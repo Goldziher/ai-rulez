@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -105,11 +106,6 @@ func validateLocalFile(root *RootSpec) error {
 // in paths and manifests, so it is allowlisted rather than checked for bad characters.
 var specName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
-// permissionsAndHooksEnabled gates the reserved sidecar kinds. They have no
-// renderer yet, so a spec declaring one fails at load time instead of at
-// generation; flip it (and add the renderers in sidecars_generic.go) to enable.
-const permissionsAndHooksEnabled = false
-
 // validateSpec enforces the closed-set enum constraints documented in
 // schema/provider.schema.json. Strict TOML/YAML/JSON decoding catches unknown
 // fields; this layer catches unknown enum values and missing required combos.
@@ -182,7 +178,38 @@ func validateSpec(s *ProviderSpec) error {
 		}
 	}
 
+	if err := validateSharedSidecarPaths(s.Sidecars); err != nil {
+		return err
+	}
+
 	return validateGlobal(s.Global)
+}
+
+// validateSharedSidecarPaths checks that sidecars merging into one document agree
+// on where it lives in the user scope and on its syntax: the document is mapped
+// once, so a sidecar without the others' global_path would be written to the
+// user-level file (or kept out of it) against its own declaration.
+func validateSharedSidecarPaths(sidecars []*SidecarSpec) error {
+	first := map[string]*SidecarSpec{}
+	for i, sc := range sidecars {
+		if sc == nil || !isMergedGenericSidecar(sc) {
+			continue
+		}
+		prev, ok := first[sc.Path]
+		if !ok {
+			first[sc.Path] = sc
+			continue
+		}
+		if prev.GlobalPath != sc.GlobalPath {
+			return fmt.Errorf("sidecars[%d].global_path %q differs from %q of the %s sidecar sharing %s",
+				i, sc.GlobalPath, prev.GlobalPath, prev.Kind, sc.Path)
+		}
+		if !sameDocFormat(prev.DocFormat(), sc.DocFormat()) {
+			return fmt.Errorf("sidecars[%d].format %q differs from %q of the %s sidecar sharing %s",
+				i, sc.DocFormat(), prev.DocFormat(), prev.Kind, sc.Path)
+		}
+	}
+	return nil
 }
 
 // validateOutputMode checks outputs.<type>.mode and the fields that belong to a
@@ -243,8 +270,8 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 	if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].path", i), sc.Path); err != nil {
 		return err
 	}
-	if !permissionsAndHooksEnabled && (sc.Kind == SidecarPermissions || sc.Kind == SidecarHooks) {
-		return fmt.Errorf("sidecars[%d].kind: %q is not yet supported", i, sc.Kind)
+	if sc.UserOnly && sc.GlobalPath == "" {
+		return fmt.Errorf("sidecars[%d].user_only needs a global_path", i)
 	}
 	if sc.GlobalPath != "" {
 		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_path", i), sc.GlobalPath); err != nil {
@@ -273,6 +300,9 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 	if len(sc.Transports) > 0 && !IsMCPSidecarKind(sc.Kind) {
 		return fmt.Errorf("sidecars[%d].transports is only valid on a sidecar that holds MCP servers", i)
 	}
+	if err := validateHookPluginSidecar(i, sc); err != nil {
+		return err
+	}
 	if !isGenericSidecarKind(sc.Kind) {
 		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" || sc.Elements != nil {
 			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
@@ -296,8 +326,18 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].key: segments must not be empty", i)
 		}
 	}
-	if sc.Dialect != "" && sc.Kind != SidecarMCP && sc.Kind != SidecarChecks {
-		return fmt.Errorf("sidecars[%d].dialect is only valid on kinds %q and %q", i, SidecarMCP, SidecarChecks)
+	if sc.Dialect != "" && sc.Kind != SidecarMCP && sc.Kind != SidecarChecks && sc.Kind != SidecarHooks && sc.Kind != SidecarPermissions {
+		return fmt.Errorf("sidecars[%d].dialect is only valid on kinds %q, %q, %q and %q", i, SidecarMCP, SidecarChecks, SidecarHooks, SidecarPermissions)
+	}
+	if sc.Kind == SidecarPermissions {
+		if err := validatePermissionsSidecar(i, sc); err != nil {
+			return err
+		}
+	}
+	if sc.Kind == SidecarHooks {
+		if err := validateHooksSidecar(i, sc); err != nil {
+			return err
+		}
 	}
 	if sc.Kind == SidecarChecks {
 		if !isChecksDialect(sc.Dialect) {
@@ -321,6 +361,41 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 		}
 	}
 	return validateElements(i, sc)
+}
+
+// validateHooksSidecar checks a `hooks` sidecar: its dialect names the harness
+// whose hook format renders into the document, which fixes the key and the
+// format of the entries; a hooks sidecar therefore takes neither key nor elements.
+func validateHooksSidecar(i int, sc *SidecarSpec) error {
+	if !settings.HasHookDialect(sc.Dialect) {
+		return fmt.Errorf("sidecars[%d].dialect: kind %q needs the name of a harness with hook support, got %q",
+			i, SidecarHooks, sc.Dialect)
+	}
+	if len(sc.Key) > 0 || sc.Elements != nil {
+		return fmt.Errorf("sidecars[%d]: kind %q takes no key or elements; its dialect fixes the document layout", i, SidecarHooks)
+	}
+	if sc.EmitWhen == "" {
+		sc.EmitWhen = PredicateHasHooks
+	}
+	return nil
+}
+
+// validatePermissionsSidecar checks a `permissions` sidecar: its dialect names the
+// harness whose permission format renders into the document, which fixes the keys
+// and the entry syntax; a permissions sidecar therefore takes neither key nor
+// elements.
+func validatePermissionsSidecar(i int, sc *SidecarSpec) error {
+	if !settings.IsPermissionDialect(sc.Dialect) {
+		return fmt.Errorf("sidecars[%d].dialect: kind %q needs a permissions dialect (one of %s), got %q",
+			i, SidecarPermissions, strings.Join(settings.PermissionDialectNames(), ", "), sc.Dialect)
+	}
+	if len(sc.Key) > 0 || sc.Elements != nil {
+		return fmt.Errorf("sidecars[%d]: kind %q takes no key or elements; its dialect fixes the document layout", i, SidecarPermissions)
+	}
+	if sc.EmitWhen == "" {
+		sc.EmitWhen = PredicateHasPermissions
+	}
+	return nil
 }
 
 // validateGlobal checks the [global] block: every path is a relative,
@@ -536,7 +611,7 @@ func isValidBodySection(section string) bool {
 
 func isValidPredicate(p string) bool {
 	switch p {
-	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort, PredicateHasResolvedEffortOrMCPServers:
+	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings, PredicateHasPermissions, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort, PredicateHasResolvedEffortOrMCPServers, PredicateHasHooks:
 		return true
 	}
 	return false
@@ -546,7 +621,7 @@ func isValidSidecarKind(k string) bool {
 	switch k {
 	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON,
 		SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON,
-		SidecarMCP, SidecarChecks, SidecarPermissions, SidecarHooks:
+		SidecarMCP, SidecarChecks, SidecarPermissions, SidecarHooks, SidecarHookPlugin:
 		return true
 	}
 	return false

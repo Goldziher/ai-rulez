@@ -2,6 +2,10 @@
 // [claude.settings.managed] blocks into the native settings documents of each
 // harness (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json,
 // .gemini/settings.json, .github/hooks/ai-rulez.json).
+// The five harnesses above have a handler struct each; the others (Factory, Qwen,
+// Kiro, Vibe, Poolside, ... see hooks_dialects.go and hooks_dialects_more.go) are
+// rendered from a table of vendor facts, and Cline through wrapper scripts
+// (hooks_cline.go).
 //
 // The documents are shared with the consumer, so the package returns
 // jsonmerge.OwnedKey values rather than finished files: array entries are owned
@@ -24,6 +28,11 @@ const (
 	CursorHooksPath    = ".cursor/hooks.json"
 	GeminiSettingsPath = ".gemini/settings.json"
 	CopilotHooksPath   = ".github/hooks/ai-rulez.json"
+
+	// AntigravityHooksPath and DevinHooksPath are the project hooks files of the
+	// antigravity and devin presets.
+	AntigravityHooksPath = ".agents/hooks.json"
+	DevinHooksPath       = ".devin/hooks.v1.json"
 
 	// UserCopilotHooksPath is where Copilot CLI loads user-level hook files.
 	UserCopilotHooksPath = ".copilot/hooks/ai-rulez.json"
@@ -67,10 +76,47 @@ type hookSpec struct {
 	// Claude Code's (same tool names, same lifecycle strings), so a group's
 	// matcher is copied. Elsewhere a matcher needs a per-harness override.
 	matcherPassthrough bool
-	// matcherless is true when the harness has no matcher at all.
-	matcherless bool
 	// args, async and condition record which handler fields the harness has.
 	args, async, condition bool
+	// status is true when the harness has a handler field for a progress message.
+	status bool
+
+	// The fields below describe a harness rendered through the generic handler
+	// shape (hooks_dialects.go); the five harnesses above keep their own structs.
+
+	// shape names the handler fields; nil for the harnesses with their own struct.
+	shape *handlerShape
+	// container is the key path of the object holding the event arrays: ["hooks"]
+	// when empty and rootKeyed is false.
+	container []string
+	// rootKeyed is true when the events are keyed at the document root.
+	rootKeyed bool
+	// userContainer / userRootKeyed override the container in user scope, for a
+	// harness whose user-level file is a different document (Devin's config.json).
+	userContainer []string
+	// matcherEvents lists the native events that honour a matcher; nil means all.
+	matcherEvents map[string]bool
+	// scriptVar is the environment variable naming the project root in a command
+	// ("$FACTORY_PROJECT_DIR"); empty when the harness documents none.
+	scriptVar string
+	// scriptCwd is true when hooks run from the project root, so a project script
+	// is addressed as ./path. A harness with neither cannot address a project script.
+	scriptCwd bool
+	// flat builds the entry of a harness whose single list carries the event in
+	// each entry (Kiro, Vibe); the entry is named, since both require a name.
+	flat func(hc handlerContext, command string, action *config.HookAction) ordered
+	// required are the scalars the document needs to be valid.
+	required []requiredKey
+	// userOnly is true when the harness ignores project-level hooks.
+	userOnly bool
+	// defaultMatcher is written for a group without one where the harness requires
+	// the field: on every event when matcherRequired, else on matcherEvents.
+	defaultMatcher  string
+	matcherRequired bool
+	// ownedFile is true for a hooks file ai-rulez writes whole (see OwnedHooksDocument).
+	ownedFile bool
+	// note is advice printed once per run when hooks are generated for the harness.
+	note string
 }
 
 var (
@@ -124,9 +170,32 @@ var (
 			eventPreCompact: "preCompact", eventStop: "agentStop", eventUserPromptSubmit: "userPromptSubmitted",
 			eventNotify: "notification", eventPermissionRequest: "permissionRequest",
 		},
-		matcherless: true,
+		// The matcher is an optional regex over toolName on preToolUse and postToolUse.
+		matcherEvents: set("preToolUse", "postToolUse"),
+		ownedFile:     true,
+	}
+	// Copilot CLI loads the same .github/hooks/*.json files as Copilot (read
+	// 2026-10-05 from docs.github.com/en/copilot/reference/hooks-configuration), so
+	// it renders the same document under its own name.
+	copilotCLISpec = hookSpec{
+		name: config.HarnessCopilotCLI, events: copilotSpec.events, matcherEvents: copilotSpec.matcherEvents, ownedFile: true,
 	}
 )
+
+// requiredKey is a scalar a hooks document needs: Cursor's `version`, ZCode's
+// `hooks.enabled`.
+type requiredKey struct {
+	path  []string
+	value any
+	// userOnly restricts the key to user scope.
+	userOnly bool
+}
+
+func init() {
+	// Cursor runs project hooks from the project root.
+	cursorSpec.scriptCwd = true
+	cursorSpec.required = []requiredKey{{path: []string{keyVersion}, value: cursorHooksVersion}}
+}
 
 func identityEvents(names []string) map[string]string {
 	m := make(map[string]string, len(names))
@@ -148,8 +217,11 @@ func specFor(harness string) (hookSpec, bool) {
 		return cursorSpec, true
 	case config.HarnessCopilot:
 		return copilotSpec, true
+	case config.HarnessCopilotCLI:
+		return copilotCLISpec, true
 	}
-	return hookSpec{}, false
+	spec, ok := dialectSpecs[harness]
+	return spec, ok
 }
 
 // SupportedEvents returns the Claude Code event names a harness can express, in

@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
@@ -1332,7 +1333,9 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 // silently replace the other's. That is reported as an error naming the presets;
 // the outputs found so far (first writer of each path) are returned with it.
 //
-// One divergence is resolved instead: a root file that omits the rules its tool
+// Two divergences are resolved instead. Presets that write one merged document
+// (or one owned hooks file) with different keys are combined: their owned keys are
+// unioned and the document rendered once (see unionOutputs). And a root file that omits the rules its tool
 // reads from a rules folder (OutputFile.OmitsRules) yields to the same file with
 // every rule inlined, because dropping the inlined rules would silently take
 // them from the tools that have no folder. The choice does not depend on the
@@ -1372,8 +1375,15 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.O
 				continue
 			}
 			kept := flatOutputs[prev.index]
+			var united config.OutputFile
+			var unionable bool
+			if !sameOutputContent(kept, output) {
+				united, unionable = unionOutputs(kept, output)
+			}
 			switch {
 			case sameOutputContent(kept, output):
+			case unionable:
+				flatOutputs[prev.index] = united
 			case kept.OmitsRules && !output.OmitsRules:
 				omitting[output.Path] = append(omitting[output.Path], prev.preset)
 				if len(omitting[output.Path]) == 1 {
@@ -1458,9 +1468,15 @@ func (g *Generator) absOutputPath(path string) string {
 // spuriously modify the file after generation.
 func (g *Generator) writeOutput(output config.OutputFile) error {
 	absPath := g.absOutputPath(output.Path)
+	// target is where a write really lands; absPath stays the lexical path that
+	// ownership and manifest logic key on.
+	target, viaLink, err := g.guardWrite(absPath)
+	if err != nil {
+		return err
+	}
 
 	if output.IsDir {
-		if err := os.MkdirAll(absPath, 0o755); err != nil {
+		if err := os.MkdirAll(target, 0o755); err != nil {
 			return oops.
 				With("dir", absPath).
 				Hint(fmt.Sprintf("Check directory permissions for: %s", absPath)).
@@ -1474,7 +1490,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	// scripts, assets) where the standard header banner would corrupt the
 	// payload (e.g. Python scripts) or break binary files.
 	if output.RawContent != nil {
-		return writeRawOutput(absPath, output)
+		return writeRawOutput(target, viaLink, output)
 	}
 
 	finalContent := g.finalContent(output)
@@ -1497,8 +1513,8 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	}
 
 	if g.canSkipWrite(absPath, output, finalContent) {
-		if output.Sensitive {
-			if err := os.Chmod(absPath, sensitiveFileMode); err != nil {
+		if output.Sensitive && !viaLink {
+			if err := os.Chmod(target, sensitiveFileMode); err != nil {
 				return oops.With("path", absPath).Wrapf(err, "restrict permissions of a file carrying secrets")
 			}
 		}
@@ -1506,7 +1522,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return nil
 	}
 
-	dir := filepath.Dir(absPath)
+	dir := filepath.Dir(target)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return oops.
 			With("dir", dir).
@@ -1518,7 +1534,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	if output.Sensitive {
 		// Owner-only temp file renamed into place: the secret is never on disk
 		// with a wider mode, and an existing world-readable file is replaced.
-		if err := config.WriteFileAtomic(absPath, []byte(finalContent), sensitiveFileMode); err != nil {
+		if err := config.WriteFileAtomic(target, []byte(finalContent), sensitiveFileMode); err != nil {
 			return oops.
 				With("path", absPath).
 				Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
@@ -1530,7 +1546,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 
 	// Temp file + rename so a crash never leaves a truncated hand-authored file;
 	// keeps an existing file's mode and writes through symlinks.
-	if err := writeFileAtomic(absPath, []byte(finalContent)); err != nil {
+	if err := writeFileAtomic(target, []byte(finalContent)); err != nil {
 		return oops.
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
@@ -1780,7 +1796,11 @@ var generatedStampPattern = regexp.MustCompile(`(?m)(?: \| )?Generated: [^\n]*$`
 // preserving Mode (defaulting to 0o644). Skips the write when both the
 // existing bytes and mode already match on disk so unchanged bundled
 // assets don't dirty the working tree on every regeneration.
-func writeRawOutput(absPath string, output config.OutputFile) error {
+//
+// The mode is applied to a file this call creates, and to an existing regular
+// file that is not reached through a symlink; a file reached through a link is
+// never chmodded, since it is not ours.
+func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) error {
 	mode := output.Mode.Perm()
 	if mode == 0 {
 		mode = 0o644
@@ -1810,6 +1830,10 @@ func writeRawOutput(absPath string, output config.OutputFile) error {
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
 			Wrapf(err, "write file")
+	}
+	if viaLink {
+		logger.Debug("Wrote raw file through a symlink, mode left as is", "path", output.Path)
+		return nil
 	}
 	// os.WriteFile only applies the mode on file creation. To handle mode
 	// changes on subsequent regenerations, chmod explicitly.
@@ -2474,7 +2498,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
 	defer func() { g.manifests = nil }()
-	if err := writeManifestFile(g.manifestPath(), shared, committedMerged); err != nil {
+	if err := g.writeManifest(g.manifestPath(), shared, committedMerged); err != nil {
 		return err
 	}
 	if g.localSkipped {
@@ -2488,7 +2512,16 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		}
 		return nil
 	}
-	return writeManifestFile(g.localManifestPath(), local, localMerged)
+	return g.writeManifest(g.localManifestPath(), local, localMerged)
+}
+
+// writeManifest writes a manifest after refusing a symlink that leaves the project.
+func (g *Generator) writeManifest(path string, files []string, merged map[string][]jsonmerge.Claim) error {
+	resolved, _, err := g.guardWrite(path)
+	if err != nil {
+		return err
+	}
+	return writeManifestFile(resolved, files, merged)
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
@@ -2960,6 +2993,10 @@ func gitignorePatternForOutput(relPath string, isDir bool) string {
 		}
 		return relPath
 	}
+	// A plugin directory is shared with hand-written plugins: ignore the generated module only.
+	if !isDir && hookplugins.IsModulePath(relPath) {
+		return relPath
+	}
 	if pattern, matched := githubGitignorePattern(relPath); matched {
 		return pattern
 	}
@@ -3254,7 +3291,11 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 		if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
 			return nil
 		}
-		return dropManagedBlock(gitignorePath, existingContent)
+		safePath, _, guardErr := g.guardWrite(gitignorePath)
+		if guardErr != nil {
+			return guardErr
+		}
+		return dropManagedBlock(safePath, existingContent)
 	}
 
 	// Build the fenced block
@@ -3282,6 +3323,10 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 		newContent += "\n" + fencedBlock.String()
 	}
 
+	gitignorePath, _, err = g.guardWrite(gitignorePath)
+	if err != nil {
+		return err
+	}
 	if err := os.WriteFile(gitignorePath, []byte(newContent), 0o644); err != nil { //nolint:gosec // path from config, not user input
 		return oops.
 			With("path", gitignorePath).
@@ -3563,7 +3608,8 @@ var legacyMCPConfigPaths = [...]string{
 func mergedMCPDocumentPaths() []string {
 	var paths []string
 	for _, p := range presets.MergedDocumentPaths() {
-		if p != presets.MergedDocCodexHooks && p != presets.MergedDocCursorHooks {
+		if p != presets.MergedDocCodexHooks && p != presets.MergedDocCursorHooks &&
+			p != presets.MergedDocAntigravityHooks && p != presets.MergedDocDevinHooks {
 			paths = append(paths, p)
 		}
 	}

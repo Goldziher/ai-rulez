@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo guard",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "audit --strict 'a b'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/home/u/.ai-rulez/scripts/boot.sh'",
+            "statusMessage": "Booting"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo done",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "fetch": {
+          "always_allow": [
+            {
+              "case_sensitive": true,
+              "pattern": "^https?://example\\.com(:\\d+)?(/|$)"
+            }
+          ],
+          "always_deny": [
+            {
+              "pattern": "^https?://evil\\.com(:\\d+)?(/|$)"
+            }
+          ]
+        },
+        "mcp:evil:tool": {
+          "default": "deny"
+        },
+        "mcp:github:create_issue": {
+          "default": "allow"
+        },
+        "terminal": {
+          "always_allow": [
+            {
+              "case_sensitive": true,
+              "pattern": "^npm run test([ \\t][^;\u0026|\\n\\r`$()\u003c\u003e]*)?$"
+            },
+            {
+              "case_sensitive": true,
+              "pattern": "^git status$"
+            }
+          ],
+          "always_confirm": [
+            {
+              "pattern": "^git push([\\s;\u0026|)`]|$)"
+            }
+          ],
+          "always_deny": [
+            {
+              "pattern": "^rm -rf([\\s;\u0026|)`]|$)"
+            },
+            {
+              "pattern": "(^|[\\s;\u0026|(`])curl .* \\| sh"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

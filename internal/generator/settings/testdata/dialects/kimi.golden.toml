@@ -1,0 +1,19 @@
+[[hooks]]
+command = "echo guard"
+event = "PreToolUse"
+matcher = "Shell"
+timeout = 10
+
+[[hooks]]
+command = "audit --strict 'a b'"
+event = "PreToolUse"
+matcher = "Shell"
+
+[[hooks]]
+command = "'/home/u/.ai-rulez/scripts/boot.sh'"
+event = "SessionStart"
+
+[[hooks]]
+command = "echo done"
+event = "Stop"
+timeout = 5

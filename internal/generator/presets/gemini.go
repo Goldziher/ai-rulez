@@ -297,7 +297,11 @@ func (g *GeminiPresetGenerator) ownedKeys(settingsPath string, cfg *config.Confi
 	if err != nil {
 		return nil, false, fmt.Errorf("render gemini hooks: %w", err)
 	}
-	return append(owned, hooks...), userNames, nil
+	perms, err := settings.PermissionKeys(cfg, config.HarnessGemini, settingsPath)
+	if err != nil {
+		return nil, false, fmt.Errorf("render gemini permissions: %w", err)
+	}
+	return append(append(owned, hooks...), perms...), userNames, nil
 }
 
 // wantedNames are the names ai-rulez appends to a user's context.fileName. The

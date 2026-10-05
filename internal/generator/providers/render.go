@@ -172,7 +172,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	}
 
 	for _, sidecar := range g.Spec.Sidecars {
-		if !g.evalPredicate(sidecar.EmitWhen, cfg) {
+		if !g.evalPredicate(sidecar.EmitWhen, cfg) || (sidecar.UserOnly && !cfg.UserScope) {
 			continue
 		}
 		outputPath := filepath.Join(baseDir, sidecar.Path)
@@ -187,11 +187,20 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			if err == nil && rendered.Body == "" {
 				continue // every check clashed with the user's own entry and there is no document
 			}
+		} else if group := g.sharedSidecars(sidecar, cfg); len(group) > 1 {
+			if group[0] != sidecar {
+				continue // rendered with the first sidecar of its document
+			}
+			rendered, err = g.renderSidecarGroup(group, cfg, outputPath)
 		} else {
 			rendered, err = g.renderSidecarSpec(sidecar, cfg, outputPath)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
+		}
+		if (sidecar.Kind == SidecarHooks || sidecar.Kind == SidecarPermissions || sidecar.Kind == SidecarHookPlugin) &&
+			rendered.Body == "" {
+			continue // nothing applies to this harness, so there is no document
 		}
 		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindSidecar, sidecar.Kind, "").
 			AddPart(config.PartKindSidecarDocument, sidecar.Kind, "", rendered.Body)
@@ -200,6 +209,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			Content:        rendered.Body,
 			PartiallyOwned: rendered.PartiallyOwned,
 			MergeClaims:    rendered.Claims,
+			Merge:          sidecarMergeSource(sidecar, outputPath, rendered),
 			Committed:      sidecar.Kind == SidecarChecks,
 		})
 	}

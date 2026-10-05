@@ -52,6 +52,15 @@ path = ".gitlab/duo/mr-review-instructions.yaml"
 dialect = "gitlab-duo"
 
 # User-scope layout: ~/.gitlab/duo on Linux and macOS.
+# Hooks: top-level [[hooks]] rendered in gitlab-duo's native format, read from the
+# vendor documentation (see docs/settings.md). Duo CLI reads hooks.json (SessionStart only); project hooks need --enable-project-hooks.
+[[sidecars]]
+kind = "hooks"
+dialect = "gitlab-duo"
+path = ".gitlab/duo/hooks.json"
+format = "json"
+global_path = ".gitlab/duo/hooks.json"
+
 [global]
 root_file = ".gitlab/duo/chat-rules.md"
 commands_dir = ".gitlab/duo/commands"

@@ -105,6 +105,23 @@ emit_when = "has_mcp_servers"
 global_path = ".qwen/settings.json"
 
 # User-scope layout: everything lives under ~/.qwen.
+# Hooks: top-level [[hooks]] rendered in qwen's native format, read from the
+# vendor documentation (see docs/settings.md). Qwen Code reads `hooks` from settings.json (Claude-style groups, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "qwen"
+path = ".qwen/settings.json"
+format = "json"
+global_path = ".qwen/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".qwen/settings.json"
+format = "json"
+dialect = "qwen"
+global_path = ".qwen/settings.json"
+
 [global]
 home_env = "QWEN_HOME"
 home_dir = ".qwen"

@@ -1,0 +1,18 @@
+[[hooks]]
+command = "echo guard"
+match = "bash"
+name = "ai-rulez-pre_tool-1"
+timeout = 10
+type = "pre_tool"
+
+[[hooks]]
+command = "audit --strict 'a b'"
+match = "bash"
+name = "ai-rulez-pre_tool-2"
+type = "pre_tool"
+
+[[hooks]]
+command = "echo done"
+name = "ai-rulez-post_agent-3"
+timeout = 5
+type = "post_agent"

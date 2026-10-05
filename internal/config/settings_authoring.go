@@ -26,13 +26,14 @@ const (
 
 // HookHarnesses lists the harnesses `[[hooks]]` can be rendered for, in a stable
 // order. Every other preset is reported as unsupported.
-var HookHarnesses = []string{HarnessClaude, HarnessCodex, HarnessCursor, HarnessGemini, HarnessCopilot}
+var HookHarnesses = slices.Concat([]string{HarnessClaude, HarnessCodex, HarnessCursor, HarnessGemini, HarnessCopilot}, extraHookHarnesses)
 
 // Permissions is the [permissions] block: allow, ask and deny rule lists in
 // Claude Code permission-rule syntax ("Bash(git *)", "Read(./.env)"). It is
-// rendered into .claude/settings.json only; the other harnesses have no
-// equivalent list (see docs/settings.md). Each listed rule is owned element by
-// element, so rules the consumer wrote in the same arrays survive.
+// rendered into .claude/settings.json verbatim and translated into the native
+// permission format of the other harnesses that have one (see
+// docs/permissions.md). Each listed rule is owned element by element, so rules
+// the consumer wrote in the same arrays survive.
 type Permissions struct {
 	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`
 	Ask   []string `yaml:"ask,omitempty" json:"ask,omitempty" toml:"ask,omitempty"`
@@ -193,6 +194,10 @@ func validateSettingsHookAction(event string, index int, action *HookAction) err
 		return oops.With("field", "hooks.hooks").With("event", event).With("script", action.Script).
 			Hint("Use a project-relative script path that does not contain '..'").
 			Errorf("hook %s[%d] has an unsafe script %q", event, index, action.Script)
+	case action.Script != "" && !IsSafeHookScript(action.Script):
+		return oops.With("field", "hooks.hooks").With("event", event).With("script", action.Script).
+			Hint("Rename the script so its path only uses letters, digits, '.', '_', '-' and '/'").
+			Errorf("hook %s[%d] script %q may only contain letters, digits, '.', '_', '-' and '/'", event, index, action.Script)
 	}
 	return nil
 }

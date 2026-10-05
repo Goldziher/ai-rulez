@@ -68,6 +68,21 @@ path = ".mimocode/mimocode.jsonc"
 dialect = "opencode"
 global_path = ".config/mimocode/mimocode.jsonc"
 
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".mimocode/mimocode.jsonc"
+dialect = "mimocode"
+global_path = ".config/mimocode/mimocode.jsonc"
+
+# [[hooks]] become a plugin module: MiMo Code loads OpenCode-style plugins from its plugin
+# directories without a registration step.
+[[sidecars]]
+kind = "hook_plugin"
+flavor = "opencode-v1"
+path = ".mimocode/plugins/ai-rulez-hooks.js"
+global_path = ".config/mimocode/plugins/ai-rulez-hooks.js"
+
 [global]
 root_file = ".config/mimocode/AGENTS.md"
 skills_dir = ".config/mimocode/skills"

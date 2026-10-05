@@ -78,6 +78,23 @@ dialect = "vscode"
 global_path = ".copilot/mcp-config.json"
 
 # User-scope layout: ~/.copilot.
+# Hooks: top-level [[hooks]] rendered in copilot-cli's native format, read from the
+# vendor documentation (see docs/settings.md). Copilot CLI loads every .github/hooks/*.json; the file is the one the copilot preset writes.
+[[sidecars]]
+kind = "hooks"
+dialect = "copilot-cli"
+path = ".github/hooks/ai-rulez.json"
+format = "json"
+global_path = ".copilot/hooks/ai-rulez.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".github/copilot/settings.json"
+format = "jsonc"
+dialect = "copilot-cli"
+global_path = ".copilot/settings.json"
+
 [global]
 root_file = ".copilot/copilot-instructions.md"
 skills_dir = ".copilot/skills"

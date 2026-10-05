@@ -92,6 +92,21 @@ values = [".kilo/rules/*.md"]
 # A project-relative glob: not written into the user-scope ~/.config/kilo/kilo.jsonc.
 project_only = true
 
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = "kilo.jsonc"
+dialect = "kilo"
+global_path = ".config/kilo/kilo.jsonc"
+
+# [[hooks]] become a plugin module: Kilo's hooks are code, loaded from the plugin
+# directories without a registration step (plugin/ and plugins/ are both scanned).
+[[sidecars]]
+kind = "hook_plugin"
+flavor = "opencode-v1"
+path = ".kilo/plugins/ai-rulez-hooks.js"
+global_path = ".config/kilo/plugins/ai-rulez-hooks.js"
+
 [global]
 root_file = ".config/kilo/AGENTS.md"
 skills_dir = ".kilo/skills"
