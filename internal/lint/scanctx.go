@@ -54,7 +54,7 @@ func isMarkdownPath(abs string) bool {
 	return false
 }
 
-func newScanText(r *runner, abs, raw string) *scanText {
+func newScanText(r *runner, abs, raw string) *scanText { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	t := &scanText{abs: abs, raw: raw, md: isMarkdownPath(abs)}
 	for _, seg := range strings.Split(filepath.ToSlash(filepath.Dir(abs)), "/") {

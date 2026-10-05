@@ -15,13 +15,13 @@ func init() {
 	registerItemCheck(checkAutoInvocation)
 }
 
-func checkAutoInvocation(r *runner, it *item, _ doc, fm frontmatter) {
+func checkAutoInvocation(r *runner, it *item, _ doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	switch it.kind {
 	case kindSkill, kindCommand:
-		if k, ok := fm.top("disable-model-invocation"); ok && k.Value == true {
+		if k, ok := fm.top(keyDisableModel); ok && k.Value == true {
 			return
 		}
-		tools, ok := fm.top("allowed-tools")
+		tools, ok := fm.top(keyAllowedTools)
 		if !ok {
 			return
 		}

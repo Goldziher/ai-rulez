@@ -35,11 +35,11 @@ var (
 
 // Keys that must be YAML booleans, per content kind.
 var boolKeys = map[string][]string{
-	kindSkill:   {"disable-model-invocation", "user-invocable", "background"},
-	kindCommand: {"disable-model-invocation", "user-invocable", "background"},
-	kindAgent:   {"background", "omitClaudeMd"},
-	kindRule:    {"alwaysApply"},
-	kindContext: {"alwaysApply"},
+	kindSkill:   {keyDisableModel, keyUserInvocable, keyBackground},
+	kindCommand: {keyDisableModel, keyUserInvocable, keyBackground},
+	kindAgent:   {keyBackground, "omitClaudeMd"},
+	kindRule:    {keyAlwaysApply},
+	kindContext: {keyAlwaysApply},
 }
 
 // vendorModelRe accepts the model IDs other harnesses use, so a subagent written
@@ -49,7 +49,7 @@ var (
 	vendorModelRe = regexp.MustCompile(`^(?:gpt-|o\d|gemini-|llama|mistral|codestral|grok|deepseek|qwen|kimi|glm-|command-)[a-z0-9.:_/-]*$`)
 )
 
-func checkFrontmatterValues(r *runner, it *item, _ doc, fm frontmatter) {
+func checkFrontmatterValues(r *runner, it *item, _ doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	bad := func(k fmKey, format string, args ...any) {
 		r.add(CodeFrontmatterValue, it.abs, k.Line, "%s", fmt.Sprintf("frontmatter %q: ", k.Name)+fmt.Sprintf(format, args...))
 	}
@@ -100,9 +100,9 @@ func checkFrontmatterValues(r *runner, it *item, _ doc, fm frontmatter) {
 			checkPathsShape(k, bad)
 		}
 	}
-	for _, key := range []string{"name", "description", "when_to_use", "argument-hint"} {
+	for _, key := range []string{keyName, keyDescription, "when_to_use", keyArgumentHint} {
 		if k, ok := fm.top(key); ok && k.Value != nil {
-			if _, isStr := k.Value.(string); !isStr && (key != "argument-hint" || !isList(k.Value)) {
+			if _, isStr := k.Value.(string); !isStr && (key != keyArgumentHint || !isList(k.Value)) {
 				bad(k, "must be text, got %s (quote the value)", describeValue(k.Value))
 			}
 		}
@@ -186,8 +186,8 @@ var mcpToolRe = regexp.MustCompile(`^mcp__[A-Za-z0-9_.-]+?(?:__(?:[A-Za-z0-9_.-]
 
 // toolKeys are the frontmatter keys that list tools, per content kind.
 var toolKeys = map[string][][2]string{ // {allow key, deny key}
-	kindSkill:   {{"allowed-tools", "disallowed-tools"}},
-	kindCommand: {{"allowed-tools", "disallowed-tools"}},
+	kindSkill:   {{keyAllowedTools, keyDisallowedTools}},
+	kindCommand: {{keyAllowedTools, keyDisallowedTools}},
 	kindAgent:   {{keyTools, "disallowedTools"}},
 }
 

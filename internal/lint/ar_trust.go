@@ -38,9 +38,9 @@ var (
 	// trustedOrgs are organizations an "official" claim is believable for.
 	trustedOrgs = []string{
 		"anthropics", "anthropic", "openai", "google", "googlecloudplatform", "google-gemini", "microsoft", "github", "vercel", "cloudflare",
-		"aws", "awslabs", "aws-samples", "stripe", "supabase", "hashicorp", "docker", "kubernetes", "mozilla", "jetbrains", "atlassian",
+		"aws", "awslabs", "aws-samples", "stripe", "supabase", "hashicorp", cmdDocker, "kubernetes", "mozilla", "jetbrains", "atlassian",
 		"slackapi", "figma", "getsentry", "datadog", "elastic", "mongodb", "redis", "huggingface", "langchain-ai", "modelcontextprotocol",
-		"agentskills", "cursor", "openai-codex", "vercel-labs", "netlify", "shopify", "twilio", "notionhq", "linear", "pulumi",
+		"agentskills", presetCursor, "openai-codex", "vercel-labs", "netlify", "shopify", "twilio", "notionhq", "linear", "pulumi",
 	}
 )
 
@@ -84,7 +84,7 @@ func publisherMatches(claimed, owner string) bool {
 	return strings.Contains(a, b) || strings.Contains(b, a)
 }
 
-func checkInstalledTrust(r *runner) {
+func checkInstalledTrust(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	cfgPath := r.configFilePath()
 	if cfgPath == "" || len(r.cfg.InstalledSkills) == 0 {
 		return
@@ -132,7 +132,7 @@ var opaqueExt = map[string]bool{
 
 var skipDirs = map[string]bool{".git": true, "node_modules": true, "__pycache__": true, ".venv": true}
 
-func checkAnalyzability(r *runner) {
+func checkAnalyzability(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	for i := range r.items {
 		it := &r.items[i]
 		if !it.owned || it.isDoc || it.kind != kindSkill || it.itemDir == "" {
@@ -156,12 +156,13 @@ func checkAnalyzability(r *runner) {
 				}
 				return nil
 			}
-			if walked++; walked > maxWalkedFiles {
+			walked++
+			if walked > maxWalkedFiles {
 				return filepath.SkipAll
 			}
 			info, ierr := d.Info()
 			if ierr != nil || !info.Mode().IsRegular() {
-				return nil
+				return nil //nolint:nilerr // an unreadable entry is simply not counted
 			}
 			size := int(info.Size())
 			total += size
@@ -190,7 +191,7 @@ func checkAnalyzability(r *runner) {
 			}
 			names = append(names, o.rel)
 		}
-		r.add(CodeLowAnalyzability, it.abs, r.docs[it.abs].lineOf("name", 1),
+		r.add(CodeLowAnalyzability, it.abs, r.docs[it.abs].lineOf(keyName, 1),
 			"only %d%% of the %d bytes in this skill directory could be scanned; the scan did not read %s", auditable*100/total, total, strings.Join(names, ", "))
 	}
 }
