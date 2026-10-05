@@ -60,8 +60,14 @@ func (m *ManagedSettings) IsEmpty() bool {
 	return m == nil || len(m.Env)+len(m.SkillOverrides) == 0
 }
 
+// Claude Code skillOverrides states that hide a skill from the model.
+const (
+	SkillModeOff               = "off"
+	SkillModeUserInvocableOnly = "user-invocable-only"
+)
+
 // skillOverrideValues are the states Claude Code documents for skillOverrides.
-var skillOverrideValues = []string{"on", "name-only", "user-invocable-only", "off"}
+var skillOverrideValues = []string{"on", "name-only", SkillModeUserInvocableOnly, SkillModeOff}
 
 // SkillOverrideValues returns the documented skillOverrides states.
 func SkillOverrideValues() []string { return slices.Clone(skillOverrideValues) }
