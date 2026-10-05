@@ -66,6 +66,8 @@ type CatalogSkill struct {
 	Delivery    string
 	Commit      string
 	Trust       string
+	// LockDigest is the digest ai-rulez.lock pins (see lockDigest).
+	LockDigest string
 	// Locked reports that ai-rulez.lock records exactly this skill's digest.
 	Locked bool
 	// ScanFindings counts security findings that did not block serving.
@@ -221,6 +223,7 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 		hash.Write([]byte(sorted[i].URI + "\x00" + sorted[i].Digest + "\n")) //nolint:errcheck // hash.Hash.Write never fails
 	}
 	skill.Digest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
+	skill.LockDigest = lockDigest(skill.Files)
 	return skill, nil
 }
 

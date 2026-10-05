@@ -400,7 +400,7 @@ func TestAdmit_LockEnforcementRefusesMismatchAndUnpinned(t *testing.T) {
 	clean := mustSkill(t, base, "clean")
 	installer := mustSkill(t, base, "installer")
 	lock := &lockfile.File{Version: lockfile.Version}
-	lock.Set(lockfile.KindServed, lockfile.Entry{Name: "clean", Digest: clean.Digest})
+	lock.Set(lockfile.KindServed, lockfile.Entry{Name: "clean", Digest: clean.LockDigest})
 	lock.Set(lockfile.KindServed, lockfile.Entry{Name: "installer", Digest: "sha256:" + strings.Repeat("0", 64)})
 
 	cat := base.Admit(Admission{Config: &config.Config{}, Lock: lock, Enforce: true})
@@ -411,7 +411,7 @@ func TestAdmit_LockEnforcementRefusesMismatchAndUnpinned(t *testing.T) {
 	r, ok := cat.Refusal("installer")
 	require.True(t, ok)
 	assert.Equal(t, CodeServedLockMismatch, r.Code)
-	assert.Contains(t, r.Reason, installer.Digest)
+	assert.Contains(t, r.Reason, installer.LockDigest)
 	assert.Contains(t, r.Reason, strings.Repeat("0", 64))
 
 	r, ok = cat.Refusal("preachy")
@@ -428,7 +428,8 @@ func TestAdmit_LockEnforcementRefusesMismatchAndUnpinned(t *testing.T) {
 	out, isErr, _ := callTool(t, p, "load_skill", map[string]any{"name": "clean"})
 	require.False(t, isErr)
 	prov := out["provenance"].(map[string]any)
-	assert.Equal(t, clean.Digest, prov["digest"], "the provenance carries the digest the lock was checked against")
+	assert.Equal(t, clean.Digest, prov["digest"])
+	assert.Equal(t, clean.LockDigest, prov["lock_digest"], "the provenance carries the digest the lock was checked against")
 	assert.Equal(t, true, prov["locked"])
 	_, isErr, text := callTool(t, p, "load_skill", map[string]any{"name": "installer"})
 	require.True(t, isErr)
@@ -491,4 +492,21 @@ func TestServer_HasNoWriteTools(t *testing.T) {
 			assert.False(t, strings.HasPrefix(m["name"].(string), prefix), m["name"])
 		}
 	}
+}
+
+func TestLockDigest_IgnoresTheProjectWideSourceHashOnly(t *testing.T) {
+	t.Parallel()
+	mk := func(sourceHash, content string) *CatalogSkill {
+		body := "---\nname: x\ndescription: d\n# Content-Hash: blake3:aaa\n# Source-Hash: " + sourceHash + "\n---\n\n" + content + "\n"
+		cat, err := BuildCatalog("p", "claude", []generator.ServedSkill{{ID: "x", Files: []generator.ServedSkillFile{{RelPath: "SKILL.md", Content: []byte(body)}}}}, SkillFilter{})
+		require.NoError(t, err)
+		return mustSkill(t, cat, "x")
+	}
+	a, b, changed := mk("blake3:111", "same"), mk("blake3:222", "same"), mk("blake3:111", "different")
+	assert.NotEqual(t, a.Digest, b.Digest, "the served-bytes digest still covers the header")
+	assert.Equal(t, a.LockDigest, b.LockDigest, "another skill changing must not change this skill's lock digest")
+	assert.NotEqual(t, a.LockDigest, changed.LockDigest)
+
+	body := []byte("---\nname: x\n---\n\n" + strings.Repeat("filler\n", 50) + "# Source-Hash: not a header, deep in the body\n")
+	assert.Equal(t, body, normalizeForLock(body), "only the leading header region is normalized")
 }

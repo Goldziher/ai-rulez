@@ -283,3 +283,26 @@ func TestFingerprint_IgnoresUsageLogsAndGit(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, before, changed)
 }
+
+func TestServeSetup_EditingOneSkillDoesNotInvalidateTheLockOfAnother(t *testing.T) {
+	root := project(t, baseConfig+"\n[skills]\ndelivery = \"served\"\n\n[lock]\nenforce = true\n", map[string]string{
+		"skills/a/SKILL.md": skillFile("a", "Skill a", ""),
+		"skills/b/SKILL.md": skillFile("b", "Skill b", ""),
+	})
+	setup := &ServeSetup{WorkDir: root, NoWatch: true, CacheDir: filepath.Join(t.TempDir(), "cache")}
+	sources, served, _, err := setup.LockRecords(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), &lockfile.File{Version: lockfile.Version, Source: sources, Served: served}))
+
+	srv, err := setup.NewServer(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, catalogNames(srv.Catalog()))
+
+	// The generated Source-Hash of every skill changes when any skill does; the lock digest does not follow it.
+	writeFile(t, root, ".ai-rulez/skills/b/SKILL.md", skillFile("b", "Skill b, edited", ""))
+	srv, err = setup.NewServer(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a"}, catalogNames(srv.Catalog()))
+	_, refused := srv.Catalog().Refusal("b")
+	assert.True(t, refused)
+}

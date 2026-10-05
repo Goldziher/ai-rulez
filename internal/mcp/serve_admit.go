@@ -90,7 +90,7 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 		return r
 	}
 	entry := a.Lock.Find(lockfile.KindServed, s.Name)
-	s.Locked = entry != nil && entry.Digest == s.Digest
+	s.Locked = entry != nil && entry.Digest == s.LockDigest
 	if !a.Enforce {
 		return nil
 	}
@@ -98,7 +98,7 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 	case entry == nil:
 		return &Refusal{s.Name, CodeServedLockMismatch, fmt.Sprintf("[lock] enforce is on and %s does not pin this skill; review it, then run `ai-rulez lock`", lockfile.FileName)}
 	case !s.Locked:
-		return &Refusal{s.Name, CodeServedLockMismatch, fmt.Sprintf("digest %s differs from the lock's %s; the skill changed since it was locked (run `ai-rulez lock` only after reviewing the change)", s.Digest, entry.Digest)}
+		return &Refusal{s.Name, CodeServedLockMismatch, fmt.Sprintf("digest %s differs from the lock's %s; the skill changed since it was locked (run `ai-rulez lock` only after reviewing the change)", s.LockDigest, entry.Digest)}
 	}
 	return nil
 }
