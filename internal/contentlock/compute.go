@@ -110,15 +110,16 @@ func itemLess(a, b lockfile.Item) bool {
 }
 
 // disambiguate suffixes the id of a second item with the same kind, domain and
-// id ("#2"), in path order, so every item has a unique key.
+// id ("#2", "#3", ...), in path order, so every item has a unique key even when
+// a real id already ends in such a suffix.
 func disambiguate(items []lockfile.Item) {
-	seen := map[string]int{}
+	used := map[string]bool{}
 	for i := range items {
-		key := items[i].Key()
-		seen[key]++
-		if n := seen[key]; n > 1 {
-			items[i].ID += "#" + strconv.Itoa(n)
+		orig := items[i].ID
+		for n := 2; used[items[i].Key()]; n++ {
+			items[i].ID = orig + "#" + strconv.Itoa(n)
 		}
+		used[items[i].Key()] = true
 	}
 }
 
