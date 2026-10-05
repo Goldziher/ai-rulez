@@ -85,6 +85,10 @@ still exits 1 and never reaches the content checks.
 | AR954 | `superseded-by-missing` | error | `superseded_by: <name>` names an item that does not exist |
 | AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
 | AR962 | `evals-missing` | off | A skill has no eval cases; turned on by `[lint.evals] require = true` or a `[lint.severity]` entry (see [Evals](evals.md)) |
+| AR996 | `eval-case-invalid` | error | An eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unknown field, missing `expect_trigger` or prompt, bad assertion, invalid regex, unsafe path, duplicate id (see [Evals](evals.md#case-format)) |
+| AR997 | `eval-stale` | off | A skill changed after its last recorded passing eval run; turned on by `[lint.evals] require_fresh = "warn"\|"error"` |
+| AR998 | `eval-score-low` | off | A skill's recorded eval pass rate is below `[lint.evals] min_pass_rate`; setting that turns the rule on at error |
+| AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -147,6 +151,8 @@ format = "sarif"                   # sarif (default) | json
 [lint.evals]
 require = true                     # enables AR962 at warning
 allow = ["scratch-*"]              # skills exempt from the check
+require_fresh = "warn"             # AR997: warn | error | off (default)
+min_pass_rate = 0.8                # AR998: recorded pass rate floor; also the pass mark of `eval run`
 ```
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,

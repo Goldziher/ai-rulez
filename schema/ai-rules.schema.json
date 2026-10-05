@@ -912,6 +912,17 @@
               "type": "array",
               "items": { "type": "string" },
               "description": "Skill names or globs exempt from the check."
+            },
+            "min_pass_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Enable eval-score-low (AR998): report a skill whose recorded eval pass rate (eval-results.json) is below this. Also the pass mark of `ai-rulez eval run`."
+            },
+            "require_fresh": {
+              "type": "string",
+              "enum": ["off", "warn", "error"],
+              "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval."
             }
           },
           "additionalProperties": false

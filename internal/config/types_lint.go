@@ -101,6 +101,13 @@ type LintEvals struct {
 	Require bool `yaml:"require,omitempty" json:"require,omitempty" toml:"require,omitempty"`
 	// Allow lists skill names or globs exempt from the check.
 	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`
+	// MinPassRate turns the eval-score-low check (AR998) on: a skill whose recorded
+	// pass rate (.ai-rulez/eval-results.json) is below it is reported. Range 0-1;
+	// also the pass mark of "ai-rulez eval run" when --threshold is not given.
+	MinPassRate float64 `yaml:"min_pass_rate,omitempty" json:"min_pass_rate,omitempty" toml:"min_pass_rate,omitempty"` //nolint:tagliatelle
+	// RequireFresh turns the eval-stale check (AR997) on: "warn" or "error" report a
+	// skill edited after its last recorded passing eval; "off" or empty disables it.
+	RequireFresh string `yaml:"require_fresh,omitempty" json:"require_fresh,omitempty" toml:"require_fresh,omitempty"` //nolint:tagliatelle
 }
 
 // LintDescription tunes description quality checks.

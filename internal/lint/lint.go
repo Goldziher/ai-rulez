@@ -183,6 +183,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkUnpinned()
 	r.scanImported()
 	r.checkPluginDrift()
+	r.checkEvalRunner()
 	if so.External {
 		r.runExternal()
 	}
@@ -215,6 +216,7 @@ func (r *runner) resolveSettings() {
 	if r.lc.Evals != nil && r.lc.Evals.Require {
 		r.sev[CodeEvalsMissing] = SeverityWarning
 	}
+	r.evalSettings()
 	for key, val := range r.lc.Severity {
 		rule, ok := lookupRule(key)
 		s, sok := ParseSeverity(val)
@@ -271,6 +273,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 		}
 	}
 	problems = append(problems, validateNewSettings(lc)...)
+	problems = append(problems, validateEvalSettings(lc)...)
 	sort.Strings(problems)
 	return problems
 }
