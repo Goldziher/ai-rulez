@@ -12,6 +12,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
+| `ai-rulez cost`                 | Report the biggest context-cost offenders           |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez lock`                 | Pin remote includes and installed skills in `ai-rulez.lock` |
@@ -1166,6 +1167,42 @@ When outputs cannot be rendered at all (for example because an MCP placeholder i
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
 Exit codes: `0` no errors (and, with `--strict`, no warnings), `2` at least one finding at the failing severity, `1` doctor could not run: the configuration does not load at all (the `config` finding is still printed) or the report could not be written. The MCP server exposes the same checks as the read-only `doctor` tool, with URL credentials removed from every message, hint and path.
+
+## Cost Command
+
+### `ai-rulez cost [config-file]`
+
+Find what to trim. `tokens` reports the token surface per runtime and bucket; `cost` adds the per-item view:
+the biggest offenders among rules, context files, skills, agents and commands, split into what is paid on every
+request and what is paid only when an item is opened.
+
+- **Always loaded** per item: a rule or context body (a path-scoped rule is *conditional* instead), or the name
+  and description of a listed skill, agent or command plus the 27-token listing framing used by `tokens` (an item
+  with `disable-model-invocation: true` is not listed).
+- **On demand** per item: the body of a skill, agent or command.
+- The runtime totals at the top are the `ai-rulez tokens` figures for the target. The per-item table is an estimate
+  from the sources and does not add up to them exactly; both are shown, never summed.
+
+```bash
+ai-rulez cost                                   # largest runtime, top 10 offenders
+ai-rulez cost --target codex --top 5
+ai-rulez cost --format markdown                 # for a PR comment
+ai-rulez cost --format json
+ai-rulez cost --budget 8000 --on-demand-budget 60000   # exit 2 when over, naming the top 3 offenders
+```
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--format` | string | `text` | `text`, `json` or `markdown` |
+| `--target` | string | largest runtime | Preset whose runtime totals to report |
+| `--top` | int | 10 | How many offenders to list per bucket |
+| `--budget` / `-b` | int | 0 | Exit 2 when the target's always-loaded tokens exceed this |
+| `--on-demand-budget` | int | 0 | Exit 2 when the target's on-demand tokens exceed this |
+| `--profile` / `-p` | string | configured default | Profile to report on |
+| `--tokenizer` | string | `cl100k_base` | `cl100k_base` or `estimate` |
+| `--no-local`, `--config-dir` | | | As for `tokens` |
+
+Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be loaded.
 
 ## Tokens Command
 
