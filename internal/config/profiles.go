@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 )
 
 // ProfileSeparator separates the elements of a composed profile value, as in

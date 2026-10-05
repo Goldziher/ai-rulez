@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	incl "github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/verifiers"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 )

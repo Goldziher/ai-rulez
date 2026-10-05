@@ -3,7 +3,7 @@ package includes
 import (
 	"context"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/spf13/viper"
 )
 

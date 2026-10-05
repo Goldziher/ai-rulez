@@ -35,6 +35,12 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
   `conditional_legacy` and `headline_always_legacy`.
 - **Skill `evals/` directories are not bundled into plugins** unless `[plugin] include_evals = true`.
 
+## Go module path
+
+The Go module is now `github.com/Goldziher/ai-rulez/v5`. Code that imports ai-rulez packages, or installs the
+CLI with `go install`, must use the `/v5` path (for example `go install github.com/Goldziher/ai-rulez/v5/cmd@latest`).
+The npm, PyPI and Homebrew distributions are unaffected.
+
 ## Where to look
 
 - [Supported harnesses](harnesses.md): the preset list and what each writes.

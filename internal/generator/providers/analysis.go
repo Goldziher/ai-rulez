@@ -3,7 +3,7 @@ package providers
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // partRecorder captures, while a file is being rendered, the byte range each

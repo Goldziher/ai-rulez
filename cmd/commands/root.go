@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -14,7 +14,7 @@ import (
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "4.24.2"
+	Version  = "5.0.0"
 )
 
 var RootCmd = &cobra.Command{

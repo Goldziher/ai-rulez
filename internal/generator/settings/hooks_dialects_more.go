@@ -1,7 +1,7 @@
 package settings
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Pseudo-events and handler fields of the harnesses whose layout is not the

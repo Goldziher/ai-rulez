@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )

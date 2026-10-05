@@ -13,7 +13,7 @@ import (
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // LocalOverlay records the machine-local config.local.* document merged into a

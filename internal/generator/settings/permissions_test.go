@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/settings"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
 // sampleRules covers every rule form the translators handle.

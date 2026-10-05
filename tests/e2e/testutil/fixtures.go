@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	helpers "github.com/Goldziher/ai-rulez/tests/fixtures/helpers"
+	helpers "github.com/Goldziher/ai-rulez/v5/tests/fixtures/helpers"
 )
 
 const BasicConfig = helpers.BasicConfig
