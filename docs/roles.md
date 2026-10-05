@@ -116,6 +116,12 @@ problems (unknown parent, cycle, depth greater than one) are logged as warnings 
 Roles are overlayable in `config.local.toml` the same way profiles are: entries merge by `name`, and an entry with
 `remove = true` drops a shared role. The local overlay schema includes `roles`.
 
+!!! warning "A role is a content filter, not an access boundary"
+    A role narrows the rules, skills, agents, commands and checks that are rendered or served, and sets skill
+    modes. It does not narrow hooks, `[permissions]`, `[[mcp_servers]]` or context files: those are rendered for
+    every role. Do not use a role to withhold a tool or a credential from someone; the file-based outputs are
+    plain files the holder can read and edit.
+
 ## Commands
 
 ```bash
@@ -142,8 +148,11 @@ a role, and the machine-local `local/` tree is not narrowed.
 
 For every skill the role keeps and gives a mode, `generate` writes `skillOverrides.<skill>` in
 `.claude/settings.json` (or `~/.claude/settings.json` with `--user`) through the same per-key ownership as
-[`[claude.settings.managed]`](settings.md): only the listed skill ids are owned, every key you wrote by hand is
-left alone, `clean` takes back exactly what was recorded, and a second run changes nothing. Switching from one role
+[`[claude.settings.managed]`](settings.md): only the listed skill ids are owned, every skill id the role does not
+list is left alone, `clean` takes back exactly what was recorded, and a second run changes nothing. A skill id the
+role lists is the role's: if you had written a different value for it by hand, `generate --role` replaces it, and
+when the role no longer lists the skill the key is removed, not restored to your value. Write such a setting in
+`[claude.settings.managed] skill_overrides` instead. Switching from one role
 to another removes the first role's entries and writes the second's. A role's modes win over the same skill in
 `[claude.settings.managed] skill_overrides`.
 
@@ -188,7 +197,7 @@ so it is safe to commit, and it is versioned by `schema_version`. The JSON schem
       "items": [
         {
           "kind": "skill", "id": "review-pr", "domain": "shared",
-          "path": "domains/shared/skills/review-pr", "mode": "name-only", "delivery": "static",
+          "path": "domains/shared/skills/review-pr/SKILL.md", "mode": "name-only", "delivery": "static",
           "owner": "platform", "version": "1.2.0", "bytes": 2210, "tokens": 540
         }
       ],
