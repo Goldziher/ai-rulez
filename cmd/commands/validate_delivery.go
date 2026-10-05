@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 )
@@ -42,11 +43,12 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 		}
 	}
 	if cfg.LockEnforced() {
+		defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 		includes.SkipFetch = true
 		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
 		problems, err := setup.ServedProblems(context.Background())
 		if err != nil {
-			logger.Warn("Skipped the served-skill lock check", "error", err)
+			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: "the served skills could not be checked against " + lockfile.FileName + " offline: " + err.Error() + "; [lock] enforce does not accept an unchecked lock"})
 		}
 		for _, p := range problems {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: p + "; [lock] enforce refuses to serve it (run `ai-rulez lock` after review)"})

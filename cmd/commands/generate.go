@@ -150,6 +150,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fmtError(err)
+		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
+			os.Exit(exitDrift) // a missing or disagreeing lock is drift, the same code as a changed source
+		}
 		os.Exit(1)
 	}
 
