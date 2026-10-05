@@ -46,6 +46,7 @@ type tomlOutput struct {
 	Defaults        *DefaultsConfig        `toml:"defaults,omitempty"`
 	Rules           *RulesConfig           `toml:"rules,omitempty"`
 	Lint            *LintConfig            `toml:"lint,omitempty"`
+	Usage           *UsageConfig           `toml:"usage,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -55,6 +56,9 @@ type tomlOutput struct {
 	Marketplace     *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
 	Placement       *PlacementConfig       `toml:"placement,omitempty"`
 	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
+	Codex           *CodexConfig           `toml:"codex,omitempty"`
+	Hooks           []HookGroup            `toml:"hooks,omitempty"`
+	Permissions     *Permissions           `toml:"permissions,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -131,6 +135,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Defaults:        cfg.Defaults,
 		Rules:           cfg.Rules,
 		Lint:            cfg.Lint,
+		Usage:           cfg.Usage,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,
@@ -140,5 +145,8 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Marketplace:     cfg.Marketplace,
 		Placement:       cfg.Placement,
 		Claude:          cfg.Claude,
+		Codex:           cfg.Codex,
+		Hooks:           cfg.Hooks,
+		Permissions:     cfg.Permissions,
 	}
 }

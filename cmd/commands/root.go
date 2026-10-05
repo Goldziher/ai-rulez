@@ -58,6 +58,7 @@ func init() {
 	RootCmd.AddCommand(GenerateCmd)
 	RootCmd.AddCommand(CleanCmd)
 	RootCmd.AddCommand(ValidateCmd)
+	RootCmd.AddCommand(ScanCmd)
 	RootCmd.AddCommand(VerifyCmd)
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InitCmd)
@@ -71,7 +72,10 @@ func init() {
 	RootCmd.AddCommand(ProfileCmd)
 	RootCmd.AddCommand(BuiltinsCmd)
 	RootCmd.AddCommand(SkillCmd)
+	RootCmd.AddCommand(LockCmd)
 	RootCmd.AddCommand(TokensCmd)
+	RootCmd.AddCommand(UsageCmd)
+	RootCmd.AddCommand(ReportCmd)
 	RootCmd.AddCommand(LocalCmd)
 }
 

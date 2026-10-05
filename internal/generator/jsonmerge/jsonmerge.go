@@ -25,6 +25,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/samber/oops"
@@ -76,6 +77,11 @@ type OwnedKey struct {
 	// elements; the rest are the consumer's. A non-nil empty slice claims
 	// nothing. See Claim.
 	Elements []any
+
+	// Alone marks a scalar ai-rulez added only so that the rest of the document is
+	// valid (Cursor's hooks.json `version`): clean takes it back only when no other
+	// top-level key remains.
+	Alone bool
 }
 
 // segments returns the key path this OwnedKey addresses. Path wins when set;
@@ -208,6 +214,12 @@ func checkPreservedDocuments(before, after string, check func(before, after map[
 // the owned set. Such a key can only have come from the consumer, so the file is
 // theirs to track and ai-rulez must not ignore or delete it.
 func hasUnownedMembers(members []jsonMember, owned []OwnedKey) bool {
+	for _, key := range owned {
+		if key.Elements != nil && sliceLen(key.Value) > len(key.Elements) {
+			// The written array also holds elements ai-rulez does not own.
+			return true
+		}
+	}
 	return hasUnownedPaths(members, ownedPaths(owned))
 }
 
@@ -232,6 +244,15 @@ func ownedPaths(owned []OwnedKey) [][]string {
 		paths = append(paths, segs)
 	}
 	return paths
+}
+
+// sliceLen is the length of a slice or array value, and 0 for anything else.
+func sliceLen(value any) int {
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		return rv.Len()
+	}
+	return 0
 }
 
 // hasUnownedPaths reports whether any member is outside the owned paths. A member

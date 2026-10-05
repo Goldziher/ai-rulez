@@ -168,13 +168,21 @@ func allInlineRules(content *config.ContentTree) []config.ContentFile {
 
 // rootRules is allInlineRules limited to the rules whose frontmatter targets
 // select the preset's root file (items without targets always qualify).
-func rootRules(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
-	return rulefiles.FilterInline(allInlineRules(content), rulefiles.RootTarget(preset, rootFile))
+func rootRules(content *config.ContentTree, cfg *config.Config, preset, rootFile string) []config.ContentFile {
+	return withoutBazNestedAt(rulefiles.FilterInline(allInlineRules(content), rulefiles.RootTarget(preset, rootFile)), cfg, rootFile)
 }
 
 // rootContext is the context counterpart to rootRules.
-func rootContext(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
-	return rulefiles.FilterInline(allInlineContext(content), rulefiles.RootTarget(preset, rootFile))
+func rootContext(content *config.ContentTree, cfg *config.Config, preset, rootFile string) []config.ContentFile {
+	return withoutBazNestedAt(rulefiles.FilterInline(allInlineContext(content), rulefiles.RootTarget(preset, rootFile)), cfg, rootFile)
+}
+
+// withoutBazNestedAt applies withoutBazNested to the shared AGENTS.md only.
+func withoutBazNestedAt(items []config.ContentFile, cfg *config.Config, rootFile string) []config.ContentFile {
+	if rootFile != "AGENTS.md" {
+		return items
+	}
+	return withoutBazNested(items, cfg)
 }
 
 // allInlineContext is the context counterpart to allInlineRules and renders in
@@ -807,4 +815,24 @@ func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir
 		outputs = append(outputs, config.OutputFile{Path: outPath, Content: text})
 	}
 	return outputs, nil
+}
+
+// CollapsedDuplicate is a content name that more than one source defines, so a
+// lower-precedence copy was dropped from the generated output.
+type CollapsedDuplicate struct {
+	Kind   string // rule, context, skill or command
+	Name   string
+	Winner string // path of the copy that was kept
+	Losers []string
+}
+
+// CollapsedDuplicates lists the names generation silently collapses, with the
+// kept and dropped source paths. It is the data behind the "Duplicate ...
+// collapsed" warning, for callers that need to report it as a finding.
+func CollapsedDuplicates(content *config.ContentTree) []CollapsedDuplicate {
+	var out []CollapsedDuplicate
+	for _, w := range duplicateContentWarnings(content) {
+		out = append(out, CollapsedDuplicate{Kind: w.Kind, Name: w.Duplicate.Name, Winner: w.Duplicate.Winner, Losers: w.Duplicate.Losers})
+	}
+	return out
 }

@@ -27,6 +27,43 @@ url = "https://example.com/mcp"
 description = "Remote server"
 `
 
+// sharedPathsTypedSkill sets every skill key some preset writes to the shared
+// .agents/skills tree, with values that need their YAML type kept (a list, a
+// bool, a nested map, a date), so each pair of writers is held to one rendering.
+const sharedPathsTypedSkill = `---
+name: typed-skill
+description: Use when checking shared skill frontmatter.
+short-description: Short
+license: MIT
+compatibility: claude, codex
+allowed-tools: Read Grep
+disable-model-invocation: true
+user-invocable: true
+paths:
+  - "src/**/*.py"
+metadata:
+  owner: team-a
+  reviewed: {by: alice, date: 2026-10-01}
+  tags: [a, b]
+---
+TYPED_SKILL_BODY
+`
+
+// sharedPathsTypedAgent carries typed invocation switches, which .github/agents
+// (copilot and copilot-cli) must render the same way.
+const sharedPathsTypedAgent = `---
+description: Typed agent
+kind: local
+temperature: 0.2
+max_turns: 5
+timeout_mins: 10
+user-invocable: true
+disable-model-invocation: false
+tools: [read, grep]
+---
+TYPED_AGENT_BODY
+`
+
 // sharedPathsVariant is one way of configuring the run.
 type sharedPathsVariant struct {
 	name     string
@@ -69,6 +106,8 @@ func newSharedPathsProject(t *testing.T, v sharedPathsVariant, presets []string)
 	writeAgentsMDFile(t, root, ".ai-rulez/rules/manual-rule.md", "---\nactivation: manual\n---\nMANUAL_BODY\n")
 	writeAgentsMDFile(t, root, ".ai-rulez/context/go-ctx.md", "---\nglobs: [\"internal/**\"]\n---\nGLOB_CONTEXT\n")
 	writeAgentsMDFile(t, root, ".ai-rulez/commands/review.md", "---\ndescription: Review code\n---\nREVIEW_BODY\n")
+	writeAgentsMDFile(t, root, ".ai-rulez/skills/typed-skill/SKILL.md", sharedPathsTypedSkill)
+	writeAgentsMDFile(t, root, ".ai-rulez/agents/typed-agent.md", sharedPathsTypedAgent)
 	return root
 }
 
@@ -346,4 +385,36 @@ func TestSharedPaths_ScopedRuleFilesMatch(t *testing.T) {
 			assert.Len(t, ruleFiles, 1, "one copy of the scoped rule: %v", ruleFiles)
 		})
 	}
+}
+
+// TestSharedPaths_SkillTreeIsOneRendering checks the canonical form directly:
+// whichever writers are enabled, a shared skill file is the same bytes and
+// carries every key with its type.
+func TestSharedPaths_SkillTreeIsOneRendering(t *testing.T) {
+	// Arrange
+	base := loadSharedPathsConfig(t, sharedPathsVariants[0])
+	content := func(rel string, presets []string) string {
+		_, flat, err := renderSharedPaths(t, base, presets)
+		require.NoError(t, err)
+		for _, o := range flat {
+			if filepath.ToSlash(o.Path) == filepath.ToSlash(filepath.Join(base.BaseDir, rel)) {
+				return o.Content
+			}
+		}
+		return ""
+	}
+	const agentsSkill = ".agents/skills/typed-skill/SKILL.md"
+	want := content(agentsSkill, []string{"codex"})
+
+	// Assert
+	assert.Contains(t, want, "name: typed-skill\ndescription: \"Use when checking shared skill frontmatter.\"\n")
+	for _, key := range []string{"disable-model-invocation: true", "user-invocable: true", "paths:", "date: 2026-10-01", "short-description:"} {
+		assert.Contains(t, want, key)
+	}
+	for _, name := range []string{"cursor", "gemini", "antigravity", "amp", "pi", "aiassistant", "goose", "zed", "muse", "letta", "replit"} {
+		assert.Equal(t, want, content(agentsSkill, []string{name}), name)
+	}
+	const githubSkill = ".github/skills/typed-skill/SKILL.md"
+	assert.Equal(t, want, content(githubSkill, []string{"copilot"}), "copilot")
+	assert.Equal(t, want, content(githubSkill, []string{"copilot-cli"}), "copilot-cli")
 }

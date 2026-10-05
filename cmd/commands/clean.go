@@ -41,12 +41,17 @@ func init() {
 	CleanCmd.Flags().BoolVarP(&cleanForce, "force", "y", false, "Skip the confirmation prompt")
 	CleanCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
 	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	CleanCmd.Flags().BoolVar(&userScope, "user", false, "Remove the files `generate --user` wrote into the home directories, as recorded in the user manifest")
 	CleanCmd.Flags().BoolVar(&cleanKeepGitignore, "keep-gitignore", false, "Leave the ai-rulez managed block in .gitignore in place")
 	CleanCmd.Flags().BoolVar(&cleanKeepManifest, "keep-manifest", false, "Leave the generated manifest in place")
 }
 
 func runClean(_ *cobra.Command, args []string) {
 	ctx := context.Background()
+
+	if handleUserClean(args) {
+		return
+	}
 
 	cfg, err := loadConfigForCommand(ctx, args)
 	if err != nil {

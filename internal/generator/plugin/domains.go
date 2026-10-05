@@ -288,10 +288,15 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		SourceDir:   cfg.BaseDir,
 	}
 	if root := cfg.Plugin; root != nil {
+		m.IncludeEvals = root.IncludeEvals
+		m.EvalsDir = evalsDir(cfg, root)
+		m.EvalsPerSkillOnly = true
 		m.Author = root.Author
 		m.Homepage = root.Homepage
 		m.Repository = root.Repository
 		m.License = root.License
+		m.Codex = root.Codex
+		m.Cursor = root.Cursor
 	}
 	if m.Market.Owner == nil {
 		m.Market.Owner = m.Author
@@ -320,22 +325,43 @@ func MemberEntryFor(p *PlannedPlugin) MemberEntry {
 // not replace it.
 func BundledNames(cfg *config.Config, tree *config.ContentTree, plan []PlannedPlugin) (skills, commands map[string]bool) {
 	skills, commands = map[string]bool{}, map[string]bool{}
+	skillPlugins, commandPlugins := BundleMembership(cfg, tree, plan)
+	for name := range skillPlugins {
+		skills[name] = true
+	}
+	for name := range commandPlugins {
+		commands[name] = true
+	}
+	return skills, commands
+}
+
+// BundleMembership maps each skill and command name to the sorted names of the
+// plugins that ship it: the planned domain plugins, and the root [plugin] bundle
+// when the marketplace does not replace it.
+func BundleMembership(cfg *config.Config, tree *config.ContentTree, plan []PlannedPlugin) (skills, commands map[string][]string) {
+	skills, commands = map[string][]string{}, map[string][]string{}
+	add := func(dst map[string][]string, name, plugin string) {
+		if !slices.Contains(dst[name], plugin) {
+			dst[name] = append(dst[name], plugin)
+			sort.Strings(dst[name])
+		}
+	}
 	for i := range plan {
 		for j := range plan[i].Skills {
-			skills[plan[i].Skills[j].Name] = true
+			add(skills, plan[i].Skills[j].Name, plan[i].Name)
 		}
 		for j := range plan[i].Commands {
-			commands[plan[i].Commands[j].Name] = true
+			add(commands, plan[i].Commands[j].Name, plan[i].Name)
 		}
 	}
 	mkt := cfg.Marketplace
 	if cfg.Plugin != nil && (mkt == nil || (len(mkt.Members) == 0 && !mkt.HasDomainPlugins())) {
 		rootSkills, rootCommands, _ := includeDomainContent(tree, cfg.Plugin.IncludeDomains)
 		for i := range rootSkills {
-			skills[rootSkills[i].Name] = true
+			add(skills, rootSkills[i].Name, cfg.Plugin.Name)
 		}
 		for i := range rootCommands {
-			commands[rootCommands[i].Name] = true
+			add(commands, rootCommands[i].Name, cfg.Plugin.Name)
 		}
 	}
 	return skills, commands

@@ -16,6 +16,11 @@ directories = [".pi", ".pi/agents", ".pi/prompts"]
 
 # AGENTS.md is shared byte-for-byte with codex, opencode, xum and amp, so the
 # sections and ordering mirror theirs.
+# pi adds each skill's name, description and path to the system prompt.
+[listing]
+skills = true
+include_path = true
+
 [root]
 file = "AGENTS.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]

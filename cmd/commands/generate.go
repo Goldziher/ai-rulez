@@ -35,6 +35,9 @@ var (
 	noLocal            bool
 	allowLocalDrift    bool
 	pluginIfConfigured bool
+	generateCheck      bool
+	generateLocked     bool
+	generateFrozen     bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -50,6 +53,12 @@ Cursor, Devin, etc. based on your configuration.`,
 
 func init() {
 	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
+	GenerateCmd.Flags().BoolVar(&generateCheck, "check", false,
+		"Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI)")
+	GenerateCmd.Flags().BoolVar(&generateLocked, "locked", false,
+		"Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI)")
+	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
+		"Like --locked, and never use the network: resolve only from the local cache, verified against the lock")
 	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
@@ -62,6 +71,9 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
+	GenerateCmd.Flags().BoolVar(&userScope, "user", false,
+		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
+	GenerateCmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "With --user: write without the confirmation prompt")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
@@ -86,11 +98,28 @@ func registerRemovedCLIMCPFlags(cmd *cobra.Command) {
 	}
 }
 
+// suggestTOMLMigration hints at the TOML migration when a YAML config is still in use.
+func suggestTOMLMigration(configDir string) {
+	if _, err := os.Stat(filepath.Join(configDir, "config.yaml")); err == nil {
+		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
+	}
+}
+
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
 
 	// Set no-fetch flag for include resolution (before any config loading)
 	includes.SkipFetch = noFetch
+	applyLockFlags()
+
+	if generateCheck {
+		runGenerateCheck(args)
+		return
+	}
+
+	if handleUserGenerate(args) {
+		return
+	}
 
 	if recursive {
 		if code := runRecursiveGenerate(); code != 0 {
@@ -114,13 +143,13 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Suggest migration for YAML configs
-	yamlPath := filepath.Join(cfg.ConfigDir, "config.yaml")
-	if _, err := os.Stat(yamlPath); err == nil {
-		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
-	}
+	suggestTOMLMigration(cfg.ConfigDir)
 
 	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
 	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
 		logger.Info("Skipping plugin generation: no plugin authoring configuration")
 		return
@@ -470,35 +499,17 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	}
 
 	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
 	if pluginMode {
-		if pluginIfConfigured && !cfg.HasPluginAuthoring() {
-			fileCounter.FinishFile()
-			return 0, nil
-		}
-		if dryRun {
-			plan, err := gen.DryRunPlugin(profile)
-			if err != nil {
-				fileCounter.ErrorFor(configPath, err)
-				return 0, err
-			}
-			for _, line := range plan {
-				progress.PrintlnIfNotQuiet("  " + line)
-			}
-			fileCounter.FinishFile()
-			return 0, nil
-		}
-		written, err := gen.GeneratePluginFiles(profile)
-		if err != nil {
-			fileCounter.ErrorFor(configPath, err)
-			return 0, err
-		}
-		fileCounter.FinishFile()
-		return written, nil
+		return processPluginConfig(configPath, cfg, gen, fileCounter)
 	}
 
 	if dryRun {
@@ -566,4 +577,75 @@ func fmtError(err error) {
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
+}
+
+// checkGenerateCheckFlags rejects flags that make no sense with --check, which
+// must never write.
+func checkGenerateCheckFlags() error {
+	switch {
+	case dryRun:
+		return oops.Errorf("--check and --dry-run are mutually exclusive: --check already writes nothing")
+	case pluginMode:
+		return oops.Errorf("--check does not cover plugin bundles; use `ai-rulez verify --plugin`")
+	case updateGitignore:
+		return oops.Errorf("--check cannot be combined with --gitignore, which writes .gitignore files")
+	}
+	return nil
+}
+
+// processPluginConfig is processConfigFile for `generate --plugin`.
+func processPluginConfig(configPath string, cfg *config.Config, gen *generator.Generator, fileCounter *progress.FileCounter) (int, error) {
+	if pluginIfConfigured && !cfg.HasPluginAuthoring() {
+		fileCounter.FinishFile()
+		return 0, nil
+	}
+	if dryRun {
+		plan, err := gen.DryRunPlugin(profile)
+		if err != nil {
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet("  " + line)
+		}
+		fileCounter.FinishFile()
+		return 0, nil
+	}
+	written, err := gen.GeneratePluginFiles(profile)
+	if err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+	fileCounter.FinishFile()
+	return written, nil
+}
+
+// applyLockFlags turns --locked and --frozen into the include lock policy.
+func applyLockFlags() {
+	switch {
+	case generateFrozen:
+		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
+	case generateLocked:
+		includes.Mode = includes.LockRequire
+	}
+}
+
+// runGenerateCheck runs `generate --check` and exits with its code.
+func runGenerateCheck(args []string) {
+	if err := checkGenerateCheckFlags(); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+	if code := runDriftCheck(args, recursive, driftRender); code != 0 {
+		os.Exit(code)
+	}
+}
+
+// importGate scans imported content before anything is written, when
+// [lint.security] scan_imports asks for it. Dry runs and plugin bundles skip it.
+func importGate(cfg *config.Config) error {
+	if dryRun || pluginMode {
+		return nil
+	}
+	return enforceScanImports(cfg)
 }

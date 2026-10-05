@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/internal/builtins"
 )
 
@@ -41,6 +43,7 @@ type Config struct {
 	MCP            *MCPConfig          `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
+	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
@@ -53,6 +56,15 @@ type Config struct {
 	Placement *PlacementConfig `yaml:"placement,omitempty" json:"placement,omitempty" toml:"placement,omitempty"`
 	// Claude holds Claude Code specific output options.
 	Claude *ClaudeConfig `yaml:"claude,omitempty" json:"claude,omitempty" toml:"claude,omitempty"`
+	// Codex groups Codex specific options; see CodexConfig.
+	Codex *CodexConfig `yaml:"codex,omitempty" json:"codex,omitempty" toml:"codex,omitempty"`
+
+	// Hooks declares lifecycle hooks rendered into each harness's native project
+	// settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json,
+	// .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin.
+	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Permissions declares allow/ask/deny rules for .claude/settings.json.
+	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir       string `yaml:"-" json:"-" toml:"-"`
@@ -93,6 +105,12 @@ type Config struct {
 	// falls back to the wall clock for callers that render a preview without a
 	// generation run. Only read when [header] timestamp opts the line back in.
 	GeneratedAt time.Time `yaml:"-" json:"-" toml:"-"`
+
+	// UserScope is set while rendering for `generate --user`: outputs are mapped
+	// into the person's home config directories, so renderers leave out keys that
+	// only make sense inside a project (MCP servers, plugin registration,
+	// machine-local context names).
+	UserScope bool `yaml:"-" json:"-" toml:"-"`
 
 	// MCPEnvOverrides are generation-time KEY=VALUE overrides used to resolve
 	// MCP env placeholders. They are intentionally not serialized.
@@ -778,6 +796,12 @@ type Metadata struct {
 	Globs []string          `yaml:"globs,omitempty" json:"globs,omitempty"`
 	Paths []string          `yaml:"paths,omitempty" json:"paths,omitempty"`
 	Extra map[string]string `yaml:",inline" json:",inline"`
+
+	// extraNodes holds the original, typed YAML value of every Extra key (nested
+	// maps, lists, booleans, numbers, dates). Extra keeps a string form for the
+	// lookups that only need text; generators emit the typed value through
+	// TypedExtra so the frontmatter round-trips without Go syntax.
+	extraNodes map[string]*yaml.Node
 }
 
 // PathScope returns the file globs a rule declares, from either `globs` or

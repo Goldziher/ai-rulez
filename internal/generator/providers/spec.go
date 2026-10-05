@@ -9,6 +9,8 @@
 // remains authoritative until commit (b) swaps registration.
 package providers
 
+import "github.com/Goldziher/ai-rulez/internal/config"
+
 // ProviderSpec is the typed mirror of schema/provider.schema.json. Loaded
 // from disk (TOML/YAML/JSON), validated, and fed into Render.
 type ProviderSpec struct {
@@ -23,6 +25,9 @@ type ProviderSpec struct {
 	// Global maps the spec's outputs onto the user-scope (home directory) layout
 	// of the tool. It is declarative only; see GlobalSpec.
 	Global *GlobalSpec `toml:"global,omitempty" yaml:"global,omitempty" json:"global,omitempty"`
+	// Listing says which item kinds the harness lists in its prompt at session
+	// start, so `ai-rulez tokens` can charge their name and description.
+	Listing *config.ListingSpec `toml:"listing,omitempty" yaml:"listing,omitempty" json:"listing,omitempty"`
 }
 
 // RootSpec declares the top-level instructions file (CLAUDE.md, AGENTS.md, ...).
@@ -142,8 +147,15 @@ type FrontmatterSpec struct {
 	Skills    bool           `toml:"skills,omitempty" yaml:"skills,omitempty" json:"skills,omitempty"`
 	// Paths copies a rule's path scope (its `globs`/`paths` frontmatter) into a
 	// `paths` frontmatter field, which is how Claude Code scopes a rule file.
-	Paths           bool     `toml:"paths,omitempty" yaml:"paths,omitempty" json:"paths,omitempty"`
-	IncludeExtras   bool     `toml:"include_extras,omitempty" yaml:"include_extras,omitempty" json:"include_extras,omitempty"`
+	//
+	// It applies to skills too: Claude Code and Cursor load a path-gated skill
+	// only when files matching the paths are in play.
+	Paths         bool `toml:"paths,omitempty" yaml:"paths,omitempty" json:"paths,omitempty"`
+	IncludeExtras bool `toml:"include_extras,omitempty" yaml:"include_extras,omitempty" json:"include_extras,omitempty"`
+	// HideKey is the frontmatter key that, written false, hides a skill from the
+	// tool's slash menu. It is written only when the project opts in with
+	// [claude.skills] hide_from_menu, and never over a value the author set.
+	HideKey         string   `toml:"hide_key,omitempty" yaml:"hide_key,omitempty" json:"hide_key,omitempty"`
 	ExtrasBlacklist []string `toml:"extras_blacklist,omitempty" yaml:"extras_blacklist,omitempty" json:"extras_blacklist,omitempty"`
 	EmitEffort      bool     `toml:"emit_effort,omitempty" yaml:"emit_effort,omitempty" json:"emit_effort,omitempty"`
 	EmitModel       bool     `toml:"emit_model,omitempty" yaml:"emit_model,omitempty" json:"emit_model,omitempty"`
@@ -281,6 +293,10 @@ const (
 	// PredicateHasResolvedEffortOrMCPServers holds when the config has MCP servers
 	// or a resolved global effort (.amp/settings.json carries both).
 	PredicateHasResolvedEffortOrMCPServers = "has_resolved_effort_or_mcp_servers"
+	// PredicateHasClaudeSettings holds when the config has MCP servers, manages
+	// the plugin keys of .claude/settings.json, or declares [[hooks]],
+	// [permissions] or [claude.settings.managed].
+	PredicateHasClaudeSettings = "has_claude_settings"
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"
