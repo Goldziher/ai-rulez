@@ -328,14 +328,10 @@ func kindCounts(counts map[okfbridge.Kind]int) string {
 }
 
 func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
-	var into okfbridge.Kind
-	if okfInto != "" {
-		k, err := okfbridge.ParseKinds([]string{okfInto})
-		if err != nil || len(k) != 1 {
-			fmtError(oops.Errorf("--into must be rules, context or skills, got %q", okfInto))
-			return exitOKFCannotRun
-		}
-		into = k[0]
+	into, err := parseImportInto()
+	if err != nil {
+		fmtError(err)
+		return exitOKFCannotRun
 	}
 	targetDir := configDir
 	if targetDir == "" {
@@ -357,10 +353,7 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 	}
 	defer cleanup()
 
-	var lintCfg *config.LintConfig
-	if cfg, cfgErr := loadConfigForCommand(ctx, nil, config.WithoutLocal(), config.WithoutRemote()); cfgErr == nil {
-		lintCfg = cfg.Lint
-	}
+	lintCfg := importLintConfig(ctx)
 	res, err := okfbridge.Import(b, okfbridge.ImportOptions{
 		ConfigDir: absTarget, Into: into, Domain: okfDomain, Force: okfForce, DryRun: okfDryRun,
 		Scan: func(texts map[string]string) []okfbridge.SecurityFinding {
@@ -392,6 +385,27 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 		return exitOKFProblems
 	}
 	return 0
+}
+
+func parseImportInto() (okfbridge.Kind, error) {
+	if okfInto == "" {
+		return "", nil
+	}
+	k, err := okfbridge.ParseKinds([]string{okfInto})
+	if err != nil || len(k) != 1 {
+		return "", oops.Errorf("--into must be rules, context or skills, got %q", okfInto)
+	}
+	return k[0], nil
+}
+
+// importLintConfig returns the project's [lint] settings for the pre-write
+// scan, or nil (defaults) when the configuration does not load.
+func importLintConfig(ctx context.Context) *config.LintConfig {
+	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal(), config.WithoutRemote())
+	if err != nil {
+		return nil
+	}
+	return cfg.Lint
 }
 
 func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.ImportResult) error {
