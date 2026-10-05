@@ -138,7 +138,10 @@ type BudgetResult struct {
 
 // TokenReport is the always-loaded and on-demand token surface of one profile.
 type TokenReport struct {
-	Profile   string        `json:"profile"`
+	// Profile is the profile reported on, or "role:<name>" for a role report.
+	Profile string `json:"profile"`
+	// Role is the role reported on; empty for a profile report.
+	Role      string        `json:"role,omitempty"`
 	Tokenizer TokenizerInfo `json:"tokenizer"`
 	// HeadlinePreset is the root-scope runtime with the largest always-loaded
 	// surface, and HeadlineAlways is that surface. It is the figure to watch and
@@ -209,8 +212,13 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		mappedFolders: providers.MappedRulesFolders(g.config),
 	}
 
+	reportProfile := activeProfile
+	if g.role != nil {
+		reportProfile = "role:" + g.role.Name
+	}
 	report := &TokenReport{
-		Profile: activeProfile,
+		Profile: reportProfile,
+		Role:    g.Role(),
 		Tokenizer: TokenizerInfo{
 			Name:        options.Counter.Name(),
 			Approximate: true,
