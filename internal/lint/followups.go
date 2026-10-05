@@ -327,7 +327,7 @@ func (r *runner) scanResources(it *item) {
 // to that severity. "off" is the opt-out.
 func (r *runner) importLevel() (force Severity, on bool) {
 	switch strings.ToLower(strings.TrimSpace(r.security().ScanImports)) {
-	case "off":
+	case freshOff:
 		return "", false
 	case "error":
 		return SeverityError, true

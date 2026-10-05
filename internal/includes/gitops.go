@@ -134,7 +134,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 		out, err := cmd.Output()
 		if err != nil {
 			return "", oops.
-				With("url", redactURL(repoURL)).
+				With("url", RedactURL(repoURL)).
 				With("ref", ref).
 				With("refspec", refspec).
 				Wrapf(err, "git ls-remote failed")
@@ -146,17 +146,17 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 				continue
 			}
 			return "", oops.
-				With("url", redactURL(repoURL)).
+				With("url", RedactURL(repoURL)).
 				With("ref", ref).
 				Errorf("ref %q not found on remote", ref)
 		}
 		sha := strings.SplitN(line, "\t", 2)[0]
-		logger.Debug("resolved remote HEAD SHA", "url", redactURL(repoURL), "ref", ref, "sha", sha)
+		logger.Debug("resolved remote HEAD SHA", "url", RedactURL(repoURL), "ref", ref, "sha", sha)
 		return sha, nil
 	}
 
 	return "", oops.
-		With("url", redactURL(repoURL)).
+		With("url", RedactURL(repoURL)).
 		With("ref", ref).
 		Errorf("ref %q not found on remote", ref)
 }
@@ -194,9 +194,9 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("ref", ref).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git sparse clone failed")
 	}
 
@@ -210,9 +210,9 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("path_spec", pathSpec).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git sparse-checkout set failed")
 	}
 
@@ -260,9 +260,9 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("commit", commitSHA).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git sparse clone failed")
 	}
 
@@ -272,9 +272,9 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if out, err := fetchCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on fetch failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("commit", commitSHA).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git fetch of pinned commit failed")
 	}
 
@@ -284,9 +284,9 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on checkout failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("commit", commitSHA).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git checkout of pinned commit failed")
 	}
 
@@ -300,9 +300,9 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if out, err := sparseCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
 		return oops.
-			With("url", redactURL(repoURL)).
+			With("url", RedactURL(repoURL)).
 			With("path_spec", pathSpec).
-			With("output", redactURL(string(out))).
+			With("output", RedactURL(string(out))).
 			Wrapf(err, "git sparse-checkout set failed")
 	}
 
