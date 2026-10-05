@@ -112,7 +112,9 @@ type runner struct {
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
 	forceSev Severity
-	opts     Options
+	// noInlineIgnore refuses `ai-rulez-lint-ignore` comments (served content).
+	noInlineIgnore bool
+	opts           Options
 	drift    []PluginDrift
 }
 
@@ -330,7 +332,7 @@ func (r *runner) pathIgnored(abs string) bool {
 }
 
 func (r *runner) inlineIgnored(abs string, line int, code string) bool {
-	if r.forceSev != "" {
+	if r.forceSev != "" || r.noInlineIgnore {
 		return false // imported text cannot silence its own findings
 	}
 	d, ok := r.docs[abs]
