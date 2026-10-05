@@ -115,7 +115,7 @@ type runner struct {
 	// noInlineIgnore refuses `ai-rulez-lint-ignore` comments (served content).
 	noInlineIgnore bool
 	opts           Options
-	drift    []PluginDrift
+	drift          []PluginDrift
 }
 
 // Options selects what a run does beyond the default strict checks.
