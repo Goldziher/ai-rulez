@@ -179,7 +179,7 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		if err := writeMarkdown(filepath.Join(caseDir, "prompt.md"), front, c.Prompt); err != nil {
 			return nil, err
 		}
-		trigger := map[string]any{keyType: "tool_used", "tool": "Skill", "input_match": regexp.QuoteMeta(req.Skill.ID)}
+		trigger := map[string]any{keyType: "tool_used", "tool": "Skill", "input_match": triggerMatch(req.Skill.ID)}
 		if !c.Expects() {
 			trigger["min"], trigger["max"], trigger["arm"] = 0, 0, "both"
 		}
@@ -199,6 +199,14 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		}
 	}
 	return tr, nil
+}
+
+// triggerMatch anchors the skill id so a call to test-driven-development or
+// plugin:contest does not count as a call to the skill "test". A plugin prefix
+// ("plugin:id") still matches, since ":" is a boundary.
+func triggerMatch(id string) string {
+	const boundary = `[^A-Za-z0-9._-]`
+	return "(^|" + boundary + ")" + regexp.QuoteMeta(id) + "($|" + boundary + ")"
 }
 
 // claudeUnsupported says why a case cannot be translated, or "".

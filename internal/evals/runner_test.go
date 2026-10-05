@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -112,7 +113,16 @@ func TestBuildClaudePlugin_TranslatesCases(t *testing.T) {
 
 	trigger := read("fires", "graders", "trigger.md")
 	assert.Contains(t, trigger, "type: tool_used")
-	assert.Contains(t, trigger, "input_match: deploy")
+	// the id is anchored: "deploy" must not match "deploy-prod" or "redeploy"
+	match := regexp.MustCompile(`input_match: (.+)`).FindStringSubmatch(trigger)
+	require.NotNil(t, match, trigger)
+	re := regexp.MustCompile(strings.Trim(match[1], `"'`))
+	for _, hit := range []string{`deploy`, `{"skill":"deploy"}`, `{"skill":"ai-rulez-eval-deploy:deploy"}`} {
+		assert.True(t, re.MatchString(hit), hit)
+	}
+	for _, miss := range []string{`deploy-prod`, `{"skill":"redeploy"}`, `{"skill":"plugin:deploy.v2"}`, `{"skill":"deployer"}`} {
+		assert.False(t, re.MatchString(miss), miss)
+	}
 	assert.NotContains(t, trigger, "max: 0")
 
 	quiet := read("quiet", "graders", "trigger.md")
