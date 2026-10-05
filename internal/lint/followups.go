@@ -321,15 +321,20 @@ func (r *runner) scanResources(it *item) {
 	}
 }
 
-// importLevel maps lint.security.scan_imports to a severity ("" when off).
-func (r *runner) importLevel() Severity {
+// importLevel maps lint.security.scan_imports to how imported content is
+// scanned. Unset scans it and keeps each finding's own severity, so an
+// error-level finding blocks `generate`. "error" and "warn" force every finding
+// to that severity. "off" is the opt-out.
+func (r *runner) importLevel() (force Severity, on bool) {
 	switch strings.ToLower(strings.TrimSpace(r.security().ScanImports)) {
+	case "off":
+		return "", false
 	case "error":
-		return SeverityError
+		return SeverityError, true
 	case "warn", "warning":
-		return SeverityWarning
+		return SeverityWarning, true
 	}
-	return ""
+	return "", true
 }
 
 // scanImported runs the security rules over content that came from includes and
@@ -337,11 +342,11 @@ func (r *runner) importLevel() Severity {
 // comment inside imported text is not honored: the author of the import must not
 // be able to silence the check on their own content.
 func (r *runner) scanImported() {
-	level := r.importLevel()
-	if level == "" {
+	force, on := r.importLevel()
+	if !on {
 		return
 	}
-	r.forceSev = level
+	r.forceSev = force
 	defer func() { r.forceSev = "" }()
 	for i := range r.items {
 		it := &r.items[i]
@@ -369,12 +374,12 @@ func (r *runner) scanImported() {
 // nothing from a remote is written until it has been checked. The findings carry
 // the scan_imports severity.
 func ScanImports(cfg *config.Config) ([]Finding, error) {
-	if cfg.Lint == nil || cfg.Lint.Security == nil {
-		return nil, nil
-	}
 	top, _ := filepath.Abs(cfg.BaseDir) //nolint:errcheck // falls back to the given dir
-	r := &runner{cfg: cfg, tree: &Tree{Top: top}, docs: map[string]doc{}, lc: *cfg.Lint}
-	if r.importLevel() == "" {
+	r := &runner{cfg: cfg, tree: &Tree{Top: top}, docs: map[string]doc{}}
+	if cfg.Lint != nil {
+		r.lc = *cfg.Lint
+	}
+	if _, on := r.importLevel(); !on {
 		return nil, nil
 	}
 	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
@@ -441,7 +446,7 @@ func validateSecurity(sec *config.LintSecurity) []string {
 	switch strings.ToLower(sec.ScanImports) {
 	case "", "off", "warn", "warning", "error":
 	default:
-		problems = append(problems, fmt.Sprintf("lint.security.scan_imports: unknown level %q (use off, warn or error)", sec.ScanImports))
+		problems = append(problems, fmt.Sprintf("lint.security.scan_imports: unknown level %q (use off, warn or error, or leave it unset)", sec.ScanImports))
 	}
 	for _, p := range sec.SecretPatterns {
 		if strings.TrimSpace(p.Name) == "" {

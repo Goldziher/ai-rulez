@@ -98,7 +98,7 @@ func injectToken(rawURL, token string) string {
 // option (`--upload-pack=<command>` runs a program); it runs before any git
 // command is built from them.
 func checkRemoteArgs(repoURL, ref string) error {
-	if err := gitutil.CheckArg("include url", repoURL); err != nil {
+	if err := gitutil.CheckRemoteURL("include url", repoURL); err != nil {
 		return oops.Wrap(err)
 	}
 	if err := gitutil.CheckArg("include ref", ref); err != nil {
