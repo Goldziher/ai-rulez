@@ -42,6 +42,9 @@ type TelemetryConfig struct {
 	// IncludePaths adds the repo-relative path of a loaded item to exported
 	// events. Default false. User scope only.
 	IncludePaths bool `yaml:"include_paths,omitempty" json:"include_paths,omitempty" toml:"include_paths,omitempty"` //nolint:tagliatelle
+	// IncludeSession adds the salted session hash to exported log records (never
+	// to metric labels). Default false: it is pseudonymous. User scope only.
+	IncludeSession bool `yaml:"include_session,omitempty" json:"include_session,omitempty" toml:"include_session,omitempty"` //nolint:tagliatelle
 	// SaltFile is the file holding the session-hash salt. User scope only.
 	SaltFile string `yaml:"salt_file,omitempty" json:"salt_file,omitempty" toml:"salt_file,omitempty"` //nolint:tagliatelle
 }

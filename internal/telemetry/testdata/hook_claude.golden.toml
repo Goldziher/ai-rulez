@@ -1,0 +1,44 @@
+# Paste into .ai-rulez/config.toml, then run `ai-rulez generate`:
+# the entries are written into .claude/settings.json, which ai-rulez owns key by key.
+
+[[hooks]]
+event = "PreToolUse"
+targets = ["claude"]
+matcher = "Skill"
+[[hooks.hooks]]
+command = "ai-rulez usage record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
+async = true
+timeout = 5
+
+[[hooks]]
+event = "UserPromptExpansion"
+targets = ["claude"]
+matcher = "*"
+[[hooks.hooks]]
+command = "ai-rulez usage record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
+async = true
+timeout = 5
+
+[[hooks]]
+event = "InstructionsLoaded"
+targets = ["claude"]
+[[hooks.hooks]]
+command = "ai-rulez telemetry record --role 'backend'"
+async = true
+timeout = 5
+
+[[hooks]]
+event = "SubagentStart"
+targets = ["claude"]
+[[hooks.hooks]]
+command = "ai-rulez telemetry record --role 'backend'"
+async = true
+timeout = 5
+
+[[hooks]]
+event = "SubagentStop"
+targets = ["claude"]
+[[hooks.hooks]]
+command = "ai-rulez telemetry record --role 'backend'"
+async = true
+timeout = 5
