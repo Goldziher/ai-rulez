@@ -134,3 +134,71 @@ func TestRoleProblems_SkillSourceSkillsCannotBeCheckedOffline(t *testing.T) {
 	cfg.SkillSources = nil
 	assert.Len(t, cfg.RoleProblems(), 2, "without sources the same entries match nothing")
 }
+
+func TestTOMLRoundTripKeepsEveryTableOfTheMergedFeatures(t *testing.T) {
+	cfg, err := decodeConfigTOML([]byte(`
+version = "4.0"
+name = "x"
+[skills]
+delivery = "served"
+[domains.billing]
+delivery = "both"
+[[skill_sources]]
+name = "vendor"
+url = "/x"
+name_prefix = "v-"
+[lock]
+enforce = true
+include_outputs = false
+scope = "skills"
+[role_manifest]
+enabled = true
+[[roles]]
+name = "dev"
+domains = ["billing"]
+[roles.delivery]
+"v-*" = "served"
+`), "config.toml")
+	require.NoError(t, err)
+	assert.Equal(t, "served", cfg.Skills.Delivery)
+	assert.Equal(t, "both", cfg.DomainSettings["billing"].Delivery)
+	require.Len(t, cfg.SkillSources, 1)
+	assert.True(t, cfg.LockEnforced())
+	assert.False(t, cfg.LockIncludeOutputs())
+	assert.Equal(t, LockScopeSkills, cfg.LockScope())
+	assert.True(t, cfg.Roles[0].Delivery["v-*"] == "served")
+
+	out, err := MarshalTOML(cfg)
+	require.NoError(t, err)
+	again, err := decodeConfigTOML(out, "config.toml")
+	require.NoError(t, err)
+	assert.Equal(t, cfg.Skills, again.Skills)
+	assert.Equal(t, cfg.DomainSettings, again.DomainSettings)
+	assert.Equal(t, cfg.SkillSources, again.SkillSources)
+	assert.Equal(t, cfg.Lock, again.Lock)
+	assert.Equal(t, cfg.Roles, again.Roles)
+	assert.Equal(t, cfg.RoleManifest, again.RoleManifest)
+}
+
+func TestRolesSelectChecksLikeAnyOtherKind(t *testing.T) {
+	cfg := roleFixture()
+	check := func(name string) ContentFile {
+		return ContentFile{Name: name, Path: "/p/.ai-rulez/checks/" + name + ".md"}
+	}
+	cfg.Content.Checks = []ContentFile{check("security")}
+	cfg.Content.Domains["backend"].Checks = []ContentFile{check("sql-injection"), check("n-plus-one")}
+	cfg.Roles = []RoleConfig{{Name: "dev", Domains: []string{"backend"}, Checks: &RoleSelector{Exclude: []string{"n-plus-*"}}}}
+
+	res, err := cfg.ResolveRole("dev")
+	require.NoError(t, err)
+	var ids []string
+	for _, it := range res.ItemsOf(RoleKindCheck) {
+		ids = append(ids, it.Domain+"/"+it.ID)
+	}
+	assert.Equal(t, []string{"/security", "backend/sql-injection"}, ids)
+
+	tree, err := cfg.FilterTreeForRole(cfg.Content, res.Flat())
+	require.NoError(t, err)
+	assert.Len(t, tree.Checks, 1, "root checks reach the role's tree")
+	assert.Len(t, tree.Domains["backend"].Checks, 1)
+}
