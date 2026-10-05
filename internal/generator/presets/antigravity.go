@@ -371,23 +371,7 @@ func (g *AntigravityPresetGenerator) renderMarkdown(
 }
 
 func (g *AntigravityPresetGenerator) renderSkillFile(skill config.ContentFile) string {
-	var builder strings.Builder
-
-	builder.WriteString("---\n")
-	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
-	builder.WriteString("\n")
-
-	builder.WriteString("description: ")
-	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
-	builder.WriteString("\n")
-
-	builder.WriteString("---\n\n")
-
-	builder.WriteString(skill.Content)
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
+	return renderAgentSkillFile(skill)
 }
 
 func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
@@ -418,9 +402,14 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 		return frontmatter
 	}
 
-	agentScalarFields := []string{keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins"}
-	for _, field := range agentScalarFields {
-		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+	// .agents/agents is shared with the amp spec, which writes the same keys:
+	// values keep their YAML type and the invocation switches are booleans.
+	agentFields := []string{
+		keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins",
+		"user-invocable", "disable-model-invocation",
+	}
+	for _, field := range agentFields {
+		if val, ok := typedAgentField(agent.Metadata, field); ok {
 			frontmatter[field] = val
 		}
 	}

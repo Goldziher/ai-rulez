@@ -42,18 +42,8 @@ func (c *Config) validatePluginAuthoring() error {
 	if err := validatePluginPaths(p); err != nil {
 		return err
 	}
-	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
-		if err := validateCodexPluginMetadata(p); err != nil {
-			return err
-		}
-	}
-	if err := validatePluginRuntimes(p); err != nil {
+	if err := validatePluginRuntimeRules(p); err != nil {
 		return err
-	}
-	if pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) {
-		if err := validateAgentPluginsName(p.Name); err != nil {
-			return err
-		}
 	}
 	if err := validatePluginName(p.Name); err != nil {
 		return err
@@ -157,7 +147,7 @@ func validatePluginRuntimes(p *PluginAuthoring) error {
 			return oops.
 				With("field", "plugin.runtimes").
 				With("value", r).
-				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes, agent-plugins").
+				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes, agent-plugins, copilot").
 				Errorf("plugin %q lists unknown runtime %q", p.Name, r)
 		}
 		if seen[r] {
@@ -369,6 +359,12 @@ func (c *Config) validateHookGroups(pluginName string, groups []HookGroup) error
 				Hint("Each [[plugin.hooks]] group needs an 'event' (e.g. SessionStart)").
 				Errorf("plugin %q hook group at index %d missing 'event'", pluginName, i)
 		}
+		if len(g.Targets) > 0 || len(g.Matchers) > 0 {
+			return oops.
+				With("field", fieldHookGroups).
+				Hint("'targets' and 'matchers' select harnesses for the top-level [[hooks]]; a plugin hook group is rendered for every runtime of the plugin").
+				Errorf("plugin %q hook group at index %d sets 'targets' or 'matchers'", pluginName, i)
+		}
 		for j := range g.Hooks {
 			if err := c.validateHookAction(pluginName, g.Event, j, &g.Hooks[j]); err != nil {
 				return err
@@ -489,4 +485,40 @@ func (c *Config) validateMarketplaceAuthoring() error {
 		seen[member] = true
 	}
 	return m.validateDomainPlugins()
+}
+
+// validatePluginRuntimeRules applies the per-runtime rules: Codex metadata, the
+// runtime list, the Codex layout and the Agent Plugins name grammar that every
+// runtime built on the standard shares.
+func validatePluginRuntimeRules(p *PluginAuthoring) error {
+	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
+		if err := validateCodexPluginMetadata(p); err != nil {
+			return err
+		}
+	}
+	if err := validatePluginRuntimes(p); err != nil {
+		return err
+	}
+	if err := validateCodexExtras(p); err != nil {
+		return err
+	}
+	usesStandard := pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) || pluginTargetsRuntime(p, PluginRuntimeCopilot) ||
+		(pluginTargetsRuntime(p, PluginRuntimeCodex) && p.Codex.ManifestLayout() != CodexManifestLegacy)
+	if usesStandard {
+		return validateAgentPluginsName(p.Name)
+	}
+	return nil
+}
+
+// validateCodexExtras rejects an unknown [plugin.codex] manifest layout.
+func validateCodexExtras(p *PluginAuthoring) error {
+	switch p.Codex.ManifestLayout() {
+	case CodexManifestLegacy, CodexManifestRoot, CodexManifestBoth:
+		return nil
+	}
+	return oops.
+		With("field", "plugin.codex.manifest").
+		With("value", p.Codex.Manifest).
+		Hint("Use legacy (default), root or both").
+		Errorf("plugin %q sets an unknown codex manifest layout %q", p.Name, p.Codex.Manifest)
 }

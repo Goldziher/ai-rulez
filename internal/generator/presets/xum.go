@@ -95,7 +95,7 @@ func (g *XumPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
-	allRules := rootRules(content, xumPresetName, "AGENTS.md")
+	allRules := rootRules(content, cfg, xumPresetName, "AGENTS.md")
 	allAgents := allAgents(content)
 
 	data := &templates.TemplateData{
@@ -121,7 +121,7 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, rootContext(content, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 
@@ -136,7 +136,9 @@ func (g *XumPresetGenerator) renderSkillFile(skill config.ContentFile) string {
 	builder.WriteString("\n")
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
-	builder.WriteString("\n---\n\n")
+	builder.WriteString("\n")
+	writeSkillSpecFields(&builder, skill, nil)
+	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
 	return builder.String()

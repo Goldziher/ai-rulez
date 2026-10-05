@@ -62,10 +62,77 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
+| Copilot  | `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md`, `.github/plugin/marketplace.json` | GitHub Copilot plugin in the Agent Plugins 1.0 layout; opt-in |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside when `claude` is
 among the bundle's runtimes. (A monorepo root also emits a Codex index at
-`.agents/plugins/marketplace.json`; see the monorepo section.)
+`.agents/plugins/marketplace.json`; see the monorepo section.) The `copilot` runtime writes its own
+index, and the Codex and Cursor indexes for a single-plugin repository are opt-in, see below.
+
+### Runtime coverage
+
+What each runtime bundles, checked against the vendors' documentation on 2026-10-04. A dash means
+ai-rulez does not emit it: either the runtime has no such component, or the vendor documents no file
+format for it (ai-rulez does not guess formats).
+
+| Runtime | Skills | Commands | Agents | Hooks | MCP | Marketplace index | Vendor documentation |
+| ------- | :----: | :------: | :----: | :---: | :-: | :---------------: | -------------------- |
+| Claude | yes | yes | yes | yes | yes | yes | [plugins](https://code.claude.com/docs/en/plugins), [marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) |
+| Cursor | yes | yes | - | yes | manifest | opt-in (`[plugin.cursor] marketplace`, `[marketplace] cursor_index`) | [plugins](https://cursor.com/docs/plugins), [reference](https://cursor.com/docs/reference/plugins) |
+| Codex | yes | - | - | - | yes | monorepo roots; single plugin opt-in (`[plugin.codex] marketplace`) | [build plugins](https://developers.openai.com/codex/plugins/build) |
+| Copilot | yes | - | yes | - | yes | yes (`.github/plugin/marketplace.json`) | [CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference) |
+| Gemini | - | opt-in (`[plugin.gemini] commands`) | - | yes | yes | - | [extension reference](https://geminicli.com/docs/extensions/reference/), [custom commands](https://geminicli.com/docs/cli/custom-commands/) |
+| Agent Plugins | yes | - | - | - | yes | - | [agent-plugins.org](https://agent-plugins.org) |
+
+Kimi, OpenCode, Factory and Hermes are unchanged. Known gaps, all because the format is undocumented
+or outside the runtime: Codex and Copilot commands and hooks, Copilot rules and LSP, Gemini agents,
+policies and `hooks/hooks.json` (hooks are inlined in `gemini-extension.json`), Cursor
+agents/rules.
+
+### Codex: root `plugin.json`
+
+Codex documents a root `plugin.json` in the Agent Plugins format as the preferred manifest for new
+packages and keeps `.codex-plugin/plugin.json` as a compatibility fallback. The Codex `interface`
+block moves under `extensions.com.openai`, skills live in the fixed `skills/` directory and MCP servers
+in a root `mcp.json` whose entries need a transport `type` (a renamed `.mcp.json` is not enough).
+The default stays the legacy layout so existing bundles do not change:
+
+```toml
+[plugin.codex]
+manifest = "root"      # legacy (default) | root | both
+marketplace = true     # also write .agents/plugins/marketplace.json for this single-plugin repo
+```
+
+`both` writes the two manifests side by side. The root layout needs an Agent Plugins plugin name
+(lowercase alphanumerics, `-` and `.`). When `codex` and `agent-plugins` (or `copilot`) are bundled
+together they share one root `plugin.json`; the Codex overlay is only written when the `codex` runtime
+is part of the bundle. The single-plugin Codex index uses `source = { source = "local", path = "./" }`.
+Codex documents that a marketplace may list one plugin and that paths start with `./` and stay inside
+the marketplace root; `./` itself as the plugin path was not exercised against a running Codex.
+
+### Copilot
+
+`runtimes = ["copilot"]` (opt-in) emits the Agent Plugins 1.0 layout that Copilot CLI and the cloud
+agent read: a root `plugin.json` with the standard's `$schema`, `skills/<name>/`, a root `mcp.json`,
+custom agents at `com.github.copilot/agents/<name>.agent.md` (copied verbatim) and a single-plugin
+marketplace at `.github/plugin/marketplace.json` (`name`, `owner`, `metadata`, `plugins[]`, which
+Copilot searches after a root `marketplace.json`). Copilot lists `com.github.copilot/commands/` and
+`com.github.copilot/hooks/hooks.json` but documents neither file format, so commands and hooks are not
+emitted and a warning says so. Enabling plugins (`enabledPlugins` in `.github/copilot/settings.json`) is
+not generated: the vendor page does not show the settings syntax.
+
+### Cursor marketplace
+
+Cursor documents `.cursor-plugin/marketplace.json` for multi-plugin repositories (`name`, `owner.name`,
+optional `metadata`, `plugins[]` with `name` and a relative `source` directory). It is opt-in:
+`[plugin.cursor] marketplace = true` for a single-plugin repository (`source` is `.`), and
+`[marketplace] cursor_index = true` next to the Claude index for members and domain plugins.
+
+### Gemini commands
+
+`[plugin.gemini] commands = true` also bundles each command as `commands/<name>.toml` (a required
+`prompt`, an optional `description`); the Claude-style `$ARGUMENTS` becomes Gemini's `{{args}}`. Shell
+(`!{...}`) and file (`@{...}`) injections are not translated.
 
 Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
 into each runtime's directories — never re-rendered — so a bundled skill is identical
@@ -395,8 +462,49 @@ relative to the marketplace root as Claude Code requires. The Codex index
 (`.agents/plugins/marketplace.json`) is written only when some plugin targets `codex`.
 Domain names are lower-cased to form the plugin name; a name that still is not valid is an
 error (use `exclude`). A domain without bundleable content is skipped with a warning.
-`verify --plugin` checks the marketplace root and every plugin directory. A plugin whose
-domain disappears is not deleted; remove its directory by hand.
+`verify --plugin` checks the marketplace root and every plugin directory.
+
+When a plugin's domain disappears (or its declaration is removed), the next
+`generate --plugin` deletes the files it generated for that plugin and the directories they
+leave empty. A directory counts as generated only when it carries ai-rulez's provenance
+sidecar, so a hand-made directory under `plugins/` is never touched, and a file inside a stale
+directory that ai-rulez did not generate is kept (with a warning). `generate --plugin --dry-run`
+lists each removal as `delete-stale:`, and `verify --plugin` fails while a stale generated
+directory exists. Removing the whole `[marketplace]` domain-plugin configuration cannot be
+detected, because the output root is no longer known; delete that tree by hand.
+
+#### Linked git worktrees
+
+With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a
+relative `directory` source (`./<output_dir>`). Claude Code's documentation does not describe how
+such a source resolves in a linked worktree (`git worktree add`); the behaviour reported for it,
+and assumed by the generator's own source comment, is that it resolves against the main checkout.
+Vendor documentation that does cover worktrees says project-local settings follow the main
+checkout, so treat edits to plugin content in a linked worktree as not visible to Claude Code until
+they reach the main checkout, unless you point the marketplace somewhere absolute. `ai-rulez
+validate` prints one warning when the directory source is relative and the project is in a linked
+worktree (detected with `git rev-parse --git-dir` versus `--git-common-dir`). To test plugin changes
+from a worktree, set `[claude.settings.marketplace_source]` to an absolute `directory` path or a
+`github`/`git` source. The warning is advisory: nothing fails. This behaviour was not verified
+against a running Claude Code; it is phrased as a caveat for that reason.
+
+#### Placement report
+
+`ai-rulez list --placement` (`--profile`, `--json`) prints every skill and command of the profile
+with its destination: `core` (written to the assistants' own directories) or `plugin` (kept out of
+them by `[placement]`), the domain it came from, and the plugins that bundle it. A plugin-only item
+is flagged when no plugin bundles it, or when none of its plugins is enabled through
+`[claude.settings] enable_plugins` and no `[marketplace.catalog_skill]` lists it, because then
+nothing tells anyone the plugin exists.
+
+#### Version drift
+
+Claude Code's documentation says a client that installed a plugin from a git-hosted marketplace
+keeps its cached copy until the plugin's version string changes (a plugin that declares no version
+is tracked by commit, and a plugin loaded in place from a local marketplace is not controlled by
+`version`). `ai-rulez validate --strict` therefore reports `AR961 plugin-version-drift` (warning)
+when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
+version in its manifest is unchanged. Bump `version`, or omit it to track commits.
 
 The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
 license, homepage, repository, version, category, keywords, runtimes) and is not bundled on
@@ -485,7 +593,7 @@ root skill with the same name wins.
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
 becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `include_domains`, `content_root` (project-relative directory of plugin-only
+`tags`, `runtimes`, `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`

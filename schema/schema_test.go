@@ -285,3 +285,50 @@ func TestLintSection(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateFile_LintSecurityAndFollowups(t *testing.T) {
+	good := `version = "4.0"
+name = "x"
+presets = ["claude"]
+
+[lint]
+allow_overrides = ["dup", "backend/dup"]
+allowed_keys = ["team"]
+
+[lint.metadata.last_verified]
+type = "date"
+max_age_days = 90
+required = true
+kinds = ["skill"]
+
+[lint.security]
+scan_imports = "error"
+allowed_hosts = ["github.com", "*.example.org"]
+allowed_tools = ["Bash"]
+secret_patterns = [{ name = "corp", regex = "corp_[a-z0-9]{10}" }]
+injection_phrases = ["as root"]
+
+[[lint.external]]
+name = "scanner"
+command = ["scan", "--sarif"]
+format = "sarif"
+`
+	bad := map[string]string{
+		"unknown security key":  "\n[lint.security]\nbogus = 1\n",
+		"bad scan_imports":      "\n[lint.security]\nscan_imports = \"sometimes\"\n",
+		"bad metadata type":     "\n[lint.metadata.a]\ntype = \"number\"\n",
+		"external needs name":   "\n[[lint.external]]\ncommand = [\"x\"]\n",
+		"pattern needs a regex": "\n[lint.security]\nsecret_patterns = [{ name = \"n\" }]\n",
+	}
+	header := "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	dir := t.TempDir()
+	write := func(body string) string {
+		p := filepath.Join(dir, "config.toml")
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+		return p
+	}
+	require.NoError(t, schema.ValidateFile(write(good)))
+	for name, extra := range bad {
+		assert.Error(t, schema.ValidateFile(write(header+extra)), name)
+	}
+}

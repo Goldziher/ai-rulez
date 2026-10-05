@@ -2,14 +2,20 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"os"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/mcp"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
+
+// flagServeDomain names the --domain flag of the skills server.
+const flagServeDomain = "domain"
 
 var MCPCmd = &cobra.Command{
 	Use:   "mcp",
@@ -19,20 +25,100 @@ ai-rulez configuration dynamically. The server provides tools for reading,
 creating, updating, and deleting configuration elements.
 
 The MCP server communicates via stdin/stdout and is designed to be integrated
-with AI assistants that support the Model Context Protocol.`,
+with AI assistants that support the Model Context Protocol.
+
+With --serve-skills the server instead becomes a read-only skills server
+(MCP Skills extension, SEP-2640): it serves the skills of one profile as
+skill:// resources, answers skills/list and skills/get, and adds search_skills,
+get_skill and read_skill_file tools. The authoring tools are not registered in
+that mode, so it is safe to hand to an unattended agent.`,
 	Run: runMCPServer,
 }
 
 func runMCPServer(cmd *cobra.Command, args []string) {
-	srv := mcp.NewServer(Version)
+	ctx := context.Background()
+	serveOnly := []string{"profile", "targets", flagServeDomain, "allow", "deny"}
+	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
+		for _, name := range serveOnly {
+			if cmd.Flags().Changed(name) {
+				fmtError(oops.Errorf("--%s requires --serve-skills", name))
+				os.Exit(1)
+			}
+		}
+	}
+	var (
+		srv       *mcp.Server
+		transport sdkmcp.Transport = &sdkmcp.StdioTransport{}
+	)
+	if serve, _ := cmd.Flags().GetBool("serve-skills"); serve {
+		var err error
+		srv, err = buildSkillServer(ctx, cmd)
+		if err != nil {
+			fmtError(oops.Wrapf(err, "MCP: build skills server"))
+			os.Exit(1)
+		}
+		transport = srv.WrapTransport(transport)
+	} else {
+		srv = mcp.NewServer(Version)
+	}
 
-	if err := srv.GetMCPServer().Run(context.Background(), &sdkmcp.StdioTransport{}); err != nil {
+	if err := srv.GetMCPServer().Run(ctx, transport); err != nil {
 		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
 		os.Exit(1)
 	}
 }
 
+// buildSkillServer loads the project in the working directory, renders the
+// effective skills of the chosen profile and preset, and wraps them in the
+// read-only serving server. Nothing is written to disk.
+func buildSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
+	flags := cmd.Flags()
+	var flagErr error
+	str := func(name string) string {
+		v, err := flags.GetString(name)
+		flagErr = errors.Join(flagErr, err)
+		return v
+	}
+	list := func(name string) []string {
+		v, err := flags.GetStringSlice(name)
+		flagErr = errors.Join(flagErr, err)
+		return v
+	}
+	profile, preset := str("profile"), str("targets")
+	domains, allow, deny := list(flagServeDomain), list("allow"), list("deny")
+	if flagErr != nil {
+		return nil, oops.Wrapf(flagErr, "read flags")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, oops.Wrapf(err, "working directory")
+	}
+	cfg, err := config.LoadConfig(ctx, wd)
+	if err != nil {
+		return nil, oops.Wrapf(err, "load configuration")
+	}
+	resolvedPreset, served, err := generator.NewGenerator(cfg).ServedSkills(profile, preset)
+	if err != nil {
+		return nil, oops.Wrapf(err, "render skills")
+	}
+	if profile == "" {
+		profile = cfg.Default
+	}
+	catalog, err := mcp.BuildCatalog(profile, resolvedPreset, served, mcp.SkillFilter{Domains: domains, Allow: allow, Deny: deny})
+	if err != nil {
+		return nil, oops.Wrapf(err, "build skill catalog")
+	}
+	return mcp.NewSkillServer(Version, catalog), nil
+}
+
 func init() {
+	MCPCmd.Flags().Bool("serve-skills", false, "Serve skills read-only over the MCP Skills extension instead of the authoring tools")
+	MCPCmd.Flags().String("profile", "", "Profile whose skills to serve (default: the configured default profile; requires --serve-skills)")
+	MCPCmd.Flags().String("targets", "", "Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills)")
+	MCPCmd.Flags().StringSlice(flagServeDomain, nil, "Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills)")
+	MCPCmd.Flags().StringSlice("allow", nil, "Only serve skills whose name matches one of these glob patterns (requires --serve-skills)")
+	MCPCmd.Flags().StringSlice("deny", nil, "Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills)")
 	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")
 	MCPCmd.Flags().String("address", "", "Address to bind to (for websocket transport)")
 	MCPCmd.Flags().Int("port", 3000, "Port to bind to (for websocket transport)")

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -60,7 +62,12 @@ type Generator struct {
 	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
 
 	manifests map[string]generatedManifest // manifests read this run, by path
-	warned    map[string]bool              // merged-document warnings already issued by this Generator
+
+	// userMode renders for the person rather than a project (see user.go);
+	// projectDir is the project the user command runs from, for overlap warnings.
+	userMode   bool
+	projectDir string
+	warned     map[string]bool // merged-document warnings already issued by this Generator
 }
 
 type generatedManifest struct {
@@ -212,9 +219,14 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	stale, err := g.stalePluginDirs()
+	if err != nil {
+		return 0, err
+	}
 	if err := g.writeOutputs(outputs); err != nil {
 		return 0, err
 	}
+	g.removeStalePluginDirs(stale)
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -225,6 +237,30 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	return written, nil
 }
 
+// ErrPluginNotGenerated is returned by VerifyPlugin when none of the expected
+// plugin files exist on disk, so a caller can tell "never generated" from "stale".
+var ErrPluginNotGenerated = errors.New("plugin bundle not generated")
+
+// checkPluginGenerated fails with ErrPluginNotGenerated, and the command that
+// fixes it, when no expected plugin file exists.
+func checkPluginGenerated(expected []config.OutputFile) error {
+	files, present := 0, 0
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		files++
+		if _, err := os.Stat(output.Path); err == nil {
+			present++
+		}
+	}
+	if files > 0 && present == 0 {
+		return oops.Hint("Run ai-rulez generate --plugin, then commit the bundle (or pass --if-generated to skip verification until it exists)").
+			Wrapf(ErrPluginNotGenerated, "plugin bundle not generated; run `ai-rulez generate --plugin`")
+	}
+	return nil
+}
+
 // VerifyPlugin verifies the generated plugin bundles against their provenance
 // sidecars without regenerating or modifying files.
 func (g *Generator) VerifyPlugin(profile string) error {
@@ -232,23 +268,20 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err != nil {
 		return oops.Wrapf(err, "render expected plugin outputs")
 	}
-	for _, output := range expected {
-		if output.IsDir {
-			continue
-		}
-		actual, readErr := os.ReadFile(output.Path)
-		if readErr != nil {
-			return oops.With("path", output.Path).Wrapf(readErr, "read generated plugin output")
-		}
-		expectedBytes := output.RawContent
-		if expectedBytes == nil {
-			expectedBytes = []byte(output.Content)
-		}
-		if !bytes.Equal(actual, expectedBytes) {
-			return oops.With("path", output.Path).
-				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
-				Errorf("generated plugin output is stale")
-		}
+	if err := checkPluginGenerated(expected); err != nil {
+		return err
+	}
+	if err := verifyPluginOutputs(expected); err != nil {
+		return err
+	}
+	stale, err := g.stalePluginDirs()
+	if err != nil {
+		return err
+	}
+	if len(stale) > 0 {
+		return oops.With("dirs", strings.Join(stale, ", ")).
+			Hint("Run ai-rulez generate --plugin to remove the plugin directories of domains that no longer exist").
+			Errorf("stale generated plugin directory")
 	}
 	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
 		for _, member := range marketplace.Members {
@@ -261,6 +294,31 @@ func (g *Generator) VerifyPlugin(profile string) error {
 		return g.verifyDomainPluginProvenance(expected)
 	}
 	return plugin.VerifyProvenance(g.config.BaseDir)
+}
+
+// verifyPluginOutputs compares every expected plugin file with what is on disk.
+func verifyPluginOutputs(expected []config.OutputFile) error {
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		actual, readErr := os.ReadFile(output.Path)
+		if readErr != nil {
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin to restore the missing file").
+				Wrapf(readErr, "read generated plugin output")
+		}
+		expectedBytes := output.RawContent
+		if expectedBytes == nil {
+			expectedBytes = []byte(output.Content)
+		}
+		if !bytes.Equal(actual, expectedBytes) {
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
+				Errorf("generated plugin output is stale")
+		}
+	}
+	return nil
 }
 
 // verifyDomainPluginProvenance verifies every bundle root the domain-plugin
@@ -288,6 +346,13 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	lines = append(lines, "plugin bundle:")
 	for _, output := range outputs {
 		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+	}
+	stale, err := g.stalePluginDirs()
+	if err != nil {
+		return nil, err
+	}
+	for _, dir := range stale {
+		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
 	}
 	return lines, nil
 }
@@ -342,6 +407,73 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	return plugin.BuildManifest(&tempCfg, contentTree)
 }
 
+// warnUnreadConsumerFiles warns that [[plugins]] is written to files no tool
+// reads. Claude Code records installed plugins in .claude/settings.json
+// (enabledPlugins, extraKnownMarketplaces) and its documentation lists no
+// .claude/plugins.json; Codex documents plugin enablement as
+// [plugins."name@marketplace"] in config.toml, not .codex/plugins.json. The files
+// are still written, so nothing changes for users who depend on them.
+func (g *Generator) warnUnreadConsumerFiles() {
+	if len(g.config.Plugins) == 0 {
+		return
+	}
+	var files []string
+	for i := range g.config.Presets {
+		switch g.config.Presets[i].GetName() {
+		case "claude":
+			files = append(files, ".claude/plugins.json")
+		case "codex":
+			files = append(files, ".codex/plugins.json")
+		}
+	}
+	if len(files) == 0 {
+		return
+	}
+	logger.Warn("[[plugins]] is written to a file no tool reads; it is deprecated and will be removed. "+
+		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); "+
+		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml",
+		"files", strings.Join(files, ", "))
+}
+
+// stalePluginDirs lists the generated domain-plugin directories whose plugin is
+// no longer planned (its domain disappeared, or its declaration was removed).
+// Only directories carrying ai-rulez's provenance sidecar qualify. The plan is
+// made over the unfiltered content tree: a profile that leaves a domain out
+// must not delete the plugin another profile generated for it.
+func (g *Generator) stalePluginDirs() ([]string, error) {
+	mkt := g.config.Marketplace
+	if mkt == nil || !mkt.HasDomainPlugins() {
+		return nil, nil
+	}
+	planned, err := plugin.PlanDomainPlugins(g.config, g.config.Content)
+	if err != nil {
+		return nil, err
+	}
+	keep := make(map[string]bool, len(planned))
+	for i := range planned {
+		keep[planned[i].Name] = true
+	}
+	return plugin.StalePluginDirs(g.marketplaceRoot(mkt), keep)
+}
+
+// removeStalePluginDirs deletes the generated files of each stale plugin
+// directory and nothing else. A failure is reported and does not stop the run.
+func (g *Generator) removeStalePluginDirs(dirs []string) {
+	for _, dir := range dirs {
+		kept, err := plugin.RemoveGeneratedPluginDir(dir)
+		rel := g.convertToRelativePath(dir)
+		switch {
+		case err != nil:
+			logger.Warn("Could not remove a stale plugin directory", "dir", rel, "error", err)
+		case len(kept) > 0:
+			logger.Warn("Removed the generated files of a stale plugin directory; files that are not generated were kept",
+				"dir", rel, "kept", strings.Join(kept, ", "))
+		default:
+			logger.Info("Removed stale plugin directory", "dir", rel)
+		}
+	}
+}
+
 // marketplaceRoot is the directory the marketplace index is written to:
 // [marketplace].output_dir for domain plugins, the project root otherwise.
 func (g *Generator) marketplaceRoot(mkt *config.MarketplaceAuthoring) string {
@@ -367,6 +499,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		outputs = append(outputs, memberOutputs...)
 		entries = append(entries, entry)
 	}
+	codexEntries := slices.Clone(entries) // members are always Codex-capable
 
 	root := g.marketplaceRoot(mkt)
 	codex := len(mkt.Members) > 0
@@ -378,7 +511,10 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		outputs = append(outputs, bundles...)
 		entries = append(entries, domainEntries...)
 		for i := range domainEntries {
-			codex = codex || domainEntries[i].Codex
+			if domainEntries[i].Codex {
+				codex = true
+				codexEntries = append(codexEntries, domainEntries[i])
+			}
 		}
 	}
 
@@ -391,18 +527,38 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
 	rootFiles := []config.OutputFile{marketplaceOutput}
-	if codex {
-		codexMarketplaceOutput, err := plugin.RenderCodexMonorepoMarketplace(market, entries, root)
-		if err != nil {
-			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
-		}
-		rootFiles = append(rootFiles, codexMarketplaceOutput)
+	extraIndexes, err := renderExtraMarketplaces(mkt, market, entries, codexEntries, root, codex)
+	if err != nil {
+		return nil, err
 	}
+	rootFiles = append(rootFiles, extraIndexes...)
 	rootOutputs, err := plugin.AddProvenance(rootFiles, root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "add marketplace provenance")
 	}
 	return append(outputs, rootOutputs...), nil
+}
+
+// renderExtraMarketplaces renders the non-Claude marketplace indexes of a
+// monorepo or domain-plugin root: the Codex index when some plugin ships a Codex
+// bundle, and the Cursor index when [marketplace] cursor_index is set.
+func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
+	var files []config.OutputFile
+	if codex {
+		out, err := plugin.RenderCodexMonorepoMarketplace(market, codexEntries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
+		}
+		files = append(files, out)
+	}
+	if mkt.CursorIndex {
+		out, err := plugin.RenderCursorMarketplace(market, entries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Cursor marketplace")
+		}
+		files = append(files, out)
+	}
+	return files, nil
 }
 
 // withCatalogSkill adds the generated plugin-catalog skill to a copy of tree
@@ -601,8 +757,10 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 	return lines, nil
 }
 
-// planLines lists the directories and files a run would create. A file the
-// overwrite guard would leave alone is not listed, because it is not written.
+// planLines lists the directories and files a run would create. A file whose
+// rendering already matches the disk is listed as unchanged, one that was
+// edited by hand as edited (generate keeps it until its sources change), and a
+// file the overwrite guard would leave alone is not listed, because it is not written.
 func (g *Generator) planLines(outputs []config.OutputFile) []string {
 	g.previousFiles = nil
 	defer func() { g.previousFiles = nil }()
@@ -610,12 +768,19 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
 		relPath := g.convertToRelativePath(abs)
-		switch {
-		case output.IsDir:
+		if output.IsDir {
 			lines = append(lines, "create-dir: "+relPath)
-		case output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)):
-		default:
+			continue
+		}
+		kind, rewrite, compared := g.outputState(output)
+		switch {
+		case !compared:
+		case rewrite:
 			lines = append(lines, "write-file: "+relPath)
+		case kind == DriftEdited:
+			lines = append(lines, "edited: "+relPath)
+		default:
+			lines = append(lines, "unchanged: "+relPath)
 		}
 	}
 	return lines
@@ -678,6 +843,9 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	if err != nil {
 		return nil, "", err
 	}
+	if index, ok := g.skillsIndexOutput(contentTree, render.byPreset); ok {
+		flatOutputs = append(flatOutputs, index)
+	}
 
 	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
 	if err != nil {
@@ -686,6 +854,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 	g.disambiguateRuleCollisions(flatOutputs)
 	g.reclaimStaleMembers(flatOutputs)
+	g.warnInstructionSizes(flatOutputs)
 
 	return flatOutputs, activeProfile, nil
 }
@@ -727,6 +896,10 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 
 	presets.WarnDuplicateContent(contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
+	g.warnUnreadConsumerFiles()
+	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
+		rulefiles.Warn(diagnostic)
+	}
 
 	// Collect MCP servers based on the resolved content tree and active profile
 	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)
@@ -1332,7 +1505,9 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return nil
 	}
 
-	if err := os.WriteFile(absPath, []byte(finalContent), 0o644); err != nil {
+	// Temp file + rename so a crash never leaves a truncated hand-authored file;
+	// keeps an existing file's mode and writes through symlinks.
+	if err := writeFileAtomic(absPath, []byte(finalContent)); err != nil {
 		return oops.
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
@@ -1343,6 +1518,12 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	return nil
 }
 
+// isNestedAgentsMD reports whether rel is an AGENTS.md below the project root
+// (the baz nested files, monorepo scope files): hand-written ones are common.
+func isNestedAgentsMD(rel string) bool {
+	return strings.HasSuffix(rel, "/AGENTS.md")
+}
+
 // isUnmanagedRuleFile reports whether absPath is an existing file inside a
 // shared rules folder that ai-rulez did not write. A file counts as ours when
 // any of these hold: it is in the previous generated manifest, it stores a
@@ -1351,7 +1532,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 // mistake our own output for a hand-written file).
 func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	rel := filepath.ToSlash(g.convertToRelativePath(absPath))
-	if !config.InRulesDir(rel) {
+	if !config.InRulesDir(rel) && !isNestedAgentsMD(rel) {
 		return false
 	}
 	info, err := os.Stat(absPath)

@@ -738,6 +738,17 @@
       },
       "additionalProperties": false
     },
+    "usage": {
+      "type": "object",
+      "description": "Usage-telemetry support (opt-in, no network).",
+      "properties": {
+        "skills_index": {
+          "type": "boolean",
+          "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset)."
+        }
+      },
+      "additionalProperties": false
+    },
     "lint": {
       "type": "object",
       "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
@@ -796,8 +807,114 @@
         },
         "require_metadata": {
           "type": "object",
-          "description": "Frontmatter keys every item of a content kind must set.",
+          "description": "Frontmatter keys every item of a content kind must set. A key inside the Agent Skills `metadata` map counts.",
           "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "allow_overrides": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them."
+        },
+        "allowed_keys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Frontmatter keys accepted in addition to the built-in Agent Skills, Claude Code and ai-rulez keys (AR303)."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Typed checks for frontmatter keys (top-level or inside `metadata`), keyed by the frontmatter key.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["string", "date", "enum"] },
+              "values": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Accepted values of an enum."
+              },
+              "max_age_days": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "A date older than this many days is stale (AR953). Date type only."
+              },
+              "kinds": {
+                "type": "array",
+                "items": { "type": "string", "enum": ["rule", "context", "skill", "agent", "command"] }
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Report an item of the configured kinds that lacks the key (AR951)."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "security": {
+          "type": "object",
+          "description": "Settings for the security checks AR001 to AR011.",
+          "properties": {
+            "scan_imports": {
+              "type": "string",
+              "enum": ["off", "warn", "error"],
+              "description": "Scan content imported through includes and installed skills; `generate` refuses to write it at level error. The level replaces the severity of findings in imports."
+            },
+            "allowed_hosts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Hosts URLs may point to (`example.com`, `*.example.com`). Empty disables the outbound host check (AR008)."
+            },
+            "allowed_tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "allowed-tools entries that may be unrestricted, for example `Bash` (AR007)."
+            },
+            "secret_patterns": {
+              "type": "array",
+              "description": "Extra secret detectors added to the built-in set (AR001).",
+              "items": {
+                "type": "object",
+                "required": ["name", "regex"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "regex": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "injection_phrases": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Extra case-insensitive phrases for the prompt-injection detector (AR004)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "external": {
+          "type": "array",
+          "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
+          "items": {
+            "type": "object",
+            "required": ["name", "command"],
+            "properties": {
+              "name": { "type": "string" },
+              "command": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "format": { "type": "string", "enum": ["sarif", "json"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evals": {
+          "type": "object",
+          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
+          "properties": {
+            "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
+            "allow": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Skill names or globs exempt from the check."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -860,6 +977,10 @@
           "type": "string",
           "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/"
         },
+        "include_evals": {
+          "type": "boolean",
+          "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
+        },
         "include_domains": {
           "type": "array",
           "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",
@@ -871,7 +992,18 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
+            "enum": [
+              "claude",
+              "cursor",
+              "codex",
+              "gemini",
+              "kimi",
+              "opencode",
+              "factory",
+              "hermes",
+              "agent-plugins",
+              "copilot"
+            ]
           }
         },
         "mcp": {
@@ -1050,11 +1182,32 @@
           },
           "additionalProperties": false
         },
+        "codex": {
+          "type": "object",
+          "description": "Codex layout. manifest: legacy (default, .codex-plugin/plugin.json), root (Agent Plugins plugin.json with the interface under extensions.com.openai, skills/ and mcp.json) or both. marketplace writes .agents/plugins/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "manifest": { "type": "string", "enum": ["legacy", "root", "both"] },
+            "marketplace": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "cursor": {
+          "type": "object",
+          "description": "Cursor packaging switches. marketplace writes .cursor-plugin/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "marketplace": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
         "gemini": {
           "type": "object",
           "properties": {
             "context_file_name": {
               "type": "string"
+            },
+            "commands": {
+              "type": "boolean",
+              "description": "Also bundle the plugin's commands as commands/<name>.toml Gemini custom commands (default off). $ARGUMENTS becomes {{args}}."
             }
           },
           "additionalProperties": false
@@ -1145,10 +1298,117 @@
             "disable_plugins": {
               "$ref": "#/$defs/patternList",
               "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": false."
+            },
+            "managed": {
+              "type": "object",
+              "description": "Further keys of .claude/settings.json owned entry by entry. Declaring an entry is the opt-in; `manage` is not required.",
+              "properties": {
+                "env": {
+                  "type": "object",
+                  "description": "Owns env.<NAME> for every listed variable.",
+                  "additionalProperties": { "type": "string" }
+                },
+                "skill_overrides": {
+                  "type": "object",
+                  "description": "Owns skillOverrides.<skill> for every listed skill.",
+                  "additionalProperties": { "enum": ["on", "name-only", "user-invocable-only", "off"] }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "skills": {
+          "type": "object",
+          "description": "Options for the skills written to .claude/skills.",
+          "properties": {
+            "hide_from_menu": {
+              "type": "boolean",
+              "default": false,
+              "description": "Write user-invocable: false on every skill that does not set the key itself, so Claude Code hides it from the / menu and only the model loads it. Off by default: a skill without the key is user-invocable. A user-invocable value set in the skill's frontmatter always wins."
             }
           },
           "additionalProperties": false
         }
+      },
+      "additionalProperties": false
+    },
+    "codex": {
+      "type": "object",
+      "description": "Codex specific options.",
+      "properties": {
+        "project_doc_max_bytes": {
+          "type": "integer",
+          "default": 32768,
+          "description": "The project_doc_max_bytes your Codex is configured with. generate warns when the AGENTS.md files Codex concatenates (root down to a directory) exceed it, naming the largest sections. Unset means the Codex default of 32 KiB; 0 turns the warning off."
+        }
+      },
+      "additionalProperties": false
+    },
+    "hooks": {
+      "type": "array",
+      "description": "Lifecycle hooks rendered into each harness's native project settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json, .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin. Events use Claude Code names; a group a harness cannot express is skipped with a warning.",
+      "items": {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+          "event": {
+            "type": "string",
+            "description": "Claude Code lifecycle event, e.g. PreToolUse. Unknown events are warned about, not rejected."
+          },
+          "matcher": {
+            "type": "string",
+            "description": "Filters which occurrences of the event run the group. Copied to claude and codex; other harnesses need matchers.<harness>."
+          },
+          "targets": {
+            "type": "array",
+            "items": { "enum": ["claude", "codex", "cursor", "gemini", "copilot"] },
+            "description": "Restrict the group to these harnesses. Default: every harness the group can be expressed for."
+          },
+          "matchers": {
+            "type": "object",
+            "description": "Per-harness matcher overriding `matcher`, for harnesses that name tools differently.",
+            "propertyNames": { "enum": ["claude", "codex", "cursor", "gemini", "copilot"] },
+            "additionalProperties": { "type": "string" }
+          },
+          "hooks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
+              "oneOf": [{ "required": ["command"] }, { "required": ["script"] }],
+              "properties": {
+                "type": { "enum": ["command"] },
+                "command": { "type": "string" },
+                "script": {
+                  "type": "string",
+                  "description": "Project-relative script, addressed through the harness's project-root variable (user scope: relative to the user config directory)."
+                },
+                "args": { "type": "array", "items": { "type": "string" } },
+                "timeout": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Seconds; converted to milliseconds for gemini."
+                },
+                "async": { "type": "boolean" },
+                "if": { "type": "string", "description": "claude only; a handler with `if` is skipped elsewhere." },
+                "status_message": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json (claude only).",
+      "properties": {
+        "allow": { "$ref": "#/$defs/patternList" },
+        "ask": { "$ref": "#/$defs/patternList" },
+        "deny": { "$ref": "#/$defs/patternList" }
       },
       "additionalProperties": false
     },
@@ -1264,6 +1524,10 @@
             "additionalProperties": false
           }
         },
+        "cursor_index": {
+          "type": "boolean",
+          "description": "Also write .cursor-plugin/marketplace.json next to the Claude index for members and domain plugins (default off)."
+        },
         "catalog_skill": {
           "type": "object",
           "description": "Generate a skill listing the plugins and how to enable them (default off). It goes to the preset skill outputs only, never into a plugin bundle.",
@@ -1289,7 +1553,18 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
+        "enum": [
+          "claude",
+          "cursor",
+          "codex",
+          "gemini",
+          "kimi",
+          "opencode",
+          "factory",
+          "hermes",
+          "agent-plugins",
+          "copilot"
+        ]
       }
     },
     "authorEntity": {

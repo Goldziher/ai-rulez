@@ -2,8 +2,9 @@ package config
 
 // loadOptions are the resolved LoadOption settings.
 type loadOptions struct {
-	withoutLocal bool
-	includeMemo  any
+	withoutLocal  bool
+	includeMemo   any
+	withoutRemote bool
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -15,6 +16,13 @@ type LoadOption func(*loadOptions)
 // teammate without local overrides sees.
 func WithoutLocal() LoadOption {
 	return func(o *loadOptions) { o.withoutLocal = true }
+}
+
+// WithoutRemote skips resolving includes and installed skills: no remote is
+// fetched and no cache is read. Use it for commands that only inspect the
+// declared configuration, such as verifying ai-rulez.lock against it.
+func WithoutRemote() LoadOption {
+	return func(o *loadOptions) { o.withoutRemote = true }
 }
 
 // WithIncludeMemo makes the loaded config share an include fetch cache created

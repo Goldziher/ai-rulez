@@ -105,7 +105,7 @@ func claimsFor(owned []OwnedKey) []Claim {
 		case key.Members:
 			claims = append(claims, memberClaims(segs, key.Value)...)
 		default:
-			claims = append(claims, Claim{Path: segs, Sum: Digest(key.Value)})
+			claims = append(claims, Claim{Path: segs, Sum: Digest(key.Value), Alone: key.Alone})
 		}
 	}
 	return claims

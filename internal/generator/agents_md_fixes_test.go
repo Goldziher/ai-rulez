@@ -358,6 +358,7 @@ func TestAgentsMD_SourceHashCoversOwnersOnlyWhenTargetsUseThem(t *testing.T) {
 
 // Claude Code reads the hyphenated user-invocable key; the underscore spelling
 // is ignored as an unknown field, so neither skills nor commands may emit it.
+// Skills keep Claude's default (user-invocable), so no key is written for them.
 func TestClaudeSkillFrontmatterUsesVendorKey(t *testing.T) {
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude"}, "", ""))
@@ -368,12 +369,12 @@ func TestClaudeSkillFrontmatterUsesVendorKey(t *testing.T) {
 	runAgentsMDGenerate(t, root)
 
 	skill := readAgentsMDFile(t, root, ".claude/skills/alpha/SKILL.md")
-	assert.Contains(t, skill, "user-invocable: false")
+	assert.NotContains(t, skill, "user-invocable")
 	command := readAgentsMDFile(t, root, ".claude/skills/go/SKILL.md")
 	assert.Contains(t, command, "user-invocable: true")
-	// A stale authored underscore key neither leaks nor overrides the constant.
+	// A stale authored underscore key neither leaks nor sets the hyphenated one.
 	legacy := readAgentsMDFile(t, root, ".claude/skills/legacy/SKILL.md")
-	assert.Contains(t, legacy, "user-invocable: false")
+	assert.NotContains(t, legacy, "user-invocable")
 	for _, content := range []string{skill, command, legacy} {
 		assert.NotContains(t, content, "user_invocable")
 	}

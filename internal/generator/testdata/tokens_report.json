@@ -6,15 +6,22 @@
     "estimate": false
   },
   "headline_preset": "claude",
-  "headline_always": 382,
+  "headline_always": 564,
+  "headline_listing": 203,
+  "headline_always_legacy": 382,
+  "listing_entry_overhead": 27,
   "runtimes": [
     {
       "preset": "claude",
       "files": 9,
-      "always": 382,
-      "conditional": 47,
-      "on_demand": 1109,
+      "always": 564,
+      "conditional": 0,
+      "on_demand": 1088,
       "unmodeled": 0,
+      "listing": 203,
+      "listed_items": 5,
+      "always_legacy": 382,
+      "conditional_legacy": 47,
       "detailed": true,
       "root_files": 1,
       "entries": [
@@ -71,18 +78,6 @@
           "artifacts": 3
         },
         {
-          "label": "skill names",
-          "bucket": "always",
-          "tokens": 7,
-          "artifacts": 3
-        },
-        {
-          "label": "skill descriptions",
-          "bucket": "conditional",
-          "tokens": 42,
-          "artifacts": 3
-        },
-        {
           "label": "skill bodies",
           "bucket": "on_demand",
           "tokens": 268,
@@ -91,20 +86,8 @@
         {
           "label": "skill file overhead",
           "bucket": "on_demand",
-          "tokens": 93,
+          "tokens": 72,
           "artifacts": 3
-        },
-        {
-          "label": "command names",
-          "bucket": "always",
-          "tokens": 1,
-          "artifacts": 1
-        },
-        {
-          "label": "command descriptions",
-          "bucket": "conditional",
-          "tokens": 5,
-          "artifacts": 1
         },
         {
           "label": "command bodies",
@@ -116,18 +99,6 @@
           "label": "command file overhead",
           "bucket": "on_demand",
           "tokens": 21,
-          "artifacts": 1
-        },
-        {
-          "label": "agent names",
-          "bucket": "always",
-          "tokens": 2,
-          "artifacts": 1
-        },
-        {
-          "label": "agent descriptions",
-          "bucket": "always",
-          "tokens": 11,
           "artifacts": 1
         },
         {
@@ -143,6 +114,84 @@
           "artifacts": 1
         },
         {
+          "label": "skill listing",
+          "bucket": "always",
+          "tokens": 130,
+          "artifacts": 3,
+          "children": [
+            {
+              "label": "names",
+              "bucket": "always",
+              "tokens": 7,
+              "artifacts": 3
+            },
+            {
+              "label": "descriptions",
+              "bucket": "always",
+              "tokens": 42,
+              "artifacts": 3
+            },
+            {
+              "label": "per-entry framing (estimate)",
+              "bucket": "always",
+              "tokens": 81,
+              "artifacts": 3
+            }
+          ]
+        },
+        {
+          "label": "command listing",
+          "bucket": "always",
+          "tokens": 33,
+          "artifacts": 1,
+          "children": [
+            {
+              "label": "names",
+              "bucket": "always",
+              "tokens": 1,
+              "artifacts": 1
+            },
+            {
+              "label": "descriptions",
+              "bucket": "always",
+              "tokens": 5,
+              "artifacts": 1
+            },
+            {
+              "label": "per-entry framing (estimate)",
+              "bucket": "always",
+              "tokens": 27,
+              "artifacts": 1
+            }
+          ]
+        },
+        {
+          "label": "agent listing",
+          "bucket": "always",
+          "tokens": 40,
+          "artifacts": 1,
+          "children": [
+            {
+              "label": "names",
+              "bucket": "always",
+              "tokens": 2,
+              "artifacts": 1
+            },
+            {
+              "label": "descriptions",
+              "bucket": "always",
+              "tokens": 11,
+              "artifacts": 1
+            },
+            {
+              "label": "per-entry framing (estimate)",
+              "bucket": "always",
+              "tokens": 27,
+              "artifacts": 1
+            }
+          ]
+        },
+        {
           "label": "per-file provenance hashes",
           "bucket": "on_demand",
           "tokens": 654,
@@ -154,28 +203,30 @@
   "domains": [
     {
       "name": "(root)",
-      "always": 186,
-      "conditional": 44,
-      "on_demand": 408
+      "always": 338,
+      "conditional": 0,
+      "on_demand": 394
+    },
+    {
+      "name": "backend",
+      "always": 80,
+      "conditional": 0,
+      "on_demand": 40
     },
     {
       "name": "frontend",
       "always": 51,
       "conditional": 0,
       "on_demand": 0
-    },
-    {
-      "name": "backend",
-      "always": 50,
-      "conditional": 3,
-      "on_demand": 47
     }
   ],
   "notes": [
     "Counts are approximations. Claude's tokenizer is not published; this report uses cl100k_base offline. Use the numbers to compare profiles and to compare before and after an edit, not as absolute truth.",
     "ai-rulez counts only the artifacts it generates. The agent harness adds a fixed floor of its own system prompt and tool schemas, plus per-artifact overhead, neither of which ai-rulez can see. This report never predicts a session total.",
     "Runtimes are not additive. One session loads one runtime's root instructions file, so emitting both CLAUDE.md and AGENTS.md costs one of them, not both. The headline figure is the largest single runtime.",
-    "\"conditional\" is surface some harness modes carry and others do not. Skill and command descriptions are the measured case: a non-interactive Claude Code run does not carry them, an interactive session surfaces them for user-invocable skills.",
-    "Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, and two digests of the same length tokenize to slightly different counts. Expect a few tokens of movement per artifact between two profiles for that reason alone."
+    "\"conditional\" is surface some harness modes carry and others do not. For a harness that lists skills (see the listing lines) skill descriptions are part of the always-loaded listing instead.",
+    "Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, and two digests of the same length tokenize to slightly different counts. Expect a few tokens of movement per artifact between two profiles for that reason alone.",
+    "Listing lines estimate what a harness puts in the prompt at session start to advertise skills, commands and agents: each entry's name and description, its path where the harness includes one, and 27 tokens of framing per entry. The framing constant is calibrated against Claude Code (100 skills measured at 64 tokens each) and is an estimate for every other harness. The listing is part of the always-loaded figure and of --budget; always_legacy and conditional_legacy keep the numbers the earlier model reported.",
+    "A harness bounds its listing (Codex: a share of the context window; Claude Code: a total budget on top of the per-entry description cap) and shortens or omits entries beyond it. The listing lines do not apply that bound, so a very large skill set is an upper estimate. Presets absent from the listing table (amp, antigravity, baz, continue-dev, hermes, xum) are not modeled and report no listing. Skills written only to the shared .agents/skills tree by agents_md are not attributed to a preset."
   ]
 }
