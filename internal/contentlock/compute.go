@@ -59,6 +59,10 @@ type Snapshot struct {
 	Options Options
 	Items   []lockfile.Item
 	Outputs []lockfile.OutputPin
+	// Problems are things that could not be pinned (for example a hook script
+	// outside the project). Compare reports each as a lock-scope change, so a
+	// check fails on them instead of the pinning aborting.
+	Problems []string
 }
 
 func (o Options) scope() string {
@@ -76,6 +80,7 @@ func Compute(cfg *config.Config, opts Options) (*Snapshot, error) {
 		return nil, err
 	}
 	snap.Items = c.items
+	snap.Problems = c.problems
 	sort.SliceStable(snap.Items, func(i, j int) bool { return itemLess(snap.Items[i], snap.Items[j]) })
 	disambiguate(snap.Items)
 	if opts.IncludeOutputs {
@@ -121,6 +126,8 @@ type collector struct {
 	cfg   *config.Config
 	scope string
 	items []lockfile.Item
+	// problems are unpinnable declarations, see Snapshot.Problems.
+	problems []string
 }
 
 func (c *collector) wants(kind string) bool {
@@ -276,6 +283,15 @@ func (c *collector) collectDeclared() error {
 				continue
 			}
 			rel := filepath.ToSlash(filepath.Clean(action.Script))
+			if filepath.IsAbs(action.Script) || rel == ".." || strings.HasPrefix(rel, "../") {
+				// Never read outside the project: pin the declaration only.
+				c.problems = append(c.problems, fmt.Sprintf("hook %s script %q is outside the project, so its content cannot be pinned; move it into the project", id, action.Script))
+				leaf := Leaf{Path: "outside/" + outsideName(rel), Mode: ModeRegular, Data: []byte(action.Script)}
+				if !containsPath(leaves, leaf.Path) {
+					leaves = append(leaves, leaf)
+				}
+				continue
+			}
 			abs := filepath.Join(c.cfg.BaseDir, filepath.FromSlash(rel))
 			leaf := Leaf{Path: "script/" + strings.TrimPrefix(rel, "./"), Mode: ModeRegular}
 			if disk, readErr := os.ReadFile(abs); readErr == nil {
@@ -334,6 +350,11 @@ func (c *collector) collectSettings() error {
 		}
 	}
 	return nil
+}
+
+// outsideName flattens a path outside the project into one valid leaf segment.
+func outsideName(rel string) string {
+	return strings.NewReplacer("/", "_", ":", "_", `\`, "_").Replace(strings.Trim(rel, "./"))
 }
 
 func containsPath(leaves []Leaf, p string) bool {

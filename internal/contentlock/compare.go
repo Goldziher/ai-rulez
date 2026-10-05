@@ -131,7 +131,13 @@ func Compare(lock *lockfile.File, snap *Snapshot) *Diff {
 		d.NoPins = true
 		return d
 	}
-	if lock.Tree != "" && lock.Tree != TreeOf(lock) {
+	for _, problem := range snap.Problems {
+		d.Changes = append(d.Changes, Change{Scope: ScopeLock, Change: Changed, Detail: problem})
+	}
+	switch {
+	case lock.Tree == "":
+		d.Changes = append(d.Changes, Change{Scope: ScopeLock, Change: Changed, Detail: "the lock has content pins but no tree digest; run `ai-rulez lock` to rewrite it"})
+	case lock.Tree != TreeOf(lock):
 		d.Changes = append(d.Changes, Change{Scope: ScopeLock, Change: Changed, Detail: "the tree digest does not match the pins in the lock; it was edited by hand"})
 	}
 	if want := snap.Options.scope(); lock.Scope != "" && lock.Scope != want {
