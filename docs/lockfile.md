@@ -40,7 +40,7 @@ content itself. Signature or attestation verification is not implemented.
 
 | `kind` | id | Pinned files |
 | --- | --- | --- |
-| `rule`, `context`, `agent`, `command` | the item name | the source file (a command with resources also pins them) |
+| `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them) |
 | `skill` | the skill directory name | `SKILL.md` and every loaded resource (`references/`, `scripts/`, `assets/`) |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
@@ -88,6 +88,43 @@ digest = "sha256:…"
 The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order, on the
 operating system or on the machine.
 
+## Served skills and skill sources
+
+The same file carries the entries of [dynamic skill loading](mcp-server.md#dynamic-skill-loading), so one `lock`
+pins everything and one `lock --check` verifies everything:
+
+```toml
+[[source]]            # one per [[skill_sources]] entry: the commit its ref resolved to and the tree digest
+name = "vendor"
+source = "https://github.com/acme/skills"
+ref = "v1.2.0"
+path = "skills"
+commit = "0f3e…"
+digest = "sha256:…"
+
+[[served]]            # one per skill the skills server serves, in the unscoped view and in every role's
+name = "deploy"
+source = ".ai-rulez/skills/deploy/SKILL.md"
+commit = ""
+digest = "sha256:…"   # the served-skill digest below
+```
+
+A served skill is a tree digest in the scheme below with the kind `served-skill` (`ai-rulez/served-skill/v1`), over
+the files the server returns, with the lines of the generated header that change without the skill changing left
+out (the project-wide `Source-Hash` and the `Generated:` stamp, comment lines in the first 40 lines only). It
+cannot collide with the digest of the authored skill of the same name. There is one implementation
+(`contentlock.ServedDigest`); the skills server, `lock`, `lock --check`/`--diff` and `[lock] enforce` all use it,
+and the per-file and whole-skill digests the server reports (`digest`) are the same scheme over the bytes as served.
+A fetched source tree and a remote include are digested with the older per-file hash of `include`/`skill` entries
+(`lockfile.DigestDir`, unchanged so existing pins stay valid); both kinds of entry are covered by `tree`.
+
+`lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
+change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
+`validate --strict` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
+source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --frozen` never use the network, and
+`lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
+remote pins.
+
 ## Hashing scheme (`hash_version = 1`)
 
 All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is frozen by `hash_version`; any change
@@ -109,8 +146,8 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
   .cjs .ts`) `CRLF` is converted to `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone
   `CR` is kept. Every other file (images, binaries, extensionless files) is hashed byte for byte.
 
-**Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `hook`, `role`,
-`settings`, `output`):
+**Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
+`settings`, `output`, `served-skill`):
 
 ```text
 digest = SHA256( lp("ai-rulez/<kind>/v1") || u64(n) || leaf_1 || … || leaf_n )
@@ -128,7 +165,7 @@ tree = SHA256( lp("ai-rulez/tree/v1") || u64(n) || { lp(kind) || lp(key) || lp(d
 ```
 
 over every pin, sorted by `(kind, key)`, where `kind`/`key` are `item/<kind>` with `<domain> NUL <id>`, `output`
-with the path, `include` and `installed-skill` with the name and `<commit> <digest>`, and `digest` is the
+with the path, `include`, `installed-skill`, `skill-source` and `served-skill` with the name and `<commit> <digest>`, and `digest` is the
 `sha256:<hex>` text of the pin.
 
 Two items with the same kind, domain and id get a `#2` suffix on the second (in path order), so every key is unique.
