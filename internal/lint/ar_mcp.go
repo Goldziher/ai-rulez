@@ -72,7 +72,12 @@ func (r *runner) mcpServers() []*mcpServer {
 		if err != nil {
 			continue
 		}
-		out = append(out, decodeMCPJSON(p, f.key, data)...)
+		for _, srv := range decodeMCPJSON(p, f.key, data) {
+			if _, generated := r.cfg.MCPServers[srv.name]; generated {
+				continue // the file mirrors config.toml, which is checked at its source
+			}
+			out = append(out, srv)
+		}
 	}
 	return out
 }
@@ -162,7 +167,8 @@ func checkMCPConfig(r *runner) {
 	byName := map[string][]*mcpServer{}
 	for _, s := range servers {
 		if !s.disabled {
-			byName[strings.ToLower(s.name)] = append(byName[strings.ToLower(s.name)], s)
+			key := s.file + "\x00" + strings.ToLower(s.name)
+			byName[key] = append(byName[key], s)
 		}
 	}
 	for _, s := range servers {
@@ -183,6 +189,9 @@ func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpSer
 	}
 	warn := func(format string, args ...any) {
 		r.addSev(SeverityWarning, CodeMCPConfigInvalid, s.file, at, "MCP server %q: %s", s.name, fmt.Sprintf(format, args...))
+	}
+	info := func(format string, args ...any) {
+		r.addSev(SeverityInfo, CodeMCPConfigInvalid, s.file, at, "MCP server %q: %s", s.name, fmt.Sprintf(format, args...))
 	}
 	for _, p := range s.typeProblems {
 		bad("%s", p)
@@ -215,11 +224,11 @@ func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpSer
 		bad("unknown transport %q (use stdio, http or sse)", s.transport)
 	}
 	if !mcpNameRe.MatchString(s.name) {
-		warn("the name has characters outside letters, digits, _ and -, which break the mcp__<server>__<tool> tool names")
+		info("the name has characters outside letters, digits, _ and -; Claude Code rewrites them in the mcp__<server>__<tool> names, so allowed-tools entries must use the rewritten name")
 	}
-	if dup := byName[strings.ToLower(s.name)]; len(dup) > 1 && dup[0].file == s.file && dup[0].name == s.name && s.name != "" {
+	if dup := byName[s.file+"\x00"+strings.ToLower(s.name)]; len(dup) > 1 && dup[0].file == s.file && dup[0].name == s.name && s.name != "" {
 		for _, other := range dup[1:] {
-			warn("is also defined in %s (as %q); the later definition wins or is dropped depending on the tool", r.display(other.file), other.name)
+			warn("is also defined as %q in the same file; names are matched case-insensitively and one definition is dropped", other.name)
 		}
 	}
 }
