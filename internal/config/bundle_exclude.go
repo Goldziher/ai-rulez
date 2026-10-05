@@ -11,12 +11,15 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
+// gitDirName is the name of a git metadata directory.
+const gitDirName = ".git"
+
 // DefaultBundleExcludes are the names that are never bundled with a skill or
 // command, whatever the project's .gitignore says: virtualenvs, bytecode caches,
 // dependency trees and VCS metadata are build artifacts, not skill content.
 // Projects add to the list with the top-level bundle_exclude config key; an entry
 // prefixed with "!" re-includes a path a default excluded (e.g. "!references/venv").
-var DefaultBundleExcludes = []string{".git", ".venv*", "venv", "__pycache__", "*.pyc", "node_modules"}
+var DefaultBundleExcludes = []string{gitDirName, ".venv*", "venv", "__pycache__", "*.pyc", "node_modules"}
 
 // bundleFilter decides which files below a skill or command root are bundled.
 type bundleFilter struct {

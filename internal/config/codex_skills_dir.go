@@ -32,7 +32,7 @@ func ValidateOutputSubdir(key, dir string) error {
 	if clean == ".." || strings.HasPrefix(clean, "../") {
 		return fmt.Errorf("%s %q must be a relative directory inside the project", key, dir)
 	}
-	for _, protected := range []string{aiRulezDirName, altConfigDirName, ".git"} {
+	for _, protected := range []string{aiRulezDirName, altConfigDirName, gitDirName} {
 		if clean == protected || strings.HasPrefix(clean, protected+"/") {
 			return fmt.Errorf("%s %q must not be inside %s", key, dir, protected)
 		}
