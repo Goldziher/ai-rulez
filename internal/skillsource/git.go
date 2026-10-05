@@ -1,0 +1,130 @@
+package skillsource
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"os/exec"
+	"regexp"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/includes"
+	"github.com/samber/oops"
+)
+
+var fullSHA = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+// Ref kinds reported by resolution.
+const (
+	kindSHA    = "commit"
+	kindTag    = "tag"
+	kindBranch = "branch"
+	kindHead   = "head"
+)
+
+func gitEnv() []string { return append(os.Environ(), "GIT_TERMINAL_PROMPT=0") }
+
+func injectToken(u, token string) string {
+	if token == "" {
+		return u
+	}
+	for _, scheme := range []string{"https://", "http://"} {
+		if strings.HasPrefix(u, scheme) {
+			return scheme + token + ":x-oauth-basic@" + strings.TrimPrefix(u, scheme)
+		}
+	}
+	return u
+}
+
+func runGit(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // arguments are built from validated config, not shell input
+	cmd.Dir = dir
+	cmd.Env = gitEnv()
+	var out, errOut bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errOut
+	if err := cmd.Run(); err != nil {
+		return "", oops.With("output", includes.RedactURL(strings.TrimSpace(errOut.String()))).Wrapf(err, "git %s", args[0])
+	}
+	return strings.TrimSpace(out.String()), nil
+}
+
+// lsRemote resolves ref to a commit on the remote and says what kind of ref it
+// was. Tags are preferred over branches (the peeled commit for annotated tags);
+// an empty ref or HEAD resolves the default branch.
+func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string, err error) {
+	remote := injectToken(url, token)
+	if ref == "" || ref == "HEAD" {
+		out, err := runGit(ctx, "", "ls-remote", remote, "HEAD")
+		if err != nil {
+			return "", "", oops.With("url", includes.RedactURL(url)).Wrapf(err, "resolve default branch")
+		}
+		sha, _, _ := strings.Cut(out, "\t")
+		if !fullSHA.MatchString(sha) {
+			return "", "", oops.With("url", includes.RedactURL(url)).Errorf("remote has no HEAD")
+		}
+		return sha, kindHead, nil
+	}
+	out, err := runGit(ctx, "", "ls-remote", remote, "refs/tags/"+ref, "refs/tags/"+ref+"^{}", "refs/heads/"+ref)
+	if err != nil {
+		return "", "", oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "resolve ref")
+	}
+	var tag, peeled, branch string
+	for _, line := range strings.Split(out, "\n") {
+		sha, name, ok := strings.Cut(strings.TrimSpace(line), "\t")
+		if !ok {
+			continue
+		}
+		switch name {
+		case "refs/tags/" + ref:
+			tag = sha
+		case "refs/tags/" + ref + "^{}":
+			peeled = sha
+		case "refs/heads/" + ref:
+			branch = sha
+		}
+	}
+	switch {
+	case peeled != "":
+		return peeled, kindTag, nil
+	case tag != "":
+		return tag, kindTag, nil
+	case branch != "":
+		return branch, kindBranch, nil
+	}
+	return "", "", oops.With("url", includes.RedactURL(url)).With("ref", ref).Errorf("ref %q not found on the remote (expected a tag, a branch or a full commit SHA)", ref)
+}
+
+// fetchCommit materializes commit of url into dest (a fresh directory) and
+// removes the git metadata, leaving only the tree. It verifies the checkout is
+// at commit so a tag that moved between resolution and fetch fails closed.
+func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string) error {
+	remote := injectToken(url, token)
+	if kind == kindTag || kind == kindBranch {
+		if _, err := runGit(ctx, "", "clone", "--quiet", "--depth", "1", "--branch", ref, remote, dest); err != nil {
+			return oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "clone")
+		}
+	} else {
+		if err := os.MkdirAll(dest, 0o755); err != nil {
+			return oops.Wrapf(err, "create checkout directory")
+		}
+		for _, args := range [][]string{
+			{"init", "--quiet"},
+			{"remote", "add", "origin", remote},
+			{"fetch", "--quiet", "--depth", "1", "origin", commit},
+			{"checkout", "--quiet", "--detach", "FETCH_HEAD"},
+		} {
+			if _, err := runGit(ctx, dest, args...); err != nil {
+				return oops.With("url", includes.RedactURL(url)).With("commit", commit).Wrapf(err, "fetch pinned commit")
+			}
+		}
+	}
+	head, err := runGit(ctx, dest, "rev-parse", "HEAD")
+	if err != nil {
+		return err
+	}
+	if head != commit {
+		return oops.With("url", includes.RedactURL(url)).Errorf("fetched commit %s but %s was resolved; the ref moved during the fetch, retry", head, commit)
+	}
+	// Dropping .git makes the cached tree immutable and smaller; the digest ignores it anyway.
+	return oops.Wrapf(os.RemoveAll(dest+string(os.PathSeparator)+".git"), "drop git metadata")
+}
