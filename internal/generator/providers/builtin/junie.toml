@@ -1,20 +1,24 @@
 # JetBrains Junie provider spec.
 #
-# Replaces the hand-written internal/generator/presets/junie.go. Junie reads
-# project guidance from .junie/guidelines.md and supports per-agent and
-# per-skill files alongside. No effort field; no sidecars.
+# Junie reads project guidance from AGENTS.md (the open standard). When a root
+# AGENTS.md is present Junie combines it with every .junie/rules/*.md file, so
+# rules go to the native rules folder and the root file keeps the always-on
+# content. Per-agent and per-skill files sit alongside. No effort field; no
+# sidecars. (The legacy .junie/guidelines.md layout is no longer written.)
 
 name = "junie"
 display_name = "JetBrains Junie"
 
 directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
 
-# guidelines.md inlines rules and context but NOT the agents-delegation
-# section — Junie surfaces subagents through its own UI, not the root file.
+# AGENTS.md inlines rules and context but NOT the agents-delegation section —
+# Junie surfaces subagents through its own UI, not the root file. Junie is a
+# native AGENTS.md reader, so it shares the file byte-for-byte with the other
+# AGENTS.md presets.
 [root]
-file = ".junie/guidelines.md"
-# Junie never reads .junie/guidelines.local.md, but it loads every .junie/rules/*.md,
-# so the machine-local context goes there.
+file = "AGENTS.md"
+# Junie never reads AGENTS.local.md, but it loads every .junie/rules/*.md, so
+# the machine-local context goes there.
 local_file = ".junie/rules/ai-rulez.local.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline"]
 

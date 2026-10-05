@@ -5,7 +5,7 @@ targets:
   - CLAUDE.md
   - GEMINI.md
   - .cursor/rules/*
-  - .windsurf/*
+  - .devin/*
   - AGENTS.md
   - .hermes.md
 ---

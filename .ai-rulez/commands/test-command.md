@@ -6,7 +6,7 @@ usage: /test [argument]
 shortcut: cmd+shift+t
 priority: high
 category: testing
-targets: [claude, cursor, continue-dev]
+targets: [claude, cursor, devin]
 ---
 
 # Test Command
@@ -27,4 +27,3 @@ The command should be generated as:
 
 - Claude: `.claude/skills/test/SKILL.md`
 - Cursor: `.cursor/rules/cmd-test.mdc`
-- Continue.dev: Entry in `.continue/prompts/ai_rulez_prompts.yaml`

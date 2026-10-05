@@ -26,10 +26,10 @@ func TestAgentsMD_AlwaysOnItemTargetedAtRulesFolderIsWrittenThere(t *testing.T) 
 		{"cursor", ".cursor/", ".cursor/rules/folder-only.mdc"},
 		{"cursor", "folder-only.mdc", ".cursor/rules/folder-only.mdc"},
 		{"cline", ".clinerules/", ".clinerules/folder-only.md"},
-		{"windsurf", ".windsurf/", ".windsurf/rules/folder-only.md"},
+		{"devin", ".devin/", ".devin/rules/folder-only.md"},
 		{"copilot", ".github/instructions/*.md", ".github/instructions/folder-only.instructions.md"},
 		{"copilot", ".github/instructions/", ".github/instructions/folder-only.instructions.md"},
-		{"windsurf", ".windsurf/rules/", ".windsurf/rules/folder-only.md"},
+		{"devin", ".devin/rules/", ".devin/rules/folder-only.md"},
 	}
 	for _, tc := range cases {
 		for _, kind := range []string{"rules", "context"} {
@@ -101,7 +101,7 @@ func emptyDirs(t *testing.T, root string) []string {
 func TestAgentsMD_NoEmptyRulesFolders(t *testing.T) {
 	rulesDirs := map[string]string{
 		"cursor": ".cursor/rules", "claude": ".claude/rules", "copilot": ".github/instructions",
-		"windsurf": ".windsurf/rules", "cline": ".clinerules", "continue-dev": ".continue/rules", "junie": ".junie/rules",
+		"devin": ".devin/rules", "cline": ".clinerules", "junie": ".junie/rules",
 	}
 	for preset, dir := range rulesDirs {
 		t.Run(preset, func(t *testing.T) {

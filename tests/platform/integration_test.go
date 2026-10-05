@@ -200,7 +200,7 @@ func TestOutputDirectoryCreation(t *testing.T) {
 		},
 		{
 			name: "Mixed separators",
-			path: filepath.Join(".continue", "prompts", "ai_rulez_prompts.yaml"),
+			path: filepath.Join(".devin", "rules", "code-review.md"),
 		},
 	}
 

@@ -152,7 +152,7 @@ func TestJunie_RulesSplit(t *testing.T) {
 			notInRoot:  []string{"ALWAYS_RULE", "TSX_RULE", "API_CTX"},
 		},
 		{
-			name: "inline keeps everything in guidelines", mode: "inline",
+			name: "inline keeps everything in the root AGENTS.md", mode: "inline",
 			wantFiles:  nil,
 			wantInRoot: []string{"ALWAYS_RULE", "TSX_RULE", "LAYOUT_CTX", "API_CTX"},
 		},
@@ -167,7 +167,7 @@ func TestJunie_RulesSplit(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 			assert.ElementsMatch(t, tt.wantFiles, fileSet(outputs, ".junie/rules"))
-			root, ok := outputByPath(outputs, ".junie/guidelines.md")
+			root, ok := outputByPath(outputs, "AGENTS.md")
 			require.True(t, ok)
 			for _, s := range tt.wantInRoot {
 				assert.Contains(t, root.Content, s)

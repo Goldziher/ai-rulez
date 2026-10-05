@@ -15,7 +15,7 @@ Directory-based AI governance for development teams.
 
 ## What is ai-rulez?
 
-ai-rulez organizes your AI assistant rules, context, and domain-specific guidance in a single `.ai-rulez/` directory. Write once, generate native configurations for Claude, Cursor, Windsurf, Copilot, Gemini, and more.
+ai-rulez organizes your AI assistant rules, context, and domain-specific guidance in a single `.ai-rulez/` directory. Write once, generate native configurations for Claude, Cursor, Devin, Copilot, Gemini, and more.
 
 **Key features:**
 

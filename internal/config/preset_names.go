@@ -7,10 +7,9 @@ type PresetName string
 const (
 	PresetClaude      PresetName = "claude"
 	PresetCursor      PresetName = "cursor"
-	PresetWindsurf    PresetName = "windsurf"
+	PresetDevin       PresetName = "devin"
 	PresetCopilot     PresetName = "copilot"
 	PresetGemini      PresetName = "gemini"
-	PresetContinue    PresetName = "continue-dev"
 	PresetCline       PresetName = "cline"
 	PresetAmp         PresetName = "amp"
 	PresetCodex       PresetName = "codex"

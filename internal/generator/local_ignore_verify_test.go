@@ -113,7 +113,7 @@ func TestGenerate_NoLocalKeepsTheLocalIgnoreEntries(t *testing.T) {
 	// Arrange: claude + cursor with a local rule and an overlay preset.
 	p := newDriftProject(t, strings.Replace(driftShared, `presets = ["claude"]`, `presets = ["claude", "cursor"]`, 1))
 	p.git(t, "init", "-q")
-	p.overlay(t, "presets = [\"windsurf\"]\n")
+	p.overlay(t, "presets = [\"devin\"]\n")
 	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
 	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
 	withLocal := p.read(t, ".gitignore")

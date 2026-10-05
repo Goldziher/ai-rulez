@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateConfigTemplate_ContinueDev(t *testing.T) {
+func TestGenerateConfigTemplate_Devin(t *testing.T) {
 	projectName := "TestProject"
 	providers := templates.ProviderConfig{
-		ContinueDev: true,
+		Devin: true,
 	}
 
 	configContent := templates.GenerateConfigTemplate(projectName, providers)
 
 	assert.Contains(t, configContent, "name: \"TestProject\"")
-	assert.Contains(t, configContent, "path: \".continue/rules/01-main.md\"")
+	assert.Contains(t, configContent, "path: \".devin/rules/01-main.md\"")
 
 	assert.Contains(t, configContent, "ai-rules-v2.schema.json")
 
@@ -32,11 +32,11 @@ func TestGenerateConfigTemplate_ContinueDev(t *testing.T) {
 	assert.Contains(t, configContent, `#   - name: "reviewer"`)
 }
 
-func TestGenerateConfigTemplate_ContinueDevAndClaude(t *testing.T) {
+func TestGenerateConfigTemplate_DevinAndClaude(t *testing.T) {
 	projectName := "TestProject"
 	providers := templates.ProviderConfig{
-		ContinueDev: true,
-		Claude:      true,
+		Devin:  true,
+		Claude: true,
 	}
 
 	configContent := templates.GenerateConfigTemplate(projectName, providers)
@@ -100,7 +100,7 @@ func TestGenerateConfigTemplate_Junie(t *testing.T) {
 	configContent := templates.GenerateConfigTemplate(projectName, providers)
 
 	assert.Contains(t, configContent, "name: \"TestProject\"")
-	assert.Contains(t, configContent, "path: \".junie/guidelines.md\"")
+	assert.Contains(t, configContent, "path: \"AGENTS.md\"")
 	assert.Contains(t, configContent, "ai-rules-v2.schema.json")
 
 	assert.Contains(t, configContent, "# agents:")

@@ -70,7 +70,7 @@ type OutputFile struct {
 // markdown root instructions file and therefore support a machine-local ".local"
 // variant of it (CLAUDE.md → CLAUDE.local.md). LocalRootFile returns the local
 // variant's path relative to the output base dir, or "" when the preset has no
-// single-file markdown root (e.g. cursor, windsurf) and so has no local variant.
+// single-file markdown root (e.g. cursor, devin) and so has no local variant.
 type LocalRootProvider interface {
 	LocalRootFile() string
 }

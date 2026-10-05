@@ -4,7 +4,6 @@ priority: medium
 targets:
   - CLAUDE.md
   - .github/copilot-instructions.md
-  - .continue/rules/*
 ---
 
 # Capability Delivery Checklist

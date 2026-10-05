@@ -88,7 +88,7 @@ type FrontmatterSpec struct {
 
 // EffortMapSpec is the provider's effort tier → native value translation.
 // Style is currently always "string"; "budget" (numeric) will be added when
-// the continue-dev preset migrates.
+// a numeric-budget preset migrates.
 type EffortMapSpec struct {
 	Style  string            `toml:"style" yaml:"style" json:"style"`
 	Values map[string]string `toml:"values" yaml:"values" json:"values"`

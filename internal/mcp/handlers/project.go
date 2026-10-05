@@ -701,45 +701,40 @@ func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string
 // curated "popular" shortcuts. Every entry is a real built-in preset: a config
 // listing a non-preset name (the old `popular`) fails validation.
 var curatedPresets = []string{
-	presetClaude, presetCursor, presetWindsurf, presetCopilot, presetGemini,
-	presetAmp, presetCodex, presetCline, presetContinueDev,
+	presetClaude, presetCursor, presetDevin, presetCopilot, presetGemini,
+	presetAmp, presetCodex, presetCline,
 }
 
-func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
+func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) []string {
 	if allProviders {
-		return append([]string(nil), curatedPresets...), true
+		return append([]string(nil), curatedPresets...)
 	}
 	if popularProviders {
-		return append([]string(nil), curatedPresets...), true
+		return append([]string(nil), curatedPresets...)
 	}
 
 	var presets []string
-	var hasContinueDev bool
 
 	providerMap := map[string]string{
-		presetClaude:      presetClaude,
-		presetCursor:      presetCursor,
-		presetWindsurf:    presetWindsurf,
-		presetCopilot:     presetCopilot,
-		presetGemini:      presetGemini,
-		presetAmp:         presetAmp,
-		presetCodex:       presetCodex,
-		presetCline:       presetCline,
-		presetContinueDev: presetContinueDev,
+		presetClaude:  presetClaude,
+		presetCursor:  presetCursor,
+		presetDevin:   presetDevin,
+		presetCopilot: presetCopilot,
+		presetGemini:  presetGemini,
+		presetAmp:     presetAmp,
+		presetCodex:   presetCodex,
+		presetCline:   presetCline,
 	}
 
 	for _, p := range providers {
 		if provider, ok := p.(string); ok {
 			if preset, exists := providerMap[provider]; exists {
 				presets = append(presets, preset)
-				if provider == presetContinueDev {
-					hasContinueDev = true
-				}
 			}
 		}
 	}
 
-	return presets, hasContinueDev
+	return presets
 }
 
 func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -755,7 +750,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		providers = providersSlice
 	}
 
-	presets, hasContinueDev := getPresetsFromProviders(providers, allProviders, popularProviders)
+	presets := getPresetsFromProviders(providers, allProviders, popularProviders)
 
 	var configContent string
 	if len(presets) > 0 {
@@ -780,12 +775,6 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		agentsDir := filepath.Join(aiRulesDir, "agents")
 		if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 			return ToolError(fmt.Errorf("failed to create agents directory: %w", err))
-		}
-	}
-
-	if hasContinueDev {
-		if err := CreateContinueDevConfig(); err != nil {
-			return ToolError(fmt.Errorf("failed to create continue.dev config: %w", err))
 		}
 	}
 

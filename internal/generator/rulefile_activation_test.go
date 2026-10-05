@@ -28,20 +28,16 @@ func TestActivationFromRuleFile(t *testing.T) {
 		{"cursor glob", ".cursor/rules/a.mdc", "---\nglobs: \"src/**\"\nalwaysApply: false\n---\nb\n", config.ActivationGlob},
 		{"cursor auto", ".cursor/rules/a.mdc", "---\ndescription: use when testing\n---\nb\n", config.ActivationAuto},
 		{"cursor manual", ".cursor/rules/a.mdc", "---\nalwaysApply: false\n---\nb\n", config.ActivationManual},
-		{"windsurf always", ".windsurf/rules/a.md", "---\ntrigger: always_on\n---\nb\n", config.ActivationAlways},
-		{"windsurf glob", ".windsurf/rules/a.md", "---\ntrigger: glob\nglobs: src/**\n---\nb\n", config.ActivationGlob},
-		{"windsurf auto", ".windsurf/rules/a.md", "---\ntrigger: model_decision\ndescription: d\n---\nb\n", config.ActivationAuto},
-		{"windsurf manual", ".windsurf/rules/a.md", "---\ntrigger: manual\n---\nb\n", config.ActivationManual},
+		{"devin always", ".devin/rules/a.md", "---\ntrigger: always_on\n---\nb\n", config.ActivationAlways},
+		{"devin glob", ".devin/rules/a.md", "---\ntrigger: glob\nglobs: src/**\n---\nb\n", config.ActivationGlob},
+		{"devin auto", ".devin/rules/a.md", "---\ntrigger: model_decision\ndescription: d\n---\nb\n", config.ActivationAuto},
+		{"devin manual", ".devin/rules/a.md", "---\ntrigger: manual\n---\nb\n", config.ActivationManual},
 		{"antigravity manual", "/r/.agents/rules/a.md", "---\ntrigger: manual\n---\nb\n", config.ActivationManual},
 		{"antigravity glob", "/r/.agents/rules/a.md", "---\ntrigger: glob\nglobs: x\n---\nb\n", config.ActivationGlob},
 		{"copilot always", ".github/instructions/a.instructions.md", "---\napplyTo: \"**\"\n---\nb\n", config.ActivationAlways},
 		{"copilot glob", ".github/instructions/a.instructions.md", "---\napplyTo: \"src/**\"\n---\nb\n", config.ActivationGlob},
 		{"copilot auto", ".github/instructions/a.instructions.md", "---\ndescription: d\n---\nb\n", config.ActivationAuto},
 		{"copilot manual", ".github/instructions/a.instructions.md", "---\n---\nb\n", config.ActivationManual},
-		{"continue always", ".continue/rules/a.md", "---\nname: a\nalwaysApply: true\n---\nb\n", config.ActivationAlways},
-		{"continue glob", ".continue/rules/a.md", "---\nname: a\nglobs:\n  - src/**\nalwaysApply: false\n---\nb\n", config.ActivationGlob},
-		{"continue auto", ".continue/rules/a.md", "---\nname: a\ndescription: d\n---\nb\n", config.ActivationAuto},
-		{"continue manual", ".continue/rules/a.md", "---\nname: a\nalwaysApply: false\n---\nb\n", config.ActivationManual},
 		{"junie always", ".junie/rules/a.md", "---\npaths: [x]\n---\nb\n", config.ActivationAlways},
 		{"unknown path", "docs/a.md", "---\ntrigger: manual\n---\nb\n", config.ActivationAlways},
 		{"malformed frontmatter", ".cursor/rules/a.mdc", "---\n: : [\n---\nb\n", config.ActivationAlways},
@@ -56,8 +52,8 @@ func TestActivationFromRuleFile(t *testing.T) {
 func TestInferOutputKind_RuleFiles(t *testing.T) {
 	for _, path := range []string{
 		".github/instructions/a.instructions.md", ".agents/rules/a.md", ".junie/rules/a.md",
-		".clinerules/a.md", ".continue/rules/a.md", ".claude/rules/a.md",
-		".cursor/rules/a.mdc", ".windsurf/rules/a.md",
+		".clinerules/a.md", ".claude/rules/a.md",
+		".cursor/rules/a.mdc", ".devin/rules/a.md",
 	} {
 		assert.Equal(t, config.OutputKindRuleFile, config.InferOutputKind("/repo/"+path, "/repo"), path)
 	}

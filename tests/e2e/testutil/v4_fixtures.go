@@ -18,8 +18,8 @@ default = "full"
 builtins = false
 
 presets = [
-  "claude", "cursor", "windsurf", "copilot", "gemini",
-  "cline", "junie", "continue-dev", "codex", "opencode",
+  "claude", "cursor", "devin", "copilot", "gemini",
+  "cline", "junie", "codex", "opencode",
   "amp", "antigravity", "mcp", "xum", "pi"
 ]
 
@@ -150,7 +150,6 @@ targets:
   - cursor
   - copilot
   - codex
-  - continue-dev
 ---
 
 Run the project's full test suite. If --coverage is specified, generate a coverage report.

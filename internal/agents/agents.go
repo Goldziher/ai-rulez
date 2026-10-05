@@ -34,7 +34,6 @@ var supportedAgents = []AgentInfo{
 	{ID: ampAgentID, Command: ampAgentID, Display: "AMP (Sourcegraph)"},
 	{ID: claudeAgentID, Command: claudeAgentID, Display: "Claude (Anthropic)"},
 	{ID: codexAgentID, Command: codexAgentID, Display: "Codex"},
-	{ID: "continue-dev", Command: "cn", Display: "Continue.dev"},
 	{ID: "cursor", Command: "cursor-agent", Display: "Cursor"},
 	{ID: geminiAgentID, Command: geminiAgentID, Display: "Gemini (Google)"},
 }
@@ -81,9 +80,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 
 	case codexAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "exec", "--color", "never", prompt) //nolint:gosec // Intentional subprocess execution
-
-	case "continue-dev":
-		cmd = exec.CommandContext(ctx, agent.Command, "--print", prompt) //nolint:gosec // Intentional subprocess execution
 
 	case geminiAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "--prompt", prompt) //nolint:gosec // Intentional subprocess execution
@@ -317,9 +313,6 @@ func configuredAgentIDs(config templates.ProviderConfig) []string { //nolint:cyc
 	}
 	if config.Cursor {
 		ids = append(ids, "cursor")
-	}
-	if config.ContinueDev {
-		ids = append(ids, "continue-dev")
 	}
 	return ids
 }

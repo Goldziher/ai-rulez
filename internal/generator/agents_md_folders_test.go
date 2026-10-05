@@ -56,10 +56,10 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 			}),
 		},
 		{
-			name: "windsurf", preset: "windsurf",
+			name: "devin", preset: "devin",
 			want: sortedPaths(sharedSkills, []string{
-				".mcp.json", ".windsurf/agents/helper.md", ".windsurf/rules/auto.md", ".windsurf/rules/context-scoped.md",
-				".windsurf/rules/go-style.md", ".windsurf/rules/manual.md", "AGENTS.md",
+				".mcp.json", ".devin/agents/helper.md", ".devin/rules/auto.md", ".devin/rules/context-scoped.md",
+				".devin/rules/go-style.md", ".devin/rules/manual.md", "AGENTS.md",
 			}),
 		},
 		{
@@ -68,16 +68,6 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 				".cline/agents/helper.md", ".clinerules/auto.md", ".clinerules/context-scoped.md", ".clinerules/go-style.md",
 				".clinerules/manual.md", ".mcp.json", "AGENTS.md",
 			}),
-		},
-		{
-			// Continue does not read .agents/skills: no shared skills, and the
-			// prompts file keeps carrying them.
-			name: "continue-dev", preset: "continue-dev",
-			want: []string{
-				".continue/agents/helper.md", ".continue/prompts/ai_rulez_prompts.yaml", ".continue/rules/auto.md",
-				".continue/rules/context-scoped.md", ".continue/rules/go-style.md", ".continue/rules/manual.md",
-				".mcp.json", "AGENTS.md",
-			},
 		},
 		{
 			name: "junie", preset: "junie",
@@ -112,12 +102,11 @@ func filterOut(paths []string, prefix string) []string {
 
 func TestAgentsMD_RulesFolderKeepsOnlyNonAlwaysItems(t *testing.T) {
 	folders := map[string]string{
-		"cursor":       ".cursor/rules",
-		"copilot":      ".github/instructions",
-		"windsurf":     ".windsurf/rules",
-		"cline":        ".clinerules",
-		"continue-dev": ".continue/rules",
-		"junie":        ".junie/rules",
+		"cursor":  ".cursor/rules",
+		"copilot": ".github/instructions",
+		"devin":   ".devin/rules",
+		"cline":   ".clinerules",
+		"junie":   ".junie/rules",
 	}
 	for preset, dir := range folders {
 		t.Run(preset, func(t *testing.T) {
@@ -176,16 +165,6 @@ func TestAgentsMD_JunieInlineModeKeepsEveryRuleInAgentsMD(t *testing.T) {
 	}
 }
 
-func TestAgentsMD_ContinueKeepsSkillsInPrompts(t *testing.T) {
-	root := newAgentsMDFoldersProject(t, "agents_md = true\n", []string{"continue-dev"}, "")
-	runAgentsMDGenerate(t, root)
-
-	prompts := readAgentsMDFile(t, root, ".continue/prompts/ai_rulez_prompts.yaml")
-	assert.Contains(t, prompts, "ALPHA_BODY")
-	assert.Contains(t, prompts, "BETA_BODY")
-	assert.NoDirExists(t, filepath.Join(root, ".agents", "skills"))
-}
-
 func TestAgentsMD_ScopedInlineDecision(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -195,7 +174,7 @@ func TestAgentsMD_ScopedInlineDecision(t *testing.T) {
 		autoManual bool // auto and manual rules in AGENTS.md
 	}{
 		{name: "claude and cursor", presets: []string{"claude", "cursor"}},
-		{name: "every folder preset", presets: []string{"claude", "cursor", "windsurf", "cline", "continue-dev", "junie", "antigravity"}},
+		{name: "every folder preset", presets: []string{"claude", "cursor", "devin", "cline", "junie", "antigravity"}},
 		{name: "copilot", presets: []string{"copilot"}, autoManual: true},
 		{name: "claude and codex", presets: []string{"claude", "codex"}, scoped: true, autoManual: true},
 		{name: "cursor and gemini", presets: []string{"cursor", "gemini"}, scoped: true, autoManual: true},
@@ -241,7 +220,7 @@ func containsAll(s string, parts ...string) bool {
 }
 
 func TestAgentsMD_ToggleRestoresDroppedFiles(t *testing.T) {
-	for _, preset := range []string{"cursor", "copilot", "windsurf", "cline", "continue-dev", "junie"} {
+	for _, preset := range []string{"cursor", "copilot", "devin", "cline", "junie"} {
 		t.Run(preset, func(t *testing.T) {
 			root := newAgentsMDFoldersProject(t, "", []string{preset}, "")
 			runAgentsMDGenerate(t, root)
@@ -270,7 +249,7 @@ func TestAgentsMD_ToggleRestoresDroppedFiles(t *testing.T) {
 
 func TestAgentsMD_FoldersSecondRunIsIdempotent(t *testing.T) {
 	root := newAgentsMDFoldersProject(t, "agents_md = true\n",
-		[]string{"cursor", "copilot", "windsurf", "cline", "continue-dev", "junie", "claude"}, "")
+		[]string{"cursor", "copilot", "devin", "cline", "junie", "claude"}, "")
 	runAgentsMDGenerate(t, root)
 	first := agentsMDSnapshot(t, root)
 	runAgentsMDGenerate(t, root)
@@ -280,13 +259,13 @@ func TestAgentsMD_FoldersSecondRunIsIdempotent(t *testing.T) {
 func TestAgentsMD_SameDecisionSameAgentsMD(t *testing.T) {
 	groups := map[string][][]string{
 		"folders only": {
-			{"claude", "cursor"}, {"cursor", "windsurf"}, {"cline", "continue-dev", "junie", "claude"},
+			{"claude", "cursor"}, {"cursor", "devin"}, {"cline", "junie", "claude"},
 		},
 		"auto and manual only": {
-			{"copilot"}, {"copilot", "cursor"}, {"copilot", "claude", "windsurf"},
+			{"copilot"}, {"copilot", "cursor"}, {"copilot", "claude", "devin"},
 		},
 		"scoped": {
-			{"claude", "codex"}, {"cursor", "gemini"}, {"copilot", "opencode"}, {"windsurf", "amp"},
+			{"claude", "codex"}, {"cursor", "gemini"}, {"copilot", "opencode"}, {"devin", "amp"},
 		},
 	}
 	for name, combos := range groups {
@@ -319,7 +298,7 @@ func TestAgentsMD_DecisionChangesSharedHash(t *testing.T) {
 		t.Fatal("no Source-Hash line")
 		return ""
 	}
-	assert.Equal(t, hash("claude", "cursor"), hash("windsurf"), "same decision, same provenance")
+	assert.Equal(t, hash("claude", "cursor"), hash("devin"), "same decision, same provenance")
 	assert.NotEqual(t, hash("claude", "cursor"), hash("claude", "codex"))
 	assert.NotEqual(t, hash("claude", "cursor"), hash("copilot"))
 }

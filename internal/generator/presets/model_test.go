@@ -102,13 +102,6 @@ func TestResolveAgentModel(t *testing.T) {
 			cfg:    &config.Config{},
 			want:   "sonnet",
 		},
-		{
-			name:   "hyphenated preset name resolves",
-			preset: "continue-dev",
-			agent:  mkAgent(map[string]string{"continue-dev_model": "mistral-large"}),
-			cfg:    nil,
-			want:   "mistral-large",
-		},
 	}
 
 	for _, tt := range tests {
@@ -165,16 +158,15 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 		Name: "researcher",
 		Metadata: &config.Metadata{
 			Extra: map[string]string{
-				"model":              "legacy-shared",
-				"claude_model":       "opus",
-				"copilot_model":      "gpt-5",
-				"cursor_model":       "cursor-fast",
-				"cline_model":        "cline-anthropic",
-				"opencode_model":     "opencode/large",
-				"windsurf_model":     "windsurf-pro",
-				"continue-dev_model": "continue-pro",
-				"gemini_model":       "gemini-2.0",
-				"description":        "Research helper",
+				"model":          "legacy-shared",
+				"claude_model":   "opus",
+				"copilot_model":  "gpt-5",
+				"cursor_model":   "cursor-fast",
+				"cline_model":    "cline-anthropic",
+				"opencode_model": "opencode/large",
+				"devin_model":    "devin-pro",
+				"gemini_model":   "gemini-2.0",
+				"description":    "Research helper",
 			},
 		},
 	}
@@ -214,18 +206,11 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 			want: "opencode/large",
 		},
 		{
-			preset: "windsurf",
+			preset: "devin",
 			got: func() map[string]interface{} {
-				return (&WindsurfPresetGenerator{}).buildWindsurfAgentFrontmatter(agent, nil)
+				return (&DevinPresetGenerator{}).buildDevinAgentFrontmatter(agent, nil)
 			},
-			want: "windsurf-pro",
-		},
-		{
-			preset: "continue-dev",
-			got: func() map[string]interface{} {
-				return (&ContinueDevPresetGenerator{}).buildContinueDevAgentFrontmatter(agent, nil)
-			},
-			want: "continue-pro",
+			want: "devin-pro",
 		},
 		{
 			preset: "gemini",

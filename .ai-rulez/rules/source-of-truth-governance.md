@@ -3,7 +3,7 @@ priority: critical
 targets:
   - CLAUDE.md
   - .cursor/rules/*
-  - .windsurf/*
+  - .devin/*
   - .github/copilot-instructions.md
   - AGENTS.md
   - .hermes.md

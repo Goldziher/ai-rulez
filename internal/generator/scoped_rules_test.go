@@ -16,7 +16,7 @@ import (
 
 const scopedRulesConfig = `version = "4.0"
 name = "mono"
-presets = ["claude", "cursor", "copilot", "antigravity", "windsurf"]
+presets = ["claude", "cursor", "copilot", "antigravity", "devin"]
 gitignore = false
 
 [rules]
@@ -29,12 +29,12 @@ web = ["web"]
 [[scopes]]
 path = "packages/api"
 profile = "api"
-presets = ["claude", "cursor", "copilot", "antigravity", "windsurf"]
+presets = ["claude", "cursor", "copilot", "antigravity", "devin"]
 
 [[scopes]]
 path = "packages/web"
 profile = "web"
-presets = ["claude", "cursor", "copilot", "antigravity", "windsurf"]
+presets = ["claude", "cursor", "copilot", "antigravity", "devin"]
 `
 
 // scopedRulesFixture is a root project with two scopes whose rules come from
@@ -181,20 +181,20 @@ func TestScopedRules_Placement(t *testing.T) {
 				".cursor/rules/packages-web/web-style.mdc",
 				".cursor/rules/packages-web/web-ts.mdc",
 				".cursor/rules/root-rule.mdc",
+				".devin/rules/context-packages-api--api-notes.md",
+				".devin/rules/context-packages-web--web-glob-context.md",
+				".devin/rules/packages-api--api-go.md",
+				".devin/rules/packages-api--api-hint.md",
+				".devin/rules/packages-api--api-style.md",
+				".devin/rules/packages-web--web-style.md",
+				".devin/rules/packages-web--web-ts.md",
+				".devin/rules/root-rule.md",
 				".github/instructions/packages-api/api-go.instructions.md",
 				".github/instructions/packages-api/api-style.instructions.md",
 				".github/instructions/packages-web/context-web-glob-context.instructions.md",
 				".github/instructions/packages-web/web-style.instructions.md",
 				".github/instructions/packages-web/web-ts.instructions.md",
 				".github/instructions/root-rule.instructions.md",
-				".windsurf/rules/context-packages-api--api-notes.md",
-				".windsurf/rules/context-packages-web--web-glob-context.md",
-				".windsurf/rules/packages-api--api-go.md",
-				".windsurf/rules/packages-api--api-hint.md",
-				".windsurf/rules/packages-api--api-style.md",
-				".windsurf/rules/packages-web--web-style.md",
-				".windsurf/rules/packages-web--web-ts.md",
-				".windsurf/rules/root-rule.md",
 			},
 			lines: map[string][]string{
 				".claude/rules/packages-api/api-go.md":                        {"    - packages/api/**/*.go"},
@@ -209,8 +209,8 @@ func TestScopedRules_Placement(t *testing.T) {
 				".github/instructions/root-rule.instructions.md":              {"applyTo: '**'"},
 				".agents/rules/packages-api--api-style.md":                    {"trigger: glob", "globs: packages/api/**"},
 				".agents/rules/packages-api--api-hint.md":                     {"trigger: model_decision", "description: Use when touching handlers"},
-				".windsurf/rules/packages-web--web-ts.md":                     {"trigger: glob", "globs: packages/web/src/**/*.ts,packages/web/src/**/*.tsx"},
-				".windsurf/rules/context-packages-web--web-glob-context.md":   {"globs: packages/web/src/**"},
+				".devin/rules/packages-web--web-ts.md":                        {"trigger: glob", "globs: packages/web/src/**/*.ts,packages/web/src/**/*.tsx"},
+				".devin/rules/context-packages-web--web-glob-context.md":      {"globs: packages/web/src/**"},
 			},
 			inlineIn: map[string][]string{
 				"packages/api/.github/copilot-instructions.md": {"API_HINT_BODY", "API_NOTES_BODY"},
@@ -234,17 +234,17 @@ func TestScopedRules_Placement(t *testing.T) {
 				".cursor/rules/packages-web/web-style.mdc",
 				".cursor/rules/packages-web/web-ts.mdc",
 				".cursor/rules/root-rule.mdc",
+				".devin/rules/context-packages-api--api-notes.md",
+				".devin/rules/context-packages-web--web-glob-context.md",
+				".devin/rules/packages-api--api-go.md",
+				".devin/rules/packages-api--api-hint.md",
+				".devin/rules/packages-api--api-style.md",
+				".devin/rules/packages-web--web-style.md",
+				".devin/rules/packages-web--web-ts.md",
+				".devin/rules/root-rule.md",
 				".github/instructions/packages-api/api-go.instructions.md",
 				".github/instructions/packages-web/context-web-glob-context.instructions.md",
 				".github/instructions/packages-web/web-ts.instructions.md",
-				".windsurf/rules/context-packages-api--api-notes.md",
-				".windsurf/rules/context-packages-web--web-glob-context.md",
-				".windsurf/rules/packages-api--api-go.md",
-				".windsurf/rules/packages-api--api-hint.md",
-				".windsurf/rules/packages-api--api-style.md",
-				".windsurf/rules/packages-web--web-style.md",
-				".windsurf/rules/packages-web--web-ts.md",
-				".windsurf/rules/root-rule.md",
 			},
 			lines: map[string][]string{
 				".claude/rules/packages-api/api-go.md": {"    - packages/api/**/*.go"},
@@ -320,7 +320,7 @@ func TestScopedRules_IdempotentAndStaleCleanup(t *testing.T) {
 		for _, gone := range []string{
 			".claude/rules/packages-api/api-go.md", ".cursor/rules/packages-api/api-go.mdc",
 			".github/instructions/packages-api/api-go.instructions.md", ".agents/rules/packages-api--api-go.md",
-			".windsurf/rules/packages-api--api-go.md",
+			".devin/rules/packages-api--api-go.md",
 		} {
 			assert.NotContains(t, after, gone)
 		}
@@ -376,11 +376,11 @@ func TestScopedRules_CollisionIsDisambiguated(t *testing.T) {
 	// Act
 	err := generateScopedProject(t, root)
 
-	// Assert: windsurf's folder is flat, so the clash happens there only
+	// Assert: devin's folder is flat, so the clash happens there only
 	require.NoError(t, err)
 	var clashing []string
 	for _, f := range ruleFilesUnder(t, root) {
-		if strings.HasPrefix(strings.ToLower(filepath.Base(f)), "packages-api--api-style") && strings.HasPrefix(f, ".windsurf/") {
+		if strings.HasPrefix(strings.ToLower(filepath.Base(f)), "packages-api--api-style") && strings.HasPrefix(f, ".devin/") {
 			clashing = append(clashing, f)
 		}
 	}
@@ -403,7 +403,7 @@ func TestScopedRules_ScopeSlugCollisionIsAnError(t *testing.T) {
 	assert.Contains(t, err.Error(), "share the rule file qualifier")
 }
 
-const presetCount = 5 // claude, cursor, copilot, antigravity, windsurf
+const presetCount = 5 // claude, cursor, copilot, antigravity, devin
 
 func TestScopedRules_DomainsInRootAreNotRepeatedInScopes(t *testing.T) {
 	noProfiles := strings.Replace(strings.Replace(scopedRulesConfig, "[profiles]\napi = [\"api\"]\nweb = [\"web\"]\n", "", 1),
@@ -474,7 +474,7 @@ func TestScopedRules_DomainsInRootAreNotRepeatedInScopes(t *testing.T) {
 
 func TestScopedRules_DuplicatePresetsAreHarmless(t *testing.T) {
 	// Arrange
-	cfgText := strings.ReplaceAll(scopedRulesConfig, `presets = ["claude", "cursor", "copilot", "antigravity", "windsurf"]`,
+	cfgText := strings.ReplaceAll(scopedRulesConfig, `presets = ["claude", "cursor", "copilot", "antigravity", "devin"]`,
 		`presets = ["claude", "claude", "cursor"]`)
 	root := writeScopedRulesProject(t, "split", nil)
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"),
