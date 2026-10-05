@@ -255,3 +255,21 @@ func TestHookTemplate(t *testing.T) {
 	assert.Contains(t, string(custom), `--index \"a b\"`)
 	assert.NotContains(t, string(custom), "--log", "a sink command alone replaces the default log")
 }
+
+func TestRunSink_DoesNotInheritRepositorySelection(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses sh")
+	}
+	t.Setenv("GIT_DIR", "/hook/repo/.git")
+	t.Setenv("GIT_INDEX_FILE", "/hook/repo/.git/index")
+	t.Setenv("GIT_AUTHOR_NAME", "kept")
+	out := filepath.Join(t.TempDir(), "env.txt")
+
+	require.NoError(t, runSink("env > "+out, []byte("{}\n")))
+
+	data, err := os.ReadFile(out)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "GIT_DIR=")
+	assert.NotContains(t, string(data), "GIT_INDEX_FILE=")
+	assert.Contains(t, string(data), "GIT_AUTHOR_NAME=kept")
+}

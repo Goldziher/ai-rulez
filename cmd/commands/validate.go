@@ -33,6 +33,10 @@ schema compliance, and structural issues.`,
 			fmtError(err)
 			os.Exit(1)
 		}
+		if err := applyRepoRoot(); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
 		// JSON output must be the only thing on stdout.
 		progress.SetQuiet(viper.GetBool("quiet") || validateFormat == formatJSON)
 
@@ -91,6 +95,7 @@ schema compliance, and structural issues.`,
 		}
 		presets.WarnDuplicateContent(cfg.Content)
 		warnUnpinned(cfg)
+		warnFrontmatter(cfg)
 		displayConfigurationSummary(cfg)
 	},
 }
@@ -102,6 +107,7 @@ func init() {
 	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default) or json")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
+	ValidateCmd.Flags().StringVar(&validateRepoRoot, "repo-root", "", "Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory)")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
@@ -128,6 +134,7 @@ func runRecursiveValidate() int {
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
 		if !validateStrict {
 			warnUnpinned(cfg)
+			warnFrontmatter(cfg)
 		}
 		if validateStrict {
 			report, lerr := strictLint(cfg)
@@ -275,5 +282,6 @@ func init() {
 	ScanCmd.Flags().StringVar(&validateFormat, "format", "", "Output format: text (default) or json")
 	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
 	ScanCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
+	ScanCmd.Flags().StringVar(&validateRepoRoot, "repo-root", "", "Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory)")
 	ScanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

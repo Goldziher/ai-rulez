@@ -46,7 +46,7 @@ var (
 	// claudeAgentKeys are the documented Claude Code subagent keys (camelCase).
 	claudeAgentKeys = []string{
 		keyTools, "disallowedTools", "model", "permissionMode", "maxTurns", keySkills, "mcpServers", "hooks", "memory",
-		"background", "omitClaudeMd", keyEffort, "isolation", "color", "initialPrompt", "experimental",
+		"background", "omitClaudeMd", keyEffort, "isolation", "color", "initialPrompt", "experimental", "permission_mode",
 	}
 	// ruleKeys are the keys rules and context files understand, including the
 	// Cursor and Windsurf spellings ai-rulez maps.
@@ -110,7 +110,37 @@ func nearestKey(key string, known map[string]bool) string {
 	if len(matches) > 0 {
 		return matches[0]
 	}
-	return ""
+	best, bestDist := "", 3
+	for k := range known {
+		if d := editDistance(target, norm(k)); d < bestDist || (d == bestDist && best != "" && k < best) {
+			best, bestDist = k, d
+		}
+	}
+	if len(target) < 5 {
+		return ""
+	}
+	return best
+}
+
+// editDistance is the Levenshtein distance between two short strings.
+func editDistance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		cur[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(b)]
 }
 
 // checkTypedMetadata applies the lint.metadata rules.

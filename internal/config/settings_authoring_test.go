@@ -1,10 +1,14 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/schema"
 )
 
 func TestDecodeSettingsBlocks(t *testing.T) {
@@ -126,4 +130,32 @@ func TestOverbroadAllowRules(t *testing.T) {
 	p := &Permissions{Allow: []string{"Bash(git status)", "Bash(*)", "Bash", "WebFetch", "Edit(*)", "Read(./docs/**)", "mcp__memory", "*", "Bash(git *)"}}
 	assert.Equal(t, []string{"Bash(*)", "Bash", "WebFetch", "Edit(*)", "*"}, p.OverbroadAllowRules())
 	assert.Empty(t, (*Permissions)(nil).OverbroadAllowRules())
+}
+
+// The JSON schema (validate) and Config.Validate (generate) must agree on the
+// handler types of a top-level [[hooks]] group: generate used to accept
+// type = "prompt" and silently render it as a command handler.
+func TestSettingsHookType_SchemaAndValidateAgree(t *testing.T) {
+	for _, tc := range []struct {
+		typ string
+		ok  bool
+	}{{"", true}, {"command", true}, {"prompt", false}, {"http", false}} {
+		body := "version = \"4.0\"\nname = \"x\"\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"echo\"\n"
+		if tc.typ != "" {
+			body += "type = \"" + tc.typ + "\"\n"
+		}
+		schemaErr := schema.ValidateFile(writeConfigTOML(t, body))
+		cfg, err := decodeConfigTOML([]byte(body), "config.toml")
+		require.NoError(t, err)
+		validateErr := cfg.validateSettingsBlocks()
+		assert.Equal(t, tc.ok, schemaErr == nil, "schema, type %q", tc.typ)
+		assert.Equal(t, tc.ok, validateErr == nil, "validateSettingsBlocks, type %q", tc.typ)
+	}
+}
+
+func writeConfigTOML(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+	return path
 }

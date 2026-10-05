@@ -253,6 +253,16 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 // plugin files exist on disk, so a caller can tell "never generated" from "stale".
 var ErrPluginNotGenerated = errors.New("plugin bundle not generated")
 
+// pluginNotGeneratedError carries the actionable message once; errors.Is
+// matches ErrPluginNotGenerated so --if-generated can still skip it.
+type pluginNotGeneratedError struct{}
+
+func (pluginNotGeneratedError) Error() string {
+	return "plugin bundle not generated; run ai-rulez generate --plugin"
+}
+
+func (pluginNotGeneratedError) Is(target error) bool { return target == ErrPluginNotGenerated }
+
 // checkPluginGenerated fails with ErrPluginNotGenerated, and the command that
 // fixes it, when no expected plugin file exists.
 func checkPluginGenerated(expected []config.OutputFile) error {
@@ -268,7 +278,7 @@ func checkPluginGenerated(expected []config.OutputFile) error {
 	}
 	if files > 0 && present == 0 {
 		return oops.Hint("Run ai-rulez generate --plugin, then commit the bundle (or pass --if-generated to skip verification until it exists)").
-			Wrapf(ErrPluginNotGenerated, "plugin bundle not generated; run `ai-rulez generate --plugin`")
+			Wrap(pluginNotGeneratedError{})
 	}
 	return nil
 }

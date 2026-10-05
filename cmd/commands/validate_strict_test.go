@@ -99,3 +99,23 @@ func TestReportStrictJudgesEachRootByItsOwnThreshold(t *testing.T) {
 		t.Errorf("exit = %d, want 0: the nested root opted out of failing", got)
 	}
 }
+
+func TestApplyRepoRoot(t *testing.T) {
+	oldRoot, oldCache := validateRepoRoot, strictTreeCache
+	t.Cleanup(func() { validateRepoRoot, strictTreeCache = oldRoot, oldCache })
+
+	dir := t.TempDir()
+	t.Setenv(repoRootEnv, dir)
+	validateRepoRoot = ""
+	if err := applyRepoRoot(); err != nil {
+		t.Fatalf("env root: %v", err)
+	}
+	if strictTreeCache.Root != dir {
+		t.Fatalf("env root not applied: %q", strictTreeCache.Root)
+	}
+
+	validateRepoRoot = dir + "/missing"
+	if err := applyRepoRoot(); err == nil {
+		t.Fatal("a missing --repo-root must be an error")
+	}
+}

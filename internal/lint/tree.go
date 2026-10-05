@@ -13,8 +13,10 @@ import (
 // Tree is the set of files the checks resolve references against: the git
 // index when the root is inside a repository, else a walk of the directory.
 type Tree struct {
-	Top      string // repo root (git toplevel) or the base dir outside git
-	Git      bool
+	Top string // repo root (git toplevel) or the base dir outside git
+	Git bool
+	// Explicit is set when the top was chosen with --repo-root rather than found.
+	Explicit bool
 	files    map[string]uint32
 	dirs     map[string]struct{}
 	topNames map[string]struct{}
@@ -22,8 +24,32 @@ type Tree struct {
 
 // LoadTree indexes the tracked files below the repository containing base.
 func LoadTree(base string) (*Tree, error) {
+	return LoadTreeAt(base, "")
+}
+
+// LoadTreeAt is LoadTree with an explicit repository root. A non-empty root is
+// used as the tree top whether or not base lies inside it, so a configuration
+// checked out away from its repository (a scratch copy, a CI artifact) resolves
+// repo-relative paths and globs against the real tree.
+func LoadTreeAt(base, root string) (*Tree, error) {
 	base = gitutil.Resolve(base)
 	t := &Tree{files: map[string]uint32{}, dirs: map[string]struct{}{}, topNames: map[string]struct{}{}}
+	if root != "" {
+		root = gitutil.Resolve(root)
+		t.Explicit = true
+		files, ok, err := gitutil.TrackedFiles(root)
+		if err != nil {
+			return nil, err //nolint:wrapcheck // already contextual
+		}
+		t.Top, t.Git = root, ok
+		if ok {
+			t.files = files
+		} else {
+			t.walk()
+		}
+		t.index()
+		return t, nil
+	}
 	if top := gitutil.TopLevel(base); top != "" {
 		files, ok, err := gitutil.TrackedFiles(top)
 		if err != nil {
@@ -37,6 +63,12 @@ func LoadTree(base string) (*Tree, error) {
 		t.Top = base
 		t.walk()
 	}
+	t.index()
+	return t, nil
+}
+
+// index derives the top-level names and directory set from the file list.
+func (t *Tree) index() {
 	for f := range t.files {
 		if i := strings.IndexByte(f, '/'); i >= 0 {
 			t.topNames[f[:i]] = struct{}{}
@@ -50,7 +82,6 @@ func LoadTree(base string) (*Tree, error) {
 			t.dirs[d] = struct{}{}
 		}
 	}
-	return t, nil
 }
 
 func (t *Tree) walk() {
@@ -149,7 +180,11 @@ func (t *Tree) matchAny(g globMatcher, baseRel string) bool {
 
 // Loader memoizes trees so linting many roots of one repository reads the git
 // index once.
-type Loader struct{ cache map[string]*Tree }
+type Loader struct {
+	// Root overrides the repository root for every tree (see LoadTreeAt).
+	Root  string
+	cache map[string]*Tree
+}
 
 // Load returns the tree for the repository containing base.
 func (l *Loader) Load(base string) (*Tree, error) {
@@ -157,13 +192,15 @@ func (l *Loader) Load(base string) (*Tree, error) {
 		l.cache = map[string]*Tree{}
 	}
 	key := gitutil.TopLevel(gitutil.Resolve(base))
-	if key == "" {
+	if l.Root != "" {
+		key = "root:" + gitutil.Resolve(l.Root)
+	} else if key == "" {
 		key = "fs:" + gitutil.Resolve(base)
 	}
 	if t, ok := l.cache[key]; ok {
 		return t, nil
 	}
-	t, err := LoadTree(base)
+	t, err := LoadTreeAt(base, l.Root)
 	if err != nil {
 		return nil, err
 	}
