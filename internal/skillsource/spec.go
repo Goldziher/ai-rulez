@@ -71,6 +71,9 @@ func ParseArg(arg string) (Spec, error) {
 		}
 	}
 	spec.URL = url
+	if err := checkRemote(url, spec.Ref); err != nil {
+		return Spec{}, err
+	}
 	if spec.Path != "" {
 		if clean := path.Clean(spec.Path); clean == ".." || strings.HasPrefix(clean, "../") {
 			return Spec{}, oops.Errorf("--source path %q escapes the repository", spec.Path)

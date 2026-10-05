@@ -23,7 +23,17 @@ const (
 	kindHead   = "head"
 )
 
-func gitEnv() []string { return append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") }
+// checkRemote refuses a url or ref git would read as an option (for example
+// `--upload-pack=<command>`), before any git command is built from it.
+func checkRemote(url, ref string) error {
+	if err := gitutil.CheckArg("skill source url", gitURL(url)); err != nil {
+		return oops.Wrap(err)
+	}
+	if err := gitutil.CheckArg("skill source ref", ref); err != nil {
+		return oops.Wrap(err)
+	}
+	return nil
+}
 
 func injectToken(u, token string) string {
 	if token == "" {
@@ -38,8 +48,10 @@ func injectToken(u, token string) string {
 }
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := gitutil.Command(ctx, dir, args...)
-	cmd.Env = gitEnv()
+	// Everything a skill source names is untrusted: no hooks, helpers or submodules,
+	// and only the https, ssh and file transports (never ext::).
+	cmd := gitutil.Command(ctx, dir, append(gitutil.HardenedConfig(), args...)...)
+	cmd.Env = gitutil.HardenedEnv(nil)
 	var out, errOut bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errOut
 	if err := cmd.Run(); err != nil {
@@ -52,9 +64,12 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 // was. Tags are preferred over branches (the peeled commit for annotated tags);
 // an empty ref or HEAD resolves the default branch.
 func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string, err error) {
+	if err = checkRemote(url, ref); err != nil {
+		return "", "", err
+	}
 	remote := injectToken(url, token)
 	if ref == "" || ref == "HEAD" {
-		out, err := runGit(ctx, "", "ls-remote", remote, "HEAD")
+		out, err := runGit(ctx, "", "ls-remote", "--", remote, "HEAD")
 		if err != nil {
 			return "", "", oops.With("url", includes.RedactURL(url)).Wrapf(err, "resolve default branch")
 		}
@@ -64,7 +79,7 @@ func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string,
 		}
 		return sha, kindHead, nil
 	}
-	out, err := runGit(ctx, "", "ls-remote", remote, "refs/tags/"+ref, "refs/tags/"+ref+"^{}", "refs/heads/"+ref)
+	out, err := runGit(ctx, "", "ls-remote", "--", remote, "refs/tags/"+ref, "refs/tags/"+ref+"^{}", "refs/heads/"+ref)
 	if err != nil {
 		return "", "", oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "resolve ref")
 	}
@@ -101,9 +116,12 @@ func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string,
 const flagQuiet = "--quiet"
 
 func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string) error {
+	if err := checkRemote(url, ref); err != nil {
+		return err
+	}
 	remote := injectToken(url, token)
 	if kind == kindTag || kind == kindBranch {
-		if _, err := runGit(ctx, "", "clone", flagQuiet, "--depth", "1", "--branch", ref, remote, dest); err != nil {
+		if _, err := runGit(ctx, "", "clone", flagQuiet, "--depth", "1", "--branch", ref, "--", remote, dest); err != nil {
 			return oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "clone")
 		}
 	} else {
@@ -112,8 +130,8 @@ func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string
 		}
 		for _, args := range [][]string{
 			{"init", flagQuiet},
-			{"remote", "add", "origin", remote},
-			{"fetch", flagQuiet, "--depth", "1", "origin", commit},
+			{"remote", "add", "origin", "--", remote},
+			{"fetch", flagQuiet, "--depth", "1", "--", "origin", commit},
 			{"checkout", flagQuiet, "--detach", "FETCH_HEAD"},
 		} {
 			if _, err := runGit(ctx, dest, args...); err != nil {
