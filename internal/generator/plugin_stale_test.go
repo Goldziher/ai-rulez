@@ -204,3 +204,17 @@ func TestCollectPluginOutputs_CursorIndexForDomainPlugins(t *testing.T) {
 		}
 	}
 }
+
+func TestGeneratePlugin_ProfileLeavingDomainOutDoesNotDeleteItsPlugin(t *testing.T) {
+	dir := newDomainsProject(t, staleTail+"\n[profiles]\nall = [\"teamA\", \"teamB\"]\nonly-a = [\"teamA\"]\n")
+	require.NoError(t, loadDomainsProject(t, dir).GeneratePlugin("all"))
+	teamB := filepath.Join(dir, "mkt", "plugins", "demo-teamb")
+	require.DirExists(t, teamB)
+
+	gen := loadDomainsProject(t, dir)
+	lines, err := gen.DryRunPlugin("only-a")
+	require.NoError(t, err)
+	assert.NotContains(t, lines, "delete-stale: mkt/plugins/demo-teamb")
+	require.NoError(t, gen.GeneratePlugin("only-a"))
+	assert.DirExists(t, teamB, "a profile that omits a domain must not delete that domain's plugin")
+}
