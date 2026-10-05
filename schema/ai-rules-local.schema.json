@@ -15,6 +15,10 @@
       },
       "type": "object"
     },
+    "delivery": {
+      "enum": ["static", "served", "both"],
+      "type": "string"
+    },
     "patternList": {
       "items": {
         "type": "string"
@@ -346,6 +350,20 @@
       "description": "Project description",
       "type": "string"
     },
+    "domains": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "delivery": {
+            "$ref": "#/$defs/delivery",
+            "description": "Default delivery of the domain's skills. A skill's own `delivery` frontmatter wins."
+          }
+        },
+        "type": "object"
+      },
+      "description": "Per-domain settings, keyed by domain name.",
+      "type": "object"
+    },
     "gitignore": {
       "default": true,
       "description": "Whether to automatically update .gitignore with generated output patterns (defaults to true)",
@@ -615,6 +633,24 @@
           },
           "type": "object"
         },
+        "evals": {
+          "additionalProperties": false,
+          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
+          "properties": {
+            "allow": {
+              "description": "Skill names or globs exempt from the check.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "require": {
+              "description": "Enable evals-missing at warning severity.",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
         "external": {
           "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
@@ -761,19 +797,6 @@
           },
           "type": "object"
         },
-        "evals": {
-          "type": "object",
-          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
-          "properties": {
-            "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
-            "allow": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Skill names or globs exempt from the check."
-            }
-          },
-          "additionalProperties": false
-        },
         "severity": {
           "additionalProperties": {
             "enum": ["error", "warning", "info", "off"],
@@ -781,6 +804,17 @@
           },
           "description": "Severity override per finding code or name.",
           "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "lock": {
+      "additionalProperties": false,
+      "description": "Lock behaviour at serve time.",
+      "properties": {
+        "enforce": {
+          "description": "Refuse to serve a skill whose digest is not the one recorded in ai-rulez.lock (kind served), and one that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -1770,6 +1804,68 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "skill_sources": {
+      "description": "Remote or local skill sources that are served over MCP, never written to the static skill trees. A tag or full commit SHA is resolved to a commit and pinned in ai-rulez.lock (kind source); a branch ref is reported as unpinned (AR010).",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "exclude": {
+            "description": "Drop skills whose directory name matches one of these globs; wins over include.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include": {
+            "description": "Keep only skills whose directory name matches one of these globs.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Identifies the source in the lock and in provenance.",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "type": "string"
+          },
+          "name_prefix": {
+            "description": "Prepended to every served skill name, so two sources cannot collide.",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "type": "string"
+          },
+          "path": {
+            "description": "Subdirectory of the repository whose child directories are skills.",
+            "type": "string"
+          },
+          "ref": {
+            "description": "A tag or full commit SHA. A branch or no ref follows a moving ref and is reported as unpinned.",
+            "type": "string"
+          },
+          "trust": {
+            "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
+            "enum": ["error", "warn"],
+            "type": "string"
+          },
+          "url": {
+            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "skills": {
+      "additionalProperties": false,
+      "description": "Defaults for every skill (dynamic skill loading).",
+      "properties": {
+        "delivery": {
+          "$ref": "#/$defs/delivery",
+          "description": "Global default delivery: static (default) writes skills into every harness skill tree, served leaves them out and serves them over MCP on demand (`ai-rulez mcp --serve-skills`), both does both. A skill's own `delivery` frontmatter, a role override and [domains.<name>] delivery take precedence."
+        }
+      },
+      "type": "object"
     },
     "usage": {
       "additionalProperties": false,
