@@ -128,6 +128,9 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 // configured source. If the local_override path does not exist, it returns
 // (nil, nil) so the caller can skip this include silently.
 func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, error) {
+	if includeConf.Format == config.IncludeFormatOKF {
+		return r.createOKFSource(includeConf), nil
+	}
 	// Check for local override: use a local path instead of git
 	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
 		localPath := r.resolveLocalOverride(includeConf)
