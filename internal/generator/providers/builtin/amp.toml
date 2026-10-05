@@ -58,4 +58,11 @@ max = "max"
 [[sidecars]]
 kind = "amp_settings_json"
 path = ".amp/settings.json"
+global_path = ".config/amp/settings.json"
 emit_when = "has_resolved_effort"
+
+# User-scope layout: Amp keeps its memory and settings under ~/.config/amp and
+# shares skills through ~/.config/agents.
+[global]
+root_file = ".config/amp/AGENTS.md"
+skills_dir = ".config/agents/skills"

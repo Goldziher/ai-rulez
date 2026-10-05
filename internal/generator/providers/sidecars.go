@@ -111,9 +111,10 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 	return sidecarRender{}, fmt.Errorf("unknown sidecar kind %q", kind)
 }
 
-// SidecarIsMergedDocument reports whether a sidecar kind produces a JSON object
-// that ai-rulez merges into rather than replaces — a document where it owns a
-// fixed set of top-level keys and the consumer may own others.
+// SidecarIsMergedDocument reports whether a sidecar kind produces a document
+// (a JSON object, or for the generic kinds a JSON, TOML or YAML one) that ai-rulez
+// merges into rather than replaces — a document where it owns a fixed set of
+// keys and the consumer may own others.
 //
 // Unlike jsonmerge.Result.PartiallyOwned this is a static property of the kind, and
 // it is deliberately the coarser test. Stale cleanup runs from the previous
@@ -127,7 +128,8 @@ func SidecarIsMergedDocument(kind string) bool {
 	case SidecarClaudeSettingsJSON, SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON:
 		return true
 	}
-	return false
+	// The generic kinds merge into whatever document format the spec names.
+	return isGenericSidecarKind(kind)
 }
 
 // MergedSidecarPaths returns every base-relative, slash-separated path that a
@@ -135,17 +137,9 @@ func SidecarIsMergedDocument(kind string) bool {
 // SidecarIsMergedDocument). Derived from the embedded specs so the set cannot
 // drift from them.
 func MergedSidecarPaths() []string {
-	names, err := BuiltinNames()
-	if err != nil {
-		return nil
-	}
 	seen := make(map[string]bool)
-	for _, name := range names {
-		gen, err := LoadBuiltin(name)
-		if err != nil {
-			continue
-		}
-		for _, sidecar := range gen.Spec.Sidecars {
+	for _, spec := range loadBuiltinSpecs() {
+		for _, sidecar := range spec.Sidecars {
 			if sidecar == nil || !SidecarIsMergedDocument(sidecar.Kind) {
 				continue
 			}

@@ -2,6 +2,8 @@ package rulefiles
 
 import (
 	"path"
+	"slices"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
@@ -19,16 +21,39 @@ var rootPresets = map[string][]string{
 	".github/copilot-instructions.md": {"copilot"},
 }
 
+var rootPresetsMu sync.RWMutex
+
+// RegisterRootOwner records that preset writes rootFile, so declarative provider
+// specs join the owners table without a hand edit. It is idempotent and keeps the
+// order owners were first added in. Call it from init() only.
+func RegisterRootOwner(rootFile, preset string) {
+	key := targetmatch.Normalize(rootFile)
+	rootPresetsMu.Lock()
+	defer rootPresetsMu.Unlock()
+	if !slices.Contains(rootPresets[key], preset) {
+		rootPresets[key] = append(rootPresets[key], preset)
+	}
+}
+
+func rootOwnersFor(rootFile string) ([]string, bool) {
+	rootPresetsMu.RLock()
+	defer rootPresetsMu.RUnlock()
+	owners, ok := rootPresets[targetmatch.Normalize(rootFile)]
+	return owners, ok
+}
+
 // RootOwners returns the presets that write the root file by default, or nil
 // when no table entry exists. The caller owns the returned slice.
 func RootOwners(rootFile string) []string {
-	return append([]string(nil), rootPresets[targetmatch.Normalize(rootFile)]...)
+	owners, _ := rootOwnersFor(rootFile)
+	return append([]string(nil), owners...)
 }
 
 // SharedRootFile reports whether several presets write the root file, so it
 // must render identically whichever of them writes it last.
 func SharedRootFile(rootFile string) bool {
-	return len(rootPresets[targetmatch.Normalize(rootFile)]) > 1
+	owners, _ := rootOwnersFor(rootFile)
+	return len(owners) > 1
 }
 
 // RootTarget describes a preset's root file for inline target filtering.
@@ -42,7 +67,7 @@ func rootOwners(t Target) []string {
 	if len(t.Owners) > 0 {
 		return t.Owners
 	}
-	if owners, ok := rootPresets[targetmatch.Normalize(t.RootFile)]; ok {
+	if owners, ok := rootOwnersFor(t.RootFile); ok {
 		return owners
 	}
 	if t.Preset == "" {

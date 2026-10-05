@@ -16,3 +16,10 @@ file = ".hermes.md"
 # (written by the generator); otherwise .hermes.md beats the AGENTS chain.
 local_file = "none"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# User-scope layout: Hermes has no user-level rules file (~/.hermes/SOUL.md is an
+# identity slot, not project guidance), and its home is relocatable.
+[global]
+home_env = "HERMES_HOME"
+home_dir = ".hermes"
+skills_dir = ".hermes/skills"

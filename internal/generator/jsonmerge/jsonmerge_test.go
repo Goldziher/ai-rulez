@@ -206,19 +206,18 @@ func TestApply_ReplacesEveryOwnedKey(t *testing.T) {
 		jsonMemberOrder(t, result.Body))
 }
 
-// TestApply_RefusesUnparseableExistingFile documents the deliberate fail-closed
-// choice: encoding/json cannot represent comments or trailing commas, so a JSONC
-// settings file must abort generation rather than be silently rewritten without
-// its comments.
-func TestApply_RefusesUnparseableExistingFile(t *testing.T) {
+// TestApply_RefusesMalformedExistingFile documents the fail-closed choice for a
+// settings file that is not JSON or JSONC at all: generation aborts rather than
+// rewriting a file it cannot understand.
+func TestApply_RefusesMalformedExistingFile(t *testing.T) {
 	t.Parallel()
 
-	const jsonc = `{
-  // ai-rulez must not eat this comment
-  "model": "opus"
+	const malformed = `{
+  // ai-rulez must not clobber this
+  "model": ,
 }
 `
-	path := writeFixture(t, "settings.json", jsonc)
+	path := writeFixture(t, "settings.json", malformed)
 
 	_, err := jsonmerge.Apply(path, ownedMCPServers())
 	require.Error(t, err)
@@ -233,7 +232,7 @@ func TestApply_RefusesUnparseableExistingFile(t *testing.T) {
 
 	onDisk, readErr := os.ReadFile(path)
 	require.NoError(t, readErr)
-	assert.Equal(t, jsonc, string(onDisk), "the unparseable file must be left untouched")
+	assert.Equal(t, malformed, string(onDisk), "the unparseable file must be left untouched")
 }
 
 // TestApply_RefusesNonObjectAndTrailingContent covers the other two shapes a

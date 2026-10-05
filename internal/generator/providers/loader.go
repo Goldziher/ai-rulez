@@ -101,6 +101,15 @@ func validateLocalFile(root *RootSpec) error {
 	return nil
 }
 
+// specName is the shape of a provider name: it becomes a preset name and appears
+// in paths and manifests, so it is allowlisted rather than checked for bad characters.
+var specName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// permissionsAndHooksEnabled gates the reserved sidecar kinds. They have no
+// renderer yet, so a spec declaring one fails at load time instead of at
+// generation; flip it (and add the renderers in sidecars_generic.go) to enable.
+const permissionsAndHooksEnabled = false
+
 // validateSpec enforces the closed-set enum constraints documented in
 // schema/provider.schema.json. Strict TOML/YAML/JSON decoding catches unknown
 // fields; this layer catches unknown enum values and missing required combos.
@@ -110,10 +119,21 @@ func validateSpec(s *ProviderSpec) error {
 	if s.Name == "" {
 		return fmt.Errorf("name is required")
 	}
+	if !specName.MatchString(s.Name) {
+		return fmt.Errorf("name: %q must match %s (lowercase letters, digits and dashes)", s.Name, specName)
+	}
+	for i, dir := range s.Directories {
+		if err := validateRelativeFile(fmt.Sprintf("directories[%d]", i), dir); err != nil {
+			return err
+		}
+	}
 
 	if s.Root != nil {
 		if s.Root.File == "" {
 			return fmt.Errorf("root.file is required when root is set")
+		}
+		if err := validateRelativeFile("root.file", s.Root.File); err != nil {
+			return err
 		}
 		if err := validateLocalFile(s.Root); err != nil {
 			return err
@@ -129,8 +149,13 @@ func validateSpec(s *ProviderSpec) error {
 		if !isValidOutputType(typ) {
 			return fmt.Errorf("outputs[%q]: unknown content type", typ)
 		}
-		if out.Mode != OutputModePerItemFile {
-			return fmt.Errorf("outputs[%q].mode: unknown mode %q", typ, out.Mode)
+		if out.Dir != "" && !out.Split { // a split rules dir has its own, stricter check
+			if err := validateRelativeFile(fmt.Sprintf("outputs[%q].dir", typ), out.Dir); err != nil {
+				return err
+			}
+		}
+		if err := validateOutputMode(typ, out); err != nil {
+			return err
 		}
 		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider && out.Filter != FilterPathScoped && out.Filter != FilterPlacementCore {
 			return fmt.Errorf("outputs[%q].filter: unknown filter %q", typ, out.Filter)
@@ -152,18 +177,157 @@ func validateSpec(s *ProviderSpec) error {
 	}
 
 	for i, sidecar := range s.Sidecars {
-		if !isValidSidecarKind(sidecar.Kind) {
-			return fmt.Errorf("sidecars[%d].kind: unknown kind %q", i, sidecar.Kind)
-		}
-		if sidecar.EmitWhen != "" && !isValidPredicate(sidecar.EmitWhen) {
-			return fmt.Errorf("sidecars[%d].emit_when: unknown predicate %q", i, sidecar.EmitWhen)
-		}
-		if sidecar.Path == "" {
-			return fmt.Errorf("sidecars[%d].path is required", i)
+		if err := validateSidecar(i, sidecar); err != nil {
+			return err
 		}
 	}
 
+	return validateGlobal(s.Global)
+}
+
+// validateOutputMode checks outputs.<type>.mode and the fields that belong to a
+// mode: aggregate (checks only) takes a file and header and no per-item layout.
+func validateOutputMode(typ string, out *OutputSpec) error {
+	switch out.Mode {
+	case OutputModePerItemFile:
+		if out.File != "" || out.Header != "" {
+			return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
+		}
+	case OutputModeAggregate:
+		if typ != OutputTypeChecks {
+			return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
+		}
+		if err := validateRelativeFile(fmt.Sprintf("outputs[%q].file", typ), out.File); err != nil {
+			return err
+		}
+		if out.Dir != "" || out.Filename != "" || out.Resources || out.Body != nil || out.Frontmatter != nil {
+			return fmt.Errorf("outputs[%q]: mode %q takes only file and header", typ, OutputModeAggregate)
+		}
+	default:
+		return fmt.Errorf("outputs[%q].mode: unknown mode %q", typ, out.Mode)
+	}
 	return nil
+}
+
+// validateRelativeFile checks a slash-separated path that stays inside its root.
+func validateRelativeFile(field, p string) error {
+	if p == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+	if !fs.ValidPath(p) || p == "." || strings.ContainsAny(p, `\:`) {
+		return fmt.Errorf("%s: %q must be a relative, slash-separated path without \"..\"", field, p)
+	}
+	return nil
+}
+
+// validateSidecar checks one sidecars[] entry: the closed enums, and that the
+// generic-only fields (format, key, dialect) appear only on a generic kind.
+func validateSidecar(i int, sc *SidecarSpec) error {
+	if !isValidSidecarKind(sc.Kind) {
+		return fmt.Errorf("sidecars[%d].kind: unknown kind %q", i, sc.Kind)
+	}
+	if sc.EmitWhen != "" && !isValidPredicate(sc.EmitWhen) {
+		return fmt.Errorf("sidecars[%d].emit_when: unknown predicate %q", i, sc.EmitWhen)
+	}
+	if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].path", i), sc.Path); err != nil {
+		return err
+	}
+	if !permissionsAndHooksEnabled && (sc.Kind == SidecarPermissions || sc.Kind == SidecarHooks) {
+		return fmt.Errorf("sidecars[%d].kind: %q is not yet supported", i, sc.Kind)
+	}
+	if sc.GlobalPath != "" {
+		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_path", i), sc.GlobalPath); err != nil {
+			return err
+		}
+	}
+	if sc.GlobalMCPPath != "" {
+		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_mcp_path", i), sc.GlobalMCPPath); err != nil {
+			return err
+		}
+		if !IsMCPSidecarKind(sc.Kind) {
+			return fmt.Errorf("sidecars[%d].global_mcp_path is only valid on a sidecar that holds MCP servers", i)
+		}
+	}
+	if !isGenericSidecarKind(sc.Kind) {
+		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" {
+			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
+				i, SidecarMCP, SidecarPermissions, SidecarHooks)
+		}
+		return nil
+	}
+	return validateGenericSidecar(i, sc)
+}
+
+// validateGenericSidecar checks the format, key and dialect of a generic sidecar.
+func validateGenericSidecar(i int, sc *SidecarSpec) error {
+	if sc.Format != "" && !isDocFormat(sc.Format) {
+		return fmt.Errorf("sidecars[%d].format: unknown format %q (want json, jsonc, toml or yaml)", i, sc.Format)
+	}
+	if sc.DocFormat() == "" {
+		return fmt.Errorf("sidecars[%d].format is required: cannot infer it from the extension of %q", i, sc.Path)
+	}
+	for _, segment := range sc.Key {
+		if segment == "" {
+			return fmt.Errorf("sidecars[%d].key: segments must not be empty", i)
+		}
+	}
+	if sc.Dialect != "" && sc.Kind != SidecarMCP {
+		return fmt.Errorf("sidecars[%d].dialect is only valid on kind %q", i, SidecarMCP)
+	}
+	if sc.Kind == SidecarMCP {
+		if _, err := mcpDialectFor(sc.Dialect); err != nil {
+			return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
+		}
+		if sc.EmitWhen == "" {
+			// No servers, no document: an mcp sidecar is not an always-on file.
+			sc.EmitWhen = PredicateHasMCPServers
+		}
+	}
+	return nil
+}
+
+// validateGlobal checks the [global] block: every path is a relative,
+// slash-separated path under the user's home, and home_env comes with home_dir.
+func validateGlobal(g *GlobalSpec) error {
+	if g == nil {
+		return nil
+	}
+	if (g.HomeEnv == "") != (g.HomeDir == "") {
+		return fmt.Errorf("global.home_env and global.home_dir must be set together")
+	}
+	if g.HomeEnv != "" && !isEnvName(g.HomeEnv) {
+		return fmt.Errorf("global.home_env: %q is not a valid environment variable name", g.HomeEnv)
+	}
+	if g.HomeDir != "" {
+		if err := validateRelativeFile("global.home_dir", g.HomeDir); err != nil {
+			return err
+		}
+	}
+	for field, value := range map[string]string{
+		"root_file": g.RootFile, "skills_dir": g.SkillsDir, "agents_dir": g.AgentsDir,
+		"commands_dir": g.CommandsDir, "rules_dir": g.RulesDir,
+	} {
+		if value == "" {
+			continue
+		}
+		if err := validateRelativeFile("global."+field, value); err != nil {
+			return err
+		}
+		if g.HomeDir != "" && !isUnder(value, g.HomeDir) {
+			// A path outside home_dir would not follow the variable.
+			return fmt.Errorf("global.%s: %q must be inside global.home_dir %q", field, value, g.HomeDir)
+		}
+	}
+	return nil
+}
+
+var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+func isEnvName(name string) bool { return envName.MatchString(name) }
+
+// isUnder reports whether p is dir or lies inside it (slash-separated, relative).
+func isUnder(p, dir string) bool {
+	return p == dir || strings.HasPrefix(p, strings.TrimSuffix(dir, "/")+"/")
 }
 
 func validateSplitEnums(typ string, out *OutputSpec) error {
@@ -179,11 +343,17 @@ func validateSplitEnums(typ string, out *OutputSpec) error {
 // validateSplitFields checks the split/inline_filter/dialect trio of a rules
 // output.
 func validateSplitFields(typ string, out *OutputSpec, rootSections []string) error {
-	if !out.Split && out.InlineFilter == "" && out.Dialect == "" {
+	if !out.Split && out.InlineFilter == "" && out.Dialect == "" && out.Activation == nil {
 		return nil
 	}
+	if out.Activation != nil && out.Dialect == "" {
+		out.Dialect = DialectMapped // an activation block is the mapped dialect
+	}
 	if typ != OutputTypeRules {
-		return fmt.Errorf("outputs[%q]: split, inline_filter and dialect are only valid on outputs.rules", typ)
+		return fmt.Errorf("outputs[%q]: split, inline_filter, dialect and activation are only valid on outputs.rules", typ)
+	}
+	if err := validateActivation(typ, out); err != nil {
+		return err
 	}
 	if err := validateSplitEnums(typ, out); err != nil {
 		return err
@@ -192,7 +362,7 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
 	}
 	if !out.Split {
-		return fmt.Errorf("outputs[%q]: inline_filter and dialect require split = true", typ)
+		return fmt.Errorf("outputs[%q]: inline_filter, dialect and activation require split = true", typ)
 	}
 	if !slices.Contains(rootSections, SectionRootRulesInline) {
 		return fmt.Errorf("outputs[%q]: split requires root.sections to include %q", typ, SectionRootRulesInline)
@@ -223,6 +393,49 @@ func registerSplitRulesDir(s *ProviderSpec) {
 // driveLetter matches a Windows drive prefix such as "C:".
 var driveLetter = regexp.MustCompile(`^[A-Za-z]:`)
 
+// validateActivation checks the dialect/activation pairing and the shape of the
+// activation tables.
+func validateActivation(typ string, out *OutputSpec) error {
+	if out.Dialect == DialectMapped && out.Activation == nil {
+		return fmt.Errorf("outputs[%q].dialect %q requires an [outputs.%s.activation] block", typ, DialectMapped, typ)
+	}
+	a := out.Activation
+	if a == nil {
+		return nil
+	}
+	if out.Dialect != DialectMapped {
+		return fmt.Errorf("outputs[%q]: an activation block needs dialect %q, got %q", typ, DialectMapped, out.Dialect)
+	}
+	if a.Format != "" && a.Format != ActivationFormatYAML && a.Format != ActivationFormatLines {
+		return fmt.Errorf("outputs[%q].activation.format: unknown format %q", typ, a.Format)
+	}
+	for mode, table := range map[string]map[string]any{"always": a.Always, "glob": a.Glob, "auto": a.Auto, "manual": a.Manual} {
+		for key, value := range table {
+			if !rulefiles.ValidActivationKey(key) {
+				return fmt.Errorf("outputs[%q].activation.%s: key %q must match [A-Za-z_][A-Za-z0-9_-]*", typ, mode, key)
+			}
+			if err := validateActivationValue(value); err != nil {
+				return fmt.Errorf("outputs[%q].activation.%s.%s: %w", typ, mode, key, err)
+			}
+		}
+	}
+	return nil
+}
+
+// validateActivationValue allows the scalars a frontmatter value can be.
+func validateActivationValue(value any) error {
+	switch v := value.(type) {
+	case string:
+		if rulefiles.ActivationValueHasEmbeddedList(v) {
+			return fmt.Errorf("{globs_list} must be the whole value, not part of %q", v)
+		}
+		return nil
+	case bool, int, int64, float64:
+		return nil
+	}
+	return fmt.Errorf("must be a string, boolean or number, got %T", value)
+}
+
 func validateSplitDir(typ, dir string) error {
 	if strings.TrimSpace(dir) == "" {
 		return fmt.Errorf("outputs[%q].dir is required when split = true", typ)
@@ -252,7 +465,7 @@ func rootSections(s *ProviderSpec) []string {
 
 func isValidOutputType(typ string) bool {
 	switch typ {
-	case "rules", "context", OutputTypeSkills, OutputTypeAgents, OutputTypeCommands:
+	case "rules", "context", OutputTypeSkills, OutputTypeAgents, OutputTypeCommands, OutputTypeChecks:
 		return true
 	}
 	return false
@@ -287,7 +500,8 @@ func isValidPredicate(p string) bool {
 func isValidSidecarKind(k string) bool {
 	switch k {
 	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON,
-		SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON:
+		SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON,
+		SidecarMCP, SidecarPermissions, SidecarHooks:
 		return true
 	}
 	return false
