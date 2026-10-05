@@ -1,0 +1,17 @@
+paths:
+  allow:
+    - path: src/**
+    - path: src/**
+      write: true
+  deny:
+    - path: .env
+tools:
+  shell:
+    allow:
+      - npm run test
+      - npm run test *
+      - git status
+    deny:
+      - rm -rf
+      - rm -rf *
+      - curl * | sh

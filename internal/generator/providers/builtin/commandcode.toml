@@ -63,6 +63,23 @@ path = ".mcp.json"
 emit_when = "has_mcp_json_entries"
 global_path = ".commandcode/mcp.json"
 
+# Hooks: top-level [[hooks]] rendered in commandcode's native format, read from the
+# vendor documentation (see docs/settings.md). Command Code reads `hooks` from settings.json (four events, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "commandcode"
+path = ".commandcode/settings.json"
+format = "json"
+global_path = ".commandcode/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".commandcode/settings.json"
+format = "json"
+dialect = "commandcode"
+global_path = ".commandcode/settings.json"
+
 [global]
 root_file = ".commandcode/AGENTS.md"
 skills_dir = ".commandcode/skills"

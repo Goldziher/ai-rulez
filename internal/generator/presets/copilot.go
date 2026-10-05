@@ -215,6 +215,12 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		})
 	}
 
+	permissionOutputs, err := g.permissionsOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("render copilot permissions: %w", err)
+	}
+	outputs = append(outputs, permissionOutputs...)
+
 	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
 	if err != nil {
 		return nil, err

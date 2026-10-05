@@ -1,0 +1,27 @@
+{
+  "permission": {
+    "bash": {
+      "curl * | sh": "deny",
+      "git push *": "ask",
+      "git status": "allow",
+      "npm run test *": "allow",
+      "rm -rf *": "deny"
+    },
+    "edit": {
+      "src/**": "allow"
+    },
+    "read": {
+      "**/.env": "deny",
+      ".env": "deny"
+    },
+    "webfetch": {
+      "http://evil.com": "deny",
+      "http://evil.com/*": "deny",
+      "http://evil.com:*": "deny",
+      "https://evil.com": "deny",
+      "https://evil.com/*": "deny",
+      "https://evil.com:*": "deny",
+      "https://example.com/*": "allow"
+    }
+  }
+}

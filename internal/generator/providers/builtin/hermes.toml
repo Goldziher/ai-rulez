@@ -19,6 +19,25 @@ sections = ["header", "title", "description", "rules_inline", "context_inline", 
 
 # User-scope layout: Hermes has no user-level rules file (~/.hermes/SOUL.md is an
 # identity slot, not project guidance), and its home is relocatable.
+# Hooks: top-level [[hooks]] rendered in hermes's native format, read from the
+# vendor documentation (see docs/settings.md). Hermes documents shell hooks in the profile config.yaml only, so they are written with --user.
+[[sidecars]]
+kind = "hooks"
+dialect = "hermes"
+path = ".hermes/config.yaml"
+format = "yaml"
+global_path = ".hermes/config.yaml"
+
+# Top-level [permissions]: the tool reads them from the user config only, so this
+# sidecar is rendered for `--user` runs.
+[[sidecars]]
+kind = "permissions"
+path = ".hermes/config.yaml"
+format = "yaml"
+dialect = "hermes"
+global_path = ".hermes/config.yaml"
+user_only = true
+
 [global]
 home_env = "HERMES_HOME"
 home_dir = ".hermes"

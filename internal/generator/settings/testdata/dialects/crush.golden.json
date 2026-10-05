@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^bash$",
+        "command": "echo guard",
+        "timeout": 10
+      },
+      {
+        "matcher": "^bash$",
+        "command": "audit --strict 'a b'"
+      }
+    ]
+  }
+}
