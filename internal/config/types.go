@@ -49,6 +49,7 @@ type Config struct {
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
 	SkillSources   []SkillSourceConfig     `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
+	Lock           *LockConfig             `yaml:"lock,omitempty" json:"lock,omitempty" toml:"lock,omitempty"`
 	// ServeMode is set while a skills server renders: every skill is rendered,
 	// served ones included, and no dynamic-skills stub is added.
 	ServeMode bool `yaml:"-" json:"-" toml:"-"`
