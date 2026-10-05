@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

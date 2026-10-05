@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // This file derives registry facts from the embedded provider specs so that a new

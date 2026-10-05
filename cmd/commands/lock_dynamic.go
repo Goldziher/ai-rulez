@@ -6,12 +6,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/contentlock"
-	"github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/internal/mcp"
-	"github.com/Goldziher/ai-rulez/internal/skillsource"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
 
 // The lock command's part for dynamic skill loading: the commit and tree digest

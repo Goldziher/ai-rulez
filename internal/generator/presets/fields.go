@@ -1,6 +1,6 @@
 package presets
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import "github.com/Goldziher/ai-rulez/v5/internal/config"
 
 // EmitAgentField reports whether an agent frontmatter field should be emitted
 // under `defaults.omit_agent_fields`. Presets consult it before writing the

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/viper"
 )
 

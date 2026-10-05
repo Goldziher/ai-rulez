@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Goldziher/ai-rulez/cmd/commands"
+	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
 )
 
 func TestMCPCommand_DynamicSkillLoadingFlags(t *testing.T) {

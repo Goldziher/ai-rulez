@@ -4,7 +4,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // FrontmatterWarnings runs the frontmatter checks that plain `validate` reports

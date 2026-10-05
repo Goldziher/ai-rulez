@@ -3,10 +3,10 @@ package presets
 import (
 	"path/filepath"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/settings"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
 // Base-relative paths of the documents the cursor, copilot and devin presets merge

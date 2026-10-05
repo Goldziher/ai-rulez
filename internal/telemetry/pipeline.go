@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/usage"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
 
 // LocalDirName is the machine-local directory inside the config directory where

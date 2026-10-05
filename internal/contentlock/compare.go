@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // DiffSchemaVersion versions the JSON written by `lock --diff --format json`.

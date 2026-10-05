@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator"
-	incl "github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/templates"
-	"github.com/Goldziher/ai-rulez/internal/walkutil"
-	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

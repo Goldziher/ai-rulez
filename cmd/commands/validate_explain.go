@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/samber/oops"
 )
 

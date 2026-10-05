@@ -8,8 +8,8 @@ import (
 
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
 // DriftKind says how a generated file differs from what the sources render.

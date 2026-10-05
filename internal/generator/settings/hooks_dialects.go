@@ -3,7 +3,7 @@ package settings
 import (
 	"encoding/json"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // handlerShape names the handler fields of a harness rendered through the

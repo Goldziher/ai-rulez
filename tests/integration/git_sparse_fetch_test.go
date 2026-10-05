@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/includes"
-	_ "github.com/Goldziher/ai-rulez/internal/includes" // register callbacks
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register callbacks
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

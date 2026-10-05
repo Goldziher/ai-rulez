@@ -3,7 +3,7 @@ package providers
 import (
 	"path/filepath"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 )
 
 // GlobalPaths is the user-scope layout of a provider with every path resolved to

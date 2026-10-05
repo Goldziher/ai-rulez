@@ -3,8 +3,8 @@ package rulefiles
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 )
 
 // Recorder observes the byte range each inline entry occupies in the output

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"github.com/zeebo/blake3"
 )

@@ -28,9 +28,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/tomlmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/yamlmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/tomlmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/yamlmerge"
 	"github.com/samber/oops"
 )
 

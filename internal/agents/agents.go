@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/spf13/cobra"
 )
 

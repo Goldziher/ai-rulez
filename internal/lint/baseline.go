@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // A baseline records findings a team has accepted. Entries are keyed by the

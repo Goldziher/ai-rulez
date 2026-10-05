@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/mcp/handlers"
-	"github.com/Goldziher/ai-rulez/internal/telemetry"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 )
 
 // ItemRecorder receives one item event per tool call that reads or lists items.

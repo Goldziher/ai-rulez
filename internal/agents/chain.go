@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"gopkg.in/yaml.v3"
 )
 

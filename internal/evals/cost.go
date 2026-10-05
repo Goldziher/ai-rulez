@@ -3,7 +3,7 @@ package evals
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // Price is a model price in USD per million tokens.

@@ -16,20 +16,20 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/hookplugins"
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
-	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/generator/settings"
-	"github.com/Goldziher/ai-rulez/internal/generator/userscope"
-	"github.com/Goldziher/ai-rulez/internal/gitignore"
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/templates"
-	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"   // Register remaining legacy preset generators
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/samber/oops"
 )
 

@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 // driftRef is the baseline plugin output is compared against.

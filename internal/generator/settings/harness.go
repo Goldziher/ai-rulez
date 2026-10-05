@@ -18,7 +18,7 @@
 package settings
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Document paths, relative to the base directory of the scope being rendered.

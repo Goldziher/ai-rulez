@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/doctor"
-	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/cobra"
 )
 

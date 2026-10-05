@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/cmd/commands"
+	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
 )
 
 func TestGenerateCommand(t *testing.T) {

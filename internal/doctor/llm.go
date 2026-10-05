@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Goldziher/ai-rulez/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
 // CheckLLM names the [llm] section of the report.

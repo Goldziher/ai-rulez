@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/telemetry"
-	"github.com/Goldziher/ai-rulez/internal/usage"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
 
 // reportItems forces the rule/agent/context section of `report usage` even when

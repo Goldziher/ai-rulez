@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Goldziher/ai-rulez/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
 func TestOKFCodesMatchPackage(t *testing.T) {

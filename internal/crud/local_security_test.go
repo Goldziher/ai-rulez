@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/crud"
+	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 )
 
 func TestLocalOperator_IgnoresLocalTreeBeforeWriting(t *testing.T) {
