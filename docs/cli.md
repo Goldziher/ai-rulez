@@ -1389,7 +1389,7 @@ Documented in [Evals](evals.md).
 
 | Command | Purpose |
 | --- | --- |
-| `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
+| `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n] [--timeout d] [--claude-bin b] [--runner-arg a] [--judge-model m] [--results f] [--no-write] [--price-in usd] [--price-out usd] [-n dir]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
 
 ## Validation Command
 

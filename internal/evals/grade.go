@@ -1,6 +1,7 @@
 package evals
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -108,7 +109,10 @@ func checkText(a *Assertion, r *Result) string {
 		if !ok {
 			return "no usable work_dir for " + a.Path
 		}
-		data, err := os.ReadFile(full) //nolint:gosec // bounded to the run's work dir by inWorkDir
+		if info, err := os.Stat(full); err != nil || !info.Mode().IsRegular() {
+			return "cannot read " + a.Path
+		}
+		data, err := readBounded(full)
 		if err != nil {
 			return "cannot read " + a.Path
 		}
@@ -142,12 +146,30 @@ func subjectName(a *Assertion) string {
 	return "output"
 }
 
+// inWorkDir joins rel onto workDir and reports whether the result stays inside it
+// once symlinks are resolved: the path itself when it exists, else its nearest
+// existing ancestor. A symlink planted by the agent under test cannot point an
+// assertion at a host file.
 func inWorkDir(workDir, rel string) (string, bool) {
 	if workDir == "" || checkRelPath(rel) != "" {
 		return "", false
 	}
 	full := filepath.Join(workDir, filepath.FromSlash(rel))
-	return full, within(workDir, full)
+	if !within(workDir, full) {
+		return "", false
+	}
+	probe := full
+	for {
+		if _, err := os.Lstat(probe); err == nil {
+			break
+		}
+		parent := filepath.Dir(probe)
+		if parent == probe {
+			return "", false
+		}
+		probe = parent
+	}
+	return full, resolvedInside(workDir, probe)
 }
 
 func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string {
@@ -155,19 +177,21 @@ func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
+		cmd = exec.CommandContext(ctx, "cmd", "/C", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
 	} else {
-		cmd = exec.Command("sh", "-c", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
+		cmd = exec.CommandContext(ctx, "sh", "-c", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
 	}
 	cmd.Dir = workDir
+	killTreeOnCancel(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Sprintf("command did not run: %v", err)
 	}
-	timer := time.AfterFunc(timeout, func() { _ = cmd.Process.Kill() }) //nolint:errcheck // the process may already have exited
 	err := cmd.Wait()
-	timer.Stop()
+	killTree(cmd) // stragglers left behind by a command that exited
 	want := 0
 	if a.ExitCode != nil {
 		want = *a.ExitCode

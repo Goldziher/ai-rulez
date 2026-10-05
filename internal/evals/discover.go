@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -28,6 +29,9 @@ type Skill struct {
 	Dir string
 	// EvalDirs are the absolute directories searched for cases that exist.
 	EvalDirs []string
+	// Escaped lists eval directories left out because they resolve (through a
+	// symlink) to somewhere outside the config directory.
+	Escaped []string
 }
 
 // FindSkills lists the skills under a config directory (root skills, then domain
@@ -84,9 +88,14 @@ func skillsIn(configDir, skillsDir, domain string) ([]Skill, error) {
 		}
 		skill := Skill{ID: entry.Name(), Domain: domain, Dir: dir}
 		for _, candidate := range []string{filepath.Join(dir, "evals"), filepath.Join(configDir, ProjectEvalsDir, entry.Name())} {
-			if info, statErr := os.Stat(candidate); statErr == nil && info.IsDir() {
-				skill.EvalDirs = append(skill.EvalDirs, candidate)
+			if info, statErr := os.Stat(candidate); statErr != nil || !info.IsDir() {
+				continue
 			}
+			if !resolvedInside(configDir, candidate) {
+				skill.Escaped = append(skill.Escaped, candidate)
+				continue
+			}
+			skill.EvalDirs = append(skill.EvalDirs, candidate)
 		}
 		out = append(out, skill)
 	}
@@ -100,6 +109,9 @@ func LoadCases(skill *Skill) ([]Case, []Problem) {
 	var cases []Case
 	var problems []Problem
 	ids := map[string]string{}
+	for _, dir := range skill.Escaped {
+		problems = append(problems, Problem{File: dir, Line: 1, Message: "eval directory resolves outside the config directory through a symlink"})
+	}
 	for _, dir := range skill.EvalDirs {
 		for _, file := range caseFiles(dir) {
 			data, err := readBounded(file)
@@ -123,7 +135,25 @@ func LoadCases(skill *Skill) ([]Case, []Problem) {
 			}
 		}
 	}
-	return cases, problems
+	return cases, append(problems, nearMissCollisions(cases)...)
+}
+
+// nearMissCollisions reports an authored case whose id equals one derived from a
+// near_miss list: the runner's results for the two would overwrite each other.
+func nearMissCollisions(cases []Case) []Problem {
+	authored := map[string]bool{}
+	for i := range cases {
+		authored[cases[i].ID] = true
+	}
+	var problems []Problem
+	for i := range cases {
+		for n := range cases[i].NearMiss {
+			if id := nearMissID(cases[i].ID, n); authored[id] {
+				problems = append(problems, Problem{File: cases[i].File, Line: cases[i].Line, Message: fmt.Sprintf("case %q: near_miss %d derives the id %q, which another case already uses", cases[i].ID, n+1, id)})
+			}
+		}
+	}
+	return problems
 }
 
 // resolve replaces prompt_file and file sources with their contents so a case
@@ -142,12 +172,22 @@ func (c *Case) resolve(root string) []Problem {
 			fail("%q points outside %s", rel, root)
 			return "", false
 		}
-		info, err := os.Lstat(full)
+		// Every path component may be a symlink, so judge the resolved path.
+		real, err := filepath.EvalSymlinks(full)
+		if err != nil {
+			fail("%q is not a regular file", rel)
+			return "", false
+		}
+		if !resolvedInside(root, real) {
+			fail("%q points outside %s", rel, root)
+			return "", false
+		}
+		info, err := os.Stat(real)
 		if err != nil || !info.Mode().IsRegular() {
 			fail("%q is not a regular file", rel)
 			return "", false
 		}
-		data, err := readBounded(full)
+		data, err := readBounded(real)
 		if err != nil {
 			fail("%v", err)
 			return "", false
@@ -174,15 +214,34 @@ func within(root, target string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// resolvedInside reports whether target, after resolving every symlink in both
+// paths, lies inside root. Either path that cannot be resolved is outside.
+func resolvedInside(root, target string) bool {
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	realTarget, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		return false
+	}
+	return within(realRoot, realTarget)
+}
+
 func readBounded(file string) ([]byte, error) {
-	info, err := os.Stat(file)
+	f, err := os.Open(file) //nolint:gosec // the path comes from walking the user's eval tree
 	if err != nil {
 		return nil, err
 	}
-	if info.Size() > maxCaseFileBytes {
+	defer f.Close() //nolint:errcheck // read-only handle
+	data, err := io.ReadAll(io.LimitReader(f, maxCaseFileBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxCaseFileBytes {
 		return nil, fmt.Errorf("file is larger than %d bytes", maxCaseFileBytes)
 	}
-	return os.ReadFile(file) //nolint:gosec // the path comes from walking the user's eval tree
+	return data, nil
 }
 
 // caseFiles lists the case files below dir in path order, skipping hidden entries
@@ -221,14 +280,41 @@ func SkillDigest(skillDir string) (string, error) {
 func CasesDigest(skill *Skill) (string, error) {
 	roots := make([]digestRoot, 0, len(skill.EvalDirs))
 	for _, dir := range skill.EvalDirs {
-		roots = append(roots, digestRoot{dir: dir})
+		roots = append(roots, digestRoot{dir: dir, authored: true})
 	}
 	return treeDigest(roots)
 }
 
 type digestRoot struct {
-	dir  string
+	dir string
+	// skip is a top-level directory left out of the digest.
 	skip string
+	// authored leaves out the results and node_modules directories, which case
+	// discovery skips too. Hidden fixtures stay in: a case can reference them.
+	authored bool
+}
+
+// osJunk are files operating systems and editors drop into folders; they must not
+// change a digest, or the same skill would hash differently on two machines.
+func osJunk(name string) bool {
+	return name == ".DS_Store" || name == "Thumbs.db" || name == "desktop.ini" || strings.HasPrefix(name, "._")
+}
+
+// digestSkips says whether the walk leaves an entry out.
+func (r digestRoot) skips(rel, name string, isDir bool) bool {
+	if rel == "." {
+		return false
+	}
+	if isDir && r.skip != "" && rel == r.skip {
+		return true
+	}
+	if osJunk(name) {
+		return true
+	}
+	if r.authored {
+		return isDir && (name == "results" || name == "node_modules")
+	}
+	return false
 }
 
 func treeDigest(roots []digestRoot) (string, error) {
@@ -243,13 +329,13 @@ func treeDigest(roots []digestRoot) (string, error) {
 			if relErr != nil {
 				return relErr
 			}
-			if d.IsDir() {
-				if root.skip != "" && rel == root.skip {
+			if root.skips(rel, d.Name(), d.IsDir()) {
+				if d.IsDir() {
 					return filepath.SkipDir
 				}
 				return nil
 			}
-			if d.Type().IsRegular() {
+			if !d.IsDir() && (d.Type().IsRegular() || d.Type()&fs.ModeSymlink != 0) {
 				files = append(files, rel)
 			}
 			return nil
@@ -260,7 +346,7 @@ func treeDigest(roots []digestRoot) (string, error) {
 		sort.Strings(files)
 		hash.Write([]byte("root " + strconv.Itoa(i) + "\n"))
 		for _, rel := range files {
-			data, err := os.ReadFile(filepath.Join(root.dir, rel)) //nolint:gosec // walking the user's own tree
+			data, err := digestContent(filepath.Join(root.dir, rel))
 			if err != nil {
 				return "", fmt.Errorf("digest %s: %w", rel, err)
 			}
@@ -269,4 +355,21 @@ func treeDigest(roots []digestRoot) (string, error) {
 		}
 	}
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// digestContent is a file's bytes, or for a symlink its target path, so
+// retargeting a link changes the digest without the digest reading outside the tree.
+func digestContent(file string) ([]byte, error) {
+	info, err := os.Lstat(file)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&fs.ModeSymlink != 0 {
+		target, err := os.Readlink(file)
+		if err != nil {
+			return nil, err
+		}
+		return []byte("-> " + target), nil
+	}
+	return os.ReadFile(file) //nolint:gosec // walking the user's own tree
 }

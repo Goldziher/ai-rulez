@@ -85,8 +85,12 @@ ai-rulez usage hook --harness cursor   # merge into .cursor/hooks.json
 Codex and Cursor have no Skill tool: they load a skill by reading its `SKILL.md`. Their templates register
 `ai-rulez usage record --harness <name>` on the `PreToolUse` (Codex, matcher `Bash`) and `preToolUse` (Cursor, matcher
 `Shell`) events, whose names and matchers come from ai-rulez's own [hook support](settings.md). The recorder then logs a
-skill load when `tool_input.command`, `file_path` or `path` contains `skills/<id>/SKILL.md`, and only the `<id>`
-is kept; the rest of the command is matched and discarded. The payload field names for those two harnesses are
+skill load when a read tool (`Read`, `read_file`, `view`, `open`) is given a `file_path` or `path` of
+`skills/<id>/SKILL.md`, or a shell command runs a reader (`cat`, `head`, `tail`, `less`, `more`, `bat`, `nl`,
+`sed` without `-i`, `Get-Content`) on that path (after `cd x &&`, `VAR=1` prefixes and inside pipelines). Writes,
+edits, `git add`, `rm` and other commands that merely mention the path are not loads. Only the `<id>` is kept; the
+rest of the command is matched and discarded. This is still an inference from a path, not a harness-confirmed skill
+load, so the entry carries `invocation: "read"`. The generated Cursor template matches only the `Shell` tool and the Codex one only `Bash`, so a skill read through a file-read tool is counted only if you widen the hook matcher; the count is a lower bound, never inflated by edits. The payload field names for those two harnesses are
 inferred, not verified: check the log after wiring the hook. Any other harness (`--harness gemini`, `copilot`, ...)
 prints a warning to standard error and no template, because its skill-load payload is not documented here.
 
@@ -101,7 +105,7 @@ is not committed by accident):
 | --- | --- |
 | `v` | Log format version, `2`. Lines without it are version 1. |
 | `ts`, `event`, `skill`, `id`, `hash`, `invocation`, `harness` | As before: when, the name the harness reported, the index id (a `plugin:` prefix is dropped), the index hash at that moment, `tool`, `slash` or `read`, and the harness. |
-| `session` | A **salted hash** of the harness session id: 16 hex digits of `sha256(salt, id)`. The salt is 16 random bytes in `usage.salt` beside the log (mode 0600, machine-local) or `$AI_RULEZ_USAGE_SALT`. The raw id is never written; when no salt can be obtained the field is omitted. |
+| `session` | A **salted hash** of the harness session id: 16 hex digits of `sha256(salt, id)`. The salt is 16 random bytes in `usage.salt` beside the log (mode 0600, machine-local; an empty file is regenerated and a looser mode is tightened) or `$AI_RULEZ_USAGE_SALT`. The raw id is never written; when no salt can be obtained the field is omitted. |
 | `outcome` | `loaded` (the hook saw the skill load), `used` or `abandoned`. The recorder itself only knows `loaded`; a hook you wire to a later event can pass `--outcome used`. Omitted for an unknown value. |
 | `served` | `true` for loads that came through the MCP server rather than from disk (set by the MCP skill server; `--served` on the command). Omitted when false. |
 | `role` | The active role, from `--role`. Omitted when unset. |
@@ -113,7 +117,7 @@ the `SKILL.md` path the id was read from), transcripts, raw session ids or file 
 those fields, so nothing else can reach the log.
 
 Compatibility: new fields are additive. `report usage` reads version 1 lines (which may hold a raw session id written
-before salting) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read version 2
+before salting; nothing rewrites them, so delete or rotate an old log if it must not keep raw ids) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read version 2
 lines and ignore the new fields.
 
 `--log FILE` chooses another file. `--sink-command CMD` runs `CMD` through the shell with the line on its standard
