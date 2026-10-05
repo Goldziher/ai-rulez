@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/internal/llm"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -611,6 +612,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Roles           []RoleConfig           `toml:"roles"`
 		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
 		Lock            *LockConfig            `toml:"lock"`
+		LLM             *llm.Config            `toml:"llm"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
@@ -683,6 +685,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Roles:           raw.Roles,
 		RoleManifest:    raw.RoleManifest,
 		Lock:            raw.Lock,
+		LLM:             raw.LLM,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,
