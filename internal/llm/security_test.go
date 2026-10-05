@@ -118,3 +118,18 @@ func TestPlainHTTPWithKeyNeedsLoopback(t *testing.T) {
 		}
 	}
 }
+
+func TestEstimateTokensIsConservativeForNonASCII(t *testing.T) {
+	cjk := strings.Repeat("日本語のテキスト", 100) // ~1 token per rune in practice
+	runes := len([]rune(cjk))
+	if got := EstimateTokens(cjk); got < runes {
+		t.Errorf("CJK: estimate %d is below the rune count %d", got, runes)
+	}
+	ascii := strings.Repeat("abcd", 100) // typical English/code is at most 4 bytes per token
+	if got := EstimateTokens(ascii); got < len(ascii)/4 {
+		t.Errorf("ASCII: estimate %d below len/4", got)
+	}
+	if EstimateTokens("") != 0 || EstimateTokens("a") != 1 {
+		t.Error("edge cases")
+	}
+}
