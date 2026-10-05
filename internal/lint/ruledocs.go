@@ -27,6 +27,8 @@ type Explanation struct {
 	Suppress []string `json:"suppress"`
 	DocsURL  string   `json:"docs_url"`
 	Anchor   string   `json:"anchor"`
+	Analyzer string   `json:"analyzer"`
+	Scope    string   `json:"scope"`
 }
 
 // docsBase is the published page the per-rule anchors live on.
@@ -271,6 +273,7 @@ func Explain(key string) (Explanation, bool) {
 		Code: r.Code, Name: r.Name, Default: r.Default, Summary: r.Describe,
 		Why: d.Why, Bad: d.Bad, Good: d.Good,
 		Suppress: suppressSyntax(r), Anchor: anchor, DocsURL: docsBase + "#" + anchor,
+		Analyzer: AnalyzerFor(r.Code).Name, Scope: AnalyzerFor(r.Code).Scope,
 	}, true
 }
 
@@ -278,6 +281,7 @@ func Explain(key string) (Explanation, bool) {
 func WriteExplanation(sb *strings.Builder, e Explanation) {
 	fmt.Fprintf(sb, "%s %s\n\n", e.Code, e.Name)
 	fmt.Fprintf(sb, "Default severity: %s\n", e.Default)
+	fmt.Fprintf(sb, "Analyzer:         %s (scope: %s)\n", e.Analyzer, e.Scope)
 	fmt.Fprintf(sb, "Finds:            %s\n\n", e.Summary)
 	fmt.Fprintf(sb, "Why it matters\n  %s\n\n", e.Why)
 	fmt.Fprintf(sb, "Bad\n  %s\n\n", e.Bad)
@@ -308,7 +312,7 @@ func RuleReferenceMarkdown() string {
 	for _, r := range Rules() {
 		e, _ := Explain(r.Code) //nolint:errcheck // registered
 		fmt.Fprintf(&sb, "\n### %s %s\n\n%s\n\n", r.Code, r.Name, e.Summary)
-		fmt.Fprintf(&sb, "- Default severity: `%s`\n- Why: %s\n- Bad: %s\n- Good: %s\n", e.Default, e.Why, e.Bad, e.Good)
+		fmt.Fprintf(&sb, "- Default severity: `%s`\n- Analyzer: `%s` (scope `%s`)\n- Why: %s\n- Bad: %s\n- Good: %s\n", e.Default, e.Analyzer, e.Scope, e.Why, e.Bad, e.Good)
 	}
 	sb.WriteString("\n" + ruleRefEnd + "\n")
 	return sb.String()
