@@ -1,0 +1,296 @@
+package config
+
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"strings"
+	"sync"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/internal/logger"
+)
+
+// DynamicSkillsName is the name of the single generated stub skill that tells
+// the agent to call find_skill / load_skill when any skill is served.
+const DynamicSkillsName = "dynamic-skills"
+
+const dynamicSkillsPath = "generated://" + DynamicSkillsName + "/SKILL.md"
+
+const dynamicSkillsDescription = "Find and load more skills on demand from the ai-rulez MCP server. " +
+	"Use when a task needs domain conventions or a workflow that no listed skill covers."
+
+const dynamicSkillsBody = `More skills are available on demand and are not listed in this session. The ` + "`ai-rulez`" + ` MCP server serves them.
+
+1. Call ` + "`find_skill`" + ` with a short description of the task. It returns ranked matches.
+2. Call ` + "`load_skill`" + ` with the chosen ` + "`name`" + ` and follow the skill it returns.
+3. ` + "`list_skill_resources`" + ` lists a skill's reference files; pass one as ` + "`path`" + ` to ` + "`load_skill`" + ` to read it.
+
+Search before starting work in an unfamiliar area, not only when stuck.
+`
+
+func normalizeKey(v string) string { return strings.ToLower(strings.TrimSpace(v)) }
+
+// mcpHarnesses are the built-in presets whose harness can call MCP tools. A
+// skill that is served needs one of these to be reachable; every other preset
+// keeps serving skills as static files. A `cmd/providers` test keeps this in
+// step with the embedded provider specs.
+var mcpHarnesses = map[string]bool{
+	"aiassistant": true, "amp": true, "antigravity": true, "augment": true, "bob": true, "claude": true,
+	"codebuddy": true, "codebuff": true, "codewhale": true, "codex": true, "commandcode": true,
+	"copilot": true, "copilot-cli": true, "crush": true, "cursor": true, "deepagents": true,
+	"devin": true, "factory": true, "gemini": true, "gitlab-duo": true, "goose": true, "grok": true,
+	"junie": true, "kilo": true, "kimi": true, "kiro": true, "mimocode": true, "omp": true,
+	"opencode": true, "pi": true, "poolside": true, "qoder": true, "qwen": true, "reasonix": true,
+	"trae": true, "vibe": true, "warp": true, "zcode": true, "zed": true, "zoocode": true,
+}
+
+// HarnessSupportsMCP reports whether the named preset's harness can call MCP
+// tools, which is what serving a skill needs. Custom and unknown presets report
+// false: they are not known to, so served skills stay static for them.
+func HarnessSupportsMCP(preset string) bool { return mcpHarnesses[preset] }
+
+// MCPHarnessNames lists the presets HarnessSupportsMCP accepts, sorted.
+func MCPHarnessNames() []string {
+	names := make([]string, 0, len(mcpHarnesses))
+	for n := range mcpHarnesses {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// SkillDeliveryValue returns the raw `delivery` frontmatter value of a skill, or "".
+func SkillDeliveryValue(skill ContentFile) string {
+	if skill.Metadata == nil {
+		return ""
+	}
+	return skill.Metadata.Extra["delivery"]
+}
+
+// EffectiveDelivery resolves how one skill reaches the agent. First match wins:
+//
+//  1. the skill's own `delivery` frontmatter key;
+//  2. roleOverride, keyed by skill name, then by domain name (per-role delivery;
+//     nil when no role applies);
+//  3. [domains.<domain>] delivery, for a skill owned by a domain;
+//  4. [skills] delivery, the global default;
+//  5. static.
+//
+// Values that are not static/served/both are skipped, so one typo cannot change
+// delivery silently; validation reports them (AR994).
+func (c *Config) EffectiveDelivery(skill ContentFile, domain string, roleOverride map[string]string) Delivery {
+	if d, ok := ParseDelivery(SkillDeliveryValue(skill)); ok {
+		return d
+	}
+	if len(roleOverride) > 0 {
+		for _, key := range []string{SkillID(skill), skill.Name, domain} {
+			if key == "" {
+				continue
+			}
+			if d, ok := ParseDelivery(roleOverride[key]); ok {
+				return d
+			}
+		}
+	}
+	if c != nil {
+		if dc, ok := c.DomainSettings[domain]; ok && domain != "" {
+			if d, ok := ParseDelivery(dc.Delivery); ok {
+				return d
+			}
+		}
+		if c.Skills != nil {
+			if d, ok := ParseDelivery(c.Skills.Delivery); ok {
+				return d
+			}
+		}
+	}
+	return DeliveryStatic
+}
+
+// PlannedSkill is one skill with its effective delivery.
+type PlannedSkill struct {
+	// ID is the skill directory name.
+	ID string
+	// Domain owns the skill; empty for root content.
+	Domain string
+	// Delivery is the effective delivery.
+	Delivery Delivery
+}
+
+// SkillDeliveries lists every skill of tree with its effective delivery, root
+// skills first then domains in name order. roleOverride is passed to
+// EffectiveDelivery.
+func (c *Config) SkillDeliveries(tree *ContentTree, roleOverride map[string]string) []PlannedSkill {
+	if tree == nil {
+		return nil
+	}
+	var out []PlannedSkill
+	for _, s := range tree.Skills {
+		out = append(out, PlannedSkill{ID: SkillID(s), Delivery: c.EffectiveDelivery(s, "", roleOverride)})
+	}
+	names := make([]string, 0, len(tree.Domains))
+	for n := range tree.Domains {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		for _, s := range tree.Domains[n].Skills {
+			out = append(out, PlannedSkill{ID: SkillID(s), Domain: n, Delivery: c.EffectiveDelivery(s, n, roleOverride)})
+		}
+	}
+	return out
+}
+
+// DeliveryConfigured reports whether anything in tree or the configuration opts
+// into dynamic delivery (served or both), at any level.
+func (c *Config) DeliveryConfigured(tree *ContentTree) bool {
+	for _, p := range c.SkillDeliveries(tree, nil) {
+		if p.Delivery != DeliveryStatic {
+			return true
+		}
+	}
+	return false
+}
+
+// hasServedSkills reports whether any skill of tree is served or both.
+func (c *Config) hasServedSkills(tree *ContentTree) bool { return c.DeliveryConfigured(tree) }
+
+// DeliveryFallback describes served skills a preset keeps static because its
+// harness has no MCP support.
+type DeliveryFallback struct {
+	Preset string
+	Skills []string
+}
+
+// DeliveryFallbacks lists, per configured preset without MCP support, the skills
+// that are served but written statically instead. Sorted by preset.
+func (c *Config) DeliveryFallbacks(tree *ContentTree) []DeliveryFallback {
+	var served []string
+	for _, p := range c.SkillDeliveries(tree, nil) {
+		if p.Delivery == DeliveryServed {
+			served = append(served, p.ID)
+		}
+	}
+	if len(served) == 0 {
+		return nil
+	}
+	sort.Strings(served)
+	var out []DeliveryFallback
+	seen := map[string]bool{}
+	for i := range c.Presets {
+		name := c.Presets[i].GetName()
+		if seen[name] || HarnessSupportsMCP(name) || name == "mcp" {
+			continue
+		}
+		seen[name] = true
+		out = append(out, DeliveryFallback{Preset: name, Skills: served})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Preset < out[j].Preset })
+	return out
+}
+
+// DynamicSkillsStub builds the generated stub skill.
+func DynamicSkillsStub() ContentFile {
+	return ContentFile{
+		Name:     DynamicSkillsName,
+		Path:     dynamicSkillsPath,
+		Content:  dynamicSkillsBody,
+		Metadata: &Metadata{Extra: map[string]string{"description": dynamicSkillsDescription}},
+	}
+}
+
+// ContentForPreset returns the content tree one preset renders. Without served
+// skills, or while a serving session renders (ServeMode), it is c.Content.
+//
+// Otherwise, for a harness that can call MCP, skills whose delivery is served
+// are left out of the tree (so no static tree lists them), and the single
+// dynamic-skills stub is added once to the root skills unless a skill of that
+// name already exists. A harness without MCP support gets every skill as
+// before: a served skill is never dropped for it.
+func (c *Config) ContentForPreset(preset string) *ContentTree {
+	tree := c.Content
+	if tree == nil || c.ServeMode || !c.hasServedSkills(tree) {
+		return tree
+	}
+	if !HarnessSupportsMCP(preset) {
+		return tree
+	}
+	out := *tree
+	out.Skills = c.keepStatic(tree.Skills, "")
+	out.Domains = make(map[string]*Domain, len(tree.Domains))
+	for name, d := range tree.Domains {
+		kept := *d
+		kept.Skills = c.keepStatic(d.Skills, name)
+		out.Domains[name] = &kept
+	}
+	if !slices.ContainsFunc(out.Skills, func(s ContentFile) bool { return SkillID(s) == DynamicSkillsName }) {
+		out.Skills = append(out.Skills, DynamicSkillsStub())
+	}
+	return &out
+}
+
+func (c *Config) keepStatic(skills []ContentFile, domain string) []ContentFile {
+	kept := make([]ContentFile, 0, len(skills))
+	for _, s := range skills {
+		if c.EffectiveDelivery(s, domain, nil) != DeliveryServed {
+			kept = append(kept, s)
+		}
+	}
+	return kept
+}
+
+var (
+	fallbackWarnMu sync.Mutex
+	fallbackWarned = map[string]bool{}
+)
+
+// WarnDeliveryFallbacks logs, once per project and preset, that a preset without
+// MCP support keeps served skills as static files. Nothing is dropped silently.
+func (c *Config) WarnDeliveryFallbacks() {
+	if c.ServeMode {
+		return
+	}
+	for _, fb := range c.DeliveryFallbacks(c.Content) {
+		key := c.BaseDir + "\x00" + fb.Preset + "\x00" + strings.Join(fb.Skills, ",")
+		fallbackWarnMu.Lock()
+		done := fallbackWarned[key]
+		fallbackWarned[key] = true
+		fallbackWarnMu.Unlock()
+		if done {
+			continue
+		}
+		logger.Warn(fmt.Sprintf("Preset %q has no MCP support: %d served skill(s) are written statically for it instead (AR992)", fb.Preset, len(fb.Skills)),
+			"skills", strings.Join(fb.Skills, ", "))
+	}
+}
+
+// ExtraList returns a list-valued frontmatter key that has no typed field (such
+// as `triggers`): a YAML sequence, or a single comma-separated scalar.
+func (m *Metadata) ExtraList(key string) []string {
+	if m == nil {
+		return nil
+	}
+	raw := strings.TrimSpace(m.Extra[key])
+	if raw == "" {
+		return nil
+	}
+	var list []string
+	if strings.HasPrefix(raw, "[") {
+		if err := yaml.Unmarshal([]byte(raw), &list); err == nil {
+			return cleanList(list)
+		}
+	}
+	return cleanList(strings.Split(raw, ","))
+}
+
+func cleanList(in []string) []string {
+	out := in[:0:0]
+	for _, v := range in {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}

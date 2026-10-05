@@ -1270,6 +1270,17 @@ Each entry supports:
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
+### `[skills]`, `[domains.<name>]`, `[[skill_sources]]`, `[lock]`
+
+Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)). All optional.
+
+| Key | Meaning |
+| --- | ------- |
+| `[skills] delivery` | Global default delivery: `static` (default), `served` or `both`. |
+| `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
+| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`): skills served from a git repository or directory. |
+| `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
+
 ## Local overlay
 
 A `config.local.{toml,yaml,yml,json}` file beside `config.toml` is a machine-local, gitignored overlay

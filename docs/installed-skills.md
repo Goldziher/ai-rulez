@@ -152,6 +152,10 @@ Files in `references/` (like `scripts/` and `assets/`) are kept as separate file
 
 `ref` defaults to the repository's default branch (`HEAD`), which moves. Run `ai-rulez lock` (or `ai-rulez skill update <name>`) to record the resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`. Later `generate` runs fetch exactly that commit and fail if the files do not match the digest; `generate --locked` fails when a skill is not covered, and `--frozen` never uses the network. See the [Lock Command](cli.md#lock-command). Imported skill text is instruction text: with `[lint.security] scan_imports`, it is also scanned for secrets, hidden characters and risky commands before it is written ([Security checks](strict-validation.md#security-checks)).
 
+To serve a repository of skills over MCP instead of writing them into the skill trees, use `[[skill_sources]]`
+or `ai-rulez mcp --serve-skills --source`; they are pinned in the same lock (kind `source`). See
+[Dynamic skill loading](mcp-server.md#skill-sources).
+
 ## Local Override
 
 For development workflows, use `local_override` to point to a local checkout instead of fetching from git:
