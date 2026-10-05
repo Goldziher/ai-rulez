@@ -63,7 +63,11 @@ func ReadLog(path string) (entries []Entry, skipped int, err error) {
 			continue
 		}
 		var entry Entry
-		if json.Unmarshal(line, &entry) != nil || entry.Event != EventSkillInvoked || entry.ID == "" {
+		decodeErr := json.Unmarshal(line, &entry)
+		if decodeErr == nil && entry.Event == EventItem {
+			continue // a telemetry item event: valid, but not a skill line
+		}
+		if decodeErr != nil || entry.Event != EventSkillInvoked || entry.ID == "" {
 			skipped++
 			continue
 		}
