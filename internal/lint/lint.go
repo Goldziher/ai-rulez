@@ -184,6 +184,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.scanImported()
 	r.checkPluginDrift()
 	r.checkEvalRunner()
+	r.checkTelemetry()
 	if so.External {
 		r.runExternal()
 	}
