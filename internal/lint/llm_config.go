@@ -51,7 +51,7 @@ func (r *runner) checkLLMConfig() {
 }
 
 // readLLMTable returns the lines of a config file and its parsed [llm] table (nil when absent).
-func (r *runner) readLLMTable(path string) ([]string, map[string]any) {
+func (r *runner) readLLMTable(path string) (lines []string, table map[string]any) {
 	data, err := os.ReadFile(path) //nolint:gosec // the project's own config file
 	if err != nil {
 		return nil, nil
@@ -63,7 +63,7 @@ func (r *runner) readLLMTable(path string) ([]string, map[string]any) {
 	default:
 		_ = yaml.Unmarshal(data, &raw) //nolint:errcheck // a parse error is reported by the loader
 	}
-	table, _ := raw["llm"].(map[string]any) //nolint:errcheck // nil map is fine
+	table, _ = raw["llm"].(map[string]any) //nolint:errcheck // nil map is fine
 	return strings.Split(string(data), "\n"), table
 }
 

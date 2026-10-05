@@ -78,16 +78,15 @@ func init() {
 
 // loadLLMConfig returns the effective [llm] setup (trust rule and env overrides applied),
 // the user-scope-only repository keys that were ignored, and the config directory.
-func loadLLMConfig(ctx context.Context, args []string, projectOptional bool) (llm.Config, []string, string, error) {
-	cfg, err := loadConfigForCommand(ctx, args, config.WithoutRemote())
-	if err != nil {
+func loadLLMConfig(ctx context.Context, args []string, projectOptional bool) (lc llm.Config, ignored []string, dir string, err error) {
+	cfg, loadErr := loadConfigForCommand(ctx, args, config.WithoutRemote())
+	if loadErr != nil {
 		if !projectOptional {
-			return llm.Config{}, nil, "", err
+			return llm.Config{}, nil, "", loadErr
 		}
 		cfg = nil // no project: user scope and the environment still apply, and their errors are reported
 	}
 	res, err := cfg.ResolveLLM(nil)
-	dir := ""
 	if cfg != nil {
 		dir = cfg.ConfigDir
 	}
