@@ -58,7 +58,7 @@ still exits 1 and never reaches the content checks.
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
 | AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist |
 | AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
-| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`) |
+| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`). The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported |
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist |

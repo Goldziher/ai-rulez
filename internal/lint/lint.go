@@ -105,6 +105,7 @@ type runner struct {
 	commands    map[string]bool
 	agents      map[string]bool
 	rules       map[string]bool
+	contexts    map[string]bool
 	items       []item
 	docs        map[string]doc
 	counter     tokens.Counter
@@ -373,9 +374,10 @@ func itemID(kind string, cf config.ContentFile) string {
 
 func (r *runner) collect() {
 	r.skills, r.commands, r.agents, r.rules = map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}
+	r.contexts = map[string]bool{}
 	for _, n := range r.lc.KnownNames {
 		n = strings.ToLower(n)
-		r.skills[n], r.commands[n], r.agents[n], r.rules[n] = true, true, true, true
+		r.skills[n], r.commands[n], r.agents[n], r.rules[n], r.contexts[n] = true, true, true, true, true
 	}
 	for _, n := range builtinSlash {
 		r.commands[n] = true
@@ -426,7 +428,7 @@ func contentNames(kind string, cf config.ContentFile) []string {
 }
 
 func (r *runner) addItems(configDir, kind, domain string, files []config.ContentFile) {
-	set := map[string]map[string]bool{kindSkill: r.skills, kindCommand: r.commands, kindAgent: r.agents, kindRule: r.rules}[kind]
+	set := map[string]map[string]bool{kindSkill: r.skills, kindCommand: r.commands, kindAgent: r.agents, kindRule: r.rules, kindContext: r.contexts}[kind]
 	for _, cf := range files {
 		abs, _ := filepath.Abs(cf.Path) //nolint:errcheck // keeps the raw path
 		rel, err := filepath.Rel(configDir, abs)
