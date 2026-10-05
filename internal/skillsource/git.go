@@ -36,18 +36,6 @@ func checkRemote(url, ref string) error {
 	return nil
 }
 
-func injectToken(u, token string) string {
-	if token == "" {
-		return u
-	}
-	for _, scheme := range []string{"https://", "http://"} {
-		if strings.HasPrefix(u, scheme) {
-			return scheme + token + ":x-oauth-basic@" + strings.TrimPrefix(u, scheme)
-		}
-	}
-	return u
-}
-
 // gitTimeout bounds one git command, so an unresponsive server cannot hang startup.
 var gitTimeout = 5 * time.Minute
 
@@ -69,11 +57,11 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 // lsRemote resolves ref to a commit on the remote and says what kind of ref it
 // was. Tags are preferred over branches (the peeled commit for annotated tags);
 // an empty ref or HEAD resolves the default branch.
-func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string, err error) {
+func lsRemote(ctx context.Context, url, ref string) (commit, kind string, err error) {
 	if err = checkRemote(url, ref); err != nil {
 		return "", "", err
 	}
-	remote := injectToken(url, token)
+	remote := url
 	if ref == "" || ref == "HEAD" {
 		out, err := runGit(ctx, "", "ls-remote", "--", remote, "HEAD")
 		if err != nil {
@@ -124,14 +112,14 @@ func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string,
 // commit. flagQuiet keeps git silent.
 const flagQuiet = "--quiet"
 
-func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string) error {
+func fetchCommit(ctx context.Context, url, ref, kind, commit, dest string) error {
 	if err := checkRemote(url, ref); err != nil {
 		return err
 	}
 	if !lockCommit.MatchString(commit) {
 		return oops.Errorf("refusing to fetch %q: not a full commit SHA", commit)
 	}
-	remote := injectToken(url, token)
+	remote := url
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		return oops.Wrapf(err, "create checkout directory")
 	}

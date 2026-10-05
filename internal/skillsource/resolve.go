@@ -33,8 +33,6 @@ type Options struct {
 	Frozen bool
 	// Refresh ignores the lock's pin and resolves the ref again (`ai-rulez lock`).
 	Refresh bool
-	// Token authenticates HTTPS fetches.
-	Token string
 }
 
 // Resolved is a source fetched (or found in the cache) and ready to read.
@@ -172,7 +170,7 @@ func materialize(ctx context.Context, spec Spec, opts Options, q treeRequest) (*
 			return oops.With("url", spec.Redacted()).With("commit", q.commit).
 				Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", spec.Name, q.commit)
 		}
-		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, opts.Token, treeDir, &fetched)
+		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, treeDir, &fetched)
 	}
 	if err := ensure(); err != nil {
 		return nil, err
@@ -215,7 +213,7 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 		}
 		return commit, kindFor(spec.Ref), nil
 	}
-	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref, opts.Token); err != nil {
+	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref); err != nil {
 		return "", "", err
 	}
 	writeRef(q.repoDir, spec.Ref, commit)
@@ -278,13 +276,13 @@ func rejectSymlinkedPath(root, rel string) error {
 	return nil
 }
 
-func fetchInto(ctx context.Context, url, ref, kind, commit, token, treeDir string, fetched *bool) error {
+func fetchInto(ctx context.Context, url, ref, kind, commit, treeDir string, fetched *bool) error {
 	if err := os.MkdirAll(filepath.Dir(treeDir), 0o755); err != nil {
 		return oops.Wrapf(err, "create skill source cache")
 	}
 	tmp := treeDir + ".partial"
 	_ = os.RemoveAll(tmp) //nolint:errcheck // a stale partial checkout is simply replaced
-	if err := fetchCommit(ctx, url, ref, kind, commit, token, tmp); err != nil {
+	if err := fetchCommit(ctx, url, ref, kind, commit, tmp); err != nil {
 		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
 		return err
 	}
