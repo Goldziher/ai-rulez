@@ -79,6 +79,16 @@ func OnlyNegatedGlobs(cf config.ContentFile) bool {
 // always-on) or that had to be adjusted. The map is nil when the dialect emits
 // no fields.
 func Frontmatter(d Dialect, it Item) (fm map[string]any, notes []Note) {
+	return frontmatterFor(d, nil, it)
+}
+
+// FrontmatterFor is Frontmatter for a rules folder: a mapped dialect resolves its
+// frontmatter from the target's activation map.
+func FrontmatterFor(t Target, it Item) (fm map[string]any, notes []Note) {
+	return frontmatterFor(t.Dialect, t.Mapping, it)
+}
+
+func frontmatterFor(d Dialect, mapping *ActivationMap, it Item) (fm map[string]any, notes []Note) {
 	mode, notes := effectiveMode(d, it)
 	if mode == config.ActivationGlob {
 		kept, dropped := splitNegated(it.Activation.Globs)
@@ -116,6 +126,8 @@ func Frontmatter(d Dialect, it Item) (fm map[string]any, notes []Note) {
 		fm = continueFrontmatter(it, mode)
 	case DialectJunie:
 		fm, extra = junieNotes(it, mode)
+	case DialectMapped:
+		fm, extra = mappedFrontmatter(mapping, it, mode)
 	}
 	return fm, mergeNotes(notes, extra)
 }

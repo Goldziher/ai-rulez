@@ -74,3 +74,8 @@ max = "max"
 kind = "pi_mcp_json"
 path = ".pi/mcp.json"
 emit_when = "has_mcp_servers"
+
+# User-scope layout: pi keeps user memory and skills under ~/.pi/agent.
+[global]
+root_file = ".pi/agent/AGENTS.md"
+skills_dir = ".pi/agent/skills"

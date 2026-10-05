@@ -269,7 +269,7 @@ func TestGuardClaims(t *testing.T) {
 	}
 }
 
-func TestGenerate_CommentedXumDocumentIsReportedOncePerRun(t *testing.T) {
+func TestGenerate_CommentedXumDocumentKeepsItsCommentsWhenTheServersAreDropped(t *testing.T) {
 	// Arrange: the servers were merged, the user added a comment, then the config dropped them.
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"xum"}, "", mcpServerS1))
@@ -283,8 +283,10 @@ func TestGenerate_CommentedXumDocumentIsReportedOncePerRun(t *testing.T) {
 	runAgentsMDGenerate(t, root)
 
 	// Assert
-	assert.Equal(t, commented, readAgentsMDFile(t, root, ".xum/mcp.jsonc"), "the commented file cannot be edited and is left alone")
-	assert.Equal(t, 1, countContaining(*warned, ".xum/mcp.jsonc has comments"), "%v", *warned)
+	got := readAgentsMDFile(t, root, ".xum/mcp.jsonc")
+	assert.Contains(t, got, "// my notes", "the user's comment survives the unmerge")
+	assert.NotContains(t, got, "s1", "the dropped server is taken back out of the commented file")
+	assert.Empty(t, *warned, "a commented document is no longer a problem")
 }
 
 func TestReadManifest_ReadsEachManifestOncePerRun(t *testing.T) {

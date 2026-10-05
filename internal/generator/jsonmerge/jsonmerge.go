@@ -8,6 +8,10 @@
 // everything ai-rulez does not own (#185), so every generator that emits an
 // object-shaped JSON document goes through Apply.
 //
+// A document with comments or trailing commas (JSONC, as VS Code, Zed and
+// OpenCode write them) is edited in place instead, so its comments survive; see
+// jsonc.go. Output for strict JSON is unchanged by that.
+//
 // The package is a leaf on purpose: both internal/generator/presets and
 // internal/generator/providers depend on it, and providers already depends on
 // presets, so the merge machinery cannot live in either of them.
@@ -132,10 +136,22 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 		body, err := marshalOwnedJSONKeys(owned)
 		return Result{Body: body, Claims: claimsFor(owned)}, err
 	}
+	return ApplyDocument(path, existing, owned)
+}
 
+// ApplyDocument is Apply for a document already read, which must not be empty;
+// path only names it in errors.
+func ApplyDocument(path, existing string, owned []OwnedKey) (Result, error) {
+	bom, existing := SplitBOM(existing)
 	members, err := decodeObjectMembers([]byte(existing))
 	if err != nil {
-		return Result{}, parseFailure(path, existing, err)
+		// Not strict JSON: it may be JSONC, which is edited in place so its
+		// comments survive (see jsonc.go).
+		result, err := applyJSONC(path, existing, owned, err)
+		if err == nil {
+			result.Body = bom + result.Body
+		}
+		return result, err
 	}
 
 	indent := detectTopLevelIndent(existing)
@@ -155,13 +171,49 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	if err != nil {
 		return Result{}, oops.With("path", path).Wrapf(err, "encode merged JSON settings document")
 	}
-	return Result{Body: rendered + newline, PartiallyOwned: hasUnownedMembers(merged, owned), Claims: claimsFor(owned)}, nil
+	body := rendered + newline
+	if err := checkPreservedDocuments(existing, body, func(before, after map[string]any) error {
+		return CheckPreservedApply(before, after, owned)
+	}); err != nil {
+		return Result{}, oops.With("path", path).
+			Hint("ai-rulez could not merge its keys into this JSON document without altering the rest of it; the file was left untouched").
+			Wrapf(err, "merged JSON settings document does not preserve the existing content")
+	}
+	partial := hasUnownedMembers(merged, owned)
+	if tree, err := DecodeTree(body); err == nil && HasUserElements(tree, owned) {
+		partial = true
+	}
+	return Result{
+		Body:           bom + body,
+		PartiallyOwned: partial,
+		Claims:         NoteFinalNewline(claimsFor(owned), existing),
+	}, nil
+}
+
+// checkPreservedDocuments decodes both strict JSON documents and runs check on
+// the results.
+func checkPreservedDocuments(before, after string, check func(before, after map[string]any) error) error {
+	b, err := DecodeTree(before)
+	if err != nil {
+		return err
+	}
+	a, err := DecodeTree(after)
+	if err != nil {
+		return err
+	}
+	return check(b, a)
 }
 
 // hasUnownedMembers reports whether the document carries a top-level key outside
 // the owned set. Such a key can only have come from the consumer, so the file is
 // theirs to track and ai-rulez must not ignore or delete it.
 func hasUnownedMembers(members []jsonMember, owned []OwnedKey) bool {
+	return hasUnownedPaths(members, ownedPaths(owned))
+}
+
+// ownedPaths lists the key path of every owned key, expanding a Members key into
+// one path per entry written.
+func ownedPaths(owned []OwnedKey) [][]string {
 	paths := make([][]string, 0, len(owned))
 	for _, key := range owned {
 		segs := key.segments()
@@ -179,7 +231,7 @@ func hasUnownedMembers(members []jsonMember, owned []OwnedKey) bool {
 		}
 		paths = append(paths, segs)
 	}
-	return hasUnownedPaths(members, paths)
+	return paths
 }
 
 // hasUnownedPaths reports whether any member is outside the owned paths. A member
@@ -285,9 +337,8 @@ func insertOwnedValue(node map[string]any, path []string, value any) {
 }
 
 // decodeObjectMembers streams the members of a JSON object, capturing each value
-// as its original source bytes. Comments, trailing commas and any other
-// JSON5/JSONC extension make this fail — deliberately, since encoding/json
-// cannot round-trip them.
+// as its original source bytes. Comments and trailing commas make this fail;
+// Apply and Unmerge then fall back to the comment-preserving JSONC path.
 func decodeObjectMembers(data []byte) ([]jsonMember, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	open, err := decoder.Token()
