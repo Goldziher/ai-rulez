@@ -403,7 +403,7 @@ lock digest (and a `[[source]]` entry per skill source). With
 
 ```toml
 [lock]
-enforce = true
+enforce = true   # the default whenever ai-rulez.lock exists; false opts out
 ```
 
 the server refuses a served skill whose digest differs from the lock, and one the lock does not pin, with

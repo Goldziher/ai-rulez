@@ -240,8 +240,8 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	assert.Equal(t, 1, sources)
 	assert.Positive(t, outputs)
 
-	// without enforce nothing is raised
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
+	// with enforce = false nothing is raised
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[lock]\nenforce = false\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
 	drift = lockDriftFor(cfg)
@@ -271,9 +271,9 @@ func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
 		})
 	}
 
-	// without enforce an unreadable lock is not this check's business
+	// with enforce = false an unreadable lock is not this check's business
 	writeFile(t, lockPath, "garbage = [\n")
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[lock]\nenforce = false\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
 	assert.Empty(t, lockDriftFor(cfg))

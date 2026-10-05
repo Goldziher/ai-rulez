@@ -366,8 +366,12 @@ func checkLock(ctx context.Context, s *state) []Finding {
 	var out []Finding
 	problems, _ := includes.CheckLock(cfg, lock)
 	if len(problems) > 0 {
+		severity := SeverityWarning
+		if cfg.LockEnforced() {
+			severity = SeverityError
+		}
 		out = append(out, Finding{
-			Check: CheckLock, Severity: SeverityWarning, Path: lockfile.FileName,
+			Check: CheckLock, Severity: severity, Path: lockfile.FileName,
 			Message: "does not match the configuration: " + strings.ReplaceAll(strings.TrimSpace(includes.FormatProblems(problems)), "\n", "; "),
 			Hint:    hintRunLock,
 		})

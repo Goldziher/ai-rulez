@@ -654,6 +654,7 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 
 // applyLockFlags turns --locked and --frozen into the include lock policy.
 func applyLockFlags() {
+	includes.RequireWhenEnforced = true
 	switch {
 	case generateFrozen:
 		includes.Mode, includes.SkipFetch = includes.LockFrozen, true

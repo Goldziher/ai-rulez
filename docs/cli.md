@@ -1624,8 +1624,9 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
 the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and
-`validate --strict` reports it as `AR010` (raise it to an error with `[lint.severity]`). With `[lock] enforce = true`
-it also reports content drift as `AR981` / `AR982`. Pinning `ref` to a full commit SHA also counts as pinned.
+`validate --strict` reports it as `AR010` (a warning; an error under enforcement, or raise it with `[lint.severity]`). Enforcement is on
+whenever `ai-rulez.lock` exists (`[lock] enforce = false` opts out); it also reports content drift as `AR981` / `AR982`, and `generate`
+refuses a remote source the lock does not cover, as `--locked` does. Pinning `ref` to a full commit SHA also counts as pinned.
 
 Signature or attestation verification is not implemented: the lock proves the bytes did not change since you
 reviewed them, not who published them.

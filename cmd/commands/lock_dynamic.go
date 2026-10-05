@@ -47,7 +47,7 @@ func lockedEntries(f *lockfile.File) []lockfile.Entry {
 
 // usesDynamicSkills reports whether the project has anything to pin for served skills.
 func usesDynamicSkills(cfg *config.Config) bool {
-	return len(cfg.SkillSources) > 0 || cfg.LockEnforced() || cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
+	return len(cfg.SkillSources) > 0 || !cfg.LockEnforceOptedOut() || cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
 }
 
 // mergeDynamicLock carries the source and served pins into next: kept from

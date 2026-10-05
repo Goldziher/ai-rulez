@@ -265,6 +265,10 @@ func (r *runner) resolveSettings() {
 		r.sev[CodeEvalsMissing] = SeverityWarning
 	}
 	r.evalSettings()
+	if r.cfg.LockEnforced() {
+		// An unpinned remote is a hole in an enforced lock, not a hint.
+		r.sev[CodeUnpinnedRemote] = SeverityError
+	}
 	for key, val := range r.lc.Severity {
 		rule, ok := lookupRule(key)
 		s, sok := ParseSeverity(val)
