@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

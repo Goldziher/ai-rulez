@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/mcp"
-	"github.com/Goldziher/ai-rulez/internal/telemetry"
-	"github.com/Goldziher/ai-rulez/internal/usage"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

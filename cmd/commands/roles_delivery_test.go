@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/progress"
-	"github.com/Goldziher/ai-rulez/internal/roles"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 )
 
 const rolesDeliveryConfig = lockProjectConfig + `

@@ -3,7 +3,7 @@ package commands_test
 import (
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/cmd/commands"
+	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
 	"github.com/stretchr/testify/assert"
 )
 

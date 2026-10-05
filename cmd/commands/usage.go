@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/evals"
-	"github.com/Goldziher/ai-rulez/internal/usage"
+	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

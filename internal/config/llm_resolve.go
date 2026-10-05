@@ -7,7 +7,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
 // LLMResolution is the effective [llm] setup and what the trust rule dropped.

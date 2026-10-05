@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 func TestTokenReport_CountsCheckOutputsAsUnmodeled(t *testing.T) {

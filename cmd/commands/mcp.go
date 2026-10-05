@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"

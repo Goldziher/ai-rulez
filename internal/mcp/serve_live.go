@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 // Mistral Vibe: .vibe/config.toml `[tools.<tool>]` tables. A shell tool carries

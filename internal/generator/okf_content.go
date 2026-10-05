@@ -1,6 +1,6 @@
 package generator
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import "github.com/Goldziher/ai-rulez/v5/internal/config"
 
 // ContentForProfile returns the shared content tree the named profile selects
 // (the default profile when empty). Machine-local content is not part of it.

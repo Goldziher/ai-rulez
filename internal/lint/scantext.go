@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // ScanText runs the security family (AR0xx) over texts keyed by display name.

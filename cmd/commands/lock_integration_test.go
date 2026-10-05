@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/contentlock"
-	"github.com/Goldziher/ai-rulez/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // dynamicLockProject is a project with authored content, a served skill and a

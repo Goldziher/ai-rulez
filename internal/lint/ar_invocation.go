@@ -3,7 +3,7 @@ package lint
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // CodeAutoInvocation reports items the model can start on its own that then run

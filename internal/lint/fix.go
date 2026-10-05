@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // Fixes are mechanical corrections a finding can carry. They exist only for

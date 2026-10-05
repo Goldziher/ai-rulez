@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

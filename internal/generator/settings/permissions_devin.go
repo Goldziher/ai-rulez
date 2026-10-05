@@ -3,7 +3,7 @@ package settings
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 // Devin CLI: .devin/config.json (JSONC) `permissions.{allow,ask,deny}` with

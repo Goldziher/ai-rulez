@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 )
 
 // manifestFileCount reads the generated manifest and returns how many files the

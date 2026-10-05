@@ -10,8 +10,8 @@ import (
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 )
 
 // CheckFields are the structured frontmatter fields of a check. A zero value

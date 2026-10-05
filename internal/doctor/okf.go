@@ -3,8 +3,8 @@ package doctor
 import (
 	"context"
 
-	"github.com/Goldziher/ai-rulez/internal/okf"
-	"github.com/Goldziher/ai-rulez/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
 // CheckOKF is the name of the OKF bundle check in reports.

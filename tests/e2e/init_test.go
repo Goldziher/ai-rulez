@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/tests/e2e/testutil"
+	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

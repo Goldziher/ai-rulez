@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/parser"
+	"github.com/Goldziher/ai-rulez/v5/internal/parser"
 )
 
 //go:embed universal languages bindings

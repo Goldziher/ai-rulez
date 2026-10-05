@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // Skill run statuses.

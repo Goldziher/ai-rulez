@@ -1,6 +1,6 @@
 package plugin
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import "github.com/Goldziher/ai-rulez/v5/internal/config"
 
 // interfaceDoc is the rich UI block shared by Codex and Kimi manifests, with the
 // camelCase JSON keys those runtimes expect.

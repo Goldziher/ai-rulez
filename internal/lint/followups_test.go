@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func fixedNow(t *testing.T, day string) {

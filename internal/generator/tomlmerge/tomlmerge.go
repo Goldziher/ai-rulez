@@ -19,7 +19,7 @@ package tomlmerge
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )

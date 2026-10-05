@@ -3,8 +3,8 @@ package commands
 import (
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 func TestCheckStrictFlags(t *testing.T) {

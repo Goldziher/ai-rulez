@@ -1,4 +1,4 @@
-module github.com/Goldziher/ai-rulez
+module github.com/Goldziher/ai-rulez/v5
 
 go 1.27.0
 

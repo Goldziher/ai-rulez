@@ -10,7 +10,7 @@ import (
 
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Roles map a person's job to the slice of the shared content they need: which

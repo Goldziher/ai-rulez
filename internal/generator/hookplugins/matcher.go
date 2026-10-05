@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // moduleMarker opens the first line of every generated module (see

@@ -3,7 +3,7 @@ package lint
 import (
 	"path/filepath"
 
-	"github.com/Goldziher/ai-rulez/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
 // The OKF family (AR9B0-AR9B9) lints the project's Open Knowledge Format bundle.

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/tiktoken-go/tokenizer/codec"
 )
 

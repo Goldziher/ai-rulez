@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Goldziher/ai-rulez/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 )
 
 func TestNewServer(t *testing.T) {

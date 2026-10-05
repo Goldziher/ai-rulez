@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/telemetry"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 )
 
 // Codes of the telemetry checks (see docs/telemetry.md). AR9K is a block of its
