@@ -190,6 +190,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.findings = securityOnly(r.findings)
 	}
 	r.checkSettingsConfig()
+	r.checkLLMConfig()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
