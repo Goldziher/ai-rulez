@@ -1711,7 +1711,7 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 // rendered file. With [header] timestamp enabled the Generated: text is ignored
 // in that comparison, otherwise every run would rewrite every file.
 func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, finalContent string) bool {
-	if g.config.GetHeaderHashes() == config.HeaderHashesFull {
+	if g.config.GetHeaderHashes() == config.HeaderHashesFull && finalCarriesHash(finalContent) {
 		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
 		existingContentHash, existingSourceHash, legacy := scanStoredHashes(absPath)
 		if legacy && config.InRulesDir(output.Path) {
@@ -1729,6 +1729,19 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 		return equalIgnoringHeaderStamp(string(existing), finalContent, output.Path)
 	}
 	return string(existing) == finalContent
+}
+
+// finalCarriesHash reports whether the rendered file holds a Content-Hash line.
+// Formats with no comment syntax to carry one (strict JSON settings documents,
+// merged MCP files) never do, so in "full" mode there is no stored hash to
+// compare and canSkipWrite falls back to the whole rendered file.
+func finalCarriesHash(finalContent string) bool {
+	for _, line := range strings.Split(finalContent, "\n") {
+		if c, _ := hashFromLine(line); c != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // equalIgnoringHeaderStamp compares two renderings of outputPath, ignoring the
