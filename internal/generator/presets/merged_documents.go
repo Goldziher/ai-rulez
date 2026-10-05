@@ -123,7 +123,9 @@ func MCPServerEntry(server *config.MCPServer) map[string]interface{} {
 
 // MCPServersByKey maps the configured MCP servers onto the `mcpServers` object
 // that tools with the shared stdio/url shape load, skipping any server that
-// cannot be expressed (see MCPServerEntry).
+// cannot be expressed (see MCPServerEntry). Pi, its only reader, expands ${VAR} in
+// env and headers itself, so a placeholder that resolved from the process
+// environment is written as that reference rather than as its value.
 func MCPServersByKey(cfg *config.Config) map[string]interface{} {
 	servers := map[string]interface{}{}
 	if cfg == nil {
@@ -131,7 +133,7 @@ func MCPServersByKey(cfg *config.Config) map[string]interface{} {
 	}
 	for name, server := range cfg.MCPServers {
 		if entry := MCPServerEntry(server); entry != nil {
-			servers[name] = entry
+			servers[name] = BracedMCPEntry(entry, server)
 		}
 	}
 	return servers
@@ -259,7 +261,7 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 	case MergedDocCursorMCP:
 		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry))
 	case MergedDocDevinMCP:
-		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry))
+		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, devinMCPEntry))
 	case MergedDocVSCodeMCP:
 		return memberClaimsOf([]string{keyServers}, mcpEntries(cfg, VSCodeMCPEntry))
 	case MergedDocAgentsMCP:

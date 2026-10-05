@@ -146,7 +146,7 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 
 	// Devin reads project MCP servers from .devin/mcp_config.json.
-	if servers := mcpEntries(cfg, nativeMCPEntry); len(servers) > 0 {
+	if servers := mcpEntries(cfg, devinMCPEntry); len(servers) > 0 {
 		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocDevinMCP))
 		doc, err := renderMergedMCP(path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
 		if err != nil {
