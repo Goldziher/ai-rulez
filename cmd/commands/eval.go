@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -116,11 +117,7 @@ func init() {
 }
 
 func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
-	ctx := cmd.Context()
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	ctx, stop := signal.NotifyContext(commandContext(cmd), os.Interrupt)
 	defer stop()
 	// Everything that can be rejected is rejected before any paid work starts.
 	if err := validateEvalFlags(cmd); err != nil {
@@ -135,24 +132,16 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 		return false, err
 	}
 	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
-		min := cfg.Lint.Evals.MinPassRate
-		opts.PassThreshold = &min
+		floor := cfg.Lint.Evals.MinPassRate
+		opts.PassThreshold = &floor
 	}
-	store, err := evals.LoadStore(resultsPath(cfg.ConfigDir))
+	store, err := attachStore(opts, resultsPath(cfg.ConfigDir))
 	if err != nil {
 		return false, err
 	}
-	opts.Store = store
 	save := !opts.DryRun && !evalFlags.noWrite
 	if save {
-		// Each finished skill is written at once (atomically), so a crash or Ctrl-C
-		// keeps the skills that already paid for themselves.
-		opts.OnSkill = func(run *evals.SkillRun) error {
-			if run.Status != evals.RunRan {
-				return nil
-			}
-			return store.Save(resultsPath(cfg.ConfigDir))
-		}
+		opts.OnSkill = saveEachSkill(store, resultsPath(cfg.ConfigDir))
 	}
 
 	report, runErr := evals.Run(ctx, opts)
@@ -164,13 +153,35 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 			return false, err
 		}
 	}
-	if err := writeEvalReport(cmd, report); err != nil {
-		return false, err
+	return report.Failed, errors.Join(writeEvalReport(cmd, report), runErr)
+}
+
+// saveEachSkill writes the store (atomically) as soon as a skill has run, so a
+// crash or Ctrl-C keeps the skills that already paid for themselves.
+func saveEachSkill(store *evals.Store, path string) func(*evals.SkillRun) error {
+	return func(run *evals.SkillRun) error {
+		if run.Status != evals.RunRan {
+			return nil
+		}
+		return store.Save(path)
 	}
-	if runErr != nil {
-		return report.Failed, runErr
+}
+
+func commandContext(cmd *cobra.Command) context.Context {
+	if ctx := cmd.Context(); ctx != nil {
+		return ctx
 	}
-	return report.Failed, nil
+	return context.Background()
+}
+
+// attachStore loads the results file into opts.
+func attachStore(opts *evals.RunOptions, path string) (*evals.Store, error) {
+	store, err := evals.LoadStore(path)
+	if err != nil {
+		return nil, err
+	}
+	opts.Store = store
+	return store, nil
 }
 
 // thresholdGiven reports whether --threshold was passed explicitly.
