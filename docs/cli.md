@@ -12,6 +12,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
+| `ai-rulez cost`                 | Report the biggest context-cost offenders           |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
@@ -1173,6 +1174,42 @@ When outputs cannot be rendered at all (for example because an MCP placeholder i
 
 Exit codes: `0` no errors (and, with `--strict`, no warnings), `2` at least one finding at the failing severity, `1` doctor could not run: the configuration does not load at all (the `config` finding is still printed) or the report could not be written. The MCP server exposes the same checks as the read-only `doctor` tool, with URL credentials removed from every message, hint and path.
 
+## Cost Command
+
+### `ai-rulez cost [config-file]`
+
+Find what to trim. `tokens` reports the token surface per runtime and bucket; `cost` adds the per-item view:
+the biggest offenders among rules, context files, skills, agents and commands, split into what is paid on every
+request and what is paid only when an item is opened.
+
+- **Always loaded** per item: a rule or context body (a path-scoped rule is *conditional* instead), or the name
+  and description of a listed skill, agent or command plus the 27-token listing framing used by `tokens` (an item
+  with `disable-model-invocation: true` is not listed).
+- **On demand** per item: the body of a skill, agent or command.
+- The runtime totals at the top are the `ai-rulez tokens` figures for the target. The per-item table is an estimate
+  from the sources and does not add up to them exactly; both are shown, never summed.
+
+```bash
+ai-rulez cost                                   # largest runtime, top 10 offenders
+ai-rulez cost --target codex --top 5
+ai-rulez cost --format markdown                 # for a PR comment
+ai-rulez cost --format json
+ai-rulez cost --budget 8000 --on-demand-budget 60000   # exit 2 when over, naming the top 3 offenders
+```
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--format` | string | `text` | `text`, `json` or `markdown` |
+| `--target` | string | largest runtime | Preset whose runtime totals to report |
+| `--top` | int | 10 | How many offenders to list per bucket |
+| `--budget` / `-b` | int | 0 | Exit 2 when the target's always-loaded tokens exceed this |
+| `--on-demand-budget` | int | 0 | Exit 2 when the target's on-demand tokens exceed this |
+| `--profile` / `-p` | string | configured default | Profile to report on |
+| `--tokenizer` | string | `cl100k_base` | `cl100k_base` or `estimate` |
+| `--no-local`, `--config-dir` | | | As for `tokens` |
+
+Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be loaded.
+
 ## Tokens Command
 
 ### `ai-rulez tokens [config-file]`
@@ -1374,13 +1411,32 @@ ai-rulez validate [config-path] [flags]
 | `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
 | `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
-| `--format`            | string  | With `--strict`: `text` (default) or `json` |
+| `--format`            | string  | With `--strict`: `text` (default), `json`, `sarif`, `github`, `junit` or `markdown` |
+| `--output`            | string  | With `--strict`: write the report to this file instead of stdout |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
+| `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
+| `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
+| `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
+| `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
+| `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
+| `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--fix`               | boolean | With `--strict`: apply the safe automatic fixes (executable bits, frontmatter key renames) to authored sources; never generated outputs or security findings |
+| `--fix-unsafe`        | boolean | With `--strict`: also apply fixes that can change meaning (skill name normalization); implies `--fix` |
+| `--dry-run`           | boolean | With `--fix`/`--fix-unsafe`: print the unified diff and change nothing |
+| `--analyzer`          | strings | With `--strict`: report only these analyzers (`security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`) |
+| `--lint-profile`      | string  | With `--strict`: lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
+| `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
 **Examples:**
+
+Explain a rule:
+
+```bash
+ai-rulez validate --explain AR401
+```
 
 Run the deep content checks, as JSON, across every root:
 
@@ -1514,7 +1570,7 @@ written. `--format json` is versioned (`schema/catalog.schema.json`) and is mean
 
 ### `ai-rulez scan [config-path]`
 
-Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
+Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 
 ## OKF Commands
 
