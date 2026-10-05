@@ -110,42 +110,69 @@ func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string,
 }
 
 // fetchCommit materializes commit of url into dest (a fresh directory) and
-// removes the git metadata, leaving only the tree. It verifies the checkout is
-// at commit so a tag that moved between resolution and fetch fails closed.
-// flagQuiet keeps git silent.
+// removes the git metadata, leaving only the tree. The commit is fetched by its
+// SHA, so a tag or branch that moved since the lock pinned it does not matter.
+// A server that refuses a fetch by SHA is asked for ref (the whole history, as
+// the pinned commit may be behind the tip) and the commit must then be
+// reachable; otherwise the fetch fails closed. The checkout is verified to be at
+// commit. flagQuiet keeps git silent.
 const flagQuiet = "--quiet"
 
 func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string) error {
 	if err := checkRemote(url, ref); err != nil {
 		return err
 	}
+	if !lockCommit.MatchString(commit) {
+		return oops.Errorf("refusing to fetch %q: not a full commit SHA", commit)
+	}
 	remote := injectToken(url, token)
-	if kind == kindTag || kind == kindBranch {
-		if _, err := runGit(ctx, "", "clone", flagQuiet, "--depth", "1", "--branch", ref, "--", remote, dest); err != nil {
-			return oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "clone")
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return oops.Wrapf(err, "create checkout directory")
+	}
+	for _, args := range [][]string{
+		{"init", flagQuiet},
+		{"remote", "add", "origin", "--", remote},
+	} {
+		if _, err := runGit(ctx, dest, args...); err != nil {
+			return oops.With("url", includes.RedactURL(url)).Wrapf(err, "prepare checkout")
 		}
-	} else {
-		if err := os.MkdirAll(dest, 0o755); err != nil {
-			return oops.Wrapf(err, "create checkout directory")
+	}
+	if _, err := runGit(ctx, dest, "fetch", flagQuiet, "--depth", "1", "--no-tags", "--", "origin", commit); err != nil {
+		if err = fetchViaRef(ctx, dest, ref, kind, commit); err != nil {
+			return oops.With("url", includes.RedactURL(url)).With("ref", ref).With("commit", commit).Wrap(err)
 		}
-		for _, args := range [][]string{
-			{"init", flagQuiet},
-			{"remote", "add", "origin", "--", remote},
-			{"fetch", flagQuiet, "--depth", "1", "--", "origin", commit},
-			{"checkout", flagQuiet, "--detach", "FETCH_HEAD"},
-		} {
-			if _, err := runGit(ctx, dest, args...); err != nil {
-				return oops.With("url", includes.RedactURL(url)).With("commit", commit).Wrapf(err, "fetch pinned commit")
-			}
-		}
+	} else if _, err = runGit(ctx, dest, "checkout", flagQuiet, "--detach", "FETCH_HEAD"); err != nil {
+		return oops.With("url", includes.RedactURL(url)).With("commit", commit).Wrapf(err, "check out the pinned commit")
 	}
 	head, err := runGit(ctx, dest, "rev-parse", "HEAD")
 	if err != nil {
 		return err
 	}
 	if head != commit {
-		return oops.With("url", includes.RedactURL(url)).Errorf("fetched commit %s but %s was resolved; the ref moved during the fetch, retry", head, commit)
+		return oops.With("url", includes.RedactURL(url)).Errorf("fetched commit %s but %s was resolved; the remote served another commit", head, commit)
 	}
 	// Dropping .git makes the cached tree immutable and smaller; the digest ignores it anyway.
 	return oops.Wrapf(os.RemoveAll(filepath.Join(dest, ".git")), "drop git metadata")
+}
+
+// fetchViaRef is the fallback for a server that will not serve a commit by SHA:
+// it fetches the ref with its history and checks the commit out if it is in it.
+func fetchViaRef(ctx context.Context, dest, ref, kind, commit string) error {
+	if kind == kindSHA {
+		return oops.Errorf("the server does not serve commit %s by SHA", commit)
+	}
+	name := ref
+	if name == "" {
+		name = "HEAD"
+	}
+	if _, err := runGit(ctx, dest, "fetch", flagQuiet, "--no-tags", "--", "origin", name); err != nil {
+		return oops.Wrapf(err, "fetch %s", name)
+	}
+	if _, err := runGit(ctx, dest, "cat-file", "-e", commit+"^{commit}"); err != nil {
+		return oops.Errorf("pinned commit %s is not reachable from %s any more (the ref was rewritten); it cannot be fetched, run `ai-rulez lock` after reviewing the new content", commit, refLabel(ref))
+	}
+	if _, err := runGit(ctx, dest, "checkout", flagQuiet, "--detach", commit); err != nil {
+		return oops.Wrapf(err, "check out the pinned commit")
+	}
+	return nil
 }
