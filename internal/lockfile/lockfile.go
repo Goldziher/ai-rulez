@@ -29,6 +29,12 @@ const Version = 1
 const (
 	KindInclude = "include"
 	KindSkill   = "skill"
+	// KindSource pins one [[skill_sources]] entry: the commit its ref resolved
+	// to and the digest of the fetched tree.
+	KindSource = "source"
+	// KindServed pins one served skill by name: Digest is the digest the skills
+	// server reports (over the rendered files). [lock] enforce checks against it.
+	KindServed = "served"
 )
 
 // Entry pins one remote source. Source has credentials redacted: the lock is committed.
@@ -49,6 +55,8 @@ type File struct {
 	Version int     `toml:"version"`
 	Include []Entry `toml:"include,omitempty"`
 	Skill   []Entry `toml:"skill,omitempty"`
+	Source  []Entry `toml:"source,omitempty"`
+	Served  []Entry `toml:"served,omitempty"`
 }
 
 // Path returns the lock path for a configuration directory.
@@ -77,7 +85,7 @@ func Load(configDir string) (*File, error) {
 
 // Save writes the lock deterministically: entries sorted by name, no timestamps.
 func Save(configDir string, f *File) error {
-	out := File{Version: Version, Include: sorted(f.Include), Skill: sorted(f.Skill)}
+	out := File{Version: Version, Include: sorted(f.Include), Skill: sorted(f.Skill), Source: sorted(f.Source), Served: sorted(f.Served)}
 	var buf bytes.Buffer
 	buf.WriteString("# ai-rulez.lock: pins every remote include and installed skill. Commit this file.\n")
 	buf.WriteString("# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.\n\n")
@@ -105,10 +113,7 @@ func (f *File) Find(kind, name string) *Entry {
 	if f == nil {
 		return nil
 	}
-	list := f.Include
-	if kind == KindSkill {
-		list = f.Skill
-	}
+	list := *f.list(kind)
 	for i := range list {
 		if list[i].Name == name {
 			return &list[i]
@@ -117,12 +122,22 @@ func (f *File) Find(kind, name string) *Entry {
 	return nil
 }
 
+// list returns the entries of a kind; an unknown kind means includes.
+func (f *File) list(kind string) *[]Entry {
+	switch kind {
+	case KindSkill:
+		return &f.Skill
+	case KindSource:
+		return &f.Source
+	case KindServed:
+		return &f.Served
+	}
+	return &f.Include
+}
+
 // Set replaces or adds an entry of the given kind.
 func (f *File) Set(kind string, e Entry) {
-	list := &f.Include
-	if kind == KindSkill {
-		list = &f.Skill
-	}
+	list := f.list(kind)
 	for i := range *list {
 		if (*list)[i].Name == e.Name {
 			(*list)[i] = e

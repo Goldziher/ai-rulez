@@ -189,6 +189,228 @@ skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full
   description is not served and a warning on stderr names it; the rest are unaffected.
 - Semantic (embedding) search is not implemented; the ranking is lexical.
 
+## Dynamic skill loading
+
+Static generation lists every skill (its name, description and about 27 tokens of framing) in every
+session: roughly 14.5k tokens for 190 skills. **Dynamic skill loading** serves the skills you choose over
+MCP instead, so the agent pays for them only when it asks. Three pieces work together:
+
+1. **`delivery`** decides per skill whether it is written to the harness skill trees (`static`), served
+   over MCP (`served`), or both.
+2. **`generate`** leaves served skills out of every static tree and writes one small stub skill
+   (`dynamic-skills`, about 100 tokens) that tells the agent to call `find_skill` and `load_skill`.
+3. **`ai-rulez mcp --serve-skills`** serves those skills with `find_skill`, `load_skill` and
+   `list_skill_resources`, scans each one before serving, can pin them in `ai-rulez.lock`, and reloads
+   when their files change.
+
+### Decision guide
+
+| Keep the skill | When |
+| -------------- | ---- |
+| `static` | A core convention the agent needs in nearly every session (code style, commit rules, the repository map). The listing costs a few tokens and it never depends on the model deciding to search. |
+| `served` | Domain skills used in some sessions: billing, migrations, a vendor API, incident response. The bulk of a large catalog. |
+| `both` | A skill that must always be visible to one harness but that other harnesses or roles should also find by search. |
+
+Rules of thumb: serve domain skills, keep a handful of core convention skills static. Three caveats:
+
+- **The model has to choose to call `find_skill`.** A served skill is invisible until it does. Write
+  `description` and `triggers` for search (what the user is trying to do, in their words), and keep the skills
+  that must not be missed `static`.
+- **An MCP-only harness is not enough for every harness.** A harness that cannot call MCP tools gets served
+  skills as static files, with a warning (`AR992`), never silently dropped. Served skills also need an MCP
+  server entry that runs `ai-rulez mcp --serve-skills` (`AR993` warns when there is none).
+- **Served skills are not in the context until loaded.** Nothing that is always loaded (a rule, a static skill)
+  can rely on them being there; `AR990` warns when static content names a served skill.
+
+### Choosing the delivery
+
+```yaml
+---
+name: db-migrations
+description: Plan and run database schema changes safely. Use when changing a table.
+delivery: served
+triggers: [schema change, alembic migration, add a column]
+---
+```
+
+```toml
+[skills]
+delivery = "static"        # global default; static when unset
+
+[domains.billing]
+delivery = "served"        # every skill of the billing domain
+```
+
+Precedence, first match wins: the skill's own `delivery` frontmatter, then a per-role override, then
+`[domains.<name>] delivery`, then `[skills] delivery`, then `static`. An invalid value is ignored (the next
+level applies) and reported as `AR994`; invalid config values fail `validate`. The per-role override is a map
+from a skill name or a domain name to a delivery; `config.Config.EffectiveDelivery(skill, domain, overrides)` is
+the single function that resolves all of this, so roles plug in by passing their map.
+
+`triggers` is a list of phrases that should make the agent look for the skill (a comma-separated string works
+too). `keywords` are searched as well. `delivery` and `triggers` are ai-rulez keys: `delivery` is not written
+into generated frontmatter.
+
+### What `generate` does
+
+- A skill whose delivery is `served` is not written to any preset's skill tree. `static` and `both` skills are.
+- When any skill is `served` or `both`, one stub skill named `dynamic-skills` is added to the root skills of
+  every preset whose harness can call MCP tools. A skill you author with that name is used instead of the stub.
+- A preset whose harness cannot call MCP (for example `cline`, `rovodev`, or any custom preset) keeps every
+  served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
+- `ai-rulez mcp --serve-skills` renders the served skills itself; it never depends on the generated trees.
+
+### Serving
+
+```bash
+ai-rulez mcp --serve-skills                       # the skills whose delivery is served or both
+ai-rulez mcp --serve-skills --role backend        # rank the backend profile's skills first
+ai-rulez mcp --serve-skills --source git+https://github.com/acme/skills@v1.2.0#skills/
+ai-rulez mcp --serve-skills --frozen              # lock required, no network
+```
+
+Register it in `config.toml` so every MCP-capable harness launches it:
+
+```toml
+[[mcp_servers]]
+name = "ai-rulez-skills"
+command = "ai-rulez"
+args = ["mcp", "--serve-skills"]
+```
+
+A project that sets no delivery anywhere serves every skill, as `--serve-skills` always did. Once any skill is
+`served` or `both`, only those are served; `--include-static` adds the rest.
+
+| Flag | Meaning |
+| ---- | ------- |
+| `--source` | Serve the skills of a source as well (repeatable, see [Skill sources](#skill-sources)). |
+| `--role` | Role (a profile name) whose skills `find_skill` ranks first when the call names no role. |
+| `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
+| `--offline` | Never use the network; use the lock and the cache when present. |
+| `--include-static` | Also serve skills whose delivery is static. |
+| `--budget-bytes` | Bytes `load_skill` may return per session. Default 262144 (256 KiB); `-1` removes the cap. |
+| `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
+| `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
+
+The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
+`--serve-skills`. The authoring tools are never registered in this mode: there is no tool that writes.
+
+### Tools
+
+| Tool | Arguments | Result |
+| ---- | --------- | ------ |
+| `find_skill` | `task` (required), `limit` (default 5, max 20), `role` | Ranked matches: name, description, score, domain, digest. With a role, `in_role` and the role's skills first. |
+| `load_skill` | `name` (required), `path`, `budget_bytes` | The file (`SKILL.md` by default), `provenance`, `digest`, and an index of the skill's other files. |
+| `list_skill_resources` | `name` (required) | Every file of the skill with path, URI, size, MIME type and digest, without loading them. |
+
+`search_skills`, `get_skill` and `read_skill_file`, the `skill://` resources, `skills/list` and `skills/get` keep
+working as described above. All tools are annotated read-only.
+
+- **Ranking.** `find_skill` scores BM25 over four fields with weights name 3, triggers 2.5, keywords 2 and
+  description 1, after lowercasing, dropping stopwords and a light stemmer (`migrations` matches `migration`).
+  It is lexical and deterministic: score descending, then name. Embedding search is not implemented.
+- **Roles.** `role` is resolved to a scope (domains, allow and deny globs). Matches inside the scope come first,
+  then the rest marked `in_role: false`. Until a richer role model is wired in, a role is a profile name: its
+  domains, plus root skills. The resolver is `mcp.RoleResolver`, a function from name to `mcp.RoleScope`.
+- **Budget.** Each session may receive `--budget-bytes` bytes from `load_skill`. A load that would exceed the
+  remainder is refused with the bytes left and is not charged; `budget_bytes` on one call truncates that
+  call's file (at a character boundary) and reports `truncated` and `total_bytes`. Supporting files count too.
+- **Path.** `path` is relative to the skill. Absolute paths, `..`, backslashes and names that are not valid
+  `skill://` path segments are rejected. Binary files are read with `resources/read`.
+- **Provenance.** Every result carries `provenance`: `digest` (served bytes), `lock_digest` (what the lock pins),
+  `locked`, `source`, `ref`, `pinned`, `commit` for a source skill, `delivery`, and `scan_warnings`.
+
+### Skill sources
+
+A source is a repository (or a directory) of skill directories, served and never written to the static trees.
+
+```toml
+[[skill_sources]]
+name = "acme"                                  # identifies the source in the lock
+url = "https://github.com/acme/skills.git"     # git URL (a leading git+ is accepted) or a local directory
+ref = "v1.2.0"                                 # a tag or a full commit SHA
+path = "skills"                                # subdirectory whose children are skills
+include = ["pdf-*", "sql"]                     # directory-name globs; exclude wins
+exclude = ["*-wip"]
+name_prefix = "acme-"                          # served as acme-pdf-forms, and SKILL.md name is rewritten
+trust = "error"                                # scan level: error (default) or warn
+```
+
+`--source` takes the same thing on the command line: `[git+]<url>[@<tag|commit>][#<subdir>]` or a directory,
+for example `git+https://host/org/repo@v1.2.0#skills/`. The ref separator is the last `@` after the final `/`,
+so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The source is named
+`cli-<repository>`. In a directory with no `.ai-rulez`, `--source` alone is enough to serve.
+
+- **Pinning.** A tag is resolved to the commit it points at (an annotated tag is peeled), a full SHA is used as
+  is. `ai-rulez lock` records the commit and the tree digest (the same `sha256` scheme as includes) as a `[[source]]`
+  entry in `ai-rulez.lock`. With the lock, the pinned commit is fetched even if the tag later moves, and the fetched
+  tree must match the digest or serving fails.
+- **Unpinned refs.** A branch, or no ref, follows a moving ref; it is reported as unpinned (`AR010`, and a warning
+  at serve time) until the lock covers it.
+- **Cache and network.** Trees are cached per commit under `~/.cache/ai-rulez/skill-sources/`. `--frozen` requires
+  the lock to cover the source and never touches the network (the commit must be cached). `--offline` does not
+  require the lock: it uses the lock's commit, or the commit an earlier online run recorded for that ref.
+- **Local directories** need no network; a lock entry pins their digest, and serving refuses a changed tree.
+- **Safety.** Symlinks are never followed, files over 2 MiB and skills over 8 MiB are skipped with a warning,
+  and a skill whose name collides with one already served is skipped (set `name_prefix`).
+
+### Security scan
+
+Every served skill is scanned before it is served, with the rules of `ai-rulez scan` (secrets,
+hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, encoded blobs) over
+`SKILL.md` and every text file. A skill that fails is not served: it is absent from `resources/list`,
+`skills/list` and `find_skill`, a warning names the finding on stderr, and `load_skill` says why. Inline
+`ai-rulez-lint-ignore` comments are not honored. The level is `trust` for a source skill:
+
+| Level | Blocks |
+| ----- | ------ |
+| `error` | Any finding (every finding counts as an error). Default for source skills and for skills installed from a git repository (`lint.security.scan_imports = "warn"` lowers installed skills to `warn`). |
+| `warn` | Findings that are errors by their own severity (secrets, hidden characters, risky shell). Default for skills authored in the project. |
+
+### Lock enforcement
+
+`ai-rulez lock` also records, for every skill the server would serve, a `[[served]]` entry with its name and
+lock digest (and a `[[source]]` entry per skill source). With
+
+```toml
+[lock]
+enforce = true
+```
+
+the server refuses a served skill whose digest differs from the lock, and one the lock does not pin, with
+`AR995`. `validate --strict` reports the same. The lock digest covers the rendered files but not the
+project-wide `Source-Hash` header line, so editing one skill does not invalidate the others. The digest is of the
+rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by design).
+`ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
+
+### Usage telemetry
+
+Each successful `load_skill` goes through the usage recorder as one identifier-only JSON line: time, skill name,
+session, harness (the MCP client name), content hash from the skills index, the served digest, and `served: true`.
+A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
+`ai-rulez report usage`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
+or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage.jsonl`.
+
+### Live reload
+
+The server checks the configuration directory (and local source directories) every two seconds. When a file
+changes it rebuilds the catalog, swaps it in, and sends `notifications/resources/list_changed`. A rebuild that
+fails keeps the previous catalog serving. Polling keeps the dependency set unchanged; git sources are immutable
+per commit and are not re-fetched.
+
+### Strict validation
+
+| Code | Severity | Meaning |
+| ---- | -------- | ------- |
+| `AR990` | warning | Static content names a served skill |
+| `AR991` | error | A harness that can call MCP has no `dynamic-skills` stub |
+| `AR992` | warning | A harness without MCP keeps served skills as static files |
+| `AR993` | warning | Skills are served but no `[[mcp_servers]]` entry runs `--serve-skills` |
+| `AR994` | error | `delivery` frontmatter is not static, served or both |
+| `AR995` | error | `[lock] enforce` and a served skill is unpinned or its digest differs |
+
+See [Strict validation](strict-validation.md) for the full table.
+
 ## Typical Workflow
 
 ### With Your Editor

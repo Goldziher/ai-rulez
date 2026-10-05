@@ -1,6 +1,10 @@
 package mcp
 
-import sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+import (
+	"sync"
+
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+)
 
 // serverInstructions is surfaced to MCP clients (and their models) during
 // initialization to explain what this server does and how to drive it.
@@ -14,6 +18,9 @@ type Server struct {
 	mcpServer *sdkmcp.Server
 	version   string
 	catalog   *Catalog
+	// catMu guards catalog, which a live reload replaces (see serve_live.go).
+	catMu sync.RWMutex
+	serve *serveState
 }
 
 func NewServer(version string) *Server {

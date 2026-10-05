@@ -112,8 +112,11 @@ type runner struct {
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
 	forceSev Severity
-	opts     Options
-	drift    []PluginDrift
+	// noInlineIgnore refuses `ai-rulez-lint-ignore` comments (served content).
+	noInlineIgnore bool
+	opts           Options
+	drift          []PluginDrift
+	delivery       []DeliveryFinding
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -181,6 +184,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkHooks(baseAbs)
 	r.checkCollapsed()
 	r.checkUnpinned()
+	r.checkDelivery()
 	r.scanImported()
 	r.checkPluginDrift()
 	r.checkEvalRunner()
@@ -333,7 +337,7 @@ func (r *runner) pathIgnored(abs string) bool {
 }
 
 func (r *runner) inlineIgnored(abs string, line int, code string) bool {
-	if r.forceSev != "" {
+	if r.forceSev != "" || r.noInlineIgnore {
 		return false // imported text cannot silence its own findings
 	}
 	d, ok := r.docs[abs]

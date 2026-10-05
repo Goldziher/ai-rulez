@@ -73,11 +73,16 @@ type Entry struct {
 	Harness    string `json:"harness"`
 	// Outcome is loaded, used or abandoned when the hook knows it, else omitted.
 	Outcome string `json:"outcome,omitempty"`
-	// Served marks a load that came through the MCP server rather than from disk;
-	// the MCP skill server sets it.
+	// Served marks a load through the skills server (`load_skill`) rather than a
+	// harness-native skill invocation; see RecordServed.
 	Served bool `json:"served,omitempty"`
 	// Role is the role active when the skill loaded, when the caller says.
 	Role string `json:"role,omitempty"`
+	// Digest is the served skill's provenance digest.
+	Digest string `json:"digest,omitempty"`
+	// Resource marks the load of a supporting file, not the skill's SKILL.md;
+	// reports do not count it as a further use of the skill.
+	Resource bool `json:"resource,omitempty"`
 }
 
 // hookEvent is the subset of a Claude Code hook event the recorder reads. Fields
@@ -162,7 +167,11 @@ func Record(in io.Reader, options RecordOptions) (*Entry, error) {
 	entry.Time = now().UTC().Format(time.RFC3339)
 	entry.ID = skillID(entry.Skill)
 	entry.Hash = lookupHash(options.IndexPath, event.CWD, entry.ID)
+	return emit(entry, options)
+}
 
+// emit encodes entry and writes it to the configured sinks.
+func emit(entry *Entry, options RecordOptions) (*Entry, error) {
 	line, err := json.Marshal(entry)
 	if err != nil {
 		return nil, oops.Wrapf(err, "encode usage entry")

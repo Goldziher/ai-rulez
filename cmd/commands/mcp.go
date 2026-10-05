@@ -2,11 +2,8 @@ package commands
 
 import (
 	"context"
-	"errors"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/mcp"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -37,7 +34,7 @@ that mode, so it is safe to hand to an unattended agent.`,
 
 func runMCPServer(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	serveOnly := []string{"profile", "targets", flagServeDomain, "allow", "deny"}
+	serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
 		for _, name := range serveOnly {
 			if cmd.Flags().Changed(name) {
@@ -68,48 +65,9 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 	}
 }
 
-// buildSkillServer loads the project in the working directory, renders the
-// effective skills of the chosen profile and preset, and wraps them in the
-// read-only serving server. Nothing is written to disk.
+// buildSkillServer builds the read-only serving server; see mcp_serve.go.
 func buildSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
-	flags := cmd.Flags()
-	var flagErr error
-	str := func(name string) string {
-		v, err := flags.GetString(name)
-		flagErr = errors.Join(flagErr, err)
-		return v
-	}
-	list := func(name string) []string {
-		v, err := flags.GetStringSlice(name)
-		flagErr = errors.Join(flagErr, err)
-		return v
-	}
-	profile, preset := str("profile"), str("targets")
-	domains, allow, deny := list(flagServeDomain), list("allow"), list("deny")
-	if flagErr != nil {
-		return nil, oops.Wrapf(flagErr, "read flags")
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, oops.Wrapf(err, "working directory")
-	}
-	cfg, err := config.LoadConfig(ctx, wd)
-	if err != nil {
-		return nil, oops.Wrapf(err, "load configuration")
-	}
-	resolvedPreset, served, err := generator.NewGenerator(cfg).ServedSkills(profile, preset)
-	if err != nil {
-		return nil, oops.Wrapf(err, "render skills")
-	}
-	if profile == "" {
-		profile = cfg.Default
-	}
-	catalog, err := mcp.BuildCatalog(profile, resolvedPreset, served, mcp.SkillFilter{Domains: domains, Allow: allow, Deny: deny})
-	if err != nil {
-		return nil, oops.Wrapf(err, "build skill catalog")
-	}
-	return mcp.NewSkillServer(Version, catalog), nil
+	return buildDynamicSkillServer(ctx, cmd)
 }
 
 func init() {
@@ -119,6 +77,7 @@ func init() {
 	MCPCmd.Flags().StringSlice(flagServeDomain, nil, "Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills)")
 	MCPCmd.Flags().StringSlice("allow", nil, "Only serve skills whose name matches one of these glob patterns (requires --serve-skills)")
 	MCPCmd.Flags().StringSlice("deny", nil, "Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills)")
+	registerDynamicServeFlags(MCPCmd)
 	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")
 	MCPCmd.Flags().String("address", "", "Address to bind to (for websocket transport)")
 	MCPCmd.Flags().Int("port", 3000, "Port to bind to (for websocket transport)")
