@@ -209,3 +209,10 @@ func TestSkillSourceConfigValidate_RejectsGitOptions(t *testing.T) {
 		assert.Error(t, s.Validate(0), "%+v", s)
 	}
 }
+
+func TestSkillSourceConfigValidate_LimitsCannotBeNegative(t *testing.T) {
+	t.Parallel()
+	assert.Error(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxSkills: -1}).Validate(0))
+	assert.Error(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxBytes: -1}).Validate(0))
+	assert.NoError(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxSkills: 10, MaxBytes: 1 << 20}).Validate(0))
+}

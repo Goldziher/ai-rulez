@@ -962,6 +962,16 @@
             "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
             "description": "Prepended to every served skill name, so two sources cannot collide."
           },
+          "max_skills": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of skills this source may load (default 200); a larger source is an error."
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error."
+          },
           "trust": {
             "type": "string",
             "enum": ["error", "warn"],

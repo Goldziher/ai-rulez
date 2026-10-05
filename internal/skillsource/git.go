@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/includes"
@@ -47,7 +48,12 @@ func injectToken(u, token string) string {
 	return u
 }
 
+// gitTimeout bounds one git command, so an unresponsive server cannot hang startup.
+var gitTimeout = 5 * time.Minute
+
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
+	defer cancel()
 	// Everything a skill source names is untrusted: no hooks, helpers or submodules,
 	// and only the https, ssh and file transports (never ext::).
 	cmd := gitutil.Command(ctx, dir, append(gitutil.HardenedConfig(), args...)...)
