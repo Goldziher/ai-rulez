@@ -2,16 +2,16 @@ package presets
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )

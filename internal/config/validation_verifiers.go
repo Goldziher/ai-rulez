@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/verifiers/vspec"
+	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/samber/oops"
 )
 

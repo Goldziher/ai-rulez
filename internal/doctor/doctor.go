@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Severity ranks a finding.

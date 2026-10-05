@@ -1,6 +1,6 @@
 package presets
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import "github.com/Goldziher/ai-rulez/v5/internal/config"
 
 // Effort tier constants — internal vocabulary used in config and frontmatter.
 // Each preset translates these via MapEffort to its own accepted values.

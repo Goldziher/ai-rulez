@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "4.24.2",
+  "version": "5.0.0",
   "description": "Complete AI development workflow for 52 AI coding harnesses. Write rules, skills, agents, hooks, permissions and checks once; generate native configs for Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode and more, per project or per user.",
   "keywords": [
     "agents",

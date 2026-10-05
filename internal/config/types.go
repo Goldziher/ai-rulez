@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 )
 
 // Config represents the configuration format

@@ -3,8 +3,8 @@ package providers
 import (
 	"fmt"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/hookplugins"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
 )
 
 // validateHookPluginSidecar checks a `hook_plugin` sidecar: it needs a flavor, and

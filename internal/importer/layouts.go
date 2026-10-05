@@ -4,11 +4,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 
 	// Register every preset (Go and declarative) so their layouts can be read.
-	_ "github.com/Goldziher/ai-rulez/internal/generator"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
 
 // nativeSource is one place a tool keeps instructions: a root file or a

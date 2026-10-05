@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/internal/generator"
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )

@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/importer"
-	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/importer"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/cobra"
 )
 

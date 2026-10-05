@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )

@@ -5,8 +5,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 )
 
 // rootPresets maps each root file to the presets that write it. A file shared

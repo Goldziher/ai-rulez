@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	_ "github.com/Goldziher/ai-rulez/internal/generator/presets"   // register the Go-implemented presets
-	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // register the declarative presets
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/presets"   // register the Go-implemented presets
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // register the declarative presets
 )
 
 // V4 TOML Configuration Fixtures
