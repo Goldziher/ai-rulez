@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -66,6 +67,17 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".github", "agents"),
 		filepath.Join(baseDir, ".github", "prompts"),
 	}
+}
+
+// GlobalOutputPaths is the Copilot user-scope layout under ~/.copilot: the
+// personal instructions file, skills and agents.
+func (g *CopilotPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RootFile:  ".copilot/copilot-instructions.md",
+		RulesDir:  ".copilot/instructions",
+		SkillsDir: ".copilot/skills",
+		AgentsDir: ".copilot/agents",
+	}.Resolve(home, getenv)
 }
 
 func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -160,6 +172,18 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 			Path:    filepath.Join(baseDir, ".github", "prompts", sanitized+".prompt.md"),
 			Content: commandContent,
 		})
+	}
+
+	// VS Code (Copilot Chat) reads workspace MCP servers from .vscode/mcp.json,
+	// under `servers`; the file often carries comments and the user's own servers,
+	// so merge into it.
+	if servers := mcpEntries(cfg, VSCodeMCPEntry); len(servers) > 0 {
+		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocVSCodeMCP))
+		doc, err := renderMergedMCP(path, docmerge.FormatJSONC, []string{keyServers}, servers)
+		if err != nil {
+			return nil, fmt.Errorf("render .vscode/mcp.json: %w", err)
+		}
+		outputs = append(outputs, mergedOutput(path, doc))
 	}
 
 	// Generate .mcp.json if MCP servers are configured. A tracked, hand-authored
@@ -446,6 +470,14 @@ func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) s
 // mcpPath, preserving every other top-level key that is already there. An empty
 // mcpPath renders a fresh document, which is what the unit tests exercise.
 func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
+	return renderSharedMCPJSON(mcpPath, cfg)
+}
+
+// renderSharedMCPJSON renders the root .mcp.json in the one shape every writer of
+// that path must agree on (the generator keeps a single copy and rejects
+// divergent content): `disabled` on every entry, `type` for remote transports,
+// the URL, headers and env as configured. It matches the mcp preset's output.
+func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
@@ -453,7 +485,7 @@ func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Confi
 			keyDisabled: !server.IsEnabled(),
 		}
 
-		// Copilot keys remote transport on `type` (not `transport`). A stdio entry
+		// Remote transports are keyed on `type` (not `transport`). A stdio entry
 		// with an empty command is invalid, so omit command/args for remote
 		// (http/sse) transports and emit `type` plus the URL instead.
 		switch t := server.GetTransport(); t {

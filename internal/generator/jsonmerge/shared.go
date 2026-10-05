@@ -471,3 +471,14 @@ func ValidateOwned(owned []OwnedKey) error {
 	}
 	return nil
 }
+
+// DecodeTolerantTree decodes a JSON or JSONC document (BOM, comments and
+// trailing commas allowed) into generic Go values, for reading a member the
+// document already holds.
+func DecodeTolerantTree(doc string) (map[string]any, error) {
+	_, rest := SplitBOM(doc)
+	if tree, err := DecodeTree(rest); err == nil {
+		return tree, nil
+	}
+	return jsoncTree(rest)
+}

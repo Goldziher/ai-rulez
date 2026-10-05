@@ -1,0 +1,35 @@
+# DeepSeek Harness (dsh) provider spec.
+#
+# dsh loads AGENTS.md from the project root down to the working directory and
+# scans .dsh/skills for <name>/SKILL.md bundles. MCP servers live in the home
+# level cordis.patch.yml (a global-only YAML patch list), which a project preset
+# cannot express, so they are not emitted.
+
+name = "dsh"
+display_name = "DeepSeek Harness"
+
+directories = [".dsh", ".dsh/skills"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".dsh/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# DSH_HOME defaults to ~/.dsh.
+[global]
+home_env = "DSH_HOME"
+home_dir = ".dsh"
+root_file = ".dsh/AGENTS.md"
+skills_dir = ".dsh/skills"

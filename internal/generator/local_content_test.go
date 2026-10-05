@@ -358,7 +358,7 @@ func TestLocalContent_ReportsItemsAPresetCannotPlace(t *testing.T) {
 		dropped []string // labels expected for the preset; nil means everything is placed
 	}{
 		{"claude writes a file per item", "claude", nil},
-		{"opencode aggregates commands into opencode.json", "opencode", []string{"command mine-cmd"}},
+		{"gemini has no commands folder", "gemini", []string{"command mine-cmd"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

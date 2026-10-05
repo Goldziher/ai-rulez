@@ -1,0 +1,59 @@
+# Zoo Code provider spec (the community continuation of Roo Code).
+#
+# Zoo Code loads the workspace AGENTS.md (and AGENTS.local.md) plus every
+# .roo/rules/*.md file; rule files carry no frontmatter, so scope is noted in
+# the body. Skills and slash commands live under .roo and MCP servers in
+# .roo/mcp.json. Custom modes (.roomodes, an aggregated YAML file) are not
+# written: the DSL has no aggregate output for agents.
+
+name = "zoocode"
+display_name = "Zoo Code"
+
+directories = [".roo", ".roo/rules", ".roo/skills", ".roo/commands"]
+
+[root]
+file = "AGENTS.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".roo/rules"
+filename = "{id}.md"
+split = true
+dialect = "junie"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".roo/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".roo/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
+[[sidecars]]
+kind = "mcp"
+path = ".roo/mcp.json"
+format = "json"
+
+# User scope: only ~/.roo/rules is loaded, so the root guidance joins it there.
+[global]
+root_file = ".roo/rules/AGENTS.md"
+rules_dir = ".roo/rules"
+skills_dir = ".roo/skills"
+commands_dir = ".roo/commands"

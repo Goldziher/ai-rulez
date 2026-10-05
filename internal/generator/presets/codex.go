@@ -7,12 +7,18 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
-const codexPresetName = "codex"
+const (
+	codexPresetName         = "codex"
+	codexKeyReasoningEffort = "model_reasoning_effort"
+	codexKeyMCPServers      = "mcp_servers"
+)
 
 func init() {
 	config.RegisterPreset(codexPresetName, &CodexPresetGenerator{})
@@ -144,14 +150,17 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
-	// Emit .codex/config.toml with the global model_reasoning_effort as a
-	// session-level default. Per-agent overrides live in each agent's TOML
-	// file (see renderAgentTOML) and take precedence when an agent runs.
-	if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".codex", "config.toml"),
-			Content: fmt.Sprintf("model_reasoning_effort = %q\n", effort),
-		})
+	// Emit .codex/config.toml: the global model_reasoning_effort as a session-level
+	// default (per-agent overrides live in each agent's TOML file, see
+	// renderAgentTOML) and the project's MCP servers as [mcp_servers.<name>]
+	// tables. The file is shared with the user's own settings, so only these keys
+	// are merged in.
+	configFile, ok, err := g.renderConfigTOML(filepath.Join(baseDir, filepath.FromSlash(MergedDocCodexConfig)), cfg)
+	if err != nil {
+		return nil, fmt.Errorf("render .codex/config.toml: %w", err)
+	}
+	if ok {
+		outputs = append(outputs, configFile)
 	}
 
 	// Generate .codex/plugins.json with plugin declarations (if configured)
@@ -167,6 +176,38 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 
 	return outputs, nil
+}
+
+// renderConfigTOML merges what ai-rulez owns into the Codex config.toml at path.
+// ok is false when the config owns nothing there (no effort, no MCP servers).
+func (g *CodexPresetGenerator) renderConfigTOML(path string, cfg *config.Config) (config.OutputFile, bool, error) {
+	var owned []jsonmerge.OwnedKey
+	if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
+		owned = append(owned, jsonmerge.OwnedKey{Name: codexKeyReasoningEffort, Value: effort})
+	}
+	if servers := mcpEntries(cfg, CodexMCPEntry); len(servers) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: codexKeyMCPServers, Value: servers, Members: true})
+	}
+	if len(owned) == 0 {
+		return config.OutputFile{}, false, nil
+	}
+	res, err := applyMergedDocumentAs(path, docmerge.FormatTOML, owned)
+	if err != nil {
+		return config.OutputFile{}, false, err
+	}
+	return mergedOutput(path, res), true, nil
+}
+
+// GlobalOutputPaths is the Codex user-scope layout under ~/.codex (CODEX_HOME).
+func (g *CodexPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		HomeEnv: "CODEX_HOME", HomeDir: ".codex",
+		RootFile:    ".codex/AGENTS.md",
+		SkillsDir:   config.DefaultCodexSkillsDir,
+		AgentsDir:   ".codex/agents",
+		CommandsDir: ".codex/prompts",
+		Sidecars:    map[string]string{MergedDocCodexConfig: ".codex/config.toml"},
+	}.Resolve(home, getenv)
 }
 
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {

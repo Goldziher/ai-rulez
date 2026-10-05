@@ -1,0 +1,60 @@
+# IBM Bob provider spec (Bob IDE and Bob Shell share .bob/).
+#
+# Bob auto-loads AGENTS.md plus every Markdown file under .bob/rules (plain
+# Markdown, no frontmatter), skills from .bob/skills, slash commands from
+# .bob/commands and MCP servers from .bob/mcp.json. Bob has no file-based
+# subagents (its modes live in a Roo-style custom_modes.yaml aggregate this DSL
+# cannot express), so agents are not written.
+
+name = "bob"
+display_name = "IBM Bob"
+
+directories = [".bob", ".bob/rules", ".bob/skills", ".bob/commands"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".bob/rules"
+filename = "{id}.md"
+split = true
+dialect = "junie"
+
+[outputs.skills]
+dir = ".bob/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".bob/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
+[[sidecars]]
+kind = "mcp"
+path = ".bob/mcp.json"
+dialect = "bob"
+global_path = ".bob/settings/mcp.json"
+
+[global]
+root_file = ".bob/AGENTS.md"
+skills_dir = ".bob/skills"
+commands_dir = ".bob/commands"
+rules_dir = ".bob/rules"

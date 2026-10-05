@@ -1,0 +1,43 @@
+# Mistral Vibe provider spec.
+#
+# Vibe loads AGENTS.md from the project root (and from each directory above a
+# file it reads), skills from .vibe/skills, and MCP servers from the
+# [[mcp_servers]] array of tables in .vibe/config.toml, merged element by element
+# so servers added with `vibe mcp add` survive. Agents are not emitted: a Vibe
+# agent is a TOML profile whose prompt is a second file under .vibe/prompts,
+# which one output cannot produce.
+
+name = "vibe"
+display_name = "Mistral Vibe"
+
+directories = [".vibe", ".vibe/skills"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".vibe/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[[sidecars]]
+kind = "mcp"
+dialect = "vibe"
+path = ".vibe/config.toml"
+global_path = ".vibe/config.toml"
+emit_when = "has_mcp_servers"
+
+[global]
+home_env = "VIBE_HOME"
+home_dir = ".vibe"
+root_file = ".vibe/AGENTS.md"
+skills_dir = ".vibe/skills"

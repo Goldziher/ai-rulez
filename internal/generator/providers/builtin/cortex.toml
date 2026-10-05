@@ -1,0 +1,49 @@
+# Snowflake Cortex Code provider spec.
+#
+# Cortex Code reads the project-root AGENTS.md as its only instruction file (no
+# rules folder), skills from .cortex/skills and subagents from .cortex/agents.
+# It documents no project-scoped MCP file (servers live in the user-level
+# ~/.snowflake/cortex/mcp.json), so no MCP document is written.
+
+name = "cortex"
+display_name = "Snowflake Cortex Code"
+
+directories = [".cortex", ".cortex/skills", ".cortex/agents"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".cortex/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+tools = true
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".cortex/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+
+[model]
+field = "model"
+
+[global]
+skills_dir = ".snowflake/cortex/skills"
+agents_dir = ".snowflake/cortex/agents"

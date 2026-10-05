@@ -122,6 +122,7 @@ func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
 	paths := g.GetOutputPaths("/base")
 
 	wantPaths := []string{
+		filepath.Join("/base", ".agents", "workflows"),
 		filepath.Join("/base", "GEMINI.md"),
 		filepath.Join("/base", ".agents"),
 		filepath.Join("/base", ".agents", "rules"),

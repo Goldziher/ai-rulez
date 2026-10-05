@@ -1,0 +1,51 @@
+# Atlassian Rovo Dev CLI provider spec.
+#
+# Rovo Dev reads project memory from AGENTS.md (and AGENTS.local.md) in the
+# working directory and its parents, so the shared root AGENTS.md is written and
+# the .rovodev/AGENTS.md mirror is not. Skills are .rovodev/skills/{id}/SKILL.md
+# and subagents .rovodev/subagents/*.md. Not emitted: saved prompts (they need a
+# prompts.yml manifest) and MCP (.rovodev/mcp.json is inert until config.yml
+# points mcp.mcpConfigPath at it).
+
+name = "rovodev"
+display_name = "Rovo Dev"
+
+directories = [".rovodev", ".rovodev/skills", ".rovodev/subagents"]
+
+[root]
+file = "AGENTS.md"
+local_file = "AGENTS.local.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".rovodev/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".rovodev/subagents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+
+[model]
+field = "model"
+
+[global]
+root_file = ".rovodev/AGENTS.md"
+skills_dir = ".rovodev/skills"
+agents_dir = ".rovodev/subagents"

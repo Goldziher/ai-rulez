@@ -78,6 +78,9 @@ func (c SharedOutputConsumer) ReplacedRootFile() string {
 	return ""
 }
 
+// sharedAll is the Outputs of a preset that reads both shared outputs.
+var sharedAll = []SharedOutput{SharedAgentsMD, SharedAgentSkills}
+
 // sharedOutputConsumers is the single place that decides which presets
 // participate. A table rather than a generator interface: amp is a declarative
 // provider with no Go type to implement one, and the participation of a preset
@@ -132,6 +135,50 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	},
 	// Hermes would let .hermes.md shadow AGENTS.md, so the preset stops writing it.
 	string(PresetHermes): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: ".hermes.md"},
+
+	// Copilot CLI shares the copilot layout, so the two stay interchangeable.
+	"copilot-cli": {
+		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".github/skills",
+		OwnRootFile: ".github/copilot-instructions.md", Folder: RulesFolderScopedOnly,
+	},
+	// Presets that read the shared AGENTS.md and .agents/skills and keep an own
+	// skills directory the shared tree replaces.
+	"deepagents": {Outputs: sharedAll, OwnSkillsDir: ".deepagents/skills"},
+	"kimi":       {Outputs: sharedAll, OwnSkillsDir: ".kimi-code/skills"},
+	"omp":        {Outputs: sharedAll, OwnSkillsDir: ".omp/skills", Folder: RulesFolderSplitOnly},
+	"rovodev":    {Outputs: sharedAll, OwnSkillsDir: ".rovodev/skills"},
+	"dsh":        {Outputs: sharedAll, OwnSkillsDir: ".dsh/skills"},
+	"vibe":       {Outputs: sharedAll, OwnSkillsDir: ".vibe/skills"},
+	"cortex":     {Outputs: sharedAll, OwnSkillsDir: ".cortex/skills"},
+	"poolside":   {Outputs: sharedAll, OwnSkillsDir: ".poolside/skills"},
+	"warp":       {Outputs: sharedAll, OwnSkillsDir: ".warp/skills"},
+	"kiro":       {Outputs: sharedAll, OwnSkillsDir: ".kiro/skills", Folder: RulesFolderSplitOnly},
+	"augment":    {Outputs: sharedAll, OwnSkillsDir: ".augment/skills", Folder: RulesFolderSplitOnly},
+	"zoocode":    {Outputs: sharedAll, OwnSkillsDir: ".roo/skills", Folder: RulesFolderSplitOnly},
+	"crush":      {Outputs: sharedAll, OwnSkillsDir: ".crush/skills", OwnRootFile: "CRUSH.md"},
+	// These already write .agents/skills themselves, so there is no own skills
+	// directory to drop; the shared tree stands in for it.
+	"muse":  {Outputs: sharedAll},
+	"goose": {Outputs: sharedAll, OwnRootFile: ".goosehints"},
+	"zed":   {Outputs: sharedAll, OwnRootFile: ".rules"},
+	// Qwen Code loads QWEN.md and AGENTS.md, so the shared AGENTS.md replaces
+	// QWEN.md (both would repeat the content); only glob-scoped rules keep a file
+	// in inline mode.
+	"qwen": {Outputs: []SharedOutput{SharedAgentsMD}, OwnRootFile: "QWEN.md", Folder: RulesFolderScopedInInline},
+	// Read the shared AGENTS.md only: their own skills directories stay.
+	"kilo":        {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderSplitOnly},
+	"qoder":       {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderSplitOnly},
+	"bob":         {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderSplitOnly},
+	"grok":        {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderSplitOnly},
+	"codewhale":   {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderSplitOnly},
+	"mimocode":    {Outputs: []SharedOutput{SharedAgentsMD}},
+	"zcode":       {Outputs: []SharedOutput{SharedAgentsMD}},
+	"commandcode": {Outputs: []SharedOutput{SharedAgentsMD}},
+	"factory":     {Outputs: []SharedOutput{SharedAgentsMD}},
+	"openclaw":    {Outputs: []SharedOutput{SharedAgentsMD}},
+	// Only the shared skills tree: these keep no AGENTS.md of their own.
+	"replit": {Outputs: []SharedOutput{SharedAgentSkills}},
+	"letta":  {Outputs: []SharedOutput{SharedAgentSkills}},
 }
 
 // SharedOutputConsumerFor returns the shared-output participation of a built-in

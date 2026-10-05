@@ -1,0 +1,53 @@
+# Trae (ByteDance AI IDE) provider spec.
+#
+# Trae reads every .trae/rules/*.md file and has no root instructions file, so
+# all rules and context become rule files. The Cursor-style frontmatter selects
+# one of Trae's four modes: alwaysApply (always), globs (specific files),
+# description (intelligent) or none of them (manual, via #Rule). Skills live in
+# .trae/skills and MCP servers in .trae/mcp.json.
+
+name = "trae"
+display_name = "Trae"
+
+directories = [".trae", ".trae/rules", ".trae/skills"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".trae/rules"
+filename = "{id}.md"
+split = true
+always_files = true
+
+[outputs.rules.activation.always]
+alwaysApply = true
+
+[outputs.rules.activation.glob]
+alwaysApply = false
+globs = "{globs}"
+
+[outputs.rules.activation.auto]
+alwaysApply = false
+description = "{description}"
+
+[outputs.rules.activation.manual]
+alwaysApply = false
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".trae/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[[sidecars]]
+kind = "mcp"
+path = ".trae/mcp.json"
+format = "json"
+
+[global]
+skills_dir = ".trae/skills"

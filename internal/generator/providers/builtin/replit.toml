@@ -1,0 +1,32 @@
+# Replit Agent provider spec.
+#
+# Replit Agent reads project guidance from replit.md at the project root and
+# loads Agent Skills from .agents/skills. It has no rules folder, subagent,
+# command or file-based MCP format, so only the root file and skills are
+# produced.
+
+name = "replit"
+display_name = "Replit"
+
+[root]
+file = "replit.md"
+# Replit reads no machine-local project file.
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# The shared .agents/skills tree stands in for this output when agents_md is on.
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]

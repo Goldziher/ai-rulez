@@ -1,0 +1,91 @@
+# Qoder provider spec (IDE, qodercli and the JetBrains plugin share .qoder/).
+#
+# Qoder reads AGENTS.md (and AGENTS.local.md), topic rules from .qoder/rules with
+# a `trigger` frontmatter (always_on, glob, model_decision, manual), skills,
+# subagents and slash commands under .qoder, and MCP servers from the project
+# .mcp.json (user scope: the mcpServers key of ~/.qoder/settings.json).
+
+name = "qoder"
+display_name = "Qoder"
+
+directories = [".qoder", ".qoder/rules", ".qoder/skills", ".qoder/agents", ".qoder/commands"]
+
+[root]
+file = "AGENTS.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".qoder/rules"
+filename = "{id}.md"
+split = true
+
+[outputs.rules.activation.always]
+trigger = "always_on"
+
+[outputs.rules.activation.glob]
+trigger = "glob"
+glob = "{globs_list}"
+
+[outputs.rules.activation.auto]
+trigger = "model_decision"
+description = "{description}"
+
+[outputs.rules.activation.manual]
+trigger = "manual"
+
+[outputs.skills]
+dir = ".qoder/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".qoder/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description", "disallowedTools"]
+tools = true
+skills = true
+emit_model = true
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".qoder/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+# The root .mcp.json is shared with the mcp preset and the other tools that read it,
+# so every writer renders the same shape (mcp_json) and the generator keeps one copy.
+[[sidecars]]
+kind = "mcp_json"
+path = ".mcp.json"
+emit_when = "has_mcp_json_entries"
+global_path = ".qoder/settings.json"
+
+[global]
+root_file = ".qoder/AGENTS.md"
+skills_dir = ".qoder/skills"
+agents_dir = ".qoder/agents"
+commands_dir = ".qoder/commands"
+rules_dir = ".qoder/rules"

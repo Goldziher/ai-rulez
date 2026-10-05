@@ -1,0 +1,59 @@
+# JetBrains AI Assistant provider spec.
+#
+# AI Assistant reads every .aiassistant/rules/*.md file and has no root
+# instructions file, so all rules and context become rule files. Each file's
+# rule type lives in a leading line-based block (`apply: always`, `apply: by
+# file patterns` with `patterns:`, `apply: by model decision` with
+# `instructions:`, `apply: manually`); a file without an `apply:` line is never
+# attached. Project skills use the shared .agents/skills tree and project MCP
+# servers live in .ai/mcp/mcp.json.
+
+name = "aiassistant"
+display_name = "JetBrains AI Assistant"
+
+directories = [".aiassistant", ".aiassistant/rules", ".agents", ".agents/skills"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".aiassistant/rules"
+filename = "{id}.md"
+split = true
+always_files = true
+
+[outputs.rules.activation]
+format = "lines"
+
+[outputs.rules.activation.always]
+apply = "always"
+
+[outputs.rules.activation.glob]
+apply = "by file patterns"
+patterns = "{globs_list}"
+
+[outputs.rules.activation.auto]
+apply = "by model decision"
+instructions = "{description}"
+
+[outputs.rules.activation.manual]
+apply = "manually"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+[[sidecars]]
+kind = "mcp"
+path = ".ai/mcp/mcp.json"
+format = "json"

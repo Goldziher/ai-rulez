@@ -1,0 +1,43 @@
+# Poolside Pool provider spec.
+#
+# Pool reads AGENTS.md at every level and Agent Skills from .poolside/skills (and
+# the shared .agents/skills). MCP servers live under mcp_servers in the committed
+# .poolside/settings.yaml, with remote servers described by a transport block.
+# Pool's subagents are entries of the same settings file, which this spec does not
+# generate. https://docs.poolside.ai
+
+name = "poolside"
+display_name = "Poolside Pool"
+
+directories = [".poolside", ".poolside/skills"]
+
+[root]
+file = "AGENTS.md"
+# Pool reads the untracked .poolside/settings.local.yaml only for settings, not
+# instructions, so machine-local content has no file.
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".poolside/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[[sidecars]]
+kind = "mcp"
+path = ".poolside/settings.yaml"
+format = "yaml"
+dialect = "yaml-standard"
+global_path = ".config/poolside/settings.yaml"
+
+# User-scope layout: Pool keeps its personal files under ~/.config/poolside.
+[global]
+root_file = ".config/poolside/AGENTS.md"
+skills_dir = ".config/poolside/skills"

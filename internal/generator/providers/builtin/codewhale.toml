@@ -1,0 +1,61 @@
+# Codewhale provider spec.
+#
+# Codewhale loads the workspace AGENTS.md, then every .codewhale/rules/*.md in
+# filename order, skills from .codewhale/skills, slash commands from
+# .codewhale/commands and MCP servers from .codewhale/mcp.json (server map under
+# `servers`). Its subagents are TOML agent profiles with a deny-unknown-fields
+# schema, which this DSL cannot express, so agents are not written. The user
+# scope has no rules directory.
+
+name = "codewhale"
+display_name = "Codewhale"
+
+directories = [".codewhale", ".codewhale/rules", ".codewhale/skills", ".codewhale/commands"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".codewhale/rules"
+filename = "{id}.md"
+split = true
+dialect = "junie"
+
+[outputs.skills]
+dir = ".codewhale/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".codewhale/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[[sidecars]]
+kind = "mcp"
+path = ".codewhale/mcp.json"
+dialect = "standard"
+key = ["servers"]
+global_path = ".codewhale/mcp.json"
+
+[global]
+root_file = ".codewhale/AGENTS.md"
+skills_dir = ".codewhale/skills"
+commands_dir = ".codewhale/commands"

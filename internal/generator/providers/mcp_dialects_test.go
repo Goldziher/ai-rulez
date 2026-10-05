@@ -405,3 +405,33 @@ func TestGenericMCPSidecar_DottedFlatKey(t *testing.T) {
 		})
 	}
 }
+
+// TestMCPDialects_AllResolve pins the dialect registry: every constant resolves
+// and carries a builder, and every builtin spec's sidecar dialect is known. The
+// registry is one map literal, so this does not depend on init order.
+func TestMCPDialects_AllResolve(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{
+		"", MCPDialectStandard, MCPDialectClaude, MCPDialectGemini, MCPDialectOpencode, MCPDialectVSCode,
+		MCPDialectZed, MCPDialectCodex, MCPDialectAmp, MCPDialectYAMLStandard, MCPDialectBob,
+		MCPDialectZcode, MCPDialectGrok, MCPDialectTransport, MCPDialectVibe,
+	}
+	for _, name := range tests {
+		t.Run("dialect "+name, func(t *testing.T) {
+			t.Parallel()
+			d, err := mcpDialectFor(name)
+			require.NoError(t, err)
+			assert.NotNil(t, d.build)
+			assert.NotEmpty(t, d.defaultKey)
+		})
+	}
+	for _, spec := range loadBuiltinSpecs() {
+		for _, sidecar := range spec.Sidecars {
+			if sidecar.Dialect == "" {
+				continue
+			}
+			assert.True(t, IsMCPDialect(sidecar.Dialect), "%s sidecar %s uses unknown dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)
+		}
+	}
+}

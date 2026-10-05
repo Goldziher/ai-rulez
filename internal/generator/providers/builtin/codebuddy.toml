@@ -1,0 +1,84 @@
+# CodeBuddy Code provider spec.
+#
+# CodeBuddy Code (Tencent Cloud) mirrors Claude Code's layout: CODEBUDDY.md and
+# CODEBUDDY.local.md at the root, .codebuddy/rules/*.md with `alwaysApply` and
+# `paths` frontmatter, skills, subagents and slash commands under .codebuddy/,
+# and project MCP servers in the shared root .mcp.json.
+
+name = "codebuddy"
+display_name = "CodeBuddy Code"
+
+directories = [".codebuddy", ".codebuddy/rules", ".codebuddy/skills", ".codebuddy/agents", ".codebuddy/commands"]
+
+[root]
+file = "CODEBUDDY.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Rules: .codebuddy/rules/{id}.md. `alwaysApply: true` injects a rule always; a
+# glob-scoped rule is `alwaysApply: false` with a `paths` pattern. Auto and
+# manual rules have no native counterpart and fall back to always-on.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".codebuddy/rules"
+filename = "{id}.md"
+split = true
+inline_filter = "path_scoped"
+
+[outputs.rules.activation]
+always = { alwaysApply = true }
+glob = { alwaysApply = false, paths = "{globs}" }
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".codebuddy/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".codebuddy/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+skills = true
+emit_model = true
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".codebuddy/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+# CodeBuddy reads the same project-root .mcp.json as Claude Code.
+[[sidecars]]
+kind = "mcp_json"
+path = ".mcp.json"
+emit_when = "has_mcp_json_entries"
+
+# User-scope layout: everything lives under ~/.codebuddy.
+[global]
+root_file = ".codebuddy/CODEBUDDY.md"
+skills_dir = ".codebuddy/skills"
+agents_dir = ".codebuddy/agents"
+commands_dir = ".codebuddy/commands"
+rules_dir = ".codebuddy/rules"

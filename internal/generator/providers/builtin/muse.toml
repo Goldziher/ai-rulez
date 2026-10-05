@@ -1,0 +1,35 @@
+# Meta Muse Code provider spec.
+#
+# Muse Code loads one instruction file per directory up to the .git boundary,
+# preferring AGENTS.md, and project skills from .agents/skills. Its MCP servers
+# live only in the user settings.json (which must carry schema_version), so no
+# project MCP document is emitted.
+
+name = "muse"
+display_name = "Muse Code"
+
+directories = [".agents", ".agents/skills"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+[global]
+skills_dir = ".config/muse/skills"

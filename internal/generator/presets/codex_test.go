@@ -234,7 +234,7 @@ func TestCodexPresetGenerator_EmitsConfigTOMLWhenEffortSet(t *testing.T) {
 			EffortByPreset: map[string]string{"codex": "high"},
 		},
 	}
-	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	outputs, err := g.Generate(&config.ContentTree{}, t.TempDir(), cfg)
 	require.NoError(t, err)
 
 	var found *config.OutputFile
@@ -255,7 +255,7 @@ func TestCodexPresetGenerator_GlobalDefaultUsedWhenNoPerPresetOverride(t *testin
 		Presets:  []config.Preset{{BuiltIn: "codex"}},
 		Defaults: &config.DefaultsConfig{Effort: "medium"},
 	}
-	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	outputs, err := g.Generate(&config.ContentTree{}, t.TempDir(), cfg)
 	require.NoError(t, err)
 	for _, o := range outputs {
 		if strings.HasSuffix(filepath.ToSlash(o.Path), ".codex/config.toml") {
@@ -273,7 +273,7 @@ func TestCodexPresetGenerator_MaxTierMapsToHigh(t *testing.T) {
 		Presets:  []config.Preset{{BuiltIn: "codex"}},
 		Defaults: &config.DefaultsConfig{Effort: "max"},
 	}
-	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	outputs, err := g.Generate(&config.ContentTree{}, t.TempDir(), cfg)
 	require.NoError(t, err)
 	for _, o := range outputs {
 		if strings.HasSuffix(filepath.ToSlash(o.Path), ".codex/config.toml") {

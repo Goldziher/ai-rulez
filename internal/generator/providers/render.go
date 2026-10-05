@@ -13,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 // Generator is a config.PresetGenerator backed by a declarative ProviderSpec.
@@ -255,7 +254,7 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 
 	target := g.rulesTarget(spec)
 	plan.target = &target
-	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg, false), rulefiles.ScopeOf(cfg), reg)
+	files, inlineRules, inlineContext, err := g.planSplit(spec, rules, ctx, plan.target, g.splitRouting(spec, cfg, false), cfg, reg)
 	if err != nil {
 		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan %s rule files", g.Spec.Name)
 	}
@@ -271,6 +270,9 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 // none, so CLAUDE.local.md does).
 func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config, local bool) rulefiles.Routing {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(g.Spec.Name), true)
+	if spec.AlwaysFiles {
+		routing = rulefiles.RoutingEverything
+	}
 	if routing == rulefiles.RoutingScopedOnly && spec.InlineFilter != InlineFilterPathScoped {
 		return rulefiles.RoutingNone
 	}
@@ -394,13 +396,15 @@ func (g *Generator) isScopedRulesDir(dir string, cfg *config.Config) bool {
 func (g *Generator) rulesTarget(spec *OutputSpec) rulefiles.Target {
 	dialect := rulefiles.Dialect(spec.Dialect)
 	return rulefiles.Target{
-		Preset:    g.Spec.Name,
-		Dir:       spec.Dir,
-		RootFile:  g.rootTarget().RootFile,
-		Ext:       strings.TrimPrefix(spec.Filename, "{id}"),
-		Dialect:   dialect,
-		Mapping:   activationMap(spec.Activation),
-		Recursive: dialect == rulefiles.DialectClaude,
+		Preset:   g.Spec.Name,
+		Dir:      spec.Dir,
+		RootFile: g.rootTarget().RootFile,
+		Ext:      strings.TrimPrefix(spec.Filename, "{id}"),
+		Dialect:  dialect,
+		Mapping:  activationMap(spec.Activation),
+		// Tools that discover rules in subdirectories get a scope's rules in a
+		// folder of their own (claude, copilot); the others a prefixed file name.
+		Recursive: dialect == rulefiles.DialectClaude || dialect == rulefiles.DialectCopilot,
 		Banner:    true,
 	}
 }
@@ -633,7 +637,7 @@ func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *Front
 		return frontmatter, nil
 	}
 
-	yamlData, err := yaml.Marshal(frontmatter)
+	yamlData, err := marshalFrontmatter(frontmatter, spec)
 	if err != nil {
 		return nil, fmt.Errorf("marshal frontmatter: %w", err)
 	}
@@ -713,11 +717,20 @@ func effortFrontmatterKey(spec *FrontmatterSpec) string {
 
 func applyTypedLists(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
 	if spec.Tools && len(meta.Tools) > 0 {
-		frontmatter["tools"] = meta.Tools
+		frontmatter["tools"] = typedList(spec, meta.Tools)
 	}
 	if spec.Skills && len(meta.Skills) > 0 {
-		frontmatter["skills"] = meta.Skills
+		frontmatter["skills"] = typedList(spec, meta.Skills)
 	}
+}
+
+// typedList is a tools or skills list as the frontmatter carries it: the list
+// itself, or one comma-separated string when join_lists is set.
+func typedList(spec *FrontmatterSpec, list []string) any {
+	if spec.JoinLists {
+		return strings.Join(list, ", ")
+	}
+	return list
 }
 
 func applyOrderedFields(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
@@ -796,6 +809,9 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		switch section {
 		case SectionRootHeader:
 			ruleCount, agentCount := countContent(content, plan)
+			if g.Spec.Root.OmitHeaderAgents {
+				agentCount = 0
+			}
 			data := &templates.TemplateData{
 				ProjectName: cfg.Name,
 				Timestamp:   cfg.HeaderTimestamp(),
@@ -838,8 +854,9 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 	recorder.flush(rendered)
 
 	return config.OutputFile{
-		Path:    outputPath,
-		Content: rendered,
+		Path:       outputPath,
+		Content:    rendered,
+		OmitsRules: len(plan.files) > 0 || len(plan.legacy) > 0,
 	}, nil
 }
 

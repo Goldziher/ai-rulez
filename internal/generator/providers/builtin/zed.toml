@@ -1,0 +1,48 @@
+# Zed provider spec.
+#
+# Zed's agent reads project rules from a root `.rules` file (it falls back to
+# AGENTS.md and other files only when `.rules` is absent), loads Agent Skills
+# from .agents/skills, and reads MCP servers from `context_servers` in
+# .zed/settings.json, which is JSONC. Zed has no rules folder, subagent or
+# command file format.
+
+name = "zed"
+display_name = "Zed"
+
+directories = [".zed"]
+
+[root]
+file = ".rules"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+# The zed dialect makes a ".json" path JSONC, so user comments in settings.json
+# survive the merge.
+[[sidecars]]
+kind = "mcp"
+path = ".zed/settings.json"
+dialect = "zed"
+emit_when = "has_mcp_servers"
+global_path = ".config/zed/settings.json"
+
+# User-scope layout: Zed's personal rules are ~/.config/zed/AGENTS.md; skills are
+# the shared ~/.agents/skills.
+[global]
+root_file = ".config/zed/AGENTS.md"
+skills_dir = ".agents/skills"

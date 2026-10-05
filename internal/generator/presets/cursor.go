@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -35,6 +36,17 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".agents", "skills"),
 		filepath.Join(baseDir, ".cursor", "agents"),
 	}
+}
+
+// GlobalOutputPaths is the Cursor user-scope layout under ~/.cursor. User rules
+// live in Cursor's settings UI, so there is no root file.
+func (g *CursorPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		SkillsDir:   ".cursor/skills",
+		AgentsDir:   ".cursor/agents",
+		CommandsDir: ".cursor/commands",
+		Sidecars:    map[string]string{MergedDocCursorMCP: ".cursor/mcp.json"},
+	}.Resolve(home, getenv)
 }
 
 func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -131,6 +143,17 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			Path:    filepath.Join(baseDir, ".cursor", "agents", agentID+".md"),
 			Content: agentContent,
 		})
+	}
+
+	// Cursor reads project MCP servers from .cursor/mcp.json, merged so the user's
+	// own servers survive.
+	if servers := mcpEntries(cfg, nativeMCPEntry); len(servers) > 0 {
+		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocCursorMCP))
+		doc, err := renderMergedMCP(path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
+		if err != nil {
+			return nil, fmt.Errorf("render .cursor/mcp.json: %w", err)
+		}
+		outputs = append(outputs, mergedOutput(path, doc))
 	}
 
 	// Generate .mcp.json if MCP servers are configured. A tracked, hand-authored
@@ -349,43 +372,11 @@ func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.Content
 	return frontmatter
 }
 
-// renderMCPJSON renders the mcpServers key ai-rulez owns into the .mcp.json at
-// mcpPath, preserving every other top-level key that is already there. An empty
-// mcpPath renders a fresh document, which is what the unit tests exercise.
+// renderMCPJSON renders the mcpServers key ai-rulez owns into the root .mcp.json at
+// mcpPath, preserving every other top-level key that is already there, in the
+// shape every writer of that file shares (see renderSharedMCPJSON). Cursor reads
+// its servers from .cursor/mcp.json; this legacy file stays for other tools. An
+// empty mcpPath renders a fresh document, which is what the unit tests exercise.
 func (g *CursorPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	mcpServers := make(map[string]interface{})
-
-	for name, server := range cfg.MCPServers {
-		entry := map[string]interface{}{
-			keyDisabled: !server.IsEnabled(),
-		}
-
-		// Cursor has no transport/type key; it infers transport from the presence of
-		// `url`. A stdio entry with an empty command is invalid, so omit command/args
-		// for remote (http/sse) transports and emit only the URL.
-		switch server.GetTransport() {
-		case config.TransportHTTP, config.TransportSSE:
-			if server.URL != "" {
-				entry["url"] = server.URL
-			}
-			if len(server.Headers) > 0 {
-				entry[keyHeaders] = server.Headers
-			}
-		default:
-			entry[keyCommand] = server.Command
-			if len(server.Args) > 0 {
-				entry["args"] = server.Args
-			}
-		}
-
-		if len(server.Env) > 0 {
-			entry["env"] = server.Env
-		}
-
-		mcpServers[name] = entry
-	}
-
-	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: mcpServers, Members: true},
-	})
+	return renderSharedMCPJSON(mcpPath, cfg)
 }

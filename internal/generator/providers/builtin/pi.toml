@@ -12,7 +12,7 @@
 name = "pi"
 display_name = "pi"
 
-directories = [".pi", ".pi/agents"]
+directories = [".pi", ".pi/agents", ".pi/prompts"]
 
 # AGENTS.md is shared byte-for-byte with codex, opencode, xum and amp, so the
 # sections and ordering mirror theirs.
@@ -33,8 +33,12 @@ resources = true
 [outputs.skills.body]
 sections = ["frontmatter", "content", "resource_index"]
 
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
 [outputs.skills.frontmatter]
 fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
 
 # Agents: `.pi/agents/{id}.md` for the subagents extension. `thinking` carries
 # the resolved effort, `model` the resolved model, `tools` the tool list.
@@ -52,6 +56,19 @@ tools = true
 emit_effort = true
 effort_field = "thinking"
 emit_model = true
+
+# Commands are prompt templates: `.pi/prompts/{id}.md`, invoked as /{id}.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".pi/prompts"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
 
 [model]
 field = "model"
@@ -79,3 +96,5 @@ emit_when = "has_mcp_servers"
 [global]
 root_file = ".pi/agent/AGENTS.md"
 skills_dir = ".pi/agent/skills"
+agents_dir = ".pi/agent/agents"
+commands_dir = ".pi/agent/prompts"

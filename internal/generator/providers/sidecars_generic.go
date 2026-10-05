@@ -77,11 +77,27 @@ func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, ou
 		if err != nil {
 			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
 		}
-		owned := []jsonmerge.OwnedKey{{
-			Path:    sc.ownedKeyPath(dialect),
-			Value:   mcpDialectEntries(dialect, cfg),
-			Members: true,
-		}}
+		if dialect.arrayKey != "" {
+			key, err := arrayOwnedKey(sc, dialect, cfg, outputPath)
+			if err != nil {
+				return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+			}
+			return mergeDocument(outputPath, sc.DocFormat(), []jsonmerge.OwnedKey{key})
+		}
+		entries := mcpDialectEntries(dialect, cfg)
+		var owned []jsonmerge.OwnedKey
+		if len(entries) > 0 || sc.Elements == nil {
+			owned = append(owned, jsonmerge.OwnedKey{Path: sc.ownedKeyPath(dialect), Value: entries, Members: true})
+		}
+		if sc.Elements != nil {
+			key, ok, err := elementsOwnedKey(sc, cfg, outputPath)
+			if err != nil {
+				return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+			}
+			if ok {
+				owned = append(owned, key)
+			}
+		}
 		return mergeDocument(outputPath, sc.DocFormat(), owned)
 	case SidecarPermissions, SidecarHooks:
 		// Reserved: validated by the loader so specs can declare them, rendered

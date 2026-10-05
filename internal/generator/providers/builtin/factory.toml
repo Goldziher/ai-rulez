@@ -1,0 +1,92 @@
+# Factory Droid provider spec.
+#
+# Droid reads project guidance from AGENTS.md (root and nested) and has native
+# custom droids (subagents), slash commands and skills under .factory/. Factory
+# documents no rules folder, so rules and context stay inline in AGENTS.md.
+# MCP servers live in .factory/mcp.json. https://docs.factory.ai
+
+name = "factory"
+display_name = "Factory Droid"
+
+directories = [".factory", ".factory/skills", ".factory/droids", ".factory/commands"]
+
+# AGENTS.md is shared byte-for-byte with the other AGENTS.md presets (codex, amp,
+# pi, ...), which all carry the agents-delegation section.
+[root]
+file = "AGENTS.md"
+# Droid has no machine-local project file.
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".factory/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Custom droids: name and description plus optional model, reasoningEffort and
+# tools (a list is accepted).
+[outputs.agents]
+mode = "per_item_file"
+dir = ".factory/droids"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+emit_effort = true
+effort_field = "reasoningEffort"
+
+# Slash commands: the name comes from the filename; description and
+# argument-hint are the only documented fields.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".factory/commands"
+filename = "{id}.md"
+filter = "include_if_targeting_provider"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
+[model]
+field = "model"
+
+# Droid takes low, medium and high; the two tiers above high are capped.
+[effort_map]
+style = "string"
+
+[effort_map.values]
+low = "low"
+medium = "medium"
+high = "high"
+xhigh = "high"
+max = "high"
+
+# .factory/mcp.json: type defaults to stdio, so only remote servers carry it.
+[[sidecars]]
+kind = "mcp"
+path = ".factory/mcp.json"
+format = "json"
+dialect = "claude"
+global_path = ".factory/mcp.json"
+
+# User-scope layout: everything lives under ~/.factory.
+[global]
+root_file = ".factory/AGENTS.md"
+skills_dir = ".factory/skills"
+agents_dir = ".factory/droids"
+commands_dir = ".factory/commands"

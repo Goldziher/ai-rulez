@@ -1,0 +1,70 @@
+# ZCode (Z.ai) provider spec.
+#
+# ZCode reads exactly one workspace AGENTS.md (no nested or per-topic rules, so
+# every rule stays inline), skills from .zcode/skills, subagents from
+# .zcode/agents, slash commands from .zcode/commands and MCP servers from the
+# mcp.servers key of .zcode/config.json (user scope: ~/.zcode/cli/config.json).
+# The workspace skills and commands paths are inferred from the user-scope
+# layout, not spelled out in the ZCode docs.
+
+name = "zcode"
+display_name = "ZCode"
+
+directories = [".zcode", ".zcode/skills", ".zcode/agents", ".zcode/commands"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+dir = ".zcode/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".zcode/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description", "disallowedTools"]
+tools = true
+emit_model = true
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".zcode/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+path = ".zcode/config.json"
+dialect = "zcode"
+global_path = ".zcode/cli/config.json"
+
+[global]
+root_file = ".zcode/AGENTS.md"
+skills_dir = ".zcode/skills"
+agents_dir = ".zcode/agents"
+commands_dir = ".zcode/commands"

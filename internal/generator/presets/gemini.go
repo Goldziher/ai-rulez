@@ -71,6 +71,17 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
+// GlobalOutputPaths is the Gemini CLI user-scope layout under ~/.gemini; user
+// skills are read from the shared ~/.agents/skills like the project ones.
+func (g *GeminiPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RootFile:  ".gemini/GEMINI.md",
+		SkillsDir: ".agents/skills",
+		AgentsDir: ".gemini/agents",
+		Sidecars:  map[string]string{MergedDocGeminiSettings: ".gemini/settings.json"},
+	}.Resolve(home, getenv)
+}
+
 func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 
