@@ -112,9 +112,9 @@ func classifyNative(err error) error {
 	msg := RedactSecrets(err.Error())
 	e := &Error{Kind: KindProvider, Message: msg}
 	switch l := strings.ToLower(msg); {
-	case strings.Contains(l, "authentication") || strings.Contains(l, "unauthorized") || strings.Contains(l, "401") || strings.Contains(l, "403"):
+	case strings.Contains(l, "authentication") || strings.Contains(l, "unauthorized") || nativeStatusRe(l, "401", "403"):
 		e.Kind = KindAuth
-	case strings.Contains(l, "rate limit") || strings.Contains(l, "ratelimit") || strings.Contains(l, "429"):
+	case strings.Contains(l, "rate limit") || strings.Contains(l, "ratelimit") || nativeStatusRe(l, "429"):
 		e.Kind = KindRateLimit
 	case strings.Contains(l, "context window") || strings.Contains(l, "context length") || strings.Contains(l, "context_length"):
 		e.Kind = KindContextLength
@@ -163,3 +163,27 @@ func (l *literLLM) Close() error {
 	l.native.Free()
 	return nil
 }
+
+// nativeStatusRe reports whether msg carries one of the HTTP status codes as a
+// whole number (not inside a longer digit run such as a request id).
+func nativeStatusRe(msg string, codes ...string) bool {
+	for _, c := range codes {
+		for from := 0; ; {
+			i := strings.Index(msg[from:], c)
+			if i < 0 {
+				break
+			}
+			i += from
+			end := i + len(c)
+			before := i == 0 || !isDigit(msg[i-1])
+			after := end >= len(msg) || !isDigit(msg[end])
+			if before && after {
+				return true
+			}
+			from = end
+		}
+	}
+	return false
+}
+
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
