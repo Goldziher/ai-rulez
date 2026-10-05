@@ -116,6 +116,7 @@ type runner struct {
 	noInlineIgnore bool
 	opts           Options
 	drift          []PluginDrift
+	delivery       []DeliveryFinding
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -183,6 +184,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkHooks(baseAbs)
 	r.checkCollapsed()
 	r.checkUnpinned()
+	r.checkDelivery()
 	r.scanImported()
 	r.checkPluginDrift()
 	if so.External {
