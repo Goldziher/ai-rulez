@@ -1,0 +1,65 @@
+# goose provider spec.
+#
+# goose reads .goosehints (and AGENTS.md) for project guidance, Agent Skills
+# from .agents/skills (the recommended location), custom agents from Markdown
+# files with name/description/model frontmatter (.goose/agents is a legacy path it
+# still discovers, which keeps the output apart from the .agents/agents tree other
+# tools use), and project MCP extensions from an open-plugin manifest at
+# .agents/plugins/<name>/.mcp.json. goose has no rules folder; recipes are not
+# slash commands, so commands are not produced.
+
+name = "goose"
+display_name = "goose"
+
+directories = [".goose", ".goose/agents"]
+
+[root]
+file = ".goosehints"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".goose/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+emit_model = true
+
+[model]
+field = "model"
+
+# The open-plugin manifest is a plain {mcpServers: {...}} file. goose reads only
+# the stdio form from it.
+[[sidecars]]
+kind = "mcp"
+path = ".agents/plugins/ai-rulez/.mcp.json"
+format = "json"
+dialect = "standard"
+emit_when = "has_mcp_servers"
+
+# User-scope layout: hints live in ~/.config/goose, skills in the shared ~/.agents.
+[global]
+root_file = ".config/goose/.goosehints"
+skills_dir = ".agents/skills"
+agents_dir = ".config/goose/agents"

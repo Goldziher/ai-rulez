@@ -1,0 +1,56 @@
+# Kimi Code provider spec.
+#
+# Kimi Code loads AGENTS.md from the project root and from .kimi-code/. It has
+# no rules folder, so rules and context are inlined into the shared AGENTS.md.
+# Skills live in .kimi-code/skills, custom agents in .kimi-code/agents/*.md
+# (name, description, tools, disallowedTools), and MCP servers in
+# .kimi-code/mcp.json with a `transport` member.
+
+name = "kimi"
+display_name = "Kimi Code"
+
+directories = [".kimi-code", ".kimi-code/skills", ".kimi-code/agents"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".kimi-code/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".kimi-code/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+
+[[sidecars]]
+kind = "mcp"
+dialect = "transport"
+path = ".kimi-code/mcp.json"
+global_path = ".kimi-code/mcp.json"
+emit_when = "has_mcp_servers"
+
+# KIMI_CODE_HOME replaces ~/.kimi-code as the data root.
+[global]
+home_env = "KIMI_CODE_HOME"
+home_dir = ".kimi-code"
+root_file = ".kimi-code/AGENTS.md"
+skills_dir = ".kimi-code/skills"
+agents_dir = ".kimi-code/agents"

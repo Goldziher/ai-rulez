@@ -1,0 +1,18 @@
+# Codebuff (Freebuff) provider spec.
+#
+# Codebuff has no rules, skills or commands surface this tool can target, so the
+# only output is the MCP document it reads from .agents/mcp.json. Its server
+# schema is strict (stdio: type/command/args/env; remote: type/url/headers), which
+# is the VS Code entry shape under the mcpServers key.
+# https://www.codebuff.com/docs/tips/mcp-servers
+
+name = "codebuff"
+display_name = "Codebuff"
+
+[[sidecars]]
+kind = "mcp"
+path = ".agents/mcp.json"
+format = "json"
+key = ["mcpServers"]
+dialect = "vscode"
+global_path = ".agents/mcp.json"

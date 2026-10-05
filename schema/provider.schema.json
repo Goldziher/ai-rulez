@@ -71,6 +71,10 @@
           "type": "string",
           "description": "Machine-local counterpart of the root file that the tool loads natively. Omit for the \".local\" variant of file (CLAUDE.md -> CLAUDE.local.md), \"none\" when the tool has no such file, or a slash-separated relative path inside the project (no backslash, drive letter or \"..\", and not file itself)."
         },
+        "omit_header_agents": {
+          "type": "boolean",
+          "description": "When true, the detailed header of the root file reports no agents (agents=0), matching a root file that another preset also writes with that count."
+        },
         "sections": {
           "type": "array",
           "description": "Ordered list of section renderers to compose into the root file body.",
@@ -112,6 +116,14 @@
         "inline_filter": {
           "enum": ["path_scoped"],
           "description": "outputs.rules with `split` only. Items that still get a rule file when the rules mode is inline. Omit to keep everything inline."
+        },
+        "inline_unscoped": {
+          "type": "boolean",
+          "description": "outputs.rules with `split` only. Items the tool's rule files cannot apply automatically (auto and manual activation, globs that are all negated) stay in the root file instead of becoming rule files (copilot has no applyTo for them)."
+        },
+        "always_files": {
+          "type": "boolean",
+          "description": "outputs.rules with `split` only. Every rule and context item becomes a rule file in every rules mode, always-on ones included, and root.sections need not include `rules_inline`. For tools whose rules live only in a folder (no root file)."
         },
         "dialect": {
           "enum": ["claude", "cursor", "trigger", "copilot", "cline", "continue", "junie", "mapped"],
@@ -202,6 +214,19 @@
         "omit_name": {
           "type": "boolean",
           "description": "When true, leave the always-present `name` key out of the frontmatter (tools that take the name from the filename)."
+        },
+        "name_first": {
+          "type": "boolean",
+          "description": "When true, write `name` first and the remaining frontmatter keys alphabetically, instead of every key alphabetically."
+        },
+        "quoted_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Frontmatter keys whose string value is always written double-quoted."
+        },
+        "join_lists": {
+          "type": "boolean",
+          "description": "When true, write the tools and skills lists as one comma-separated string (\"read, grep\") instead of a YAML list, for tools whose frontmatter parser reads only scalars (Letta Code)."
         }
       }
     },
@@ -265,6 +290,7 @@
             "has_mcp_json_entries",
             "has_plugins",
             "has_resolved_effort",
+            "has_resolved_effort_or_mcp_servers",
             "has_mcp_servers_or_plugin_settings"
           ],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit. Defaults to `has_mcp_servers` for kind `mcp`, otherwise `always`."
@@ -282,12 +308,47 @@
           "description": "Generic kinds only. Path of the owned member; each element is a literal member name, so [\"amp.mcpServers\"] is one flat key and [\"amp\",\"mcpServers\"] a nested object. Defaults to the dialect's key."
         },
         "dialect": {
-          "enum": ["standard", "claude", "gemini", "opencode", "vscode", "zed", "codex", "amp", "yaml-standard"],
-          "description": "Kind `mcp` only. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block). Defaults to standard. Each dialect has a default `key`."
+          "enum": [
+            "standard",
+            "claude",
+            "gemini",
+            "opencode",
+            "vscode",
+            "zed",
+            "codex",
+            "amp",
+            "yaml-standard",
+            "transport",
+            "vibe",
+            "bob",
+            "zcode",
+            "grok"
+          ],
+          "description": "Kind `mcp` only. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
         },
         "global_path": {
           "type": "string",
           "description": "User-scope path of the sidecar, relative to the home directory."
+        },
+        "elements": {
+          "type": "object",
+          "required": ["key", "values"],
+          "additionalProperties": false,
+          "description": "Kind `mcp` on a json or jsonc document only. Also adds values to an array member of the document (Kilo's `instructions` globs); every other element of the array stays the consumer's. Without `emit_when` the sidecar is then written even with no MCP servers.",
+          "properties": {
+            "key": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Path of the array member."
+            },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Elements ai-rulez adds."
+            }
+          }
         },
         "global_mcp_path": {
           "type": "string",

@@ -768,11 +768,8 @@ func (s *V4GenerationSuite) TestMarketplaces_LoadedCorrectly() {
 // ==========================================
 
 func (s *V4GenerationSuite) TestAllPresets_Generated() {
-	expectedPresets := []string{
-		"claude", "cursor", "devin", "copilot", "gemini",
-		"cline", "junie", "codex", "opencode",
-		"amp", "antigravity", "mcp", "xum", "pi",
-	}
+	expectedPresets := testutil.AllV4Presets()
+	s.Require().Greater(len(expectedPresets), 14, "the DSL-backed presets must be registered")
 
 	for _, preset := range expectedPresets {
 		_, ok := s.outputs[preset]
@@ -790,7 +787,7 @@ func (s *V4GenerationSuite) TestV4Config_TOMLFormat() {
 	s.Assert().Equal("Full V4 test configuration with all presets", s.cfg.Description)
 	s.Assert().Equal("compact", s.cfg.GetHeaderStyle())
 	s.Assert().Equal("full", s.cfg.GetDefaultProfile())
-	s.Assert().Len(s.cfg.Presets, 14, "Should have 14 presets configured")
+	s.Assert().Len(s.cfg.Presets, len(testutil.AllV4Presets()), "Should have every built-in preset configured")
 
 	// Profiles
 	s.Assert().Contains(s.cfg.Profiles, "full")

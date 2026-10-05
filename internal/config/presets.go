@@ -60,6 +60,11 @@ type OutputFile struct {
 	// headers). It is written owner-only (0600), and an existing file is
 	// tightened to that mode.
 	Sensitive bool
+	// OmitsRules marks a root instruction file that leaves out the rules and
+	// context its tool reads from its own rules folder (junie's AGENTS.md in the
+	// split rules mode). When another preset writes the same path with every rule
+	// inlined, that file is the complete one and replaces this.
+	OmitsRules bool
 	// MergeClaims records what ai-rulez wrote into a PartiallyOwned (or merged)
 	// JSON document, so it can take exactly that back out on clean or when the
 	// preset or server that wrote it goes away.

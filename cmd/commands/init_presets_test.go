@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestGeneratedConfigListsEveryBuiltinPreset(t *testing.T) {
 			for _, preset := range config.IndividualPresetNames() {
 				assert.Contains(t, out, preset)
 			}
-			assert.Contains(t, out, "# Built-in presets: amp, antigravity, baz, claude")
+			assert.Contains(t, out, "# Built-in presets: "+strings.Join(config.IndividualPresetNames(), ", ")+"\n")
 		})
 	}
 }

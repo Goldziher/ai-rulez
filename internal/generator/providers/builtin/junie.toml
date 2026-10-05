@@ -3,13 +3,13 @@
 # Junie reads project guidance from AGENTS.md (the open standard). When a root
 # AGENTS.md is present Junie combines it with every .junie/rules/*.md file, so
 # rules go to the native rules folder and the root file keeps the always-on
-# content. Per-agent and per-skill files sit alongside. No effort field; no
-# sidecars. (The legacy .junie/guidelines.md layout is no longer written.)
+# content. Per-agent, per-skill and per-command files sit alongside, and MCP
+# servers go to .junie/mcp/mcp.json. No effort field. (The legacy .junie/guidelines.md layout is no longer written.)
 
 name = "junie"
 display_name = "JetBrains Junie"
 
-directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
+directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules", ".junie/commands"]
 
 # AGENTS.md inlines rules and context but NOT the agents-delegation section —
 # Junie surfaces subagents through its own UI, not the root file. Junie is a
@@ -20,7 +20,7 @@ file = "AGENTS.md"
 # Junie never reads AGENTS.local.md, but it loads every .junie/rules/*.md, so
 # the machine-local context goes there.
 local_file = ".junie/rules/ai-rulez.local.md"
-sections = ["header", "title", "description", "rules_inline", "context_inline"]
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
 
 # Rules: .junie/rules/{id}.md, written in `[rules] mode = "split"` (the default).
 # Junie has no glob activation, so in inline mode every rule stays
@@ -58,9 +58,33 @@ tools = true
 skills = true
 emit_model = true
 
+# Custom slash commands: .junie/commands/{id}.md, invoked as /{id}.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".junie/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
 [model]
 field = "model"
+
+# Junie reads MCP servers from .junie/mcp/mcp.json (mcpServers, command/args/env
+# or url/headers), in the project and under ~/.junie.
+[[sidecars]]
+kind = "mcp"
+path = ".junie/mcp/mcp.json"
+dialect = "standard"
+global_path = ".junie/mcp/mcp.json"
 
 # User-scope layout: Junie merges ~/.junie/AGENTS.md with the project guidelines.
 [global]
 root_file = ".junie/AGENTS.md"
+skills_dir = ".junie/skills"
+agents_dir = ".junie/agents"
+commands_dir = ".junie/commands"

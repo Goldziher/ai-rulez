@@ -34,6 +34,9 @@ type RootSpec struct {
 	// CLAUDE.local.md), LocalFileNone means the tool has no such file and local
 	// content is reported as not written, and any other value is a relative path.
 	LocalFile string `toml:"local_file,omitempty" yaml:"local_file,omitempty" json:"local_file,omitempty"`
+	// OmitHeaderAgents leaves the agent count out of the detailed header (it reads
+	// "agents=0"), for a root file another preset also writes with that count.
+	OmitHeaderAgents bool `toml:"omit_header_agents,omitempty" yaml:"omit_header_agents,omitempty" json:"omit_header_agents,omitempty"`
 }
 
 // LocalFileNone is the RootSpec.LocalFile value for a tool with no machine-local
@@ -57,6 +60,15 @@ type OutputSpec struct {
 	// InlineFilter (split outputs only) selects the items that still get a file
 	// when the rules mode is inline: "path_scoped" or "" (none).
 	InlineFilter string `toml:"inline_filter,omitempty" yaml:"inline_filter,omitempty" json:"inline_filter,omitempty"`
+	// AlwaysFiles (split outputs only) writes every rule and context item to a
+	// rule file in every rules mode, always-on ones included, so the spec needs
+	// no root file that inlines rules (trae, aiassistant, takt).
+	AlwaysFiles bool `toml:"always_files,omitempty" yaml:"always_files,omitempty" json:"always_files,omitempty"`
+	// InlineUnscoped (split outputs only) keeps the items the tool's rule files
+	// cannot apply automatically (auto and manual activation, and globs that are
+	// all negated) in the root file instead of writing rule files for them
+	// (copilot: no applyTo, so the file would never load).
+	InlineUnscoped bool `toml:"inline_unscoped,omitempty" yaml:"inline_unscoped,omitempty" json:"inline_unscoped,omitempty"`
 	// Dialect (split outputs only) names the rule-file frontmatter vocabulary.
 	// "mapped" (implied by an Activation block) builds the frontmatter from the
 	// spec instead of from Go.
@@ -142,6 +154,17 @@ type FrontmatterSpec struct {
 	// OmitName leaves the always-present `name` key out, for tools whose
 	// command or prompt files take the name from the filename.
 	OmitName bool `toml:"omit_name,omitempty" yaml:"omit_name,omitempty" json:"omit_name,omitempty"`
+	// JoinLists writes the tools and skills lists as one comma-separated string
+	// ("read, grep") instead of a YAML list, for tools whose frontmatter parser
+	// reads only scalars (Letta Code).
+	JoinLists bool `toml:"join_lists,omitempty" yaml:"join_lists,omitempty" json:"join_lists,omitempty"`
+	// NameFirst writes `name` first and the other keys alphabetically, instead
+	// of every key alphabetically (a tool whose files must match another
+	// preset's byte for byte).
+	NameFirst bool `toml:"name_first,omitempty" yaml:"name_first,omitempty" json:"name_first,omitempty"`
+	// QuotedFields lists the frontmatter keys whose string value is always
+	// written double-quoted.
+	QuotedFields []string `toml:"quoted_fields,omitempty" yaml:"quoted_fields,omitempty" json:"quoted_fields,omitempty"`
 }
 
 // EffortMapSpec is the provider's effort tier → native value translation.
@@ -192,6 +215,9 @@ type SidecarSpec struct {
 	// this path and everything else to GlobalPath. Empty means the MCP servers go
 	// where GlobalPath says.
 	GlobalMCPPath string `toml:"global_mcp_path,omitempty" yaml:"global_mcp_path,omitempty" json:"global_mcp_path,omitempty"`
+	// Elements (kind "mcp" on a json or jsonc document) also adds values to an
+	// array member of the document, such as Kilo's `instructions` globs.
+	Elements *ElementsSpec `toml:"elements,omitempty" yaml:"elements,omitempty" json:"elements,omitempty"`
 }
 
 // Closed-set enum constants. Extending any of these is a deliberate Go change
@@ -252,6 +278,9 @@ const (
 	// PredicateHasMCPServersOrPluginSettings holds when the config has MCP
 	// servers or manages the plugin keys of .claude/settings.json.
 	PredicateHasMCPServersOrPluginSettings = "has_mcp_servers_or_plugin_settings"
+	// PredicateHasResolvedEffortOrMCPServers holds when the config has MCP servers
+	// or a resolved global effort (.amp/settings.json carries both).
+	PredicateHasResolvedEffortOrMCPServers = "has_resolved_effort_or_mcp_servers"
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"
