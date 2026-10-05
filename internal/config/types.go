@@ -1258,16 +1258,3 @@ func (s *InstalledSkillConfig) GetPath() string {
 	}
 	return "skills/" + s.Name
 }
-
-// IncludeLock tracks resolved include sources
-type IncludeLock struct {
-	Includes map[string]IncludeLockEntry `yaml:"includes" json:"includes"`
-}
-
-// IncludeLockEntry represents a locked include source
-type IncludeLockEntry struct {
-	Source      string    `yaml:"source" json:"source"`
-	Type        string    `yaml:"type" json:"type"`                                     // "git" or "local"
-	ResolvedRef string    `yaml:"resolved_ref,omitempty" json:"resolved_ref,omitempty"` // git only
-	ResolvedAt  time.Time `yaml:"resolved_at" json:"resolved_at"`
-}

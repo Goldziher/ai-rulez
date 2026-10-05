@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
+
+	rulezconfig "github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 const cacheFileName = ".ai_rulez_cache"
@@ -41,11 +43,11 @@ type CacheConfig struct {
 }
 
 func defaultCacheConfig() *CacheConfig {
-	homeDir, err := os.UserHomeDir()
+	// Without a home directory there is no disk cache (never a shared temp directory).
+	cacheDir, err := rulezconfig.CacheDir("remote")
 	if err != nil {
-		homeDir = "."
+		cacheDir = ""
 	}
-	cacheDir := filepath.Join(homeDir, ".cache", "ai-rulez", "remote")
 
 	return &CacheConfig{
 		MaxMemoryEntries: 50,

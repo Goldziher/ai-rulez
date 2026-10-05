@@ -322,14 +322,7 @@ func cacheRoot(override string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
-	// Never fall back to the shared temp directory: a cache other users can write
-	// to could hold a tree they planted (an unlocked source trusts the cache).
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return "", oops.Hint("Set HOME, or run from an account with a home directory").
-			Errorf("cannot place the skill-source cache: no home directory")
-	}
-	return filepath.Join(home, ".cache", "ai-rulez", "skill-sources"), nil
+	return config.CacheDir("skill-sources") //nolint:wrapcheck // already contextual
 }
 
 // cacheTree is the directory holding the tree of a commit of url below the cache root.

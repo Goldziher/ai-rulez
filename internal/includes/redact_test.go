@@ -32,7 +32,7 @@ func TestRedactURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, redactURL(tt.in))
+			assert.Equal(t, tt.want, RedactURL(tt.in))
 		})
 	}
 }
@@ -42,7 +42,7 @@ func TestInjectTokenIsRedactedForDisplay(t *testing.T) {
 	injected := injectToken("https://github.com/o/r.git", "ghp_secret")
 
 	assert.Contains(t, injected, "ghp_secret")
-	assert.NotContains(t, redactURL(injected), "ghp_secret")
+	assert.NotContains(t, RedactURL(injected), "ghp_secret")
 }
 
 func TestValidateGitURL_ErrorDoesNotLeakUserinfo(t *testing.T) {

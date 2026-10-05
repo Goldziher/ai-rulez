@@ -34,5 +34,3 @@ func RedactURL(s string) string {
 		return parts[1] + strings.Join(params, "&")
 	})
 }
-
-func redactURL(s string) string { return RedactURL(s) }
