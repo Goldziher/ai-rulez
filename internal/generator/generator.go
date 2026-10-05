@@ -850,6 +850,13 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	if index, ok := g.skillsIndexOutput(contentTree, render.byPreset); ok {
 		flatOutputs = append(flatOutputs, index)
 	}
+	manifest, ok, err := g.rolesManifestOutput()
+	if err != nil {
+		return nil, "", err
+	}
+	if ok {
+		flatOutputs = append(flatOutputs, manifest)
+	}
 
 	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
 	if err != nil {
