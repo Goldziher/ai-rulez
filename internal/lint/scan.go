@@ -87,9 +87,13 @@ func (r *runner) checkLink(it *item, line int, target string) {
 	}
 	for _, c := range cands {
 		if r.existsAbs(c) {
+			r.dep(it.abs, c)
 			r.checkAnchor(it, line, c, frag, target)
 			return
 		}
+	}
+	for _, c := range cands {
+		r.dep(it.abs, c) // a file that reappears, or is deleted, affects this finding
 	}
 	r.add(CodeLinkUnresolved, it.abs, line, "link target %q does not exist", target)
 }
@@ -136,6 +140,10 @@ func (r *runner) checkToken(it *item, line int, tok string) {
 	if !r.tree.IsTopLevel(first) && (r.baseRel == "" || !r.tree.Exists(r.baseRel+"/"+first)) {
 		return
 	}
+	r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(tok)))
+	if r.baseRel != "" {
+		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
+	}
 	if !r.existsRepo(tok) {
 		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
 	}
@@ -172,6 +180,7 @@ func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool
 	if it.itemDir == "" {
 		return false
 	}
+	r.dep(it.abs, filepath.Join(it.itemDir, filepath.FromSlash(tok)))
 	if r.existsAbs(filepath.Join(it.itemDir, filepath.FromSlash(tok))) || r.existsRepo(tok) || r.allowed(tok) {
 		return true
 	}
@@ -187,6 +196,7 @@ func (r *runner) existsRepo(rel string) bool {
 
 func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[string]bool) {
 	key := strings.ToLower(name)
+	r.depName(it.abs, key)
 	if looksPlaceholder(key) || strings.Contains(key, ":") {
 		return
 	}

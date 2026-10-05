@@ -1362,6 +1362,8 @@ ai-rulez validate [config-path] [flags]
 | `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
+| `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
+| `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |

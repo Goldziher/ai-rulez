@@ -55,6 +55,11 @@ type Report struct {
 	Findings []Finding `json:"findings"`
 	// Baseline is set when a baseline was applied to the report.
 	Baseline *BaselineResult `json:"-"`
+	// Deps maps a file to the files it refers to (repository-relative slash
+	// paths), the input of changed-only reporting.
+	Deps map[string][]string `json:"-"`
+	// Scope is set when the report was narrowed to changed files.
+	Scope *ChangedScope `json:"-"`
 }
 
 // Counts returns findings per severity.
@@ -116,6 +121,11 @@ type runner struct {
 	forceSev Severity
 	opts     Options
 	drift    []PluginDrift
+	// deps records which file refers to which (both absolute): links, name
+	// references, skill resources and hook scripts. --since uses it to report
+	// files that refer to a changed file.
+	deps  map[string]map[string]struct{}
+	names map[string][]string
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -158,7 +168,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so}
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so,
+		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}
 	for _, opt := range opts {
 		opt(r)
 	}
@@ -204,7 +215,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	return &Report{Root: r.display(baseAbs), Findings: r.findings}, nil
+	return &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps()}, nil
 }
 
 func (r *runner) resolveSettings() {
@@ -446,6 +457,10 @@ func (r *runner) addItems(configDir, kind, domain string, files []config.Content
 			if set != nil {
 				set[n] = true
 			}
+			if r.names == nil {
+				r.names = map[string][]string{}
+			}
+			r.names[n] = append(r.names[n], abs)
 		}
 		it := item{kind: kind, abs: abs, domain: domain, cf: cf, owned: owned}
 		if base := strings.ToUpper(filepath.Base(abs)); owned && (base == "SKILL.MD" || base == "COMMAND.MD") {
@@ -649,6 +664,7 @@ func (r *runner) checkFrontmatterSkills(it *item, d doc) {
 	}
 	for _, s := range it.cf.Metadata.Skills {
 		key := strings.ToLower(strings.TrimSpace(s))
+		r.depName(it.abs, key)
 		if key == "" || strings.Contains(key, ":") || r.skills[key] || r.commands[key] {
 			continue
 		}
@@ -873,6 +889,7 @@ func (r *runner) checkHookCommand(settings, event, command string) {
 			r.add(CodeHookMissing, settings, line, "%s hook runs %q, which does not exist", event, rel)
 			continue
 		}
+		r.dep(settings, filepath.Join(r.tree.Top, filepath.FromSlash(found)))
 		direct := m[0] == len(command)-len(trimmed)
 		if exe, known := r.tree.Executable(found); direct && known && !exe {
 			r.add(CodeHookNotExecutable, settings, line, "%s hook runs %q, which is not executable", event, rel)
