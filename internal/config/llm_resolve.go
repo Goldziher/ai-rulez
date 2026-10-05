@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -19,15 +18,6 @@ type LLMResolution struct {
 	Ignored []string
 	// UserFile is the user config path that was read ("" when none exists).
 	UserFile string
-}
-
-// userLLMConfigPath is config.toml in UserConfigDir.
-func userLLMConfigPath(getenv func(string) string) string {
-	dir := UserConfigDir(getenv, "")
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, "config.toml")
 }
 
 // loadUserLLM reads the [llm] table of the user config file. A missing file or
@@ -64,7 +54,7 @@ func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 	if c != nil {
 		repo = c.LLM
 	}
-	path := userLLMConfigPath(getenv)
+	path := UserConfigFile(getenv)
 	user, err := loadUserLLM(path)
 	if err != nil {
 		return LLMResolution{}, err
