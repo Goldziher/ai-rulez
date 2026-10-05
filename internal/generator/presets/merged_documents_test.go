@@ -17,18 +17,23 @@ func TestMergedDocumentPaths(t *testing.T) {
 	t.Parallel()
 
 	assert.Equal(t, []string{
+		".agents/hooks.json",
 		".agents/mcp_config.json",
 		".agents/settings.json",
 		".codex/config.toml",
 		".codex/hooks.json",
 		".cursor/BUGBOT.md",
+		".cursor/cli.json",
 		".cursor/hooks.json",
 		".cursor/mcp.json",
+		".devin/config.json",
+		".devin/hooks.v1.json",
 		".devin/mcp_config.json",
 		".gemini/settings.json",
 		".mcp.json",
 		".pi/mcp.json",
 		".vscode/mcp.json",
+		".vscode/settings.json",
 		".xum/mcp.jsonc",
 		"opencode.json",
 	}, MergedDocumentPaths())

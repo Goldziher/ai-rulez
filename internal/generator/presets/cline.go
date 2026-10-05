@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,11 +52,16 @@ func (g *ClinePresetGenerator) ProjectLayout() ProjectLayout {
 // ~/Documents/Cline, skills and agents under ~/.cline. Cline has no project MCP
 // file (its servers live in the extension's global settings).
 func (g *ClinePresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	hooks := map[string]string{}
+	for _, event := range settings.ClineHookEvents() {
+		hooks[settings.ClineHooksDir+"/"+event] = "Documents/Cline/Hooks/" + event
+	}
 	return GlobalLayout{
 		RulesDir:    "Documents/Cline/Rules",
 		SkillsDir:   ".cline/skills",
 		AgentsDir:   ".cline/agents",
 		CommandsDir: "Documents/Cline/Workflows",
+		Sidecars:    hooks,
 	}.Resolve(home, getenv)
 }
 
@@ -81,6 +87,8 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 	outputs = append(outputs, rulesDirMarker(cfg, presetNameCline, filepath.Join(baseDir, ".clinerules"), ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
+
+	outputs = append(outputs, g.hooksOutputs(cfg, baseDir)...)
 
 	// Generate skill files to .cline/skills/
 	allSkills := allSkills(content)

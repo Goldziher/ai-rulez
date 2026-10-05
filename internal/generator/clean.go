@@ -196,7 +196,11 @@ func (g *Generator) stripGitignoreManagedBlock() error {
 		}
 		return nil
 	}
-	if err := os.WriteFile(gitignorePath, []byte(stripped+"\n"), 0o644); err != nil { //nolint:gosec // path from config, not user input
+	safePath, _, err := g.guardWrite(gitignorePath)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(safePath, []byte(stripped+"\n"), 0o644); err != nil { //nolint:gosec // path from config, not user input
 		return oops.With("path", gitignorePath).Wrapf(err, "write .gitignore")
 	}
 	return nil

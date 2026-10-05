@@ -144,24 +144,18 @@ func TestGenericMCPSidecar_NoServersEmitsNothing(t *testing.T) {
 	assert.False(t, hasOutputPathSuffix(outputs, "mcp.json"), "emit_when defaults to has_mcp_servers")
 }
 
-// TestGenericSidecar_UnsupportedKinds pins that the reserved kinds fail at load
-// time, not at generation.
-func TestGenericSidecar_UnsupportedKinds(t *testing.T) {
+// TestHooksSidecar_NeedsADialect pins that a hooks sidecar without the name of a
+// harness fails at load time, not at generation.
+func TestHooksSidecar_NeedsADialect(t *testing.T) {
 	t.Parallel()
 
-	for _, kind := range []string{"permissions", "hooks"} {
-		t.Run(kind, func(t *testing.T) {
-			t.Parallel()
+	// Act
+	_, err := providers.LoadProviderSpec([]byte("name = \"tool\"\n[[sidecars]]\nkind = \"hooks\"\npath = \"p.json\"\nemit_when = \"always\"\n"),
+		"spec.toml", providers.FormatAuto)
 
-			// Act
-			_, err := providers.LoadProviderSpec([]byte("name = \"tool\"\n[[sidecars]]\nkind = \""+kind+"\"\npath = \"p.json\"\nemit_when = \"always\"\n"),
-				"spec.toml", providers.FormatAuto)
-
-			// Assert
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "not yet supported")
-		})
-	}
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "needs the name of a harness with hook support")
 }
 
 // TestGenericMCPSidecar_MergesTOMLAndYAML checks that TOML and YAML documents are
@@ -256,7 +250,8 @@ func TestLoadProviderSpec_Validation(t *testing.T) {
 		{"unknown sidecar format", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.json\"\nformat = \"ini\"", `sidecars[0].format: unknown format "ini"`},
 		{"format not inferable", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.cfg\"", "cannot infer it from the extension"},
 		{"unknown dialect", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.json\"\ndialect = \"nope\"", `unknown mcp dialect "nope"`},
-		{"dialect on permissions", "name = \"t\"\n[[sidecars]]\nkind = \"permissions\"\npath = \"a.json\"\ndialect = \"zed\"", "not yet supported"},
+		{"mcp dialect on permissions", "name = \"t\"\n[[sidecars]]\nkind = \"permissions\"\npath = \"a.json\"\ndialect = \"standard\"", "needs a permissions dialect"},
+		{"user_only without global_path", "name = \"t\"\n[[sidecars]]\nkind = \"permissions\"\npath = \"a.json\"\ndialect = \"zed\"\nuser_only = true", "user_only needs a global_path"},
 		{"empty key segment", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.json\"\nkey = [\"a\", \"\"]", "segments must not be empty"},
 		{"generic fields on a legacy kind", "name = \"t\"\n[[sidecars]]\nkind = \"mcp_json\"\npath = \".mcp.json\"\nformat = \"json\"", "only valid on the generic kinds"},
 		{"global_path escapes", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.json\"\nglobal_path = \"../x.json\"", "global_path"},
@@ -374,18 +369,26 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 		}},
 		{"amp", nil, providers.GlobalPaths{
 			RootFile: j(".config/amp/AGENTS.md"), SkillsDir: j(".config/agents/skills"),
-			Sidecars: map[string]string{".amp/settings.json": j(".config/amp/settings.json")},
+			Sidecars: map[string]string{
+				".amp/settings.json":             j(".config/amp/settings.json"),
+				".amp/plugins/ai-rulez-hooks.ts": j(".config/amp/plugins/ai-rulez-hooks.ts"),
+			},
 		}},
 		{"pi", nil, providers.GlobalPaths{
 			RootFile: j(".pi/agent/AGENTS.md"), SkillsDir: j(".pi/agent/skills"), AgentsDir: j(".pi/agent/agents"),
-			CommandsDir: j(".pi/agent/prompts"), Sidecars: map[string]string{},
+			CommandsDir: j(".pi/agent/prompts"),
+			Sidecars:    map[string]string{".pi/extensions/ai-rulez-hooks.ts": j(".pi/agent/extensions/ai-rulez-hooks.ts")},
 		}},
 		{"junie", nil, providers.GlobalPaths{
 			RootFile: j(".junie/AGENTS.md"), SkillsDir: j(".junie/skills"), AgentsDir: j(".junie/agents"),
-			CommandsDir: j(".junie/commands"), Sidecars: map[string]string{".junie/mcp/mcp.json": j(".junie/mcp/mcp.json")},
+			CommandsDir: j(".junie/commands"), Sidecars: map[string]string{
+				".junie/mcp/mcp.json": j(".junie/mcp/mcp.json"),
+				".junie/config.json":  j(".junie/config.json"),
+			},
 		}},
 		{"hermes", map[string]string{"HERMES_HOME": filepath.FromSlash("/data/hermes")}, providers.GlobalPaths{
-			SkillsDir: filepath.FromSlash("/data/hermes/skills"), Sidecars: map[string]string{},
+			SkillsDir:     filepath.FromSlash("/data/hermes/skills"),
+			Sidecars:      map[string]string{".hermes/config.yaml": filepath.FromSlash("/data/hermes/config.yaml")},
 			RelocatedHome: filepath.FromSlash("/data/hermes"),
 		}},
 	}

@@ -328,9 +328,14 @@
             "mcp",
             "checks",
             "permissions",
-            "hooks"
+            "hooks",
+            "hook_plugin"
           ],
-          "description": "Closed-set sidecar renderer. The tool-specific kinds render a fixed document; the generic kinds (`mcp`, and the reserved `permissions` and `hooks`) merge into any json, jsonc, toml or yaml document. `permissions` and `hooks` validate but are not rendered yet. New kinds extend this enum and add a Go handler in providers/sidecars.go."
+          "description": "Closed-set sidecar renderer. The tool-specific kinds render a fixed document; the generic kinds (`mcp`, `permissions` and `hooks`) merge into any json, jsonc, toml or yaml document. `permissions` translates the top-level [permissions] into the tool's native permission format (see docs/permissions.md); its `dialect` names the translator and fixes the keys, and it defaults to `has_permissions`. `hooks` translates the top-level [[hooks]] into the tool's native hook format (see docs/settings.md); when several generic sidecars name one path they are merged into one document. New kinds extend this enum and add a Go handler in providers/sidecars.go."
+        },
+        "flavor": {
+          "enum": ["opencode", "opencode-v1", "pi", "amp"],
+          "description": "Kind `hook_plugin` only (required there). Plugin dialect of the generated JavaScript or TypeScript module that renders the top-level [[hooks]] for a harness whose hooks are code: `opencode` (default export with the v2 `setup` and the v1 `server`), `opencode-v1` (`{ id, server }`, for OpenCode forks such as Kilo and MiMo Code), `pi` (extension factory), `amp` (plugin function). The module is owned wholly by ai-rulez and takes no format, key or dialect."
         },
         "path": {
           "type": "string",
@@ -345,9 +350,11 @@
             "has_resolved_effort",
             "has_resolved_effort_or_mcp_servers",
             "has_mcp_servers_or_plugin_settings",
-            "has_claude_settings"
+            "has_claude_settings",
+            "has_permissions",
+            "has_hooks"
           ],
-          "description": "Closed-set predicate evaluated against the Config to decide whether to emit. Defaults to `has_mcp_servers` for kind `mcp`, otherwise `always`."
+          "description": "Closed-set predicate evaluated against the Config to decide whether to emit. Defaults to `has_mcp_servers` for kind `mcp`, `has_hooks` for kind `hooks`, `has_permissions` for kind `permissions`, otherwise `always`."
         },
         "format": {
           "enum": ["json", "jsonc", "toml", "yaml"],
@@ -379,13 +386,42 @@
             "grok",
             "augment",
             "gitlab-duo",
-            "roo"
+            "roo",
+            "codebuddy",
+            "commandcode",
+            "qoder",
+            "qwen",
+            "letta",
+            "kilo",
+            "mimocode",
+            "devin",
+            "poolside",
+            "omp",
+            "copilot",
+            "copilot-cli",
+            "cursor",
+            "zoocode",
+            "factory",
+            "antigravity",
+            "cortex",
+            "goose",
+            "deepagents",
+            "junie",
+            "crush",
+            "reasonix",
+            "hermes",
+            "kiro",
+            "kimi"
           ],
-          "description": "Kind `checks`: augment (an `areas` map, one area per check) or gitlab-duo (an `instructions` list of groups). Kind `mcp` only otherwise. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
+          "description": "Kind `checks`: augment (an `areas` map, one area per check) or gitlab-duo (an `instructions` list of groups). Kind `permissions`: the harness whose permission format is rendered (see docs/permissions.md). Kind `hooks`: the harness whose hook format renders the top-level [[hooks]] (required; see docs/settings.md for the harnesses), which fixes the key and the entry layout, so the sidecar takes no `key` or `elements`; it defaults to `has_hooks`. Kind `mcp` otherwise. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
         },
         "global_path": {
           "type": "string",
           "description": "User-scope path of the sidecar, relative to the home directory."
+        },
+        "user_only": {
+          "type": "boolean",
+          "description": "Emit the sidecar only in a user-scope run (`--user`). Needs `global_path`. For a setting the tool reads from the user file only."
         },
         "elements": {
           "type": "object",

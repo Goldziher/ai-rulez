@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/settings"
@@ -64,6 +65,10 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 	case PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings:
 		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() ||
 			(predicate == PredicateHasClaudeSettings && cfg.HasClaudeSettingsContent()))
+	case PredicateHasHooks:
+		return cfg != nil && cfg.HasSettingsHooks()
+	case PredicateHasPermissions:
+		return cfg != nil && !cfg.Permissions.IsEmpty()
 	case PredicateHasMCPJSONEntries:
 		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
@@ -159,7 +164,7 @@ func MergedSidecarPaths() []string {
 	seen := make(map[string]bool)
 	for _, spec := range loadBuiltinSpecs() {
 		for _, sidecar := range spec.Sidecars {
-			if sidecar == nil || !SidecarIsMergedDocument(sidecar.Kind) {
+			if sidecar == nil || !sidecarIsMerged(sidecar) {
 				continue
 			}
 			seen[filepath.ToSlash(sidecar.Path)] = true
@@ -429,6 +434,51 @@ func piMCPServerEntries(cfg *config.Config) map[string]any {
 // value so a hand-written server of the same name stays. See
 // presets.LegacyMergeClaims for the preset-owned documents.
 func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
+	return append(specLegacyClaims(rel, cfg), serverLegacyClaims(rel, cfg)...)
+}
+
+// specLegacyClaims derives, from the hooks and permissions sidecars the builtin
+// specs declare for the document rel, what the current configuration would write
+// there: the kind and dialect say which keys, the sidecar's format how they are
+// recorded.
+func specLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
+	if cfg == nil || (len(cfg.Hooks) == 0 && cfg.Permissions == nil) {
+		return nil
+	}
+	var claims []jsonmerge.Claim
+	seen := map[string]bool{}
+	for _, spec := range loadBuiltinSpecs() {
+		for _, sc := range spec.Sidecars {
+			if sc == nil || filepath.ToSlash(sc.Path) != rel || !isMergedGenericSidecar(sc) || sc.Kind == SidecarMCP {
+				continue
+			}
+			key := sc.Kind + "/" + sc.Dialect
+			format := sc.DocFormat()
+			if seen[key] || format == "" {
+				continue
+			}
+			seen[key] = true
+			var keys []jsonmerge.OwnedKey
+			var err error
+			if sc.Kind == SidecarHooks {
+				keys, err = settings.HookKeys(cfg, sc.Dialect, "")
+			} else {
+				keys, err = settings.PermissionKeys(cfg, sc.Dialect, "")
+			}
+			if err != nil || len(keys) == 0 {
+				continue
+			}
+			if result, err := docmerge.Apply("", docmerge.Format(format), keys); err == nil {
+				claims = append(claims, result.Claims...)
+			}
+		}
+	}
+	return claims
+}
+
+// serverLegacyClaims is LegacyMergeClaims for the documents that hold MCP servers
+// and Claude's settings.
+func serverLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 	if cfg == nil || (len(cfg.MCPServers) == 0 && !cfg.ManagesClaudeSettings() && !cfg.HasClaudeSettingsContent()) {
 		return nil
 	}

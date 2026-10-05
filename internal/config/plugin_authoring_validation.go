@@ -130,6 +130,17 @@ func escapesProject(baseDir, resolved string) bool {
 	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// hookScriptChars is the allowlist of a hook `script` path. The path is spliced
+// into the shell command line of every harness's hook, so anything beyond path
+// characters (spaces, quotes, $, backticks, ;, &, |, newlines, backslashes) would
+// be command injection from a config file. Allowlisting is stricter than escaping
+// on purpose: it also keeps the path portable across harness shells.
+var hookScriptChars = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
+
+// IsSafeHookScript reports whether a hook `script` path uses only the characters
+// ai-rulez is willing to put on a shell command line.
+func IsSafeHookScript(script string) bool { return hookScriptChars.MatchString(script) }
+
 func isUnsafeProjectPath(value string) bool {
 	normalized := strings.ReplaceAll(value, `\`, "/")
 	cleaned := path.Clean(normalized)
@@ -408,6 +419,16 @@ func (c *Config) validateHookAction(pluginName, event string, index int, action 
 			With("script", action.Script).
 			Hint("Use a project-relative script path that does not contain '..'").
 			Errorf("plugin %q hook %s[%d] has an unsafe hook script %q", pluginName, event, index, action.Script)
+	}
+
+	if !IsSafeHookScript(action.Script) {
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("script", action.Script).
+			Hint("Rename the script so its path only uses letters, digits, '.', '_', '-' and '/'").
+			Errorf("plugin %q hook %s[%d] script %q may only contain letters, digits, '.', '_', '-' and '/'",
+				pluginName, event, index, action.Script)
 	}
 
 	// Resolved exactly as the generator's passthroughFile does: relative to the

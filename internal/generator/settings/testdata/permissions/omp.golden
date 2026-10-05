@@ -1,0 +1,22 @@
+bash:
+  patterns:
+    - approval: deny
+      match: rm -rf
+    - approval: deny
+      match: rm -rf *
+    - approval: deny
+      match: curl * | sh
+    - approval: prompt
+      match: git push
+    - approval: prompt
+      match: git push *
+    - approval: allow
+      match: npm run test
+    - approval: allow
+      match: npm run test *
+    - approval: allow
+      match: git status
+tools:
+  approval:
+    mcp__evil_tool: deny
+    mcp__github_create_issue: allow

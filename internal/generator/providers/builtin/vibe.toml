@@ -36,6 +36,22 @@ path = ".vibe/config.toml"
 global_path = ".vibe/config.toml"
 emit_when = "has_mcp_servers"
 
+# Hooks: top-level [[hooks]] rendered in vibe's native format, read from the
+# vendor documentation (see docs/settings.md). Vibe reads a flat [[hooks]] list from hooks.toml (seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "vibe"
+path = ".vibe/hooks.toml"
+format = "toml"
+global_path = ".vibe/hooks.toml"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".vibe/config.toml"
+dialect = "vibe"
+global_path = ".vibe/config.toml"
+
 [global]
 home_env = "VIBE_HOME"
 home_dir = ".vibe"
