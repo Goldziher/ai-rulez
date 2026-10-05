@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/eval-case.schema.json",
+  "title": "ai-rulez skill eval cases",
+  "description": "Harness-neutral eval cases for a skill. Files named *.eval.yaml, *.eval.yml or *.eval.json under skills/<name>/evals/ or .ai-rulez/evals/<name>/. A file holds a `cases` list, or one case written at the top level.",
+  "type": "object",
+  "definitions": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(/|~|[A-Za-z]:)" },
+      "description": "A relative path that stays inside its base directory (no leading slash or ~; `..` segments are rejected by ai-rulez validate --strict, AR996)."
+    },
+    "fixture": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "$ref": "#/definitions/relativePath", "description": "Where the file is created in the case's working directory." },
+        "content": { "type": "string", "description": "Inline file content." },
+        "source": { "$ref": "#/definitions/relativePath", "description": "A file next to the case file to copy. Mutually exclusive with content." }
+      },
+      "additionalProperties": false
+    },
+    "assertion": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["contains", "not_contains", "regex", "file_exists", "command_exit"] },
+        "value": { "type": "string", "minLength": 1, "description": "Text for contains and not_contains, an RE2 pattern for regex." },
+        "path": { "$ref": "#/definitions/relativePath", "description": "contains/not_contains/regex: check this file instead of the final answer. file_exists: the file to look for." },
+        "exists": { "type": "boolean", "description": "file_exists only. false asserts absence. Default true." },
+        "command": { "type": "string", "minLength": 1, "description": "command_exit only. Run through the shell in the working directory; needs --allow-exec." },
+        "exit_code": { "type": "integer", "description": "command_exit only. Expected exit status. Default 0." }
+      },
+      "additionalProperties": false
+    },
+    "case": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "description": { "type": "string" },
+        "prompt": { "type": "string", "minLength": 1 },
+        "prompt_file": { "$ref": "#/definitions/relativePath", "description": "A file next to the case file holding the prompt. Mutually exclusive with prompt." },
+        "expect_trigger": { "type": "boolean", "description": "Whether the skill should fire for the prompt." },
+        "near_miss": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Prompts that look like they should trigger the skill but must not. Each becomes a derived negative case `<id>.near-miss-<n>`."
+        },
+        "files": { "type": "array", "items": { "$ref": "#/definitions/fixture" } },
+        "assertions": { "type": "array", "items": { "$ref": "#/definitions/assertion" } },
+        "rubric": { "type": "string", "description": "Graded by a model grader the runner provides." },
+        "rubric_min_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Pass mark for the rubric. Default 0.7." },
+        "model": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]*$" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "allOf": [
+          { "$ref": "#/definitions/case" },
+          { "required": ["id", "expect_trigger"], "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }] }
+        ]
+      }
+    },
+    "id": { "$ref": "#/definitions/case/properties/id" },
+    "description": { "$ref": "#/definitions/case/properties/description" },
+    "prompt": { "$ref": "#/definitions/case/properties/prompt" },
+    "prompt_file": { "$ref": "#/definitions/case/properties/prompt_file" },
+    "expect_trigger": { "$ref": "#/definitions/case/properties/expect_trigger" },
+    "near_miss": { "$ref": "#/definitions/case/properties/near_miss" },
+    "files": { "$ref": "#/definitions/case/properties/files" },
+    "assertions": { "$ref": "#/definitions/case/properties/assertions" },
+    "rubric": { "$ref": "#/definitions/case/properties/rubric" },
+    "rubric_min_score": { "$ref": "#/definitions/case/properties/rubric_min_score" },
+    "model": { "$ref": "#/definitions/case/properties/model" },
+    "tags": { "$ref": "#/definitions/case/properties/tags" }
+  },
+  "oneOf": [
+    { "required": ["cases"], "not": { "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }, { "required": ["expect_trigger"] }] } },
+    { "required": ["expect_trigger"], "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }], "not": { "required": ["cases"] } }
+  ],
+  "additionalProperties": false
+}
