@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -113,7 +112,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 
 	for i, refspec := range refspecs {
 		// nolint: gosec
-		cmd := exec.CommandContext(ctx, "git", "ls-remote", url, refspec)
+		cmd := gitutil.Command(ctx, "", "ls-remote", url, refspec)
 		cmd.Env = env
 		out, err := cmd.Output()
 		if err != nil {
@@ -167,7 +166,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	cloneArgs = append(cloneArgs, url, destDir)
 
 	// nolint: gosec
-	cloneCmd := exec.CommandContext(ctx, "git", cloneArgs...)
+	cloneCmd := gitutil.Command(ctx, "", cloneArgs...)
 	cloneCmd.Env = env
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
@@ -183,7 +182,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	}
 
 	// nolint: gosec
-	checkoutCmd := exec.CommandContext(ctx, "git", "-C", destDir, "sparse-checkout", "set", pathSpec)
+	checkoutCmd := gitutil.Command(ctx, destDir, "sparse-checkout", "set", pathSpec)
 	checkoutCmd.Env = env
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
@@ -226,7 +225,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
 
 	// nolint: gosec
-	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--no-checkout", "--filter=blob:none", "--sparse", url, destDir)
+	cloneCmd := gitutil.Command(ctx, "", "clone", "--depth", "1", "--no-checkout", "--filter=blob:none", "--sparse", url, destDir)
 	cloneCmd.Env = env
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
@@ -238,7 +237,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	fetchCmd := exec.CommandContext(ctx, "git", "-C", destDir, "fetch", "--depth", "1", "origin", commitSHA)
+	fetchCmd := gitutil.Command(ctx, destDir, "fetch", "--depth", "1", "origin", commitSHA)
 	fetchCmd.Env = env
 	if out, err := fetchCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on fetch failure
@@ -250,7 +249,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	checkoutCmd := exec.CommandContext(ctx, "git", "-C", destDir, "checkout", "--detach", commitSHA)
+	checkoutCmd := gitutil.Command(ctx, destDir, "checkout", "--detach", commitSHA)
 	checkoutCmd.Env = env
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on checkout failure
@@ -266,7 +265,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	sparseCmd := exec.CommandContext(ctx, "git", "-C", destDir, "sparse-checkout", "set", pathSpec)
+	sparseCmd := gitutil.Command(ctx, destDir, "sparse-checkout", "set", pathSpec)
 	sparseCmd.Env = env
 	if out, err := sparseCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure

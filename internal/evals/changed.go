@@ -2,9 +2,10 @@ package evals
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 )
 
 // GitFunc runs git in dir and returns its standard output. Tests replace it.
@@ -12,7 +13,7 @@ type GitFunc func(dir string, args ...string) (string, error)
 
 // ExecGit is the GitFunc that runs the git binary.
 func ExecGit(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...) //nolint:gosec // fixed git subcommands
+	cmd := gitutil.CommandNoContext(dir, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
