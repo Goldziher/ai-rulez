@@ -29,6 +29,7 @@ nav = [
     { "Authoring Plugins" = "plugins.md" },
     { "Evals" = "evals.md" },
     { "Usage Telemetry" = "usage-telemetry.md" },
+    { "Item-Load Telemetry (OTLP)" = "telemetry.md" },
     { "Poly Hooks" = "poly-hooks.md" },
     { "Monorepo" = "monorepo.md" },
     { "Examples" = "examples.md" },
