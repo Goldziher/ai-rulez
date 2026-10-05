@@ -623,6 +623,13 @@
           },
           "type": "object"
         },
+        "example_paths": {
+          "description": "Globs of files that document risky commands as examples: findings of the command-shaped rules (AR005, AR006, AR008) in them are dropped.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "external": {
           "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {

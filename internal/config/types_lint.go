@@ -17,6 +17,10 @@ type LintConfig struct {
 	IgnorePaths []string `yaml:"ignore_paths,omitempty" json:"ignore_paths,omitempty" toml:"ignore_paths,omitempty"` //nolint:tagliatelle
 	// Severity overrides the severity of a code or name: error, warning, info, off.
 	Severity map[string]string `yaml:"severity,omitempty" json:"severity,omitempty" toml:"severity,omitempty"`
+	// ExamplePaths lists globs, relative to the config directory or the repo
+	// root, of files that document risky commands as examples: findings of the
+	// command-shaped rules (AR005, AR006, AR008) in them are dropped.
+	ExamplePaths []string `yaml:"example_paths,omitempty" json:"example_paths,omitempty" toml:"example_paths,omitempty"` //nolint:tagliatelle
 	// AllowPaths lists globs of repo paths that may be referenced without
 	// existing in the tracked tree (generated or machine-local outputs).
 	AllowPaths []string `yaml:"allow_paths,omitempty" json:"allow_paths,omitempty" toml:"allow_paths,omitempty"` //nolint:tagliatelle
