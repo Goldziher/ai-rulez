@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -142,17 +144,17 @@ func TestOpencodePresetGenerator_GeneratesV2MCPConfig(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected nested mcp object, got: %v", doc)
 	}
-	servers, ok := mcp["servers"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected mcp.servers object, got: %v", mcp)
+	if _, nested := mcp["servers"]; nested {
+		t.Fatalf("servers are mcp.<name> members, not mcp.servers: %v", mcp)
 	}
+	servers := mcp
 
 	local := servers["local-server"].(map[string]any)
 	if local["type"] != "local" {
 		t.Errorf("local server type = %v, want local", local["type"])
 	}
-	if local["disabled"] != false {
-		t.Errorf("local server disabled = %v, want false", local["disabled"])
+	if local["enabled"] != true {
+		t.Errorf("local server enabled = %v, want true", local["enabled"])
 	}
 	cmd, ok := local["command"].([]any)
 	if !ok || len(cmd) != 3 || cmd[0] != "npx" {
@@ -200,9 +202,7 @@ func TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys(t *testing.T) {
 	seed := `{
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "servers": {
-      "ai-rulez": { "type": "local", "command": ["x"] }
-    }
+    "ai-rulez": { "type": "local", "command": ["x"] }
   }
 }
 `
@@ -222,7 +222,7 @@ func TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys(t *testing.T) {
 	}
 }
 
-func TestOpencodePresetGenerator_MCPDisabledIsInverted(t *testing.T) {
+func TestOpencodePresetGenerator_MCPDisabledIsEnabledFalse(t *testing.T) {
 	g := &OpencodePresetGenerator{}
 	disabled := false
 	cfg := &config.Config{
@@ -242,8 +242,8 @@ func TestOpencodePresetGenerator_MCPDisabledIsInverted(t *testing.T) {
 			body = o.Content
 		}
 	}
-	if !strings.Contains(body, `"disabled": true`) {
-		t.Errorf("an explicitly disabled server must render disabled:true, got:\n%s", body)
+	if !strings.Contains(body, `"enabled": false`) {
+		t.Errorf("an explicitly disabled server must render enabled:false, got:\n%s", body)
 	}
 }
 
@@ -257,11 +257,9 @@ func TestOpencodePresetGenerator_MCPMergePreservesUserKeys(t *testing.T) {
     "timeout": {
       "catalog": 30000
     },
-    "servers": {
-      "user-server": {
-        "type": "local",
-        "command": ["user-cmd"]
-      }
+    "user-server": {
+      "type": "local",
+      "command": ["user-cmd"]
     }
   }
 }
@@ -297,7 +295,7 @@ func TestOpencodePresetGenerator_MCPMergePreservesUserKeys(t *testing.T) {
 	if _, ok := mcp["timeout"]; !ok {
 		t.Errorf("sibling mcp.timeout was dropped: %v", mcp)
 	}
-	servers := mcp["servers"].(map[string]any)
+	servers := mcp
 	if _, ok := servers["ai-rulez"]; !ok {
 		t.Errorf("owned server missing: %v", servers)
 	}
@@ -800,6 +798,139 @@ func TestOpencodePresetGenerator_WarnsOnV1LocalPlugins(t *testing.T) {
 			}
 			if got := opencodev1.WasWarned(plugin); got != tt.wantWarned {
 				t.Errorf("WasWarned(%s) = %v, want %v", plugin, got, tt.wantWarned)
+			}
+		})
+	}
+}
+
+// TestOpencodePresetGenerator_RemovesLegacyNestedServers pins the migration off
+// the mcp.servers shape: members a previous run recorded are taken back, a
+// hand-written one under the same key is left alone.
+func TestOpencodePresetGenerator_RemovesLegacyNestedServers(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "opencode.json")
+	seed := `{
+  "mcp": {
+    "servers": {
+      "old": { "type": "local", "command": ["x"], "disabled": false },
+      "mine": { "type": "local", "command": ["m"] }
+    }
+  }
+}
+`
+	if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{
+		Name: "test", BaseDir: dir, Run: config.NewRunState(),
+		MCPServers: map[string]*config.MCPServer{"new": {Name: "new", Command: "npx"}},
+	}
+	cfg.Run.SetPreviousMerged(map[string][]jsonmerge.Claim{"opencode.json": {
+		{Path: []string{"mcp", "servers", "old"}, Equals: map[string]any{"type": "local", "command": []any{"x"}, "disabled": false}},
+	}})
+
+	result, err := (&OpencodePresetGenerator{}).renderMCPConfig(path, cfg)
+	if err != nil {
+		t.Fatalf("renderMCPConfig: %v", err)
+	}
+	var top map[string]any
+	if err := json.Unmarshal([]byte(result.Body), &top); err != nil {
+		t.Fatal(err)
+	}
+	doc := map[string]map[string]any{"mcp": top["mcp"].(map[string]any)}
+	legacy, _ := doc["mcp"]["servers"].(map[string]any)
+	if _, ok := legacy["old"]; ok {
+		t.Errorf("the recorded legacy member must be removed: %v", legacy)
+	}
+	if _, ok := legacy["mine"]; !ok {
+		t.Errorf("a hand-written member must survive: %v", legacy)
+	}
+	if _, ok := doc["mcp"]["new"]; !ok {
+		t.Errorf("the configured server must be written as mcp.new: %v", doc["mcp"])
+	}
+}
+
+func TestOpencodePresetGenerator_LegacyServersRemovalIsGuarded(t *testing.T) {
+	oldEntry := map[string]any{"type": "local", "command": []any{"x"}, "enabled": true}
+	tests := []struct {
+		name        string
+		seed        string
+		servers     map[string]*config.MCPServer
+		claims      []jsonmerge.Claim
+		wantLegacy  []string // members expected to remain under mcp.servers
+		wantServers bool     // mcp.servers expected to be a configured server entry
+	}{
+		{
+			name:       "claimed member whose value changed is the user's now",
+			seed:       `{"mcp":{"servers":{"old":{"type":"local","command":["edited"]}}}}`,
+			servers:    map[string]*config.MCPServer{"new": {Name: "new", Command: "npx"}},
+			claims:     []jsonmerge.Claim{{Path: []string{"mcp", "servers", "old"}, Equals: oldEntry}},
+			wantLegacy: []string{"old"},
+		},
+		{
+			name:        "a server literally named servers is current, not legacy",
+			seed:        `{"mcp":{"servers":{"type":"local","command":["npx"],"enabled":true}}}`,
+			servers:     map[string]*config.MCPServer{"servers": {Name: "servers", Command: "npx"}},
+			claims:      []jsonmerge.Claim{{Path: []string{"mcp", "servers"}}},
+			wantServers: true,
+		},
+		{
+			name:    "no record: members exactly matching configured entries are removed",
+			seed:    `{"mcp":{"servers":{"new":{"type":"local","command":["npx"],"enabled":true}}}}`,
+			servers: map[string]*config.MCPServer{"new": {Name: "new", Command: "npx"}},
+		},
+		{
+			name:       "no record: a member that is not ai-rulez shaped keeps the whole object",
+			seed:       `{"mcp":{"servers":{"new":{"type":"local","command":["npx"],"enabled":true},"mine":{"command":["m"]}}}}`,
+			servers:    map[string]*config.MCPServer{"new": {Name: "new", Command: "npx"}},
+			wantLegacy: []string{"mine", "new"},
+		},
+		{
+			name:       "no record: a member of an unconfigured name is the user's",
+			seed:       `{"mcp":{"servers":{"other":{"type":"local","command":["npx"],"enabled":true}}}}`,
+			servers:    map[string]*config.MCPServer{"new": {Name: "new", Command: "npx"}},
+			wantLegacy: []string{"other"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			path := filepath.Join(dir, "opencode.json")
+			if err := os.WriteFile(path, []byte(tt.seed), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cfg := &config.Config{Name: "test", BaseDir: dir, Run: config.NewRunState(), MCPServers: tt.servers}
+			if tt.claims != nil {
+				cfg.Run.SetPreviousMerged(map[string][]jsonmerge.Claim{"opencode.json": tt.claims})
+			}
+
+			// Act
+			result, err := (&OpencodePresetGenerator{}).renderMCPConfig(path, cfg)
+
+			// Assert
+			if err != nil {
+				t.Fatalf("renderMCPConfig: %v", err)
+			}
+			var top map[string]any
+			if err := json.Unmarshal([]byte(result.Body), &top); err != nil {
+				t.Fatal(err)
+			}
+			mcp, _ := top["mcp"].(map[string]any)
+			servers, _ := mcp["servers"].(map[string]any)
+			var got []string
+			for k := range servers {
+				got = append(got, k)
+			}
+			sort.Strings(got)
+			if tt.wantServers {
+				if servers["command"] == nil || servers["enabled"] == nil {
+					t.Fatalf("the configured server named servers must be written: %v", servers)
+				}
+				return
+			}
+			if !slices.Equal(got, tt.wantLegacy) {
+				t.Errorf("mcp.servers members = %v, want %v", got, tt.wantLegacy)
 			}
 		})
 	}

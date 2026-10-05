@@ -421,3 +421,35 @@ func TestUnmerge_MissingFileAndMalformed(t *testing.T) {
 	_, err = yamlmerge.UnmergeDocument("x.yaml", "a: [1\n", []yamlmerge.Claim{{Path: []string{"a"}}})
 	require.Error(t, err)
 }
+
+func TestApply_ListReplacementKeepsUnchangedElementsVerbatim(t *testing.T) {
+	// Arrange: the first element carries comments and keys in a deliberate order.
+	existing := "# top\n" +
+		"items:\n" +
+		"  # first\n" +
+		"  - name: a   # note\n" +
+		"    zeta: 1\n" +
+		"    alpha: 2\n" +
+		"\n" +
+		"  - name: b\n" +
+		"other: 1\n"
+	kept := map[string]any{"name": "a", "zeta": 1, "alpha": 2}
+	added := map[string]any{"name": "c"}
+
+	// Act: b is dropped, c is added, a is untouched.
+	res, err := yamlmerge.ApplyDocument("c.yaml", existing, []yamlmerge.OwnedKey{{Name: "items", Value: []any{kept, added}, Elements: []any{added}}})
+
+	// Assert
+	require.NoError(t, err)
+	want := "# top\n" +
+		"items:\n" +
+		"  # first\n" +
+		"  - name: a   # note\n" +
+		"    zeta: 1\n" +
+		"    alpha: 2\n" +
+		"\n" +
+		"  - name: c\n" +
+		"other: 1\n"
+	assert.Equal(t, want, res.Body)
+	assert.True(t, res.PartiallyOwned)
+}

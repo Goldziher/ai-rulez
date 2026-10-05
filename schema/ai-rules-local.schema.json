@@ -464,7 +464,7 @@
           "include": {
             "description": "What content types to import (defaults to all). MCP servers are not importable from an include.",
             "items": {
-              "enum": ["rules", "context", "skills", "agents", "commands"],
+              "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
               "type": "string"
             },
             "type": "array"

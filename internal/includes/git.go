@@ -429,6 +429,9 @@ func (s *GitSource) filterContent(tree *config.ContentTree) *config.ContentTree 
 	if shouldInclude("commands") {
 		filtered.Commands = tree.Commands
 	}
+	if shouldInclude("checks") {
+		filtered.Checks = tree.Checks
+	}
 
 	// Copy domains (domains always included if they exist)
 	filtered.Domains = tree.Domains

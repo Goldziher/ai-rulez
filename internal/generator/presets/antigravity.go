@@ -2,7 +2,9 @@ package presets
 
 import (
 	"fmt"
+	"github.com/Goldziher/ai-rulez/schema"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -96,9 +98,14 @@ func (g *AntigravityPresetGenerator) GetName() string {
 	return presetNameAntigravity
 }
 
-// antigravityWorkflows is the folder of Antigravity workflows (custom slash
-// commands), shared by the IDE and the CLI.
-var antigravityWorkflows = commandFilesSpec{preset: presetNameAntigravity, dir: ".agents/workflows", ext: ".md"}
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *AntigravityPresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{
+		RootFile: "GEMINI.md", RulesDir: ".agents/rules", SkillsDir: ".agents/skills", AgentsDir: ".agents/agents",
+		CommandsDir: ".agents/skills",
+	}
+}
 
 // GlobalOutputPaths is the Antigravity user-scope layout: the shared
 // ~/.gemini/config tree (rules, skills, agents, MCP), ~/.gemini/GEMINI.md and the
@@ -109,14 +116,13 @@ func (g *AntigravityPresetGenerator) GlobalOutputPaths(home string, getenv func(
 		RulesDir:    ".gemini/config/rules",
 		SkillsDir:   ".gemini/config/skills",
 		AgentsDir:   ".gemini/config/agents",
-		CommandsDir: ".gemini/antigravity/global_workflows",
+		CommandsDir: ".gemini/config/skills",
 		Sidecars:    map[string]string{MergedDocAgentsMCP: ".gemini/config/mcp_config.json"},
 	}.Resolve(home, getenv)
 }
 
 func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, ".agents", "workflows"),
 		filepath.Join(baseDir, "GEMINI.md"),
 		filepath.Join(baseDir, ".agents"),
 		filepath.Join(baseDir, ".agents", "rules"),
@@ -144,34 +150,11 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	// Generate .agents/settings.json with MCP configuration.
-	//
-	// ai-rulez owns the mcpServers key of this document and the consumer owns the
-	// rest, so merge into whatever is on disk rather than replacing it (#185).
-	//
-	// Emitted only when there are MCP servers to contribute, for the same reason as
-	// the gemini preset: an owned key is replaced wholesale, so an unconditional
-	// write would still reduce a consumer's own mcpServers to the lone ai-rulez
-	// self-registration entry. Losing that self-registration in projects with no
-	// [[mcp_servers]] is the better trade.
-	if len(cfg.MCPServers) > 0 {
-		settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsSettings))
-		settings, err := g.renderSettingsJSON(settingsPath, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("render settings.json: %w", err)
-		}
-
-		outputs = append(outputs, config.OutputFile{
-			Path:           settingsPath,
-			Content:        settings.Body,
-			PartiallyOwned: settings.PartiallyOwned,
-			MergeClaims:    settings.Claims,
-		})
-	}
-
-	// Workspace MCP servers live in .agents/mcp_config.json (the file Antigravity
-	// reads); settings.json above is kept for output written by earlier versions.
-	if len(cfg.MCPServers) > 0 {
+	// Workspace MCP servers live in .agents/mcp_config.json, the file Antigravity
+	// reads. Earlier versions also wrote .agents/settings.json, which nothing
+	// reads; it is no longer written, and renderSettingsJSON only remains so the
+	// stale-output cleanup can recognise what those versions wrote.
+	if len(cfg.MCPServers) > 0 || cfg.HasSelfServer() {
 		mcpPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsMCP))
 		mcpConfig, err := g.renderMCPConfigJSON(mcpPath, cfg)
 		if err != nil {
@@ -179,13 +162,6 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		}
 		outputs = append(outputs, mergedOutput(mcpPath, mcpConfig))
 	}
-
-	// Commands are workflows: .agents/workflows/{id}.md, invoked as /{id}.
-	workflows, err := commandFileOutputs(content, baseDir, antigravityWorkflows)
-	if err != nil {
-		return nil, err
-	}
-	outputs = append(outputs, workflows...)
 
 	routing, demoted := antigravityRouting(cfg, logger.Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)
@@ -232,8 +208,10 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		})
 	}
 
-	// Generate skill files to .agents/skills/
-	allSkills := allSkills(content)
+	// Generate skill files to .agents/skills/. Workflows (the custom slash
+	// commands) retire on 2026-11-01 in favour of skills, so a command is written
+	// as a skill, which Antigravity runs on an explicit invocation.
+	allSkills := append(allSkills(content), commandAsSkills(content, presetNameAntigravity)...)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
@@ -295,14 +273,14 @@ func (g *AntigravityPresetGenerator) renderMCPConfigJSON(path string, cfg *confi
 func antigravityMCPServers(cfg *config.Config) map[string]interface{} {
 	mcpServers := make(map[string]interface{})
 
-	// Always include the hardcoded ai-rulez MCP server
-	mcpServers["ai-rulez"] = map[string]interface{}{
-		keyCommand: cmdNPX,
-		keyArgs: []string{
-			"-y",
-			aiRulezLatest,
-			keyMCP,
-		},
+	// The ai-rulez MCP server is added only when [mcp] self_server asks for it, as
+	// for every other preset (Antigravity has no `type` key, so it is dropped).
+	if cfg.HasSelfServer() {
+		self := cfg.SelfMCPServerEntry(schema.Version)
+		delete(self, keyType)
+		if _, declared := cfg.MCPServers[config.SelfMCPServerName]; !declared {
+			mcpServers[config.SelfMCPServerName] = self
+		}
 	}
 
 	// Merge user-configured MCP servers
@@ -402,20 +380,61 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 		return frontmatter
 	}
 
-	// .agents/agents is shared with the amp spec, which writes the same keys:
-	// values keep their YAML type and the invocation switches are booleans.
-	agentFields := []string{
-		keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins",
-		"user-invocable", "disable-model-invocation",
-	}
-	for _, field := range agentFields {
+	// Antigravity subagents take name, description, model (inherit, flash or pro),
+	// tools, subagent and commandExecutionPolicy; the Gemini CLI keys (kind,
+	// temperature, max_turns, timeout_mins) are not part of the format.
+	for _, field := range []string{keyDescription, "subagent", "commandExecutionPolicy"} {
 		if val, ok := typedAgentField(agent.Metadata, field); ok {
 			frontmatter[field] = val
 		}
 	}
-	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
-		frontmatter["tools"] = agent.Metadata.Tools
+	if model := antigravityModel(ResolveAgentModel(presetNameAntigravity, agent, cfg)); model != "" {
+		frontmatter[keyModel] = model
+	}
+	if EmitAgentField(cfg, "tools") {
+		if tools := antigravityTools(agent.Metadata.Tools); len(tools) > 0 {
+			frontmatter["tools"] = tools
+		}
 	}
 
 	return frontmatter
+}
+
+// antigravityModelTiers is how a model reads as one of Antigravity's three
+// subagent models.
+var antigravityModelTiers = []struct{ contains, tier string }{
+	{"inherit", "inherit"}, {"flash", "flash"}, {"haiku", "flash"}, {"pro", "pro"}, {"sonnet", "pro"}, {"opus", "pro"},
+}
+
+// antigravityModel maps a resolved model onto inherit, flash or pro, the only
+// values an Antigravity subagent accepts. A Claude alias maps by tier (haiku to
+// flash, sonnet and opus to pro); anything else is dropped so the subagent
+// inherits.
+func antigravityModel(model string) string {
+	lower := strings.ToLower(strings.TrimSpace(model))
+	for _, t := range antigravityModelTiers {
+		if strings.Contains(lower, t.contains) {
+			return t.tier
+		}
+	}
+	return ""
+}
+
+// antigravityToolNames maps the Claude tools with a documented Antigravity
+// counterpart; an unmapped name makes the subagent hang, so the rest are dropped.
+var antigravityToolNames = map[string]string{
+	"read": "view_file", "edit": "replace_file_content", "multiedit": "replace_file_content",
+	"grep": "grep_search", "bash": "run_command",
+}
+
+// antigravityTools translates Claude tool names, dropping those with no mapping.
+func antigravityTools(tools []string) []string {
+	var out []string
+	for _, tool := range tools {
+		name, ok := antigravityToolNames[strings.ToLower(strings.TrimSpace(tool))]
+		if ok && !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	return out
 }

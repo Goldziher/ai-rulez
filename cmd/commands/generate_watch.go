@@ -1,0 +1,246 @@
+package commands
+
+import (
+	"context"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"syscall"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/includes"
+	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/watch"
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+)
+
+var generateWatch bool
+
+// checkGenerateWatchFlags rejects flags that make no sense with --watch: it is a
+// long-running, single-root write loop.
+func checkGenerateWatchFlags() error {
+	switch {
+	case dryRun:
+		return oops.Errorf("--watch and --dry-run are mutually exclusive: watch mode writes files on every change")
+	case generateCheck:
+		return oops.Errorf("--watch and --check are mutually exclusive: --check is a one-shot CI verification")
+	case userScope:
+		return oops.Errorf("--watch cannot be combined with --user; it watches the project's configuration directory")
+	case pluginMode:
+		return oops.Errorf("--watch cannot be combined with --plugin")
+	case recursive:
+		return oops.Errorf("--watch cannot be combined with --recursive; it watches a single configuration")
+	}
+	return nil
+}
+
+// runGenerateWatch generates once, then again whenever the configuration or its
+// sources change, until interrupted.
+func runGenerateWatch(parent context.Context, args []string) error {
+	if err := checkGenerateWatchFlags(); err != nil {
+		return err
+	}
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, stop := interruptContext(parent)
+	defer stop()
+
+	var last *config.Config // the most recent successfully loaded configuration
+	outputs := newGeneratedOutputFilter()
+	run := func(ctx context.Context, triggers []string) error {
+		if changed := changedPaths(triggers); len(changed) > 0 {
+			logger.Info("Change detected, regenerating", "changed", describeTriggers(changed))
+		}
+		cfg, err := generateOnce(ctx, args)
+		if cfg != nil {
+			last = cfg
+			outputs.refresh(cfg)
+		}
+		if err == nil {
+			logger.Success("Generated; watching for changes (Ctrl-C to stop)")
+		}
+		return err
+	}
+	onError := func(err error, _ []string) {
+		// A bad config is the normal state while editing; keep watching.
+		fmtError(err)
+		logger.Warn("Generation failed; still watching for changes")
+	}
+	return watch.Watch(ctx, watch.Options{
+		Targets: func() []watch.Target { return watchTargets(last, args) },
+		Ignore:  func(path string) bool { return watchIgnore(path) || outputs.ignore(path) },
+		Run:     run,
+		OnError: onError,
+		Log:     func(msg string, kv ...any) { logger.Debug(msg, kv...) },
+		Warn:    func(msg string, kv ...any) { logger.Warn(msg, kv...) },
+	})
+}
+
+// interruptContext is a context cancelled by the first SIGINT or SIGTERM. The
+// signal handling is released right after, so a second Ctrl-C takes the default
+// action and kills the process even while a run is stuck.
+func interruptContext(parent context.Context) (context.Context, context.CancelFunc) {
+	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+	return ctx, stop
+}
+
+// changedPaths drops the "initial" pseudo-trigger, leaving the paths that
+// changed. It does not rely on where "initial" sorts among them.
+func changedPaths(triggers []string) []string {
+	var out []string
+	for _, t := range triggers {
+		if t != "initial" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// generatedOutputFilter recognises the files the previous run recorded as
+// generated. An include source can sit on a tree that also holds outputs; their
+// rewrite must not count as a change, or every run would trigger the next.
+type generatedOutputFilter struct {
+	paths atomic.Pointer[map[string]bool]
+}
+
+func newGeneratedOutputFilter() *generatedOutputFilter { return &generatedOutputFilter{} }
+
+// refresh reads the manifests the finished run left behind.
+func (f *generatedOutputFilter) refresh(cfg *config.Config) {
+	set := map[string]bool{}
+	for _, p := range generator.NewGenerator(cfg).GeneratedPaths() {
+		set[filepath.Clean(p)] = true
+	}
+	f.paths.Store(&set)
+}
+
+func (f *generatedOutputFilter) ignore(path string) bool {
+	set := f.paths.Load()
+	return set != nil && (*set)[filepath.Clean(path)]
+}
+
+// generateOnce is the single-root path of `generate`, returning errors rather
+// than exiting. The configuration is returned (when it loaded) so the caller
+// can derive what to watch.
+func generateOnce(ctx context.Context, args []string) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return cfg, err //nolint:wrapcheck // already contextual
+	}
+	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		return cfg, err
+	}
+	gen := generator.NewGenerator(cfg)
+	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetContext(ctx)
+	return cfg, gen.Generate(profile) //nolint:wrapcheck // already contextual
+}
+
+// describeTriggers shortens a trigger list for the log line.
+func describeTriggers(triggers []string) string {
+	const maxShown = 3
+	shown := append([]string(nil), triggers...)
+	if len(shown) > maxShown {
+		shown = shown[:maxShown]
+	}
+	for i, t := range shown {
+		if rel, err := filepath.Rel(".", t); err == nil && !strings.HasPrefix(rel, "..") {
+			shown[i] = rel
+		}
+	}
+	out := strings.Join(shown, ", ")
+	if extra := len(triggers) - len(shown); extra > 0 {
+		out += " (+" + strconv.Itoa(extra) + " more)"
+	}
+	return out
+}
+
+// watchIgnore drops files the generator itself writes inside the configuration
+// directory, which would otherwise retrigger every run.
+func watchIgnore(path string) bool {
+	base := filepath.Base(path)
+	return strings.HasPrefix(base, ".generated-manifest") || base == ".gitignore"
+}
+
+// watchTargets lists what to watch: the configuration directory (or, for a
+// single-file config, that file) and the local-path include sources. With no
+// loaded configuration it falls back to discovery so a config that is broken at
+// start still gets watched.
+func watchTargets(cfg *config.Config, args []string) []watch.Target {
+	var targets []watch.Target
+	if cfg != nil && cfg.ConfigDir != "" {
+		if filepath.Clean(cfg.ConfigDir) == filepath.Clean(cfg.BaseDir) {
+			// V2-style config beside the project: watch only the file, never
+			// the project root, which holds the generated output.
+			if cfg.ConfigFile != "" {
+				targets = append(targets, watch.Target{Path: filepath.Join(cfg.ConfigDir, cfg.ConfigFile), File: true})
+			}
+		} else {
+			targets = append(targets, watch.Target{Path: cfg.ConfigDir})
+		}
+		targets = append(targets, includeTargets(cfg)...)
+		return targets
+	}
+	return fallbackTargets(args)
+}
+
+// fallbackTargets resolves the config location without loading it.
+func fallbackTargets(args []string) []watch.Target {
+	switch {
+	case len(args) > 0:
+		return []watch.Target{{Path: args[0], File: true}}
+	case cfgFile != "":
+		return []watch.Target{{Path: cfgFile, File: true}}
+	}
+	name := configDir
+	if name == "" {
+		name = defaultConfigDirName
+	}
+	if found, err := config.FindConfigFileInDirName(".", configDir); err == nil {
+		return []watch.Target{{Path: filepath.Dir(found)}}
+	}
+	return []watch.Target{{Path: name}}
+}
+
+// includeTargets are the local-path include and installed-skill sources.
+func includeTargets(cfg *config.Config) []watch.Target {
+	var out []watch.Target
+	add := func(p string) {
+		if p == "" || !includes.IsLocalPath(p) {
+			return
+		}
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(cfg.BaseDir, p)
+		}
+		out = append(out, watch.Target{Path: p})
+	}
+	for _, inc := range cfg.Includes {
+		add(inc.Source)
+		add(inc.LocalOverride)
+	}
+	for _, s := range cfg.InstalledSkills {
+		add(s.LocalOverride)
+	}
+	return out
+}
+
+func watchParentContext(cmd *cobra.Command) context.Context {
+	if cmd != nil && cmd.Context() != nil {
+		return cmd.Context()
+	}
+	return context.Background()
+}

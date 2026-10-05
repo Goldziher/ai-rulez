@@ -80,6 +80,7 @@ func (g *Generator) scopeConfig(scope config.ScopeConfig, scopeRun *config.Scope
 	scopeContent.Skills = nil
 	scopeContent.Agents = nil
 	scopeContent.Commands = nil
+	scopeContent.Checks = nil
 
 	domains := make(map[string]*config.Domain, len(scopeContent.Domains))
 	dropped := 0
@@ -127,7 +128,7 @@ func (g *Generator) warnGeminiOnlyInScope(scope config.ScopeConfig) {
 
 func hasDomainContent(tree *config.ContentTree) bool {
 	for _, d := range tree.Domains {
-		if len(d.Rules)+len(d.Context)+len(d.Skills)+len(d.Agents)+len(d.Commands) > 0 {
+		if len(d.Rules)+len(d.Context)+len(d.Skills)+len(d.Agents)+len(d.Commands)+len(d.Checks) > 0 {
 			return true
 		}
 	}

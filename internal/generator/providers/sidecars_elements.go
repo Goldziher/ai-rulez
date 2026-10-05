@@ -18,6 +18,9 @@ type ElementsSpec struct {
 	Key []string `toml:"key" yaml:"key" json:"key"`
 	// Values are the elements ai-rulez adds.
 	Values []string `toml:"values" yaml:"values" json:"values"`
+	// ProjectOnly marks values that are project-relative globs: they are left out
+	// of the user-scope document, where they would resolve against no project.
+	ProjectOnly bool `toml:"project_only,omitempty" yaml:"project_only,omitempty" json:"project_only,omitempty"`
 }
 
 // validateElements checks the elements block of the sidecar at index i.

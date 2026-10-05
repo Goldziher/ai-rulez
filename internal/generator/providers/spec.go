@@ -112,8 +112,8 @@ type ActivationSpec struct {
 
 // GlobalSpec declares where a tool keeps the user-scope counterparts of the
 // project outputs. Every path is relative to the user's home directory and
-// slash-separated. It is only parsed, validated and exposed (GlobalPaths); the
-// generator does not write user-scope files yet.
+// slash-separated. `generate --user` maps the outputs of the spec onto these
+// paths (see internal/generator/userscope); GlobalPaths exposes them resolved.
 type GlobalSpec struct {
 	// HomeEnv names an environment variable that relocates the tool's home
 	// directory (HERMES_HOME). When it is set, the part of a path under HomeDir
@@ -128,12 +128,27 @@ type GlobalSpec struct {
 	AgentsDir   string `toml:"agents_dir,omitempty" yaml:"agents_dir,omitempty" json:"agents_dir,omitempty"`
 	CommandsDir string `toml:"commands_dir,omitempty" yaml:"commands_dir,omitempty" json:"commands_dir,omitempty"`
 	RulesDir    string `toml:"rules_dir,omitempty" yaml:"rules_dir,omitempty" json:"rules_dir,omitempty"`
+
+	// SkillReaders lists every user-level skill directory the tool reads, when it
+	// reads more than skills_dir (Gemini CLI also reads ~/.agents/skills). A skill
+	// of the same name in two of them loads twice, which `generate --user` warns about.
+	SkillReaders []string `toml:"skill_readers,omitempty" yaml:"skill_readers,omitempty" json:"skill_readers,omitempty"`
+	// SkillPrecedence says which copy runs when a skill of the same name exists at
+	// user and project level, as the vendor documents it. Empty means none is documented.
+	SkillPrecedence string `toml:"skill_precedence,omitempty" yaml:"skill_precedence,omitempty" json:"skill_precedence,omitempty"`
 }
 
 // BodySpec lists the ordered closed-set section renderers composed into a
 // per-item file body.
 type BodySpec struct {
 	Sections []string `toml:"sections" yaml:"sections" json:"sections"`
+	// Replace rewrites placeholders in the item's content (a command's
+	// $ARGUMENTS becomes Junie's $prompt): every key is replaced by its value.
+	Replace map[string]string `toml:"replace,omitempty" yaml:"replace,omitempty" json:"replace,omitempty"`
+	// ReplaceFlag is a frontmatter key written true when Replace changed the
+	// content, so a tool that must be told a command takes arguments
+	// (allowPromptArgument) says so only for the commands that do.
+	ReplaceFlag string `toml:"replace_flag,omitempty" yaml:"replace_flag,omitempty" json:"replace_flag,omitempty"`
 }
 
 // FrontmatterSpec describes how to build the YAML frontmatter map for a
@@ -177,7 +192,32 @@ type FrontmatterSpec struct {
 	// QuotedFields lists the frontmatter keys whose string value is always
 	// written double-quoted.
 	QuotedFields []string `toml:"quoted_fields,omitempty" yaml:"quoted_fields,omitempty" json:"quoted_fields,omitempty"`
+	// ToolNames translates the Claude tool names an agent or skill lists (Read,
+	// Grep, Bash, ...) into the tool's own names. The match ignores case. A tool
+	// the table does not name is dropped, since a name the tool does not know
+	// would make it reject the file; an agent left with no tool keeps no `tools`
+	// key and so inherits all of them.
+	ToolNames map[string]string `toml:"tool_names,omitempty" yaml:"tool_names,omitempty" json:"tool_names,omitempty"`
+	// ToolCase is "lower" to write every tool name lower-case (applied after
+	// ToolNames); empty keeps the case as written.
+	ToolCase string `toml:"tool_case,omitempty" yaml:"tool_case,omitempty" json:"tool_case,omitempty"`
+	// ModelAliases translates a resolved model (matched ignoring case) into the
+	// tool's own id; a value of "" drops the model. A model that is no key passes
+	// through.
+	ModelAliases map[string]string `toml:"model_aliases,omitempty" yaml:"model_aliases,omitempty" json:"model_aliases,omitempty"`
+	// DropBareAliases drops a model that is one of the bare Claude aliases
+	// (sonnet, opus, haiku, inherit), which a tool with its own model namespace
+	// cannot take; the agent then inherits the session model. It runs after
+	// ModelAliases, so a mapped alias is kept.
+	DropBareAliases bool `toml:"drop_bare_aliases,omitempty" yaml:"drop_bare_aliases,omitempty" json:"drop_bare_aliases,omitempty"`
+	// Renames writes a listed field under another frontmatter key: with
+	// renames = { severity = "severity-default" } a `severity` field is written
+	// as `severity-default`.
+	Renames map[string]string `toml:"renames,omitempty" yaml:"renames,omitempty" json:"renames,omitempty"`
 }
+
+// ToolCaseLower is the FrontmatterSpec.ToolCase value for lower-case tool names.
+const ToolCaseLower = "lower"
 
 // EffortMapSpec is the provider's effort tier → native value translation.
 // Style is currently always "string"; "budget" (numeric) will be added when
@@ -227,6 +267,14 @@ type SidecarSpec struct {
 	// this path and everything else to GlobalPath. Empty means the MCP servers go
 	// where GlobalPath says.
 	GlobalMCPPath string `toml:"global_mcp_path,omitempty" yaml:"global_mcp_path,omitempty" json:"global_mcp_path,omitempty"`
+	// Transports (kind "mcp") limits the sidecar to servers with these transports
+	// (stdio, http, sse); empty means every server. goose skips a whole plugin
+	// document that holds a remote entry, so its sidecar is stdio-only.
+	Transports []string `toml:"transports,omitempty" yaml:"transports,omitempty" json:"transports,omitempty"`
+	// EnvRefSyntax (kind "mcp") writes a value that came from a ${VAR} placeholder
+	// as a reference the tool expands itself instead of the resolved secret:
+	// "dollar" is $NAME (Codebuff), "env_prefix" is ${env:NAME} (Cursor).
+	EnvRefSyntax string `toml:"env_ref_syntax,omitempty" yaml:"env_ref_syntax,omitempty" json:"env_ref_syntax,omitempty"`
 	// Elements (kind "mcp" on a json or jsonc document) also adds values to an
 	// array member of the document, such as Kilo's `instructions` globs.
 	Elements *ElementsSpec `toml:"elements,omitempty" yaml:"elements,omitempty" json:"elements,omitempty"`
@@ -306,7 +354,10 @@ const (
 	SidecarPiMCPJSON          = "pi_mcp_json"
 	// Generic sidecar kinds. SidecarMCP is implemented; the other two are
 	// accepted by validation and reserved for later renderers.
-	SidecarMCP         = "mcp"
+	SidecarMCP = "mcp"
+	// SidecarChecks merges code-review checks into a YAML review-guideline
+	// document (dialects augment and gitlab-duo).
+	SidecarChecks      = "checks"
 	SidecarPermissions = "permissions"
 	SidecarHooks       = "hooks"
 

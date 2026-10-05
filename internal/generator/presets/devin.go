@@ -46,6 +46,12 @@ func (g *DevinPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *DevinPresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{RootFile: "AGENTS.md", RulesDir: ".devin/rules", SkillsDir: ".devin/skills", AgentsDir: ".devin/agents"}
+}
+
 // GlobalOutputPaths is the Devin user-scope layout under ~/.config/devin.
 func (g *DevinPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
 	return GlobalLayout{

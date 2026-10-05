@@ -57,6 +57,20 @@ sections = ["frontmatter", "content"]
 fields = ["description", "color"]
 tools = true
 emit_model = true
+# Augment's tool ids are view, str-replace-editor, launch-process, ...; the
+# bare Claude model aliases are no Augment model.
+drop_bare_aliases = true
+
+[outputs.agents.frontmatter.tool_names]
+Read = "view"
+Grep = "codebase-retrieval"
+Glob = "codebase-retrieval"
+Edit = "str-replace-editor"
+MultiEdit = "str-replace-editor"
+Write = "save-file"
+Bash = "launch-process"
+WebFetch = "web-fetch"
+WebSearch = "web-search"
 
 [model]
 field = "model"
@@ -79,7 +93,17 @@ omit_name = true
 kind = "mcp"
 path = ".augment/settings.json"
 format = "jsonc"
+# Augment keys a remote server on `type` (http or sse), as Claude Code does.
+dialect = "claude"
 global_path = ".augment/settings.json"
+
+# Code-review checks: Augment Code Review reads .augment/code_review_guidelines.yaml,
+# which people hand-write, so ai-rulez owns only the areas it renders (one area
+# per check, keyed by the check name). Severity critical is written as high.
+[[sidecars]]
+kind = "checks"
+path = ".augment/code_review_guidelines.yaml"
+dialect = "augment"
 
 [global]
 rules_dir = ".augment/rules"

@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
 // Reserved domain names that should not be used
@@ -17,6 +19,7 @@ var reservedDomainNames = map[string]bool{
 	ContentTypeSkills:   true,
 	ContentTypeAgents:   true,
 	ContentTypeCommands: true,
+	ContentTypeChecks:   true,
 	"mcp":               true,
 	".":                 true,
 	"..":                true,
@@ -113,6 +116,22 @@ func ValidateFileName(name string) error {
 	return nil
 }
 
+// ValidateCheckName validates the name of a check file. Check names reach output
+// paths and section markers, so they are restricted to [A-Za-z0-9._-].
+func ValidateCheckName(name string) error {
+	if err := ValidateFileName(name); err != nil {
+		return err
+	}
+	if !config.IsValidCheckName(name) {
+		return oops.
+			With("field", "file_name").
+			With("value", name).
+			Hint("Check names may only contain letters, digits, '.', '_' and '-'.").
+			Errorf("invalid check name: %s", name)
+	}
+	return nil
+}
+
 // ValidateFileType validates a file type
 func ValidateFileType(ftype string) error {
 	validTypes := map[string]bool{
@@ -121,13 +140,14 @@ func ValidateFileType(ftype string) error {
 		ContentTypeSkills:   true,
 		ContentTypeAgents:   true,
 		ContentTypeCommands: true,
+		ContentTypeChecks:   true,
 	}
 
 	if !validTypes[ftype] {
 		return oops.
 			With("field", "type").
 			With("value", ftype).
-			Hint("Valid types: rules, context, skills, agents, commands.").
+			Hint("Valid types: rules, context, skills, agents, commands, checks.").
 			Errorf("invalid file type: %s", ftype)
 	}
 

@@ -141,6 +141,16 @@ func SidecarIsMergedDocument(kind string) bool {
 	return isGenericSidecarKind(kind)
 }
 
+// aggregateChecksPath is the base-relative path of the file a spec's aggregate
+// checks output merges its marker block into, or "".
+func aggregateChecksPath(spec *ProviderSpec) string {
+	out := spec.Outputs[OutputTypeChecks]
+	if out == nil || out.Mode != OutputModeAggregate || out.File == "" {
+		return ""
+	}
+	return filepath.ToSlash(out.File)
+}
+
 // MergedSidecarPaths returns every base-relative, slash-separated path that a
 // builtin provider spec declares as a merged JSON document (see
 // SidecarIsMergedDocument). Derived from the embedded specs so the set cannot
@@ -153,6 +163,9 @@ func MergedSidecarPaths() []string {
 				continue
 			}
 			seen[filepath.ToSlash(sidecar.Path)] = true
+		}
+		if path := aggregateChecksPath(spec); path != "" {
+			seen[path] = true
 		}
 	}
 	paths := make([]string, 0, len(seen))
@@ -394,9 +407,20 @@ func renderClaudePluginsJSON(cfg *config.Config) (string, error) {
 // settings-style sidecars this document is a plain {mcpServers: {...}} file, so
 // it drops the escaping the shared `mcp_json` sidecar needs (pi has no `${VAR}`
 // expansion of its own to preserve) and emits the stdio `command/args/env`
-// form and the remote `url/headers` form.
+// form and the remote `url/headers` form. pi-mcp-adapter has no inline switch to
+// turn a server off (that is a command writing .pi/mcp-adapter.json), so a
+// disabled server is left out rather than written as an active one.
 func piMCPServerEntries(cfg *config.Config) map[string]any {
-	return presets.MCPServersByKey(cfg)
+	servers := presets.MCPServersByKey(cfg)
+	if cfg == nil {
+		return servers
+	}
+	for name, server := range cfg.MCPServers {
+		if server != nil && !server.IsEnabled() {
+			delete(servers, name)
+		}
+	}
+	return servers
 }
 
 // LegacyMergeClaims is what clean may take back out of a provider-owned merged

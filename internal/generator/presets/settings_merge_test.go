@@ -170,8 +170,8 @@ func TestGeminiPreset_SettingsJSON_WithoutMCPServers(t *testing.T) {
 	assert.Contains(t, settings.Content, `"GEMINI.local.md"`)
 }
 
-func TestAntigravityPreset_SettingsJSON_PreservesHandAuthoredKeys(t *testing.T) {
-	relPath := filepath.Join(".agents", "settings.json")
+func TestAntigravityPreset_MCPConfig_PreservesHandAuthoredKeys(t *testing.T) {
+	relPath := filepath.Join(".agents", "mcp_config.json")
 	baseDir := writeDocumentFixture(t, relPath, handAuthoredMCPDocument)
 
 	g := &AntigravityPresetGenerator{}
@@ -183,12 +183,21 @@ func TestAntigravityPreset_SettingsJSON_PreservesHandAuthoredKeys(t *testing.T) 
 
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
-	assert.Equal(t, "npx", servers["ai-rulez"]["command"])
-	assert.Equal(t, []any{"-y", "ai-rulez@latest", "mcp"}, servers["ai-rulez"]["args"])
+	assert.NotContains(t, servers, "ai-rulez", "the self server is opt-in ([mcp] self_server)")
 }
 
-func TestAntigravityPreset_SettingsJSON_SkippedWithoutMCPServers(t *testing.T) {
-	relPath := filepath.Join(".agents", "settings.json")
+func TestAntigravityPreset_NoLongerWritesSettingsJSON(t *testing.T) {
+	baseDir := t.TempDir()
+
+	outputs, err := (&AntigravityPresetGenerator{}).Generate(&config.ContentTree{}, baseDir, mergeFixtureConfig())
+	require.NoError(t, err)
+
+	_, found := findOutput(outputs, filepath.Join(baseDir, ".agents", "settings.json"))
+	assert.False(t, found, "nothing reads .agents/settings.json")
+}
+
+func TestAntigravityPreset_MCPConfig_SkippedWithoutMCPServers(t *testing.T) {
+	relPath := filepath.Join(".agents", "mcp_config.json")
 	baseDir := writeDocumentFixture(t, relPath, handAuthoredMCPDocument)
 
 	g := &AntigravityPresetGenerator{}
@@ -196,7 +205,7 @@ func TestAntigravityPreset_SettingsJSON_SkippedWithoutMCPServers(t *testing.T) {
 	require.NoError(t, err)
 
 	_, found := findOutput(outputs, filepath.Join(baseDir, relPath))
-	assert.False(t, found, "no MCP servers configured, so no settings.json output")
+	assert.False(t, found, "no MCP servers configured, so no mcp_config.json output")
 
 	onDisk, readErr := os.ReadFile(filepath.Join(baseDir, relPath))
 	require.NoError(t, readErr)
@@ -245,7 +254,7 @@ func TestLegacyPresets_JSONDocument_GreenfieldIsWhollyOwned(t *testing.T) {
 		relPath   string
 	}{
 		"gemini":      {generator: &GeminiPresetGenerator{}, relPath: filepath.Join(".gemini", "settings.json")},
-		"antigravity": {generator: &AntigravityPresetGenerator{}, relPath: filepath.Join(".agents", "settings.json")},
+		"antigravity": {generator: &AntigravityPresetGenerator{}, relPath: filepath.Join(".agents", "mcp_config.json")},
 		"cursor":      {generator: &CursorPresetGenerator{}, relPath: ".mcp.json"},
 		"copilot":     {generator: &CopilotPresetGenerator{}, relPath: ".mcp.json"},
 	} {
