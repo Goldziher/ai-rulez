@@ -482,6 +482,18 @@ lists each removal as `delete-stale:`, and `verify --plugin` fails while a stale
 directory exists. Removing the whole `[marketplace]` domain-plugin configuration cannot be
 detected, because the output root is no longer known; delete that tree by hand.
 
+#### Obsolete files inside a bundle
+
+When a skill, command or agent is removed from the sources, the next `generate --plugin` also
+deletes the files it generated in every bundle that stays (for every runtime), then the
+directories they leave empty. The previous run's `.ai-rulez-generated.json` is the record: only a
+file it lists, that the new plan no longer contains, and whose content still matches the recorded
+hash is deleted. An obsolete file you edited since, or one reached through a symlink that leaves
+the project, is kept with a warning, and a file the sidecar never listed is never touched.
+`generate --plugin --dry-run` prints `delete-stale: <path>` for each deletion and
+`keep-obsolete: <path>` for each kept file, and `verify --plugin` fails with
+`obsolete generated plugin file` while such a file exists.
+
 #### Linked git worktrees
 
 With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a

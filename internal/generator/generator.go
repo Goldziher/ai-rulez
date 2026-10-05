@@ -303,6 +303,13 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err := checkPluginGenerated(expected); err != nil {
 		return err
 	}
+	obsolete, err := g.planPluginPrune(expected)
+	if err != nil {
+		return err
+	}
+	if len(obsolete) > 0 {
+		return obsoleteFilesError(obsolete)
+	}
 	if err := verifyPluginOutputs(expected); err != nil {
 		return err
 	}
