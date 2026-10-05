@@ -36,6 +36,14 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateRoles(); err != nil {
+		return err
+	}
+
+	if err := c.validateLock(); err != nil {
+		return err
+	}
+
 	if err := c.validateSkillDescriptions(); err != nil {
 		return err
 	}

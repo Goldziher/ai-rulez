@@ -738,6 +738,111 @@
       },
       "additionalProperties": false
     },
+    "roles": {
+      "type": "array",
+      "description": "Roles map a person's job to a slice of the shared content. Select one with `ai-rulez generate --role <name>`. ai-rulez never decides who holds a role; an external tool picks the name (see `match`).",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "description": "Role name, as passed to --role."
+          },
+          "description": { "type": "string" },
+          "extends": {
+            "type": "string",
+            "description": "Name of one parent role (one level only). Domains and excludes are unioned, includes are unioned when both set one, skill_mode is merged with the child winning. match is not inherited."
+          },
+          "domains": {
+            "type": "array",
+            "description": "Domains the role selects, with the same meaning as a profile's list (builtin:<name> allowed).",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "skills": {
+            "type": "object",
+            "description": "Include/exclude selectors for skills. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            },
+            "additionalProperties": false
+          },
+          "rules": {
+            "type": "object",
+            "description": "Include/exclude selectors for rules. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            },
+            "additionalProperties": false
+          },
+          "agents": {
+            "type": "object",
+            "description": "Include/exclude selectors for agents. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            },
+            "additionalProperties": false
+          },
+          "commands": {
+            "type": "object",
+            "description": "Include/exclude selectors for commands. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            },
+            "additionalProperties": false
+          },
+          "skill_mode": {
+            "type": "object",
+            "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",
+            "additionalProperties": { "enum": ["on", "name-only", "user-invocable-only", "off"] }
+          },
+          "match": {
+            "type": "object",
+            "description": "Hints for an external identity tool. ai-rulez stores and republishes them in roles.json and never interprets them.",
+            "properties": {
+              "groups": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "role_manifest": {
+      "type": "object",
+      "description": "Options for the roles.json manifest (a separate table because roles is an array).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Write <config dir>/roles.json on generate: every role with its resolved item ids, byte sizes and token estimates."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lock": {
+      "type": "object",
+      "description": "Content pinning in ai-rulez.lock (see docs/lockfile.md).",
+      "properties": {
+        "enforce": {
+          "type": "boolean",
+          "description": "Report content drift as AR981/AR982 in `validate --strict`, and make `lock --check` fail on a lock without content pins."
+        },
+        "include_outputs": {
+          "type": "boolean",
+          "description": "Also pin digests of generated output files. Defaults to true."
+        },
+        "scope": {
+          "enum": ["all", "skills"],
+          "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only."
+        }
+      },
+      "additionalProperties": false
+    },
     "usage": {
       "type": "object",
       "description": "Usage-telemetry support (opt-in, no network).",
