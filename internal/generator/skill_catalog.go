@@ -34,7 +34,12 @@ type ServedSkill struct {
 	// Pinned reports that Ref is a full commit SHA rather than a moving ref.
 	Pinned   bool
 	Keywords []string
+	// Triggers are the phrases the skill declares (frontmatter `triggers`) that
+	// should make an agent look for it.
+	Triggers []string
 	Category string
+	// Delivery is the skill's effective delivery (static, served or both).
+	Delivery config.Delivery
 	// Files lists SKILL.md first, then the supporting files in path order.
 	Files []ServedSkillFile
 }
@@ -78,6 +83,7 @@ func (g *Generator) skillPresetCandidates(preset string) []string {
 
 func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill, error) {
 	cfg := *g.config
+	cfg.ServeMode = true
 	cfg.Presets = []config.Preset{{BuiltIn: preset, Name: preset}}
 	for i := range g.config.Presets {
 		if g.config.Presets[i].GetName() == preset {
@@ -113,6 +119,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 		if owner, ok := owners[skill.ID]; ok {
 			skill.Domain, skill.Source, skill.Ref, skill.Pinned = owner.domain, owner.source, owner.ref, owner.pinned
 			skill.Keywords, skill.Category = owner.keywords, owner.category
+			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -144,6 +151,8 @@ type skillOwner struct {
 	domain, source, ref string
 	pinned              bool
 	keywords            []string
+	triggers            []string
+	delivery            config.Delivery
 	category            string
 }
 
@@ -163,9 +172,10 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 			if _, dup := owners[id]; dup {
 				continue
 			}
-			o := skillOwner{domain: domain, source: relSource(cfg.BaseDir, f.Path)}
+			o := skillOwner{domain: domain, source: relSource(cfg.BaseDir, f.Path), delivery: cfg.EffectiveDelivery(f, domain, nil)}
 			if f.Metadata != nil {
 				o.keywords, o.category = f.Metadata.Keywords, f.Metadata.Category
+				o.triggers = f.Metadata.ExtraList("triggers")
 			}
 			if inst, ok := installed[f.Name]; ok {
 				o.source, o.ref, o.pinned = inst.Source, inst.Ref, isCommitSHA(inst.Ref)
