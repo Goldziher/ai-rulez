@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ai-rulez",
+          "version": "1.2.3",
+          "informationUri": "https://github.com/Goldziher/ai-rulez",
+          "rules": [
+            {
+              "id": "AR001",
+              "name": "secret-detected",
+              "shortDescription": {
+                "text": "secret-detected"
+              },
+              "fullDescription": {
+                "text": "a credential pattern (cloud key, token, private key or a configured pattern) appears in content or a script"
+              },
+              "help": {
+                "text": "a credential pattern (cloud key, token, private key or a configured pattern) appears in content or a script.\nA credential committed into instructions or scripts is readable by everyone with repository access and is sent to the model provider with the prompt.\nBad: `export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE` in a skill script\nGood: Read the value from the environment: `aws sts get-caller-identity` with credentials from the shell",
+                "markdown": "**a credential pattern (cloud key, token, private key or a configured pattern) appears in content or a script**\n\nA credential committed into instructions or scripts is readable by everyone with repository access and is sent to the model provider with the prompt.\n\n- Bad: `export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE` in a skill script\n- Good: Read the value from the environment: `aws sts get-caller-identity` with credentials from the shell\n\n[Documentation](https://goldziher.github.io/ai-rulez/strict-validation/#ar001-secret-detected)"
+              },
+              "helpUri": "https://goldziher.github.io/ai-rulez/strict-validation/#ar001-secret-detected",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "tags": [
+                  "security",
+                  "ai-instructions"
+                ]
+              }
+            },
+            {
+              "id": "AR202",
+              "name": "anchor-unresolved",
+              "shortDescription": {
+                "text": "anchor-unresolved"
+              },
+              "fullDescription": {
+                "text": "a markdown link anchor matches no heading in the target"
+              },
+              "help": {
+                "text": "a markdown link anchor matches no heading in the target.\nThe target file exists but has no heading producing the anchor, so the link lands at the top of the file.\nBad: `[setup](README.md#setup)` when the heading is now \"Installation\"\nGood: `[setup](README.md#installation)`",
+                "markdown": "**a markdown link anchor matches no heading in the target**\n\nThe target file exists but has no heading producing the anchor, so the link lands at the top of the file.\n\n- Bad: `[setup](README.md#setup)` when the heading is now \"Installation\"\n- Good: `[setup](README.md#installation)`\n\n[Documentation](https://goldziher.github.io/ai-rulez/strict-validation/#ar202-anchor-unresolved)"
+              },
+              "helpUri": "https://goldziher.github.io/ai-rulez/strict-validation/#ar202-anchor-unresolved",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "quality",
+                  "ai-instructions"
+                ]
+              }
+            },
+            {
+              "id": "AR401",
+              "name": "path-missing",
+              "shortDescription": {
+                "text": "path-missing"
+              },
+              "fullDescription": {
+                "text": "a backticked repo path does not exist"
+              },
+              "help": {
+                "text": "a backticked repo path does not exist.\nA backticked repository path that does not exist is stale guidance that misleads the model.\nBad: `Edit src/old_module/api.py` after the module moved\nGood: Update the path, or list generated paths in lint.allow_paths",
+                "markdown": "**a backticked repo path does not exist**\n\nA backticked repository path that does not exist is stale guidance that misleads the model.\n\n- Bad: `Edit src/old_module/api.py` after the module moved\n- Good: Update the path, or list generated paths in lint.allow_paths\n\n[Documentation](https://goldziher.github.io/ai-rulez/strict-validation/#ar401-path-missing)"
+              },
+              "helpUri": "https://goldziher.github.io/ai-rulez/strict-validation/#ar401-path-missing",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "quality",
+                  "ai-instructions"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AR001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "AWS access key id AKIA**** found"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".ai-rulez/rules/a%20b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "aiRulezFingerprint/v1": "ar1:aaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "properties": {
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "AR401",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "path \"src/x.go\" does not exist | really,\nreally"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".ai-rulez/skills/s/SKILL.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "aiRulezFingerprint/v1": "ar1:bbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "ruleId": "AR202",
+          "ruleIndex": 1,
+          "level": "note",
+          "message": {
+            "text": "no heading produces #x"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "README.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "aiRulezFingerprint/v1": "ar1:cccccccccccccccccccccccc"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

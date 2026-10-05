@@ -201,6 +201,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		}
 		return a.Code < b.Code
 	})
+	assignIdentity(r.findings, tree, r.cwd)
 	return &Report{Root: r.display(baseAbs), Findings: r.findings}, nil
 }
 
