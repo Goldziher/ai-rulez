@@ -343,3 +343,14 @@ runtimes = ["claude", "codex"]
 	assert.NotContains(t, byRel[".agents/plugins/marketplace.json"], `"teama"`)
 	assert.Contains(t, byRel[".claude-plugin/marketplace.json"], `"teama"`)
 }
+
+func TestVerifyPlugin_NotGeneratedMessage(t *testing.T) {
+	dir := newDomainsProject(t, "\n[marketplace]\nname = \"mk\"\noutput_dir = \"mkt\"\n[marketplace.from_domains]\n")
+	gen := loadDomainsProject(t, dir)
+
+	err := gen.VerifyPlugin("")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPluginNotGenerated)
+	assert.Equal(t, "plugin bundle not generated; run ai-rulez generate --plugin", err.Error())
+}
