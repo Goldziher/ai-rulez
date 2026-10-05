@@ -347,6 +347,12 @@ Rules:
   and is reported as not found.
 - **A profile name may not contain a comma**, since it could then never be selected.
 
+## Roles
+
+When the question is "what should a backend engineer or a support agent get on their machine" rather than "what
+does this repository ship", use [Roles](roles.md): they add per-kind `include` / `exclude` selectors, one level
+of inheritance and a per-skill `skill_mode` on top of a domain list, and are selected with `generate --role`.
+
 ## Advanced Profile Combinations
 
 ### Multi-Level Profiles

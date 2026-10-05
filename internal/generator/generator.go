@@ -68,6 +68,10 @@ type Generator struct {
 	userMode   bool
 	projectDir string
 	warned     map[string]bool // merged-document warnings already issued by this Generator
+
+	// role is the flattened role a `generate --role` run renders; nil otherwise.
+	// It replaces the profile selection (see roles.go).
+	role *config.RoleConfig
 }
 
 type generatedManifest struct {
@@ -846,6 +850,13 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	if index, ok := g.skillsIndexOutput(contentTree, render.byPreset); ok {
 		flatOutputs = append(flatOutputs, index)
 	}
+	manifest, ok, err := g.rolesManifestOutput()
+	if err != nil {
+		return nil, "", err
+	}
+	if ok {
+		flatOutputs = append(flatOutputs, manifest)
+	}
 
 	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
 	if err != nil {
@@ -1194,6 +1205,9 @@ func (g *Generator) resolveProfile(profile string) string {
 
 // getContentForProfile returns the shared content tree for a specific profile.
 func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, error) {
+	if g.role != nil {
+		return g.config.FilterTreeForRole(g.config.Content, g.role)
+	}
 	return selectProfileContent(g.config, g.config.Content, profile)
 }
 

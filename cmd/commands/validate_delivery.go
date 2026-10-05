@@ -19,7 +19,7 @@ import (
 // entry (AR993) and lock enforcement (AR995). It returns nothing for a project
 // that serves no skill.
 func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
-	served := cfg.DeliveryConfigured(cfg.Content)
+	served := cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
 	if !served && len(cfg.SkillSources) == 0 {
 		return nil
 	}

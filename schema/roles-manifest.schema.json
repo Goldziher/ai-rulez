@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/roles-manifest.schema.json",
+  "title": "ai-rulez roles manifest",
+  "description": "roles.json, written next to config.toml by `ai-rulez generate` when [role_manifest] enabled = true, and printed by `ai-rulez roles list --format json`. A stable, deterministic (no timestamps) interface for an identity tool or a UI: every role with the items it resolves to.",
+  "type": "object",
+  "required": ["schema_version", "tokenizer", "roles"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Bumped on any incompatible change."
+    },
+    "tokenizer": {
+      "type": "string",
+      "description": "Counter used for every tokens figure (an approximation)."
+    },
+    "roles": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/role" }
+    }
+  },
+  "definitions": {
+    "role": {
+      "type": "object",
+      "required": ["name", "domains", "items", "totals"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "extends": { "type": "string" },
+        "match": {
+          "type": "object",
+          "description": "Hints an external tool maps to this role (for example identity-provider groups). ai-rulez never interprets them. Not inherited through extends.",
+          "additionalProperties": false,
+          "properties": {
+            "groups": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Domains the role selects, inherited ones included."
+        },
+        "skill_modes": {
+          "type": "object",
+          "description": "Skill id to the Claude Code skillOverrides state the role sets.",
+          "additionalProperties": { "enum": ["on", "name-only", "user-invocable-only", "off"] }
+        },
+        "delivery": {
+          "type": "object",
+          "description": "Skill id or glob (domain/id for one domain) to the delivery the role sets, inherited entries merged in.",
+          "additionalProperties": { "enum": ["static", "served", "both"] }
+        },
+        "items": { "type": "array", "items": { "$ref": "#/definitions/item" } },
+        "totals": {
+          "type": "object",
+          "required": ["items", "bytes", "tokens", "by_kind", "served_skills", "served_tokens"],
+          "additionalProperties": false,
+          "properties": {
+            "items": { "type": "integer", "minimum": 0 },
+            "bytes": { "type": "integer", "minimum": 0 },
+            "tokens": { "type": "integer", "minimum": 0 },
+            "served_skills": { "type": "integer", "minimum": 0, "description": "Skills the role gets through the skills server only (not listed in context)." },
+            "served_tokens": { "type": "integer", "minimum": 0, "description": "Share of tokens held by those skills." },
+            "by_kind": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["kind", "id", "bytes", "tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["rule", "skill", "agent", "command"] },
+        "id": { "type": "string" },
+        "domain": { "type": "string", "description": "Empty (absent) for root content." },
+        "path": { "type": "string", "description": "Source path relative to the configuration directory." },
+        "mode": {
+          "enum": ["on", "name-only", "user-invocable-only", "off"],
+          "description": "skill_mode the role sets for this skill."
+        },
+        "delivery": { "enum": ["static", "served", "both"], "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both." },
+        "owner": { "type": "string" },
+        "version": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0, "description": "Source size on disk; a skill counts its resources." },
+        "tokens": { "type": "integer", "minimum": 0, "description": "Estimate for the primary file." }
+      }
+    }
+  }
+}

@@ -92,6 +92,11 @@ const (
 	CodeSupersededMissing    = "AR954"
 	CodePluginVersionDrift   = "AR961"
 	CodeEvalsMissing         = "AR962"
+	CodeRoleReferenceUnknown = "AR971"
+	CodeRoleExtendsInvalid   = "AR972"
+	CodeRoleUnreachable      = "AR973"
+	CodeLockSourceDrift      = "AR981"
+	CodeLockOutputDrift      = "AR982"
 )
 
 // RuleInfo describes one check.
@@ -144,6 +149,11 @@ var registry = []RuleInfo{
 	{CodeSupersededMissing, "superseded-by-missing", SeverityError, "a deprecated item names a superseded_by replacement that does not exist"},
 	{CodePluginVersionDrift, "plugin-version-drift", SeverityWarning, "a generated plugin's content changed since HEAD but its version did not, so installs keep the cached copy"},
 	{CodeEvalsMissing, "evals-missing", SeverityOff, "a skill has no eval cases (enabled by lint.evals.require or lint.severity; exempt skills go in lint.evals.allow)"},
+	{CodeRoleReferenceUnknown, "role-reference-unknown", SeverityError, "a role names a domain, skill, rule, agent or command that does not exist (or exists only in a domain the role does not select)"},
+	{CodeRoleExtendsInvalid, "role-extends-invalid", SeverityError, "a role extends an unknown role, takes part in an extends cycle, or extends a role that itself extends another (one level only)"},
+	{CodeRoleUnreachable, "role-unreachable-dependency", SeverityWarning, "a kept item lists a skill in its skills: frontmatter that the role drops or hides from the model"},
+	{CodeLockSourceDrift, "lock-source-drift", SeverityError, "an authored item differs from the content pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
+	{CodeLockOutputDrift, "lock-output-drift", SeverityError, "a generated output differs from the digest pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
 }
 
 // Rules returns the registry sorted by code.

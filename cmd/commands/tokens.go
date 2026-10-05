@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 	"github.com/samber/oops"
@@ -19,6 +20,8 @@ var (
 	tokensBudget          int
 	tokensCompareProfiles []string
 	tokensTokenizer       string
+	tokensRole            string
+	tokensByRole          bool
 )
 
 // TokensCmd reports the token surface of the generated configuration.
@@ -67,6 +70,8 @@ func init() {
 		"Report this profile as one column of a comparison table; repeat per column")
 	TokensCmd.Flags().StringVar(&tokensTokenizer, "tokenizer", tokens.CounterCL100KBase,
 		"Token counter to use: "+strings.Join(tokens.Names(), " or "))
+	TokensCmd.Flags().StringVar(&tokensRole, flagRole, "", "Report on this role's content slice instead of a profile (see `ai-rulez roles list`)")
+	TokensCmd.Flags().BoolVar(&tokensByRole, "by-role", false, "Report every declared role as one column of a comparison table")
 	TokensCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to report on, or a comma-separated list to compose several")
 	TokensCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -92,18 +97,24 @@ func runTokens(out io.Writer, args []string) (overBudget bool, err error) {
 		return false, err
 	}
 
-	profiles := tokensCompareProfiles
-	if len(profiles) == 0 {
-		profiles = []string{profile}
+	targets, err := tokenTargets(cfg)
+	if err != nil {
+		return false, err
 	}
 
-	reports := make([]*generator.TokenReport, 0, len(profiles))
-	for _, name := range profiles {
-		// A fresh Generator per profile: collectOutputs writes SourceHash onto the
-		// config it holds, so reusing one across profiles would carry a stale hash
-		// into the next report.
-		report, err := generator.NewGenerator(cfg).TokenReport(generator.TokenReportOptions{
-			Profile: name,
+	reports := make([]*generator.TokenReport, 0, len(targets))
+	for _, target := range targets {
+		// A fresh Generator per profile or role: collectOutputs writes SourceHash
+		// onto the config it holds, so reusing one across reports would carry a
+		// stale hash into the next.
+		gen := generator.NewGenerator(cfg)
+		if target.role != "" {
+			if err := gen.SetRole(target.role); err != nil {
+				return false, err //nolint:wrapcheck // already contextual
+			}
+		}
+		report, err := gen.TokenReport(generator.TokenReportOptions{
+			Profile: target.profile,
 			Counter: counter,
 			Budget:  tokensBudget,
 		})
@@ -328,4 +339,40 @@ func wrapNote(note string, width int, indent string) string {
 	}
 	lines = append(lines, current)
 	return strings.Join(lines, "\n"+indent)
+}
+
+type tokenTarget struct{ profile, role string }
+
+// tokenTargets lists what to report on: the compared profiles, one role, or every role.
+func tokenTargets(cfg *config.Config) ([]tokenTarget, error) {
+	if (tokensRole != "" || tokensByRole) && (profile != "" || len(tokensCompareProfiles) > 0) {
+		return nil, oops.Hint("Use --role or --by-role on its own, or --profile/--compare-profiles").
+			Errorf("--role and --by-role cannot be combined with --profile or --compare-profiles")
+	}
+	if tokensRole != "" && tokensByRole {
+		return nil, oops.Errorf("--role and --by-role are mutually exclusive")
+	}
+	switch {
+	case tokensByRole:
+		names := cfg.RoleNames()
+		if len(names) == 0 {
+			return nil, oops.Hint("Declare [[roles]] in config.toml").Errorf("no roles are defined")
+		}
+		targets := make([]tokenTarget, 0, len(names))
+		for _, name := range names {
+			targets = append(targets, tokenTarget{role: name})
+		}
+		return targets, nil
+	case tokensRole != "":
+		return []tokenTarget{{role: tokensRole}}, nil
+	}
+	profiles := tokensCompareProfiles
+	if len(profiles) == 0 {
+		profiles = []string{profile}
+	}
+	targets := make([]tokenTarget, 0, len(profiles))
+	for _, name := range profiles {
+		targets = append(targets, tokenTarget{profile: name})
+	}
+	return targets, nil
 }
