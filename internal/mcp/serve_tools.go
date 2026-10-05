@@ -128,7 +128,7 @@ func (s *Server) lookupServed(name string) (*CatalogSkill, error) {
 		return skill, nil
 	}
 	if r, refused := cat.Refusal(key); refused {
-		return nil, fmt.Errorf("skill %q is refused: %s", key, r.Reason)
+		return nil, fmt.Errorf("skill %q is refused (%s): %s", key, r.Code, r.Reason)
 	}
 	return nil, fmt.Errorf("no served skill %q; call find_skill to see what is available", key)
 }
