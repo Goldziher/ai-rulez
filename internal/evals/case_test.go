@@ -203,3 +203,55 @@ func TestDigests_SkillDigestIgnoresEvals(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, c1, c2)
 }
+
+func TestLoadCases_RejectsSymlinkedEscapes(t *testing.T) {
+	cfg := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("TOP SECRET"), 0o600))
+	skillDir := filepath.Join(cfg, "skills", "deploy")
+	evalDir := filepath.Join(skillDir, "evals")
+	require.NoError(t, os.MkdirAll(evalDir, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink(outside, filepath.Join(evalDir, "link")))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "ok.txt"), []byte("fine"), 0o600))
+	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(evalDir, "file-link.txt")))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "a.eval.yaml"), []byte(
+		"cases:\n  - id: a\n    prompt_file: link/secret.txt\n    expect_trigger: true\n    files:\n      - path: f.txt\n        source: link/secret.txt\n"+
+			"  - id: b\n    prompt_file: file-link.txt\n    expect_trigger: true\n"+
+			"  - id: c\n    prompt_file: /etc/passwd\n    expect_trigger: true\n"), 0o600))
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	cases, problems := LoadCases(&skills[0])
+	require.NotEmpty(t, problems)
+	for i := range cases {
+		assert.NotContains(t, cases[i].Prompt, "TOP SECRET")
+		for _, f := range cases[i].Files {
+			assert.NotContains(t, f.Content, "TOP SECRET")
+		}
+	}
+	var text []string
+	for _, p := range problems {
+		text = append(text, p.Message)
+	}
+	assert.Contains(t, strings.Join(text, "\n"), "outside")
+}
+
+func TestFindSkills_RejectsEvalDirThatEscapesTheProject(t *testing.T) {
+	cfg := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("TOP SECRET"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "a.eval.yaml"), []byte(
+		"cases:\n  - id: a\n    prompt_file: secret.txt\n    expect_trigger: true\n"), 0o600))
+	skillDir := filepath.Join(cfg, "skills", "deploy")
+	require.NoError(t, os.MkdirAll(skillDir, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink(outside, filepath.Join(skillDir, "evals")))
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	cases, problems := LoadCases(&skills[0])
+	assert.Empty(t, cases)
+	require.NotEmpty(t, problems)
+	assert.Contains(t, problems[0].Message, "outside")
+}

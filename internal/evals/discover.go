@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -28,6 +29,9 @@ type Skill struct {
 	Dir string
 	// EvalDirs are the absolute directories searched for cases that exist.
 	EvalDirs []string
+	// Escaped lists eval directories left out because they resolve (through a
+	// symlink) to somewhere outside the config directory.
+	Escaped []string
 }
 
 // FindSkills lists the skills under a config directory (root skills, then domain
@@ -84,9 +88,14 @@ func skillsIn(configDir, skillsDir, domain string) ([]Skill, error) {
 		}
 		skill := Skill{ID: entry.Name(), Domain: domain, Dir: dir}
 		for _, candidate := range []string{filepath.Join(dir, "evals"), filepath.Join(configDir, ProjectEvalsDir, entry.Name())} {
-			if info, statErr := os.Stat(candidate); statErr == nil && info.IsDir() {
-				skill.EvalDirs = append(skill.EvalDirs, candidate)
+			if info, statErr := os.Stat(candidate); statErr != nil || !info.IsDir() {
+				continue
 			}
+			if !resolvedInside(configDir, candidate) {
+				skill.Escaped = append(skill.Escaped, candidate)
+				continue
+			}
+			skill.EvalDirs = append(skill.EvalDirs, candidate)
 		}
 		out = append(out, skill)
 	}
@@ -100,6 +109,9 @@ func LoadCases(skill *Skill) ([]Case, []Problem) {
 	var cases []Case
 	var problems []Problem
 	ids := map[string]string{}
+	for _, dir := range skill.Escaped {
+		problems = append(problems, Problem{File: dir, Line: 1, Message: "eval directory resolves outside the config directory through a symlink"})
+	}
 	for _, dir := range skill.EvalDirs {
 		for _, file := range caseFiles(dir) {
 			data, err := readBounded(file)
@@ -142,12 +154,22 @@ func (c *Case) resolve(root string) []Problem {
 			fail("%q points outside %s", rel, root)
 			return "", false
 		}
-		info, err := os.Lstat(full)
+		// Every path component may be a symlink, so judge the resolved path.
+		real, err := filepath.EvalSymlinks(full)
+		if err != nil {
+			fail("%q is not a regular file", rel)
+			return "", false
+		}
+		if !resolvedInside(root, real) {
+			fail("%q points outside %s", rel, root)
+			return "", false
+		}
+		info, err := os.Stat(real)
 		if err != nil || !info.Mode().IsRegular() {
 			fail("%q is not a regular file", rel)
 			return "", false
 		}
-		data, err := readBounded(full)
+		data, err := readBounded(real)
 		if err != nil {
 			fail("%v", err)
 			return "", false
@@ -174,15 +196,34 @@ func within(root, target string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// resolvedInside reports whether target, after resolving every symlink in both
+// paths, lies inside root. Either path that cannot be resolved is outside.
+func resolvedInside(root, target string) bool {
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	realTarget, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		return false
+	}
+	return within(realRoot, realTarget)
+}
+
 func readBounded(file string) ([]byte, error) {
-	info, err := os.Stat(file)
+	f, err := os.Open(file) //nolint:gosec // the path comes from walking the user's eval tree
 	if err != nil {
 		return nil, err
 	}
-	if info.Size() > maxCaseFileBytes {
+	defer f.Close() //nolint:errcheck // read-only handle
+	data, err := io.ReadAll(io.LimitReader(f, maxCaseFileBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxCaseFileBytes {
 		return nil, fmt.Errorf("file is larger than %d bytes", maxCaseFileBytes)
 	}
-	return os.ReadFile(file) //nolint:gosec // the path comes from walking the user's eval tree
+	return data, nil
 }
 
 // caseFiles lists the case files below dir in path order, skipping hidden entries
