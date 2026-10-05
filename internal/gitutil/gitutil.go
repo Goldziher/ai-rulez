@@ -468,3 +468,38 @@ func ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
 	}
 	return out, true
 }
+
+// ChangedSince lists the files that differ between rev and the working tree
+// (committed, staged and unstaged changes, including deletions) plus untracked
+// files that are not ignored, as slash paths relative to the repository root.
+// dir may be any directory inside the repository. An unknown rev, a directory
+// outside a repository, or a rev that looks like an option is an error.
+func ChangedSince(dir, rev string) ([]string, error) {
+	rev = strings.TrimSpace(rev)
+	if rev == "" || strings.HasPrefix(rev, "-") {
+		return nil, oops.Errorf("invalid git revision %q", rev)
+	}
+	top := TopLevel(dir)
+	if top == "" {
+		return nil, oops.Errorf("%s is not inside a git repository", dir)
+	}
+	diff, _, err := run(top, nil, "diff", "--name-only", "-z", "--no-renames", rev, "--")
+	if err != nil {
+		return nil, oops.Hint("Check that the revision exists (git rev-parse --verify "+rev+")").Wrapf(err, "list files changed since %s", rev)
+	}
+	others, _, err := run(top, nil, "ls-files", "--others", "--exclude-standard", "-z")
+	if err != nil {
+		return nil, oops.Wrapf(err, "list untracked files")
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, chunk := range [][]byte{diff, others} {
+		for _, p := range strings.Split(string(chunk), "\x00") {
+			if p != "" && !seen[p] {
+				seen[p] = true
+				out = append(out, p)
+			}
+		}
+	}
+	return out, nil
+}
