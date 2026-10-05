@@ -233,7 +233,7 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		p.run.Status = RunNoCases
 		return p, nil
 	case len(problems) > 0:
-		p.run.Status, p.run.Problems = RunInvalid, problems
+		p.run.Status, p.run.Problems = RunInvalid, e.relativize(problems)
 		return p, nil
 	}
 	cases := Expand(authored)
@@ -257,6 +257,20 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		p.run.Status = RunCached
 	}
 	return p, nil
+}
+
+// relativize makes problem paths relative to the project (the directory holding
+// the config directory), so reports do not differ between checkouts.
+func (e *engine) relativize(problems []Problem) []Problem {
+	root := filepath.Dir(e.opts.ConfigDir)
+	out := make([]Problem, len(problems))
+	for i, p := range problems {
+		if rel, err := filepath.Rel(root, p.File); err == nil && within(root, p.File) {
+			p.File = filepath.ToSlash(rel)
+		}
+		out[i] = p
+	}
+	return out
 }
 
 func (e *engine) cacheKey(run *SkillRun) string {
