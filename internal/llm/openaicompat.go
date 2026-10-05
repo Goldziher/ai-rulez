@@ -50,6 +50,11 @@ func newOpenAICompat(cfg Config, getenv func(string) string, hc *http.Client) (*
 	if hc == nil {
 		hc = &http.Client{}
 	}
+	// Never follow a redirect: it would re-POST the prompt to a host the user did not configure.
+	// A 3xx surfaces as a provider error.
+	noRedirect := *hc
+	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	hc = &noRedirect
 	return &openAICompat{baseURL: base, apiKey: key, model: cfg.Model, embedModel: cfg.EmbeddingModel, pricing: NewPricing(cfg), http: hc}, nil
 }
 

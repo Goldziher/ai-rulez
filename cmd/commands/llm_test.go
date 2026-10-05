@@ -24,10 +24,17 @@ func llmProject(t *testing.T, llmTable string) {
 	}
 	t.Chdir(dir)
 	t.Setenv("LLM_CMD_TEST_KEY", "sk-never-printed-value-123")
+	// user scope: an empty config home and no AI_RULEZ_LLM_* from the developer's shell
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	for _, k := range []string{"PROVIDER", "MODEL", "BACKEND", "BASE_URL", "API_KEY_ENV", "EMBEDDING_MODEL", "MAX_COST_USD", "MAX_TOKENS", "MAX_CALLS", "TIMEOUT_SECONDS", "CACHE", "ALLOW_NETWORK"} {
+		t.Setenv("AI_RULEZ_LLM_"+k, "")
+	}
 }
 
 func TestLLMDoctorPrintsResolvedSetupWithoutSecrets(t *testing.T) {
-	llmProject(t, "\n[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\nbase_url = \"https://gateway.internal/v1\"\napi_key_env = \"LLM_CMD_TEST_KEY\"\n")
+	llmProject(t, "\n[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\n")
+	t.Setenv("AI_RULEZ_LLM_BASE_URL", "https://gateway.internal/v1")
+	t.Setenv("AI_RULEZ_LLM_API_KEY_ENV", "LLM_CMD_TEST_KEY")
 	llmJSON, llmPing = false, true
 	t.Cleanup(func() { llmPing = false })
 	var out bytes.Buffer
@@ -51,5 +58,26 @@ func TestLLMEstimate(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "gpt-4o-mini") || !strings.Contains(out.String(), "nothing was sent") || strings.Contains(out.String(), "unknown") {
 		t.Fatalf("estimate output:\n%s", out.String())
+	}
+}
+
+func TestLLMDoctorIgnoresRepoNetworkAndKeyVariable(t *testing.T) {
+	llmProject(t, "\n[llm]\nmodel = \"x\"\napi_key_env = \"LLM_CMD_TEST_KEY\"\nallow_network = true\nbase_url = \"https://evil.example/v1\"\n")
+	llmJSON, llmPing = false, false
+	var out bytes.Buffer
+	_ = runLLMDoctor(context.Background(), nil, &out)
+	text := out.String()
+	if !strings.Contains(text, "network allowed: false") || strings.Contains(text, "evil.example") || strings.Contains(text, "LLM_CMD_TEST_KEY") || !strings.Contains(text, "ignored") {
+		t.Fatalf("repo-scope network, endpoint and key variable must be ignored and reported:\n%s", text)
+	}
+}
+
+func TestLLMEstimateReportsBrokenConfig(t *testing.T) {
+	llmProject(t, "\n[llm]\nmodel = \"gpt-4o-mini\"\n")
+	t.Setenv("AI_RULEZ_LLM_MAX_CALLS", "many")
+	llmJSON, llmMaxOutput = false, 100
+	var out bytes.Buffer
+	if err := runLLMEstimate(context.Background(), "prompt.txt", &out); err == nil || !strings.Contains(err.Error(), "AR9C0") {
+		t.Fatalf("a broken AI_RULEZ_LLM_* value must fail estimate, got %v\n%s", err, out.String())
 	}
 }

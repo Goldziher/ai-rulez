@@ -109,6 +109,7 @@ stdout.
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9C0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
+| AR9C1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
 | AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)). AR9D, AR9E and AR9F are proposed by other open designs, so telemetry uses AR9K |
 | AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
 

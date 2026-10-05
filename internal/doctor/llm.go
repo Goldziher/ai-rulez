@@ -18,12 +18,15 @@ func checkLLM(_ context.Context, s *state) []Finding {
 	if s.cfg == nil || s.cfg.LLM == nil {
 		return nil
 	}
-	cfg, err := s.cfg.ResolvedLLM()
+	res, err := s.cfg.ResolveLLM(nil)
 	if err != nil {
 		return []Finding{{Check: CheckLLM, Severity: SeverityError, Message: err.Error()}}
 	}
-	d := llm.Diagnose(cfg, llm.Options{ConfigDir: s.cfg.ConfigDir})
+	d := llm.Diagnose(res.Config, llm.Options{ConfigDir: s.cfg.ConfigDir})
 	var out []Finding
+	if len(res.Ignored) > 0 {
+		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: llm.IgnoredKeysMessage(res.Ignored), Hint: "see docs/llm.md, \"Trust rule\""})
+	}
 	for _, p := range d.Problems {
 		out = append(out, Finding{Check: CheckLLM, Severity: SeverityError, Message: llm.CodeConfigInvalid + " " + p, Hint: "see docs/llm.md"})
 	}
