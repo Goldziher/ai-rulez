@@ -17,6 +17,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |

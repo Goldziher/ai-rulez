@@ -97,6 +97,7 @@ const (
 	CodeRoleUnreachable      = "AR973"
 	CodeLockSourceDrift      = "AR981"
 	CodeLockOutputDrift      = "AR982"
+	CodeLLMConfigInvalid     = "AR9C0"
 )
 
 // RuleInfo describes one check.
@@ -154,6 +155,7 @@ var registry = []RuleInfo{
 	{CodeRoleUnreachable, "role-unreachable-dependency", SeverityWarning, "a kept item lists a skill in its skills: frontmatter that the role drops or hides from the model"},
 	{CodeLockSourceDrift, "lock-source-drift", SeverityError, "an authored item differs from the content pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
 	{CodeLockOutputDrift, "lock-output-drift", SeverityError, "a generated output differs from the digest pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
+	{CodeLLMConfigInvalid, "llm-config-invalid", SeverityError, "the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit"},
 }
 
 // Rules returns the registry sorted by code.

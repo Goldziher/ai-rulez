@@ -16,7 +16,11 @@
       "type": "object"
     },
     "delivery": {
-      "enum": ["static", "served", "both"],
+      "enum": [
+        "static",
+        "served",
+        "both"
+      ],
       "type": "string"
     },
     "patternList": {
@@ -121,7 +125,12 @@
                 },
                 "skill_overrides": {
                   "additionalProperties": {
-                    "enum": ["on", "name-only", "user-invocable-only", "off"]
+                    "enum": [
+                      "on",
+                      "name-only",
+                      "user-invocable-only",
+                      "off"
+                    ]
                   },
                   "description": "Owns skillOverrides.<skill> for every listed skill.",
                   "type": "object"
@@ -143,7 +152,12 @@
                   "type": "string"
                 },
                 "source": {
-                  "enum": ["directory", "github", "git", "url"]
+                  "enum": [
+                    "directory",
+                    "github",
+                    "git",
+                    "url"
+                  ]
                 },
                 "url": {
                   "type": "string"
@@ -203,12 +217,26 @@
       "properties": {
         "effort": {
           "description": "Default reasoning effort applied across providers that support it. Each preset maps the value to its own vocabulary.",
-          "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "inherit"
+          ],
           "type": "string"
         },
         "effort_by_preset": {
           "additionalProperties": {
-            "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "inherit"
+            ],
             "type": "string"
           },
           "description": "Per-preset reasoning effort overrides. Beats `effort` for the matching preset; per-agent metadata still wins where the preset supports it.",
@@ -340,7 +368,12 @@
         "omit_agent_fields": {
           "description": "Agent frontmatter fields to suppress for every preset, so an agent stays loadable where a field is invalid (unconfigured model/provider, unrecognized tool name). Values: model, effort, tools, description.",
           "items": {
-            "enum": ["model", "effort", "tools", "description"],
+            "enum": [
+              "model",
+              "effort",
+              "tools",
+              "description"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -378,13 +411,21 @@
         "hashes": {
           "default": "full",
           "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash (default); content keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
-          "enum": ["full", "content", "none"],
+          "enum": [
+            "full",
+            "content",
+            "none"
+          ],
           "type": "string"
         },
         "style": {
           "default": "minimal",
           "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
-          "enum": ["detailed", "compact", "minimal"],
+          "enum": [
+            "detailed",
+            "compact",
+            "minimal"
+          ],
           "type": "string"
         },
         "text": {
@@ -412,7 +453,10 @@
             "items": {
               "additionalProperties": false,
               "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
-              "oneOf": [{}, {}],
+              "oneOf": [
+                {},
+                {}
+              ],
               "properties": {
                 "args": {
                   "items": {
@@ -443,7 +487,9 @@
                   "type": "integer"
                 },
                 "type": {
-                  "enum": ["command"]
+                  "enum": [
+                    "command"
+                  ]
                 }
               },
               "type": "object"
@@ -558,7 +604,14 @@
           "include": {
             "description": "What content types to import (defaults to all). MCP servers are not importable from an include.",
             "items": {
-              "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
+              "enum": [
+                "rules",
+                "context",
+                "skills",
+                "agents",
+                "commands",
+                "checks"
+              ],
               "type": "string"
             },
             "type": "array"
@@ -573,7 +626,11 @@
           },
           "merge_strategy": {
             "description": "How to handle conflicting files: local-override (default, local wins), include-override (include wins), or error (fail on conflict)",
-            "enum": ["local-override", "include-override", "error"],
+            "enum": [
+              "local-override",
+              "include-override",
+              "error"
+            ],
             "type": "string"
           },
           "name": {
@@ -597,7 +654,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -641,7 +700,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -732,7 +793,11 @@
             },
             "require_fresh": {
               "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval.",
-              "enum": ["off", "warn", "error"],
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
               "type": "string"
             }
           },
@@ -751,7 +816,10 @@
                 "type": "array"
               },
               "format": {
-                "enum": ["sarif", "json"],
+                "enum": [
+                  "sarif",
+                  "json"
+                ],
                 "type": "string"
               },
               "name": {
@@ -764,7 +832,11 @@
         },
         "fail_on": {
           "description": "Lowest severity that makes strict validation exit non-zero. Defaults to error.",
-          "enum": ["error", "warning", "none"],
+          "enum": [
+            "error",
+            "warning",
+            "none"
+          ],
           "type": "string"
         },
         "ignore": {
@@ -794,7 +866,13 @@
             "properties": {
               "kinds": {
                 "items": {
-                  "enum": ["rule", "context", "skill", "agent", "command"],
+                  "enum": [
+                    "rule",
+                    "context",
+                    "skill",
+                    "agent",
+                    "command"
+                  ],
                   "type": "string"
                 },
                 "type": "array"
@@ -809,7 +887,11 @@
                 "type": "boolean"
               },
               "type": {
-                "enum": ["string", "date", "enum"],
+                "enum": [
+                  "string",
+                  "date",
+                  "enum"
+                ],
                 "type": "string"
               },
               "values": {
@@ -862,7 +944,11 @@
             },
             "scan_imports": {
               "description": "Scan content imported through includes and installed skills; `generate` refuses to write it at level error. The level replaces the severity of findings in imports.",
-              "enum": ["off", "warn", "error"],
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
               "type": "string"
             },
             "secret_patterns": {
@@ -886,11 +972,96 @@
         },
         "severity": {
           "additionalProperties": {
-            "enum": ["error", "warning", "info", "off"],
+            "enum": [
+              "error",
+              "warning",
+              "info",
+              "off"
+            ],
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
           "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "llm": {
+      "additionalProperties": false,
+      "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9C0).",
+      "properties": {
+        "allow_network": {
+          "description": "Must be true for any provider call (default false).",
+          "type": "boolean"
+        },
+        "api_key_env": {
+          "description": "Name of the environment variable holding the API key. Never the key itself.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "type": "string"
+        },
+        "backend": {
+          "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat.",
+          "enum": [
+            "auto",
+            "openaicompat",
+            "literllm"
+          ],
+          "type": "string"
+        },
+        "base_url": {
+          "description": "API root of an OpenAI-compatible endpoint, e.g. an in-VPC gateway. No credentials or query string.",
+          "type": "string"
+        },
+        "cache": {
+          "description": "On-disk response cache under .ai-rulez/local/llm-cache/ (default true).",
+          "type": "boolean"
+        },
+        "embedding_model": {
+          "description": "Model used for embeddings.",
+          "type": "string"
+        },
+        "max_calls": {
+          "description": "Stop after this many provider calls (0 = unlimited).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_cost_usd": {
+          "description": "Stop before estimated spend would exceed this (0 = unlimited).",
+          "minimum": 0,
+          "type": "number"
+        },
+        "max_retries": {
+          "description": "Retries after the first attempt (default 3, -1 disables).",
+          "minimum": -1,
+          "type": "integer"
+        },
+        "max_tokens": {
+          "description": "Stop before prompt plus completion tokens would exceed this (0 = unlimited).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model": {
+          "description": "Chat model name.",
+          "type": "string"
+        },
+        "price_input_per_mtok": {
+          "description": "USD per million prompt tokens; overrides the built-in price table.",
+          "minimum": 0,
+          "type": "number"
+        },
+        "price_output_per_mtok": {
+          "description": "USD per million completion tokens; overrides the built-in price table.",
+          "minimum": 0,
+          "type": "number"
+        },
+        "provider": {
+          "description": "Provider prefix for provider/model routing (used by the literllm backend).",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "description": "Per-call timeout including retries (default 60).",
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "type": "object"
@@ -909,7 +1080,10 @@
         },
         "scope": {
           "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only.",
-          "enum": ["all", "skills"]
+          "enum": [
+            "all",
+            "skills"
+          ]
         }
       },
       "type": "object"
@@ -1141,11 +1315,18 @@
           },
           "type": {
             "description": "Source type.",
-            "enum": ["github", "git", "local", "url"],
+            "enum": [
+              "github",
+              "git",
+              "local",
+              "url"
+            ],
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1238,7 +1419,11 @@
           "transport": {
             "default": "stdio",
             "description": "Transport protocol for MCP server communication (default: stdio)",
-            "enum": ["stdio", "http", "sse"],
+            "enum": [
+              "stdio",
+              "http",
+              "sse"
+            ],
             "type": "string"
           },
           "url": {
@@ -1247,7 +1432,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1268,14 +1455,23 @@
         "include": {
           "description": "Content kinds to export. Defaults to all.",
           "items": {
-            "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
+            "enum": [
+              "rules",
+              "context",
+              "skills",
+              "agents",
+              "commands",
+              "checks"
+            ],
             "type": "string"
           },
           "type": "array"
         },
         "spec": {
           "description": "OKF spec version to write. Only 0.2 is implemented.",
-          "enum": ["0.2"],
+          "enum": [
+            "0.2"
+          ],
           "type": "string"
         }
       },
@@ -1307,7 +1503,10 @@
         },
         "default": {
           "description": "Placement of items no pattern or frontmatter decides. Default core.",
-          "enum": ["core", "plugin"]
+          "enum": [
+            "core",
+            "plugin"
+          ]
         },
         "honor_targets": {
           "description": "Apply frontmatter targets to skills in .claude/skills, as is already done for commands. Default false.",
@@ -1338,7 +1537,11 @@
           "description": "Codex layout. manifest: legacy (default, .codex-plugin/plugin.json), root (Agent Plugins plugin.json with the interface under extensions.com.openai, skills/ and mcp.json) or both. marketplace writes .agents/plugins/marketplace.json for a single-plugin repository.",
           "properties": {
             "manifest": {
-              "enum": ["legacy", "root", "both"],
+              "enum": [
+                "legacy",
+                "root",
+                "both"
+              ],
               "type": "string"
             },
             "marketplace": {
@@ -1410,7 +1613,10 @@
                 "items": {
                   "additionalProperties": false,
                   "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
-                  "oneOf": [{}, {}],
+                  "oneOf": [
+                    {},
+                    {}
+                  ],
                   "properties": {
                     "args": {
                       "items": {
@@ -1577,7 +1783,11 @@
                 "type": "string"
               },
               "transport": {
-                "enum": ["stdio", "http", "sse"],
+                "enum": [
+                  "stdio",
+                  "http",
+                  "sse"
+                ],
                 "type": "string"
               },
               "url": {
@@ -1663,11 +1873,16 @@
           },
           "scope": {
             "description": "Install scope. Defaults to project.",
-            "enum": ["project", "user"],
+            "enum": [
+              "project",
+              "user"
+            ],
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1746,7 +1961,10 @@
               {
                 "description": "Provider-backed preset",
                 "not": {
-                  "anyOf": [{}, {}]
+                  "anyOf": [
+                    {},
+                    {}
+                  ]
                 }
               }
             ],
@@ -1772,7 +1990,11 @@
               },
               "type": {
                 "description": "Output type (markdown/directory/json presets)",
-                "enum": ["markdown", "directory", "json"],
+                "enum": [
+                  "markdown",
+                  "directory",
+                  "json"
+                ],
                 "type": "string"
               }
             },
@@ -1880,7 +2102,11 @@
           },
           "delivery": {
             "additionalProperties": {
-              "enum": ["static", "served", "both"]
+              "enum": [
+                "static",
+                "served",
+                "both"
+              ]
             },
             "description": "Skill id or glob (domain/id for one domain) to how the skill reaches this role's agent: static (written to the skill trees), served (fetched over MCP on demand with `ai-rulez mcp --serve-skills --role`, never listed) or both. Same specificity rule as skill_mode; a skill's own `delivery` frontmatter wins, and the entries are inherited through extends with the child winning.",
             "type": "object"
@@ -1945,7 +2171,12 @@
           },
           "skill_mode": {
             "additionalProperties": {
-              "enum": ["on", "name-only", "user-invocable-only", "off"]
+              "enum": [
+                "on",
+                "name-only",
+                "user-invocable-only",
+                "off"
+              ]
             },
             "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",
             "type": "object"
@@ -1972,7 +2203,9 @@
             "type": "object"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1983,17 +2216,26 @@
       "properties": {
         "baz_scoped": {
           "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
-          "enum": ["nested", "root"],
+          "enum": [
+            "nested",
+            "root"
+          ],
           "type": "string"
         },
         "mode": {
           "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split.",
-          "enum": ["split", "inline"],
+          "enum": [
+            "split",
+            "inline"
+          ],
           "type": "string"
         },
         "mode_by_preset": {
           "additionalProperties": {
-            "enum": ["split", "inline"],
+            "enum": [
+              "split",
+              "inline"
+            ],
             "type": "string"
           },
           "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
@@ -2012,10 +2254,14 @@
         "additionalProperties": false,
         "anyOf": [
           {
-            "required": ["name"]
+            "required": [
+              "name"
+            ]
           },
           {
-            "required": ["path"]
+            "required": [
+              "path"
+            ]
           }
         ],
         "properties": {
@@ -2143,7 +2389,10 @@
           },
           "trust": {
             "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
-            "enum": ["error", "warn"],
+            "enum": [
+              "error",
+              "warn"
+            ],
             "type": "string"
           },
           "url": {
@@ -2179,7 +2428,10 @@
     },
     "version": {
       "description": "Configuration version (3.0 or 4.0)",
-      "enum": ["3.0", "4.0"],
+      "enum": [
+        "3.0",
+        "4.0"
+      ],
       "type": "string"
     }
   },

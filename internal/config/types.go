@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/internal/llm"
 )
 
 // Config represents the configuration format
@@ -62,6 +63,8 @@ type Config struct {
 	// roleDelivery is the per-skill delivery of the role being rendered (see
 	// SetRoleDelivery); nil when no role is active.
 	roleDelivery map[string]string
+	// LLM configures model access for features that call a model; nothing calls out unless allow_network is true.
+	LLM *llm.Config `yaml:"llm,omitempty" json:"llm,omitempty" toml:"llm,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the

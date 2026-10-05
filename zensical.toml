@@ -34,6 +34,7 @@ nav = [
     { "Authoring Plugins" = "plugins.md" },
     { "Evals" = "evals.md" },
     { "Usage Telemetry" = "usage-telemetry.md" },
+    { "LLM Access" = "llm.md" },
     { "Poly Hooks" = "poly-hooks.md" },
     { "Monorepo" = "monorepo.md" },
     { "Examples" = "examples.md" },
