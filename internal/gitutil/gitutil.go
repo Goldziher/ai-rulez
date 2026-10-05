@@ -32,6 +32,42 @@ const (
 // stops reading a .gitignore at 100 MB. A var so tests can lower it.
 var maxIgnoreFileSize int64 = 100 << 20
 
+// inheritedRepoVars are the variables git exports to hooks and child
+// processes. Left in place they point every nested git call at the hook's
+// repository (a `git init` run from a hook then rewrites that repository's
+// config), so they never reach a git subprocess started from here.
+var inheritedRepoVars = []string{
+	"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+	"GIT_COMMON_DIR", "GIT_PREFIX", "GIT_NAMESPACE",
+	"GIT_INDEX_VERSION", "GIT_CONFIG", "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_COUNT", "GIT_QUARANTINE_PATH",
+	"GIT_PUSH_OPTION_COUNT",
+}
+
+// CleanEnv returns env without the variables a parent git process exports
+// (GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, GIT_CONFIG_*, ...). Use it as the
+// Env of every git subprocess so the command addresses the directory it was
+// given, not the repository that happens to be running a hook.
+func CleanEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		name, _, _ := strings.Cut(kv, "=")
+		if strings.HasPrefix(name, "GIT_CONFIG_KEY_") || strings.HasPrefix(name, "GIT_CONFIG_VALUE_") {
+			continue
+		}
+		drop := false
+		for _, v := range inheritedRepoVars {
+			if name == v {
+				drop = true
+				break
+			}
+		}
+		if !drop {
+			out = append(out, kv)
+		}
+	}
+	return out
+}
+
 // run executes git in dir. ok is false when git could not run or exited
 // non-zero; exitCode distinguishes "no match" (1) from failure (>1) for the
 // commands that use it.
@@ -39,6 +75,7 @@ func run(dir string, stdin []byte, args ...string) (out []byte, exitCode int, er
 	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...) //nolint:gosec // fixed git subcommands
+	cmd.Env = CleanEnv(os.Environ())
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if stdin != nil {
