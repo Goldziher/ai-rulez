@@ -26,8 +26,12 @@ type LockConfig struct {
 // LockEnforced reports whether [lock] enforce is set.
 func (c *Config) LockEnforced() bool { return c != nil && c.Lock != nil && c.Lock.Enforce }
 
-// LockIncludeOutputs reports whether generated outputs are pinned (default true).
+// LockIncludeOutputs reports whether generated outputs are pinned: true unless
+// include_outputs is false or the scope is "skills".
 func (c *Config) LockIncludeOutputs() bool {
+	if c.LockScope() != LockScopeAll {
+		return false
+	}
 	return c == nil || c.Lock == nil || c.Lock.IncludeOutputs == nil || *c.Lock.IncludeOutputs
 }
 
