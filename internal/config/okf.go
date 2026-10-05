@@ -55,6 +55,15 @@ func (c *Config) OKFInclude() []string {
 }
 
 func (c *Config) validateOKF() error {
+	for i := range c.Includes {
+		if f := c.Includes[i].Format; f != "" && f != IncludeFormatOKF {
+			return oops.
+				With("field", "includes.format").
+				With("include", c.Includes[i].Name).
+				Hint(`The only supported format is "okf".`).
+				Errorf("unknown format %q for include %q", f, c.Includes[i].Name)
+		}
+	}
 	if c.OKF == nil {
 		return nil
 	}

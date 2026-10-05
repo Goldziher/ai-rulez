@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/okf"
 	"github.com/Goldziher/ai-rulez/internal/okfbridge"
@@ -146,6 +147,7 @@ func init() {
 	importOKFCmd.Flags().StringVar(&okfFormat, "format", "text", "Output format: text or json")
 	importOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImportCmd.AddCommand(importOKFCmd)
+	includes.OKFScan = okfScanner(nil)
 }
 
 func loadBundle(ctx context.Context, spec string) (*okf.Bundle, func(), error) {
@@ -356,13 +358,7 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 	lintCfg := importLintConfig(ctx)
 	res, err := okfbridge.Import(b, okfbridge.ImportOptions{
 		ConfigDir: absTarget, Into: into, Domain: okfDomain, Force: okfForce, DryRun: okfDryRun,
-		Scan: func(texts map[string]string) []okfbridge.SecurityFinding {
-			var found []okfbridge.SecurityFinding
-			for _, f := range lint.ScanText(lintCfg, texts) {
-				found = append(found, okfbridge.SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
-			}
-			return found
-		},
+		Scan: okfScanner(lintCfg),
 	})
 	var secErr *okfbridge.SecurityError
 	if err != nil && res == nil {
@@ -385,6 +381,17 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 		return exitOKFProblems
 	}
 	return 0
+}
+
+// okfScanner adapts the AR0xx security scan to the bridge's Scanner.
+func okfScanner(lc *config.LintConfig) okfbridge.Scanner {
+	return func(texts map[string]string) []okfbridge.SecurityFinding {
+		var found []okfbridge.SecurityFinding
+		for _, f := range lint.ScanText(lc, texts) {
+			found = append(found, okfbridge.SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
+		}
+		return found
+	}
 }
 
 func parseImportInto() (okfbridge.Kind, error) {
