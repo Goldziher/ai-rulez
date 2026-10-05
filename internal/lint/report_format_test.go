@@ -114,7 +114,7 @@ func TestSARIFContent(t *testing.T) {
 					Rules []struct {
 						ID         string         `json:"id"`
 						HelpURI    string         `json:"helpUri"`
-						Help       sarifText      `json:"help"`
+						Help       sarifOutText   `json:"help"`
 						Properties map[string]any `json:"properties"`
 						Default    struct {
 							Level string `json:"level"`

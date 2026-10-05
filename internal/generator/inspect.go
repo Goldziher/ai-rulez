@@ -32,18 +32,18 @@ func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
 		patterns = append(patterns, pattern)
 	}
 	sort.Strings(patterns)
-	probes := make([]string, len(patterns))
-	for i, pattern := range patterns {
-		probes[i] = gitignoreProbe(pattern)
-	}
+	probes, ranges := flattenProbes(patterns)
 	ignored, err := gitutil.IgnoredAmong(g.config.BaseDir, probes)
 	if err != nil || ignored == nil {
 		return nil, nil //nolint:nilerr // git cannot answer: report nothing rather than guess
 	}
 	var missing []string
 	for i, pattern := range patterns {
-		if !ignored[filepath.ToSlash(probes[i])] {
-			missing = append(missing, pattern)
+		for _, probe := range probes[ranges[i][0]:ranges[i][1]] {
+			if !ignored[filepath.ToSlash(probe)] {
+				missing = append(missing, pattern)
+				break
+			}
 		}
 	}
 	return missing, nil

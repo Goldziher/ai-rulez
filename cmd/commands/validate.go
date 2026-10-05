@@ -111,6 +111,7 @@ func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
 	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
+	ValidateCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default), json, sarif, github, junit or markdown")
 	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "With --strict, lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
 	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "With --strict, report only these analyzers (repeatable or comma-separated): "+strings.Join(lint.AnalyzerNames(), ", "))
@@ -293,6 +294,7 @@ configuration could not be loaded, 2 findings at or above --fail-on.`,
 func init() {
 	ScanCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Scan every configuration file found recursively")
 	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
+	ScanCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	ScanCmd.Flags().StringVar(&validateFormat, "format", "", "Output format: text (default), json, sarif, github, junit or markdown")
 	ScanCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile)")
 	ScanCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")

@@ -343,7 +343,7 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 	if resolveIncludesFunc == nil {
 		return oops.
 			With("config_dir", configDir).
-			Hint("Includes are configured but the includes resolver is not registered.\nImport github.com/Goldziher/ai-rulez/internal/includes (blank import) before loading configs, or ensure the CLI/mcp entrypoint is used.").
+			Hint("Includes are configured but the includes resolver is not registered.\nImport github.com/Goldziher/ai-rulez/v5/internal/includes (blank import) before loading configs, or ensure the CLI/mcp entrypoint is used.").
 			Errorf("includes configured but includes resolver is unavailable")
 	}
 
@@ -377,7 +377,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 
 	if resolveInstalledSkillsFunc == nil {
 		return oops.
-			Hint("Installed skills are configured but the resolver is not registered.\nImport github.com/Goldziher/ai-rulez/internal/includes (blank import) before loading configs.").
+			Hint("Installed skills are configured but the resolver is not registered.\nImport github.com/Goldziher/ai-rulez/v5/internal/includes (blank import) before loading configs.").
 			Errorf("installed skills configured but resolver is unavailable")
 	}
 
@@ -605,6 +605,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Defaults        *DefaultsConfig        `toml:"defaults"`
 		Rules           *RulesConfig           `toml:"rules"`
 		Lint            *LintConfig            `toml:"lint"`
+		Verifiers       []VerifierConfig       `toml:"verifiers"`
 		Usage           *UsageConfig           `toml:"usage"`
 		Skills          *SkillsConfig          `toml:"skills"`
 		DomainSettings  DomainConfigs          `toml:"domains"`
@@ -679,6 +680,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Defaults:        raw.Defaults,
 		Rules:           raw.Rules,
 		Lint:            raw.Lint,
+		Verifiers:       raw.Verifiers,
 		Usage:           raw.Usage,
 		Skills:          raw.Skills,
 		DomainSettings:  raw.DomainSettings,

@@ -549,3 +549,36 @@ func TestValidateHookActionRejectsSymlinkEscape(t *testing.T) {
 		require.NoError(t, cfg.validateHookAction("basemind", "SessionStart", 0, &HookAction{Script: "bootstrap.sh"}))
 	})
 }
+
+// A [[hooks]] group that carries its command on the group itself instead of in a
+// [[hooks.hooks]] action decodes to a group with no actions, so no harness writes
+// anything for it. That is the config a user is most likely to write by mistake
+// and it must not pass silently.
+func TestEmptyHookGroupWarnings(t *testing.T) {
+	tests := []struct {
+		name   string
+		groups []HookGroup
+		want   []string
+	}{
+		{"group with an action", []HookGroup{{Event: "PreToolUse", Hooks: []HookAction{{Command: "x"}}}}, nil},
+		{"group without actions", []HookGroup{{Event: "PreToolUse", Matcher: "Bash"}}, []string{"PreToolUse"}},
+		{"only the empty one is reported", []HookGroup{
+			{Event: "Stop", Hooks: []HookAction{{Command: "x"}}}, {Event: "SessionStart"},
+		}, []string{"SessionStart"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			warnings := emptyHookGroupWarnings(tt.groups)
+
+			// Assert
+			var events []string
+			for _, w := range warnings {
+				events = append(events, w.Event)
+				assert.Equal(t, "hooks.hooks", w.Field)
+				assert.Contains(t, w.Message, "[[hooks.hooks]]")
+			}
+			assert.Equal(t, tt.want, events)
+		})
+	}
+}

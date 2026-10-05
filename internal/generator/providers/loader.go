@@ -291,7 +291,7 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].transports: unknown transport %q", i, tr)
 		}
 	}
-	if sc.EnvRefSyntax != "" && sc.EnvRefSyntax != EnvRefSyntaxDollar && sc.EnvRefSyntax != EnvRefSyntaxEnvPrefix {
+	if sc.EnvRefSyntax != "" && !IsEnvRefSyntax(sc.EnvRefSyntax) {
 		return fmt.Errorf("sidecars[%d].env_ref_syntax: unknown syntax %q", i, sc.EnvRefSyntax)
 	}
 	if sc.EnvRefSyntax != "" && sc.Kind != SidecarMCP {

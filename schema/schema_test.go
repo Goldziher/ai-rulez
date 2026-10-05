@@ -359,3 +359,27 @@ func toStrings(v any) []string {
 	out, _ := v.([]string)
 	return out
 }
+func TestVerifiersSection(t *testing.T) {
+	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	tests := []struct {
+		name    string
+		body    string
+		wantErr bool
+	}{
+		{"valid", head + "[[verifiers]]\nname = \"a\"\ntype = \"glob_count\"\nglob = \"*.go\"\nmin = 1\nexclude = [\"vendor/**\"]\n", false},
+		{"missing type", head + "[[verifiers]]\nname = \"a\"\n", true},
+		{"unknown type", head + "[[verifiers]]\nname = \"a\"\ntype = \"command\"\n", true},
+		{"unknown key", head + "[[verifiers]]\nname = \"a\"\ntype = \"file_exists\"\nbogus = 1\n", true},
+		{"bad severity", head + "[[verifiers]]\nname = \"a\"\ntype = \"file_exists\"\nseverity = \"loud\"\n", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := schema.ValidateFile(writeTOML(t, tt.body))
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

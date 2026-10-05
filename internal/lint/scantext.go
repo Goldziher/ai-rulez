@@ -1,43 +1,36 @@
 package lint
 
 import (
-	"sort"
-	"strings"
+	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// ScanText runs the security family (AR0xx) over texts keyed by display name.
-// It is for content that is about to be written, such as an import. An inline
-// ai-rulez-lint-ignore comment inside the text is not honored: the author of the
-// text must not be able to silence the check on their own content. lc supplies
-// the [lint] settings (severities, allowed hosts, custom patterns); nil uses the
-// defaults.
-func ScanText(lc *config.LintConfig, texts map[string]string) []Finding {
-	r := &runner{cfg: &config.Config{}, tree: &Tree{}, docs: map[string]doc{}}
-	if lc != nil {
-		r.lc = *lc
-	}
-	r.cwd = ""
+// ScanText applies the security rules (AR0xx) with default settings to one text
+// that is not part of a loaded project, for example a file staged by `convert`.
+// Inline ai-rulez-lint-ignore comments in the text are not honoured: the text
+// is not trusted to silence its own findings.
+func ScanText(file, text string) []Finding {
+	r := &runner{cfg: &config.Config{}, docs: map[string]doc{file: {}}}
+	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
 	r.resolveSettings()
-	names := make([]string, 0, len(texts))
-	for name := range texts {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		r.docs[name] = doc{} // an empty doc has no ignore directives
-		r.securityScan(name, strings.ToValidUTF8(texts[name], "�"))
-	}
-	sort.SliceStable(r.findings, func(i, j int) bool {
-		a, b := r.findings[i], r.findings[j]
-		if a.File != b.File {
-			return a.File < b.File
+	r.securityScan(file, text)
+	return securityOnly(r.findings)
+}
+
+// DetectSecret reports whether s contains a credential the security scan
+// recognises (cloud keys, tokens, private keys, JWTs and key=value
+// assignments with a long mixed value) and returns the pattern name.
+func DetectSecret(s string) (string, bool) {
+	for _, p := range builtinSecrets {
+		if p.re.MatchString(s) {
+			return p.name, true
 		}
-		if a.Line != b.Line {
-			return a.Line < b.Line
+	}
+	for _, m := range genericCredential.FindAllStringSubmatch(s, -1) {
+		if hasLetterAndDigit(m[1]) {
+			return "hard-coded credential", true
 		}
-		return a.Code < b.Code
-	})
-	return r.findings
+	}
+	return "", false
 }

@@ -543,3 +543,22 @@ func validateCodexExtras(p *PluginAuthoring) error {
 		Hint("Use legacy (default), root or both").
 		Errorf("plugin %q sets an unknown codex manifest layout %q", p.Name, p.Codex.Manifest)
 }
+
+// emptyHookGroupWarnings reports the top-level [[hooks]] groups that declare no
+// action. A command written on the group itself rather than in a [[hooks.hooks]]
+// table is not read, so the group decodes empty and no harness gets a hook.
+func emptyHookGroupWarnings(groups []HookGroup) []hookWarning {
+	var warnings []hookWarning
+	for _, g := range groups {
+		if g.Event == "" || len(g.Hooks) > 0 {
+			continue
+		}
+		warnings = append(warnings, hookWarning{
+			Event: g.Event,
+			Field: "hooks.hooks",
+			Message: "[[hooks]] group declares no action, so no hook is generated; " +
+				"put the command in a [[hooks.hooks]] table (command = \"...\") under the group",
+		})
+	}
+	return warnings
+}

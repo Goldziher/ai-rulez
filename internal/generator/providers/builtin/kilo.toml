@@ -84,6 +84,8 @@ field = "model"
 kind = "mcp"
 path = "kilo.jsonc"
 dialect = "opencode"
+# Kilo, like OpenCode, substitutes {env:NAME} in its config.
+env_ref_syntax = "opencode_env"
 global_path = ".config/kilo/kilo.jsonc"
 
 [sidecars.elements]

@@ -12,7 +12,7 @@ import (
 )
 
 // CodeConfigInvalid is the strict-validation code for a bad [llm] table.
-const CodeConfigInvalid = "AR9C0"
+const CodeConfigInvalid = "AR9L0"
 
 // Backend names accepted in config.
 const (
@@ -195,7 +195,7 @@ func looksLikeSecret(v string) bool {
 }
 
 // Validate checks the config statically (no network, no environment reads) and
-// returns one message per problem. Every message belongs to AR9C0.
+// returns one message per problem. Every message belongs to AR9L0.
 func (c Config) Validate() []string {
 	var out []string
 	switch c.Backend {
@@ -270,7 +270,7 @@ func (c Config) validateNumbers() []string {
 	return out
 }
 
-// Err returns Validate's problems as one AR9C0 error, or nil.
+// Err returns Validate's problems as one AR9L0 error, or nil.
 func (c Config) Err() error {
 	if p := c.Validate(); len(p) > 0 {
 		return newError(KindConfig, "%s llm-config-invalid: %s", CodeConfigInvalid, strings.Join(p, "; "))

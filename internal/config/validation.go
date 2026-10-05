@@ -157,6 +157,9 @@ func (c *Config) validateDefaults() error {
 	if err := c.validateScopes(); err != nil {
 		return err
 	}
+	if err := c.validateVerifiers(); err != nil {
+		return err
+	}
 	if c.Defaults == nil {
 		return nil
 	}
@@ -612,31 +615,7 @@ func (c *Config) defaultFromOverlay() bool {
 
 // validateInstalledSkills validates the installed_skills section
 func (c *Config) validateInstalledSkills() error {
-	seen := make(map[string]bool)
-	for i, skill := range c.InstalledSkills {
-		if skill.Name == "" {
-			return oops.
-				With("field", fmt.Sprintf("installed_skills[%d].name", i)).
-				Hint("Each installed skill must have a non-empty 'name' field").
-				Errorf("installed skill at index %d missing required field 'name'", i)
-		}
-		if skill.Source == "" {
-			return oops.
-				With("field", fmt.Sprintf("installed_skills[%d].source", i)).
-				With("skill_name", skill.Name).
-				Hint("Provide a git URL or local path as the 'source'").
-				Errorf("installed skill %q missing required field 'source'", skill.Name)
-		}
-		if seen[skill.Name] {
-			return oops.
-				With("field", "installed_skills").
-				With("skill_name", skill.Name).
-				Hint("Each installed skill must have a unique name").
-				Errorf("duplicate installed skill name: %q", skill.Name)
-		}
-		seen[skill.Name] = true
-	}
-	return nil
+	return ValidateInstalledSkills(c.InstalledSkills)
 }
 
 // warnMissingDomainReferences logs warnings for domains referenced in profiles but not found in content.

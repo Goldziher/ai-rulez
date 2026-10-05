@@ -837,6 +837,17 @@
                 "minItems": 1,
                 "type": "array"
               },
+              "egress": {
+                "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress.",
+                "type": "boolean"
+              },
+              "env_pass": {
+                "description": "Extra environment variable names passed through the scrubbed environment. Proxy and credential-like names are rejected when egress is false (AR9E0).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "format": {
                 "enum": [
                   "sarif",
@@ -845,6 +856,10 @@
                 "type": "string"
               },
               "name": {
+                "type": "string"
+              },
+              "timeout": {
+                "description": "Go duration such as \"90s\". Default 2m, at most 15m.",
                 "type": "string"
               }
             },
@@ -1035,13 +1050,27 @@
           },
           "description": "Severity override per finding code or name.",
           "type": "object"
+        },
+        "traps": {
+          "additionalProperties": false,
+          "description": "Harness trap checks (AR9C1...): files a harness silently ignores.",
+          "properties": {
+            "extra_harnesses": {
+              "description": "Harnesses (cursor, copilot) whose traps run although no preset for them is configured, for hand-written files.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"
     },
     "llm": {
       "additionalProperties": false,
-      "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9C0).",
+      "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9L0).",
       "properties": {
         "allow_network": {
           "description": "Must be true for any provider call (default false).",
@@ -2545,6 +2574,75 @@
         }
       },
       "type": "object"
+    },
+    "verifiers": {
+      "description": "Deterministic repo checks run by `ai-rulez verifiers run`.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "equals": {
+            "description": "Expected scalar value, compared as text (key_equals).",
+            "type": "string"
+          },
+          "exclude": {
+            "description": "Globs removed from the selection.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "glob": {
+            "description": "Files to select (glob_count, regex, forbid).",
+            "type": "string"
+          },
+          "key": {
+            "description": "Dotted key path into a JSON, YAML or TOML file (key_equals).",
+            "type": "string"
+          },
+          "max": {
+            "description": "Maximum match count (glob_count).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min": {
+            "description": "Minimum match count (glob_count).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "description": "Unique verifier name.",
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "path": {
+            "description": "Repo-relative file (file_exists, file_absent, key_equals).",
+            "type": "string"
+          },
+          "pattern": {
+            "description": "RE2 expression (regex, forbid).",
+            "type": "string"
+          },
+          "profile": {
+            "description": "Generate profile to render (generated_in_sync).",
+            "type": "string"
+          },
+          "severity": {
+            "description": "Defaults to error.",
+            "enum": ["error", "warning", "info"],
+            "type": "string"
+          },
+          "type": {
+            "description": "Predicate type.",
+            "enum": ["file_exists", "file_absent", "glob_count", "regex", "forbid", "key_equals", "generated_in_sync"],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "version": {
       "description": "Configuration version (3.0 or 4.0)",

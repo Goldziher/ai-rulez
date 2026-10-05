@@ -66,6 +66,8 @@ type Config struct {
 	// LLM configures model access for features that call a model; nothing calls out unless allow_network is true.
 	LLM       *llm.Config      `yaml:"llm,omitempty" json:"llm,omitempty" toml:"llm,omitempty"`
 	Telemetry *TelemetryConfig `yaml:"telemetry,omitempty" json:"telemetry,omitempty" toml:"telemetry,omitempty"`
+	// Verifiers declares deterministic repo checks run by `ai-rulez verifiers run`.
+	Verifiers []VerifierConfig `yaml:"verifiers,omitempty" json:"verifiers,omitempty" toml:"verifiers,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the

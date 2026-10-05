@@ -31,8 +31,8 @@ model = "gpt-4o-mini"
 	}
 
 	bad := project(t, map[string]string{".ai-rulez/config.toml": baseConfig + "\n[llm]\nbackend = \"nope\"\n"})
-	if f := byCheck(run(t, bad), CheckLLM); len(f) == 0 || f[0].Severity != SeverityError || !strings.Contains(f[0].Message, "AR9C0") {
-		t.Fatalf("invalid [llm] must be an AR9C0 error, got %+v", f)
+	if f := byCheck(run(t, bad), CheckLLM); len(f) == 0 || f[0].Severity != SeverityError || !strings.Contains(f[0].Message, "AR9L0") {
+		t.Fatalf("invalid [llm] must be an AR9L0 error, got %+v", f)
 	}
 
 	none := project(t, map[string]string{".ai-rulez/config.toml": baseConfig})

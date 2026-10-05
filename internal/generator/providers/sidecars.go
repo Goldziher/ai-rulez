@@ -210,6 +210,7 @@ func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 			"disabled": !server.IsEnabled(),
 		}
 		applyMCPTransport(entry, server)
+		presets.ApplySharedMCPJSONRefs(entry, server, cfg)
 		mcpServers[name] = entry
 	}
 	return mcpServers
@@ -249,7 +250,8 @@ func (g *Generator) ampSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKe
 	}
 	if cfg != nil && len(cfg.MCPServers) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{
-			Name: ampSettingsKeyMCPServers, Value: mcpDialectEntries(mcpDialects[MCPDialectAmp], cfg), Members: true,
+			Name: ampSettingsKeyMCPServers, Members: true,
+			Value: mcpDialectEntriesFor(mcpDialects[MCPDialectAmp], cfg, &mcpEntryOpts{refSyntax: EnvRefSyntaxBraced}),
 		})
 	}
 	return owned
