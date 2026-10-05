@@ -7,6 +7,8 @@ import (
 
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/internal/llm"
 )
 
 // literalSecretKeys are [llm] keys that would hold a key value; the config only
@@ -55,6 +57,10 @@ func (r *runner) checkLLMConfig() {
 	}
 	if r.cfg.LLM == nil {
 		return
+	}
+	if ignored := r.cfg.LLM.PrivilegedKeys(); len(ignored) > 0 {
+		r.docs[path] = doc{lines: text}
+		r.add(CodeLLMUntrustedKey, path, lineOf(ignored[0]), "llm: %s", llm.IgnoredKeysMessage(ignored))
 	}
 	for _, problem := range r.cfg.LLM.Validate() {
 		r.docs[path] = doc{lines: text}

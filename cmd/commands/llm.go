@@ -76,23 +76,25 @@ func init() {
 	llmEstimateCmd.Flags().IntVar(&llmMaxOutput, "max-output", llm.DefaultCompletionCap, "Completion tokens to assume")
 }
 
-// loadLLMConfig returns the [llm] table with env overrides applied and the config directory.
-func loadLLMConfig(ctx context.Context, args []string) (llm.Config, string, error) {
+// loadLLMConfig returns the effective [llm] setup (trust rule and env overrides applied),
+// the user-scope-only repository keys that were ignored, and the config directory.
+func loadLLMConfig(ctx context.Context, args []string) (llm.Config, []string, string, error) {
 	cfg, err := loadConfigForCommand(ctx, args, config.WithoutRemote())
 	if err != nil {
-		return llm.Config{}, "", err
+		return llm.Config{}, nil, "", err
 	}
-	lc, err := cfg.ResolvedLLM()
-	return lc, cfg.ConfigDir, err
+	res, err := cfg.ResolveLLM(nil)
+	return res.Config, res.Ignored, cfg.ConfigDir, err
 }
 
 func runLLMDoctor(ctx context.Context, args []string, out io.Writer) error {
-	lc, dir, err := loadLLMConfig(ctx, args)
+	lc, ignored, dir, err := loadLLMConfig(ctx, args)
 	if err != nil {
 		return err
 	}
 	opts := llm.Options{ConfigDir: dir}
 	d := llm.Diagnose(lc, opts)
+	d.IgnoredRepoKeys = ignored
 	type pingResult struct {
 		Attempted bool   `json:"attempted"`
 		OK        bool   `json:"ok"`
@@ -136,7 +138,7 @@ func runLLMEstimate(ctx context.Context, path string, out io.Writer) error {
 	if err != nil {
 		return oops.Wrapf(err, "read %s", path)
 	}
-	lc, _, err := loadLLMConfig(ctx, nil)
+	lc, _, _, err := loadLLMConfig(ctx, nil)
 	if err != nil {
 		lc = llm.Config{} // estimate works without a project
 	}
