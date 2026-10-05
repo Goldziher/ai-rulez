@@ -53,7 +53,7 @@ still exits 1 and never reaches the content checks.
 | AR007 | `tool-breadth` | warning | A skill or command `allowed-tools` entry that is unrestricted: `Bash`, `Bash(*)`, `*` (listed exceptions in `allowed_tools` pass) |
 | AR008 | `outbound-host` | warning | A URL whose host is not in `[lint.security] allowed_hosts`; checked only when that list is set (`localhost` and `127.0.0.1` always pass) |
 | AR009 | `encoded-blob` | warning | A base64-like run of 200 or more characters that a reviewer cannot read |
-| AR010 | `unpinned-remote` | warning | A remote include or installed skill follows a moving ref and `ai-rulez.lock` does not pin it (a full commit SHA counts as pinned) |
+| AR010 | `unpinned-remote` | warning | A remote include, installed skill or `[[skill_sources]]` entry follows a moving ref and `ai-rulez.lock` does not pin it (a full commit SHA counts as pinned) |
 | AR011 | `external-finding` | warning | A finding from a `[[lint.external]]` scanner (its own severity is kept) |
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
 | AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist |
@@ -89,6 +89,12 @@ still exits 1 and never reaches the content checks.
 | AR997 | `eval-stale` | off | A skill changed after its last recorded passing eval run; turned on by `[lint.evals] require_fresh = "warn"\|"error"` |
 | AR998 | `eval-score-low` | off | A skill's recorded eval pass rate is below `[lint.evals] min_pass_rate`; setting that turns the rule on at error |
 | AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
+| AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
+| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
+| AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
+| AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
+| AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.

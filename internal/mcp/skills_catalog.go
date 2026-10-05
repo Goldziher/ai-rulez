@@ -62,8 +62,18 @@ type CatalogSkill struct {
 	Ref         string
 	Pinned      bool
 	Keywords    []string
-	Frontmatter map[string]any
-	Files       []CatalogFile
+	Triggers    []string
+	Delivery    string
+	Commit      string
+	Trust       string
+	// LockDigest is the digest ai-rulez.lock pins (see lockDigest).
+	LockDigest string
+	// Locked reports that ai-rulez.lock records exactly this skill's digest.
+	Locked bool
+	// ScanFindings counts security findings that did not block serving.
+	ScanFindings int
+	Frontmatter  map[string]any
+	Files        []CatalogFile
 	// Digest identifies the skill as a whole: sha256 over its sorted file URIs
 	// and digests, so one value changes whenever any file does.
 	Digest string
@@ -77,6 +87,7 @@ type Catalog struct {
 	byName  map[string]*CatalogSkill
 	byURI   map[string]*CatalogSkill
 	byFile  map[string]*CatalogFile
+	refused map[string]Refusal
 }
 
 // BuildCatalog converts rendered skills into a catalog, applying the filter.
@@ -181,7 +192,17 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 		Ref:         src.Ref,
 		Pinned:      src.Pinned,
 		Keywords:    src.Keywords,
+		Triggers:    src.Triggers,
+		Delivery:    string(src.Delivery),
+		Commit:      src.Commit,
+		Trust:       src.Trust,
 		Frontmatter: front,
+	}
+	if len(skill.Triggers) == 0 {
+		skill.Triggers = listField(front, "triggers")
+	}
+	if len(skill.Keywords) == 0 {
+		skill.Keywords = listField(front, "keywords")
 	}
 	hash := sha256.New()
 	for _, f := range src.Files {
@@ -202,6 +223,7 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 		hash.Write([]byte(sorted[i].URI + "\x00" + sorted[i].Digest + "\n")) //nolint:errcheck // hash.Hash.Write never fails
 	}
 	skill.Digest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
+	skill.LockDigest = lockDigest(skill.Files)
 	return skill, nil
 }
 

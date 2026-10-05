@@ -1467,9 +1467,16 @@ Starts the Model Context Protocol (MCP) server to allow AI assistants to program
 
 ```bash
 ai-rulez mcp
+ai-rulez mcp --serve-skills [--profile <p>] [--source <src>] [--role <r>] [--frozen]
 ```
 
-See the [MCP Server Documentation](mcp-server.md) for more details.
+With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
+`list_skill_resources` and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
+`--allow`, `--deny`, `--source` (repeatable), `--role`, `--frozen`, `--offline`, `--include-static`,
+`--budget-bytes`, `--usage-log`, `--usage-sink`, `--no-watch`, `--reload-interval`.
+
+See the [MCP Server Documentation](mcp-server.md) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)
+for more details.
 
 ## Global Flags
 
