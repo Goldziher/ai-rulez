@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const quiet = "--quiet"

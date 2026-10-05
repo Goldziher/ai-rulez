@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/crud"
-	incl "github.com/Goldziher/ai-rulez/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"gopkg.in/yaml.v3"
 )

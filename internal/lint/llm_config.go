@@ -8,7 +8,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Goldziher/ai-rulez/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
 // literalSecretKeys are [llm] keys that would hold a key value; the config only

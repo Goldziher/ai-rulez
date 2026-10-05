@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )

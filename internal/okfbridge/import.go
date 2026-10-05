@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"gopkg.in/yaml.v3"
 )
 

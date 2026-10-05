@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	_ "github.com/Goldziher/ai-rulez/internal/generator" // registers every preset name
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator" // registers every preset name
 )
 
 // Regenerate the preset enums after adding a preset:

@@ -3,8 +3,8 @@ package generator
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 )
 
 // LockOutputs renders every output in memory and returns the ones ai-rulez.lock
