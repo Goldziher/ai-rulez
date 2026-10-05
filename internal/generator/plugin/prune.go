@@ -23,17 +23,23 @@ type StaleOutput struct {
 
 // PlanStaleOutputs compares previous and planned inventories for every bundle
 // being generated. Modified obsolete files refuse generation before any writes.
-func PlanStaleOutputs(outputs []config.OutputFile) ([]StaleOutput, error) {
+func PlanStaleOutputs(outputs []config.OutputFile, staleRoots ...string) ([]StaleOutput, error) {
 	keep := make(map[string]bool, len(outputs))
 	for _, output := range outputs {
 		keep[filepath.Clean(output.Path)] = true
 	}
 	var stale []StaleOutput
+	var inventories []string
 	for _, output := range outputs {
-		if !output.PluginInventory {
-			continue
+		if output.PluginInventory {
+			inventories = append(inventories, output.Path)
 		}
-		bundleStale, err := planBundleStaleOutputs(output.Path, keep)
+	}
+	for _, root := range staleRoots {
+		inventories = append(inventories, filepath.Join(root, provenanceFileName))
+	}
+	for _, sidecar := range inventories {
+		bundleStale, err := planBundleStaleOutputs(sidecar, keep)
 		if err != nil {
 			return nil, err
 		}

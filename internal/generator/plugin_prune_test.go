@@ -3,9 +3,11 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -167,4 +169,54 @@ func TestGeneratePluginRetriesPartialLayoutTransition(t *testing.T) {
 			require.NoError(t, gen.VerifyPlugin(""))
 		})
 	}
+}
+
+func TestGeneratePluginPreservesEditedRemovedDomainBundle(t *testing.T) {
+	dir := newDomainsProject(t, staleTail)
+	gen := loadDomainsProject(t, dir)
+	require.NoError(t, gen.GeneratePlugin(""))
+	bundle := filepath.Join(dir, "mkt/plugins/demo-teamb")
+	edited := filepath.Join(bundle, "skills/b-s/SKILL.md")
+	writeDomainsFile(t, edited, "edited\n")
+	rootInventory := filepath.Join(dir, "mkt/.ai-rulez-generated.json")
+	before, err := os.ReadFile(rootInventory)
+	require.NoError(t, err)
+	require.NoError(t, os.RemoveAll(filepath.Join(dir, ".ai-rulez/domains/teamB")))
+	gen = loadDomainsProject(t, dir)
+	_, err = gen.DryRunPlugin("")
+	require.ErrorContains(t, err, "modified obsolete plugin output")
+	require.ErrorContains(t, gen.GeneratePlugin(""), "modified obsolete plugin output")
+	data, err := os.ReadFile(edited)
+	require.NoError(t, err)
+	assert.Equal(t, "edited\n", string(data))
+	after, err := os.ReadFile(rootInventory)
+	require.NoError(t, err)
+	assert.Equal(t, before, after)
+	assert.FileExists(t, filepath.Join(bundle, ".ai-rulez-generated.json"))
+	require.NoError(t, os.Remove(edited))
+	require.NoError(t, gen.GeneratePlugin(""))
+	assert.NoDirExists(t, bundle)
+	require.NoError(t, gen.VerifyPlugin(""))
+}
+
+func TestPluginInventoryWriteFailurePreservesPreviousBytes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("requires Unix directory permissions")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".ai-rulez-generated.json")
+	original := []byte("previous inventory\n")
+	require.NoError(t, os.WriteFile(path, original, 0o644))
+	require.NoError(t, os.Chmod(dir, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o750) })
+	if probe, err := os.CreateTemp(dir, "probe"); err == nil {
+		_ = probe.Close()
+		_ = os.Remove(probe.Name())
+		t.Skip("directory write permissions are not enforced for this user")
+	}
+	err := writeRawOutput(path, false, config.OutputFile{Path: path, RawContent: []byte("new inventory\n"), PluginInventory: true})
+	require.ErrorContains(t, err, "commit plugin inventory")
+	actual, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, original, actual, "failed atomic commit must leave previous inventory intact")
 }

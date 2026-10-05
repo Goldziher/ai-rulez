@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -44,22 +43,12 @@ func StalePluginDirs(outputRoot string, keep map[string]bool) ([]string, error) 
 // kept, so are the directories holding it, and its path is returned.
 func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	sidecarPath := filepath.Join(dir, provenanceFileName)
-	data, err := os.ReadFile(sidecarPath)
+	stale, err := planBundleStaleOutputs(sidecarPath, nil)
 	if err != nil {
-		return nil, oops.With("path", sidecarPath).Wrapf(err, "read plugin provenance")
+		return nil, err
 	}
-	var document provenanceDocument
-	if err := json.Unmarshal(data, &document); err != nil {
-		return nil, oops.With("path", sidecarPath).Wrapf(err, "parse plugin provenance")
-	}
-	for rel := range document.Outputs {
-		target, pathErr := safeOutputPath(dir, rel)
-		if pathErr != nil {
-			return nil, pathErr
-		}
-		if rmErr := os.Remove(target); rmErr != nil && !os.IsNotExist(rmErr) {
-			return nil, oops.With("path", target).Wrapf(rmErr, "remove stale plugin file")
-		}
+	if err := RemoveStaleOutputs(stale); err != nil {
+		return nil, err
 	}
 	if err := os.Remove(sidecarPath); err != nil && !os.IsNotExist(err) {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "remove plugin provenance")

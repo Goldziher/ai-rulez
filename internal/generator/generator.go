@@ -231,7 +231,7 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	obsolete, err := plugin.PlanStaleOutputs(outputs)
+	obsolete, err := plugin.PlanStaleOutputs(outputs, stale...)
 	if err != nil {
 		return 0, err
 	}
@@ -256,7 +256,9 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err := g.writeOutputs(inventories); err != nil {
 		return 0, err
 	}
-	g.removeStalePluginDirs(stale)
+	if err := g.removeStalePluginDirs(stale); err != nil {
+		return 0, err
+	}
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -377,16 +379,16 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	for _, output := range outputs {
 		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
 	}
-	obsolete, err := plugin.PlanStaleOutputs(outputs)
+	stale, err := g.stalePluginDirs()
+	if err != nil {
+		return nil, err
+	}
+	obsolete, err := plugin.PlanStaleOutputs(outputs, stale...)
 	if err != nil {
 		return nil, err
 	}
 	for _, output := range obsolete {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(output.Path))
-	}
-	stale, err := g.stalePluginDirs()
-	if err != nil {
-		return nil, err
 	}
 	for _, dir := range stale {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
@@ -494,14 +496,14 @@ func (g *Generator) stalePluginDirs() ([]string, error) {
 }
 
 // removeStalePluginDirs deletes the generated files of each stale plugin
-// directory and nothing else. A failure is reported and does not stop the run.
-func (g *Generator) removeStalePluginDirs(dirs []string) {
+// directory and nothing else. A failure preserves its inventory for retry.
+func (g *Generator) removeStalePluginDirs(dirs []string) error {
 	for _, dir := range dirs {
 		kept, err := plugin.RemoveGeneratedPluginDir(dir)
 		rel := g.convertToRelativePath(dir)
 		switch {
 		case err != nil:
-			logger.Warn("Could not remove a stale plugin directory", "dir", rel, "error", err)
+			return oops.With("dir", rel).Wrapf(err, "remove stale plugin directory")
 		case len(kept) > 0:
 			logger.Warn("Removed the generated files of a stale plugin directory; files that are not generated were kept",
 				"dir", rel, "kept", strings.Join(kept, ", "))
@@ -509,6 +511,7 @@ func (g *Generator) removeStalePluginDirs(dirs []string) {
 			logger.Info("Removed stale plugin directory", "dir", rel)
 		}
 	}
+	return nil
 }
 
 // marketplaceRoot is the directory the marketplace index is written to:
@@ -1839,6 +1842,9 @@ func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) erro
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check directory permissions for: %s", dir)).
 			Wrapf(err, "create parent directory")
+	}
+	if output.PluginInventory {
+		return oops.With("path", absPath).Wrapf(writeFileAtomic(absPath, output.RawContent), "commit plugin inventory")
 	}
 	if err := os.WriteFile(absPath, output.RawContent, mode); err != nil {
 		return oops.
