@@ -997,6 +997,11 @@
       "type": "object",
       "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
       "properties": {
+        "profile": {
+          "type": "string",
+          "enum": ["default", "strict", "permissive"],
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset."
+        },
         "fail_on": {
           "type": "string",
           "enum": ["error", "warning", "none"],
@@ -1017,6 +1022,11 @@
           "description": "Severity override per finding code or name.",
           "additionalProperties": { "type": "string", "enum": ["error", "warning", "info", "off"] }
         },
+        "example_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs of files that document risky commands as examples: findings of the command-shaped rules (AR005, AR006, AR008) in them are dropped."
+        },
         "allow_paths": {
           "type": "array",
           "items": { "type": "string" },
@@ -1034,6 +1044,21 @@
             "max_length": { "type": "integer", "minimum": 0 },
             "require_use_when": { "type": "boolean" },
             "near_duplicate_threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "budget": {
+          "type": "object",
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "risk": {
+          "type": "object",
+          "description": "Weights of the advisory risk score shown next to the findings (never affects the exit code). Points per finding; the score is capped at 100.",
+          "properties": {
+            "error": { "type": "integer", "minimum": 0, "description": "Points per error finding. Default 25." },
+            "warning": { "type": "integer", "minimum": 0, "description": "Points per warning finding. Default 8." },
+            "info": { "type": "integer", "minimum": 0, "description": "Points per info finding. Default 1." }
           },
           "additionalProperties": false
         },

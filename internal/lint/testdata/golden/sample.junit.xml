@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="ai-rulez validate" tests="3" failures="1" skipped="2">
+  <testsuite name="." tests="3" failures="1" skipped="2">
+    <testcase name="AR001 secret-detected (line 7)" classname=".ai-rulez/rules/a b.md" file=".ai-rulez/rules/a b.md" line="7">
+      <failure message="AWS access key id AKIA**** found" type="AR001">.ai-rulez/rules/a b.md:7: error AR001: AWS access key id AKIA**** found</failure>
+    </testcase>
+    <testcase name="AR401 path-missing (line 12)" classname=".ai-rulez/skills/s/SKILL.md" file=".ai-rulez/skills/s/SKILL.md" line="12">
+      <skipped message="warning: path &#34;src/x.go&#34; does not exist | really,&#xA;really" type="AR401">.ai-rulez/skills/s/SKILL.md:12: warning AR401: path &#34;src/x.go&#34; does not exist | really,&#xA;really</skipped>
+    </testcase>
+    <testcase name="AR202 anchor-unresolved (line 3)" classname="README.md" file="README.md" line="3">
+      <skipped message="info: no heading produces #x" type="AR202">README.md:3: info AR202: no heading produces #x</skipped>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -1,13 +1,16 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -28,25 +31,77 @@ var (
 	// tracked-file globs resolve against (default: the git toplevel, else the
 	// directory holding the configuration).
 	validateRepoRoot string
+	validateOutput   string
+	// validateLintProfile overrides [lint] profile. It is not --profile: that
+	// name selects a generation profile everywhere else.
+	validateLintProfile string
+	// validateAnalyzers restricts the report to these analyzers.
+	validateAnalyzers []string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
 )
 
+// strictOnlyFlagSet reports whether any flag that only means something with
+// --strict was given.
+func strictOnlyFlagSet() bool {
+	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
+		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
+		baselineFlagsSet() || changedRev() != ""
+}
+
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern) {
-		return oops.Errorf("--format, --fail-on and --external require --strict")
+	if !validateStrict && strictOnlyFlagSet() {
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix and the baseline flags require --strict")
 	}
-	switch validateFormat {
-	case "", "text", formatJSON:
-	default:
-		return oops.Errorf("unknown --format %q (use text or json)", validateFormat)
+	if err := checkFlagValues(); err != nil {
+		return err
+	}
+	return checkFlagCombinations()
+}
+
+// checkFlagValues rejects unknown names and values.
+func checkFlagValues() error {
+	if !lint.IsFormat(validateFormat) {
+		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
 	}
 	switch validateFailOn {
 	case "", "error", "warning", "info", "none":
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
+	}
+	known := lint.AnalyzerNames()
+	for _, a := range validateAnalyzers {
+		if !slices.Contains(known, strings.ToLower(strings.TrimSpace(a))) {
+			return oops.Errorf("unknown --analyzer %q (use %s)", a, strings.Join(known, ", "))
+		}
+	}
+	if _, ok := lint.LookupProfile(validateLintProfile); !ok {
+		return oops.Errorf("unknown --lint-profile %q (use %s)", validateLintProfile, strings.Join(lint.ProfileNames(), ", "))
+	}
+	return nil
+}
+
+// checkFlagCombinations rejects strict flags that contradict each other.
+func checkFlagCombinations() error {
+	if validateDryRun && !fixRequested() {
+		return oops.Errorf("--dry-run only applies with --fix or --fix-unsafe")
+	}
+	if fixRequested() && validateUpdateBaseline {
+		return oops.Errorf("--fix and --update-baseline cannot be combined: fix first, then record what is left")
+	}
+	if validateSince != "" && validateChanged {
+		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
+	}
+	if validateUpdateBaseline && validateStrictBaseline {
+		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
+	}
+	if validateUpdateBaseline && changedRev() != "" {
+		return oops.Errorf("--update-baseline needs every finding; it cannot be combined with --since or --changed")
+	}
+	if validateBaselineReason != "" && !validateUpdateBaseline {
+		return oops.Errorf("--baseline-reason only applies with --update-baseline")
 	}
 	return nil
 }
@@ -77,6 +132,14 @@ func applyRepoRoot() error {
 
 // strictLint lints one loaded root.
 func strictLint(cfg *config.Config) (*lint.Report, error) {
+	if validateLintProfile != "" {
+		lc := config.LintConfig{}
+		if cfg.Lint != nil {
+			lc = *cfg.Lint
+		}
+		lc.Profile = validateLintProfile
+		cfg.Lint = &lc
+	}
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
@@ -116,8 +179,13 @@ func failOnFor(cfg *config.Config) string {
 	if validateFailOn != "" {
 		return validateFailOn
 	}
-	if cfg != nil && cfg.Lint != nil && cfg.Lint.FailOn != "" {
-		return cfg.Lint.FailOn
+	if cfg != nil && cfg.Lint != nil {
+		if cfg.Lint.FailOn != "" {
+			return cfg.Lint.FailOn
+		}
+		if f := lint.ProfileFailOn(cfg.Lint.Profile); f != "" {
+			return f
+		}
 	}
 	return "error"
 }
@@ -126,26 +194,100 @@ func failOnFor(cfg *config.Config) string {
 // Each root is judged against its own threshold, so one root's [lint] fail_on
 // never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
+	excess, code, done := prepareReports(reports, cfgs)
+	if done {
+		return code
+	}
 	combined := lint.Combine(reports)
-	if validateFormat == formatJSON {
-		if err := lint.WriteJSON(os.Stdout, combined); err != nil {
-			fmtError(err)
-			return 1
-		}
-	} else if err := lint.WriteText(os.Stdout, combined); err != nil {
+	for _, e := range excess {
+		combined.Budgets = append(combined.Budgets, e...)
+	}
+	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
 		fmtError(err)
 		return 1
 	}
+	code = 0
 	for i, report := range reports {
-		var cfg *config.Config
-		if i < len(cfgs) {
-			cfg = cfgs[i]
-		}
-		if lint.Failed(report.Findings, failOnFor(cfg)) {
-			return exitStrictFindings
+		cfg := cfgAt(cfgs, i)
+		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), budgetsFor(cfg), excess[i]) {
+			code = exitStrictFindings
 		}
 	}
-	return 0
+	if baselineBlocks(reports) {
+		code = exitStrictFindings
+	}
+	return code
+}
+
+// prepareReports runs the steps between linting and printing, in the order that
+// keeps each one honest: fixes first (so fixed findings leave the report), then
+// the baseline against every finding (so stale entries are judged on the full
+// set), budgets on the full set, and only then the views that narrow the report
+// (analyzer filter, changed-only) and the risk score of what is shown. done is
+// true when the run ends here with code (--update-baseline, or an error).
+func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.BudgetExcess, code int, done bool) {
+	fail := func(err error) ([][]lint.BudgetExcess, int, bool) {
+		fmtError(err)
+		return nil, 1, true
+	}
+	if fixRequested() {
+		if err := applyFixes(reports, cfgs); err != nil {
+			return fail(err)
+		}
+	}
+	if validateUpdateBaseline {
+		if err := updateBaselines(reports, cfgs); err != nil {
+			return fail(err)
+		}
+		return nil, 0, true
+	}
+	if err := applyBaselines(reports, cfgs); err != nil {
+		return fail(err)
+	}
+	excess = make([][]lint.BudgetExcess, len(reports))
+	for i, report := range reports {
+		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+		lint.FilterAnalyzers(report, validateAnalyzers)
+	}
+	if err := narrowToChanged(reports, cfgs); err != nil {
+		return fail(err)
+	}
+	for i, report := range reports {
+		var rc *config.LintRisk
+		if cfg := cfgAt(cfgs, i); cfg != nil && cfg.Lint != nil {
+			rc = cfg.Lint.Risk
+		}
+		risk := lint.ComputeRisk(report.Findings, lint.RiskWeightsFrom(rc))
+		report.Risk = &risk
+	}
+	return excess, 0, false
+}
+
+// structuredFormat reports whether the format must be the only thing on stdout.
+func structuredFormat(format string) bool {
+	return format != "" && format != lint.FormatText
+}
+
+// writeReport prints the combined report in the chosen format, to --output
+// (written atomically) or stdout.
+func writeReport(combined lint.Combined, failOn string) error {
+	opts := lint.WriteOptions{Version: Version, FailOn: failOn}
+	if validateOutput == "" {
+		return lint.Write(os.Stdout, validateFormat, combined, opts)
+	}
+	var buf bytes.Buffer
+	if err := lint.Write(&buf, validateFormat, combined, opts); err != nil {
+		return err //nolint:wrapcheck // formatter error
+	}
+	if dir := filepath.Dir(validateOutput); dir != "." {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			return oops.With("path", validateOutput).Wrapf(err, "create output directory")
+		}
+	}
+	if err := gitutil.WriteFileAtomic(validateOutput, buf.Bytes(), 0o644); err != nil {
+		return oops.With("path", validateOutput).Wrapf(err, "write report")
+	}
+	return nil
 }
 
 func runStrictSingle(cfg *config.Config) int {
