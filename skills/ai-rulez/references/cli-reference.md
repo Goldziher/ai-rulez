@@ -31,6 +31,8 @@ Render outputs for all configured presets.
 Flags:
 
 - `--profile <name>` — Select a specific profile
+- `--role <name>` — Generate the slice of content a `[[roles]]` entry selects (mutually exclusive with `--profile`; works with `--user`)
+- `--locked` / `--frozen` — Require `ai-rulez.lock` to match remote sources and authored content (`--frozen` never uses the network); exit 2 on a source difference
 - `--dry-run, -d` — Print planned directories, writes, and stale generated-file deletions without mutating files
 - `--gitignore, -i` — Update `.gitignore` with generated output patterns
 - `--config-dir, -n <name>` — Use a non-default config directory name instead of `.ai-rulez`
@@ -105,6 +107,13 @@ Start the MCP server for AI assistant integrations.
 - `ai-rulez skill install <name> --source <url> [--path <p>] [--ref <r>]`
 - `ai-rulez skill remove <name> [--force]`
 - `ai-rulez skill list [--json]`
+
+## Roles, Lock and Catalog
+
+- `ai-rulez roles list|show <name>|resolve <name> [--format json]` — Inspect `[[roles]]`; `list --format json` is the `roles.json` manifest
+- `ai-rulez lock [--check] [--diff] [--format json] [--content-only]` — Pin remote includes, installed skills, authored content and outputs in `ai-rulez.lock`; `--check` exits 2 and names each difference
+- `ai-rulez catalog --format json` — Items with owner, version, tokens, roles and lock status
+- `ai-rulez tokens --role <name>` / `--by-role` — Token surface per role
 
 ## Other Commands
 

@@ -39,14 +39,25 @@ skill of the same name exists at both levels.
 
 ### Roles
 
-A role is a profile. Keep the shared content at the top level and one domain per role, then choose the role
-per machine with `default` in the user config or per run with `--profile`:
+The simplest role is a profile. Keep the shared content at the top level and one domain per role, then choose the
+role per machine with `default` in the user config or per run with `--profile`:
 
 ```bash
 ai-rulez generate --user --profile frontend
 ```
 
 Switching the role removes the files of the old one on the next run (they are in the manifest).
+
+For finer control, declare `[[roles]]` in the user config (domains, per-kind `include` / `exclude` selectors,
+inheritance and a per-skill `skill_mode` that becomes `skillOverrides` in `~/.claude/settings.json`) and select one
+with `--role`, which is mutually exclusive with `--profile`:
+
+```bash
+ai-rulez generate --user --role backend-engineer --yes
+```
+
+ai-rulez does not decide who holds a role: an external tool picks the name. See [Roles](roles.md), including
+[Integrating an identity tool or UI](roles.md#integrating-an-identity-tool-or-ui).
 
 ## Commands
 
