@@ -37,6 +37,8 @@ type Combined struct {
 	Baseline *BaselineSummary `json:"baseline,omitempty"`
 	// Budgets lists rules over their [lint.budget].
 	Budgets []BudgetExcess `json:"budgets_exceeded,omitempty"`
+	// Profile is the lint profile when it is not the default.
+	Profile string `json:"profile,omitempty"`
 	// Risk is the advisory risk score (never affects the exit code).
 	Risk *CombinedRisk `json:"risk,omitempty"`
 	// ChangedOnly is set when the report was narrowed to changed files.
@@ -68,6 +70,11 @@ func Combine(reports []*Report) Combined {
 		}
 	}
 	c.Risk = combineRisk(reports)
+	for _, r := range reports {
+		if r.Profile != "" && c.Profile == "" {
+			c.Profile = r.Profile
+		}
+	}
 	for i := range c.Findings {
 		f := &c.Findings[i]
 		if f.IsAccepted() {
@@ -100,6 +107,10 @@ func WriteJSON(w io.Writer, c Combined) error {
 // followed by a per-code tally.
 func WriteText(w io.Writer, c Combined) error {
 	var sb strings.Builder
+	if c.Profile != "" {
+		p, _ := LookupProfile(c.Profile) //nolint:errcheck // set from a resolved profile
+		fmt.Fprintf(&sb, "lint profile: %s (%s)\n", p.Name, p.Summary)
+	}
 	for i := range c.Findings {
 		f := &c.Findings[i]
 		if f.IsAccepted() {

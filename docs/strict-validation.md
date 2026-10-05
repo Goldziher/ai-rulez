@@ -111,6 +111,8 @@ known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands prov
 allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 
+profile = "default"                # default | strict | permissive (see Profiles)
+
 [lint.severity]                    # error | warning | info | off
 AR401 = "error"
 anchor-unresolved = "off"
@@ -226,6 +228,24 @@ one entry per accepted finding:
   tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the text
   report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
   per root, after the baseline.
+
+## Profiles
+
+`[lint] profile` (or `--lint-profile` on the command line) selects a preset of severities and the failure
+threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` selects a *generation* profile on
+`generate`, `tokens` and friends and the two are unrelated.
+
+| Profile | Deltas against `default` |
+| --- | --- |
+| `default` | None: every rule at its registry severity, `fail_on = error` |
+| `strict` | `fail_on = warning`. Turns on `AR803` and `AR962` (warning). Promotes to error: `AR202` anchor-unresolved, `AR303` frontmatter-key-unknown, `AR401` path-missing, `AR801` description-missing, `AR802` description-length, `AR804` skill-name-invalid, `AR901` size-lines, `AR902` size-tokens |
+| `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
+
+Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
+`[lint.budget]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
+`config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
+report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
+`"profile"`. The preset tables live in `internal/lint/profile.go`.
 
 ## Risk score
 

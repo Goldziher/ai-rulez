@@ -60,6 +60,8 @@ type Report struct {
 	Deps map[string][]string `json:"-"`
 	// Scope is set when the report was narrowed to changed files.
 	Scope *ChangedScope `json:"-"`
+	// Profile is the non-default lint profile the run used.
+	Profile string `json:"-"`
 	// Risk is the advisory risk score, set by the caller after the baseline.
 	Risk *RiskReport `json:"-"`
 }
@@ -217,7 +219,11 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	return &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps()}, nil
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps()}
+	if p, ok := LookupProfile(r.lc.Profile); ok && p.Name != ProfileDefault {
+		rep.Profile = p.Name
+	}
+	return rep, nil
 }
 
 func (r *runner) resolveSettings() {
@@ -225,6 +231,7 @@ func (r *runner) resolveSettings() {
 	for _, rule := range registry {
 		r.sev[rule.Code] = rule.Default
 	}
+	r.applyProfile()
 	if r.lc.Description != nil && r.lc.Description.RequireUseWhen {
 		r.sev[CodeDescriptionStyle] = SeverityWarning
 	}
@@ -1021,6 +1028,9 @@ func (r *runner) checkSettingsConfig() {
 // validateBudgetAndRisk checks [lint.budget] and [lint.risk].
 func validateBudgetAndRisk(lc *config.LintConfig) []string {
 	var problems []string
+	if _, ok := LookupProfile(lc.Profile); !ok {
+		problems = append(problems, fmt.Sprintf("lint.profile: unknown profile %q (use %s)", lc.Profile, strings.Join(ProfileNames(), ", ")))
+	}
 	for key, limit := range lc.Budget {
 		if _, ok := lookupRule(key); !ok {
 			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))

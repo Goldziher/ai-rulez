@@ -753,6 +753,11 @@
       "type": "object",
       "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
       "properties": {
+        "profile": {
+          "type": "string",
+          "enum": ["default", "strict", "permissive"],
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset."
+        },
         "fail_on": {
           "type": "string",
           "enum": ["error", "warning", "none"],
