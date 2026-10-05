@@ -152,29 +152,9 @@ func applyMarkdown(path, existing string, owned []OwnedKey) (Result, error) {
 			doc = strings.TrimRight(withEndings(header, nl), "\r\n") + nl + nl
 		}
 	}
-	for _, b := range blocks {
-		span, found, ferr := findBlock(path, doc, b.name)
-		if ferr != nil {
-			return Result{}, ferr
-		}
-		block := renderBlock(b, nl)
-		if found {
-			doc = doc[:span.start] + block + doc[span.end:]
-			continue
-		}
-		if doc != "" && !strings.HasSuffix(doc, "\n") {
-			doc += nl
-		}
-		if doc != "" && !strings.HasSuffix(doc, nl+nl) {
-			doc += nl
-		}
-		doc += block
-	}
-	for _, b := range blocks {
-		span, found, ferr := findBlock(path, doc, b.name)
-		if ferr != nil || !found || !strings.Contains(doc[span.start:span.end], strings.TrimRight(withEndings(b.text, nl), "\r\n")) {
-			return Result{}, oops.With("path", path, "block", b.name).Errorf("the merged markdown document does not hold the block")
-		}
+	doc, err = mergeMarkdownBlocks(path, doc, nl, blocks)
+	if err != nil {
+		return Result{}, err
 	}
 
 	rest, headerPresent := outsideBlocks(path, doc, blocks, header, nl)
@@ -252,4 +232,32 @@ func unmergeMarkdown(path, existing string, claims []Claim) (Unmerged, error) {
 	}
 	out.Body = bom + jsonmerge.RestoreFinalNewline(claims, doc)
 	return out, nil
+}
+
+func mergeMarkdownBlocks(path, doc, nl string, blocks []mdBlock) (string, error) {
+	for _, b := range blocks {
+		span, found, ferr := findBlock(path, doc, b.name)
+		if ferr != nil {
+			return "", ferr
+		}
+		block := renderBlock(b, nl)
+		if found {
+			doc = doc[:span.start] + block + doc[span.end:]
+			continue
+		}
+		if doc != "" && !strings.HasSuffix(doc, "\n") {
+			doc += nl
+		}
+		if doc != "" && !strings.HasSuffix(doc, nl+nl) {
+			doc += nl
+		}
+		doc += block
+	}
+	for _, b := range blocks {
+		span, found, ferr := findBlock(path, doc, b.name)
+		if ferr != nil || !found || !strings.Contains(doc[span.start:span.end], strings.TrimRight(withEndings(b.text, nl), "\r\n")) {
+			return "", oops.With("path", path, "block", b.name).Errorf("the merged markdown document does not hold the block")
+		}
+	}
+	return doc, nil
 }

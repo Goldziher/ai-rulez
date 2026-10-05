@@ -41,7 +41,7 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
 func (g *CursorPresetGenerator) ProjectLayout() ProjectLayout {
-	return ProjectLayout{RulesDir: ".cursor/rules", SkillsDir: ".agents/skills", AgentsDir: ".cursor/agents", CommandsDir: ".cursor/commands"}
+	return ProjectLayout{RulesDir: ".cursor/rules", SkillsDir: sharedSkillsDir, AgentsDir: ".cursor/agents", CommandsDir: ".cursor/commands"}
 }
 
 // GlobalOutputPaths is the Cursor user-scope layout under ~/.cursor. User rules
@@ -50,14 +50,14 @@ func (g *CursorPresetGenerator) GlobalOutputPaths(home string, getenv func(strin
 	return GlobalLayout{
 		// Cursor reads ~/.agents/skills, the directory the project skills use too, so a
 		// skill shared with codex and gemini is written once.
-		SkillsDir:   ".agents/skills",
+		SkillsDir:   sharedSkillsDir,
 		AgentsDir:   ".cursor/agents",
 		CommandsDir: ".cursor/commands",
 		Sidecars: map[string]string{
 			MergedDocCursorMCP:   ".cursor/mcp.json",
 			MergedDocCursorHooks: ".cursor/hooks.json",
 		},
-		SkillReaders: []string{".cursor/skills", ".agents/skills", ".claude/skills", ".codex/skills"},
+		SkillReaders: []string{".cursor/skills", sharedSkillsDir, ".claude/skills", ".codex/skills"},
 	}.Resolve(home, getenv)
 }
 
@@ -106,7 +106,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			sanitized := sanitizeName(command.Name)
 
 			outputs = append(outputs, config.OutputFile{
-				Path:    filepath.Join(baseDir, ".cursor", "commands", sanitized+".md"),
+				Path:    filepath.Join(baseDir, ".cursor", "commands", sanitized+extMarkdown),
 				Content: commandContent,
 			})
 		}
@@ -159,7 +159,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".cursor", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".cursor", "agents", agentID+extMarkdown),
 			Content: agentContent,
 		})
 	}

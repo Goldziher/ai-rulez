@@ -601,7 +601,6 @@ func (s *V4GenerationSuite) TestAmp_Content() {
 	agentsMD := s.requireFile(outputs, "AGENTS.md")
 	s.assertContentContains(agentsMD, "code-review-standards")
 	s.assertContentContains(agentsMD, "project-architecture")
-
 }
 
 // ==========================================

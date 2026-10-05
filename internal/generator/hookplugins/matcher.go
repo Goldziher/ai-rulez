@@ -63,17 +63,28 @@ func incompatibleSyntax(matcher string) string {
 			if strings.ContainsRune("zZAQEpPkK123456789", rune(matcher[i])) {
 				return fmt.Sprintf(`\%c is not portable`, matcher[i])
 			}
-		case inClass && c == '[' && i+1 < len(matcher) && matcher[i+1] == ':':
+		case inClass && startsPOSIXClass(matcher, i):
 			return "POSIX classes are not portable"
 		case inClass && c == ']':
 			inClass = false
 		case !inClass && c == '[':
 			inClass = true
-		case !inClass && c == '(' && i+1 < len(matcher) && matcher[i+1] == '?':
-			if i+2 >= len(matcher) || matcher[i+2] != ':' {
+		case !inClass && startsSpecialGroup(matcher, i):
+			if !isNoncapturingGroup(matcher, i) {
 				return "only (?: groups are portable"
 			}
 		}
 	}
 	return ""
+}
+
+func startsSpecialGroup(matcher string, i int) bool {
+	return matcher[i] == '(' && i+1 < len(matcher) && matcher[i+1] == '?'
+}
+func isNoncapturingGroup(matcher string, i int) bool {
+	return i+2 < len(matcher) && matcher[i+2] == ':'
+}
+
+func startsPOSIXClass(matcher string, i int) bool {
+	return matcher[i] == '[' && i+1 < len(matcher) && matcher[i+1] == ':'
 }

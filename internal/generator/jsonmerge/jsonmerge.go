@@ -416,16 +416,7 @@ func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth i
 	head, rest := path[0], path[1:]
 
 	if len(rest) == 0 {
-		if key.Remove {
-			if key.RemoveIf != nil && !removalAccepted(members, head, key.RemoveIf) {
-				return members, nil
-			}
-			return removeMember(members, head), nil
-		}
-		if key.Members {
-			return mergeMembers(members, head, key.Value, depth, indent, newline)
-		}
-		return replaceMemberValue(members, head, key.Value, depth, indent, newline)
+		return replaceOwnedLeaf(members, head, key, depth, indent, newline)
 	}
 
 	idx := -1
@@ -705,4 +696,17 @@ func advanceStructural(char byte, depth int) (inString bool, newDepth int) {
 	default:
 		return false, depth
 	}
+}
+
+func replaceOwnedLeaf(members []jsonMember, head string, key OwnedKey, depth int, indent, newline string) ([]jsonMember, error) {
+	if key.Remove {
+		if key.RemoveIf != nil && !removalAccepted(members, head, key.RemoveIf) {
+			return members, nil
+		}
+		return removeMember(members, head), nil
+	}
+	if key.Members {
+		return mergeMembers(members, head, key.Value, depth, indent, newline)
+	}
+	return replaceMemberValue(members, head, key.Value, depth, indent, newline)
 }

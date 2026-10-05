@@ -140,23 +140,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	ctx := context.Background()
 
-	// Load configuration
-	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
+	cfg, err := loadGenerateConfig(ctx, args)
 	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	suggestTOMLMigration(cfg.ConfigDir)
-
-	applyGenerateOverrides(cfg)
-	if err := importGate(cfg); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
@@ -658,4 +643,26 @@ func importGate(cfg *config.Config) error {
 		return nil
 	}
 	return enforceScanImports(cfg)
+}
+
+func loadGenerateConfig(ctx context.Context, args []string) (*config.Config, error) {
+	// Load configuration
+	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	suggestTOMLMigration(cfg.ConfigDir)
+
+	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }

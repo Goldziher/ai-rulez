@@ -179,7 +179,7 @@ func rootContext(content *config.ContentTree, cfg *config.Config, preset, rootFi
 
 // withoutBazNestedAt applies withoutBazNested to the shared AGENTS.md only.
 func withoutBazNestedAt(items []config.ContentFile, cfg *config.Config, rootFile string) []config.ContentFile {
-	if rootFile != "AGENTS.md" {
+	if rootFile != agentsFileName {
 		return items
 	}
 	return withoutBazNested(items, cfg)

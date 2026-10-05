@@ -1,9 +1,8 @@
 package settings
 
 import (
-	"strings"
-
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // Devin CLI: .devin/config.json (JSONC) `permissions.{allow,ask,deny}` with
@@ -18,10 +17,11 @@ var _ = registerPermissionDialect("devin", buildDevin)
 
 func buildDevin(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
-	for _, e := range t.entries {
-		rule, why := devinRule(e)
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		rule, why := devinRule(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		lists[e.Action] = append(lists[e.Action], rule)
@@ -29,13 +29,13 @@ func buildDevin(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var keys []jsonmerge.OwnedKey
 	for _, action := range []PermAction{ActionAllow, ActionAsk, ActionDeny} {
 		if len(lists[action]) > 0 {
-			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", string(action)}, lists[action]))
+			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyPermissions, string(action)}, lists[action]))
 		}
 	}
 	return keys, nil
 }
 
-func devinRule(e permEntry) (string, string) {
+func devinRule(e permEntry) (value string, reason string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
@@ -50,9 +50,9 @@ func devinRule(e permEntry) (string, string) {
 		}
 		return "", "Exec rules are word prefixes; wildcards inside a command cannot be expressed"
 	case KindRead, KindEdit:
-		tool, bare := "Read", "read"
+		tool, bare := toolnames.Read, ocRead
 		if r.Kind == KindEdit {
-			tool, bare = "Write", "edit"
+			tool, bare = toolnames.Write, ocEdit
 		}
 		if r.Bare {
 			return bare, ""
@@ -67,7 +67,7 @@ func devinRule(e permEntry) (string, string) {
 		return tool + "(" + glob + ")", ""
 	case KindFetch:
 		if r.Domain == "" {
-			return "", "only WebFetch(domain:host) rules carry over"
+			return "", webFetchDomainOnlyReason
 		}
 		return "Fetch(domain:" + r.Domain + ")", ""
 	case KindMCP:
@@ -90,60 +90,49 @@ var _ = registerPermissionDialect("grok", buildGrok)
 
 func buildGrok(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
-	for _, e := range t.entries {
-		rules, why := grokRules(e)
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		rules, why := grokRules(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
-		for _, r := range rules {
-			lists[e.Action] = append(lists[e.Action], r)
+		for rIndex := range rules {
+			r := &rules[rIndex]
+			lists[e.Action] = append(lists[e.Action], *r)
 		}
 	}
 	var keys []jsonmerge.OwnedKey
 	for _, action := range []PermAction{ActionAllow, ActionAsk, ActionDeny} {
 		if len(lists[action]) > 0 {
-			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permission", string(action)}, lists[action]))
+			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyPermission, string(action)}, lists[action]))
 		}
 	}
 	return keys, nil
 }
 
-func grokRules(e permEntry) ([]string, string) {
+func grokRules(e permEntry) (rules []string, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
 		p := r.Shell()
 		switch p.Kind {
 		case ShellAny:
-			return []string{"Bash"}, ""
+			return []string{toolnames.Bash}, ""
 		case ShellPrefix:
 			return []string{"Bash(" + p.Literal + ")", "Bash(" + p.Literal + " *)"}, ""
 		default:
 			return []string{"Bash(" + p.Literal + ")"}, ""
 		}
 	case KindRead, KindEdit:
-		tool := "Read"
-		if r.Kind == KindEdit {
-			tool = "Edit"
-			if r.Tool != "Edit" && e.Action == ActionAllow {
-				return nil, "Grok has one Edit filter for every edit tool, so a " + r.Tool + " allow rule would be widened"
-			}
-		}
-		if r.Bare {
-			return []string{tool}, ""
-		}
-		if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
-			return nil, "home and absolute path anchors are not documented for Grok"
-		}
-		return []string{tool + "(" + r.Path.Glob + ")"}, ""
+		return grokPathRules(e)
 	case KindSearch:
 		if r.Bare {
-			return []string{"WebSearch"}, ""
+			return []string{toolnames.WebSearch}, ""
 		}
 	case KindFetch:
 		if r.Bare {
-			return []string{"WebFetch"}, ""
+			return []string{toolnames.WebFetch}, ""
 		}
 		return nil, "the WebFetch domain syntax is not documented for Grok"
 	case KindMCP:
@@ -155,4 +144,21 @@ func grokRules(e permEntry) ([]string, string) {
 	return nil, "the harness has no equivalent of " + r.Tool + " rules"
 }
 
-func hasGlob(s string) bool { return strings.ContainsAny(s, "*?[") }
+func grokPathRules(e permEntry) (rules []string, why string) {
+	r := e.Rule
+
+	tool := toolnames.Read
+	if r.Kind == KindEdit {
+		tool = toolnames.Edit
+		if r.Tool != toolnames.Edit && e.Action == ActionAllow {
+			return nil, "Grok has one Edit filter for every edit tool, so a " + r.Tool + " allow rule would be widened"
+		}
+	}
+	if r.Bare {
+		return []string{tool}, ""
+	}
+	if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
+		return nil, "home and absolute path anchors are not documented for Grok"
+	}
+	return []string{tool + "(" + r.Path.Glob + ")"}, ""
+}

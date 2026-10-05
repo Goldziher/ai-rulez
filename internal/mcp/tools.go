@@ -295,7 +295,7 @@ func (s *Server) registerUtilityTools() {
 	)
 }
 
-var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
+var priorityValues = []string{priorityCritical, priorityHigh, priorityMedium, priorityLow, "minimal"}
 
 func (s *Server) registerCRUDTools() {
 	// Domain tools
@@ -401,7 +401,7 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Check filename without .md extension (letters, digits, '.', '_', '-')", true).
 				String("content", "Markdown body, or a full file with YAML frontmatter", false).
 				String("description", "Short summary of the check", false).
-				Enum("severity", "Severity level", []string{"low", "medium", "high", "critical"}, false).
+				Enum("severity", "Severity level", []string{priorityLow, priorityMedium, priorityHigh, priorityCritical}, false).
 				StringArray("tools", "Tool names the check may use", false).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				StringArray("targets", "Target providers (e.g., cursor, kilo)", false).
@@ -428,7 +428,7 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Check filename without .md extension", true).
 				String("content", "New markdown body (the existing frontmatter is kept), or a full file with YAML frontmatter. Optional when a field below is given", false).
 				String("description", "Short summary of the check; given fields are set on the existing frontmatter", false).
-				Enum("severity", "Severity level", []string{"low", "medium", "high", "critical"}, false).
+				Enum("severity", "Severity level", []string{priorityLow, priorityMedium, priorityHigh, priorityCritical}, false).
 				StringArray("tools", "Tool names the check may use", false).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				StringArray("targets", "Target presets or path globs (e.g., cursor, kilo, src/**)", false).

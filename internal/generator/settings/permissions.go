@@ -132,9 +132,10 @@ func (t *translation) parse() []permEntry {
 // only returns the entries of one list, in declaration order.
 func (t *translation) only(action PermAction) []permEntry {
 	var out []permEntry
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == action {
-			out = append(out, e)
+			out = append(out, *e)
 		}
 	}
 	return out
@@ -163,14 +164,6 @@ func (t *translation) askUnsupported() {
 		return
 	}
 	rulefiles.Warn(fmt.Sprintf("[permissions] ask rules are not generated for %s: it has no ask list and prompts for whatever is not allowed", t.harness))
-}
-
-// noDenySurface reports that the harness has no way to deny anything, once per
-// harness, when the configuration declares deny rules.
-func (t *translation) noDenySurface(why string) {
-	for _, e := range t.only(ActionDeny) {
-		t.drop(e, why)
-	}
 }
 
 // docTree reads the target document into generic Go values; nil when it is
@@ -230,7 +223,9 @@ func containsValue(list []any, v any) bool {
 func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) jsonmerge.OwnedKey {
 	var existing []any
 	if v, ok := jsonmerge.LookupTree(docTree(docPath), path); ok {
-		existing, _ = v.([]any) // a non-array value is the consumer's; the merge reports it
+		if list, isArray := v.([]any); isArray {
+			existing = list
+		} // a non-array value is the consumer's; the merge reports it
 	}
 	var previous []any
 	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
@@ -267,7 +262,9 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 func docMembersKey(t *translation, path []string, entries map[string]any) (jsonmerge.OwnedKey, bool) {
 	var existing map[string]any
 	if v, ok := jsonmerge.LookupTree(docTree(t.docPath), path); ok {
-		existing, _ = v.(map[string]any)
+		if object, isMap := v.(map[string]any); isMap {
+			existing = object
+		}
 	}
 	previous := t.cfg.Run.PreviousClaims(documentRel(t.cfg, t.docPath))
 	value := make(map[string]any, len(entries))
@@ -307,8 +304,9 @@ func claimedPath(claims []jsonmerge.Claim, path []string) bool {
 // stringElements converts rule strings to array elements.
 func stringElements(rules []string) []any {
 	out := make([]any, 0, len(rules))
-	for _, r := range rules {
-		out = append(out, r)
+	for rIndex := range rules {
+		r := &rules[rIndex]
+		out = append(out, *r)
 	}
 	return out
 }

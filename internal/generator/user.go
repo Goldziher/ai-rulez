@@ -2,6 +2,7 @@ package generator
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ import (
 // each preset declares (its spec's [global] block, or presets.GlobalOutputProvider),
 // so only locations a vendor documents are written. A tool's home variable
 // (CODEX_HOME, HERMES_HOME, ...) relocates its directory, and only an absolute
-// value is honoured.
+// value is honored.
 //
 // The config directory (default ~/.config/ai-rulez) keeps the generated manifest
 // beside the user config, which is what `clean --user` reads. Nothing is written
@@ -84,8 +85,8 @@ func (g *Generator) userEnv() func(string) string {
 // below the home directory, and records the tool homes environment variables
 // relocated outside it, for the configured presets. It returns the supported layouts and the reason for each
 // unsupported preset.
-func (g *Generator) resolveUserLayouts() (map[string]*userscope.Layout, map[string]string, error) {
-	layouts, unsupported, err := userscope.AllFor(g.config, g.config.BaseDir, g.userEnv())
+func (g *Generator) resolveUserLayouts() (layouts map[string]*userscope.Layout, unsupported map[string]string, err error) {
+	layouts, unsupported, err = userscope.AllFor(g.config, g.config.BaseDir, g.userEnv())
 	if err != nil {
 		return nil, nil, oops.With("home", g.config.BaseDir).
 			Hint("The home directory must be an absolute path").Wrapf(err, "resolve the user-level layouts")
@@ -151,7 +152,11 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	if err != nil {
 		return nil, "", nil, oops.Wrapf(err, "create the scratch directory")
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	defer func() {
+		if cleanupErr := os.RemoveAll(stage); cleanupErr != nil {
+			err = errors.Join(err, oops.Wrapf(cleanupErr, "remove the scratch directory"))
+		}
+	}()
 	if err := stageUserDocuments(stage, presets, layouts); err != nil {
 		return nil, "", nil, err
 	}
@@ -274,7 +279,7 @@ func stageUserDocuments(stage string, presets []config.Preset, layouts map[strin
 // userPreviousAliases returns the previous run's generated files and merge claims
 // under the project-relative paths the presets render at. The manifest records the
 // user-level destinations, and a preset looks its own files up by what it renders.
-func (g *Generator) userPreviousAliases(presets []config.Preset, layouts map[string]*userscope.Layout) ([]string, map[string][]jsonmerge.Claim) {
+func (g *Generator) userPreviousAliases(presets []config.Preset, layouts map[string]*userscope.Layout) (values []string, value map[string][]jsonmerge.Claim) {
 	files := g.previousManifestFiles()
 	claims := g.previousMergedClaims()
 	generated := slices.Clone(files)
@@ -689,19 +694,12 @@ func (g *Generator) userPruneCandidates(removed []string) []string {
 			}
 		}
 	}
-	home := filepath.Clean(g.config.BaseDir)
-	keep := func(dir string) bool {
-		if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
-			return true
-		}
-		return g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir)
-	}
 	seen := map[string]bool{}
 	var dirs []string
 	for _, file := range removed {
 		for dir := filepath.Dir(file); g.withinScope(dir); dir = filepath.Dir(dir) {
 			inRoot := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
-			if keep(dir) && !inRoot {
+			if g.protectedUserDirectory(dir) && !inRoot {
 				break
 			}
 			if g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir) {
@@ -837,4 +835,12 @@ func (g *Generator) projectOverlapWarnings(byDir map[string][]string) []string {
 		}
 	}
 	return warnings
+}
+
+func (g *Generator) protectedUserDirectory(dir string) bool {
+	home := filepath.Clean(g.config.BaseDir)
+	if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
+		return true
+	}
+	return g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir)
 }

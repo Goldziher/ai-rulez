@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -121,14 +120,8 @@ func readPreviousProvenance(sidecar string) (*provenanceDocument, error) {
 		return nil, oops.Wrapf(err, "read previous plugin provenance")
 	}
 	var document provenanceDocument
-	if err := json.Unmarshal(data, &document); err != nil {
-		return nil, oops.Wrapf(err, "parse previous plugin provenance")
-	}
-	if document.SchemaVersion != provenanceSchema {
-		return nil, oops.Errorf("unsupported plugin provenance schema %q", document.SchemaVersion)
-	}
-	if document.Outputs == nil || provenanceSourceHash(document.Outputs) != document.SourceHash {
-		return nil, oops.With("path", sidecar).Errorf("invalid previous plugin provenance inventory or source hash")
+	if err := unmarshalProvenance(data, &document); err != nil {
+		return nil, oops.With("path", sidecar).Wrap(err)
 	}
 	return &document, nil
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // ToolKind groups Claude Code tools by the capability a permission rule
@@ -83,16 +85,16 @@ const (
 
 // toolKinds maps the Claude tool names that have a cross-harness meaning.
 var toolKinds = map[string]ToolKind{
-	"Bash":         KindShell,
-	"Read":         KindRead,
-	"Edit":         KindEdit,
-	"Write":        KindEdit,
-	"MultiEdit":    KindEdit,
-	"NotebookEdit": KindEdit,
-	"WebFetch":     KindFetch,
-	"WebSearch":    KindSearch,
-	"Task":         KindAgent,
-	"Agent":        KindAgent,
+	toolnames.Bash:      KindShell,
+	toolnames.Read:      KindRead,
+	toolnames.Edit:      KindEdit,
+	toolnames.Write:     KindEdit,
+	"MultiEdit":         KindEdit,
+	"NotebookEdit":      KindEdit,
+	toolnames.WebFetch:  KindFetch,
+	toolnames.WebSearch: KindSearch,
+	"Task":              KindAgent,
+	toolnames.Agent:     KindAgent,
 }
 
 // ParseRule parses a Claude Code permission rule: `Tool`, `Tool(specifier)` or

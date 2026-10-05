@@ -269,7 +269,7 @@ header = "# Bugbot rules\n"
 			require.NoError(t, err)
 			var got *config.OutputFile
 			for i := range outputs {
-				if outputs[i].Path == "/proj/.cursor/BUGBOT.md" {
+				if outputs[i].Path == filepath.FromSlash("/proj/.cursor/BUGBOT.md") {
 					got = &outputs[i]
 				}
 			}
@@ -305,7 +305,7 @@ sections = ["frontmatter", "content"]
 	require.NoError(t, err)
 	var content string
 	for _, o := range outputs {
-		if o.Path == "/proj/.x/checks/perf-check.md" {
+		if o.Path == filepath.FromSlash("/proj/.x/checks/perf-check.md") {
 			content = o.Content
 		}
 	}

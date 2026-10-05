@@ -5,7 +5,7 @@
 // The generated module is owned wholly by ai-rulez. It carries the hook
 // declarations as one JSON literal produced by encoding/json, so no hook text is
 // ever spliced into code, and a fixed runtime that spawns each hook command with a
-// Claude Code style JSON document on stdin, honours its timeout and blocks a
+// Claude Code style JSON document on stdin, honors its timeout and blocks a
 // pre-tool call on exit code 2. Only the adapter between the harness's event API
 // and that runtime differs per flavor. Event names, tool names and file
 // locations were read from each vendor's plugin documentation and source (see
@@ -397,7 +397,7 @@ func command(cfg *config.Config, action *config.HookAction) string {
 	script := path.Clean(filepath.ToSlash(action.Script))
 	target := "./" + script
 	if cfg.UserScope {
-		target = filepath.Join(cfg.ConfigDir, filepath.FromSlash(script))
+		target = filepath.ToSlash(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script)))
 	}
 	line := shellQuote(target)
 	if len(action.Args) > 0 {

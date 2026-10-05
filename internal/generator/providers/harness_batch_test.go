@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -269,7 +271,7 @@ func TestHarnessBatch_MCPDocuments(t *testing.T) {
 func TestHarnessBatch_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	home := "/home/u"
+	home := testutil.AbsolutePath("/home/u")
 	j := func(p string) string { return filepath.Join(home, filepath.FromSlash(p)) }
 	tests := []struct {
 		preset string

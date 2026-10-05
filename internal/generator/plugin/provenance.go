@@ -157,5 +157,11 @@ func unmarshalProvenance(sidecar []byte, document *provenanceDocument) error {
 	if err := json.Unmarshal(sidecar, document); err != nil {
 		return oops.Wrapf(err, "parse plugin provenance")
 	}
+	if document.SchemaVersion != provenanceSchema {
+		return oops.Errorf("unsupported plugin provenance schema %q", document.SchemaVersion)
+	}
+	if document.Outputs == nil || provenanceSourceHash(document.Outputs) != document.SourceHash {
+		return oops.Errorf("invalid plugin provenance inventory or source hash")
+	}
 	return nil
 }

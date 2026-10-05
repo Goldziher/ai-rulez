@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -70,7 +71,7 @@ filter = "include_if_targeting_provider"
 	require.NoError(t, err)
 	var got string
 	for _, o := range outputs {
-		if o.Path == "/proj/REVIEW.md" {
+		if o.Path == filepath.FromSlash("/proj/REVIEW.md") {
 			got = string(o.RawContent)
 		}
 	}
@@ -108,7 +109,7 @@ renames = { severity = "severity-default" }
 	require.NoError(t, err)
 	var got string
 	for _, o := range outputs {
-		if o.Path == "/proj/.x/checks/sec.md" {
+		if o.Path == filepath.FromSlash("/proj/.x/checks/sec.md") {
 			got = o.Content
 		}
 	}

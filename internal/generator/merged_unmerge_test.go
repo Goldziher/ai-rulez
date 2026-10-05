@@ -328,6 +328,8 @@ func TestWriteFileAtomic_WritesThroughSymlink(t *testing.T) {
 	require.NoError(t, os.WriteFile(target, []byte("old"), 0o600))
 	link := filepath.Join(dir, "settings.json")
 	require.NoError(t, os.Symlink(target, link))
+	before, statErr := os.Stat(target)
+	require.NoError(t, statErr)
 
 	// Act
 	require.NoError(t, writeFileAtomic(link, []byte("new")))
@@ -341,7 +343,7 @@ func TestWriteFileAtomic_WritesThroughSymlink(t *testing.T) {
 	assert.Equal(t, "new", string(got))
 	stat, err := os.Stat(target)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), stat.Mode().Perm(), "existing mode is kept")
+	assert.Equal(t, before.Mode().Perm(), stat.Mode().Perm(), "existing mode is kept")
 }
 
 func TestIsNestedAgentsMD(t *testing.T) {

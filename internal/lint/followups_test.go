@@ -252,7 +252,7 @@ func TestExternalScanner(t *testing.T) {
 				format = "format = \"" + tt.format + "\"\n"
 			}
 			writeFiles(t, root, map[string]string{".ai-rulez/config.toml": baseConfig +
-				"\n[[lint.external]]\nname = \"fake\"\ncommand = [\"" + filepath.ToSlash(script) + "\"]\n" + format})
+				"\n[[lint.external]]\nname = \"fake\"\ncommand = [\"sh\", \"" + filepath.ToSlash(script) + "\"]\n" + format})
 			gitAdd(t, root)
 			cfg := loadNoRemote(t, root)
 			tree, err := LoadTree(root)

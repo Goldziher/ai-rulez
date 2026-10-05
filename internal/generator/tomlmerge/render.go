@@ -22,7 +22,7 @@ func renderKey(part string) string {
 	if bareKey.MatchString(part) {
 		return part
 	}
-	quoted, _ := json.Marshal(part)
+	quoted, _ := json.Marshal(part) //nolint:errcheck // A string is always JSON-serializable.
 	return string(quoted)
 }
 
@@ -112,7 +112,7 @@ func quote(s string) string {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
-	_ = enc.Encode(s)
+	_ = enc.Encode(s) //nolint:errcheck // Strings are serializable and bytes.Buffer writes cannot fail.
 	return strings.ReplaceAll(strings.TrimSuffix(buf.String(), "\n"), "\x7f", `\u007f`)
 }
 

@@ -63,12 +63,12 @@ func (g *OpencodePresetGenerator) GetName() string {
 
 // LocalRootFile implements config.LocalRootProvider: AGENTS.md → AGENTS.local.md.
 func (g *OpencodePresetGenerator) LocalRootFile() string {
-	return config.LocalVariantPath("AGENTS.md")
+	return config.LocalVariantPath(agentsFileName)
 }
 
 func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, agentsFileName),
 		filepath.Join(baseDir, ".opencode"),
 		filepath.Join(baseDir, ".opencode", "skills"),
 		filepath.Join(baseDir, ".opencode", "agents"),
@@ -77,12 +77,12 @@ func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 }
 
 // opencodeCommands is the folder of OpenCode custom commands, invoked as /{id}.
-var opencodeCommands = commandFilesSpec{preset: opencodePresetName, dir: ".opencode/commands", ext: ".md"}
+var opencodeCommands = commandFilesSpec{preset: opencodePresetName, dir: ".opencode/commands", ext: extMarkdown}
 
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
 func (g *OpencodePresetGenerator) ProjectLayout() ProjectLayout {
-	return ProjectLayout{RootFile: "AGENTS.md", SkillsDir: ".opencode/skills", AgentsDir: ".opencode/agents", CommandsDir: ".opencode/commands"}
+	return ProjectLayout{RootFile: agentsFileName, SkillsDir: ".opencode/skills", AgentsDir: ".opencode/agents", CommandsDir: ".opencode/commands"}
 }
 
 // GlobalOutputPaths is the OpenCode user-scope layout under ~/.config/opencode.
@@ -97,7 +97,7 @@ func (g *OpencodePresetGenerator) GlobalOutputPaths(home string, getenv func(str
 			hookplugins.OpencodePath: hookplugins.OpencodeUserPath,
 		},
 		// OpenCode also reads the Claude Code and shared agent skill directories.
-		SkillReaders: []string{".config/opencode/skills", ".claude/skills", ".agents/skills"},
+		SkillReaders: []string{".config/opencode/skills", ".claude/skills", sharedSkillsDir},
 	}.Resolve(home, getenv)
 }
 
@@ -128,7 +128,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
 	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
+		Path:    filepath.Join(baseDir, agentsFileName),
 		Content: agentsContent,
 		IsDir:   false,
 	})
@@ -169,7 +169,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".opencode", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".opencode", "agents", agentID+extMarkdown),
 			Content: agentContent,
 		})
 	}
@@ -352,7 +352,7 @@ const opencodeInstructionsKey = "instructions"
 // opencodeLocalEntries are the spellings of the local root file OpenCode resolves
 // to the same path.
 func opencodeLocalEntries() []any {
-	local := config.LocalVariantPath("AGENTS.md")
+	local := config.LocalVariantPath(agentsFileName)
 	return []any{local, "./" + local}
 }
 
@@ -470,11 +470,11 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	var builder strings.Builder
 
 	// Calculate content counts
-	allRules := rootRules(content, cfg, opencodePresetName, "AGENTS.md")
+	allRules := rootRules(content, cfg, opencodePresetName, agentsFileName)
 	allAgents := allAgents(content)
 
 	// Add header before title
-	header := generateOpenCodePresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
+	header := generateOpenCodePresetHeader(cfg, agentsFileName, len(allRules), 0, len(allAgents))
 	builder.WriteString(header)
 
 	// Add title
@@ -491,7 +491,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := rootContext(content, cfg, opencodePresetName, "AGENTS.md")
+	allContext := rootContext(content, cfg, opencodePresetName, agentsFileName)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)

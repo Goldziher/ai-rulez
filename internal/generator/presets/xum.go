@@ -31,12 +31,12 @@ func (g *XumPresetGenerator) GetName() string {
 
 // LocalRootFile implements config.LocalRootProvider: AGENTS.md → AGENTS.local.md.
 func (g *XumPresetGenerator) LocalRootFile() string {
-	return config.LocalVariantPath("AGENTS.md")
+	return config.LocalVariantPath(agentsFileName)
 }
 
 func (g *XumPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, agentsFileName),
 		filepath.Join(baseDir, ".xum"),
 		filepath.Join(baseDir, ".xum", "skills"),
 		filepath.Join(baseDir, ".xum", "agents"),
@@ -52,7 +52,7 @@ func (g *XumPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 		config.OutputFile{Path: filepath.Join(baseDir, ".xum", "skills"), IsDir: true},
 		config.OutputFile{Path: filepath.Join(baseDir, ".xum", "agents"), IsDir: true},
 		config.OutputFile{
-			Path:    filepath.Join(baseDir, "AGENTS.md"),
+			Path:    filepath.Join(baseDir, agentsFileName),
 			Content: g.renderAgentsMarkdown(content, cfg),
 		},
 	)
@@ -76,7 +76,7 @@ func (g *XumPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".xum", "agents", sanitizeAgentID(agent.Name)+".md"),
+			Path:    filepath.Join(baseDir, ".xum", "agents", sanitizeAgentID(agent.Name)+extMarkdown),
 			Content: agentContent,
 		})
 	}
@@ -95,14 +95,14 @@ func (g *XumPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
-	allRules := rootRules(content, cfg, xumPresetName, "AGENTS.md")
+	allRules := rootRules(content, cfg, xumPresetName, agentsFileName)
 	allAgents := allAgents(content)
 
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
 		Timestamp:    cfg.HeaderTimestamp(),
 		ConfigFile:   configFileName(cfg),
-		OutputFile:   "AGENTS.md",
+		OutputFile:   agentsFileName,
 		Config:       cfg,
 		RuleCount:    len(allRules),
 		AgentCount:   len(allAgents),
@@ -121,7 +121,7 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, agentsFileName), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 
@@ -204,7 +204,7 @@ func (g *XumPresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg
 // ("off" | "low" | "medium" | "high").
 func xumThinkingLevel(tier string) string {
 	switch tier {
-	case "", "inherit":
+	case "", effortInherit:
 		return ""
 	case "xhigh", "max":
 		return "high"

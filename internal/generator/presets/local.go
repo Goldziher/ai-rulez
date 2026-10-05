@@ -19,7 +19,7 @@ import (
 // out of scope for local overrides). outputFile is the local variant's path
 // relative to the base dir, used only for the header banner.
 func RenderLocalRootRules(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config, outputFile string) string {
-	return RenderLocalRootRulesFor(local, allRules, cfg, outputFile, strings.Replace(outputFile, ".local.md", ".md", 1))
+	return RenderLocalRootRulesFor(local, allRules, cfg, outputFile, strings.Replace(outputFile, ".local.md", extMarkdown, 1))
 }
 
 // RenderLocalRootRulesFor is RenderLocalRootRules for a local file whose name does

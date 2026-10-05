@@ -125,7 +125,7 @@ func commandAsSkills(content *config.ContentTree, preset string) []config.Conten
 			continue
 		}
 		taken[id] = true
-		extra := map[string]string{"disable-model-invocation": "true"}
+		extra := map[string]string{keyDisableModelInvocation: "true"}
 		if desc := commandDescription(command); desc != "" {
 			extra[keyDescription] = desc
 		}

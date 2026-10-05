@@ -29,22 +29,9 @@ func UnmergeDocument(path, existing string, claims []Claim) (Unmerged, error) {
 	}
 	ed := &editor{src: existing, newline: detectLineEnding(existing)}
 
-	changed := false
-	var mismatched [][]string
-	for _, alone := range []bool{false, true} {
-		for _, claim := range claims {
-			if len(claim.Path) == 0 || claim.Alone != alone {
-				continue
-			}
-			did, mismatch, err := ed.unmergeClaim(claim)
-			if err != nil {
-				return Unmerged{}, oops.With("path", path).Wrapf(err, "remove ai-rulez content from TOML document")
-			}
-			changed = changed || did
-			if mismatch {
-				mismatched = append(mismatched, claim.Path)
-			}
-		}
+	changed, mismatched, err := ed.removeClaims(path, claims)
+	if err != nil {
+		return Unmerged{}, err
 	}
 
 	if changed {
@@ -139,4 +126,24 @@ func (e *editor) unmergeClaim(claim Claim) (changed, mismatch bool, err error) {
 	default:
 		return true, false, e.set(claim.Path, remaining)
 	}
+}
+
+func (e *editor) removeClaims(path string, claims []Claim) (changed bool, mismatched [][]string, err error) {
+	changed = false
+	for _, alone := range []bool{false, true} {
+		for _, claim := range claims {
+			if len(claim.Path) == 0 || claim.Alone != alone {
+				continue
+			}
+			did, mismatch, err := e.unmergeClaim(claim)
+			if err != nil {
+				return false, nil, oops.With("path", path).Wrapf(err, "remove ai-rulez content from TOML document")
+			}
+			changed = changed || did
+			if mismatch {
+				mismatched = append(mismatched, claim.Path)
+			}
+		}
+	}
+	return changed, mismatched, nil
 }

@@ -43,7 +43,7 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 		if err != nil {
 			return nil, err
 		}
-		info, statErr := os.Lstat(target)
+		info, statErr := inspectOutputPath(bundleDir, rel)
 		if statErr != nil {
 			if os.IsNotExist(statErr) {
 				continue
@@ -63,19 +63,4 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 	}
 	sort.Slice(obsolete, func(i, j int) bool { return obsolete[i].Rel < obsolete[j].Rel })
 	return obsolete, nil
-}
-
-// RemoveObsolete deletes one obsolete file and then every directory it leaves
-// empty, stopping at bundleDir, which is never removed.
-func RemoveObsolete(bundleDir, path string) error {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return oops.With("path", path).Wrapf(err, "remove obsolete plugin file")
-	}
-	bundleDir = filepath.Clean(bundleDir)
-	for dir := filepath.Dir(path); dir != bundleDir && len(dir) > len(bundleDir); dir = filepath.Dir(dir) {
-		if err := os.Remove(dir); err != nil {
-			break // not empty: something that is not generated lives there
-		}
-	}
-	return nil
 }

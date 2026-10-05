@@ -176,7 +176,7 @@ func claimSpecs(claims []Claim) []pathSpec {
 // CheckPreservedApply verifies that merging owned into before, which produced
 // after (both decoded documents), changed nothing but the owned keys: with every
 // owned path removed from both, what is left must be identical. It is the
-// engines' last line of defence against a text edit that damaged content it did
+// engines' last line of defense against a text edit that damaged content it did
 // not own, and a violation means the merge must be abandoned.
 func CheckPreservedApply(before, after map[string]any, owned []OwnedKey) error {
 	return checkPreserved(before, after, ownedSpecs(before, owned))
@@ -188,8 +188,14 @@ func CheckPreservedUnmerge(before, after map[string]any, claims []Claim) error {
 }
 
 func checkPreserved(before, after map[string]any, specs []pathSpec) error {
-	b := deepCopy(before).(map[string]any)
-	a := deepCopy(after).(map[string]any)
+	b, ok := deepCopy(before).(map[string]any)
+	if !ok {
+		return fmt.Errorf("cannot copy the original document")
+	}
+	a, ok := deepCopy(after).(map[string]any)
+	if !ok {
+		return fmt.Errorf("cannot copy the edited document")
+	}
 	for _, spec := range specs {
 		spec.strip(b)
 		spec.strip(a)
@@ -285,43 +291,9 @@ func deepCopy(value any) any {
 func firstDiff(a, b any, path []string) ([]string, bool) {
 	switch av := a.(type) {
 	case map[string]any:
-		bv, ok := b.(map[string]any)
-		if !ok {
-			return path, true
-		}
-		keys := make([]string, 0, len(av)+len(bv))
-		for k := range av {
-			keys = append(keys, k)
-		}
-		for k := range bv {
-			if _, in := av[k]; !in {
-				keys = append(keys, k)
-			}
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			x, inA := av[k]
-			y, inB := bv[k]
-			sub := append(slices.Clone(path), k)
-			if inA != inB {
-				return sub, true
-			}
-			if diff, differs := firstDiff(x, y, sub); differs {
-				return diff, true
-			}
-		}
-		return nil, false
+		return firstObjectDiff(av, b, path)
 	case []any:
-		bv, ok := b.([]any)
-		if !ok || len(av) != len(bv) {
-			return path, true
-		}
-		for i := range av {
-			if diff, differs := firstDiff(av[i], bv[i], path); differs {
-				return diff, true
-			}
-		}
-		return nil, false
+		return firstArrayDiff(av, b, path)
 	case float64:
 		bv, ok := b.(float64)
 		if ok && math.IsNaN(av) && math.IsNaN(bv) {
@@ -481,4 +453,46 @@ func DecodeTolerantTree(doc string) (map[string]any, error) {
 		return tree, nil
 	}
 	return jsoncTree(rest)
+}
+
+func firstObjectDiff(av map[string]any, b any, path []string) (diff []string, differs bool) {
+	bv, ok := b.(map[string]any)
+	if !ok {
+		return path, true
+	}
+	keys := make([]string, 0, len(av)+len(bv))
+	for k := range av {
+		keys = append(keys, k)
+	}
+	for k := range bv {
+		if _, in := av[k]; !in {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		x, inA := av[k]
+		y, inB := bv[k]
+		sub := append(slices.Clone(path), k)
+		if inA != inB {
+			return sub, true
+		}
+		if diff, differs := firstDiff(x, y, sub); differs {
+			return diff, true
+		}
+	}
+	return nil, false
+}
+
+func firstArrayDiff(av []any, b any, path []string) (diff []string, differs bool) {
+	bv, ok := b.([]any)
+	if !ok || len(av) != len(bv) {
+		return path, true
+	}
+	for i := range av {
+		if diff, differs := firstDiff(av[i], bv[i], path); differs {
+			return diff, true
+		}
+	}
+	return nil, false
 }

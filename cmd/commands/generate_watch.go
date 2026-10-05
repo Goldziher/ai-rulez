@@ -45,9 +45,6 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	if err := checkGenerateWatchFlags(); err != nil {
 		return err
 	}
-	if parent == nil {
-		parent = context.Background()
-	}
 	ctx, stop := interruptContext(parent)
 	defer stop()
 
@@ -82,7 +79,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	})
 }
 
-// interruptContext is a context cancelled by the first SIGINT or SIGTERM. The
+// interruptContext is a context canceled by the first SIGINT or SIGTERM. The
 // signal handling is released right after, so a second Ctrl-C takes the default
 // action and kills the process even while a run is stuck.
 func interruptContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -106,7 +103,7 @@ func changedPaths(triggers []string) []string {
 	return out
 }
 
-// generatedOutputFilter recognises the files the previous run recorded as
+// generatedOutputFilter recognizes the files the previous run recorded as
 // generated. An include source can sit on a tree that also holds outputs; their
 // rewrite must not count as a change, or every run would trigger the next.
 type generatedOutputFilter struct {
@@ -147,7 +144,7 @@ func generateOnce(ctx context.Context, args []string) (*config.Config, error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
-	return cfg, gen.Generate(profile) //nolint:wrapcheck // already contextual
+	return cfg, gen.Generate(profile) //nolint:contextcheck,wrapcheck // Generate uses the inherited context installed by SetContext. // already contextual
 }
 
 // describeTriggers shortens a trigger list for the log line.
@@ -228,7 +225,8 @@ func includeTargets(cfg *config.Config) []watch.Target {
 		}
 		out = append(out, watch.Target{Path: p})
 	}
-	for _, inc := range cfg.Includes {
+	for incIndex := range cfg.Includes {
+		inc := &cfg.Includes[incIndex]
 		add(inc.Source)
 		add(inc.LocalOverride)
 	}

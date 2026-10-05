@@ -1,10 +1,11 @@
 package providers
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/config"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,8 +23,8 @@ func marshalFrontmatter(frontmatter map[string]any, spec *FrontmatterSpec) ([]by
 	}
 	sort.Strings(keys)
 	if spec.NameFirst {
-		if i := slices.Index(keys, "name"); i > 0 {
-			keys = append([]string{"name"}, slices.Delete(keys, i, i+1)...)
+		if i := slices.Index(keys, keyName); i > 0 {
+			keys = append([]string{keyName}, slices.Delete(keys, i, i+1)...)
 		}
 	}
 

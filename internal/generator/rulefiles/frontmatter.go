@@ -89,29 +89,8 @@ func FrontmatterFor(t Target, it Item) (fm map[string]any, notes []Note) {
 }
 
 func frontmatterFor(d Dialect, mapping *ActivationMap, it Item) (fm map[string]any, notes []Note) {
-	mode, notes := effectiveMode(d, it)
-	if mode == config.ActivationGlob {
-		kept, dropped := splitNegated(it.Activation.Globs)
-		if len(dropped) > 0 {
-			notes = append(notes, negatedNote(d, it, kept, dropped))
-		}
-		if len(kept) == 0 {
-			// Nothing positive is left to scope by: load always.
-			mode = config.ActivationAlways
-		}
-		it.Activation.Globs = kept
-	}
+	it, mode, joined, notes := prepareActivation(d, it)
 	act := it.Activation
-
-	joined := ""
-	if mode == config.ActivationGlob && (d == DialectCursor || d == DialectTrigger || d == DialectCopilot) {
-		var braceNotes []string
-		joined, braceNotes = joinExpanded(it.File.Name, act.Globs)
-		for _, text := range braceNotes {
-			notes = append(notes, newNote(d, it, text, false))
-		}
-	}
-
 	var extra []Note
 	switch d {
 	case DialectClaude, DialectCline:
@@ -257,4 +236,31 @@ func continueFrontmatter(it Item, mode config.ActivationMode) map[string]any {
 		fm[keyAlwaysApply] = true
 	}
 	return fm
+}
+
+func prepareActivation(d Dialect, it Item) (Item, config.ActivationMode, string, []Note) {
+	mode, notes := effectiveMode(d, it)
+	if mode == config.ActivationGlob {
+		kept, dropped := splitNegated(it.Activation.Globs)
+		if len(dropped) > 0 {
+			notes = append(notes, negatedNote(d, it, kept, dropped))
+		}
+		if len(kept) == 0 {
+			// Nothing positive is left to scope by: load always.
+			mode = config.ActivationAlways
+		}
+		it.Activation.Globs = kept
+	}
+	act := it.Activation
+
+	joined := ""
+	if mode == config.ActivationGlob && (d == DialectCursor || d == DialectTrigger || d == DialectCopilot) {
+		var braceNotes []string
+		joined, braceNotes = joinExpanded(it.File.Name, act.Globs)
+		for _, text := range braceNotes {
+			notes = append(notes, newNote(d, it, text, false))
+		}
+	}
+
+	return it, mode, joined, notes
 }

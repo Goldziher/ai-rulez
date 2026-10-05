@@ -103,22 +103,8 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 		if !g.HookTargetsHarness(spec.name) {
 			continue
 		}
-		native, ok := spec.events[g.Event]
+		native, matcher, ok := hookGroupContext(g, spec)
 		if !ok {
-			warn(spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
-				"hint", "restrict the group with targets, or remove it")
-			continue
-		}
-		matcher, ok := groupMatcher(g, spec)
-		if !ok {
-			continue
-		}
-		if matcher == "" && spec.defaultMatcher != "" && (spec.matcherRequired || spec.matcherEvents[native]) {
-			matcher = spec.defaultMatcher
-		}
-		if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
-			warn(spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
-				"hint", "remove the matcher or set targets to leave this harness out")
 			continue
 		}
 		handlers := make([]json.RawMessage, 0, len(g.Hooks))
@@ -192,7 +178,6 @@ type handlerContext struct{ name, event, matcher string }
 
 func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, action *config.HookAction, hc handlerContext,
 ) (raw json.RawMessage, ok bool, err error) {
-	matcher := hc.matcher
 	if action.Type != "" && action.Type != config.HookTypeCommand {
 		warn(spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
 		return nil, false, nil
@@ -221,27 +206,7 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 		args = nil
 	}
 
-	var value any
-	switch {
-	case spec.flat != nil:
-		value = spec.flat(hc, command, action)
-	case spec.shape != nil:
-		value = spec.shape.handler(spec, matcher, command, args, action)
-	}
-	switch spec.name {
-	case config.HarnessClaude:
-		value = claudeHandler{Type: config.HookTypeCommand, Command: command, Args: args, Timeout: action.Timeout,
-			Async: action.Async, If: action.If, StatusMessage: action.StatusMessage}
-	case config.HarnessCodex:
-		value = codexHandler{Type: config.HookTypeCommand, Command: command, Timeout: action.Timeout,
-			Async: action.Async, StatusMessage: action.StatusMessage}
-	case config.HarnessGemini:
-		value = geminiHandler{Type: config.HookTypeCommand, Command: command, Timeout: action.Timeout * 1000}
-	case config.HarnessCursor:
-		value = cursorEntry{Command: command, Timeout: action.Timeout, Matcher: matcher}
-	case config.HarnessCopilot, config.HarnessCopilotCLI:
-		value = copilotEntry{Type: config.HookTypeCommand, Matcher: matcher, Bash: command, TimeoutSec: action.Timeout}
-	}
+	value := nativeHookHandler(spec, action, hc, command, args)
 	raw, err = json.Marshal(value)
 	if err != nil {
 		return nil, false, fmt.Errorf("marshal %s hook handler: %w", spec.name, err)
@@ -259,7 +224,7 @@ func handlerCommand(cfg *config.Config, spec hookSpec, action *config.HookAction
 	}
 	script := path.Clean(filepath.ToSlash(action.Script))
 	if cfg.UserScope {
-		return quote(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script))), action.Args, true
+		return quote(filepath.ToSlash(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script)))), action.Args, true
 	}
 	// The script path is single-quoted on top of the config-time allowlist
 	// (config.IsSafeHookScript); only the root variable stays double-quoted, because
@@ -359,9 +324,9 @@ func (s hookSpec) requiredKeys(cfg *config.Config, docPath string) []jsonmerge.O
 	return keys
 }
 
-func hookClaimedBefore(cfg *config.Config, docPath string, path []string) bool {
+func hookClaimedBefore(cfg *config.Config, docPath string, keyPath []string) bool {
 	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-		if equalPath(claim.Path, path) {
+		if equalPath(claim.Path, keyPath) {
 			return true
 		}
 	}
@@ -419,4 +384,52 @@ func targetsAny(cfg *config.Config, harness string) bool {
 		}
 	}
 	return false
+}
+
+func hookGroupContext(g *config.HookGroup, spec hookSpec) (native, matcher string, ok bool) {
+	native, ok = spec.events[g.Event]
+	if !ok {
+		warn(spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
+			"hint", "restrict the group with targets, or remove it")
+		return "", "", false
+	}
+	matcher, ok = groupMatcher(g, spec)
+	if !ok {
+		return "", "", false
+	}
+	if matcher == "" && spec.defaultMatcher != "" && (spec.matcherRequired || spec.matcherEvents[native]) {
+		matcher = spec.defaultMatcher
+	}
+	if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
+		warn(spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
+			"hint", "remove the matcher or set targets to leave this harness out")
+		return "", "", false
+	}
+	return native, matcher, true
+}
+
+func nativeHookHandler(spec hookSpec, action *config.HookAction, hc handlerContext, command string, args []string) any {
+	matcher := hc.matcher
+	var value any
+	switch {
+	case spec.flat != nil:
+		value = spec.flat(hc, command, action)
+	case spec.shape != nil:
+		value = spec.shape.handler(spec, matcher, command, args, action)
+	}
+	switch spec.name {
+	case config.HarnessClaude:
+		value = claudeHandler{Type: config.HookTypeCommand, Command: command, Args: args, Timeout: action.Timeout,
+			Async: action.Async, If: action.If, StatusMessage: action.StatusMessage}
+	case config.HarnessCodex:
+		value = codexHandler{Type: config.HookTypeCommand, Command: command, Timeout: action.Timeout,
+			Async: action.Async, StatusMessage: action.StatusMessage}
+	case config.HarnessGemini:
+		value = geminiHandler{Type: config.HookTypeCommand, Command: command, Timeout: action.Timeout * 1000}
+	case config.HarnessCursor:
+		value = cursorEntry{Command: command, Timeout: action.Timeout, Matcher: matcher}
+	case config.HarnessCopilot, config.HarnessCopilotCLI:
+		value = copilotEntry{Type: config.HookTypeCommand, Matcher: matcher, Bash: command, TimeoutSec: action.Timeout}
+	}
+	return value
 }

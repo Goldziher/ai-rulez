@@ -113,20 +113,7 @@ func unmergeJSONC(path, existing string, claims []Claim, strictErr error) (Unmer
 	}
 
 	ed := newJSONCEditor(existing, obj)
-	changed := false
-	var mismatched [][]string
-	for _, alone := range []bool{false, true} {
-		for _, claim := range claims {
-			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(obj.Members) != 1) {
-				continue
-			}
-			did, mismatch := ed.unmergeClaim(obj, claim.Path, claim)
-			changed = changed || did
-			if mismatch {
-				mismatched = append(mismatched, claim.Path)
-			}
-		}
-	}
+	changed, mismatched := ed.removeClaims(obj, claims)
 
 	var kept [][]string
 	seen := map[string]bool{}
@@ -429,7 +416,8 @@ func jsoncMultiline(obj *hujson.Object) bool {
 	if bytes.IndexByte(obj.AfterExtra, '\n') >= 0 {
 		return true
 	}
-	for _, member := range obj.Members {
+	for memberIndex := range obj.Members {
+		member := &obj.Members[memberIndex]
 		if bytes.IndexByte(member.Name.BeforeExtra, '\n') >= 0 {
 			return true
 		}
@@ -440,7 +428,8 @@ func jsoncMultiline(obj *hujson.Object) bool {
 // jsoncIndent infers one indentation level from the first top-level member that
 // starts its own line, falling back to defaultJSONIndent.
 func jsoncIndent(obj *hujson.Object) string {
-	for _, member := range obj.Members {
+	for memberIndex := range obj.Members {
+		member := &obj.Members[memberIndex]
 		before := member.Name.BeforeExtra
 		nl := bytes.LastIndexByte(before, '\n')
 		if nl < 0 {
@@ -467,8 +456,12 @@ func hasUnownedJSONC(obj *hujson.Object, paths [][]string) bool {
 	for _, path := range paths {
 		roots[path[0]] = append(roots[path[0]], path[1:])
 	}
-	for _, member := range obj.Members {
-		lit, _ := member.Name.Value.(hujson.Literal)
+	for memberIndex := range obj.Members {
+		member := &obj.Members[memberIndex]
+		lit, ok := member.Name.Value.(hujson.Literal)
+		if !ok {
+			return true
+		}
 		rems, ok := roots[lit.String()]
 		if !ok {
 			return true
@@ -548,7 +541,7 @@ func elementSlots(arr *hujson.Array) []jsoncSlot {
 }
 
 // removeSlot rewrites the extras around slots[i] so the item can be deleted
-// without taking neighbouring comments or the trailing-comma style with it.
+// without taking neighboring comments or the trailing-comma style with it.
 // Comments on the line after the previous item stay with it; comments on the
 // removed item's own line go with it; comments on their own lines above it stay.
 // tail is the container's AfterExtra. The caller deletes the item afterwards.
@@ -669,4 +662,21 @@ func tokenEnd(e []byte, pos int) int {
 		}
 		return end
 	}
+}
+
+func (ed jsoncEditor) removeClaims(obj *hujson.Object, claims []Claim) (changed bool, mismatched [][]string) {
+	changed = false
+	for _, alone := range []bool{false, true} {
+		for _, claim := range claims {
+			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(obj.Members) != 1) {
+				continue
+			}
+			did, mismatch := ed.unmergeClaim(obj, claim.Path, claim)
+			changed = changed || did
+			if mismatch {
+				mismatched = append(mismatched, claim.Path)
+			}
+		}
+	}
+	return changed, mismatched
 }

@@ -22,7 +22,7 @@ const maxSymlinkHops = 40
 // Writing through a link that stays inside the project is deliberate (a
 // CLAUDE.md -> AGENTS.md link); a link out of it would let a hostile checkout
 // overwrite arbitrary files, so it is an error naming the link.
-func (g *Generator) guardWrite(abs string) (string, bool, error) {
+func (g *Generator) guardWrite(abs string) (value string, ok bool, err error) {
 	abs = filepath.Clean(abs)
 	if !g.withinScope(abs) {
 		return abs, false, nil
@@ -58,7 +58,7 @@ func (g *Generator) writeRoots() []string {
 // resolveWriteTarget resolves every symlink in p, parent directories first,
 // following a dangling final link lexically, so the result is where a write
 // would land. Components that do not exist yet cannot be links and are kept.
-func resolveWriteTarget(p string, hops *int) (string, bool, error) {
+func resolveWriteTarget(p string, hops *int) (value string, ok bool, err error) {
 	p = filepath.Clean(p)
 	parent := filepath.Dir(p)
 	if parent == p {

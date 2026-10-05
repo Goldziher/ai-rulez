@@ -488,10 +488,12 @@ When a skill, command or agent is removed from the sources, the next `generate -
 deletes the files it generated in every bundle that stays (for every runtime), then the
 directories they leave empty. The previous run's `.ai-rulez-generated.json` is the record: only a
 file it lists, that the new plan no longer contains, and whose content still matches the recorded
-hash is deleted. An obsolete file you edited since, or one reached through a symlink that leaves
-the project, is kept with a warning, and a file the sidecar never listed is never touched.
-`generate --plugin --dry-run` prints `delete-stale: <path>` for each deletion and
-`keep-obsolete: <path>` for each kept file, and `verify --plugin` fails with
+hash is deleted. A file the sidecar never listed is never touched.
+An edited obsolete file or a symlinked obsolete path stops generation before writes,
+so the previous inventory remains available for retry.
+Move or remove the reported file explicitly, then regenerate.
+`generate --plugin --dry-run` prints `delete-stale: <path>` for each planned deletion
+without changing files, and `verify --plugin` fails with
 `obsolete generated plugin file` while such a file exists.
 
 #### Linked git worktrees

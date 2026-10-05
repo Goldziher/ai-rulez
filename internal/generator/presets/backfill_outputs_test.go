@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -216,7 +218,7 @@ func TestDevinCommandSkill_SkillWithSameIDWins(t *testing.T) {
 }
 
 func TestGoPresets_GlobalOutputPaths(t *testing.T) {
-	home := filepath.FromSlash("/home/u")
+	home := testutil.AbsolutePath("/home/u")
 	abs := func(rel string) string { return filepath.Join(home, filepath.FromSlash(rel)) }
 
 	cases := []struct {
@@ -300,8 +302,8 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 }
 
 func TestCodexGlobalOutputPaths_HonoursCodexHome(t *testing.T) {
-	home := filepath.FromSlash("/home/u")
-	override := filepath.FromSlash("/data/codex")
+	home := testutil.AbsolutePath("/home/u")
+	override := testutil.AbsolutePath("/data/codex")
 	got := (&CodexPresetGenerator{}).GlobalOutputPaths(home, func(k string) string {
 		if k == "CODEX_HOME" {
 			return override

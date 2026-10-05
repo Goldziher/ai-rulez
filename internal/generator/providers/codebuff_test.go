@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -74,7 +76,7 @@ func TestCodebuff_NoServersNoOutput(t *testing.T) {
 func TestCodebuff_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := codebuffGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := codebuffGen(t).Spec.GlobalPaths(testutil.AbsolutePath("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.agents/mcp.json"), g.Sidecars[".agents/mcp.json"])
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.agents/mcp.json"), g.Sidecars[".agents/mcp.json"])
 }

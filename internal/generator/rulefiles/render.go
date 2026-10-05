@@ -36,18 +36,8 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 	}
 
 	var b strings.Builder
-	if fm != nil {
-		b.WriteString("---\n")
-		if t.IsMappedLines() {
-			b.WriteString(MappedLines(fm))
-		} else {
-			marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
-			if err != nil {
-				return "", nil, oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
-			}
-			b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
-		}
-		b.WriteString("---\n")
+	if err := writeFrontmatter(&b, t, it, fm); err != nil {
+		return "", nil, err
 	}
 	if t.Banner {
 		b.WriteString(templates.RuleBanner(sourceLabel(it.File.Path, cfg)))
@@ -127,4 +117,21 @@ func sourceLabel(p string, cfg *config.Config) string {
 	}
 	p = strings.ReplaceAll(p, "\\", "/")
 	return p[strings.LastIndex(p, "/")+1:]
+}
+
+func writeFrontmatter(b *strings.Builder, t Target, it Item, fm map[string]any) error {
+	if fm != nil {
+		b.WriteString("---\n")
+		if t.IsMappedLines() {
+			b.WriteString(MappedLines(fm))
+		} else {
+			marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
+			if err != nil {
+				return oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
+			}
+			b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
+		}
+		b.WriteString("---\n")
+	}
+	return nil
 }

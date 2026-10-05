@@ -2,7 +2,7 @@
 // shared, user-authored settings document of any supported format: JSON and
 // JSONC (jsonmerge), TOML (tomlmerge) and YAML (yamlmerge).
 //
-// Every engine honours the same contract. Apply replaces only the keys ai-rulez
+// Every engine honors the same contract. Apply replaces only the keys ai-rulez
 // owns and leaves the rest of the document, comments included, as it was;
 // Unmerge takes back exactly what an earlier Apply claimed. The types are the
 // ones jsonmerge defines, so the ownership record (Claim) is the same JSON shape
@@ -102,7 +102,7 @@ func (f Format) Valid() bool {
 // Apply merges the owned keys into the document at path, which is parsed as
 // format, and returns the body to write. A missing or empty file is created from
 // the owned keys alone. A document that cannot be parsed, or whose shape the
-// merge cannot honour, is an error and the file is not touched (Apply never
+// merge cannot honor, is an error and the file is not touched (Apply never
 // writes).
 //
 // An empty Result.Body means there is nothing to write: the file is missing (or

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // OpenCode, Kilo Code and MiMo Code share one permission surface: the
@@ -45,23 +46,7 @@ type ocRule struct {
 }
 
 func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
-	byTool := map[string][]ocRule{}
-	for _, e := range t.entries {
-		tool, patterns, why := opencodePatterns(e)
-		if why != "" {
-			t.drop(e, why)
-			continue
-		}
-		if r := e.Rule; (r.Kind == KindRead || r.Kind == KindEdit) && !r.Bare && e.Action != ActionAllow &&
-			(r.Path.Anchor == AnchorHome || r.Path.Anchor == AnchorAbsolute) {
-			rulefiles.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
-				"so a home or absolute path pattern may never apply", e.Action, r.Raw, t.harness),
-				"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
-		}
-		for _, p := range patterns {
-			byTool[tool] = append(byTool[tool], ocRule{pattern: p, entry: e})
-		}
-	}
+	byTool := collectOpencodeRules(t)
 	tools := make([]string, 0, len(byTool))
 	for tool := range byTool {
 		tools = append(tools, tool)
@@ -70,10 +55,11 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 
 	var keys []jsonmerge.OwnedKey
 	for _, tool := range tools {
-		path := []string{"permission", tool}
+		path := []string{keyPermission, tool}
 		existing, ok := existingObject(t.docPath, path)
 		if !ok {
-			for _, r := range byTool[tool] {
+			for i := range byTool[tool] {
+				r := &byTool[tool][i]
 				t.drop(r.entry, "permission."+tool+" is not an object in the document, so it is the consumer's")
 			}
 			continue
@@ -109,14 +95,15 @@ func existingObject(docPath string, path []string) (map[string]any, bool) {
 // stricter rule, ours or the user's, is dropped.
 func orderSafe(t *translation, rules []ocRule, existing map[string]any) map[string]PermAction {
 	chosen := map[string]ocRule{}
-	for _, r := range rules {
+	for rIndex := range rules {
+		r := &rules[rIndex]
 		prev, dup := chosen[r.pattern]
 		switch {
 		case !dup:
-			chosen[r.pattern] = r
+			chosen[r.pattern] = *r
 		case strictness(r.entry.Action) > strictness(prev.entry.Action):
 			t.drop(prev.entry, "the stricter rule "+r.entry.Rule.Raw+" covers the same pattern")
-			chosen[r.pattern] = r
+			chosen[r.pattern] = *r
 		default:
 			t.drop(r.entry, "the stricter rule "+prev.entry.Rule.Raw+" covers the same pattern")
 		}
@@ -157,7 +144,10 @@ func stricterBefore(earlier []string, chosen map[string]ocRule, r ocRule, existi
 		if _, ours := chosen[name]; ours {
 			continue
 		}
-		action, _ := existing[name].(string)
+		action, isString := existing[name].(string)
+		if !isString {
+			continue
+		}
 		if strictness(PermAction(action)) > strictness(r.entry.Action) && globsOverlap(name, r.pattern) {
 			return name
 		}
@@ -219,7 +209,7 @@ func pathPatterns(e permEntry) (tool string, patterns []string, why string) {
 	tool = ocRead
 	if r.Kind == KindEdit {
 		tool = ocEdit
-		if r.Tool != "Edit" && e.Action == ActionAllow {
+		if r.Tool != toolnames.Edit && e.Action == ActionAllow {
 			return "", nil, "the edit permission also covers every other edit tool, so a " + r.Tool + " allow rule would be widened"
 		}
 	}
@@ -284,4 +274,26 @@ func fetchPatterns(e permEntry) (tool string, patterns []string, why string) {
 			"https://"+r.Domain+":*", "http://"+r.Domain+":*")
 	}
 	return ocWebfetch, patterns, ""
+}
+
+func collectOpencodeRules(t *translation) map[string][]ocRule {
+	byTool := map[string][]ocRule{}
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		tool, patterns, why := opencodePatterns(*e)
+		if why != "" {
+			t.drop(*e, why)
+			continue
+		}
+		if r := e.Rule; (r.Kind == KindRead || r.Kind == KindEdit) && !r.Bare && e.Action != ActionAllow &&
+			(r.Path.Anchor == AnchorHome || r.Path.Anchor == AnchorAbsolute) {
+			rulefiles.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
+				"so a home or absolute path pattern may never apply", e.Action, r.Raw, t.harness),
+				"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
+		}
+		for _, p := range patterns {
+			byTool[tool] = append(byTool[tool], ocRule{pattern: p, entry: *e})
+		}
+	}
+	return byTool
 }

@@ -61,12 +61,12 @@ func augmentAreas(checks []config.ContentFile) map[string]any {
 			desc = check.Name
 		}
 		areas[check.Name] = map[string]any{
-			"description": desc,
-			"globs":       []any{"**"},
+			SectionRootDescription: desc,
+			"globs":                []any{"**"},
 			"rules": []any{map[string]any{
-				"id":          check.Name,
-				"description": checkText(check),
-				"severity":    augmentSeverity(check),
+				"id":                   check.Name,
+				SectionRootDescription: checkText(check),
+				"severity":             augmentSeverity(check),
 			}},
 		}
 	}
@@ -77,7 +77,7 @@ func augmentAreas(checks []config.ContentFile) map[string]any {
 func gitlabInstructions(checks []config.ContentFile) []any {
 	groups := make([]any, 0, len(checks))
 	for i := range checks {
-		groups = append(groups, map[string]any{"name": checks[i].Name, "instructions": checkText(&checks[i])})
+		groups = append(groups, map[string]any{keyName: checks[i].Name, "instructions": checkText(&checks[i])})
 	}
 	return groups
 }
@@ -133,8 +133,8 @@ func readYAMLMember(path, member string) (value any, present bool, err error) {
 		return nil, false, nil
 	}
 	var doc map[string]any
-	if yaml.Unmarshal([]byte(text), &doc) != nil {
-		return nil, false, nil
+	if parseErr := yaml.Unmarshal([]byte(text), &doc); parseErr != nil { //nolint:nilerr // The merge reports invalid documents; this probe claims no existing member.
+		return nil, false, nil //nolint:nilerr // The merge reports invalid documents; this probe claims no member.
 	}
 	value, present = doc[member]
 	return value, present && value != nil, nil
@@ -218,15 +218,36 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 
 	oursByName := make(map[string]any, len(checks))
 	for _, group := range gitlabInstructions(checks) {
-		oursByName[group.(map[string]any)["name"].(string)] = group
-	}
-	placed, skipped := map[string]bool{}, map[string]bool{}
-	entries := make([]any, 0, len(existing)+len(checks))
-	for _, element := range existing {
-		name := ""
-		if group, isMap := element.(map[string]any); isMap {
-			name, _ = group["name"].(string)
+		object, isMap := group.(map[string]any)
+		if !isMap {
+			return jsonmerge.OwnedKey{}, false, fmt.Errorf("invalid generated instruction group")
 		}
+		name, isString := object[keyName].(string)
+		if !isString {
+			return jsonmerge.OwnedKey{}, false, fmt.Errorf("generated instruction group has no name")
+		}
+		oursByName[name] = group
+	}
+	entries, placed, skipped := reconcileGitlabGroups(existing, previous, oursByName, sidecarPath)
+	claimed := make([]any, 0, len(oursByName))
+	for _, check := range checks {
+		name := check.Name
+		if skipped[name] {
+			continue
+		}
+		if !placed[name] {
+			entries = append(entries, oursByName[name])
+		}
+		claimed = append(claimed, oursByName[name])
+	}
+	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+}
+
+func reconcileGitlabGroups(existing, previous []any, oursByName map[string]any, sidecarPath string) (entries []any, placed, skipped map[string]bool) {
+	placed, skipped = map[string]bool{}, map[string]bool{}
+	entries = make([]any, 0, len(existing)+len(oursByName))
+	for _, element := range existing {
+		name := gitlabGroupName(element)
 		ours, isOurs := oursByName[name]
 		switch {
 		case isOurs && name != "" && (jsonmerge.ElementsContain(element, previous) || sameYAMLValue(element, ours)):
@@ -247,16 +268,14 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 			entries = append(entries, element)
 		}
 	}
-	claimed := make([]any, 0, len(oursByName))
-	for _, check := range checks {
-		name := check.Name
-		if skipped[name] {
-			continue
+	return entries, placed, skipped
+}
+
+func gitlabGroupName(element any) string {
+	if group, isMap := element.(map[string]any); isMap {
+		if name, isString := group[keyName].(string); isString {
+			return name
 		}
-		if !placed[name] {
-			entries = append(entries, oursByName[name])
-		}
-		claimed = append(claimed, oursByName[name])
 	}
-	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+	return ""
 }

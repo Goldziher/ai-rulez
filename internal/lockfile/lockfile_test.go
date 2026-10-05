@@ -3,6 +3,7 @@ package lockfile
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,5 +103,9 @@ func TestDigestDir(t *testing.T) {
 	write(b, "two.md", "2", 0o755)
 	dd, err := DigestDir(b)
 	require.NoError(t, err)
-	assert.NotEqual(t, da, dd, "the executable bit changes the digest")
+	if runtime.GOOS != "windows" {
+		assert.NotEqual(t, da, dd, "the executable bit changes the digest")
+	} else {
+		assert.Equal(t, da, dd, "Windows does not expose executable permission bits")
+	}
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
@@ -214,13 +216,13 @@ func TestCopilotCLI_MCPJSON(t *testing.T) {
 func TestCopilotCLI_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := copilotCLIGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := copilotCLIGen(t).Spec.GlobalPaths(testutil.AbsolutePath("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/copilot-instructions.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/skills"), g.SkillsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/agents"), g.AgentsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/instructions"), g.RulesDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/mcp-config.json"), g.Sidecars[".github/mcp.json"])
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.copilot/copilot-instructions.md"), g.RootFile)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.copilot/skills"), g.SkillsDir)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.copilot/agents"), g.AgentsDir)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.copilot/instructions"), g.RulesDir)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.copilot/mcp-config.json"), g.Sidecars[".github/mcp.json"])
 }
 
 // TestCopilotCLI_ExtensionsValidate pins the loader checks of the generic DSL

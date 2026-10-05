@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -418,7 +419,11 @@ script = "tools/ready.sh"
 			t.Errorf("an executable script must not be reported: %+v", f)
 		}
 	}
-	if len(got) != 2 || !missing || !notExec {
+	wantCount := 2
+	if runtime.GOOS == "windows" {
+		wantCount = 1
+	}
+	if len(got) != wantCount || !missing || notExec != (runtime.GOOS != "windows") {
 		t.Fatalf("findings = %+v, want the missing and the non-executable script", got)
 	}
 }
@@ -563,7 +568,7 @@ script = "tools/plain.sh"
 		missing = missing || strings.Contains(f.Message, "tools/missing.sh") && strings.Contains(f.Message, "does not exist")
 		notExec = notExec || strings.Contains(f.Message, "tools/plain.sh") && strings.Contains(f.Message, "not executable")
 	}
-	if !missing || !notExec {
+	if !missing || notExec != (runtime.GOOS != "windows") {
 		t.Fatalf("findings = %+v, want the missing and the non-executable script", got)
 	}
 }

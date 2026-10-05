@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -303,7 +305,7 @@ func TestBatch2_GlobalPaths(t *testing.T) {
 		{"zcode", ".zcode/AGENTS.md", ".zcode/skills", ".zcode/agents", ".zcode/commands", "", [2]string{".zcode/config.json", ".zcode/cli/config.json"}},
 		{"commandcode", ".commandcode/AGENTS.md", ".commandcode/skills", ".commandcode/agents", ".commandcode/commands", "", [2]string{".mcp.json", ".commandcode/mcp.json"}},
 	}
-	home := "/home/u"
+	home := testutil.AbsolutePath("/home/u")
 	join := func(rel string) string {
 		if rel == "" {
 			return ""

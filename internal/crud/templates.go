@@ -19,7 +19,7 @@ type Template struct {
 // GenerateFrontmatter generates YAML frontmatter from a Template
 func GenerateFrontmatter(priority string, targets []string) string {
 	if priority == "" {
-		priority = "medium"
+		priority = PriorityDefault
 	}
 
 	// Normalize targets
@@ -118,7 +118,7 @@ func GenerateCheckTemplate(name, description string) string {
 		description = name
 	}
 	content, err := MergeCheckContent("", "Describe what the reviewer should look for.\n", true,
-		CheckFields{Description: description, Severity: "medium"})
+		CheckFields{Description: description, Severity: PriorityDefault})
 	if err != nil {
 		return "Describe what the reviewer should look for.\n" // unreachable: the fields are fixed and valid
 	}
@@ -127,15 +127,15 @@ func GenerateCheckTemplate(name, description string) string {
 
 // GenerateEmptyRuleTemplate generates an empty rule template with just frontmatter
 func GenerateEmptyRuleTemplate() string {
-	return GenerateFrontmatter("medium", []string{})
+	return GenerateFrontmatter(PriorityDefault, []string{})
 }
 
 // GenerateEmptyContextTemplate generates an empty context template with just frontmatter
 func GenerateEmptyContextTemplate() string {
-	return GenerateFrontmatter("medium", []string{})
+	return GenerateFrontmatter(PriorityDefault, []string{})
 }
 
 // GenerateEmptySkillTemplate generates an empty skill template with just frontmatter
 func GenerateEmptySkillTemplate() string {
-	return GenerateSkillTemplate("skill", "", "medium", []string{}, "")
+	return GenerateSkillTemplate("skill", "", PriorityDefault, []string{}, "")
 }

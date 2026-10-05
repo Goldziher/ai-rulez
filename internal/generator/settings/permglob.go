@@ -45,7 +45,7 @@ func globIntersect(p, q string) bool {
 		case j < len(q) && q[j] == '*':
 			res = f(i, j+1) || (i < len(p) && f(i+1, j))
 		case i < len(p) && j < len(q):
-			res = (p[i] == q[j] || p[i] == '?' || q[j] == '?') && f(i+1, j+1)
+			res = globCharactersOverlap(p[i], q[j]) && f(i+1, j+1)
 		}
 		memo[key] = res
 		return res
@@ -64,3 +64,5 @@ func strictness(a PermAction) int {
 	}
 	return 0
 }
+
+func globCharactersOverlap(a, b byte) bool { return a == b || a == '?' || b == '?' }

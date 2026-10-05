@@ -33,7 +33,7 @@ func TestRelativeDirectoryMarketplace(t *testing.T) {
 		},
 		{
 			"absolute directory",
-			Config{Claude: &ClaudeConfig{Settings: &ClaudeSettings{Manage: true, MarketplaceSource: &MarketplaceSource{Source: "directory", Path: "/opt/mkt"}}}},
+			Config{Claude: &ClaudeConfig{Settings: &ClaudeSettings{Manage: true, MarketplaceSource: &MarketplaceSource{Source: "directory", Path: t.TempDir()}}}},
 			"", false,
 		},
 		{

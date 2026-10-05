@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,8 +52,8 @@ func TestHookPluginSidecar_BuiltinSpecs(t *testing.T) {
 			assert.Contains(t, found.Content, tt.contains)
 			assert.Contains(t, found.Content, `"command": "echo guard"`)
 			assert.False(t, found.PartiallyOwned)
-			assert.Equal(t, filepath.FromSlash("/home/u/"+tt.userPath),
-				gen.GlobalOutputPaths("/home/u", func(string) string { return "" }).Sidecars[tt.path])
+			assert.Equal(t, testutil.AbsolutePath("/home/u/"+tt.userPath),
+				gen.GlobalOutputPaths(testutil.AbsolutePath("/home/u"), func(string) string { return "" }).Sidecars[tt.path])
 
 			// Without hooks there is no module.
 			outputs, err = gen.Generate(&config.ContentTree{}, t.TempDir(), &config.Config{Name: "test"})

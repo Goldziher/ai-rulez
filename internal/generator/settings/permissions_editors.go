@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // VS Code (GitHub Copilot agent) and Zoo Code share .vscode/settings.json, so one
@@ -66,15 +67,16 @@ func buildVSCode(t *translation) ([]jsonmerge.OwnedKey, error) {
 func vscodeCopilot(t *translation) []jsonmerge.OwnedKey {
 	t.harness = config.HarnessCopilot
 	maps := map[string]map[string]any{vscTerminal: {}, vscEdits: {}, vscURLs: {}}
-	for _, e := range t.entries {
-		target, patterns, why := vscodeEntry(e)
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		target, patterns, why := vscodeEntry(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		approve := e.Action == ActionAllow
 		if e.Action == ActionDeny {
-			rulefilesDenyOnlyPrompts(t, e)
+			rulefilesDenyOnlyPrompts(t, *e)
 		}
 		for _, p := range patterns {
 			if prev, ok := maps[target][p]; ok && prev == false {
@@ -113,22 +115,9 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
-		p := r.Shell()
-		switch {
-		case p.Kind == ShellAny:
-			return vscTerminal, []string{"/.*/"}, ""
-		case p.Kind == ShellPrefix && e.Action == ActionAllow:
-			// A plain key is a prefix whose word boundary VS Code does not document, so
-			// `git` could approve `gitk`; an anchored regular expression cannot.
-			return vscTerminal, []string{"/^" + strings.ReplaceAll(regexp.QuoteMeta(p.Literal), "/", `\/`) + `(\s|$)/`}, ""
-		case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action != ActionAllow:
-			return vscTerminal, []string{p.Literal}, ""
-		case p.Kind == ShellExact:
-			return "", nil, "VS Code matches command prefixes, so an exact-command allow would be widened"
-		}
-		return "", nil, "VS Code terminal rules are prefixes or regular expressions; a command glob is not translated"
+		return vscodeShellEntry(e)
 	case KindEdit:
-		if r.Tool != "Edit" && e.Action == ActionAllow {
+		if r.Tool != toolnames.Edit && e.Action == ActionAllow {
 			return "", nil, "the edits setting covers every edit tool, so a " + r.Tool + " allow rule would be widened"
 		}
 		if r.Bare {
@@ -143,7 +132,7 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 			return vscURLs, []string{"*"}, ""
 		}
 		if r.Domain == "" || strings.ContainsAny(r.Domain, "*?/") {
-			return "", nil, "only WebFetch(domain:host) rules carry over"
+			return "", nil, webFetchDomainOnlyReason
 		}
 		return vscURLs, []string{"https://" + r.Domain, "https://" + r.Domain + "/*"}, ""
 	}
@@ -154,13 +143,14 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	t.harness = harnessZoocode
 	t.askUnsupported()
 	var allowed, denied []string
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == ActionAsk {
 			continue
 		}
-		prefix, why := zooPrefix(e)
+		prefix, why := zooPrefix(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		if e.Action == ActionAllow {
@@ -171,23 +161,7 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	}
 	// The longest matching prefix wins and a deny only wins a tie or a longer
 	// match: an allow with a deny prefix of it would override the deny.
-	kept := allowed[:0:0]
-	for _, a := range allowed {
-		blocked := ""
-		for _, d := range denied {
-			// The allow is written with a trailing space (below), so even an allow equal
-			// to a deny prefix is the longer match and would override it.
-			if d == "*" || strings.HasPrefix(strings.ToLower(a)+" ", strings.ToLower(d)) && len(a)+1 > len(d) {
-				blocked = d
-				break
-			}
-		}
-		if blocked != "" && blocked != "*" {
-			t.dropRaw(ActionAllow, a, "Zoo Code lets the longer allow prefix override the shorter deny prefix "+blocked)
-			continue
-		}
-		kept = append(kept, a)
-	}
+	kept := zooSafeAllows(t, allowed, denied)
 	// Zoo Code matches with a plain startsWith, so `git` would also approve `gitk`:
 	// an allow prefix ends at a word boundary.
 	for i, a := range kept {
@@ -205,7 +179,7 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	return keys
 }
 
-func zooPrefix(e permEntry) (string, string) {
+func zooPrefix(e permEntry) (value string, reason string) {
 	r := e.Rule
 	if r.Kind != KindShell {
 		return "", "Zoo Code only has command allow and deny lists"
@@ -234,13 +208,14 @@ var _ = registerPermissionDialect("copilot-cli", buildCopilotCLI)
 func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allowed, denied []any
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == ActionAsk {
 			continue
 		}
 		r := e.Rule
 		if r.Kind != KindFetch || r.Domain == "" {
-			t.drop(e, "the Copilot CLI has no repository-level setting for "+r.Tool+" rules (tool permissions are per-session flags)")
+			t.drop(*e, "the Copilot CLI has no repository-level setting for "+r.Tool+" rules (tool permissions are per-session flags)")
 			continue
 		}
 		if e.Action == ActionAllow {
@@ -270,13 +245,14 @@ var _ = registerPermissionDialect(config.HarnessCursor, buildCursor)
 func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	allow, deny := []any{}, []any{}
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == ActionAsk {
 			continue
 		}
-		rule, why := cursorRule(e)
+		rule, why := cursorRule(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		if e.Action == ActionAllow {
@@ -290,34 +266,20 @@ func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	// Cursor's schema lists both arrays as required.
 	return []jsonmerge.OwnedKey{
-		docArrayKey(t.cfg, t.docPath, []string{"permissions", "allow"}, allow),
-		docArrayKey(t.cfg, t.docPath, []string{"permissions", "deny"}, deny),
+		docArrayKey(t.cfg, t.docPath, []string{keyPermissions, string(ActionAllow)}, allow),
+		docArrayKey(t.cfg, t.docPath, []string{keyPermissions, string(ActionDeny)}, deny),
 	}, nil
 }
 
-func cursorRule(e permEntry) (string, string) {
+func cursorRule(e permEntry) (rule string, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
-		p := r.Shell()
-		words := strings.Fields(p.Literal)
-		switch {
-		case p.Kind == ShellAny && e.Action == ActionDeny:
-			return "Shell(*)", ""
-		case p.Kind == ShellAny:
-			return "", "allowing every command is not documented for Cursor"
-		case p.Kind == ShellPrefix && len(words) == 1:
-			return "Shell(" + words[0] + ")", ""
-		case p.Kind == ShellPrefix && e.Action == ActionDeny:
-			return "Shell(" + words[0] + ":" + strings.Join(words[1:], " ") + "*)", ""
-		case p.Kind == ShellExact && len(words) == 1 && e.Action == ActionDeny:
-			return "Shell(" + words[0] + ")", ""
-		}
-		return "", "Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it"
+		return cursorShellRule(e)
 	case KindRead, KindEdit:
-		tool := "Read"
+		tool := toolnames.Read
 		if r.Kind == KindEdit {
-			tool = "Write"
+			tool = toolnames.Write
 		}
 		if r.Bare {
 			return tool + "(**)", ""
@@ -334,7 +296,7 @@ func cursorRule(e permEntry) (string, string) {
 			return "WebFetch(*)", ""
 		}
 		if r.Domain == "" {
-			return "", "only WebFetch(domain:host) rules carry over"
+			return "", webFetchDomainOnlyReason
 		}
 		return "WebFetch(" + r.Domain + ")", ""
 	case KindMCP:
@@ -357,17 +319,18 @@ var _ = registerPermissionDialect("zed", buildZed)
 
 var zedLists = map[PermAction]string{ActionAllow: "always_allow", ActionAsk: "always_confirm", ActionDeny: "always_deny"}
 
-var zedDefaults = map[PermAction]string{ActionAllow: "allow", ActionAsk: "confirm", ActionDeny: "deny"}
+var zedDefaults = map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: "confirm", ActionDeny: string(ActionDeny)}
 
 func buildZed(t *translation) ([]jsonmerge.OwnedKey, error) {
-	base := []string{"agent", "tool_permissions", "tools"}
+	base := []string{"agent", "tool_permissions", keyTools}
 	lists := map[string][]any{}
 	var keys []jsonmerge.OwnedKey
-	for _, e := range t.entries {
-		tool, pattern, def, why := zedEntry(e)
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		tool, pattern, def, why := zedEntry(*e)
 		switch {
 		case why != "":
-			t.drop(e, why)
+			t.drop(*e, why)
 		case def != "":
 			if key, ok := scalarKey(t, append(append([]string{}, base...), tool, "default"), def); ok {
 				keys = append(keys, key)
@@ -398,17 +361,17 @@ func zedEntry(e permEntry) (tool, pattern, def, why string) {
 	switch r.Kind {
 	case KindShell:
 		if r.Bare {
-			return "terminal", "", zedDefaults[e.Action], ""
+			return terminalTool, "", zedDefaults[e.Action], ""
 		}
 		p := r.Shell()
 		if p.Kind == ShellAny {
-			return "terminal", "", zedDefaults[e.Action], ""
+			return terminalTool, "", zedDefaults[e.Action], ""
 		}
 		// Zed also tests each chained sub-command, so a deny prefix stays anchored.
 		if e.Action == ActionAllow {
-			return "terminal", allowShellRegex(p), "", ""
+			return terminalTool, allowShellRegex(p), "", ""
 		}
-		return "terminal", denyShellRegex(p, true), "", ""
+		return terminalTool, denyShellRegex(p, true), "", ""
 	case KindEdit:
 		if r.Bare {
 			return "edit_file", "", zedDefaults[e.Action], ""
@@ -422,7 +385,7 @@ func zedEntry(e permEntry) (tool, pattern, def, why string) {
 			return "fetch", "", zedDefaults[e.Action], ""
 		}
 		if r.Domain == "" || strings.ContainsAny(r.Domain, "*?/") {
-			return "", "", "", "only WebFetch(domain:host) rules carry over"
+			return "", "", "", webFetchDomainOnlyReason
 		}
 		return "fetch", `^https?://` + regexp.QuoteMeta(r.Domain) + `(:\d+)?(/|$)`, "", ""
 	case KindMCP:
@@ -459,4 +422,64 @@ func pathRegex(glob string) string {
 	}
 	b.WriteString("$")
 	return b.String()
+}
+
+func vscodeShellEntry(e permEntry) (target string, patterns []string, why string) {
+	r := e.Rule
+
+	p := r.Shell()
+	switch {
+	case p.Kind == ShellAny:
+		return vscTerminal, []string{"/.*/"}, ""
+	case p.Kind == ShellPrefix && e.Action == ActionAllow:
+		// A plain key is a prefix whose word boundary VS Code does not document, so
+		// `git` could approve `gitk`; an anchored regular expression cannot.
+		return vscTerminal, []string{"/^" + strings.ReplaceAll(regexp.QuoteMeta(p.Literal), "/", `\/`) + `(\s|$)/`}, ""
+	case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action != ActionAllow:
+		return vscTerminal, []string{p.Literal}, ""
+	case p.Kind == ShellExact:
+		return "", nil, "VS Code matches command prefixes, so an exact-command allow would be widened"
+	}
+	return "", nil, "VS Code terminal rules are prefixes or regular expressions; a command glob is not translated"
+}
+
+func cursorShellRule(e permEntry) (rule string, why string) {
+	r := e.Rule
+
+	p := r.Shell()
+	words := strings.Fields(p.Literal)
+	switch {
+	case p.Kind == ShellAny && e.Action == ActionDeny:
+		return "Shell(*)", ""
+	case p.Kind == ShellAny:
+		return "", "allowing every command is not documented for Cursor"
+	case p.Kind == ShellPrefix && len(words) == 1:
+		return "Shell(" + words[0] + ")", ""
+	case p.Kind == ShellPrefix && e.Action == ActionDeny:
+		return "Shell(" + words[0] + ":" + strings.Join(words[1:], " ") + "*)", ""
+	case p.Kind == ShellExact && len(words) == 1 && e.Action == ActionDeny:
+		return "Shell(" + words[0] + ")", ""
+	}
+	return "", "Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it"
+}
+
+func zooSafeAllows(t *translation, allowed, denied []string) []string {
+	kept := allowed[:0:0]
+	for _, a := range allowed {
+		blocked := ""
+		for _, d := range denied {
+			// The allow is written with a trailing space (below), so even an allow equal
+			// to a deny prefix is the longer match and would override it.
+			if d == "*" || strings.HasPrefix(strings.ToLower(a)+" ", strings.ToLower(d)) && len(a) >= len(d) {
+				blocked = d
+				break
+			}
+		}
+		if blocked != "" && blocked != "*" {
+			t.dropRaw(ActionAllow, a, "Zoo Code lets the longer allow prefix override the shorter deny prefix "+blocked)
+			continue
+		}
+		kept = append(kept, a)
+	}
+	return kept
 }

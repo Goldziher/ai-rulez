@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -58,10 +60,10 @@ func TestLetta_Generate(t *testing.T) {
 func TestLetta_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := lettaGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := lettaGen(t).Spec.GlobalPaths(testutil.AbsolutePath("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.letta/agents"), g.AgentsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.letta/skills"), g.SkillsDir)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.letta/agents"), g.AgentsDir)
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.letta/skills"), g.SkillsDir)
 }
 
 // TestLetta_JoinListsOffByDefault: the other presets keep writing YAML lists.

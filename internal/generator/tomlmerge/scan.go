@@ -56,7 +56,7 @@ type document struct {
 	hasComment bool
 }
 
-var errScan = errors.New("unrecognised TOML syntax")
+var errScan = errors.New("unrecognized TOML syntax")
 
 type scanner struct {
 	src string
@@ -185,8 +185,8 @@ func (s *scanner) skipFiller(pos int) int {
 }
 
 // key parses a possibly dotted key starting at pos.
-func (s *scanner) key(pos int) ([]string, int, error) {
-	var parts []string
+func (s *scanner) key(pos int) (parts []string, next int, err error) {
+	parts = nil
 	for {
 		pos = s.skipInline(pos)
 		part, next, err := s.keyPart(pos)
@@ -203,7 +203,7 @@ func (s *scanner) key(pos int) ([]string, int, error) {
 	}
 }
 
-func (s *scanner) keyPart(pos int) (string, int, error) {
+func (s *scanner) keyPart(pos int) (part string, next int, err error) {
 	if pos >= len(s.src) {
 		return "", 0, errScan
 	}
@@ -426,11 +426,6 @@ func (d *document) headerLead(i int) int {
 		pos = prev
 	}
 	return pos
-}
-
-// topLevelEmpty reports whether the document has no statements at all.
-func (d *document) empty() bool {
-	return len(d.sections) == 1 && len(d.sections[0].stmts) == 0
 }
 
 // blockedAncestor returns the length and kind of the first proper prefix of key

@@ -96,26 +96,19 @@ func arrayOwnedKey(sc *SidecarSpec, d mcpDialect, cfg *config.Config, outputPath
 	var kept []any
 	byName := make(map[string]map[string]any, len(existing))
 	for _, el := range existing {
-		if name, _ := el[d.arrayKey].(string); name != "" {
+		if name, ok := el[d.arrayKey].(string); ok && name != "" {
 			byName[name] = el
 		}
 	}
 	for _, el := range existing {
-		if name, _ := el[d.arrayKey].(string); entries[name] == nil {
+		if name, ok := el[d.arrayKey].(string); !ok || entries[name] == nil {
 			kept = append(kept, el)
 		}
 	}
 	for _, name := range names {
-		entry := map[string]any{d.arrayKey: name}
-		for k, v := range entries[name].(map[string]any) {
-			entry[k] = v
-		}
-		if prev := byName[name]; prev != nil {
-			for _, field := range vibeUserManagedFields {
-				if _, set := entry[field]; !set && prev[field] != nil {
-					entry[field] = prev[field]
-				}
-			}
+		entry, err := vibeOwnedEntry(name, d.arrayKey, entries[name], byName[name])
+		if err != nil {
+			return jsonmerge.OwnedKey{}, err
 		}
 		ours = append(ours, entry)
 	}
@@ -155,4 +148,23 @@ func existingArrayElements(file string, path []string, nameKey string) ([]map[st
 		}
 	}
 	return out, nil
+}
+
+func vibeOwnedEntry(name, nameKey string, value any, prev map[string]any) (map[string]any, error) {
+	entry := map[string]any{nameKey: name}
+	fields, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("MCP server %s has invalid fields", name)
+	}
+	for k, v := range fields {
+		entry[k] = v
+	}
+	if prev != nil {
+		for _, field := range vibeUserManagedFields {
+			if _, set := entry[field]; !set && prev[field] != nil {
+				entry[field] = prev[field]
+			}
+		}
+	}
+	return entry, nil
 }

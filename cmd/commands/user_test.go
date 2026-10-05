@@ -31,21 +31,22 @@ func withUserHome(t *testing.T) string {
 }
 
 func TestUserConfigPath(t *testing.T) {
+	home, xdg, custom := t.TempDir(), t.TempDir(), t.TempDir()
 	oldCfg := cfgFile
 	t.Cleanup(func() { cfgFile = oldCfg })
 
 	cfgFile = ""
 	t.Setenv("XDG_CONFIG_HOME", "")
-	assert.Equal(t, filepath.Join("/home/u", ".config", "ai-rulez"), userConfigPath("/home/u"))
+	assert.Equal(t, filepath.Join(home, ".config", "ai-rulez"), userConfigPath(home))
 
-	t.Setenv("XDG_CONFIG_HOME", "/xdg")
-	assert.Equal(t, filepath.Join("/xdg", "ai-rulez"), userConfigPath("/home/u"))
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	assert.Equal(t, filepath.Join(xdg, "ai-rulez"), userConfigPath(home))
 
 	t.Setenv("XDG_CONFIG_HOME", "relative/ignored")
-	assert.Equal(t, filepath.Join("/home/u", ".config", "ai-rulez"), userConfigPath("/home/u"))
+	assert.Equal(t, filepath.Join(home, ".config", "ai-rulez"), userConfigPath(home))
 
-	cfgFile = "/custom/dir"
-	assert.Equal(t, "/custom/dir", userConfigPath("/home/u"))
+	cfgFile = custom
+	assert.Equal(t, custom, userConfigPath(home))
 }
 
 func TestRunUserGenerate(t *testing.T) {

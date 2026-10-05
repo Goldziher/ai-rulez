@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // Harnesses whose permission settings live in a user-level file only (their
@@ -27,13 +28,14 @@ var (
 func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allow, deny []any
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == ActionAsk {
 			continue
 		}
-		patterns, why := hermesPatterns(e)
+		patterns, why := hermesPatterns(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		for _, p := range patterns {
@@ -49,12 +51,12 @@ func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"command_allowlist"}, dedupe(allow)))
 	}
 	if len(deny) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"approvals", "deny"}, dedupe(deny)))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"approvals", string(ActionDeny)}, dedupe(deny)))
 	}
 	return keys, nil
 }
 
-func hermesPatterns(e permEntry) ([]string, string) {
+func hermesPatterns(e permEntry) (values []string, reason string) {
 	r := e.Rule
 	if r.Kind != KindShell {
 		return nil, "Hermes only has command allow and deny lists"
@@ -77,10 +79,11 @@ func hermesPatterns(e permEntry) ([]string, string) {
 
 func buildKimi(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var rules []any
-	for _, e := range t.entries {
-		patterns, why := kimiPatterns(e)
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
+		patterns, why := kimiPatterns(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		for _, p := range patterns {
@@ -90,23 +93,23 @@ func buildKimi(t *translation) ([]jsonmerge.OwnedKey, error) {
 	if len(rules) == 0 {
 		return nil, nil
 	}
-	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{"permission", "rules"}, dedupe(rules))}, nil
+	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{keyPermission, "rules"}, dedupe(rules))}, nil
 }
 
-func kimiPatterns(e permEntry) ([]string, string) {
+func kimiPatterns(e permEntry) (values []string, reason string) {
 	r := e.Rule
 	switch {
 	case r.Kind == KindShell:
 		p := r.Shell()
 		switch p.Kind {
 		case ShellAny:
-			return []string{"Bash"}, ""
+			return []string{toolnames.Bash}, ""
 		case ShellPrefix:
 			return []string{"Bash(" + p.Literal + ")", "Bash(" + p.Literal + " *)"}, ""
 		}
 		return []string{"Bash(" + p.Literal + ")"}, ""
 	case r.Kind == KindRead && r.Bare:
-		return []string{"Read"}, ""
+		return []string{toolnames.Read}, ""
 	}
 	return nil, "only Bash rules and a bare Read rule are documented for Kimi Code"
 }

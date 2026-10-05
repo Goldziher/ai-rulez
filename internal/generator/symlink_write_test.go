@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -120,6 +121,8 @@ func TestWriteRaw_NeverChangesTheModeOfAFileItDidNotCreate(t *testing.T) {
 	real := filepath.Join(dir, "real")
 	require.NoError(t, os.WriteFile(real, []byte("old"), 0o600))
 	require.NoError(t, os.Symlink("real", filepath.Join(dir, "linked")))
+	before, statErr := os.Stat(real)
+	require.NoError(t, statErr)
 
 	// Act
 	err := rawGenerator(t, dir).writeOutput(config.OutputFile{Path: "linked", RawContent: []byte("new"), Mode: 0o755})
@@ -128,7 +131,7 @@ func TestWriteRaw_NeverChangesTheModeOfAFileItDidNotCreate(t *testing.T) {
 	require.NoError(t, err)
 	info, serr := os.Stat(real)
 	require.NoError(t, serr)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assert.Equal(t, before.Mode().Perm(), info.Mode().Perm())
 	data, rerr := os.ReadFile(real)
 	require.NoError(t, rerr)
 	assert.Equal(t, "new", string(data))
@@ -145,7 +148,11 @@ func TestWriteRaw_AppliesTheModeToAFileItCreates(t *testing.T) {
 	require.NoError(t, err)
 	info, serr := os.Stat(filepath.Join(dir, "hooks", "run"))
 	require.NoError(t, serr)
-	assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	} else {
+		assert.NotZero(t, info.Mode().Perm()&0o200)
+	}
 }
 
 func TestWrite_ManifestThroughALinkOutsideIsRefused(t *testing.T) {

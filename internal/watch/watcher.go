@@ -44,9 +44,9 @@ type Watcher struct {
 	targets    map[string]Target
 	watched    map[string]bool
 	warnedAdds bool
-	// aliases maps the real path of a symlinked directory to the path it was
-	// reached through. A symlinked directory is watched by its real path (the
-	// backends differ in how they treat a link), so its events carry the real
+	// aliases maps the resolved path of a symlinked directory to the path it was
+	// reached through. A symlinked directory is watched by its resolved path (the
+	// backends differ in how they treat a link), so its events carry the resolved
 	// path and are translated back.
 	aliases map[string]string
 }
@@ -102,8 +102,8 @@ func resolveTarget(t Target) (Target, error) {
 	if err != nil {
 		return t, err //nolint:wrapcheck // the caller logs it with the path
 	}
-	if real, evalErr := filepath.EvalSymlinks(abs); evalErr == nil {
-		abs = real
+	if resolved, evalErr := filepath.EvalSymlinks(abs); evalErr == nil {
+		abs = resolved
 	} else if parent, parentErr := filepath.EvalSymlinks(filepath.Dir(abs)); parentErr == nil {
 		abs = filepath.Join(parent, filepath.Base(abs))
 	}
@@ -188,11 +188,11 @@ func (w *Watcher) addDir(dir string) {
 	if w.watched[dir] {
 		return
 	}
-	real := dir
-	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
-		real = resolved
+	resolved := dir
+	if evaluated, err := filepath.EvalSymlinks(dir); err == nil {
+		resolved = evaluated
 	}
-	if err := w.add(real); err != nil {
+	if err := w.add(resolved); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			w.logf("watch: directory does not exist yet", "path", dir)
 			return
@@ -206,40 +206,42 @@ func (w *Watcher) addDir(dir string) {
 		return
 	}
 	w.watched[dir] = true
-	if real != dir {
-		w.aliases[real] = dir
+	if resolved != dir {
+		w.aliases[resolved] = dir
 	}
 }
 
 // unwatchLocked forgets a watched directory and releases its OS watch, unless
-// another watched path (a second link to it) still needs the same real path.
+// another watched path (a second link to it) still needs the same resolved path.
 func (w *Watcher) unwatchLocked(dir string) {
-	real := dir
+	resolved := dir
 	for r, via := range w.aliases {
 		if via == dir {
-			real = r
+			resolved = r
 			delete(w.aliases, r)
 		}
 	}
 	delete(w.watched, dir)
 	for other := range w.watched {
-		if resolved, err := filepath.EvalSymlinks(other); err == nil && resolved == real {
-			w.aliases[real] = other
+		if otherResolved, err := filepath.EvalSymlinks(other); err == nil && otherResolved == resolved {
+			w.aliases[resolved] = other
 			return
 		}
 	}
-	_ = w.fs.Remove(real) // the directory may already be gone
+	if err := w.fs.Remove(resolved); err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+		w.logf("watch: cannot remove directory watch", "path", resolved, "error", err)
+	}
 }
 
-// translate maps an event path under the real path of a symlinked directory to
+// translate maps an event path under the resolved path of a symlinked directory to
 // the path the directory was reached through, so it falls under its target.
 func (w *Watcher) translate(path string) string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	best := ""
-	for real := range w.aliases {
-		if (path == real || strings.HasPrefix(path, real+string(filepath.Separator))) && len(real) > len(best) {
-			best = real
+	for resolved := range w.aliases {
+		if (path == resolved || strings.HasPrefix(path, resolved+string(filepath.Separator))) && len(resolved) > len(best) {
+			best = resolved
 		}
 	}
 	if best == "" {
@@ -256,15 +258,15 @@ func (w *Watcher) addTree(dir string) {
 }
 
 func (w *Watcher) walk(root, dir string, ancestors map[string]bool) {
-	real, err := filepath.EvalSymlinks(dir)
-	if err != nil || ancestors[real] {
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil || ancestors[resolved] {
 		return
 	}
 	if dir != root && w.isIgnored(dir) {
 		return
 	}
-	ancestors[real] = true
-	defer delete(ancestors, real)
+	ancestors[resolved] = true
+	defer delete(ancestors, resolved)
 	w.addDir(dir)
 
 	entries, err := os.ReadDir(dir)
@@ -333,13 +335,6 @@ func (w *Watcher) relevant(path string) bool {
 	return false
 }
 
-func (w *Watcher) isDirTarget(path string) bool {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	t, ok := w.targets[path]
-	return ok && !t.File
-}
-
 // forget drops the watch bookkeeping for a removed path and everything below it.
 func (w *Watcher) forget(path string) {
 	w.mu.Lock()
@@ -351,7 +346,7 @@ func (w *Watcher) forget(path string) {
 	}
 }
 
-// Run processes events until ctx is cancelled.
+// Run processes events until ctx is canceled.
 func (w *Watcher) Run(ctx context.Context) {
 	for {
 		select {

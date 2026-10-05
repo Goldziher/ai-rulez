@@ -40,7 +40,7 @@ func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
 
 // clineWorkflows is the folder of Cline workflows, its custom slash commands. A
 // workflow is a plain markdown file invoked as /{id}.md.
-var clineWorkflows = commandFilesSpec{preset: presetNameCline, dir: ".clinerules/workflows", ext: ".md", noFrontmatter: true}
+var clineWorkflows = commandFilesSpec{preset: presetNameCline, dir: ".clinerules/workflows", ext: extMarkdown, noFrontmatter: true}
 
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
@@ -225,15 +225,15 @@ func yamlScalar(s string) string {
 // vocabulary (ClineDefaultTool in the Cline source). Cline throws on a name it does
 // not know, which skips the whole agent, so anything unmapped is dropped.
 var clineToolNames = map[string]string{
-	"read": "read_file", "write": "write_to_file", "edit": "replace_in_file", "multiedit": "replace_in_file",
-	"bash": "execute_command", "grep": "search_files", "glob": "list_files", "ls": "list_files",
+	"read": "read_file", "write": "write_to_file", "edit": clineReplaceInFile, "multiedit": clineReplaceInFile,
+	"bash": "execute_command", "grep": "search_files", "glob": clineListFiles, "ls": clineListFiles,
 	"webfetch": "web_fetch", "websearch": "web_search", "task": "use_subagents", "skill": "use_skill",
 	"askuserquestion": "ask_followup_question",
 }
 
 var clineNativeTools = map[string]bool{
-	"ask_followup_question": true, "attempt_completion": true, "execute_command": true, "replace_in_file": true,
-	"read_file": true, "write_to_file": true, "search_files": true, "list_files": true,
+	"ask_followup_question": true, "attempt_completion": true, "execute_command": true, clineReplaceInFile: true,
+	"read_file": true, "write_to_file": true, "search_files": true, clineListFiles: true,
 	"list_code_definition_names": true, "browser_action": true, "use_mcp_tool": true, "access_mcp_resource": true,
 	"load_mcp_documentation": true, "new_task": true, "plan_mode_respond": true, "act_mode_respond": true,
 	"focus_chain": true, "web_fetch": true, "web_search": true, "condense": true, "summarize_task": true,

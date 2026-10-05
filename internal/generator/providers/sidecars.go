@@ -57,24 +57,27 @@ const (
 // effort_map to know whether the global tier translates to a non-empty
 // emitted value — so the predicate is a method on Generator.
 func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
-	switch predicate {
-	case "", PredicateAlways:
+	if predicate == "" || predicate == PredicateAlways {
 		return true
+	}
+	if cfg == nil {
+		return false
+	}
+	switch predicate {
 	case PredicateHasMCPServers:
-		return cfg != nil && len(cfg.MCPServers) > 0
+		return len(cfg.MCPServers) > 0
 	case PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() ||
-			(predicate == PredicateHasClaudeSettings && cfg.HasClaudeSettingsContent()))
+		return claudeSettingsPredicate(predicate, cfg)
 	case PredicateHasHooks:
-		return cfg != nil && cfg.HasSettingsHooks()
+		return cfg.HasSettingsHooks()
 	case PredicateHasPermissions:
-		return cfg != nil && !cfg.Permissions.IsEmpty()
+		return !cfg.Permissions.IsEmpty()
 	case PredicateHasMCPJSONEntries:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
+		return (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
-		return cfg != nil && len(cfg.Plugins) > 0
+		return len(cfg.Plugins) > 0
 	case PredicateHasResolvedEffortOrMCPServers:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || g.resolveGlobalEffort(cfg) != "")
+		return (len(cfg.MCPServers) > 0 || g.resolveGlobalEffort(cfg) != "")
 	case PredicateHasResolvedEffort:
 		return g.resolveGlobalEffort(cfg) != ""
 	}
@@ -460,19 +463,7 @@ func specLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 				continue
 			}
 			seen[key] = true
-			var keys []jsonmerge.OwnedKey
-			var err error
-			if sc.Kind == SidecarHooks {
-				keys, err = settings.HookKeys(cfg, sc.Dialect, "")
-			} else {
-				keys, err = settings.PermissionKeys(cfg, sc.Dialect, "")
-			}
-			if err != nil || len(keys) == 0 {
-				continue
-			}
-			if result, err := docmerge.Apply("", docmerge.Format(format), keys); err == nil {
-				claims = append(claims, result.Claims...)
-			}
+			claims = append(claims, sidecarLegacyClaims(sc, cfg, format)...)
 		}
 	}
 	return claims
@@ -503,4 +494,26 @@ func serverLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		return nil
 	}
 	return result.Claims
+}
+
+func sidecarLegacyClaims(sc *SidecarSpec, cfg *config.Config, format string) []jsonmerge.Claim {
+	var claims []jsonmerge.Claim
+	var keys []jsonmerge.OwnedKey
+	var err error
+	if sc.Kind == SidecarHooks {
+		keys, err = settings.HookKeys(cfg, sc.Dialect, "")
+	} else {
+		keys, err = settings.PermissionKeys(cfg, sc.Dialect, "")
+	}
+	if err != nil || len(keys) == 0 {
+		return nil
+	}
+	if result, err := docmerge.Apply("", docmerge.Format(format), keys); err == nil {
+		claims = append(claims, result.Claims...)
+	}
+	return claims
+}
+
+func claudeSettingsPredicate(predicate string, cfg *config.Config) bool {
+	return len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() || (predicate == PredicateHasClaudeSettings && cfg.HasClaudeSettingsContent())
 }

@@ -60,15 +60,6 @@ func (o ordered) MarshalJSON() ([]byte, error) {
 	return append(out, '}'), nil
 }
 
-// native returns the object as a plain map, for documents that are not JSON.
-func (o ordered) native() map[string]any {
-	m := make(map[string]any, len(o))
-	for _, field := range o {
-		m[field.key] = field.value
-	}
-	return m
-}
-
 // handler builds the handler object of an action.
 func (s *handlerShape) handler(spec hookSpec, matcher, command string, args []string, action *config.HookAction) ordered {
 	var o ordered
@@ -76,29 +67,17 @@ func (s *handlerShape) handler(spec hookSpec, matcher, command string, args []st
 		o.set("type", config.HookTypeCommand)
 	}
 	if matcher != "" && !spec.nested {
-		name := s.matcherField
-		if name == "" {
-			name = "matcher"
-		}
+		name := fieldName(s.matcherField, "matcher")
 		o.set(name, matcher)
 	}
-	field := s.commandField
-	if field == "" {
-		field = "command"
-	}
+	field := fieldName(s.commandField, "command")
 	o.set(field, command)
 	if len(args) > 0 {
-		name := s.argsField
-		if name == "" {
-			name = "args"
-		}
+		name := fieldName(s.argsField, "args")
 		o.set(name, args)
 	}
 	if action.Timeout > 0 {
-		name := s.timeoutField
-		if name == "" {
-			name = "timeout"
-		}
+		name := fieldName(s.timeoutField, "timeout")
 		timeout := action.Timeout
 		if s.timeoutMS {
 			timeout *= 1000
@@ -127,7 +106,7 @@ func (s hookSpec) containerPath(cfg *config.Config) []string {
 	case s.container != nil:
 		return s.container
 	}
-	return []string{"hooks"}
+	return []string{keyHooks}
 }
 
 var claudeShape = &handlerShape{typed: true}
@@ -161,22 +140,22 @@ func allBut(all map[string]string, excluded ...string) map[string]bool {
 
 var qwenEvents = identityEvents([]string{
 	eventSessionStart, eventSessionEnd, eventUserPromptSubmit, "UserPromptExpansion", eventPreToolUse,
-	eventPostToolUse, eventPostToolUseFailure, "PostToolBatch", eventPermissionRequest, "PermissionDenied",
-	eventNotify, "MessageDisplay", eventSubagentStart, eventSubagentStop, eventStop, "StopFailure",
-	eventPreCompact, eventPostCompact, "InstructionsLoaded",
+	eventPostToolUse, eventPostToolUseFailure, "PostToolBatch", eventPermissionRequest, eventPermissionDenied,
+	eventNotify, "MessageDisplay", eventSubagentStart, eventSubagentStop, eventStop, eventStopFailure,
+	eventPreCompact, eventPostCompact, eventInstructionsLoaded,
 })
 
 var codebuddyEvents = identityEvents([]string{
 	eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventSessionStart, eventSessionEnd, eventStop,
-	eventSubagentStart, eventSubagentStop, "StopFailure", eventUserPromptSubmit, eventNotify, eventPermissionRequest,
-	"PermissionDenied", "Elicitation", "ElicitationResult", eventPreCompact, eventPostCompact, "InstructionsLoaded",
+	eventSubagentStart, eventSubagentStop, eventStopFailure, eventUserPromptSubmit, eventNotify, eventPermissionRequest,
+	eventPermissionDenied, "Elicitation", "ElicitationResult", eventPreCompact, eventPostCompact, eventInstructionsLoaded,
 	"ConfigChange", "TaskCreated", "TaskCompleted", "FileChanged", "CwdChanged", "WorktreeCreate", "WorktreeRemove",
 })
 
 var qoderEvents = identityEvents([]string{
 	eventSessionStart, eventSessionEnd, eventUserPromptSubmit, eventPreToolUse, eventPostToolUse, eventPostToolUseFailure,
-	eventPermissionRequest, "PermissionDenied", eventStop, "StopFailure", eventSubagentStart, eventSubagentStop,
-	eventPreCompact, eventPostCompact, eventNotify, "InstructionsLoaded", "ConfigChange", "CwdChanged", "FileChanged",
+	eventPermissionRequest, eventPermissionDenied, eventStop, eventStopFailure, eventSubagentStart, eventSubagentStop,
+	eventPreCompact, eventPostCompact, eventNotify, eventInstructionsLoaded, "ConfigChange", "CwdChanged", "FileChanged",
 	"WorktreeCreate", "WorktreeRemove", "Elicitation", "ElicitationResult",
 })
 
@@ -188,7 +167,7 @@ var factoryEvents = identityEvents([]string{
 // dialectSpecs are the harnesses rendered through the generic handler shape.
 // Each entry cites the vendor page it was read from (read 2026-10-05); events
 // the vendor does not document are left out, and a matcher is only accepted on
-// the events the vendor says honour one.
+// the events the vendor says honor one.
 var dialectSpecs = map[string]hookSpec{
 	// Qwen Code: .qwen/settings.json `hooks`, Claude nesting, seconds, regex matcher
 	// that accepts Claude tool aliases. https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/
@@ -222,7 +201,7 @@ var dialectSpecs = map[string]hookSpec{
 	config.HarnessQoder: {
 		name: config.HarnessQoder, events: qoderEvents, nested: true, matcherPassthrough: true,
 		args: true, async: true, condition: true, shape: claudeShape,
-		matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, "StopFailure", "CwdChanged",
+		matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, eventStopFailure, "CwdChanged",
 			"WorktreeCreate", "WorktreeRemove"),
 		scriptVar: "$QODER_PROJECT_DIR",
 	},
@@ -294,7 +273,7 @@ var dialectSpecs = map[string]hookSpec{
 			eventPostToolUse, eventPostToolUse, eventPermissionRequest, eventPermissionRequest,
 			eventUserPromptSubmit, eventUserPromptSubmit, eventStop, eventStop, eventPostCompact, "PostCompaction",
 		),
-		nested: true, rootKeyed: true, userContainer: []string{"hooks"}, shape: claudeShape,
+		nested: true, rootKeyed: true, userContainer: []string{keyHooks}, shape: claudeShape,
 		matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPermissionRequest),
 		scriptVar:     "$DEVIN_PROJECT_DIR",
 		note:          "Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice",
@@ -305,7 +284,15 @@ var dialectSpecs = map[string]hookSpec{
 const antigravityGroup = "ai-rulez"
 
 func init() {
-	for name, spec := range moreDialectSpecs() {
-		dialectSpecs[name] = spec
+	specs := moreDialectSpecs()
+	for name := range specs {
+		dialectSpecs[name] = specs[name]
 	}
+}
+
+func fieldName(configured, fallback string) string {
+	if configured != "" {
+		return configured
+	}
+	return fallback
 }

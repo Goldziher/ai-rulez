@@ -180,6 +180,6 @@ func groupResourcesByKind(resources []config.SkillResource) map[string][]config.
 // preserves the subpath so disambiguation is possible.
 func referenceDisplayName(relPath string) string {
 	name := strings.TrimPrefix(relPath, config.SkillKindReferences+"/")
-	name = strings.TrimSuffix(name, ".md")
+	name = strings.TrimSuffix(name, extMarkdown)
 	return name
 }

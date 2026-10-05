@@ -207,6 +207,8 @@ func isRegisteredMergedDocument(path string) bool {
 //
 // The documents .claude/settings.json and the providers' .mcp.json are covered by
 // providers.LegacyMergeClaims.
+//
+//nolint:gocyclo // Closed dispatch over registered document paths; each renderer has its own validation.
 func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 	if cfg == nil {
 		return nil
@@ -235,25 +237,9 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 	case MergedDocDevinHooks:
 		return hooksLegacyClaims(cfg, config.HarnessDevin)
 	case MergedDocAgentsSettings:
-		claims := []jsonmerge.Claim{selfEntry}
-		if len(cfg.MCPServers) > 0 {
-			if result, err := (&AntigravityPresetGenerator{}).renderSettingsJSON("", cfg); err == nil {
-				claims = append(claims, result.Claims...)
-			}
-		}
-		return claims
+		return legacyAgentsSettings(cfg, selfEntry)
 	case MergedDocMCPJSON:
-		if len(cfg.MCPServers) == 0 {
-			return nil
-		}
-		var claims []jsonmerge.Claim
-		if result, err := (&CursorPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
-			claims = append(claims, result.Claims...)
-		}
-		if result, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
-			claims = append(claims, result.Claims...)
-		}
-		return claims
+		return legacySharedMCP(cfg)
 	case MergedDocXumMCP:
 		return memberClaimsOf([]string{keyServers}, xumServers(cfg))
 	case MergedDocPiMCP:
@@ -321,4 +307,28 @@ func projectRelative(cfg *config.Config, path string) string {
 		return filepath.ToSlash(path)
 	}
 	return filepath.ToSlash(rel)
+}
+
+func legacyAgentsSettings(cfg *config.Config, selfEntry jsonmerge.Claim) []jsonmerge.Claim {
+	claims := []jsonmerge.Claim{selfEntry}
+	if len(cfg.MCPServers) > 0 {
+		if result, err := (&AntigravityPresetGenerator{}).renderSettingsJSON("", cfg); err == nil {
+			claims = append(claims, result.Claims...)
+		}
+	}
+	return claims
+}
+
+func legacySharedMCP(cfg *config.Config) []jsonmerge.Claim {
+	if len(cfg.MCPServers) == 0 {
+		return nil
+	}
+	var claims []jsonmerge.Claim
+	if result, err := (&CursorPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+		claims = append(claims, result.Claims...)
+	}
+	if result, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+		claims = append(claims, result.Claims...)
+	}
+	return claims
 }

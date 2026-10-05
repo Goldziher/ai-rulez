@@ -16,64 +16,10 @@ import (
 
 // Validate validates a configuration
 func (c *Config) Validate() error {
-	if err := c.validateVersion(); err != nil {
-		return err
-	}
-
-	if err := c.validateName(); err != nil {
-		return err
-	}
-
-	if err := c.validatePresets(); err != nil {
-		return err
-	}
-
-	if err := c.validateCodexSkillsDir(); err != nil {
-		return err
-	}
-
-	if err := c.validateProfiles(); err != nil {
-		return err
-	}
-
-	if err := c.validateSkillDescriptions(); err != nil {
-		return err
-	}
-
-	if err := c.validateFrontmatter(); err != nil {
-		return err
-	}
-
-	if err := c.validateChecks(); err != nil {
-		return err
-	}
-
-	if err := c.validateInstalledSkills(); err != nil {
-		return err
-	}
-
-	if err := c.validateDefaults(); err != nil {
-		return err
-	}
-
-	if err := c.validateMCP(); err != nil {
-		return err
-	}
-
-	if err := c.validateAgentEffort(); err != nil {
-		return err
-	}
-
-	if err := c.validatePluginAuthoring(); err != nil {
-		return err
-	}
-
-	if err := c.validateMarketplaceAuthoring(); err != nil {
-		return err
-	}
-
-	if err := c.validateOutputCollisions(); err != nil {
-		return err
+	for _, validate := range []func() error{c.validateVersion, c.validateName, c.validatePresets, c.validateCodexSkillsDir, c.validateProfiles, c.validateSkillDescriptions, c.validateFrontmatter, c.validateChecks, c.validateInstalledSkills, c.validateDefaults, c.validateMCP, c.validateAgentEffort, c.validatePluginAuthoring, c.validateMarketplaceAuthoring, c.validateOutputCollisions} {
+		if err := validate(); err != nil {
+			return err
+		}
 	}
 
 	// Warn about missing domain references (non-fatal)

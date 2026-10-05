@@ -50,7 +50,10 @@ func readNativeArray(docPath string, path []string) []any {
 		}
 		node = object[key]
 	}
-	list, _ := node.([]any)
+	list, ok := node.([]any)
+	if !ok {
+		return nil
+	}
 	return list
 }
 

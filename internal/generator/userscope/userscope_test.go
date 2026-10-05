@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +19,7 @@ import (
 	_ "github.com/Goldziher/ai-rulez/internal/generator/providers"
 )
 
-var home = filepath.FromSlash("/home/probe")
+var home = testutil.AbsolutePath("/home/probe")
 
 func noEnv(string) string { return "" }
 
@@ -56,9 +58,9 @@ func TestMap(t *testing.T) {
 		{"a prefix is not a path prefix", "claude", ".claude/skills-extra/x.md", noEnv, "", false},
 		{"unsupported preset", "baz", "AGENTS.md", noEnv, "", false},
 		{"backslashes are normalised", "claude", `.claude\skills\x\SKILL.md`, noEnv, abs(".claude/skills/x/SKILL.md"), true},
-		{"CODEX_HOME relocates the codex files", "codex", "AGENTS.md", env(map[string]string{"CODEX_HOME": "/tools/codex"}),
-			filepath.FromSlash("/tools/codex/AGENTS.md"), true},
-		{"CODEX_HOME leaves the shared skills directory", "codex", ".agents/skills/x/SKILL.md", env(map[string]string{"CODEX_HOME": "/tools/codex"}),
+		{"CODEX_HOME relocates the codex files", "codex", "AGENTS.md", env(map[string]string{"CODEX_HOME": testutil.AbsolutePath("/tools/codex")}),
+			testutil.AbsolutePath("/tools/codex/AGENTS.md"), true},
+		{"CODEX_HOME leaves the shared skills directory", "codex", ".agents/skills/x/SKILL.md", env(map[string]string{"CODEX_HOME": testutil.AbsolutePath("/tools/codex")}),
 			abs(".agents/skills/x/SKILL.md"), true},
 		{"a relative home override is ignored", "codex", "AGENTS.md", env(map[string]string{"CODEX_HOME": "tools/codex"}),
 			abs(".codex/AGENTS.md"), true},
@@ -144,9 +146,9 @@ func TestEveryPresetIsResolved(t *testing.T) {
 }
 
 func TestRelocatedHome(t *testing.T) {
-	layout, err := userscope.Resolve("codex", home, env(map[string]string{"CODEX_HOME": "/tools/codex"}))
+	layout, err := userscope.Resolve("codex", home, env(map[string]string{"CODEX_HOME": testutil.AbsolutePath("/tools/codex")}))
 	require.NoError(t, err)
-	assert.Equal(t, filepath.FromSlash("/tools/codex"), layout.RelocatedHome)
+	assert.Equal(t, testutil.AbsolutePath("/tools/codex"), layout.RelocatedHome)
 
 	layout, err = userscope.Resolve("codex", home, noEnv)
 	require.NoError(t, err)
@@ -154,7 +156,7 @@ func TestRelocatedHome(t *testing.T) {
 
 	layout, err = userscope.Resolve("codex", home, env(map[string]string{"CODEX_HOME": "relative"}))
 	require.NoError(t, err)
-	assert.Empty(t, layout.RelocatedHome, "a relative override is not honoured")
+	assert.Empty(t, layout.RelocatedHome, "a relative override is not honored")
 }
 
 func TestPrecedenceAndReaders(t *testing.T) {
@@ -227,12 +229,12 @@ func TestResolve_RefusesDangerousHomeOverrides(t *testing.T) {
 		value   string
 		refused bool
 	}{
-		{"filesystem root", "/", true},
-		{"an ancestor of the home directory", "/home", true},
-		{"the home directory itself", "/home/probe", true},
+		{"filesystem root", testutil.AbsolutePath("/"), true},
+		{"an ancestor of the home directory", filepath.Dir(home), true},
+		{"the home directory itself", home, true},
 		{"a relative value is ignored", "relative/codex", false},
-		{"a directory elsewhere", "/tools/codex", false},
-		{"a directory below the home directory", "/home/probe/tools/codex", false},
+		{"a directory elsewhere", testutil.AbsolutePath("/tools/codex"), false},
+		{"a directory below the home directory", filepath.Join(home, "tools", "codex"), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -40,21 +40,29 @@ func WriteJSON(w io.Writer, r *Report) error {
 func WriteText(w io.Writer, r *Report) error {
 	if len(r.Findings) > 0 {
 		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "SEVERITY\tCHECK\tMESSAGE")
+		if _, err := fmt.Fprintln(tw, "SEVERITY\tCHECK\tMESSAGE"); err != nil {
+			return wrap(err)
+		}
 		for _, f := range r.Findings {
 			msg := f.Message
 			if f.Path != "" {
 				msg = f.Path + ": " + msg
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\n", f.Severity, f.Check, msg)
+			if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n", f.Severity, f.Check, msg); err != nil {
+				return wrap(err)
+			}
 			if f.Hint != "" {
-				fmt.Fprintf(tw, "\t\t  fix: %s\n", f.Hint)
+				if _, err := fmt.Fprintf(tw, "\t\t  fix: %s\n", f.Hint); err != nil {
+					return wrap(err)
+				}
 			}
 		}
 		if err := tw.Flush(); err != nil {
 			return oops.Wrapf(err, "write doctor report")
 		}
-		fmt.Fprintln(w)
+		if _, err := fmt.Fprintln(w); err != nil {
+			return wrap(err)
+		}
 	}
 	c := r.Counts()
 	if len(r.Findings) == 0 {

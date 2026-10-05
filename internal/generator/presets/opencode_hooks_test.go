@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -59,8 +61,8 @@ func TestOpencodePresetGenerator_HooksPlugin(t *testing.T) {
 
 func TestOpencodePresetGenerator_HooksPluginUserScope(t *testing.T) {
 	g := &OpencodePresetGenerator{}
-	paths := g.GlobalOutputPaths("/home/u", func(string) string { return "" })
+	paths := g.GlobalOutputPaths(testutil.AbsolutePath("/home/u"), func(string) string { return "" })
 
-	assert.Equal(t, filepath.FromSlash("/home/u/.config/opencode/plugins/ai-rulez-hooks.js"),
+	assert.Equal(t, testutil.AbsolutePath("/home/u/.config/opencode/plugins/ai-rulez-hooks.js"),
 		paths.Sidecars[".opencode/plugins/ai-rulez-hooks.js"])
 }

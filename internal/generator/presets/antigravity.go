@@ -2,10 +2,11 @@ package presets
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/schema"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/schema"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -31,7 +32,7 @@ var antigravityRulesTarget = rulefiles.Target{
 	Preset:    presetNameAntigravity,
 	Dir:       ".agents/rules",
 	RootFile:  geminiRootFile,
-	Ext:       ".md",
+	Ext:       extMarkdown,
 	Dialect:   rulefiles.DialectTrigger,
 	Recursive: false,
 	MaxChars:  antigravityRuleMaxChars,
@@ -102,8 +103,8 @@ func (g *AntigravityPresetGenerator) GetName() string {
 // onto GlobalOutputPaths.
 func (g *AntigravityPresetGenerator) ProjectLayout() ProjectLayout {
 	return ProjectLayout{
-		RootFile: "GEMINI.md", RulesDir: ".agents/rules", SkillsDir: ".agents/skills", AgentsDir: ".agents/agents",
-		CommandsDir: ".agents/skills",
+		RootFile: "GEMINI.md", RulesDir: ".agents/rules", SkillsDir: sharedSkillsDir, AgentsDir: ".agents/agents",
+		CommandsDir: sharedSkillsDir,
 	}
 }
 
@@ -153,25 +154,11 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	// Workspace MCP servers live in .agents/mcp_config.json, the file Antigravity
-	// reads. Earlier versions also wrote .agents/settings.json, which nothing
-	// reads; it is no longer written, and renderSettingsJSON only remains so the
-	// stale-output cleanup can recognise what those versions wrote.
-	if len(cfg.MCPServers) > 0 || cfg.HasSelfServer() {
-		mcpPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsMCP))
-		mcpConfig, err := g.renderMCPConfigJSON(mcpPath, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("render mcp_config.json: %w", err)
-		}
-		outputs = append(outputs, mergedOutput(mcpPath, mcpConfig))
-	}
-
-	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	sidecars, err := g.renderSidecars(baseDir, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("render antigravity hooks: %w", err)
+		return nil, err
 	}
-	outputs = append(outputs, hookOutputs...)
-
+	outputs = append(outputs, sidecars...)
 	routing, demoted := antigravityRouting(cfg, logger.Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)
 	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, contexts,
@@ -218,7 +205,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	}
 
 	// Generate skill files to .agents/skills/. Workflows (the custom slash
-	// commands) retire on 2026-11-01 in favour of skills, so a command is written
+	// commands) retire on 2026-11-01 in favor of skills, so a command is written
 	// as a skill, which Antigravity runs on an explicit invocation.
 	allSkills := append(allSkills(content), commandAsSkills(content, presetNameAntigravity)...)
 	for _, skill := range allSkills {
@@ -248,7 +235,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+extMarkdown),
 			Content: agentContent,
 		})
 	}
@@ -412,7 +399,7 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 // antigravityModelTiers is how a model reads as one of Antigravity's three
 // subagent models.
 var antigravityModelTiers = []struct{ contains, tier string }{
-	{"inherit", "inherit"}, {"flash", "flash"}, {"haiku", "flash"}, {"pro", "pro"}, {"sonnet", "pro"}, {"opus", "pro"},
+	{effortInherit, effortInherit}, {modelFlash, modelFlash}, {"haiku", modelFlash}, {modelPro, modelPro}, {"sonnet", modelPro}, {"opus", modelPro},
 }
 
 // antigravityModel maps a resolved model onto inherit, flash or pro, the only
@@ -446,4 +433,28 @@ func antigravityTools(tools []string) []string {
 		}
 	}
 	return out
+}
+
+func (g *AntigravityPresetGenerator) renderSidecars(baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
+	// Workspace MCP servers live in .agents/mcp_config.json, the file Antigravity
+	// reads. Earlier versions also wrote .agents/settings.json, which nothing
+	// reads; it is no longer written, and renderSettingsJSON only remains so the
+	// stale-output cleanup can recognize what those versions wrote.
+	if len(cfg.MCPServers) > 0 || cfg.HasSelfServer() {
+		mcpPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsMCP))
+		mcpConfig, err := g.renderMCPConfigJSON(mcpPath, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render mcp_config.json: %w", err)
+		}
+		outputs = append(outputs, mergedOutput(mcpPath, mcpConfig))
+	}
+
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("render antigravity hooks: %w", err)
+	}
+	outputs = append(outputs, hookOutputs...)
+
+	return outputs, nil
 }

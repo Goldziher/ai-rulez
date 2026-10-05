@@ -2,6 +2,7 @@ package settings
 
 import (
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // Gemini CLI: .gemini/settings.json `tools.allowed` (skip the confirmation) and
@@ -20,23 +21,24 @@ const geminiShell = "run_shell_command"
 // geminiTools maps a bare rule to Gemini's tool names; deny lists every name the
 // capability may go by, allow only the primary one.
 var geminiTools = map[string]struct{ allow, deny []string }{
-	"Read":      {[]string{"read_file"}, []string{"read_file", "read_many_files"}},
-	"Edit":      {[]string{"replace", "write_file"}, []string{"replace", "write_file"}},
-	"Write":     {[]string{"write_file"}, []string{"write_file"}},
-	"WebFetch":  {[]string{"web_fetch"}, []string{"web_fetch"}},
-	"WebSearch": {[]string{"google_web_search"}, []string{"google_web_search"}},
+	toolnames.Read:      {[]string{toolReadFile}, []string{toolReadFile, "read_many_files"}},
+	toolnames.Edit:      {[]string{"replace", toolWriteFile}, []string{"replace", toolWriteFile}},
+	toolnames.Write:     {[]string{toolWriteFile}, []string{toolWriteFile}},
+	toolnames.WebFetch:  {[]string{toolWebFetch}, []string{toolWebFetch}},
+	toolnames.WebSearch: {[]string{"google_web_search"}, []string{"google_web_search"}},
 }
 
 func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var allowed, excluded []any
 	t.askUnsupported()
-	for _, e := range t.entries {
+	for eIndex := range t.entries {
+		e := &t.entries[eIndex]
 		if e.Action == ActionAsk {
 			continue
 		}
-		names, why := geminiNames(e)
+		names, why := geminiNames(*e)
 		if why != "" {
-			t.drop(e, why)
+			t.drop(*e, why)
 			continue
 		}
 		for _, n := range names {
@@ -49,15 +51,15 @@ func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	var keys []jsonmerge.OwnedKey
 	if len(allowed) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", "allowed"}, allowed))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, "allowed"}, allowed))
 	}
 	if len(excluded) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", "exclude"}, excluded))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, "exclude"}, excluded))
 	}
 	return keys, nil
 }
 
-func geminiNames(e permEntry) ([]string, string) {
+func geminiNames(e permEntry) (values []string, reason string) {
 	r := e.Rule
 	if r.Kind == KindShell {
 		p := r.Shell()

@@ -78,7 +78,7 @@ func checkConfig(_ context.Context, s *state) []Finding {
 // removedPresets maps a preset name that no longer exists to what replaced it.
 // An empty replacement means there is none.
 var removedPresets = map[string]string{
-	"windsurf":     "devin",
+	"windsurf":     presetDevin,
 	"continue-dev": "",
 }
 
@@ -242,11 +242,13 @@ func unresolvedSources(cfg *config.Config) bool {
 }
 
 // checkGitignore: outputs generate wants git to ignore are ignored.
-func checkGitignore(_ context.Context, s *state) []Finding {
+func checkGitignore(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil || s.renderFailed {
 		return nil
 	}
-	missing, err := generator.NewGenerator(s.cfg).UnignoredOutputs(s.opts.Profile)
+	gen := generator.NewGenerator(s.cfg)
+	gen.SetContext(ctx)
+	missing, err := gen.UnignoredOutputs(s.opts.Profile) //nolint:contextcheck // Uses the inherited context installed by SetContext.
 	if err != nil {
 		return errorFinding(CheckGitignore, SeverityWarning, err, "")
 	}
@@ -371,16 +373,16 @@ func checkLock(ctx context.Context, s *state) []Finding {
 // counts. Presets that are not listed are skipped: either they have no CLI or
 // the binary name is not known with certainty.
 var presetBinaries = map[string][]string{
-	"claude":   {"claude"},
-	"codex":    {"codex"},
-	"gemini":   {"gemini"},
-	"opencode": {"opencode"},
-	"amp":      {"amp"},
-	"copilot":  {"copilot"},
-	"cline":    {"cline"},
-	"devin":    {"devin"},
-	"cursor":   {"cursor-agent", "cursor"},
-	"junie":    {"junie"},
+	"claude":    {"claude"},
+	"codex":     {"codex"},
+	"gemini":    {"gemini"},
+	"opencode":  {"opencode"},
+	"amp":       {"amp"},
+	"copilot":   {"copilot"},
+	"cline":     {"cline"},
+	presetDevin: {presetDevin},
+	"cursor":    {"cursor-agent", "cursor"},
+	"junie":     {"junie"},
 }
 
 // checkTools: the tool behind each preset is installed (information only; the

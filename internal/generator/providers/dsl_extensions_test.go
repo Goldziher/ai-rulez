@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -304,7 +306,7 @@ kind = "mcp"
 path = ".tool/mcp.json"
 global_path = ".tool/mcp.json"
 `).Spec
-	home := filepath.FromSlash("/home/me")
+	home := testutil.AbsolutePath("/home/me")
 
 	tests := []struct {
 		name string
@@ -314,19 +316,19 @@ global_path = ".tool/mcp.json"
 		{
 			name: "default home",
 			want: providers.GlobalPaths{
-				RootFile:  filepath.FromSlash("/home/me/.tool/RULES.md"),
-				SkillsDir: filepath.FromSlash("/home/me/.tool/skills"),
-				Sidecars:  map[string]string{".tool/mcp.json": filepath.FromSlash("/home/me/.tool/mcp.json")},
+				RootFile:  testutil.AbsolutePath("/home/me/.tool/RULES.md"),
+				SkillsDir: testutil.AbsolutePath("/home/me/.tool/skills"),
+				Sidecars:  map[string]string{".tool/mcp.json": testutil.AbsolutePath("/home/me/.tool/mcp.json")},
 			},
 		},
 		{
 			name: "home_env re-roots everything under home_dir",
-			env:  map[string]string{"TOOL_HOME": filepath.FromSlash("/opt/tool")},
+			env:  map[string]string{"TOOL_HOME": testutil.AbsolutePath("/opt/tool")},
 			want: providers.GlobalPaths{
-				RootFile:      filepath.FromSlash("/opt/tool/RULES.md"),
-				SkillsDir:     filepath.FromSlash("/opt/tool/skills"),
-				Sidecars:      map[string]string{".tool/mcp.json": filepath.FromSlash("/opt/tool/mcp.json")},
-				RelocatedHome: filepath.FromSlash("/opt/tool"),
+				RootFile:      testutil.AbsolutePath("/opt/tool/RULES.md"),
+				SkillsDir:     testutil.AbsolutePath("/opt/tool/skills"),
+				Sidecars:      map[string]string{".tool/mcp.json": testutil.AbsolutePath("/opt/tool/mcp.json")},
+				RelocatedHome: testutil.AbsolutePath("/opt/tool"),
 			},
 		},
 	}
@@ -346,7 +348,7 @@ global_path = ".tool/mcp.json"
 
 func TestGlobalPaths_NoneDeclared(t *testing.T) {
 	t.Parallel()
-	assert.Nil(t, loadSpec(t, `name = "plain"`).Spec.GlobalPaths("/home/me", os.Getenv))
+	assert.Nil(t, loadSpec(t, `name = "plain"`).Spec.GlobalPaths(testutil.AbsolutePath("/home/me"), os.Getenv))
 }
 
 func TestBuiltinGlobalPaths(t *testing.T) {
@@ -386,10 +388,10 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 				".junie/config.json":  j(".junie/config.json"),
 			},
 		}},
-		{"hermes", map[string]string{"HERMES_HOME": filepath.FromSlash("/data/hermes")}, providers.GlobalPaths{
-			SkillsDir:     filepath.FromSlash("/data/hermes/skills"),
-			Sidecars:      map[string]string{".hermes/config.yaml": filepath.FromSlash("/data/hermes/config.yaml")},
-			RelocatedHome: filepath.FromSlash("/data/hermes"),
+		{"hermes", map[string]string{"HERMES_HOME": testutil.AbsolutePath("/data/hermes")}, providers.GlobalPaths{
+			SkillsDir:     testutil.AbsolutePath("/data/hermes/skills"),
+			Sidecars:      map[string]string{".hermes/config.yaml": testutil.AbsolutePath("/data/hermes/config.yaml")},
+			RelocatedHome: testutil.AbsolutePath("/data/hermes"),
 		}},
 	}
 	for _, tt := range tests {

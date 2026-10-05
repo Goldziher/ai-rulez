@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
@@ -77,13 +79,13 @@ func batchAGlobal(t *testing.T, name string, env map[string]string) providers.Gl
 	t.Helper()
 	gen, err := providers.LoadBuiltin(name)
 	require.NoError(t, err)
-	got := gen.Spec.GlobalPaths(filepath.FromSlash("/home/u"), func(k string) string { return env[k] })
+	got := gen.Spec.GlobalPaths(testutil.AbsolutePath("/home/u"), func(k string) string { return env[k] })
 	require.NotNil(t, got)
 	return *got
 }
 
 func batchAJoin(p string) string {
-	return filepath.Join(filepath.FromSlash("/home/u"), filepath.FromSlash(p))
+	return filepath.Join(testutil.AbsolutePath("/home/u"), filepath.FromSlash(p))
 }
 
 func TestQwen_Generate(t *testing.T) {
@@ -182,6 +184,6 @@ func TestQwen_Global(t *testing.T) {
 	}
 	assert.Equal(t, want, batchAGlobal(t, "qwen", nil))
 
-	relocated := batchAGlobal(t, "qwen", map[string]string{"QWEN_HOME": filepath.FromSlash("/data/qwen")})
-	assert.Equal(t, filepath.FromSlash("/data/qwen/rules"), relocated.RulesDir)
+	relocated := batchAGlobal(t, "qwen", map[string]string{"QWEN_HOME": testutil.AbsolutePath("/data/qwen")})
+	assert.Equal(t, testutil.AbsolutePath("/data/qwen/rules"), relocated.RulesDir)
 }

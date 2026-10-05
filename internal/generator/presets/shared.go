@@ -24,7 +24,7 @@ import (
 func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string,
 	inlining config.AgentsMDInlining,
 ) config.OutputFile {
-	all := rulefiles.RootOwners("AGENTS.md")
+	all := rulefiles.RootOwners(agentsFileName)
 	var aliases []string
 	for _, owner := range owners {
 		if !slices.Contains(all, owner) {
@@ -36,7 +36,7 @@ func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Con
 	}
 	shared := &sharedAgentsMDOpts{owners: all, aliases: aliases, inlining: inlining, negatedOnly: !rulefiles.InScope(cfg)}
 	return config.OutputFile{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
+		Path:    filepath.Join(baseDir, agentsFileName),
 		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, shared),
 	}
 }
@@ -132,7 +132,7 @@ func agentSkillExtraFields(skill config.ContentFile) map[string]any {
 	if scope := skill.Metadata.PathScope(); len(scope) > 0 {
 		extra["paths"] = scope
 	}
-	for _, key := range []string{"disable-model-invocation", "user-invocable"} {
+	for _, key := range []string{keyDisableModelInvocation, keyUserInvocable} {
 		if val, set := skill.Metadata.ExtraBool(key); set {
 			extra[key] = val
 		}
@@ -145,7 +145,7 @@ func agentSkillExtraFields(skill config.ContentFile) map[string]any {
 // booleans, every other key with its original YAML type (list, map, bool,
 // date), a plain string as text. The second result is false when it is unset.
 func typedAgentField(meta *config.Metadata, key string) (any, bool) {
-	if val, set := meta.ExtraBool(key); set && (key == "user-invocable" || key == "disable-model-invocation") {
+	if val, set := meta.ExtraBool(key); set && (key == keyUserInvocable || key == keyDisableModelInvocation) {
 		return val, true
 	}
 	if val, ok := meta.TypedExtra(key); ok {

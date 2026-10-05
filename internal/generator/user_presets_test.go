@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -115,7 +117,7 @@ func TestUser_EveryPresetMapsOrIsReportedUnsupported(t *testing.T) {
 func TestUser_HomeEnvOverrides(t *testing.T) {
 	var relocatable []string
 	for _, name := range config.IndividualPresetNames() {
-		layout, err := userscope.Resolve(name, "/home/probe", func(string) string { return "/tools/probe" })
+		layout, err := userscope.Resolve(name, testutil.AbsolutePath("/home/probe"), func(string) string { return testutil.AbsolutePath("/tools/probe") })
 		if err == nil && layout.RelocatedHome != "" {
 			relocatable = append(relocatable, name)
 		}
@@ -148,7 +150,7 @@ func TestUser_HomeEnvOverrides(t *testing.T) {
 			again.SetUserEnv(getenv)
 			plan, err = again.PlanUser("")
 			require.NoError(t, err)
-			assert.Empty(t, plan.Skips, "files written by the first run are recognised as its own")
+			assert.Empty(t, plan.Skips, "files written by the first run are recognized as its own")
 			assert.Empty(t, plan.Stale)
 
 			clean := loadUserGenerator(t, home)
@@ -210,7 +212,7 @@ func snapshotHome(t *testing.T, root string) (files map[string]string, dirs []st
 // created must be empty or gone.
 func TestUser_GenerateThenCleanRestoresHome(t *testing.T) {
 	quietWarnings(t)
-	layouts, _, err := userscope.All("/home/probe", noEnv)
+	layouts, _, err := userscope.All(testutil.AbsolutePath("/home/probe"), noEnv)
 	require.NoError(t, err)
 	names := userscope.Supported(layouts)
 	require.Greater(t, len(names), 40)

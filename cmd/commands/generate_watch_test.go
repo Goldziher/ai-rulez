@@ -51,7 +51,8 @@ func TestCheckGenerateWatchFlags(t *testing.T) {
 }
 
 func TestWatchTargets(t *testing.T) {
-	base := filepath.Join(string(filepath.Separator), "proj")
+	root := t.TempDir()
+	base := filepath.Join(root, "proj")
 	tests := []struct {
 		name string
 		cfg  *config.Config
@@ -64,13 +65,13 @@ func TestWatchTargets(t *testing.T) {
 				Includes: []config.IncludeConfig{
 					{Name: "shared", Source: "../shared"},
 					{Name: "remote", Source: "https://github.com/acme/rules.git"},
-					{Name: "abs", Source: filepath.Join(string(filepath.Separator), "opt", "rules")},
+					{Name: "abs", Source: filepath.Join(root, "opt", "rules")},
 				},
 			},
 			want: []watch.Target{
 				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: filepath.Join(base, "..", "shared")},
-				{Path: filepath.Join(string(filepath.Separator), "opt", "rules")},
+				{Path: filepath.Join(root, "opt", "rules")},
 			},
 		},
 		{
@@ -254,8 +255,8 @@ func TestInterruptContext_SecondSignalKills(t *testing.T) {
 		defer stop()
 		fmt.Println("ready")
 		<-ctx.Done()
-		time.Sleep(200 * time.Millisecond) // interruptContext releases the handlers right after cancelling
-		fmt.Println("cancelled")
+		time.Sleep(200 * time.Millisecond) // interruptContext releases the handlers right after canceling
+		fmt.Println("canceled")
 		time.Sleep(time.Minute) // a run that does not stop on its own
 		return
 	}
@@ -289,7 +290,7 @@ func TestInterruptContext_SecondSignalKills(t *testing.T) {
 	if err := cmd.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}
-	waitLine("cancelled")
+	waitLine("canceled")
 	if err := cmd.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}

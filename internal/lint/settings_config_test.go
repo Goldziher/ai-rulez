@@ -2,6 +2,7 @@ package lint
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -34,6 +35,9 @@ deny = ["Bash(*)"]
 		t.Fatal(err)
 	}
 	gitAdd(t, root)
+	if out, err := exec.Command("git", "-C", root, "update-index", "--chmod=+x", "--", "tools/ready.sh").CombinedOutput(); err != nil {
+		t.Fatalf("set index executable bit: %v: %s", err, out)
+	}
 	fs := lintDir(t, root)
 
 	tests := []struct {

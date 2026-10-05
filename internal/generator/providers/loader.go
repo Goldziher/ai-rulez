@@ -217,20 +217,7 @@ func validateSharedSidecarPaths(sidecars []*SidecarSpec) error {
 func validateOutputMode(typ string, out *OutputSpec) error {
 	switch out.Mode {
 	case OutputModePerItemFile:
-		if out.File != "" || out.Header != "" {
-			return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
-		}
-		if fm := out.Frontmatter; fm != nil && fm.JoinLists && !fm.Tools && !fm.Skills {
-			return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
-		}
-		if fm := out.Frontmatter; fm != nil {
-			if fm.ToolCase != "" && fm.ToolCase != ToolCaseLower {
-				return fmt.Errorf("outputs[%q].frontmatter.tool_case: unknown case %q", typ, fm.ToolCase)
-			}
-			if (len(fm.ToolNames) > 0 || fm.ToolCase != "") && !fm.Tools {
-				return fmt.Errorf("outputs[%q].frontmatter.tool_names and tool_case need tools to be true", typ)
-			}
-		}
+		return validatePerItemMode(typ, out)
 	case OutputModeAggregate:
 		if typ != OutputTypeChecks {
 			return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
@@ -267,38 +254,11 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 	if sc.EmitWhen != "" && !isValidPredicate(sc.EmitWhen) {
 		return fmt.Errorf("sidecars[%d].emit_when: unknown predicate %q", i, sc.EmitWhen)
 	}
-	if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].path", i), sc.Path); err != nil {
+	if err := validateSidecarPaths(i, sc); err != nil {
 		return err
 	}
-	if sc.UserOnly && sc.GlobalPath == "" {
-		return fmt.Errorf("sidecars[%d].user_only needs a global_path", i)
-	}
-	if sc.GlobalPath != "" {
-		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_path", i), sc.GlobalPath); err != nil {
-			return err
-		}
-	}
-	if sc.GlobalMCPPath != "" {
-		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_mcp_path", i), sc.GlobalMCPPath); err != nil {
-			return err
-		}
-		if !IsMCPSidecarKind(sc.Kind) {
-			return fmt.Errorf("sidecars[%d].global_mcp_path is only valid on a sidecar that holds MCP servers", i)
-		}
-	}
-	for _, tr := range sc.Transports {
-		if tr != config.TransportStdio && tr != config.TransportHTTP && tr != config.TransportSSE {
-			return fmt.Errorf("sidecars[%d].transports: unknown transport %q", i, tr)
-		}
-	}
-	if sc.EnvRefSyntax != "" && !IsEnvRefSyntax(sc.EnvRefSyntax) {
-		return fmt.Errorf("sidecars[%d].env_ref_syntax: unknown syntax %q", i, sc.EnvRefSyntax)
-	}
-	if sc.EnvRefSyntax != "" && sc.Kind != SidecarMCP {
-		return fmt.Errorf("sidecars[%d].env_ref_syntax is only valid on kind %q", i, SidecarMCP)
-	}
-	if len(sc.Transports) > 0 && !IsMCPSidecarKind(sc.Kind) {
-		return fmt.Errorf("sidecars[%d].transports is only valid on a sidecar that holds MCP servers", i)
+	if err := validateSidecarTransport(i, sc); err != nil {
+		return err
 	}
 	if err := validateHookPluginSidecar(i, sc); err != nil {
 		return err
@@ -326,7 +286,7 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].key: segments must not be empty", i)
 		}
 	}
-	if sc.Dialect != "" && sc.Kind != SidecarMCP && sc.Kind != SidecarChecks && sc.Kind != SidecarHooks && sc.Kind != SidecarPermissions {
+	if sc.Dialect != "" && !isGenericSidecarKind(sc.Kind) {
 		return fmt.Errorf("sidecars[%d].dialect is only valid on kinds %q, %q, %q and %q", i, SidecarMCP, SidecarChecks, SidecarHooks, SidecarPermissions)
 	}
 	if sc.Kind == SidecarPermissions {
@@ -339,26 +299,8 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 			return err
 		}
 	}
-	if sc.Kind == SidecarChecks {
-		if !isChecksDialect(sc.Dialect) {
-			return fmt.Errorf("sidecars[%d].dialect: kind %q needs dialect %q or %q", i, SidecarChecks, ChecksDialectAugment, ChecksDialectGitLabDuo)
-		}
-		if sc.DocFormat() != DocFormatYAML || len(sc.Key) > 0 {
-			return fmt.Errorf("sidecars[%d]: kind %q writes a yaml document and takes no key", i, SidecarChecks)
-		}
-	}
-	if sc.Kind == SidecarMCP {
-		if _, err := mcpDialectFor(sc.Dialect); err != nil {
-			return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
-		}
-		if sc.EmitWhen == "" {
-			// No servers, no document: an mcp sidecar is not an always-on file,
-			// unless it also owns array elements, which need no server.
-			sc.EmitWhen = PredicateHasMCPServers
-			if sc.Elements != nil {
-				sc.EmitWhen = PredicateAlways
-			}
-		}
+	if err := validateChecksAndMCP(i, sc); err != nil {
+		return err
 	}
 	return validateElements(i, sc)
 }
@@ -478,43 +420,9 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 	if err := validateSplitEnums(typ, out); err != nil {
 		return err
 	}
-	if out.Dialect != "" && (out.Body != nil || out.Frontmatter != nil) {
-		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
-	}
-	if !out.Split {
-		return fmt.Errorf("outputs[%q]: inline_filter, dialect, activation and always_files require split = true", typ)
-	}
-	if !out.AlwaysFiles && !slices.Contains(rootSections, SectionRootRulesInline) {
-		return fmt.Errorf("outputs[%q]: split requires root.sections to include %q", typ, SectionRootRulesInline)
-	}
-	if out.Filter != "" {
-		return fmt.Errorf("outputs[%q]: split cannot be combined with filter %q", typ, out.Filter)
-	}
-	if out.Dialect == "" {
-		return fmt.Errorf("outputs[%q].dialect is required when split = true", typ)
-	}
-	if err := validateSplitDir(typ, out.Dir); err != nil {
-		return err
-	}
-	return validateSplitFilename(typ, out.Filename)
+	return validateSplitLayout(typ, out, rootSections)
 }
 
-// registerSplitRulesDir marks the folder of a split rules output as a shared
-// rules folder, so it gets the protections the built-in folders have: the
-// overwrite guard for hand-written files, hashes in the banner, and per-file
-// gitignore entries. Registering on load is the one point every spec passes
-// through, built-in or custom, before any path check can run.
-func registerSplitRulesDir(s *ProviderSpec) {
-	if out := s.Outputs[OutputTypeRules]; out != nil && out.Split {
-		config.RegisterRulesDir(out.Dir)
-	}
-}
-
-// driveLetter matches a Windows drive prefix such as "C:".
-var driveLetter = regexp.MustCompile(`^[A-Za-z]:`)
-
-// validateActivation checks the dialect/activation pairing and the shape of the
-// activation tables.
 func validateActivation(typ string, out *OutputSpec) error {
 	if out.Dialect == DialectMapped && out.Activation == nil {
 		return fmt.Errorf("outputs[%q].dialect %q requires an [outputs.%s.activation] block", typ, DialectMapped, typ)
@@ -626,3 +534,127 @@ func isValidSidecarKind(k string) bool {
 	}
 	return false
 }
+
+func validatePerItemMode(typ string, out *OutputSpec) error {
+	if out.File != "" || out.Header != "" {
+		return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
+	}
+	if fm := out.Frontmatter; fm != nil && fm.JoinLists && !fm.Tools && !fm.Skills {
+		return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
+	}
+	if fm := out.Frontmatter; fm != nil {
+		if fm.ToolCase != "" && fm.ToolCase != ToolCaseLower {
+			return fmt.Errorf("outputs[%q].frontmatter.tool_case: unknown case %q", typ, fm.ToolCase)
+		}
+		if (len(fm.ToolNames) > 0 || fm.ToolCase != "") && !fm.Tools {
+			return fmt.Errorf("outputs[%q].frontmatter.tool_names and tool_case need tools to be true", typ)
+		}
+	}
+
+	return nil
+}
+
+func validateSidecarPaths(i int, sc *SidecarSpec) error {
+	if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].path", i), sc.Path); err != nil {
+		return err
+	}
+	if sc.UserOnly && sc.GlobalPath == "" {
+		return fmt.Errorf("sidecars[%d].user_only needs a global_path", i)
+	}
+	if sc.GlobalPath != "" {
+		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_path", i), sc.GlobalPath); err != nil {
+			return err
+		}
+	}
+	if sc.GlobalMCPPath != "" {
+		if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].global_mcp_path", i), sc.GlobalMCPPath); err != nil {
+			return err
+		}
+		if !IsMCPSidecarKind(sc.Kind) {
+			return fmt.Errorf("sidecars[%d].global_mcp_path is only valid on a sidecar that holds MCP servers", i)
+		}
+	}
+	return nil
+}
+
+func validateSidecarTransport(i int, sc *SidecarSpec) error {
+	for _, tr := range sc.Transports {
+		if tr != config.TransportStdio && tr != config.TransportHTTP && tr != config.TransportSSE {
+			return fmt.Errorf("sidecars[%d].transports: unknown transport %q", i, tr)
+		}
+	}
+	if sc.EnvRefSyntax != "" && !IsEnvRefSyntax(sc.EnvRefSyntax) {
+		return fmt.Errorf("sidecars[%d].env_ref_syntax: unknown syntax %q", i, sc.EnvRefSyntax)
+	}
+	if sc.EnvRefSyntax != "" && sc.Kind != SidecarMCP {
+		return fmt.Errorf("sidecars[%d].env_ref_syntax is only valid on kind %q", i, SidecarMCP)
+	}
+	if len(sc.Transports) > 0 && !IsMCPSidecarKind(sc.Kind) {
+		return fmt.Errorf("sidecars[%d].transports is only valid on a sidecar that holds MCP servers", i)
+	}
+	return nil
+}
+
+func validateChecksAndMCP(i int, sc *SidecarSpec) error {
+	if sc.Kind == SidecarChecks {
+		if !isChecksDialect(sc.Dialect) {
+			return fmt.Errorf("sidecars[%d].dialect: kind %q needs dialect %q or %q", i, SidecarChecks, ChecksDialectAugment, ChecksDialectGitLabDuo)
+		}
+		if sc.DocFormat() != DocFormatYAML || len(sc.Key) > 0 {
+			return fmt.Errorf("sidecars[%d]: kind %q writes a yaml document and takes no key", i, SidecarChecks)
+		}
+	}
+	if sc.Kind == SidecarMCP {
+		if _, err := mcpDialectFor(sc.Dialect); err != nil {
+			return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
+		}
+		if sc.EmitWhen == "" {
+			// No servers, no document: an mcp sidecar is not an always-on file,
+			// unless it also owns array elements, which need no server.
+			sc.EmitWhen = PredicateHasMCPServers
+			if sc.Elements != nil {
+				sc.EmitWhen = PredicateAlways
+			}
+		}
+	}
+	return nil
+}
+
+func validateSplitLayout(typ string, out *OutputSpec, rootSections []string) error {
+	if out.Dialect != "" && (out.Body != nil || out.Frontmatter != nil) {
+		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
+	}
+	if !out.Split {
+		return fmt.Errorf("outputs[%q]: inline_filter, dialect, activation and always_files require split = true", typ)
+	}
+	if !out.AlwaysFiles && !slices.Contains(rootSections, SectionRootRulesInline) {
+		return fmt.Errorf("outputs[%q]: split requires root.sections to include %q", typ, SectionRootRulesInline)
+	}
+	if out.Filter != "" {
+		return fmt.Errorf("outputs[%q]: split cannot be combined with filter %q", typ, out.Filter)
+	}
+	if out.Dialect == "" {
+		return fmt.Errorf("outputs[%q].dialect is required when split = true", typ)
+	}
+	if err := validateSplitDir(typ, out.Dir); err != nil {
+		return err
+	}
+	return validateSplitFilename(typ, out.Filename)
+}
+
+// registerSplitRulesDir marks the folder of a split rules output as a shared
+// rules folder, so it gets the protections the built-in folders have: the
+// overwrite guard for hand-written files, hashes in the banner, and per-file
+// gitignore entries. Registering on load is the one point every spec passes
+// through, built-in or custom, before any path check can run.
+func registerSplitRulesDir(s *ProviderSpec) {
+	if out := s.Outputs[OutputTypeRules]; out != nil && out.Split {
+		config.RegisterRulesDir(out.Dir)
+	}
+}
+
+// driveLetter matches a Windows drive prefix such as "C:".
+var driveLetter = regexp.MustCompile(`^[A-Za-z]:`)
+
+// validateActivation checks the dialect/activation pairing and the shape of the
+// activation tables.

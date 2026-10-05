@@ -37,7 +37,7 @@ func TestGeneratePlugin_RemovesStalePluginDirectory(t *testing.T) {
 
 	lines, err := gen.DryRunPlugin("")
 	require.NoError(t, err)
-	assert.Contains(t, lines, "delete-stale: mkt/plugins/demo-teamb")
+	assert.Contains(t, lines, "delete-stale: "+filepath.Join("mkt", "plugins", "demo-teamb"))
 	assert.DirExists(t, teamB, "dry run must not delete")
 
 	require.Error(t, gen.VerifyPlugin(""), "verify must flag the stale directory")
@@ -214,7 +214,7 @@ func TestGeneratePlugin_ProfileLeavingDomainOutDoesNotDeleteItsPlugin(t *testing
 	gen := loadDomainsProject(t, dir)
 	lines, err := gen.DryRunPlugin("only-a")
 	require.NoError(t, err)
-	assert.NotContains(t, lines, "delete-stale: mkt/plugins/demo-teamb")
+	assert.NotContains(t, lines, "delete-stale: "+filepath.Join("mkt", "plugins", "demo-teamb"))
 	require.NoError(t, gen.GeneratePlugin("only-a"))
 	assert.DirExists(t, teamB, "a profile that omits a domain must not delete that domain's plugin")
 }

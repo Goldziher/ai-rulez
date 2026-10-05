@@ -1056,13 +1056,11 @@ func (t *ContentTree) IsEmpty() bool {
 	if t == nil {
 		return true
 	}
-	if len(t.Rules) > 0 || len(t.Context) > 0 || len(t.Skills) > 0 ||
-		len(t.Agents) > 0 || len(t.Commands) > 0 || len(t.Checks) > 0 {
+	if len(t.Rules)+len(t.Context)+len(t.Skills)+len(t.Agents)+len(t.Commands)+len(t.Checks) > 0 {
 		return false
 	}
 	for _, domain := range t.Domains {
-		if domain != nil && (len(domain.Rules) > 0 || len(domain.Context) > 0 ||
-			len(domain.Skills) > 0 || len(domain.Agents) > 0 || len(domain.Commands) > 0 || len(domain.Checks) > 0) {
+		if domain != nil && (len(domain.Rules)+len(domain.Context)+len(domain.Skills)+len(domain.Agents)+len(domain.Commands)+len(domain.Checks) > 0) {
 			return false
 		}
 	}

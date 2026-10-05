@@ -314,3 +314,12 @@ func TestWebFetchDomainsAreLowercasedAndDeniesCoverPorts(t *testing.T) {
 		assert.Equal(t, strings.ToLower(name), name)
 	}
 }
+
+func TestClineUserScriptUsesPortablePath(t *testing.T) {
+	cfg := &config.Config{UserScope: true, ConfigDir: filepath.Join(t.TempDir(), "config"),
+		Hooks: []config.HookGroup{{Event: "Stop", Hooks: []config.HookAction{{Script: "scripts/guard.sh"}}}},
+	}
+	scripts := settings.ClineHookScripts(cfg)
+	require.Len(t, scripts, 1)
+	assert.Contains(t, scripts[0].Body, "'"+filepath.ToSlash(cfg.ConfigDir)+"/scripts/guard.sh'")
+}

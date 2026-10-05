@@ -91,7 +91,7 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTree, b
 		ruleContent := g.renderContentFile(rule)
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(dirPath, sanitized+".md"),
+			Path:    filepath.Join(dirPath, sanitized+extMarkdown),
 			Content: ruleContent,
 		})
 	}

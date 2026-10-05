@@ -8,24 +8,24 @@ func init() {
 	register(&Vocabulary{
 		Harness: "opencode", Source: "https://opencode.ai/docs/tools/",
 		Tools: map[string][]string{
-			Bash: {"bash"}, Read: {"read"}, Edit: {"edit", "apply_patch"}, MultiEdit: {"edit", "apply_patch"},
-			Write: {"write", "apply_patch"}, Grep: {"grep"}, Glob: {"glob"}, TodoWrite: {"todowrite"},
-			WebFetch: {"webfetch"}, WebSearch: {"websearch"}, Task: {"task"}, Agent: {"task"}, Skill: {"skill"},
+			Bash: {nativeBash}, Read: {nativeRead}, Edit: {nativeEdit, nativeApplyPatch}, MultiEdit: {nativeEdit, nativeApplyPatch},
+			Write: {nativeWrite, nativeApplyPatch}, Grep: {nativeGrep}, Glob: {nativeGlob}, TodoWrite: {"todowrite"},
+			WebFetch: {"webfetch"}, WebSearch: {"websearch"}, Task: {nativeTask}, Agent: {nativeTask}, Skill: {"skill"},
 		},
 	})
 	// Pi: built-in tools of the extension API (isToolCallEventType).
 	register(&Vocabulary{
 		Harness: "pi", Source: "Pi extension types, isToolCallEventType",
 		Tools: map[string][]string{
-			Bash: {"bash"}, Read: {"read"}, Edit: {"edit"}, MultiEdit: {"edit"}, Write: {"write"},
-			Grep: {"grep"}, Glob: {"find"}, LS: {"ls"},
+			Bash: {nativeBash}, Read: {nativeRead}, Edit: {nativeEdit}, MultiEdit: {nativeEdit}, Write: {nativeWrite},
+			Grep: {nativeGrep}, Glob: {"find"}, LS: {"ls"},
 		},
 	})
 	// Amp's own names beyond the ones it shares with Claude Code (Bash, Read, Grep, Task).
 	register(&Vocabulary{
 		Harness: "amp", Source: "amp tools list",
 		Tools: map[string][]string{
-			Edit: {"edit_file"}, MultiEdit: {"edit_file"}, Write: {"create_file"}, Glob: {"glob"},
+			Edit: {"edit_file"}, MultiEdit: {"edit_file"}, Write: {"create_file"}, Glob: {nativeGlob},
 			WebSearch: {"web_search"}, WebFetch: {"read_web_page"}, TodoWrite: {"todo_write"},
 		},
 	})
@@ -39,8 +39,8 @@ func init() {
 	register(&Vocabulary{
 		Harness: "cursor", Source: "https://cursor.com/docs/hooks (read 2026-10-05)", Search: true, MatchAll: "*",
 		Tools: map[string][]string{
-			Bash: {"Shell"}, Read: {"Read"}, Edit: {"Write"}, MultiEdit: {"Write"}, Write: {"Write"},
-			Grep: {"Grep"}, Task: {"Task"}, Agent: {"Task"},
+			Bash: {"Shell"}, Read: {"Read"}, Edit: {Write}, MultiEdit: {Write}, Write: {Write},
+			Grep: {"Grep"}, Task: {Task}, Agent: {Task},
 		},
 	})
 	// Gemini CLI BeforeTool/AfterTool: a regex over the tool name; MCP tools are
@@ -51,8 +51,8 @@ func init() {
 		Search: true, MatchAll: ".*", MCP: "mcp_{server}_{tool}",
 		Tools: map[string][]string{
 			Bash: {"run_shell_command"}, Read: {"read_file", "read_many_files"}, Edit: {"replace"},
-			MultiEdit: {"replace"}, Write: {"write_file"}, Grep: {"grep_search"}, Glob: {"glob"},
-			LS: {"list_directory"}, WebFetch: {"web_fetch"}, WebSearch: {"google_web_search"},
+			MultiEdit: {"replace"}, Write: {"write_file"}, Grep: {"grep_search"}, Glob: {nativeGlob},
+			LS: {"list_directory"}, WebFetch: {nativeWebFetch}, WebSearch: {"google_web_search"},
 			TodoWrite: {"write_todos"},
 		},
 	})
@@ -65,8 +65,8 @@ func init() {
 		register(&Vocabulary{
 			Harness: harness, Source: "https://docs.github.com/en/copilot/reference/hooks-configuration (read 2026-10-05)",
 			Tools: map[string][]string{
-				Bash: {"bash"}, Read: {"view"}, Edit: {"edit"}, MultiEdit: {"edit"}, Write: {"create"},
-				Grep: {"grep"}, Glob: {"glob"}, WebFetch: {"web_fetch"}, Task: {"task"}, Agent: {"task"},
+				Bash: {nativeBash}, Read: {nativeView}, Edit: {nativeEdit}, MultiEdit: {nativeEdit}, Write: {"create"},
+				Grep: {nativeGrep}, Glob: {nativeGlob}, WebFetch: {nativeWebFetch}, Task: {nativeTask}, Agent: {nativeTask},
 			},
 		})
 	}
@@ -76,10 +76,10 @@ func init() {
 	// https://docs.factory.com/reference/hooks-reference
 	register(&Vocabulary{
 		Harness: "factory", Source: "https://docs.factory.com/reference/hooks-reference (read 2026-10-05)",
-		Search: true, MatchAll: "*", MCP: "mcp__{server}__{tool}",
+		Search: true, MatchAll: "*", MCP: nativeMCPPattern,
 		Tools: map[string][]string{
 			Bash: {"Execute"}, Read: {"Read"}, Edit: {"Edit"}, Write: {"Create"}, Grep: {"Grep"}, Glob: {"Glob"},
-			LS: {"LS"}, WebFetch: {"FetchUrl"}, WebSearch: {"WebSearch"}, Task: {"Task"}, Agent: {"Task"},
+			LS: {"LS"}, WebFetch: {"FetchUrl"}, WebSearch: {"WebSearch"}, Task: {Task}, Agent: {Task},
 		},
 	})
 	// Devin CLI: a regex over tool_name, documented with anchored patterns; MCP
@@ -87,9 +87,9 @@ func init() {
 	// https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks
 	register(&Vocabulary{
 		Harness: "devin", Source: "https://docs.devin.ai/cli/extensibility/hooks/lifecycle-hooks (read 2026-10-05)",
-		Search: true, MCP: "mcp__{server}__{tool}",
+		Search: true, MCP: nativeMCPPattern,
 		Tools: map[string][]string{
-			Bash: {"exec"}, Read: {"read"}, Edit: {"edit"}, Write: {"write"}, Grep: {"grep"}, Glob: {"glob"},
+			Bash: {"exec"}, Read: {nativeRead}, Edit: {nativeEdit}, Write: {nativeWrite}, Grep: {nativeGrep}, Glob: {nativeGlob},
 			WebFetch: {"webfetch"},
 		},
 	})
@@ -99,7 +99,7 @@ func init() {
 	register(&Vocabulary{
 		Harness: "augment", Source: "https://docs.augmentcode.com/cli/hooks (read 2026-10-05)", Search: true,
 		Tools: map[string][]string{
-			Bash: {"launch-process"}, Read: {"view"}, Edit: {"str-replace-editor"}, MultiEdit: {"str-replace-editor"},
+			Bash: {"launch-process"}, Read: {nativeView}, Edit: {"str-replace-editor"}, MultiEdit: {"str-replace-editor"},
 			Write: {"save-file"}, WebFetch: {"web-fetch"}, WebSearch: {"web-search"},
 		},
 	})
@@ -123,7 +123,7 @@ func init() {
 	// https://kiro.dev/docs/hooks/types/
 	register(&Vocabulary{
 		Harness: "kiro", Source: "https://kiro.dev/docs/hooks/types/ (read 2026-10-05)", NoAlternation: true,
-		MatchAll: "*", Tools: map[string][]string{Bash: {"shell"}},
+		MatchAll: "*", Tools: map[string][]string{Bash: {nativeShell}},
 	})
 	// Block goose: the matcher is a regular expression (`.*`, never `*`); the
 	// developer extension's tools are unprefixed and every other extension's are
@@ -131,7 +131,7 @@ func init() {
 	register(&Vocabulary{
 		Harness: "goose", Source: "https://goose-docs.ai/docs/guides/context-engineering/hooks/ (read 2026-10-05)",
 		Search: true, MatchAll: ".*", MCP: "{server}__{tool}",
-		Tools: map[string][]string{Bash: {"shell"}, Write: {"write"}, Edit: {"edit"}, MultiEdit: {"edit"}},
+		Tools: map[string][]string{Bash: {nativeShell}, Write: {nativeWrite}, Edit: {nativeEdit}, MultiEdit: {nativeEdit}},
 	})
 	// Charm Crush: a regex over lowercase tool names; MCP tools are
 	// mcp_<server>_<tool>. https://github.com/charmbracelet/crush/blob/main/docs/hooks/README.md
@@ -139,8 +139,8 @@ func init() {
 		Harness: "crush", Source: "https://github.com/charmbracelet/crush/blob/main/docs/hooks/README.md (read 2026-10-05)",
 		Search: true, MCP: "mcp_{server}_{tool}",
 		Tools: map[string][]string{
-			Bash: {"bash"}, Read: {"view"}, Edit: {"edit"}, Write: {"write"}, MultiEdit: {"multiedit"},
-			Grep: {"grep"}, Glob: {"glob"}, LS: {"ls"}, Task: {"agent"}, Agent: {"agent"},
+			Bash: {nativeBash}, Read: {nativeView}, Edit: {nativeEdit}, Write: {nativeWrite}, MultiEdit: {"multiedit"},
+			Grep: {nativeGrep}, Glob: {nativeGlob}, LS: {"ls"}, Task: {"agent"}, Agent: {"agent"},
 		},
 	})
 	// Snowflake Cortex Code CLI: a case-sensitive regex over lowercase runtime
@@ -149,9 +149,9 @@ func init() {
 	// https://docs.snowflake.com/en/user-guide/cortex-code/extensibility
 	register(&Vocabulary{
 		Harness: "cortex", Source: "https://docs.snowflake.com/en/user-guide/cortex-code/extensibility (read 2026-10-05)",
-		Search: true, MatchAll: "*", MCP: "mcp__{server}__{tool}",
+		Search: true, MatchAll: "*", MCP: nativeMCPPattern,
 		Tools: map[string][]string{
-			Bash: {"bash"}, Read: {"read"}, Edit: {"edit"}, Write: {"write"}, Grep: {"grep"}, Glob: {"glob"},
+			Bash: {nativeBash}, Read: {nativeRead}, Edit: {nativeEdit}, Write: {nativeWrite}, Grep: {nativeGrep}, Glob: {nativeGlob},
 			NotebookEdit: {"notebook_edit_cell"},
 		},
 	})
@@ -161,8 +161,8 @@ func init() {
 	register(&Vocabulary{
 		Harness: "poolside", Source: "https://docs.poolside.ai/hooks (read 2026-10-05)", MatchAll: "*",
 		Tools: map[string][]string{
-			Bash: {"shell"}, Read: {"read"}, Edit: {"edit"}, MultiEdit: {"edit"}, Write: {"write"},
-			WebFetch: {"web_fetch"}, WebSearch: {"web_search"},
+			Bash: {nativeShell}, Read: {nativeRead}, Edit: {nativeEdit}, MultiEdit: {nativeEdit}, Write: {nativeWrite},
+			WebFetch: {nativeWebFetch}, WebSearch: {"web_search"},
 		},
 	})
 	// Mistral Vibe: `match` is an fnmatch glob (or a regex behind `re:`), so no
@@ -172,6 +172,6 @@ func init() {
 	register(&Vocabulary{
 		Harness: "vibe", Source: "https://docs.mistral.ai/vibe/code/cli/hooks (read 2026-10-05)",
 		NoAlternation: true, MatchAll: "*", Glob: true,
-		Tools: map[string][]string{Bash: {"bash"}, Grep: {"grep"}},
+		Tools: map[string][]string{Bash: {nativeBash}, Grep: {nativeGrep}},
 	})
 }

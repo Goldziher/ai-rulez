@@ -124,7 +124,7 @@ another generated file).
 - **devin**: <https://docs.devin.ai/cli/reference/permissions>.
 - **qwen, codebuddy, commandcode, qoder, letta**: <https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/>
   (the dedicated permissions page was not reachable, so its details beyond the documented
-  `permissions.{allow,ask,deny}` shape are unverified), <https://www.codebuddy.ai/docs/cli/permissions>,
+  `permissions.{allow,ask,deny}` shape are unverified), <https://www.codebuddy.ai/docs/cli/permissions/>,
   <https://commandcode.ai/docs/permissions>, <https://docs.qoder.com/cli/permissions>,
   <https://docs.letta.com/letta-code/permissions>. Command Code calls the shell tool `Shell`, and Command
   Code and Qoder match a bare path at any depth, so paths are written project-rooted (`/src/**`). Qoder's

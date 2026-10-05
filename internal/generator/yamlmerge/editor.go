@@ -281,7 +281,7 @@ func wouldEmpty(m *yaml.Node, path []string) bool {
 }
 
 // removeMember deletes a member's lines, with the blank line that separated it
-// from its neighbours when it had one on each side.
+// from its neighbors when it had one on each side.
 func (e *editor) removeMember(cur *yaml.Node, idx int) {
 	start, end := e.memberSpan(cur, idx)
 	if blankBefore(e.src, start) {
@@ -484,7 +484,8 @@ func flowEnd(src string, from int) int {
 		case '[', '{':
 			depth++
 		case ']', '}':
-			if depth--; depth == 0 {
+			depth--
+			if depth == 0 {
 				return i + 1
 			}
 		case '"', '\'':
@@ -600,33 +601,71 @@ func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *
 		return false
 	}
 	start, end := e.memberSpan(cur, idx)
+	starts, oldValues, dashIndent, ok := e.blockSequenceLayout(old, start)
+	if !ok {
+		return false
+	}
+	replaced, ok := e.renderBlockSequence(items, starts, oldValues, dashIndent, start, end)
+	if !ok {
+		return false
+	}
+
+	// The new member must read back as value on its own, before it goes in.
+	var parsedMember map[string]any
+	if err := yaml.Unmarshal([]byte(replaced), &parsedMember); err != nil ||
+		jsonmerge.Digest(parsedMember[key]) != jsonmerge.Digest(value) {
+		return false
+	}
+	e.src = e.src[:start] + replaced + e.src[end:]
+	return true
+}
+
+// sliceItems returns the elements of a slice or array value.
+func sliceItems(value any) ([]any, bool) {
+	rv := reflect.ValueOf(value)
+	if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
+		return nil, false
+	}
+	items := make([]any, rv.Len())
+	for i := range items {
+		items[i] = rv.Index(i).Interface()
+	}
+	return items, true
+}
+
+func (e *editor) blockSequenceLayout(old *yaml.Node, start int) (starts []int, oldValues []any, dashIndent int, ok bool) {
 	lines := strings.SplitAfter(e.src, "\n")
 	offsets := make([]int, len(lines))
 	for i := 1; i < len(lines); i++ {
 		offsets[i] = offsets[i-1] + len(lines[i-1])
 	}
-	starts := make([]int, len(old.Content))
-	oldValues := make([]any, len(old.Content))
-	dashIndent := -1
+	starts = make([]int, len(old.Content))
+	oldValues = make([]any, len(old.Content))
+	dashIndent = -1
 	for i, item := range old.Content {
 		if item.Line < 1 || item.Line > len(lines) {
-			return false
+			return nil, nil, 0, false
 		}
 		line := lines[item.Line-1]
 		prefix := strings.TrimRight(line[:min(byteColumn(line, item.Column-1), len(line))], " ")
 		indent, isDash := strings.CutSuffix(prefix, "-")
 		if !isDash || strings.TrimSpace(indent) != "" || (dashIndent >= 0 && len(indent) != dashIndent) {
-			return false
+			return nil, nil, 0, false
 		}
 		dashIndent = len(indent)
 		starts[i] = offsets[item.Line-1]
 		if starts[i] < start || (i > 0 && starts[i] <= starts[i-1]) {
-			return false
+			return nil, nil, 0, false
 		}
 		if err := item.Decode(&oldValues[i]); err != nil {
-			return false
+			return nil, nil, 0, false
 		}
 	}
+
+	return starts, oldValues, dashIndent, true
+}
+
+func (e *editor) renderBlockSequence(items []any, starts []int, oldValues []any, dashIndent, start, end int) (string, bool) {
 	spanEnd := func(i int) int {
 		if i+1 < len(starts) {
 			return starts[i+1]
@@ -651,7 +690,7 @@ func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *
 		if chunk == "" {
 			rendered, err := marshal([]any{item}, e.unit)
 			if err != nil {
-				return false
+				return "", false
 			}
 			chunk = e.indentText(rendered, dashIndent)
 		}
@@ -661,32 +700,10 @@ func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *
 		b.WriteString(chunk)
 	}
 	if retained == 0 {
-		return false // nothing to keep: rendering the whole list is the same edit
+		return "", false // nothing to keep: rendering the whole list is the same edit
 	}
 	if !strings.HasSuffix(b.String(), "\n") && end < len(e.src) {
 		b.WriteString(e.newline)
 	}
-	replaced := b.String()
-
-	// The new member must read back as value on its own, before it goes in.
-	var parsedMember map[string]any
-	if err := yaml.Unmarshal([]byte(replaced), &parsedMember); err != nil ||
-		jsonmerge.Digest(parsedMember[key]) != jsonmerge.Digest(value) {
-		return false
-	}
-	e.src = e.src[:start] + replaced + e.src[end:]
-	return true
-}
-
-// sliceItems returns the elements of a slice or array value.
-func sliceItems(value any) ([]any, bool) {
-	rv := reflect.ValueOf(value)
-	if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
-		return nil, false
-	}
-	items := make([]any, rv.Len())
-	for i := range items {
-		items[i] = rv.Index(i).Interface()
-	}
-	return items, true
+	return b.String(), true
 }
