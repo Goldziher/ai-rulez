@@ -247,9 +247,9 @@ These keys go under `[outputs.<kind>.frontmatter]`:
 
 `[outputs.<kind>.body]` takes `replace` (a table of placeholder to replacement in the item's content, such as
 `{ "$ARGUMENTS" = "$prompt" }`) and `replace_flag` (a frontmatter key written `true` when a replacement happened).
-An `mcp` sidecar takes `transports` (`["stdio"]` leaves remote servers out), `env_ref_syntax` (`"dollar"` or
-`"env_prefix"`: a value that came from a `${VAR}` placeholder is written as `$VAR` or `${env:VAR}` instead of the
-resolved secret), and `elements.project_only` (the elements are project-relative and skipped in the user scope).
+An `mcp` sidecar takes `transports` (`["stdio"]` leaves remote servers out), `env_ref_syntax` (`"dollar"`,
+`"env_prefix"`, `"braced"` or `"opencode_env"`: a value that came from a `${VAR}` placeholder is written as `$VAR`,
+`${env:VAR}`, `${VAR}` or `{env:VAR}` instead of the resolved secret), and `elements.project_only` (the elements are project-relative and skipped in the user scope).
 
 A `hooks` sidecar renders the top-level `[[hooks]]` into the tool's own hooks file. Its `dialect` names the
 harness whose hook format is used (`claude`, `qwen`, `factory`, `kiro`, `vibe`, ...; the harnesses and what
@@ -598,6 +598,33 @@ patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
 `.claude/settings.json`, `.gemini/settings.json`, `.agents/mcp_config.json`, and `opencode.json`,
 including scoped variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
 source-hash calculation, but generated MCP config files contain the actual resolved values.
+
+**Environment references.** Where a tool expands environment references in its own MCP config, a value that
+came from a `${VAR}` placeholder resolved from the process environment is written as that tool's reference
+instead of the secret. A value from `--env`, `--env-file`, `.env`, `${PROJECT_ROOT}` or an unresolved lenient
+placeholder is always written resolved, and a file that holds only references is not made owner-only.
+
+| Tool (preset) | Reference | Where | Documentation |
+| --- | --- | --- | --- |
+| Claude Code and the readers of the root `.mcp.json` (`mcp`, `codebuddy`, `commandcode`, `reasonix`, `cursor`, `copilot`) | `${VAR}` | `.mcp.json` env and headers | <https://code.claude.com/docs/en/mcp> |
+| Gemini CLI (`gemini`) | `${VAR}` | `.gemini/settings.json` env and headers | <https://geminicli.com/docs/tools/mcp-server/> |
+| Amp (`amp`) | `${VAR}` | `.amp/settings.json` env and headers | <https://ampcode.com/docs/customize/mcp> |
+| Pi (`pi`) | `${VAR}` | `.pi/mcp.json` env and headers | <https://pi.dev/docs/latest/mcp> |
+| Factory Droid (`factory`) | `${VAR}` | `.factory/mcp.json` env and headers (not `url`, `args`) | <https://docs.factory.com/cli/configuration/mcp> |
+| OpenCode (`opencode`), Kilo (`kilo`) | `{env:VAR}` | `environment` and `headers` | <https://opencode.ai/docs/config/> |
+| Cursor (`cursor`), Devin (`devin`) | `${env:VAR}` | `.cursor/mcp.json`, `.devin/mcp_config.json` | <https://docs.devin.ai/desktop/cascade/mcp> |
+| Codex (`codex`) | `env_vars`, `env_http_headers`, `bearer_token_env_var` | `~/.codex/config.toml` / `.codex/config.toml` | Codex configuration reference |
+| Codebuff (`codebuff`), Crush (`crush`) | `$VAR` (whole value only) | env and headers | tool documentation |
+
+A reference with a delimiter (`${VAR}`, `${env:VAR}`, `{env:VAR}`) may sit inside a longer value
+(`Bearer ${TOKEN}`); `$VAR` is written only when the value is exactly one placeholder, because `$TOKEN_v2` would
+read another variable.
+
+The root `.mcp.json` is one file shared by several presets, so every writer renders the same bytes. It carries
+`${VAR}` references only for upper-case names (CodeBuddy expands no others) and only while no `qoder` preset is
+active (Qoder documents no expansion); otherwise it keeps the resolved values. Tools whose documentation
+promises no expansion (`junie`, `antigravity`, `zed`, `trae`, `cline`, `xum`, Claude Desktop, VS Code's `.vscode/mcp.json`)
+and tools that expand only after an opt-in (`kiro`: "Mcp Approved Env Vars") keep the resolved value.
 
 #### Settings document merge behavior
 
