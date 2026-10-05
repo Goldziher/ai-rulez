@@ -131,6 +131,22 @@ func Compare(lock *lockfile.File, snap *Snapshot) *Diff {
 		d.NoPins = true
 		return d
 	}
+	d.compareHeader(lock, snap)
+	d.compareItems(lock.Item, snap.Items)
+	if !snap.Options.SourcesOnly {
+		d.compareOutputs(lock.Output, snap.Outputs)
+	}
+	SortChanges(d.Changes)
+	if lock.AIRulezVersion != "" && snap.Options.ToolVersion != "" && lock.AIRulezVersion != snap.Options.ToolVersion {
+		d.Notes = append(d.Notes, fmt.Sprintf("the lock was written by ai-rulez %s, this is %s; output digests can differ between releases", lock.AIRulezVersion, snap.Options.ToolVersion))
+	}
+	d.InSync = len(d.Changes) == 0
+	return d
+}
+
+// compareHeader checks what the lock says about itself: unpinnable sources, the
+// tree digest and the settings it was written with.
+func (d *Diff) compareHeader(lock *lockfile.File, snap *Snapshot) {
 	for _, problem := range snap.Problems {
 		d.Changes = append(d.Changes, Change{Scope: ScopeLock, Change: Changed, Detail: problem})
 	}
@@ -149,16 +165,6 @@ func Compare(lock *lockfile.File, snap *Snapshot) *Diff {
 	if lock.Profile != snap.Options.Profile && snap.Options.IncludeOutputs && !snap.Options.SourcesOnly {
 		d.Changes = append(d.Changes, Change{Scope: ScopeLock, Change: Changed, Detail: fmt.Sprintf("the lock pins outputs of profile %q, this check rendered %q", lock.Profile, snap.Options.Profile)})
 	}
-	d.compareItems(lock.Item, snap.Items)
-	if !snap.Options.SourcesOnly {
-		d.compareOutputs(lock.Output, snap.Outputs)
-	}
-	SortChanges(d.Changes)
-	if lock.AIRulezVersion != "" && snap.Options.ToolVersion != "" && lock.AIRulezVersion != snap.Options.ToolVersion {
-		d.Notes = append(d.Notes, fmt.Sprintf("the lock was written by ai-rulez %s, this is %s; output digests can differ between releases", lock.AIRulezVersion, snap.Options.ToolVersion))
-	}
-	d.InSync = len(d.Changes) == 0
-	return d
 }
 
 func (d *Diff) compareItems(locked, now []lockfile.Item) {
