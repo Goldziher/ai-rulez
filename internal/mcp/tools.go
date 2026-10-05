@@ -199,6 +199,9 @@ func (s *Server) addTool(tool *sdkmcp.Tool, handler handlerFunc) {
 	sdkmcp.AddTool(s.mcpServer, tool, func(ctx context.Context, req *sdkmcp.CallToolRequest, input map[string]any) (*sdkmcp.CallToolResult, any, error) {
 		wrapper := handlers.NewToolRequest(req, input)
 		res, err := handler(ctx, wrapper)
+		if err == nil && (res == nil || !res.IsError) {
+			s.emitToolTelemetry(ctx, tool.Name, wrapper)
+		}
 		return res, nil, err
 	})
 }

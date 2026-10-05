@@ -1376,7 +1376,11 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 | `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
 | `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
 | `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
-| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown |
+| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
+| `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
+| `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
+| `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
+| `ai-rulez telemetry doctor [--json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
 | `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 
 ## Eval Commands

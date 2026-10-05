@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"sync"
+	"sync/atomic"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -19,8 +20,9 @@ type Server struct {
 	version   string
 	catalog   *Catalog
 	// catMu guards catalog, which a live reload replaces (see serve_live.go).
-	catMu sync.RWMutex
-	serve *serveState
+	catMu     sync.RWMutex
+	serve     *serveState
+	telemetry atomic.Pointer[itemTelemetry]
 }
 
 func NewServer(version string) *Server {
