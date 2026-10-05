@@ -33,6 +33,7 @@ const okfFailNone = "none"
 var (
 	okfOut     string
 	okfProfile string
+	okfRole    string
 	okfInclude []string
 	okfCheck   bool
 	okfFormat  string
@@ -85,6 +86,7 @@ diffs cleanly in git.
 Without --out the bundle goes to okf.dir (default docs/okf). --out replaces the
 contents of that directory, but only when it is empty or already an OKF bundle.
 --check writes nothing and exits 2 when the bundle on disk differs.
+--role exports only the content a role selects (see "ai-rulez roles list").
 
 The okf preset ("presets = [\"claude\", \"okf\"]") runs the same export inside
 generate, so the bundle stays in sync and generate --check detects drift.`,
@@ -135,6 +137,7 @@ func init() {
 
 	exportOKFCmd.Flags().StringVarP(&okfOut, "out", "o", "", "Bundle directory (default: okf.dir, docs/okf)")
 	exportOKFCmd.Flags().StringVarP(&okfProfile, "profile", "p", "", "Profile to export (default: from config or 'default')")
+	exportOKFCmd.Flags().StringVar(&okfRole, "role", "", "Export the slice of content a role selects (see `ai-rulez roles list`); mutually exclusive with --profile")
 	exportOKFCmd.Flags().StringSliceVar(&okfInclude, "include", nil, "Kinds to export: rules,context,skills,agents,commands,checks (default: okf.include or all)")
 	exportOKFCmd.Flags().BoolVar(&okfCheck, "check", false, "Write nothing; exit 2 when the bundle on disk differs")
 	exportOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
@@ -269,7 +272,17 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitOKFCannotRun
 	}
-	tree, err := generator.NewGenerator(cfg).ContentForProfile(okfProfile)
+	if okfRole != "" && okfProfile != "" {
+		fmtError(oops.Hint("A role replaces the profile selection; pass only one").Errorf("--role and --profile are mutually exclusive"))
+		return exitOKFCannotRun
+	}
+	gen := generator.NewGenerator(cfg)
+	var tree *config.ContentTree
+	if okfRole != "" {
+		tree, err = gen.ContentForRole(okfRole)
+	} else {
+		tree, err = gen.ContentForProfile(okfProfile)
+	}
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun
