@@ -80,9 +80,9 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | cursor       | .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/ |
 | gemini       | GEMINI.md, .gemini/, .agents/   |
 | copilot      | .github/copilot-instructions.md, .github/{skills,agents,commands}/ |
-| devin        | .devin/                         |
+| devin        | AGENTS.md, .devin/              |
 | cline        | .clinerules/, .cline/           |
-| codex        | AGENTS.md and .codex/           |
+| codex        | AGENTS.md, .agents/skills/ and .codex/ |
 | amp          | AGENTS.md and .agents/ (.amp/settings.json) |
 | junie        | AGENTS.md and .junie/           |
 | opencode     | AGENTS.md, .opencode/, opencode.json |
@@ -91,6 +91,30 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | xum          | AGENTS.md and .xum/             |
 | pi           | AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json |
 | baz          | AGENTS.md (root and nested), .agents/skills, .claude/agents |
+
+These are 15 of the 52 built-in presets. The rest: `aiassistant`, `augment`, `bob`, `codebuddy`, `codebuff`,
+`codewhale`, `commandcode`, `copilot-cli`, `cortex`, `crush`, `deepagents`, `dsh`, `factory`, `gitlab-duo`, `goose`,
+`grok`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `poolside`, `qoder`, `qwen`,
+`reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `zcode`, `zed`, `zoocode`. See
+`docs/harnesses.md` for the feature matrix. `windsurf` was renamed `devin`; `continue-dev` was removed.
+
+## Hooks and Permissions
+
+```toml
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"          # or: command = "..."
+
+[permissions]
+allow = ["Bash(npm run test:*)"]
+ask   = ["Bash(git push:*)"]
+deny  = ["Read(./.env)"]
+```
+
+Both use Claude Code names and syntax and are translated per harness (`docs/settings.md`, `docs/permissions.md`).
+`generate --user` renders a user config into home directories (`docs/user-scope.md`).
 
 ## Available Builtins
 
