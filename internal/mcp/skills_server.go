@@ -80,6 +80,13 @@ func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest
 	if !ok {
 		return nil, sdkmcp.ResourceNotFoundError(req.Params.URI)
 	}
+	session := ""
+	if req.Session != nil {
+		session = req.Session.ID()
+	}
+	if err := s.chargeRead(session, len(file.Content)); err != nil {
+		return nil, err
+	}
 	contents := &sdkmcp.ResourceContents{URI: file.URI, MIMEType: file.MIME}
 	if utf8.Valid(file.Content) {
 		contents.Text = string(file.Content)
@@ -145,6 +152,10 @@ func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill %q", key))
 	}
+	session, _ := sessionInfo(req)
+	if err := s.chargeRead(session, len(skill.Files[0].Content)); err != nil {
+		return handlers.ToolError(err)
+	}
 	summary := skillSummary(skill, 0)
 	summary["content"] = string(skill.Files[0].Content)
 	files := make([]map[string]any, 0, len(skill.Files))
@@ -163,6 +174,10 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 	}
 	if !utf8.Valid(file.Content) {
 		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read", uri))
+	}
+	session, _ := sessionInfo(req)
+	if err := s.chargeRead(session, len(file.Content)); err != nil {
+		return handlers.ToolError(err)
 	}
 	return handlers.ToolSuccess(map[string]any{
 		keyURI: file.URI, keyDigest: file.Digest, keySize: file.Size, "content": string(file.Content),
