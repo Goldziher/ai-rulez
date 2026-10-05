@@ -70,9 +70,9 @@ func (d *Diff) Outputs() []Change { return d.scoped(ScopeOutput) }
 
 func (d *Diff) scoped(scope string) []Change {
 	var out []Change
-	for _, c := range d.Changes {
-		if c.Scope == scope {
-			out = append(out, c)
+	for i := range d.Changes {
+		if d.Changes[i].Scope == scope {
+			out = append(out, d.Changes[i])
 		}
 	}
 	return out
@@ -262,8 +262,8 @@ func (c Change) Line() string {
 
 // WriteText writes the changes, one per line, then the notes.
 func (d *Diff) WriteText(w io.Writer) error {
-	for _, c := range d.Changes {
-		if _, err := fmt.Fprintln(w, "  "+c.Line()); err != nil {
+	for i := range d.Changes {
+		if _, err := fmt.Fprintln(w, "  "+d.Changes[i].Line()); err != nil {
 			return err //nolint:wrapcheck // writer error
 		}
 	}

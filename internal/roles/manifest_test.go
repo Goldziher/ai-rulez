@@ -27,13 +27,13 @@ func fixtureConfig(t *testing.T) *config.Config {
 	}
 	rule := config.ContentFile{Name: "style", Path: write("rules/style.md", "# Style\nUse tabs.\n")}
 	migrate := config.ContentFile{Name: "migrate", Path: write("domains/backend/skills/migrate/SKILL.md", "---\nname: migrate\nowner: db-team\nversion: 2.0.0\n---\nMigrate.\n"),
-		Metadata: &config.Metadata{Extra: map[string]string{"owner": "db-team", "version": "2.0.0"}},
+		Metadata:  &config.Metadata{Extra: map[string]string{"owner": "db-team", "version": "2.0.0"}},
 		Resources: []config.SkillResource{{RelPath: "references/x.md", Content: []byte("12345")}}}
 	deploy := config.ContentFile{Name: "deploy", Path: write("domains/backend/skills/deploy/SKILL.md", "deploy\n")}
 	return &config.Config{
 		ConfigDir: cfgDir, BaseDir: root,
 		Content: &config.ContentTree{
-			Rules: []config.ContentFile{rule},
+			Rules:   []config.ContentFile{rule},
 			Domains: map[string]*config.Domain{"backend": {Name: "backend", Skills: []config.ContentFile{migrate, deploy}}},
 		},
 		Roles: []config.RoleConfig{

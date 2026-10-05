@@ -124,8 +124,8 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	}
 	diff := contentlock.Compare(lock, snap)
 	var lines []string
-	for _, c := range diff.Changes {
-		lines = append(lines, c.Line())
+	for i := range diff.Changes {
+		lines = append(lines, diff.Changes[i].Line())
 	}
 	return lines, nil
 }
@@ -160,7 +160,9 @@ func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
 		return nil, err
 	}
 	var out []lint.LockDrift
-	for _, c := range contentlock.Compare(lock, snap).Changes {
+	changes := contentlock.Compare(lock, snap).Changes
+	for i := range changes {
+		c := &changes[i]
 		switch c.Scope {
 		case contentlock.ScopeOutput:
 			out = append(out, lint.LockDrift{Output: true, Path: c.Path, Message: "generated " + c.Line() + " since " + lockfile.FileName + " was written"})

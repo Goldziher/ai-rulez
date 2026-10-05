@@ -85,7 +85,7 @@ func (g *Generator) warnRoleSkillModeHarnesses(name string, flat *config.RoleCon
 	var others []string
 	for i := range g.config.Presets {
 		p := g.config.Presets[i].GetName()
-		if p != "claude" && p != "mcp" {
+		if p != presetClaude && p != presetMCP {
 			others = append(others, p)
 		}
 	}
@@ -115,3 +115,9 @@ func (g *Generator) rolesManifestOutput() (config.OutputFile, bool, error) {
 	}
 	return config.OutputFile{Path: filepath.Join(g.config.ConfigDir, roles.FileName), RawContent: data}, true, nil
 }
+
+// Preset names the role warning treats specially.
+const (
+	presetClaude = "claude"
+	presetMCP    = "mcp"
+)

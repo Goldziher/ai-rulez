@@ -661,50 +661,53 @@ func (c *Config) roleReferenceProblems(flat *FlatRole, all []RoleItem) []RolePro
 	add := func(format string, args ...any) {
 		out = append(out, RoleProblem{Kind: RoleProblemReference, Role: flat.Name, Message: fmt.Sprintf(format, args...)})
 	}
+	selectedDomains := map[string]bool{}
 	for _, d := range flat.Domains {
 		if !c.domainExists(d) {
 			add("role %q lists domain %q, which does not exist", flat.Name, d)
 		}
-	}
-	selectedDomains := map[string]bool{}
-	for _, d := range flat.Domains {
 		selectedDomains[trimBuiltinRef(d)] = true
-	}
-	check := func(field, kind, pattern string) {
-		var elsewhere []string
-		found := false
-		for i := range all {
-			if all[i].Kind != kind || !matchRoleItem(pattern, all[i].Domain, all[i].ID) {
-				continue
-			}
-			if all[i].Domain == "" || selectedDomains[all[i].Domain] || c.alwaysActiveDomain(all[i].Domain) {
-				found = true
-				break
-			}
-			elsewhere = append(elsewhere, all[i].Domain)
-		}
-		switch {
-		case found:
-		case len(elsewhere) > 0:
-			sort.Strings(elsewhere)
-			add("role %q %s entry %q exists only in domain %q, which the role does not select", flat.Name, field, pattern, elsewhere[0])
-		default:
-			add("role %q %s entry %q matches no %s", flat.Name, field, pattern, kind)
-		}
 	}
 	for _, kind := range RoleKinds {
 		include, exclude := flat.selector(kind).lists()
 		for _, p := range include {
-			check(kind+"s include", kind, p)
+			if msg := c.unmatchedEntry(flat.Name, kind+"s include", kind, p, selectedDomains, all); msg != "" {
+				add("%s", msg)
+			}
 		}
 		for _, p := range exclude {
-			check(kind+"s exclude", kind, p)
+			if msg := c.unmatchedEntry(flat.Name, kind+"s exclude", kind, p, selectedDomains, all); msg != "" {
+				add("%s", msg)
+			}
 		}
 	}
-	for p := range flat.SkillMode {
-		check("skill_mode", RoleKindSkill, p)
+	for _, p := range sortedKeys(flat.SkillMode) {
+		if msg := c.unmatchedEntry(flat.Name, "skill_mode", RoleKindSkill, p, selectedDomains, all); msg != "" {
+			add("%s", msg)
+		}
 	}
 	return out
+}
+
+// unmatchedEntry explains why a selector entry matches nothing the role can see;
+// it returns "" when the entry matches an item in root content, an always-active
+// domain or a domain the role selects.
+func (c *Config) unmatchedEntry(role, field, kind, pattern string, selectedDomains map[string]bool, all []RoleItem) string {
+	var elsewhere []string
+	for i := range all {
+		if all[i].Kind != kind || !matchRoleItem(pattern, all[i].Domain, all[i].ID) {
+			continue
+		}
+		if all[i].Domain == "" || selectedDomains[all[i].Domain] || c.alwaysActiveDomain(all[i].Domain) {
+			return ""
+		}
+		elsewhere = append(elsewhere, all[i].Domain)
+	}
+	if len(elsewhere) == 0 {
+		return fmt.Sprintf("role %q %s entry %q matches no %s", role, field, pattern, kind)
+	}
+	sort.Strings(elsewhere)
+	return fmt.Sprintf("role %q %s entry %q exists only in domain %q, which the role does not select", role, field, pattern, elsewhere[0])
 }
 
 func (c *Config) domainExists(ref string) bool {
@@ -744,24 +747,28 @@ func (c *Config) roleReachabilityProblems(res *ResolvedRole, all []RoleItem) []R
 			continue
 		}
 		for _, dep := range item.File.Metadata.Skills {
-			if !exists[dep] || dep == item.ID && item.Kind == RoleKindSkill {
+			if !exists[dep] || (dep == item.ID && item.Kind == RoleKindSkill) {
 				continue
 			}
-			switch k := kept[dep]; {
-			case k == nil:
-				out = append(out, RoleProblem{Kind: RoleProblemUnreachable, Role: res.Name,
-					Message: fmt.Sprintf("role %q keeps %s %q, which uses skill %q, but the role does not include that skill", res.Name, item.Kind, item.ID, dep)})
-			case k.Mode == "off" || k.Mode == "user-invocable-only":
-				out = append(out, RoleProblem{Kind: RoleProblemUnreachable, Role: res.Name,
-					Message: fmt.Sprintf("role %q keeps %s %q, which uses skill %q, but skill_mode %q hides it from the model", res.Name, item.Kind, item.ID, dep, k.Mode)})
+			if msg := unreachableMessage(res.Name, item, dep, kept[dep]); msg != "" {
+				out = append(out, RoleProblem{Kind: RoleProblemUnreachable, Role: res.Name, Message: msg})
 			}
 		}
 	}
 	return out
 }
 
-// roleItemID is the id a role selector matches: the skill directory name for a
-// skill, the content name for everything else.
+// unreachableMessage describes a skill dependency the role cannot satisfy, or "".
+func unreachableMessage(role string, item *RoleItem, dep string, kept *RoleItem) string {
+	switch {
+	case kept == nil:
+		return fmt.Sprintf("role %q keeps %s %q, which uses skill %q, but the role does not include that skill", role, item.Kind, item.ID, dep)
+	case kept.Mode == SkillModeOff || kept.Mode == SkillModeUserInvocableOnly:
+		return fmt.Sprintf("role %q keeps %s %q, which uses skill %q, but skill_mode %q hides it from the model", role, item.Kind, item.ID, dep, kept.Mode)
+	}
+	return ""
+}
+
 func roleItemID(kind string, f ContentFile) string {
 	if kind == RoleKindSkill {
 		return SkillID(f)
