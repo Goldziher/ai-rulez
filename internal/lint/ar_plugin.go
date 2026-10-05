@@ -28,17 +28,17 @@ var (
 	semverRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 
 	pluginKeys = []string{
-		"$schema", "name", "version", "description", "author", "homepage", "repository", "license", "keywords",
-		"commands", "agents", "skills", "hooks", "mcpServers", "outputStyles", "lspServers", "userConfig", "channels", "dependencies", "monitors", "themes",
+		"$schema", keyName, "version", keyDescription, "author", "homepage", "repository", keyLicense, keyKeywords,
+		keyCommands, keyAgents, keySkills, keyHooks, keyMCPServers, "outputStyles", "lspServers", "userConfig", "channels", "dependencies", "monitors", "themes",
 	}
-	pluginPathKeys = []string{"commands", "agents", "skills", "hooks", "mcpServers", "outputStyles", "lspServers"}
+	pluginPathKeys = []string{keyCommands, keyAgents, keySkills, keyHooks, keyMCPServers, "outputStyles", "lspServers"}
 	// Marketplace names Anthropic reserves (plugins reference, marketplace schema).
 	reservedMarketplaceNames = []string{
 		"claude-code-marketplace", "claude-code-plugins", "claude-plugins-official", "anthropic-marketplace",
 		"anthropic-plugins", "agent-skills", "knowledge-work-plugins", "life-sciences",
 	}
-	marketplaceKeys = []string{"$schema", "name", "owner", "plugins", "metadata", "description", "version", "allowCrossMarketplaceDependenciesOn"}
-	entryKeys       = append([]string{"source", "strict", "category", "tags", "defaultEnabled", "relevance"}, pluginKeys...)
+	marketplaceKeys = []string{"$schema", keyName, "owner", "plugins", keyMetadata, keyDescription, "version", "allowCrossMarketplaceDependenciesOn"}
+	entryKeys       = append([]string{"source", "strict", keyCategory, "tags", "defaultEnabled", "relevance"}, pluginKeys...)
 )
 
 func checkPluginManifests(r *runner) {
@@ -52,7 +52,7 @@ func checkPluginManifests(r *runner) {
 			pluginDirs = append(pluginDirs, filepath.Dir(filepath.Dir(abs)))
 		case path.Base(dir) == ".claude-plugin" && base == "marketplace.json":
 			r.checkMarketplaceJSON(abs)
-		case base == "hooks.json" && path.Base(dir) == "hooks":
+		case base == "hooks.json" && path.Base(dir) == keyHooks:
 			r.checkPluginHookQuoting(abs)
 		}
 	}
@@ -64,13 +64,12 @@ func checkPluginManifests(r *runner) {
 	}
 }
 
-func (r *runner) readManifest(abs string) (map[string]json.RawMessage, []string, bool) {
+func (r *runner) readManifest(abs string) (m map[string]json.RawMessage, lines []string, ok bool) {
 	data, err := readSmallFile(abs)
 	if err != nil {
 		return nil, nil, false
 	}
-	var m map[string]json.RawMessage
-	lines := r.fileLines(abs)
+	lines = r.fileLines(abs)
 	if json.Unmarshal(data, &m) != nil {
 		r.add(CodePluginManifest, abs, 1, "the manifest is not valid JSON")
 		return nil, nil, false
@@ -84,7 +83,7 @@ func rawString(raw json.RawMessage) (string, bool) {
 	return s, err == nil
 }
 
-func (r *runner) checkPluginJSON(abs string) {
+func (r *runner) checkPluginJSON(abs string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	m, lines, ok := r.readManifest(abs)
 	if !ok {
 		return
@@ -92,17 +91,17 @@ func (r *runner) checkPluginJSON(abs string) {
 	bad := func(key, format string, args ...any) {
 		r.add(CodePluginManifest, abs, lineContaining(lines, quoteNeedle(key)), "%s", key+": "+fmt.Sprintf(format, args...))
 	}
-	if raw, has := m["name"]; !has {
+	if raw, has := m[keyName]; !has {
 		r.add(CodePluginManifest, abs, 1, "name is required")
 	} else if s, isStr := rawString(raw); !isStr || !kebabRe.MatchString(s) {
-		bad("name", "must be a kebab-case string (lowercase letters, digits and hyphens, no spaces)")
+		bad(keyName, "must be a kebab-case string (lowercase letters, digits and hyphens, no spaces)")
 	}
 	if raw, has := m["version"]; has {
 		if s, isStr := rawString(raw); !isStr || !semverRe.MatchString(s) {
 			bad("version", "must be a semantic version string such as 1.2.3")
 		}
 	}
-	for _, k := range []string{"description", "homepage", "license"} {
+	for _, k := range []string{keyDescription, "homepage", keyLicense} {
 		if raw, has := m[k]; has {
 			if _, isStr := rawString(raw); !isStr {
 				bad(k, "must be a string")
@@ -119,14 +118,14 @@ func (r *runner) checkPluginJSON(abs string) {
 		var obj map[string]any
 		if json.Unmarshal(raw, &obj) != nil {
 			bad("author", "must be an object such as {\"name\": \"...\"}")
-		} else if n, _ := obj["name"].(string); n == "" {
+		} else if anyString(obj[keyName]) == "" {
 			bad("author", "needs a \"name\"")
 		}
 	}
-	if raw, has := m["keywords"]; has {
+	if raw, has := m[keyKeywords]; has {
 		var kw []string
 		if json.Unmarshal(raw, &kw) != nil {
-			bad("keywords", "must be a list of strings")
+			bad(keyKeywords, "must be a list of strings")
 		}
 	}
 	for _, k := range pluginPathKeys {
@@ -143,7 +142,7 @@ func (r *runner) checkPluginJSON(abs string) {
 			r.addSev(SeverityWarning, CodePluginManifest, abs, lineContaining(lines, quoteNeedle(k)), "unknown field %q is ignored at load time%s", k, hint)
 		}
 	}
-	if raw, has := m["hooks"]; has {
+	if raw, has := m[keyHooks]; has {
 		r.checkInlineHookQuoting(abs, lines, raw)
 	}
 }
@@ -180,13 +179,13 @@ func (r *runner) checkManifestPaths(abs string, lines []string, key string, raw 
 	}
 }
 
-func (r *runner) checkMarketplaceJSON(abs string) {
+func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	m, lines, ok := r.readManifest(abs)
 	if !ok {
 		return
 	}
 	at := func(needle string) int { return lineContaining(lines, needle) }
-	if raw, has := m["name"]; !has {
+	if raw, has := m[keyName]; !has {
 		r.add(CodePluginManifest, abs, 1, "name is required")
 	} else if s, isStr := rawString(raw); !isStr || !kebabRe.MatchString(s) {
 		r.add(CodePluginManifest, abs, at(`"name"`), "name must be a kebab-case string")
@@ -196,7 +195,7 @@ func (r *runner) checkMarketplaceJSON(abs string) {
 	var owner map[string]any
 	if raw, has := m["owner"]; !has || json.Unmarshal(raw, &owner) != nil {
 		r.add(CodePluginManifest, abs, at(`"owner"`), "owner must be an object such as {\"name\": \"...\"}")
-	} else if n, _ := owner["name"].(string); n == "" {
+	} else if anyString(owner[keyName]) == "" {
 		r.add(CodePluginManifest, abs, at(`"owner"`), "owner needs a \"name\"")
 	}
 	var plugins []map[string]json.RawMessage
@@ -205,7 +204,7 @@ func (r *runner) checkMarketplaceJSON(abs string) {
 	}
 	seen := map[string]bool{}
 	for _, p := range plugins {
-		name, _ := rawString(p["name"])
+		name, _ := rawString(p[keyName])
 		line := at(quoteNeedle(name))
 		switch {
 		case name == "" || !kebabRe.MatchString(name):
@@ -224,7 +223,7 @@ func (r *runner) checkMarketplaceJSON(abs string) {
 		case !isStr && json.Unmarshal(src, &obj) != nil:
 			r.add(CodePluginManifest, abs, line, "plugin %q: source must be a ./ path or an object", name)
 		case !isStr:
-			if kind, _ := obj["source"].(string); !inSet([]string{"github", "url", "git-subdir", "npm", "git"}, kind) {
+			if kind := anyString(obj["source"]); !inSet([]string{"github", "url", "git-subdir", cmdNPM, "git"}, kind) {
 				r.add(CodePluginManifest, abs, line, "plugin %q: source.source %q is not one of github, url, git-subdir, npm", name, kind)
 			}
 		}
@@ -272,7 +271,7 @@ func (r *runner) checkPluginHookQuoting(abs string) {
 	if json.Unmarshal(data, &root) != nil {
 		return
 	}
-	if raw, ok := root["hooks"]; ok {
+	if raw, ok := root[keyHooks]; ok {
 		r.checkInlineHookQuoting(abs, r.fileLines(abs), raw)
 	}
 }
@@ -291,7 +290,7 @@ func (r *runner) checkInlineHookQuoting(abs string, lines []string, raw json.Raw
 	for _, event := range sortedEventKeys(byEvent) {
 		for _, g := range byEvent[event] {
 			for _, h := range g.Hooks {
-				if (h.Type == "" || h.Type == "command") && len(h.Args) == 0 && unquotedPluginRoot(h.Command) {
+				if (h.Type == "" || h.Type == hookTypeCommand) && len(h.Args) == 0 && unquotedPluginRoot(h.Command) {
 					r.addSev(SeverityWarning, CodePluginManifest, abs, lineContaining(lines, "CLAUDE_PLUGIN_ROOT"),
 						"%s hook: ${CLAUDE_PLUGIN_ROOT} is not quoted in a shell-form command; a plugin path with a space splits the command (write \"${CLAUDE_PLUGIN_ROOT}/...\")", event)
 				}
@@ -337,7 +336,7 @@ func (r *runner) delegatePluginValidate(dir string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	var out bytes.Buffer
-	cmd := exec.CommandContext(ctx, bin, "plugin", "validate", dir, "--json")
+	cmd := exec.CommandContext(ctx, bin, "plugin", "validate", dir, "--json") //nolint:gosec // bin comes from LookPath and the arguments are fixed; dir is a tracked plugin directory
 	cmd.Stdout = &out
 	_ = cmd.Run() //nolint:errcheck // a non-zero exit is how it reports errors; the JSON decides
 	var rep claudeValidation
@@ -368,4 +367,12 @@ func pathPrefix(p string) string {
 		return ""
 	}
 	return p + ": "
+}
+
+// anyString returns v when it is a string, else "".
+func anyString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }

@@ -160,7 +160,7 @@ func scanStealth(r *runner, t *scanText) {
 // proseWords are English words that follow a launcher name in a sentence
 // ("uvx is faster") and are never a package name.
 var proseWords = map[string]bool{
-	"is": true, "are": true, "to": true, "for": true, "can": true, "will": true, "the": true, "a": true, "an": true, "and": true,
+	"is": true, "are": true, "to": true, "for": true, "can": true, "will": true, "the": true, "a": true, "an": true, wordAnd: true,
 	"or": true, "with": true, "in": true, "on": true, "instead": true, "vs": true, "as": true, "has": true, "was": true, "does": true,
 	"lets": true, "runs": true, "should": true, "must": true, "may": true, "if": true, "when": true, "which": true, "also": true,
 	"from": true, "by": true, "it": true, "that": true, "this": true, "then": true, "but": true, "not": true, "no": true,

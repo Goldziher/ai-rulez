@@ -250,11 +250,11 @@ func checkInsecureConfig(r *runner) {
 		}
 		r.add(CodeInsecureHTTP, cfgPath, lineContaining(lines, `"`+name+`"`), "%s %q is fetched over plain HTTP; use an https or git source", kind, name)
 	}
-	for _, inc := range r.cfg.Includes {
-		check("include", inc.Name, inc.Source)
+	for i := range r.cfg.Includes {
+		check("include", r.cfg.Includes[i].Name, r.cfg.Includes[i].Source)
 	}
-	for _, s := range r.cfg.InstalledSkills {
-		check("installed skill", s.Name, s.Source)
+	for i := range r.cfg.InstalledSkills {
+		check("installed skill", r.cfg.InstalledSkills[i].Name, r.cfg.InstalledSkills[i].Source)
 	}
 }
 
