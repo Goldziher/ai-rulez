@@ -34,6 +34,7 @@ Presets define how content is formatted and where it's output for different tool
 - `xum` → generates `AGENTS.md` and `.xum/`
 - `pi` → generates `AGENTS.md`, `.agents/skills/`, `.pi/agents/`, and `.pi/mcp.json`
 - `baz` → generates what the [Baz](baz.md) reviewer reads: `AGENTS.md` (root and nested), `.agents/skills/`, `.claude/agents/`
+- `okf` → an [Open Knowledge Format](okf.md) bundle of your rules, context and skills (`docs/okf/`), opt-in
 - And many others...
 - Custom tools: use a template preset or a [provider-backed preset](configuration.md#provider-backed-presets-full-parity) for full parity with built-ins.
 

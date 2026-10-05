@@ -1515,6 +1515,42 @@ written. `--format json` is versioned (`schema/catalog.schema.json`) and is mean
 
 Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 
+## OKF Commands
+
+[Open Knowledge Format](okf.md) export, import and lint. Exit codes: `0` success, `2` the command ran and found
+problems (drift with `--check`, lint findings at `--fail-on`, files an import did not overwrite, an import refused by
+the security scan), `1` it could not run.
+
+### `ai-rulez export okf`
+
+```bash
+ai-rulez export okf [config-file] [--out dir] [--profile p] [--include rules,context,skills] [--check]
+```
+
+Writes rules, context, skills, agents, commands and checks as an OKF v0.2 bundle. Without `--out` the bundle goes
+to `okf.dir` (default `docs/okf`). `--out` replaces the contents of that directory, but only when it is empty or
+already a bundle (a root `index.md` with `okf_version`); any other directory is refused. `--check` writes nothing and
+exits 2 when the bundle on disk differs. Machine-local content is never exported.
+
+### `ai-rulez import okf`
+
+```bash
+ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json]
+```
+
+Converts the concepts of a bundle into `.ai-rulez/` sources. The target directory must exist (`--config-dir` selects a
+non-default one). Existing files are never overwritten unless `--force`; identical files are reported as unchanged, so a
+second run changes nothing. Imported text goes through the `AR001`-`AR011` security scan first and the import is refused
+with nothing written when it finds an error. A git source is fetched shallowly into a temporary directory.
+
+### `ai-rulez okf validate`
+
+```bash
+ai-rulez okf validate <dir|git-url[@ref][#subdir]> [--format text|json] [--fail-on error|warning|info|none]
+```
+
+Lints any OKF bundle with the `AR9B0`-`AR9B9` checks. The default `--fail-on error` only fails on conformance problems.
+
 ## Migrate Command
 
 ### `ai-rulez migrate v4`

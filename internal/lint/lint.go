@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/okf"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 )
 
@@ -119,6 +120,9 @@ type runner struct {
 	drift          []PluginDrift
 	delivery       []DeliveryFinding
 	lockDrift      []LockDrift
+
+	okfDir      string
+	okfFindings []okf.Finding
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -192,6 +196,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkEvalRunner()
 	r.checkRoles()
 	r.checkLockDrift()
+	r.checkOKF()
 	if so.External {
 		r.runExternal()
 	}

@@ -95,6 +95,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | xum          | AGENTS.md and .xum/             |
 | pi           | AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json |
 | baz          | AGENTS.md (root and nested), .agents/skills, .claude/agents |
+| okf          | docs/okf/ (Open Knowledge Format bundle; `[okf] dir`) |
 
 ## Available Builtins
 

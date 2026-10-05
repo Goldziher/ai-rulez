@@ -93,7 +93,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ],
             "description": "Built-in preset name"
           },
@@ -247,7 +248,8 @@
                 "warp",
                 "zcode",
                 "zed",
-                "zoocode"
+                "zoocode",
+                "okf"
               ]
             }
           }
@@ -630,7 +632,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "additionalProperties": {
@@ -695,7 +698,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "additionalProperties": {
@@ -875,6 +879,27 @@
         "delivery": {
           "$ref": "#/$defs/delivery",
           "description": "Global default delivery: static (default) writes skills into every harness skill tree, served leaves them out and serves them over MCP on demand (`ai-rulez mcp --serve-skills`), both does both. A skill's own `delivery` frontmatter, a role override and [domains.<name>] delivery take precedence."
+        }
+      },
+      "additionalProperties": false
+    },
+    "okf": {
+      "type": "object",
+      "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "Bundle directory, relative to the project root. Defaults to docs/okf. Must not be inside the configuration directory or .git."
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["rules", "context", "skills", "agents", "commands", "checks"] },
+          "description": "Content kinds to export. Defaults to all."
+        },
+        "spec": {
+          "type": "string",
+          "enum": ["0.2"],
+          "description": "OKF spec version to write. Only 0.2 is implemented."
         }
       },
       "additionalProperties": false
