@@ -231,9 +231,9 @@ func includeTargets(cfg *config.Config) []watch.Target {
 		}
 		out = append(out, watch.Target{Path: p})
 	}
-	for _, inc := range cfg.Includes {
-		add(inc.Source)
-		add(inc.LocalOverride)
+	for i := range cfg.Includes {
+		add(cfg.Includes[i].Source)
+		add(cfg.Includes[i].LocalOverride)
 	}
 	for _, s := range cfg.InstalledSkills {
 		add(s.LocalOverride)

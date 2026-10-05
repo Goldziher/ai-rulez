@@ -272,17 +272,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitOKFCannotRun
 	}
-	if okfRole != "" && okfProfile != "" {
-		fmtError(oops.Hint("A role replaces the profile selection; pass only one").Errorf("--role and --profile are mutually exclusive"))
-		return exitOKFCannotRun
-	}
-	gen := generator.NewGenerator(cfg)
-	var tree *config.ContentTree
-	if okfRole != "" {
-		tree, err = gen.ContentForRole(okfRole)
-	} else {
-		tree, err = gen.ContentForProfile(okfProfile)
-	}
+	tree, err := okfExportTree(cfg)
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun
@@ -327,6 +317,19 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
 	return 0
+}
+
+// okfExportTree selects the content to export: a role's slice with --role, else
+// the profile's.
+func okfExportTree(cfg *config.Config) (*config.ContentTree, error) {
+	if okfRole != "" && okfProfile != "" {
+		return nil, oops.Hint("A role replaces the profile selection; pass only one").Errorf("--role and --profile are mutually exclusive")
+	}
+	gen := generator.NewGenerator(cfg)
+	if okfRole != "" {
+		return gen.ContentForRole(okfRole) //nolint:wrapcheck // already contextual
+	}
+	return gen.ContentForProfile(okfProfile) //nolint:wrapcheck // already contextual
 }
 
 func kindCounts(counts map[okfbridge.Kind]int) string {
