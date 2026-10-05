@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/samber/oops"
 )
 
@@ -183,6 +184,8 @@ func runSink(command string, line []byte) error {
 		cmd = exec.Command("sh", "-c", command) //nolint:gosec // the user configured this command
 	}
 	cmd.Stdin = bytes.NewReader(line)
+	// A sink that runs git must not inherit a hook's repository selection.
+	cmd.Env = gitutil.Env(nil)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return oops.With("output", strings.TrimSpace(string(output))).Wrapf(err, "run usage sink command")
 	}

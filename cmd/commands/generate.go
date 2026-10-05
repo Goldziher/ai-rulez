@@ -156,6 +156,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	suggestTOMLMigration(cfg.ConfigDir)
 
 	applyGenerateOverrides(cfg)
+	warnFrontmatter(cfg)
 	if err := importGate(cfg); err != nil {
 		fmtError(err)
 		os.Exit(1)
@@ -654,7 +655,6 @@ func runGenerateCheck(args []string) {
 // importGate scans imported content before anything is written, when
 // [lint.security] scan_imports asks for it. Dry runs and plugin bundles skip it.
 func importGate(cfg *config.Config) error {
-	warnFrontmatter(cfg)
 	if dryRun || pluginMode {
 		return nil
 	}

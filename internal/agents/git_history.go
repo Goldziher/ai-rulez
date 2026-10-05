@@ -3,6 +3,8 @@ package agents
 import (
 	"os/exec"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 )
 
 func analyzeGitHistory(rootPath string) *GitHistory {
@@ -12,16 +14,14 @@ func analyzeGitHistory(rootPath string) *GitHistory {
 		CodingConventions: []string{},
 	}
 
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
-	cmd.Dir = rootPath
+	cmd := gitutil.CommandNoContext(rootPath, "rev-parse", "--git-dir")
 	if err := cmd.Run(); err != nil {
 		return history
 	}
 
 	history.HasGit = true
 
-	cmd = exec.Command("git", "rev-list", "--count", "HEAD")
-	cmd.Dir = rootPath
+	cmd = gitutil.CommandNoContext(rootPath, "rev-list", "--count", "HEAD")
 	if output, err := cmd.Output(); err == nil {
 		countStr := strings.TrimSpace(string(output))
 		count := 0
@@ -39,8 +39,7 @@ func analyzeGitHistory(rootPath string) *GitHistory {
 		return history
 	}
 
-	cmd = exec.Command("git", "log", "--oneline", "-n", "10", "--format=%s")
-	cmd.Dir = rootPath
+	cmd = gitutil.CommandNoContext(rootPath, "log", "--oneline", "-n", "10", "--format=%s")
 	if output, err := cmd.Output(); err == nil {
 		lines := strings.Split(string(output), "\n")
 		for _, line := range lines {
@@ -53,8 +52,7 @@ func analyzeGitHistory(rootPath string) *GitHistory {
 
 	history.CommonPatterns = analyzeCommitPatterns(history.RecentCommits)
 
-	cmd = exec.Command("git", "diff", "HEAD~5", "--stat")
-	cmd.Dir = rootPath
+	cmd = gitutil.CommandNoContext(rootPath, "diff", "HEAD~5", "--stat")
 	if output, err := cmd.Output(); err == nil {
 		history.CodingConventions = analyzeCodingConventions(string(output))
 	}
