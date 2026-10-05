@@ -345,3 +345,14 @@ func TestComputePinsMCPServersAtTheSource(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, snap.Items, "scope = skills pins no declared items")
 }
+
+func TestDuplicateIDsStayUniqueWhenARealIDEndsInSuffix(t *testing.T) {
+	f := newFixture(t)
+	f.rule("dup", "one\n")
+	p := f.write("rules/sub/dup.md", []byte("two\n"), 0o644)
+	f.cfg.Content.Rules = append(f.cfg.Content.Rules, config.ContentFile{Name: "dup", Path: p})
+	f.rule("dup#2", "literal\n")
+	got := keys(f.items())
+	assert.Len(t, got, 3)
+	assert.ElementsMatch(t, []string{"rule:/dup", "rule:/dup#2", "rule:/dup#2#2"}, got, "no two items share a key")
+}
