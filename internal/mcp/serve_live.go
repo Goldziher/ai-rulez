@@ -8,7 +8,11 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const defaultPollInterval = 2 * time.Second
+const (
+	defaultPollInterval = 2 * time.Second
+	// maxRetryPause caps the pause between retries of a failed rebuild.
+	maxRetryPause = time.Minute
+)
 
 // Replace swaps in a freshly built catalog and updates the registered skill://
 // resources to match: removed skills disappear, new and changed ones are
@@ -82,6 +86,10 @@ func (s *Server) Watch(ctx context.Context) {
 	}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	var (
+		failures int
+		retryAt  time.Time
+	)
 	for {
 		select {
 		case <-ctx.Done():
@@ -89,15 +97,19 @@ func (s *Server) Watch(ctx context.Context) {
 		case <-ticker.C:
 		}
 		cur, err := o.Fingerprint()
-		if err != nil || cur == last {
+		if err != nil || cur == last || time.Now().Before(retryAt) {
 			continue
 		}
-		last = cur
 		next, err := o.Rebuild()
 		if err != nil {
-			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one", "error", err.Error())
+			// Keep `last`: the change is still unapplied, so the rebuild is tried
+			// again (with a growing pause) instead of waiting for another edit.
+			failures++
+			retryAt = time.Now().Add(min(interval<<min(failures, 6), maxRetryPause))
+			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
 			continue
 		}
+		last, failures, retryAt = cur, 0, time.Time{}
 		s.Replace(next)
 		logger.Info("Reloaded served skills", "skills", len(next.Skills()))
 	}
