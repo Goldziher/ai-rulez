@@ -1806,6 +1806,10 @@
           "description": "Add the repo-relative path of a loaded item to exported events. Default false. Ignored in a repository config.",
           "type": "boolean"
         },
+        "include_session": {
+          "description": "Add the salted session hash to exported log records (never to metric labels). Default false. Ignored in a repository config.",
+          "type": "boolean"
+        },
         "otlp_endpoint": {
           "description": "OTLP/HTTP collector base URL (https, or http on loopback). /v1/logs and /v1/metrics are appended. Ignored in a repository config.",
           "type": "string"
