@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -164,6 +165,9 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 		name = src.ID
 		front["name"] = name
 	}
+	if !validSkillSegment(name) {
+		return nil, oops.Errorf("skill %q has the name %q, which is not a valid skill:// path segment", src.ID, name)
+	}
 	desc := stringField(front, "description")
 	if strings.TrimSpace(desc) == "" {
 		return nil, oops.Errorf("skill %q has no description; the Skills extension requires one", src.ID)
@@ -199,6 +203,14 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	}
 	skill.Digest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
 	return skill, nil
+}
+
+// skillSegmentRe is a single URI path segment with no separators, whitespace or
+// control characters; the name becomes the first segment of every skill:// URI.
+var skillSegmentRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+func validSkillSegment(name string) bool {
+	return skillSegmentRe.MatchString(name) && !strings.Contains(name, "..")
 }
 
 func stringField(m map[string]any, key string) string {
