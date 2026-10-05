@@ -200,6 +200,9 @@ func (s *Server) addProvenance(out map[string]any, skill *CatalogSkill) {
 	if skill.ScanFindings > 0 {
 		prov["scan_warnings"] = skill.ScanFindings
 	}
+	if len(skill.Unscanned) > 0 {
+		prov["unserved_unscannable_files"] = skill.Unscanned
+	}
 	out["provenance"] = prov
 }
 
