@@ -231,10 +231,15 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	obsolete, err := g.planPluginPrune(outputs)
+	if err != nil {
+		return 0, err
+	}
 	if err := g.writeOutputs(outputs); err != nil {
 		return 0, err
 	}
 	g.removeStalePluginDirs(stale)
+	g.applyPluginPrune(obsolete)
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -278,6 +283,13 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	}
 	if err := checkPluginGenerated(expected); err != nil {
 		return err
+	}
+	obsolete, err := g.planPluginPrune(expected)
+	if err != nil {
+		return err
+	}
+	if len(obsolete) > 0 {
+		return obsoleteFilesError(obsolete)
 	}
 	if err := verifyPluginOutputs(expected); err != nil {
 		return err
@@ -361,6 +373,17 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	}
 	for _, dir := range stale {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
+	}
+	obsolete, err := g.planPluginPrune(outputs)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range obsolete {
+		if item.reason == "" {
+			lines = append(lines, "delete-stale: "+item.rel)
+		} else {
+			lines = append(lines, "keep-obsolete: "+item.rel+" ("+item.reason+")")
+		}
 	}
 	return lines, nil
 }
