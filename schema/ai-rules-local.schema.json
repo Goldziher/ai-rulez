@@ -603,7 +603,9 @@
         "properties": {
           "format": {
             "description": "Read the source as an Open Knowledge Format bundle (a directory or git repository; path selects the bundle directory) and convert it to rules, context and skills at load time. See docs/okf.md.",
-            "enum": ["okf"],
+            "enum": [
+              "okf"
+            ],
             "type": "string"
           },
           "include": {

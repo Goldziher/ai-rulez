@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/okf"
 	"github.com/Goldziher/ai-rulez/internal/okfbridge"
 	"github.com/samber/oops"
@@ -17,64 +19,68 @@ import (
 // be called from here). nil skips the scan.
 var OKFScan okfbridge.Scanner
 
-// OKFSource reads an Open Knowledge Format bundle (a local directory or a git
-// repository) as an include: the bundle is converted to .ai-rulez sources in a
-// temporary directory, loaded like any other include, and discarded.
+// OKFSource reads an Open Knowledge Format bundle in a local directory as an
+// include: the bundle is converted to .ai-rulez sources in a temporary
+// directory, loaded like any other include, and discarded. A bundle in a git
+// repository is a GitSource in OKF mode instead, so it is cached and pinned in
+// ai-rulez.lock like every other remote include.
 type OKFSource struct {
 	name    string
-	source  string
-	subdir  string
-	ref     string
-	baseDir string
+	dir     string
 	include []string
 }
 
-func (r *Resolver) createOKFSource(c *config.IncludeConfig) *OKFSource {
+func (r *Resolver) createOKFSource(c *config.IncludeConfig) (Source, error) {
 	source := c.Source
-	if c.LocalOverride != "" {
-		if p := r.resolveLocalOverride(c); p != "" {
-			source = p
+	if c.LocalOverride != "" && !refreshing(lockfile.KindInclude, c.Name) {
+		p := r.resolveLocalOverride(c)
+		if p == "" {
+			logger.Info("Skipping include (local_override path not found)", "name", c.Name, "local_override", c.LocalOverride)
+			return nil, nil
 		}
+		return &OKFSource{name: c.Name, dir: p, include: c.Include}, nil
 	}
-	return &OKFSource{name: c.Name, source: source, subdir: c.Path, ref: c.Ref, baseDir: r.baseDir, include: c.Include}
+	if DetectSourceType(source) == SourceTypeGit {
+		p, err := pinFor(r.cfg, r.lock, lockfile.Want{
+			Kind: lockfile.KindInclude, Name: c.Name, Source: RedactURL(source), Path: c.Path, Ref: c.Ref,
+		})
+		if err != nil {
+			return nil, err
+		}
+		src, err := NewOKFGitSource(c.Name, source, c.Path, p.effectiveRef(c.Ref), r.baseDir, c.Include, r.accessToken)
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
+		}
+		src.pin = p
+		return src, nil
+	}
+	dir := source
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(r.baseDir, dir)
+	}
+	if c.Path != "" {
+		dir = filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(c.Path, "/")))
+	}
+	return &OKFSource{name: c.Name, dir: dir, include: c.Include}, nil
 }
 
-// GetType returns the type of the underlying location.
-func (s *OKFSource) GetType() SourceType { return DetectSourceType(s.source) }
+// GetType returns the source type.
+func (s *OKFSource) GetType() SourceType { return SourceTypeLocal }
 
 // GetName returns the include name.
 func (s *OKFSource) GetName() string { return s.name }
 
 // Fetch converts the bundle and loads the result.
-func (s *OKFSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
-	spec := s.source
-	if DetectSourceType(spec) == SourceTypeLocal {
-		if !filepath.IsAbs(spec) {
-			spec = filepath.Join(s.baseDir, spec)
-		}
-		if s.subdir != "" {
-			spec = filepath.Join(spec, filepath.FromSlash(strings.TrimPrefix(s.subdir, "/")))
-		}
-	} else {
-		if s.ref != "" {
-			spec += "@" + s.ref
-		}
-		if s.subdir != "" {
-			spec += "#" + strings.TrimPrefix(s.subdir, "/")
-		}
-	}
-	src, err := okfbridge.ParseSource(spec)
-	if err != nil {
-		return nil, oops.With("include", s.name).Wrapf(err, "parse OKF include source")
-	}
-	dir, cleanup, err := src.Fetch(ctx)
-	if err != nil {
-		return nil, oops.With("include", s.name).Wrapf(err, "fetch OKF bundle")
-	}
-	defer cleanup()
+func (s *OKFSource) Fetch(_ context.Context) (*config.ContentTree, error) {
+	return convertOKFBundle(s.dir, s.name, s.include)
+}
+
+// convertOKFBundle reads the OKF bundle in dir and converts it to a content
+// tree through a temporary .ai-rulez directory, applying the include filter.
+func convertOKFBundle(dir, name string, include []string) (*config.ContentTree, error) {
 	b, err := okf.Load(os.DirFS(dir))
 	if err != nil {
-		return nil, oops.With("include", s.name).Wrapf(err, "read OKF bundle")
+		return nil, oops.With("include", name).Wrapf(err, "read OKF bundle")
 	}
 	tmp, err := os.MkdirTemp("", "ai-rulez-okf-include-*")
 	if err != nil {
@@ -86,14 +92,14 @@ func (s *OKFSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return nil, oops.Wrapf(err, "create temp directory")
 	}
 	if _, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: target, Scan: OKFScan}); err != nil {
-		return nil, oops.With("include", s.name).Wrapf(err, "convert OKF bundle")
+		return nil, oops.With("include", name).Wrapf(err, "convert OKF bundle")
 	}
 	tree, err := config.ScanContentTree(target)
 	if err != nil {
-		return nil, oops.With("include", s.name).Wrapf(err, "scan converted OKF bundle")
+		return nil, oops.With("include", name).Wrapf(err, "scan converted OKF bundle")
 	}
-	if len(s.include) > 0 {
-		tree = (&LocalSource{include: s.include}).filterContent(tree)
+	if len(include) > 0 {
+		tree = (&LocalSource{include: include}).filterContent(tree)
 	}
 	return tree, nil
 }
