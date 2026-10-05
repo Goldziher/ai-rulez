@@ -132,11 +132,24 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands, OutputTypeChecks} {
 		spec, ok := g.Spec.Outputs[typ]
 		if !ok || spec == nil {
-			continue
+			if spec = g.userOnlyOutput(typ, cfg); spec == nil {
+				continue
+			}
 		}
 		items := collectItemsByType(content, typ)
 		if spec.Mode == OutputModeAggregate {
-			if aggregated := g.renderAggregate(typ, spec, items, baseDir, cfg); aggregated != nil {
+			aggregated, aggErr := g.renderAggregate(typ, spec, items, baseDir, cfg)
+			if aggErr != nil {
+				return nil, aggErr
+			}
+			if aggregated != nil {
+				for i := range outputs {
+					if outputs[i].Path == aggregated.Path {
+						return nil, oops.With("preset", g.Spec.Name, "path", aggregated.Path).
+							Hint("Rename the skill or the check; both render to this file").
+							Errorf("the aggregate %s output %s collides with another generated file", typ, aggregated.Path)
+					}
+				}
 				outputs = append(outputs, *aggregated)
 			}
 			continue
@@ -149,6 +162,11 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			if err != nil {
 				return nil, fmt.Errorf("render %s %q: %w", typ, item.Name, err)
 			}
+			if typ == OutputTypeChecks {
+				for i := range itemOutputs {
+					itemOutputs[i].Committed = true
+				}
+			}
 			outputs = append(outputs, itemOutputs...)
 		}
 	}
@@ -158,7 +176,20 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			continue
 		}
 		outputPath := filepath.Join(baseDir, sidecar.Path)
-		rendered, err := g.renderSidecarSpec(sidecar, cfg, outputPath)
+		var rendered sidecarRender
+		var err error
+		if sidecar.Kind == SidecarChecks {
+			checks := g.checksSidecarItems(content)
+			if len(checks) == 0 {
+				continue // no checks, no document
+			}
+			rendered, err = g.renderChecksSidecar(sidecar, checks, cfg, outputPath)
+			if err == nil && rendered.Body == "" {
+				continue // every check clashed with the user's own entry and there is no document
+			}
+		} else {
+			rendered, err = g.renderSidecarSpec(sidecar, cfg, outputPath)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
 		}
@@ -169,6 +200,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			Content:        rendered.Body,
 			PartiallyOwned: rendered.PartiallyOwned,
 			MergeClaims:    rendered.Claims,
+			Committed:      sidecar.Kind == SidecarChecks,
 		})
 	}
 
@@ -536,6 +568,9 @@ func computeItemID(typ string, item config.ContentFile) string {
 		dir := filepath.Dir(item.Path)
 		return filepath.Base(dir)
 	}
+	if typ == OutputTypeChecks {
+		return sanitizeAgentID(sanitizeCheckName(item.Name))
+	}
 	return sanitizeAgentID(item.Name)
 }
 
@@ -558,6 +593,8 @@ func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.Con
 		return "", nil
 	}
 
+	item, fmSpec := spec.Body.rewrite(item, spec.Frontmatter)
+
 	for _, section := range spec.Body.Sections {
 		start := recorder.mark(&b)
 		switch section {
@@ -567,7 +604,7 @@ func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.Con
 				frontmatter = writeSharedSkillFrontmatter(&b, item)
 			} else {
 				var err error
-				if frontmatter, err = g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg); err != nil {
+				if frontmatter, err = g.writeFrontmatter(&b, typ, fmSpec, item, cfg); err != nil {
 					return "", err
 				}
 			}
@@ -747,7 +784,7 @@ func (g *Generator) applyResolvedScalars(frontmatter map[string]any, spec *Front
 		}
 	}
 	if spec.EmitModel && g.Spec.Model != nil {
-		if model := presets.ResolveAgentModel(g.Spec.Name, item, cfg); model != "" {
+		if model := spec.mapModel(presets.ResolveAgentModel(g.Spec.Name, item, cfg)); model != "" {
 			frontmatter[g.Spec.Model.Field] = model
 		}
 	}
@@ -763,8 +800,10 @@ func effortFrontmatterKey(spec *FrontmatterSpec) string {
 }
 
 func applyTypedLists(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
-	if spec.Tools && len(meta.Tools) > 0 {
-		frontmatter["tools"] = typedList(spec, meta.Tools)
+	if spec.Tools {
+		if tools := spec.mapTools(meta.Tools); len(tools) > 0 {
+			frontmatter["tools"] = typedList(spec, tools)
+		}
 	}
 	if spec.Skills && len(meta.Skills) > 0 {
 		frontmatter["skills"] = typedList(spec, meta.Skills)
@@ -783,7 +822,11 @@ func typedList(spec *FrontmatterSpec, list []string) any {
 func applyOrderedFields(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
 	for _, field := range spec.Fields {
 		if val, ok := meta.TypedExtra(field); ok {
-			frontmatter[field] = val
+			key := field
+			if renamed := spec.Renames[field]; renamed != "" {
+				key = renamed
+			}
+			frontmatter[key] = val
 		}
 	}
 }
@@ -956,4 +999,32 @@ func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, c
 		return
 	}
 	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: summary}, recorder)
+}
+
+// userOnlyOutput is the output of a tool that keeps skills in a user-level store
+// but has no project folder for them (Hermes): in a user-scope run the skills
+// are rendered at the layout's skills_dir, below the home directory the run uses
+// as its base. It is nil for any other output, and in a project run.
+func (g *Generator) userOnlyOutput(typ string, cfg *config.Config) *OutputSpec {
+	dir := g.userOnlySkillsDir(cfg)
+	if typ != OutputTypeSkills || dir == "" {
+		return nil
+	}
+	return &OutputSpec{
+		Mode:        OutputModePerItemFile,
+		Dir:         dir,
+		Filename:    "{id}/SKILL.md",
+		Resources:   true,
+		Body:        &BodySpec{Sections: []string{"frontmatter", "content", "resource_index"}},
+		Frontmatter: &FrontmatterSpec{Fields: []string{"description"}},
+	}
+}
+
+// userOnlySkillsDir returns the skills_dir of a spec with a user-level skills
+// store and no project skills output, in a user-scope run; "" otherwise.
+func (g *Generator) userOnlySkillsDir(cfg *config.Config) string {
+	if cfg == nil || !cfg.UserScope || g.Spec.Outputs[OutputTypeSkills] != nil || g.Spec.Global == nil {
+		return ""
+	}
+	return g.Spec.Global.SkillsDir
 }

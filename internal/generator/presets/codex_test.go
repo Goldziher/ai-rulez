@@ -187,40 +187,84 @@ func TestCodexPresetGenerator_renderPluginsJSON(t *testing.T) {
 	assert.Len(t, parsed, 1)
 }
 
-func TestCodexPresetGenerator_shouldIncludeCommand(t *testing.T) {
-	g := &CodexPresetGenerator{}
-
+func TestCodexPresetGenerator_CommandsAreSkills(t *testing.T) {
 	tests := []struct {
-		name     string
-		command  config.ContentFile
-		expected bool
+		name      string
+		command   config.ContentFile
+		skills    []config.ContentFile
+		wantSkill bool
 	}{
-		{
-			name:     "no metadata includes",
-			command:  config.ContentFile{Name: "cmd"},
-			expected: true,
-		},
-		{
-			name: "matching target includes",
-			command: config.ContentFile{
-				Name:     "cmd",
-				Metadata: &config.Metadata{Targets: []string{"codex"}},
-			},
-			expected: true,
-		},
-		{
-			name: "non-matching target excludes",
-			command: config.ContentFile{
-				Name:     "cmd",
-				Metadata: &config.Metadata{Targets: []string{"claude"}},
-			},
-			expected: false,
-		},
+		{"no metadata", config.ContentFile{Name: "ship", Path: "/p/commands/ship.md", Content: "Ship it"}, nil, true},
+		{"matching target", config.ContentFile{
+			Name: "ship", Path: "/p/commands/ship.md", Metadata: &config.Metadata{Targets: []string{"codex"}},
+		}, nil, true},
+		{"other target", config.ContentFile{
+			Name: "ship", Path: "/p/commands/ship.md", Metadata: &config.Metadata{Targets: []string{"claude"}},
+		}, nil, false},
+		{"skill of the same name wins", config.ContentFile{Name: "ship", Path: "/p/commands/ship.md"},
+			[]config.ContentFile{{Name: "ship", Path: "/p/skills/ship/SKILL.md"}}, false},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, g.shouldIncludeCommand(tt.command))
+			// Arrange
+			content := &config.ContentTree{Commands: []config.ContentFile{tt.command}, Skills: tt.skills}
+
+			// Act
+			outputs, err := (&CodexPresetGenerator{}).Generate(content, "/p", &config.Config{BaseDir: "/p"})
+
+			// Assert
+			require.NoError(t, err)
+			var got *config.OutputFile
+			for i := range outputs {
+				if strings.HasSuffix(filepath.ToSlash(outputs[i].Path), ".agents/skills/ship/SKILL.md") {
+					got = &outputs[i]
+				}
+				assert.NotContains(t, filepath.ToSlash(outputs[i].Path), ".codex/prompts", "project scope has no prompts folder")
+			}
+			if tt.wantSkill {
+				require.NotNil(t, got)
+				assert.Contains(t, got.Content, "disable-model-invocation: true")
+			} else if len(tt.skills) == 0 {
+				assert.Nil(t, got)
+			}
+		})
+	}
+}
+
+func TestCodexMCPEntry_EnvReferences(t *testing.T) {
+	tests := []struct {
+		name   string
+		server *config.MCPServer
+		want   map[string]any
+	}{
+		{"bearer token", &config.MCPServer{
+			Transport: "http", URL: "https://x/mcp",
+			Headers:    map[string]string{"Authorization": "Bearer s3cret"},
+			HeaderRefs: map[string]string{"Authorization": "Bearer ${TOK}"},
+		}, map[string]any{"url": "https://x/mcp", "bearer_token_env_var": "TOK"}},
+		{"whole header and literal header", &config.MCPServer{
+			Transport: "http", URL: "https://x/mcp",
+			Headers:    map[string]string{"X-Key": "abc", "X-Static": "1"},
+			HeaderRefs: map[string]string{"X-Key": "${KEY_VAR}"},
+		}, map[string]any{
+			"url": "https://x/mcp", "http_headers": map[string]string{"X-Static": "1"},
+			"env_http_headers": map[string]string{"X-Key": "KEY_VAR"},
+		}},
+		{"mixed template stays literal", &config.MCPServer{
+			Transport: "http", URL: "https://x/mcp",
+			Headers:    map[string]string{"X-Key": "pre-abc"},
+			HeaderRefs: map[string]string{"X-Key": "pre-${KEY_VAR}"},
+		}, map[string]any{"url": "https://x/mcp", "http_headers": map[string]string{"X-Key": "pre-abc"}}},
+		{"stdio env forwarded by name", &config.MCPServer{
+			Command: "npx", Env: map[string]string{"API_KEY": "abc", "MODE": "x", "RENAMED": "zzz"},
+			EnvRefs: map[string]string{"API_KEY": "${API_KEY}", "RENAMED": "${OTHER}"},
+		}, map[string]any{
+			"command": "npx", "env": map[string]string{"MODE": "x", "RENAMED": "zzz"}, "env_vars": []string{"API_KEY"},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, CodexMCPEntry(tt.server))
 		})
 	}
 }
@@ -392,6 +436,25 @@ func TestCodexPresetGenerator_SkillsDir(t *testing.T) {
 			for _, p := range paths {
 				assert.NotContains(t, p, tt.notWant)
 			}
+		})
+	}
+}
+
+func TestCodexProjectLayout_HonoursConfiguredSkillsDir(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *config.Config
+		want string
+	}{
+		{"default", &config.Config{}, ".agents/skills"},
+		{"configured", &config.Config{CodexSkillsDir: ".codex/skills"}, ".codex/skills"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layout := (&CodexPresetGenerator{}).ProjectLayoutFor(tt.cfg)
+
+			assert.Equal(t, tt.want, layout.SkillsDir)
+			assert.Equal(t, tt.want, layout.CommandsDir)
 		})
 	}
 }

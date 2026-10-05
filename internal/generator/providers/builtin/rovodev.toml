@@ -38,9 +38,19 @@ filename = "{id}.md"
 sections = ["frontmatter", "content"]
 
 [outputs.agents.frontmatter]
+# Rovo Dev subagents list their own tool ids, which no Claude tool name matches,
+# so no `tools` key is written (the subagent gets every tool); the bare Claude
+# model aliases are no Rovo Dev model.
 fields = ["description"]
-tools = true
 emit_model = true
+drop_bare_aliases = true
+
+# Code-review checks: Rovo Dev reads custom review instructions from one
+# Markdown file, .rovodev/.review-agent.md.
+[outputs.checks]
+mode = "aggregate"
+file = ".rovodev/.review-agent.md"
+filter = "include_if_targeting_provider"
 
 [model]
 field = "model"

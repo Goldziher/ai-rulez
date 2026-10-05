@@ -68,7 +68,7 @@ func TestLetta_GlobalPaths(t *testing.T) {
 func TestLetta_JoinListsOffByDefault(t *testing.T) {
 	t.Parallel()
 
-	gen, err := providers.LoadBuiltin("amp")
+	gen, err := providers.LoadBuiltin("junie")
 	require.NoError(t, err)
 	content := &config.ContentTree{Agents: []config.ContentFile{{
 		Name: "scout", Content: "x", Metadata: &config.Metadata{Tools: []string{"read", "grep"}},
@@ -76,5 +76,24 @@ func TestLetta_JoinListsOffByDefault(t *testing.T) {
 	outputs, err := gen.Generate(content, "/test", &config.Config{Name: "demo", BaseDir: "/test"})
 	require.NoError(t, err)
 
-	assert.Contains(t, requireFile(t, outputs, ".agents/agents/scout.md").Content, "- grep")
+	assert.Contains(t, requireFile(t, outputs, ".junie/agents/scout.md").Content, "- grep")
+}
+
+// TestLetta_Commands: custom slash commands are .commands/{id}.md, named by file.
+func TestLetta_Commands(t *testing.T) {
+	t.Parallel()
+
+	content := &config.ContentTree{Commands: []config.ContentFile{{
+		Name: "ship", Content: "Ship $ARGUMENTS.",
+		Metadata: &config.Metadata{Extra: map[string]string{"description": "Ship it", "argument-hint": "<env>"}},
+	}}}
+
+	outputs, err := lettaGen(t).Generate(content, "/test", &config.Config{Name: "demo", BaseDir: "/test"})
+	require.NoError(t, err)
+
+	cmd := requireFile(t, outputs, ".commands/ship.md")
+	assert.Equal(t, "Ship it", frontmatterValue(cmd.Content, "description"))
+	assert.Equal(t, "<env>", frontmatterValue(cmd.Content, "argument-hint"))
+	assert.Empty(t, frontmatterValue(cmd.Content, "name"), "a command takes its name from the file")
+	assert.Contains(t, cmd.Content, "Ship $ARGUMENTS.")
 }

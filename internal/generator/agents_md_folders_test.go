@@ -65,7 +65,7 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 		{
 			name: "cline", preset: "cline",
 			want: sortedPaths(sharedSkills, []string{
-				".cline/agents/helper.md", ".clinerules/auto.md", ".clinerules/context-scoped.md", ".clinerules/go-style.md",
+				".cline/agents/helper.yaml", ".clinerules/auto.md", ".clinerules/context-scoped.md", ".clinerules/go-style.md",
 				".clinerules/manual.md", ".mcp.json", "AGENTS.md",
 			}),
 		},

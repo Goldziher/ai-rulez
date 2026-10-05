@@ -13,6 +13,8 @@ import (
 const (
 	MergedDocCodexHooks  = settings.CodexHooksPath
 	MergedDocCursorHooks = settings.CursorHooksPath
+	// MergedDocCopilotHooks is owned outright by ai-rulez, not merged.
+	MergedDocCopilotHooks = settings.CopilotHooksPath
 )
 
 // mergedHooksOutput renders [[hooks]] for a harness into the shared hooks

@@ -46,6 +46,9 @@ tools = true
 emit_model = true
 emit_effort = true
 effort_field = "reasoningEffort"
+# "inherit" is a droid model; the bare Claude aliases are not Factory model ids.
+drop_bare_aliases = true
+model_aliases = { inherit = "inherit" }
 
 # Slash commands: the name comes from the filename; description and
 # argument-hint are the only documented fields.
@@ -61,6 +64,18 @@ sections = ["frontmatter", "content"]
 [outputs.commands.frontmatter]
 fields = ["description", "argument-hint"]
 omit_name = true
+
+# Code-review checks: Factory's automated review injects the repository skill
+# named review-guidelines into every review run, so every check collapses into
+# that one SKILL.md.
+[outputs.checks]
+mode = "aggregate"
+file = ".factory/skills/review-guidelines/SKILL.md"
+filter = "include_if_targeting_provider"
+header = """---
+name: review-guidelines
+description: Repository-specific code review guidelines.
+---"""
 
 [model]
 field = "model"

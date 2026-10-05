@@ -19,6 +19,8 @@ const (
 	// rules and context.
 	ContentTypeAgents   = "agents"
 	ContentTypeCommands = "commands"
+	// ContentTypeChecks is a flat markdown file of code-review guidance.
+	ContentTypeChecks = "checks"
 )
 
 // FileManager handles file I/O operations for CRUD
@@ -261,6 +263,11 @@ func (fm *FileManager) GetCommandsPath(domainName string) string {
 	return fm.contentDir(domainName, ContentTypeCommands)
 }
 
+// GetChecksPath returns the path for the checks directory
+func (fm *FileManager) GetChecksPath(domainName string) string {
+	return fm.contentDir(domainName, ContentTypeChecks)
+}
+
 func (fm *FileManager) contentDir(domainName, sub string) string {
 	if domainName != "" {
 		return filepath.Join(fm.GetDomainPath(domainName), sub)
@@ -281,6 +288,8 @@ func (fm *FileManager) GetFilePath(domain, ftype, name string) string {
 		dirPath = fm.GetAgentsPath(domain)
 	case ContentTypeCommands:
 		dirPath = fm.GetCommandsPath(domain)
+	case ContentTypeChecks:
+		dirPath = fm.GetChecksPath(domain)
 	case ContentTypeSkills:
 		// For skills, return the SKILL.md file within the skill directory
 		dirPath = fm.GetSkillsPath(domain)
@@ -302,7 +311,7 @@ func (fm *FileManager) CreateDomainStructure(domainName string) error {
 	}
 
 	// Create subdirectories
-	subdirs := []string{ContentTypeRules, ContentTypeContext, ContentTypeSkills, ContentTypeAgents, ContentTypeCommands}
+	subdirs := []string{ContentTypeRules, ContentTypeContext, ContentTypeSkills, ContentTypeAgents, ContentTypeCommands, ContentTypeChecks}
 	for _, subdir := range subdirs {
 		path := filepath.Join(domainPath, subdir)
 		if err := fm.CreateDirectory(path); err != nil {

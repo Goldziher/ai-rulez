@@ -18,6 +18,11 @@ filename = "{id}.md"
 split = true
 always_files = true
 
+# Trae reads the frontmatter as bare "key: value" lines, so globs such as
+# **/*.ts must stay unquoted (a YAML writer would quote them).
+[outputs.rules.activation]
+format = "lines"
+
 [outputs.rules.activation.always]
 alwaysApply = true
 

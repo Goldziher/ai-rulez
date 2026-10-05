@@ -85,8 +85,8 @@ func TestBackfill_MCPDocuments(t *testing.T) {
 		{
 			name: "antigravity writes .agents/mcp_config.json with serverUrl",
 			gen:  &AntigravityPresetGenerator{}, path: ".agents/mcp_config.json",
-			contains:   []string{`"mcpServers"`, `"serverUrl": "https://example.com/mcp"`, `"ai-rulez"`},
-			notContain: []string{`"url"`},
+			contains:   []string{`"mcpServers"`, `"serverUrl": "https://example.com/mcp"`},
+			notContain: []string{`"url"`, `"ai-rulez"`},
 		},
 		{
 			name: "codex merges mcp_servers tables into .codex/config.toml",
@@ -168,9 +168,9 @@ func TestBackfill_CommandOutputs(t *testing.T) {
 			wantHas: []string{"---\n", "description: Ship a release", "Ship it."}, absent: ".opencode/commands/other-only.md",
 		},
 		{
-			name: "antigravity workflows carry description frontmatter",
-			gen:  &AntigravityPresetGenerator{}, path: ".agents/workflows/ship.md",
-			wantHas: []string{"description: Ship a release", "Ship it."}, absent: ".agents/workflows/other-only.md",
+			name: "antigravity commands become explicit-only skills (workflows retire)",
+			gen:  &AntigravityPresetGenerator{}, path: ".agents/skills/ship/SKILL.md",
+			wantHas: []string{"description: \"Ship a release\"", "disable-model-invocation: true", "Ship it."}, absent: ".agents/skills/other-only/SKILL.md",
 		},
 		{
 			name: "cline workflows are plain markdown",
@@ -226,15 +226,25 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 	}{
 		{"codex", &CodexPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".codex/AGENTS.md"), SkillsDir: abs(".agents/skills"), AgentsDir: abs(".codex/agents"),
-			CommandsDir: abs(".codex/prompts"), Sidecars: map[string]string{".codex/config.toml": abs(".codex/config.toml")},
+			CommandsDir: abs(".agents/skills"),
+			Sidecars: map[string]string{
+				".codex/config.toml": abs(".codex/config.toml"), ".codex/hooks.json": abs(".codex/hooks.json"),
+			},
+			SkillReaders:    []string{abs(".agents/skills")},
+			SkillPrecedence: "Codex lists both; it does not merge or override same-named skills",
 		}},
 		{"cursor", &CursorPresetGenerator{}, GlobalPaths{
-			SkillsDir: abs(".cursor/skills"), AgentsDir: abs(".cursor/agents"), CommandsDir: abs(".cursor/commands"),
-			Sidecars: map[string]string{".cursor/mcp.json": abs(".cursor/mcp.json")},
+			SkillsDir: abs(".agents/skills"), AgentsDir: abs(".cursor/agents"), CommandsDir: abs(".cursor/commands"),
+			Sidecars: map[string]string{
+				".cursor/mcp.json": abs(".cursor/mcp.json"), ".cursor/hooks.json": abs(".cursor/hooks.json"),
+			},
+			SkillReaders: []string{abs(".cursor/skills"), abs(".agents/skills"), abs(".claude/skills"), abs(".codex/skills")},
 		}},
 		{"copilot", &CopilotPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".copilot/copilot-instructions.md"), RulesDir: abs(".copilot/instructions"),
-			SkillsDir: abs(".copilot/skills"), AgentsDir: abs(".copilot/agents"), Sidecars: map[string]string{},
+			SkillsDir: abs(".copilot/skills"), AgentsDir: abs(".copilot/agents"),
+			Sidecars:     map[string]string{".github/hooks/ai-rulez.json": abs(".copilot/hooks/ai-rulez.json")},
+			SkillReaders: []string{abs(".copilot/skills"), abs(".agents/skills")},
 		}},
 		{"devin", &DevinPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".config/devin/AGENTS.md"), SkillsDir: abs(".config/devin/skills"), AgentsDir: abs(".config/devin/agents"),
@@ -246,17 +256,20 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 		}},
 		{"gemini", &GeminiPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".gemini/GEMINI.md"), SkillsDir: abs(".agents/skills"), AgentsDir: abs(".gemini/agents"),
-			Sidecars: map[string]string{".gemini/settings.json": abs(".gemini/settings.json")},
+			Sidecars:        map[string]string{".gemini/settings.json": abs(".gemini/settings.json")},
+			SkillReaders:    []string{abs(".gemini/skills"), abs(".agents/skills")},
+			SkillPrecedence: "Gemini CLI runs the workspace skill (workspace over user)",
 		}},
 		{"antigravity", &AntigravityPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".gemini/GEMINI.md"), RulesDir: abs(".gemini/config/rules"), SkillsDir: abs(".gemini/config/skills"),
-			AgentsDir: abs(".gemini/config/agents"), CommandsDir: abs(".gemini/antigravity/global_workflows"),
+			AgentsDir: abs(".gemini/config/agents"), CommandsDir: abs(".gemini/config/skills"),
 			Sidecars: map[string]string{".agents/mcp_config.json": abs(".gemini/config/mcp_config.json")},
 		}},
 		{"opencode", &OpencodePresetGenerator{}, GlobalPaths{
 			RootFile: abs(".config/opencode/AGENTS.md"), SkillsDir: abs(".config/opencode/skills"),
 			AgentsDir: abs(".config/opencode/agents"), CommandsDir: abs(".config/opencode/commands"),
-			Sidecars: map[string]string{"opencode.json": abs(".config/opencode/opencode.json")},
+			Sidecars:     map[string]string{"opencode.json": abs(".config/opencode/opencode.json")},
+			SkillReaders: []string{abs(".config/opencode/skills"), abs(".claude/skills"), abs(".agents/skills")},
 		}},
 	}
 	for _, tc := range cases {
@@ -281,5 +294,7 @@ func TestCodexGlobalOutputPaths_HonoursCodexHome(t *testing.T) {
 	require.NotNil(t, got)
 	assert.Equal(t, filepath.Join(override, "AGENTS.md"), got.RootFile)
 	assert.Equal(t, filepath.Join(override, "config.toml"), got.Sidecars[".codex/config.toml"])
+	assert.Equal(t, filepath.Join(override, "hooks.json"), got.Sidecars[".codex/hooks.json"])
+	assert.Equal(t, override, got.RelocatedHome)
 	assert.True(t, strings.HasPrefix(got.SkillsDir, home), "skills live outside CODEX_HOME: %s", got.SkillsDir)
 }

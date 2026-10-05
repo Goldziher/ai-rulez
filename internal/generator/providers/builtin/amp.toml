@@ -2,14 +2,15 @@
 #
 # Replaces the hand-written internal/generator/presets/amp.go. Amp reads
 # project guidance from AGENTS.md and supports per-agent and per-skill
-# files. Global effort (the `amp.anthropic.effort` key) and the MCP servers
+# files; custom subagent files (.agents/agents) are an Antigravity format Amp does
+# not read, so agents are only listed in AGENTS.md. Global effort (the `amp.anthropic.effort` key) and the MCP servers
 # (the flat `amp.mcpServers` key) are emitted via .amp/settings.json. Amp caps xhigh→high (it does not accept
 # xhigh at the moment); max passes through.
 
 name = "amp"
 display_name = "Sourcegraph Amp"
 
-directories = [".agents", ".agents/skills", ".agents/agents"]
+directories = [".agents", ".agents/skills", ".agents/checks"]
 
 [root]
 file = "AGENTS.md"
@@ -33,19 +34,21 @@ fields = ["description"]
 name_first = true
 quoted_fields = ["description"]
 
-[outputs.agents]
+# Code-review checks, one file per check (Amp's @amp/review-checks plugin). The
+# name comes from the file name; severity is written as severity-default.
+[outputs.checks]
 mode = "per_item_file"
-dir = ".agents/agents"
+dir = ".agents/checks"
 filename = "{id}.md"
+filter = "include_if_targeting_provider"
 
-[outputs.agents.body]
+[outputs.checks.body]
 sections = ["frontmatter", "content"]
 
-[outputs.agents.frontmatter]
-# .agents/agents is shared with the antigravity preset, which writes these keys.
-fields = ["description", "kind", "temperature", "max_turns", "timeout_mins"]
+[outputs.checks.frontmatter]
+fields = ["description", "severity"]
 tools = true
-emit_model = true
+renames = { severity = "severity-default" }
 
 [model]
 field = "model"

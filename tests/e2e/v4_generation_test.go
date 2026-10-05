@@ -426,7 +426,7 @@ func (s *V4GenerationSuite) TestCline_FileStructure() {
 		"Should generate skill file")
 
 	// Agents (NEW — currently not rendered for Cline)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".cline", "agents", "security-reviewer.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".cline", "agents", "security-reviewer.yaml")),
 		"Should generate agent file (NEW)")
 }
 
@@ -448,7 +448,7 @@ func (s *V4GenerationSuite) TestCline_Content() {
 	s.Assert().True(hasContext, "Cline output should include context content")
 
 	// Agent file (NEW)
-	agentFile := s.requireFile(outputs, filepath.Join(".cline", "agents", "security-reviewer.md"))
+	agentFile := s.requireFile(outputs, filepath.Join(".cline", "agents", "security-reviewer.yaml"))
 	s.assertContentContains(agentFile, "description:")
 }
 
@@ -508,9 +508,9 @@ func (s *V4GenerationSuite) TestCodex_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "plugins.json")),
 		"Should generate Codex plugin declarations (NEW)")
 
-	// Commands (NEW — currently not rendered for Codex)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "prompts", "run-tests.md")),
-		"Should generate command file (NEW)")
+	// Commands are written as skills: Codex reads no project prompts folder
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "run-tests", "SKILL.md")),
+		"Should generate the command as a skill")
 }
 
 func (s *V4GenerationSuite) TestCodex_Content() {
@@ -568,10 +568,10 @@ func (s *V4GenerationSuite) TestOpencode_Content() {
 	agentFile := s.requireFile(outputs, filepath.Join(".opencode", "agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "description:")
 
-	// MCP config uses the v2 nested shape and carries the configured server.
+	// MCP config uses the stable mcp.<name> shape and carries the configured server.
 	mcpConfig := s.requireFile(outputs, "opencode.json")
 	s.assertContentContains(mcpConfig, `"mcp"`)
-	s.assertContentContains(mcpConfig, `"servers"`)
+	s.Assert().NotContains(mcpConfig.Content, `"servers"`)
 	s.assertContentContains(mcpConfig, "test-mcp-server")
 }
 
@@ -589,9 +589,9 @@ func (s *V4GenerationSuite) TestAmp_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "deployment-workflow", "SKILL.md")),
 		"Should generate skill file")
 
-	// Agents (NEW — currently not rendered for Amp)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md")),
-		"Should generate agent file (NEW)")
+	// Amp reads no custom agent files, so none are written.
+	s.Require().Nil(s.findFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md")),
+		"Amp does not read .agents/agents")
 }
 
 func (s *V4GenerationSuite) TestAmp_Content() {
@@ -602,9 +602,6 @@ func (s *V4GenerationSuite) TestAmp_Content() {
 	s.assertContentContains(agentsMD, "code-review-standards")
 	s.assertContentContains(agentsMD, "project-architecture")
 
-	// Agent file content (NEW)
-	agentFile := s.requireFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md"))
-	s.assertContentContains(agentFile, "description:")
 }
 
 // ==========================================
@@ -617,9 +614,9 @@ func (s *V4GenerationSuite) TestAntigravity_FileStructure() {
 	// Main GEMINI.md
 	s.Require().NotNil(s.findFile(outputs, "GEMINI.md"), "Should generate GEMINI.md")
 
-	// MCP settings from user config (NEW — currently hardcoded)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "settings.json")),
-		"Should generate .agents/settings.json")
+	// MCP servers from the user config, in the file Antigravity reads
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "mcp_config.json")),
+		"Should generate .agents/mcp_config.json")
 
 	// Skills
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "deployment-workflow", "SKILL.md")),
@@ -638,7 +635,7 @@ func (s *V4GenerationSuite) TestAntigravity_Content() {
 	s.assertContentContains(geminiMD, "code-review-standards")
 
 	// Settings.json should include user-configured MCP servers (NEW — currently hardcoded)
-	settingsFile := s.requireFile(outputs, filepath.Join(".agents", "settings.json"))
+	settingsFile := s.requireFile(outputs, filepath.Join(".agents", "mcp_config.json"))
 	var settingsJSON map[string]interface{}
 	err := json.Unmarshal([]byte(settingsFile.Content), &settingsJSON)
 	s.Require().NoError(err, "settings.json should be valid JSON")

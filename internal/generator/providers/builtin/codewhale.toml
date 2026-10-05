@@ -51,8 +51,7 @@ omit_name = true
 [[sidecars]]
 kind = "mcp"
 path = ".codewhale/mcp.json"
-dialect = "standard"
-key = ["servers"]
+dialect = "codewhale"
 global_path = ".codewhale/mcp.json"
 
 [global]

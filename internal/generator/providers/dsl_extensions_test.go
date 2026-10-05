@@ -328,9 +328,10 @@ global_path = ".tool/mcp.json"
 			name: "home_env re-roots everything under home_dir",
 			env:  map[string]string{"TOOL_HOME": filepath.FromSlash("/opt/tool")},
 			want: providers.GlobalPaths{
-				RootFile:  filepath.FromSlash("/opt/tool/RULES.md"),
-				SkillsDir: filepath.FromSlash("/opt/tool/skills"),
-				Sidecars:  map[string]string{".tool/mcp.json": filepath.FromSlash("/opt/tool/mcp.json")},
+				RootFile:      filepath.FromSlash("/opt/tool/RULES.md"),
+				SkillsDir:     filepath.FromSlash("/opt/tool/skills"),
+				Sidecars:      map[string]string{".tool/mcp.json": filepath.FromSlash("/opt/tool/mcp.json")},
+				RelocatedHome: filepath.FromSlash("/opt/tool"),
 			},
 		},
 	}
@@ -368,7 +369,8 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 			CommandsDir: j(".claude/commands"), RulesDir: j(".claude/rules"),
 			Sidecars: map[string]string{".claude/settings.json": j(".claude/settings.json")},
 			// Claude Code reads user-scope MCP servers from ~/.claude.json, not settings.json.
-			MCPSidecars: map[string]string{".claude/settings.json": j(".claude.json")},
+			MCPSidecars:     map[string]string{".claude/settings.json": j(".claude.json")},
+			SkillPrecedence: "Claude Code runs the user-level skill (personal over project)",
 		}},
 		{"amp", nil, providers.GlobalPaths{
 			RootFile: j(".config/amp/AGENTS.md"), SkillsDir: j(".config/agents/skills"),
@@ -384,6 +386,7 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 		}},
 		{"hermes", map[string]string{"HERMES_HOME": filepath.FromSlash("/data/hermes")}, providers.GlobalPaths{
 			SkillsDir: filepath.FromSlash("/data/hermes/skills"), Sidecars: map[string]string{},
+			RelocatedHome: filepath.FromSlash("/data/hermes"),
 		}},
 	}
 	for _, tt := range tests {
