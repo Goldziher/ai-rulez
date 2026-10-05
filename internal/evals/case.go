@@ -415,7 +415,7 @@ func Expand(cases []Case) []Case {
 		out = append(out, parent)
 		for n, prompt := range c.NearMiss {
 			nm := Case{
-				ID:            fmt.Sprintf("%s.near-miss-%d", c.ID, n+1),
+				ID:            nearMissID(c.ID, n),
 				Description:   "near miss of " + c.ID,
 				Prompt:        prompt,
 				ExpectTrigger: boolPtr(false),
@@ -431,6 +431,9 @@ func Expand(cases []Case) []Case {
 	}
 	return out
 }
+
+// nearMissID is the id of the n-th (zero-based) derived near-miss case of id.
+func nearMissID(id string, n int) string { return fmt.Sprintf("%s.near-miss-%d", id, n+1) }
 
 func boolPtr(b bool) *bool { return &b }
 

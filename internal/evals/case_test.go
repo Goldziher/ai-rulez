@@ -313,3 +313,14 @@ func TestDigests_IgnoreOSJunkAndResultsButNotSymlinkTargets(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, linked, retargeted)
 }
+
+func TestLoadCases_NearMissIDCollidingWithAnAuthoredCaseIsAProblem(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "deploy", "x", "cases:\n  - id: deploy\n    prompt: p\n    expect_trigger: true\n    near_miss: [something close]\n"+
+		"  - id: deploy.near-miss-1\n    prompt: q\n    expect_trigger: false\n")
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	_, problems := LoadCases(&skills[0])
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, "deploy.near-miss-1")
+}
