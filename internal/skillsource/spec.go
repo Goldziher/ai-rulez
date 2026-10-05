@@ -1,0 +1,86 @@
+// Package skillsource resolves [[skill_sources]] and `--source` arguments: a git
+// repository (pinned to the commit a tag or SHA names) or a local directory that
+// holds skill directories. Resolution records what it found in ai-rulez.lock's
+// existing structure, never touches the network when told not to, and keeps
+// fetched trees in a local cache keyed by commit.
+package skillsource
+
+import (
+	"path"
+	"regexp"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/includes"
+	"github.com/samber/oops"
+)
+
+// Spec describes one skill source.
+type Spec struct {
+	Name       string
+	URL        string
+	Ref        string
+	Path       string
+	Include    []string
+	Exclude    []string
+	NamePrefix string
+	Trust      string
+}
+
+// FromConfig converts a [[skill_sources]] entry.
+func FromConfig(c *config.SkillSourceConfig) Spec {
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust}
+}
+
+// TrustLevel is the scan level, defaulting to the strict one.
+func (s Spec) TrustLevel() string {
+	if s.Trust == config.TrustWarn {
+		return config.TrustWarn
+	}
+	return config.TrustError
+}
+
+// IsGit reports whether the source is a git repository rather than a directory.
+func (s Spec) IsGit() bool { return includes.IsGitURL(gitURL(s.URL)) }
+
+// gitURL strips the optional `git+` scheme prefix.
+func gitURL(u string) string { return strings.TrimPrefix(u, "git+") }
+
+// Redacted is the URL with credentials removed; the lock is committed.
+func (s Spec) Redacted() string { return includes.RedactURL(gitURL(s.URL)) }
+
+var nameCleanRe = regexp.MustCompile(`[^a-z0-9._-]+`)
+
+// ParseArg parses `--source` as `[git+]<url>[@<ref>][#<path>]` or a local
+// directory, optionally with `#<path>`. The ref separator is the last `@` after
+// the final `/` of the URL, so `git@host:org/repo` and `https://user@host/x`
+// keep their user info. The name is derived from the last URL segment.
+func ParseArg(arg string) (Spec, error) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return Spec{}, oops.Errorf("empty --source")
+	}
+	spec := Spec{}
+	if i := strings.LastIndex(arg, "#"); i >= 0 {
+		spec.Path, arg = strings.Trim(arg[i+1:], "/"), arg[:i]
+	}
+	url := arg
+	if includes.IsGitURL(gitURL(arg)) {
+		if i := strings.LastIndex(arg, "@"); i > strings.LastIndex(arg, "/") && i >= 0 {
+			spec.Ref, url = arg[i+1:], arg[:i]
+		}
+	}
+	spec.URL = url
+	if spec.Path != "" {
+		if clean := path.Clean(spec.Path); clean == ".." || strings.HasPrefix(clean, "../") {
+			return Spec{}, oops.Errorf("--source path %q escapes the repository", spec.Path)
+		}
+	}
+	base := path.Base(strings.TrimRight(gitURL(url), "/"))
+	base = strings.TrimSuffix(base, ".git")
+	spec.Name = "cli-" + strings.Trim(nameCleanRe.ReplaceAllString(strings.ToLower(base), "-"), "-.")
+	if spec.Name == "cli-" {
+		spec.Name = "cli-source"
+	}
+	return spec, nil
+}
