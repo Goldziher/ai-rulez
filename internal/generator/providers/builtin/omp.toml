@@ -84,6 +84,15 @@ key = ["mcpServers"]
 global_path = ".omp/agent/mcp.json"
 emit_when = "has_mcp_servers"
 
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".omp/config.yml"
+format = "yaml"
+dialect = "omp"
+global_path = ".omp/agent/config.yml"
+
 # The default profile keeps user config under ~/.omp/agent.
 [global]
 root_file = ".omp/agent/AGENTS.md"

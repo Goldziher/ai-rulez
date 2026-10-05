@@ -41,6 +41,16 @@ dialect = "zed"
 emit_when = "has_mcp_servers"
 global_path = ".config/zed/settings.json"
 
+# Top-level [permissions]. Zed reads agent.tool_permissions from the user settings
+# only, so this sidecar is rendered for `--user` runs and not into the project file.
+[[sidecars]]
+kind = "permissions"
+path = ".zed/settings.json"
+format = "jsonc"
+dialect = "zed"
+global_path = ".config/zed/settings.json"
+user_only = true
+
 # User-scope layout: Zed's personal rules are ~/.config/zed/AGENTS.md; skills are
 # the shared ~/.agents/skills.
 [global]

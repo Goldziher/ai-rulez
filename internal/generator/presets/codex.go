@@ -165,6 +165,8 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
+	outputs = append(outputs, g.permissionsOutputs(cfg, baseDir)...)
+
 	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
 	if err != nil {
 		return nil, err
@@ -211,8 +213,9 @@ func (g *CodexPresetGenerator) GlobalOutputPaths(home string, getenv func(string
 		AgentsDir:   ".codex/agents",
 		CommandsDir: config.DefaultCodexSkillsDir,
 		Sidecars: map[string]string{
-			MergedDocCodexConfig: ".codex/config.toml",
-			MergedDocCodexHooks:  ".codex/hooks.json",
+			MergedDocCodexConfig:     ".codex/config.toml",
+			MergedDocCodexHooks:      ".codex/hooks.json",
+			MergedDocCodexPermission: ".codex/rules/ai-rulez.rules",
 		},
 		SkillReaders:    []string{config.DefaultCodexSkillsDir},
 		SkillPrecedence: "Codex lists both; it does not merge or override same-named skills",

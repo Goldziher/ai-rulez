@@ -101,14 +101,14 @@ func TestHookKeysUnsupportedIsReported(t *testing.T) {
 			want:  "the event FileChanged has no equivalent",
 		},
 		{
-			name: "claude matcher without override", harness: config.HarnessGemini,
-			group: config.HookGroup{Event: "PreToolUse", Matcher: "Bash", Hooks: []config.HookAction{{Command: "x"}}},
-			want:  "names Claude Code tools",
+			name: "claude matcher the vocabulary does not document", harness: config.HarnessGemini,
+			group: config.HookGroup{Event: "PreToolUse", Matcher: "Bash|Task", Hooks: []config.HookAction{{Command: "x"}}},
+			want:  `documents no equivalent of "Task"`,
 		},
 		{
-			name: "matcher on a harness without matchers", harness: config.HarnessCopilot,
-			group: config.HookGroup{Event: "PreToolUse", Matcher: "Bash", Hooks: []config.HookAction{{Command: "x"}}},
-			want:  "copilot hooks have no matcher",
+			name: "matcher on a copilot event that ignores it", harness: config.HarnessCopilot,
+			group: config.HookGroup{Event: "Stop", Matcher: "Bash", Hooks: []config.HookAction{{Command: "x"}}},
+			want:  "copilot ignores a matcher on agentStop",
 		},
 		{
 			name: "if on a harness without conditions", harness: config.HarnessCursor,
@@ -159,10 +159,10 @@ func TestHookScriptReferences(t *testing.T) {
 	tests := []struct {
 		harness, want string
 	}{
-		{config.HarnessClaude, `"${CLAUDE_PROJECT_DIR}"/scripts/boot.sh`},
-		{config.HarnessCodex, `"$(git rev-parse --show-toplevel)"/scripts/boot.sh`},
-		{config.HarnessGemini, `"$GEMINI_PROJECT_DIR"/scripts/boot.sh`},
-		{config.HarnessCursor, `./scripts/boot.sh`},
+		{config.HarnessClaude, `"${CLAUDE_PROJECT_DIR}"/'scripts/boot.sh'`},
+		{config.HarnessCodex, `"$(git rev-parse --show-toplevel)"/'scripts/boot.sh'`},
+		{config.HarnessGemini, `"$GEMINI_PROJECT_DIR"/'scripts/boot.sh'`},
+		{config.HarnessCursor, `'./scripts/boot.sh'`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.harness, func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestHookScriptReferences(t *testing.T) {
 		require.NoError(t, err)
 		result, err := jsonmerge.Apply("", keys)
 		require.NoError(t, err)
-		assert.Contains(t, result.Body, `\"/home/u/.config/ai-rulez/scripts/boot.sh\"`)
+		assert.Contains(t, result.Body, `'/home/u/.config/ai-rulez/scripts/boot.sh'`)
 	})
 }
 
@@ -341,20 +341,20 @@ func TestSupportedEvents(t *testing.T) {
 	native, ok := settings.NativeEvent(config.HarnessGemini, "PreToolUse")
 	assert.True(t, ok)
 	assert.Equal(t, "BeforeTool", native)
-	assert.Nil(t, settings.SupportedEvents("devin"))
+	assert.Nil(t, settings.SupportedEvents("windsurf"))
 }
 
 func TestUnsupportedDiagnostics(t *testing.T) {
 	cfg := &config.Config{
-		Presets:     []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}, {BuiltIn: "devin"}, {BuiltIn: "mcp"}, {BuiltIn: "amp"}},
+		Presets:     []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}, {BuiltIn: "windsurf"}, {BuiltIn: "mcp"}, {BuiltIn: "amp"}},
 		Hooks:       sampleHooks(),
 		Permissions: &config.Permissions{Allow: []string{"Bash(ls)"}},
 	}
 	diagnostics := settings.UnsupportedDiagnostics(cfg)
 	require.Len(t, diagnostics, 2)
-	assert.Contains(t, diagnostics[0], "amp, devin")
+	assert.Contains(t, diagnostics[0], "not generated for windsurf:")
 	assert.NotContains(t, diagnostics[0], "mcp")
-	assert.Contains(t, diagnostics[1], "amp, codex, devin")
+	assert.Contains(t, diagnostics[1], "amp, windsurf")
 
 	assert.Empty(t, settings.UnsupportedDiagnostics(&config.Config{Presets: cfg.Presets}))
 }

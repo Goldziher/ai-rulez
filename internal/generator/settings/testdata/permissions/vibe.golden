@@ -1,0 +1,6 @@
+[tools.bash]
+allowlist = ["npm run test"]
+denylist = ["rm -rf"]
+
+[tools.read_file]
+denylist = ["*/.env"]
