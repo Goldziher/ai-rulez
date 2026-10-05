@@ -16,7 +16,7 @@ import (
 func resetOKFFlags(t *testing.T) {
 	t.Helper()
 	reset := func() {
-		okfOut, okfProfile, okfInclude, okfCheck, okfFormat = "", "", nil, false, ""
+		okfOut, okfProfile, okfRole, okfInclude, okfCheck, okfFormat = "", "", "", nil, false, ""
 		okfFailOn, okfInto, okfDomain, okfForce, okfDryRun = "error", "", "", false, false
 		noLocal, configDir = false, ""
 	}
@@ -239,4 +239,136 @@ func TestOKFBundleAsInclude(t *testing.T) {
 	writeFile(t, filepath.Join(bundle, "decisions", "evil.md"), "---\ntype: Decision\n---\nkey AKIAABCDEFGHIJKLMNOP\n")
 	runRecursiveGenerate() // a refused include is skipped with an error, as any failing include is
 	assert.NoFileExists(t, filepath.Join(root, ".claude", "rules", "decisions-evil.md"), "the security scan refuses the whole bundle")
+}
+
+const okfRolesConfig = `version = "4.0"
+name = "x"
+presets = ["claude", "okf"]
+
+[skills]
+delivery = "served"
+
+[[roles]]
+name = "backend"
+domains = ["backend"]
+[roles.rules]
+exclude = ["secret-*"]
+[roles.checks]
+include = ["review-*"]
+`
+
+// okfRolesProject has root content, a backend and a frontend domain, a served
+// skill and two checks, and one role that selects part of it.
+func okfRolesProject(t *testing.T) string {
+	t.Helper()
+	root := okfProject(t)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), okfRolesConfig)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "secret-plan.md"), "---\ndescription: Plan\n---\nInternal plan.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "backend", "rules", "db.md"), "---\ndescription: DB\n---\nUse transactions.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "frontend", "rules", "css.md"), "---\ndescription: CSS\n---\nUse tokens.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "backend", "skills", "migrate", "SKILL.md"),
+		"---\nname: migrate\ndescription: Use when you migrate the database.\n---\nRun the migration.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "checks", "review-security.md"), "---\ndescription: Security review\n---\nCheck authz.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "checks", "lint-style.md"), "---\ndescription: Style check\n---\nCheck naming.\n")
+	return root
+}
+
+func listFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	var out []string
+	require.NoError(t, filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			rel, _ := filepath.Rel(dir, p) //nolint:errcheck // both paths are below dir
+			out = append(out, filepath.ToSlash(rel))
+		}
+		return err
+	}))
+	return out
+}
+
+func TestOKFExportRoleFiltersLikeGenerate(t *testing.T) {
+	okfRolesProject(t)
+	okfRole = "backend"
+	out := filepath.Join(t.TempDir(), "bundle")
+	okfOut = out
+	code, msg := exportRun(t, false)
+	require.Equal(t, 0, code, msg)
+
+	files := listFiles(t, out)
+	joined := strings.Join(files, " ")
+	assert.Contains(t, joined, "db.md", "the role's domain is exported")
+	assert.Contains(t, joined, "review-security.md", "a check the role includes is exported")
+	assert.Contains(t, joined, "migrate", "a served skill is still knowledge and is exported")
+	assert.NotContains(t, joined, "secret-plan", "the role excludes it")
+	assert.NotContains(t, joined, "css.md", "a domain the role does not select")
+	assert.NotContains(t, joined, "lint-style", "a check outside the role include list")
+	assert.Contains(t, joined, "rules/style.md", "root content stays unless a selector drops it")
+
+	// The full export still has everything.
+	okfRole = ""
+	full := filepath.Join(t.TempDir(), "full")
+	okfOut = full
+	code, msg = exportRun(t, false)
+	require.Equal(t, 0, code, msg)
+	all := strings.Join(listFiles(t, full), " ")
+	for _, want := range []string{"secret-plan", "css.md", "lint-style", "review-security"} {
+		assert.Contains(t, all, want)
+	}
+}
+
+func TestOKFExportRoleErrors(t *testing.T) {
+	okfRolesProject(t)
+	okfRole = "nobody"
+	code, _ := exportRun(t, false)
+	assert.Equal(t, exitOKFCannotRun, code, "unknown role")
+
+	okfRole, okfProfile = "backend", "default"
+	code, _ = exportRun(t, false)
+	assert.Equal(t, exitOKFCannotRun, code, "--role and --profile are exclusive")
+}
+
+func TestOKFExportRoleCheckCompares(t *testing.T) {
+	okfRolesProject(t)
+	okfRole = "backend"
+	dir := filepath.Join(t.TempDir(), "bundle")
+	okfOut = dir
+	require.Equal(t, 0, mustExport(t))
+	code, msg := exportRun(t, true)
+	assert.Equal(t, 0, code, msg)
+	okfRole = ""
+	code, _ = exportRun(t, true)
+	assert.Equal(t, exitOKFProblems, code, "the full export differs from the role's bundle")
+}
+
+func TestOKFRoleBundleRoundTripsChecksAndDelivery(t *testing.T) {
+	okfRolesProject(t)
+	okfRole = "backend"
+	bundle := filepath.Join(t.TempDir(), "bundle")
+	okfOut = bundle
+	require.Equal(t, 0, mustExport(t))
+	okfRole, okfOut = "", ""
+
+	target := t.TempDir()
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	chdir(t, target)
+	var out bytes.Buffer
+	require.Equal(t, 0, runOKFImport(context.Background(), bundle, &out), out.String())
+
+	imported := strings.Join(listFiles(t, filepath.Join(target, ".ai-rulez")), " ")
+	assert.Contains(t, imported, "checks/review-security.md", "a check comes back as a check")
+	assert.Contains(t, imported, "skills/migrate/SKILL.md")
+	assert.NotContains(t, imported, "lint-style")
+}
+
+func TestGenerateWithRoleLeavesTheCommittedOKFBundleAlone(t *testing.T) {
+	root := okfRolesProject(t)
+	require.Equal(t, 0, runRecursiveGenerate())
+	bundle := filepath.Join(root, "docs", "okf")
+	before := listFiles(t, bundle)
+	require.Contains(t, strings.Join(before, " "), "css.md")
+
+	generateRole = "backend"
+	t.Cleanup(func() { generateRole = "" })
+	require.Equal(t, 0, runRecursiveGenerate())
+	assert.Equal(t, before, listFiles(t, bundle), "generate --role must not shrink the project-wide bundle")
 }

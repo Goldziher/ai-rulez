@@ -2591,9 +2591,19 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	// overlay that produced it.
 	local := g.localManifestSet()
 
+	// A role renders one person's slice, not the project: the committed OKF
+	// bundle documents the whole project, so a role run leaves it in place.
+	keepPrefix := ""
+	if g.role != nil && g.config.OKFEnabled() {
+		keepPrefix = strings.Trim(filepath.ToSlash(g.config.OKFDir()), "/") + "/"
+	}
+
 	var stale []string
 	for _, relPath := range previous {
 		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
+			continue
+		}
+		if keepPrefix != "/" && keepPrefix != "" && strings.HasPrefix(relPath, keepPrefix) {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))

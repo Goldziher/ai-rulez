@@ -261,7 +261,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 
 | Command | Does |
 | --- | --- |
-| `ai-rulez export okf [--out dir] [--profile p] [--include kinds] [--check]` | Write (or compare) the bundle. `--role` is not offered: this version of ai-rulez has no roles |
+| `ai-rulez export okf [--out dir] [--profile p \| --role r] [--include kinds] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
 | `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
@@ -367,7 +367,7 @@ ai-rulez import okf https://github.com/GoogleCloudPlatform/open-knowledge-format
   (`runbooks-deploy`). Hand-tune names and descriptions afterwards: skills need a trigger-oriented description.
 - `title` is derived, so a title edited in a bundle is lost on the next export unless it was imported (kept as
   `okf.title`).
-- No roles: this base has no `--role`.
+- Roles: `export okf --role r` filters content like `generate --role`, but a knowledge export is not written for a harness, so skills a role serves (`delivery = "served"`) are exported like static ones and a skill's own `delivery` key travels in its `x-ai-rulez.metadata`. `skill_mode` is a Claude Code setting and is not exported. While `generate --role` runs, the `okf` preset leaves the committed bundle untouched instead of shrinking it to the role's slice.
 - Agents, commands and checks have no OKF type and travel as `Reference` with `x-ai-rulez.kind`. A third-party tool
   that drops unknown keys loses that information.
 
