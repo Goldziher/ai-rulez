@@ -56,6 +56,7 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	} else {
 		cmd = exec.CommandContext(ctx, "sh", "-c", r.Command) //nolint:gosec // the user configured this command
 	}
+	killTreeOnCancel(cmd)
 	cmd.Stdin = bytes.NewReader(body)
 	var stdout bytes.Buffer
 	cmd.Stdout = &limitedWriter{w: &stdout, n: maxResponseBytes}
