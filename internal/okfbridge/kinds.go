@@ -18,6 +18,7 @@ const (
 	KindSkill     Kind = "skills"
 	KindAgent     Kind = "agents"
 	KindCommand   Kind = "commands"
+	KindCheck     Kind = "checks"
 	kindResource  Kind = "skill-resource"
 	dirDomains         = "domains"
 	fileSkill          = "SKILL.md"
@@ -25,8 +26,18 @@ const (
 	maxSanitizeID      = 128
 )
 
+// Frontmatter keys and YAML tags the bridge writes and reads.
+const (
+	keyType        = "type"
+	keyTitle       = "title"
+	keyDescription = "description"
+	keyKind        = "kind"
+	keyDomain      = "domain"
+	tagStr         = "!!str"
+)
+
 // AllKinds lists the kinds in export order.
-var AllKinds = []Kind{KindRule, KindContext, KindSkill, KindAgent, KindCommand}
+var AllKinds = []Kind{KindRule, KindContext, KindSkill, KindAgent, KindCommand, KindCheck}
 
 // ParseKinds parses a comma-separated include list; an empty list means all kinds.
 func ParseKinds(list []string) ([]Kind, error) {
@@ -63,7 +74,7 @@ func ParseKinds(list []string) ([]Kind, error) {
 type UnknownKindError struct{ Name string }
 
 func (e *UnknownKindError) Error() string {
-	return "unknown content kind " + `"` + e.Name + `"` + " (use rules, context, skills, agents or commands)"
+	return "unknown content kind " + `"` + e.Name + `"` + " (use rules, context, skills, agents, commands or checks)"
 }
 
 func kindFromName(name string) (Kind, bool) {
@@ -78,6 +89,8 @@ func kindFromName(name string) (Kind, bool) {
 		return KindAgent, true
 	case "command":
 		return KindCommand, true
+	case "check":
+		return KindCheck, true
 	}
 	return "", false
 }
@@ -108,6 +121,8 @@ func kindLabel(k Kind) string {
 		return "Agents"
 	case KindCommand:
 		return "Commands"
+	case KindCheck:
+		return "Checks"
 	}
 	return string(k)
 }
