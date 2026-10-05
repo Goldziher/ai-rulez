@@ -3,7 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"time"
 
@@ -97,12 +99,12 @@ func init() {
 	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost; call no runner and write nothing")
 	f.StringVar(&evalFlags.format, "format", evals.FormatMarkdown, "Report format: json, markdown or junit")
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
-	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Stop above this many USD: refuse to start when the estimate exceeds it, skip skills once spend reaches it")
+	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Stop above this many USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it")
 	f.StringVar(&evalFlags.date, "date", "", "Date recorded in the results (default $"+EvalDateEnv+"; the clock is never read)")
 	f.BoolVar(&evalFlags.changedOnly, "changed-only", false, "Only skills with files changed against --base (git diff, plus untracked files)")
 	f.StringVar(&evalFlags.base, "base", "HEAD", "Git ref --changed-only compares the working tree against")
 	f.BoolVar(&evalFlags.force, "force", false, "Ignore the result cache and re-run every selected skill")
-	f.Float64Var(&evalFlags.threshold, "threshold", -1, "Pass rate a skill needs (default [lint.evals] min_pass_rate, else 1)")
+	f.Float64Var(&evalFlags.threshold, "threshold", 1, "Pass rate (0 to 1) a skill needs; 0 records scores without gating (default [lint.evals] min_pass_rate, else 1)")
 	f.BoolVar(&evalFlags.allowExec, "allow-exec", false, "Run command_exit assertions (they execute commands from the case files)")
 	f.BoolVar(&evalFlags.noWrite, "no-write", false, "Do not update the results file")
 	f.StringVar(&evalFlags.results, "results", "", "Results file (default <config dir>/eval-results.json)")
@@ -117,6 +119,12 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
+	// Everything that can be rejected is rejected before any paid work starts.
+	if err := validateEvalFlags(cmd); err != nil {
+		return false, err
+	}
 	cfg, err := loadConfigForCommand(ctx, nil)
 	if err != nil {
 		return false, err
@@ -125,20 +133,32 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && evalFlags.threshold < 0 {
-		opts.PassThreshold = cfg.Lint.Evals.MinPassRate
+	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
+		min := cfg.Lint.Evals.MinPassRate
+		opts.PassThreshold = &min
 	}
 	store, err := evals.LoadStore(resultsPath(cfg.ConfigDir))
 	if err != nil {
 		return false, err
 	}
 	opts.Store = store
-
-	report, err := evals.Run(ctx, opts)
-	if err != nil {
-		return false, err
+	save := !opts.DryRun && !evalFlags.noWrite
+	if save {
+		// Each finished skill is written at once (atomically), so a crash or Ctrl-C
+		// keeps the skills that already paid for themselves.
+		opts.OnSkill = func(run *evals.SkillRun) error {
+			if run.Status != evals.RunRan {
+				return nil
+			}
+			return store.Save(resultsPath(cfg.ConfigDir))
+		}
 	}
-	if !opts.DryRun && !evalFlags.noWrite && anyRan(report) {
+
+	report, runErr := evals.Run(ctx, opts)
+	if report == nil {
+		return false, runErr
+	}
+	if save && anyRan(report) {
 		if err := store.Save(resultsPath(cfg.ConfigDir)); err != nil {
 			return false, err
 		}
@@ -146,7 +166,41 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	if err := writeEvalReport(cmd, report); err != nil {
 		return false, err
 	}
+	if runErr != nil {
+		return report.Failed, runErr
+	}
 	return report.Failed, nil
+}
+
+// thresholdGiven reports whether --threshold was passed explicitly.
+func thresholdGiven(cmd *cobra.Command) bool {
+	flag := cmd.Flags().Lookup("threshold")
+	return flag != nil && flag.Changed
+}
+
+// validateEvalFlags checks every flag that does not need the project, so a typo
+// costs nothing.
+func validateEvalFlags(cmd *cobra.Command) error {
+	switch evalFlags.format {
+	case evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit:
+	default:
+		return oops.Errorf("unknown --format %q (use json, markdown or junit)", evalFlags.format)
+	}
+	for name, value := range map[string]float64{"--max-cost": evalFlags.maxCost, "--price-in": evalFlags.priceIn, "--price-out": evalFlags.priceOut} {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+			return oops.Errorf("%s must be a finite number >= 0, got %v", name, value)
+		}
+	}
+	if thresholdGiven(cmd) && (math.IsNaN(evalFlags.threshold) || evalFlags.threshold < 0 || evalFlags.threshold > 1) {
+		return oops.Errorf("--threshold must be between 0 and 1, got %v", evalFlags.threshold)
+	}
+	if evalFlags.runs < 0 {
+		return oops.Errorf("--runs must be >= 0, got %d", evalFlags.runs)
+	}
+	if evalFlags.timeout < 0 {
+		return oops.Errorf("--timeout must be >= 0, got %s", evalFlags.timeout)
+	}
+	return nil
 }
 
 func resultsPath(configDirAbs string) string {
@@ -177,9 +231,13 @@ func buildEvalOptions(cmd *cobra.Command, skills []string, cfgDir, baseDir strin
 	opts := &evals.RunOptions{
 		ConfigDir: absDir, Skills: skills, Harness: evalFlags.harness, Model: evalFlags.model,
 		Ablation: evalFlags.ablation, DryRun: evalFlags.dryRun, Force: evalFlags.force,
-		MaxCostUSD: evalFlags.maxCost, Date: date, PassThreshold: max(evalFlags.threshold, 0),
-		Grade: evals.GradeOptions{AllowExec: evalFlags.allowExec},
+		MaxCostUSD: evalFlags.maxCost, Date: date,
+		Grade: evals.GradeOptions{AllowExec: evalFlags.allowExec}, ToolVersion: Version,
 		Price: evals.Price{InPerMTok: evalFlags.priceIn, OutPerMTok: evalFlags.priceOut},
+	}
+	if thresholdGiven(cmd) {
+		threshold := evalFlags.threshold
+		opts.PassThreshold = &threshold
 	}
 	if evalFlags.changedOnly {
 		all, err := evals.FindSkills(absDir)
@@ -242,11 +300,6 @@ func buildEvalRunner(cmd *cobra.Command) (evals.Runner, int, error) {
 }
 
 func writeEvalReport(cmd *cobra.Command, report *evals.RunReport) error {
-	switch evalFlags.format {
-	case evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit:
-	default:
-		return oops.Errorf("unknown --format %q (use json, markdown or junit)", evalFlags.format)
-	}
 	if evalFlags.out == "" {
 		return oops.Wrapf(report.Write(cmd.OutOrStdout(), evalFlags.format), "write report")
 	}
