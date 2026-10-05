@@ -1,9 +1,6 @@
 package llm
 
-import (
-	"strings"
-	"unicode/utf8"
-)
+import "strings"
 
 // price is USD per million tokens.
 type price struct{ in, out float64 }
@@ -65,14 +62,20 @@ func (p Pricing) Cost(model string, u Usage) (usd float64, known bool) {
 	return (float64(u.PromptTokens)*pr.in + float64(u.CompletionTokens)*pr.out) / 1e6, true
 }
 
-// EstimateTokens approximates the token count of text (about four bytes per
-// token for English and code). It is deliberately conservative for budgets.
+// BytesPerTokenEstimate is the divisor behind EstimateTokens. English prose runs
+// near four bytes per token and dense code or non-Latin text near one to three,
+// so three bytes per token overestimates typical input and never undercounts a
+// CJK rune (three bytes, about one token).
+const BytesPerTokenEstimate = 3
+
+// EstimateTokens approximates the token count of text from its UTF-8 length
+// (one token per BytesPerTokenEstimate bytes, rounded up). It is deliberately
+// conservative, for budget decisions only; it is not a tokenizer.
 func EstimateTokens(text string) int {
 	if text == "" {
 		return 0
 	}
-	n := utf8.RuneCountInString(text)
-	return (n + 3) / 4
+	return (len(text) + BytesPerTokenEstimate - 1) / BytesPerTokenEstimate
 }
 
 // EstimatePromptTokens approximates the prompt size of a chat request,

@@ -44,6 +44,8 @@ type Error struct {
 	// RetryAfter is the provider's requested delay for rate limits, if any.
 	RetryAfter time.Duration
 	Cause      error
+	// permanent marks a failure that retrying cannot fix (a malformed reply).
+	permanent bool
 }
 
 func (e *Error) Error() string {
@@ -68,6 +70,9 @@ func (e *Error) Is(target error) bool {
 
 // Transient reports whether retrying the same request may succeed.
 func (e *Error) Transient() bool {
+	if e.permanent {
+		return false
+	}
 	switch e.Kind {
 	case KindRateLimit, KindTimeout:
 		return true
@@ -80,6 +85,13 @@ func (e *Error) Transient() bool {
 
 func newError(kind Kind, format string, args ...any) *Error {
 	return &Error{Kind: kind, Message: fmt.Sprintf(format, args...)}
+}
+
+// permanentError is a provider error that is never retried.
+func permanentError(format string, args ...any) *Error {
+	e := newError(KindProvider, format, args...)
+	e.permanent = true
+	return e
 }
 
 // IsTransient reports whether err is worth retrying.

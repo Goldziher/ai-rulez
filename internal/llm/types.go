@@ -57,6 +57,10 @@ type ChatRequest struct {
 	PromptVersion string `json:"prompt_version,omitempty"`
 	// NoCache skips the response cache for this call.
 	NoCache bool `json:"-"`
+	// AcceptReply, when set, is asked whether a reply is usable. The cache
+	// stores only accepted replies and treats a cached reply it rejects as a
+	// miss, so a malformed answer is never served twice.
+	AcceptReply func(text string) error `json:"-"`
 }
 
 // Usage is the token accounting of one call.
