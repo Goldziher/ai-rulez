@@ -331,3 +331,17 @@ func TestCompareRequiresTreeDigest(t *testing.T) {
 	require.False(t, diff.InSync)
 	assert.Contains(t, diff.Changes[0].Detail, "no tree digest")
 }
+
+func TestComputePinsMCPServersAtTheSource(t *testing.T) {
+	f := newFixture(t)
+	f.cfg.MCPServersRaw = []config.MCPServer{{Name: "b", Command: "node", Args: []string{"b.js"}}, {Name: "a", Command: "npx"}}
+	before := f.items()["settings:/mcp-servers"]
+	require.NotEmpty(t, before, "MCP servers are pinned as a settings item")
+
+	f.cfg.MCPServersRaw[0].Args = []string{"evil.js"}
+	assert.NotEqual(t, before, f.items()["settings:/mcp-servers"], "editing a server changes the source pin")
+
+	snap, err := Compute(f.cfg, Options{Scope: config.LockScopeSkills})
+	require.NoError(t, err)
+	assert.Empty(t, snap.Items, "scope = skills pins no declared items")
+}

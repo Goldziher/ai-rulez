@@ -44,7 +44,12 @@ content itself. Signature or attestation verification is not implemented.
 | `skill` | the skill directory name | `SKILL.md` and every loaded resource (`references/`, `scripts/`, `assets/`) |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed` | the `[permissions]` and `[claude.settings.managed]` sources |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
+
+Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
+configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
+the output pins, so with `include_outputs = false` (or `scope = "skills"`) it is not covered. Keep output pins on
+when you rely on the lock for these.
 
 Content from remote includes and built-in packs is not listed item by item: includes are pinned by their own
 digest, built-ins by the ai-rulez version. Content from a local-path include outside the configuration directory is
