@@ -78,6 +78,9 @@ func init() {
 	RootCmd.AddCommand(UsageCmd)
 	RootCmd.AddCommand(ReportCmd)
 	RootCmd.AddCommand(LocalCmd)
+	RootCmd.AddCommand(OKFCmd)
+	RootCmd.AddCommand(ExportCmd)
+	RootCmd.AddCommand(ImportCmd)
 }
 
 func initConfig() {
