@@ -91,7 +91,7 @@ func newScanText(r *runner, abs, raw string) *scanText {
 					block++
 					lang = strings.ToLower(strings.Fields(info + " ")[0])
 					openNeg = negRe.MatchString(info) || negRe.MatchString(prev[0]) || negRe.MatchString(prev[1])
-					l.Fenced, l.Lang, l.Block, l.Neg = true, lang, block, true
+					l.Fenced, l.Lang, l.Block, l.Neg = true, lang, block, openNeg
 					t.lines = append(t.lines, l)
 					continue
 				}
