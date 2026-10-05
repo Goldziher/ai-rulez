@@ -139,8 +139,14 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
 ```
 
 - `path` is relative to the item, `/`-separated, with no `.`, `..`, empty segment or backslash.
-- `mode` is the string `100755` if any execute bit of the file is set, else `100644`. Nothing else about the file
-  mode matters.
+- `mode` is the string `100755` if the file is executable, else `100644`. Nothing else about the file mode
+  matters. On Linux and macOS the file's own execute bits decide (any of them set means executable). Windows
+  filesystems have no execute bit, so there the mode is taken from the git index (`git ls-files -s`, the mode git
+  checks out on Unix); if git is not available or the file is not tracked it is `100644`. A checkout whose
+  repository records the executable bit therefore pins the same digest on every operating system. A script that is
+  executable on disk but not recorded as such in git will pin differently on Windows than elsewhere; commit the
+  bit (`git update-index --chmod=+x`). The per-file digest of remote includes and installed skills (`include` and
+  `skill` entries, kind 1 algorithm) still reads the file's own bits.
 - `data` is the **raw bytes on disk**, never the frontmatter-stripped text the loader keeps in memory. For files
   with a text extension (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json .jsonc .sh .bash .zsh .py .js .mjs
   .cjs .ts`) `CRLF` is converted to `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone
