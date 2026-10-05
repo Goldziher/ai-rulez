@@ -54,7 +54,7 @@ var (
 	// ownKeys are the ai-rulez keys valid on every kind.
 	ownKeys = []string{
 		"priority", "targets", "aliases", "keywords", "usage", "shortcut", "category", "placement", "short-description",
-		keyTools, keySkills, keyGlobs, keyPaths, keyEffort, "deprecated", "superseded_by",
+		keyTools, keySkills, keyGlobs, keyPaths, keyEffort, "deprecated", "superseded_by", "delivery", "triggers",
 	}
 )
 
