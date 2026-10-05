@@ -26,6 +26,7 @@ nav = [
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Hooks and Permissions" = "settings.md" },
+    { "Permissions" = "permissions.md" },
     { "User-level Configuration" = "user-scope.md" },
     { "Authoring Plugins" = "plugins.md" },
     { "Evals" = "evals.md" },

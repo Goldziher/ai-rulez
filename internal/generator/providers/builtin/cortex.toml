@@ -49,6 +49,15 @@ drop_bare_aliases = true
 [model]
 field = "model"
 
+# Hooks: top-level [[hooks]] rendered in cortex's native format, read from the
+# vendor documentation (see docs/settings.md). Cortex Code reads `hooks` from settings.json; the user level is the dedicated hooks.json.
+[[sidecars]]
+kind = "hooks"
+dialect = "cortex"
+path = ".cortex/settings.json"
+format = "json"
+global_path = ".snowflake/cortex/hooks.json"
+
 [global]
 skills_dir = ".snowflake/cortex/skills"
 agents_dir = ".snowflake/cortex/agents"

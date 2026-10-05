@@ -40,6 +40,15 @@ emit_when = "has_mcp_servers"
 global_path = ".config/crush/crush.json"
 
 # User-scope layout: Crush keeps its memory, skills and config under ~/.config/crush.
+# Hooks: top-level [[hooks]] rendered in crush's native format, read from the
+# vendor documentation (see docs/settings.md). Crush reads `hooks.PreToolUse` from crush.json (flat entries, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "crush"
+path = "crush.json"
+format = "json"
+global_path = ".config/crush/crush.json"
+
 [global]
 root_file = ".config/crush/CRUSH.md"
 skills_dir = ".config/crush/skills"

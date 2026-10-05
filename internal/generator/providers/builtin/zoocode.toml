@@ -46,6 +46,14 @@ path = ".roo/mcp.json"
 format = "json"
 dialect = "roo"
 
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".vscode/settings.json"
+format = "jsonc"
+dialect = "zoocode"
+
 # User scope: only ~/.roo/rules is loaded, so the root guidance joins it there.
 [global]
 root_file = ".roo/rules/AGENTS.md"

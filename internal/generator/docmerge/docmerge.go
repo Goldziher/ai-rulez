@@ -124,6 +124,12 @@ func (f Format) Valid() bool {
 // mark is kept, and a document that had no final newline gets one from Apply,
 // which the claims record so Unmerge takes it back out.
 func Apply(path string, format Format, owned []OwnedKey) (Result, error) {
+	result, err := apply(path, format, owned)
+	result.Owned = owned
+	return result, err
+}
+
+func apply(path string, format Format, owned []OwnedKey) (Result, error) {
 	if !format.Valid() {
 		return Result{}, unsupported(format)
 	}
@@ -140,6 +146,12 @@ func Apply(path string, format Format, owned []OwnedKey) (Result, error) {
 // ApplyDocument is Apply for a document already read; path only names it in
 // errors.
 func ApplyDocument(path string, format Format, existing string, owned []OwnedKey) (Result, error) {
+	result, err := applyDocument(path, format, existing, owned)
+	result.Owned = owned
+	return result, err
+}
+
+func applyDocument(path string, format Format, existing string, owned []OwnedKey) (Result, error) {
 	if !format.Valid() {
 		return Result{}, unsupported(format)
 	}

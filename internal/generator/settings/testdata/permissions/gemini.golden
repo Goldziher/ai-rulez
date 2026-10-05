@@ -1,0 +1,10 @@
+{
+  "tools": {
+    "allowed": [
+      "run_shell_command(npm run test )"
+    ],
+    "exclude": [
+      "run_shell_command(rm -rf)"
+    ]
+  }
+}

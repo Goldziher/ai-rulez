@@ -229,6 +229,7 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 			CommandsDir: abs(".agents/skills"),
 			Sidecars: map[string]string{
 				".codex/config.toml": abs(".codex/config.toml"), ".codex/hooks.json": abs(".codex/hooks.json"),
+				".codex/rules/ai-rulez.rules": abs(".codex/rules/ai-rulez.rules"),
 			},
 			SkillReaders:    []string{abs(".agents/skills")},
 			SkillPrecedence: "Codex lists both; it does not merge or override same-named skills",
@@ -248,11 +249,21 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 		}},
 		{"devin", &DevinPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".config/devin/AGENTS.md"), SkillsDir: abs(".config/devin/skills"), AgentsDir: abs(".config/devin/agents"),
-			Sidecars: map[string]string{".devin/mcp_config.json": abs(".config/devin/mcp_config.json")},
+			Sidecars: map[string]string{
+				".devin/mcp_config.json": abs(".config/devin/mcp_config.json"),
+				".devin/config.json":     abs(".config/devin/config.json"),
+			},
 		}},
 		{"cline", &ClinePresetGenerator{}, GlobalPaths{
 			RulesDir: abs("Documents/Cline/Rules"), SkillsDir: abs(".cline/skills"), AgentsDir: abs(".cline/agents"),
-			CommandsDir: abs("Documents/Cline/Workflows"), Sidecars: map[string]string{},
+			CommandsDir: abs("Documents/Cline/Workflows"), Sidecars: map[string]string{
+				".clinerules/hooks/PostToolUse":      abs("Documents/Cline/Hooks/PostToolUse"),
+				".clinerules/hooks/PreCompact":       abs("Documents/Cline/Hooks/PreCompact"),
+				".clinerules/hooks/PreToolUse":       abs("Documents/Cline/Hooks/PreToolUse"),
+				".clinerules/hooks/TaskComplete":     abs("Documents/Cline/Hooks/TaskComplete"),
+				".clinerules/hooks/TaskStart":        abs("Documents/Cline/Hooks/TaskStart"),
+				".clinerules/hooks/UserPromptSubmit": abs("Documents/Cline/Hooks/UserPromptSubmit"),
+			},
 		}},
 		{"gemini", &GeminiPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".gemini/GEMINI.md"), SkillsDir: abs(".agents/skills"), AgentsDir: abs(".gemini/agents"),
@@ -263,12 +274,18 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 		{"antigravity", &AntigravityPresetGenerator{}, GlobalPaths{
 			RootFile: abs(".gemini/GEMINI.md"), RulesDir: abs(".gemini/config/rules"), SkillsDir: abs(".gemini/config/skills"),
 			AgentsDir: abs(".gemini/config/agents"), CommandsDir: abs(".gemini/config/skills"),
-			Sidecars: map[string]string{".agents/mcp_config.json": abs(".gemini/config/mcp_config.json")},
+			Sidecars: map[string]string{
+				".agents/mcp_config.json": abs(".gemini/config/mcp_config.json"),
+				".agents/hooks.json":      abs(".gemini/config/hooks.json"),
+			},
 		}},
 		{"opencode", &OpencodePresetGenerator{}, GlobalPaths{
 			RootFile: abs(".config/opencode/AGENTS.md"), SkillsDir: abs(".config/opencode/skills"),
 			AgentsDir: abs(".config/opencode/agents"), CommandsDir: abs(".config/opencode/commands"),
-			Sidecars:     map[string]string{"opencode.json": abs(".config/opencode/opencode.json")},
+			Sidecars: map[string]string{
+				"opencode.json":                       abs(".config/opencode/opencode.json"),
+				".opencode/plugins/ai-rulez-hooks.js": abs(".config/opencode/plugins/ai-rulez-hooks.js"),
+			},
 			SkillReaders: []string{abs(".config/opencode/skills"), abs(".claude/skills"), abs(".agents/skills")},
 		}},
 	}

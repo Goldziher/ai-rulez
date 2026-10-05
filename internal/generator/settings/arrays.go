@@ -24,9 +24,11 @@ func documentRel(cfg *config.Config, docPath string) string {
 	return filepath.ToSlash(rel)
 }
 
-// readPath returns the raw value at path in the JSON document at docPath, or nil
-// when the document or the key is absent or the document is not strict JSON (the
-// merge reports that itself).
+// readPath returns the raw value at path in the JSON or JSONC document at docPath,
+// or nil when the document or the key is absent or the document cannot be parsed
+// (the merge reports that itself). A strict document keeps its bytes; a JSONC one
+// (comments, trailing commas, a BOM) is read through the tolerant decoder, so a
+// commented config is not mistaken for an empty one.
 func readPath(docPath string, path []string) json.RawMessage {
 	if docPath == "" {
 		return nil
@@ -35,6 +37,22 @@ func readPath(docPath string, path []string) json.RawMessage {
 	if err != nil {
 		return nil
 	}
+	if json.Valid(data) {
+		return strictPath(data, path)
+	}
+	value, ok := jsonmerge.LookupTree(docTree(docPath), path)
+	if !ok {
+		return nil
+	}
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil
+	}
+	return raw
+}
+
+// strictPath walks a strict JSON document and returns the value at path, or nil.
+func strictPath(data []byte, path []string) json.RawMessage {
 	var node json.RawMessage = data
 	for _, key := range path {
 		var object map[string]json.RawMessage
@@ -76,6 +94,9 @@ func containsJSON(list []json.RawMessage, value json.RawMessage) bool {
 // claimed earlier are recorded as its own, so an identical element the consumer
 // wrote stays theirs on clean.
 func arrayKey(cfg *config.Config, docPath string, path []string, ours []json.RawMessage) jsonmerge.OwnedKey {
+	if !isJSONDocument(docPath) {
+		return nativeArrayKey(cfg, docPath, path, ours)
+	}
 	var existing []json.RawMessage
 	if raw := readPath(docPath, path); raw != nil {
 		if json.Unmarshal(raw, &existing) != nil {

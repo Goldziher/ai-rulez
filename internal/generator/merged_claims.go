@@ -3,7 +3,6 @@ package generator
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -172,8 +171,12 @@ func elementsWithout(elements, drop []any) []any {
 	return kept
 }
 
+// jsonValuesEqual compares two values as JSON. The previous run's claims come
+// back from the manifest as []any and map[string]any, while this run's are built
+// from typed values ([]string args); reflect.DeepEqual calls those different, so a
+// claim still held would be taken back and its element deleted from the document.
 func jsonValuesEqual(a, b any) bool {
-	return reflect.DeepEqual(a, b)
+	return jsonmerge.ElementsContain(a, []any{b})
 }
 
 // guardClaims holds the claims of an older record, which carry no guard, to the
@@ -332,7 +335,13 @@ func (g *Generator) applyUnmerge(edits []mergedEdit) {
 		if g.userMode && !g.userMayTouch(edit.abs) {
 			continue
 		}
-		if err := writeFileAtomic(edit.abs, []byte(edit.body)); err != nil {
+		target, _, guardErr := g.guardWrite(edit.abs)
+		if guardErr != nil {
+			logger.Warn("Skipped a merged document behind a symlink that leaves the project",
+				"path", edit.rel, "error", guardErr)
+			continue
+		}
+		if err := writeFileAtomic(target, []byte(edit.body)); err != nil {
 			logger.Warn("Failed to remove ai-rulez content from merged document",
 				"path", edit.rel, "error", oops.Wrapf(err, "write merged document"))
 			continue

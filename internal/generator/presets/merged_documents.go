@@ -63,7 +63,12 @@ var mergedDocumentPaths = []string{
 	MergedDocAgentsMCP,
 	MergedDocCodexHooks,
 	MergedDocCursorHooks,
+	MergedDocAntigravityHooks,
+	MergedDocDevinHooks,
 	MergedDocCursorBugbot,
+	MergedDocCursorCLI,
+	MergedDocVSCodeSettings,
+	MergedDocDevinConfig,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
@@ -163,6 +168,16 @@ func applyMergedDocumentAs(path string, format docmerge.Format, owned []jsonmerg
 	return docmerge.Apply(path, format, owned)
 }
 
+// mergeSource records what a merged output was rendered from, so that presets
+// writing one document with different keys are combined rather than conflicting
+// (see config.MergeSource).
+func mergeSource(path string, format docmerge.Format, result jsonmerge.Result) *config.MergeSource {
+	if len(result.Owned) == 0 {
+		return nil
+	}
+	return &config.MergeSource{Path: path, Format: string(format), Owned: result.Owned}
+}
+
 // isRegisteredMergedDocument reports whether path ends in one of the registered
 // base-relative paths. Matching on the tail rather than computing a relative path
 // keeps callers from having to thread baseDir through their render helpers, and is
@@ -200,12 +215,23 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 	}
 
 	switch rel {
+	case MergedDocCursorCLI:
+		return permissionsLegacyClaims(cfg, config.HarnessCursor)
+	case MergedDocVSCodeSettings:
+		return permissionsLegacyClaims(cfg, config.HarnessCopilot)
+	case MergedDocDevinConfig:
+		// User scope merges [[hooks]] into the same document (settingsOutputs).
+		return append(permissionsLegacyClaims(cfg, "devin"), hooksLegacyClaims(cfg, config.HarnessDevin)...)
 	case MergedDocGeminiSettings:
-		return geminiLegacyClaims(cfg, selfEntry)
+		return append(geminiLegacyClaims(cfg, selfEntry), permissionsLegacyClaims(cfg, config.HarnessGemini)...)
 	case MergedDocCodexHooks:
 		return hooksLegacyClaims(cfg, config.HarnessCodex)
 	case MergedDocCursorHooks:
 		return hooksLegacyClaims(cfg, config.HarnessCursor)
+	case MergedDocAntigravityHooks:
+		return hooksLegacyClaims(cfg, config.HarnessAntigravity)
+	case MergedDocDevinHooks:
+		return hooksLegacyClaims(cfg, config.HarnessDevin)
 	case MergedDocAgentsSettings:
 		claims := []jsonmerge.Claim{selfEntry}
 		if len(cfg.MCPServers) > 0 {
@@ -251,7 +277,7 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		claims = append(claims,
 			jsonmerge.Claim{Path: []string{opencodeInstructionsKey}, Elements: opencodeLocalEntries()},
 			jsonmerge.Claim{Path: []string{keySchema}, Equals: opencodeSchemaURL, Alone: true})
-		return claims
+		return append(claims, permissionsLegacyClaims(cfg, config.HarnessOpencode)...)
 	}
 	return nil
 }

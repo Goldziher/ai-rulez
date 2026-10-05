@@ -53,6 +53,15 @@ path = ".bob/mcp.json"
 dialect = "bob"
 global_path = ".bob/settings/mcp.json"
 
+# Hooks: top-level [[hooks]] rendered in bob's native format, read from the
+# vendor documentation (see docs/settings.md). Bob reads `hooks` from settings.json (five events, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "bob"
+path = ".bob/settings.json"
+format = "json"
+global_path = ".bob/settings/settings.json"
+
 [global]
 root_file = ".bob/AGENTS.md"
 skills_dir = ".bob/skills"

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -450,6 +451,14 @@ func TestMCPDialects_AllResolve(t *testing.T) {
 			}
 			if sidecar.Kind == SidecarChecks {
 				assert.True(t, isChecksDialect(sidecar.Dialect), "%s sidecar %s uses unknown checks dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)
+				continue
+			}
+			if sidecar.Kind == SidecarPermissions {
+				assert.True(t, settings.IsPermissionDialect(sidecar.Dialect), "%s sidecar %s uses unknown permissions dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)
+				continue
+			}
+			if sidecar.Kind == SidecarHooks {
+				assert.True(t, settings.HasHookDialect(sidecar.Dialect), "%s sidecar %s uses unknown hooks dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)
 				continue
 			}
 			assert.True(t, IsMCPDialect(sidecar.Dialect), "%s sidecar %s uses unknown dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)

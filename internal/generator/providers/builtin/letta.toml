@@ -61,6 +61,23 @@ omit_name = true
 field = "model"
 
 # User-scope layout: agents and skills live under ~/.letta.
+# Hooks: top-level [[hooks]] rendered in letta's native format, read from the
+# vendor documentation (see docs/settings.md). Letta Code reads `hooks` from settings.json (milliseconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "letta"
+path = ".letta/settings.json"
+format = "json"
+global_path = ".letta/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".letta/settings.json"
+format = "json"
+dialect = "letta"
+global_path = ".letta/settings.json"
+
 [global]
 agents_dir = ".letta/agents"
 skills_dir = ".letta/skills"
