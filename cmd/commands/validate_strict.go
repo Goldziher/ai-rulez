@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/okfbridge"
 	"github.com/samber/oops"
 )
 
@@ -61,6 +62,11 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			logger.Warn("Skipped the plugin version drift check", "error", driftErr)
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
+	}
+	if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
+		logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
+	} else if okfRes != nil {
+		opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
 	}
 	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern}, opts...)
 }
@@ -152,4 +158,20 @@ func enforceScanImports(cfg *config.Config) error {
 	}
 	return oops.Hint("Review the imported source, or lower [lint.security] scan_imports to \"warn\"").
 		Errorf("imported content failed the security scan; nothing was written:\n  %s", strings.Join(lines, "\n  "))
+}
+
+// checkOKFProject lints the configured OKF bundle (AR9B0-AR9B9), including
+// drift against what the okf preset would write now. nil when none is configured.
+func checkOKFProject(cfg *config.Config) (*okfbridge.ProjectResult, error) {
+	if !okfbridge.Configured(cfg) {
+		return nil, nil
+	}
+	var tree *config.ContentTree
+	if cfg.OKFEnabled() {
+		var err error
+		if tree, err = generator.NewGenerator(cfg).ContentForProfile(""); err != nil {
+			return nil, err
+		}
+	}
+	return okfbridge.CheckProject(cfg, tree)
 }

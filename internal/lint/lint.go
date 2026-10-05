@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/okf"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 )
 
@@ -114,6 +115,9 @@ type runner struct {
 	forceSev Severity
 	opts     Options
 	drift    []PluginDrift
+
+	okfDir      string
+	okfFindings []okf.Finding
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -183,6 +187,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkUnpinned()
 	r.scanImported()
 	r.checkPluginDrift()
+	r.checkOKF()
 	if so.External {
 		r.runExternal()
 	}
