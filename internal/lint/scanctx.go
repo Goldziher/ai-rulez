@@ -27,21 +27,16 @@ type scanLine struct {
 
 // scanText is one scanned file split into lines.
 type scanText struct {
-	abs string
-	raw string
-	md  bool
-	// example is true for files under references/, examples/, templates/ and
-	// similar directories, which mostly document commands rather than run them.
-	example bool
-	lines   []scanLine
+	abs   string
+	raw   string
+	md    bool
+	lines []scanLine
 }
 
 var (
 	// negRe reads a line that talks *about* a risky command rather than
 	// instructing it.
 	negRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|denied|dangerous|unsafe|insecure|malicious|attack\w*|exploit\w*|anti-?patterns?|bad|wrong|incorrect|harmful|destructive|risky|refuse\w*|reject\w*|vulnerab\w*|injection|threat|red\s+flags?)\b|❌|⛔|🚫|⚠`)
-
-	exampleDirs = map[string]bool{"references": true, "reference": true, "examples": true, "example": true, "templates": true, "template": true, "fixtures": true, "testdata": true}
 
 	shellLangs = map[string]bool{"": true, "sh": true, "bash": true, "zsh": true, "shell": true, "console": true, "terminal": true, "shellsession": true, "shell-session": true, "fish": true}
 )
@@ -57,11 +52,6 @@ func isMarkdownPath(abs string) bool {
 func newScanText(r *runner, abs, raw string) *scanText { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	t := &scanText{abs: abs, raw: raw, md: isMarkdownPath(abs)}
-	for _, seg := range strings.Split(filepath.ToSlash(filepath.Dir(abs)), "/") {
-		if exampleDirs[seg] {
-			t.example = true
-		}
-	}
 	lines := strings.Split(raw, "\n")
 	bodyStart := 0
 	if t.md {
