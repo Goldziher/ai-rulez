@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -33,37 +34,8 @@ type Skill struct {
 // skills), sorted by id. A skill id that appears twice keeps the first (root
 // before domain, domains alphabetically).
 func FindSkills(configDir string) ([]Skill, error) {
-	var found []Skill
-	add := func(skillsDir, domain string) error {
-		entries, err := os.ReadDir(skillsDir)
-		if os.IsNotExist(err) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("read %s: %w", skillsDir, err)
-		}
-		for _, entry := range entries {
-			dir := filepath.Join(skillsDir, entry.Name())
-			if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
-				continue
-			}
-			if info, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil || !info.Mode().IsRegular() {
-				continue
-			}
-			skill := Skill{ID: entry.Name(), Domain: domain, Dir: dir}
-			for _, candidate := range []string{
-				filepath.Join(dir, "evals"),
-				filepath.Join(configDir, ProjectEvalsDir, entry.Name()),
-			} {
-				if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-					skill.EvalDirs = append(skill.EvalDirs, candidate)
-				}
-			}
-			found = append(found, skill)
-		}
-		return nil
-	}
-	if err := add(filepath.Join(configDir, "skills"), ""); err != nil {
+	found, err := skillsIn(configDir, filepath.Join(configDir, "skills"), "")
+	if err != nil {
 		return nil, err
 	}
 	domains, err := os.ReadDir(filepath.Join(configDir, "domains"))
@@ -71,11 +43,14 @@ func FindSkills(configDir string) ([]Skill, error) {
 		return nil, fmt.Errorf("read domains: %w", err)
 	}
 	for _, domain := range domains {
-		if domain.IsDir() {
-			if err := add(filepath.Join(configDir, "domains", domain.Name(), "skills"), domain.Name()); err != nil {
-				return nil, err
-			}
+		if !domain.IsDir() {
+			continue
 		}
+		more, err := skillsIn(configDir, filepath.Join(configDir, "domains", domain.Name(), "skills"), domain.Name())
+		if err != nil {
+			return nil, err
+		}
+		found = append(found, more...)
 	}
 	seen := map[string]bool{}
 	out := found[:0]
@@ -86,6 +61,35 @@ func FindSkills(configDir string) ([]Skill, error) {
 		}
 	}
 	sort.SliceStable(out, func(a, b int) bool { return out[a].ID < out[b].ID })
+	return out, nil
+}
+
+// skillsIn lists the skill directories (those holding a SKILL.md) in skillsDir.
+func skillsIn(configDir, skillsDir, domain string) ([]Skill, error) {
+	entries, err := os.ReadDir(skillsDir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", skillsDir, err)
+	}
+	var out []Skill
+	for _, entry := range entries {
+		dir := filepath.Join(skillsDir, entry.Name())
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if info, statErr := os.Stat(filepath.Join(dir, "SKILL.md")); statErr != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		skill := Skill{ID: entry.Name(), Domain: domain, Dir: dir}
+		for _, candidate := range []string{filepath.Join(dir, "evals"), filepath.Join(configDir, ProjectEvalsDir, entry.Name())} {
+			if info, statErr := os.Stat(candidate); statErr == nil && info.IsDir() {
+				skill.EvalDirs = append(skill.EvalDirs, candidate)
+			}
+		}
+		out = append(out, skill)
+	}
 	return out, nil
 }
 
@@ -187,7 +191,7 @@ func caseFiles(dir string) []string {
 	var out []string
 	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // an unreadable entry is skipped
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // an unreadable entry is skipped, not fatal
 		}
 		name := d.Name()
 		if p != dir && (strings.HasPrefix(name, ".") || (d.IsDir() && (name == "results" || name == "node_modules"))) {
@@ -254,13 +258,13 @@ func treeDigest(roots []digestRoot) (string, error) {
 			return "", fmt.Errorf("digest %s: %w", root.dir, err)
 		}
 		sort.Strings(files)
-		fmt.Fprintf(hash, "root %d\n", i)
+		hash.Write([]byte("root " + strconv.Itoa(i) + "\n"))
 		for _, rel := range files {
 			data, err := os.ReadFile(filepath.Join(root.dir, rel)) //nolint:gosec // walking the user's own tree
 			if err != nil {
 				return "", fmt.Errorf("digest %s: %w", rel, err)
 			}
-			fmt.Fprintf(hash, "%s\x00%d\x00", filepath.ToSlash(rel), len(data))
+			hash.Write([]byte(filepath.ToSlash(rel) + "\x00" + strconv.Itoa(len(data)) + "\x00"))
 			hash.Write(data)
 		}
 	}
