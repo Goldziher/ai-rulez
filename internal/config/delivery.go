@@ -313,6 +313,11 @@ func cleanList(in []string) []string {
 // marks a role as active (it sets no delivery of its own).
 func (c *Config) SetRoleDelivery(override map[string]string) { c.roleDelivery = orEmpty(override) }
 
+// RoleActive reports whether this Config is rendering a role (SetRoleDelivery
+// was called). Outputs that belong to the whole project, such as the committed
+// OKF bundle, are left alone while a role renders.
+func (c *Config) RoleActive() bool { return c.roleDelivery != nil }
+
 // RoleDeliveryOverride resolves a (flattened) role's delivery selectors against
 // the content tree and returns the override EffectiveDelivery takes: one entry
 // per skill the role sets a delivery for, keyed by "<domain>/<id>" for a skill
