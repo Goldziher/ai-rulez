@@ -30,3 +30,27 @@ func TestServeSetup_SourceSkillCannotCollideItsWayIntoAbortingTheServer(t *testi
 	require.True(t, ok)
 	assert.Equal(t, "Core conventions", core.Description, "the source skill did not replace it")
 }
+
+func TestServeSetup_SourceSkillFilesAreDigestedVerbatim(t *testing.T) {
+	build := func(line string) string {
+		dir := t.TempDir()
+		writeFile(t, dir, "a/SKILL.md", "---\nname: a\ndescription: A source skill\n---\n\n# a\n")
+		writeFile(t, dir, "a/references/x.md", "# Source-Hash: blake3:0123abcd\n"+line+"\n")
+		srv := newServerFor(t, &ServeSetup{WorkDir: project(t, baseConfig, nil), Sources: []string{dir}})
+		a, ok := srv.Catalog().Lookup("a")
+		require.True(t, ok)
+		return a.LockDigest
+	}
+	assert.NotEqual(t, build("payload one"), build("payload two"))
+	// A Source-Hash line in a source skill is content like any other.
+	one, two := t.TempDir(), t.TempDir()
+	for dir, hash := range map[string]string{one: "blake3:0123abcd", two: "blake3:ffff0000"} {
+		writeFile(t, dir, "a/SKILL.md", "---\nname: a\ndescription: A source skill\n---\n\n# a\n# Source-Hash: "+hash+"\n")
+	}
+	digest := func(dir string) string {
+		srv := newServerFor(t, &ServeSetup{WorkDir: project(t, baseConfig, nil), Sources: []string{dir}})
+		a, _ := srv.Catalog().Lookup("a")
+		return a.LockDigest
+	}
+	assert.NotEqual(t, digest(one), digest(two))
+}

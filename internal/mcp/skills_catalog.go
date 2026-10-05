@@ -225,7 +225,7 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	if skill.Digest, err = contentlock.ServedDigest(leaves, false); err != nil {
 		return nil, oops.With("skill", name).Wrapf(err, "digest skill files")
 	}
-	if skill.LockDigest, err = contentlock.ServedDigest(leaves, true); err != nil {
+	if skill.LockDigest, err = contentlock.ServedDigest(leaves, !src.Verbatim); err != nil {
 		return nil, oops.With("skill", name).Wrapf(err, "digest skill files")
 	}
 	return skill, nil
