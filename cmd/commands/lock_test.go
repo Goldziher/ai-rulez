@@ -3,16 +3,20 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 )
@@ -275,4 +279,69 @@ func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
 	assert.Empty(t, lockDriftFor(cfg))
+}
+
+func TestLockDiffSkippedRemoteOutputsFailUnderEnforce(t *testing.T) {
+	root := lockProject(t, "")
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+	lock := &lockfile.File{Version: lockfile.Version}
+	hasCacheChange := func(d *contentlock.Diff) bool {
+		for _, c := range d.Changes {
+			if strings.Contains(c.Detail, "not in the local cache") {
+				return true
+			}
+		}
+		return false
+	}
+	diff, err := lockDiff(cfg, lock, "", true)
+	require.NoError(t, err)
+	assert.NotEmpty(t, diff.Notes, "without enforce the skipped outputs are a note")
+	assert.False(t, hasCacheChange(diff))
+
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"[lock]\nenforce = true\n")
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	diff, err = lockDiff(cfg, lock, "", true)
+	require.NoError(t, err)
+	assert.True(t, hasCacheChange(diff), "under enforce skipped outputs fail the check")
+}
+
+func TestLoadWithCacheFallback(t *testing.T) {
+	ok := &config.Config{}
+	miss := oops.Wrapf(includes.ErrNotCached, "no cached content")
+	violation := oops.Wrapf(config.ErrLockViolation, "digest mismatch")
+
+	t.Run("cache miss falls back", func(t *testing.T) {
+		calls := 0
+		cfg, skipped, err := loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+			calls++
+			if len(opts) == 0 {
+				return nil, miss
+			}
+			return ok, nil
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 2, calls)
+		assert.Same(t, ok, cfg)
+		assert.False(t, skipped, "no lockable includes in an empty config")
+	})
+	t.Run("a lock violation is returned, not swallowed", func(t *testing.T) {
+		calls := 0
+		_, _, err := loadWithCacheFallback(func(...config.LoadOption) (*config.Config, error) {
+			calls++
+			return ok, violation
+		})
+		require.ErrorIs(t, err, config.ErrLockViolation)
+		assert.Equal(t, 1, calls, "no retry without remotes")
+	})
+	t.Run("a failing retry returns the original error", func(t *testing.T) {
+		_, _, err := loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+			if len(opts) == 0 {
+				return nil, miss
+			}
+			return nil, errors.New("second failure")
+		})
+		require.ErrorIs(t, err, includes.ErrNotCached)
+	})
 }

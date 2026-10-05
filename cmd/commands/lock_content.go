@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -72,7 +73,13 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 			Detail: fmt.Sprintf("%s (version %d) has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", lockfile.FileName, lock.Version)})
 	}
 	if remoteSkipped {
-		diff.Notes = append(diff.Notes, "remote includes are not in the local cache, so generated outputs were not compared")
+		const msg = "remote includes are not in the local cache, so generated outputs were not compared"
+		if cfg.LockEnforced() {
+			diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
+				Detail: msg + " and [lock] enforce = true; run `ai-rulez generate` (or `ai-rulez lock`) to fetch them"})
+		} else {
+			diff.Notes = append(diff.Notes, msg)
+		}
 	}
 	contentlock.SortChanges(diff.Changes)
 	diff.InSync = len(diff.Changes) == 0
@@ -81,16 +88,29 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 
 // loadForLockCheck loads a configuration for an offline comparison. Includes are
 // read from the local cache so the outputs render as generate would; when they
-// are not cached the load falls back to skipping them (remoteSkipped).
+// are not cached (and only then: any other load error is returned as it is) the
+// load falls back to skipping them (remoteSkipped).
 func loadForLockCheck(path string) (cfg *config.Config, remoteSkipped bool, err error) {
 	prev := includes.SkipFetch
 	includes.SkipFetch = true
 	defer func() { includes.SkipFetch = prev }()
-	cfg, err = loadForLock(path, config.WithoutLocal())
+	return loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+		return loadForLock(path, append([]config.LoadOption{config.WithoutLocal()}, opts...)...)
+	})
+}
+
+// loadWithCacheFallback loads with remote includes, and retries without them only
+// when the first error says an include is not in the cache. Every other error (a
+// lock violation, a parse error) is returned unchanged.
+func loadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config, error)) (cfg *config.Config, remoteSkipped bool, err error) {
+	cfg, err = load()
 	if err == nil {
 		return cfg, false, nil
 	}
-	cfg, retryErr := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
+	if !errors.Is(err, includes.ErrNotCached) {
+		return nil, false, err
+	}
+	cfg, retryErr := load(config.WithoutRemote())
 	if retryErr != nil {
 		return nil, false, err
 	}
