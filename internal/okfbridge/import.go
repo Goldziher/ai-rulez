@@ -12,8 +12,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/okf"
 	"gopkg.in/yaml.v3"
 )
@@ -42,9 +40,27 @@ type ImportOptions struct {
 	Force bool
 	// DryRun reports without writing.
 	DryRun bool
-	// Lint supplies the [lint] settings for the security scan; nil uses defaults.
-	Lint *config.LintConfig
+	// Scan runs the security scan over the text about to be written, keyed by
+	// target path. The bridge cannot import internal/lint (lint imports the
+	// presets, which use this package), so the caller supplies it. nil skips the
+	// scan, which only tests should do.
+	Scan Scanner
 }
+
+// SecurityFinding is one finding of the pre-write scan.
+type SecurityFinding struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+	Message  string `json:"message"`
+}
+
+// SeverityError is the severity that refuses an import.
+const SeverityError = "error"
+
+// Scanner scans texts keyed by display name.
+type Scanner func(texts map[string]string) []SecurityFinding
 
 // Action is the fate of one target file.
 type Action struct {
@@ -60,7 +76,7 @@ type ImportResult struct {
 	// Findings are OKF-level notes (AR9B1, AR9B9) about the bundle.
 	Findings []okf.Finding `json:"findings,omitempty"`
 	// Security are the AR0xx findings of the scan that ran before writing.
-	Security []lint.Finding `json:"security,omitempty"`
+	Security []SecurityFinding `json:"security,omitempty"`
 	// Skipped lists bundle files that were not imported, with the reason.
 	Skipped []string `json:"skipped,omitempty"`
 }
@@ -78,12 +94,12 @@ func (r *ImportResult) Count(status string) int {
 
 // SecurityError is returned when the scan found an error-level problem; nothing
 // was written.
-type SecurityError struct{ Findings []lint.Finding }
+type SecurityError struct{ Findings []SecurityFinding }
 
 func (e *SecurityError) Error() string {
 	var errs []string
 	for _, f := range e.Findings {
-		if f.Severity == lint.SeverityError {
+		if f.Severity == SeverityError {
 			errs = append(errs, fmt.Sprintf("%s %s:%d %s", f.Code, f.File, f.Line, f.Message))
 		}
 	}
@@ -123,9 +139,9 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	p.files(b)
 	sort.Slice(p.out, func(i, j int) bool { return p.out[i].rel < p.out[j].rel })
 
-	res.Security = scan(opts.Lint, p.out)
+	res.Security = scan(opts.Scan, p.out)
 	for i := range res.Security {
-		if res.Security[i].Severity == lint.SeverityError {
+		if res.Security[i].Severity == SeverityError {
 			return res, &SecurityError{Findings: res.Security}
 		}
 	}
@@ -146,14 +162,17 @@ func rejectUnsafe(b *okf.Bundle) error {
 }
 
 // scan runs the AR0xx security scan over everything about to be written.
-func scan(lc *config.LintConfig, files []planned) []lint.Finding {
+func scan(scanner Scanner, files []planned) []SecurityFinding {
+	if scanner == nil {
+		return nil
+	}
 	texts := map[string]string{}
 	for i := range files {
 		if len(files[i].data) <= maxScanSize && utf8.Valid(files[i].data) {
 			texts[files[i].rel] = string(files[i].data)
 		}
 	}
-	return lint.ScanText(lc, texts)
+	return scanner(texts)
 }
 
 type planner struct {
