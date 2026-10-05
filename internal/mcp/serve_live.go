@@ -72,10 +72,13 @@ func (s *Server) Watch(ctx context.Context) {
 	if interval <= 0 {
 		interval = defaultPollInterval
 	}
-	last, err := o.Fingerprint()
-	if err != nil {
-		logger.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
-		return
+	last := o.Baseline
+	if last == "" {
+		var err error
+		if last, err = o.Fingerprint(); err != nil {
+			logger.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
+			return
+		}
 	}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
