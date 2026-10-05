@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const quiet = "--quiet"
+
 const cloneTimeout = 3 * time.Minute
 
 // Source is a bundle location: a directory or a git repository.
@@ -110,9 +112,9 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 		ref = "HEAD"
 	}
 	for _, args := range [][]string{
-		{"init", "--quiet"},
-		{"fetch", "--quiet", "--depth", "1", "--no-tags", "--no-recurse-submodules", "--", s.URL, ref},
-		{"-c", "advice.detachedHead=false", "checkout", "--quiet", "--detach", "FETCH_HEAD"},
+		{"init", quiet},
+		{"fetch", quiet, "--depth", "1", "--no-tags", "--no-recurse-submodules", "--", s.URL, ref},
+		{"-c", "advice.detachedHead=false", "checkout", quiet, "--detach", "FETCH_HEAD"},
 	} {
 		if err := git(ctx, tmp, args...); err != nil {
 			cleanup()

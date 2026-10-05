@@ -52,6 +52,16 @@ func CheckProject(cfg *config.Config, tree *config.ContentTree) (*ProjectResult,
 	if tree == nil || !cfg.OKFEnabled() {
 		return res, nil
 	}
+	drift, err := driftFindings(cfg, tree, dir)
+	if err != nil {
+		return nil, err
+	}
+	res.Findings = append(res.Findings, drift...)
+	return res, nil
+}
+
+// driftFindings compares the bundle on disk with a fresh export.
+func driftFindings(cfg *config.Config, tree *config.ContentTree, dir string) ([]okf.Finding, error) {
 	kinds, err := ParseKinds(cfg.OKFInclude())
 	if err != nil {
 		return nil, err
@@ -64,14 +74,15 @@ func CheckProject(cfg *config.Config, tree *config.ContentTree) (*ProjectResult,
 	if err != nil {
 		return nil, err
 	}
+	var out []okf.Finding
 	for _, g := range []struct {
 		what  string
 		paths []string
 	}{{"is missing", drift.Missing}, {"differs from the sources", drift.Changed}, {"is not produced by the export", drift.Extra}} {
 		for _, p := range g.paths {
-			res.Findings = append(res.Findings, okf.NewFinding(okf.CodeExportDrift, p, 0,
+			out = append(out, okf.NewFinding(okf.CodeExportDrift, p, 0,
 				"%s %s; run `ai-rulez generate` (or `ai-rulez export okf`)", p, g.what))
 		}
 	}
-	return res, nil
+	return out, nil
 }
