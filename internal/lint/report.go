@@ -117,11 +117,11 @@ func WriteText(w io.Writer, c Combined) error {
 			continue
 		}
 		fmt.Fprintf(&sb, "%s:%d: %s %s %s: %s\n", f.File, f.Line, f.Severity, f.Code, f.Name, f.Message)
-		if f.Hint != "" {
-			fmt.Fprintf(&sb, "      fix: %s\n", f.Hint)
+		if f.Trap != nil && f.Trap.Hint != "" {
+			fmt.Fprintf(&sb, "      fix: %s\n", f.Trap.Hint)
 		}
-		if f.Evidence != "" {
-			fmt.Fprintf(&sb, "      evidence: %s (verified %s)\n", f.Evidence, f.VerifiedOn)
+		if f.Trap != nil && f.Trap.Evidence != "" {
+			fmt.Fprintf(&sb, "      evidence: %s (verified %s)\n", f.Trap.Evidence, f.Trap.VerifiedOn)
 		}
 	}
 	if c.Summary.Total == 0 {

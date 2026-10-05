@@ -209,16 +209,18 @@ type Finding struct {
 	Line     int      `json:"line"`
 	Message  string   `json:"message"`
 	Root     string   `json:"root,omitempty"`
-	// Harness, Evidence, VerifiedOn and Hint describe a harness trap (AR9C*):
-	// the tool that ignores the file, the vendor page that says so, the date it
-	// was checked, and how to fix it.
-	Harness    string `json:"harness,omitempty"`
-	Evidence   string `json:"evidence,omitempty"`
-	VerifiedOn string `json:"verified_on,omitempty"`
-	Hint       string `json:"hint,omitempty"`
+	// Trap describes a harness trap (AR9C*): the tool that ignores the file, the
+	// vendor page that says so, the date it was checked, and how to fix it. Nil
+	// for every other finding. It is a pointer so that a Finding stays small.
+	Trap *TrapInfo `json:"-"`
 	// Meta carries the optional annotations (repository path, baseline state,
 	// analyzer, fix); nil for a plain finding.
 	Meta *FindingMeta `json:"-"`
+}
+
+// TrapInfo is the provenance of a harness-trap finding.
+type TrapInfo struct {
+	Harness, Evidence, VerifiedOn, Hint string
 }
 
 // FindingMeta is the optional, non-core data of a finding.
@@ -291,7 +293,9 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 	out := findingJSON{
 		Code: f.Code, Name: f.Name, Severity: f.Severity, File: f.File, Line: f.Line,
 		Message: f.Message, Root: f.Root, Fingerprint: f.Fingerprint(),
-		Harness: f.Harness, Evidence: f.Evidence, VerifiedOn: f.VerifiedOn, Hint: f.Hint,
+	}
+	if f.Trap != nil {
+		out.Harness, out.Evidence, out.VerifiedOn, out.Hint = f.Trap.Harness, f.Trap.Evidence, f.Trap.VerifiedOn, f.Trap.Hint
 	}
 	if f.Meta != nil {
 		out.Accepted, out.AcceptReason = f.Meta.Accepted, f.Meta.AcceptReason
