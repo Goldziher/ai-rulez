@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 )
 
@@ -130,6 +131,10 @@ type runner struct {
 	// files that refer to a changed file.
 	deps  map[string]map[string]struct{}
 	names map[string][]string
+	// exampleGlobs are the lint.example_paths; exampleCache memoizes the
+	// example-fence lines per file.
+	exampleGlobs []globMatcher
+	exampleCache map[string]map[int]bool
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -251,16 +256,20 @@ func (r *runner) resolveSettings() {
 			r.ignore[rule.Code] = true
 		}
 	}
-	for _, g := range r.lc.IgnorePaths {
+	r.ignorePaths = compileGlobs(r.lc.IgnorePaths)
+	r.exampleGlobs = compileGlobs(r.lc.ExamplePaths)
+	r.allow = compileGlobs(r.lc.AllowPaths)
+}
+
+// compileGlobs compiles the valid patterns of a config list.
+func compileGlobs(patterns []string) []globMatcher {
+	var out []globMatcher
+	for _, g := range patterns {
 		if m, ok := newGlob(g); ok {
-			r.ignorePaths = append(r.ignorePaths, m)
+			out = append(out, m)
 		}
 	}
-	for _, g := range r.lc.AllowPaths {
-		if m, ok := newGlob(g); ok {
-			r.allow = append(r.allow, m)
-		}
-	}
+	return out
 }
 
 // ValidateSettings reports lint settings that name no known rule or severity,
@@ -316,6 +325,9 @@ func (r *runner) add(code, abs string, line int, format string, args ...any) {
 	if r.pathIgnored(abs) || r.inlineIgnored(abs, line, code) {
 		return
 	}
+	if exampleAware[code] && r.inExample(abs, line) {
+		return
+	}
 	if r.forceSev != "" {
 		sev = r.forceSev
 	}
@@ -333,15 +345,27 @@ func (r *runner) rootAbs() string {
 	return abs
 }
 
+// configRel returns abs as a slash path relative to the configuration
+// directory, or "" when it lies elsewhere.
+func (r *runner) configRel(abs string) string {
+	cd, err := filepath.Abs(r.cfg.ConfigDir)
+	if err != nil {
+		return ""
+	}
+	rel, rerr := filepath.Rel(gitutil.Resolve(cd), gitutil.Resolve(abs))
+	if rerr != nil {
+		return ""
+	}
+	return filepath.ToSlash(rel)
+}
+
 func (r *runner) pathIgnored(abs string) bool {
 	if len(r.ignorePaths) == 0 {
 		return false
 	}
 	cands := []string{r.tree.Rel(abs)}
-	if cd, err := filepath.Abs(r.cfg.ConfigDir); err == nil {
-		if rel, rerr := filepath.Rel(cd, abs); rerr == nil {
-			cands = append(cands, filepath.ToSlash(rel))
-		}
+	if rel := r.configRel(abs); rel != "" {
+		cands = append(cands, rel)
 	}
 	for _, c := range cands {
 		for _, g := range r.ignorePaths {

@@ -778,6 +778,11 @@
           "description": "Severity override per finding code or name.",
           "additionalProperties": { "type": "string", "enum": ["error", "warning", "info", "off"] }
         },
+        "example_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs of files that document risky commands as examples: findings of the command-shaped rules (AR005, AR006, AR008) in them are dropped."
+        },
         "allow_paths": {
           "type": "array",
           "items": { "type": "string" },
