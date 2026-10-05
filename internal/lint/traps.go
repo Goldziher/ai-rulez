@@ -316,7 +316,7 @@ func (r *runner) addTrap(t Trap, abs string, hit trapHit, generated bool) {
 		return
 	}
 	f := &r.findings[n]
-	f.Harness, f.Evidence, f.VerifiedOn, f.Hint = t.Harness, t.Source, t.VerifiedOn, t.Hint
+	f.Trap = &TrapInfo{Harness: t.Harness, Evidence: t.Source, VerifiedOn: t.VerifiedOn, Hint: t.Hint}
 	if generated && t.CertainlyInert && !r.severityConfigured(t.Code) {
 		f.Severity = SeverityError
 	}

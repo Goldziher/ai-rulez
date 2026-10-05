@@ -82,7 +82,7 @@ func init() {
 	f.BoolVar(&convertWrite, "write", false, "Write the converted tree")
 	f.BoolVar(&convertForce, "force", false, "Overwrite existing content files that differ (config.toml is always merged, never replaced)")
 	f.StringVar(&convertReport, "report", "", "Also write the report (in --format) to this file")
-	f.StringVar(&convertFormat, "format", "text", "Report format: text or json")
+	f.StringVar(&convertFormat, "format", formatText, "Report format: text or json")
 	f.StringSliceVar(&convertFailOn, "fail-on", nil, "Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported")
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
@@ -99,7 +99,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	progress.SetQuiet(true)
 	defer progress.SetQuiet(false)
 
-	if convertFormat != "text" && convertFormat != formatJSON {
+	if convertFormat != formatText && convertFormat != formatJSON {
 		fmtError(fmt.Errorf("unknown --format %q (use text or json)", convertFormat))
 		return exitConvertCannotRun
 	}
@@ -144,7 +144,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	if len(convertFailOn) > 0 && report.Matches(normalizeStatuses(convertFailOn)) {
 		return exitConvertBlocked
 	}
-	if !write && convertFormat == "text" {
+	if !write && convertFormat == formatText {
 		fmt.Fprintln(out, "\nDry run: nothing was written. Rerun with --write to create the files.")
 	}
 	return 0

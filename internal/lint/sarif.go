@@ -264,7 +264,7 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 			authority, path = rest[:i], rest[i:]
 		}
 		switch {
-		case authority == "" || strings.EqualFold(authority, "localhost"):
+		case authority == "" || strings.EqualFold(authority, hostLocalhost):
 		case driveAuthority.MatchString(authority):
 			// file://C:/x is a common malformed spelling of file:///C:/x
 			path = "/" + authority + path

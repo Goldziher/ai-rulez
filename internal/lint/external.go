@@ -98,7 +98,7 @@ func loopbackValue(v string) bool {
 		host = h
 	}
 	host = strings.Trim(host, "[]")
-	if host == "localhost" {
+	if host == hostLocalhost {
 		return true
 	}
 	ip := net.ParseIP(host)
@@ -314,3 +314,6 @@ func (r *runner) scannedFiles() []string {
 	sort.Strings(files)
 	return files
 }
+
+// hostLocalhost is the loopback host name the URL checks treat as local.
+const hostLocalhost = "localhost"

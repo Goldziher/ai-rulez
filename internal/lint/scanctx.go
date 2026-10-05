@@ -192,7 +192,7 @@ func stripShellComment(s string) string {
 func hostClass(host string) (loopback, private bool) {
 	host = strings.ToLower(strings.Trim(host, "[]"))
 	switch {
-	case host == "localhost" || strings.HasSuffix(host, ".localhost") || host == "0.0.0.0" || host == "::1":
+	case host == hostLocalhost || strings.HasSuffix(host, ".localhost") || host == "0.0.0.0" || host == "::1":
 		return true, true
 	case strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".internal") || strings.HasSuffix(host, ".lan") || strings.HasSuffix(host, ".home.arpa"):
 		return false, true
