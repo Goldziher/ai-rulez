@@ -26,7 +26,10 @@ func (p RetryPolicy) delay(attempt int, err error) time.Duration {
 	if maxD <= 0 {
 		maxD = 30 * time.Second
 	}
-	ceiling := min(base<<attempt, maxD)
+	ceiling := maxD
+	if attempt < 30 && base < maxD>>attempt { // base<<attempt would overflow or exceed maxD otherwise
+		ceiling = base << attempt
+	}
 	rnd := p.Rand
 	if rnd == nil {
 		rnd = rand.Float64
