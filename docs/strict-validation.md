@@ -108,6 +108,8 @@ stdout.
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9C0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
+| AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)). AR9D, AR9E and AR9F are proposed by other open designs, so telemetry uses AR9K |
+| AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -1597,5 +1599,25 @@ the [llm] table is invalid: unknown backend, a literal secret instead of an api_
 - Why: An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.
 - Bad: `api_key_env = "sk-live-123"`
 - Good: `api_key_env = "ANTHROPIC_API_KEY"`
+
+### AR9K0 telemetry-config-invalid
+
+a [telemetry] setting is invalid: bad enum or range, unsupported protocol, non-https endpoint, or a literal credential in headers_env
+
+- Default severity: `error`
+- Analyzer: `budgets` (scope `item`)
+- Why: An out-of-range sample, an unsupported protocol, a non-https or credential-bearing endpoint, or a literal credential in headers_env makes export fail or leaks the credential into the repository.
+- Bad: `otlp_endpoint = "http://user:pw@collector.example.com"`
+- Good: `otlp_endpoint = "https://collector.example.com"` with `headers_env = ["OTEL_HEADERS"]` naming an environment variable
+
+### AR9K1 telemetry-repo-key-ignored
+
+a repository [telemetry] sets a key only user scope may set (allow_network, otlp_endpoint, headers_env, ...); it is ignored
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: Only the user config and AI_RULEZ_TELEMETRY_* variables may choose where data is sent, so a repository cannot opt its contributors into export; the key has no effect.
+- Bad: `allow_network = true` in the repository `[telemetry]`
+- Good: Set it in the user config, or remove it from the repository
 
 <!-- rules:end -->

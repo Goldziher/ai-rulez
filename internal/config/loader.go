@@ -613,6 +613,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
 		Lock            *LockConfig            `toml:"lock"`
 		LLM             *llm.Config            `toml:"llm"`
+		Telemetry       *TelemetryConfig       `toml:"telemetry"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
@@ -686,6 +687,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest:    raw.RoleManifest,
 		Lock:            raw.Lock,
 		LLM:             raw.LLM,
+		Telemetry:       raw.Telemetry,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,

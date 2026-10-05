@@ -2,7 +2,8 @@
 
 Which generated skills are ever used, which fire when they should not, and which can be retired? A runtime event
 only answers that if it can be tied back to a source skill, its owner and its version. ai-rulez supports that in
-four opt-in pieces. None of them makes a network call, and none is enabled by default.
+four opt-in pieces. None of them makes a network call, and none is enabled by default. For rule, agent and context
+loads, per-session statistics and optional OpenTelemetry export, see [Item-load telemetry and OTLP export](telemetry.md).
 
 1. a **skills index** written by `generate`,
 2. a **hook template** that records skill invocations as identifier-only log lines,
@@ -165,3 +166,9 @@ and `--evals` point at other files (a named file must exist).
 
 `--json` prints the same data as JSON (rows gain `feedback` and `eval` members, and the report `feedback_events`).
 The command reports and exits 0.
+
+## See also
+
+[Item-load telemetry and OTLP export](telemetry.md) extends the same log with rule, agent and context events (Claude Code
+`InstructionsLoaded`, `SubagentStart`, `SubagentStop`), adds `report usage` sections for them, and documents the opt-in
+OTLP exporter, its consent model and the trust rule that keeps a repository from enabling network export.

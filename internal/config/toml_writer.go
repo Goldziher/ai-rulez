@@ -55,6 +55,7 @@ type tomlOutput struct {
 	RoleManifest    *RoleManifestConfig    `toml:"role_manifest,omitempty"`
 	Lock            *LockConfig            `toml:"lock,omitempty"`
 	LLM             *llm.Config            `toml:"llm,omitempty"`
+	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -151,6 +152,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		RoleManifest:    cfg.RoleManifest,
 		Lock:            cfg.Lock,
 		LLM:             cfg.LLM,
+		Telemetry:       cfg.Telemetry,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,
