@@ -225,6 +225,9 @@ func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, w
 		if err != nil {
 			return err
 		}
+		for _, problem := range snap.Problems {
+			logger.Warn("Cannot pin part of the configuration; lock --check will fail until it is fixed", "problem", problem)
+		}
 		contentlock.Build(next, snap)
 		return nil
 	}
