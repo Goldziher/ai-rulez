@@ -30,6 +30,9 @@ exclude = [
 
   # npm (rate-limited)
   "npmjs\\.com/package/",
+
+  # CodeBuddy permissions docs return HTTP 200 manually but repeatedly time out on CI runners.
+  "^https://www\\.codebuddy\\.ai/docs/cli/permissions/$",
 ]
 
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
