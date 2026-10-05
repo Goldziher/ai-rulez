@@ -104,7 +104,7 @@ func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	}
 	key := cc.c.key("chat", firstNonEmpty(req.Model, cc.model), req)
 	var hit ChatResponse
-	if cc.c.load(key, &hit) {
+	if cc.c.load(key, &hit) && (req.AcceptReply == nil || req.AcceptReply(hit.Text) == nil) {
 		hit.Cached, hit.CostUSD = true, 0
 		return hit, nil
 	}
@@ -112,7 +112,9 @@ func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	if err != nil {
 		return resp, err
 	}
-	cc.c.store(key, resp)
+	if req.AcceptReply == nil || req.AcceptReply(resp.Text) == nil {
+		cc.c.store(key, resp)
+	}
 	return resp, nil
 }
 
