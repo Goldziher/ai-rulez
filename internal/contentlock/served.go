@@ -39,7 +39,12 @@ const volatileHeaderLines = 40
 
 var (
 	headerCommentPrefixes = []string{"<!--", "-->", "//", "#", ";", "/*", "*/"}
-	generatedStampPattern = regexp.MustCompile(`(?: \| )?Generated: [^\n]*$`)
+	// generatedStampPattern is the stamp ai-rulez writes: a date and time, at the
+	// end of the line (optionally before a comment closer), and nothing else. Text after "Generated:" that is not one is content.
+	generatedStampPattern = regexp.MustCompile(`(?: \| )?Generated: \d{4}-\d{2}-\d{2}[ T][0-9:.]+(?:Z|[+-]\d{2}:?\d{2})?[ \t]*(?:-->|\*/)?[ \t]*$`)
+	// sourceHashLinePattern is a whole line that only carries the generated hash
+	// (optionally inside a comment): "# Source-Hash: blake3:<hex>".
+	sourceHashLinePattern = regexp.MustCompile(`^\s*(?:<!--|/\*|//|#|;)?\s*Source-Hash: [a-z0-9]+:[0-9a-f]+\s*(?:-->|\*/)?\s*$`)
 )
 
 func hasCommentPrefix(line string) bool {
@@ -52,17 +57,13 @@ func hasCommentPrefix(line string) bool {
 	return false
 }
 
-func isSourceHashLine(line string) bool {
-	s := strings.TrimSpace(line)
-	for _, p := range headerCommentPrefixes {
-		s = strings.TrimPrefix(s, p)
-	}
-	return strings.HasPrefix(strings.TrimSpace(s), "Source-Hash: ")
-}
+func isSourceHashLine(line string) bool { return sourceHashLinePattern.MatchString(line) }
 
 // StripVolatileHeader drops the Source-Hash line and the Generated stamp from
 // the generated header at the top of a file. Only the leading header region is
-// inspected, and only comment lines: a body line is never touched. The
+// inspected, only comment lines, and only lines of exactly the generated shape
+// (a line that carries other text after the marker is content): a body line is
+// never touched. The
 // Content-Hash line stays, it identifies the file's own content.
 func StripVolatileHeader(content []byte) []byte {
 	lines := strings.SplitAfter(string(content), "\n")

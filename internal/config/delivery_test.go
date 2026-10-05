@@ -198,3 +198,36 @@ func TestValidateDynamicSkills(t *testing.T) {
 		})
 	}
 }
+
+func TestSkillSourceConfigValidate_RejectsGitOptions(t *testing.T) {
+	t.Parallel()
+	for _, s := range []SkillSourceConfig{
+		{Name: "s", URL: "--upload-pack=touch /tmp/x;@h:p"},
+		{Name: "s", URL: "git+--upload-pack=x;@h:p"},
+		{Name: "s", URL: "https://h/r.git", Ref: "--upload-pack=x"},
+	} {
+		assert.Error(t, s.Validate(0), "%+v", s)
+	}
+}
+
+func TestSkillSourceConfigValidate_LimitsCannotBeNegative(t *testing.T) {
+	t.Parallel()
+	assert.Error(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxSkills: -1}).Validate(0))
+	assert.Error(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxBytes: -1}).Validate(0))
+	assert.NoError(t, (&SkillSourceConfig{Name: "s", URL: "/tmp/x", MaxSkills: 10, MaxBytes: 1 << 20}).Validate(0))
+}
+
+func TestContentForPreset_SkillSourcesAloneGetTheStub(t *testing.T) {
+	t.Parallel()
+	cfg := &Config{
+		SkillSources: []SkillSourceConfig{{Name: "team", URL: "/tmp/skills"}},
+		Content:      treeWithSkills(),
+	}
+	assert.True(t, cfg.ServesSkills(cfg.Content))
+	got := skillNames(cfg.ContentForPreset("claude"))
+	assert.Contains(t, got, DynamicSkillsName, "the agent must be told to call find_skill when a source serves skills")
+	assert.Contains(t, got, "core", "no project skill is dropped")
+
+	plain := &ContentTree{Skills: []ContentFile{skillWith("core", "")}}
+	assert.False(t, (&Config{Content: plain}).ServesSkills(plain))
+}

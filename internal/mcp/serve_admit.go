@@ -103,6 +103,22 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 	return nil
 }
 
+// dropUnscannable removes the files the security scan could not read from what
+// the skill serves (trust=error: content from a remote must be scanned to be
+// served). The skill's digest still covers them, so the lock sees them change.
+func (s *CatalogSkill) dropUnscannable() {
+	kept := make([]CatalogFile, 0, len(s.Files))
+	for i := range s.Files {
+		if lint.UnscannableReason(s.Files[i].Content) != "" {
+			s.Unscanned = append(s.Unscanned, s.Files[i].RelPath)
+			continue
+		}
+		kept = append(kept, s.Files[i])
+	}
+	sort.Strings(s.Unscanned)
+	s.Files = kept
+}
+
 func (a Admission) scan(s *CatalogSkill) *Refusal {
 	level := s.Trust
 	if level == "" {
@@ -123,6 +139,9 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 		}
 	}
 	s.ScanFindings = len(findings) - len(blocking)
+	if len(blocking) == 0 && level == config.TrustError {
+		s.dropUnscannable()
+	}
 	if len(blocking) == 0 {
 		for _, f := range findings {
 			logger.Warn("Security scan finding in a served skill", "skill", s.Name, "code", f.Code, "where", fmt.Sprintf("%s:%d", f.File, f.Line), "message", f.Message)

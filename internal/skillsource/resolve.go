@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -32,8 +33,6 @@ type Options struct {
 	Frozen bool
 	// Refresh ignores the lock's pin and resolves the ref again (`ai-rulez lock`).
 	Refresh bool
-	// Token authenticates HTTPS fetches.
-	Token string
 }
 
 // Resolved is a source fetched (or found in the cache) and ready to read.
@@ -87,6 +86,11 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "resolve local skill source %q", spec.Name)
 	}
+	// A symlinked root is the user's own choice of directory: resolve it and read
+	// (and digest) the real directory. Links below the root are never followed.
+	if resolved, linkErr := filepath.EvalSymlinks(root); linkErr == nil {
+		root = resolved
+	}
 	info, err := os.Stat(root)
 	if err != nil || !info.IsDir() {
 		return nil, oops.With("path", root).Errorf("skill source %q: %s is not a directory", spec.Name, root)
@@ -121,6 +125,10 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	covered := entry.Covers(spec.Want()) && !opts.Refresh
 	if covered && entry.Commit == "" {
 		covered = false
+	}
+	if covered && !lockCommit.MatchString(entry.Commit) {
+		return nil, oops.Wrapf(errors.Join(config.ErrLockViolation, errLockCommit),
+			"skill source %q: the lock's commit %q is not a full hexadecimal commit SHA; run `ai-rulez lock`", spec.Name, entry.Commit)
 	}
 	if opts.Frozen && !covered {
 		return nil, errLock(spec, "not covered by %s (or the lock is stale); run `ai-rulez lock`", lockfile.FileName)
@@ -162,7 +170,7 @@ func materialize(ctx context.Context, spec Spec, opts Options, q treeRequest) (*
 			return oops.With("url", spec.Redacted()).With("commit", q.commit).
 				Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", spec.Name, q.commit)
 		}
-		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, opts.Token, treeDir, &fetched)
+		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, treeDir, &fetched)
 	}
 	if err := ensure(); err != nil {
 		return nil, err
@@ -205,7 +213,7 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 		}
 		return commit, kindFor(spec.Ref), nil
 	}
-	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref, opts.Token); err != nil {
+	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref); err != nil {
 		return "", "", err
 	}
 	writeRef(q.repoDir, spec.Ref, commit)
@@ -214,10 +222,19 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 
 var errDigest = errors.New("content digest mismatch")
 
+// lockCommit is the only shape a lock's commit may have: it becomes a cache path
+// component, so anything else (a path traversal) is a violation, never a path.
+var lockCommit = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
+
+var errLockCommit = errors.New("invalid commit in the lock")
+
 func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, covered bool) (*Resolved, error) {
 	dir := treeDir
 	if spec.Path != "" {
 		dir = filepath.Join(treeDir, filepath.FromSlash(spec.Path))
+		if err := rejectSymlinkedPath(treeDir, spec.Path); err != nil {
+			return nil, oops.With("url", spec.Redacted()).Wrapf(err, "skill source %q", spec.Name)
+		}
 	}
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		return nil, oops.With("url", spec.Redacted()).Errorf("skill source %q: path %q does not exist at commit %s", spec.Name, spec.Path, commit)
@@ -238,17 +255,45 @@ func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, cove
 	return res, err
 }
 
-func fetchInto(ctx context.Context, url, ref, kind, commit, token, treeDir string, fetched *bool) error {
-	if err := os.MkdirAll(filepath.Dir(treeDir), 0o755); err != nil {
+// rejectSymlinkedPath fails when any component of rel below root is a symlink: a
+// fetched repository could otherwise point its skills path at a file tree outside
+// the checkout, whose content neither the digest nor the scan would cover.
+func rejectSymlinkedPath(root, rel string) error {
+	cur := root
+	for _, part := range strings.Split(filepath.ToSlash(rel), "/") {
+		if part == "" || part == "." {
+			continue
+		}
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		if err != nil {
+			return nil //nolint:nilerr // a missing path is reported by the caller
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return oops.Errorf("path %q goes through a symlink (%s); symlinks in a fetched repository are not followed", rel, part)
+		}
+	}
+	return nil
+}
+
+func fetchInto(ctx context.Context, url, ref, kind, commit, treeDir string, fetched *bool) error {
+	if err := os.MkdirAll(filepath.Dir(treeDir), 0o700); err != nil {
 		return oops.Wrapf(err, "create skill source cache")
 	}
-	tmp := treeDir + ".partial"
-	_ = os.RemoveAll(tmp) //nolint:errcheck // a stale partial checkout is simply replaced
-	if err := fetchCommit(ctx, url, ref, kind, commit, token, tmp); err != nil {
+	// A private name per fetch: two servers fetching the same commit do not share a checkout.
+	tmp, err := os.MkdirTemp(filepath.Dir(treeDir), "tree-*.partial")
+	if err != nil {
+		return oops.Wrapf(err, "create a checkout directory in the skill source cache")
+	}
+	if err := fetchCommit(ctx, url, ref, kind, commit, tmp); err != nil {
 		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
 		return err
 	}
 	if err := os.Rename(tmp, treeDir); err != nil {
+		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
+		if _, statErr := os.Stat(treeDir); statErr == nil {
+			return nil // another process stored the same commit first; its tree is verified like ours
+		}
 		return oops.Wrapf(err, "store skill source in the cache")
 	}
 	*fetched = true
@@ -257,7 +302,7 @@ func fetchInto(ctx context.Context, url, ref, kind, commit, token, treeDir strin
 
 func kindFor(ref string) string {
 	switch {
-	case ref == "" || ref == "HEAD":
+	case ref == "" || ref == refHEAD:
 		return kindHead
 	case fullSHA.MatchString(ref):
 		return kindSHA
@@ -276,11 +321,19 @@ func cacheRoot(override string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
+	// Never fall back to the shared temp directory: a cache other users can write
+	// to could hold a tree they planted (an unlocked source trusts the cache).
 	home, err := os.UserHomeDir()
-	if err != nil {
-		home = os.TempDir()
+	if err != nil || home == "" {
+		return "", oops.Hint("Set HOME, or run from an account with a home directory").
+			Errorf("cannot place the skill-source cache: no home directory")
 	}
 	return filepath.Join(home, ".cache", "ai-rulez", "skill-sources"), nil
+}
+
+// cacheTree is the directory holding the tree of a commit of url below the cache root.
+func cacheTree(root, url, commit string) string {
+	return filepath.Join(root, urlKey(gitURL(url)), commit, "tree")
 }
 
 func urlKey(url string) string {
@@ -309,10 +362,10 @@ func writeRef(repoDir, ref, commit string) {
 	}
 	m[refLabel(ref)] = commit
 	data, err := json.Marshal(m)
-	if err != nil || os.MkdirAll(repoDir, 0o755) != nil {
+	if err != nil || os.MkdirAll(repoDir, 0o700) != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644) //nolint:errcheck,gosec // the index is only a convenience for offline runs
+	_ = os.WriteFile(path, data, 0o600) //nolint:errcheck // the index is only a convenience for offline runs
 }
 
 // Problem is one way the lock disagrees with the configured sources.
@@ -346,6 +399,8 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 			problems = append(problems, Problem{spec.Name, "not covered by the lock"})
 		case !entry.Covers(spec.Want()):
 			problems = append(problems, Problem{spec.Name, "lock is stale: url, path or ref changed since it was written"})
+		case spec.IsGit() && !lockCommit.MatchString(entry.Commit):
+			problems = append(problems, Problem{spec.Name, fmt.Sprintf("the lock's commit %q is not a full hexadecimal commit SHA", entry.Commit)})
 		case spec.IsGit():
 			root, _ := cacheRoot(cacheDir) //nolint:errcheck // never fails
 			tree := filepath.Join(root, urlKey(gitURL(spec.URL)), entry.Commit, "tree")

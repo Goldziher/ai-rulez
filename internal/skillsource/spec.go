@@ -25,11 +25,14 @@ type Spec struct {
 	Exclude    []string
 	NamePrefix string
 	Trust      string
+	// MaxSkills and MaxBytes bound what the source loads; 0 selects the defaults.
+	MaxSkills int
+	MaxBytes  int
 }
 
 // FromConfig converts a [[skill_sources]] entry.
 func FromConfig(c *config.SkillSourceConfig) Spec {
-	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust}
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes}
 }
 
 // TrustLevel is the scan level, defaulting to the strict one.
@@ -71,6 +74,9 @@ func ParseArg(arg string) (Spec, error) {
 		}
 	}
 	spec.URL = url
+	if err := checkRemote(url, spec.Ref); err != nil {
+		return Spec{}, err
+	}
 	if spec.Path != "" {
 		if clean := path.Clean(spec.Path); clean == ".." || strings.HasPrefix(clean, "../") {
 			return Spec{}, oops.Errorf("--source path %q escapes the repository", spec.Path)
