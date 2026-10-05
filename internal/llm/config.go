@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -233,8 +234,19 @@ func (c Config) validateBaseURL() []string {
 		return []string{"base_url must not embed credentials; put the key in the variable named by api_key_env"}
 	case u.RawQuery != "":
 		return []string{"base_url must not carry a query string (it may hold a key); configure headers at the gateway instead"}
+	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()):
+		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost)"}
 	}
 	return nil
+}
+
+// isLoopbackHost reports whether host is localhost or a loopback IP literal.
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (c Config) validateNumbers() []string {
