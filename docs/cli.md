@@ -12,7 +12,9 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
-| `ai-rulez verify`               | Verify generated plugin bundles (requires `--plugin`) |
+| `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
+| `ai-rulez lock`                 | Pin remote includes and installed skills in `ai-rulez.lock` |
+| `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
@@ -888,16 +890,36 @@ ai-rulez generate [config-file] [flags]
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
+| `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
+| `--locked`                      | boolean | false         | Require `ai-rulez.lock` to cover every remote include and installed skill and fetch exactly the pinned commits (CI mode, see [Lock Command](#lock-command)) |
+| `--frozen`                      | boolean | false         | `--locked` and never use the network: resolve only from the local cache, verified against the lock |
 | `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see [Local Configuration](#local-configuration))                  |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
 | `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
+| `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
+| `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell)                                                              |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
 `--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` are hidden deprecated no-ops kept so existing scripts keep working: `generate` only writes MCP config files and never configures CLI tools, so there is nothing to skip.
+
+`--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` leaves it alone until its sources change).
+
+#### Detecting drift
+
+Teams that commit generated files can gate CI on `generate --check`. It renders in memory, never writes or deletes, and prints one line per file that differs:
+
+| Line | Meaning |
+| --- | --- |
+| `missing: <path>` | A generated file is not on disk |
+| `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
+| `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit |
+| `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it |
+
+Exit codes: `0` nothing differs, `1` the check could not run (configuration invalid, a nested root failed to load), `2` at least one file differs. A trailing-newline-only difference is not reported, because `generate` normalizes it. With `[header] hashes = "none"` there is no hash to compare, so every difference is `stale`. `--check` cannot be combined with `--dry-run`, `--plugin` (use `verify --plugin`) or `--gitignore`.
 
 **Examples:**
 
@@ -1023,6 +1045,7 @@ ai-rulez clean [config-path] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
 | `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
 | `--keep-manifest`     | boolean | false              | Leave the generated manifest in place                   |
+| `--user`              | boolean | false              | Remove what `generate --user` wrote into the home directory, as recorded in `~/.config/ai-rulez/.generated-manifest.json` (see [User-level configuration](user-scope.md)) |
 
 Preview what would be removed:
 
@@ -1046,12 +1069,14 @@ ai-rulez clean --force --keep-gitignore --keep-manifest
 
 ### `ai-rulez verify [config-path]`
 
-Verify generated plugin outputs and provenance hashes without modifying files.
+Verify generated files without modifying them.
+
+Without `--plugin`, every file listed in `.ai-rulez/.generated-manifest.json` must exist and still match the `Content-Hash` in its own header. This is fast and offline, and catches hand edits and deleted files; it does not re-render, so a source that changed since the last `generate` is caught by [`generate --check`](#detecting-drift) instead. Output and exit codes are the same (`0` verified, `1` cannot run, e.g. no manifest, `2` files differ). With `--plugin`, generated plugin bundles are checked against their provenance hashes.
 
 **Syntax:**
 
 ```bash
-ai-rulez verify [config-path] --plugin [flags]
+ai-rulez verify [config-path] [--plugin] [flags]
 ```
 
 **Flags:**
@@ -1061,6 +1086,7 @@ ai-rulez verify [config-path] --plugin [flags]
 | `--plugin`            | boolean | false              | Verify generated plugin bundles and marketplace files      |
 | `--recursive` / `-r`  | boolean | false              | Find and verify plugin producers recursively               |
 | `--if-configured`     | boolean | false              | Succeed without work when no plugin producer is configured |
+| `--if-generated`      | boolean | false              | With `--plugin`, succeed without work when the bundle has not been generated yet |
 | `--profile` / `-p`    | string  | configured default | Profile used when the plugin was generated                 |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 
@@ -1075,6 +1101,8 @@ Verify every plugin producer and marketplace in a repository:
 ```bash
 ai-rulez verify --recursive --plugin --if-configured
 ```
+
+When a `[plugin]` block exists but no bundle was generated, `verify --plugin` fails with `plugin bundle not generated; run `ai-rulez generate --plugin``. `--if-configured` only skips a project with no plugin configuration; add `--if-generated` to also skip until the bundle exists.
 
 Recursive verification treats a marketplace root and its members as one atomic
 producer. Consumer-only plugin installation declarations are skipped. Missing
@@ -1125,8 +1153,8 @@ when the surface is loaded:
 
 | Bucket        | Meaning                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
-| `always`      | Paid on every request: the root instructions file, skill and command names, agent names and descriptions |
-| `conditional` | Paid in some harness modes only — skill and command descriptions — and machine-local files, labelled `(machine-local)` for roots |
+| `always`      | Paid on every request: the root instructions file and the item listing (below) |
+| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labelled `(machine-local)` for roots |
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
@@ -1137,9 +1165,69 @@ agent-requested rules split into an `always` description and an `on demand` body
 manual rules are `on demand`. Machine-local rule files (`*.local.*`) count as `conditional`.
 
 The root instructions file is broken down per section, and rules and context are
-listed individually so an expensive one can be named. Skill names, descriptions and
-bodies are separate lines: they are loaded on different schedules, and a single
-per-file total hides which part is actually costing anything.
+listed individually so an expensive one can be named. The item listing, bodies and
+file overhead are separate lines: they are loaded on different schedules, and a
+single per-file total hides which part is actually costing anything.
+
+#### The item listing
+
+A harness that supports skills does not wait for a skill to be opened. At session
+start it puts a listing of the skills (and, for some, commands and agents) it can
+load into the prompt: one entry per item with its name and description, and for
+Codex and pi its path. That listing is paid on every request, whether or not a
+skill is ever used, and it is usually the largest always-loaded cost a skill tree
+adds. Each runtime whose harness lists items gets one `skill listing` line (and
+`command listing` / `agent listing` where the harness lists those), with the
+names, descriptions, paths and per-entry framing as children. The listing is
+included in the runtime's `always` figure, in the headline and in `--budget`.
+
+| Harness                                  | Lists                       | Source of the model |
+| ---------------------------------------- | --------------------------- | ------------------- |
+| `claude`                                 | skills, commands, agents (descriptions cut at 1,536 characters) | documented, measured |
+| `codex`                                  | skills, with path           | documented          |
+| `pi`                                     | skills, with path           | documented          |
+| `gemini`, `opencode`, `devin`, `cline`, `junie` | skills            | documented          |
+| `cursor`, `copilot`                      | skills                      | implied by the docs, not stated as a per-request listing |
+| `amp`, `antigravity`, `baz`, `continue-dev`, `hermes`, `xum` | not modeled | no listing is reported |
+
+An item with `disable-model-invocation: true` is not offered to the model and is
+not listed. Each entry costs the token count of its name, description and path
+plus a framing constant of 27 tokens (`listing_entry_overhead` in the JSON).
+
+The figure is an estimate, and so is the constant. Calibration method, which you
+can repeat on your own harness version:
+
+```bash
+mkdir p && cd p && git init -q
+# empty project
+claude -p "reply with the single word ok" --output-format json \
+  --setting-sources project --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+# then add 100 skills with ~165-character descriptions under .claude/skills and rerun
+```
+
+The prompt size is `input_tokens + cache_creation_input_tokens +
+cache_read_input_tokens`. On Claude Code 2.1.289, 100 such skills added 6,402
+tokens (64 per skill); `ai-rulez tokens` reports 6,400 for the same skills as an
+ai-rulez source. The constant is the difference between that per-skill figure and
+the `cl100k_base` count of the name and description (3 + 34 tokens), so it also
+absorbs the tokenizer gap on that text.
+
+What the estimate does not model: a harness bounds its listing and shortens or
+omits entries beyond it (Codex: a share of the context window; Claude Code: a total
+budget in addition to the 1,536-character per-entry cap, which capped the same probe
+at about 9.6k tokens from 100 skills up). A very large skill set is therefore an
+upper estimate. `truncated_descriptions` counts entries whose description exceeds a
+known per-entry limit. With `agents_md`, skills written only to the shared
+`.agents/skills` tree are not attributed to a preset.
+
+The earlier model counted only skill and command names (and agent descriptions) as
+`always` and skill descriptions as `conditional`. Those figures remain in the JSON
+as `always_legacy`, `conditional_legacy` (per runtime) and `headline_always_legacy`,
+and the text report prints the pre-listing headline next to the listing share, so a
+number recorded before this change stays comparable. `headline_always` itself now
+includes the listing, so a `--budget` that passed before can fail; raise the ceiling
+or trim descriptions. Provider specs declare the listing with a `[listing]` table
+(`skills`, `commands`, `agents`, `include_path`, `description_limit`).
 
 `--budget` compares against the headline figure and exits `2` when it is exceeded,
 which is distinct from `1` so a hook can tell "over budget" from "the command
@@ -1174,6 +1262,16 @@ while `.claude/agents/*.md` already carry the same text on demand. Drop it with
 `builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
 lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
+## Usage Commands
+
+Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
+
+| Command | Purpose |
+| --- | --- |
+| `ai-rulez usage hook [-o file] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the Claude Code hooks block that records skill invocations |
+| `ai-rulez usage record [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
+| `ai-rulez report usage <log> [--index f] [--json] [-n dir]` | Join a usage log with `skills-index.json`: used, never used, changed since used, unknown |
+
 ## Validation Command
 
 ### `ai-rulez validate [config-path]`
@@ -1200,6 +1298,7 @@ ai-rulez validate [config-path] [flags]
 | `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
 | `--format`            | string  | With `--strict`: `text` (default) or `json` |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
+| `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
@@ -1255,6 +1354,43 @@ or a value outside an enum fails rather than being silently dropped. The structu
 - No skill and command share an output id. Both render to `.claude/skills/{id}/SKILL.md`, differing
   only in whether the item is user-invocable, so a shared id silently overwrites one with the other.
   This check pools root and every domain, because the output layout has no domain segment.
+
+## Lock Command
+
+### `ai-rulez lock [name...]`
+
+Remote includes and installed skills are fetched at generate time, and a `ref` that is empty or a branch moves. `ai-rulez lock` resolves every git include and installed skill and records, in `.ai-rulez/ai-rulez.lock` (commit it):
+
+- the source, path and requested ref,
+- the commit the ref resolved to,
+- a `sha256` digest of the imported file tree.
+
+Local-path sources live in the repository and are not locked. Credentials in a source URL are redacted in the lock.
+
+```bash
+ai-rulez lock                 # pin everything (uses the network)
+ai-rulez lock shared          # re-pin one include or skill, keep the other pins
+ai-rulez skill update kreuzberg   # same, for installed skills only
+ai-rulez lock --check         # verify lock vs config and cached files; no network
+```
+
+With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce identical output even after the remote moved, and verifies the digest of what it fetched. A mismatch fails the run (a damaged cache is repaired by fetching the pinned commit again first; a remote that serves different bytes for the same commit is a hard failure). A source the lock does not cover is fetched as before, with the advice to run `ai-rulez lock`.
+
+| Flag | Description |
+| --- | --- |
+| `--check` | Verify the lock against the configuration and any cached content; exit 2 on a mismatch, a stale entry or an entry no longer configured |
+| `--kind include\|skill` | Limit a refresh to one kind |
+| `--recursive` / `-r` | Process every nested root |
+
+CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source; `generate --frozen` additionally never touches the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and `validate --strict` reports it as `AR010` (raise it to an error with `[lint.severity]`). Pinning `ref` to a full commit SHA also counts as pinned.
+
+Signature or attestation verification is not implemented: the lock proves the bytes did not change since you reviewed them, not who published them.
+
+## Scan Command
+
+### `ai-rulez scan [config-path]`
+
+Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 
 ## Migrate Command
 
@@ -1398,7 +1534,7 @@ The CLI uses standard exit codes:
 | ---- | ---------------------------------------------------------------- |
 | 0    | Success                                                          |
 | 1    | Error (config not found, validation failed, bad flags, etc.)     |
-| 2    | `tokens --budget` exceeded — a hook can tell over-budget from failure |
+| 2    | `tokens --budget` exceeded — a hook can tell over-budget from failure; also `validate --strict` / `scan` findings, drift reported by `generate --check` / `verify`, and `lock --check` mismatches |
 
 ## Output Examples
 

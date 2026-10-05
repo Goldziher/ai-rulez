@@ -42,7 +42,8 @@ filename = "{id}.md"
 sections = ["frontmatter", "content"]
 
 [outputs.agents.frontmatter]
-fields = ["description"]
+# .agents/agents is shared with the antigravity preset, which writes these keys.
+fields = ["description", "kind", "temperature", "max_turns", "timeout_mins"]
 tools = true
 emit_model = true
 

@@ -181,6 +181,7 @@ func (g *DevinPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
+	writeSkillSpecFields(&builder, skill, nil)
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))

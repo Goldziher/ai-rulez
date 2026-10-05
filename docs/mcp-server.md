@@ -130,6 +130,65 @@ The MCP server enables AI assistants to:
 
 This approach ensures your configuration remains auditable and version-controlled, while allowing AI assistants to help you manage it efficiently.
 
+## Serving Skills (`--serve-skills`)
+
+`ai-rulez mcp --serve-skills` starts a different, **read-only** server for consumers of skills rather
+than authors of configuration. It implements the MCP [Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension)
+(`io.modelcontextprotocol/skills`, SEP-2640, status *Final*, verified 2026-10-04), so a client that
+supports MCP but not a local skills directory can discover and load the skills of a profile with no
+files on disk. The authoring tools (create, update, delete, generate, ...) are **not registered** in
+this mode.
+
+```bash
+ai-rulez mcp --serve-skills --profile backend
+ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --deny 'internal-*'
+```
+
+| Flag | Meaning |
+| ---- | ------- |
+| `--profile` | Profile whose skills are served. Default: the configured default profile. A profile is the role: it selects the domains whose skills apply. |
+| `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
+| `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. |
+| `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
+
+The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
+`SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
+preset. Nothing is written. Restart the server to pick up edits.
+
+### What is exposed
+
+- **Resources**: every file of a skill as `skill://<name>/<path>` (`skill://pdf-processing/SKILL.md`,
+  `skill://pdf-processing/references/FORMS.md`), readable with `resources/read`. `_meta` carries
+  `io.modelcontextprotocol.skills/digest`.
+- **`skills/list`** and **`skills/get`** (JSON-RPC methods defined by the extension): the entry of a
+  skill is `{uri, frontmatter, resources: [{uri, digest, size}]}` with `sha256:<hex>` digests, so a
+  client can verify what it loads. An unknown URI returns `-32602`. The server declares
+  `capabilities.extensions["io.modelcontextprotocol/skills"]` and the `resources` capability.
+  `resources/directory/read` is not implemented and `directoryRead` is not declared.
+- **Tools** for clients that only speak tools, all annotated read-only: `search_skills(query, limit, domain)`
+  ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
+  deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
+  provenance and per-file digests; `read_skill_file(uri)` returns a supporting file.
+
+### Provenance
+
+Search and `get_skill` results carry `digest` (a sha256 over the digests of all the skill's files, so
+it changes when any file does), `source` (the authored path, or the repository of an installed
+skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full commit SHA). Log the
+`digest` to record exactly what a session loaded.
+
+### Notes and limits
+
+- The Go SDK dispatches only the methods it knows, so `skills/list` and `skills/get` are answered in a
+  thin JSON-RPC layer in front of the SDK; everything else, including resources and tools, is served
+  by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers.
+- `skills/list` returns the whole catalog in one page (no `nextCursor`).
+- A skill URI uses the skill name as its path, so two served skills must not share a name; the server
+  refuses to start when they do.
+- The extension requires every skill to have a `name` and a `description`. A skill without a
+  description is not served and a warning on stderr names it; the rest are unaffected.
+- Semantic (embedding) search is not implemented; the ranking is lexical.
+
 ## Typical Workflow
 
 ### With Your Editor

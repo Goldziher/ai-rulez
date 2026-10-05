@@ -13,6 +13,15 @@ display_name = "Claude Code"
 directories = [".claude", ".claude/skills", ".claude/agents", ".claude/rules"]
 
 # CLAUDE.md is composed by walking these sections in order.
+# The skill listing (skills and commands, which Claude Code merges into one list)
+# and the Agent tool description carry each item's name and description on every
+# request. The combined description text of an entry is cut at 1,536 characters.
+[listing]
+skills = true
+commands = true
+agents = true
+description_limit = 1536
+
 [root]
 file = "CLAUDE.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
@@ -35,13 +44,14 @@ sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targe
 
 [outputs.skills.frontmatter]
 include_extras = true
-# argument-hint is inert on a skill: user-invocable is a hard false below, so
-# Claude never prompts for arguments and the hint is dead metadata. Only a
-# command can carry it. Blacklisted here so it cannot leak into skill output.
-extras_blacklist = ["priority", "targets", "argument-hint", "user_invocable", "placement"]
-
-[outputs.skills.frontmatter.constants]
-"user-invocable" = false
+# A skill-level `paths` (or `globs`) key gates the skill to matching files.
+paths = true
+# user-invocable is not written by default: Claude Code's default is true, so a
+# skill is listed in the / menu. `[claude.skills] hide_from_menu = true` writes
+# `user-invocable: false` on skills that do not set the key; an author-set
+# user-invocable or disable-model-invocation is always honoured.
+hide_key = "user-invocable"
+extras_blacklist = ["priority", "targets", "user_invocable", "placement"]
 
 # Agents: .claude/agents/{id}.md with effort + model resolved from the shared
 # resolvers, plus tools/skills lists and the standard scalar fields.
@@ -120,7 +130,7 @@ global_path = ".claude/settings.json"
 # ~/.claude/settings.json: a --global run writes mcpServers there and the other
 # keys (plugin settings, effort) to global_path.
 global_mcp_path = ".claude.json"
-emit_when = "has_mcp_servers_or_plugin_settings"
+emit_when = "has_claude_settings"
 
 [[sidecars]]
 kind = "claude_plugins_json"

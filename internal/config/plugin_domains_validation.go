@@ -284,12 +284,15 @@ func validateMarketplaceSource(src *MarketplaceSource) error {
 	return nil
 }
 
-// validateOutputOptions checks [placement] and [claude.settings].
+// validateOutputOptions checks [placement], [claude.settings], [[hooks]] and [permissions].
 func (c *Config) validateOutputOptions() error {
 	if err := c.validatePlacement(); err != nil {
 		return err
 	}
-	return c.validateClaudeSettings()
+	if err := c.validateClaudeSettings(); err != nil {
+		return err
+	}
+	return c.validateSettingsBlocks()
 }
 
 func validatePluginNames(field string, names []string) error {

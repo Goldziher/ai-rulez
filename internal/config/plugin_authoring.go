@@ -1,5 +1,10 @@
 package config
 
+import (
+	"path/filepath"
+	"strings"
+)
+
 // This file defines the *authoring* (producer) side of plugins: describing a
 // distributable plugin bundle that ai-rulez packages from the project's content
 // tree for the Claude/Cursor/Codex/Gemini/Kimi/OpenCode/Factory/Hermes runtimes.
@@ -19,12 +24,14 @@ const (
 	PluginRuntimeFactory      = "factory"
 	PluginRuntimeHermes       = "hermes"
 	PluginRuntimeAgentPlugins = "agent-plugins"
+	PluginRuntimeCopilot      = "copilot"
 )
 
 // AllPluginRuntimes lists the runtimes emitted by default when a plugin does not
-// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins is deliberately
-// excluded: it is opt-in via an explicit runtimes = ["agent-plugins"] so adding it
-// never changes existing bundles' output.
+// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins and
+// PluginRuntimeCopilot are deliberately excluded: they are opt-in via an explicit
+// runtimes = ["agent-plugins"] / ["copilot"] so adding them never changes
+// existing bundles' output.
 var AllPluginRuntimes = []string{
 	PluginRuntimeClaude,
 	PluginRuntimeCursor,
@@ -38,7 +45,7 @@ var AllPluginRuntimes = []string{
 
 // KnownPluginRuntimes lists every runtime the generator can emit, including
 // opt-in ones. Used for validation and schema documentation.
-var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins)
+var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins, PluginRuntimeCopilot)
 
 // Author identifies a person or organization in plugin/marketplace metadata.
 type Author struct {
@@ -74,6 +81,12 @@ type PluginAuthoring struct {
 	// root-only. On a name collision the root item wins.
 	IncludeDomains []string `yaml:"include_domains,omitempty" json:"include_domains,omitempty" toml:"include_domains,omitempty"` //nolint:tagliatelle
 
+	// IncludeEvals bundles eval cases into the plugin: each skill's evals/
+	// directory and the project-level .ai-rulez/evals/ tree (the latter at
+	// <bundle>/evals/). Off by default, so a skill's evals/ directory is not
+	// shipped to consumers of the bundle.
+	IncludeEvals bool `yaml:"include_evals,omitempty" json:"include_evals,omitempty" toml:"include_evals,omitempty"` //nolint:tagliatelle
+
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
@@ -96,6 +109,12 @@ type PluginAuthoring struct {
 
 	// Interface carries the rich UI block used by Codex and Kimi manifests.
 	Interface *PluginInterface `yaml:"interface,omitempty" json:"interface,omitempty" toml:"interface,omitempty"`
+
+	// Codex selects the Codex manifest layout and marketplace index.
+	Codex *CodexExtras `yaml:"codex,omitempty" json:"codex,omitempty" toml:"codex,omitempty"`
+
+	// Cursor holds Cursor-plugin-specific packaging switches.
+	Cursor *CursorExtras `yaml:"cursor,omitempty" json:"cursor,omitempty" toml:"cursor,omitempty"`
 
 	// Gemini holds Gemini-extension-specific fields.
 	Gemini *GeminiExtras `yaml:"gemini,omitempty" json:"gemini,omitempty" toml:"gemini,omitempty"`
@@ -199,10 +218,22 @@ var HookEventsEvaluatingIf = []string{
 // HookGroup is one lifecycle-event hook group. Matcher filters which occurrences
 // of Event run the group (for SessionStart: startup, resume, clear, compact,
 // fork); it is ignored for the events in HookEventsWithoutMatcher.
+//
+// Targets and Matchers apply to the top-level [[hooks]] only, which render for
+// several harnesses whose event and tool vocabularies differ; a plugin hook
+// group is rendered per runtime and rejects them.
 type HookGroup struct {
 	Event   string       `yaml:"event" json:"event" toml:"event"` // e.g. SessionStart, PreToolUse
 	Matcher string       `yaml:"matcher,omitempty" json:"matcher,omitempty" toml:"matcher,omitempty"`
 	Hooks   []HookAction `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Targets restricts a top-level [[hooks]] group to the listed harnesses
+	// (claude, codex, cursor, gemini, copilot). Empty means every harness the
+	// group can be expressed for.
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" toml:"targets,omitempty"`
+	// Matchers overrides Matcher per harness, for harnesses that name tools
+	// differently from Claude Code (gemini matches `write_file|replace` where
+	// Claude matches `Write|Edit`).
+	Matchers map[string]string `yaml:"matchers,omitempty" json:"matchers,omitempty" toml:"matchers,omitempty"`
 }
 
 // HookAction is one action within a HookGroup. Exactly one of Command or Script
@@ -261,9 +292,48 @@ type PluginInterface struct {
 	Screenshots       []string `yaml:"screenshots,omitempty" json:"screenshots,omitempty" toml:"screenshots,omitempty"`
 }
 
+// Codex manifest layouts for [plugin.codex] manifest.
+const (
+	// CodexManifestLegacy writes .codex-plugin/plugin.json only (the default).
+	CodexManifestLegacy = "legacy"
+	// CodexManifestRoot writes the Agent Plugins root plugin.json that Codex
+	// documents as the preferred format, with the Codex interface block under
+	// extensions.com.openai, skills/ and a root mcp.json.
+	CodexManifestRoot = "root"
+	// CodexManifestBoth writes the root manifest and the legacy one.
+	CodexManifestBoth = "both"
+)
+
+// CodexExtras selects how the Codex runtime is laid out.
+type CodexExtras struct {
+	// Manifest is legacy (default), root or both; see the CodexManifest constants.
+	Manifest string `yaml:"manifest,omitempty" json:"manifest,omitempty" toml:"manifest,omitempty"`
+	// Marketplace also writes the Codex marketplace index
+	// (.agents/plugins/marketplace.json) for a single-plugin repository.
+	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+}
+
+// ManifestLayout returns the resolved Codex manifest layout.
+func (c *CodexExtras) ManifestLayout() string {
+	if c == nil || c.Manifest == "" {
+		return CodexManifestLegacy
+	}
+	return c.Manifest
+}
+
+// CursorExtras holds Cursor-plugin-specific switches.
+type CursorExtras struct {
+	// Marketplace also writes .cursor-plugin/marketplace.json for a
+	// single-plugin repository.
+	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+}
+
 // GeminiExtras holds Gemini-extension-specific manifest fields.
 type GeminiExtras struct {
 	ContextFileName string `yaml:"context_file_name,omitempty" json:"context_file_name,omitempty" toml:"context_file_name,omitempty"` //nolint:tagliatelle
+	// Commands also bundles the plugin's commands as commands/<name>.toml
+	// custom commands (default off).
+	Commands bool `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
 }
 
 // KimiExtras holds Kimi-plugin-specific manifest fields.
@@ -305,6 +375,10 @@ type MarketplaceAuthoring struct {
 	// Plugins declares plugins by hand, mixing domains and root content. An entry
 	// named like a FromDomains plugin replaces it.
 	Plugins []MarketplacePlugin `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+
+	// CursorIndex also writes .cursor-plugin/marketplace.json next to the
+	// Claude index for members and domain plugins (default off).
+	CursorIndex bool `yaml:"cursor_index,omitempty" json:"cursor_index,omitempty" toml:"cursor_index,omitempty"` //nolint:tagliatelle
 
 	// CatalogSkill generates a skill listing the plugins and how to enable them.
 	CatalogSkill *CatalogSkillConfig `yaml:"catalog_skill,omitempty" json:"catalog_skill,omitempty" toml:"catalog_skill,omitempty"` //nolint:tagliatelle
@@ -438,6 +512,22 @@ type PlacementConfig struct {
 // ClaudeConfig groups Claude Code specific output options.
 type ClaudeConfig struct {
 	Settings *ClaudeSettings `yaml:"settings,omitempty" json:"settings,omitempty" toml:"settings,omitempty"`
+	Skills   *ClaudeSkills   `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
+}
+
+// ClaudeSkills is the [claude.skills] block: options for the skills written to
+// .claude/skills.
+type ClaudeSkills struct {
+	// HideFromMenu writes `user-invocable: false` on every skill that does not
+	// set the key itself, so Claude Code hides them from the / menu and only the
+	// model loads them. Off by default: a skill without the key is user-invocable.
+	HideFromMenu bool `yaml:"hide_from_menu,omitempty" json:"hide_from_menu,omitempty" toml:"hide_from_menu,omitempty"` //nolint:tagliatelle
+}
+
+// HidesSkillsFromMenu reports whether [claude.skills] hide_from_menu is set.
+// Safe on a nil receiver.
+func (c *ClaudeConfig) HidesSkillsFromMenu() bool {
+	return c != nil && c.Skills != nil && c.Skills.HideFromMenu
 }
 
 // ClaudeSettings is the [claude.settings] block: opt-in management of the
@@ -454,6 +544,9 @@ type ClaudeSettings struct {
 	// as true and false. Names are plugin names in the marketplace.
 	EnablePlugins  []string `yaml:"enable_plugins,omitempty" json:"enable_plugins,omitempty" toml:"enable_plugins,omitempty"`    //nolint:tagliatelle
 	DisablePlugins []string `yaml:"disable_plugins,omitempty" json:"disable_plugins,omitempty" toml:"disable_plugins,omitempty"` //nolint:tagliatelle
+	// Managed owns further keys of .claude/settings.json entry by entry (env,
+	// skillOverrides). It needs no Manage flag.
+	Managed *ManagedSettings `yaml:"managed,omitempty" json:"managed,omitempty" toml:"managed,omitempty"`
 }
 
 // MarketplaceSource is a Claude Code marketplace source object.
@@ -476,6 +569,33 @@ func (s *ClaudeSettings) RegistersMarketplace() bool {
 	return s != nil && s.Manage && (s.RegisterMarketplace == nil || *s.RegisterMarketplace)
 }
 
+// RelativeDirectoryMarketplace reports whether the managed
+// extraKnownMarketplaces entry points at a directory given as a relative path,
+// which is the default when no marketplace_source is set. It returns the path.
+func (c *Config) RelativeDirectoryMarketplace() (path string, ok bool) {
+	if !c.ManagesClaudeSettings() {
+		return "", false
+	}
+	s := c.Claude.Settings
+	if !s.RegistersMarketplace() {
+		return "", false
+	}
+	if src := s.MarketplaceSource; src != nil {
+		if src.Source != "directory" || src.Path == "" || filepath.IsAbs(src.Path) {
+			return "", false
+		}
+		return src.Path, true
+	}
+	dir := "."
+	if c.Marketplace != nil && c.Marketplace.OutputDir != "" {
+		dir = filepath.ToSlash(filepath.Clean(c.Marketplace.OutputDir))
+	}
+	if dir != "." && !strings.HasPrefix(dir, "./") {
+		dir = "./" + dir
+	}
+	return dir, true
+}
+
 // ResolvedRuntimes returns the runtimes to emit for this plugin: the explicit
 // Runtimes list if set, otherwise AllPluginRuntimes.
 func (p *PluginAuthoring) ResolvedRuntimes() []string {
@@ -483,4 +603,28 @@ func (p *PluginAuthoring) ResolvedRuntimes() []string {
 		return AllPluginRuntimes
 	}
 	return p.Runtimes
+}
+
+// DefaultCodexProjectDocMaxBytes is Codex's default project_doc_max_bytes: the
+// most combined AGENTS.md content Codex reads (32 KiB).
+const DefaultCodexProjectDocMaxBytes = 32 * 1024
+
+// CodexConfig is the [codex] block.
+type CodexConfig struct {
+	// ProjectDocMaxBytes is the project_doc_max_bytes your Codex is configured
+	// with; generate warns when the AGENTS.md chain exceeds it. Unset means the
+	// Codex default (32 KiB); 0 or a negative value turns the warning off.
+	ProjectDocMaxBytes *int `yaml:"project_doc_max_bytes,omitempty" json:"project_doc_max_bytes,omitempty" toml:"project_doc_max_bytes,omitempty"` //nolint:tagliatelle
+}
+
+// ProjectDocLimit returns the AGENTS.md byte budget to warn against, or 0 when
+// the warning is disabled. Safe on a nil receiver.
+func (c *CodexConfig) ProjectDocLimit() int {
+	if c == nil || c.ProjectDocMaxBytes == nil {
+		return DefaultCodexProjectDocMaxBytes
+	}
+	if *c.ProjectDocMaxBytes <= 0 {
+		return 0
+	}
+	return *c.ProjectDocMaxBytes
 }

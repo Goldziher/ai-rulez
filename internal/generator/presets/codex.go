@@ -115,6 +115,16 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		// Emit bundled resources alongside SKILL.md so the agent can read
 		// references on demand rather than receiving them all inlined.
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
+
+		// Codex has no SKILL.md key for invocation control; an author-set
+		// disable-model-invocation becomes agents/openai.yaml policy.
+		if disabled, set := skill.Metadata.ExtraBool("disable-model-invocation"); set && disabled {
+			agentsDir := filepath.Join(skillDir, "agents")
+			outputs = append(outputs,
+				config.OutputFile{Path: agentsDir, IsDir: true},
+				config.OutputFile{Path: filepath.Join(agentsDir, "openai.yaml"), Content: codexImplicitInvocationOff},
+			)
+		}
 	}
 
 	// Generate agent files to .codex/agents/ (TOML format)
@@ -175,7 +185,11 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 // renderConfigTOML merges what ai-rulez owns into the Codex config.toml at path.
@@ -268,40 +282,16 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	return builder.String()
 }
 
-// renderSkillFile renders a skill file in SKILL.md format for Codex
+// codexImplicitInvocationOff is the agents/openai.yaml of a skill Codex must
+// only run when the user names it ($skill), the Codex counterpart of
+// disable-model-invocation.
+const codexImplicitInvocationOff = "policy:\n  allow_implicit_invocation: false\n"
+
+// renderSkillFile renders a skill file in SKILL.md format for Codex: the shared
+// .agents/skills rendering, which Codex's own keys (short-description under
+// metadata) are part of.
 func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string {
-	var builder strings.Builder
-
-	// Add YAML frontmatter
-	builder.WriteString("---\n")
-	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
-	builder.WriteString("\n")
-
-	// Description is required by Codex for skill loading.
-	builder.WriteString("description: ")
-	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
-	builder.WriteString("\n")
-
-	if skill.Metadata != nil {
-		// Add short-description for user-facing display.
-		if shortDesc := config.SkillShortDescription(skill.Metadata); shortDesc != "" {
-			builder.WriteString("metadata:\n")
-			builder.WriteString("  short-description: ")
-			builder.WriteString(quoteYAMLString(shortDesc))
-			builder.WriteString("\n")
-		}
-	}
-
-	builder.WriteString("---\n\n")
-
-	// Add skill content
-	builder.WriteString(skill.Content)
-
-	// Index bundled resources so the agent knows what to read on demand.
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
+	return renderAgentSkillFile(skill)
 }
 
 // renderAgentTOML renders an agent file in TOML format for Codex

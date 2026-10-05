@@ -13,6 +13,7 @@ const serverInstructions = "ai-rulez manages AI assistant governance from a sing
 type Server struct {
 	mcpServer *sdkmcp.Server
 	version   string
+	catalog   *Catalog
 }
 
 func NewServer(version string) *Server {

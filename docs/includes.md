@@ -355,6 +355,10 @@ warning.
   CRUD commands that validate a change (including the `--local` ones) read remote includes from cache
   only.
 
+### Pinning remote includes
+
+A git include without a `ref` follows the repository's default branch, so two machines can generate different output from the same config. `ai-rulez lock` records each remote include's resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`; later `generate` runs fetch that commit and verify the digest. `generate --locked` (CI) fails on a source the lock does not cover, and `--frozen` never uses the network. See the [Lock Command](cli.md#lock-command).
+
 ## Include Priority
 
 Resolution starts from your local content and folds each include in declaration order, using that

@@ -1,9 +1,12 @@
 package presets
 
 import (
+	"bytes"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
@@ -82,7 +85,30 @@ func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.Out
 	return outputs
 }
 
+// renderAgentSkillFile is the one rendering of a skill in the shared
+// .agents/skills tree. Every preset that writes that tree (the Go presets and
+// the DSL specs, through RenderAgentSkillFrontmatter) must produce these exact
+// bytes, so the frontmatter carries the union of the keys any writer emits and
+// does not depend on which presets are enabled. Tools ignore keys they do not
+// know, so a key meant for one harness is harmless to the others.
 func renderAgentSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+	builder.WriteString(RenderAgentSkillFrontmatter(skill))
+	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
+	return builder.String()
+}
+
+// RenderAgentSkillFrontmatter renders the canonical SKILL.md frontmatter block
+// (--- fences and the blank line after them) of the shared .agents/skills tree:
+// name, then the quoted description, then the remaining keys sorted:
+//   - the Agent Skills specification fields with their original types
+//     (license, compatibility, metadata, allowed-tools), the Codex
+//     short-description merged into metadata;
+//   - paths, the Claude Code and Cursor glob gate;
+//   - disable-model-invocation (Cursor, Claude Code) and user-invocable, as
+//     booleans.
+func RenderAgentSkillFrontmatter(skill config.ContentFile) string {
 	var builder strings.Builder
 	builder.WriteString("---\n")
 	builder.WriteString("name: ")
@@ -91,10 +117,41 @@ func renderAgentSkillFile(skill config.ContentFile) string {
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
+	writeSkillSpecFields(&builder, skill, agentSkillExtraFields(skill))
 	builder.WriteString("---\n\n")
-	builder.WriteString(skill.Content)
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
 	return builder.String()
+}
+
+// agentSkillExtraFields are the keys of the canonical skill frontmatter beyond
+// name, description and the specification fields writeSkillSpecFields adds.
+func agentSkillExtraFields(skill config.ContentFile) map[string]any {
+	extra := map[string]any{}
+	if shortDesc := config.SkillShortDescription(skill.Metadata); shortDesc != "" {
+		extra["metadata"] = mergeShortDescription(skill.Metadata.SkillSpecFields()["metadata"], shortDesc)
+	}
+	if scope := skill.Metadata.PathScope(); len(scope) > 0 {
+		extra["paths"] = scope
+	}
+	for _, key := range []string{"disable-model-invocation", "user-invocable"} {
+		if val, set := skill.Metadata.ExtraBool(key); set {
+			extra[key] = val
+		}
+	}
+	return extra
+}
+
+// typedAgentField is an agent frontmatter field as the DSL renderer carries it,
+// so a file both write is identical: the invocation switches as canonical
+// booleans, every other key with its original YAML type (list, map, bool,
+// date), a plain string as text. The second result is false when it is unset.
+func typedAgentField(meta *config.Metadata, key string) (any, bool) {
+	if val, set := meta.ExtraBool(key); set && (key == "user-invocable" || key == "disable-model-invocation") {
+		return val, true
+	}
+	if val, ok := meta.TypedExtra(key); ok {
+		return val, true
+	}
+	return nil, false
 }
 
 // inlinedInAgentsMD drops, from the items AGENTS.md would inline, the ones
@@ -141,4 +198,58 @@ func routingWithSharedAgentsMD(cfg *config.Config, preset string, r rulefiles.Ro
 		return rulefiles.WithoutAlwaysOn(r)
 	}
 	return r
+}
+
+// writeSkillSpecFields appends the optional Agent Skills specification fields
+// the skill sets (license, compatibility, metadata, allowed-tools), plus any
+// preset-specific extra fields, as YAML with their original types. Keys are
+// sorted, so output is deterministic. Nothing is written when there are none,
+// which keeps a skill without those fields byte-identical to before.
+func writeSkillSpecFields(b *strings.Builder, skill config.ContentFile, extra map[string]any) {
+	fields := skill.Metadata.SkillSpecFields()
+	for k, v := range extra {
+		fields[k] = v
+	}
+	if len(fields) == 0 {
+		return
+	}
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(fields); err != nil {
+		return
+	}
+	if err := enc.Close(); err != nil {
+		return
+	}
+	b.Write(buf.Bytes())
+}
+
+// mergeShortDescription returns the metadata value with short-description added
+// as a nested key. existing is the author's metadata (a mapping node) or nil; a
+// metadata value that is not a map is returned unchanged, and an author-set
+// short-description wins.
+func mergeShortDescription(existing any, shortDesc string) any {
+	entry := func() (*yaml.Node, *yaml.Node) {
+		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "short-description"},
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: shortDesc, Style: yaml.DoubleQuotedStyle}
+	}
+	switch m := existing.(type) {
+	case nil:
+		k, v := entry()
+		return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: []*yaml.Node{k, v}}
+	case *yaml.Node:
+		if m.Kind != yaml.MappingNode {
+			return existing
+		}
+		for i := 0; i+1 < len(m.Content); i += 2 {
+			if m.Content[i].Value == "short-description" {
+				return existing
+			}
+		}
+		k, v := entry()
+		m.Content = append(m.Content, k, v)
+		return m
+	}
+	return existing
 }

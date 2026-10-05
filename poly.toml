@@ -14,6 +14,7 @@ exclude = [
   "**/go.sum",
   "**/package-lock.json",
   "**/pnpm-lock.yaml",
+  "**/testdata/*.golden.json",
   "**/uv.lock",
   "dist/**",
   "docs/snippets",

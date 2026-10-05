@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/schema"
 )
 
@@ -60,8 +61,9 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 		return true
 	case PredicateHasMCPServers:
 		return cfg != nil && len(cfg.MCPServers) > 0
-	case PredicateHasMCPServersOrPluginSettings:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings())
+	case PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings:
+		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() ||
+			(predicate == PredicateHasClaudeSettings && cfg.HasClaudeSettingsContent()))
 	case PredicateHasMCPJSONEntries:
 		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
@@ -96,7 +98,11 @@ type sidecarRender = jsonmerge.Result
 func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath string) (sidecarRender, error) {
 	switch kind {
 	case SidecarClaudeSettingsJSON:
-		return jsonmerge.Apply(outputPath, claudeSettingsOwnedKeys(cfg))
+		owned, err := claudeSettingsOwnedKeys(cfg, outputPath)
+		if err != nil {
+			return sidecarRender{}, err
+		}
+		return jsonmerge.Apply(outputPath, owned)
 	case SidecarMCPJSON:
 		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
 	case SidecarAmpSettingsJSON:
@@ -237,13 +243,23 @@ func (g *Generator) ampSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKe
 // by entry (Members), so every other marketplace and plugin the file lists
 // survives, and an entry dropped from the config is removed by the previous
 // run's ownership record. An MCP-less config does not claim mcpServers at all.
-func claudeSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
+//
+// [[hooks]], [permissions] and [claude.settings.managed] add their own keys (see
+// package settings): hooks and permission rules element by element, env and
+// skillOverrides entry by entry. User scope owns those keys alone: MCP servers
+// and plugin registration are project concepts.
+func claudeSettingsOwnedKeys(cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
 	var owned []jsonmerge.OwnedKey
-	if cfg != nil && len(cfg.MCPServers) > 0 {
+	if cfg != nil && !cfg.UserScope && len(cfg.MCPServers) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true})
 	}
-	if !cfg.ManagesClaudeSettings() {
-		return owned
+	extra, err := settings.ClaudeKeys(cfg, outputPath)
+	if err != nil {
+		return nil, fmt.Errorf("render .claude/settings.json settings: %w", err)
+	}
+	owned = append(owned, extra...)
+	if !cfg.ManagesClaudeSettings() || cfg.UserScope {
+		return owned, nil
 	}
 	s := cfg.Claude.Settings
 	market := ""
@@ -267,7 +283,7 @@ func claudeSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 	if len(plugins) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyEnabledPlugins, Value: plugins, Members: true})
 	}
-	return owned
+	return owned, nil
 }
 
 // marketplaceSettingsEntry builds the extraKnownMarketplaces value. Without an
@@ -389,13 +405,16 @@ func piMCPServerEntries(cfg *config.Config) map[string]any {
 // value so a hand-written server of the same name stays. See
 // presets.LegacyMergeClaims for the preset-owned documents.
 func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
-	if cfg == nil || (len(cfg.MCPServers) == 0 && !cfg.ManagesClaudeSettings()) {
+	if cfg == nil || (len(cfg.MCPServers) == 0 && !cfg.ManagesClaudeSettings() && !cfg.HasClaudeSettingsContent()) {
 		return nil
 	}
 	var owned []jsonmerge.OwnedKey
 	switch rel {
 	case ".claude/settings.json":
-		owned = claudeSettingsOwnedKeys(cfg)
+		var err error
+		if owned, err = claudeSettingsOwnedKeys(cfg, ""); err != nil {
+			return nil
+		}
 	case presets.MergedDocMCPJSON:
 		owned = mcpJSONOwnedKeys(cfg)
 	case presets.MergedDocPiMCP:

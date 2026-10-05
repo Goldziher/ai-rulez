@@ -203,7 +203,11 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 // planCopilotRules routes rules and context between .github/instructions files
@@ -352,22 +356,10 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(cfg *config.Config, allR
 	return builder.String()
 }
 
-// renderSkillFile renders a skill file in SKILL.md format for Copilot
+// renderSkillFile renders a skill file in SKILL.md format for Copilot: the shared
+// skill rendering, which the copilot-cli spec writes to the same path.
 func (g *CopilotPresetGenerator) renderSkillFile(skill config.ContentFile) string {
-	var builder strings.Builder
-
-	builder.WriteString("---\n")
-	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
-	builder.WriteString("\n")
-	builder.WriteString("description: ")
-	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
-	builder.WriteString("\n")
-	builder.WriteString("---\n\n")
-	builder.WriteString(skill.Content)
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
+	return renderAgentSkillFile(skill)
 }
 
 // renderCopilotAgentFile renders an agent file with YAML frontmatter for Copilot
@@ -411,7 +403,7 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 		"agents", "handoffs", "mcp-servers",
 	}
 	for _, field := range copilotFields {
-		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+		if val, ok := typedAgentField(agent.Metadata, field); ok {
 			frontmatter[field] = val
 		}
 	}

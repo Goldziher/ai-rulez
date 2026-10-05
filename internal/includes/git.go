@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -112,6 +113,8 @@ type GitSource struct {
 	cacheDir    string // ~/.cache/ai-rulez/includes/{name}/
 	include     []string
 	accessToken string
+	pin         *pin   // ai-rulez.lock entry this source must match (nil: unpinned)
+	baseDir     string // project the include belongs to, for recording what it resolved to
 }
 
 // NewGitSource creates a new git source
@@ -138,6 +141,7 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 		cacheDir:    cacheDir,
 		include:     include,
 		accessToken: accessToken,
+		baseDir:     baseDir,
 	}
 
 	return source, nil
@@ -176,6 +180,43 @@ func (s *GitSource) sparsePathSpec() string {
 // or --no-fetch) is lock-free; only refresh of a stale cache is serialized
 // by a per-cacheDir mutex with double-checked locking.
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
+	tree, err := s.fetch(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.checkPin()
+	if retryable(ctx, err) {
+		// The cache may be damaged: fetch the pinned commit again before failing.
+		_ = os.Remove(filepath.Join(s.cacheDir, cacheMetaFile)) //nolint:errcheck // best-effort; a stale meta only skips the retry
+		if tree, err = s.fetch(ctx); err != nil {
+			return nil, err
+		}
+		err = s.checkPin()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return tree, nil
+}
+
+// checkPin records what the cache holds and verifies it against the lock.
+func (s *GitSource) checkPin() error {
+	dir := s.findAIRulezDir()
+	if dir == "" {
+		return nil
+	}
+	digest, err := lockfile.DigestDir(dir)
+	if err != nil {
+		return oops.With("include", s.name).Wrapf(err, "digest include content")
+	}
+	commit := ""
+	if meta, metaErr := readCacheMeta(s.cacheDir); metaErr == nil && meta != nil {
+		commit = meta.RemoteHEADSHA
+	}
+	return s.pin.check(s.baseDir, lockfile.KindInclude, s.name, commit, digest)
+}
+
+func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", redactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	if SkipFetch || config.OfflineIncludes(ctx) {

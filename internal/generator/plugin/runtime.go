@@ -37,6 +37,11 @@ func Generate(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		}
 		outputs = append(outputs, marketOutputs...)
 	}
+	extraMarkets, err := renderSingleMarketplaces(m, baseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "render runtime marketplaces")
+	}
+	outputs = append(outputs, extraMarkets...)
 	return AddProvenance(outputs, baseDir)
 }
 
@@ -106,7 +111,7 @@ func rewriteRoot(s, runtime string) string {
 	case config.PluginRuntimeGemini:
 		return strings.ReplaceAll(s, rootVarCanonical, rootVarGemini)
 	case config.PluginRuntimeCursor, config.PluginRuntimeKimi, config.PluginRuntimeCodex,
-		config.PluginRuntimeAgentPlugins:
+		config.PluginRuntimeAgentPlugins, config.PluginRuntimeCopilot:
 		s = strings.ReplaceAll(s, rootVarCanonical+"/", "./")
 		return strings.ReplaceAll(s, rootVarCanonical, ".")
 	default:

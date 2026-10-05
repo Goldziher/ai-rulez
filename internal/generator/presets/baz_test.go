@@ -269,3 +269,33 @@ func TestBazGenerate_ScopeRunWritesOnlyAgentsMD(t *testing.T) {
 	assert.True(t, strings.HasSuffix(outputs[0].Path, "AGENTS.md"))
 	assert.Contains(t, outputs[0].Content, "api-rule BODY", "inside a scope the rule stays in the scoped file")
 }
+
+func TestBazScopeDir_BareDirectoryScopesToItself(t *testing.T) {
+	cfg := bazProject(t, "src/api", "src/web")
+	tests := map[string]string{
+		"src/api":          "src/api",
+		"./src/api":        "src/api",
+		"src/api/":         "src/api",
+		"src/nope":         "src",
+		"src/api/main.py":  "src/api",
+		"src/api/*.py":     "src/api",
+		"src/*/api":        "src",
+		"src/{api,web}/**": "src",
+	}
+	for glob, want := range tests {
+		assert.Equal(t, want, bazScopeDir(glob, cfg), glob)
+	}
+}
+
+func TestWithoutBazNested_SharedRootFileHelpers(t *testing.T) {
+	cfg := bazProject(t, "src/api")
+	cfg.Rules = &config.RulesConfig{BazScoped: config.BazScopedNested}
+	cfg.Presets = []config.Preset{{BuiltIn: "baz"}, {BuiltIn: "opencode"}}
+	content := bazContent(globRule("api", "src/api/**"), config.ContentFile{Name: "all", Content: "ALL", Metadata: &config.Metadata{}})
+
+	got := rootRules(content, cfg, "opencode", "AGENTS.md")
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "all", got[0].Name)
+	assert.Len(t, rootRules(content, cfg, "gemini", "GEMINI.md"), 2, "only AGENTS.md is filtered")
+}
