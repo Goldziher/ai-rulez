@@ -58,7 +58,7 @@ func loadUserLLM(path string) (*llm.Config, error) {
 
 // ResolveLLM layers the repository [llm] table (config plus local overlay), the
 // user config file and the AI_RULEZ_LLM_* environment, applying the trust rule:
-// allow_network, base_url, api_key_env and price overrides are honoured only
+// allow_network, base_url, api_key_env and price overrides are honored only
 // from the user config file or the environment. getenv may be nil (os.Getenv).
 func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 	if getenv == nil {
