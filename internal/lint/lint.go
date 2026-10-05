@@ -800,6 +800,9 @@ func (r *runner) commandResolves(cmd string) bool {
 		abs := cmd
 		if !filepath.IsAbs(cmd) {
 			abs = filepath.Join(r.rootAbs(), cmd)
+			if _, err := os.Stat(abs); err != nil && r.tree.Explicit {
+				abs = filepath.Join(r.tree.Top, cmd)
+			}
 		}
 		info, err := os.Stat(abs)
 		return err == nil && !info.IsDir()

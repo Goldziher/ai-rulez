@@ -115,3 +115,58 @@ func TestReferenceUnknown_KindWordDoesNotHideAnotherNamespace(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadTreeAt_ExplicitRepoRootResolvesPathsOfADetachedConfig(t *testing.T) {
+	repo := t.TempDir()
+	writeFiles(t, repo, map[string]string{
+		"scripts/deploy.sh":     "#!/bin/sh\n",
+		"src/app.py":            "x = 1\n",
+		"shared/schema.json":    "{}\n",
+		".ai-rulez/config.toml": baseConfig,
+	})
+	gitAdd(t, repo)
+
+	scratch := t.TempDir()
+	writeFiles(t, scratch, map[string]string{
+		".ai-rulez/config.toml":            baseConfig,
+		".ai-rulez/rules/scoped.md":        "---\npaths:\n  - \"src/**/*.py\"\n---\n# Scoped\nSee `shared/schema.json`.\n",
+		".ai-rulez/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: Deploys. Use when shipping.\n---\nRun `scripts/deploy.sh` and read `references/guide.md`.\n",
+	})
+	cfg, err := config.LoadConfig(context.Background(), scratch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(tree *Tree) []Finding {
+		rep, rerr := Run(cfg, tree)
+		if rerr != nil {
+			t.Fatal(rerr)
+		}
+		return rep.Findings
+	}
+	detached, err := LoadTree(scratch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := run(detached); !has(got, CodeSkillResourceMissing, "deploy/SKILL.md", 0) {
+		t.Fatalf("without a repo root the detached config must report AR402: %+v", got)
+	}
+	tree, err := LoadTreeAt(scratch, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := run(tree)
+	if has(got, CodeGlobNoMatch, "scoped.md", 0) {
+		t.Errorf("AR101 must resolve against the explicit repo root: %+v", got)
+	}
+	var missing []Finding
+	for _, f := range got {
+		if f.Code == CodeSkillResourceMissing {
+			missing = append(missing, f)
+		}
+	}
+	if len(missing) != 1 || !strings.Contains(missing[0].Message, "references/guide.md") ||
+		!strings.Contains(missing[0].Message, "skill's directory") || !strings.Contains(missing[0].Message, "repo root") {
+		t.Fatalf("want only the real missing references/guide.md, naming both bases: %+v", missing)
+	}
+}

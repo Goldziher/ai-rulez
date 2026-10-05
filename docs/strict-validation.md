@@ -31,6 +31,11 @@ still exits 1 and never reaches the content checks.
 - **Tracked files.** Globs, paths and hook files are resolved against `git ls-files` (the index), so a file that
   exists only in your working tree does not satisfy a glob. Outside a git repository the directory is walked
   instead.
+- **Repository root.** The root defaults to the git toplevel of the configuration, else the directory that holds
+  it. For a configuration checked out away from its repository (a scratch copy, a CI artifact) pass
+  `--repo-root <dir>` or set `AI_RULEZ_REPO_ROOT`: paths, globs (`git ls-files`) and hook files then resolve
+  against that directory instead of reporting paths that exist in the real repository as missing. `AR402`
+  names both bases it tried: the skill directory and the repo root.
 - **Nested roots.** A root's globs and paths resolve from the repository top or from the root's own directory,
   whichever matches. A root may name skills, agents, commands and rules defined by an ancestor root or in a
   hand-authored `.claude/` directory of an ancestor, because assistants load the ancestors' instructions.
@@ -62,7 +67,7 @@ still exits 1 and never reaches the content checks.
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist |
-| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path exists neither in the skill or command nor in the repo |
+| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`) |
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command runs a `$CLAUDE_PROJECT_DIR/...` file that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |

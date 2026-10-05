@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -22,6 +23,10 @@ var (
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
+	// validateRepoRoot is --repo-root: the directory repo-relative paths and
+	// tracked-file globs resolve against (default: the git toplevel, else the
+	// directory holding the configuration).
+	validateRepoRoot string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -42,6 +47,30 @@ func checkStrictFlags() error {
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
 	}
+	return nil
+}
+
+// repoRootEnv names the environment variable that --repo-root defaults to.
+const repoRootEnv = "AI_RULEZ_REPO_ROOT"
+
+// applyRepoRoot resolves --repo-root (or AI_RULEZ_REPO_ROOT) and points the
+// strict tree loader at it. An empty value keeps the default lookup.
+func applyRepoRoot() error {
+	root := validateRepoRoot
+	if root == "" {
+		root = os.Getenv(repoRootEnv)
+	}
+	if root == "" {
+		return nil
+	}
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return oops.Wrapf(err, "resolve --repo-root %q", root)
+	}
+	if info, statErr := os.Stat(abs); statErr != nil || !info.IsDir() {
+		return oops.Errorf("--repo-root %q is not a directory", root)
+	}
+	strictTreeCache = lint.Loader{Root: abs}
 	return nil
 }
 
