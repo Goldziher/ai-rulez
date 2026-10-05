@@ -296,3 +296,38 @@ func TestDuplicateIDsGetSuffix(t *testing.T) {
 	f.cfg.Content.Rules = append(f.cfg.Content.Rules, config.ContentFile{Name: "dup", Path: p})
 	assert.ElementsMatch(t, []string{"rule:/dup", "rule:/dup#2"}, keys(f.items()))
 }
+
+func TestComputeHookScriptOutsideProjectIsAProblemNotAnAbort(t *testing.T) {
+	f := newFixture(t)
+	outside := filepath.Join(filepath.Dir(f.root), "outside-"+filepath.Base(f.root)+".sh")
+	require.NoError(t, os.WriteFile(outside, []byte("#!/bin/sh\n"), 0o755))
+	t.Cleanup(func() { _ = os.Remove(outside) })
+	for _, script := range []string{"../" + filepath.Base(outside), outside} {
+		f.cfg.Hooks = []config.HookGroup{{Event: "PreToolUse", Matcher: "Bash", Hooks: []config.HookAction{{Script: script}}}}
+		snap, err := Compute(f.cfg, Options{})
+		require.NoError(t, err, script)
+		require.Len(t, snap.Problems, 1, script)
+		assert.Contains(t, snap.Problems[0], "outside the project")
+
+		lock := &lockfile.File{Version: lockfile.Version}
+		Build(lock, snap)
+		diff := Compare(lock, snap)
+		assert.False(t, diff.InSync, "the unpinnable script keeps the check red")
+		require.Len(t, diff.Changes, 1)
+		assert.Equal(t, ScopeLock, diff.Changes[0].Scope)
+	}
+}
+
+func TestCompareRequiresTreeDigest(t *testing.T) {
+	f := newFixture(t)
+	f.rule("style", "# Style\n")
+	snap, err := Compute(f.cfg, Options{})
+	require.NoError(t, err)
+	lock := &lockfile.File{Version: lockfile.Version}
+	Build(lock, snap)
+	require.True(t, Compare(lock, snap).InSync)
+	lock.Tree = ""
+	diff := Compare(lock, snap)
+	require.False(t, diff.InSync)
+	assert.Contains(t, diff.Changes[0].Detail, "no tree digest")
+}
