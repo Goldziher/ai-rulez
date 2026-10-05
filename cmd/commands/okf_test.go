@@ -222,3 +222,21 @@ func TestDoctorReportsOKFBundleProblems(t *testing.T) {
 	assert.Equal(t, exitDoctorFindings, code, out.String())
 	assert.Contains(t, out.String(), "AR9B1")
 }
+
+func TestOKFBundleAsInclude(t *testing.T) {
+	root := okfProject(t)
+	bundle := filepath.Join(t.TempDir(), "kb")
+	writeFile(t, filepath.Join(bundle, "decisions", "use-go.md"), "---\ntype: Decision\ndescription: Use Go\n---\nWe write Go.\n")
+	writeFile(t, filepath.Join(bundle, "concepts", "arch.md"), "---\ntype: Concept\n---\nLayers.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
+		"version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"kb\"\nsource = \""+bundle+"\"\nformat = \"okf\"\ninclude = [\"rules\"]\n")
+	require.Equal(t, 0, runRecursiveGenerate())
+	got, err := os.ReadFile(filepath.Join(root, ".claude", "rules", "decisions-use-go.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(got), "We write Go.")
+	assert.NoFileExists(t, filepath.Join(root, ".claude", "rules", "concepts-arch.md"), "include filter applies")
+
+	writeFile(t, filepath.Join(bundle, "decisions", "evil.md"), "---\ntype: Decision\n---\nkey AKIAABCDEFGHIJKLMNOP\n")
+	runRecursiveGenerate() // a refused include is skipped with an error, as any failing include is
+	assert.NoFileExists(t, filepath.Join(root, ".claude", "rules", "decisions-evil.md"), "the security scan refuses the whole bundle")
+}
