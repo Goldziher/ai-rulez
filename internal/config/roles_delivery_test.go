@@ -122,3 +122,15 @@ func TestRoleProblems_ReportsADeliveryEntryThatMatchesNothing(t *testing.T) {
 	}
 	assert.True(t, found)
 }
+
+func TestRoleProblems_SkillSourceSkillsCannotBeCheckedOffline(t *testing.T) {
+	cfg := roleFixture()
+	cfg.SkillSources = []SkillSourceConfig{{Name: "vendor", URL: "/x"}}
+	cfg.Roles = []RoleConfig{{Name: "dev", Domains: []string{"backend"},
+		Skills:   &RoleSelector{Exclude: []string{"v-*"}},
+		Delivery: map[string]string{"v-*": "served"}}}
+	assert.Empty(t, cfg.RoleProblems(), "entries that may name a source's skills are not reported")
+
+	cfg.SkillSources = nil
+	assert.Len(t, cfg.RoleProblems(), 2, "without sources the same entries match nothing")
+}

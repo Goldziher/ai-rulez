@@ -778,6 +778,9 @@ func (c *Config) unmatchedEntry(role, field, kind, pattern string, selectedDomai
 		elsewhere = append(elsewhere, all[i].Domain)
 	}
 	if len(elsewhere) == 0 {
+		if kind == RoleKindSkill && len(c.SkillSources) > 0 {
+			return "" // the entry may name a skill of a [[skill_sources]] entry, which is only known once the source is fetched
+		}
 		return fmt.Sprintf("role %q %s entry %q matches no %s", role, field, pattern, kind)
 	}
 	sort.Strings(elsewhere)
