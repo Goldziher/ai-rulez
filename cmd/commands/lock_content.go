@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 // lockSnapshot computes the content pins of cfg: the authored items, and the
@@ -63,14 +65,21 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 	case lock == nil && cfg.LockEnforced():
 		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Added,
 			Detail: lockfile.FileName + " does not exist but [lock] enforce = true; run `ai-rulez lock`"})
-	case lock != nil && diff.NoPins && cfg.LockEnforced():
-		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
-			Detail: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)})
 	case lock != nil && diff.NoPins:
-		diff.Notes = append(diff.Notes, "the lock has no content pins (version 1); run `ai-rulez lock` to pin authored content")
+		// A lock without content pins (version 1, or hash_version 0) cannot tell
+		// whether a source changed, so a check never passes on it: that would let
+		// a downgraded lock switch the content checks off.
+		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
+			Detail: fmt.Sprintf("%s (version %d) has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", lockfile.FileName, lock.Version)})
 	}
 	if remoteSkipped {
-		diff.Notes = append(diff.Notes, "remote includes are not in the local cache, so generated outputs were not compared")
+		const msg = "remote includes are not in the local cache, so generated outputs were not compared"
+		if cfg.LockEnforced() {
+			diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
+				Detail: msg + " and [lock] enforce = true; run `ai-rulez generate` (or `ai-rulez lock`) to fetch them"})
+		} else {
+			diff.Notes = append(diff.Notes, msg)
+		}
 	}
 	contentlock.SortChanges(diff.Changes)
 	diff.InSync = len(diff.Changes) == 0
@@ -79,16 +88,29 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 
 // loadForLockCheck loads a configuration for an offline comparison. Includes are
 // read from the local cache so the outputs render as generate would; when they
-// are not cached the load falls back to skipping them (remoteSkipped).
+// are not cached (and only then: any other load error is returned as it is) the
+// load falls back to skipping them (remoteSkipped).
 func loadForLockCheck(path string) (cfg *config.Config, remoteSkipped bool, err error) {
 	prev := includes.SkipFetch
 	includes.SkipFetch = true
 	defer func() { includes.SkipFetch = prev }()
-	cfg, err = loadForLock(path, config.WithoutLocal())
+	return loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+		return loadForLock(path, append([]config.LoadOption{config.WithoutLocal()}, opts...)...)
+	})
+}
+
+// loadWithCacheFallback loads with remote includes, and retries without them only
+// when the first error says an include is not in the cache. Every other error (a
+// lock violation, a parse error) is returned unchanged.
+func loadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config, error)) (cfg *config.Config, remoteSkipped bool, err error) {
+	cfg, err = load()
 	if err == nil {
 		return cfg, false, nil
 	}
-	cfg, retryErr := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
+	if !errors.Is(err, includes.ErrNotCached) {
+		return nil, false, err
+	}
+	cfg, retryErr := load(config.WithoutRemote())
 	if retryErr != nil {
 		return nil, false, err
 	}
@@ -106,6 +128,9 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	if lock == nil || !lock.HasContentPins() {
 		if cfg.LockEnforced() {
 			return []string{lockfile.FileName + " has no content pins and [lock] enforce = true; run `ai-rulez lock`"}, nil
+		}
+		if lock != nil {
+			logger.Warn("The lock has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", "lock", lockfile.FileName)
 		}
 		return nil, nil
 	}
@@ -132,22 +157,27 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 }
 
 // lockDriftFor returns the AR981 and AR982 findings for strict validation. It
-// reports nothing unless a lock exists and [lock] enforce is set.
-func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
+// reports nothing unless [lock] enforce is set. Under enforce a lock that cannot
+// be read or compared (corrupt, newer than this ai-rulez, a source that cannot be
+// snapshotted) is itself a finding: enforcement never fails open.
+func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 	if !cfg.LockEnforced() {
-		return nil, nil
-	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
-	}
-	if lock == nil {
-		return nil, nil
+		return nil
 	}
 	configRel := relToBase(cfg, cfg.ConfigDir)
 	lockRel := filepath.ToSlash(filepath.Join(configRel, lockfile.FileName))
+	unverifiable := func(err error) []lint.LockDrift {
+		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("cannot verify %s and [lock] enforce = true: %v", lockfile.FileName, err)}}
+	}
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil {
+		return unverifiable(err)
+	}
+	if lock == nil {
+		return nil
+	}
 	if !lock.HasContentPins() {
-		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}, nil
+		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}
 	}
 	shared := cfg
 	if cfg.LocalOverlay != nil || cfg.LocalContent != nil {
@@ -158,7 +188,7 @@ func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
 	}
 	snap, err := lockSnapshot(shared, lock.Profile, false)
 	if err != nil {
-		return nil, err
+		return unverifiable(err)
 	}
 	var out []lint.LockDrift
 	changes := contentlock.Compare(lock, snap).Changes
@@ -177,7 +207,7 @@ func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
 			out = append(out, lint.LockDrift{Path: lockRel, Message: c.Line()})
 		}
 	}
-	return out, nil
+	return out
 }
 
 func relToBase(cfg *config.Config, abs string) string {
