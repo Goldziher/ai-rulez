@@ -68,15 +68,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.validatePluginAuthoring(); err != nil {
-		return err
-	}
-
-	if err := c.validateMarketplaceAuthoring(); err != nil {
-		return err
-	}
-
-	if err := c.validateOutputCollisions(); err != nil {
+	if err := c.validateAuthoring(); err != nil {
 		return err
 	}
 
@@ -99,6 +91,18 @@ func (c *Config) validateSelectors() error {
 		return err
 	}
 	return c.validateDynamicSkills()
+}
+
+// validateAuthoring checks the plugin and marketplace tables and that no two
+// outputs collide.
+func (c *Config) validateAuthoring() error {
+	if err := c.validatePluginAuthoring(); err != nil {
+		return err
+	}
+	if err := c.validateMarketplaceAuthoring(); err != nil {
+		return err
+	}
+	return c.validateOutputCollisions()
 }
 
 func (c *Config) validateOutputCollisions() error {

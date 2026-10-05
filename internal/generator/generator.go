@@ -2551,6 +2551,24 @@ func writeManifestFile(path string, files []string, merged map[string][]jsonmerg
 	return os.WriteFile(path, data, 0o644)
 }
 
+// keepForRole marks the previously generated files a role run must not clean as
+// still wanted. A role renders one person's slice, not the project, and the
+// committed OKF bundle documents the whole project.
+func (g *Generator) keepForRole(previous []string, next map[string]bool) {
+	if g.role == nil || !g.config.OKFEnabled() {
+		return
+	}
+	dir := strings.Trim(filepath.ToSlash(g.config.OKFDir()), "/")
+	if dir == "" || dir == "." {
+		return
+	}
+	for _, rel := range previous {
+		if strings.HasPrefix(rel, dir+"/") {
+			next[rel] = true
+		}
+	}
+}
+
 func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	previous := g.previousManifestFiles()
 	if len(previous) == 0 {
@@ -2591,19 +2609,11 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	// overlay that produced it.
 	local := g.localManifestSet()
 
-	// A role renders one person's slice, not the project: the committed OKF
-	// bundle documents the whole project, so a role run leaves it in place.
-	keepPrefix := ""
-	if g.role != nil && g.config.OKFEnabled() {
-		keepPrefix = strings.Trim(filepath.ToSlash(g.config.OKFDir()), "/") + "/"
-	}
+	g.keepForRole(previous, next)
 
 	var stale []string
 	for _, relPath := range previous {
 		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
-			continue
-		}
-		if keepPrefix != "/" && keepPrefix != "" && strings.HasPrefix(relPath, keepPrefix) {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
