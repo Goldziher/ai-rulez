@@ -8,17 +8,22 @@ import (
 
 // ruleCase is one project and the findings it must (and must not) produce.
 type ruleCase struct {
-	name   string
-	config string            // appended to the base config
-	files  map[string]string // extra files, relative to the project
-	skill  string            // SKILL.md of skill "bad" (when non-empty)
-	want   []string          // "CODE:file-suffix:line" (line 0 = any)
-	absent []string          // codes that must not appear
-	sev    map[string]Severity
+	name    string
+	config  string            // appended to the base config
+	presets string            // replaces the preset list, e.g. `"codex", "cursor"`
+	files   map[string]string // extra files, relative to the project
+	skill   string            // SKILL.md of skill "bad" (when non-empty)
+	want    []string          // "CODE:file-suffix:line" (line 0 = any)
+	absent  []string          // codes that must not appear
+	sev     map[string]Severity
 }
 
 func (c ruleCase) project() map[string]string {
-	files := map[string]string{".ai-rulez/config.toml": baseConfig + c.config}
+	base := baseConfig
+	if c.presets != "" {
+		base = strings.Replace(base, `presets = ["claude"]`, "presets = ["+c.presets+"]", 1)
+	}
+	files := map[string]string{".ai-rulez/config.toml": base + c.config}
 	if c.skill != "" {
 		files[".ai-rulez/skills/bad/SKILL.md"] = c.skill
 	}
