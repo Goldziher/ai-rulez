@@ -53,6 +53,8 @@ type SkillScore struct {
 	OutcomeWith    *float64 `json:"outcome_pass_with"`
 	OutcomeWithout *float64 `json:"outcome_pass_without"`
 	AblationDelta  *float64 `json:"ablation_delta"`
+	// AblationCases is how many cases the three figures above are based on.
+	AblationCases int `json:"ablation_cases,omitempty"`
 	// SkillTokens is the token count of the skill's SKILL.md (cl100k_base, an
 	// approximation). RunTokens and CostUSD are what the runner reported for the
 	// "with" and "without" arms together.
@@ -132,6 +134,7 @@ func Score(cases []Case, resp *Response, opts ScoreOptions) (SkillScore, []CaseS
 		with, without := round(float64(t.withPass)/float64(t.both)), round(float64(t.withoutPass)/float64(t.both))
 		delta := round(with - without)
 		score.OutcomeWith, score.OutcomeWithout, score.AblationDelta = &with, &without, &delta
+		score.AblationCases = t.both
 	}
 	return score, scores
 }
