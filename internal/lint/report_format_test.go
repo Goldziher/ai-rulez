@@ -209,3 +209,31 @@ func TestFingerprintIgnoresLineNumbersAndIndentation(t *testing.T) {
 	assert.NotEqual(t, a, fingerprintOf(CodeLinkUnresolved, "a.md", "see `src/x.go`", 0))
 	assert.NotEqual(t, a, fingerprintOf(CodePathMissing, "a.md", "see `src/x.go`", 1))
 }
+
+func TestAcceptedFindingsInEveryFormat(t *testing.T) {
+	c := sampleCombined()
+	r := &Report{Root: ".", Findings: c.Findings}
+	res := ApplyBaseline(r, &Baseline{Version: 1, Entries: []BaselineEntry{
+		{Fingerprint: "ar1:aaaaaaaaaaaaaaaaaaaaaaaa", Reason: "test fixture"},
+		{Fingerprint: "ar1:gone"},
+	}}, "lint-baseline.json", "2026-10-05")
+	r.Baseline = &res
+	c = Combine([]*Report{r})
+	assert.Equal(t, 1, c.Summary.Accepted)
+	assert.Equal(t, 2, c.Summary.Total, "accepted findings leave the totals")
+
+	sarif := render(t, FormatSARIF, c, WriteOptions{})
+	validateSARIF(t, sarif)
+	assert.Contains(t, string(sarif), `"baselineState": "unchanged"`)
+	assert.Contains(t, string(sarif), `"justification": "test fixture"`)
+	assert.Contains(t, string(sarif), `"baselineState": "new"`)
+
+	assert.NotContains(t, string(render(t, FormatGitHub, c, WriteOptions{})), "AR001")
+	assert.NotContains(t, string(render(t, FormatText, c, WriteOptions{})), "AKIA")
+	assert.Contains(t, string(render(t, FormatText, c, WriteOptions{})), "baseline: 1 finding(s) accepted, 1 stale")
+	assert.Contains(t, string(render(t, FormatJSON, c, WriteOptions{})), `"accepted": true`)
+	assert.Contains(t, string(render(t, FormatMarkdown, c, WriteOptions{})), "Baseline: 1 accepted, 1 stale")
+	var s junitSuites
+	require.NoError(t, xml.Unmarshal(render(t, FormatJUnit, c, WriteOptions{FailOn: "error"}), &s))
+	assert.Equal(t, 0, s.Failures, "the only error is accepted")
+}

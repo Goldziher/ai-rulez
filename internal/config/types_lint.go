@@ -21,6 +21,10 @@ type LintConfig struct {
 	KnownNames []string `yaml:"known_names,omitempty" json:"known_names,omitempty" toml:"known_names,omitempty"` //nolint:tagliatelle
 	// Description tunes the frontmatter description checks.
 	Description *LintDescription `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	// Budget tolerates up to N findings per rule code or name: a rule whose
+	// unaccepted findings number at most N does not count toward the exit code.
+	// Lower N over time to ratchet a rule down.
+	Budget map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
 	// Budgets maps a content kind (rule, context, skill, agent, command) to its size limits.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.

@@ -93,7 +93,11 @@ func ghLevel(s Severity) string {
 // WriteGitHub prints one GitHub Actions workflow-command annotation per finding.
 func WriteGitHub(w io.Writer, c Combined) error {
 	var sb strings.Builder
-	for _, f := range c.Findings {
+	for i := range c.Findings {
+		f := &c.Findings[i]
+		if f.IsAccepted() {
+			continue
+		}
 		path := f.RepoPath()
 		fmt.Fprintf(&sb, "::%s file=%s,line=%d,title=%s::%s\n",
 			ghLevel(f.Severity), ghEscape(path, true), max(f.Line, 1), ghEscape(f.Code+" "+f.Name, true), ghEscape(f.Message, false))
@@ -151,7 +155,8 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 		}
 	}
 	doc := junitSuites{Name: "ai-rulez validate"}
-	for _, f := range c.Findings {
+	for i := range c.Findings {
+		f := &c.Findings[i]
 		root := f.Root
 		if _, exists := byRoot[root]; !exists {
 			byRoot[root] = &junitSuite{Name: root}
@@ -207,6 +212,7 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 	sb.WriteString("## ai-rulez validate\n\n")
 	if c.Summary.Total == 0 {
 		fmt.Fprintf(&sb, "No findings in %d root(s).\n", len(c.Roots))
+		writeBaselineMarkdown(&sb, c)
 		_, err := io.WriteString(w, sb.String())
 		return err //nolint:wrapcheck // writer error
 	}
@@ -214,9 +220,9 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		c.Summary.Errors, c.Summary.Warnings, c.Summary.Infos, len(c.Roots))
 	for _, sev := range []Severity{SeverityError, SeverityWarning, SeverityInfo} {
 		var group []Finding
-		for _, f := range c.Findings {
-			if f.Severity == sev {
-				group = append(group, f)
+		for i := range c.Findings {
+			if c.Findings[i].Severity == sev && !c.Findings[i].IsAccepted() {
+				group = append(group, c.Findings[i])
 			}
 		}
 		if len(group) == 0 {
@@ -240,6 +246,24 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		fmt.Fprintf(&sb, "| `%s` %s | %d |\n", code, rule.Name, c.Summary.ByCode[code])
 	}
 	sb.WriteString("\n</details>\n")
+	writeBaselineMarkdown(&sb, c)
 	_, err := io.WriteString(w, sb.String())
 	return err //nolint:wrapcheck // writer error
+}
+
+func writeBaselineMarkdown(sb *strings.Builder, c Combined) {
+	for _, e := range c.Budgets {
+		fmt.Fprintf(sb, "\n**Over budget:** `%s` has %d finding(s), budget %d.\n", e.Code, e.Count, e.Max)
+	}
+	if c.Baseline == nil {
+		return
+	}
+	fmt.Fprintf(sb, "\nBaseline: %d accepted", c.Baseline.Accepted)
+	if n := len(c.Baseline.Stale); n > 0 {
+		fmt.Fprintf(sb, ", %d stale", n)
+	}
+	if n := len(c.Baseline.Expired); n > 0 {
+		fmt.Fprintf(sb, ", %d expired", n)
+	}
+	sb.WriteString(".\n")
 }
