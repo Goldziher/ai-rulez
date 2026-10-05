@@ -132,6 +132,7 @@ func Run(ctx context.Context, o Options) *Report {
 		checkOKF,
 		checkHooks,
 		checkLock,
+		checkLLM,
 		checkTools,
 	}
 	for _, c := range checks {
