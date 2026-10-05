@@ -118,10 +118,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	includes.SkipFetch = noFetch
 	applyLockFlags()
 
-	if err := checkRoleFlags(); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
+	exitOn(checkRoleFlags())
 
 	if generateWatch {
 		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
@@ -164,13 +161,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	suggestTOMLMigration(cfg.ConfigDir)
 
-	if err := enforceLockedContent(cfg); err != nil {
-		fmtError(err)
-		if errors.Is(err, errLockedSourceDrift) {
-			os.Exit(exitDrift)
-		}
-		os.Exit(1)
-	}
+	exitOnLockedDrift(enforceLockedContent(cfg))
 
 	applyGenerateOverrides(cfg)
 	if err := importGate(cfg); err != nil {
@@ -186,10 +177,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
-	if err := applyRole(gen); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
+	exitOn(applyRole(gen))
 
 	if pluginMode {
 		runPluginGenerate(gen)
@@ -604,9 +592,9 @@ func fmtError(err error) {
 	if oopsErr, ok := oops.AsOops(err); ok {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 
-		if errors, ok := oopsErr.Context()["errors"].([]string); ok && len(errors) > 0 {
+		if details, ok := oopsErr.Context()["errors"].([]string); ok && len(details) > 0 {
 			fmt.Fprintf(os.Stderr, "\nValidation errors:\n")
-			for _, e := range errors {
+			for _, e := range details {
 				fmt.Fprintf(os.Stderr, "  - %s\n", e)
 			}
 		}
@@ -713,6 +701,19 @@ func applyRole(gen *generator.Generator) error {
 // errLockedSourceDrift marks a `generate --locked` refusal because authored
 // content no longer matches ai-rulez.lock.
 var errLockedSourceDrift = errors.New("authored content differs from " + "ai-rulez.lock")
+
+// exitOnLockedDrift exits with the drift code when err says authored content no
+// longer matches the lock, and with 1 on any other error.
+func exitOnLockedDrift(err error) {
+	if err == nil {
+		return
+	}
+	fmtError(err)
+	if errors.Is(err, errLockedSourceDrift) {
+		os.Exit(exitDrift)
+	}
+	os.Exit(1)
+}
 
 // enforceLockedContent is the content half of --locked and --frozen: when the
 // lock pins authored content, every source must still match it. generate never
