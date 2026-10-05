@@ -1,0 +1,161 @@
+# LLM access
+
+Some ai-rulez features need a language model: rubric graders for evals, semantic review, embeddings for skill search, verifiers. They all go through one Go interface, `internal/llm.Client`, so the provider, the cost controls and the privacy rules live in one place.
+
+**Nothing calls a model unless you turn it on.** `allow_network` defaults to `false`; every call is refused with a message that names the setting.
+
+## Configuration
+
+```toml
+# .ai-rulez/config.toml
+[llm]
+provider        = "openai"                 # provider prefix; the literllm backend routes on provider/model
+model           = "gpt-4o-mini"
+backend         = "auto"                   # auto | openaicompat | literllm
+base_url        = "https://llm-gateway.internal.example/v1"   # optional; see "Data egress"
+api_key_env     = "OPENAI_API_KEY"         # the NAME of an environment variable, never a key
+embedding_model = "text-embedding-3-small"
+max_cost_usd    = 2.00                     # stop before the estimate would exceed this
+max_tokens      = 500000                   # prompt + completion, whole run
+max_calls       = 200
+cache           = true                     # default true
+allow_network   = false                    # default false; nothing is sent unless true
+```
+
+Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know).
+
+Keep the opt-in on your machine, not in the shared file: a machine-local `.ai-rulez/config.local.toml` is merged key by key, so
+
+```toml
+# .ai-rulez/config.local.toml (git-ignored)
+[llm]
+allow_network = true
+```
+
+turns it on for you while a teammate who has not opted in stays offline.
+
+### Environment overrides
+
+`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BACKEND`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`. An environment value wins over the config file. An unparsable value is an `AR9C0` error, not a silent default.
+
+### Validation: `AR9C0 llm-config-invalid`
+
+`validate --strict`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, and negative limits. The message never repeats the offending value.
+
+## Commands
+
+```text
+ai-rulez llm doctor [--ping] [--json]   resolved backend, model, base_url host (never the key),
+                                        whether the key variable is set, network gate, cache dir, limits
+ai-rulez llm estimate <file>            approximate tokens and worst-case cost of sending the file; no call
+```
+
+`llm doctor` is also a section of `ai-rulez doctor` (check `llm`, silent when there is no `[llm]` table). `--ping` makes one 1-token call and refuses unless `allow_network` is true.
+
+## What it does for every call
+
+Outermost first: network gate and timeout, cache, retry, budget, backend.
+
+- **Budget, fail closed.** Before each provider call the guard checks the estimated prompt plus the worst-case completion against `max_cost_usd`, `max_tokens` and `max_calls`, and refuses if any could be exceeded. A request without `max_tokens` gets a 1024-token completion cap while a budget is active. If a provider reports no usage, the worst case is charged. With `max_cost_usd` set and no known price for the model, the call is refused. Retries count as calls. Cache hits cost nothing.
+- **Cache.** Keyed by provider identity (provider and base URL), model, the request and its `PromptVersion`, so bumping the prompt version or changing the model misses. Entries hold model output only, live in `.ai-rulez/local/llm-cache/` (already git-ignored with the rest of `local/`), are written atomically with mode 0600, and a corrupt entry is just a miss. `cache = false`, `AI_RULEZ_LLM_CACHE=0` or `NoCache` on a request opt out.
+- **Retry.** Rate limits, 5xx and transport errors retry with exponential backoff and full jitter, honouring `Retry-After`. Authentication, context-length, budget and config errors never retry.
+- **Typed errors.** `errors.Is(err, llm.ErrRateLimit | ErrAuth | ErrContextLength | ErrProvider | ErrBudget | ErrNetworkDisabled | ErrConfig | ErrTimeout)`; `*llm.Error` carries the HTTP status and `Retry-After`.
+- **Redaction.** Logs (`llm.WithLogging`) and dry-run output carry counts, sizes, a short content hash, usage and cost, never prompt or completion text and never keys. Provider error bodies are scrubbed of key-looking text before they enter an error.
+- **Dry run.** `Options.DryRun` returns a client that prints what would be sent (model, sizes, estimated tokens and cost; message text only with `ShowContent`) and returns `llm.ErrDryRun`.
+
+## Data egress and residency
+
+When `allow_network` is true, the prompt text of each feature is sent to the configured endpoint. What that is depends on the feature; for an eval judge it is the rubric and the transcript of the agent session, which can contain source code, file paths, tool output and anything a user typed. ai-rulez adds no other data, and never sends config files, keys or environment.
+
+To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. The `openaicompat` backend speaks only the OpenAI chat and embeddings shapes and talks to that host alone; `llm doctor` shows the host so a reviewer can check it. `base_url` must not embed credentials or a query string (`AR9C0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host.
+
+Model-side retention and training terms are the provider's; check them before sending transcripts that contain private code.
+
+### Cost controls
+
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first. The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families, the embedding models, Claude families) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+
+## Backends
+
+| Backend | Build | Notes |
+| --- | --- | --- |
+| `openaicompat` | always (pure Go, `net/http`) | chat (JSON-schema `response_format`), embeddings; no streaming; no new dependencies |
+| `literllm` | `-tags literllm`, cgo, separate module | experimental; same request/response shapes over the liter-llm FFI; 165 providers via `provider/model` |
+
+`backend = "auto"` picks `literllm` when it is compiled in and `openaicompat` otherwise. Choosing `literllm` in a binary without it is an `AR9C0` error that says how to build it.
+
+For `openaicompat` the `model` is sent verbatim (so a gateway sees exactly the name you configured); `provider` is used for cost lookup and for the `literllm` backend's `provider/model` routing.
+
+## The optional `literllm` backend
+
+[liter-llm](https://github.com/xberg-io/liter-llm) is a Rust client with one interface for 165 providers (`provider/model` names, keys from the provider's environment variable, its own cache, budget, rate limit and cost tracking). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`.
+
+What ai-rulez relies on, checked against v2.1.2 (commit `08d481b`) on macOS arm64:
+
+- `CreateClient(apiKey, baseURL, timeoutSecs, maxRetries, modelHint)`, `Chat(req)`, `Embed(req)` and `Free()`; request and response JSON is OpenAI-shaped, so the adapter reuses the same encoder and decoder as `openaicompat`. `response_format` with a JSON schema reaches the server.
+- Nothing else: ai-rulez keeps its own cache, budget, retry and redaction so they behave the same for both backends (liter-llm's budget is USD-only and it does not return a per-response cost).
+
+How it is linked, and why it is not in the default build:
+
+- The binding's API exists only when cgo is on (its code is all `import "C"`), and it needs the native library at link time, so importing it would break `CGO_ENABLED=0` builds. The release tarball `liter-llm-go-v2.1.2-<platform>.tar.gz` holds `include/liter_llm.h`, the static `lib/libliter_llm_ffi.a` (about 169 MB on macOS arm64) and a dynamic library (about 22 MB).
+- ai-rulez therefore keeps the binding in a nested module, `internal/llm/literllm` (its `go.mod` is the only place the binding is required), and a file guarded by `//go:build literllm && cgo` in `internal/llm` that registers it. The main module's `go.mod` and `go.sum` never mention liter-llm, `go list -deps ./...` shows nothing from it, and `CGO_ENABLED=0 go build ./...` is unchanged.
+- The adapter is a thin shell over JSON: the request and response mapping and the error classification live in cgo-free code that the default tests cover with a stub `NativeClient`.
+
+### Building a release with it
+
+1. Download the tarball for the target platform and verify it against the `.sha256` sidecar from the same release. Copy only `lib/libliter_llm_ffi.a` into an otherwise empty directory (if a dynamic library sits next to it, `-l` prefers that one).
+2. Write a throwaway `go.work` outside the repository:
+
+   ```text
+   go 1.27.0
+
+   use (
+       /path/to/ai-rulez
+       /path/to/ai-rulez/internal/llm/literllm
+   )
+   ```
+
+3. Build:
+
+   ```sh
+   GOWORK=/path/to/go.work CGO_ENABLED=1 \
+     CGO_LDFLAGS="-L/path/to/static-lib-dir -framework Security -framework CoreFoundation -framework SystemConfiguration -liconv -lresolv" \
+     go build -tags literllm -o ai-rulez ./cmd
+   ```
+
+The `-framework ...` flags are the macOS system libraries the static library needs and does not declare. The equivalent Linux and Windows flags are not documented upstream.
+
+### Verified and not verified
+
+Verified here: on macOS arm64 with v2.1.2, the module compiles and links statically with the flags above; `llm doctor --ping` works end to end through both backends against a local OpenAI-compatible server (Authorization header, model name, `max_tokens`, JSON-schema `response_format`); the bridge module's own tests pass against the real library (chat, embeddings, idempotent `Free`, use-after-`Free` returns an error); the `internal/llm` tests pass with `-tags literllm` (so the native backend is registered and `auto` selects it); the default build has no trace of liter-llm (`CGO_ENABLED=0 go build ./...`, `go list -deps`, `go version -m`).
+
+Not verified: Linux, Windows and macOS x86_64 builds (the release has assets for them; the link flags above are macOS-only); behaviour against real providers; concurrent use of one client from several goroutines; running on a macOS older than the one the library was built on (its C objects carry a deployment target of 26.5, the Rust ones 11.0).
+
+### Limitations
+
+- **Binary size.** Linking it added about 39 MB to a 34 MB CLI (72 MB total). The library has no slim feature set for chat and embeddings only.
+- **No cancellation.** The binding's `Chat` and `Embed` take no context. The adapter abandons a call when its context ends; the call finishes in the background and `Close` waits for it.
+- **Flat errors.** The binding returns `"[2] rate limited: ..."` strings, not typed errors; the adapter classifies by message text and redacts keys.
+- **Model prefix.** With a `base_url`, liter-llm sends `provider/model` to the server unchanged, which strict OpenAI-compatible servers reject. Configure `model` without a prefix and leave `provider` empty when you use `base_url` with `literllm`, or use `openaicompat`.
+- **Platforms.** Release assets exist for macOS (arm64, x86_64), Linux glibc (x86_64, aarch64) and Windows (x86_64, aarch64); none for musl.
+- **Status: experimental.** The adapter follows the documented API of a pre-stable binding. Problems found while building it are tracked upstream.
+
+### Licensing
+
+liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). A release that bundles the static library redistributes that code: ship the MIT notice and the third-party notices of the library (`cargo about` or the upstream attribution file) with the binary. The default build contains none of it.
+
+Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.2`, in `internal/llm/literllm/go.mod` only.
+
+## Using it from a feature
+
+```go
+lc, err := cfg.ResolvedLLM()            // cfg is the loaded *config.Config; env overrides applied
+if err != nil { return err }
+client, err := llm.New(lc, llm.Options{ConfigDir: cfg.ConfigDir})
+if err != nil { return err }            // AR9C0; a disabled network surfaces on the first call
+defer client.Close()
+
+v, err := llm.Judge(ctx, client, rubric, transcript)   // v.Score in [0,1], v.Rationale
+```
+
+`llm.Judge` uses structured output at temperature 0 and `llm.JudgePromptVersion` as the cache version. Change the judge prompt or schema and bump that constant. A feature must treat `errors.Is(err, llm.ErrNetworkDisabled)` as "refuse with a clear message" and `llm.ErrDryRun` as "skipped". In tests use `llm.NewFake()` (deterministic, no network) and `llm.Wrap(fake, cfg, opts)` to get the real middleware around it.
