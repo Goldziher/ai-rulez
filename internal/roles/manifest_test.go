@@ -85,3 +85,11 @@ func TestBuildIsDeterministicAndMatchesSchema(t *testing.T) {
 	result := compiled.Validate(doc)
 	assert.True(t, result.IsValid(), "manifest violates its schema: %v", result.Errors)
 }
+
+func TestManifestPath_IncludedItemsDoNotCarryMachinePaths(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), ".ai-rulez", "rules", "shared.md")
+	assert.Equal(t, "rules/style.md", manifestPath("rules/style.md"))
+	assert.Empty(t, manifestPath(""))
+	assert.Equal(t, "included/rules/shared.md", manifestPath(tmp))
+	assert.Equal(t, "included/SKILL.md", manifestPath(filepath.Join(t.TempDir(), "SKILL.md")))
+}
