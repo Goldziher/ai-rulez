@@ -199,20 +199,17 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	root := lockProject(t, "[lock]\nenforce = true\n")
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
-	drift, err := lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift := lockDriftFor(cfg)
 	assert.Empty(t, drift, "no lock, no finding")
 
 	require.Equal(t, 0, writeLockAt("", "", nil))
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	assert.Empty(t, drift)
 
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	var sources, outputs int
 	for _, d := range drift {
 		if d.Output {
@@ -229,7 +226,38 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	assert.Empty(t, drift)
+}
+
+func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
+	root := lockProject(t, "[lock]\nenforce = true\n")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockPath := filepath.Join(root, ".ai-rulez", lockfile.FileName)
+	good, err := os.ReadFile(lockPath)
+	require.NoError(t, err)
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+
+	for name, content := range map[string]string{
+		"corrupt":               string(good) + "garbage = [\n",
+		"hash_version too new":  strings.Replace(string(good), "hash_version = 1", "hash_version = 9", 1),
+		"unsupported version":   "version = 99\n",
+		"content pins removed":  "version = 1\n",
+		"hash_version 0 and v2": strings.Replace(string(good), "hash_version = 1", "hash_version = 0", 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			writeFile(t, lockPath, content)
+			drift := lockDriftFor(cfg)
+			require.NotEmpty(t, drift, "an unverifiable lock must not pass silently")
+			assert.Equal(t, ".ai-rulez/"+lockfile.FileName, drift[0].Path)
+		})
+	}
+
+	// without enforce an unreadable lock is not this check's business
+	writeFile(t, lockPath, "garbage = [\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	assert.Empty(t, lockDriftFor(cfg))
 }
