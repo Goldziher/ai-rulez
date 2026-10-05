@@ -349,6 +349,14 @@ func (c *collector) collectSettings() error {
 			return err
 		}
 	}
+	if len(c.cfg.MCPServersRaw) > 0 {
+		// As written in the configuration (placeholders unresolved), by name.
+		servers := append([]config.MCPServer(nil), c.cfg.MCPServersRaw...)
+		sort.SliceStable(servers, func(i, j int) bool { return servers[i].Name < servers[j].Name })
+		if err := add("mcp-servers", servers); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
