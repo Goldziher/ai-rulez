@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 	"github.com/zeebo/blake3"
@@ -42,7 +43,7 @@ var (
 // Result is cached for the process lifetime.
 func requireGit(ctx context.Context) error {
 	gitCheckOnce.Do(func() {
-		cmd := exec.CommandContext(ctx, "git", "version")
+		cmd := gitutil.Command(ctx, "", "version")
 		out, err := cmd.Output()
 		if err != nil {
 			gitCheckErr = oops.Wrapf(err, "git not found in PATH")
@@ -108,7 +109,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 		refspecs = []string{"refs/heads/" + ref, "refs/tags/" + ref}
 	}
 
-	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
 
 	for i, refspec := range refspecs {
 		// nolint: gosec
@@ -157,7 +158,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 // On any error, destDir is cleaned up before returning.
 func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token string) error {
 	url := injectToken(repoURL, token)
-	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
 
 	cloneArgs := []string{"clone", "--depth", "1", "--filter=blob:none", "--sparse"}
 	if ref != "" && ref != refHead {
@@ -222,7 +223,7 @@ func cloneFor(isSHA bool) func(ctx context.Context, repoURL, ref, pathSpec, dest
 
 func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, token string) error {
 	url := injectToken(repoURL, token)
-	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
 
 	// nolint: gosec
 	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--no-checkout", "--filter=blob:none", "--sparse", url, destDir)
