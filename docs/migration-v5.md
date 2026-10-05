@@ -76,6 +76,9 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
 `AR9K0`. If a repository relied on setting these, move them to the user config file. See [LLM access](llm.md)
 and [Telemetry](telemetry.md).
 
+The same rule now covers every egress or execution knob (scanner egress, eval execution, git credentials, hooks) and is
+documented once, with a table of each knob's scope and precedence, in the [trust model](trust-model.md).
+
 ## Exit codes
 
 The new commands follow one contract: `0` success, `1` the command could not run (invalid configuration, missing

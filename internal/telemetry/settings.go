@@ -303,11 +303,10 @@ func contains(list []string, want string) bool {
 // LoadUser reads the [telemetry] table of the user config file. A missing file
 // or table is not an error.
 func LoadUser(getenv func(string) string) (*config.TelemetryConfig, string, error) {
-	dir := config.UserConfigDir(getenv, "")
-	if dir == "" {
+	path := config.UserConfigFile(getenv)
+	if path == "" {
 		return nil, "", nil
 	}
-	path := filepath.Join(dir, "config.toml")
 	cfg, err := loadTable([]string{path})
 	return cfg, path, err
 }
