@@ -1357,10 +1357,17 @@ ai-rulez validate [config-path] [flags]
 | `--format`            | string  | With `--strict`: `text` (default) or `json` |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
+| `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
 **Examples:**
+
+Explain a rule:
+
+```bash
+ai-rulez validate --explain AR401
+```
 
 Run the deep content checks, as JSON, across every root:
 
