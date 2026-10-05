@@ -35,6 +35,52 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
   `conditional_legacy` and `headline_always_legacy`.
 - **Skill `evals/` directories are not bundled into plugins** unless `[plugin] include_evals = true`.
 
+## Lock file and enforcement
+
+- **`ai-rulez.lock` is format version 2.** `lock` now also pins the ai-rulez version, every authored rule, context
+  file, skill, agent, command, hook, role and settings source, the generated outputs and served skills, as
+  `sha256:` digests with a `hash_version`. Version 1 locks still load, but `lock --check` exits 2 on a lock without
+  content pins, whatever `[lock] enforce` says. Run `ai-rulez lock` once, review the diff and commit the file.
+  See [Lock file](lockfile.md).
+- **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
+  (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
+  the lock does not pin or whose digest differs. A corrupt lock, a newer `hash_version` or a source that cannot be
+  snapshotted is an `AR981` finding, not a logged skip.
+- **The lock digest ignores the project-wide `Source-Hash` header**, so editing an unrelated file no longer changes
+  the digest of a served skill.
+
+## Trust rule for `[llm]` and `[telemetry]`
+
+`allow_network`, `base_url`, `api_key_env` and the price overrides of `[llm]`, and the egress keys of `[telemetry]`
+(`allow_network`, `otlp_endpoint`, `headers_env`, ...), are honoured only from the user config file
+(`~/.config/ai-rulez/config.toml`) or the `AI_RULEZ_LLM_*` / `AI_RULEZ_TELEMETRY_*` variables. A repository
+`config.toml` or `config.local.*` that sets them is ignored and reported by `llm doctor`, `telemetry doctor`,
+`ai-rulez doctor` and the strict findings `AR9L1` and `AR9K1`. A literal key in either table is `AR9L0` or
+`AR9K0`. If a repository relied on setting these, move them to the user config file. See [LLM access](llm.md)
+and [Telemetry](telemetry.md).
+
+## Exit codes
+
+The new commands follow one contract: `0` success, `1` the command could not run (invalid configuration, missing
+input), `2` findings, drift or a failed gate. This applies to `lock --check`, `generate --check`/`--locked`,
+`validate --strict` (including the new `AR9*` families), `verifiers run`, `eval run`, `cost --budget` and
+`tokens --budget`. Scripts that treated every non-zero status alike are unaffected; scripts that
+matched `1` for a drift result need to match `2`.
+
+## Hooks, validation and the rule registry
+
+- **`validate --strict` has more rules.** About thirty new codes (`AR304`, `AR305`, `AR403`, `AR504`-`AR507`,
+  `AR601`, `AR602`, `AR805`, `AR963`, `AR964`, `AR971`-`AR982`, `AR9A0`-`AR9B9`, `AR9K*`, `AR9L*` and more) can
+  fail a CI job that passed before. Every code is listed in [Strict validation](strict-validation.md); lower
+  or turn off a rule with `[lint.severity]`, or accept current findings with `validate --strict --update-baseline`.
+  Rule codes are stable and are never renumbered.
+- **Top-level `[[hooks]]` validation is stricter**: a `script` outside `A-Za-z0-9._/-` is rejected, a missing or
+  non-executable script is `AR504`/`AR505`, and every generated shell line quotes the path.
+- **Served skills (`delivery = "served"`) are left out of the harness skill trees** and reach the model through
+  `ai-rulez mcp --serve-skills`; a static reference to one is `AR990`. Skills default to `static`, so nothing
+  changes until you opt in.
+- **The usage log's `session` field is a salted hash** of the harness session id, not the raw id.
+
 ## Go module path
 
 The Go module is now `github.com/Goldziher/ai-rulez/v5`. Code that imports ai-rulez packages, or installs the
