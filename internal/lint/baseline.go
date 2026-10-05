@@ -245,8 +245,15 @@ func (b Budgets) Excess(findings []Finding) []BudgetExcess {
 // FailedWith is Failed with the baseline and budgets applied: accepted
 // findings never fail, and a rule within its budget is tolerated.
 func FailedWith(findings []Finding, failOn string, budgets Budgets) bool {
+	return FailedWithExcess(findings, failOn, budgets, budgets.Excess(findings))
+}
+
+// FailedWithExcess is FailedWith with the over-budget rules computed by the
+// caller, for a run that narrows findings (changed-only) after judging budgets
+// against the full set.
+func FailedWithExcess(findings []Finding, failOn string, budgets Budgets, excess []BudgetExcess) bool {
 	over := map[string]bool{}
-	for _, e := range budgets.Excess(findings) {
+	for _, e := range excess {
 		over[e.Code] = true
 	}
 	var counting []Finding
