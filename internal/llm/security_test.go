@@ -255,7 +255,7 @@ func TestBudgetAmbiguousFailuresChargeTheWorstCase(t *testing.T) {
 	for name, err := range map[string]error{
 		"timeout":   &Error{Kind: KindTimeout, Message: "slow"},
 		"transport": &Error{Kind: KindProvider, Message: "request failed"},
-		"cancelled": context.DeadlineExceeded,
+		"canceled":  context.DeadlineExceeded,
 	} {
 		if sp := run(err); sp.Tokens != worst || sp.CostUSD <= 0 {
 			t.Errorf("%s may have been billed, want worst case %d: %+v", name, worst, sp)
@@ -387,10 +387,10 @@ func TestMalformedRepliesAreNotRetried(t *testing.T) {
 			t.Errorf("%q: want a permanent error, got %v", body, err)
 		}
 	}
-	if classifyNative(errors.New("request req-14013-x failed")).(*Error).Kind == KindAuth { //nolint:errcheck,forcetypeassert // test
+	if nativeKind("request req-14013-x failed") == KindAuth {
 		t.Error("digits inside an id must not classify as 401/403")
 	}
-	if classifyNative(errors.New("[3] HTTP 403 forbidden")).(*Error).Kind != KindAuth { //nolint:errcheck,forcetypeassert // test
+	if nativeKind("[3] HTTP 403 forbidden") != KindAuth {
 		t.Error("a real 403 must classify as auth")
 	}
 }
@@ -444,7 +444,11 @@ func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
 	}
 	n := 0
 	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error { //nolint:errcheck // test walk
-		if err != nil || d.IsDir() {
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		if d.IsDir() {
 			return nil
 		}
 		n++
@@ -460,4 +464,12 @@ func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
 	if n == 0 {
 		t.Fatal("expected a cache file")
 	}
+}
+
+func nativeKind(msg string) Kind {
+	var e *Error
+	if errors.As(classifyNative(errors.New(msg)), &e) {
+		return e.Kind
+	}
+	return ""
 }

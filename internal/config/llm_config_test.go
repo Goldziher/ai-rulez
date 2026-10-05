@@ -85,7 +85,7 @@ func TestResolveLLMTrustRule(t *testing.T) {
 		t.Fatalf("ignored: %q", got)
 	}
 
-	// user config file: privileged keys honoured; repo limits can only tighten the user's
+	// user config file: privileged keys honored; repo limits can only tighten the user's
 	dir := filepath.Join(xdg, "ai-rulez")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -100,7 +100,7 @@ func TestResolveLLMTrustRule(t *testing.T) {
 	}
 	c = res.Config
 	if !c.AllowNetwork || c.BaseURL != "https://gw.internal/v1" || c.APIKeyEnv != "GW_KEY" || c.Model != "user-model" {
-		t.Fatalf("user scope must be honoured: %+v", c)
+		t.Fatalf("user scope must be honored: %+v", c)
 	}
 	if c.MaxCostUSD != 2 || c.MaxCalls != 100 {
 		t.Fatalf("limits: the lower of user and repo wins: %+v", c)
