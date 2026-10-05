@@ -1,11 +1,12 @@
 package contentlock
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 )
 
 // fileMode returns the digest mode (ModeRegular or ModeExecutable) of the file at
