@@ -255,7 +255,11 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
 - **Nested `AGENTS.md`** support varies: Codex reads only from the project root down to cwd, Cursor, Copilot, Amp
   and opencode load nested files; Zed does not; Cline and Junie are unverified.
 - **Not verified:** the entries marked `?` in the tool table, and whether Copilot expands the `@AGENTS.md` line of
-  the Claude shim when it reads `CLAUDE.md` as agent instructions.
+  the Claude shim when it reads `CLAUDE.md` as agent instructions. Status on 2026-10-04: a `?` means no
+  dated research pass has confirmed the behavior. The 2026-10-04 pass re-checked only the Codex `project_doc_max_bytes`
+  default (32 KiB, content past it is dropped), skill `paths` in Cursor, and Copilot `excludeAgent`; the other `?` cells
+  were not re-researched. In particular `.codex/agents`, `.codex/commands`, `.github/agents` and `.github/commands`,
+  which `generate` writes, remain unverified as outputs the tools read.
 
 See also: [Configuration: `agents_md`](configuration.md#agents_md), [Rules and native rules folders](rules.md),
 [Local Overrides](local-overrides.md), [Monorepo](monorepo.md).

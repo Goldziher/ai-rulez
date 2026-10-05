@@ -581,6 +581,11 @@ the document's original indentation.
   the value ai-rulez wrote: an entry you edited is yours, stays, and is reported once. If a
   hand-written server has the same name as a configured one, the configured value wins on
   `generate` and is the one recorded.
+- **Hooks, permissions and managed keys**: top-level `[[hooks]]`, `[permissions]` and
+  `[claude.settings.managed]` add `hooks`, `permissions.allow|ask|deny`, `env` and `skillOverrides`
+  to the shared documents, owned element by element (hook groups, rules) or entry by entry (env,
+  skill overrides). Hand-authored keys, groups and rules in the same arrays survive `generate` and
+  `clean`. See [Hooks and permissions](settings.md).
 - **Plugin keys of `.claude/settings.json`**: with `[claude.settings] manage = true`, ai-rulez also
   owns `extraKnownMarketplaces.<marketplace.name>` and the listed `enabledPlugins.<plugin>@<marketplace>`
   entries, each entry on its own; other marketplaces and plugins in those objects survive.
@@ -620,11 +625,15 @@ scope = "project"          # project or user; defaults to project
 enabled = true             # defaults to true
 ```
 
-!!! warning "Experimental"
-    The emitted `.claude/plugins.json` is not the same file Claude Code reads for installed
-    plugins — Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
-    `extraKnownMarketplaces`). Treat consumer plugin declarations as experimental until ai-rulez
-    emits the native format.
+!!! warning "Deprecated"
+    `.claude/plugins.json` and `.codex/plugins.json` are not read by Claude Code or Codex (checked
+    2026-10-04). Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
+    `extraKnownMarketplaces`); Codex enables plugins with `[plugins."name@marketplace"] enabled = true`
+    in `config.toml`. `generate` keeps writing the files and now warns when `[[plugins]]` is set
+    together with the `claude` or `codex` preset. Migrate to [`[claude.settings]`](#claudesettings)
+    for Claude Code, and to a `config.toml` entry you keep yourself for Codex; ai-rulez does not write
+    `.codex/config.toml` plugin entries because it owns that file outright. The Copilot
+    `enabledPlugins` settings syntax is not shown in the vendor documentation, so it is not generated.
 
 ### `marketplaces`
 
@@ -664,6 +673,39 @@ in `.claude/settings.json`, merged like `mcpServers` (see
 manage = true
 enable_plugins = ["acme-essentials"]
 ```
+
+### `claude.skills`
+
+By default a skill is user-invocable and appears in Claude Code's `/` menu. `hide_from_menu = true` writes
+`user-invocable: false` on every skill that does not set the key itself, so only the model loads it. A `user-invocable`
+value in a skill's frontmatter always wins. See [Skill Frontmatter](skills.md#invocation-keys).
+
+```toml
+[claude.skills]
+hide_from_menu = true
+```
+
+### `codex`
+
+`project_doc_max_bytes` is the limit your Codex is configured with (default 32 KiB). `generate` warns when the
+`AGENTS.md` files Codex concatenates exceed it, naming the largest sections; `0` turns the warning off. See
+[Rules: size limits](rules.md#size-limits).
+
+```toml
+[codex]
+project_doc_max_bytes = 65536
+```
+
+`[claude.settings.managed]` additionally owns `env.<NAME>` and `skillOverrides.<skill>` entries without
+`manage = true`; `[[hooks]]` and `[permissions]` render the hooks and permission rules. See
+[Hooks and permissions](settings.md).
+
+### `hooks` and `permissions`
+
+Top-level `[[hooks]]` (lifecycle hooks for `claude`, `codex`, `cursor`, `gemini` and `copilot`) and
+`[permissions]` (`allow`, `ask`, `deny` rules for `claude`) are rendered into each harness's native
+settings file outside any plugin, merged key by key so hand-authored content survives. See
+[Hooks and permissions](settings.md).
 
 ### `builtins`
 
@@ -1508,7 +1550,7 @@ above. To keep a domain-specific version, give it a name no other layer uses, or
 
 Deduplication resolves collisions *across* precedence layers. It cannot resolve two items in the
 **same** layer: there is no precedence between them. Skills and commands both render to
-`.claude/skills/{id}/SKILL.md`, differing only in the `user-invocable` frontmatter constant, so two
+`.claude/skills/{id}/SKILL.md`, differing only in the `user-invocable` frontmatter a command gets, so two
 items in one scope resolving to one id means one silently overwrites the other. `ai-rulez validate`
 (and `generate`) refuse instead, with the two source paths named.
 

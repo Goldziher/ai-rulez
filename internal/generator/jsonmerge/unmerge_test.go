@@ -304,3 +304,64 @@ func TestApply_MembersMergeServerByServer(t *testing.T) {
 		})
 	}
 }
+
+func TestApply_ArrayWithConsumerElementsIsPartiallyOwned(t *testing.T) {
+	dir := t.TempDir()
+	doc := filepath.Join(dir, "settings.json")
+	require.NoError(t, os.WriteFile(doc, []byte("{\n  \"hooks\": {\"Stop\": [{\"command\": \"mine\"}]}\n}\n"), 0o644))
+
+	tests := []struct {
+		name          string
+		value         []any
+		elements      []any
+		wantPartially bool
+	}{
+		{"consumer elements beside ours", []any{map[string]any{"command": "mine"}, map[string]any{"command": "ours"}},
+			[]any{map[string]any{"command": "ours"}}, true},
+		{"only ours", []any{map[string]any{"command": "ours"}}, []any{map[string]any{"command": "ours"}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := doc
+			if !tt.wantPartially {
+				path = filepath.Join(dir, "fresh.json")
+			}
+			result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{{Path: []string{"hooks", "Stop"}, Value: tt.value, Elements: tt.elements}})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantPartially, result.PartiallyOwned)
+		})
+	}
+}
+
+func TestAloneKeyIsTakenBackOnlyWhenNothingElseRemains(t *testing.T) {
+	dir := t.TempDir()
+	owned := []jsonmerge.OwnedKey{
+		{Name: "version", Value: 1, Alone: true},
+		{Path: []string{"hooks", "stop"}, Value: []any{map[string]any{"command": "ours"}}, Elements: []any{map[string]any{"command": "ours"}}},
+	}
+
+	t.Run("nothing else: the document goes", func(t *testing.T) {
+		doc := filepath.Join(dir, "a.json")
+		result, err := jsonmerge.Apply(doc, owned)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(doc, []byte(result.Body), 0o644))
+		clean, err := jsonmerge.Unmerge(doc, result.Claims)
+		require.NoError(t, err)
+		assert.True(t, clean.Empty)
+	})
+
+	t.Run("a consumer key remains: the version stays with it", func(t *testing.T) {
+		doc := filepath.Join(dir, "b.json")
+		result, err := jsonmerge.Apply(doc, owned)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(doc, []byte(result.Body), 0o644))
+		merged, err := jsonmerge.Apply(doc, []jsonmerge.OwnedKey{{Path: []string{"hooks", "mine"}, Value: []any{"x"}}})
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(doc, []byte(merged.Body), 0o644))
+		clean, err := jsonmerge.Unmerge(doc, result.Claims)
+		require.NoError(t, err)
+		assert.False(t, clean.Empty)
+		assert.Contains(t, clean.Body, `"version": 1`)
+		assert.NotContains(t, clean.Body, "ours")
+	})
+}

@@ -101,6 +101,7 @@ func (g *Generator) GetOutputPaths(baseDir string) []string {
 func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 
+	cfg.Analysis.DeclareListing(g.Spec.Name, g.Spec.Listing)
 	outputs = append(outputs, g.directoryOutputs(baseDir, cfg)...)
 
 	reg := rulefiles.RegistryFor(cfg, g.Spec.Name)
@@ -230,6 +231,18 @@ func (g *Generator) rulesOutputAccepts(spec *OutputSpec, rule config.ContentFile
 // that the configured rules mode selects; legacy specs keep the filter-based
 // behavior and leave context inline.
 func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, reg *rulefiles.Registry) (*rulesPlan, error) {
+	plan, err := g.planRulesRaw(content, cfg, reg)
+	if err != nil || g.Spec.Root == nil || g.Spec.Root.File != "AGENTS.md" {
+		return plan, err
+	}
+	// The shared AGENTS.md must match codex's: path-scoped items that the baz
+	// preset moves into nested AGENTS.md files are not inlined at the root.
+	plan.inlineRules = presets.WithoutBazNested(plan.inlineRules, cfg)
+	plan.inlineContext = presets.WithoutBazNested(plan.inlineContext, cfg)
+	return plan, nil
+}
+
+func (g *Generator) planRulesRaw(content *config.ContentTree, cfg *config.Config, reg *rulefiles.Registry) (*rulesPlan, error) {
 	rules := presets.AllInlineRules(content)
 	ctx := presets.AllInlineContext(content)
 	spec := g.Spec.Outputs[OutputTypeRules]
@@ -549,9 +562,14 @@ func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.Con
 		start := recorder.mark(&b)
 		switch section {
 		case SectionBodyFrontmatter:
-			frontmatter, err := g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg)
-			if err != nil {
-				return "", err
+			var frontmatter map[string]any
+			if typ == OutputTypeSkills && writesSharedSkillTree(spec) {
+				frontmatter = writeSharedSkillFrontmatter(&b, item)
+			} else {
+				var err error
+				if frontmatter, err = g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg); err != nil {
+					return "", err
+				}
 			}
 			recorder.section(config.PartKindItemFrontmatter, "frontmatter", item.Path, start, &b)
 			// name and description are reported apart from the rest of the
@@ -577,6 +595,25 @@ func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.Con
 	rendered := b.String()
 	recorder.flush(rendered)
 	return rendered, nil
+}
+
+// sharedSkillTreeDirs are the skills directories that Go presets and DSL specs
+// both write: .agents/skills (codex, cursor, gemini, antigravity and the specs
+// that read it) and .github/skills (copilot and copilot-cli).
+var sharedSkillTreeDirs = []string{".agents/skills", ".github/skills"}
+
+// writesSharedSkillTree reports whether a skills output lands in one of the
+// shared skill trees.
+func writesSharedSkillTree(spec *OutputSpec) bool {
+	return slices.Contains(sharedSkillTreeDirs, path.Clean(spec.Dir))
+}
+
+// writeSharedSkillFrontmatter writes the canonical frontmatter of a skill in the
+// shared tree, the same bytes every other writer of that path produces, and
+// returns the name and description it carries.
+func writeSharedSkillFrontmatter(b *strings.Builder, item config.ContentFile) map[string]any {
+	b.WriteString(presets.RenderAgentSkillFrontmatter(item))
+	return map[string]any{"name": item.Name, "description": config.SkillDescriptionForContent(item)}
 }
 
 // writeTargetedSection writes a "## <Heading>" section listing the included
@@ -661,16 +698,27 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 		frontmatter[k] = v
 	}
 	g.applyResolvedScalars(frontmatter, spec, item, cfg)
+	if typ == OutputTypeSkills && spec.HideKey != "" && cfg.Claude.HidesSkillsFromMenu() {
+		frontmatter[spec.HideKey] = false
+	}
 	if item.Metadata != nil {
 		applyTypedLists(frontmatter, spec, item.Metadata)
 		applyOrderedFields(frontmatter, spec, item.Metadata)
 		applyExtras(frontmatter, spec, item.Metadata)
+		applyAuthorControlled(frontmatter, item.Metadata)
 	}
-	if typ == OutputTypeRules && spec.Paths && item.Metadata != nil {
+	if (typ == OutputTypeRules || typ == OutputTypeSkills) && spec.Paths && item.Metadata != nil {
 		if scope := item.Metadata.PathScope(); len(scope) > 0 {
 			frontmatter["paths"] = scope
 		}
 	}
+	g.finishFrontmatter(frontmatter, typ, spec, item, cfg)
+	return frontmatter
+}
+
+// finishFrontmatter applies the global per-field omission policy and the skill
+// description fallback to an assembled frontmatter map.
+func (g *Generator) finishFrontmatter(frontmatter map[string]any, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) {
 	// Honor the global per-field omission policy. model/effort are already
 	// suppressed by the shared resolvers returning ""; tools and description
 	// are written here, so drop them post-hoc.
@@ -690,7 +738,6 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 			frontmatter["description"] = config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), config.SkillID(item))
 		}
 	}
-	return frontmatter
 }
 
 func (g *Generator) applyResolvedScalars(frontmatter map[string]any, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) {
@@ -735,8 +782,23 @@ func typedList(spec *FrontmatterSpec, list []string) any {
 
 func applyOrderedFields(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
 	for _, field := range spec.Fields {
-		if val, ok := meta.Extra[field]; ok && val != "" {
+		if val, ok := meta.TypedExtra(field); ok {
 			frontmatter[field] = val
+		}
+	}
+}
+
+// authorControlledKeys are invocation switches the author decides. A preset
+// default (a constant or the hide-from-menu option) applies only while the
+// author has not set the key.
+var authorControlledKeys = []string{"user-invocable", "disable-model-invocation"}
+
+// applyAuthorControlled writes the author's value of each author-controlled key
+// as a canonical boolean, replacing any preset default already in the map.
+func applyAuthorControlled(frontmatter map[string]any, meta *config.Metadata) {
+	for _, key := range authorControlledKeys {
+		if val, set := meta.ExtraBool(key); set {
+			frontmatter[key] = val
 		}
 	}
 }
@@ -751,6 +813,10 @@ func applyExtras(frontmatter map[string]any, spec *FrontmatterSpec, meta *config
 			continue
 		}
 		if _, alreadySet := frontmatter[k]; alreadySet {
+			continue
+		}
+		if typed, ok := meta.TypedExtra(k); ok {
+			frontmatter[k] = typed
 			continue
 		}
 		frontmatter[k] = v

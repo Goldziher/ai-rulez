@@ -109,15 +109,57 @@ type runner struct {
 	docs        map[string]doc
 	counter     tokens.Counter
 	findings    []Finding
+	// forceSev replaces the severity of every finding while imported content is
+	// scanned (lint.security.scan_imports).
+	forceSev Severity
+	opts     Options
+	drift    []PluginDrift
+}
+
+// Options selects what a run does beyond the default strict checks.
+type Options struct {
+	// SecurityOnly keeps only the security family (AR0xx).
+	SecurityOnly bool
+	// External also runs the scanners configured in lint.external.
+	External bool
+}
+
+// PluginDrift describes a generated plugin whose content changed against the
+// baseline while its declared version stayed the same.
+type PluginDrift struct {
+	// Plugin is the plugin name.
+	Plugin string
+	// File is the absolute path of the manifest that carries the version.
+	File string
+	// Version is the unchanged version.
+	Version string
+	// Changed lists some of the bundle files whose content changed.
+	Changed []string
+}
+
+// Option adds inputs the runner cannot compute from the repository tree alone.
+type Option func(*runner)
+
+// WithPluginDrift supplies the plugin version drift to report as AR961.
+func WithPluginDrift(drift []PluginDrift) Option {
+	return func(r *runner) { r.drift = drift }
 }
 
 // Run lints one loaded configuration against the repository tree.
-func Run(cfg *config.Config, tree *Tree) (*Report, error) {
+func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
+	return RunWith(cfg, tree, Options{}, opts...)
+}
+
+// RunWith is Run with the security and external-scanner options.
+func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Report, error) {
 	counter, err := tokens.New("")
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter}
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so}
+	for _, opt := range opts {
+		opt(r)
+	}
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
@@ -137,6 +179,17 @@ func Run(cfg *config.Config, tree *Tree) (*Report, error) {
 	r.checkDuplicates()
 	r.checkMCP()
 	r.checkHooks(baseAbs)
+	r.checkCollapsed()
+	r.checkUnpinned()
+	r.scanImported()
+	r.checkPluginDrift()
+	if so.External {
+		r.runExternal()
+	}
+	if so.SecurityOnly {
+		r.findings = securityOnly(r.findings)
+	}
+	r.checkSettingsConfig()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
@@ -158,6 +211,9 @@ func (r *runner) resolveSettings() {
 	}
 	if r.lc.Description != nil && r.lc.Description.RequireUseWhen {
 		r.sev[CodeDescriptionStyle] = SeverityWarning
+	}
+	if r.lc.Evals != nil && r.lc.Evals.Require {
+		r.sev[CodeEvalsMissing] = SeverityWarning
 	}
 	for key, val := range r.lc.Severity {
 		rule, ok := lookupRule(key)
@@ -214,6 +270,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.require_metadata: unknown content kind %q", kind))
 		}
 	}
+	problems = append(problems, validateNewSettings(lc)...)
 	sort.Strings(problems)
 	return problems
 }
@@ -234,6 +291,9 @@ func (r *runner) add(code, abs string, line int, format string, args ...any) {
 	}
 	if r.pathIgnored(abs) || r.inlineIgnored(abs, line, code) {
 		return
+	}
+	if r.forceSev != "" {
+		sev = r.forceSev
 	}
 	rule, _ := lookupRule(code) //nolint:errcheck // every emitted code is registered
 	r.findings = append(r.findings, Finding{
@@ -270,6 +330,9 @@ func (r *runner) pathIgnored(abs string) bool {
 }
 
 func (r *runner) inlineIgnored(abs string, line int, code string) bool {
+	if r.forceSev != "" {
+		return false // imported text cannot silence its own findings
+	}
 	d, ok := r.docs[abs]
 	if !ok {
 		return false
@@ -408,14 +471,22 @@ func (r *runner) checkItem(it *item) {
 	}
 	d := parseDoc(raw)
 	r.docs[it.abs] = d
+	r.securityScan(it.abs, raw)
 	if !it.isDoc {
+		fm := parseFrontmatterDoc(d)
+		r.checkFrontmatterKeys(it, fm)
+		r.checkTypedMetadata(it, fm)
+		r.checkSuperseded(it, fm)
+		r.checkToolBreadth(it, fm)
+		r.scanResources(it)
 		r.checkGlobs(it, d)
 		r.checkDescription(it, d)
 		r.checkBudget(it, raw)
-		r.checkRequiredMetadata(it, d)
+		r.checkRequiredMetadata(it, d, fm)
 		r.checkSkillName(it, d)
 		r.checkFrontmatterSkills(it, d)
 		r.checkScripts(it)
+		r.checkEvals(it, d)
 	}
 	r.scanBody(it, d)
 }
@@ -512,33 +583,36 @@ func metaValue(m *config.Metadata, key string) string {
 		return m.Category
 	case "shortcut":
 		return m.Shortcut
-	case "effort":
+	case keyEffort:
 		return m.Effort
 	case "activation":
 		return m.Activation
 	case "targets":
 		return strings.Join(m.Targets, ",")
-	case "tools":
+	case keyTools:
 		return strings.Join(m.Tools, ",")
-	case "skills":
+	case keySkills:
 		return strings.Join(m.Skills, ",")
 	case "keywords":
 		return strings.Join(m.Keywords, ",")
-	case "paths":
+	case keyPaths:
 		return strings.Join(m.Paths, ",")
-	case "globs":
+	case keyGlobs:
 		return strings.Join(m.Globs, ",")
 	}
 	return m.Extra[key]
 }
 
-func (r *runner) checkRequiredMetadata(it *item, d doc) {
+func (r *runner) checkRequiredMetadata(it *item, _ doc, fm frontmatter) {
 	for _, key := range r.lc.RequireMetadata[it.kind] {
-		if strings.TrimSpace(metaValue(it.cf.Metadata, key)) == "" {
-			r.add(CodeMetadataMissing, it.abs, 1, "%s %q is missing required frontmatter key %q", it.kind, itemID(it.kind, it.cf), key)
+		if strings.TrimSpace(metaValue(it.cf.Metadata, key)) != "" {
+			continue
 		}
+		if k, ok := fm.lookup(key); ok && scalar(k.Value) != "" {
+			continue // set inside the Agent Skills `metadata` map
+		}
+		r.add(CodeMetadataMissing, it.abs, 1, "%s %q is missing required frontmatter key %q", it.kind, itemID(it.kind, it.cf), key)
 	}
-	_ = d
 }
 
 func (r *runner) checkSkillName(it *item, d doc) {
@@ -809,4 +883,114 @@ func hookLine(d doc, needle string) int {
 		}
 	}
 	return 1
+}
+
+// checkPluginDrift reports plugins whose content changed but whose version did
+// not. A client that installed from a git-hosted marketplace keeps its cached
+// copy until the version string changes (a plugin that declares no version is
+// tracked by commit and is never reported).
+func (r *runner) checkPluginDrift() {
+	for _, d := range r.drift {
+		changed := strings.Join(d.Changed, ", ")
+		r.add(CodePluginVersionDrift, d.File, 1,
+			"plugin %q changed since the baseline (%s) but its version is still %s; installs that cache the plugin keep the old copy until the version changes",
+			d.Plugin, changed, d.Version)
+	}
+}
+
+// checkEvals reports a skill that ships no eval cases. Cases live in the
+// skill's own evals/ directory or in .ai-rulez/evals/<skill-name>/.
+func (r *runner) checkEvals(it *item, d doc) {
+	if r.sev[CodeEvalsMissing] == SeverityOff || it.kind != kindSkill || it.itemDir == "" {
+		return
+	}
+	id := config.SkillID(it.cf)
+	if r.evalsAllowed(id) {
+		return
+	}
+	for _, dir := range []string{
+		filepath.Join(it.itemDir, config.SkillKindEvals),
+		filepath.Join(r.cfg.ConfigDir, config.EvalsDirName, id),
+	} {
+		if hasFiles(dir) {
+			return
+		}
+	}
+	r.add(CodeEvalsMissing, it.abs, d.lineOf("name", 1), "skill %q has no eval cases (add files under %s/ or %s/%s/)",
+		id, config.SkillKindEvals, config.EvalsDirName, id)
+}
+
+func (r *runner) evalsAllowed(id string) bool {
+	if r.lc.Evals == nil {
+		return false
+	}
+	for _, pattern := range r.lc.Evals.Allow {
+		if m, ok := newGlob(pattern); ok && m.match(id) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasFiles reports whether dir holds at least one regular, non-hidden file.
+func hasFiles(dir string) bool {
+	found := false
+	//nolint:errcheck // an unreadable or missing directory simply has no cases
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type().IsRegular() && !strings.HasPrefix(entry.Name(), ".") {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
+}
+
+// checkSettingsConfig checks the [[hooks]] and [permissions] blocks of
+// config.toml against the tree. The generated settings files may be gitignored,
+// so the declaration is checked at its source: a hook script that is missing or
+// not executable fails the hook at runtime, and an allow rule for a whole tool
+// defeats the point of listing rules.
+func (r *runner) checkSettingsConfig() {
+	if len(r.cfg.Hooks) == 0 && r.cfg.Permissions.IsEmpty() {
+		return
+	}
+	path := r.configFilePath()
+	if path == "" {
+		return
+	}
+	var text []string
+	if data, err := os.ReadFile(path); err == nil {
+		text = strings.Split(string(data), "\n")
+		r.docs[path] = doc{lines: text}
+	}
+	lineOf := func(needle string) int {
+		for i, l := range text {
+			if strings.Contains(l, needle) {
+				return i + 1
+			}
+		}
+		return 1
+	}
+	for _, group := range r.cfg.Hooks {
+		for _, action := range group.Hooks {
+			if action.Script == "" {
+				continue
+			}
+			rel := joinRel(r.baseRel, filepath.ToSlash(filepath.Clean(action.Script)))
+			if !r.tree.Exists(rel) {
+				r.add(CodeHookSourceMissing, path, lineOf(action.Script), "%s hook runs %q, which does not exist", group.Event, action.Script)
+				continue
+			}
+			if exe, known := r.tree.Executable(rel); known && !exe {
+				r.add(CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
+			}
+		}
+	}
+	for _, rule := range r.cfg.Permissions.OverbroadAllowRules() {
+		r.add(CodePermissionOverbroad, path, lineOf(rule), "permissions.allow %q permits every call of the tool; name the commands or paths it may run", rule)
+	}
 }

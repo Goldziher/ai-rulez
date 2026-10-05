@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
@@ -126,16 +127,16 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// so the committed document is the same on every machine, and that makes the
 	// document worth writing without MCP servers.
 	settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocGeminiSettings))
-	settings, write, err := g.renderSettings(settingsPath, cfg)
+	rendered, write, err := g.renderSettings(settingsPath, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("render settings.json: %w", err)
 	}
 	if write {
 		outputs = append(outputs, config.OutputFile{
 			Path:           settingsPath,
-			Content:        settings.Body,
-			PartiallyOwned: settings.PartiallyOwned,
-			MergeClaims:    settings.Claims,
+			Content:        rendered.Body,
+			PartiallyOwned: rendered.PartiallyOwned,
+			MergeClaims:    rendered.Claims,
 		})
 	}
 
@@ -193,12 +194,12 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 // would be written: Gemini CLI accepts comments there, merging would delete
 // them, and the registration is not worth that (generation carries on).
 func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.Config) (result jsonmerge.Result, write bool, err error) {
-	owned, userNames, err := g.settingsKeys(settingsPath, cfg)
+	owned, userNames, err := g.ownedKeys(settingsPath, cfg)
 	if err != nil || len(owned) == 0 {
 		return jsonmerge.Result{}, false, err
 	}
 	result, err = applyMergedDocument(settingsPath, owned)
-	if err != nil && len(cfg.MCPServers) == 0 {
+	if err != nil && len(cfg.MCPServers) == 0 && len(cfg.Hooks) == 0 {
 		rulefiles.Warn(".gemini/settings.json could not be merged into, so "+geminiLocalContextFile+
 			" is not added to context.fileName and Gemini CLI does not load machine-local content: "+err.Error(),
 			"hint", "add \""+geminiLocalContextFile+"\" to context.fileName by hand, or remove the comments",
@@ -271,6 +272,23 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 		g.warnUnreachableGeminiMD(settingsPath, kept, isList)
 	}
 	return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: kept, Elements: claimed}), true, nil
+}
+
+// ownedKeys lists everything ai-rulez owns in .gemini/settings.json: the project
+// keys of settingsKeys (none in user scope, which has no MCP servers and no
+// project context files to register) and the groups [[hooks]] declares.
+func (g *GeminiPresetGenerator) ownedKeys(settingsPath string, cfg *config.Config,
+) (owned []jsonmerge.OwnedKey, userNames bool, err error) {
+	if !cfg.UserScope {
+		if owned, userNames, err = g.settingsKeys(settingsPath, cfg); err != nil {
+			return nil, false, err
+		}
+	}
+	hooks, err := settings.HookKeys(cfg, config.HarnessGemini, settingsPath)
+	if err != nil {
+		return nil, false, fmt.Errorf("render gemini hooks: %w", err)
+	}
+	return append(owned, hooks...), userNames, nil
 }
 
 // wantedNames are the names ai-rulez appends to a user's context.fileName. The
@@ -440,7 +458,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	var builder strings.Builder
 
 	// Calculate content counts
-	allRules := rootRules(content, presetNameGemini, "GEMINI.md")
+	allRules := rootRules(content, cfg, presetNameGemini, "GEMINI.md")
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -461,7 +479,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := rootContext(content, presetNameGemini, "GEMINI.md")
+	allContext := rootContext(content, cfg, presetNameGemini, "GEMINI.md")
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
@@ -472,25 +490,10 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	return builder.String()
 }
 
-// renderGeminiSkillFile renders a skill file in SKILL.md format for Gemini
+// renderGeminiSkillFile renders a skill file in SKILL.md format for Gemini: the
+// shared .agents/skills rendering.
 func (g *GeminiPresetGenerator) renderGeminiSkillFile(skill config.ContentFile) string {
-	var builder strings.Builder
-
-	builder.WriteString("---\n")
-	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
-	builder.WriteString("\n")
-
-	builder.WriteString("description: ")
-	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
-	builder.WriteString("\n")
-
-	builder.WriteString("---\n\n")
-
-	builder.WriteString(skill.Content)
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
+	return renderAgentSkillFile(skill)
 }
 
 // renderGeminiAgentFile renders an agent file with YAML frontmatter for Gemini

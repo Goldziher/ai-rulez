@@ -173,7 +173,11 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 // cursorRulesTarget is the Cursor rules folder. Every .mdc carries frontmatter
@@ -281,39 +285,11 @@ func (g *CursorPresetGenerator) shouldIncludeSkill(skill config.ContentFile) boo
 	return true
 }
 
-// renderSkillFile renders a skill file in SKILL.md format for Cursor
-func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *config.Config) string {
-	var builder strings.Builder
-
-	// Add YAML frontmatter
-	builder.WriteString("---\n")
-	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
-	builder.WriteString("\n")
-
-	if skill.Metadata != nil {
-		if skill.Metadata.Priority != "" {
-			builder.WriteString("priority: ")
-			builder.WriteString(skill.Metadata.Priority)
-			builder.WriteString("\n")
-		}
-
-		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
-			builder.WriteString("description: ")
-			builder.WriteString(quoteYAMLString(desc))
-			builder.WriteString("\n")
-		}
-	}
-
-	builder.WriteString("---\n\n")
-
-	// Add skill content
-	builder.WriteString(skill.Content)
-
-	// Index bundled resources so the agent knows what to read on demand.
-	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
+// renderSkillFile renders a skill file in SKILL.md format for Cursor: the shared
+// .agents/skills rendering, which carries Cursor's paths and
+// disable-model-invocation keys.
+func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, _ *config.Config) string {
+	return renderAgentSkillFile(skill)
 }
 
 // renderCursorAgentFile renders an agent file with YAML frontmatter for Cursor

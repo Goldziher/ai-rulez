@@ -45,6 +45,22 @@
     "model": {
       "$ref": "#/$defs/model"
     },
+    "listing": {
+      "type": "object",
+      "description": "Item kinds the harness lists in its prompt at session start (name + description per entry). Used by `ai-rulez tokens` to charge the always-loaded listing cost.",
+      "additionalProperties": false,
+      "properties": {
+        "skills": { "type": "boolean" },
+        "commands": { "type": "boolean" },
+        "agents": { "type": "boolean" },
+        "include_path": { "type": "boolean", "description": "Each entry also carries the item's file path." },
+        "description_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Per-entry description truncation limit in characters; 0 when unknown."
+        }
+      }
+    },
     "sidecars": {
       "type": "array",
       "description": "Conditionally-emitted single files (settings.json, .mcp.json, etc.) dispatched on the closed-set `kind` enum.",
@@ -186,7 +202,11 @@
         },
         "paths": {
           "type": "boolean",
-          "description": "When true, copy a rule's path scope (its globs/paths frontmatter) into a `paths` field, which is how Claude Code scopes a rule file."
+          "description": "When true, copy a rule's or skill's path scope (its globs/paths frontmatter) into a `paths` field, which is how Claude Code scopes a rule file and gates a skill to matching files."
+        },
+        "hide_key": {
+          "type": "string",
+          "description": "Skills only. The frontmatter key written false (e.g. user-invocable) to hide a skill from the tool's slash menu when the project sets [claude.skills] hide_from_menu. Never overrides a value the author set."
         },
         "include_extras": {
           "type": "boolean",
@@ -291,7 +311,8 @@
             "has_plugins",
             "has_resolved_effort",
             "has_resolved_effort_or_mcp_servers",
-            "has_mcp_servers_or_plugin_settings"
+            "has_mcp_servers_or_plugin_settings",
+            "has_claude_settings"
           ],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit. Defaults to `has_mcp_servers` for kind `mcp`, otherwise `always`."
         },
