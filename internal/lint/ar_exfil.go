@@ -19,6 +19,7 @@ const (
 )
 
 func init() {
+	MarkExampleAware(CodeEscapeObfuscated, CodeInsecureHTTP, CodeRawIPURL)
 	registerRules(
 		RuleInfo{CodeExfilCommand, "exfil-command", SeverityError, "a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, DNS exfiltration)"},
 		RuleInfo{CodeImageExfil, "markdown-image-exfil", SeverityWarning, "a markdown image URL carries a query string; rendering it in an agent UI sends the query to the host"},
@@ -188,9 +189,6 @@ func publicIPv4(s string) bool {
 }
 
 func scanRawIPs(r *runner, t *scanText) {
-	if t.example {
-		return
-	}
 	for _, l := range t.lines {
 		if l.Front || l.Neg {
 			continue
@@ -209,9 +207,6 @@ var (
 )
 
 func scanInsecureHTTP(r *runner, t *scanText) {
-	if t.example {
-		return
-	}
 	for _, l := range t.lines {
 		if l.Front || l.Neg || !fetchCmdRe.MatchString(l.Text) {
 			continue
@@ -272,7 +267,7 @@ var (
 )
 
 func scanEscapes(r *runner, t *scanText) {
-	if t.example || (!t.md && escapeSkipEx[strings.ToLower(filepath.Ext(t.abs))]) {
+	if !t.md && escapeSkipEx[strings.ToLower(filepath.Ext(t.abs))] {
 		return
 	}
 	for _, l := range t.lines {

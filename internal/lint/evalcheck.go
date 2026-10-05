@@ -26,7 +26,7 @@ const (
 
 // The eval checks register themselves so this file is the only place to touch.
 func init() {
-	registry = append(registry,
+	registerRules(
 		RuleInfo{CodeEvalCaseInvalid, "eval-case-invalid", SeverityError, "an eval case file (*.eval.yaml, *.eval.yml, *.eval.json) is malformed: unknown field, missing expect_trigger or prompt, bad assertion, unsafe path"},
 		RuleInfo{CodeEvalStale, "eval-stale", SeverityOff, "a skill changed after its last recorded passing eval run (enabled by lint.evals.require_fresh)"},
 		RuleInfo{CodeEvalScoreLow, "eval-score-low", SeverityOff, "a skill's recorded eval pass rate is below lint.evals.min_pass_rate (enabled by setting it)"},

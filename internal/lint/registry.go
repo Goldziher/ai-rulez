@@ -23,6 +23,14 @@ var (
 // registerRules adds rules to the code registry.
 func registerRules(infos ...RuleInfo) { registry = append(registry, infos...) }
 
+// registerRuleDocs adds the long-form explanation of rules by code. Every
+// registered code needs one (TestEveryRuleHasDocs).
+func registerRuleDocs(docs map[string]RuleDoc) {
+	for code, d := range docs {
+		ruleDocs[code] = d
+	}
+}
+
 func registerItemCheck(fn itemCheck) { itemChecks = append(itemChecks, fn) }
 func registerTextScan(fn textScan)   { textScans = append(textScans, fn) }
 func registerRunCheck(fn runCheck)   { runChecks = append(runChecks, fn) }

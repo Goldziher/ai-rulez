@@ -18,7 +18,7 @@ func TestUnpinnedExecAR021(t *testing.T) {
 		{name: "prose mentioning uvx", skill: body("uvx is faster than pipx for one-off tools.\nUse the uvx launcher.\n"), absent: []string{"AR021"}},
 		{name: "index url is not the package", skill: body("pip install --index-url https://pypi.example/simple requests==2.0\n"), absent: []string{"AR021"}},
 		{name: "documented bad example", skill: body("Avoid `npx -y some-helper`.\n"), absent: []string{"AR021"}},
-		{name: "references dir", files: map[string]string{".ai-rulez/skills/bad/references/x.md": "# X\nnpx -y some-helper\n"}, skill: body("x\n"), absent: []string{"AR021"}},
+		{name: "references dir via example_paths", config: "\n[lint]\nexample_paths = [\"**/references/**\"]\n", files: map[string]string{".ai-rulez/skills/bad/references/x.md": "# X\nnpx -y some-helper\n"}, skill: body("x\n"), absent: []string{"AR021"}},
 	})
 }
 
