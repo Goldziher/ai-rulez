@@ -1,4 +1,4 @@
-//go:build cgo
+//go:build cgo && literllm
 
 // Package literllm is the cgo bridge to the liter-llm Go binding. It lives in its
 // own Go module so the default ai-rulez module graph, go.sum and CGO_ENABLED=0
