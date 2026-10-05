@@ -526,8 +526,8 @@ func TestConfigValidation(t *testing.T) {
 		}
 	}
 	err := Config{Backend: "x"}.Err()
-	if err == nil || !strings.Contains(err.Error(), "AR9C0") || !errors.Is(err, ErrConfig) {
-		t.Fatalf("Err must carry AR9C0: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "AR9L0") || !errors.Is(err, ErrConfig) {
+		t.Fatalf("Err must carry AR9L0: %v", err)
 	}
 	if _, err := New(Config{Backend: "x", AllowNetwork: true}, Options{}); err == nil {
 		t.Fatal("New must reject an invalid config")
@@ -551,7 +551,7 @@ func TestEnvOverrides(t *testing.T) {
 			return "many"
 		}
 		return ""
-	}); err == nil || !strings.Contains(err.Error(), "AR9C0") {
+	}); err == nil || !strings.Contains(err.Error(), "AR9L0") {
 		t.Fatalf("bad env value: %v", err)
 	}
 	if !(Config{}).CacheEnabled() || (Config{}).AllowNetwork {

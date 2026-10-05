@@ -403,7 +403,7 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 func okfScanner(lc *config.LintConfig) okfbridge.Scanner {
 	return func(texts map[string]string) []okfbridge.SecurityFinding {
 		var found []okfbridge.SecurityFinding
-		for _, f := range lint.ScanText(lc, texts) {
+		for _, f := range lint.ScanTexts(lc, texts) {
 			found = append(found, okfbridge.SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
 		}
 		return found

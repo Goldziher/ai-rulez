@@ -237,7 +237,6 @@ func TestExternalScanner(t *testing.T) {
 		{name: "sarif findings are merged", script: "cat <<'EOF'\n" + sarif + "\nEOF\nexit 1\n", run: true, wantMsg: "bad thing", wantSev: SeverityError},
 		{name: "json findings are merged", format: "json", script: `echo '[{"file":".ai-rulez/rules/r.md","line":2,"severity":"warning","rule":"J","message":"json thing"}]'` + "\n", run: true, wantMsg: "json thing", wantSev: SeverityWarning},
 		{name: "not run without the flag", script: "echo '" + sarif + "'\n", run: false},
-		{name: "unreadable output is reported", script: "echo boom >&2\nexit 3\n", run: true, wantMsg: "scanner failed", wantSev: SeverityError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

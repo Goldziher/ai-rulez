@@ -14,19 +14,47 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
-// gitignoreProbeName stands in for the unknown file under a directory pattern.
-const gitignoreProbeName = "ai-rulez-probe"
+// gitignoreProbeNames stand in for the unknown file under a directory (or the
+// text a glob star matches). Two dissimilar names are used so that a user rule
+// that happens to match one stand-in does not make a whole directory look
+// covered: "x.*", "*.tmp" or "generated-*" each catch only one of them. A name
+// must not start with "ai-rulez": a Go project's own "/ai-rulez-*" or
+// "**/ai-rulez-*" binary rules would match it and make git report every
+// directory as already ignored, so nothing under it reached the managed block.
+var gitignoreProbeNames = [...]string{"generated-probe", "x7q-probe.tmp"}
 
-// gitignoreProbe maps an ignore pattern to a representative path git can be
-// asked about: the path itself for a file, a child for a directory, and the probe
-// name in place of each glob star. A short stand-in such as "x" would match a
-// user rule like "x.*" that does not cover the pattern's real files.
-func gitignoreProbe(pattern string) string {
+// gitignoreProbes maps an ignore pattern to the representative paths git is
+// asked about: the path itself for a file (one probe), and for a directory or a
+// glob one probe per stand-in name, a child of the directory or the name in
+// place of each glob star. The pattern counts as covered only when every probe
+// is ignored.
+func gitignoreProbes(pattern string) []string {
 	p := strings.TrimPrefix(pattern, "/")
-	if strings.HasSuffix(p, "/") {
-		p += gitignoreProbeName
+	isDir := strings.HasSuffix(p, "/")
+	if !isDir && !strings.Contains(p, "*") {
+		return []string{p}
 	}
-	return strings.ReplaceAll(p, "*", gitignoreProbeName)
+	probes := make([]string, 0, len(gitignoreProbeNames))
+	for _, name := range gitignoreProbeNames {
+		q := p
+		if isDir {
+			q += name
+		}
+		probes = append(probes, strings.ReplaceAll(q, "*", name))
+	}
+	return probes
+}
+
+// flattenProbes concatenates the probes of every pattern and returns, per
+// pattern, its half-open range in the flat list.
+func flattenProbes(patterns []string) (flat []string, ranges [][2]int) {
+	ranges = make([][2]int, len(patterns))
+	for i, pattern := range patterns {
+		start := len(flat)
+		flat = append(flat, gitignoreProbes(pattern)...)
+		ranges[i] = [2]int{start, len(flat)}
+	}
+	return flat, ranges
 }
 
 // withoutManagedBlock returns content with the ai-rulez managed block removed.
@@ -151,10 +179,7 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 	if len(patterns) == 0 {
 		return nil, nil
 	}
-	probes := make([]string, len(patterns))
-	for i, pattern := range patterns {
-		probes[i] = gitignoreProbe(pattern)
-	}
+	probes, ranges := flattenProbes(patterns)
 	rules := g.userIgnoreRules(probes)
 	if rules == nil {
 		return dropCoveredPatterns(patterns), nil
@@ -162,9 +187,9 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 	protected := g.protectedGitignorePatterns(outputs)
 	needed = make([]string, 0, len(patterns))
 	for i, pattern := range patterns {
-		match := rules[probes[i]]
+		match, covered := coverage(rules, probes[ranges[i][0]:ranges[i][1]])
 		switch {
-		case match.Ignored():
+		case covered:
 			logger.Debug("Already ignored by git", "pattern", pattern, "rule", match.Pattern, "source", match.Source)
 		case match.Negated():
 			if g.isProtectedPattern(pattern, protected) {
@@ -175,6 +200,28 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 		}
 	}
 	return dropCoveredPatterns(needed), overridden
+}
+
+// coverage combines the answers for one pattern's probes. The pattern is
+// covered only if every probe is ignored. When it is not, the returned match is
+// the first negating rule if any probe was un-ignored (a deliberate user
+// choice), else a zero match.
+func coverage(rules map[string]gitutil.IgnoreMatch, probes []string) (gitutil.IgnoreMatch, bool) {
+	all := true
+	var negated gitutil.IgnoreMatch
+	for _, probe := range probes {
+		m := rules[probe]
+		if !m.Ignored() {
+			all = false
+		}
+		if m.Negated() && !negated.Negated() {
+			negated = m
+		}
+	}
+	if all {
+		return rules[probes[0]], true
+	}
+	return negated, false
 }
 
 // dropCoveredPatterns removes, from a sorted list, the patterns a directory

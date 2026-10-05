@@ -290,6 +290,51 @@ func init() {
 			Bad:  "A concept with an unknown `x-ai-rulez` key",
 			Good: "Keep only mappable `x-ai-rulez` keys",
 		},
+		CodeCursorRuleExtension: {
+			Why:  "Cursor reads only .mdc files in .cursor/rules, so a rule in another extension is silently ignored.",
+			Bad:  "`.cursor/rules/style.md`",
+			Good: "`.cursor/rules/style.mdc`",
+		},
+		CodeCursorRuleNotApplied: {
+			Why:  "A .mdc rule with no description, globs or alwaysApply applies only when someone @-mentions it.",
+			Bad:  "A `.mdc` rule whose frontmatter has none of `description`, `globs`, `alwaysApply`",
+			Good: "Add `alwaysApply: true`, `globs` or a `description`",
+		},
+		CodeCopilotExcludeAgent: {
+			Why:  "Copilot rejects an excludeAgent value it does not know, so the file is applied to the wrong agents.",
+			Bad:  "`excludeAgent: reviewer`",
+			Good: "`excludeAgent: code-review` or `cloud-agent`",
+		},
+		CodeCopilotInstructionsName: {
+			Why:  "Copilot reads only files named *.instructions.md in .github/instructions and skips the rest.",
+			Bad:  "`.github/instructions/tests.md`",
+			Good: "`.github/instructions/tests.instructions.md`",
+		},
+		CodeScannerConfigInvalid: {
+			Why:  "An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.",
+			Bad:  "`egress = false` with `env_pass = [\"HTTPS_PROXY\"]`",
+			Good: "Remove the variable or declare `egress = true`",
+		},
+		CodeScannerEgressUndeclared: {
+			Why:  "A scanner that does not declare egress runs with the full environment, including credentials.",
+			Bad:  "A `[[lint.external]]` entry without `egress`",
+			Good: "Set `egress = false` (or `true` and allow it with `--allow-egress`)",
+		},
+		CodeScannerUnavailable: {
+			Why:  "The scanner binary is not on PATH, so its checks did not run.",
+			Bad:  "A `[[lint.external]]` command that is not installed",
+			Good: "Install the scanner or remove the entry",
+		},
+		CodeScannerRunFailed: {
+			Why:  "A scanner that times out, floods output or prints unreadable SARIF gives no result, which must not read as a clean scan.",
+			Bad:  "A scanner that exceeds its timeout or prints invalid SARIF",
+			Good: "Fix the scanner, raise `timeout` within the limit, or narrow its scope",
+		},
+		CodeScannerEgressBlocked: {
+			Why:  "A scanner that can reach the network could send repository content away, so it runs only when the user allows it.",
+			Bad:  "`egress = true` run without `--allow-egress`",
+			Good: "Run with `--allow-egress=<name>` after reviewing the scanner",
+		},
 		CodeLLMConfigInvalid: {
 			Why:  "An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.",
 			Bad:  "`api_key_env = \"sk-live-123\"`",

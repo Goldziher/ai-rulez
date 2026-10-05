@@ -1,6 +1,6 @@
 [project]
 site_name = "AI-Rulez"
-site_description = "Directory-based AI governance with 14 built-in presets (Claude, Cursor, Copilot, Devin, …)"
+site_description = "Directory-based AI governance with 52 built-in harness presets (Claude, Cursor, Copilot, Codex, Gemini, Devin, …)"
 site_url = "https://goldziher.github.io/ai-rulez"
 site_author = "Na'aman Hirschfeld"
 repo_name = "Goldziher/ai-rulez"
@@ -13,6 +13,7 @@ nav = [
   { "Installation" = "installation.md" },
   { "Quick Start" = "quick-start.md" },
   { "Configuration" = "configuration.md" },
+  { "Supported Harnesses" = "harnesses.md" },
   { "Guides" = [
     { "Rules" = "rules.md" },
     { "Domains & Profiles" = "domains.md" },
@@ -28,6 +29,8 @@ nav = [
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Lock File" = "lockfile.md" },
+    { "Harness Traps" = "harness-traps.md" },
+    { "Verifiers" = "verifiers.md" },
     { "Hooks and Permissions" = "settings.md" },
     { "Permissions" = "permissions.md" },
     { "User-level Configuration" = "user-scope.md" },
@@ -43,6 +46,11 @@ nav = [
   { "CLI Commands" = "cli.md" },
   { "MCP Server" = "mcp-server.md" },
   { "Schema" = "schema.md" },
+  { "Migrating to v5" = "migration-v5.md" },
+  { "Proposals" = [
+    { "Agent Extends" = "proposals/agent-extends.md" },
+    { "Agent Extends Docs" = "proposals/agent-extends-docs.md" },
+  ] },
   { "Changelog" = "CHANGELOG.md" },
 ]
 

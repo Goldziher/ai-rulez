@@ -235,10 +235,15 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	obsolete, err := g.planPluginPrune(outputs)
+	if err != nil {
+		return 0, err
+	}
 	if err := g.writeOutputs(outputs); err != nil {
 		return 0, err
 	}
 	g.removeStalePluginDirs(stale)
+	g.applyPluginPrune(obsolete)
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -292,6 +297,13 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	}
 	if err := checkPluginGenerated(expected); err != nil {
 		return err
+	}
+	obsolete, err := g.planPluginPrune(expected)
+	if err != nil {
+		return err
+	}
+	if len(obsolete) > 0 {
+		return obsoleteFilesError(obsolete)
 	}
 	if err := verifyPluginOutputs(expected); err != nil {
 		return err
@@ -375,6 +387,17 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	}
 	for _, dir := range stale {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
+	}
+	obsolete, err := g.planPluginPrune(outputs)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range obsolete {
+		if item.reason == "" {
+			lines = append(lines, "delete-stale: "+item.rel)
+		} else {
+			lines = append(lines, "keep-obsolete: "+item.rel+" ("+item.reason+")")
+		}
 	}
 	return lines, nil
 }
@@ -2090,24 +2113,32 @@ func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 		prefix = "; "
 	}
 
+	// Only a comment block at the very start of the file is a header (the same
+	// shape stripHeader removes). A "# heading" line deeper in the file, such as
+	// inside a TOML multi-line string or a YAML block scalar, is body: hashes
+	// injected there are never stripped, so the file would read as hand-edited.
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "" && i > 0 {
-			prevTrimmed := strings.TrimSpace(lines[i-1])
-			isComment := strings.HasPrefix(prevTrimmed, "#") ||
-				strings.HasPrefix(prevTrimmed, "//") ||
-				strings.HasPrefix(prevTrimmed, ";")
-			if isComment {
-				hashLines := strings.Split(hashBlock(prefix), "\n")
-				result := make([]string, 0, len(lines)+len(hashLines))
-				result = append(result, lines[:i]...)
-				result = append(result, hashLines...)
-				result = append(result, lines[i:]...)
-				return strings.Join(result, "\n")
-			}
+		if isLineComment(line) {
+			continue
 		}
+		if strings.TrimSpace(line) == "" && i > 0 {
+			hashLines := strings.Split(hashBlock(prefix), "\n")
+			result := make([]string, 0, len(lines)+len(hashLines))
+			result = append(result, lines[:i]...)
+			result = append(result, hashLines...)
+			result = append(result, lines[i:]...)
+			return strings.Join(result, "\n")
+		}
+		break
 	}
 	return content
+}
+
+// isLineComment reports whether line starts a #, // or ; comment.
+func isLineComment(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, ";")
 }
 
 // hashLines renders the Content-Hash line and, when set, the Source-Hash line,

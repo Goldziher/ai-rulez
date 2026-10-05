@@ -15,17 +15,19 @@ targets:
 Core commands:
 
 - `ai-rulez init` initializes `.ai-rulez/` with optional presets or domains.
-- `ai-rulez generate` renders outputs; `--profile` selects domains; `--dry-run` previews.
-- `ai-rulez clean` removes generated outputs (the inverse of `generate`); `--dry-run` previews, `--force` skips the prompt.
-- `ai-rulez validate` checks config and content structure.
+- `ai-rulez generate` renders outputs; `--profile` selects domains; `--dry-run` previews; `--watch` regenerates on change; `--check` reports drift without writing; `--user` renders the user config into the home directory.
+- `ai-rulez clean` removes generated outputs (the inverse of `generate`); `--dry-run` previews, `--force` skips the prompt; `--user` removes what `generate --user` wrote.
+- `ai-rulez validate` checks config and content structure (`--strict` adds deep content checks).
+- `ai-rulez doctor` runs read-only diagnostics (removed presets, drift, unresolved MCP placeholders, missing tools); it exits 2 on errors.
+- `ai-rulez verify` checks generated files against their `Content-Hash` offline.
 - `ai-rulez migrate v4` converts V3 YAML config to V4 TOML config.
 - `ai-rulez mcp` starts the MCP server (usually launched by the assistant).
 
 CRUD helpers manage file-based content:
 
-- `ai-rulez add rule|context|skill|agent` creates content files.
-- `ai-rulez remove rule|context|skill|agent` removes content files.
-- `ai-rulez list rules|context|skills|agents` lists items.
+- `ai-rulez add rule|context|skill|agent|command|check` creates content files.
+- `ai-rulez remove rule|context|skill|agent|command|check` removes content files.
+- `ai-rulez list rules|context|skills|agents|commands|checks` lists items.
 - `ai-rulez domain add|remove|list` and `ai-rulez profile add|remove|list` manage scopes.
 - `ai-rulez include add|remove|list` manages remote includes.
 

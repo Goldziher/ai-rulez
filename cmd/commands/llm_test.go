@@ -77,7 +77,7 @@ func TestLLMEstimateReportsBrokenConfig(t *testing.T) {
 	t.Setenv("AI_RULEZ_LLM_MAX_CALLS", "many")
 	llmJSON, llmMaxOutput = false, 100
 	var out bytes.Buffer
-	if err := runLLMEstimate(context.Background(), "prompt.txt", &out); err == nil || !strings.Contains(err.Error(), "AR9C0") {
+	if err := runLLMEstimate(context.Background(), "prompt.txt", &out); err == nil || !strings.Contains(err.Error(), "AR9L0") {
 		t.Fatalf("a broken AI_RULEZ_LLM_* value must fail estimate, got %v\n%s", err, out.String())
 	}
 }

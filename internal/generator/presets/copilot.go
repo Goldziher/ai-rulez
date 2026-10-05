@@ -515,6 +515,7 @@ func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, 
 			entry["url"] = server.URL
 		}
 
+		ApplySharedMCPJSONRefs(entry, server, cfg)
 		mcpServers[name] = entry
 	}
 

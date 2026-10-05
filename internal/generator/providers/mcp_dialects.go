@@ -162,7 +162,22 @@ const (
 	EnvRefSyntaxDollar = "dollar"
 	// EnvRefSyntaxEnvPrefix is ${env:NAME} (Cursor).
 	EnvRefSyntaxEnvPrefix = "env_prefix"
+	// EnvRefSyntaxBraced is ${NAME} (Claude Code, Amp, Pi, Factory and the tools that
+	// read the shared root .mcp.json). Its delimiters make a reference inside a longer
+	// string safe.
+	EnvRefSyntaxBraced = "braced"
+	// EnvRefSyntaxOpencodeEnv is {env:NAME} (OpenCode and Kilo).
+	EnvRefSyntaxOpencodeEnv = "opencode_env"
 )
+
+// IsEnvRefSyntax reports whether name is a known env_ref_syntax.
+func IsEnvRefSyntax(name string) bool {
+	switch name {
+	case EnvRefSyntaxDollar, EnvRefSyntaxEnvPrefix, EnvRefSyntaxBraced, EnvRefSyntaxOpencodeEnv:
+		return true
+	}
+	return false
+}
 
 // applyRefSyntax rewrites the values of an entry that held a placeholder to the
 // tool's reference syntax; see presets.ApplyEnvRefs.
@@ -180,8 +195,13 @@ func applyRefSyntax(entry map[string]any, server *config.MCPServer, syntax strin
 
 // formatEnvRef is a reference to the environment variable name in syntax.
 func formatEnvRef(syntax, name string) string {
-	if syntax == EnvRefSyntaxEnvPrefix {
+	switch syntax {
+	case EnvRefSyntaxEnvPrefix:
 		return "${env:" + name + "}"
+	case EnvRefSyntaxBraced:
+		return "${" + name + "}"
+	case EnvRefSyntaxOpencodeEnv:
+		return "{env:" + name + "}"
 	}
 	return "$" + name
 }

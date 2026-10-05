@@ -15,7 +15,7 @@ import (
 // takes the name of an environment variable (api_key_env).
 var literalSecretKeys = []string{"api_key", "apikey", "key", "token", "secret", "password", "authorization"}
 
-// checkLLMConfig reports an invalid [llm] table (AR9C0): an unknown backend, a
+// checkLLMConfig reports an invalid [llm] table (AR9L0): an unknown backend, a
 // literal secret where an environment variable name belongs, credentials in
 // base_url, or negative limits.
 func (r *runner) checkLLMConfig() {
