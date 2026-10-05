@@ -73,6 +73,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **Unknown top-level config key** is reported by name (`Additional property 'bogus_key' does not match the schema`) instead of the literal `{property}` placeholder.
 - **`validate --strict --repo-root <dir>`** (env `AI_RULEZ_REPO_ROOT`; also on `scan`): a configuration checked out away from its repository no longer reports false `AR402` missing-resource and `AR101` glob errors for paths that exist in the real repository. The root defaults to the git toplevel, else the config's parent. `AR402` now names both bases it tried (the skill directory and the repo root).
 - **`AR301` false positive on kind words**: prose such as "the `test-writer` rules" or "the `test-writer` agent" no longer reports an unknown rule or agent when `test-writer` exists as another kind (rule, skill, agent, command or context); only a name no namespace defines is reported.
 - **Agent frontmatter reaches `.claude/agents/`**: `disallowedTools`, `permissionMode` (the legacy `permission_mode` is renamed to it), `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt` and `omitClaudeMd` were silently dropped; they now pass through with their YAML types (lists, maps, booleans, numbers) in the `claude` preset only. `validate` and `generate` warn about an unknown agent frontmatter key with a did-you-mean, and `validate` warns about a `skills:` entry in any item that names no skill (an error under `--strict`, as `AR302`).
