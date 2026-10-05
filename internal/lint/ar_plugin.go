@@ -218,7 +218,7 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 		switch s, isStr := rawString(src); {
 		case !has:
 			r.add(CodePluginManifest, abs, line, "plugin %q has no source", name)
-		case isStr && !strings.HasPrefix(s, "./"):
+		case isStr && s != "." && !strings.HasPrefix(s, "./"):
 			r.add(CodePluginManifest, abs, line, "plugin %q: source %q must start with ./ or be a source object", name, s)
 		case !isStr && json.Unmarshal(src, &obj) != nil:
 			r.add(CodePluginManifest, abs, line, "plugin %q: source must be a ./ path or an object", name)
