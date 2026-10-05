@@ -211,7 +211,7 @@ func buildSARIF(c Combined, version string) sarifDocument {
 	}
 	results := make([]sarifResult, 0, len(c.Findings))
 	for i := range c.Findings {
-		results = append(results, sarifResultFor(&c.Findings[i], index[c.Findings[i].Code]))
+		results = append(results, sarifResultFor(&c.Findings[i], index[c.Findings[i].Code], c.Baseline != nil))
 	}
 	run := sarifRun{
 		Tool: sarifTool{Driver: sarifDriver{
@@ -226,7 +226,7 @@ func buildSARIF(c Combined, version string) sarifDocument {
 	return sarifDocument{Schema: sarifSchema, Version: sarifVersion, Runs: []sarifRun{run}}
 }
 
-func sarifResultFor(f *Finding, ruleIndex int) sarifResult {
+func sarifResultFor(f *Finding, ruleIndex int, baselined bool) sarifResult {
 	path := f.RepoPath()
 	uri, base := artifactURI(path)
 	res := sarifResult{
@@ -239,6 +239,12 @@ func sarifResultFor(f *Finding, ruleIndex int) sarifResult {
 	}
 	if fp := f.Fingerprint(); fp != "" {
 		res.PartialFingerprints = map[string]string{sarifFingerprint: fp}
+	}
+	if f.IsAccepted() {
+		res.BaselineState = "unchanged"
+		res.Suppressions = []sarifSuppression{{Kind: "external", Status: "accepted", Justification: f.Meta.AcceptReason}}
+	} else if baselined {
+		res.BaselineState = "new"
 	}
 	props := resultProperties(f)
 	if isSecurityCode(f.Code) {

@@ -1358,6 +1358,10 @@ ai-rulez validate [config-path] [flags]
 | `--output`            | string  | With `--strict`: write the report to this file instead of stdout |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
+| `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
+| `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
+| `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
+| `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |

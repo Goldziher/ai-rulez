@@ -121,6 +121,10 @@ max_length = 1024
 require_use_when = true            # enables AR803 at warning
 near_duplicate_threshold = 0.9
 
+[lint.budget]                      # tolerated findings per rule (see Baseline and budgets)
+AR401 = 12
+link-unresolved = 0
+
 [lint.budgets.skill]               # kinds: rule, context, skill, agent, command
 max_lines = 400
 max_tokens = 4000                  # 0 keeps the default, a negative value removes the limit
@@ -171,6 +175,57 @@ every finding there:
 <!-- ai-rulez-lint-ignore: AR401, AR301 -->
 See `legacy/old-tool/README.md` and the `retired-helper` skill.
 ```
+
+## Baseline and budgets
+
+A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
+records the findings you accept today, so only *new* findings fail the build, and a **budget** caps how many
+findings of one rule are tolerated.
+
+```bash
+ai-rulez validate --strict --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
+git add .ai-rulez/lint-baseline.json
+ai-rulez validate --strict            # exit 2 only for findings not in the baseline
+ai-rulez validate --strict --strict-baseline   # ratchet: stale entries fail too
+```
+
+`.ai-rulez/lint-baseline.json` (next to `config.toml`; `--baseline <file>` names another, which must exist) holds
+one entry per accepted finding:
+
+```json
+{
+  "version": 1,
+  "entries": [
+    {
+      "fingerprint": "ar1:3f2c9a1b7d4e5f60a8b1c2d3",
+      "code": "AR401", "file": ".ai-rulez/rules/legacy.md",
+      "message": "path \"src/old/api.py\" does not exist in the repository",
+      "reason": "module removed in Q3; tracked in TEAM-123",
+      "expires": "2026-12-31"
+    }
+  ]
+}
+```
+
+- **Accept keys.** An entry is matched by its `fingerprint` alone (the rule code, repository-relative path and
+  normalized line text, see [Output formats](#output-formats)), never by line number: the finding stays accepted
+  while the file changes around it, and a *different* finding of the same rule on different text is new again. This
+  is the same idea as skillshare's accept keys, kept in a committed file rather than install metadata. `code`,
+  `file` and `message` are there for the reviewer of the baseline diff.
+- **`--update-baseline`** rewrites the file to accept every current finding. Entries that still match keep their
+  `reason` and `expires`; entries that match nothing are dropped. New entries get `--baseline-reason`. Accepting a
+  security finding (`AR0xx`) requires a reason. It exits 0 and cannot be combined with `--strict-baseline`.
+- **Only new findings count.** Accepted findings stay visible (`"accepted": true` in JSON, a SARIF `suppression` with
+  the reason, `baselineState` `unchanged` or `new`), but they are left out of the totals and the exit code.
+- **Stale entries.** An entry whose finding is gone is reported (`baseline: N accepted, M stale`). By default that is
+  only information; `--strict-baseline` exits 2 so the baseline can only shrink.
+- **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
+  and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
+  `AI_RULEZ_TODAY` for reproducible runs.
+- **Budgets.** `[lint.budget]` maps a code or name to a number: up to that many unaccepted findings of the rule are
+  tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the text
+  report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
+  per root, after the baseline.
 
 ## Security checks
 

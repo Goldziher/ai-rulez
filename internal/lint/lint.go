@@ -53,6 +53,8 @@ var builtinAgents = []string{"general-purpose", "explore", "plan", "statusline-s
 type Report struct {
 	Root     string    `json:"root"`
 	Findings []Finding `json:"findings"`
+	// Baseline is set when a baseline was applied to the report.
+	Baseline *BaselineResult `json:"-"`
 }
 
 // Counts returns findings per severity.
@@ -73,8 +75,8 @@ func Failed(findings []Finding, failOn string) bool {
 	if !ok || threshold == SeverityOff {
 		threshold = SeverityError
 	}
-	for _, f := range findings {
-		if f.Severity.AtLeast(threshold) {
+	for i := range findings {
+		if findings[i].Severity.AtLeast(threshold) && !findings[i].IsAccepted() {
 			return true
 		}
 	}
@@ -269,6 +271,14 @@ func ValidateSettings(lc *config.LintConfig) []string {
 	for kind := range lc.RequireMetadata {
 		if _, ok := defaultBudgets[kind]; !ok {
 			problems = append(problems, fmt.Sprintf("lint.require_metadata: unknown content kind %q", kind))
+		}
+	}
+	for key, limit := range lc.Budget {
+		if _, ok := lookupRule(key); !ok {
+			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))
+		}
+		if limit < 0 {
+			problems = append(problems, fmt.Sprintf("lint.budget.%s: %d is negative", key, limit))
 		}
 	}
 	problems = append(problems, validateNewSettings(lc)...)

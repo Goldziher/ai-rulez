@@ -33,8 +33,14 @@ var (
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "") {
-		return oops.Errorf("--format, --output, --fail-on and --external require --strict")
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || baselineFlagsSet()) {
+		return oops.Errorf("--format, --output, --fail-on, --external and the baseline flags require --strict")
+	}
+	if validateUpdateBaseline && validateStrictBaseline {
+		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
+	}
+	if validateBaselineReason != "" && !validateUpdateBaseline {
+		return oops.Errorf("--baseline-reason only applies with --update-baseline")
 	}
 	if !lint.IsFormat(validateFormat) {
 		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
@@ -83,25 +89,36 @@ func failOnFor(cfg *config.Config) string {
 // Each root is judged against its own threshold, so one root's [lint] fail_on
 // never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
-	combined := lint.Combine(reports)
-	var first *config.Config
-	if len(cfgs) > 0 {
-		first = cfgs[0]
+	if validateUpdateBaseline {
+		if err := updateBaselines(reports, cfgs); err != nil {
+			fmtError(err)
+			return 1
+		}
+		return 0
 	}
-	if err := writeReport(combined, failOnFor(first)); err != nil {
+	if err := applyBaselines(reports, cfgs); err != nil {
 		fmtError(err)
 		return 1
 	}
+	combined := lint.Combine(reports)
 	for i, report := range reports {
-		var cfg *config.Config
-		if i < len(cfgs) {
-			cfg = cfgs[i]
-		}
-		if lint.Failed(report.Findings, failOnFor(cfg)) {
-			return exitStrictFindings
+		combined.Budgets = append(combined.Budgets, budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)...)
+	}
+	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
+		fmtError(err)
+		return 1
+	}
+	code := 0
+	for i, report := range reports {
+		cfg := cfgAt(cfgs, i)
+		if lint.FailedWith(report.Findings, failOnFor(cfg), budgetsFor(cfg)) {
+			code = exitStrictFindings
 		}
 	}
-	return 0
+	if baselineBlocks(reports) {
+		code = exitStrictFindings
+	}
+	return code
 }
 
 // structuredFormat reports whether the format must be the only thing on stdout.
