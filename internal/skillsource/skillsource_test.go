@@ -73,7 +73,9 @@ func (f *fixture) advance(rel, content string) string {
 	return git(f.t, f.work, "rev-parse", "HEAD")
 }
 
-func (f *fixture) firstCommit() string { return git(f.t, f.work, "rev-list", "--max-parents=0", "HEAD") }
+func (f *fixture) firstCommit() string {
+	return git(f.t, f.work, "rev-list", "--max-parents=0", "HEAD")
+}
 
 func names(r *Resolved) []string {
 	var out []string
