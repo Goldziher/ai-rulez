@@ -37,6 +37,7 @@ var namedListKeys = map[string]bool{
 	"installed_skills": false,
 	"marketplaces":     false,
 	"scopes":           true,
+	"verifiers":        false,
 }
 
 // mapValuedKeys are top-level tables merged per key.

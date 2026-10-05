@@ -1,0 +1,17 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude']
+
+[[installed_skills]]
+name = 'frontend-design'
+source = 'https://github.com/acme/agent-skills'
+ref = 'main'
+
+[[installed_skills]]
+name = 'pdf-tools'
+source = 'https://git.example.com/team/pdf.git'
+path = 'extras/pdf'
+ref = 'v2.1.0'

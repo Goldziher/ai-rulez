@@ -85,6 +85,18 @@ still exits 1 and never reaches the content checks.
 | AR954 | `superseded-by-missing` | error | `superseded_by: <name>` names an item that does not exist |
 | AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
 | AR962 | `evals-missing` | off | A skill has no eval cases; turned on by `[lint.evals] require = true` or a `[lint.severity]` entry (see [Evals](evals.md)) |
+| AR9C1 | `cursor-rule-extension-ignored` | warning | A file in `.cursor/rules` that is not `.mdc` (Cursor ignores it; `README.md` and folder-style `RULE.md` are exempt); error when ai-rulez generated it. See [Harness traps](harness-traps.md) |
+| AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
+| AR9C3 | `copilot-exclude-agent-invalid` | warning | A `.instructions.md` file whose `excludeAgent` is neither `code-review` nor `cloud-agent` (the older `coding-agent` is still accepted) |
+| AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
+| AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
+| AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
+| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
+| AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
+| AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
+
+Code ranges: `AR0xx` security, `AR1xx`-`AR8xx` content, `AR9xx` budgets, metadata, plugins and evals, `AR9C1`-`AR9C9`
+harness traps, `AR9E0`-`AR9E4` external scanners, `AR9F0`-`AR9F5` the `convert` report (never emitted by `validate`). `AR9C0` and `AR9D*` are reserved for other designs.
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -143,6 +155,12 @@ secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
 name = "my-scanner"
 command = ["my-scanner", "--sarif"]
 format = "sarif"                   # sarif (default) | json
+egress = false                     # required for hardening; see External scanners
+timeout = "120s"                   # default 2m, max 15m
+env_pass = []                      # extra environment variable names for an egress = false scanner
+
+[lint.traps]
+extra_harnesses = ["cursor"]       # run these harnesses' traps without a preset, see Harness traps
 
 [lint.evals]
 require = true                     # enables AR962 at warning
@@ -185,9 +203,51 @@ silence the check on its own content. Pair it with `ai-rulez lock` so the scanne
 **External scanners.** `[[lint.external]]` plugs in a classifier or a third-party scanner. The command is run from
 the project root with the scanned file paths appended, and prints SARIF 2.1.0 (`runs[].results[]`) or a JSON list
 of `{file, line, severity, rule, message}` to stdout; a non-zero exit is fine when the output parses. Findings are
-merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. A scanner that fails or
-prints nothing parseable is itself reported. Because the command comes from the repository, it runs only when you
-pass `--external`.
+merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. Because the command
+comes from the repository, it runs only when you pass `--external`. The command is an argv and never goes through
+a shell.
+
+Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to each run), a 32 MiB cap on each of
+stdout and stderr, and a kill of the whole process group at the timeout and again after the command exits, so a
+daemonised helper does not outlive the run. On Windows the child is placed in a Job Object that is terminated the
+same way; a grandchild spawned in the instant between process start and job assignment can escape it. Output
+past the cap is dropped without blocking the scanner: stdout past it is `AR9E3` (never ingested), while stderr
+past it is truncated silently, and stderr is only ever used, cleaned and cut to 500 characters, in the detail of
+an `AR9E3` message. A command that exits 0 while a helper still holds its output pipe open is a success: its output
+is kept and the helper is killed after a 2 second grace. A very long file list is split into several runs so the
+command line stays under the operating system limit (128 KiB of arguments on Unix, 24 KiB on Windows); a failing run
+stops the remaining ones. A scanner that is not installed is a notice (`AR9E2`, warning),
+not a failure; a command found only through a relative `PATH` entry (`.`, `bin`) counts as not installed, because
+its meaning depends on the current directory. One that times out, overflows the cap, or prints unreadable output, a SARIF version other than 2.1.0,
+a run with `executionSuccessful = false`, a tool notification at level `error`, an empty `runs` (SARIF) or an empty list or `null` (JSON) with a non-zero
+exit, is reported as `AR9E3`: it is never ingested in part, and a crashed scanner never looks clean. Results the
+tool marked suppressed are dropped. Messages are cleaned before printing (escape sequences, control,
+bidirectional, zero-width and tag characters removed, one line, 500 characters, secret-shaped text masked), and a
+reported path is normalised (`file://`, percent-encoding, Windows separators on Windows only; a backslash is an
+ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base the log declares in
+`originalUriBaseIds` (an undeclared id is resolved against the project root). A path outside the project, a
+`file://` URI naming a host other than `localhost` (a UNC or remote share), or a base that points outside the
+project is attributed to `config.toml` with a note.
+
+`egress` declares whether content derived from the scanned files can leave the machine (a hosted model, an
+upload, a credential used for a network call):
+
+| `egress` | Environment | Network flags | Runs |
+| --- | --- | --- | --- |
+| unset (legacy) | the full inherited environment | not checked | always; `AR9E1` warns |
+| `false` | scrubbed: `PATH`, `HOME`, `USER`, `LANG`/`LC_*`, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
+| `true` | scrubbed as above | not checked | only with `--allow-egress=<name>` on the command line (repeatable); otherwise `AR9E4` |
+
+`egress = false` is a declaration with two enforced layers, not a sandbox: the scrubbed environment (proxy and
+credential variables, such as `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_API_KEY`, `*_PAT`, `*_DSN`,
+`*_WEBHOOK_URL`, `COOKIE`, `SESSION`, `DATABASE_URL`, `AWS_*` keys and `HTTPS_PROXY`, are removed and rejected in
+`env_pass`, `AR9E0`; `HOME` is kept, so credentials stored in files below it, such as `~/.aws`, `~/.config` or
+`~/.netrc`, stay reachable by the scanner) and the argv check, which is a heuristic that catches a flag added later, not a scanner that
+ignores its flags. Network isolation (`unshare`, `sandbox-exec`) is not implemented; run the scanner under
+`docker run --network=none` when you need it. Repository config alone cannot enable an egress scanner, so a CI job
+opts in per invocation. Timeout, caps and the group kill apply to every entry, including legacy ones; the
+environment scrub applies once `egress` is set. The hardened runner is the `internal/runner` package, reused by
+later features that execute commands.
 
 ## JSON output
 

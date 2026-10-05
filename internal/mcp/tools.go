@@ -265,6 +265,20 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
+		newAnnotatedTool("run_verifiers", "Evaluate the deterministic repo checks declared as [[verifiers]] (file exists/absent, glob counts, regex present/absent, JSON/YAML/TOML key values, generated output in sync). Read-only; returns one pass/fail/error result per verifier.",
+			newSchemaBuilder().
+				String("config_file", "Path to the root configuration file (optional)", false).
+				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
+				String("name", "Comma-separated verifier names to run (default: all)", false).
+				Boolean("strict", "Treat failing warning-severity verifiers as failures in the ok field", false).
+				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
+				WorkingDirectory(),
+			readOnlyAnnotations(),
+		),
+		handlers.RunVerifiersHandler,
+	)
+
+	s.addTool(
 		newAnnotatedTool("init_project", "Initialize a new ai-rulez project in the current directory",
 			newSchemaBuilder().
 				String("project_name", "The name for the new project", false).
