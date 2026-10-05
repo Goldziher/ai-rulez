@@ -93,7 +93,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ],
             "description": "Built-in preset name"
           },
@@ -247,7 +248,8 @@
                 "warp",
                 "zcode",
                 "zed",
-                "zoocode"
+                "zoocode",
+                "okf"
               ]
             }
           }
@@ -630,7 +632,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "additionalProperties": {
@@ -695,7 +698,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "additionalProperties": {
@@ -745,6 +749,27 @@
         "skills_index": {
           "type": "boolean",
           "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "okf": {
+      "type": "object",
+      "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "Bundle directory, relative to the project root. Defaults to docs/okf. Must not be inside the configuration directory or .git."
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["rules", "context", "skills", "agents", "commands", "checks"] },
+          "description": "Content kinds to export. Defaults to all."
+        },
+        "spec": {
+          "type": "string",
+          "enum": ["0.2"],
+          "description": "OKF spec version to write. Only 0.2 is implemented."
         }
       },
       "additionalProperties": false

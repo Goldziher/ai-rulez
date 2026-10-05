@@ -262,7 +262,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "type": "object"
@@ -326,7 +327,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ]
           },
           "type": "object"
@@ -1207,6 +1209,30 @@
       "minLength": 1,
       "type": "string"
     },
+    "okf": {
+      "additionalProperties": false,
+      "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
+      "properties": {
+        "dir": {
+          "description": "Bundle directory, relative to the project root. Defaults to docs/okf. Must not be inside the configuration directory or .git.",
+          "type": "string"
+        },
+        "include": {
+          "description": "Content kinds to export. Defaults to all.",
+          "items": {
+            "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "spec": {
+          "description": "OKF spec version to write. Only 0.2 is implemented.",
+          "enum": ["0.2"],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "permissions": {
       "additionalProperties": false,
       "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json and translated into the native permission format of the other harnesses that have one (see docs/permissions.md).",
@@ -1657,7 +1683,8 @@
               "warp",
               "zcode",
               "zed",
-              "zoocode"
+              "zoocode",
+              "okf"
             ],
             "type": "string"
           },
@@ -1831,7 +1858,8 @@
                 "warp",
                 "zcode",
                 "zed",
-                "zoocode"
+                "zoocode",
+                "okf"
               ],
               "type": "string"
             },
