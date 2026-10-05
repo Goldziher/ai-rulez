@@ -146,3 +146,10 @@ func ProvenanceOutputs(sidecar []byte) (hashes map[string]string, sourceHash str
 	}
 	return hashes, document.SourceHash, nil
 }
+
+func unmarshalProvenance(sidecar []byte, document *provenanceDocument) error {
+	if err := json.Unmarshal(sidecar, document); err != nil {
+		return oops.Wrapf(err, "parse plugin provenance")
+	}
+	return nil
+}

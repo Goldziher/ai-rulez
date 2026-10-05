@@ -35,12 +35,22 @@ var matrixFixtures = map[string]string{
 // project directory with every output the run produced.
 func generateWithGitignore(t *testing.T, preset string, agentsMD bool) (string, []config.OutputFile) {
 	t.Helper()
+	return generateWithUserGitignore(t, preset, agentsMD, "")
+}
+
+// generateWithUserGitignore is generateWithGitignore with a hand-written root
+// .gitignore in place before the run.
+func generateWithUserGitignore(t *testing.T, preset string, agentsMD bool, userGitignore string) (string, []config.OutputFile) {
+	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
 	base := t.TempDir()
 	cmd := exec.Command("git", "-C", base, "init", "-q") //nolint:gosec // test
 	require.NoError(t, cmd.Run())
+	if userGitignore != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(base, ".gitignore"), []byte(userGitignore), 0o600))
+	}
 
 	dir := filepath.Join(base, ".ai-rulez")
 	for rel, body := range matrixFixtures {
@@ -173,6 +183,23 @@ func TestGitignoreMatrix_EveryPresetIgnoresItsOutputs(t *testing.T) {
 	}
 }
 
+// TestGitignoreMatrix_UserRulesMatchingTheProbeNameDoNotHideOutputs: a user rule
+// such as the Go-binary pattern "/ai-rulez-*" matched the stand-in name used to
+// ask git about directory patterns, so directories were judged already ignored
+// and never written to the managed block.
+func TestGitignoreMatrix_UserRulesMatchingTheProbeNameDoNotHideOutputs(t *testing.T) {
+	user := "bin/\n/ai-rulez\n/ai-rulez-*\n**/ai-rulez-*\n"
+	for _, preset := range []string{"codex", "opencode", "claude"} {
+		t.Run(preset, func(t *testing.T) {
+			// Arrange + Act
+			base, outputs := generateWithUserGitignore(t, preset, false, user)
+
+			// Assert
+			assertGitignoreMatrix(t, base, outputs)
+		})
+	}
+}
+
 func TestGitignoreMatrix_MCPPresetIgnoresItsConfig(t *testing.T) {
 	// Arrange + Act
 	base, outputs := generateWithGitignore(t, string(config.PresetMCP), false)
@@ -180,4 +207,40 @@ func TestGitignoreMatrix_MCPPresetIgnoresItsConfig(t *testing.T) {
 	// Assert
 	assertGitignoreMatrix(t, base, outputs)
 	assertSiblingsNotIgnored(t, base, outputs)
+}
+
+// TestGitignore_PiKeepsHandAuthoredFilesTracked is the regression test for #211:
+// the .pi/ folder also holds files a user writes and commits (settings.json,
+// extensions/*.ts), so only what ai-rulez generates there is ignored, never the
+// directory itself.
+func TestGitignore_PiKeepsHandAuthoredFilesTracked(t *testing.T) {
+	// Arrange + Act
+	base, outputs := generateWithGitignore(t, "pi", false)
+	data, err := os.ReadFile(filepath.Join(base, ".gitignore"))
+	require.NoError(t, err)
+	lines := strings.Split(string(data), "\n")
+
+	// Assert: no pattern covers the whole folder.
+	for _, broad := range []string{".pi", ".pi/", "/.pi", "/.pi/", ".pi/*", ".pi/**"} {
+		assert.NotContains(t, lines, broad)
+	}
+	isIgnored := func(rel string) bool {
+		return exec.Command("git", "-C", base, "check-ignore", "--no-index", "-q", rel).Run() == nil //nolint:gosec // test
+	}
+	for _, handAuthored := range []string{
+		".pi/settings.json", ".pi/extensions/my-extension.ts", ".pi/themes/dark.json", ".pi/SYSTEM.md",
+	} {
+		assert.False(t, isIgnored(handAuthored), "hand-authored %s must stay tracked", handAuthored)
+	}
+	assertGitignoreMatrix(t, base, outputs)
+	written := map[string]bool{}
+	for _, out := range outputs {
+		if rel, err := filepath.Rel(base, out.Path); err == nil {
+			written[filepath.ToSlash(rel)] = true
+		}
+	}
+	for _, generated := range []string{".pi/extensions/ai-rulez-hooks.ts", ".pi/mcp.json", ".pi/agents/helper.md"} {
+		assert.True(t, written[generated], "%s is generated", generated)
+		assert.True(t, isIgnored(generated), "generated %s must be ignored", generated)
+	}
 }

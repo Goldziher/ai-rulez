@@ -29,21 +29,46 @@ Every AI coding tool wants its own config: Claude needs `CLAUDE.md`, Cursor want
 
 ## The Solution
 
-Write your rules, context, skills, agents, and commands once in `.ai-rulez/`. Run `generate`. Get native configs for every tool you use.
+Write your rules, context, skills, agents, commands, and checks once in `.ai-rulez/`. Run `generate`. Get native configs for every tool you use.
+
+## Quick Start
 
 ```bash
-npx ai-rulez@latest init && npx ai-rulez@latest generate
+npx ai-rulez@latest init                # scaffold .ai-rulez/ with config.toml
+```
+
+```toml
+# .ai-rulez/config.toml
+presets = ["claude", "cursor", "codex", "copilot", "gemini"]   # any of the 52 harnesses
+```
+
+```bash
+npx ai-rulez@latest generate            # write native files for each preset
+npx ai-rulez@latest generate --watch    # regenerate on every change to .ai-rulez/
+npx ai-rulez@latest doctor              # read-only diagnostics: drift, removed presets, missing tools
+npx ai-rulez@latest generate --user     # same, for your home directory (~/.claude, ~/.codex, ...)
 ```
 
 Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? `ai-rulez` auto-discovers `.config/ai-rulez/` as well, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
 
-ai-rulez generates correct, tool-native output for **15 platforms**: Claude, Cursor, Devin, Copilot, Gemini, Cline, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, Xum, pi and Baz. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+ai-rulez generates correct, tool-native output for **52 harnesses**, among them Claude Code, Cursor, Codex, GitHub Copilot and Copilot CLI, Gemini CLI, OpenCode, Kilo Code, Devin, Cline, Amp, Junie, Antigravity, Qwen Code, Factory Droid, goose, Kiro, Zed, Warp and pi. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats, tool and model names. The [harness matrix](docs/harnesses.md) lists every preset with the features it supports: rules folder, skills, agents, commands, MCP, hooks, permissions, checks and user scope. Where a harness cannot express something, ai-rulez skips it with a warning and never approximates.
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
 Set `agents_md = true` to write `AGENTS.md` and `.agents/skills/` once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Off by default. See [docs/agents-md.md](docs/agents-md.md).
 
 Need the same knowledge outside coding agents? `ai-rulez export okf` writes rules, context and skills as an [Open Knowledge Format](docs/okf.md) bundle (the `okf` preset keeps it in sync on every `generate`), `ai-rulez import okf <dir|git-url>` turns an existing OKF bundle into `.ai-rulez/` sources, and `ai-rulez okf validate` lints any bundle. See [docs/okf.md](docs/okf.md).
+## Beyond Instructions
+
+| Feature | What it does | Docs |
+| ------- | ------------ | ---- |
+| **Hooks** | One top-level `[[hooks]]` list, rendered into the native hooks file of 36 harnesses (or a generated plugin module for OpenCode, Kilo, MiMo Code, pi and Amp), with matchers translated to each tool's names | [settings](docs/settings.md) |
+| **Permissions** | One `[permissions]` allow/ask/deny list translated for 24 harnesses; a rule a tool cannot express is skipped and an unenforced deny is reported, never widened | [permissions](docs/permissions.md) |
+| **Checks** | Code-review guidelines in `.ai-rulez/checks/` for Cursor Bugbot, Kilo, Qwen Code, Factory, Rovo Dev, Amp, Augment and GitLab Duo | [checks](docs/checks.md) |
+| **User scope** | `generate --user` writes a personal config into the per-user directories of 47 harnesses and `clean --user` takes it back | [user-scope](docs/user-scope.md) |
+| **Merges** | JSON, JSONC, TOML and YAML settings files you also edit are merged key by key; your keys and comments survive `generate` and `clean` | [configuration](docs/configuration.md#settings-document-merge-behavior) |
+| **Native MCP env references** | A `${VAR}` placeholder is written as the tool's own reference where it expands one, so no secret lands in the file | [configuration](docs/configuration.md#mcp_servers) |
+| **Watch and doctor** | `generate --watch` regenerates on save; `ai-rulez doctor` reports drift, removed presets, unresolved placeholders and missing tools | [CLI](docs/cli.md) |
 
 ## Generate Plugins, Not Just Config
 
@@ -55,7 +80,7 @@ ai-rulez generate --plugin --dry-run # preview
 ai-rulez verify --plugin             # prove committed output matches its sources
 ```
 
-Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable — a hook either runs a command already on the consumer’s machine or bundles a project script into the plugin’s `hooks/` directory, so it works in a fresh clone — and each runtime gets its own manifest with the variable and hook format rewritten to fit. Hermes generation emits both a project plugin and a buildable Python entry-point package. Use `plugin.content_root` to keep distributable skills separate from contributor governance. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. See [Authoring Plugins](docs/plugins.md).
+Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable — a hook either runs a command already on the consumer’s machine or bundles a project script into the plugin’s `hooks/` directory, so it works in a fresh clone — and each runtime gets its own manifest with the variable and hook format rewritten to fit. Hermes generation emits both a project plugin and a buildable Python entry-point package. Use `plugin.content_root` to keep distributable skills separate from contributor governance. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. Re-running `generate --plugin` prunes files a previous run generated that no longer have a source, and keeps anything you edited. See [Authoring Plugins](docs/plugins.md).
 
 ## What Ships Out of the Box
 
@@ -131,6 +156,7 @@ entries too, so an exclusion written against a rule keeps working after it becom
 | **Skills**   | Reusable prompts and workflows | Deployment checklist, review protocol  |
 | **Agents**   | Specialized AI personas        | Code reviewer, performance engineer    |
 | **Commands** | Slash commands across tools    | `/review`, `/deploy`, `/test`          |
+| **Checks**   | Code-review guidelines         | Security review, performance review    |
 
 ## Organization at Scale
 
@@ -270,7 +296,7 @@ See [Roles](docs/roles.md).
 
 ## MCP Server
 
-ai-rulez includes a built-in MCP server with 36 tools that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
+ai-rulez includes a built-in MCP server (read, CRUD, generate, validate, doctor and verifier tools) that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
 
 ```toml
 [[mcp_servers]]
@@ -354,7 +380,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.24.2
+    rev: v5.0.0
     hooks:
       - id: ai-rulez-recursive # generate outputs across the repo
       - id: ai-rulez-validate # dry-run validation
@@ -375,7 +401,7 @@ repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.24.2"
+revision = "v5.0.0"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 

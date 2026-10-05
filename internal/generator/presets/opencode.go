@@ -459,6 +459,7 @@ func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string
 			}
 		}
 
+		ApplyEnvRefs(entry, server, opencodeEnvRef)
 		servers[name] = entry
 	}
 

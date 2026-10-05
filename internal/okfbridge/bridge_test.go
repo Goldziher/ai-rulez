@@ -16,7 +16,7 @@ import (
 
 func testScan(texts map[string]string) []okfbridge.SecurityFinding {
 	var out []okfbridge.SecurityFinding
-	for _, f := range lint.ScanText(nil, texts) {
+	for _, f := range lint.ScanTexts(nil, texts) {
 		out = append(out, okfbridge.SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
 	}
 	return out

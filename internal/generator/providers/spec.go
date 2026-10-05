@@ -278,7 +278,8 @@ type SidecarSpec struct {
 	Transports []string `toml:"transports,omitempty" yaml:"transports,omitempty" json:"transports,omitempty"`
 	// EnvRefSyntax (kind "mcp") writes a value that came from a ${VAR} placeholder
 	// as a reference the tool expands itself instead of the resolved secret:
-	// "dollar" is $NAME (Codebuff), "env_prefix" is ${env:NAME} (Cursor).
+	// "dollar" is $NAME (Codebuff, Crush), "env_prefix" is ${env:NAME} (Cursor),
+	// "braced" is ${NAME} (Factory) and "opencode_env" is {env:NAME} (Kilo).
 	EnvRefSyntax string `toml:"env_ref_syntax,omitempty" yaml:"env_ref_syntax,omitempty" json:"env_ref_syntax,omitempty"`
 	// Elements (kind "mcp" on a json or jsonc document) also adds values to an
 	// array member of the document, such as Kilo's `instructions` globs.

@@ -72,7 +72,7 @@ base_url = "https://user:pw@gw.example/v1"
 	fs := lintDir(t, root)
 
 	if !has(fs, CodeLLMConfigInvalid, ".ai-rulez/config.toml", 0) {
-		t.Fatalf("expected AR9C0; findings:\n%s", dump(fs))
+		t.Fatalf("expected AR9L0; findings:\n%s", dump(fs))
 	}
 	msgs := ""
 	for _, f := range fs {
@@ -103,7 +103,7 @@ api_key_env = "GITHUB_TOKEN"
 	gitAdd(t, root)
 	fs := lintDir(t, root)
 	if !has(fs, CodeLLMUntrustedKey, ".ai-rulez/config.toml", 0) {
-		t.Fatalf("expected AR9C1; findings:\n%s", dump(fs))
+		t.Fatalf("expected AR9L1; findings:\n%s", dump(fs))
 	}
 }
 
@@ -125,6 +125,6 @@ func TestRunChecksLLMSecretKeyInLocalOverlay(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected AR9C0 on the local overlay; findings:\n%s", dump(fs))
+		t.Fatalf("expected AR9L0 on the local overlay; findings:\n%s", dump(fs))
 	}
 }

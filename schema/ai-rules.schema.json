@@ -1038,7 +1038,7 @@
     },
     "llm": {
       "type": "object",
-      "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9C0).",
+      "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9L0).",
       "properties": {
         "provider": {"type": "string", "description": "Provider prefix for provider/model routing (used by the literllm backend)."},
         "model": {"type": "string", "description": "Chat model name."},
@@ -1057,6 +1057,38 @@
         "price_output_per_mtok": {"type": "number", "minimum": 0, "description": "USD per million completion tokens; overrides the built-in price table."}
       },
       "additionalProperties": false
+    },
+    "verifiers": {
+      "type": "array",
+      "description": "Deterministic repo checks run by `ai-rulez verifiers run`.",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "description": "Unique verifier name." },
+          "description": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["file_exists", "file_absent", "glob_count", "regex", "forbid", "key_equals", "generated_in_sync"],
+            "description": "Predicate type."
+          },
+          "severity": { "type": "string", "enum": ["error", "warning", "info"], "description": "Defaults to error." },
+          "path": { "type": "string", "description": "Repo-relative file (file_exists, file_absent, key_equals)." },
+          "glob": { "type": "string", "description": "Files to select (glob_count, regex, forbid)." },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Globs removed from the selection."
+          },
+          "pattern": { "type": "string", "description": "RE2 expression (regex, forbid)." },
+          "min": { "type": "integer", "minimum": 0, "description": "Minimum match count (glob_count)." },
+          "max": { "type": "integer", "minimum": 0, "description": "Maximum match count (glob_count)." },
+          "key": { "type": "string", "description": "Dotted key path into a JSON, YAML or TOML file (key_equals)." },
+          "equals": { "type": "string", "description": "Expected scalar value, compared as text (key_equals)." },
+          "profile": { "type": "string", "description": "Generate profile to render (generated_in_sync)." }
+        }
+      }
     },
     "lint": {
       "type": "object",
@@ -1232,10 +1264,32 @@
             "properties": {
               "name": { "type": "string" },
               "command": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-              "format": { "type": "string", "enum": ["sarif", "json"] }
+              "format": { "type": "string", "enum": ["sarif", "json"] },
+              "egress": {
+                "type": "boolean",
+                "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress."
+              },
+              "timeout": { "type": "string", "description": "Go duration such as \"90s\". Default 2m, at most 15m." },
+              "env_pass": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Extra environment variable names passed through the scrubbed environment. Proxy and credential-like names are rejected when egress is false (AR9E0)."
+              }
             },
             "additionalProperties": false
           }
+        },
+        "traps": {
+          "type": "object",
+          "description": "Harness trap checks (AR9C1...): files a harness silently ignores.",
+          "properties": {
+            "extra_harnesses": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Harnesses (cursor, copilot) whose traps run although no preset for them is configured, for hand-written files."
+            }
+          },
+          "additionalProperties": false
         },
         "evals": {
           "type": "object",

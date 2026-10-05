@@ -59,6 +59,27 @@ func TestCheckStrictFlags_External(t *testing.T) {
 	}
 }
 
+func TestCheckStrictFlags_AllowEgress(t *testing.T) {
+	t.Cleanup(func() { validateStrict, validateExtern, validateAllowEgress = false, false, nil })
+	validateStrict, validateExtern, validateAllowEgress = true, false, []string{"snyk"}
+	if err := checkStrictFlags(); err == nil {
+		t.Error("--allow-egress without --external must be rejected")
+	}
+	validateExtern = true
+	if err := checkStrictFlags(); err != nil {
+		t.Errorf("--allow-egress with --external must be accepted: %v", err)
+	}
+	for _, cmd := range []string{"validate", "scan"} {
+		c := ValidateCmd
+		if cmd == "scan" {
+			c = ScanCmd
+		}
+		if c.Flags().Lookup("allow-egress") == nil {
+			t.Errorf("%s is missing --allow-egress", cmd)
+		}
+	}
+}
+
 func TestScanCommand(t *testing.T) {
 	for _, name := range []string{"recursive", "external", "format", "fail-on", "no-local", "config-dir"} {
 		if ScanCmd.Flags().Lookup(name) == nil {
