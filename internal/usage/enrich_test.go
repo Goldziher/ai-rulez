@@ -314,3 +314,52 @@ func TestFeedback_ReadCountsAndReportJoin(t *testing.T) {
 	assert.NotContains(t, string(plain), "feedback")
 	assert.NotContains(t, string(plain), "eval")
 }
+
+func TestSalt_EmptyFileIsReplacedAndLooseModeIsTightened(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "usage.salt")
+	require.NoError(t, os.WriteFile(path, nil, 0o644)) //nolint:gosec // a loose mode is the point of the test
+	salt := loadSalt(path)
+	assert.NotEmpty(t, salt, "an empty salt file must not silently drop every session hash")
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assert.Equal(t, salt, loadSalt(path), "the regenerated salt is stable")
+
+	loose := filepath.Join(dir, "loose.salt")
+	require.NoError(t, os.WriteFile(loose, []byte("abc\n"), 0o644)) //nolint:gosec // a loose mode is the point of the test
+	assert.Equal(t, "abc", loadSalt(loose))
+	info, err = os.Stat(loose)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}
+
+func TestFeedback_NoteIsBoundedBeforeReadingAndDirIsPrivate(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "f.jsonl")
+
+	big := filepath.Join(dir, "big.txt")
+	require.NoError(t, os.WriteFile(big, make([]byte, maxNoteBytes+10), 0o600))
+	_, err := RecordFeedback("alpha", FeedbackWrong, FeedbackOptions{LogPath: log, NoteFile: big})
+	require.Error(t, err)
+
+	// a device or directory is not a note; it must be refused without reading it
+	_, err = RecordFeedback("alpha", FeedbackWrong, FeedbackOptions{LogPath: log, NoteFile: dir})
+	require.Error(t, err)
+	if _, statErr := os.Stat("/dev/zero"); statErr == nil {
+		_, err = RecordFeedback("alpha", FeedbackWrong, FeedbackOptions{LogPath: log, NoteFile: "/dev/zero"})
+		require.Error(t, err)
+	}
+
+	// an existing world-listable notes directory is tightened
+	notes := filepath.Join(dir, notesDirName)
+	require.NoError(t, os.MkdirAll(notes, 0o755)) //nolint:gosec // a loose mode is the point of the test
+	require.NoError(t, os.Chmod(notes, 0o755))    //nolint:gosec // umask may have narrowed it
+	ok := filepath.Join(dir, "ok.txt")
+	require.NoError(t, os.WriteFile(ok, []byte("fine"), 0o600))
+	_, err = RecordFeedback("alpha", FeedbackWrong, FeedbackOptions{LogPath: log, NoteFile: ok})
+	require.NoError(t, err)
+	info, err := os.Stat(notes)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+}
