@@ -18,6 +18,10 @@ import (
 // Event names written to the log.
 const EventSkillInvoked = "skill_invoked"
 
+// EventItem is the event name internal/telemetry gives rule, agent, context and
+// command events written to the same log. Skill-only readers ignore it.
+const EventItem = "item_event"
+
 // EntrySchemaVersion is the version written to the "v" field of new log lines.
 // Lines without it predate the field (version 1: raw session id, no outcome,
 // served or role) and stay readable; readers ignore fields they do not know.

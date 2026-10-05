@@ -1,0 +1,66 @@
+{
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "ai-rulez telemetry record",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "ai-rulez usage record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Skill"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "ai-rulez telemetry record",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "ai-rulez telemetry record",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "ai-rulez usage record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}

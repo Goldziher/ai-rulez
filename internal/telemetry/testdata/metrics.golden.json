@@ -1,0 +1,271 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "ai-rulez"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "4.30.0"
+            }
+          },
+          {
+            "key": "ai_rulez.schema_version",
+            "value": {
+              "stringValue": "1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "ai-rulez.telemetry",
+            "version": "1"
+          },
+          "metrics": [
+            {
+              "name": "ai_rulez.item.loads",
+              "description": "Items (skills, rules, agents, context files) loaded by a harness",
+              "unit": "{load}",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "digest_short",
+                        "value": {
+                          "stringValue": "0699fc6b2f01"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      },
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "atomic-commits"
+                        }
+                      },
+                      {
+                        "key": "kind",
+                        "value": {
+                          "stringValue": "rule"
+                        }
+                      },
+                      {
+                        "key": "role",
+                        "value": {
+                          "stringValue": "backend"
+                        }
+                      },
+                      {
+                        "key": "served",
+                        "value": {
+                          "boolValue": false
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1791191560000000000",
+                    "timeUnixNano": "1791191564000000000",
+                    "asInt": "1"
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "digest_short",
+                        "value": {
+                          "stringValue": "deadbeefdead"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      },
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "deploy-staging"
+                        }
+                      },
+                      {
+                        "key": "kind",
+                        "value": {
+                          "stringValue": "skill"
+                        }
+                      },
+                      {
+                        "key": "served",
+                        "value": {
+                          "boolValue": true
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1791191560000000000",
+                    "timeUnixNano": "1791191564000000000",
+                    "asInt": "1"
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      },
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "atomic-commits"
+                        }
+                      },
+                      {
+                        "key": "kind",
+                        "value": {
+                          "stringValue": "rule"
+                        }
+                      },
+                      {
+                        "key": "role",
+                        "value": {
+                          "stringValue": "backend"
+                        }
+                      },
+                      {
+                        "key": "served",
+                        "value": {
+                          "boolValue": false
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1791191560000000000",
+                    "timeUnixNano": "1791191564000000000",
+                    "asInt": "1"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ai_rulez.item.outcomes",
+              "description": "Items used or abandoned after loading",
+              "unit": "{load}",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      },
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "code-reviewer"
+                        }
+                      },
+                      {
+                        "key": "kind",
+                        "value": {
+                          "stringValue": "agent"
+                        }
+                      },
+                      {
+                        "key": "outcome",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      },
+                      {
+                        "key": "served",
+                        "value": {
+                          "boolValue": false
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1791191560000000000",
+                    "timeUnixNano": "1791191564000000000",
+                    "asInt": "1"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ai_rulez.agent.duration",
+              "description": "Subagent run time",
+              "unit": "ms",
+              "histogram": {
+                "aggregationTemporality": 1,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "kind",
+                        "value": {
+                          "stringValue": "agent"
+                        }
+                      },
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "code-reviewer"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1791191560000000000",
+                    "timeUnixNano": "1791191564000000000",
+                    "count": "1",
+                    "sum": 2500,
+                    "bucketCounts": [
+                      "0",
+                      "0",
+                      "0",
+                      "1",
+                      "0",
+                      "0",
+                      "0",
+                      "0"
+                    ],
+                    "explicitBounds": [
+                      100,
+                      500,
+                      1000,
+                      5000,
+                      15000,
+                      60000,
+                      300000
+                    ],
+                    "min": 2500,
+                    "max": 2500
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
