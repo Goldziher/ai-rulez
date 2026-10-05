@@ -149,6 +149,18 @@ func TestServeSetup_RoleScopedFindSkillOverTheWire(t *testing.T) {
 	require.Len(t, results, 1)
 	assert.Equal(t, "refund-policy", results[0].(map[string]any)["name"])
 	assert.Equal(t, true, results[0].(map[string]any)["in_role"])
+
+	// The restriction is the server's --role: a skill outside it is not in the
+	// catalog, so it cannot be loaded, listed or read by name (the find_skill role
+	// argument alone only ranks).
+	for _, name := range []string{"invoice-format", "git-workflow"} {
+		_, isErr, _ := callTool(t, p, "load_skill", map[string]any{"name": name})
+		assert.True(t, isErr, name)
+		_, isErr, _ = callTool(t, p, "list_skill_resources", map[string]any{"name": name})
+		assert.True(t, isErr, name)
+	}
+	_, isErr, _ = callTool(t, p, "load_skill", map[string]any{"name": "refund-policy"})
+	assert.False(t, isErr)
 }
 
 func TestServeSetup_LockCoversSkillsAnyRoleServes(t *testing.T) {
