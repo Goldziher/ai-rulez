@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/internal/llm"
 )
 
 // Config represents the configuration format
@@ -44,6 +45,8 @@ type Config struct {
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
+	// LLM configures model access for features that call a model; nothing calls out unless allow_network is true.
+	LLM *llm.Config `yaml:"llm,omitempty" json:"llm,omitempty" toml:"llm,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
