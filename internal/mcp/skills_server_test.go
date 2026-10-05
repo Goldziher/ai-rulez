@@ -72,6 +72,20 @@ func TestBuildCatalog_SkipsUnrepresentableSkills(t *testing.T) {
 	assert.Equal(t, "good", cat.Skills()[0].Name)
 }
 
+func TestBuildCatalog_SkipsSkillsWithUnsafeNames(t *testing.T) {
+	t.Parallel()
+	var served []generator.ServedSkill
+	for i, name := range []string{"../evil", "a/b", "has space", "x..y"} {
+		content := "---\nname: \"" + name + "\"\ndescription: d\n---\nbody"
+		served = append(served, generator.ServedSkill{ID: "s" + string(rune('a'+i)), Files: []generator.ServedSkillFile{{RelPath: "SKILL.md", Content: []byte(content)}}})
+	}
+	served = append(served, servedSkill("good", "", "A good skill", nil))
+	cat, err := BuildCatalog("p", "claude", served, SkillFilter{})
+	require.NoError(t, err)
+	require.Len(t, cat.Skills(), 1)
+	assert.Equal(t, "good", cat.Skills()[0].Name)
+}
+
 func TestBuildCatalog_DuplicateNamesAreAnError(t *testing.T) {
 	t.Parallel()
 	a := servedSkill("same", "", "one", nil)
