@@ -125,6 +125,22 @@ func warnUnpinned(cfg *config.Config) {
 	}
 }
 
+// warnFrontmatter logs the frontmatter problems that plain validate and generate
+// report without --strict: an agent key no tool reads (dropped silently
+// otherwise) and a skills: entry that names no skill.
+func warnFrontmatter(cfg *config.Config) {
+	if cfg == nil || cfg.Content == nil {
+		return
+	}
+	tree, err := strictTreeCache.Load(cfg.BaseDir)
+	if err != nil {
+		return
+	}
+	for _, f := range lint.FrontmatterWarnings(cfg, tree) {
+		logger.Warn(fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
+	}
+}
+
 // enforceScanImports runs the security rules over imported content when
 // [lint.security] scan_imports is set, before anything is written. At level
 // "error" a finding stops the run; at "warn" it is logged.
