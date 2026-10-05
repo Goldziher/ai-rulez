@@ -44,6 +44,12 @@ type Config struct {
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
+	// Roles map a job to a slice of the shared content (see roles.go); RoleManifest
+	// is the [role_manifest] table, kept apart because [[roles]] is an array.
+	Roles        []RoleConfig        `yaml:"roles,omitempty" json:"roles,omitempty" toml:"roles,omitempty"`
+	RoleManifest *RoleManifestConfig `yaml:"role_manifest,omitempty" json:"role_manifest,omitempty" toml:"role_manifest,omitempty"` //nolint:tagliatelle
+	// Lock configures content pinning in ai-rulez.lock (see internal/contentlock).
+	Lock *LockConfig `yaml:"lock,omitempty" json:"lock,omitempty" toml:"lock,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
@@ -992,13 +998,19 @@ func (c *Config) SelectContentForProfile(content *ContentTree, profile string) (
 		return nil, ErrNoContent
 	}
 
-	profileDomains := c.GetProfileDomains(profile)
-
 	// Installed skills may be scoped to profiles; drop the ones not active.
 	activeProfile := profile
 	if activeProfile == "" {
 		activeProfile = c.Default
 	}
+	return c.selectContent(content, c.GetProfileDomains(profile), activeProfile)
+}
+
+// selectContent is the shared body of profile and role selection: the root
+// content, the globally active builtins, every included domain and the listed
+// domains. Installed skills scoped to profiles are filtered by activeProfile; an
+// empty value keeps them all.
+func (c *Config) selectContent(content *ContentTree, profileDomains []string, activeProfile string) (*ContentTree, error) {
 	rootSkills := FilterContentFilesByProfile(content.Skills, activeProfile)
 
 	// Build filtered domains map: profile-listed domains + global builtins + FromInclude
