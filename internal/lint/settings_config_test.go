@@ -106,3 +106,25 @@ api_key_env = "GITHUB_TOKEN"
 		t.Fatalf("expected AR9C1; findings:\n%s", dump(fs))
 	}
 }
+
+func TestRunChecksLLMSecretKeyInLocalOverlay(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":       baseConfig,
+		".ai-rulez/config.local.toml": "[llm]\napi_key = \"sk-literal-secret-value\"\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	found := false
+	for _, f := range fs {
+		if f.Code == CodeLLMConfigInvalid && strings.Contains(f.File, "config.local.toml") {
+			found = true
+			if strings.Contains(f.Message, "literal-secret-value") {
+				t.Errorf("echoed the secret: %s", f.Message)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected AR9C0 on the local overlay; findings:\n%s", dump(fs))
+	}
+}

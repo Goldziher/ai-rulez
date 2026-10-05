@@ -78,17 +78,24 @@ func init() {
 
 // loadLLMConfig returns the effective [llm] setup (trust rule and env overrides applied),
 // the user-scope-only repository keys that were ignored, and the config directory.
-func loadLLMConfig(ctx context.Context, args []string) (llm.Config, []string, string, error) {
+func loadLLMConfig(ctx context.Context, args []string, projectOptional bool) (llm.Config, []string, string, error) {
 	cfg, err := loadConfigForCommand(ctx, args, config.WithoutRemote())
 	if err != nil {
-		return llm.Config{}, nil, "", err
+		if !projectOptional {
+			return llm.Config{}, nil, "", err
+		}
+		cfg = nil // no project: user scope and the environment still apply, and their errors are reported
 	}
 	res, err := cfg.ResolveLLM(nil)
-	return res.Config, res.Ignored, cfg.ConfigDir, err
+	dir := ""
+	if cfg != nil {
+		dir = cfg.ConfigDir
+	}
+	return res.Config, res.Ignored, dir, err
 }
 
 func runLLMDoctor(ctx context.Context, args []string, out io.Writer) error {
-	lc, ignored, dir, err := loadLLMConfig(ctx, args)
+	lc, ignored, dir, err := loadLLMConfig(ctx, args, false)
 	if err != nil {
 		return err
 	}
@@ -138,9 +145,10 @@ func runLLMEstimate(ctx context.Context, path string, out io.Writer) error {
 	if err != nil {
 		return oops.Wrapf(err, "read %s", path)
 	}
-	lc, _, _, err := loadLLMConfig(ctx, nil)
+	// estimate works without a project, but a broken [llm] table, user config or AI_RULEZ_LLM_* value is an error.
+	lc, _, _, err := loadLLMConfig(ctx, nil, true)
 	if err != nil {
-		lc = llm.Config{} // estimate works without a project
+		return err
 	}
 	res := llm.Estimate(lc, string(data), llmMaxOutput)
 	if llmJSON {
