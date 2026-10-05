@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -1442,7 +1441,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 // isNestedAgentsMD reports whether rel is an AGENTS.md below the project root
 // (the baz nested files, monorepo scope files): hand-written ones are common.
 func isNestedAgentsMD(rel string) bool {
-	return rel != "AGENTS.md" && path.Base(rel) == "AGENTS.md"
+	return strings.HasSuffix(rel, "/AGENTS.md")
 }
 
 // isUnmanagedRuleFile reports whether absPath is an existing file inside a

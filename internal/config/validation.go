@@ -28,10 +28,8 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if strings.TrimSpace(c.CodexSkillsDir) != "" {
-		if err := ValidateOutputSubdir("codex_skills_dir", c.CodexSkillsDirOrDefault()); err != nil {
-			return err
-		}
+	if err := c.validateCodexSkillsDir(); err != nil {
+		return err
 	}
 
 	if err := c.validateProfiles(); err != nil {
@@ -70,11 +68,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.validateDuplicateOutputIDs(); err != nil {
-		return err
-	}
-
-	if err := c.validateOutputNamespaceCollisions(); err != nil {
+	if err := c.validateOutputCollisions(); err != nil {
 		return err
 	}
 
@@ -82,6 +76,20 @@ func (c *Config) Validate() error {
 	c.warnMissingDomainReferences()
 
 	return nil
+}
+
+func (c *Config) validateOutputCollisions() error {
+	if err := c.validateDuplicateOutputIDs(); err != nil {
+		return err
+	}
+	return c.validateOutputNamespaceCollisions()
+}
+
+func (c *Config) validateCodexSkillsDir() error {
+	if strings.TrimSpace(c.CodexSkillsDir) == "" {
+		return nil
+	}
+	return ValidateOutputSubdir("codex_skills_dir", c.CodexSkillsDirOrDefault())
 }
 
 // validEffortValues lists the reasoning-effort values accepted by Claude Code

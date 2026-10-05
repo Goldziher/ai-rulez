@@ -256,7 +256,7 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 }
 
 func looksLikeProjectRoot(dir string) bool {
-	for _, marker := range []string{".git", "go.mod", "package.json", "Cargo.toml", "pyproject.toml", "Taskfile.yml", "Taskfile.yaml"} {
+	for _, marker := range []string{gitDirName, "go.mod", "package.json", "Cargo.toml", "pyproject.toml", "Taskfile.yml", "Taskfile.yaml"} {
 		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
 			return true
 		}
