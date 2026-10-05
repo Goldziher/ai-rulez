@@ -1186,7 +1186,7 @@ included in the runtime's `always` figure, in the headline and in `--budget`.
 | `claude`                                 | skills, commands, agents (descriptions cut at 1,536 characters) | documented, measured |
 | `codex`                                  | skills, with path           | documented          |
 | `pi`                                     | skills, with path           | documented          |
-| `gemini`, `opencode`, `windsurf`, `cline`, `junie` | skills            | documented          |
+| `gemini`, `opencode`, `devin`, `cline`, `junie` | skills            | documented          |
 | `cursor`, `copilot`                      | skills                      | implied by the docs, not stated as a per-request listing |
 | `amp`, `antigravity`, `baz`, `continue-dev`, `hermes`, `xum` | not modeled | no listing is reported |
 

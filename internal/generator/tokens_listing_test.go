@@ -41,9 +41,9 @@ func skillText(name, description, extra string) string {
 }
 
 func TestTokenReport_ListingCoversEverySkillHarness(t *testing.T) {
-	report := listingFixtureReport(t, []string{"claude", "codex", "cursor", "gemini", "opencode", "copilot", "windsurf", "cline", "pi", "junie"}, nil)
+	report := listingFixtureReport(t, []string{"claude", "codex", "cursor", "gemini", "opencode", "copilot", "devin", "cline", "pi", "junie"}, nil)
 
-	for _, preset := range []string{"claude", "codex", "cursor", "gemini", "opencode", "copilot", "windsurf", "cline", "pi", "junie"} {
+	for _, preset := range []string{"claude", "codex", "cursor", "gemini", "opencode", "copilot", "devin", "cline", "pi", "junie"} {
 		runtime := findRuntime(t, report, preset)
 		assert.Positive(t, runtime.Listing, "%s lists skills, so it has a listing cost", preset)
 		assert.Positive(t, runtime.ListedItems, preset)

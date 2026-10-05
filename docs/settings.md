@@ -87,7 +87,7 @@ Handler fields a harness lacks are never dropped silently when dropping would ch
 - Copilot hooks have no matcher: a group that sets one is skipped for `copilot`.
 
 Every skipped group is reported once per run as a warning: `[[hooks]] not generated for <harness>: ...`.
-A `preset` without hook support (`opencode`, `windsurf`, `amp`, `junie`, `cline`, `continue-dev`,
+A `preset` without hook support (`opencode`, `devin`, `amp`, `junie`, `cline`, `continue-dev`,
 `antigravity`, `pi`, `hermes`, `baz`, `xum`) gets one warning naming those presets. Their hook formats are
 not verified against vendor documentation, so ai-rulez does not emit them.
 
