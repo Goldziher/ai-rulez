@@ -3,7 +3,7 @@ package lint
 import (
 	"os"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // ScanText applies the security rules (AR0xx) with default settings to one text

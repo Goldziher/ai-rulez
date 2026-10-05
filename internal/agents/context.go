@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/utils"
-	"github.com/Goldziher/ai-rulez/internal/walkutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/utils"
+	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 	"gopkg.in/yaml.v3"
 )
 

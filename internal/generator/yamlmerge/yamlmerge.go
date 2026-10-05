@@ -31,7 +31,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
