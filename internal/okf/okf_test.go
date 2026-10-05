@@ -274,3 +274,19 @@ func FuzzSplitFrontmatter(f *testing.F) {
 		_ = fm.Scalar("type")
 	})
 }
+
+// The okf.md guide shows an index.md with title/version/entries frontmatter. The
+// spec forbids it, but a reader must still read such a bundle.
+func TestReadsGuideStyleBundle(t *testing.T) {
+	b := load(t, map[string]string{
+		"index.md":            "---\ntitle: My Bundle\nversion: 0.1.0\nentries:\n  - what-is-okf.md\n---\n\n# My Bundle\n\n* [What is OKF](what-is-okf.md) - intro\n",
+		"what-is-okf.md":      "---\ntype: concept\ntitle: What is OKF\n---\nBody\n",
+		"validation-rules.md": "---\ntype: howto\n---\nSteps\n",
+	})
+	require.Len(t, b.Concepts, 2)
+	require.Len(t, b.Indexes["index.md"].Entries, 1)
+	got := codes(b.Validate())
+	assert.Contains(t, got, "AR9B6 index.md", "index frontmatter is reported")
+	assert.Contains(t, got, "AR9B0 index.md", "validation-rules.md is not listed")
+	assert.NotContains(t, got, "AR9B1 what-is-okf.md")
+}
