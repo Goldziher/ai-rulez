@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -259,6 +260,9 @@ func checkLockAt(path string) int {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
 		fmtError(err)
+		if errors.Is(err, config.ErrLockViolation) {
+			return exitDrift // fetched or cached remote content disagrees with the lock: drift, not a tool failure
+		}
 		return 1
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
