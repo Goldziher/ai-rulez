@@ -1,4 +1,4 @@
-package okfbridge
+package okfbridge_test
 
 import (
 	"context"
@@ -7,10 +7,20 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/okf"
+	"github.com/Goldziher/ai-rulez/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func testScan(texts map[string]string) []okfbridge.SecurityFinding {
+	var out []okfbridge.SecurityFinding
+	for _, f := range lint.ScanText(nil, texts) {
+		out = append(out, okfbridge.SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
+	}
+	return out
+}
 
 func write(t *testing.T, root, rel, content string) {
 	t.Helper()
@@ -47,9 +57,9 @@ func loadTree(t *testing.T, root string) *config.ContentTree {
 	return cfg.Content
 }
 
-func exportProject(t *testing.T, root string) *ExportResult {
+func exportProject(t *testing.T, root string) *okfbridge.ExportResult {
 	t.Helper()
-	res, err := Export(loadTree(t, root), ExportOptions{})
+	res, err := okfbridge.Export(loadTree(t, root), okfbridge.ExportOptions{})
 	require.NoError(t, err)
 	return res
 }
@@ -80,7 +90,7 @@ func TestExportProducesConformantBundle(t *testing.T) {
 	} {
 		assert.True(t, paths[want], want)
 	}
-	assert.Equal(t, 3, res.Counts[KindRule], "two root rules and one domain rule")
+	assert.Equal(t, 3, res.Counts[okfbridge.KindRule], "two root rules and one domain rule")
 	rule := b.Concepts["rules/testing.md"]
 	assert.Equal(t, "Decision", rule.Type())
 	assert.Equal(t, "How we test", rule.Description())
@@ -104,10 +114,10 @@ func TestRoundTripIsByteIdentical(t *testing.T) {
 	require.NoError(t, err)
 	fresh := t.TempDir()
 	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
-	res, err := Import(b, ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez")})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
-	assert.Equal(t, 0, res.Count(StatusConflict))
-	assert.Equal(t, 0, res.Count(StatusUnchanged))
+	assert.Equal(t, 0, res.Count(okfbridge.StatusConflict))
+	assert.Equal(t, 0, res.Count(okfbridge.StatusUnchanged))
 
 	second := exportProject(t, fresh)
 	require.Equal(t, len(first.Files), len(second.Files))
@@ -127,21 +137,21 @@ func TestRoundTripIsByteIdentical(t *testing.T) {
 	}
 
 	// Importing again changes nothing.
-	again, err := Import(b, ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez")})
+	again, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
-	assert.Equal(t, len(res.Actions), again.Count(StatusUnchanged))
+	assert.Equal(t, len(res.Actions), again.Count(okfbridge.StatusUnchanged))
 }
 
 func TestInclude(t *testing.T) {
-	kinds, err := ParseKinds([]string{"rules,skills"})
+	kinds, err := okfbridge.ParseKinds([]string{"rules,skills"})
 	require.NoError(t, err)
-	res, err := Export(loadTree(t, sampleProject(t)), ExportOptions{Include: kinds})
+	res, err := okfbridge.Export(loadTree(t, sampleProject(t)), okfbridge.ExportOptions{Include: kinds})
 	require.NoError(t, err)
 	for _, f := range res.Files {
 		assert.NotContains(t, f.Path, "agents/")
 		assert.NotContains(t, f.Path, "context/")
 	}
-	_, err = ParseKinds([]string{"nonsense"})
+	_, err = okfbridge.ParseKinds([]string{"nonsense"})
 	assert.Error(t, err)
 }
 
@@ -166,17 +176,17 @@ func TestImportForeignBundleMapsByType(t *testing.T) {
 		"broken.md":           "---\ntype: [\n---\n",
 	})
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	require.NoError(t, err)
-	got := map[string]Kind{}
+	got := map[string]okfbridge.Kind{}
 	for _, a := range res.Actions {
 		got[a.Path] = a.Kind
 	}
-	assert.Equal(t, KindRule, got["rules/decisions-use-go.md"])
-	assert.Equal(t, KindSkill, got["skills/runbooks-deploy/SKILL.md"])
-	assert.Equal(t, KindContext, got["context/metrics-mrr.md"])
-	assert.Equal(t, KindContext, got["context/weird.md"])
-	assert.Equal(t, KindContext, got["context/notype.md"])
+	assert.Equal(t, okfbridge.KindRule, got["rules/decisions-use-go.md"])
+	assert.Equal(t, okfbridge.KindSkill, got["skills/runbooks-deploy/SKILL.md"])
+	assert.Equal(t, okfbridge.KindContext, got["context/metrics-mrr.md"])
+	assert.Equal(t, okfbridge.KindContext, got["context/weird.md"])
+	assert.Equal(t, okfbridge.KindContext, got["context/notype.md"])
 	require.Len(t, res.Skipped, 1)
 	assert.Contains(t, res.Skipped[0], "broken.md")
 
@@ -203,7 +213,7 @@ func TestImportForeignBundleMapsByType(t *testing.T) {
 func TestImportIntoForcesKindAndDomain(t *testing.T) {
 	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nx\n"})
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir, Into: KindContext, Domain: "team"})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan, Into: okfbridge.KindContext, Domain: "team"})
 	require.NoError(t, err)
 	require.Len(t, res.Actions, 1)
 	assert.Equal(t, "domains/team/context/a.md", res.Actions[0].Path)
@@ -213,15 +223,15 @@ func TestImportNeverOverwritesWithoutForce(t *testing.T) {
 	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nnew\n"})
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
 	write(t, cfgDir, "rules/a.md", "mine\n")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	require.NoError(t, err)
-	assert.Equal(t, 1, res.Count(StatusConflict))
+	assert.Equal(t, 1, res.Count(okfbridge.StatusConflict))
 	got, _ := os.ReadFile(filepath.Join(cfgDir, "rules/a.md"))
 	assert.Equal(t, "mine\n", string(got))
 
-	res, err = Import(b, ImportOptions{ConfigDir: cfgDir, Force: true})
+	res, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan, Force: true})
 	require.NoError(t, err)
-	assert.Equal(t, 1, res.Count(StatusOverwritten))
+	assert.Equal(t, 1, res.Count(okfbridge.StatusOverwritten))
 	got, _ = os.ReadFile(filepath.Join(cfgDir, "rules/a.md"))
 	assert.Contains(t, string(got), "new")
 }
@@ -229,9 +239,9 @@ func TestImportNeverOverwritesWithoutForce(t *testing.T) {
 func TestImportDryRunWritesNothing(t *testing.T) {
 	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nx\n"})
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir, DryRun: true})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan, DryRun: true})
 	require.NoError(t, err)
-	assert.Equal(t, 1, res.Count(StatusCreated))
+	assert.Equal(t, 1, res.Count(okfbridge.StatusCreated))
 	_, statErr := os.Stat(cfgDir)
 	assert.True(t, os.IsNotExist(statErr))
 }
@@ -242,19 +252,19 @@ func TestImportRefusesSecretsAndHiddenText(t *testing.T) {
 		"bad.md": "---\ntype: Decision\n---\nkey AKIAABCDEFGHIJKLMNOP here\n",
 	})
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
-	var sec *SecurityError
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
+	var sec *okfbridge.SecurityError
 	require.ErrorAs(t, err, &sec)
 	assert.NotEmpty(t, res.Security)
 	_, statErr := os.Stat(cfgDir)
 	assert.True(t, os.IsNotExist(statErr), "nothing is written when the scan fails")
 
 	hidden := foreignBundle(map[string]string{"h.md": "---\ntype: Decision\n---\nzero\u200bwidth\n"})
-	_, err = Import(hidden, ImportOptions{ConfigDir: cfgDir})
+	_, err = okfbridge.Import(hidden, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	assert.ErrorAs(t, err, &sec)
 
 	inline := foreignBundle(map[string]string{"i.md": "---\ntype: Decision\n---\n<!-- ai-rulez-lint-ignore -->\nkey AKIAABCDEFGHIJKLMNOP\n"})
-	_, err = Import(inline, ImportOptions{ConfigDir: cfgDir})
+	_, err = okfbridge.Import(inline, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	assert.ErrorAs(t, err, &sec, "imported text cannot silence its own findings")
 }
 
@@ -266,7 +276,7 @@ func TestImportRejectsHostileMetadata(t *testing.T) {
 		"skills/s/references/evil2.md": "---\ntype: Reference\nx-ai-rulez:\n  kind: skill-resource\n  id: ../x\n  path: references/e.md\n---\nx\n",
 	})
 	cfgDir := filepath.Join(t.TempDir(), "root", ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	require.NoError(t, err)
 	for _, a := range res.Actions {
 		assert.NotContains(t, a.Path, "..")
@@ -281,9 +291,9 @@ func TestImportRejectsHostileMetadata(t *testing.T) {
 
 func TestImportUnknownXAIRulezKindFallsBackToType(t *testing.T) {
 	b := foreignBundle(map[string]string{"a.md": "---\ntype: Playbook\nx-ai-rulez:\n  kind: spaceship\n---\nx\n"})
-	res, err := Import(b, ImportOptions{ConfigDir: filepath.Join(t.TempDir(), ".ai-rulez"), DryRun: true})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(t.TempDir(), ".ai-rulez"), DryRun: true, Scan: testScan})
 	require.NoError(t, err)
-	assert.Equal(t, KindSkill, res.Actions[0].Kind)
+	assert.Equal(t, okfbridge.KindSkill, res.Actions[0].Kind)
 	found := false
 	for _, f := range res.Findings {
 		found = found || f.Code == okf.CodeLossyMapping
@@ -295,7 +305,7 @@ func TestImportOfficialAcmeRetail(t *testing.T) {
 	b, err := okf.Load(os.DirFS("../okf/testdata/acme_retail"))
 	require.NoError(t, err)
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
-	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	require.NoError(t, err)
 	assert.Empty(t, res.Security)
 	assert.Equal(t, 9, len(res.Actions))
