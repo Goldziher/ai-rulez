@@ -130,3 +130,18 @@ func TestBaselineFlagValidation(t *testing.T) {
 	validateStrictBaseline, validateUpdateBaseline, validateBaselineReason = false, false, "why"
 	assert.Error(t, checkStrictFlags(), "a reason without --update-baseline")
 }
+
+func TestRiskInReportDoesNotBlock(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "\n[lint.risk]\nerror = 0\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	code := runStrict(t, root, cfg)
+	assert.Equal(t, exitStrictFindings, code, "an error still fails regardless of weights")
+	data, err := os.ReadFile(validateOutput)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"risk"`)
+	assert.Contains(t, string(data), `"label": "high"`, "the severity floor applies even with a zero weight")
+	assert.Contains(t, string(data), `"score": 0`)
+
+	validateFailOn = "none"
+	assert.Equal(t, 0, runStrict(t, root, cfg), "--fail-on none never blocks either")
+}

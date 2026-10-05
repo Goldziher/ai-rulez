@@ -37,6 +37,8 @@ type Combined struct {
 	Baseline *BaselineSummary `json:"baseline,omitempty"`
 	// Budgets lists rules over their [lint.budget].
 	Budgets []BudgetExcess `json:"budgets_exceeded,omitempty"`
+	// Risk is the advisory risk score (never affects the exit code).
+	Risk *CombinedRisk `json:"risk,omitempty"`
 	// ChangedOnly is set when the report was narrowed to changed files.
 	ChangedOnly *ChangedScope `json:"changed_only,omitempty"`
 }
@@ -65,6 +67,7 @@ func Combine(reports []*Report) Combined {
 			c.Baseline.Expired = append(c.Baseline.Expired, r.Baseline.Expired...)
 		}
 	}
+	c.Risk = combineRisk(reports)
 	for i := range c.Findings {
 		f := &c.Findings[i]
 		if f.IsAccepted() {
@@ -120,6 +123,7 @@ func WriteText(w io.Writer, c Combined) error {
 		rule, _ := lookupRule(code) //nolint:errcheck // codes come from findings
 		fmt.Fprintf(&sb, "  %s %-28s %d\n", code, rule.Name, c.Summary.ByCode[code])
 	}
+	writeRiskText(&sb, c)
 	writeBaselineText(&sb, c)
 	_, err := io.WriteString(w, sb.String())
 	return err //nolint:wrapcheck // writer error

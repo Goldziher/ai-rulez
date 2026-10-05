@@ -65,7 +65,13 @@ func Write(w io.Writer, format string, c Combined, o WriteOptions) error {
 
 // runProperties and resultProperties are the advisory extras (risk, baseline
 // state) that structured formats attach next to the findings.
-func runProperties(Combined) map[string]any { return map[string]any{} }
+func runProperties(c Combined) map[string]any {
+	props := map[string]any{}
+	if c.Risk != nil {
+		props["risk"] = c.Risk
+	}
+	return props
+}
 
 func resultProperties(*Finding) map[string]any { return map[string]any{} }
 
@@ -246,6 +252,7 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		fmt.Fprintf(&sb, "| `%s` %s | %d |\n", code, rule.Name, c.Summary.ByCode[code])
 	}
 	sb.WriteString("\n</details>\n")
+	writeRiskMarkdown(&sb, c)
 	writeBaselineMarkdown(&sb, c)
 	_, err := io.WriteString(w, sb.String())
 	return err //nolint:wrapcheck // writer error

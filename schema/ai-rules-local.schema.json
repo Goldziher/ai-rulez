@@ -720,6 +720,28 @@
           "description": "Frontmatter keys every item of a content kind must set. A key inside the Agent Skills `metadata` map counts.",
           "type": "object"
         },
+        "risk": {
+          "additionalProperties": false,
+          "description": "Weights of the advisory risk score shown next to the findings (never affects the exit code). Points per finding; the score is capped at 100.",
+          "properties": {
+            "error": {
+              "description": "Points per error finding. Default 25.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "info": {
+              "description": "Points per info finding. Default 1.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "warning": {
+              "description": "Points per warning finding. Default 8.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
         "security": {
           "additionalProperties": false,
           "description": "Settings for the security checks AR001 to AR011.",
