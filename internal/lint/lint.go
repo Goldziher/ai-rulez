@@ -111,9 +111,10 @@ type runner struct {
 	findings    []Finding
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
-	forceSev Severity
-	opts     Options
-	drift    []PluginDrift
+	forceSev  Severity
+	opts      Options
+	drift     []PluginDrift
+	lockDrift []LockDrift
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -183,6 +184,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkUnpinned()
 	r.scanImported()
 	r.checkPluginDrift()
+	r.checkRoles()
+	r.checkLockDrift()
 	if so.External {
 		r.runExternal()
 	}
