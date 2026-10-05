@@ -221,6 +221,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if so.External {
 		r.runExternal()
 	}
+	r.runRunChecks()
 	if so.SecurityOnly {
 		r.findings = securityOnly(r.findings)
 	}
@@ -556,6 +557,7 @@ func (r *runner) checkItem(it *item) {
 		r.checkFrontmatterSkills(it, d)
 		r.checkScripts(it)
 		r.checkEvals(it, d)
+		r.runItemChecks(it, d, fm)
 	}
 	r.scanBody(it, d)
 }

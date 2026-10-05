@@ -54,7 +54,6 @@ var (
 	evalRe          = regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval(?:\\s+[\"'$`]|\\s*\\()")
 	evalBenignRe    = regexp.MustCompile(`(?i)\beval\s+"?\$\(\s*(?:ssh-agent|pyenv|rbenv|nodenv|direnv|brew\s+shellenv|fnm|starship|zoxide|mise|rtx|asdf|opam|thefuck)\b`)
 	base64ExecRe    = regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
-	credReadRe      = regexp.MustCompile(`(?:~|\$HOME|\$\{HOME\}|/home/[^/\s]+|/Users/[^/\s]+)/\.(?:ssh|aws|gnupg|kube|netrc|npmrc|pypirc|docker/config\.json|config/gcloud)\b|/etc/shadow\b|\bid_(?:rsa|ed25519|ecdsa)\b|\bsecurity\s+find-(?:generic|internet)-password\b`)
 	writeOutsideRe  = regexp.MustCompile(`(?:>>?|\btee(?:\s+-a)?)\s*(?:~/|\$HOME/|\$\{HOME\}/|/etc/|/usr/|/opt/|/var/|/root/)`)
 	chmod777Re      = regexp.MustCompile(`\bchmod\s+(?:-R\s+)?(?:0?777|a\+rwx)\b`)
 	blobRe          = regexp.MustCompile(`[A-Za-z0-9+/]{200,}={0,2}`)
@@ -104,6 +103,7 @@ func (r *runner) securityScan(abs, raw string) {
 		}
 	}
 	r.scanComments(abs, raw)
+	r.runTextScans(abs, raw)
 }
 
 func (r *runner) scanHidden(abs string, no int, line string, firstLine bool) {
@@ -250,9 +250,7 @@ func (r *runner) scanShell(abs string, no int, line string) {
 	case evalRe.MatchString(line) && !evalBenignRe.MatchString(line):
 		r.add(CodeShellExec, abs, no, "evaluates dynamic text (eval)")
 	}
-	if m := credReadRe.FindString(line); m != "" {
-		r.add(CodeShellAccess, abs, no, "touches a credential location (%s)", m)
-	}
+	r.scanCredentialAccess(abs, no, line)
 	if m := writeOutsideRe.FindString(line); m != "" {
 		r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
 	}
