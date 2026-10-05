@@ -164,6 +164,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	exitOnLockedDrift(enforceLockedContent(cfg))
 
 	applyGenerateOverrides(cfg)
+	warnFrontmatter(cfg)
 	if err := importGate(cfg); err != nil {
 		fmtError(err)
 		os.Exit(1)
