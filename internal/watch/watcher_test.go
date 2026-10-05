@@ -9,9 +9,63 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 const eventTimeout = 10 * time.Second
+
+func TestWatcher_DrainsEventsWhileAddingWatch(t *testing.T) {
+	root := resolved(t, t.TempDir())
+	child := filepath.Join(root, "child")
+	if err := os.Mkdir(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	c := newCollector()
+	// Own the synthetic backend's channels, including their lifetime.
+	w := &Watcher{
+		fs: &fsnotify.Watcher{
+			Events: make(chan fsnotify.Event),
+			Errors: make(chan error),
+		},
+		messages: make(chan watcherMessage),
+		stop:     make(chan struct{}),
+		notify:   c.notify,
+		logf:     func(string, ...any) {},
+		targets:  map[string]Target{root: {Path: root}},
+		watched:  map[string]bool{},
+		aliases:  map[string]string{},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	t.Cleanup(func() {
+		cancel()
+		<-done
+		close(w.stop)
+		for range w.messages {
+		}
+	})
+	file := filepath.Join(child, "rules.md")
+	// The Windows backend may need to deliver another event before it can
+	// acknowledge Add. Keep this dependency deterministic on every platform.
+	w.add = func(string) error {
+		select {
+		case w.fs.Events <- fsnotify.Event{Name: file, Op: fsnotify.Write}:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	go w.drainEvents()
+	go func() { w.Run(ctx); close(done) }()
+	select {
+	case w.fs.Events <- fsnotify.Event{Name: child, Op: fsnotify.Create}:
+	case <-time.After(eventTimeout):
+		t.Fatal("watcher did not receive directory creation")
+	}
+	c.waitFor(t, child)
+	c.waitFor(t, file)
+}
 
 // collector gathers notified paths and lets a test wait for one.
 type collector struct {

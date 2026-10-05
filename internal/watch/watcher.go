@@ -32,11 +32,15 @@ type Logf func(msg string, kv ...any)
 // only, so a project that happens to live under a node_modules or .git directory
 // is still watched.
 type Watcher struct {
-	fs     *fsnotify.Watcher
-	ignore func(path string) bool
-	notify func(path string)
-	logf   Logf
-	warn   Logf
+	fs        *fsnotify.Watcher
+	ignore    func(path string) bool
+	messages  chan watcherMessage
+	stop      chan struct{}
+	closeOnce sync.Once
+	closeErr  error
+	notify    func(path string)
+	logf      Logf
+	warn      Logf
 	// add attaches one directory to the OS watcher; tests replace it.
 	add func(dir string) error
 
@@ -66,17 +70,21 @@ func NewWatcher(ignore func(path string) bool, notify func(path string), logf Lo
 	if logf == nil {
 		logf = func(string, ...any) {}
 	}
-	return &Watcher{
-		fs:      w,
-		ignore:  ignore,
-		notify:  notify,
-		logf:    logf,
-		warn:    logf,
-		add:     w.Add,
-		targets: map[string]Target{},
-		watched: map[string]bool{},
-		aliases: map[string]string{},
-	}, nil
+	watcher := &Watcher{
+		fs:       w,
+		messages: make(chan watcherMessage),
+		stop:     make(chan struct{}),
+		ignore:   ignore,
+		notify:   notify,
+		logf:     logf,
+		warn:     logf,
+		add:      w.Add,
+		targets:  map[string]Target{},
+		watched:  map[string]bool{},
+		aliases:  map[string]string{},
+	}
+	go watcher.drainEvents()
+	return watcher, nil
 }
 
 // SetWarn sets where warnings go (default: the Logf given to NewWatcher). A
@@ -89,8 +97,14 @@ func (w *Watcher) SetWarn(warn Logf) {
 
 // Close stops the underlying watcher.
 func (w *Watcher) Close() error {
-	if err := w.fs.Close(); err != nil {
-		return oops.Wrapf(err, "close file watcher")
+	w.closeOnce.Do(func() {
+		// Keep draining until the backend has finished: Windows Close also
+		// waits for the event reader to acknowledge its request.
+		w.closeErr = w.fs.Close()
+		close(w.stop)
+	})
+	if w.closeErr != nil {
+		return oops.Wrapf(w.closeErr, "close file watcher")
 	}
 	return nil
 }
@@ -352,16 +366,15 @@ func (w *Watcher) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case ev, ok := <-w.fs.Events:
+		case message, ok := <-w.messages:
 			if !ok {
 				return
 			}
-			w.handle(ev)
-		case err, ok := <-w.fs.Errors:
-			if !ok {
-				return
+			if message.err != nil {
+				w.logf("watch: watcher error", "error", message.err)
+			} else {
+				w.handle(message.event)
 			}
-			w.logf("watch: watcher error", "error", err)
 		}
 	}
 }
