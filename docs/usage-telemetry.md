@@ -89,7 +89,7 @@ skill load when a read tool (`Read`, `read_file`, `view`, `open`) is given a `fi
 `sed` without `-i`, `Get-Content`) on that path (after `cd x &&`, `VAR=1` prefixes and inside pipelines). Writes,
 edits, `git add`, `rm` and other commands that merely mention the path are not loads. Only the `<id>` is kept; the
 rest of the command is matched and discarded. This is still an inference from a path, not a harness-confirmed skill
-load, so the entry carries `invocation: "read"`. The payload field names for those two harnesses are
+load, so the entry carries `invocation: "read"`. The generated Cursor template matches only the `Shell` tool and the Codex one only `Bash`, so a skill read through a file-read tool is counted only if you widen the hook matcher; the count is a lower bound, never inflated by edits. The payload field names for those two harnesses are
 inferred, not verified: check the log after wiring the hook. Any other harness (`--harness gemini`, `copilot`, ...)
 prints a warning to standard error and no template, because its skill-load payload is not documented here.
 
