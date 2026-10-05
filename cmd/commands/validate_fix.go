@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +52,9 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 			opts.Refuse = func(abs string) string {
 				if generated[gitutil.Resolve(abs)] {
 					return "the file is a generated output; fix its source instead"
+				}
+				if filepath.Base(abs) == lockfile.FileName {
+					return "the lock is written by `ai-rulez lock`, never by a fix"
 				}
 				return ""
 			}

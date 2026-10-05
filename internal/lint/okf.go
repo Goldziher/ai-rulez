@@ -27,7 +27,7 @@ const (
 
 func init() {
 	for _, r := range okf.Rules() {
-		registry = append(registry, RuleInfo{Code: r.Code, Name: r.Name, Default: Severity(r.Default), Describe: r.Describe})
+		registerRules(RuleInfo{Code: r.Code, Name: r.Name, Default: Severity(r.Default), Describe: r.Describe})
 	}
 }
 

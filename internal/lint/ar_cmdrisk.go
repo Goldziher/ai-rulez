@@ -15,6 +15,7 @@ const (
 )
 
 func init() {
+	MarkExampleAware(CodeUnpinnedExec, CodeDestructive)
 	registerRules(
 		RuleInfo{CodeUnpinnedExec, "unpinned-package-exec", SeverityWarning, "a command runs a package it does not pin: npx -y pkg, uvx pkg, pipx run pkg, pip install from a URL or an unpinned git requirement, go run pkg@latest"},
 		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb"},
@@ -28,9 +29,6 @@ func init() {
 var unpinnedStartRe = regexp.MustCompile(unpinnedStartWordsPat)
 
 func scanUnpinnedExec(r *runner, t *scanText) {
-	if t.example {
-		return
-	}
 	for _, l := range t.lines {
 		if l.Neg {
 			continue
@@ -100,9 +98,6 @@ func forcePush(args []string) string {
 }
 
 func scanDestructive(r *runner, t *scanText) {
-	if t.example {
-		return
-	}
 	for _, l := range t.lines {
 		if l.Front || l.Neg {
 			continue
