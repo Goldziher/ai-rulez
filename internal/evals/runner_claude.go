@@ -53,6 +53,11 @@ type ClaudePluginEval struct {
 // Name implements Runner.
 func (*ClaudePluginEval) Name() string { return RunnerClaudePluginEval }
 
+// Fingerprint implements Fingerprinter: the settings that change what claude runs.
+func (r *ClaudePluginEval) Fingerprint() string {
+	return fmt.Sprintf("bin=%s runs=%d judge=%s args=%q", r.Bin, r.Runs, r.JudgeModel, r.ExtraArgs)
+}
+
 // Run implements Runner.
 func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, error) {
 	if req.Harness != "" && req.Harness != "claude" {
@@ -331,6 +336,9 @@ func ParseClaudeResult(data []byte, req *Request, tr *ClaudeTranslation) (*Respo
 		if req.Ablation && len(entry.Arms.Without) > 0 {
 			resp.Results = append(resp.Results, claudeArm(c, ArmWithout, entry.Arms.Without, false))
 		}
+	}
+	if err := resp.Validate(req); err != nil {
+		return nil, fmt.Errorf("claude plugin eval result: %w", err)
 	}
 	return resp, nil
 }

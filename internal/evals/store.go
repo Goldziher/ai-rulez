@@ -162,8 +162,27 @@ func (s *Store) Save(path string) error {
 	return nil
 }
 
+// CacheInputs is everything that determines a run's result. Any change produces a
+// different key, so a stored run is reused only when none of them changed.
+type CacheInputs struct {
+	// Digest and CasesDigest cover the skill, and the cases with their fixtures,
+	// rubrics, graders and assertions.
+	Digest, CasesDigest string
+	Runner              string
+	// RunnerFingerprint holds the runner's own settings (command, runs per case,
+	// judge model, extra arguments); see Fingerprinter.
+	RunnerFingerprint string
+	Harness, Model    string
+	Ablation          bool
+	// AllowExec changes how command_exit assertions grade.
+	AllowExec   bool
+	ToolVersion string
+}
+
 // CacheKey derives the key that decides whether a stored run can be reused.
-func CacheKey(digest, casesDigest, runner, harness, model string, ablation bool) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("v%d\n%s\n%s\n%s\n%s\n%s\n%s", StoreSchemaVersion, digest, casesDigest, runner, harness, model, strconv.FormatBool(ablation))))
+func CacheKey(in CacheInputs) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("v%d\n%s\n%s\n%s\n%s\n%s\n%s\n%s\nexec=%s\nversion=%s",
+		StoreSchemaVersion, in.Digest, in.CasesDigest, in.Runner, in.RunnerFingerprint, in.Harness, in.Model,
+		strconv.FormatBool(in.Ablation), strconv.FormatBool(in.AllowExec), in.ToolVersion)))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }

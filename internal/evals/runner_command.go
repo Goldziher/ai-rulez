@@ -31,6 +31,9 @@ type CommandRunner struct {
 // Name implements Runner.
 func (*CommandRunner) Name() string { return RunnerCommand }
 
+// Fingerprint implements Fingerprinter: a different command is a different runner.
+func (r *CommandRunner) Fingerprint() string { return "command=" + r.Command }
+
 // Run implements Runner.
 func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error) {
 	if strings.TrimSpace(r.Command) == "" {

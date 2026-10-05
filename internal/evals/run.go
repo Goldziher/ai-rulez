@@ -3,6 +3,7 @@ package evals
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -44,16 +45,22 @@ type RunOptions struct {
 	MaxCostUSD float64
 	// Date is recorded in the results; the caller supplies it (no clock is read).
 	Date string
-	// PassThreshold is the pass rate a skill needs to count as passing. Default 1.
-	PassThreshold float64
-	Grade         GradeOptions
-	Counter       tokens.Counter
+	// PassThreshold is the pass rate a skill needs to count as passing. Nil means 1;
+	// an explicit 0 records scores without gating on them. Must lie in 0..1.
+	PassThreshold *float64
+	// ToolVersion identifies the ai-rulez build; a different version re-runs.
+	ToolVersion string
+	Grade       GradeOptions
+	Counter     tokens.Counter
 	// Price overrides the model price tier for estimates when non-zero.
 	Price Price
 	// EstimateRuns is the agent runs per case and arm assumed by the estimate.
 	EstimateRuns int
 	// Store holds earlier results (for the cache) and receives new ones.
 	Store *Store
+	// OnSkill, when set, is called after each skill finishes, so a caller can save
+	// the store incrementally and a crash or interrupt keeps completed skills.
+	OnSkill func(run *SkillRun) error
 }
 
 // SkillRun is the outcome of one skill in a run.
@@ -112,7 +119,15 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner == nil && !opts.DryRun {
 		return nil, fmt.Errorf("no runner configured")
 	}
-	e := &engine{opts: opts, counter: opts.Counter, threshold: opts.PassThreshold, price: opts.Price, store: opts.Store, model: opts.Model, runnerName: "none"}
+	if t := opts.PassThreshold; t != nil && (math.IsNaN(*t) || *t < 0 || *t > 1) {
+		return nil, fmt.Errorf("pass threshold must be between 0 and 1, got %v", *t)
+	}
+	for name, v := range map[string]float64{"max cost": opts.MaxCostUSD, "price in": opts.Price.InPerMTok, "price out": opts.Price.OutPerMTok} {
+		if err := checkMoney(name, v); err != nil {
+			return nil, err
+		}
+	}
+	e := &engine{opts: opts, counter: opts.Counter, threshold: defaultThreshold, price: opts.Price, store: opts.Store, model: opts.Model, runnerName: "none"}
 	if e.counter == nil {
 		c, err := tokens.New("")
 		if err != nil {
@@ -120,8 +135,8 @@ func newEngine(opts *RunOptions) (*engine, error) {
 		}
 		e.counter = c
 	}
-	if e.threshold <= 0 {
-		e.threshold = defaultThreshold
+	if opts.PassThreshold != nil {
+		e.threshold = *opts.PassThreshold
 	}
 	if e.price == (Price{}) {
 		e.price = PriceFor(opts.Model)
@@ -176,11 +191,21 @@ func Run(ctx context.Context, opts *RunOptions) (*RunReport, error) {
 	}
 
 	for i := range plans {
+		if err := ctx.Err(); err != nil {
+			// Interrupted: hand back what finished so the caller can keep it.
+			e.report.Failed = true
+			return e.report, fmt.Errorf("interrupted before %s: %w", plans[i].skill.ID, err)
+		}
 		run := e.execute(ctx, &plans[i])
 		if failedRun(&run) {
 			e.report.Failed = true
 		}
 		e.report.Skills = append(e.report.Skills, run)
+		if opts.OnSkill != nil {
+			if err := opts.OnSkill(&run); err != nil {
+				return e.report, err
+			}
+		}
 	}
 	return e.report, nil
 }
@@ -228,14 +253,34 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 	}
 	est := EstimateRun(p.req, skillTokens(skill, e.counter), e.opts.EstimateRuns, e.price, e.counter)
 	p.run.Estimate = &est
-	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && old.CacheKey == e.cacheKey(&p.run) {
+	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) {
 		p.run.Status = RunCached
 	}
 	return p, nil
 }
 
 func (e *engine) cacheKey(run *SkillRun) string {
-	return CacheKey(run.Digest, run.CasesDigest, e.runnerName, e.opts.Harness, e.model, e.opts.Ablation)
+	fingerprint := ""
+	if f, ok := e.opts.Runner.(Fingerprinter); ok {
+		fingerprint = f.Fingerprint()
+	}
+	return CacheKey(CacheInputs{
+		Digest: run.Digest, CasesDigest: run.CasesDigest, Runner: e.runnerName, RunnerFingerprint: fingerprint,
+		Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation, AllowExec: e.opts.Grade.AllowExec,
+		ToolVersion: e.opts.ToolVersion,
+	})
+}
+
+// cacheable says whether a score is a real grading result. A run in which a case
+// errored (rate limit, missing credentials, no result) or nothing was scored says
+// more about the environment than about the skill and is always repeated.
+func cacheable(score *SkillScore) bool { return score.Errors == 0 && score.Scored > 0 }
+
+func checkMoney(name string, v float64) error {
+	if math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+		return fmt.Errorf("%s must be a finite number >= 0, got %v", name, v)
+	}
+	return nil
 }
 
 // execute runs (or replays from the store) one planned skill.
@@ -262,12 +307,20 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		resp, err := e.opts.Runner.Run(ctx, p.req)
 		if err != nil {
 			run.Status, run.Error = RunError, err.Error()
+			if e.opts.MaxCostUSD > 0 {
+				// A failed call may already have spent money and reported none of it:
+				// assume the whole remaining budget so the run stops.
+				e.report.CostUSD = round(math.Max(e.report.CostUSD, e.opts.MaxCostUSD))
+			}
 			return run
 		}
-		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter)})
+		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price})
 		e.report.CostUSD = round(e.report.CostUSD + score.CostUSD)
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
+		if !cacheable(&score) {
+			return run // never store an infrastructure failure: it would mask the last good result
+		}
 		e.store.Put(SkillRecord{
 			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, CacheKey: e.cacheKey(&run),
 			Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,

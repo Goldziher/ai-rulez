@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,4 +251,16 @@ func indexOf(list []string, item string) int {
 		}
 	}
 	return -1
+}
+
+func TestResponseValidate_RejectsBadCosts(t *testing.T) {
+	req := &Request{Cases: []Case{{ID: "a"}}}
+	for name, resp := range map[string]*Response{
+		"negative result cost":   {Version: ProtocolVersion, Results: []Result{{Case: "a", Arm: ArmWith, CostUSD: -1}}},
+		"negative response cost": {Version: ProtocolVersion, CostUSD: -5},
+		"negative tokens":        {Version: ProtocolVersion, Results: []Result{{Case: "a", Arm: ArmWith, InputTokens: -1}}},
+		"nan cost":               {Version: ProtocolVersion, CostUSD: math.NaN()},
+	} {
+		t.Run(name, func(t *testing.T) { assert.Error(t, resp.Validate(req)) })
+	}
 }
