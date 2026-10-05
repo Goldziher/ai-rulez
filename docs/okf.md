@@ -100,7 +100,7 @@ would need attribution notices.
 **Decision: (c) write our own against SPEC.md, borrow only naming.** The floor is
 about 300 lines in Go with `yaml.v3`, which ai-rulez already uses, so copying
 would buy no maintained code and would add NOTICE obligations and okfctl's index
-conventions. We reuse okfctl's *check vocabulary* so its users recognise the codes
+conventions. We reuse okfctl's *check vocabulary* so its users recognize the codes
 (table below) and we rebuilt its five fixture *cases* (bad-frontmatter, empty-type,
 no-type, unknown-type, good-bundle) as our own tiny fixtures. Nothing is copied, so
 no NOTICE entry is needed. openknowledge is not used (telemetry, dependencies).
@@ -196,4 +196,159 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 | AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one, or `log.md` headings that are not ISO dates |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
 | AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, or two paths differing only in case |
-| AR9B9 | `okf-lossy-mapping` | info | A concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, invalid metadata) and imports as plain context |
+| AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead |
+
+## Format details
+
+What an export writes, so a bundle can be read without ai-rulez.
+
+```
+docs/okf/
+  index.md                      ---\nokf_version: "0.2"\n---  then "# Subdirectories" entries
+  rules/index.md                "# Concepts" entries: * [Title](file.md) - description
+  rules/<id>.md
+  context/<id>.md
+  skills/index.md
+  skills/<id>/index.md
+  skills/<id>/SKILL.md          type: Playbook
+  skills/<id>/references/*.md  wrapped as type: Reference; scripts/ and assets/ copied verbatim
+  agents/<id>.md  commands/<id>.md  checks/<id>.md    type: Reference
+  domains/<domain>/<kind>/...
+```
+
+- Every directory with a concept gets an `index.md` (SPEC section 8): no frontmatter except `okf_version` at the root,
+  entries sorted by path, each with the concept's one-line description. Subdirectories are listed as
+  `[name](name/index.md)`, the shape used by the official `acme_retail` bundle.
+- No `log.md` is written: history is git's, and a log would need timestamps that break determinism.
+- `title` is the item id in words (`code-style` becomes "Code Style") unless an `okf.title` is kept (see below). No
+  `generated`, `verified`, `sources` or `timestamp` fields are written, for the same reason.
+- `x-ai-rulez` holds `kind`, `id`, optionally `domain`, and `metadata`: every frontmatter key of the source item
+  (`priority`, `targets`, `globs`, `paths`, `tools`, `owner`, `version`, custom keys) with its YAML type, except
+  `description`, which becomes the OKF `description`. The body is copied byte for byte.
+- A skill resource in markdown gets a small wrapper (`type: Reference`, `x-ai-rulez.kind: skill-resource`, the original
+  path) so it stays a conformant concept; a resource called `index.md` or `log.md` is stored as `index_.md` /
+  `log_.md`, because those names are reserved. The wrapper is removed on import.
+- Executable bits of scripts are kept.
+
+### Keeping foreign OKF keys
+
+OKF keys ai-rulez has no field for (`tags`, `resource`, `sources`, `generated`, `verified`, `status`, `stale_after`,
+`timestamp`, a custom `type` or `title`, anything else) are stored on import under one extra frontmatter key, `okf`:
+
+```yaml
+---
+description: We use Go
+okf:
+  tags: [lang]
+  status: stable
+---
+```
+
+`export okf` lifts that map back to the top level of the concept, so a bundle imported and exported again keeps its
+keys and its `type`. You can use the same mechanism by hand: `okf: {type: Playbook}` on a rule overrides the
+`Decision` type an export would write.
+
+### Round trip
+
+`export`, `import` and `export` again is byte-identical for the kinds ai-rulez owns (rules, context, skills with
+resources, agents, commands, checks, domains). The tests check this, and that a foreign bundle (the official
+`acme_retail` example) imports, exports and still validates. What does not survive: key order and comments inside a
+source file's frontmatter (the export normalizes them), and a source file that is empty after its frontmatter.
+
+## CLI
+
+See [CLI commands](cli.md#okf-commands) for every flag.
+
+| Command | Does |
+| --- | --- |
+| `ai-rulez export okf [--out dir] [--profile p] [--include kinds] [--check]` | Write (or compare) the bundle. `--role` is not offered: this version of ai-rulez has no roles |
+| `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
+| `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
+| `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
+| `ai-rulez validate --strict`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |
+
+`--into` takes `rules`, `context` or `skills`; use `--domain` to place the result in a domain. (The design note
+asked for `--into domain|...`; a separate flag keeps the two choices independent.)
+
+Import sources: a local directory, or `https://host/org/repo[.git][@ref][#subdir]`, `git@host:org/repo[.git][@ref]`,
+`file:///path/repo[@ref]`. `ref` is a branch, tag or commit. Plain `http://` is refused. Git runs without hooks,
+prompts or submodules and times out after three minutes.
+
+## Configuration
+
+```toml
+presets = ["claude", "okf"]      # opt in; without it only the commands above exist
+
+[okf]
+dir = "docs/okf"                 # default
+include = ["rules", "context", "skills"]   # default: all six kinds
+spec = "0.2"                     # the only accepted value
+```
+
+The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`), and
+includes content pulled in from includes and installed skills; domains that come from builtins or includes are skipped
+in `export okf` because they are not this project's own content. The bundle is committed documentation: `gitignore = true`
+never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
+hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
+
+## Security
+
+- Import refuses a bundle containing symlinks or paths that differ only in case, writes only below the target
+  directory (through `os.Root`, so symlinks in the target cannot redirect a write), and rejects `x-ai-rulez` ids and
+  resource paths that are not plain names (`..`, absolute paths, separators, and resource folders other than
+  `references/`, `scripts/`, `assets/`).
+- All text to be written, including scripts, is scanned with the `AR001`-`AR011` checks before the first write; one
+  error-level finding (a secret, hidden Unicode, `curl | sh`) refuses the whole import. `ignore` comments inside
+  imported text are not honored.
+- Bundle size is bounded (50,000 files, 8 MiB per file). Nothing in a bundle is executed.
+- OKF content is instructions for agents. Importing a rule from a stranger has the same trust implications as any
+  other include: read what `--dry-run` reports.
+
+## CI usage
+
+```bash
+ai-rulez generate --check                 # includes the okf preset: fails when docs/okf is stale
+ai-rulez validate --strict                # AR9B0-AR9B9 for the configured bundle
+ai-rulez okf validate docs/okf --fail-on warning --format json
+ai-rulez export okf --out /tmp/kb --check # compare without touching the repository
+```
+
+Validate a third-party bundle before importing it:
+
+```bash
+ai-rulez okf validate https://github.com/GoogleCloudPlatform/open-knowledge-format@main#bundles/acme_retail
+ai-rulez import okf https://github.com/GoogleCloudPlatform/open-knowledge-format@main#bundles/acme_retail --domain acme --dry-run
+```
+
+## Fixtures and licences
+
+- `internal/okf/testdata/acme_retail` is a copy of `bundles/acme_retail` from
+  `GoogleCloudPlatform/open-knowledge-format` (commit `ad30107`, Apache-2.0, Copyright Google LLC), without its
+  `viz.html`. It is used read-only as a conformance and import fixture; the notice is in `testdata/NOTICE.txt`.
+- The other fixtures are synthesized in the tests. No code was copied from okfctl or openknowledge.
+
+## Limitations
+
+- Only OKF 0.2 is written. 0.1 bundles (`timestamp`, `# Citations`) are read as they are; nothing is upgraded.
+- The trust, provenance and lifecycle families (`sources`, `generated`, `verified`, `status`, `stale_after`) and the
+  `Attested Computation` type are preserved as opaque keys but have no meaning in ai-rulez. A failing or stale status
+  is not acted on.
+- Links inside a concept body are not rewritten on import or export; they keep pointing at bundle paths. An
+  imported rule that links to `/tables/orders.md` has a dead link in `.ai-rulez/`.
+- Non-markdown files in a foreign bundle are skipped unless they sit in `references/`, `scripts/` or `assets/` next to a
+  skill. `log.md` is not imported.
+- A foreign concept maps to exactly one kind; a long `Playbook` becomes a skill named after its path
+  (`runbooks-deploy`). Hand-tune names and descriptions afterwards: skills need a trigger-oriented description.
+- `title` is derived, so a title edited in a bundle is lost on the next export unless it was imported (kept as
+  `okf.title`).
+- No roles: this base has no `--role`.
+- Agents, commands and checks have no OKF type and travel as `Reference` with `x-ai-rulez.kind`. A third-party tool
+  that drops unknown keys loses that information.
+
+## Open questions
+
+- The spec is single-vendor and pre-1.0; okf.md describes a different `index.md` and version scheme (see above). If
+  the ecosystem converges on that scheme, the writer would need a second mode.
+- Whether `Decision`, `Concept` and `Playbook` are the right type names for consumers that route by `type`. The spec
+  leaves it open; they are easy to change in one table.
+- Whether exporting `agents`, `commands` and `checks` by default is wanted, or only rules, context and skills.
