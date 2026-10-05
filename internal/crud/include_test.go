@@ -287,12 +287,12 @@ func TestAddIncludeEdgeCases(t *testing.T) {
 			shouldErr: false,
 		},
 		{
-			name: "http git URL",
+			name: "http git URL is rejected",
 			req: &crud.AddIncludeRequest{
 				Name:   "test",
 				Source: "http://github.com/example/repo.git",
 			},
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name: "valid git SSH without .git",
@@ -340,7 +340,7 @@ func TestIncludeSourceValidation(t *testing.T) {
 		// Valid git URLs
 		{"https github", "https://github.com/user/repo.git", false},
 		{"https gitlab", "https://gitlab.com/user/repo", false},
-		{"http", "http://example.com/repo.git", false},
+		{"http is rejected", "http://example.com/repo.git", true},
 		{"git@github", "git@github.com:user/repo.git", false},
 		{"git@gitlab", "git@gitlab.com:user/repo", false},
 

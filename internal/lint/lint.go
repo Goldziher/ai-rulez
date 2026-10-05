@@ -266,8 +266,9 @@ func (r *runner) resolveSettings() {
 	}
 	r.evalSettings()
 	if r.cfg.LockEnforced() {
-		// An unpinned remote is a hole in an enforced lock, not a hint.
+		// An unpinned remote or MCP package is a hole in an enforced lock, not a hint.
 		r.sev[CodeUnpinnedRemote] = SeverityError
+		r.sev[CodeMCPUnpinned] = SeverityError
 	}
 	for key, val := range r.lc.Severity {
 		rule, ok := lookupRule(key)

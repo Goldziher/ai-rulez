@@ -185,7 +185,13 @@ func ValidateIncludeSource(source string) error {
 	}
 
 	// Check if it's a git URL
-	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "git@") {
+	if strings.HasPrefix(strings.ToLower(source), "http://") {
+		return oops.
+			With("field", "source").
+			Hint("Plain http:// is not accepted since ai-rulez 5; use https:// or git@host:path").
+			Errorf("insecure include source %q", source)
+	}
+	if strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "git@") {
 		return nil
 	}
 
