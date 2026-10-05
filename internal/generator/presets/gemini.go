@@ -457,6 +457,7 @@ func (g *GeminiPresetGenerator) mcpServersValue(cfg *config.Config) map[string]i
 		if t := server.GetTransport(); (t == config.TransportHTTP || t == config.TransportSSE) && len(server.Headers) > 0 {
 			entry[keyHeaders] = server.Headers
 		}
+		BracedMCPEntry(entry, server)
 		if !server.IsEnabled() {
 			entry[keyDisabled] = true
 		}
