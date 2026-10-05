@@ -60,6 +60,8 @@ type Report struct {
 	Deps map[string][]string `json:"-"`
 	// Scope is set when the report was narrowed to changed files.
 	Scope *ChangedScope `json:"-"`
+	// Risk is the advisory risk score, set by the caller after the baseline.
+	Risk *RiskReport `json:"-"`
 }
 
 // Counts returns findings per severity.
@@ -284,14 +286,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.require_metadata: unknown content kind %q", kind))
 		}
 	}
-	for key, limit := range lc.Budget {
-		if _, ok := lookupRule(key); !ok {
-			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))
-		}
-		if limit < 0 {
-			problems = append(problems, fmt.Sprintf("lint.budget.%s: %d is negative", key, limit))
-		}
-	}
+	problems = append(problems, validateBudgetAndRisk(lc)...)
 	problems = append(problems, validateNewSettings(lc)...)
 	sort.Strings(problems)
 	return problems
@@ -1021,4 +1016,28 @@ func (r *runner) checkSettingsConfig() {
 	for _, rule := range r.cfg.Permissions.OverbroadAllowRules() {
 		r.add(CodePermissionOverbroad, path, lineOf(rule), "permissions.allow %q permits every call of the tool; name the commands or paths it may run", rule)
 	}
+}
+
+// validateBudgetAndRisk checks [lint.budget] and [lint.risk].
+func validateBudgetAndRisk(lc *config.LintConfig) []string {
+	var problems []string
+	for key, limit := range lc.Budget {
+		if _, ok := lookupRule(key); !ok {
+			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))
+		}
+		if limit < 0 {
+			problems = append(problems, fmt.Sprintf("lint.budget.%s: %d is negative", key, limit))
+		}
+	}
+	if lc.Risk != nil {
+		for _, w := range []struct {
+			name string
+			v    *int
+		}{{string(SeverityError), lc.Risk.Error}, {string(SeverityWarning), lc.Risk.Warning}, {string(SeverityInfo), lc.Risk.Info}} {
+			if w.v != nil && *w.v < 0 {
+				problems = append(problems, fmt.Sprintf("lint.risk.%s: %d is negative", w.name, *w.v))
+			}
+		}
+	}
+	return problems
 }

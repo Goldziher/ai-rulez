@@ -227,6 +227,27 @@ one entry per accepted finding:
   report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
   per root, after the baseline.
 
+## Risk score
+
+Every report carries an advisory risk score per item (a source file) and for the bundle (the root, or the whole run
+across roots). It helps triage; it **never** changes the exit code, which stays a threshold on finding severity
+(`--fail-on`, `fail_on`). The text report shows the bundle line and the five riskiest items, markdown shows the same
+as a table, `--format json` has a `risk` object and SARIF carries it in the run's `properties.risk`.
+
+- **Score.** Each unaccepted finding adds the weight of its severity: error 25, warning 8, info 1. The sum is capped
+  at 100. Findings accepted by a baseline do not count.
+- **Label.** `clean` (no findings), `low` (1-25), `medium` (26-50), `high` (51-75), `critical` (76-100), raised to
+  at least `high` when the worst finding is an error, `medium` for a warning and `low` for an info. One error is
+  therefore never "low", however small the score.
+- **Weights.** `[lint.risk]` sets the points per severity; `0` is allowed, and the severity floor still applies.
+
+```toml
+[lint.risk]
+error = 30
+warning = 10
+info = 0
+```
+
 ## Changed-only mode
 
 ```bash
@@ -286,12 +307,19 @@ pass `--external`.
       "code": "AR101", "name": "glob-no-match", "severity": "error",
       "file": ".ai-rulez/rules/scoped.md", "line": 4,
       "message": "glob \"nothing/**\" matches no tracked file, so this rule never applies",
-      "root": "."
+      "root": ".", "fingerprint": "ar1:3f2c9a1b7d4e5f60a8b1c2d3"
     }
   ],
-  "summary": { "total": 1, "errors": 1, "warnings": 0, "infos": 0, "by_code": { "AR101": 1 } }
+  "summary": { "total": 1, "errors": 1, "warnings": 0, "infos": 0, "by_code": { "AR101": 1 } },
+  "risk": {
+    "bundle": { "score": 25, "label": "high", "findings": 1 },
+    "items": [ { "item": ".ai-rulez/rules/scoped.md", "score": 25, "label": "high", "findings": 1 } ]
+  }
 }
 ```
+
+`baseline`, `budgets_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
+a baseline carries `"accepted": true`.
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
 
