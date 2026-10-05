@@ -175,6 +175,13 @@ func (c *Config) validateSettingsHooks() error {
 // (AR504, AR505), because the file may be produced by a build step.
 func validateSettingsHookAction(event string, index int, action *HookAction) error {
 	switch {
+	case action.Type != "" && action.Type != HookTypeCommand:
+		// The JSON schema (validate) allows only "command" here, and the settings
+		// renderers write only command handlers: accepting another type would
+		// silently turn a prompt or http hook into a shell command.
+		return oops.With("field", "hooks.hooks").With("event", event).With("type", action.Type).
+			Hint("Only type = \"command\" is supported for top-level [[hooks]]; omit 'type' or set it to \"command\"").
+			Errorf("hook %s[%d] has unsupported type %q", event, index, action.Type)
 	case action.Command != "" && action.Script != "":
 		return oops.With("field", "hooks.hooks").With("event", event).
 			Hint("Use 'command' for an executable the harness can resolve, or 'script' for a file in the project").
