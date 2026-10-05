@@ -18,7 +18,7 @@ func resetStrictFlags(t *testing.T) {
 	t.Cleanup(func() {
 		validateStrict, validateFormat, validateFailOn, validateOutput = false, "", "", ""
 		validateBaseline, validateUpdateBaseline, validateBaselineReason, validateStrictBaseline, validateToday = "", false, "", false, ""
-		validateLintProfile, validateSince, validateChanged = "", "", false
+		validateLintProfile, validateSince, validateChanged, validateAnalyzers = "", "", false, nil
 		strictTreeCache = lint.Loader{}
 	})
 	validateStrict = true
@@ -193,4 +193,29 @@ func TestLintProfileFlagValidation(t *testing.T) {
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("lint-profile"))
 	assert.Nil(t, ValidateCmd.Flags().Lookup("profile"), "the generation --profile flag is not reused")
 	t.Cleanup(func() { validateLintProfile = "" })
+}
+
+func TestAnalyzerFilter(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	assert.Equal(t, exitStrictFindings, runStrict(t, root, cfg))
+
+	validateAnalyzers = []string{"security"}
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)), "the broken link belongs to the references analyzer")
+	data, err := os.ReadFile(validateOutput)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "AR201")
+
+	validateAnalyzers = []string{"references"}
+	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)))
+	data, err = os.ReadFile(validateOutput)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"analyzer": "references"`)
+	assert.Contains(t, string(data), `"scope": "file"`)
+
+	validateAnalyzers = []string{"nope"}
+	assert.Error(t, checkStrictFlags())
+	validateStrict = false
+	validateAnalyzers = []string{"security"}
+	assert.Error(t, checkStrictFlags(), "--analyzer needs --strict")
 }

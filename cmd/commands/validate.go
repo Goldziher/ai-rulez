@@ -108,6 +108,7 @@ func init() {
 	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
 	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default), json, sarif, github, junit or markdown")
 	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "With --strict, lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
+	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "With --strict, report only these analyzers (repeatable or comma-separated): "+strings.Join(lint.AnalyzerNames(), ", "))
 	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "With --strict, write the report to this file instead of stdout")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")

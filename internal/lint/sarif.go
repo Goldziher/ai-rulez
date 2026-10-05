@@ -166,7 +166,7 @@ func sarifRuleFor(code string, def Severity) sarifRule {
 	if help == "" {
 		help = info.Describe
 	}
-	props := map[string]any{"tags": ruleTags(code)}
+	props := map[string]any{"tags": ruleTags(code), "analyzer": AnalyzerFor(code).Name, "scope": AnalyzerFor(code).Scope}
 	if isSecurityCode(code) {
 		props["security-severity"] = securitySeverity(info.Default)
 	}
@@ -183,10 +183,15 @@ func sarifRuleFor(code string, def Severity) sarifRule {
 
 // ruleTags labels a rule for code scanning filters.
 func ruleTags(code string) []string {
+	family := "quality"
 	if isSecurityCode(code) {
-		return []string{"security", "ai-instructions"}
+		family = AnalyzerSecurity
 	}
-	return []string{"quality", "ai-instructions"}
+	tags := []string{family, "ai-instructions"}
+	if name := AnalyzerFor(code).Name; name != family { // SARIF requires unique tags
+		tags = append(tags, name)
+	}
+	return tags
 }
 
 // buildSARIF converts a combined report to a SARIF log. version is the ai-rulez

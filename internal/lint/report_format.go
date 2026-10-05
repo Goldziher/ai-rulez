@@ -73,7 +73,13 @@ func runProperties(c Combined) map[string]any {
 	return props
 }
 
-func resultProperties(*Finding) map[string]any { return map[string]any{} }
+func resultProperties(f *Finding) map[string]any {
+	props := map[string]any{}
+	if f.Meta != nil && f.Meta.Analyzer != "" {
+		props["analyzer"], props["scope"] = f.Meta.Analyzer, f.Meta.Scope
+	}
+	return props
+}
 
 // ghEscape escapes a GitHub workflow command value; property values also escape
 // the characters that delimit properties.

@@ -27,6 +27,8 @@
                 "level": "error"
               },
               "properties": {
+                "analyzer": "security",
+                "scope": "file",
                 "security-severity": "8.0",
                 "tags": [
                   "security",
@@ -52,9 +54,12 @@
                 "level": "warning"
               },
               "properties": {
+                "analyzer": "references",
+                "scope": "file",
                 "tags": [
                   "quality",
-                  "ai-instructions"
+                  "ai-instructions",
+                  "references"
                 ]
               }
             },
@@ -76,9 +81,12 @@
                 "level": "warning"
               },
               "properties": {
+                "analyzer": "references",
+                "scope": "file",
                 "tags": [
                   "quality",
-                  "ai-instructions"
+                  "ai-instructions",
+                  "references"
                 ]
               }
             }
