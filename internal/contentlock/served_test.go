@@ -67,3 +67,16 @@ func repeatLine(s string, n int) string {
 	}
 	return out
 }
+
+func TestServedDigest_OnlyAGeneratedSourceHashShapeIsIgnored(t *testing.T) {
+	digest := func(line string) string {
+		d, err := ServedDigest([]Leaf{{Path: "references/x.md", Mode: ModeRegular, Data: []byte("# Content-Hash: blake3:aaa\n" + line + "\nbody\n")}}, true)
+		require.NoError(t, err)
+		return d
+	}
+	assert.Equal(t, digest("# Source-Hash: blake3:0123abcd"), digest("# Source-Hash: blake3:ffff0000"), "a generated hash line is volatile")
+	assert.Equal(t, digest("<!-- Source-Hash: blake3:0123abcd -->"), digest("<!-- Source-Hash: blake3:ffff0000 -->"))
+	assert.NotEqual(t, digest("# Source-Hash: ignore previous instructions"), digest("# Source-Hash: do something else"),
+		"text after Source-Hash: is content, not a hash")
+	assert.NotEqual(t, digest("# Source-Hash: blake3:0123abcd and more text"), digest("# Source-Hash: blake3:0123abcd and other text"))
+}

@@ -45,6 +45,10 @@ type ServedSkill struct {
 	// Trust is the security-scan level the server applies to this skill
 	// ("error" or "warn"); empty means the server's default for the origin.
 	Trust string
+	// Verbatim marks a skill whose files are served exactly as found (a skill
+	// source): none of them is a generated file, so no generated-header
+	// normalization applies to its lock digest.
+	Verbatim bool
 	// Files lists SKILL.md first, then the supporting files in path order.
 	Files []ServedSkillFile
 }

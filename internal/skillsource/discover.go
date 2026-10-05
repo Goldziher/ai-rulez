@@ -18,7 +18,28 @@ const (
 	maxFileBytes  = 2 << 20
 	maxSkillBytes = 8 << 20
 	skillFile     = "SKILL.md"
+
+	// maxSkillFiles bounds the files of one skill.
+	maxSkillFiles = 2000
+	// DefaultMaxSkills and DefaultMaxBytes bound what one skill source loads into
+	// memory ([[skill_sources]] max_skills and max_bytes override them).
+	DefaultMaxSkills = 200
+	DefaultMaxBytes  = 64 << 20
 )
+
+func (s Spec) maxSkills() int {
+	if s.MaxSkills > 0 {
+		return s.MaxSkills
+	}
+	return DefaultMaxSkills
+}
+
+func (s Spec) maxBytes() int {
+	if s.MaxBytes > 0 {
+		return s.MaxBytes
+	}
+	return DefaultMaxBytes
+}
 
 // File is one file of a skill.
 type File struct {
@@ -33,15 +54,15 @@ type Skill struct {
 	Name string
 	// Dir is the skill directory name inside the source.
 	Dir string
-	// Files lists SKILL.md first, then the rest in path order. When the source
-	// has a name_prefix, SKILL.md's `name:` is rewritten to Name.
+	// Files lists SKILL.md first, then the rest in path order. SKILL.md's `name:`
+	// is rewritten to Name, so the catalog name and Name always agree.
 	Files []File
 }
 
 // Discover lists the skills below root: each immediate child directory that has
 // a SKILL.md, or root itself when it has one. Include/exclude globs match the
 // directory name; exclude wins. Symlinks are never followed (a link could point
-// out of the source), and a skill over the size limits is skipped with a warning.
+// out of the source), and a skill over the size limits is skipped with a warning (a single file over the limit is dropped on its own), and a source over max_skills or max_bytes is an error.
 func Discover(spec Spec, root string) ([]Skill, error) {
 	var dirs []string
 	if fileExists(filepath.Join(root, skillFile)) {
@@ -57,21 +78,36 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 			}
 		}
 	}
-	var skills []Skill
+	var chosen []string
 	for _, dir := range dirs {
-		base := filepath.Base(dir)
-		if !selected(spec, base) {
-			continue
+		if selected(spec, filepath.Base(dir)) {
+			chosen = append(chosen, dir)
 		}
+	}
+	if len(chosen) > spec.maxSkills() {
+		return nil, oops.With("source", spec.Name).Hint("Narrow the source with `include`/`path`, or raise max_skills").
+			Errorf("skill source %q holds %d skills, more than max_skills = %d", spec.Name, len(chosen), spec.maxSkills())
+	}
+	var skills []Skill
+	total := 0
+	for _, dir := range chosen {
+		base := filepath.Base(dir)
 		files, err := readSkill(dir)
 		if err != nil {
 			logger.Warn("Skipping a skill in a skill source", "source", spec.Name, "skill", base, "reason", err.Error())
 			continue
 		}
-		name := spec.NamePrefix + base
-		if spec.NamePrefix != "" {
-			files[0].Content = rewriteName(files[0].Content, name)
+		for i := range files {
+			total += len(files[i].Content)
 		}
+		if total > spec.maxBytes() {
+			return nil, oops.With("source", spec.Name).Hint("Narrow the source with `include`/`path`, or raise max_bytes").
+				Errorf("skill source %q loads more than max_bytes = %d bytes of skill files", spec.Name, spec.maxBytes())
+		}
+		name := spec.NamePrefix + base
+		// The served name is the directory name (with the prefix), whatever SKILL.md
+		// claims: a source cannot pick a name that another skill already has.
+		files[0].Content = rewriteName(files[0].Content, name)
 		skills = append(skills, Skill{Name: name, Dir: base, Files: files})
 	}
 	sort.Slice(skills, func(i, j int) bool { return skills[i].Name < skills[j].Name })
@@ -118,12 +154,8 @@ func readSkill(dir string) ([]File, error) {
 		if !info.Mode().IsRegular() {
 			return nil // symlinks and devices are not served
 		}
-		if info.Size() > maxFileBytes {
-			return oops.Errorf("%s is larger than %d bytes", p, maxFileBytes)
-		}
-		total += int(info.Size())
-		if total > maxSkillBytes {
-			return oops.Errorf("the skill is larger than %d bytes", maxSkillBytes)
+		if skip, limitErr := checkFileLimits(p, info.Size(), len(files), &total); limitErr != nil || skip {
+			return limitErr
 		}
 		data, err := os.ReadFile(p) //nolint:gosec // p comes from WalkDir below the resolved source
 		if err != nil {
@@ -149,6 +181,24 @@ func readSkill(dir string) ([]File, error) {
 		return nil, oops.Errorf("no %s", skillFile)
 	}
 	return files, nil
+}
+
+// checkFileLimits applies the per-file and per-skill limits to one more file: a
+// single file over maxFileBytes is skipped (skip) with a warning; a skill with
+// too many files or bytes is an error.
+func checkFileLimits(p string, size int64, fileCount int, total *int) (skip bool, err error) {
+	if size > maxFileBytes {
+		logger.Warn("Not serving a file of a skill because it is too large", "file", p, "limit_bytes", maxFileBytes)
+		return true, nil
+	}
+	if fileCount >= maxSkillFiles {
+		return false, oops.Errorf("the skill has more than %d files", maxSkillFiles)
+	}
+	*total += int(size)
+	if *total > maxSkillBytes {
+		return false, oops.Errorf("the skill is larger than %d bytes", maxSkillBytes)
+	}
+	return false, nil
 }
 
 // rewriteName sets the frontmatter `name:` of a SKILL.md, so the served name and
