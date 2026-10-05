@@ -154,16 +154,8 @@ func readSkill(dir string) ([]File, error) {
 		if !info.Mode().IsRegular() {
 			return nil // symlinks and devices are not served
 		}
-		if info.Size() > maxFileBytes {
-			logger.Warn("Not serving a file of a skill because it is too large", "file", p, "limit_bytes", maxFileBytes)
-			return nil
-		}
-		if len(files) >= maxSkillFiles {
-			return oops.Errorf("the skill has more than %d files", maxSkillFiles)
-		}
-		total += int(info.Size())
-		if total > maxSkillBytes {
-			return oops.Errorf("the skill is larger than %d bytes", maxSkillBytes)
+		if skip, limitErr := checkFileLimits(p, info.Size(), len(files), &total); limitErr != nil || skip {
+			return limitErr
 		}
 		data, err := os.ReadFile(p) //nolint:gosec // p comes from WalkDir below the resolved source
 		if err != nil {
@@ -189,6 +181,24 @@ func readSkill(dir string) ([]File, error) {
 		return nil, oops.Errorf("no %s", skillFile)
 	}
 	return files, nil
+}
+
+// checkFileLimits applies the per-file and per-skill limits to one more file: a
+// single file over maxFileBytes is skipped (skip) with a warning; a skill with
+// too many files or bytes is an error.
+func checkFileLimits(p string, size int64, fileCount int, total *int) (skip bool, err error) {
+	if size > maxFileBytes {
+		logger.Warn("Not serving a file of a skill because it is too large", "file", p, "limit_bytes", maxFileBytes)
+		return true, nil
+	}
+	if fileCount >= maxSkillFiles {
+		return false, oops.Errorf("the skill has more than %d files", maxSkillFiles)
+	}
+	*total += int(size)
+	if *total > maxSkillBytes {
+		return false, oops.Errorf("the skill is larger than %d bytes", maxSkillBytes)
+	}
+	return false, nil
 }
 
 // rewriteName sets the frontmatter `name:` of a SKILL.md, so the served name and

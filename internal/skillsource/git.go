@@ -16,6 +16,9 @@ import (
 
 var fullSHA = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
+// refHEAD names the remote's default branch.
+const refHEAD = "HEAD"
+
 // Ref kinds reported by resolution.
 const (
 	kindSHA    = "commit"
@@ -58,12 +61,12 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 // was. Tags are preferred over branches (the peeled commit for annotated tags);
 // an empty ref or HEAD resolves the default branch.
 func lsRemote(ctx context.Context, url, ref string) (commit, kind string, err error) {
-	if err = checkRemote(url, ref); err != nil {
-		return "", "", err
+	if checkErr := checkRemote(url, ref); checkErr != nil {
+		return "", "", checkErr
 	}
 	remote := url
-	if ref == "" || ref == "HEAD" {
-		out, err := runGit(ctx, "", "ls-remote", "--", remote, "HEAD")
+	if ref == "" || ref == refHEAD {
+		out, err := runGit(ctx, "", "ls-remote", "--", remote, refHEAD)
 		if err != nil {
 			return "", "", oops.With("url", includes.RedactURL(url)).Wrapf(err, "resolve default branch")
 		}
@@ -138,7 +141,7 @@ func fetchCommit(ctx context.Context, url, ref, kind, commit, dest string) error
 	} else if _, err = runGit(ctx, dest, "checkout", flagQuiet, "--detach", "FETCH_HEAD"); err != nil {
 		return oops.With("url", includes.RedactURL(url)).With("commit", commit).Wrapf(err, "check out the pinned commit")
 	}
-	head, err := runGit(ctx, dest, "rev-parse", "HEAD")
+	head, err := runGit(ctx, dest, "rev-parse", refHEAD)
 	if err != nil {
 		return err
 	}
@@ -157,7 +160,7 @@ func fetchViaRef(ctx context.Context, dest, ref, kind, commit string) error {
 	}
 	name := ref
 	if name == "" {
-		name = "HEAD"
+		name = refHEAD
 	}
 	if _, err := runGit(ctx, dest, "fetch", flagQuiet, "--no-tags", "--", "origin", name); err != nil {
 		return oops.Wrapf(err, "fetch %s", name)
