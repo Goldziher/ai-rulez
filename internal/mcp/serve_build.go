@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/skillsource"
@@ -299,7 +300,7 @@ func defaultTrust(cfg *config.Config) func(*CatalogSkill) string {
 		imports = config.TrustWarn
 	}
 	return func(s *CatalogSkill) string {
-		if s.Ref != "" || s.Commit != "" {
+		if s.Ref != "" || s.Commit != "" || includes.IsGitURL(s.Source) {
 			return imports
 		}
 		return config.TrustWarn
