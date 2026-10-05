@@ -129,7 +129,7 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 // (nil, nil) so the caller can skip this include silently.
 func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, error) {
 	if includeConf.Format == config.IncludeFormatOKF {
-		return r.createOKFSource(includeConf), nil
+		return r.createOKFSource(includeConf)
 	}
 	// Check for local override: use a local path instead of git
 	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
