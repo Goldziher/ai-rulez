@@ -29,7 +29,12 @@ What the lock gives you:
 | An added, removed or edited rule / skill / resource / hook / role | per-item digest, named in the check output |
 | An executable bit added to a script | the file mode is part of the digest |
 | A change in what gets generated, by any cause | output digests |
-| A hand-edited lock line | the `tree` digest no longer matches the pins |
+| An accidentally edited or truncated lock | the `tree` digest no longer matches the pins, or is missing |
+| A lock replaced by one without content pins (a downgrade to version 1) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate --strict` fail |
+
+The `tree` digest is an integrity check, not a signature: whoever can edit the lock can recompute it (`ai-rulez
+lock` does exactly that). It catches accidental edits and merge mistakes; a deliberate change to the pins is caught
+by review of the lock diff and by CI running `lock --check` against the sources, not by the digest.
 
 What it does **not** do: it does not say *who* published a change, it does not sandbox anything, and it cannot
 tell a malicious edit from a good one. It makes every change explicit and reviewable; a human still reviews it
@@ -44,7 +49,12 @@ content itself. Signature or attestation verification is not implemented.
 | `skill` | the skill directory name | `SKILL.md` and every loaded resource (`references/`, `scripts/`, `assets/`) |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed` | the `[permissions]` and `[claude.settings.managed]` sources |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
+
+Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
+configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
+the output pins, so with `include_outputs = false` (or `scope = "skills"`) it is not covered. Keep output pins on
+when you rely on the lock for these.
 
 Content from remote includes and built-in packs is not listed item by item: includes are pinned by their own
 digest, built-ins by the ai-rulez version. Content from a local-path include outside the configuration directory is
@@ -53,8 +63,10 @@ not pinned.
 Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
 not `[header] timestamp` is on. Not pinned: machine-local outputs, outputs that may carry resolved secrets, and
-documents that are partly yours (the merged `.claude/settings.json`); the latter is pinned through its sources: the
-hooks, permissions, managed settings and roles above.
+documents that are partly yours, that is, a merged document in which the consumer owns some keys. A plain
+`.claude/settings.json` that only ai-rulez writes is pinned like any other output. When the document is partly
+yours it is not pinned as a whole; its sources (the hooks, permissions, managed settings, MCP servers and roles
+above) are.
 
 ```toml
 version = 2
@@ -139,12 +151,22 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
 ```
 
 - `path` is relative to the item, `/`-separated, with no `.`, `..`, empty segment or backslash.
-- `mode` is the string `100755` if any execute bit of the file is set, else `100644`. Nothing else about the file
-  mode matters.
+- `mode` is the string `100755` if the file is executable, else `100644`. Nothing else about the file mode
+  matters. On Linux and macOS the file's own execute bits decide (any of them set means executable). Windows
+  filesystems have no execute bit, so there the mode is taken from the git index (`git ls-files -s`, the mode git
+  checks out on Unix); if git is not available or the file is not tracked it is `100644`. A checkout whose
+  repository records the executable bit therefore pins the same digest on every operating system. A script that is
+  executable on disk but not recorded as such in git will pin differently on Windows than elsewhere; commit the
+  bit (`git update-index --chmod=+x`). The per-file digest of remote includes and installed skills (`include` and
+  `skill` entries, kind 1 algorithm) still reads the file's own bits.
 - `data` is the **raw bytes on disk**, never the frontmatter-stripped text the loader keeps in memory. For files
   with a text extension (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json .jsonc .sh .bash .zsh .py .js .mjs
   .cjs .ts`) `CRLF` is converted to `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone
-  `CR` is kept. Every other file (images, binaries, extensionless files) is hashed byte for byte.
+  `CR` is kept. Every other file (images, binaries, extensionless files) is hashed byte for byte. The list includes
+  shell and script extensions, where a `CRLF` can change behaviour (`#!/bin/sh\r` fails with "bad interpreter"), so
+  a script whose only change is its line endings pins the same digest. Keep scripts `LF` in git
+  (`.gitattributes`: `*.sh text eol=lf`). Narrowing the list would change existing pins, so it needs a new
+  `hash_version`.
 
 **Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
 `settings`, `output`, `served-skill`):
@@ -228,11 +250,17 @@ revision), and that is worth a look too. Exit codes: `0` in sync, `1` the comman
 A change of the ai-rulez version is a note, not a failure: output digests can differ between releases, and the
 output lines then tell you which.
 
-A lock written before content pins existed (`version = 1`, or no `hash_version`) has none to compare. `--check`
-passes with a note unless `[lock] enforce = true`, in which case it fails and asks for `ai-rulez lock`.
+A lock written before content pins existed (`version = 1`, or no `hash_version`) has none to compare, and a lock
+whose pins were stripped looks the same. `--check` therefore fails on it (exit `2`) and asks for `ai-rulez lock`,
+whatever `enforce` says: a check that passes on such a lock would let a downgrade switch the content checks off.
+Reading version 1 locks still works, and `generate` keeps using their include and skill pins. `generate --locked`
+on such a lock warns, and fails under `enforce`. A lock with content pins must also carry a `tree` digest.
+A hook `script` outside the project cannot be pinned; it is reported as a `lock` change (not an abort) until it
+moves inside the project.
 
 If remote includes are configured but not in the local cache, outputs cannot be rendered as `generate` would; the
-check then compares sources only and says so.
+check then compares sources only and says so in a note, or fails under `enforce = true`. Only a cache miss falls back
+this way: a cached include that violates its pin, or any other load error, is reported as the error it is.
 
 ### `lock --diff`
 
@@ -261,7 +289,7 @@ pins, or written with different `[lock]` settings).
 
 ```toml
 [lock]
-enforce = false          # true: strict validation reports drift, and --check requires content pins
+enforce = false          # true: strict validation reports drift (and an unreadable lock), generate --locked requires content pins
 include_outputs = true   # false: pin sources only
 scope = "all"            # "skills": pin only skills, remote includes and installed skills
 ```
@@ -274,7 +302,7 @@ With `enforce = true`, and only when a lock exists, `validate --strict` adds:
 
 | Code | Meaning |
 | --- | --- |
-| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written (or the lock has no content pins). |
+| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written, the lock has no content pins, or the lock cannot be read or compared (corrupt, a newer `hash_version`, an unpinnable source). Enforcement never skips a check it cannot run. |
 | `AR982` `lock-output-drift` | A generated output differs from its pinned digest. |
 
 Both default to `error`; they can be tuned with `[lint.severity]` like any other code.

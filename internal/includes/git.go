@@ -34,6 +34,11 @@ const (
 // Set from the --no-fetch CLI flag.
 var SkipFetch bool
 
+// ErrNotCached is wrapped by the error an offline load returns for an include or
+// installed skill that has no cached copy, so callers can tell a cache miss from
+// any other load failure.
+var ErrNotCached = errors.New("not in the local cache")
+
 // fetchLocks serializes Fetch calls per cache directory. Multiple configs
 // processed in parallel often reference the same shared include — without
 // this, concurrent goroutines would race on RemoveAll/MkdirAll/extract into
@@ -252,7 +257,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 			return nil, oops.
 				With("repo", redactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
-				Errorf("--no-fetch specified but no cached content found for include '%s'", s.name)
+				Wrapf(ErrNotCached, "--no-fetch specified but no cached content found for include '%s'", s.name)
 		}
 		logger.Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
 		return s.scanCachedContent()
