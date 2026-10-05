@@ -13,7 +13,9 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
-| `ai-rulez lock`                 | Pin remote includes and installed skills in `ai-rulez.lock` |
+| `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
+| `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
+| `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
@@ -880,6 +882,7 @@ ai-rulez generate [config-file] [flags]
 | Flag               | Type   | Default       | Description         |
 | ------------------ | ------ | ------------- | ------------------- |
 | `--profile` / `-p` | string | (from config) | Profile to generate; a comma-separated list composes several ([Composing Profiles](domains.md#composing-profiles)) |
+| `--role`           | string |               | Generate the slice of content a [role](roles.md) selects, instead of a profile. Mutually exclusive with `--profile` and `--plugin`; works with `--user`, `--check` and `--dry-run` |
 
 **General Flags:**
 
@@ -891,7 +894,7 @@ ai-rulez generate [config-file] [flags]
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
 | `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
-| `--locked`                      | boolean | false         | Require `ai-rulez.lock` to cover every remote include and installed skill and fetch exactly the pinned commits (CI mode, see [Lock Command](#lock-command)) |
+| `--locked`                      | boolean | false         | Require `ai-rulez.lock` to cover every remote include and installed skill, fetch exactly the pinned commits, and fail (exit 2) when an authored source differs from the lock's content pins (CI mode, see [Lock Command](#lock-command)). Never writes the lock |
 | `--frozen`                      | boolean | false         | `--locked` and never use the network: resolve only from the local cache, verified against the lock |
 | `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see [Local Configuration](#local-configuration))                  |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
@@ -1136,6 +1139,8 @@ ai-rulez tokens [config-file] [flags]
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
 | `--no-local`          | boolean | false              | Ignore the machine-local overlay and `local/` content            |
 | `--profile` / `-p`    | string  | configured default | Profile to report on; a comma-separated list composes several    |
+| `--role`              | string  |                    | Report on a [role](roles.md)'s slice instead of a profile        |
+| `--by-role`           | boolean | false              | One comparison column per declared role                          |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts             |
 
 ```bash
@@ -1144,6 +1149,8 @@ ai-rulez tokens --json
 ai-rulez tokens --compare-profiles base --compare-profiles backend --compare-profiles full
 ai-rulez tokens --compare-profiles base --compare-profiles base,backend
 ai-rulez tokens --budget 6000
+ai-rulez tokens --role backend
+ai-rulez tokens --by-role
 ```
 
 ### Reading the report
@@ -1359,32 +1366,75 @@ or a value outside an enum fails rather than being silently dropped. The structu
 
 ### `ai-rulez lock [name...]`
 
-Remote includes and installed skills are fetched at generate time, and a `ref` that is empty or a branch moves. `ai-rulez lock` resolves every git include and installed skill and records, in `.ai-rulez/ai-rulez.lock` (commit it):
+`ai-rulez.lock` (commit it) pins the parts of your AI configuration that an attacker, or an honest mistake, could
+change without anyone noticing. See [Lock file](lockfile.md) for the threat model, the hashing scheme and how to
+review a lock diff. It records:
 
-- the source, path and requested ref,
-- the commit the ref resolved to,
-- a `sha256` digest of the imported file tree.
+- for every git include and installed skill: the source, path and requested ref, the commit the ref resolved to,
+  and a `sha256` digest of the imported file tree;
+- for every authored rule, context file, skill (with its resources), agent, command, hook and role: a `sha256:<hex>`
+  digest of the raw files, with its id, domain, owner and version;
+- a digest of each generated output, and one `tree` digest over everything.
 
-Local-path sources live in the repository and are not locked. Credentials in a source URL are redacted in the lock.
+Local-path sources live in the repository and are not locked as remotes. Credentials in a source URL are redacted.
 
 ```bash
-ai-rulez lock                 # pin everything (uses the network)
-ai-rulez lock shared          # re-pin one include or skill, keep the other pins
+ai-rulez lock                     # pin everything (uses the network for remotes)
+ai-rulez lock shared              # re-pin one include or skill, keep the other pins (and the content pins)
 ai-rulez skill update kreuzberg   # same, for installed skills only
-ai-rulez lock --check         # verify lock vs config and cached files; no network
+ai-rulez lock --content-only      # re-pin authored content and outputs; offline
+ai-rulez lock --check             # verify everything, offline; exit 2 and name each difference
+ai-rulez lock --diff              # what `lock` would change, for a pull request
+ai-rulez lock --diff --format json
 ```
 
-With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce identical output even after the remote moved, and verifies the digest of what it fetched. A mismatch fails the run (a damaged cache is repaired by fetching the pinned commit again first; a remote that serves different bytes for the same commit is a hard failure). A source the lock does not cover is fetched as before, with the advice to run `ai-rulez lock`.
+With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce
+identical output even after the remote moved, and verifies the digest of what it fetched. A mismatch fails the run
+(a damaged cache is repaired by fetching the pinned commit again first; a remote that serves different bytes for
+the same commit is a hard failure). A source the lock does not cover is fetched as before, with the advice to run
+`ai-rulez lock`. `generate` never writes the lock.
 
 | Flag | Description |
 | --- | --- |
-| `--check` | Verify the lock against the configuration and any cached content; exit 2 on a mismatch, a stale entry or an entry no longer configured |
+| `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
+| `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
+| `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept |
+| `--format text\|json` | Output format of `--diff` |
+| `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
 | `--kind include\|skill` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |
 
-CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source; `generate --frozen` additionally never touches the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and `validate --strict` reports it as `AR010` (raise it to an error with `[lint.severity]`). Pinning `ref` to a full commit SHA also counts as pinned.
+CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
+authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
+the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and
+`validate --strict` reports it as `AR010` (raise it to an error with `[lint.severity]`). With `[lock] enforce = true`
+it also reports content drift as `AR981` / `AR982`. Pinning `ref` to a full commit SHA also counts as pinned.
 
-Signature or attestation verification is not implemented: the lock proves the bytes did not change since you reviewed them, not who published them.
+Signature or attestation verification is not implemented: the lock proves the bytes did not change since you
+reviewed them, not who published them.
+
+## Roles Command
+
+### `ai-rulez roles list|show|resolve`
+
+Inspect `[[roles]]`. Every subcommand accepts `--format text|json`, `--no-local` and `--config-dir`.
+
+| Command | Output |
+| --- | --- |
+| `roles list` | Every role with its parent, domains, item counts and token estimate. `--format json` prints the `roles.json` document |
+| `roles show <name>` | The role as declared and, when it extends another, with the parent merged in, plus its problems (AR971 to AR973) |
+| `roles resolve <name>` | The items the role keeps, with kind, domain, id, skill mode, bytes and tokens |
+
+Generate for a role with `ai-rulez generate --role <name>` (or `generate --user --role <name>`). See [Roles](roles.md).
+
+## Catalog Command
+
+### `ai-rulez catalog`
+
+Print every rule, context file, skill, agent and command with its id, domain, source, owner, version, size, the
+sha256 digest `ai-rulez.lock` pins, the roles that keep it, a summary of every role and the lock status. Nothing is
+written. `--format json` is versioned (`schema/catalog.schema.json`) and is meant for a UI or an audit script; see
+[Integrating an identity tool or UI](roles.md#integrating-an-identity-tool-or-ui).
 
 ## Scan Command
 

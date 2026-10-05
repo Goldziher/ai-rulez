@@ -311,6 +311,31 @@ domains. A profile name may therefore not contain a comma, and a profile's value
 domains only, never other profiles. See
 [Domains and Profiles](domains.md#composing-profiles).
 
+### `roles` and `role_manifest`
+
+`[[roles]]` maps a job to a slice of the content (domains, per-kind include/exclude selectors, inheritance, a
+per-skill `skill_mode` rendered as Claude Code `skillOverrides`), selected with `ai-rulez generate --role <name>`.
+`[role_manifest] enabled = true` writes `<config dir>/roles.json`. See [Roles](roles.md).
+
+```toml
+[role_manifest]
+enabled = true
+
+[[roles]]
+name = "backend"
+domains = ["backend"]
+[roles.skills]
+exclude = ["deploy-*"]
+[roles.skill_mode]
+migrate = "name-only"
+```
+
+### `lock`
+
+`[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `false`) makes `validate --strict`
+report content drift as `AR981` / `AR982` and makes `lock --check` require content pins; `include_outputs`
+(default `true`) pins generated outputs; `scope` is `all` (default) or `skills`. See [Lock file](lockfile.md).
+
 ### `scopes`
 
 Generate additional assistant files in subfolders with their own profile.
