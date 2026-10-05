@@ -710,6 +710,15 @@
           "description": "Typed checks for frontmatter keys (top-level or inside `metadata`), keyed by the frontmatter key.",
           "type": "object"
         },
+        "profile": {
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset.",
+          "enum": [
+            "default",
+            "strict",
+            "permissive"
+          ],
+          "type": "string"
+        },
         "require_metadata": {
           "additionalProperties": {
             "items": {

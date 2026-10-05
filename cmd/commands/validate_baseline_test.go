@@ -18,6 +18,7 @@ func resetStrictFlags(t *testing.T) {
 	t.Cleanup(func() {
 		validateStrict, validateFormat, validateFailOn, validateOutput = false, "", "", ""
 		validateBaseline, validateUpdateBaseline, validateBaselineReason, validateStrictBaseline, validateToday = "", false, "", false, ""
+		validateLintProfile, validateSince, validateChanged = "", "", false
 		strictTreeCache = lint.Loader{}
 	})
 	validateStrict = true
@@ -144,4 +145,52 @@ func TestRiskInReportDoesNotBlock(t *testing.T) {
 
 	validateFailOn = "none"
 	assert.Equal(t, 0, runStrict(t, root, cfg), "--fail-on none never blocks either")
+}
+
+const missingPathRule = "---\ndescription: a rule\n---\nEdit `src/nope.go` first.\n"
+
+func TestLintProfileEndToEnd(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{
+		".ai-rulez/rules/a.md": missingPathRule,
+		"src/real.go":          "package src\n",
+	})
+	assert.Equal(t, 0, runStrict(t, root, cfg), "AR401 is a warning by default")
+
+	validateLintProfile = "strict"
+	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "strict promotes it and fails on warnings")
+	data, err := os.ReadFile(validateOutput)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"profile": "strict"`)
+
+	validateFailOn = "none"
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)), "--fail-on beats the preset threshold")
+	validateFailOn = ""
+
+	validateLintProfile = ""
+	root2, _ := strictProject(t, "\n[lint]\nprofile = \"permissive\"\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	assert.Equal(t, 0, runStrict(t, root2, loadStrictProject(t, root2)), "permissive turns the broken link into a warning")
+}
+
+func TestFailOnPrecedenceWithProfile(t *testing.T) {
+	resetStrictFlags(t)
+	strictCfg := &config.Config{Lint: &config.LintConfig{Profile: "strict"}}
+	assert.Equal(t, "warning", failOnFor(strictCfg))
+	strictCfg.Lint.FailOn = "none"
+	assert.Equal(t, "none", failOnFor(strictCfg), "[lint] fail_on beats the preset")
+	validateFailOn = "error"
+	assert.Equal(t, "error", failOnFor(strictCfg), "--fail-on beats both")
+}
+
+func TestLintProfileFlagValidation(t *testing.T) {
+	resetStrictFlags(t)
+	validateLintProfile = "paranoid"
+	assert.Error(t, checkStrictFlags())
+	validateLintProfile = "strict"
+	assert.NoError(t, checkStrictFlags())
+	validateStrict = false
+	assert.Error(t, checkStrictFlags(), "--lint-profile needs --strict on validate")
+	assert.NotNil(t, ValidateCmd.Flags().Lookup("lint-profile"))
+	assert.Nil(t, ValidateCmd.Flags().Lookup("profile"), "the generation --profile flag is not reused")
+	t.Cleanup(func() { validateLintProfile = "" })
 }

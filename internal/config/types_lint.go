@@ -3,6 +3,10 @@ package config
 // LintConfig configures `ai-rulez validate --strict`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
+	// Profile selects a preset of severities and the failure threshold:
+	// "default", "strict" or "permissive". Explicit severity, fail_on and
+	// budget settings win over the preset.
+	Profile string `yaml:"profile,omitempty" json:"profile,omitempty" toml:"profile,omitempty"`
 	// FailOn is the lowest severity that makes the command exit non-zero:
 	// "error" (default), "warning", or "none".
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
