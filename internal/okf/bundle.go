@@ -95,6 +95,33 @@ type Bundle struct {
 	Dirs map[string]bool
 	// Problems are unsafe entries found while loading (symlinks, oversize files).
 	Problems []Problem
+
+	fsys fs.FS
+}
+
+// ReadFile returns the bytes of a regular file of the bundle, refusing files
+// larger than the load limit.
+func (b *Bundle) ReadFile(name string) ([]byte, error) {
+	if !b.Files[name] {
+		return nil, fs.ErrNotExist
+	}
+	info, err := fs.Stat(b.fsys, name)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > maxFileSize {
+		return nil, fmt.Errorf("%s is larger than %d bytes", name, maxFileSize)
+	}
+	return fs.ReadFile(b.fsys, name)
+}
+
+// Mode returns the permission bits of a file of the bundle.
+func (b *Bundle) Mode(name string) fs.FileMode {
+	info, err := fs.Stat(b.fsys, name)
+	if err != nil {
+		return 0
+	}
+	return info.Mode().Perm()
 }
 
 // Load reads the bundle rooted at root. It never follows symlinks and skips
@@ -102,7 +129,7 @@ type Bundle struct {
 func Load(root fs.FS) (*Bundle, error) {
 	b := &Bundle{
 		Concepts: map[string]*Concept{}, Indexes: map[string]*IndexFileDoc{},
-		Logs: map[string]*LogDoc{}, Files: map[string]bool{}, Dirs: map[string]bool{"": true},
+		Logs: map[string]*LogDoc{}, Files: map[string]bool{}, Dirs: map[string]bool{"": true}, fsys: root,
 	}
 	count := 0
 	err := fs.WalkDir(root, ".", func(p string, d fs.DirEntry, walkErr error) error {
