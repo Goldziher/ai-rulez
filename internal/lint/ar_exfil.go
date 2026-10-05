@@ -58,9 +58,11 @@ var (
 	secretVarRe = regexp.MustCompile(`\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?`)
 	secretName  = regexp.MustCompile(`(?i)(?:^|_)(?:secret|token|api_?key|passw(?:or)?d|private_?key|access_?key|secret_?key|credentials?|auth)$|^(?:DATABASE_URL|DB_URL|DB_PASSWORD)$|^AWS_SECRET`)
 	headerArgRe = regexp.MustCompile(`(?i)(?:-H|--header)\s*("[^"]*"|'[^']*')|(?:-u|--user)\s+\S+|--oauth2-bearer\s+\S+`)
-	envDumpRe   = regexp.MustCompile(`(?i)(?:curl|wget|nc|ncat|xh)\b[^\n]*(?:\$\(\s*(?:env|printenv|set)\s*\)|` + "`" + `\s*(?:env|printenv)\s*` + "`" + `|@-?\s*<\(\s*(?:env|printenv)|\$\(\s*cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*\s*\))`)
+	envDumpRe   = regexp.MustCompile(`(?i)(?:^|[\s;&|(])(?:curl|wget|nc|ncat|xh)\b[^\n]*(?:\$\(\s*(?:env|printenv|set)\s*\)|` + "`" + `\s*(?:env|printenv)\s*` + "`" + `|@-?\s*<\(\s*(?:env|printenv)|\$\(\s*cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*\s*\))`)
 	envPipeRe   = regexp.MustCompile(`(?i)(?:(?:^|[\s;&(])(?:env|printenv)|cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*)\s*(?:\|[^|\n]*)*\|\s*(?:curl|wget|nc|ncat|xh)\b`)
-	dnsExfilRe  = regexp.MustCompile(`(?i)(?:^|[\s;&|(])(?:dig|nslookup|host)\s[^\n]*(?:\$\(|` + "`" + `)`)
+	dnsExfilRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*\$\(`)
+	dnsTickRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*` + "`")
+	dnsStartRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s`)
 )
 
 // secretVars lists the secret-looking environment variables a line references.
@@ -97,8 +99,13 @@ func scanExfilCommands(r *runner, t *scanText) {
 				continue
 			}
 			r.add(CodeExfilCommand, t.abs, l.No, "sends the environment or a credential file to a remote host")
-		case dnsExfilRe.MatchString(text):
-			r.add(CodeExfilCommand, t.abs, l.No, "builds a DNS lookup from command output, a classic exfiltration channel")
+		default:
+			for _, seg := range t.commandSegmentsWith(l, dnsStartRe, pipeSegSplitRe) {
+				if dnsExfilRe.MatchString(seg) || (t.shellLike(l) && dnsTickRe.MatchString(seg)) {
+					r.add(CodeExfilCommand, t.abs, l.No, "builds a DNS lookup from command output, a classic exfiltration channel")
+					break
+				}
+			}
 		}
 	}
 }

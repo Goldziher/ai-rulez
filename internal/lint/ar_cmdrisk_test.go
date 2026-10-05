@@ -13,6 +13,7 @@ func TestUnpinnedExecAR021(t *testing.T) {
 		{name: "go run latest", skill: body("```sh\ngo run golang.org/x/tools/cmd/stringer@latest -h\n```\n"), want: []string{"AR021:SKILL.md:6"}},
 		{name: "pipx run", skill: body("`pipx run cowsay`\n"), want: []string{"AR021:SKILL.md:5"}},
 		{name: "pinned", skill: body("npx -y some-helper@1.4.2\npip install requests==2.32.0\npip install git+https://github.com/o/r@0123456789abcdef0123456789abcdef01234567\nuvx tool==1.2.3\n"), absent: []string{"AR021"}},
+		{name: "placeholder version in docs", skill: body("`npx -y ai-rulez@<version> mcp`\n"), absent: []string{"AR021"}},
 		{name: "interactive npx is not flagged", skill: body("npx prettier --check .\n"), absent: []string{"AR021"}},
 		{name: "prose mentioning uvx", skill: body("uvx is faster than pipx for one-off tools.\nUse the uvx launcher.\n"), absent: []string{"AR021"}},
 		{name: "index url is not the package", skill: body("pip install --index-url https://pypi.example/simple requests==2.0\n"), absent: []string{"AR021"}},

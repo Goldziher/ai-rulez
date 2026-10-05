@@ -66,7 +66,7 @@ func scanFakeTags(r *runner, t *scanText) {
 	}
 }
 
-var configTamperRe = regexp.MustCompile(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\bsettings\.json\b)`)
+var configTamperRe = regexp.MustCompile(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`)
 
 func scanConfigTamper(r *runner, t *scanText) {
 	for _, l := range t.lines {

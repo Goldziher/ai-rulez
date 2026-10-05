@@ -21,9 +21,10 @@ func TestMCPConfigAR602(t *testing.T) {
 		{name: "env must map to strings", files: mcpJSON(`{"a":{"command":"node","env":{"A":1}}}`), want: []string{"AR602:.mcp.json:1"}},
 		{name: "name with a dot", files: mcpJSON(`{"my.server":{"command":"node"}}`), want: []string{"AR602:.mcp.json:1"}},
 		{name: "valid stdio and http", files: mcpJSON(`{"a":{"command":"node","args":["s.js"]},"b":{"type":"http","url":"https://x.test/mcp"},"c":{"url":"https://x.test/mcp"}}`), absent: []string{"AR602"}},
+		{name: "names that differ only by case", files: mcpJSON(`{"GitHub":{"command":"node"},"github":{"command":"node"}}`), want: []string{"AR602:.mcp.json:1"}},
 		{
-			name: "duplicate across config and .mcp.json", files: mcpJSON(`{"dup":{"command":"node"}}`),
-			config: "\n[[mcp_servers]]\nname = \"dup\"\ncommand = \"node\"\n", want: []string{"AR602:config.toml:0"},
+			name: "a .mcp.json entry that mirrors config.toml is not checked twice", files: mcpJSON(`{"dup":{"type":"http"}}`),
+			config: "\n[[mcp_servers]]\nname = \"dup\"\ncommand = \"node\"\n", absent: []string{"AR602"},
 		},
 		{name: "disabled servers are not checked", files: mcpJSON(`{"a":{"disabled":true}}`), absent: []string{"AR602"}},
 		{
