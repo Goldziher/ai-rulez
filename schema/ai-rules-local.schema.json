@@ -577,6 +577,14 @@
           },
           "type": "array"
         },
+        "budget": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
+          "type": "object"
+        },
         "budgets": {
           "additionalProperties": {
             "additionalProperties": false,
