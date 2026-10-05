@@ -35,6 +35,8 @@ kind = "mcp"
 path = "crush.json"
 format = "json"
 dialect = "vscode"
+# Crush shell-expands every MCP value; $NAME only when it is the whole value.
+env_ref_syntax = "dollar"
 key = ["mcp"]
 emit_when = "has_mcp_servers"
 global_path = ".config/crush/crush.json"

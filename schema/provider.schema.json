@@ -448,8 +448,8 @@
           }
         },
         "env_ref_syntax": {
-          "enum": ["dollar", "env_prefix"],
-          "description": "kind mcp only. Write a value that came from a ${VAR} placeholder as a reference the tool expands itself instead of the resolved secret: dollar is $NAME, env_prefix is ${env:NAME}."
+          "enum": ["dollar", "env_prefix", "braced", "opencode_env"],
+          "description": "kind mcp only. Write a value that came from a ${VAR} placeholder as a reference the tool expands itself instead of the resolved secret: dollar is $NAME, env_prefix is ${env:NAME}, braced is ${NAME}, opencode_env is {env:NAME}."
         },
         "transports": {
           "type": "array",

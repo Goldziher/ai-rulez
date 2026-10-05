@@ -167,6 +167,9 @@ func (c *Config) validateSettingsHooks() error {
 		logger.Warn(strings.TrimPrefix(warning.Message, "plugin "), "event", warning.Event,
 			"field", strings.Replace(warning.Field, "plugin.hooks", "hooks", 1))
 	}
+	for _, warning := range emptyHookGroupWarnings(c.Hooks) {
+		logger.Warn(warning.Message, "event", warning.Event, "field", warning.Field)
+	}
 	return nil
 }
 

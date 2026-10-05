@@ -97,6 +97,8 @@ kind = "mcp"
 path = ".factory/mcp.json"
 format = "json"
 dialect = "claude"
+# Droid expands ${NAME} in env and headers (not command, args or url) at connection time.
+env_ref_syntax = "braced"
 global_path = ".factory/mcp.json"
 
 # User-scope layout: everything lives under ~/.factory.
