@@ -14,6 +14,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez lock`                 | Pin remote includes and installed skills in `ai-rulez.lock` |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
