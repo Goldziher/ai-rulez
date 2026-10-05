@@ -37,13 +37,14 @@ var namedListKeys = map[string]bool{
 	"installed_skills": false,
 	"marketplaces":     false,
 	"scopes":           true,
+	"roles":            false,
 }
 
 // mapValuedKeys are top-level tables merged per key.
 var mapValuedKeys = map[string]bool{
 	docKeyProfiles: true, docKeyHeader: true, docKeyDefaults: true, string(PresetMCP): true,
 	"plugin": true, "marketplace": true, "placement": true, "claude": true, rulesDir: true, "lint": true,
-	"permissions": true,
+	"permissions": true, "role_manifest": true, "lock": true,
 }
 
 // knownConfigDocKeys returns the TOML keys of Config (plus "schema").
