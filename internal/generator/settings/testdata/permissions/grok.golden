@@ -1,0 +1,4 @@
+[permission]
+allow = ["Bash(npm run test)", "Bash(npm run test *)", "Bash(git status)", "Read(src/**)", "Edit(src/**)", "MCPTool(github__create_issue)"]
+ask = ["Bash(git push)", "Bash(git push *)"]
+deny = ["Bash(rm -rf)", "Bash(rm -rf *)", "Read(.env)", "MCPTool(evil__tool)", "Bash(curl * | sh)"]

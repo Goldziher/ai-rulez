@@ -69,7 +69,8 @@ func TestCodebuddy_Global(t *testing.T) {
 	want := providers.GlobalPaths{
 		RootFile: batchAJoin(".codebuddy/CODEBUDDY.md"), SkillsDir: batchAJoin(".codebuddy/skills"),
 		AgentsDir: batchAJoin(".codebuddy/agents"), CommandsDir: batchAJoin(".codebuddy/commands"),
-		RulesDir: batchAJoin(".codebuddy/rules"), Sidecars: map[string]string{},
+		RulesDir: batchAJoin(".codebuddy/rules"),
+		Sidecars: map[string]string{".codebuddy/settings.json": batchAJoin(".codebuddy/settings.json")},
 	}
 	assert.Equal(t, want, batchAGlobal(t, "codebuddy", nil))
 }

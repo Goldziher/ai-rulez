@@ -100,6 +100,15 @@ dialect = "claude"
 global_path = ".factory/mcp.json"
 
 # User-scope layout: everything lives under ~/.factory.
+# Hooks: top-level [[hooks]] rendered in factory's native format, read from the
+# vendor documentation (see docs/settings.md). Droid reads hooks.json, keyed by event at the document root (seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "factory"
+path = ".factory/hooks.json"
+format = "json"
+global_path = ".factory/hooks.json"
+
 [global]
 root_file = ".factory/AGENTS.md"
 skills_dir = ".factory/skills"

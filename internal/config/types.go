@@ -63,7 +63,8 @@ type Config struct {
 	// settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json,
 	// .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin.
 	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
-	// Permissions declares allow/ask/deny rules for .claude/settings.json.
+	// Permissions declares allow/ask/deny rules for .claude/settings.json and, translated,
+	// for every harness with a native permission surface (docs/permissions.md).
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
 
 	// Runtime fields (populated during load)

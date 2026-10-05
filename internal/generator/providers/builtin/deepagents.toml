@@ -58,6 +58,15 @@ emit_when = "has_mcp_servers"
 
 # DEEPAGENTS_HOME is the profile root itself, so the ".deepagents" segment is
 # dropped when it is set; "agent" is dcode's default agent profile.
+# Hooks: top-level [[hooks]] rendered in deepagents's native format, read from the
+# vendor documentation (see docs/settings.md). Deep Agents Code reads hooks.json (Claude-style groups, seconds); project hooks need trust.
+[[sidecars]]
+kind = "hooks"
+dialect = "deepagents"
+path = ".deepagents/hooks.json"
+format = "json"
+global_path = ".deepagents/hooks.json"
+
 [global]
 home_env = "DEEPAGENTS_HOME"
 home_dir = ".deepagents"

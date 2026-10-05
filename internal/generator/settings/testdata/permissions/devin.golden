@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(npm run test)",
+      "Read(src/**)",
+      "Write(src/**)",
+      "Fetch(domain:example.com)",
+      "mcp__github__create_issue"
+    ],
+    "ask": [
+      "Exec(git push)"
+    ],
+    "deny": [
+      "Exec(rm -rf)",
+      "Read(.env)",
+      "Fetch(domain:evil.com)",
+      "mcp__evil__tool"
+    ]
+  }
+}

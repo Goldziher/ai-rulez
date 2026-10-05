@@ -97,6 +97,13 @@ kind = "pi_mcp_json"
 path = ".pi/mcp.json"
 emit_when = "has_mcp_servers"
 
+# [[hooks]] become a Pi extension: Pi's hooks are code, loaded from .pi/extensions.
+[[sidecars]]
+kind = "hook_plugin"
+flavor = "pi"
+path = ".pi/extensions/ai-rulez-hooks.ts"
+global_path = ".pi/agent/extensions/ai-rulez-hooks.ts"
+
 # User-scope layout: pi keeps user memory and skills under ~/.pi/agent.
 [global]
 root_file = ".pi/agent/AGENTS.md"

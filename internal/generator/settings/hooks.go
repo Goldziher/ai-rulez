@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/toolnames"
 )
 
 // Handler documents. They differ per harness in field names and units, and are
@@ -51,6 +53,7 @@ type (
 	}
 	copilotEntry struct {
 		Type       string `json:"type"`
+		Matcher    string `json:"matcher,omitempty"`
 		Bash       string `json:"bash"`
 		TimeoutSec int    `json:"timeoutSec,omitempty"`
 	}
@@ -61,6 +64,18 @@ type (
 type hookRender struct {
 	events  []string
 	entries map[string][]json.RawMessage
+	// flat is the single list of a harness whose entries carry their own event
+	// (Kiro, Vibe), in configuration order.
+	flat []json.RawMessage
+}
+
+// count is the number of handlers rendered so far; flat entries are named after it.
+func (r *hookRender) count() int {
+	n := len(r.flat)
+	for _, entries := range r.entries {
+		n += len(entries)
+	}
+	return n
 }
 
 func (r *hookRender) add(event string, raw json.RawMessage) {
@@ -98,9 +113,18 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 		if !ok {
 			continue
 		}
+		if matcher == "" && spec.defaultMatcher != "" && (spec.matcherRequired || spec.matcherEvents[native]) {
+			matcher = spec.defaultMatcher
+		}
+		if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
+			warn(spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
+				"hint", "remove the matcher or set targets to leave this harness out")
+			continue
+		}
 		handlers := make([]json.RawMessage, 0, len(g.Hooks))
 		for j := range g.Hooks {
-			raw, ok, err := renderHandler(cfg, spec, g, &g.Hooks[j], matcher)
+			name := fmt.Sprintf("ai-rulez-%s-%d", strings.ToLower(native), out.count()+len(handlers)+1)
+			raw, ok, err := renderHandler(cfg, spec, g, &g.Hooks[j], handlerContext{name: name, event: native, matcher: matcher})
 			if err != nil {
 				return hookRender{}, err
 			}
@@ -109,6 +133,10 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 			}
 		}
 		if len(handlers) == 0 {
+			continue
+		}
+		if spec.flat != nil {
+			out.flat = append(out.flat, handlers...)
 			continue
 		}
 		if !spec.nested {
@@ -128,7 +156,9 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 
 // groupMatcher resolves the matcher a group renders with for a harness. ok is
 // false when the group cannot be rendered there: a Claude matcher does not carry
-// over to a harness with other tool names, so it needs an explicit override.
+// over to a harness with other tool names, so it is rewritten through the
+// harness's tool vocabulary (internal/toolnames) where the vendor documents it,
+// and otherwise needs an explicit override.
 func groupMatcher(g *config.HookGroup, spec hookSpec) (string, bool) {
 	override, hasOverride := g.Matchers[spec.name]
 	matcher := g.Matcher
@@ -138,20 +168,35 @@ func groupMatcher(g *config.HookGroup, spec hookSpec) (string, bool) {
 	switch {
 	case matcher == "":
 		return "", true
-	case spec.matcherless:
-		warn(spec.name, fmt.Sprintf("%s hooks have no matcher, so the %s group would run on every occurrence", spec.name, g.Event),
-			"hint", "remove the matcher or set targets to leave this harness out")
-		return "", false
 	case hasOverride || spec.matcherPassthrough:
 		return matcher, true
+	}
+	if vocab, ok := toolnames.For(spec.name); ok {
+		translated, unmapped, ok := vocab.TranslateMatcher(matcher)
+		if ok {
+			return translated, true
+		}
+		warn(spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools; %s documents no equivalent of %q",
+			matcher, g.Event, spec.name, unmapped),
+			"hint", fmt.Sprintf("set matchers.%s to the %s equivalent, or restrict the group with targets", spec.name, spec.name))
+		return "", false
 	}
 	warn(spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools", matcher, g.Event),
 		"hint", fmt.Sprintf("set matchers.%s to the %s equivalent, or restrict the group with targets", spec.name, spec.name))
 	return "", false
 }
 
-func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, action *config.HookAction, matcher string,
+// handlerContext is what a handler is rendered under: its generated name (flat
+// layouts need one), the native event and the resolved matcher.
+type handlerContext struct{ name, event, matcher string }
+
+func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, action *config.HookAction, hc handlerContext,
 ) (raw json.RawMessage, ok bool, err error) {
+	matcher := hc.matcher
+	if action.Type != "" && action.Type != config.HookTypeCommand {
+		warn(spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
+		return nil, false, nil
+	}
 	if action.If != "" && !spec.condition {
 		warn(spec.name, fmt.Sprintf("a %s handler sets 'if', which %s has no equivalent of; running it unconditionally would widen it", g.Event, spec.name))
 		return nil, false, nil
@@ -160,13 +205,29 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 		warn(spec.name, fmt.Sprintf("a %s handler is async, which %s cannot express", g.Event, spec.name))
 		return nil, false, nil
 	}
-	command, args := handlerCommand(cfg, spec, action)
+	if action.Script != "" && !config.IsSafeHookScript(action.Script) {
+		warn(spec.name, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+			g.Event, action.Script))
+		return nil, false, nil
+	}
+	command, args, ok := handlerCommand(cfg, spec, action)
+	if !ok {
+		warn(spec.name, fmt.Sprintf("a %s handler uses script %q, but %s documents no way to address a project file", g.Event, action.Script, spec.name),
+			"hint", "use 'command' with a path the harness resolves, or set targets to leave this harness out")
+		return nil, false, nil
+	}
 	if len(args) > 0 && !spec.args {
 		command += " " + shellJoin(args)
 		args = nil
 	}
 
 	var value any
+	switch {
+	case spec.flat != nil:
+		value = spec.flat(hc, command, action)
+	case spec.shape != nil:
+		value = spec.shape.handler(spec, matcher, command, args, action)
+	}
 	switch spec.name {
 	case config.HarnessClaude:
 		value = claudeHandler{Type: config.HookTypeCommand, Command: command, Args: args, Timeout: action.Timeout,
@@ -178,8 +239,8 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 		value = geminiHandler{Type: config.HookTypeCommand, Command: command, Timeout: action.Timeout * 1000}
 	case config.HarnessCursor:
 		value = cursorEntry{Command: command, Timeout: action.Timeout, Matcher: matcher}
-	case config.HarnessCopilot:
-		value = copilotEntry{Type: config.HookTypeCommand, Bash: command, TimeoutSec: action.Timeout}
+	case config.HarnessCopilot, config.HarnessCopilotCLI:
+		value = copilotEntry{Type: config.HookTypeCommand, Matcher: matcher, Bash: command, TimeoutSec: action.Timeout}
 	}
 	raw, err = json.Marshal(value)
 	if err != nil {
@@ -192,27 +253,39 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 // `script` is a file of the project (or, for user scope, of the user config
 // directory) and is addressed through the variable the harness documents for its
 // project root; a `command` is copied verbatim.
-func handlerCommand(cfg *config.Config, spec hookSpec, action *config.HookAction) (command string, args []string) {
+func handlerCommand(cfg *config.Config, spec hookSpec, action *config.HookAction) (command string, args []string, ok bool) {
 	if action.Script == "" {
-		return action.Command, action.Args
+		return action.Command, action.Args, true
 	}
 	script := path.Clean(filepath.ToSlash(action.Script))
 	if cfg.UserScope {
-		return quote(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script))), action.Args
+		return quote(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script))), action.Args, true
 	}
+	// The script path is single-quoted on top of the config-time allowlist
+	// (config.IsSafeHookScript); only the root variable stays double-quoted, because
+	// it has to expand.
+	quoted := quote(script)
 	switch spec.name {
 	case config.HarnessClaude:
-		return `"${CLAUDE_PROJECT_DIR}"/` + script, action.Args
+		return `"${CLAUDE_PROJECT_DIR}"/` + quoted, action.Args, true
 	case config.HarnessGemini:
-		return `"$GEMINI_PROJECT_DIR"/` + script, action.Args
-	case config.HarnessCodex, config.HarnessCopilot:
-		return `"$(git rev-parse --show-toplevel)"/` + script, action.Args
-	default: // cursor runs project hooks from the project root
-		return "./" + script, action.Args
+		return `"$GEMINI_PROJECT_DIR"/` + quoted, action.Args, true
+	case config.HarnessCodex, config.HarnessCopilot, config.HarnessCopilotCLI:
+		return `"$(git rev-parse --show-toplevel)"/` + quoted, action.Args, true
 	}
+	switch {
+	case spec.scriptVar != "":
+		return `"` + spec.scriptVar + `"/` + quoted, action.Args, true
+	case spec.scriptCwd:
+		return quote("./" + script), action.Args, true
+	}
+	return "", nil, false
 }
 
-func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"` }
+// quote single-quotes s for a POSIX shell. Inside single quotes nothing is special,
+// so unlike double quotes ($, `, \, ! and " all stay live there) only the quote
+// itself needs closing, escaping and reopening.
+func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
 // shellJoin quotes argv for a shell command line.
 func shellJoin(args []string) string {
@@ -236,35 +309,63 @@ func HookKeys(cfg *config.Config, harness, docPath string) ([]jsonmerge.OwnedKey
 	if !ok || cfg == nil || len(cfg.Hooks) == 0 || inScopeRun(cfg) {
 		return nil, nil
 	}
+	if spec.userOnly && !cfg.UserScope {
+		if targetsAny(cfg, harness) {
+			warn(harness, harness+" ignores project-level hooks, so they are only generated with --user")
+		}
+		return nil, nil
+	}
 	rendered, err := renderHooks(cfg, spec)
 	if err != nil {
 		return nil, err
 	}
-	keys := make([]jsonmerge.OwnedKey, 0, len(rendered.events)+1)
-	for _, event := range rendered.events {
-		keys = append(keys, arrayKey(cfg, docPath, []string{"hooks", event}, rendered.entries[event]))
+	if len(rendered.events) > 0 && spec.note != "" {
+		rulefiles.Warn(fmt.Sprintf("[[hooks]] for %s: %s", harness, spec.note))
 	}
-	if len(keys) > 0 && harness == config.HarnessCursor {
-		if version, ok := cursorVersionKey(cfg, docPath); ok {
-			keys = append([]jsonmerge.OwnedKey{version}, keys...)
-		}
+	keys := make([]jsonmerge.OwnedKey, 0, len(rendered.events)+2)
+	container := spec.containerPath(cfg)
+	if len(rendered.flat) > 0 {
+		keys = append(keys, arrayKey(cfg, docPath, container, rendered.flat))
+	}
+	for _, event := range rendered.events {
+		keys = append(keys, arrayKey(cfg, docPath, append(slices.Clone(container), event), rendered.entries[event]))
+	}
+	if len(keys) > 0 {
+		keys = append(spec.requiredKeys(cfg, docPath), keys...)
 	}
 	return keys, nil
 }
 
-// cursorVersionKey owns Cursor's required `version` only when the document lacks
-// one or an earlier run added it, and asks clean to drop it only when nothing
-// else is left in the file. A version the consumer wrote is theirs.
-func cursorVersionKey(cfg *config.Config, docPath string) (jsonmerge.OwnedKey, bool) {
-	if readPath(docPath, []string{keyVersion}) != nil {
-		for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-			if equalPath(claim.Path, []string{keyVersion}) {
-				return jsonmerge.OwnedKey{Name: keyVersion, Value: cursorHooksVersion, Alone: true}, true
-			}
+// requiredKeys are the scalars a harness's hooks document needs to be valid
+// (Cursor's and Kiro's `version`, ZCode's `hooks.enabled`). ai-rulez owns one
+// only when the document lacks it or an earlier run added it, and asks clean to
+// drop it only when nothing else is left in the file: a value the consumer wrote
+// is theirs.
+func (s hookSpec) requiredKeys(cfg *config.Config, docPath string) []jsonmerge.OwnedKey {
+	var keys []jsonmerge.OwnedKey
+	for _, req := range s.required {
+		if req.userOnly && !cfg.UserScope {
+			continue
 		}
-		return jsonmerge.OwnedKey{}, false
+		if existing := readPath(docPath, req.path); existing != nil && !hookClaimedBefore(cfg, docPath, req.path) {
+			if wanted, err := json.Marshal(req.value); err == nil && !equalJSON(existing, wanted) {
+				rulefiles.Warn(fmt.Sprintf("[[hooks]] for %s: %s is %s, but the hooks need %s; the existing value is kept, so they may not run",
+					s.name, strings.Join(req.path, "."), existing, wanted))
+			}
+			continue
+		}
+		keys = append(keys, jsonmerge.OwnedKey{Path: req.path, Value: req.value, Alone: true})
 	}
-	return jsonmerge.OwnedKey{Name: keyVersion, Value: cursorHooksVersion, Alone: true}, true
+	return keys
+}
+
+func hookClaimedBefore(cfg *config.Config, docPath string, path []string) bool {
+	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
+		if equalPath(claim.Path, path) {
+			return true
+		}
+	}
+	return false
 }
 
 // inScopeRun reports whether cfg renders a [[scopes]] subdirectory, where
@@ -277,20 +378,45 @@ func inScopeRun(cfg *config.Config) bool {
 // (.github/hooks/ai-rulez.json). ok is false when no hook applies, in which case
 // the file is not generated.
 func CopilotHooksDocument(cfg *config.Config) (body string, ok bool, err error) {
-	if cfg == nil || len(cfg.Hooks) == 0 || inScopeRun(cfg) {
-		return "", false, nil
-	}
-	rendered, err := renderHooks(cfg, copilotSpec)
-	if err != nil || len(rendered.events) == 0 {
+	return OwnedHooksDocument(cfg, config.HarnessCopilot)
+}
+
+// OwnedHooksDocument renders the hooks file of a harness whose hooks live in a
+// file of their own that the harness loads next to any other (Copilot and Copilot
+// CLI read every *.json of .github/hooks). The copilot and copilot-cli presets
+// write the same path, so both render through here and agree byte for byte.
+func OwnedHooksDocument(cfg *config.Config, harness string) (body string, ok bool, err error) {
+	keys, ok, err := OwnedHooksKeys(cfg, harness)
+	if err != nil || !ok {
 		return "", false, err
 	}
-	hooks := make(map[string][]json.RawMessage, len(rendered.events))
-	for _, event := range rendered.events {
-		hooks[event] = rendered.entries[event]
-	}
-	data, err := json.MarshalIndent(map[string]any{keyVersion: copilotHooksVersion, "hooks": hooks}, "", "  ")
+	body, err = RenderOwnedHooks(keys)
 	if err != nil {
-		return "", false, fmt.Errorf("marshal copilot hooks: %w", err)
+		return "", false, fmt.Errorf("marshal %s hooks: %w", harness, err)
 	}
-	return string(data) + "\n", true, nil
+	return body, true, nil
+}
+
+// HasHookDialect reports whether a harness has a hooks renderer; it is the
+// `dialect` a `hooks` sidecar of a provider spec names.
+func HasHookDialect(name string) bool {
+	_, ok := specFor(name)
+	return ok
+}
+
+// HookDialectOwnsFile reports whether the harness's hooks file is owned outright
+// (see OwnedHooksDocument) rather than merged into a shared document.
+func HookDialectOwnsFile(name string) bool {
+	spec, _ := specFor(name)
+	return spec.ownedFile
+}
+
+// targetsAny reports whether any [[hooks]] group applies to the harness.
+func targetsAny(cfg *config.Config, harness string) bool {
+	for i := range cfg.Hooks {
+		if cfg.Hooks[i].HookTargetsHarness(harness) {
+			return true
+		}
+	}
+	return false
 }

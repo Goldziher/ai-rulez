@@ -1,0 +1,11 @@
+hooks:
+  PreToolUse:
+    - command: echo guard
+      matcher: shell
+      timeout: 10
+    - command: audit --strict 'a b'
+      matcher: shell
+  Stop:
+    - command: echo done
+      matcher: '*'
+      timeout: 5

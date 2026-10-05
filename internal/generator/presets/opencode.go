@@ -12,8 +12,11 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
+	"github.com/Goldziher/ai-rulez/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/Goldziher/ai-rulez/internal/templates"
@@ -89,7 +92,10 @@ func (g *OpencodePresetGenerator) GlobalOutputPaths(home string, getenv func(str
 		SkillsDir:   ".config/opencode/skills",
 		AgentsDir:   ".config/opencode/agents",
 		CommandsDir: ".config/opencode/commands",
-		Sidecars:    map[string]string{MergedDocOpencodeConfig: ".config/opencode/opencode.json"},
+		Sidecars: map[string]string{
+			MergedDocOpencodeConfig:  ".config/opencode/opencode.json",
+			hookplugins.OpencodePath: hookplugins.OpencodeUserPath,
+		},
 		// OpenCode also reads the Claude Code and shared agent skill directories.
 		SkillReaders: []string{".config/opencode/skills", ".claude/skills", ".agents/skills"},
 	}.Resolve(home, getenv)
@@ -189,6 +195,24 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		})
 	}
 
+	// The user-scope document holds [permissions] only.
+	if cfg.UserScope {
+		permissionOutputs, err := mergedPermissionsOutput(cfg, config.HarnessOpencode, baseDir, MergedDocOpencodeConfig, docmerge.FormatJSONC)
+		if err != nil {
+			return nil, fmt.Errorf("render opencode permissions: %w", err)
+		}
+		outputs = append(outputs, permissionOutputs...)
+	}
+
+	// [[hooks]] become a plugin module, since OpenCode's hooks are code.
+	plugin, ok, err := hookplugins.Render(cfg, config.HarnessOpencode, hookplugins.FlavorOpencode)
+	if err != nil {
+		return nil, fmt.Errorf("render %s: %w", hookplugins.OpencodePath, err)
+	}
+	if pluginPath := filepath.Join(baseDir, filepath.FromSlash(hookplugins.OpencodePath)); ok && hookplugins.MayWriteModule(pluginPath) {
+		outputs = append(outputs, config.OutputFile{Path: pluginPath, Content: plugin})
+	}
+
 	return outputs, nil
 }
 
@@ -229,6 +253,11 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 		owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeMCPKey}, Value: g.mcpServersValue(cfg), Members: true})
 	}
 	owned = append(owned, g.opencodeLegacyServers(cfg, mcpPath)...)
+	perms, err := settings.PermissionKeys(cfg, config.HarnessOpencode, mcpPath)
+	if err != nil {
+		return jsonmerge.Result{}, fmt.Errorf("render opencode permissions: %w", err)
+	}
+	owned = append(owned, perms...)
 	result, err = applyMergedDocument(mcpPath, owned)
 	// An entry the user listed is theirs even when it is the only key left.
 	result.PartiallyOwned = result.PartiallyOwned || userEntries

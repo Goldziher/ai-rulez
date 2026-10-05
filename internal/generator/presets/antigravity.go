@@ -117,7 +117,10 @@ func (g *AntigravityPresetGenerator) GlobalOutputPaths(home string, getenv func(
 		SkillsDir:   ".gemini/config/skills",
 		AgentsDir:   ".gemini/config/agents",
 		CommandsDir: ".gemini/config/skills",
-		Sidecars:    map[string]string{MergedDocAgentsMCP: ".gemini/config/mcp_config.json"},
+		Sidecars: map[string]string{
+			MergedDocAgentsMCP:        ".gemini/config/mcp_config.json",
+			MergedDocAntigravityHooks: ".gemini/config/hooks.json",
+		},
 	}.Resolve(home, getenv)
 }
 
@@ -162,6 +165,12 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		}
 		outputs = append(outputs, mergedOutput(mcpPath, mcpConfig))
 	}
+
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("render antigravity hooks: %w", err)
+	}
+	outputs = append(outputs, hookOutputs...)
 
 	routing, demoted := antigravityRouting(cfg, logger.Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)

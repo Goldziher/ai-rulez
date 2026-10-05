@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "echo guard",
+              "timeoutMs": 10000
+            },
+            {
+              "type": "command",
+              "command": "audit --strict 'a b'"
+            }
+          ]
+        }
+      ],
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "'/home/u/.ai-rulez/scripts/boot.sh'",
+              "statusMessage": "Booting"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "echo done",
+              "timeoutMs": 5000
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "toolPermissions": [
+    {
+      "permission": {
+        "type": "deny"
+      },
+      "shellInputRegex": "(^|[\\s;\u0026|(`])rm -rf([\\s;\u0026|)`]|$)",
+      "toolName": "terminal"
+    },
+    {
+      "permission": {
+        "type": "deny"
+      },
+      "shellInputRegex": "(^|[\\s;\u0026|(`])curl .* \\| sh",
+      "toolName": "terminal"
+    },
+    {
+      "permission": {
+        "type": "allow"
+      },
+      "shellInputRegex": "^npm run test([ \\t][^;\u0026|\\n\\r`$()\u003c\u003e]*)?$",
+      "toolName": "terminal"
+    },
+    {
+      "permission": {
+        "type": "allow"
+      },
+      "shellInputRegex": "^git status$",
+      "toolName": "terminal"
+    }
+  ]
+}
