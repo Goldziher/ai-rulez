@@ -179,6 +179,40 @@ every finding there:
 See `legacy/old-tool/README.md` and the `retired-helper` skill.
 ```
 
+## Automatic fixes
+
+```bash
+ai-rulez validate --strict --fix --dry-run      # show a unified diff, change nothing
+ai-rulez validate --strict --fix                # apply the safe fixes
+ai-rulez validate --strict --fix-unsafe         # also apply fixes that can change meaning
+```
+
+A finding may carry a mechanical fix. Only deterministic, local corrections exist:
+
+| Rule | Fix | Tier |
+| --- | --- | --- |
+| `AR303` frontmatter-key-unknown | Rename the key to the known key it differs from only by case or separators (`allowed_tools` to `allowed-tools`), unless that key is already set | safe |
+| `AR502`, `AR503`, `AR505` not executable | `chmod +x` the hook or script, and stage the bit in the git index (`git update-index --chmod=+x`), because the index mode is what the check reads | safe |
+| `AR804` skill-name-invalid | Rewrite `name:` to the normalized name (lowercase letters, digits, single hyphens, at most 64 characters) or to the skill's directory name | unsafe: the name is how the skill is invoked and referenced |
+
+Guarantees:
+
+- **Authored sources only.** Text edits apply only to files under the configuration directory, and no fix touches a
+  file recorded as generated in the generate manifest; such a fix is reported as skipped. Fix the source and run
+  `generate`.
+- **Never security findings.** `AR0xx` findings have no automatic fix and would be refused if one existed.
+- **Idempotent and atomic.** An edit records the line it replaces and is skipped (reported) when the file changed
+  since the lint run; files are rewritten atomically with their permissions and line endings (LF or CRLF) kept.
+  Running `--fix` twice changes nothing the second time.
+- **Baselined findings are left alone.** A finding accepted by the baseline is not fixed.
+- **`--dry-run`** prints the unified diff (to stdout with the text format, to stderr with a structured format so
+  stdout stays the report) plus a `chmod` line per mode change, and writes nothing.
+
+After the fixes the run reports what is left, and the exit code reflects that. The summary ends with a reminder to run
+`ai-rulez generate` so the changes reach the generated files. Not implemented because no existing rule reports
+them: coercing string `"true"`/`"false"` to booleans for known boolean keys, and repairing an unclosed fence or a
+missing final newline.
+
 ## Baseline and budgets
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
