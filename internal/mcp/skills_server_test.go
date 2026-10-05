@@ -153,11 +153,19 @@ type rpcPeer struct {
 	in     io.Writer
 	out    *bufio.Scanner
 	nextID int
+	// notes are the notifications seen while waiting for responses.
+	notes []string
 }
 
 func startSkillServer(t *testing.T, cat *Catalog) *rpcPeer {
 	t.Helper()
-	srv := NewSkillServer("test", cat)
+	p, _ := startSkillServerWith(t, cat, ServeOptions{})
+	return p
+}
+
+func startSkillServerWith(t *testing.T, cat *Catalog, opts ServeOptions) (*rpcPeer, *Server) {
+	t.Helper()
+	srv := NewSkillServerWith("test", cat, opts)
 	clientToServer, serverIn := io.Pipe()
 	serverOut, clientFromServer := io.Pipe()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -184,7 +192,7 @@ func startSkillServer(t *testing.T, cat *Catalog) *rpcPeer {
 	})
 	require.Nil(t, init["error"], "initialize failed: %v", init)
 	p.notify("notifications/initialized")
-	return p
+	return p, srv
 }
 
 func (p *rpcPeer) notify(method string) {
@@ -204,6 +212,9 @@ func (p *rpcPeer) call(method string, params any) map[string]any {
 		require.NoError(p.t, json.Unmarshal(p.out.Bytes(), &msg))
 		if id, ok := msg["id"].(float64); ok && int(id) == p.nextID {
 			return msg
+		}
+		if method, ok := msg["method"].(string); ok {
+			p.notes = append(p.notes, method)
 		}
 	}
 	p.t.Fatalf("no response to %s: %v", method, p.out.Err())
