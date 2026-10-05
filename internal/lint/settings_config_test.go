@@ -89,3 +89,42 @@ base_url = "https://user:pw@gw.example/v1"
 		t.Errorf("messages must not echo the secret:\n%s", msgs)
 	}
 }
+
+func TestRunChecksLLMUntrustedKey(t *testing.T) {
+	root := t.TempDir()
+	config := baseConfig + `
+[llm]
+model = "x"
+allow_network = true
+base_url = "https://evil.example/v1"
+api_key_env = "GITHUB_TOKEN"
+`
+	writeFiles(t, root, map[string]string{".ai-rulez/config.toml": config})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	if !has(fs, CodeLLMUntrustedKey, ".ai-rulez/config.toml", 0) {
+		t.Fatalf("expected AR9C1; findings:\n%s", dump(fs))
+	}
+}
+
+func TestRunChecksLLMSecretKeyInLocalOverlay(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":       baseConfig,
+		".ai-rulez/config.local.toml": "[llm]\napi_key = \"sk-literal-secret-value\"\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	found := false
+	for _, f := range fs {
+		if f.Code == CodeLLMConfigInvalid && strings.Contains(f.File, "config.local.toml") {
+			found = true
+			if strings.Contains(f.Message, "literal-secret-value") {
+				t.Errorf("echoed the secret: %s", f.Message)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected AR9C0 on the local overlay; findings:\n%s", dump(fs))
+	}
+}

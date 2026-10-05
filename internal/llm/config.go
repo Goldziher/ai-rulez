@@ -1,7 +1,7 @@
 package llm
 
 import (
-	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -56,6 +56,9 @@ type Config struct {
 	PriceInputPerMTok  float64 `yaml:"price_input_per_mtok,omitempty" json:"price_input_per_mtok,omitempty" toml:"price_input_per_mtok,omitempty"`
 	PriceOutputPerMTok float64 `yaml:"price_output_per_mtok,omitempty" json:"price_output_per_mtok,omitempty" toml:"price_output_per_mtok,omitempty"`
 }
+
+// MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
+const MaxRetriesLimit = 10
 
 // Defaults.
 const (
@@ -119,7 +122,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
 			f, err := strconv.ParseFloat(v, 64)
 			if err != nil {
-				errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not a number", name, v))
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a number")
 				return
 			}
 			*dst = f
@@ -129,7 +132,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil {
-				errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not an integer", name, v))
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not an integer")
 				return
 			}
 			*dst = n
@@ -142,7 +145,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		}
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not a boolean", name, v))
+			errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
 			return false, false
 		}
 		return b, true
@@ -198,13 +201,13 @@ func (c Config) Validate() []string {
 	switch c.Backend {
 	case "", BackendAuto, BackendOpenAICompat, BackendLiterLLM:
 	default:
-		out = append(out, fmt.Sprintf("backend %q is not one of auto, openaicompat, literllm", c.Backend))
+		out = append(out, "backend is not one of auto, openaicompat, literllm")
 	}
 	out = append(out, c.validateAPIKeyEnv()...)
 	out = append(out, c.validateBaseURL()...)
 	out = append(out, c.validateNumbers()...)
 	if c.Model != "" && strings.ContainsAny(c.Model, " \t\n") {
-		out = append(out, fmt.Sprintf("model %q must not contain whitespace", c.Model))
+		out = append(out, "model must not contain whitespace")
 	}
 	sort.Strings(out)
 	return out
@@ -217,7 +220,7 @@ func (c Config) validateAPIKeyEnv() []string {
 	case looksLikeSecret(c.APIKeyEnv):
 		return []string{"api_key_env looks like a literal API key; it must be the NAME of an environment variable (for example OPENAI_API_KEY), never the key"}
 	case !envNameRe.MatchString(c.APIKeyEnv):
-		return []string{fmt.Sprintf("api_key_env %q is not an environment variable name; it must be the NAME of an environment variable, never the key", c.APIKeyEnv)}
+		return []string{"api_key_env is not an environment variable name; it must be the NAME of an environment variable (for example OPENAI_API_KEY), never the key"}
 	}
 	return nil
 }
@@ -234,8 +237,19 @@ func (c Config) validateBaseURL() []string {
 		return []string{"base_url must not embed credentials; put the key in the variable named by api_key_env"}
 	case u.RawQuery != "":
 		return []string{"base_url must not carry a query string (it may hold a key); configure headers at the gateway instead"}
+	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()):
+		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost)"}
 	}
 	return nil
+}
+
+// isLoopbackHost reports whether host is localhost or a loopback IP literal.
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (c Config) validateNumbers() []string {
@@ -244,6 +258,9 @@ func (c Config) validateNumbers() []string {
 		if v < 0 {
 			out = append(out, name+" must not be negative")
 		}
+	}
+	if c.MaxRetries > MaxRetriesLimit {
+		out = append(out, "max_retries must not exceed "+strconv.Itoa(MaxRetriesLimit))
 	}
 	for name, v := range map[string]int{"max_tokens": c.MaxTokens, "max_calls": c.MaxCalls, "timeout_seconds": c.TimeoutSeconds} {
 		if v < 0 {

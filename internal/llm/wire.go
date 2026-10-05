@@ -3,6 +3,7 @@ package llm
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -64,6 +65,9 @@ type wireEmbedResponse struct {
 	Usage wireUsage `json:"usage"`
 }
 
+// maxRetryAfterSeconds caps a provider-requested delay (one hour).
+const maxRetryAfterSeconds = 3600
+
 // encodeChat renders req for model as an OpenAI-compatible chat body.
 func encodeChat(model string, req ChatRequest) ([]byte, error) {
 	w := wireChatRequest{Model: model, Temperature: req.Temperature, MaxTokens: req.MaxTokens}
@@ -79,10 +83,10 @@ func encodeChat(model string, req ChatRequest) ([]byte, error) {
 func decodeChat(body []byte, pricing Pricing, fallbackModel string) (ChatResponse, error) {
 	var w wireChatResponse
 	if err := json.Unmarshal(body, &w); err != nil {
-		return ChatResponse{}, &Error{Kind: KindProvider, Message: "response is not valid chat JSON", Cause: err}
+		return ChatResponse{}, &Error{Kind: KindProvider, Message: "response is not valid chat JSON", Cause: err, permanent: true}
 	}
 	if len(w.Choices) == 0 {
-		return ChatResponse{}, newError(KindProvider, "response has no choices")
+		return ChatResponse{}, permanentError("response has no choices")
 	}
 	text := contentText(w.Choices[0].Message.Content)
 	model := firstNonEmpty(w.Model, fallbackModel)
@@ -98,15 +102,15 @@ func encodeEmbed(model string, req EmbedRequest) ([]byte, error) {
 func decodeEmbed(body []byte, pricing Pricing, fallbackModel string, want int) (EmbedResponse, error) {
 	var w wireEmbedResponse
 	if err := json.Unmarshal(body, &w); err != nil {
-		return EmbedResponse{}, &Error{Kind: KindProvider, Message: "response is not valid embeddings JSON", Cause: err}
+		return EmbedResponse{}, &Error{Kind: KindProvider, Message: "response is not valid embeddings JSON", Cause: err, permanent: true}
 	}
 	if len(w.Data) != want {
-		return EmbedResponse{}, newError(KindProvider, "got %d embeddings for %d inputs", len(w.Data), want)
+		return EmbedResponse{}, permanentError("got %d embeddings for %d inputs", len(w.Data), want)
 	}
 	vecs := make([][]float32, want)
 	for _, d := range w.Data {
 		if d.Index < 0 || d.Index >= want || vecs[d.Index] != nil {
-			return EmbedResponse{}, newError(KindProvider, "embedding index %d is out of range or repeated", d.Index)
+			return EmbedResponse{}, permanentError("embedding index %d is out of range or repeated", d.Index)
 		}
 		vecs[d.Index] = d.Embedding
 	}
@@ -127,8 +131,9 @@ func classifyHTTPError(status int, retryAfter string, body []byte) *Error {
 		e.Kind = KindAuth
 	case status == 429:
 		e.Kind = KindRateLimit
-		if secs, err := strconv.ParseFloat(strings.TrimSpace(retryAfter), 64); err == nil && secs >= 0 {
-			e.RetryAfter = time.Duration(secs * float64(time.Second))
+		// A non-finite or huge value is ignored or capped; the retry policy caps the wait again.
+		if secs, err := strconv.ParseFloat(strings.TrimSpace(retryAfter), 64); err == nil && secs >= 0 && !math.IsInf(secs, 0) && !math.IsNaN(secs) {
+			e.RetryAfter = time.Duration(min(secs, maxRetryAfterSeconds) * float64(time.Second))
 		}
 	case status == 413 || strings.Contains(lower, "context_length") || strings.Contains(lower, "context length") ||
 		strings.Contains(lower, "maximum context") || strings.Contains(lower, "context window"):
