@@ -128,10 +128,13 @@ func Wrap(backend Client, cfg Config, opts Options) *Managed {
 }
 
 // cacheIdentity names the provider endpoint so two gateways never share answers.
+// The identity also carries the resolved backend, the URL scheme and the NAME of
+// the key variable (never its value), so two credentials or backends behind one
+// gateway do not share answers.
 func cacheIdentity(cfg Config) string {
 	id := cfg.Provider
 	if u, err := url.Parse(cfg.BaseURL); err == nil && u.Host != "" {
-		id += "@" + u.Host + u.Path
+		id += "@" + u.Scheme + "://" + u.Host + u.Path
 	}
-	return id
+	return id + "|backend=" + ResolveBackend(cfg.Backend) + "|key=" + cfg.APIKeyEnv
 }

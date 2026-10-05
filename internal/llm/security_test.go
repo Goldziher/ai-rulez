@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -357,5 +358,106 @@ func TestJudgeFencesTheTranscriptAndRefusesSecrets(t *testing.T) {
 	}
 	if strings.Contains(sent, "abcdef0123456789") || !strings.Contains(sent, "[REDACTED]") {
 		t.Fatalf("outbound content must be masked:\n%s", sent)
+	}
+}
+
+func TestRetryDelayDoesNotOverflow(t *testing.T) {
+	p := RetryPolicy{Rand: func() float64 { return 1 }}
+	for _, attempt := range []int{0, 5, 29, 30, 34, 63, 64, 1000} {
+		d := p.delay(attempt, nil)
+		if d <= 0 || d > 30*time.Second {
+			t.Errorf("attempt %d: delay %v outside (0, 30s]", attempt, d)
+		}
+	}
+	if e := classifyHTTPError(429, "1e400", nil); e.RetryAfter != 0 {
+		t.Errorf("non-finite Retry-After must be ignored: %v", e.RetryAfter)
+	}
+	if e := classifyHTTPError(429, "99999999999", nil); e.RetryAfter != time.Hour {
+		t.Errorf("huge Retry-After must be capped: %v", e.RetryAfter)
+	}
+	if p := (Config{MaxRetries: 11}).Validate(); len(p) == 0 {
+		t.Error("max_retries must be bounded")
+	}
+}
+
+func TestMalformedRepliesAreNotRetried(t *testing.T) {
+	for _, body := range []string{`not json`, `{"choices":[]}`} {
+		_, err := decodeChat([]byte(body), Pricing{}, "m")
+		if err == nil || IsTransient(err) {
+			t.Errorf("%q: want a permanent error, got %v", body, err)
+		}
+	}
+	if classifyNative(errors.New("request req-14013-x failed")).(*Error).Kind == KindAuth { //nolint:errcheck,forcetypeassert // test
+		t.Error("digits inside an id must not classify as 401/403")
+	}
+	if classifyNative(errors.New("[3] HTTP 403 forbidden")).(*Error).Kind != KindAuth { //nolint:errcheck,forcetypeassert // test
+		t.Error("a real 403 must classify as auth")
+	}
+}
+
+func TestCacheIdentitySeparatesBackendsAndKeys(t *testing.T) {
+	base := Config{Provider: "openai", BaseURL: "https://gw.example/v1", APIKeyEnv: "KEY_A", Backend: BackendOpenAICompat}
+	other := base
+	other.APIKeyEnv = "KEY_B"
+	http1 := base
+	http1.BaseURL = "http://gw.example/v1"
+	native := base
+	native.Backend = BackendLiterLLM
+	ids := map[string]bool{cacheIdentity(base): true, cacheIdentity(other): true, cacheIdentity(http1): true, cacheIdentity(native): true}
+	if len(ids) != 4 {
+		t.Fatalf("identities must differ by key variable, scheme and backend: %v", ids)
+	}
+}
+
+func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
+	const key = "sk-live-very-secret-123456"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("bad") != "" || strings.Contains(r.URL.Path, "boom") {
+			http.Error(w, "invalid key "+r.Header.Get("Authorization"), http.StatusUnauthorized)
+			return
+		}
+		fmt.Fprint(w, `{"model":"gpt-4o-mini","choices":[{"message":{"content":"hi"}}],"usage":{"prompt_tokens":3,"completion_tokens":1}}`)
+	}))
+	defer srv.Close()
+	dir := t.TempDir()
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	cfg := allowed(Config{Model: "gpt-4o-mini", BaseURL: srv.URL + "/v1", APIKeyEnv: "K", MaxRetries: -1})
+	m, err := New(cfg, Options{ConfigDir: dir, Logger: logger, Getenv: func(string) string { return key }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Chat(context.Background(), chatReq("hello")); err != nil {
+		t.Fatal(err)
+	}
+	cfg.BaseURL = srv.URL + "/boom"
+	m2, err := New(cfg, Options{ConfigDir: dir, Logger: logger, Getenv: func(string) string { return key }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = m2.Chat(context.Background(), chatReq("other"))
+	if err == nil || strings.Contains(err.Error(), key) {
+		t.Fatalf("error must exist and not carry the key: %v", err)
+	}
+	if strings.Contains(logs.String(), key) {
+		t.Fatalf("key in logs:\n%s", logs.String())
+	}
+	n := 0
+	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error { //nolint:errcheck // test walk
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		n++
+		b, _ := os.ReadFile(p) //nolint:errcheck,gosec // test
+		if strings.Contains(string(b), key) {
+			t.Errorf("key in cache file %s", p)
+		}
+		if info, _ := d.Info(); info != nil && info.Mode().Perm() != 0o600 { //nolint:errcheck // test
+			t.Errorf("cache file %s has mode %v, want 0600", p, info.Mode().Perm())
+		}
+		return nil
+	})
+	if n == 0 {
+		t.Fatal("expected a cache file")
 	}
 }
