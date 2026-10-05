@@ -104,6 +104,7 @@ func (r *runner) securityScan(abs, raw string) {
 		}
 	}
 	r.scanComments(abs, raw)
+	r.runTextScans(abs, raw)
 }
 
 func (r *runner) scanHidden(abs string, no int, line string, firstLine bool) {
