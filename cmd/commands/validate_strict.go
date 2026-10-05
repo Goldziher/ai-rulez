@@ -37,11 +37,27 @@ var (
 	strictTreeCache    lint.Loader
 )
 
+// strictOnlyFlagSet reports whether any flag that only means something with
+// --strict was given.
+func strictOnlyFlagSet() bool {
+	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
+		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
+		baselineFlagsSet() || changedRev() != ""
+}
+
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || validateLintProfile != "" || len(validateAnalyzers) > 0 || baselineFlagsSet() || changedRev() != "") {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed and the baseline flags require --strict")
+	if !validateStrict && strictOnlyFlagSet() {
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix and the baseline flags require --strict")
 	}
+	if err := checkFlagValues(); err != nil {
+		return err
+	}
+	return checkFlagCombinations()
+}
+
+// checkFlagValues rejects unknown names and values.
+func checkFlagValues() error {
 	if !lint.IsFormat(validateFormat) {
 		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
 	}
@@ -59,11 +75,17 @@ func checkStrictFlags() error {
 	if _, ok := lint.LookupProfile(validateLintProfile); !ok {
 		return oops.Errorf("unknown --lint-profile %q (use %s)", validateLintProfile, strings.Join(lint.ProfileNames(), ", "))
 	}
-	return checkFlagCombinations()
+	return nil
 }
 
 // checkFlagCombinations rejects strict flags that contradict each other.
 func checkFlagCombinations() error {
+	if validateDryRun && !fixRequested() {
+		return oops.Errorf("--dry-run only applies with --fix or --fix-unsafe")
+	}
+	if fixRequested() && validateUpdateBaseline {
+		return oops.Errorf("--fix and --update-baseline cannot be combined: fix first, then record what is left")
+	}
 	if validateSince != "" && validateChanged {
 		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
 	}
@@ -128,39 +150,9 @@ func failOnFor(cfg *config.Config) string {
 // Each root is judged against its own threshold, so one root's [lint] fail_on
 // never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
-	if validateUpdateBaseline {
-		if err := updateBaselines(reports, cfgs); err != nil {
-			fmtError(err)
-			return 1
-		}
-		return 0
-	}
-	if err := applyBaselines(reports, cfgs); err != nil {
-		fmtError(err)
-		return 1
-	}
-	excess := make([][]lint.BudgetExcess, len(reports))
-	for i, report := range reports {
-		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
-	}
-	for _, report := range reports {
-		lint.FilterAnalyzers(report, validateAnalyzers)
-	}
-	if err := narrowToChanged(reports, cfgs); err != nil {
-		fmtError(err)
-		return 1
-	}
-	for i, report := range reports {
-		var lc *config.LintConfig
-		if cfg := cfgAt(cfgs, i); cfg != nil {
-			lc = cfg.Lint
-		}
-		var rc *config.LintRisk
-		if lc != nil {
-			rc = lc.Risk
-		}
-		risk := lint.ComputeRisk(report.Findings, lint.RiskWeightsFrom(rc))
-		report.Risk = &risk
+	excess, code, done := prepareReports(reports, cfgs)
+	if done {
+		return code
 	}
 	combined := lint.Combine(reports)
 	for _, e := range excess {
@@ -170,7 +162,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		fmtError(err)
 		return 1
 	}
-	code := 0
+	code = 0
 	for i, report := range reports {
 		cfg := cfgAt(cfgs, i)
 		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), budgetsFor(cfg), excess[i]) {
@@ -181,6 +173,50 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		code = exitStrictFindings
 	}
 	return code
+}
+
+// prepareReports runs the steps between linting and printing, in the order that
+// keeps each one honest: fixes first (so fixed findings leave the report), then
+// the baseline against every finding (so stale entries are judged on the full
+// set), budgets on the full set, and only then the views that narrow the report
+// (analyzer filter, changed-only) and the risk score of what is shown. done is
+// true when the run ends here with code (--update-baseline, or an error).
+func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.BudgetExcess, code int, done bool) {
+	fail := func(err error) ([][]lint.BudgetExcess, int, bool) {
+		fmtError(err)
+		return nil, 1, true
+	}
+	if fixRequested() {
+		if err := applyFixes(reports, cfgs); err != nil {
+			return fail(err)
+		}
+	}
+	if validateUpdateBaseline {
+		if err := updateBaselines(reports, cfgs); err != nil {
+			return fail(err)
+		}
+		return nil, 0, true
+	}
+	if err := applyBaselines(reports, cfgs); err != nil {
+		return fail(err)
+	}
+	excess = make([][]lint.BudgetExcess, len(reports))
+	for i, report := range reports {
+		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+		lint.FilterAnalyzers(report, validateAnalyzers)
+	}
+	if err := narrowToChanged(reports, cfgs); err != nil {
+		return fail(err)
+	}
+	for i, report := range reports {
+		var rc *config.LintRisk
+		if cfg := cfgAt(cfgs, i); cfg != nil && cfg.Lint != nil {
+			rc = cfg.Lint.Risk
+		}
+		risk := lint.ComputeRisk(report.Findings, lint.RiskWeightsFrom(rc))
+		report.Risk = &risk
+	}
+	return excess, 0, false
 }
 
 // structuredFormat reports whether the format must be the only thing on stdout.

@@ -71,3 +71,30 @@ func TestChangedSince(t *testing.T) {
 	_, err = ChangedSince(t.TempDir(), "HEAD")
 	assert.Error(t, err)
 }
+
+func TestStageExecutable(t *testing.T) {
+	gitAvailable(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	path := filepath.Join(dir, "run.sh")
+	require.NoError(t, os.WriteFile(path, []byte("#!/bin/sh\n"), 0o644))                     //nolint:gosec // test
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "untracked.sh"), []byte("x"), 0o644)) //nolint:gosec // test
+	runGit(t, dir, "add", "run.sh")
+
+	changed, err := StageExecutable(path)
+	require.NoError(t, err)
+	assert.True(t, changed)
+	_, _, err = run(dir, nil, "diff", "--cached", "--quiet")
+	assert.Error(t, err, "the mode change is staged")
+
+	again, err := StageExecutable(path)
+	require.NoError(t, err)
+	assert.False(t, again, "already executable in the index")
+
+	none, err := StageExecutable(filepath.Join(dir, "untracked.sh"))
+	require.NoError(t, err)
+	assert.False(t, none)
+	outside, err := StageExecutable(filepath.Join(t.TempDir(), "x.sh"))
+	require.NoError(t, err)
+	assert.False(t, outside)
+}
