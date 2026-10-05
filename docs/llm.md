@@ -123,6 +123,10 @@ How it is linked, and why it is not in the default build:
      go build -tags literllm -o ai-rulez ./cmd
    ```
 
+The bridge module's own tests are compiled only with `-tags literllm` (and cgo), so a plain `go test ./...` inside
+`internal/llm/literllm` finds nothing to build or run when the binding or the static library is not available. To run
+them, set `CGO_LDFLAGS` as above and `go test -tags literllm ./...` from that directory.
+
 The `-framework ...` flags are the macOS system libraries the static library needs and does not declare. The equivalent Linux and Windows flags are not documented upstream.
 
 ### Verified and not verified
