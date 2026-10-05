@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 )
 
 // crossFixture is one project that uses every lock feature at once: authored
@@ -118,7 +118,9 @@ exclude = ["heavy"]
 	return fx
 }
 
-func (fx *crossFixture) path(rel string) string { return filepath.Join(fx.root, filepath.FromSlash(rel)) }
+func (fx *crossFixture) path(rel string) string {
+	return filepath.Join(fx.root, filepath.FromSlash(rel))
+}
 
 func (fx *crossFixture) read(t *testing.T, rel string) string {
 	t.Helper()
