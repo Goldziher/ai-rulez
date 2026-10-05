@@ -135,11 +135,26 @@ func TestLockCheckNamesSourceAndOutputChanges(t *testing.T) {
 	assert.Equal(t, 0, checkLockAt(""))
 }
 
+func TestLockCheckRejectsDowngradedLock(t *testing.T) {
+	root := lockProject(t, "")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	assert.Equal(t, 0, checkLockAt(""))
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", lockfile.FileName), "version = 1\n")
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, exitDrift, code, "a downgraded lock must fail the check")
+	assert.Contains(t, stderr, "no content pins")
+}
+
 func TestLockCheckWithLegacyLock(t *testing.T) {
 	root := lockProject(t, "")
 	legacy := filepath.Join(root, ".ai-rulez", lockfile.FileName)
 	writeFile(t, legacy, "version = 1\n")
-	assert.Equal(t, 0, checkLockAt(""), "a version 1 lock has no content pins and passes without enforce")
+	var legacyCode int
+	_, legacyErr := capture(t, func() { legacyCode = checkLockAt("") })
+	assert.Equal(t, exitDrift, legacyCode, "a lock without content pins must not pass a check, enforce or not")
+	assert.Contains(t, legacyErr, "no content pins")
 
 	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
 	require.NoError(t, err)

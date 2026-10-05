@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 // lockSnapshot computes the content pins of cfg: the authored items, and the
@@ -63,11 +64,12 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 	case lock == nil && cfg.LockEnforced():
 		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Added,
 			Detail: lockfile.FileName + " does not exist but [lock] enforce = true; run `ai-rulez lock`"})
-	case lock != nil && diff.NoPins && cfg.LockEnforced():
-		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
-			Detail: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)})
 	case lock != nil && diff.NoPins:
-		diff.Notes = append(diff.Notes, "the lock has no content pins (version 1); run `ai-rulez lock` to pin authored content")
+		// A lock without content pins (version 1, or hash_version 0) cannot tell
+		// whether a source changed, so a check never passes on it: that would let
+		// a downgraded lock switch the content checks off.
+		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
+			Detail: fmt.Sprintf("%s (version %d) has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", lockfile.FileName, lock.Version)})
 	}
 	if remoteSkipped {
 		diff.Notes = append(diff.Notes, "remote includes are not in the local cache, so generated outputs were not compared")
@@ -106,6 +108,9 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	if lock == nil || !lock.HasContentPins() {
 		if cfg.LockEnforced() {
 			return []string{lockfile.FileName + " has no content pins and [lock] enforce = true; run `ai-rulez lock`"}, nil
+		}
+		if lock != nil {
+			logger.Warn("The lock has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", "lock", lockfile.FileName)
 		}
 		return nil, nil
 	}
