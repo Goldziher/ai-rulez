@@ -63,7 +63,8 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 
 	var idx []okf.IndexInput
 	var files []okf.File
-	for _, it := range items {
+	for i := range items {
+		it := items[i]
 		fs, in, err := renderItem(it, claim)
 		if err != nil {
 			return nil, err
@@ -103,7 +104,7 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 	}
 	add("", map[Kind][]config.ContentFile{
 		KindRule: tree.Rules, KindContext: tree.Context, KindSkill: tree.Skills,
-		KindAgent: tree.Agents, KindCommand: tree.Commands,
+		KindAgent: tree.Agents, KindCommand: tree.Commands, KindCheck: tree.Checks,
 	})
 	names := make([]string, 0, len(tree.Domains))
 	for name := range tree.Domains {
@@ -121,7 +122,7 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 		}
 		add(name, map[Kind][]config.ContentFile{
 			KindRule: d.Rules, KindContext: d.Context, KindSkill: d.Skills,
-			KindAgent: d.Agents, KindCommand: d.Commands,
+			KindAgent: d.Agents, KindCommand: d.Commands, KindCheck: d.Checks,
 		})
 	}
 	return items
@@ -184,7 +185,7 @@ func renderItem(it sourceItem, claim func(string) string) ([]okf.File, []okf.Ind
 
 func titleOf(fields []okf.Field) string {
 	for _, f := range fields {
-		if f.Key == "title" {
+		if f.Key == keyTitle {
 			if s, ok := f.Value.(string); ok {
 				return s
 			}
@@ -201,31 +202,31 @@ func conceptFields(it sourceItem, id string) (fields []okf.Field, description st
 	hoisted := []okf.Field{}
 	for _, kv := range okfExtra {
 		switch kv.Key {
-		case "type":
+		case keyType:
 			if s, ok := kv.Value.(string); ok && strings.TrimSpace(s) != "" {
 				typ = s
 			}
-		case "title":
+		case keyTitle:
 			if s, ok := kv.Value.(string); ok && strings.TrimSpace(s) != "" {
 				title = s
 			}
-		case "description", okf.ExtensionKey:
+		case keyDescription, okf.ExtensionKey:
 		default:
 			hoisted = append(hoisted, kv)
 		}
 	}
-	fields = []okf.Field{{Key: "type", Value: typ}, {Key: "title", Value: title}}
+	fields = []okf.Field{{Key: keyType, Value: typ}, {Key: keyTitle, Value: title}}
 	if it.cf.Metadata != nil {
-		description = strings.TrimSpace(it.cf.Metadata.Extra["description"])
+		description = strings.TrimSpace(it.cf.Metadata.Extra[keyDescription])
 	}
 	if description != "" {
-		fields = append(fields, okf.Field{Key: "description", Value: description})
+		fields = append(fields, okf.Field{Key: keyDescription, Value: description})
 	}
 	fields = append(fields, hoisted...)
 
-	ext := []okf.Field{{Key: "kind", Value: kindName(it.kind)}, {Key: "id", Value: id}}
+	ext := []okf.Field{{Key: keyKind, Value: kindName(it.kind)}, {Key: "id", Value: id}}
 	if it.domain != "" {
-		ext = append(ext, okf.Field{Key: "domain", Value: it.domain})
+		ext = append(ext, okf.Field{Key: keyDomain, Value: it.domain})
 	}
 	if len(meta) > 0 {
 		ext = append(ext, okf.Field{Key: "metadata", Value: fieldsNode(meta)})
@@ -242,12 +243,12 @@ func kindName(k Kind) string {
 func fieldsNode(fields []okf.Field) *yaml.Node {
 	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	for _, f := range fields {
-		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: f.Key}
+		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: tagStr, Value: f.Key}
 		var val yaml.Node
 		if vn, ok := f.Value.(*yaml.Node); ok {
 			val = *vn
 		} else if err := val.Encode(f.Value); err != nil {
-			val = yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: fmt.Sprint(f.Value)}
+			val = yaml.Node{Kind: yaml.ScalarNode, Tag: tagStr, Value: fmt.Sprint(f.Value)}
 		}
 		n.Content = append(n.Content, key, &val)
 	}
@@ -261,7 +262,34 @@ func splitMetadata(m *config.Metadata) (okfKeys, meta []okf.Field) {
 	if m == nil {
 		return nil, nil
 	}
-	add := func(key string, v any) { meta = append(meta, okf.Field{Key: key, Value: v}) }
+	meta = typedFields(m)
+	extras := make([]string, 0, len(m.Extra))
+	for k := range m.Extra {
+		if k != keyDescription {
+			extras = append(extras, k)
+		}
+	}
+	sort.Strings(extras)
+	for _, k := range extras {
+		v, ok := m.TypedExtra(k)
+		if !ok {
+			continue
+		}
+		if node, isNode := v.(*yaml.Node); isNode && k == "okf" && node.Kind == yaml.MappingNode {
+			for i := 0; i+1 < len(node.Content); i += 2 {
+				okfKeys = append(okfKeys, okf.Field{Key: node.Content[i].Value, Value: nodeValue(node.Content[i+1])})
+			}
+			continue
+		}
+		meta = append(meta, okf.Field{Key: k, Value: v})
+	}
+	return okfKeys, meta
+}
+
+// typedFields lists the metadata ai-rulez models as fields, in a fixed order.
+func typedFields(m *config.Metadata) []okf.Field {
+	var out []okf.Field
+	add := func(key string, v any) { out = append(out, okf.Field{Key: key, Value: v}) }
 	if m.Priority != "" {
 		add("priority", m.Priority)
 	}
@@ -290,35 +318,13 @@ func splitMetadata(m *config.Metadata) (okfKeys, meta []okf.Field) {
 	if len(m.Paths) > 0 {
 		add("paths", m.Paths)
 	}
-	extras := make([]string, 0, len(m.Extra))
-	for k := range m.Extra {
-		if k != "description" {
-			extras = append(extras, k)
-		}
-	}
-	sort.Strings(extras)
-	for _, k := range extras {
-		v, ok := m.TypedExtra(k)
-		if !ok {
-			continue
-		}
-		if k == "okf" {
-			if node, isNode := v.(*yaml.Node); isNode && node.Kind == yaml.MappingNode {
-				for i := 0; i+1 < len(node.Content); i += 2 {
-					okfKeys = append(okfKeys, okf.Field{Key: node.Content[i].Value, Value: nodeValue(node.Content[i+1])})
-				}
-				continue
-			}
-		}
-		add(k, v)
-	}
-	return okfKeys, meta
+	return out
 }
 
 // nodeValue returns a plain string for string scalars, so they are re-emitted
 // with the encoder's own quoting, and the node itself for anything else.
 func nodeValue(n *yaml.Node) any {
-	if n.Kind == yaml.ScalarNode && n.Tag == "!!str" {
+	if n.Kind == yaml.ScalarNode && n.Tag == tagStr {
 		return n.Value
 	}
 	return n
@@ -339,13 +345,13 @@ func renderResources(it sourceItem, id, dir string, claim func(string) string) (
 			continue
 		}
 		p := claim(path.Join(dir, resourcePath(rel)))
-		ext := []okf.Field{{Key: "kind", Value: string(kindResource)}, {Key: "id", Value: id}, {Key: "owner", Value: kindName(it.kind)}, {Key: "path", Value: rel}}
+		ext := []okf.Field{{Key: keyKind, Value: string(kindResource)}, {Key: "id", Value: id}, {Key: "owner", Value: kindName(it.kind)}, {Key: "path", Value: rel}}
 		if it.domain != "" {
-			ext = append(ext, okf.Field{Key: "domain", Value: it.domain})
+			ext = append(ext, okf.Field{Key: keyDomain, Value: it.domain})
 		}
 		title := okf.TitleFromPath(rel)
 		head, err := okf.MarshalFrontmatter([]okf.Field{
-			{Key: "type", Value: "Reference"}, {Key: "title", Value: title},
+			{Key: keyType, Value: "Reference"}, {Key: keyTitle, Value: title},
 			{Key: okf.ExtensionKey, Value: fieldsNode(ext)},
 		})
 		if err != nil {
@@ -368,7 +374,8 @@ func resourcePath(rel string) string {
 
 func dirLabels(items []sourceItem) okf.DirLabel {
 	labels := okf.DirLabel{}
-	for _, it := range items {
+	for i := range items {
+		it := &items[i]
 		if it.domain == "" {
 			labels[string(it.kind)] = kindLabel(it.kind) + " exported from ai-rulez"
 			continue

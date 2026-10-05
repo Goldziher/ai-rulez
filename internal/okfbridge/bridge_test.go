@@ -1,0 +1,311 @@
+package okfbridge
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/okf"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func write(t *testing.T, root, rel, content string) {
+	t.Helper()
+	p := filepath.Join(root, filepath.FromSlash(rel))
+	require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+	require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
+}
+
+func sampleProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	ar := ".ai-rulez/"
+	write(t, root, ar+"config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+	write(t, root, ar+"rules/testing.md", "---\npriority: high\nglobs:\n  - \"**/*_test.go\"\ndescription: How we test\nowner: platform-team\nversion: 1.2\n---\n\n# Testing\n\nWrite table tests.\n")
+	write(t, root, ar+"rules/plain.md", "No frontmatter, just text.\n")
+	write(t, root, ar+"context/architecture.md", "---\ndescription: System layout\nokf:\n  tags: [arch, core]\n  status: stable\n---\nMonolith with plugins.\n")
+	write(t, root, ar+"skills/release/SKILL.md", "---\nname: release\ndescription: Cut a release\nallowed-tools: Bash(git tag:*)\n---\n\nSteps go here.\n")
+	write(t, root, ar+"skills/release/references/checklist.md", "---\ndescription: Checklist\n---\n- tag\n- publish\n")
+	write(t, root, ar+"skills/release/references/index.md", "# reserved name\n")
+	write(t, root, ar+"skills/release/scripts/tag.sh", "#!/bin/sh\necho tag\n")
+	require.NoError(t, os.Chmod(filepath.Join(root, ar, "skills/release/scripts/tag.sh"), 0o755))
+	write(t, root, ar+"agents/reviewer.md", "---\ndescription: Reviews code\ntools: [Read]\n---\nYou review.\n")
+	write(t, root, ar+"commands/ship.md", "---\ndescription: Ship it\n---\nRun ship.\n")
+	write(t, root, ar+"checks/no-todo.md", "---\nseverity: high\ndescription: No TODOs\n---\nFlag TODO comments.\n")
+	write(t, root, ar+"domains/backend/rules/db.md", "---\ndescription: DB rules\n---\nUse migrations.\n")
+	return root
+}
+
+func loadTree(t *testing.T, root string) *config.ContentTree {
+	t.Helper()
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Content)
+	return cfg.Content
+}
+
+func exportProject(t *testing.T, root string) *ExportResult {
+	t.Helper()
+	res, err := Export(loadTree(t, root), ExportOptions{})
+	require.NoError(t, err)
+	return res
+}
+
+func writeBundle(t *testing.T, dir string, files []okf.File) {
+	t.Helper()
+	require.NoError(t, okf.WriteFiles(dir, files, true))
+}
+
+func TestExportProducesConformantBundle(t *testing.T) {
+	res := exportProject(t, sampleProject(t))
+	dir := t.TempDir() + "/bundle"
+	writeBundle(t, dir, res.Files)
+	b, err := okf.Load(os.DirFS(dir))
+	require.NoError(t, err)
+	assert.Empty(t, b.Validate(), "exported bundle must be clean")
+
+	paths := map[string]bool{}
+	for _, f := range res.Files {
+		paths[f.Path] = true
+	}
+	for _, want := range []string{
+		"index.md", "rules/testing.md", "rules/plain.md", "context/architecture.md",
+		"skills/release/SKILL.md", "skills/release/references/checklist.md",
+		"skills/release/references/index_.md", "skills/release/scripts/tag.sh",
+		"agents/reviewer.md", "commands/ship.md", "checks/no-todo.md",
+		"domains/backend/rules/db.md", "domains/backend/rules/index.md",
+	} {
+		assert.True(t, paths[want], want)
+	}
+	assert.Equal(t, 3, res.Counts[KindRule], "two root rules and one domain rule")
+	rule := b.Concepts["rules/testing.md"]
+	assert.Equal(t, "Decision", rule.Type())
+	assert.Equal(t, "How we test", rule.Description())
+	assert.Equal(t, "Playbook", b.Concepts["skills/release/SKILL.md"].Type())
+	assert.Equal(t, "Reference", b.Concepts["agents/reviewer.md"].Type())
+}
+
+func TestExportIsDeterministic(t *testing.T) {
+	root := sampleProject(t)
+	a, b := exportProject(t, root), exportProject(t, root)
+	assert.Equal(t, a.Files, b.Files)
+}
+
+func TestRoundTripIsByteIdentical(t *testing.T) {
+	root := sampleProject(t)
+	first := exportProject(t, root)
+	bundleDir := t.TempDir() + "/b"
+	writeBundle(t, bundleDir, first.Files)
+
+	b, err := okf.Load(os.DirFS(bundleDir))
+	require.NoError(t, err)
+	fresh := t.TempDir()
+	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+	res, err := Import(b, ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez")})
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Count(StatusConflict))
+	assert.Equal(t, 0, res.Count(StatusUnchanged))
+
+	second := exportProject(t, fresh)
+	require.Equal(t, len(first.Files), len(second.Files))
+	for i := range first.Files {
+		assert.Equal(t, first.Files[i].Path, second.Files[i].Path)
+		assert.Equal(t, string(first.Files[i].Data), string(second.Files[i].Data), first.Files[i].Path)
+		assert.Equal(t, first.Files[i].Mode, second.Files[i].Mode, first.Files[i].Path)
+	}
+
+	// Source files come back byte-identical for content that has a canonical form.
+	for _, rel := range []string{"rules/plain.md", "skills/release/scripts/tag.sh", "skills/release/references/index.md"} {
+		want, err := os.ReadFile(filepath.Join(root, ".ai-rulez", rel))
+		require.NoError(t, err)
+		got, err := os.ReadFile(filepath.Join(fresh, ".ai-rulez", rel))
+		require.NoError(t, err)
+		assert.Equal(t, string(want), string(got), rel)
+	}
+
+	// Importing again changes nothing.
+	again, err := Import(b, ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez")})
+	require.NoError(t, err)
+	assert.Equal(t, len(res.Actions), again.Count(StatusUnchanged))
+}
+
+func TestInclude(t *testing.T) {
+	kinds, err := ParseKinds([]string{"rules,skills"})
+	require.NoError(t, err)
+	res, err := Export(loadTree(t, sampleProject(t)), ExportOptions{Include: kinds})
+	require.NoError(t, err)
+	for _, f := range res.Files {
+		assert.NotContains(t, f.Path, "agents/")
+		assert.NotContains(t, f.Path, "context/")
+	}
+	_, err = ParseKinds([]string{"nonsense"})
+	assert.Error(t, err)
+}
+
+func foreignBundle(files map[string]string) *okf.Bundle {
+	dir, _ := os.MkdirTemp("", "okf")
+	for p, c := range files {
+		_ = os.MkdirAll(filepath.Dir(filepath.Join(dir, p)), 0o755)
+		_ = os.WriteFile(filepath.Join(dir, p), []byte(c), 0o644)
+	}
+	b, _ := okf.Load(os.DirFS(dir))
+	return b
+}
+
+func TestImportForeignBundleMapsByType(t *testing.T) {
+	b := foreignBundle(map[string]string{
+		"index.md":            "* [x](a.md)\n",
+		"decisions/use-go.md": "---\ntype: Decision\ntitle: Use Go\ndescription: We use Go\ntags: [lang]\n---\nBecause.\n",
+		"runbooks/deploy.md":  "---\ntype: Runbook\ntitle: Deploy\n---\nDo it.\n",
+		"metrics/mrr.md":      "---\ntype: Metric\ntitle: MRR\nsources:\n  - resource: https://x.y\n---\nFormula.\n",
+		"weird.md":            "---\ntype: Totally Unknown\nextra: {a: 1}\n---\nx\n",
+		"notype.md":           "just text\n",
+		"broken.md":           "---\ntype: [\n---\n",
+	})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	require.NoError(t, err)
+	got := map[string]Kind{}
+	for _, a := range res.Actions {
+		got[a.Path] = a.Kind
+	}
+	assert.Equal(t, KindRule, got["rules/decisions-use-go.md"])
+	assert.Equal(t, KindSkill, got["skills/runbooks-deploy/SKILL.md"])
+	assert.Equal(t, KindContext, got["context/metrics-mrr.md"])
+	assert.Equal(t, KindContext, got["context/weird.md"])
+	assert.Equal(t, KindContext, got["context/notype.md"])
+	require.Len(t, res.Skipped, 1)
+	assert.Contains(t, res.Skipped[0], "broken.md")
+
+	text, err := os.ReadFile(filepath.Join(cfgDir, "rules/decisions-use-go.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(text), "description: We use Go")
+	assert.Contains(t, string(text), "okf:")
+	assert.Contains(t, string(text), "tags:")
+
+	// Loads as a normal ai-rulez project and exports again with the foreign keys back.
+	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.yaml", "version: \"4.0\"\nname: imported\npresets:\n  - claude\n")
+	out := exportProject(t, filepath.Dir(cfgDir))
+	var ruleFile string
+	for _, f := range out.Files {
+		if f.Path == "rules/decisions-use-go.md" {
+			ruleFile = string(f.Data)
+		}
+	}
+	assert.Contains(t, ruleFile, "type: Decision")
+	assert.Contains(t, ruleFile, "title: Use Go")
+	assert.Contains(t, ruleFile, "tags:")
+}
+
+func TestImportIntoForcesKindAndDomain(t *testing.T) {
+	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nx\n"})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir, Into: KindContext, Domain: "team"})
+	require.NoError(t, err)
+	require.Len(t, res.Actions, 1)
+	assert.Equal(t, "domains/team/context/a.md", res.Actions[0].Path)
+}
+
+func TestImportNeverOverwritesWithoutForce(t *testing.T) {
+	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nnew\n"})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	write(t, cfgDir, "rules/a.md", "mine\n")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.Count(StatusConflict))
+	got, _ := os.ReadFile(filepath.Join(cfgDir, "rules/a.md"))
+	assert.Equal(t, "mine\n", string(got))
+
+	res, err = Import(b, ImportOptions{ConfigDir: cfgDir, Force: true})
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.Count(StatusOverwritten))
+	got, _ = os.ReadFile(filepath.Join(cfgDir, "rules/a.md"))
+	assert.Contains(t, string(got), "new")
+}
+
+func TestImportDryRunWritesNothing(t *testing.T) {
+	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\n---\nx\n"})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir, DryRun: true})
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.Count(StatusCreated))
+	_, statErr := os.Stat(cfgDir)
+	assert.True(t, os.IsNotExist(statErr))
+}
+
+func TestImportRefusesSecretsAndHiddenText(t *testing.T) {
+	b := foreignBundle(map[string]string{
+		"ok.md":  "---\ntype: Decision\n---\nfine\n",
+		"bad.md": "---\ntype: Decision\n---\nkey AKIAABCDEFGHIJKLMNOP here\n",
+	})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	var sec *SecurityError
+	require.ErrorAs(t, err, &sec)
+	assert.NotEmpty(t, res.Security)
+	_, statErr := os.Stat(cfgDir)
+	assert.True(t, os.IsNotExist(statErr), "nothing is written when the scan fails")
+
+	hidden := foreignBundle(map[string]string{"h.md": "---\ntype: Decision\n---\nzero\u200bwidth\n"})
+	_, err = Import(hidden, ImportOptions{ConfigDir: cfgDir})
+	assert.ErrorAs(t, err, &sec)
+
+	inline := foreignBundle(map[string]string{"i.md": "---\ntype: Decision\n---\n<!-- ai-rulez-lint-ignore -->\nkey AKIAABCDEFGHIJKLMNOP\n"})
+	_, err = Import(inline, ImportOptions{ConfigDir: cfgDir})
+	assert.ErrorAs(t, err, &sec, "imported text cannot silence its own findings")
+}
+
+func TestImportRejectsHostileMetadata(t *testing.T) {
+	b := foreignBundle(map[string]string{
+		"a.md":                         "---\ntype: Decision\nx-ai-rulez:\n  kind: rule\n  id: ../../../etc/passwd\n---\nx\n",
+		"skills/s/SKILL.md":            "---\ntype: Playbook\nx-ai-rulez:\n  kind: skill\n  id: s\n---\nx\n",
+		"skills/s/references/evil.md":  "---\ntype: Reference\nx-ai-rulez:\n  kind: skill-resource\n  id: s\n  path: ../../../../evil.md\n---\nx\n",
+		"skills/s/references/evil2.md": "---\ntype: Reference\nx-ai-rulez:\n  kind: skill-resource\n  id: ../x\n  path: references/e.md\n---\nx\n",
+	})
+	cfgDir := filepath.Join(t.TempDir(), "root", ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	require.NoError(t, err)
+	for _, a := range res.Actions {
+		assert.NotContains(t, a.Path, "..")
+		full := filepath.Join(cfgDir, a.Path)
+		assert.True(t, filepath.IsLocal(a.Path), full)
+	}
+	assert.NotEmpty(t, res.Skipped)
+	_, statErr := os.Stat(filepath.Join(filepath.Dir(cfgDir), "evil.md"))
+	assert.True(t, os.IsNotExist(statErr))
+	assert.Equal(t, "rules/a.md", res.Actions[0].Path, "unsafe id falls back to the file name")
+}
+
+func TestImportUnknownXAIRulezKindFallsBackToType(t *testing.T) {
+	b := foreignBundle(map[string]string{"a.md": "---\ntype: Playbook\nx-ai-rulez:\n  kind: spaceship\n---\nx\n"})
+	res, err := Import(b, ImportOptions{ConfigDir: filepath.Join(t.TempDir(), ".ai-rulez"), DryRun: true})
+	require.NoError(t, err)
+	assert.Equal(t, KindSkill, res.Actions[0].Kind)
+	found := false
+	for _, f := range res.Findings {
+		found = found || f.Code == okf.CodeLossyMapping
+	}
+	assert.True(t, found)
+}
+
+func TestImportOfficialAcmeRetail(t *testing.T) {
+	b, err := okf.Load(os.DirFS("../okf/testdata/acme_retail"))
+	require.NoError(t, err)
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := Import(b, ImportOptions{ConfigDir: cfgDir})
+	require.NoError(t, err)
+	assert.Empty(t, res.Security)
+	assert.Equal(t, 9, len(res.Actions))
+	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.yaml", "version: \"4.0\"\nname: acme\npresets:\n  - claude\n")
+	out := exportProject(t, filepath.Dir(cfgDir))
+	dir := t.TempDir() + "/b"
+	writeBundle(t, dir, out.Files)
+	nb, err := okf.Load(os.DirFS(dir))
+	require.NoError(t, err)
+	for _, f := range nb.Validate() {
+		assert.NotEqual(t, okf.SeverityError, f.Severity, "%s %s %s", f.Code, f.Path, f.Message)
+	}
+}

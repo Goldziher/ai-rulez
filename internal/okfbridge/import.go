@@ -113,10 +113,8 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 		return nil, fmt.Errorf("--into must be rules, context or skills, got %q", opts.Into)
 	}
 	res := &ImportResult{}
-	for _, f := range b.Validate() {
-		if f.Code == okf.CodePathUnsafe && f.Severity == okf.SeverityError {
-			return nil, fmt.Errorf("refusing to import a bundle with unsafe paths: %s %s", f.Path, f.Message)
-		}
+	if err := rejectUnsafe(b); err != nil {
+		return nil, err
 	}
 	p := &planner{opts: opts, res: res, taken: map[string]string{}, owners: map[string]ownerDir{}}
 	for _, cp := range b.ConceptPaths() {
@@ -125,15 +123,9 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	p.files(b)
 	sort.Slice(p.out, func(i, j int) bool { return p.out[i].rel < p.out[j].rel })
 
-	texts := map[string]string{}
-	for _, f := range p.out {
-		if len(f.data) <= maxScanSize && utf8.Valid(f.data) {
-			texts[f.rel] = string(f.data)
-		}
-	}
-	res.Security = lint.ScanText(opts.Lint, texts)
-	for _, f := range res.Security {
-		if f.Severity == lint.SeverityError {
+	res.Security = scan(opts.Lint, p.out)
+	for i := range res.Security {
+		if res.Security[i].Severity == lint.SeverityError {
 			return res, &SecurityError{Findings: res.Security}
 		}
 	}
@@ -142,6 +134,26 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	}
 	sort.Strings(res.Skipped)
 	return res, nil
+}
+
+func rejectUnsafe(b *okf.Bundle) error {
+	for _, f := range b.Validate() {
+		if f.Code == okf.CodePathUnsafe && f.Severity == okf.SeverityError {
+			return fmt.Errorf("refusing to import a bundle with unsafe paths: %s %s", f.Path, f.Message)
+		}
+	}
+	return nil
+}
+
+// scan runs the AR0xx security scan over everything about to be written.
+func scan(lc *config.LintConfig, files []planned) []lint.Finding {
+	texts := map[string]string{}
+	for i := range files {
+		if len(files[i].data) <= maxScanSize && utf8.Valid(files[i].data) {
+			texts[files[i].rel] = string(files[i].data)
+		}
+	}
+	return lint.ScanText(lc, texts)
 }
 
 type planner struct {
@@ -167,11 +179,11 @@ func readExt(fm okf.Frontmatter) extInfo {
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		k, v := n.Content[i].Value, n.Content[i+1]
 		switch k {
-		case "kind":
+		case keyKind:
 			e.kind = strings.TrimSpace(v.Value)
 		case "id":
 			e.id = strings.TrimSpace(v.Value)
-		case "domain":
+		case keyDomain:
 			e.domain = strings.TrimSpace(v.Value)
 		case "path":
 			e.pathKey = strings.TrimSpace(v.Value)
@@ -236,20 +248,23 @@ func (p *planner) concept(c *okf.Concept) {
 		id = deriveID(c.Path)
 	}
 	dir := p.domainDir(ext.domain)
-	base := path.Join(dir, string(kind))
-	rel := path.Join(base, id+".md")
-	switch {
-	case kind == KindSkill:
-		rel = path.Join(base, id, fileSkill)
-	case kind == KindCommand && path.Base(c.Path) == fileCommand:
-		rel = path.Join(base, id, fileCommand)
-	}
-	rel = p.unique(rel, c.Path)
+	rel := p.unique(targetPath(path.Join(dir, string(kind)), kind, id, c.Path), c.Path)
 	if kind == KindSkill || path.Base(rel) == fileCommand {
 		p.owners[path.Dir(c.Path)] = ownerDir{kind: kind, id: path.Base(path.Dir(rel)), domain: dir}
 	}
 	data := p.render(c, ext, kind, id)
 	p.out = append(p.out, planned{rel: rel, data: data, kind: kind, source: c.Path})
+}
+
+// targetPath is where a concept of kind lands below base.
+func targetPath(base string, kind Kind, id, source string) string {
+	switch {
+	case kind == KindSkill:
+		return path.Join(base, id, fileSkill)
+	case kind == KindCommand && path.Base(source) == fileCommand:
+		return path.Join(base, id, fileCommand)
+	}
+	return path.Join(base, id+".md")
 }
 
 func deriveID(p string) string {
@@ -280,15 +295,15 @@ func (p *planner) unique(rel, source string) string {
 // render builds the ai-rulez source file of a concept.
 func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id string) []byte {
 	var fields []okf.Field
-	desc := c.Frontmatter.Lookup("description")
+	desc := c.Frontmatter.Lookup(keyDescription)
 	if desc != nil && desc.Kind == yaml.ScalarNode && strings.TrimSpace(desc.Value) != "" {
-		fields = append(fields, okf.Field{Key: "description", Value: desc.Value})
+		fields = append(fields, okf.Field{Key: keyDescription, Value: desc.Value})
 	}
 	hasName := false
 	if ext.metadata != nil {
 		for i := 0; i+1 < len(ext.metadata.Content); i += 2 {
 			key := ext.metadata.Content[i].Value
-			if key == "description" {
+			if key == keyDescription {
 				continue
 			}
 			hasName = hasName || key == "name"
@@ -300,7 +315,7 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id string) []by
 			fields = append(fields, okf.Field{Key: "name", Value: id})
 		}
 		if desc == nil || strings.TrimSpace(desc.Value) == "" {
-			fields = append([]okf.Field{{Key: "description", Value: c.Title()}}, fields...)
+			fields = append([]okf.Field{{Key: keyDescription, Value: c.Title()}}, fields...)
 		}
 	}
 	if memory := okfMemory(c, kind, id); memory != nil {
@@ -328,13 +343,13 @@ func okfMemory(c *okf.Concept, kind Kind, id string) *yaml.Node {
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i].Value, root.Content[i+1]
 		switch k {
-		case "description", okf.ExtensionKey:
+		case keyDescription, okf.ExtensionKey:
 			continue
-		case "type":
+		case keyType:
 			if v.Kind == yaml.ScalarNode && (strings.TrimSpace(v.Value) == defaultType(kind) || strings.TrimSpace(v.Value) == "") {
 				continue
 			}
-		case "title":
+		case keyTitle:
 			if v.Kind == yaml.ScalarNode && (strings.TrimSpace(v.Value) == okf.TitleFromPath(sanitizeID(id)+".md") || strings.TrimSpace(v.Value) == "") {
 				continue
 			}
