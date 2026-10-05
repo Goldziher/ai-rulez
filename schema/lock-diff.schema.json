@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/lock-diff.schema.json",
+  "title": "ai-rulez lock diff",
+  "description": "Output of `ai-rulez lock --diff --format json`: how the sources, generated outputs and remote pins differ from ai-rulez.lock.",
+  "type": "object",
+  "required": ["schema_version", "in_sync", "lock_version", "changes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "in_sync": { "type": "boolean" },
+    "no_content_pins": { "type": "boolean", "description": "The lock is version 1 and pins no authored content." },
+    "lock_version": { "type": "integer" },
+    "hash_version": { "type": "integer" },
+    "lock_ai_rulez_version": { "type": "string" },
+    "ai_rulez_version": { "type": "string" },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scope", "change"],
+        "additionalProperties": false,
+        "properties": {
+          "scope": { "enum": ["source", "output", "remote", "served", "lock"] },
+          "change": { "enum": ["added", "removed", "changed"] },
+          "kind": { "type": "string" },
+          "id": { "type": "string" },
+          "domain": { "type": "string" },
+          "path": { "type": "string" },
+          "old": { "type": "string" },
+          "new": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

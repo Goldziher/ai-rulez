@@ -117,6 +117,7 @@ type runner struct {
 	opts           Options
 	drift          []PluginDrift
 	delivery       []DeliveryFinding
+	lockDrift      []LockDrift
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -188,6 +189,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.scanImported()
 	r.checkPluginDrift()
 	r.checkEvalRunner()
+	r.checkRoles()
+	r.checkLockDrift()
 	if so.External {
 		r.runExternal()
 	}

@@ -97,6 +97,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 		}
 	}
 	sub := NewGenerator(&cfg)
+	sub.role = g.role // g.config already carries the role's delivery and overrides
 
 	generateMu.Lock()
 	defer generateMu.Unlock()

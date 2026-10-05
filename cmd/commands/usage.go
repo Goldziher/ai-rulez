@@ -314,7 +314,7 @@ func init() {
 	}
 	for _, c := range []*cobra.Command{usageHookCmd, usageRecordCmd, usageFeedbackCmd} {
 		c.Flags().StringVar(&usageHarness, "harness", "", "Harness: claude, codex or cursor (default claude; feedback records it as given)")
-		c.Flags().StringVar(&usageRole, "role", "", "Role active when the skill loaded (recorded as given)")
+		c.Flags().StringVar(&usageRole, flagRole, "", "Role active when the skill loaded, a role of [[roles]] (recorded as given)")
 	}
 	usageRecordCmd.Flags().StringVar(&usageOutcome, "outcome", "", "Outcome to record: loaded (default), used or abandoned")
 	usageRecordCmd.Flags().BoolVar(&usageServed, "served", false, "Mark the load as served by the MCP server")

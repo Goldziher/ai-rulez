@@ -95,6 +95,11 @@ still exits 1 and never reaches the content checks.
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
+| AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
+| AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
+| AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
+| AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
+| AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.

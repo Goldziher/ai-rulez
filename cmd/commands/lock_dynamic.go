@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/mcp"
@@ -45,7 +47,7 @@ func lockedEntries(f *lockfile.File) []lockfile.Entry {
 
 // usesDynamicSkills reports whether the project has anything to pin for served skills.
 func usesDynamicSkills(cfg *config.Config) bool {
-	return len(cfg.SkillSources) > 0 || cfg.LockEnforced() || cfg.DeliveryConfigured(cfg.Content)
+	return len(cfg.SkillSources) > 0 || cfg.LockEnforced() || cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
 }
 
 // mergeDynamicLock carries the source and served pins into next: kept from
@@ -134,6 +136,26 @@ func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
 		for _, p := range problems {
 			out = append(out, "  "+p)
 		}
+	}
+	return out
+}
+
+// dynamicLockChanges reports the source and served pins that disagree with the
+// configuration and the local cache, as changes for `lock --check` and `--diff`.
+func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
+	var out []contentlock.Change
+	for _, line := range checkDynamicLock(cfg, lock) {
+		kind, rest, _ := strings.Cut(strings.TrimSpace(line), " ")
+		kind = strings.TrimSuffix(kind, ":")
+		name, detail, found := strings.Cut(rest, ": ")
+		if !found {
+			name, detail = "", rest
+		}
+		scope := contentlock.ScopeRemote
+		if kind == lockfile.KindServed {
+			scope = contentlock.ScopeServed
+		}
+		out = append(out, contentlock.Change{Scope: scope, Change: contentlock.Changed, Kind: kind, ID: name, Detail: detail})
 	}
 	return out
 }

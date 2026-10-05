@@ -72,8 +72,9 @@ func SkillDeliveryValue(skill ContentFile) string {
 // EffectiveDelivery resolves how one skill reaches the agent. First match wins:
 //
 //  1. the skill's own `delivery` frontmatter key;
-//  2. roleOverride, keyed by skill name, then by domain name (per-role delivery;
-//     nil when no role applies);
+//  2. roleOverride, keyed by "<domain>/<skill>" for a skill of a domain, then by
+//     skill id and name, then by domain name (per-role delivery; nil means the
+//     role being rendered, see SetRoleDelivery, and none when no role applies);
 //  3. [domains.<domain>] delivery, for a skill owned by a domain;
 //  4. [skills] delivery, the global default;
 //  5. static.
@@ -84,8 +85,15 @@ func (c *Config) EffectiveDelivery(skill ContentFile, domain string, roleOverrid
 	if d, ok := ParseDelivery(SkillDeliveryValue(skill)); ok {
 		return d
 	}
+	if roleOverride == nil && c != nil {
+		roleOverride = c.roleDelivery
+	}
 	if len(roleOverride) > 0 {
-		for _, key := range []string{SkillID(skill), skill.Name, domain} {
+		keys := []string{SkillID(skill), skill.Name, domain}
+		if domain != "" {
+			keys = append([]string{domain + "/" + SkillID(skill)}, keys...)
+		}
+		for _, key := range keys {
 			if key == "" {
 				continue
 			}
@@ -293,4 +301,58 @@ func cleanList(in []string) []string {
 		}
 	}
 	return out
+}
+
+// SetRoleDelivery makes the per-skill delivery of a role the one every later
+// EffectiveDelivery call without an explicit override uses, so a role render, a
+// token report and the skills server all see the same split. It changes this
+// Config: call it on a copy when the Config is shared. A nil override still
+// marks a role as active (it sets no delivery of its own).
+func (c *Config) SetRoleDelivery(override map[string]string) { c.roleDelivery = orEmpty(override) }
+
+// RoleDeliveryOverride resolves a (flattened) role's delivery selectors against
+// the content tree and returns the override EffectiveDelivery takes: one entry
+// per skill the role sets a delivery for, keyed by "<domain>/<id>" for a skill
+// of a domain and by id for a root skill.
+func (c *Config) RoleDeliveryOverride(role *RoleConfig) map[string]string {
+	if role == nil || len(role.Delivery) == 0 || c.Content == nil {
+		return nil
+	}
+	out := map[string]string{}
+	add := func(domain string, skills []ContentFile) {
+		for i := range skills {
+			id := SkillID(skills[i])
+			d, ok := role.DeliveryFor(domain, id)
+			if !ok {
+				continue
+			}
+			key := id
+			if domain != "" {
+				key = domain + "/" + id
+			}
+			out[key] = string(d)
+		}
+	}
+	add("", c.Content.Skills)
+	for name, d := range c.Content.Domains {
+		add(name, d.Skills)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// RolesServeSkills reports whether some role sets a delivery other than static,
+// so the project can serve skills even when no skill, domain or global default
+// does.
+func (c *Config) RolesServeSkills() bool {
+	for i := range c.Roles {
+		for _, v := range c.Roles[i].Delivery {
+			if d, ok := ParseDelivery(v); ok && d != DeliveryStatic {
+				return true
+			}
+		}
+	}
+	return false
 }

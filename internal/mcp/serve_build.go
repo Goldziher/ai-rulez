@@ -31,7 +31,10 @@ type ServeSetup struct {
 	Profile string
 	Preset  string
 	Filter  SkillFilter
-	// Role is the default role of find_skill.
+	// Role is a role of the project's [[roles]]. The server then serves only the
+	// skills the role keeps, with the delivery the role gives them (skills the
+	// role delivers static are not served unless IncludeStatic is set), and it is
+	// the default role of find_skill. Role and Profile are mutually exclusive.
 	Role string
 	// Sources are `--source` arguments (see skillsource.ParseArg), added to the
 	// [[skill_sources]] of the configuration.
@@ -78,9 +81,11 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	holder := &configHolder{}
+	holder.set(first.cfg)
 	opts := ServeOptions{
 		Role:         st.Role,
-		Roles:        ProfileRoles(first.cfg.Profiles),
+		Roles:        RolesFromConfig(holder.get),
 		BudgetBytes:  st.BudgetBytes,
 		Telemetry:    st.telemetry(first.cfg),
 		PollInterval: st.PollInterval,
@@ -92,6 +97,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			if err != nil {
 				return nil, err
 			}
+			holder.set(b.cfg)
 			return b.catalog, nil
 		}
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots) }
@@ -140,6 +146,9 @@ type buildOptions struct {
 	// ignoreLock neither reads nor enforces the lock's served pins (the lock
 	// command is writing them).
 	ignoreLock bool
+	// noSources leaves the skill sources out: a role view can only narrow what
+	// the full view serves, so the lock command builds sources once.
+	noSources bool
 }
 
 func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error) {
@@ -154,20 +163,43 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		}
 	}
 	profile, preset := st.Profile, st.Preset
+	gen := generator.NewGenerator(cfg)
+	var roleKeeps func(name string) bool
+	if st.Role != "" {
+		if st.Profile != "" {
+			return nil, oops.Errorf("--role and --profile are mutually exclusive")
+		}
+		if cfg.Content == nil {
+			return nil, oops.Hint("A role selects project content; run in a project with [[roles]]").Errorf("role %q needs a project", st.Role)
+		}
+		if err = gen.SetRole(st.Role); err != nil {
+			return nil, oops.Wrapf(err, "resolve role %q", st.Role)
+		}
+		resolved, rerr := cfg.ResolveRole(st.Role)
+		if rerr != nil {
+			return nil, oops.Wrap(rerr)
+		}
+		roleKeeps = func(name string) bool { return resolved.Flat().Keeps(config.RoleKindSkill, "", name) }
+	}
 	var served []generator.ServedSkill
 	if cfg.Content != nil {
-		if preset, served, err = generator.NewGenerator(cfg).ServedSkills(profile, preset); err != nil {
+		if preset, served, err = gen.ServedSkills(profile, preset); err != nil {
 			return nil, oops.Wrapf(err, "render skills")
 		}
-		if profile == "" {
+		switch {
+		case st.Role != "":
+			profile = "role:" + st.Role
+		case profile == "":
 			profile = cfg.Default
 		}
 		served = selectByDelivery(served, st.IncludeStatic)
 	}
 
-	specs, err := st.sourceSpecs(cfg)
-	if err != nil {
-		return nil, err
+	var specs []skillsource.Spec
+	if !bo.noSources {
+		if specs, err = st.sourceSpecs(cfg); err != nil {
+			return nil, err
+		}
 	}
 	b := &built{cfg: cfg, lock: lock}
 	taken := map[string]bool{}
@@ -183,6 +215,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		}
 		b.sources = append(b.sources, res)
 		for _, sk := range res.Skills {
+			if roleKeeps != nil && !roleKeeps(sk.Name) {
+				continue
+			}
 			if taken[sk.Name] {
 				logger.Warn("A skill source skill has the name of a skill that is already served; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
 				continue
@@ -318,7 +353,7 @@ func (st *ServeSetup) telemetry(cfg *config.Config) func(SessionTelemetry) {
 	}
 	return func(t SessionTelemetry) {
 		_, err := usage.RecordServed(usage.ServedLoad{
-			Skill: t.Skill, Digest: t.Digest, Session: t.Session, Harness: t.Client, Resource: t.Resource,
+			Skill: t.Skill, Digest: t.Digest, Session: t.Session, Harness: t.Client, Role: t.Role, Resource: t.Resource,
 		}, options)
 		if err != nil {
 			logger.Warn("Could not record the skill load", "skill", t.Skill, "error", err.Error())
@@ -380,48 +415,98 @@ func fingerprint(roots []string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// LockRecords resolves everything the server would serve, re-resolving remote
-// sources (unless offline), and returns the lock entries to record: one per
-// skill source, and one per skill that passes the security scan. Skills the
-// scan refuses are returned as refusals and are not pinned.
+// buildAll builds the full view and, for each role of the project, the role's
+// view. A skill a role delivers as served is pinned and checked even when the
+// unscoped view does not serve it, so the lock covers every view a server can be
+// started with.
+func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions) ([]*built, error) {
+	base := *st
+	base.Role = ""
+	first, err := base.build(ctx, bo)
+	if err != nil {
+		return nil, err
+	}
+	views := []*built{first}
+	bo.noSources, bo.refresh = true, false
+	for _, name := range first.cfg.RoleNames() {
+		view := base
+		view.Role = name
+		b, err := view.build(ctx, bo)
+		if err != nil {
+			logger.Warn("Left a role out of the served-skill lock", "role", name, "error", err.Error())
+			continue
+		}
+		views = append(views, b)
+	}
+	return views, nil
+}
+
+// servedUnion lists the skills served by any view, once each, by name.
+func servedUnion(views []*built) []*CatalogSkill {
+	seen := map[string]bool{}
+	var out []*CatalogSkill
+	for _, v := range views {
+		for _, s := range v.catalog.Skills() {
+			if !seen[s.Name] {
+				seen[s.Name] = true
+				out = append(out, s)
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// LockRecords resolves everything the server would serve, in every role view,
+// re-resolving remote sources (unless offline), and returns the lock entries to
+// record: one per skill source, and one per skill that passes the security scan.
+// Skills the scan refuses are returned as refusals and are not pinned.
 func (st *ServeSetup) LockRecords(ctx context.Context) (sources, served []lockfile.Entry, refused []Refusal, err error) {
-	b, err := st.build(ctx, buildOptions{admit: true, refresh: !st.Offline && !st.Frozen, ignoreLock: true})
+	views, err := st.buildAll(ctx, buildOptions{admit: true, refresh: !st.Offline && !st.Frozen, ignoreLock: true})
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	for _, res := range b.sources {
+	for _, res := range views[0].sources {
 		sources = append(sources, res.Entry())
 	}
-	for _, s := range b.catalog.Skills() {
+	for _, s := range servedUnion(views) {
 		served = append(served, lockfile.Entry{Name: s.Name, Source: s.Source, Ref: s.Ref, Commit: s.Commit, Digest: s.LockDigest})
 	}
-	sort.Slice(served, func(i, j int) bool { return served[i].Name < served[j].Name })
-	return sources, served, b.catalog.Refusals(), nil
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, r := range v.catalog.Refusals() {
+			if !seen[r.Name] {
+				seen[r.Name] = true
+				refused = append(refused, r)
+			}
+		}
+	}
+	return sources, served, refused, nil
 }
 
-// ServedProblems compares the skills the server would serve with the lock's
-// served pins, offline, and lists every disagreement. It is `lock --check` for
-// served skills.
+// ServedProblems compares the skills the server would serve (in every role view)
+// with the lock's served pins, offline, and lists every disagreement. It is
+// `lock --check` for served skills.
 func (st *ServeSetup) ServedProblems(ctx context.Context) ([]string, error) {
 	off := *st
 	off.Offline = true
-	b, err := off.build(config.WithOfflineIncludes(ctx), buildOptions{admit: true, ignoreLock: true})
+	views, err := off.buildAll(config.WithOfflineIncludes(ctx), buildOptions{admit: true, ignoreLock: true})
 	if err != nil {
 		return nil, err
 	}
 	var problems []string
 	have := map[string]bool{}
-	for _, s := range b.catalog.Skills() {
+	for _, s := range servedUnion(views) {
 		have[s.Name] = true
-		switch e := b.lock.Find(lockfile.KindServed, s.Name); {
+		switch e := views[0].lock.Find(lockfile.KindServed, s.Name); {
 		case e == nil:
 			problems = append(problems, fmt.Sprintf("served %s: not pinned in %s", s.Name, lockfile.FileName))
 		case e.Digest != s.LockDigest:
 			problems = append(problems, fmt.Sprintf("served %s: digest %s differs from the lock's %s", s.Name, s.LockDigest, e.Digest))
 		}
 	}
-	if b.lock != nil {
-		for _, e := range b.lock.Served {
+	if views[0].lock != nil {
+		for _, e := range views[0].lock.Served {
 			if !have[e.Name] {
 				problems = append(problems, fmt.Sprintf("served %s: in the lock but no longer served", e.Name))
 			}

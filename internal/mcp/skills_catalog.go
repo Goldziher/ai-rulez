@@ -1,14 +1,13 @@
 package mcp
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -204,26 +203,28 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	if len(skill.Keywords) == 0 {
 		skill.Keywords = listField(front, "keywords")
 	}
-	hash := sha256.New()
+	leaves := make([]contentlock.Leaf, 0, len(src.Files))
 	for _, f := range src.Files {
-		sum := sha256.Sum256(f.Content)
-		file := CatalogFile{
+		leaf := contentlock.Leaf{Path: f.RelPath, Mode: contentlock.ModeRegular, Data: f.Content}
+		leaves = append(leaves, leaf)
+		skill.Files = append(skill.Files, CatalogFile{
 			URI:     SkillURIScheme + name + "/" + f.RelPath,
 			RelPath: f.RelPath,
-			Digest:  "sha256:" + hex.EncodeToString(sum[:]),
+			Digest:  contentlock.FileDigest(leaf),
 			Size:    len(f.Content),
 			MIME:    mimeFor(f.RelPath, f.Content),
 			Content: f.Content,
-		}
-		skill.Files = append(skill.Files, file)
+		})
 	}
-	sorted := append([]CatalogFile(nil), skill.Files...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].URI < sorted[j].URI })
-	for i := range sorted {
-		hash.Write([]byte(sorted[i].URI + "\x00" + sorted[i].Digest + "\n")) //nolint:errcheck // hash.Hash.Write never fails
+	// Two digests of the same files under the one scheme of ai-rulez.lock: Digest
+	// covers the bytes as served; LockDigest leaves out the header lines that
+	// change without this skill changing, and is what the lock pins.
+	if skill.Digest, err = contentlock.ServedDigest(leaves, false); err != nil {
+		return nil, oops.With("skill", name).Wrapf(err, "digest skill files")
 	}
-	skill.Digest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
-	skill.LockDigest = lockDigest(skill.Files)
+	if skill.LockDigest, err = contentlock.ServedDigest(leaves, true); err != nil {
+		return nil, oops.With("skill", name).Wrapf(err, "digest skill files")
+	}
 	return skill, nil
 }
 
