@@ -1153,7 +1153,7 @@ ai-rulez doctor [config-file] [--strict] [--json] [--profile <name>] [--no-local
 | `gitignore` | Generated paths `generate` wants git to ignore (committed outputs with `gitignore = true`, machine-local and secret outputs always) that git does not ignore; asked through `git check-ignore`, skipped outside a git repository | warning |
 | `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |
 | `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
-| `lock` | `ai-rulez.lock` does not match the remote includes and installed skills (checked offline, as in `lock --check`) | warning |
+| `lock` | `ai-rulez.lock` does not match the remote includes and installed skills, or authored content differs from its content pins (checked offline against the sources, as in `lock --check`; an error when `[lock] enforce = true`) | warning |
 | `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
 
 When outputs cannot be rendered at all (for example because an MCP placeholder is unset), `drift` says so and the `gitignore` check is skipped; the `mcp-env` finding names the cause.
@@ -1197,7 +1197,7 @@ ai-rulez tokens [config-file] [flags]
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
 | `--no-local`          | boolean | false              | Ignore the machine-local overlay and `local/` content            |
 | `--profile` / `-p`    | string  | configured default | Profile to report on; a comma-separated list composes several    |
-| `--role`              | string  |                    | Report on a [role](roles.md)'s slice instead of a profile        |
+| `--role`              | string  |                    | Report on a [role](roles.md)'s slice instead of a profile; skills the role delivers as `served` are left out of the listing and named in `served_skills` |
 | `--by-role`           | boolean | false              | One comparison column per declared role                          |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts             |
 
@@ -1442,6 +1442,9 @@ review a lock diff. It records:
   and a `sha256` digest of the imported file tree;
 - for every authored rule, context file, skill (with its resources), agent, command, hook and role: a `sha256:<hex>`
   digest of the raw files, with its id, domain, owner and version;
+- for every `[[skill_sources]]` entry (`[[source]]`: commit and tree digest) and every skill the skills server
+  serves (`[[served]]`: a `sha256:` digest in the same scheme as the content pins; skills that only a role serves
+  are included): the entries [`[lock] enforce`](lockfile.md#served-skills-and-skill-sources) checks at serve time;
 - a digest of each generated output, and one `tree` digest over everything.
 
 Local-path sources live in the repository and are not locked as remotes. Credentials in a source URL are redacted.
@@ -1466,10 +1469,10 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | --- | --- |
 | `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
 | `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
-| `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept |
+| `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
 | `--format text\|json` | Output format of `--diff` |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
-| `--kind include\|skill` | Limit a refresh to one kind |
+| `--kind include\|skill\|source\|served` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |
 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
@@ -1575,13 +1578,14 @@ Starts the Model Context Protocol (MCP) server to allow AI assistants to program
 
 ```bash
 ai-rulez mcp
-ai-rulez mcp --serve-skills [--profile <p>] [--source <src>] [--role <r>] [--frozen]
+ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--frozen]
 ```
 
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
 `list_skill_resources` and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
 `--allow`, `--deny`, `--source` (repeatable), `--role`, `--frozen`, `--offline`, `--include-static`,
-`--budget-bytes`, `--usage-log`, `--usage-sink`, `--no-watch`, `--reload-interval`.
+`--budget-bytes`, `--usage-log`, `--usage-sink`, `--no-watch`, `--reload-interval`. `--role` names a role of
+`[[roles]]`: the server serves only that role's skills, with the role's [delivery](roles.md#delivery).
 
 See the [MCP Server Documentation](mcp-server.md) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)
 for more details.

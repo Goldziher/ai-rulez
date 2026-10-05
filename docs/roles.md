@@ -49,8 +49,9 @@ deploy = "on"                        # child wins over the parent's "user-invoca
 | `name` | Lowercase letters, digits, `-` and `_`. What `--role` takes. Must be unique. |
 | `description` | Free text shown by `roles list`. |
 | `domains` | Domains the role selects. Root content, globally active builtins and included domains are always kept, exactly as for a profile. |
-| `skills`, `rules`, `agents`, `commands` | `include` and `exclude` lists. An entry is an item id or a [`path.Match`](https://pkg.go.dev/path#Match) glob; an entry containing `/` is matched against `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. There is no selector for `context`: context files stay. |
+| `skills`, `rules`, `agents`, `commands`, `checks` | `include` and `exclude` lists. An entry is an item id or a [`path.Match`](https://pkg.go.dev/path#Match) glob; an entry containing `/` is matched against `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. There is no selector for `context`: context files stay. |
 | `skill_mode` | Skill id or glob to a Claude Code `skillOverrides` state. |
+| `delivery` | Skill id or glob to `static`, `served` or `both`: how the skill reaches this role's agent (see [Delivery](#delivery)). |
 | `extends` | The name of one parent role. |
 | `match` | `groups`: hint strings for an external tool. Not inherited. |
 
@@ -59,6 +60,34 @@ deploy = "on"                        # child wins over the parent's "user-invoca
 For one skill, every matching key competes: an exact id beats a glob, a longer glob beats a shorter one, and ties
 go to the lexically first pattern. The answer never depends on map order. A skill no key matches keeps the
 default, which is to render it with no override.
+
+### Delivery
+
+`[roles.delivery]` decides, per skill, whether the role's agent gets the skill as a file in the harness skill
+tree (`static`), only on demand from the [skills server](mcp-server.md#dynamic-skill-loading) (`served`), or both.
+The keys follow the `skill_mode` rules (ids, globs, `domain/id`, the most specific key wins) and the entries are
+inherited through `extends` with the child winning.
+
+```toml
+[[roles]]
+name = "backend"
+domains = ["backend"]
+
+[roles.delivery]
+"deploy-*" = "served"      # not listed in the backend agent's context, found with find_skill
+"backend/runbooks" = "both"
+```
+
+Precedence for one skill: its own `delivery` frontmatter, then the role, then `[domains.<name>] delivery`, then
+`[skills] delivery`, then `static`. Everything that renders or serves a role uses it:
+
+- `generate --role backend` leaves the served skills out of the static trees and adds the `dynamic-skills` stub;
+- `tokens --role backend` does not count served skills in the listing and names them (`served_skills`);
+- `ai-rulez mcp --serve-skills --role backend` serves those skills and `find_skill` is scoped to the role;
+- `roles resolve`, `roles.json` (`items[].delivery`, `totals.served_skills`, `totals.served_tokens`, `delivery`)
+  and `catalog` (`items[].delivery`, `items[].role_delivery`) report it.
+
+`ai-rulez lock` pins the served skills of every role, so `[lock] enforce` covers them.
 
 ### Inheritance
 
@@ -70,11 +99,11 @@ merged over the parent as follows.
 | `domains` | union, parent first |
 | `exclude` lists | union |
 | `include` lists | union when both roles set one, otherwise whichever is set |
-| `skill_mode` | merged, the child wins per key |
+| `skill_mode`, `delivery` | merged, the child wins per key |
 | `description` | the child's, else the parent's |
 | `match` | **not** inherited: it identifies who holds *this* role |
 
-`Validate()` fails hard only on a bad name, a duplicate name or an invalid `skill_mode` value. Inheritance
+`Validate()` fails hard only on a bad name, a duplicate name, an invalid `skill_mode` value or an invalid `delivery` value. Inheritance
 problems (unknown parent, cycle, depth greater than one) are logged as warnings there so that
 `validate --strict` can report them as [AR972](strict-validation.md). A role with broken inheritance is left out of
 `roles.json` with a warning.
@@ -128,7 +157,7 @@ approximated: a role that must restrict skills on another harness does it with `
 
 | Code | Meaning |
 | --- | --- |
-| [AR971](strict-validation.md) `role-reference-unknown` | A role lists a domain that does not exist, or a selector / `skill_mode` entry that matches no item (or only matches in a domain the role does not select). |
+| [AR971](strict-validation.md) `role-reference-unknown` | A role lists a domain that does not exist, or a selector / `skill_mode` / `delivery` entry that matches no item (or only matches in a domain the role does not select). |
 | [AR972](strict-validation.md) `role-extends-invalid` | Unknown parent, cycle, or inheritance deeper than one level. |
 | [AR973](strict-validation.md) `role-unreachable-dependency` | An item the role keeps names a skill in its `skills:` frontmatter that the role drops, or hides from the model with `off` / `user-invocable-only`. Prose references are not analysed. |
 
@@ -150,14 +179,15 @@ so it is safe to commit, and it is versioned by `schema_version`. The JSON schem
       "match": { "groups": ["okta:eng"] },
       "domains": ["shared", "backend"],
       "skill_modes": { "review-pr": "name-only" },
+      "delivery": { "deploy-*": "served" },
       "items": [
         {
           "kind": "skill", "id": "review-pr", "domain": "shared",
-          "path": "domains/shared/skills/review-pr", "mode": "name-only",
+          "path": "domains/shared/skills/review-pr", "mode": "name-only", "delivery": "static",
           "owner": "platform", "version": "1.2.0", "bytes": 2210, "tokens": 540
         }
       ],
-      "totals": { "items": 1, "bytes": 2210, "tokens": 540, "by_kind": { "skill": 1 } }
+      "totals": { "items": 1, "bytes": 2210, "tokens": 540, "by_kind": { "skill": 1 }, "served_skills": 0, "served_tokens": 0 }
     }
   ]
 }
@@ -165,6 +195,8 @@ so it is safe to commit, and it is versioned by `schema_version`. The JSON schem
 
 `bytes` is the size of the item's source files on disk (a skill counts its resources). `tokens` is an estimate for
 the primary file (`SKILL.md`, the rule file, ...) and is an approximation, like every figure of `ai-rulez tokens`.
+`delivery` (skills only) is how the skill reaches the role's agent; `served_skills` and `served_tokens` total the
+skills that are served only, which cost no listing tokens until `load_skill` runs.
 `owner` and `version` come from the item's frontmatter when present.
 
 ## Integrating an identity tool or UI
@@ -196,4 +228,7 @@ other interface: lists come from `roles.json` / `catalog`, previews from `roles 
 The [lock file](lockfile.md) pins each role declaration as an item (`kind = "role"`), so adding a role, or
 changing what a role includes, shows up in the lock diff and is caught by `lock --check`. Outputs generated for a
 single role are not pinned: the lock pins the default rendering, and `generate --locked --role <name>` verifies
-that the *sources* still match the lock before generating the role's slice.
+that the *sources* still match the lock before generating the role's slice. Skills a role delivers as `served` are
+pinned as `[[served]]` entries (see [Served skills and skill sources](lockfile.md#served-skills-and-skill-sources)),
+so `[lock] enforce` holds for a server started with `--role`. Checks are a role-selectable kind and are pinned like
+rules.

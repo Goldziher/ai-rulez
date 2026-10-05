@@ -241,11 +241,11 @@ delivery = "static"        # global default; static when unset
 delivery = "served"        # every skill of the billing domain
 ```
 
-Precedence, first match wins: the skill's own `delivery` frontmatter, then a per-role override, then
-`[domains.<name>] delivery`, then `[skills] delivery`, then `static`. An invalid value is ignored (the next
-level applies) and reported as `AR994`; invalid config values fail `validate`. The per-role override is a map
-from a skill name or a domain name to a delivery; `config.Config.EffectiveDelivery(skill, domain, overrides)` is
-the single function that resolves all of this, so roles plug in by passing their map.
+Precedence, first match wins: the skill's own `delivery` frontmatter, then the role's `delivery` map (when a role
+is being rendered or served, see [Roles](roles.md#delivery)), then `[domains.<name>] delivery`, then
+`[skills] delivery`, then `static`. An invalid value is ignored (the next level applies) and reported as `AR994`;
+invalid config values fail `validate`. `config.Config.EffectiveDelivery(skill, domain, roleOverride)` is the
+single function that resolves all of this.
 
 `triggers` is a list of phrases that should make the agent look for the skill (a comma-separated string works
 too). `keywords` are searched as well. `delivery` and `triggers` are ai-rulez keys: `delivery` is not written
@@ -264,7 +264,7 @@ into generated frontmatter.
 
 ```bash
 ai-rulez mcp --serve-skills                       # the skills whose delivery is served or both
-ai-rulez mcp --serve-skills --role backend        # rank the backend profile's skills first
+ai-rulez mcp --serve-skills --role backend        # the backend role's skills, with the role's delivery
 ai-rulez mcp --serve-skills --source git+https://github.com/acme/skills@v1.2.0#skills/
 ai-rulez mcp --serve-skills --frozen              # lock required, no network
 ```
@@ -284,7 +284,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | Flag | Meaning |
 | ---- | ------- |
 | `--source` | Serve the skills of a source as well (repeatable, see [Skill sources](#skill-sources)). |
-| `--role` | Role (a profile name) whose skills `find_skill` ranks first when the call names no role. |
+| `--role` | A role of `[[roles]]`. The server serves only the skills the role keeps, with the delivery the role gives them (a skill the role delivers `static` is not served unless `--include-static` is set), and `find_skill` ranks within the role by default. Mutually exclusive with `--profile`; an unknown role is an error at start. |
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
@@ -309,9 +309,11 @@ working as described above. All tools are annotated read-only.
 - **Ranking.** `find_skill` scores BM25 over four fields with weights name 3, triggers 2.5, keywords 2 and
   description 1, after lowercasing, dropping stopwords and a light stemmer (`migrations` matches `migration`).
   It is lexical and deterministic: score descending, then name. Embedding search is not implemented.
-- **Roles.** `role` is resolved to a scope (domains, allow and deny globs). Matches inside the scope come first,
-  then the rest marked `in_role: false`. Until a richer role model is wired in, a role is a profile name: its
-  domains, plus root skills. The resolver is `mcp.RoleResolver`, a function from name to `mcp.RoleScope`.
+- **Roles.** `role` is resolved against the project's `[[roles]]` (`mcp.RolesFromConfig`): a skill is in scope
+  when the role keeps it (its domains and `skills` include and exclude selectors, `extends` merged in). Matches
+  inside the scope come first, then the rest marked `in_role: false`; an unknown role is an error. A skill that
+  comes from a `[[skill_sources]]` entry is matched by name against the role's `skills` selectors. The role is
+  read again on every live reload.
 - **Budget.** Each session may receive `--budget-bytes` bytes from `load_skill`. A load that would exceed the
   remainder is refused with the bytes left and is not charged; `budget_bytes` on one call truncates that
   call's file (at a character boundary) and reports `truncated` and `total_bytes`. Supporting files count too.
@@ -378,15 +380,20 @@ enforce = true
 ```
 
 the server refuses a served skill whose digest differs from the lock, and one the lock does not pin, with
-`AR995`. `validate --strict` reports the same. The lock digest covers the rendered files but not the
-project-wide `Source-Hash` header line, so editing one skill does not invalidate the others. The digest is of the
-rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by design).
-`ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
+`AR995`. `validate --strict` reports the same. The lock digest is a `sha256:` tree digest in the same scheme as
+the other pins ([Lock file](lockfile.md#served-skills-and-skill-sources), domain `ai-rulez/served-skill/v1`). It
+covers the rendered files but not the header lines that change without the skill changing (the project-wide
+`Source-Hash` and the `Generated:` stamp), so editing one skill does not invalidate the others. The digest is of
+the rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by
+design). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
+role. `ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
 
 ### Usage telemetry
 
 Each successful `load_skill` goes through the usage recorder as one identifier-only JSON line: time, skill name,
-session, harness (the MCP client name), content hash from the skills index, the served digest, and `served: true`.
+salted session hash, harness (the MCP client name), the role the server runs under, `outcome: "loaded"`, content
+hash from the skills index, the served digest, and `served: true` (log format `v: 2`, the same as hook-recorded
+loads).
 A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
 `ai-rulez report usage`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
 or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage.jsonl`.
