@@ -41,6 +41,6 @@ func checkDescriptionNearLimit(r *runner, it *item, d doc, _ frontmatter) {
 	}
 	warnAt := min(descWarnAt, maxLen*9/10)
 	if n := utf8.RuneCountInString(r.description(it)); n >= warnAt && n <= maxLen {
-		r.add(CodeDescriptionLength, it.abs, d.lineOf("description", 1), "description is %d characters, within %d of the maximum of %d; trim it before an edit pushes it over", n, maxLen-n, maxLen)
+		r.add(CodeDescriptionLength, it.abs, d.lineOf(keyDescription, 1), "description is %d characters, within %d of the maximum of %d; trim it before an edit pushes it over", n, maxLen-n, maxLen)
 	}
 }

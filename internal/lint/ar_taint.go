@@ -23,7 +23,7 @@ var (
 	fileArgRe     = regexp.MustCompile(`(?:@|<\s*|-T\s+|--upload-file\s+|--data-binary\s+@?)(\S+)`)
 	taintSinks    = map[string]bool{
 		"curl": true, "wget": true, "nc": true, "ncat": true, "netcat": true, "ssh": true, "scp": true, "rsync": true, "socat": true,
-		"dig": true, "nslookup": true, "http": true, "xh": true, "ftp": true, "telnet": true, "sftp": true,
+		"dig": true, "nslookup": true, transportHTTP: true, "xh": true, "ftp": true, "telnet": true, "sftp": true,
 	}
 	pipeSplitRe = regexp.MustCompile(`\|\|?`)
 	stageSplit  = regexp.MustCompile(`&&|\|\||;`)
@@ -106,7 +106,7 @@ func (st *taintState) dataOf(text string, line int) (taintOrigin, bool) {
 	return st.sourceIn(text, line)
 }
 
-func (st *taintState) step(r *runner, t *scanText, l scanLine, seg string) {
+func (st *taintState) step(r *runner, t *scanText, l scanLine, seg string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	if seg == "" {
 		return
 	}
@@ -118,7 +118,7 @@ func (st *taintState) step(r *runner, t *scanText, l scanLine, seg string) {
 		}
 		return
 	}
-	if m := assignRe.FindStringSubmatch(seg); m != nil && !strings.Contains(m[1], "-") {
+	if m := assignRe.FindStringSubmatch(seg); len(m) > 2 && !strings.Contains(m[1], "-") {
 		if o, ok := st.dataOf(m[2], l.No); ok {
 			st.vars[m[1]] = o
 		} else {
@@ -197,7 +197,7 @@ func commandWord(words []string) string {
 		w := words[0]
 		switch {
 		case strings.Contains(w, "=") && !strings.HasPrefix(w, "-") && !strings.Contains(w, "/"):
-		case w == "sudo" || w == "time" || w == "nohup" || w == "env" || w == "command" || w == "exec" || w == "xargs":
+		case w == cmdSudo || w == "time" || w == "nohup" || w == keyEnv || w == hookTypeCommand || w == cmdExec || w == "xargs":
 		default:
 			return filepath.Base(w)
 		}
