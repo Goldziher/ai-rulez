@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -8,6 +9,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/roles"
+	"github.com/Goldziher/ai-rulez/internal/tokens"
 )
 
 // SetRole makes the Generator render the named role instead of a profile. The
@@ -92,4 +95,23 @@ func (g *Generator) warnRoleSkillModeHarnesses(name string, flat *config.RoleCon
 	sort.Strings(others)
 	logger.Warn("skill_mode of role "+name+" is applied to Claude Code only (skillOverrides); these presets have no documented per-skill invocation setting, so it is not applied",
 		"presets", strings.Join(others, ", "))
+}
+
+// rolesManifestOutput builds <config dir>/roles.json when [role_manifest]
+// enabled is set. The manifest always describes every role over the whole content
+// tree, so it is the same whichever role or profile is being generated, and it
+// carries no timestamp. User scope writes none.
+func (g *Generator) rolesManifestOutput() (config.OutputFile, bool, error) {
+	if g.userMode || !g.config.RoleManifestEnabled() {
+		return config.OutputFile{}, false, nil
+	}
+	counter, err := tokens.New("")
+	if err != nil {
+		return config.OutputFile{}, false, oops.Wrapf(err, "token counter for the roles manifest")
+	}
+	data, err := roles.Build(g.config, counter).Marshal()
+	if err != nil {
+		return config.OutputFile{}, false, err //nolint:wrapcheck // already contextual
+	}
+	return config.OutputFile{Path: filepath.Join(g.config.ConfigDir, roles.FileName), RawContent: data}, true, nil
 }

@@ -128,6 +128,7 @@ func TestLockCheckNamesSourceAndOutputChanges(t *testing.T) {
 	assert.Equal(t, contentlock.DiffSchemaVersion, diff.SchemaVersion)
 	assert.NotEmpty(t, diff.Sources())
 	assert.NotEmpty(t, diff.Outputs())
+	validateAgainst(t, "../../schema/lock-diff.schema.json", []byte(stdout))
 
 	// accepting the change makes the check pass again
 	require.Equal(t, 0, writeLockAt("", "", nil))
