@@ -16,7 +16,7 @@
       "files": 9,
       "always": 564,
       "conditional": 0,
-      "on_demand": 1109,
+      "on_demand": 1088,
       "unmodeled": 0,
       "listing": 203,
       "listed_items": 5,
@@ -86,7 +86,7 @@
         {
           "label": "skill file overhead",
           "bucket": "on_demand",
-          "tokens": 93,
+          "tokens": 72,
           "artifacts": 3
         },
         {
@@ -205,13 +205,13 @@
       "name": "(root)",
       "always": 338,
       "conditional": 0,
-      "on_demand": 408
+      "on_demand": 394
     },
     {
       "name": "backend",
       "always": 80,
       "conditional": 0,
-      "on_demand": 47
+      "on_demand": 40
     },
     {
       "name": "frontend",
