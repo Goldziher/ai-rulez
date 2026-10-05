@@ -64,11 +64,20 @@ filename = "{id}.md"
 sections = ["frontmatter", "content", "targeted_rules", "targeted_context"]
 
 [outputs.agents.frontmatter]
-fields = ["description", "permission_mode"]
+# The remaining fields are the documented Claude Code subagent keys that ai-rulez
+# does not model itself; their YAML types (lists, maps, booleans, numbers) pass
+# through unchanged. permission_mode is the legacy snake_case spelling.
+fields = [
+  "description", "permission_mode", "permissionMode", "disallowedTools", "memory", "maxTurns",
+  "mcpServers", "hooks", "background", "isolation", "color", "initialPrompt", "omitClaudeMd",
+]
 tools = true
 skills = true
 emit_effort = true
 emit_model = true
+
+[outputs.agents.frontmatter.renames]
+permission_mode = "permissionMode"
 
 # Rules: .claude/rules/{id}.md. With `[rules] mode = "split"` every rule and
 # path-scoped context item is a file; in inline mode only

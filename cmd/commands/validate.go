@@ -91,6 +91,7 @@ schema compliance, and structural issues.`,
 		}
 		presets.WarnDuplicateContent(cfg.Content)
 		warnUnpinned(cfg)
+		warnFrontmatter(cfg)
 		displayConfigurationSummary(cfg)
 	},
 }
@@ -128,6 +129,7 @@ func runRecursiveValidate() int {
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
 		if !validateStrict {
 			warnUnpinned(cfg)
+			warnFrontmatter(cfg)
 		}
 		if validateStrict {
 			report, lerr := strictLint(cfg)
