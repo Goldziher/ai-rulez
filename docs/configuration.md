@@ -146,7 +146,7 @@ presets = [
   "cursor",       # → .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/
   "gemini",       # → GEMINI.md, .gemini/ (settings.json, agents/), .agents/skills/
   "copilot",      # → .github/copilot-instructions.md, .github/instructions/, .github/{skills,agents,commands}/
-  "devin",        # → .devin/
+  "devin",        # → AGENTS.md, .devin/ (rules/, skills/, agents/, mcp_config.json)
   "cline",        # → .clinerules/, .cline/
   "codex",        # → AGENTS.md, .agents/skills/ and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json when an effort resolves)
@@ -155,10 +155,22 @@ presets = [
   "hermes",       # → .hermes.md
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
   "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio with env as a shell prefix, http and sse MCP servers)
-  "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json (stdio and http MCP servers)
-  "baz"           # → AGENTS.md (root and nested), .agents/skills, .claude/agents; see baz.md
+  "pi",           # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json (stdio and http MCP servers)
+  "baz",          # → AGENTS.md (root and nested), .agents/skills, .claude/agents; see baz.md
 ]
 ```
+
+These are 15 of the 52 built-in presets. The complete list, with the features each supports, is in
+[Supported harnesses](harnesses.md); `ai-rulez init --help` prints the names:
+
+`aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`,
+`codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`,
+`dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`,
+`mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`,
+`rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`.
+
+The `windsurf` preset is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. See
+[Migrating to v5](migration-v5.md).
 
 With `agents_md = true`, one shared `AGENTS.md` and `.agents/skills/` replace the per-tool copies; see
 [`agents_md`](#agents_md).
@@ -509,6 +521,9 @@ Behavior:
   `mcpServers` object, see [Settings document merge behavior](#settings-document-merge-behavior)),
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
   wins.
+- **Opt-in for every preset**: the `antigravity` preset adds the `ai-rulez` server to
+  `.agents/mcp_config.json` only when `self_server` is set, like every other preset. An entry an earlier version
+  wrote there is removed on the next `generate` unless `self_server = true` keeps it.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
 - The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
 - **Turning it off**: removing `self_server` stops ai-rulez from owning the entry but does not
@@ -764,10 +779,16 @@ project_doc_max_bytes = 65536
 
 ### `hooks` and `permissions`
 
-Top-level `[[hooks]]` (lifecycle hooks for `claude`, `codex`, `cursor`, `gemini`, `copilot` and some thirty more harnesses; `settings.md` lists them) and
-`[permissions]` (`allow`, `ask`, `deny` rules, translated for every harness with a native permission
+Top-level `[[hooks]]` (lifecycle hooks for 36 harnesses, from `claude`, `codex`, `cursor`, `gemini` and `copilot` to
+`qwen`, `kiro` and the plugin-based `opencode`, `kilo`, `pi` and `amp`) and
+`[permissions]` (`allow`, `ask`, `deny` rules, translated for 24 harnesses with a native permission
 surface) are rendered into each harness's native settings file outside any plugin, merged key by key so
-hand-authored content survives. See [Hooks and permissions](settings.md) and [Permissions](permissions.md).
+hand-authored content survives, comments in JSONC, TOML and YAML included. See
+[Hooks and permissions](settings.md), [Permissions](permissions.md) and the per-harness
+[feature matrix](harnesses.md).
+
+`ai-rulez generate --user` renders a user config into the per-user directories each harness reads; see
+[User-level configuration](user-scope.md).
 
 ### `builtins`
 
@@ -999,7 +1020,7 @@ is usually the right call when the same agent is generated for many tools.
 
 **Resolution order** (per preset, per agent):
 
-1. Per-agent `effort` in agent frontmatter (Claude, Codex, Devin, Opencode, Xum — presets that support per-agent effort)
+1. Per-agent `effort` in agent frontmatter (Claude, Codex, Devin, Opencode, Xum, pi — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
 4. Omit
@@ -1032,7 +1053,6 @@ For models the order is:
 | `copilot`      | `copilot_model`           | `model` in `.github/agents/<id>.agent.md`    |
 | `cursor`       | `cursor_model`            | `model` in `.cursor/agents/<id>.md`          |
 | `cline`        | `cline_model`             | `modelId` in `.cline/agents/<id>.yaml`         |
-| `amp`          | `amp_model`               | `model` in `.agents/agents/<id>.md` (Amp)    |
 | `junie`        | `junie_model`             | `model` in `.junie/agents/<id>.md`           |
 | `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |
 | `devin`        | `devin_model`             | `model` in `.devin/agents/<id>.md`           |
@@ -1081,6 +1101,41 @@ skill = ["owner"]
 ```
 
 Every key, the finding codes and the exit codes are in [Strict validation](strict-validation.md).
+
+### `verifiers`
+
+Deterministic, read-only repo checks, run by `ai-rulez verifiers run`. One `[[verifiers]]` table per check; the guide with
+semantics and examples is [Verifiers](verifiers.md).
+
+```toml
+[[verifiers]]
+name = "node-version"
+description = "package.json pins Node"
+type = "key_equals"
+path = "package.json"
+key = "engines.node"
+equals = ">=20"
+severity = "error"
+```
+
+| Field | Applies to | Meaning |
+| --- | --- | --- |
+| `name` | all | Required. Letters, digits, `.`, `_`, `-`; unique. The merge key of the machine-local overlay |
+| `type` | all | Required: `file_exists`, `file_absent`, `glob_count`, `regex`, `forbid`, `key_equals`, `generated_in_sync` |
+| `description` | all | Free text shown by `list` and in reports |
+| `severity` | all | `error` (default), `warning` or `info`. Only errors, and warnings with `--strict`, fail the run |
+| `path` | `file_exists`, `file_absent`, `key_equals` | Project-relative path that stays inside the root |
+| `glob` | `glob_count`, `regex`, `forbid` | Files to select; `**`, `*`, `?`, `{a,b}` (at most 64 expanded alternatives per glob) |
+| `exclude` | `glob_count`, `regex`, `forbid` | Globs removed from the selection |
+| `pattern` | `regex`, `forbid` | RE2 expression, matched against the whole file |
+| `min`, `max` | `glob_count` | Inclusive, non-negative bounds on the match count; at least one is required |
+| `key` | `key_equals` | Dotted path; `\.` is a literal dot, `["a.b"]` quotes a segment, `[0]` or `.0` indexes a list |
+| `equals` | `key_equals` | Expected scalar, compared as text |
+| `profile` | `generated_in_sync` | A defined profile (or `default`); empty selects the default |
+
+A field that does not apply to the type is a configuration error, as is a glob that does not compile, a `key_equals` path
+that is not `.json`, `.yaml`, `.yml` or `.toml`, and a `profile` that is not defined. `config.local.toml` may declare
+`[[verifiers]]` too; entries merge by `name`.
 
 ### `header`
 

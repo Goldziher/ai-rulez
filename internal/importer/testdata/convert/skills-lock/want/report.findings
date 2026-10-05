@@ -1,0 +1,6 @@
+approximated | (project) | presets | presets | no tool-specific file identifies a preset (AGENTS.md and .agents/skills are shared by many tools); defaulting to claude, adjust `presets` in config.toml
+unsupported | skills-lock.json | skills.from-npm |  | npm package skills are not git sources; install the package and copy the skill into skills/
+mapped | skills-lock.json | skills.frontend-design | installed_skills.frontend-design | 
+needs-action | skills-lock.json | skills.frontend-design.computedHash |  | hash scheme differs from the ai-rulez lock (sha256 of file paths and contents, not a tree digest); not carried, run `ai-rulez lock`
+mapped | skills-lock.json | skills.pdf-tools | installed_skills.pdf-tools | 
+needs-action | skills-lock.json | skills.pdf-tools.computedHash |  | hash scheme differs from the ai-rulez lock (sha256 of file paths and contents, not a tree digest); not carried, run `ai-rulez lock`
