@@ -708,8 +708,56 @@ func (c *Config) RoleProblems() []RoleProblem {
 			continue
 		}
 		problems = append(problems, c.roleReachabilityProblems(res, all)...)
+		problems = append(problems, roleSkillModeCollisions(res)...)
 	}
 	return sortProblems(problems)
+}
+
+// roleSkillModeCollisions reports kept skills that share an id across domains but
+// get different skill_mode values. Claude Code's skillOverrides is one flat map
+// keyed by skill id, so only one of them could win; the role must make the modes
+// agree (or exclude one of the skills).
+func roleSkillModeCollisions(res *ResolvedRole) []RoleProblem {
+	type seenMode struct {
+		mode    string
+		domains []string
+	}
+	byID := map[string][]seenMode{}
+	for _, item := range res.ItemsOf(RoleKindSkill) {
+		label := item.Domain
+		if label == "" {
+			label = "(root)"
+		}
+		found := false
+		for i := range byID[item.ID] {
+			if byID[item.ID][i].mode == item.Mode {
+				byID[item.ID][i].domains = append(byID[item.ID][i].domains, label)
+				found = true
+			}
+		}
+		if !found {
+			byID[item.ID] = append(byID[item.ID], seenMode{mode: item.Mode, domains: []string{label}})
+		}
+	}
+	var out []RoleProblem
+	for _, id := range sortedKeys(byID) {
+		modes := byID[id]
+		if len(modes) < 2 {
+			continue
+		}
+		var parts []string
+		for _, m := range modes {
+			mode := m.mode
+			if mode == "" {
+				mode = "(no skill_mode)"
+			}
+			parts = append(parts, fmt.Sprintf("%s in %s", mode, strings.Join(m.domains, ", ")))
+		}
+		out = append(out, RoleProblem{Kind: RoleProblemReference, Role: res.Name, Message: fmt.Sprintf(
+			"role %q keeps several skills with id %q that resolve to different skill_mode values (%s); skillOverrides is keyed by skill id, so only one would apply. Use one mode for all of them or exclude one of the skills",
+			res.Name, id, strings.Join(parts, "; "))})
+	}
+	return out
 }
 
 func sortProblems(p []RoleProblem) []RoleProblem {
