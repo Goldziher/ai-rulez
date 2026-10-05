@@ -52,8 +52,15 @@ func NewClient(config *HTTPConfig) *Client {
 	return newClientWithValidator(config, newURLValidator())
 }
 
+// NewTestClient builds a client for tests: no URL validation and a memory-only
+// cache. The default disk cache is keyed by URL, and httptest servers reuse
+// ephemeral ports, so a body cached by one test would be served to another.
 func NewTestClient(config *HTTPConfig) *Client {
-	return newClientWithValidator(config, &testURLValidator{})
+	client := newClientWithValidator(config, &testURLValidator{})
+	cacheConfig := defaultCacheConfig()
+	cacheConfig.DiskCacheDir = ""
+	client.cache = newCache(cacheConfig)
+	return client
 }
 
 // NewClientWithToken creates a new HTTP client with optional access token
