@@ -30,7 +30,7 @@ func PlanStaleOutputs(outputs []config.OutputFile) ([]StaleOutput, error) {
 	}
 	var stale []StaleOutput
 	for _, output := range outputs {
-		if output.IsDir || filepath.Base(output.Path) != provenanceFileName {
+		if !output.PluginInventory {
 			continue
 		}
 		bundleStale, err := planBundleStaleOutputs(output.Path, keep)
@@ -46,22 +46,12 @@ func PlanStaleOutputs(outputs []config.OutputFile) ([]StaleOutput, error) {
 
 func planBundleStaleOutputs(sidecar string, keep map[string]bool) ([]StaleOutput, error) {
 	root := filepath.Dir(sidecar)
-	if err := regularOutputPath(root, provenanceFileName); err != nil {
+	document, err := readPreviousProvenance(sidecar)
+	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, err
-	}
-	data, err := os.ReadFile(sidecar)
-	if err != nil {
-		return nil, oops.Wrapf(err, "read previous plugin provenance")
-	}
-	var document provenanceDocument
-	if err := json.Unmarshal(data, &document); err != nil {
-		return nil, oops.Wrapf(err, "parse previous plugin provenance")
-	}
-	if document.SchemaVersion != provenanceSchema {
-		return nil, oops.Errorf("unsupported plugin provenance schema %q", document.SchemaVersion)
 	}
 	var stale []StaleOutput
 	for rel, expected := range document.Outputs {
@@ -93,6 +83,27 @@ func planBundleStaleOutputs(sidecar string, keep map[string]bool) ([]StaleOutput
 		stale = append(stale, StaleOutput{Path: target, root: root, body: body})
 	}
 	return stale, nil
+}
+
+func readPreviousProvenance(sidecar string) (*provenanceDocument, error) {
+	if err := regularOutputPath(filepath.Dir(sidecar), provenanceFileName); err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(sidecar)
+	if err != nil {
+		return nil, oops.Wrapf(err, "read previous plugin provenance")
+	}
+	var document provenanceDocument
+	if err := json.Unmarshal(data, &document); err != nil {
+		return nil, oops.Wrapf(err, "parse previous plugin provenance")
+	}
+	if document.SchemaVersion != provenanceSchema {
+		return nil, oops.Errorf("unsupported plugin provenance schema %q", document.SchemaVersion)
+	}
+	if document.Outputs == nil || provenanceSourceHash(document.Outputs) != document.SourceHash {
+		return nil, oops.With("path", sidecar).Errorf("invalid previous plugin provenance inventory or source hash")
+	}
+	return &document, nil
 }
 
 // regularOutputPath refuses directories and symlinks, including symlinked

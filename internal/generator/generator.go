@@ -238,16 +238,18 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	// can be retried without losing the ownership record.
 	var files, inventories []config.OutputFile
 	for _, output := range outputs {
-		if !output.IsDir && filepath.Base(output.Path) == plugin.ProvenanceFileName {
+		if output.PluginInventory {
 			inventories = append(inventories, output)
 		} else {
 			files = append(files, output)
 		}
 	}
-	if err := g.writeOutputs(files); err != nil {
+	// Remove verified obsolete files before writing replacements, including
+	// resources that change from a file to a directory or back again.
+	if err := plugin.RemoveStaleOutputs(obsolete); err != nil {
 		return 0, err
 	}
-	if err := plugin.RemoveStaleOutputs(obsolete); err != nil {
+	if err := g.writeOutputs(files); err != nil {
 		return 0, err
 	}
 	if err := g.writeOutputs(inventories); err != nil {
@@ -352,7 +354,7 @@ func verifyPluginOutputs(expected []config.OutputFile) error {
 // marketplace wrote: the marketplace root and each plugin directory.
 func (g *Generator) verifyDomainPluginProvenance(expected []config.OutputFile) error {
 	for _, output := range expected {
-		if filepath.Base(output.Path) != plugin.ProvenanceFileName {
+		if !output.PluginInventory {
 			continue
 		}
 		dir := filepath.Dir(output.Path)

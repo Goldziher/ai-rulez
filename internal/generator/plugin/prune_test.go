@@ -22,11 +22,11 @@ func writePruneBundle(t *testing.T, root string) []config.OutputFile {
 		require.NoError(t, os.MkdirAll(filepath.Dir(output.Path), 0o750))
 		require.NoError(t, os.WriteFile(output.Path, output.RawContent, 0o600))
 	}
-	return []config.OutputFile{{Path: filepath.Join(root, provenanceFileName)}}
+	return []config.OutputFile{{Path: filepath.Join(root, provenanceFileName), PluginInventory: true}}
 }
 
 func TestPlanStaleOutputsSafety(t *testing.T) {
-	for _, scenario := range []string{"modified-header", "symlink-file", "symlink-parent", "traversal", "absolute", "directory", "unsupported-schema", "invalid-json"} {
+	for _, scenario := range []string{"modified-header", "symlink-file", "symlink-parent", "traversal", "absolute", "directory", "unsupported-schema", "invalid-json", "missing-inventory", "missing-entry"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			outputs := writePruneBundle(t, root)
@@ -63,6 +63,10 @@ func TestPlanStaleOutputsSafety(t *testing.T) {
 					doc.Outputs[external] = provenanceOutput{ContentHash: hashBytes(original)}
 				case "unsupported-schema":
 					doc.SchemaVersion = "v99"
+				case "missing-inventory":
+					doc.Outputs = nil
+				case "missing-entry":
+					delete(doc.Outputs, "skills/old/SKILL.md")
 				}
 				data, err = json.Marshal(doc)
 				require.NoError(t, err)

@@ -81,3 +81,54 @@ func TestGeneratePluginPrunesDomainBundleOutputs(t *testing.T) {
 	assert.FileExists(t, filepath.Join(dir, "mkt/plugins/teamb/skills/b-s/SKILL.md"))
 	require.NoError(t, gen.VerifyPlugin(""))
 }
+
+func TestGeneratePluginResourceLayoutTransitions(t *testing.T) {
+	for _, directoryFirst := range []bool{false, true} {
+		t.Run(map[bool]string{false: "file-to-directory", true: "directory-to-file"}[directoryFirst], func(t *testing.T) {
+			dir := newDomainsProject(t, "")
+			source := filepath.Join(dir, ".ai-rulez/skills/core-s/asset")
+			if directoryFirst {
+				writeDomainsFile(t, filepath.Join(source, "old.json"), "{}\n")
+			} else {
+				writeDomainsFile(t, source, "old\n")
+			}
+			gen := loadDomainsProject(t, dir)
+			require.NoError(t, gen.GeneratePlugin(""))
+			require.NoError(t, os.RemoveAll(source))
+			if directoryFirst {
+				writeDomainsFile(t, source, "new\n")
+			} else {
+				writeDomainsFile(t, filepath.Join(source, "new.json"), "{}\n")
+			}
+			gen = loadDomainsProject(t, dir)
+			require.NoError(t, gen.GeneratePlugin(""))
+			require.NoError(t, gen.VerifyPlugin(""))
+			if directoryFirst {
+				assert.FileExists(t, filepath.Join(dir, "skills/core-s/asset"))
+			} else {
+				assert.FileExists(t, filepath.Join(dir, "skills/core-s/asset/new.json"))
+			}
+		})
+	}
+}
+
+func TestGeneratePluginInventoryNamedResource(t *testing.T) {
+	dir := newDomainsProject(t, "")
+	fixture := ".ai-rulez-generated.json"
+	source := filepath.Join(dir, ".ai-rulez/skills/core-s/assets", fixture)
+	writeDomainsFile(t, source, "{\"test-fixture\":true}\n")
+	gen := loadDomainsProject(t, dir)
+	require.NoError(t, gen.GeneratePlugin(""))
+	require.NoError(t, gen.GeneratePlugin(""))
+	_, err := gen.DryRunPlugin("")
+	require.NoError(t, err)
+	target := filepath.Join(dir, "skills/core-s/assets", fixture)
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "{\"test-fixture\":true}\n", string(data))
+	require.NoError(t, os.Remove(source))
+	gen = loadDomainsProject(t, dir)
+	require.NoError(t, gen.GeneratePlugin(""))
+	assert.NoFileExists(t, target)
+	require.NoError(t, gen.VerifyPlugin(""))
+}

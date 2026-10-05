@@ -55,7 +55,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 
 	var drift []lint.PluginDrift
 	for path, sidecar := range byPath {
-		if filepath.Base(path) != plugin.ProvenanceFileName {
+		if !sidecar.PluginInventory {
 			continue
 		}
 		bundle := filepath.Dir(path)

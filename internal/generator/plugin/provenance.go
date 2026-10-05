@@ -32,7 +32,6 @@ type provenanceDocument struct {
 // JSON and binary artifacts remain byte-identical to keep runtime schemas valid.
 func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.OutputFile, error) {
 	entries := make(map[string]provenanceOutput, len(outputs))
-	paths := make([]string, 0, len(outputs))
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -43,16 +42,8 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		}
 		relativePath = filepath.ToSlash(relativePath)
 		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(outputBytes(output))}
-		paths = append(paths, relativePath)
 	}
-	sort.Strings(paths)
-
-	var sourceInput strings.Builder
-	sourceInput.WriteString("schema=" + provenanceSchema + "\n")
-	for _, path := range paths {
-		sourceInput.WriteString(path + "=" + entries[path].ContentHash + "\n")
-	}
-	sourceHash := hashBytes([]byte(sourceInput.String()))
+	sourceHash := provenanceSourceHash(entries)
 
 	decorated := make([]config.OutputFile, 0, len(outputs)+1)
 	for _, output := range outputs {
@@ -77,7 +68,22 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 	if err != nil {
 		return nil, err
 	}
+	sidecar.PluginInventory = true
 	return append(decorated, sidecar), nil
+}
+
+func provenanceSourceHash(outputs map[string]provenanceOutput) string {
+	paths := make([]string, 0, len(outputs))
+	for path := range outputs {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	var sourceInput strings.Builder
+	sourceInput.WriteString("schema=" + provenanceSchema + "\n")
+	for _, path := range paths {
+		sourceInput.WriteString(path + "=" + outputs[path].ContentHash + "\n")
+	}
+	return hashBytes([]byte(sourceInput.String()))
 }
 
 func outputBytes(output config.OutputFile) []byte {

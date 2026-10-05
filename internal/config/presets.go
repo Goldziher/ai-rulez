@@ -64,6 +64,9 @@ type OutputFile struct {
 	// headers). It is written owner-only (0600), and an existing file is
 	// tightened to that mode.
 	Sensitive bool
+	// PluginInventory identifies a bundle's generated provenance sidecar, so
+	// ordinary skill assets with the same filename remain payload files.
+	PluginInventory bool
 	// OmitsRules marks a root instruction file that leaves out the rules and
 	// context its tool reads from its own rules folder (junie's AGENTS.md in the
 	// split rules mode). When another preset writes the same path with every rule
