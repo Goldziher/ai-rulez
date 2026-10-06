@@ -194,16 +194,17 @@ func runFix(cmd *cobra.Command, args []string, out io.Writer) (int, error) {
 		}
 	}
 	if fixFlags.apply {
+		var writes []fileWrite
 		for _, p := range proposals {
-			if !p.Verified {
-				continue
+			if p.Verified {
+				writes = append(writes, fileWrite{abs: itemByID(res, p.Item).Abs, digest: p.Digest, text: p.Patched, label: p.Path})
 			}
-			ir := itemByID(res, p.Item)
-			if err := applyFile(ir.Abs, p.Digest, p.Patched); err != nil {
-				return 0, oops.Wrapf(err, "apply the fix to %s", p.Path)
-			}
-			result.Applied = append(result.Applied, p.Path)
 		}
+		applied, err := applyFiles(writes)
+		if err != nil {
+			return 0, oops.Wrapf(err, "apply the fixes")
+		}
+		result.Applied = applied
 	}
 	return exit, writeFixOutput(out, cmd, result, patch)
 }
@@ -333,20 +334,42 @@ func scanAdded(path, orig, patched string) []string {
 	return added
 }
 
-// applyFile writes patched over the file at abs when it is still the file the patch was made for
-// and has no uncommitted changes. The write keeps the file's mode and replaces it atomically.
-func applyFile(abs, digest, patched string) error {
-	data, mode, err := safefs.ReadRegularKeepMode(abs)
-	if err != nil {
-		return oops.Wrapf(err, "read %s", abs)
+// fileWrite is one verified rewrite: the file, the digest it must still have, and its new text.
+type fileWrite struct{ abs, digest, text, label string }
+
+// applyFiles writes every rewrite or none of them. Each file must still be the one its patch was
+// made for and be clean in git; all are checked before the first write, and a write that fails
+// puts the files already written back. The writes keep each file's mode and replace it atomically.
+func applyFiles(writes []fileWrite) ([]string, error) {
+	type original struct {
+		data []byte
+		mode os.FileMode
 	}
-	if got := rv.TextDigest(string(data)); got != digest {
-		return oops.Hint("run `ai-rulez review fix` again").Errorf("stale patch: the file changed since the patch was made (digest %s, patch for %s)", got, digest)
+	origs := make([]original, len(writes))
+	for i, w := range writes {
+		data, mode, err := safefs.ReadRegularKeepMode(w.abs)
+		if err != nil {
+			return nil, oops.Wrapf(err, "read %s", w.label)
+		}
+		if got := rv.TextDigest(string(data)); got != w.digest {
+			return nil, oops.Hint("run `ai-rulez review fix` again").Errorf("stale patch: %s changed since the patch was made (digest %s, patch for %s)", w.label, got, w.digest)
+		}
+		if err := requireCleanInGit(w.abs); err != nil {
+			return nil, err
+		}
+		origs[i] = original{data, mode}
 	}
-	if err := requireCleanInGit(abs); err != nil {
-		return err
+	var applied []string
+	for i, w := range writes {
+		if err := safefs.WriteFileAtomicMode(w.abs, []byte(w.text), origs[i].mode); err != nil {
+			for j := range i {
+				_ = safefs.WriteFileAtomicMode(writes[j].abs, origs[j].data, origs[j].mode) //nolint:errcheck // best-effort rollback; the write error is the one to report
+			}
+			return nil, oops.Wrapf(err, "write %s", w.label)
+		}
+		applied = append(applied, w.label)
 	}
-	return oops.Wrapf(safefs.WriteFileAtomicMode(abs, []byte(patched), mode), "write %s", abs)
+	return applied, nil
 }
 
 // requireCleanInGit refuses a file with uncommitted changes (or one outside a git repository,
@@ -432,8 +455,7 @@ func runFixFromPatch(cmd *cobra.Command, out io.Writer) (int, error) {
 	targets := patchTargets(rc)
 	growth := cfg.Review.FixMaxGrowthPercent()
 	result := fixOutput{}
-	type staged struct{ abs, digest, text string }
-	var apply []staged
+	var apply []fileWrite
 	for _, pf := range files {
 		abs := filepath.Join(cfg.BaseDir, filepath.FromSlash(pf.Path))
 		// A patch is a file anyone can hand over: it may edit only what a fix run could have edited, an
@@ -459,15 +481,14 @@ func runFixFromPatch(cmd *cobra.Command, out io.Writer) (int, error) {
 			return 0, oops.Errorf("the patch for %s adds security findings: %s", pf.Path, strings.Join(added, "; "))
 		}
 		result.Proposals = append(result.Proposals, &rv.FixProposal{Item: pf.Item, Path: pf.Path, Digest: pf.Digest, Verified: true, Note: "patch applies and passes its checks"})
-		apply = append(apply, staged{abs: abs, digest: pf.Digest, text: patched})
+		apply = append(apply, fileWrite{abs: abs, digest: pf.Digest, text: patched, label: pf.Path})
 	}
 	if fixFlags.apply {
-		for i, st := range apply {
-			if err := applyFile(st.abs, st.digest, st.text); err != nil {
-				return 0, oops.Wrapf(err, "apply the patch to %s", files[i].Path)
-			}
-			result.Applied = append(result.Applied, files[i].Path)
+		applied, err := applyFiles(apply)
+		if err != nil {
+			return 0, oops.Wrapf(err, "apply the patch")
 		}
+		result.Applied = applied
 	}
 	return 0, writeFixOutput(out, cmd, result, "")
 }
