@@ -81,6 +81,13 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 		defer os.RemoveAll(tmp) //nolint:errcheck // throwaway directory
 		dir = tmp
 	}
+	// A kept directory may hold the previous run's result and cases; a failed run
+	// must never be scored from them.
+	for _, stale := range []string{"aggregate.json", "results", "evals", "skills"} {
+		if err := os.RemoveAll(filepath.Join(dir, stale)); err != nil {
+			return nil, fmt.Errorf("clear stale %s: %w", stale, err)
+		}
+	}
 	translated, err := BuildClaudePlugin(dir, req)
 	if err != nil {
 		return nil, err
@@ -104,8 +111,13 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	defer cancel()
 	var stdout bytes.Buffer
 	runErr := run(runCtx, bin, args, &cappedWriter{w: &stdout, n: maxToolOutputBytes}, r.Stderr)
-	if errors.Is(runCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
-		runErr = fmt.Errorf("timed out after %s (raise --timeout): %w", timeout, runErr)
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("claude plugin eval interrupted: %w", ctx.Err())
+	}
+	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+		// The tool was killed mid-run: whatever it wrote is partial, so it is an error,
+		// not a score.
+		return nil, fmt.Errorf("claude plugin eval timed out after %s (raise --timeout): %w", timeout, errors.Join(runCtx.Err(), runErr))
 	}
 	data, readErr := os.ReadFile(resultFile) //nolint:gosec // the file this run was told to write
 	if readErr != nil {
@@ -161,7 +173,7 @@ func execCommand(ctx context.Context, bin string, args []string, stdout, stderr 
 	if stderr != nil {
 		cmd.Stderr = &cappedWriter{w: stderr, n: maxToolOutputBytes}
 	}
-	return cmd.Run()
+	return runTree(cmd)
 }
 
 // cappedWriter forwards at most n bytes and silently drops the rest, so the

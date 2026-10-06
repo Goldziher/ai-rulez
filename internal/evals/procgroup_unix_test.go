@@ -4,7 +4,9 @@ package evals
 
 import (
 	"context"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -49,4 +51,17 @@ func TestCommandAssertion_TimeoutKillsBackgroundChildren(t *testing.T) {
 	assert.NotEmpty(t, msg)
 	assert.Less(t, time.Since(start), 10*time.Second)
 	assert.True(t, processGone(t, pidFile))
+}
+
+func TestKillTreeOnCancel_GroupAlreadyGoneIsNotAFailure(t *testing.T) {
+	cmd := exec.CommandContext(context.Background(), "true")
+	killTreeOnCancel(cmd)
+	require.NoError(t, cmd.Run())
+
+	err := cmd.Cancel()
+
+	assert.False(t, errors.Is(err, syscall.ESRCH), "ESRCH must not surface: %v", err)
+	if err != nil {
+		assert.ErrorIs(t, err, os.ErrProcessDone)
+	}
 }

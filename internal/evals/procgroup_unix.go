@@ -17,14 +17,22 @@ func killTreeOnCancel(cmd *exec.Cmd) {
 		if cmd.Process == nil {
 			return nil
 		}
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
+			// The group is already gone (ESRCH) or cannot be signalled: kill the
+			// child itself so the cancel never reports a spurious failure.
+			return cmd.Process.Kill() //nolint:wrapcheck // os.ErrProcessDone is handled by exec
+		}
+		return nil
 	}
 	cmd.WaitDelay = 2 * time.Second
 }
 
+// runTree starts cmd and waits for it.
+func runTree(cmd *exec.Cmd) error { return cmd.Run() } //nolint:wrapcheck // the caller adds context
+
 // killTree kills the process group of a started cmd.
 func killTree(cmd *exec.Cmd) {
 	if cmd.Process != nil {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck // the group may already be gone
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck // ESRCH when nothing is left
 	}
 }

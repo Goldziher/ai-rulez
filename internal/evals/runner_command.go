@@ -64,7 +64,7 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	cmd.Stdout = &limitedWriter{w: &stdout, n: maxResponseBytes}
 	cmd.Stderr = r.Stderr
 	cmd.Env = append(cmd.Environ(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID)
-	if err := cmd.Run(); err != nil {
+	if err := runTree(cmd); err != nil {
 		return nil, fmt.Errorf("runner command failed: %w", err)
 	}
 	var resp Response
