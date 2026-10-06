@@ -1,0 +1,23 @@
+{
+  "name": "acme-skills",
+  "owner": {
+    "name": "Acme",
+    "email": "plugins@acme.test"
+  },
+  "metadata": {
+    "description": "Acme conventions",
+    "version": "1.4.0"
+  },
+  "plugins": [
+    {
+      "name": "acme-conventions",
+      "source": "plugins/acme-conventions",
+      "description": "Conventions",
+      "version": "1.4.0",
+      "category": "development",
+      "keywords": [
+        "conventions"
+      ]
+    }
+  ]
+}

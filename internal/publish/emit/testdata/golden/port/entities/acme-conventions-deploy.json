@@ -1,0 +1,13 @@
+{
+  "identifier": "acme-conventions-deploy",
+  "title": "deploy",
+  "properties": {
+    "commit": "0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e",
+    "description": "Deploy the service safely.",
+    "kind": "skill",
+    "plugin": "acme-conventions",
+    "repository": "acme/skills",
+    "version": "1.4.0"
+  },
+  "relations": {}
+}

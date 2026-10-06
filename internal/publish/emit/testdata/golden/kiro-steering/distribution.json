@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "target": ".kiro/steering",
+  "files": [
+    {
+      "path": ".kiro/steering/always-tests.md",
+      "size": 49,
+      "digest": "sha256:061c070e7cc1ec3044642748b842127dea518473412a14ed15a7664fbcf28446"
+    },
+    {
+      "path": ".kiro/steering/go-style.md",
+      "size": 71,
+      "digest": "sha256:453052d9b1bdf2d00681fe0ecb7e46c5211efe97a26ad34548d6e06eaeab1884"
+    },
+    {
+      "path": ".kiro/steering/review.md",
+      "size": 77,
+      "digest": "sha256:b6309a4d3174b7b082f70c8cced8906175c28d4ce9b0be334a18d268aab53da2"
+    },
+    {
+      "path": ".kiro/steering/skill-deploy.md",
+      "size": 110,
+      "digest": "sha256:d3ad50c0a5ed6a84d942e96c4925859598fb8d29fa562b988d69a9b1d5ecf0eb"
+    }
+  ]
+}

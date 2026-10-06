@@ -1,0 +1,19 @@
+{
+  "identifier": "acme-conventions",
+  "title": "acme-conventions",
+  "properties": {
+    "bundle": "acme-conventions-1.4.0.tar.gz",
+    "bundle_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "commit": "0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e",
+    "description": "Conventions",
+    "kind": "plugin",
+    "lock_tree": "sha256:6cd1000000000000000000000000000000000000000000000000000000000000",
+    "repository": "acme/skills",
+    "runtimes": [
+      "claude",
+      "cursor"
+    ],
+    "version": "1.4.0"
+  },
+  "relations": {}
+}
