@@ -236,6 +236,7 @@ func TestImprove_BundledNoOpAdapterRunsAsAChildAndIsRecorded(t *testing.T) {
 	assert.True(t, noCandidate, "a no-op adapter proposes nothing")
 	var report improve.Report
 	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	assert.Contains(t, errOut.String(), "builtin:noop (bundled adapter", "the consent summary names the adapter, not a long command line")
 	assert.Equal(t, "builtin:noop", report.Adapter)
 	require.Len(t, report.Rounds, 1)
 	assert.Equal(t, "rejected: no change", report.Rounds[0].Decision)
