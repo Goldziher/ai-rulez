@@ -160,7 +160,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	digest := digestStage(files)
 	key, cache := r.cacheFor(sc, binary, digest)
 	if key != "" {
-		if hit, found := cache.get(key); found && !r.opts.Scanner.DryRun {
+		if hit, found := r.cacheGet(sc, cache, key); found && !r.opts.Scanner.DryRun {
 			logger.Debug("Scanner result served from the cache", "scanner", sc.Name)
 			return r.fromCache(sc, files, hit), true
 		}
@@ -183,7 +183,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	spec.InheritEnv = false
 	spec.Env = st.env(sc.EnvPass, cmdrun.HostEnv())
 	if r.opts.Scanner.DryRun {
-		r.planStaged(sc, st, argv, spec, files, key != "", cacheState(cache, key))
+		r.planStaged(sc, st, argv, spec, files, key != "", r.cacheState(sc, cache, key))
 		return nil, true
 	}
 	norm, outOfScope, firstOut, ok := r.execStaged(sc, st, spec, argv, binary)
@@ -191,7 +191,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 		return nil, false
 	}
 	if key != "" {
-		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: r.probeVersion(binary)})
+		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: r.probeVersion(binary), Stored: r.clock().Unix()})
 	}
 	return r.convertFindings(sc, stagedScope(files), norm, outOfScope, firstOut), true
 }
@@ -249,19 +249,40 @@ func (r *runner) cacheFor(sc resolvedScanner, binary, digest string) (string, *S
 	if cache == nil || r.opts.Scanner.NoCache || sc.Egress == nil || *sc.Egress || binary == "" {
 		return "", nil
 	}
-	key, ok := scanKeyFor(sc, binary, digest, r.opts.Scanner.ShowSuppressed)
+	key, ok := scanKeyFor(sc, binary, digest, r.opts.Scanner.ShowSuppressed, r.isolationKey())
 	if !ok {
 		return "", nil
 	}
 	return key, cache
 }
 
-func cacheState(c *ScanCache, key string) string {
+// cacheGet reads a cached result, treating one that expired (launcher
+// scanners) as a miss.
+func (r *runner) cacheGet(sc resolvedScanner, c *ScanCache, key string) (cachedScan, bool) {
+	hit, ok := c.get(key)
+	if !ok || cacheExpired(sc, hit, r.clock()) {
+		return cachedScan{}, false
+	}
+	return hit, true
+}
+
+// isolationKey is the part of the cache key that says how a run is confined:
+// the policy mode and, when it can confine, the backend. It starts no process
+// (the backend is only looked up), so the lock can compute it.
+func (r *runner) isolationKey() string {
+	mode := policyOf(&r.lc).isolation
+	if mode == sandbox.ModeNone {
+		return string(mode) + "/"
+	}
+	return string(mode) + "/" + string(scannerSandbox.Backend())
+}
+
+func (r *runner) cacheState(sc resolvedScanner, c *ScanCache, key string) string {
 	switch {
 	case c == nil || key == "":
 		return "off"
 	default:
-		if _, ok := c.get(key); ok {
+		if _, ok := r.cacheGet(sc, c, key); ok {
 			return "hit"
 		}
 		return "miss"

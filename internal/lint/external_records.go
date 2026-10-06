@@ -75,8 +75,8 @@ func (r *runner) scanRecords(root string) []ScanRecord {
 		}
 		rec := ScanRecord{Scanner: sc.Name, Tree: digestStage(files)}
 		binary := lookExecutable(sc.Command[0], root)
-		if key, ok := scanKeyFor(sc, binary, rec.Tree, r.opts.Scanner.ShowSuppressed); ok {
-			if hit, found := cache.get(key); found {
+		if key, ok := scanKeyFor(sc, binary, rec.Tree, r.opts.Scanner.ShowSuppressed, r.isolationKey()); ok {
+			if hit, found := r.cacheGet(sc, cache, key); found {
 				rec.Cached, rec.Version = true, hit.Version
 				rec.Findings, rec.MaxSeverity, rec.Pass = summarize(sc, hit, threshold)
 			}

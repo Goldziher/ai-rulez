@@ -11,11 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // The scanner result cache. A staged scanner run is a function of the scanner
@@ -29,7 +32,14 @@ import (
 
 const (
 	// scanCacheVersion is bumped when the entry format or the key changes.
-	scanCacheVersion = 1
+	scanCacheVersion = 2
+	// scanMappingVersion is bumped when the way a report is parsed into findings
+	// (formats, severity mapping, path normalisation) changes, so an entry written
+	// by older mapping code is not served.
+	scanMappingVersion = 1
+	// launcherTTL is how long a result of a launcher scanner (npx, uvx, ...) is
+	// served: the tool it downloads can change without the launcher binary changing.
+	launcherTTL = 24 * time.Hour
 	// maxScanCacheEntry bounds one entry's size, on write and on read.
 	maxScanCacheEntry = 4 << 20
 	// scanCacheSecretFile is the per-user secret, next to the LLM cache's.
@@ -110,6 +120,31 @@ type cachedScan struct {
 	FirstOut   string          `json:"first_out,omitempty"`
 	// Version is the scanner's --version line at scan time ("" when unknown).
 	Version string `json:"version,omitempty"`
+	// Stored is when the entry was written (Unix seconds); 0 for an unknown time.
+	Stored int64 `json:"stored,omitempty"`
+}
+
+// launchers are the commands that download and run a tool: the scanner's
+// version is not the launcher binary's.
+var launchers = map[string]bool{
+	"npx": true, "pnpx": true, "bunx": true, "uvx": true, "pipx": true,
+	"uv": true, "npm": true, "pnpm": true, "yarn": true, "bun": true,
+}
+
+// cacheExpired reports whether a cached result of sc is too old to serve. Only
+// launcher scanners expire; an entry without a recorded time is expired.
+func cacheExpired(sc resolvedScanner, hit cachedScan, at time.Time) bool {
+	if len(sc.Command) == 0 {
+		return false
+	}
+	name := strings.ToLower(filepath.Base(strings.ReplaceAll(sc.Command[0], "\\", "/")))
+	for _, ext := range []string{".exe", ".cmd", ".bat"} {
+		name = strings.TrimSuffix(name, ext)
+	}
+	if !launchers[name] {
+		return false
+	}
+	return hit.Stored == 0 || at.Sub(time.Unix(hit.Stored, 0)) > launcherTTL
 }
 
 func toCached(found []externalFinding) []cachedFinding {
@@ -236,6 +271,14 @@ type scanCacheKeyInput struct {
 	Layout  string   `json:"layout,omitempty"`
 	Inputs  []string `json:"inputs"`
 	EnvPass []string `json:"env_pass,omitempty"`
+	// EnvValues are hashes of the env_pass values, in EnvPass order: a scanner's
+	// answer can depend on them (an endpoint, a rules path).
+	EnvValues []string `json:"env_values,omitempty"`
+	// Isolation is the mode and backend the run was confined with, so a result
+	// produced unconfined is never served to a run that requires confinement.
+	Isolation string `json:"isolation"`
+	// Mapping is scanMappingVersion.
+	Mapping int `json:"mapping"`
 	// SeverityMap is sorted "pattern=value" pairs.
 	SeverityMap []string `json:"severity_map,omitempty"`
 	MaxSeverity string   `json:"max_severity,omitempty"`
@@ -265,7 +308,7 @@ func digestStage(files []stagedFile) string {
 // The scanner's identity is its binary file (path, size, modification time) and
 // its command line; the version string is stored with the entry but is not part
 // of the key, so computing a key never starts a program.
-func scanKeyFor(sc resolvedScanner, binary, tree string, showSuppressed bool) (string, bool) {
+func scanKeyFor(sc resolvedScanner, binary, tree string, showSuppressed bool, isolation string) (string, bool) {
 	info, err := os.Stat(binary)
 	if binary == "" || err != nil {
 		return "", false
@@ -276,8 +319,31 @@ func scanKeyFor(sc resolvedScanner, binary, tree string, showSuppressed bool) (s
 	}
 	sort.Strings(smap)
 	return scanCacheKeyInput{
+		EnvValues: envValueHashes(sc.EnvPass, cmdrun.HostEnv()), Isolation: isolation, Mapping: scanMappingVersion,
 		V: scanCacheVersion, Scanner: sc.Name, Binary: binary, BinSize: info.Size(), BinTime: info.ModTime().UnixNano(),
 		Command: sc.Command, Format: sc.Format, Layout: sc.Layout, Inputs: sc.Inputs,
 		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, Suppressed: showSuppressed, Tree: tree,
 	}.hash(), true
+}
+
+// envValueHashes hashes the value of each named variable (unset differs from
+// empty), so the key changes with the environment while the cache file never
+// holds a value.
+func envValueHashes(names, parent []string) []string {
+	if len(names) == 0 {
+		return nil
+	}
+	vals := map[string]string{}
+	for _, kv := range parent {
+		if name, val, ok := strings.Cut(kv, "="); ok {
+			vals[name] = val
+		}
+	}
+	out := make([]string, len(names))
+	for i, name := range names {
+		v, set := vals[name]
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%t\x00%s", set, v)))
+		out[i] = hex.EncodeToString(sum[:8])
+	}
+	return out
 }
