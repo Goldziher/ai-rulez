@@ -1536,6 +1536,22 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
+### `[publish]`
+
+What [`ai-rulez publish`](publish.md) ships and its policy gates. All optional; it has no credential keys.
+
+| Key | Meaning |
+| --- | ------- |
+| `runtimes` | Plugin runtimes to publish (default: the `[plugin]` runtimes). `--runtime` overrides it. |
+| `require_signature` | Fail unless the archive is signed (`AR9N7`). |
+| `require_approved` | Fail unless every item `[governance]` selects has a valid approval (`AR9N8`). |
+| `allow_dirty` | Publish from a tree with uncommitted changes. |
+| `[publish.github_release] repo` | `OWNER/REPO` of the release. |
+| `[publish.oci] ref` | Repository `host/path` (no tag) of the OCI target. |
+| `[publish.npm]` | `scope` (`@acme`, required for the npm target), `access` (`restricted` or `public`), `registry` (https). |
+| `[publish.marketplace.channels]` | Channel name to the git ref its pinned marketplace index points at. |
+| `[[publish.emitters]]` | `name` (`template`, `cursor-team-marketplace`, `port`, `aws-agent-registry`, `kiro-steering`), `template` and `output` for the template emitter, `options` (for example `blueprint` for `port`). |
+
 ## Local overlay
 
 A `config.local.toml` file beside `config.toml` is a machine-local, gitignored overlay

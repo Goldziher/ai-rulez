@@ -21,7 +21,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site, `catalog diff` compares two catalogs ([Catalog](catalog.md)) |
 | `ai-rulez sbom`                 | CycloneDX 1.6 or SPDX 2.3 bill of materials of the AI configuration ([SBOM](sbom.md)) |
-| `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle; `--to github-release --execute --yes` uploads through `gh` ([Publish](publish.md)) |
+| `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle, optionally signed; `--to github-release\|npm\|oci --execute --yes` uploads ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
@@ -2219,19 +2219,28 @@ The machine-local overlay is never included. Nothing is rendered; the only file 
 
 ## Publish Command
 
-### `ai-rulez publish [verify <dir>]`
+### `ai-rulez publish [verify <dir|oci-ref> | emit <emitter>]`
 
 ```bash
-ai-rulez publish [--dist dist] [--to github-release] [--tag v1.4.0] [--repo OWNER/REPO]
+ai-rulez publish [--dist dist] [--to github-release|npm|oci] [--tag v1.4.0] [--repo OWNER/REPO] [--channel NAME]
+                 [--oci-ref host/path] [--npm-scope @acme] [--public]
+                 [--sign-key FILE | --sign-keyless] [--sbom] [--marketplace] [--emit NAME]... [--experimental]
+                 [--runtime R]... [--only NAME]... [--since TAG]
                  [--dry-run | --execute --yes [--force]] [--allow-dirty] [--template file]... [--format text|json]
-ai-rulez publish verify <dir> [--format text|json]
+ai-rulez publish verify <dir|oci-ref> [--key PUBLIC.pem]... [--identity ID --issuer URL] [--require-signature] [--format text|json]
+ai-rulez publish emit <emitter> [--out dir] [--experimental]
 ```
 
-Runs `validate --strict`, `lock --check`, `verify --plugin` and a secret scan, then writes a reproducible
-`<name>-<version>.tar.gz`, its manifest, `SHA256SUMS`, a copy of `ai-rulez.lock`, `RELEASE_NOTES.md` and
-`publish-plan.json` to `--dist`. `--dry-run` writes nothing. Only `--execute --yes` leaves the machine, by running the
-`gh` argv shown in the plan. `publish verify` recomputes every digest of a dist directory offline. Exit codes: 0 done,
-1 could not complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](publish.md).
+Runs `validate --strict`, `lock --check`, `verify --plugin`, a secret scan and the `[publish]` policy gates
+(`require_approved`, `require_signature`), then writes a reproducible `<name>-<version>.tar.gz`, its manifest,
+`SHA256SUMS`, a copy of `ai-rulez.lock`, `RELEASE_NOTES.md` (with the lock changes since the previous tag) and
+`publish-plan.json` to `--dist`. `--dry-run` writes nothing. Only `--execute --yes` leaves the machine: `gh release create`,
+`npm pack` then `npm publish`, or an OCI push with oras-go, as the plan shows. `--sign-key` and `--sign-keyless` sign the
+archive, `--sbom` ships the SBOM, `--marketplace` writes a Claude marketplace index pinned to the release commit (one per
+`--channel`), `--emit` runs an emitter and `--runtime` limits the bundle. A `[marketplace]` with members or domain plugins
+publishes one bundle per plugin (`--only`). `publish verify` recomputes every digest of a dist directory (or a pulled OCI
+artifact) offline and verifies the signature against the keys or identity you name. Exit codes: 0 done, 1 could not
+complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](publish.md).
 
 ## Scan Command
 
