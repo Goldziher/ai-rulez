@@ -77,6 +77,7 @@ func Collect(cfg *config.Config) []Item {
 	items = append(items, mcpItems(cfg, presets)...)
 	items = append(items, permissionItems(cfg, presets)...)
 	items = append(items, claudeSettingsItems(cfg, presets)...)
+	items = append(items, automationItems(cfg)...)
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Kind != items[j].Kind {
 			return items[i].Kind < items[j].Kind

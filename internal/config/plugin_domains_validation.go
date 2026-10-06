@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -35,6 +36,13 @@ func (m *MarketplaceAuthoring) validateDomainPlugins() error {
 		return oops.With("field", "marketplace.output_dir").With("value", m.OutputDir).
 			Hint("Use a project-relative directory that does not contain '..'").
 			Errorf("marketplace %q has an unsafe output_dir", m.Name)
+	}
+	if dir := filepath.ToSlash(filepath.Clean(m.OutputDir)); m.OutputDir != "" && dir != "." {
+		if err := ValidateOutputPath("marketplace.output_dir", m.OutputDir); err != nil {
+			return oops.With("field", "marketplace.output_dir").With("value", m.OutputDir).
+				Hint("Use a project-relative directory outside .git/ and .ai-rulez/").
+				Wrapf(err, "marketplace %q has an unsafe output_dir", m.Name)
+		}
 	}
 	if len(m.Members) > 0 && m.HasDomainPlugins() && m.OutputDir != "" && m.OutputDir != "." {
 		return oops.With("field", "marketplace.output_dir").
