@@ -313,6 +313,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	}
 	r.unit(unitOf("settings-config", AnalyzerHooks, AnalyzerSecurity), r.checkSettingsConfig)
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
+	r.unit(unitOf("improve-config", AnalyzerEvals), r.checkImproveConfig)
 	r.unit(unitOf("search-index", AnalyzerSearch, AnalyzerConfig), r.checkSearchIndex)
 	r.reportSuppressionAttempts()
 	r.checkMaxFindings()
