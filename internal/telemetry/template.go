@@ -41,8 +41,9 @@ var telemetryEvents = []string{HookInstructionsLoaded, HookSubagentStart, HookSu
 // and agent loads. For Claude Code it is the usage template (PreToolUse on the
 // Skill tool, UserPromptExpansion) plus InstructionsLoaded, SubagentStart and
 // SubagentStop; every handler is async with a short timeout because the recorders
-// only append to a local file. Codex and Cursor have no verified equivalents of
-// the three added events, so they get the usage template unchanged.
+// only append to a local file. Codex and Cursor document no instruction-load
+// event, so they get the usage template plus the subagent events they do document
+// (Codex SubagentStart/SubagentStop, Cursor subagentStart/subagentStop).
 func HookTemplate(options TemplateOptions) ([]byte, error) {
 	harness := options.Harness
 	if harness == "" {
@@ -67,9 +68,9 @@ func HookTemplate(options TemplateOptions) ([]byte, error) {
 		return nil, err
 	}
 	if harness != usage.HarnessClaude {
-		return base, nil
+		return otherHarnessJSON(base, harness, recordCommand(executable, options.Role, harness))
 	}
-	command := recordCommand(executable, options.Role)
+	command := recordCommand(executable, options.Role, usage.HarnessClaude)
 	if format == FormatTOML {
 		return []byte(tomlTemplate(base, command)), nil
 	}
@@ -106,8 +107,37 @@ func claudeJSON(base []byte, command string) ([]byte, error) {
 	return append(out, '\n'), nil
 }
 
-func recordCommand(executable, role string) string {
+// otherHarnessJSON adds the documented subagent events to the usage template of
+// Codex (nested matcher groups, like Claude Code) or Cursor (flat entries, camelCase
+// names, a documented per-hook timeout). Codex's `async` and `timeout` handler
+// fields are not documented, so they are not written.
+func otherHarnessJSON(base []byte, harness, command string) ([]byte, error) {
+	var doc map[string]any
+	if err := json.Unmarshal(base, &doc); err != nil {
+		return nil, oops.Wrapf(err, "decode usage template")
+	}
+	hooks, _ := doc["hooks"].(map[string]any) //nolint:errcheck // produced by usage.HookTemplate
+	if harness == usage.HarnessCursor {
+		for _, event := range []string{"subagentStart", "subagentStop"} {
+			hooks[event] = []any{map[string]any{"command": command, "timeout": hookTimeout}}
+		}
+	} else {
+		for _, event := range []string{HookSubagentStart, HookSubagentStop} {
+			hooks[event] = []any{map[string]any{"hooks": []any{map[string]any{"type": "command", "command": command}}}}
+		}
+	}
+	out, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return nil, oops.Wrapf(err, "encode hook template")
+	}
+	return append(out, '\n'), nil
+}
+
+func recordCommand(executable, role, harness string) string {
 	parts := []string{usage.ShellWord(executable), "telemetry", "record"}
+	if harness != usage.HarnessClaude {
+		parts = append(parts, "--harness", harness)
+	}
 	if role != "" {
 		parts = append(parts, "--role", singleQuote(role))
 	}
