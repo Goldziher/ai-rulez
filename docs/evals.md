@@ -248,7 +248,14 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
 - **Treated as data.** The rubric and the transcript go to the judge between markers that carry a token derived from
   the request, the judge is told to ignore instructions inside them, and its reply must be exactly one JSON object.
   Secret-looking text in the rubric or transcript makes that case ungraded (nothing is sent); an oversized transcript
-  is cut to its head and tail (64 KiB).
+  is cut to its head and tail (64 KiB). The judge call gets at least 2,048 completion tokens: the model layer's judge
+  asks for 300, which a reasoning model such as `gemini-2.5-flash` spends on its thinking before the verdict, leaving
+  a cut-off reply.
+- **Choose the model deliberately.** The grade is only as good as the judge. In a live comparison against Claude
+  Code's own rubric grading on 24 real transcripts, `gemini-2.5-flash-lite` agreed on 79% (Cohen's kappa 0.60) and
+  erred lenient (it passed a control rubric the answer plainly contradicted, and passed two answers that omitted a
+  required detail), while `gemini-2.5-flash` agreed on 96% (kappa 0.92). Check a cheap judge against a few labelled
+  transcripts before trusting its pass rate.
 - **Runners.** The command runner must return `output`. `claude-plugin-eval` returns the answer its own llm grader
   read; with `--grader builtin` that tool still runs its grader (so the rubric is judged twice and the tool's verdict is
   ignored) and the built-in grade decides. The claude adapter's results carry no transcript for cases without a rubric.
