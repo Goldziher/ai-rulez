@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
 )
 
 func TestBuild_SignsAReleaseAttestationBindingNameVersionAndDigests(t *testing.T) {
@@ -128,4 +131,27 @@ func TestVerify_TheArchiveMustNameTheManifestsPluginAndVersion(t *testing.T) {
 			assert.Contains(t, strings.Join(problemPaths(res), "\n"), tt.want)
 		})
 	}
+}
+
+func TestOCI_ASignedReleaseVerifiesAfterAPullThroughTheRegistry(t *testing.T) {
+	// Arrange: push a signed artifact, then pull it by digest into a fresh directory.
+	host := newRegistry(t)
+	signer, trust := keyPair(t)
+	in := ociInput(host + "/acme/skills/acme")
+	in.Sign = signedInput(t, signer).Sign
+	dir, d := writeBuilt(t, in)
+	_, err := ExecuteOCI(context.Background(), d.Plan, OCIExecuteOptions{Dir: dir})
+	require.NoError(t, err)
+	pulled := t.TempDir()
+
+	// Act
+	digest, err := PullOCI(context.Background(), oci.Target{Ref: host + "/acme/skills/acme@" + d.Plan.OCIDigest}, pulled)
+	require.NoError(t, err)
+	res, err := VerifyWith(pulled, VerifyChecks{Signature: trust})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, d.Plan.OCIDigest, digest)
+	assert.True(t, res.OK(), "%v", res.Problems)
+	assert.Equal(t, "verified", res.Signature)
 }
