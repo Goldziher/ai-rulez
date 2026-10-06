@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
@@ -107,6 +108,9 @@ type RunReport struct {
 	// PriceKnown is false when the model has no entry in the price table, so the
 	// estimate used the sonnet tier as a stand-in (--price-in and --price-out replace it).
 	PriceKnown bool `json:"price_known"`
+	// PricedAs names the tier the estimate was priced at when the run named no
+	// model (the harness picks its own, so the sonnet tier stands in); empty otherwise.
+	PricedAs string `json:"priced_as,omitempty"`
 	// Failed is set when a skill failed its threshold, errored or had invalid cases.
 	Failed bool `json:"failed"`
 }
@@ -151,8 +155,12 @@ func newEngine(opts *RunOptions) (*engine, error) {
 		e.threshold = *opts.PassThreshold
 	}
 	e.priceKnown = true
+	pricedAs := ""
 	if e.price == (Price{}) {
 		e.price, e.priceKnown = PriceFor(opts.Model)
+		if strings.TrimSpace(opts.Model) == "" || strings.EqualFold(opts.Model, "default") {
+			pricedAs = "sonnet"
+		}
 		if !e.priceKnown && opts.MaxCostUSD > 0 {
 			return nil, fmt.Errorf("model %q has no built-in price, so --max-cost cannot be checked: pass --price-in and --price-out, or use a model the price table lists", opts.Model)
 		}
@@ -166,7 +174,7 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner != nil {
 		e.runnerName = opts.Runner.Name()
 	}
-	e.report = &RunReport{Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown}
+	e.report = &RunReport{Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown, PricedAs: pricedAs}
 	return e, nil
 }
 
