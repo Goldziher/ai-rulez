@@ -30,6 +30,7 @@ nav = [
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Lock File" = "lockfile.md" },
+    { "Signing" = "signing.md" },
     { "Forge Client" = "forge.md" },
     { "Approvals" = "approvals.md" },
     { "SBOM" = "sbom.md" },

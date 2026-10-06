@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verify-attestation.schema.json",
+  "title": "ai-rulez verify --attestation",
+  "description": "Output of `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock (docs/signing.md).",
+  "type": "object",
+  "required": ["schema_version", "results"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subject", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "subject": { "enum": ["lock"], "description": "What was verified." },
+          "status": { "enum": ["valid", "invalid", "missing"] },
+          "code": {
+            "type": "string",
+            "pattern": "^AR72[0-9]$",
+            "description": "The AR code of the failure; absent when valid."
+          },
+          "name": { "type": "string", "description": "The registry name of code." },
+          "reason": { "type": "string", "description": "Why verification failed." },
+          "attestation": { "type": "string", "description": "The bundle file that was read." },
+          "signer": {
+            "type": "object",
+            "required": ["kind"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["key", "keyless"] },
+              "key_id": { "type": "string", "description": "sha256:<hex> fingerprint of the signing key (key mode)." },
+              "identity": { "type": "string", "description": "Certificate subject alternative name (keyless)." },
+              "issuer": { "type": "string", "description": "OIDC issuer (keyless)." }
+            }
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the transparency log or timestamp authority saw the signature; absent for a log-less key signature."
+          },
+          "logged": { "type": "boolean", "description": "The bundle carries a transparency log entry." },
+          "weak": {
+            "type": "boolean",
+            "description": "No log or timestamp: freshness rests on the signer's own claim."
+          },
+          "age_seconds": { "type": "integer", "description": "Seconds since the signature was made." },
+          "hash_version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
