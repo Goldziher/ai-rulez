@@ -16,6 +16,16 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
+// CodexProcess is one codex invocation: the program, its arguments, the directory
+// and environment it runs in, and the prompt on its standard input.
+type CodexProcess struct {
+	Bin   string
+	Args  []string
+	Dir   string
+	Env   []string
+	Stdin []byte
+}
+
 // defaultCodexRunTimeout bounds one run; a run is stopped at its first commands, so
 // this is a ceiling for a stuck process.
 const defaultCodexRunTimeout = 3 * time.Minute
@@ -52,7 +62,7 @@ type CodexNative struct {
 	Stderr    io.Writer
 	// Start runs one codex process and returns its stdout line by line; tests replace
 	// it. Nil starts a real process.
-	Start func(ctx context.Context, bin string, args []string, dir string, env []string, stdin []byte, onLine func(line []byte) (stop bool)) error
+	Start func(ctx context.Context, proc CodexProcess, onLine func(line []byte) (stop bool)) error
 }
 
 // Name implements Runner.
@@ -119,7 +129,7 @@ func (r *CodexNative) Run(ctx context.Context, req *Request) (*Response, error) 
 		runCtx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 		watch := &codexWatch{ids: ids}
-		err := start(runCtx, r.bin(), args, workDir, env, []byte(c.Prompt), watch.line)
+		err := start(runCtx, CodexProcess{Bin: r.bin(), Args: args, Dir: workDir, Env: env, Stdin: []byte(c.Prompt)}, watch.line)
 		return watch.outcome(err)
 	})
 }
@@ -233,12 +243,13 @@ func (w *codexWatch) outcome(runErr error) activationOutcome {
 
 // startProcessLines runs a process, feeds its stdout line by line to onLine and
 // kills its process group as soon as onLine returns true.
-func startProcessLines(ctx context.Context, bin string, args []string, dir string, env []string, stdin []byte, onLine func([]byte) bool) error {
+func startProcessLines(ctx context.Context, proc CodexProcess, onLine func([]byte) bool) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // the adapter's own argv; no shell involved
-	cmd.Dir, cmd.Env = dir, env
-	cmd.Stdin = bytes.NewReader(stdin)
+	bin := proc.Bin
+	cmd := exec.CommandContext(ctx, bin, proc.Args...) //nolint:gosec // the adapter's own argv; no shell involved
+	cmd.Dir, cmd.Env = proc.Dir, proc.Env
+	cmd.Stdin = bytes.NewReader(proc.Stdin)
 	isolateProcessGroup(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -301,13 +301,13 @@ func TestCodexNative_RunsThroughTheStartHookAndStopsEarly(t *testing.T) {
 	var gotArgs []string
 	var gotEnv []string
 	var skillFile bool
-	adapter := &CodexNative{Concurrency: 1, Start: func(_ context.Context, _ string, args []string, dir string, env []string, stdin []byte, onLine func([]byte) bool) error {
+	adapter := &CodexNative{Concurrency: 1, Start: func(_ context.Context, proc CodexProcess, onLine func([]byte) bool) error {
 		mu.Lock()
 		defer mu.Unlock()
-		gotArgs, gotEnv = args, env
-		_, err := os.Stat(filepath.Join(dir, ".agents", "skills", "release-notes", "SKILL.md"))
+		gotArgs, gotEnv = proc.Args, proc.Env
+		_, err := os.Stat(filepath.Join(proc.Dir, ".agents", "skills", "release-notes", "SKILL.md"))
 		skillFile = err == nil
-		assert.Equal(t, "deploy it", string(stdin))
+		assert.Equal(t, "deploy it", string(proc.Stdin))
 		for _, l := range strings.Split(strings.TrimSpace(codexSkillRead), "\n") {
 			if onLine([]byte(l)) {
 				stoppedEarly++
