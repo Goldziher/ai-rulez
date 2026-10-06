@@ -186,7 +186,8 @@ type Env struct {
 }
 
 // Run evaluates the configured verifiers: the [[verifiers]] of config.toml in
-// declaration order, then those of .ai-rulez/verifiers/*.toml.
+// declaration order (flat entries, then spec-form ones), then those of
+// .ai-rulez/verifiers/*.toml.
 func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	rep := &Report{Root: cfg.BaseDir, Results: []Result{}}
 	if opts.Since != "" && opts.Staged {
@@ -196,7 +197,9 @@ func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	specs, problems := LoadSpecs(cfg)
 	entries := make([]entry, 0, len(cfg.Verifiers)+len(specs))
 	for i := range cfg.Verifiers {
-		entries = append(entries, entry{id: cfg.Verifiers[i].Name, legacy: &cfg.Verifiers[i]})
+		if !cfg.Verifiers[i].IsSpec() {
+			entries = append(entries, entry{id: cfg.Verifiers[i].Name, legacy: &cfg.Verifiers[i]})
+		}
 	}
 	for i := range specs {
 		entries = append(entries, entry{id: specs[i].ID, spec: &specs[i]})

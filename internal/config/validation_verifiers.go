@@ -44,6 +44,13 @@ func validateVerifierName(v *VerifierConfig, field string, seen map[string]bool)
 }
 
 func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
+	if v.IsSpec() {
+		return validateVerifierSpecForm(v, field)
+	}
+	if extra := verifierSpecFieldsSet(v); len(extra) > 0 {
+		return oops.Hint("Spec-form fields need an entry without type; a typed entry uses the flat fields.").
+			Errorf("verifier %s sets %s, which does not apply to type %s", field, strings.Join(extra, ", "), v.Type)
+	}
 	known := false
 	for _, t := range VerifierTypes {
 		known = known || t == v.Type
@@ -196,4 +203,70 @@ func validateVerifierRegex(v *VerifierConfig, field string) error {
 		return oops.Wrapf(err, "invalid verifier %s.pattern", field)
 	}
 	return validateVerifierGlobs(v, field)
+}
+
+// verifierSpecFieldsSet names the spec-form-only fields that are set.
+func verifierSpecFieldsSet(v *VerifierConfig) []string {
+	var set []string
+	for _, f := range []struct {
+		name string
+		on   bool
+	}{
+		{"rule", v.Rule != ""}, {"skill", v.Skill != ""}, {"agent", v.Agent != ""}, {"command", v.Command != ""},
+		{"anchor", v.Anchor != ""}, {"message", v.Message != ""}, {"fix", v.Fix != ""},
+		{"when_changed", len(v.WhenChanged) > 0}, {"require", v.Require != nil}, {"examples", len(v.Examples) > 0},
+	} {
+		if f.on {
+			set = append(set, f.name)
+		}
+	}
+	return set
+}
+
+// validateVerifierSpecForm checks the shape of a spec-form entry: severity, no
+// flat-only fields, exactly one enforced item, a predicate. The predicate tree,
+// globs and examples are validated by the verifier loader (AR9H2), which also
+// resolves the enforced item against the content tree.
+func validateVerifierSpecForm(v *VerifierConfig, field string) error {
+	switch v.Severity {
+	case "", "error", "warning", "info":
+	default:
+		return oops.Hint("Use one of: error, warning, info.").
+			Errorf("invalid verifier severity %q at %s.severity", v.Severity, field)
+	}
+	var flat []string
+	for _, f := range []struct {
+		name string
+		on   bool
+	}{
+		{"path", v.Path != ""}, {"glob", v.Glob != ""}, {"pattern", v.Pattern != ""}, {"min", v.Min != nil},
+		{"max", v.Max != nil}, {"key", v.Key != ""}, {"equals", v.Equals != nil}, {"profile", v.Profile != ""},
+	} {
+		if f.on {
+			flat = append(flat, f.name)
+		}
+	}
+	if len(flat) > 0 {
+		return oops.Hint("Set type to use the flat form, or declare the check under require.").
+			Errorf("verifier %s sets %s, which does not apply without a type", field, strings.Join(flat, ", "))
+	}
+	n := 0
+	for _, t := range []string{v.Rule, v.Skill, v.Agent, v.Command} {
+		if t != "" {
+			n++
+		}
+	}
+	if n != 1 {
+		return oops.Hint("Set type for a flat check, or one of rule, skill, agent, command for a spec.").
+			Errorf("verifier %s needs a type, or exactly one of rule, skill, agent or command", field)
+	}
+	if v.Require == nil {
+		return oops.Errorf("verifier %s needs a require predicate", field)
+	}
+	for i, g := range append(append([]string{}, v.WhenChanged...), v.Exclude...) {
+		if _, err := vspec.CompileGlob(g); err != nil {
+			return oops.Wrapf(err, "invalid verifier %s glob #%d %q", field, i, g)
+		}
+	}
+	return nil
 }

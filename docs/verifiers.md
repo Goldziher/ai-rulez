@@ -7,9 +7,10 @@ shipped code, `package.json` pins the Node version the rules mention, generated 
 A verifier never uses the network, never starts a process and never writes. The same input gives the same
 result.
 
-Two forms exist. The flat `[[verifiers]]` entries of `config.toml` below check the whole repository. The
-rule-linked specs under `.ai-rulez/verifiers/*.toml` ([next section](#rule-linked-verifiers)) attach a check
-to the rule or skill it enforces, run on changed files only, and can combine predicates.
+Two forms exist. The flat `[[verifiers]]` entries of `config.toml` (with a `type`) check the whole repository. The
+rule-linked specs ([next section](#rule-linked-verifiers)) attach a check to the rule or skill it enforces, run
+on changed files only, and can combine predicates. A spec lives in `.ai-rulez/verifiers/*.toml` or, without a
+`type`, inline under `[[verifiers]]` in `config.toml`.
 
 ```toml
 [[verifiers]]
@@ -147,7 +148,22 @@ expect = "pass"
 ```
 
 `id` is lowercase letters, digits, `.`, `_`, `-`, and unique across `config.toml` and every spec file. Unknown
-keys are an error. The format has a JSON Schema,
+keys are an error.
+
+The same fields can be declared inline in `config.toml`: an entry without `type` is a spec, its `name` is the
+`id`, and `[verifiers.require.*]` / `[[verifiers.examples]]` nest under it. `config.toml` checks the shape
+(exactly one of `rule`, `skill`, `agent`, `command`, a `require`, valid globs); the predicate tree and the
+enforced item are checked on every run and reported as `AR9H2` like a file spec.
+
+```toml
+[[verifiers]]
+name = "no-todo"
+rule = "style"
+when_changed = ["src/**/*.go"]
+
+[verifiers.require.forbid]
+regex = "TODO"
+``` The format has a JSON Schema,
 [`schema/verifiers-spec.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-spec.schema.json).
 
 ### Predicates
@@ -245,8 +261,8 @@ without examples are listed.
 ### Design decisions
 
 - Rule-linked specs live in `.ai-rulez/verifiers/*.toml`; flat `[[verifiers]]` in `config.toml` keep working
-  unchanged and have no rule link. Declaring rule-linked fields (`rule`, `fix`, `when_changed`, combinators) in
-  `config.toml` itself is not available yet. A spec `id` may not repeat a `config.toml` name.
+  unchanged and have no rule link. Rule-linked fields (`rule`, `fix`, `when_changed`, combinators) may also be
+  declared inline in `config.toml` by omitting `type`. A spec `id` may not repeat a `config.toml` name.
 - `severity` defaults to `warning` for specs (as the design proposes) and to `error` for flat entries (their
   existing behaviour).
 - Predicates are tables (`[verifiers.require.regex]`), not keys on `require`, so `regex` is one name for the
@@ -269,5 +285,4 @@ shared one with the same name.
 Not available: the `command` predicate that runs a program and checks its exit status (it will reuse the
 hardened command runner, behind `--allow-exec`), LLM checklist verifiers, `verifiers suggest`, lock pinning of
 verifiers (kind `verifier`) and import restrictions for verifiers that arrive through includes, `AR9H3` and
-`AR9H4`, the `AR9H6` missing-examples rule and the `[verifiers_settings]` table, and rule-linked fields in
-`config.toml` itself.
+`AR9H4`, the `AR9H6` missing-examples rule and the `[verifiers_settings]` table.
