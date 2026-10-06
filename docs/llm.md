@@ -111,7 +111,7 @@ Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use
 | Backend | Build | Notes |
 | --- | --- | --- |
 | `openaicompat` | always (pure Go, `net/http`) | chat (JSON-schema `response_format`), embeddings; no streaming; no new dependencies |
-| `literllm` | `-tags literllm`, cgo, separate module | experimental; same request/response shapes over the liter-llm FFI; 165 providers via `provider/model` |
+| `literllm` | `-tags literllm`, cgo, separate module | experimental; same request/response shapes over the liter-llm FFI; 174 providers via `provider/model` |
 
 `backend = "auto"` picks `literllm` when it is compiled in and `openaicompat` otherwise. Choosing `literllm` in a binary without it is an `AR9L0` error that says how to build it.
 
@@ -119,16 +119,17 @@ For `openaicompat` the `model` is sent verbatim (so a gateway sees exactly the n
 
 ## The optional `literllm` backend
 
-[liter-llm](https://github.com/xberg-io/liter-llm) is a Rust client with one interface for 165 providers (`provider/model` names, keys from the provider's environment variable, its own cache, budget, rate limit and cost tracking). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`.
+[liter-llm](https://github.com/xberg-io/liter-llm) is a Rust client with one interface for 174 providers (`provider/model` names, keys from the provider's environment variable, its own cache, budget, rate limit and cost tracking). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`.
 
-What ai-rulez relies on, checked against v2.1.2 (commit `08d481b`) on macOS arm64:
+What ai-rulez relies on, ported to liter-llm 2.1.3 and checked against its release commit (`4ad174d`, built locally) on macOS arm64. 2.1.3 is not published yet: until it is, `internal/llm/literllm/go.mod` stays on v2.1.2, which does not compile against this adapter (it needs `ChatWithContext` and typed errors), so a `literllm` build needs a workspace `replace` to a 2.1.3 checkout. When v2.1.3 ships, bump the one `require` line in `internal/llm/literllm/go.mod` and its `go.sum`.
 
-- `CreateClient(apiKey, baseURL, timeoutSecs, maxRetries, modelHint)`, `Chat(req)`, `Embed(req)` and `Free()`; request and response JSON is OpenAI-shaped, so the adapter reuses the same encoder and decoder as `openaicompat`. `response_format` with a JSON schema reaches the server.
+- `CreateClient(apiKey, baseURL, timeoutSecs, maxRetries, modelHint)`, `ChatWithContext(ctx, req)`, `EmbedWithContext(ctx, req)` and `Free()`; request and response JSON is OpenAI-shaped, so the adapter reuses the same encoder and decoder as `openaicompat`. `response_format` with a JSON schema reaches the server. The configured `provider/model` is passed as the `modelHint`, which is what lets liter-llm strip the provider prefix when `base_url` is set.
+- Typed errors: `*literllm.Error` carries the variant (`Authentication`, `RateLimited`, `Timeout`, ...), HTTP status, a transient flag and `RetryAfter`. The adapter classifies by variant and never reads message text; a failure that is not typed is a permanent provider error.
 - Nothing else: ai-rulez keeps its own cache, budget, retry and redaction so they behave the same for both backends (liter-llm's budget is USD-only and it does not return a per-response cost).
 
 How it is linked, and why it is not in the default build:
 
-- The binding's API exists only when cgo is on (its code is all `import "C"`), and it needs the native library at link time, so importing it would break `CGO_ENABLED=0` builds. The release tarball `liter-llm-go-v2.1.2-<platform>.tar.gz` holds `include/liter_llm.h`, the static `lib/libliter_llm_ffi.a` (about 169 MB on macOS arm64) and a dynamic library (about 22 MB).
+- The binding's API exists only when cgo is on (its code is all `import "C"`), and it needs the native library at link time, so importing it would break `CGO_ENABLED=0` builds. The release tarball `liter-llm-go-v2.1.3-<platform>.tar.gz` holds `include/liter_llm.h`, the static `lib/libliter_llm_ffi.a` (about 169 MB on macOS arm64) and a dynamic library (about 22 MB).
 - ai-rulez therefore keeps the binding in a nested module, `internal/llm/literllm` (its `go.mod` is the only place the binding is required), and a file guarded by `//go:build literllm && cgo` in `internal/llm` that registers it. The main module's `go.mod` and `go.sum` never mention liter-llm, `go list -deps ./...` shows nothing from it, and `CGO_ENABLED=0 go build ./...` is unchanged.
 - The adapter is a thin shell over JSON: the request and response mapping and the error classification live in cgo-free code that the default tests cover with a stub `NativeClient`.
 
@@ -141,7 +142,7 @@ How it is linked, and why it is not in the default build:
 
    ```sh
    GOWORK=$PWD/literllm.work CGO_ENABLED=1 \
-     CGO_LDFLAGS="-L/path/to/static-lib-dir -framework Security -framework CoreFoundation -framework SystemConfiguration -liconv -lresolv" \
+     CGO_LDFLAGS="-L/path/to/static-lib-dir" \
      go build -tags literllm -o ai-rulez ./cmd/ai-rulez
    ```
 
@@ -151,28 +152,29 @@ The bridge module's own tests are compiled only with `-tags literllm` (and cgo),
 `internal/llm/literllm` finds nothing to build or run when the binding or the static library is not available. To run
 them, set `CGO_LDFLAGS` as above and `go test -tags literllm ./...` from that directory.
 
-The `-framework ...` flags are the macOS system libraries the static library needs and does not declare. The equivalent Linux and Windows flags are not documented upstream.
+Since 2.1.3 the binding's cgo preamble declares the system libraries (macOS frameworks, `-lm -ldl -lpthread -lrt` on Linux), so `-L` is the only flag. Its own `-L` points at a bundled dynamic library; yours comes first, so the static one wins when it is the only `libliter_llm_ffi` in your directory.
 
 ### Verified and not verified
 
-Verified here: on macOS arm64 with v2.1.2, the module compiles and links statically with the flags above; `llm doctor --ping` works end to end through both backends against a local OpenAI-compatible server (Authorization header, model name, `max_tokens`, JSON-schema `response_format`); the bridge module's own tests pass against the real library (chat, embeddings, idempotent `Free`, use-after-`Free` returns an error); the `internal/llm` tests pass with `-tags literllm` (so the native backend is registered and `auto` selects it); the default build has no trace of liter-llm (`CGO_ENABLED=0 go build ./...`, `go list -deps`, `go version -m`).
+Verified here, on macOS arm64 with the locally built 2.1.3 (`4ad174d`): the module compiles and links statically with `-L` alone (binary 81 MB against 42 MB for the default build, which is unchanged); the bridge module's tests pass against the real library (chat, embeddings, idempotent `Free`, use-after-`Free` returns an error, typed `Authentication` / `RateLimited` (with `Retry-After`) / `Timeout` errors, prompt cancellation through the context, provider-prefix stripping with a `base_url`); the `internal/llm` tests pass with `-tags literllm`; `llm doctor --ping` returns `ok` through both backends against Gemini.
 
-Not verified: Linux, Windows and macOS x86_64 builds (the release has assets for them; the link flags above are macOS-only); behaviour against real providers; concurrent use of one client from several goroutines; running on a macOS older than the one the library was built on (its C objects carry a deployment target of 26.5, the Rust ones 11.0).
+Live parity (`AI_RULEZ_LIVE_LLM=1 go test -tags literllm -run TestLive ./internal/llm`, needs `GEMINI_API_KEY`) against Gemini, `gemini-2.5-flash-lite` and `gemini-embedding-001`: chat, JSON-schema `response_format` and embeddings succeed on both backends (`openaicompat` through Google's OpenAI-compatible endpoint, `literllm` through its native Gemini route), and a bad key (Gemini answers HTTP 400, not 401, so both report a permanent `provider` error) and a 1 ms timeout (`timeout`, transient) are classified identically.
+
+Not verified: Linux, Windows and macOS x86_64 builds; providers other than Gemini; concurrent use of one client from several goroutines; running on a macOS older than the one the library was built on (2.1.3 pins the C objects to 11.0, not checked here).
 
 ### Limitations
 
-- **Binary size.** Linking it added about 39 MB to a 34 MB CLI (72 MB total). The library has no slim feature set for chat and embeddings only.
-- **No cancellation.** The binding's `Chat` and `Embed` take no context. The adapter abandons a call when its context ends; the call finishes in the background and `Close` waits for it.
-- **Flat errors.** The binding returns `"[2] rate limited: ..."` strings, not typed errors (upstream #244); the adapter classifies by message text (corpus-tested, unknown messages are never retried) and redacts keys. Also open upstream: #245 (no `context.Context`), #246 (`(nil, nil)` on a serialisation failure, treated as an error here), #249 (model prefix with a custom `base_url`), #247 and #248 (static link and macOS deployment target), #250 to #252 (slim build). Re-check them on each bump of the pinned module and drop the matching note here.
-- **Model prefix.** With a `base_url`, liter-llm sends `provider/model` to the server unchanged, which strict OpenAI-compatible servers reject. Configure `model` without a prefix and leave `provider` empty when you use `base_url` with `literllm`, or use `openaicompat`.
+- **Binary size.** Linking it adds about 39 MB to a 42 MB CLI (81 MB total, macOS arm64). The release asset has no slim feature set (upstream #250 and #252 only changed the documentation).
+- **Provider schema dialects.** liter-llm translates `response_format` into the provider's native form. Gemini's native API rejects `additionalProperties` in a schema (HTTP 400), and the built-in judge sends `additionalProperties: false`, so judge calls through `literllm` to Gemini fail; use `openaicompat` with Gemini's OpenAI-compatible endpoint, or another provider, until that is handled.
+- **Model prefix.** With a `base_url`, liter-llm strips only the `provider/` prefix named by the model hint (now the configured `provider`), so `provider = "openai"`, `model = "gpt-4o-mini"` reaches a strict server as `gpt-4o-mini`. Without a configured provider the model is sent verbatim.
 - **Platforms.** Release assets exist for macOS (arm64, x86_64), Linux glibc (x86_64, aarch64) and Windows (x86_64, aarch64); none for musl.
-- **Status: experimental.** The adapter follows the documented API of a pre-stable binding. Problems found while building it are tracked upstream.
+- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because 2.1.3 is unreleased (the pin is still 2.1.2 and a build needs a local `replace`), only macOS arm64 and only one provider have been exercised, and the Gemini schema gap above exists.
 
 ### Licensing
 
 liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). A release that bundles the static library redistributes that code: ship the MIT notice and the third-party notices of the library (`cargo about` or the upstream attribution file) with the binary. The default build contains none of it.
 
-Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.2`, in `internal/llm/literllm/go.mod` only.
+Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.2`, in `internal/llm/literllm/go.mod` only. The adapter needs v2.1.3 or later; bump it when that release is published.
 
 ## Using it from a feature
 

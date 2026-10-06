@@ -3,26 +3,38 @@ package llm
 import (
 	"context"
 	"errors"
-	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // NativeClient is the byte-level surface of the liter-llm binding as this
 // package uses it. The binding's own types stay outside this module (see
-// internal/llm/literllm); only OpenAI-shaped JSON crosses the boundary. The
-// methods are blocking and cannot be canceled by the binding, so the adapter
-// abandons a call when its context ends.
+// internal/llm/literllm); only OpenAI-shaped JSON crosses the boundary. Ending
+// the context aborts the in-flight native request (liter-llm 2.1.3 and later).
 type NativeClient interface {
-	ChatJSON(req []byte) ([]byte, error)
-	EmbedJSON(req []byte) ([]byte, error)
+	ChatJSON(ctx context.Context, req []byte) ([]byte, error)
+	EmbedJSON(ctx context.Context, req []byte) ([]byte, error)
 	Free()
+}
+
+// NativeError is the typed failure a NativeClient returns for a provider or
+// transport error. NativeVariant is the liter-llm error variant name
+// ("RateLimited", "Authentication", "Timeout", ...); it is the only thing the
+// classifier reads, never message text.
+type NativeError interface {
+	error
+	NativeVariant() string
+	NativeStatus() int
+	NativeTransient() bool
+	NativeRetryAfter() time.Duration
 }
 
 // NativeConfig is what a native factory needs to create a client.
 type NativeConfig struct {
 	APIKey         string
 	BaseURL        string // empty: provider routing decides
+	ModelHint      string // the configured provider/model; lets the binding strip the provider prefix when BaseURL is set
 	TimeoutSeconds int
 	MaxRetries     int
 }
@@ -74,7 +86,7 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 			return nil, newError(KindAuth, "environment variable %s (api_key_env) is empty or unset", cfg.APIKeyEnv)
 		}
 	}
-	n, err := f(NativeConfig{APIKey: key, BaseURL: cfg.BaseURL, TimeoutSeconds: int(cfg.Timeout().Seconds()), MaxRetries: 0})
+	n, err := f(NativeConfig{APIKey: key, BaseURL: cfg.BaseURL, ModelHint: cfg.FullModel(), TimeoutSeconds: int(cfg.Timeout().Seconds()), MaxRetries: 0})
 	if err != nil {
 		return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
 	}
@@ -88,62 +100,41 @@ func embedFull(cfg Config) string {
 	return cfg.EmbeddingModel
 }
 
-// run executes a blocking native call, returning early when ctx ends. The
-// abandoned call finishes in the background; its result is dropped.
-func run(ctx context.Context, call func() ([]byte, error)) ([]byte, error) {
-	type result struct {
-		b   []byte
-		err error
-	}
-	ch := make(chan result, 1)
-	go func() {
-		b, err := call()
-		ch <- result{b, err}
-	}()
-	select {
-	case r := <-ch:
-		return r.b, r.err
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-}
-
-// classifyNative maps the binding's flat "[code] message" errors onto typed errors.
-// This is the one place the message text is interpreted (upstream liter-llm #244:
-// the binding flattens its typed errors, so sentinels never match). A message it
-// does not recognise maps to a permanent provider error: never retried, and an
-// error is never cached. The corpus in native_classify_test.go pins the strings
-// this relies on, so a reworded upstream message fails CI instead of silently
-// changing retry, budget or gate behaviour.
+// classifyNative maps a typed liter-llm error onto the package's errors by its
+// variant. A failure that is not a NativeError (a request that could not be
+// built, a closed client) is a permanent provider error: never retried, and an
+// error is never cached. The variant names are pinned by native_classify_test.go.
 func classifyNative(err error) error {
 	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
-	msg := RedactSecrets(err.Error())
-	e := &Error{Kind: KindProvider, Message: msg, permanent: true}
-	switch l := strings.ToLower(msg); {
-	case strings.Contains(l, "authentication") || strings.Contains(l, "unauthorized") || nativeStatusRe(l, "401", "403"):
-		e.Kind, e.permanent = KindAuth, false
-	case strings.Contains(l, "rate limit") || strings.Contains(l, "ratelimit") || nativeStatusRe(l, "429"):
-		e.Kind, e.permanent = KindRateLimit, false
-	case strings.Contains(l, "context window") || strings.Contains(l, "context length") || strings.Contains(l, "context_length"):
-		e.Kind, e.permanent = KindContextLength, false
-	case strings.Contains(l, "budget"):
-		e.Kind, e.permanent = KindBudget, false
+	var ne NativeError
+	if !errors.As(err, &ne) {
+		return &Error{Kind: KindProvider, Message: RedactSecrets(err.Error()), permanent: true}
+	}
+	e := &Error{Kind: KindProvider, Message: RedactSecrets(ne.Error()), Status: ne.NativeStatus(), RetryAfter: ne.NativeRetryAfter()}
+	switch ne.NativeVariant() {
+	case "Authentication":
+		e.Kind = KindAuth
+	case "RateLimited":
+		e.Kind = KindRateLimit
+	case "ContextWindowExceeded":
+		e.Kind = KindContextLength
+	case "BudgetExceeded":
+		e.Kind = KindBudget
+	case "Timeout":
+		e.Kind = KindTimeout
+	case "ServerError", "ServiceUnavailable":
+		e.permanent = !ne.NativeTransient() && e.Status == 0
 	default:
-		// A server-side failure the binding reports by HTTP status is worth a retry.
-		for _, code := range []int{500, 502, 503, 504} {
-			if nativeStatusRe(l, strconv.Itoa(code)) {
-				e.Status, e.permanent = code, false
-				break
-			}
-		}
+		// BadRequest, NotFound, ContentPolicy, Serialization, ...: a retry cannot fix them.
+		e.permanent = true
 	}
 	return e
 }
 
 // errEmptyNative is returned when the binding reports neither a result nor an error
-// (upstream liter-llm #246: a serialisation failure surfaces as (nil, nil)).
+// (defensive; liter-llm 2.1.3 returns an error instead).
 var errEmptyNative = permanentError("liter-llm returned an empty reply without an error")
 
 func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
@@ -155,7 +146,7 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if err != nil {
 		return ChatResponse{}, newError(KindConfig, "cannot encode request: %v", err)
 	}
-	out, err := run(ctx, func() ([]byte, error) { return l.native.ChatJSON(body) })
+	out, err := l.native.ChatJSON(ctx, body)
 	if err != nil {
 		return ChatResponse{}, classifyNative(err)
 	}
@@ -177,7 +168,7 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	if err != nil {
 		return EmbedResponse{}, newError(KindConfig, "cannot encode request: %v", err)
 	}
-	out, err := run(ctx, func() ([]byte, error) { return l.native.EmbedJSON(body) })
+	out, err := l.native.EmbedJSON(ctx, body)
 	if err != nil {
 		return EmbedResponse{}, classifyNative(err)
 	}
@@ -191,27 +182,3 @@ func (l *literLLM) Close() error {
 	l.native.Free()
 	return nil
 }
-
-// nativeStatusRe reports whether msg carries one of the HTTP status codes as a
-// whole number (not inside a longer digit run such as a request id).
-func nativeStatusRe(msg string, codes ...string) bool {
-	for _, c := range codes {
-		for from := 0; ; {
-			i := strings.Index(msg[from:], c)
-			if i < 0 {
-				break
-			}
-			i += from
-			end := i + len(c)
-			before := i == 0 || !isDigit(msg[i-1])
-			after := end >= len(msg) || !isDigit(msg[end])
-			if before && after {
-				return true
-			}
-			from = end
-		}
-	}
-	return false
-}
-
-func isDigit(b byte) bool { return b >= '0' && b <= '9' }

@@ -8,7 +8,7 @@ import literllm "github.com/Goldziher/ai-rulez/v5/internal/llm/literllm"
 // also uses the nested module internal/llm/literllm; see docs/llm.md.
 func init() {
 	RegisterNative(func(c NativeConfig) (NativeClient, error) {
-		n, err := literllm.New(c.APIKey, c.BaseURL, c.TimeoutSeconds, c.MaxRetries)
+		n, err := literllm.New(c.APIKey, c.BaseURL, c.ModelHint, c.TimeoutSeconds, c.MaxRetries)
 		if err != nil {
 			return nil, err
 		}
