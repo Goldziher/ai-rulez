@@ -53,6 +53,14 @@ func hostileDoc() *govview.CatalogDocV2 {
 		Lint: govview.CatalogLint{Available: true, Summary: govview.LintSummary{Warnings: 1}, ByCode: map[string]int{},
 			Unattributed: []govview.ProjectFinding{{LintFinding: govview.LintFinding{Code: hostile[1], Severity: "error", Message: hostile[2]}, File: hostile[3]}}},
 	}
+	yes := true
+	for i, h := range hostile {
+		doc.MCPServers = append(doc.MCPServers, govview.CatalogMCPServer{Ref: "mcp/" + h, Name: h, Description: h, Transport: "stdio",
+			CommandBasename: h, Enabled: true, Profiles: []string{h}, Pinned: &yes,
+			Env: []govview.MCPValue{{Name: h, Ref: h}, {Name: "LIT", Literal: true}}, Headers: []govview.MCPValue{{Name: h, Literal: i%2 == 0}},
+			Warnings: []string{h}})
+	}
+	doc.MCPServers = append(doc.MCPServers, doc.MCPServers[0]) // a repeated name must not repeat an anchor
 	for i, id := range append([]string{"Deploy", "deploy", "DEPLOY", "con", "a/b", "a b", ".."}, hostile...) {
 		doc.Items = append(doc.Items, item(i, id))
 	}
@@ -330,4 +338,43 @@ func TestRender_ShowsApprovalStatusEscaped(t *testing.T) {
 	assert.Contains(t, all, "missing (required)")
 	assert.Contains(t, all, "not required")
 	assert.NotContains(t, all, hostile[0], "a reviewer name is escaped")
+}
+
+func TestRender_MCPPageShowsNamesNotValues(t *testing.T) {
+	// Arrange
+	no := false
+	doc := hostileDoc()
+	doc.MCPServers = []govview.CatalogMCPServer{
+		{Ref: "mcp/github", Name: "github", Transport: "stdio", CommandBasename: "npx", Enabled: true, Profiles: []string{},
+			Pinned: &no, Env: []govview.MCPValue{{Name: "GITHUB_TOKEN", Ref: "GITHUB_TOKEN"}, {Name: "REGION", Literal: true}},
+			Headers: []govview.MCPValue{}, Warnings: []string{"launch is not pinned to an exact version or digest"}},
+		{Ref: "mcp/remote", Name: "remote", Transport: "http", Enabled: false, Profiles: []string{"ci"}, Env: []govview.MCPValue{},
+			Headers: []govview.MCPValue{{Name: "Authorization", Literal: true}}, Warnings: []string{}},
+	}
+
+	// Act
+	site, err := Render(doc, Options{})
+
+	// Assert
+	require.NoError(t, err)
+	page := string(site.Files["mcp.html"])
+	checkHTML(t, "mcp.html", page)
+	assert.Contains(t, page, "GITHUB_TOKEN (from ${GITHUB_TOKEN})")
+	assert.Contains(t, page, "REGION (literal value)")
+	assert.Contains(t, page, "Authorization (literal value)")
+	assert.Contains(t, page, "launch is not pinned")
+	assert.Contains(t, string(site.Files["index.html"]), `href="mcp.html"`)
+}
+
+func TestRender_MCPPageEmpty(t *testing.T) {
+	// Arrange
+	doc := hostileDoc()
+	doc.MCPServers = []govview.CatalogMCPServer{}
+
+	// Act
+	site, err := Render(doc, Options{})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, string(site.Files["mcp.html"]), "defines no MCP servers")
 }

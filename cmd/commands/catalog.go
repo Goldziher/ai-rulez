@@ -196,7 +196,7 @@ func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter) e
 		return err //nolint:wrapcheck // already contextual
 	}
 	w := reportWriter{out}
-	w.printf("wrote %d files to %s (%d items, %d roles)   catalog digest %s\n", res.Written, catalogHTMLDir, len(doc.Items), len(doc.Roles), site.Digest)
+	w.printf("wrote %d files to %s (%d items, %d roles, %d MCP servers)   catalog digest %s\n", res.Written, catalogHTMLDir, len(doc.Items), len(doc.Roles), len(doc.MCPServers), site.Digest)
 	if len(res.Removed) > 0 {
 		w.printf("removed %d stale file(s)\n", len(res.Removed))
 	}

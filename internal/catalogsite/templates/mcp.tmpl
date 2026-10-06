@@ -1,0 +1,21 @@
+{{define "mcp"}}{{template "head" .}}
+<h1>MCP servers</h1>
+{{if .Doc.MCPServers}}
+<p>{{len .Doc.MCPServers}} server(s). Only names are shown: arguments, URLs and the values of environment variables and headers are never part of the catalog.</p>
+<table id="mcp">
+<caption>MCP servers</caption>
+<thead><tr><th scope="col">Name</th><th scope="col">Transport</th><th scope="col">Command</th><th scope="col">Enabled</th><th scope="col">Profiles</th><th scope="col">Pinned</th><th scope="col">Environment</th><th scope="col">Headers</th></tr></thead>
+<tbody>
+{{range .MCP}}<tr><th scope="row" dir="auto" id="{{.Anchor}}">{{s .Name}}{{if .Hidden}} <span class="badge badge-warn">contains hidden characters</span>{{end}}</th><td>{{s .Transport}}</td><td dir="auto"><code>{{s .Command}}</code></td><td>{{.Enabled}}</td><td dir="auto">{{s .Profiles}}</td><td>{{.Pinned}}</td><td dir="auto">{{s .Env}}</td><td dir="auto">{{s .Headers}}</td></tr>
+{{end}}</tbody>
+</table>
+{{range .MCP}}{{if or .Description .Warnings}}<section>
+<h2 dir="auto">{{s .Name}}</h2>
+{{if .Description}}<p dir="auto">{{s .Description}}</p>{{end}}
+{{if .Warnings}}<ul>{{range .Warnings}}<li class="note" dir="auto">{{s .}}</li>{{end}}</ul>{{end}}
+</section>
+{{end}}{{end}}
+{{else}}
+<p>This project defines no MCP servers.</p>
+{{end}}
+{{template "foot" .}}{{end}}
