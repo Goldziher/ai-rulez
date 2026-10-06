@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -375,14 +377,16 @@ func TestCommandEmbedder(t *testing.T) {
 
 func TestCommandEmbedder_StdoutCapAndFingerprint(t *testing.T) {
 	t.Parallel()
-	b := &limitedBuffer{limit: 4}
-	_, _ = b.Write([]byte("abcdef"))
-	assert.True(t, b.over)
-	assert.Equal(t, "abcd", b.String())
+	capped := &runner.Fake{Handle: func(runner.Spec) runner.Result {
+		return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"vectors":[[1]]}`), StdoutTruncated: true}
+	}}
+	_, err := (&CommandEmbedder{Argv: []string{"embed"}, Runner: capped}).Embed(t.Context(), []string{"a"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "wrote more than")
 	e := &CommandEmbedder{Argv: []string{"/opt/embed", "--secret-flag"}, ModelName: "m"}
 	assert.Equal(t, "command:/opt/embed", e.Fingerprint(), "arguments never enter the fingerprint")
 	assert.Equal(t, "m", e.Model())
-	_, err := (&CommandEmbedder{}).Embed(t.Context(), []string{"a"})
+	_, err = (&CommandEmbedder{}).Embed(t.Context(), []string{"a"})
 	assert.Error(t, err)
 }
 
@@ -461,4 +465,67 @@ func TestBuild_ConfigBatchSizeSplitsTheCalls(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 4, res.Calls, "one text per call")
 	assert.Equal(t, 4, res.Embedded)
+}
+
+// A grandchild that inherits stdout must not keep the call alive past its timeout, and must
+// not outlive the call.
+func TestCommandEmbedder_TimeoutKillsTheProcessGroup(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a shell script")
+	}
+	tests := []struct {
+		name    string
+		body    string
+		timeout time.Duration
+		wantErr string
+	}{
+		{"hung child with a grandchild on stdout", "sleep 30 &\nsleep 30\n", 400 * time.Millisecond, "did not finish"},
+		{"child exits while a grandchild keeps stdout open", "cat >/dev/null\nsleep 30 &\necho '{\"vectors\":[[1]]}'\n", 20 * time.Second, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p := filepath.Join(t.TempDir(), "embed.sh")
+			require.NoError(t, os.WriteFile(p, []byte("#!/bin/sh\n"+tt.body), 0o700))
+			e := &CommandEmbedder{Argv: []string{p}, Timeout: tt.timeout, Getenv: func(k string) string {
+				if k == "PATH" {
+					return "/usr/bin:/bin"
+				}
+				return ""
+			}}
+			start := ambient.Clock(nil).Now()
+
+			// Act
+			_, err := e.Embed(t.Context(), []string{"a"})
+
+			// Assert
+			elapsed := ambient.Clock(nil).Now().Sub(start)
+			assert.Less(t, elapsed, 6*time.Second, "the timeout must bound the call even with a grandchild holding stdout")
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestCommandEmbedder_PassesTheWindowsBaseEnvironmentWhenSet(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	fake := &runner.Fake{Handle: func(runner.Spec) runner.Result {
+		return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"vectors":[[1]]}`)}
+	}}
+	vars := map[string]string{"PATH": "p", "HOME": "h", "SYSTEMROOT": `C:\Windows`, "PATHEXT": ".EXE", "TEMP": `C:\t`, "USERPROFILE": `C:\u`, "OTHER": "no"}
+	e := &CommandEmbedder{Argv: []string{"embed"}, Runner: fake, Getenv: func(k string) string { return vars[k] }}
+
+	// Act
+	_, err := e.Embed(t.Context(), []string{"a"})
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, fake.Calls(), 1)
+	assert.ElementsMatch(t, []string{"PATH=p", "HOME=h", `SYSTEMROOT=C:\Windows`, "PATHEXT=.EXE", `TEMP=C:\t`, `USERPROFILE=C:\u`}, fake.Calls()[0].Env)
 }
