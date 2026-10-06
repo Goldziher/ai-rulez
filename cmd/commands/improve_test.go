@@ -146,6 +146,7 @@ func setupImproveRun(t *testing.T) string {
 
 func TestImprove_EndToEndAcceptsAndApplies(t *testing.T) {
 	// Arrange
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // the report MAC key stays out of the real home
 	root := setupImproveRun(t)
 	var out, errOut bytes.Buffer
 	improveRunCmd.SetOut(&out)
@@ -179,7 +180,11 @@ func TestImprove_EndToEndAcceptsAndApplies(t *testing.T) {
 	data, err = os.ReadFile(skillPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "GOOD advice.")
-	assert.Contains(t, applyOut.String(), "Nothing was committed")
+	assert.Contains(t, errOut.String(), "Nothing was committed", "the narrative goes to stderr in JSON mode")
+	var applied improve.ApplyResult
+	require.NoError(t, json.Unmarshal(applyOut.Bytes(), &applied), "stdout is the result document only")
+	assert.Equal(t, "deploy", applied.Skill)
+	assert.Contains(t, applied.Written, "SKILL.md")
 	require.Error(t, improveApplyCmd.RunE(improveApplyCmd, []string{report.RunID}), "a second apply is refused")
 }
 

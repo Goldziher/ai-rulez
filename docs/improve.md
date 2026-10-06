@@ -93,6 +93,9 @@ A held-out assertion string that appears in the candidate but not in the origina
 Baseline and candidate are both measured in the run on the held-out set, `--runs` times each, with the majority
 outcome per case. A candidate is accepted only if all hold:
 
+- at least one held-out case was scored by both arms, and the candidate was scored on every case the baseline was
+  (a case the candidate could not be scored on counts as a loss, never as a pass; a gain of 0 with `--min-gain 0`
+  is not evidence);
 - held-out pass rate gain >= `--min-gain`;
 - held-out cases flipping pass to fail <= `--max-regressions`;
 - trigger precision and recall do not drop, and near-miss false positives do not rise;
@@ -120,6 +123,12 @@ kills the process tree and capped output. A credential-like or proxy name in `--
 report, and is **not enforced**. ai-rulez cannot sandbox file system or network access, and the run directory sits
 inside the project, so use a container or CI egress policy for anything beyond local experiments.
 
+The held-out gate guards against an honest-but-overfitting optimizer, not a hostile one. The held-out cases are
+files in the authored skill's `evals/` directory, readable by absolute path by a process running as you, and the
+optimizer is such a process. A hostile optimizer can read them, forge a run, or read the per-user key described
+below. Run `improve run` in a container (or CI job) with no access to the repository checkout beyond the run
+workspace and an egress policy if the optimizer is not code you trust.
+
 What leaves the machine: the skill text and the train cases, to whatever the optimizer calls. The consent summary
 says so and needs `--yes` or an interactive confirmation. Held-out cases never leave ai-rulez.
 
@@ -131,9 +140,23 @@ A run lives under `.ai-rulez/local/improve/<run-id>/` (machine-local, git-ignore
 reasons, before/after scores, wins and losses, costs, declared egress, the environment variable names (not values)
 and the description change.
 
+Before each optimizer call the run directory outside `workspace/`, `home/` and `tmp/` (plan, original copy, train
+cases, earlier rounds) is snapshotted. If the optimizer changed any of it, or the authored skill, the round is
+rejected (`outside-workspace`) and everything is restored from the snapshot. A run id is `imp-<8 hex>` with an
+optional `-<n>` suffix. `apply` takes `--format text|json`; with `json`, stdout holds the result document and the
+diff and prompts go to stderr.
+
 `improve apply <run-id>` shows the diff, asks for confirmation (`--yes` skips it) and writes the files. It refuses with
 `AR9J1` if the skill changed since the run (so a second apply fails), if the saved candidate no longer matches its
 digest, or if the candidate now breaks the diff policy. It never commits.
+
+`improve run` signs `report.json` with an HMAC under the per-user key (`eval-results.key` in the user config
+directory, outside the repository, shared with `eval run`) and stores it as `report.mac`. `apply` refuses a run
+whose report is missing the MAC, was edited, or was made on another machine or by another user. The diff policy is
+recomputed on apply from the defaults and the flags, never taken from the report: edits to `scripts/` and
+`assets/` need `--allow-scripts`, and changes to `allowed-tools`, `model` or `disable-model-invocation` need
+`--allow-frontmatter`, even if the run itself used them. Files are written all or nothing: if a write fails, the
+files already changed are restored.
 
 ## Codes
 

@@ -52,6 +52,7 @@ var canaries = []string{"CANARY-PROMPT-ONE", "CANARY-PROMPT-TWO", "CANARY-PROMPT
 // project builds a config dir with one skill and its eval cases.
 func project(t *testing.T) (root, configDir string) {
 	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // the report MAC key lives here, never in the real home
 	root = t.TempDir()
 	configDir = filepath.Join(root, ".ai-rulez")
 	files := map[string]string{
