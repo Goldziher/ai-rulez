@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -49,6 +50,9 @@ includes or skills; the other pins (and the content pins) are kept.
   ai-rulez lock --check         verify the lock against the config, the local
                                 cache and the sources, without the network
   ai-rulez lock --diff          show what "lock" would change (--format json)
+  ai-rulez lock --check --format json
+                                the same comparison as JSON on stdout (the
+                                MCP lock_status tool returns this document)
 
 --check names every added, removed or changed item and whether its source or its
 generated output changed.
@@ -68,7 +72,7 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockCheck, "check", false, "Verify ai-rulez.lock against the configuration and cached content without writing or using the network")
 	LockCmd.Flags().BoolVar(&lockDiffFlag, "diff", false, "Show how the lock differs from the sources and outputs (for pull request review); exits 0")
 	LockCmd.Flags().BoolVar(&lockContentOnly, "content-only", false, "Re-pin authored content and outputs only: no network, remote pins are kept")
-	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --diff: text (default) or json")
+	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check and --diff: text (default) or json")
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
@@ -280,15 +284,21 @@ func checkLockAt(path string) int {
 		}
 		return 1
 	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
+	diff, err := govview.CheckLock(cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges)
 	if err != nil {
 		fmtError(err)
 		return 1
 	}
-	diff, err := lockDiff(cfg, lock, lockProfileFor(lock), remoteSkipped)
-	if err != nil {
-		fmtError(err)
-		return 1
+	if lockFormat == formatJSON {
+		// The same document as the MCP lock_status tool; the exit code still gates.
+		if err := diff.WriteJSON(os.Stdout); err != nil {
+			fmtError(err)
+			return 1
+		}
+		if !diff.InSync {
+			return exitDrift
+		}
+		return 0
 	}
 	if !diff.InSync {
 		fmt.Fprintf(os.Stderr, "%s does not match %s:\n", lockfile.FileName, cfg.ConfigDir)

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,79 +10,21 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
-// lockSnapshot computes the content pins of cfg: the authored items, and the
-// generated outputs when [lock] pins them. sourcesOnly skips rendering.
+// lockSnapshot computes the content pins of cfg (see govview.Snapshot).
 func lockSnapshot(cfg *config.Config, profileName string, sourcesOnly bool) (*contentlock.Snapshot, error) {
-	opts := contentlock.Options{
-		Scope:          cfg.LockScope(),
-		IncludeOutputs: cfg.LockIncludeOutputs(),
-		ToolVersion:    Version,
-		Profile:        profileName,
-		SourcesOnly:    sourcesOnly,
-	}
-	if opts.IncludeOutputs && !sourcesOnly {
-		outputs, err := generator.NewGenerator(cfg).LockOutputs(profileName)
-		if err != nil {
-			return nil, oops.Wrapf(err, "render the outputs to pin")
-		}
-		opts.Outputs = outputs
-	}
-	snap, err := contentlock.Compute(cfg, opts)
-	if err != nil {
-		return nil, oops.Wrap(err)
-	}
-	return snap, nil
+	return govview.Snapshot(cfg, profileName, sourcesOnly, Version)
 }
 
-// lockDiff compares the lock with the working tree: remote pins (offline, against
-// the cache), authored sources and generated outputs. remoteSkipped reports that
-// includes could not be loaded from the cache, so the outputs were not compared.
+// lockDiff compares the lock with the working tree (see govview.LockDiff).
 func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool) (*contentlock.Diff, error) {
-	snap, err := lockSnapshot(cfg, profileName, remoteSkipped)
-	if err != nil {
-		return nil, err
-	}
-	var diff *contentlock.Diff
-	if lock == nil {
-		diff = &contentlock.Diff{SchemaVersion: contentlock.DiffSchemaVersion, Changes: []contentlock.Change{}, ToolVersion: Version}
-	} else {
-		diff = contentlock.Compare(lock, snap)
-	}
-	problems, _ := includes.CheckLock(cfg, lock)
-	for _, p := range problems {
-		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeRemote, Change: contentlock.Changed, Kind: p.Kind, ID: p.Name, Detail: p.Message})
-	}
-	diff.Changes = append(diff.Changes, dynamicLockChanges(cfg, lock)...)
-	switch {
-	case lock == nil && cfg.LockEnforced():
-		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Added,
-			Detail: lockfile.FileName + " does not exist but [lock] enforce = true; run `ai-rulez lock`"})
-	case lock != nil && diff.NoPins:
-		// A lock without content pins cannot tell whether a source changed, so a
-		// check never passes on it: that would let a stripped lock switch the
-		// content checks off.
-		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
-			Detail: fmt.Sprintf("%s (version %d) has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", lockfile.FileName, lock.Version)})
-	}
-	if remoteSkipped {
-		const msg = "remote includes are not in the local cache, so generated outputs were not compared"
-		if cfg.LockEnforced() {
-			diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
-				Detail: msg + " and [lock] enforce = true; run `ai-rulez generate` (or `ai-rulez lock`) to fetch them"})
-		} else {
-			diff.Notes = append(diff.Notes, msg)
-		}
-	}
-	contentlock.SortChanges(diff.Changes)
-	diff.InSync = len(diff.Changes) == 0
-	return diff, nil
+	return govview.LockDiff(cfg, lock, profileName, remoteSkipped, Version, dynamicLockChanges)
 }
 
 // loadForLockCheck loads a configuration for an offline comparison. Includes are
@@ -99,23 +40,7 @@ func loadForLockCheck(path string) (cfg *config.Config, remoteSkipped bool, err 
 	})
 }
 
-// loadWithCacheFallback loads with remote includes, and retries without them only
-// when the first error says an include is not in the cache. Every other error (a
-// lock violation, a parse error) is returned unchanged.
-func loadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config, error)) (cfg *config.Config, remoteSkipped bool, err error) {
-	cfg, err = load()
-	if err == nil {
-		return cfg, false, nil
-	}
-	if !errors.Is(err, includes.ErrNotCached) {
-		return nil, false, err
-	}
-	cfg, retryErr := load(config.WithoutRemote())
-	if retryErr != nil {
-		return nil, false, err
-	}
-	return cfg, len(includes.Lockable(cfg)) > 0, nil
-}
+var loadWithCacheFallback = govview.LoadWithCacheFallback
 
 // verifyLockedSources is the content half of `generate --locked`: when the lock
 // pins authored content, every source must still match it. The lock is read, never

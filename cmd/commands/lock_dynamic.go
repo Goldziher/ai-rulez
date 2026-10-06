@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
@@ -12,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
-	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
 
 // exitUnpinned is the exit code of a `lock` that wrote the lock but left served
@@ -89,11 +87,6 @@ func lockedEntries(f *lockfile.File) []lockfile.Entry {
 		}
 	}
 	return all
-}
-
-// usesDynamicSkills reports whether the project has anything to pin for served skills.
-func usesDynamicSkills(cfg *config.Config) bool {
-	return len(lockExtraViews()) > 0 || len(cfg.SkillSources) > 0 || !cfg.LockEnforceOptedOut() || cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
 }
 
 // mergeDynamicLock carries the source and served pins into next: kept from
@@ -235,62 +228,18 @@ func keepConfigured(entries []lockfile.Entry, keep map[string]bool) []lockfile.E
 	return out
 }
 
-// checkDynamicLock verifies the source and served pins against the configuration
-// and the local cache without the network.
-func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
-	if !usesDynamicSkills(cfg) {
-		return nil
-	}
-	extras := lockExtraViews()
-	sources := append([]config.SkillSourceConfig(nil), cfg.SkillSources...)
-	for _, e := range extras {
-		for _, arg := range e.Sources {
-			if spec, err := skillsource.ParseArg(arg); err == nil {
-				sources = append(sources, config.SkillSourceConfig{Name: spec.Name, URL: spec.URL, Ref: spec.Ref, Path: spec.Path})
-			}
-		}
-	}
-	var viewSources []string
-	if lock != nil {
-		for _, e := range lock.Served {
-			viewSources = append(viewSources, mcp.ViewKeySources(e.View)...)
-		}
-	}
-	var out []string
-	for _, p := range skillsource.CheckLock(sources, lock, "", viewSources...) {
-		out = append(out, "  "+p.String())
-	}
-	if lock != nil && (len(lock.Served) > 0 || len(extras) > 0 || cfg.LockEnforced()) {
-		defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
-		includes.SkipFetch = true
-		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
-		problems, err := setup.ServedProblems(context.Background(), extras...)
-		if err != nil {
-			out = append(out, "  served: "+err.Error())
-		}
-		for _, p := range problems {
-			out = append(out, "  "+p)
-		}
-	}
-	return out
-}
-
 // dynamicLockChanges reports the source and served pins that disagree with the
 // configuration and the local cache, as changes for `lock --check` and `--diff`.
 func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
-	var out []contentlock.Change
-	for _, line := range checkDynamicLock(cfg, lock) {
-		kind, rest, _ := strings.Cut(strings.TrimSpace(line), " ")
-		kind = strings.TrimSuffix(kind, ":")
-		name, detail, found := strings.Cut(rest, ": ")
-		if !found {
-			name, detail = "", rest
-		}
-		scope := contentlock.ScopeRemote
-		if kind == lockfile.KindServed {
-			scope = contentlock.ScopeServed
-		}
-		out = append(out, contentlock.Change{Scope: scope, Change: contentlock.Changed, Kind: kind, ID: name, Detail: detail})
-	}
-	return out
+	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
+	includes.SkipFetch = true
+	return mcp.DynamicLockChanges(context.Background(), cfg, lock, Version, lockExtraViews()...)
+}
+
+// checkDynamicLock verifies the source and served pins against the configuration
+// and the local cache without the network.
+func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
+	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
+	includes.SkipFetch = true
+	return mcp.DynamicLockProblems(context.Background(), cfg, lock, Version, lockExtraViews()...)
 }
