@@ -72,6 +72,12 @@ type Entry struct {
 	Tag string `toml:"tag,omitempty"`
 	// TagObject is the annotated tag object id of Tag; "" for a lightweight tag.
 	TagObject string `toml:"tag_object,omitempty"`
+	// Released is when Tag was released (RFC 3339, UTC) as recorded when it was
+	// pinned under a min_release_age, and ReleasedFrom says where that time came
+	// from: "forge", "first-seen" or "commit". Informational: not part of the
+	// tree digest and never compared by `lock --check`.
+	Released     string `toml:"released,omitempty"`
+	ReleasedFrom string `toml:"released_from,omitempty"`
 	// Commit is the full SHA Ref resolved to when the lock was written (for a
 	// tag, the peeled commit).
 	Commit string `toml:"commit"`
@@ -317,6 +323,9 @@ type Want struct {
 	// TagPrefix and IncludePrerelease refine Constraint.
 	TagPrefix         string
 	IncludePrerelease bool
+	// MinReleaseAge is the source's own minimum release age ("7d"); "" defers to
+	// [lock] min_release_age. It never makes a pin stale (see Covers).
+	MinReleaseAge string
 }
 
 // Covers reports whether e pins exactly the source the config asks for. A
