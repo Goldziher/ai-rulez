@@ -17,6 +17,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 )
 
 const ruleBody = "# Database\n\n## Migrations\n\nEvery migration needs a down section.\n"
@@ -593,4 +594,43 @@ func TestReportFailedAt(t *testing.T) {
 	assert.True(t, rep.FailedAt("warning"))
 	assert.True(t, rep.FailedAt("info"))
 	assert.False(t, rep.FailedAt("none"))
+}
+
+func TestRun_InlineSpecInConfigToml(t *testing.T) {
+	// Arrange: a spec-form verifier and a flat one declared in config.toml, plus a file spec.
+	files := map[string]string{"db/1.sql": "create\n", "db/2.sql": "create\n-- DROP\n"}
+	cfg := specProject(t, files, "[[verifiers]]\nid = \"from-file\"\nrule = \"api\"\n[verifiers.require.file_exists]\npath = \"db/1.sql\"\n")
+	cfg.Verifiers = []config.VerifierConfig{
+		{Name: "flat", Type: "file_exists", Path: "db/1.sql"},
+		{
+			Name: "no-drop", Rule: "database", WhenChanged: []string{"db/*.sql"}, Fix: "remove DROP",
+			Require: &vspec.Require{Forbid: &vspec.RegexPred{Regex: "DROP", In: "any-file", Files: "db/*.sql"}},
+		},
+		{Name: "bad", Rule: "ghost", Require: &vspec.Require{FileExists: &vspec.FileExistsPred{Path: "a"}}},
+	}
+
+	// Act
+	rep := Run(context.Background(), cfg, Options{})
+	got := map[string]Result{}
+	for _, r := range rep.Results {
+		got[r.Name] = r
+	}
+	rows := List(cfg)
+
+	// Assert
+	assert.Equal(t, StatusPass, got["flat"].Status)
+	assert.Equal(t, StatusPass, got["from-file"].Status)
+	assert.Equal(t, StatusFail, got["no-drop"].Status, "%+v", got["no-drop"])
+	assert.Equal(t, "config.toml", got["no-drop"].Source)
+	assert.Equal(t, StatusError, got["bad"].Status)
+	assert.Equal(t, CodeVerifierInvalid, got["bad"].Code)
+	var names []string
+	for _, r := range rows {
+		names = append(names, r.Name)
+	}
+	assert.Equal(t, []string{"flat", "no-drop", "from-file", "bad"}, names)
+
+	var buf bytes.Buffer
+	require.NoError(t, Explain(&buf, cfg, "no-drop"))
+	assert.Contains(t, buf.String(), "fix: remove DROP")
 }
