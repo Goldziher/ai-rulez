@@ -1,11 +1,11 @@
 package usage
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
 
@@ -183,17 +184,20 @@ func emit(entry *Entry, options RecordOptions) (*Entry, error) {
 	}
 	line = append(line, '\n')
 
+	// A failing sink never drops the entry: the caller still has the event (for
+	// telemetry, for example) and decides what the error means.
+	var errs []error
 	if options.LogPath != "" {
 		if err := appendLine(options.LogPath, line); err != nil {
-			return nil, err
+			errs = append(errs, err)
 		}
 	}
 	if options.SinkCommand != "" {
 		if err := runSink(options.SinkCommand, line); err != nil {
-			return nil, err
+			errs = append(errs, err)
 		}
 	}
-	return entry, nil
+	return entry, errors.Join(errs...)
 }
 
 func entryFor(event *hookEvent, harness string) *Entry {
@@ -319,13 +323,21 @@ func lookupHash(indexPath, cwd, id string) string {
 	return ""
 }
 
+// appendLine appends one line to the log. It refuses to write through a symlink
+// (the log file, or the directory that holds it): a repository can commit
+// .ai-rulez/local or usage.jsonl as a symlink, and a recorder it launches would
+// otherwise append JSON to whatever the link points at.
 func appendLine(path string, line []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+	dir := filepath.Dir(path)
+	if info, err := os.Lstat(dir); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return oops.With("path", path).Errorf("refusing to write the usage log through a symlinked directory %s", dir)
+	}
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return oops.With("path", path).Wrapf(err, "create usage log directory")
 	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // user-chosen log path
+	file, err := openLogForAppend(path)
 	if err != nil {
-		return oops.With("path", path).Wrapf(err, "open usage log")
+		return err
 	}
 	// One write of a whole line keeps concurrent sessions from interleaving.
 	if _, err := file.Write(line); err != nil {
@@ -335,18 +347,76 @@ func appendLine(path string, line []byte) error {
 	return oops.Wrapf(file.Close(), "close usage log")
 }
 
+// openLogForAppend opens path for appending without following a symlink. An
+// existing file is opened without O_CREATE and checked against a fresh Lstat; a
+// missing one is created with O_EXCL, which never follows a link.
+func openLogForAppend(path string) (*os.File, error) {
+	fail := func(err error, what string) (*os.File, error) {
+		return nil, oops.With("path", path).Wrapf(err, "%s", what)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		info, err := os.Lstat(path)
+		switch {
+		case err == nil:
+			if !info.Mode().IsRegular() {
+				return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s is a symlink or not a regular file", path)
+			}
+			file, openErr := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600) //nolint:gosec // user-chosen log path, symlinks refused above
+			if openErr != nil {
+				return fail(openErr, "open usage log")
+			}
+			if opened, statErr := file.Stat(); statErr != nil || !os.SameFile(info, opened) {
+				_ = file.Close() //nolint:errcheck // the file was swapped under us
+				return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s changed while it was opened", path)
+			}
+			return file, nil
+		case errors.Is(err, os.ErrNotExist):
+			file, openErr := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) //nolint:gosec // user-chosen log path
+			if openErr == nil {
+				return file, nil
+			}
+			if !errors.Is(openErr, os.ErrExist) {
+				return fail(openErr, "open usage log")
+			}
+			// created concurrently (or planted): look again
+		default:
+			return fail(err, "open usage log")
+		}
+	}
+	return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s keeps changing", path)
+}
+
+// Limits of the sink command: it is a convenience hook that must not stall the
+// harness that launched the recorder, nor flood memory.
+const (
+	// SinkTimeout bounds one sink command; the process group is killed after it.
+	SinkTimeout = 3 * time.Second
+	// maxSinkOutput caps the captured stdout and stderr of a sink command.
+	maxSinkOutput = 64 << 10
+)
+
+// sinkTimeout is SinkTimeout; tests shorten it.
+var sinkTimeout = SinkTimeout
+
 func runSink(command string, line []byte) error {
-	var cmd *exec.Cmd
+	argv := []string{"sh", "-c", command}
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", command) //nolint:gosec // the user configured this command
-	} else {
-		cmd = exec.Command("sh", "-c", command) //nolint:gosec // the user configured this command
+		argv = []string{"cmd", "/C", command}
 	}
-	cmd.Stdin = bytes.NewReader(line)
 	// A sink that runs git must not inherit a hook's repository selection.
-	cmd.Env = gitutil.Env(nil)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return oops.With("output", strings.TrimSpace(string(output))).Wrapf(err, "run usage sink command")
+	res := runner.Run(context.Background(), runner.Spec{
+		Argv: argv, Env: gitutil.Env(nil), Stdin: line, Timeout: sinkTimeout, MaxOutput: maxSinkOutput,
+	})
+	if res.Status == runner.StatusOK {
+		return nil
 	}
-	return nil
+	output := strings.TrimSpace(string(res.Stderr) + string(res.Stdout))
+	switch res.Status {
+	case runner.StatusTimeout:
+		return oops.With("output", output).Errorf("usage sink command timed out after %s and was killed", sinkTimeout)
+	case runner.StatusExit:
+		return oops.With("output", output, "exit", res.ExitCode).Errorf("usage sink command failed")
+	default:
+		return oops.With("output", output).Wrapf(res.Err, "run usage sink command")
+	}
 }
