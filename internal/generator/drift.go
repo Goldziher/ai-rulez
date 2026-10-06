@@ -118,38 +118,11 @@ func bodyEdited(content, path string) bool {
 // from the disk. It never writes or deletes anything. An empty result means a
 // generate run would change nothing and no generated file was edited by hand.
 func (g *Generator) CheckDrift(profile string) ([]Drift, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
-	g.beginRun()
-	defer g.resetRunState()
-
-	outputs, _, err := g.collectOutputs(profile)
+	res, err := g.run(profile, CheckApplier)
 	if err != nil {
 		return nil, err
 	}
-	g.previousFiles = nil
-	var drift []Drift
-	for _, output := range outputs {
-		kind, _, ok := g.outputState(output)
-		if !ok || kind == "" {
-			continue
-		}
-		drift = append(drift, Drift{Path: g.relSlash(g.absOutputPath(output.Path)), Kind: kind})
-	}
-	for _, stale := range g.staleManifestFiles(outputs) {
-		drift = append(drift, Drift{Path: g.relSlash(stale), Kind: DriftOrphan})
-	}
-	// A merged document that still holds what an earlier run wrote and this one
-	// no longer does (a role or setting that was removed) is rewritten by generate.
-	for _, edit := range g.planUnmerge(outputs, false) {
-		kind := DriftStale
-		if edit.delete {
-			kind = DriftOrphan
-		}
-		drift = append(drift, Drift{Path: edit.rel, Kind: kind})
-	}
-	sortDrift(drift)
-	return drift, nil
+	return res.Drift, nil
 }
 
 // VerifyGenerated checks the files listed in the committed manifest without
