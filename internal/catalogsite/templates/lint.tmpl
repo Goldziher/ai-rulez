@@ -1,0 +1,19 @@
+{{define "lint"}}{{template "head" .}}
+<h1>Lint</h1>
+{{if .Doc.Lint.Available}}
+<p>{{.Doc.Lint.Summary.Errors}} error(s), {{.Doc.Lint.Summary.Warnings}} warning(s), {{.Doc.Lint.Summary.Infos}} info finding(s).</p>
+{{range .Groups}}<section>
+<h2 id="{{.Anchor}}">{{s .Code}}</h2>
+<table>
+<caption>Findings for {{s .Code}}</caption>
+<thead><tr><th scope="col">Item</th><th scope="col">Severity</th><th scope="col" class="num">Line</th><th scope="col">Message</th></tr></thead>
+<tbody>
+{{range .Entries}}<tr><th scope="row" dir="auto">{{if .Href}}<a href="{{.Href}}">{{s .Subject}}</a>{{else}}{{s .Subject}}{{if .File}} ({{s .File}}){{end}}{{end}}</th><td>{{s .Severity}}</td><td class="num">{{.Line}}</td><td dir="auto">{{s .Message}}</td></tr>
+{{end}}</tbody>
+</table>
+</section>
+{{else}}<p>No findings.</p>{{end}}
+{{else}}
+<p>Lint is unavailable{{with .Doc.Lint.Reason}}: {{s .}}{{end}}.</p>
+{{end}}
+{{template "foot" .}}{{end}}

@@ -1,0 +1,33 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+{{if not .Indexable}}<meta name="robots" content="noindex, nofollow">
+{{end}}<title>{{s .Title}} - {{s .SiteTitle}}</title>
+<link rel="stylesheet" href="{{.Root}}assets/catalog.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site">
+<p class="brand">{{s .SiteTitle}}</p>
+<nav aria-label="Catalog">
+<a href="{{.Root}}index.html"{{if eq .Current "index"}} aria-current="page"{{end}}>Overview</a>
+<a href="{{.Root}}lock.html"{{if eq .Current "lock"}} aria-current="page"{{end}}>Lock</a>
+<a href="{{.Root}}lint.html"{{if eq .Current "lint"}} aria-current="page"{{end}}>Lint</a>
+<a href="{{.Root}}about.html"{{if eq .Current "about"}} aria-current="page"{{end}}>About</a>
+</nav>
+</header>
+<main id="main">
+{{end}}
+{{define "foot"}}</main>
+<footer class="site">
+<p>ai-rulez {{s .Version}} &middot; catalog <code>sha256:{{.DigestShort}}</code> &middot; schema version {{.SchemaVersion}}</p>
+</footer>
+<script src="{{.Root}}assets/catalog.js" defer></script>
+</body>
+</html>
+{{end}}
+{{define "badge"}}<span class="badge badge-{{.Status}}">{{if eq .Status "error"}}&#10007; {{else if eq .Status "warn"}}! {{else if eq .Status "ok"}}&#10003; {{else}}- {{end}}{{.StatusLabel}}</span>{{end}}
