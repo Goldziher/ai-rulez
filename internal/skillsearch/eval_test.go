@@ -94,7 +94,7 @@ func TestCompareBaselineAndGate(t *testing.T) {
 	base := mk(map[string]bool{"a": true, "b": true, "c": false, "gone": true})
 	cur := mk(map[string]bool{"a": true, "b": false, "c": true, "new": false})
 
-	cur.CompareBaseline(base)
+	require.NoError(t, cur.CompareBaseline(base))
 
 	assert.Equal(t, []string{"b"}, cur.Flips.Regressed)
 	assert.Equal(t, []string{"c"}, cur.Flips.Fixed)
@@ -222,4 +222,17 @@ func TestLoadBaseline(t *testing.T) {
 	assert.Error(t, err)
 	_, err = LoadBaseline(filepath.Join(dir, "none.json"))
 	assert.Error(t, err)
+}
+
+func TestCompareBaselineRefusesADifferentK(t *testing.T) {
+	t.Parallel()
+	base := &Result{SchemaVersion: ResultSchemaVersion, K: 10, Cases: []CaseResult{{ID: "a", Hit: true}}}
+	cur := &Result{SchemaVersion: ResultSchemaVersion, K: 3, Cases: []CaseResult{{ID: "a", Hit: false}}}
+
+	err := cur.CompareBaseline(base)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "k=10")
+	assert.Contains(t, err.Error(), "k=3")
+	assert.Nil(t, cur.Flips, "no flips are reported from incomparable runs")
 }
