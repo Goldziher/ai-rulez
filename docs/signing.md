@@ -333,6 +333,12 @@ signed file). Only the `name:` line of `SKILL.md` may differ, because a source s
 Verdicts are computed when the catalog is built and again on every reload, which swaps the catalog whole. Attestation
 files are never served, scanned or part of the served digest.
 
+`generate` applies `skill` to the installed skills it writes into harness trees (static delivery; a skill with
+`delivery = "served"` is gated when it is served). Each needs a valid `.ai-rulez.sigstore.json` whose digest covers the
+directory on disk; otherwise nothing is written and the error lists each skill with its `AR72x` code. The check runs
+before the content scan (`scan_imports`), so an unsigned or tampered skill is refused as such rather than scanned as
+trusted. Dry runs and plugin bundles skip it, like the scan.
+
 ## Cosign interoperability
 
 `ai-rulez` writes a standard Sigstore bundle, so cosign can verify it. Because the payload is an in-toto attestation,
@@ -379,8 +385,6 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 ## Not done yet
 
-- Static delivery: `generate` does not check the publisher attestations of installed skills it writes into harness
-  trees; `require = ["skill"]` gates `mcp --serve-skills` only.
 - `verify --self` for ai-rulez's own releases.
 
 Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
