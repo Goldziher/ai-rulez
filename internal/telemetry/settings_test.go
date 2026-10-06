@@ -261,6 +261,47 @@ func TestDiagnose_NeverEchoesAPastedCredentialInHeadersEnv(t *testing.T) {
 	assert.Contains(t, text.String(), "(invalid, hidden)")
 }
 
+// A pasted credential that happens to look like a variable name (upper case, no
+// underscore) must be hidden too, and its environment variable never looked up.
+func TestDiagnose_HidesCredentialShapedHeadersEnvNames(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+	}{
+		{"aws access key id", "AKIAIOSFODNN7EXAMPLE"},
+		{"temporary aws key id", "ASIAIOSFODNN7EXAMPLE12"},
+		{"long upper case token", "ABCDEF0123456789ABCDEF0123"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			looked := []string{}
+			getenv := func(key string) string {
+				looked = append(looked, key)
+				if key == EnvHeadersEnv {
+					return tt.secret + ",OTLP_HEADERS"
+				}
+				return ""
+			}
+			s := Resolve(Layers{Getenv: getenv})
+
+			// Act
+			report := Diagnose(&s, t.TempDir(), getenv)
+			var text bytes.Buffer
+			report.Render(&text)
+			asJSON, err := json.Marshal(report)
+			require.NoError(t, err)
+
+			// Assert
+			assert.NotContains(t, text.String(), tt.secret)
+			assert.NotContains(t, string(asJSON), tt.secret)
+			assert.NotContains(t, looked, tt.secret, "a credential-shaped name is never looked up")
+			assert.Contains(t, text.String(), "(invalid, hidden)")
+			assert.Contains(t, text.String(), "OTLP_HEADERS")
+		})
+	}
+}
+
 func TestRender_AlignsLongSettingValues(t *testing.T) {
 	// Arrange
 	user := &config.TelemetryConfig{Enabled: true, Resource: map[string]string{"deployment.environment": "production-eu-west-1", "team": "platform-engineering"}}

@@ -347,6 +347,9 @@ func (x *Exporter) headers() (http.Header, error) {
 	}
 	header := http.Header{}
 	for _, name := range x.HeadersEnv {
+		if !plausibleHeaderEnvName(name) {
+			continue // a pasted credential is neither looked up nor named in an error
+		}
 		raw := getenv(name)
 		if raw == "" {
 			continue
@@ -381,7 +384,7 @@ func (x *Exporter) HeaderNamesSet() (set, unset []string) {
 		getenv = os.Getenv
 	}
 	for _, name := range x.HeadersEnv {
-		if !headerEnvName.MatchString(name) {
+		if !plausibleHeaderEnvName(name) {
 			unset = append(unset, hiddenHeaderName) // never look up or print a pasted credential
 			continue
 		}
