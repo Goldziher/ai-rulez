@@ -79,6 +79,9 @@ func resolveJudge(cmd *cobra.Command, cfg *config.Config, model string, defCost 
 	if len(rres.IgnoredRepoKeys) > 0 {
 		fmtWarn(cmd, "repository [review] keys ignored (user scope only: set them in the user config file or AI_RULEZ_REVIEW_*): "+strings.Join(rres.IgnoredRepoKeys, ", "))
 	}
+	if host := llm.Diagnose(lc, llm.Options{ConfigDir: cfg.ConfigDir}).BaseURLHost; host != "" && len(rres.AllowedHosts) == 0 {
+		fmtWarn(cmd, "[review] allowed_hosts is empty, so the judge may send item text to any host: "+host+" (set allowed_hosts in the user config file to pin the endpoint)")
+	}
 	lc.MaxCostUSD = tighterFloat(lc.MaxCostUSD, maxCost)
 	lc.MaxCalls = tighterInt(lc.MaxCalls, maxCalls)
 	return &judgeSetup{lc: lc, resolved: resolved, review: rres, maxCost: maxCost, maxCalls: maxCalls}, nil
