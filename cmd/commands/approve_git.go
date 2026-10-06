@@ -59,8 +59,11 @@ func (g *approveGit) pinnedAt(s approval.Subject) func(ctx context.Context, sha 
 		if rel == "" {
 			return "", false, oops.Errorf("%s is outside the git work tree", lockfile.Path(g.cfg.ConfigDir))
 		}
-		data, ok := workspace.ReadFileAt(ctx, g.top, sha, rel, nil)
-		if !ok {
+		data, found, err := workspace.ReadFileAt(ctx, g.top, sha, rel, nil)
+		if err != nil {
+			return "", false, oops.With("commit", sha).Wrapf(err, "read the lock at the reviewed commit")
+		}
+		if !found {
 			return "", false, nil
 		}
 		lock, err := lockfile.Parse(data)

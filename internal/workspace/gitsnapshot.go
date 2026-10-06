@@ -295,6 +295,9 @@ func (s *snapshot) blob(oid string) ([]byte, error) {
 	if err := gitutil.ResultErr(res); err != nil {
 		return nil, oops.With("oid", oid, "commit", s.commit).Wrapf(err, "read object")
 	}
+	if res.StdoutTruncated {
+		return nil, oops.With("oid", oid, "commit", s.commit).Errorf("object is larger than the read cap")
+	}
 	s.mu.Lock()
 	s.blobs[oid] = res.Stdout
 	s.mu.Unlock()
@@ -337,15 +340,134 @@ func (d *dirFile) ReadDir(count int) ([]fs.DirEntry, error) {
 	return rest[:count], nil
 }
 
+// MaxBaseFileBytes caps what ReadFileAt reads: the same per-file cap content
+// loading applies, so a base revision cannot be used to read an unbounded blob.
+const MaxBaseFileBytes = 8 << 20
+
+// maxSymlinkHops bounds how many symlinks ReadFileAt follows.
+const maxSymlinkHops = 40
+
 // ReadFileAt returns the file rel (relative to the repository root) as it was at
-// rev, the way `git show rev:rel` does, without listing the rest of the tree. ok is
-// false when the file does not exist at rev, the revision is unknown or git cannot
-// run.
-func ReadFileAt(ctx context.Context, repoDir, rev, rel string, r runner.Runner) (content []byte, ok bool) {
-	snap, err := GitSnapshot(ctx, repoDir, rev, r, rel)
-	if err != nil {
-		return nil, false
+// rev, the way `git show rev:rel` does, without listing the rest of the tree.
+// found is false, with a nil error, when the file does not exist at rev. An
+// unknown revision, git failing to run, a blob over MaxBaseFileBytes or a
+// symlink that leaves the tree is an error: a caller never mistakes those for an
+// absent file. A symlink entry (also in an ancestor directory) is followed inside
+// the tree, like a snapshot does.
+func ReadFileAt(ctx context.Context, repoDir, rev, rel string, r runner.Runner) (content []byte, found bool, err error) {
+	rev = strings.TrimSpace(rev)
+	if err := gitutil.CheckArg("revision", rev); err != nil || rev == "" {
+		return nil, false, oops.With("rev", rev).Errorf("invalid git revision %q", rev)
 	}
-	data, err := snap.ReadFile(rel)
-	return data, err == nil
+	g := gitutil.New(r)
+	res := g.Exec(ctx, repoDir, nil, "rev-parse", "--verify", "--quiet", rev+"^{commit}")
+	if err := gitutil.ResultErr(res); err != nil {
+		return nil, false, oops.With("rev", rev, "dir", repoDir).Wrapf(err, "resolve revision")
+	}
+	commit := strings.TrimSpace(string(res.Stdout))
+	for range maxSymlinkHops {
+		if !fs.ValidPath(rel) || rel == "." {
+			return nil, false, oops.With("path", rel).Errorf("invalid path in revision %s", rev)
+		}
+		next, data, done, err := stepRead(ctx, g, repoDir, commit, rel)
+		if err != nil {
+			return nil, false, err
+		}
+		if done {
+			return data, data != nil, nil
+		}
+		rel = next
+	}
+	return nil, false, oops.With("path", rel, "rev", rev).Errorf("too many symbolic links")
+}
+
+type treeEntry struct {
+	mode, kind, oid string
+	size            int64
+}
+
+// lookupEntry lists the tree entry of one path (a directory is one entry, not its
+// contents) at commit; ok is false when the path is absent.
+func lookupEntry(ctx context.Context, g gitutil.Git, dir, commit, name string) (e treeEntry, ok bool, err error) {
+	res := g.Exec(ctx, dir, nil, "ls-tree", "-z", "--long", "--full-tree", commit, "--", name)
+	if err := gitutil.ResultErr(res); err != nil {
+		return treeEntry{}, false, oops.With("commit", commit, "path", name).Wrapf(err, "list the tree")
+	}
+	for _, record := range bytes.Split(res.Stdout, []byte{0}) {
+		if len(record) == 0 {
+			continue
+		}
+		meta, got, cut := strings.Cut(string(record), "\t")
+		fields := strings.Fields(meta)
+		if !cut || len(fields) != 4 {
+			return treeEntry{}, false, oops.With("entry", string(record)).Errorf("unexpected git tree entry")
+		}
+		if got != name {
+			continue
+		}
+		size, _ := strconv.ParseInt(fields[3], 10, 64) //nolint:errcheck // "-" for a tree
+		return treeEntry{mode: fields[0], kind: fields[1], oid: fields[2], size: size}, true, nil
+	}
+	return treeEntry{}, false, nil
+}
+
+// stepRead resolves one step of ReadFileAt: the content when rel is a regular
+// file (done), the rewritten path when a prefix is a symlink, or "absent" (done,
+// nil data) when a prefix is missing or a directory.
+func stepRead(ctx context.Context, g gitutil.Git, dir, commit, rel string) (next string, data []byte, done bool, err error) {
+	parts := strings.Split(rel, "/")
+	for i := range parts {
+		prefix := strings.Join(parts[:i+1], "/")
+		e, ok, err := lookupEntry(ctx, g, dir, commit, prefix)
+		if err != nil {
+			return "", nil, false, err
+		}
+		if !ok {
+			return "", nil, true, nil
+		}
+		last := i == len(parts)-1
+		switch {
+		case e.mode == gitModeSymlink:
+			target, err := readBlob(ctx, g, dir, commit, e, 4096)
+			if err != nil {
+				return "", nil, false, err
+			}
+			joined := path.Join(path.Dir(prefix), string(target))
+			if path.IsAbs(string(target)) || !fs.ValidPath(joined) {
+				return "", nil, false, oops.With("path", prefix, "target", string(target)).Errorf("symlink leaves the tree")
+			}
+			if rest := strings.Join(parts[i+1:], "/"); rest != "" {
+				joined = path.Join(joined, rest)
+			}
+			return joined, nil, false, nil
+		case last && e.kind == "blob":
+			content, err := readBlob(ctx, g, dir, commit, e, MaxBaseFileBytes)
+			if err != nil {
+				return "", nil, false, err
+			}
+			if content == nil {
+				content = []byte{}
+			}
+			return "", content, true, nil
+		case last || e.kind != "tree":
+			return "", nil, true, nil // a directory or submodule is not a file
+		}
+	}
+	return "", nil, true, nil
+}
+
+// readBlob reads the object of e, refusing one larger than limit and output the
+// runner cut short.
+func readBlob(ctx context.Context, g gitutil.Git, dir, commit string, e treeEntry, limit int64) ([]byte, error) {
+	if e.size > limit {
+		return nil, oops.With("oid", e.oid, "size", e.size, "limit", limit).Errorf("blob is larger than %d bytes", limit)
+	}
+	res := g.Exec(ctx, dir, nil, "cat-file", "blob", e.oid)
+	if err := gitutil.ResultErr(res); err != nil {
+		return nil, oops.With("oid", e.oid, "commit", commit).Wrapf(err, "read object")
+	}
+	if res.StdoutTruncated {
+		return nil, oops.With("oid", e.oid, "commit", commit).Errorf("object output was truncated")
+	}
+	return res.Stdout, nil
 }
