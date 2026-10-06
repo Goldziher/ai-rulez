@@ -120,6 +120,19 @@ func (p Policy) Tree() map[string]any {
 	if p.Guard.Generated {
 		table("guard")["generated"] = true
 	}
+	g := p.Governance
+	if g.Enforce {
+		table("governance")["enforce"] = true
+	}
+	if len(g.RequireApproval) > 0 {
+		table("governance")["require_approval"] = g.RequireApproval
+	}
+	if g.MinApprovers > 0 {
+		table("governance")["min_approvers"] = g.MinApprovers
+	}
+	if g.Approvers.Set {
+		table("governance")["approvers"] = nonNil(g.Approvers.Items)
+	}
 	return root
 }
 

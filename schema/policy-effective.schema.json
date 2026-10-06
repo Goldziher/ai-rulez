@@ -72,7 +72,17 @@
           "additionalProperties": false,
           "properties": { "allow_network": { "const": false } }
         },
-        "guard": { "type": "object", "additionalProperties": false, "properties": { "generated": { "const": true } } }
+        "guard": { "type": "object", "additionalProperties": false, "properties": { "generated": { "const": true } } },
+        "governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enforce": { "const": true },
+            "require_approval": { "type": "array", "items": { "type": "string" } },
+            "min_approvers": { "type": "integer", "minimum": 1 },
+            "approvers": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       }
     },
     "provenance": {
