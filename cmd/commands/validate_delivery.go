@@ -122,7 +122,11 @@ func scanReportFindings(r mcp.ScanReport) []lint.DeliveryFinding {
 		default:
 			effect = fmt.Sprintf("the server serves it with this warning (trust = %q)", r.Level)
 		}
-		out = append(out, lint.DeliveryFinding{Code: f.Code, Message: fmt.Sprintf("%s: %s; %s", f.File, f.Message, effect)})
+		finding := lint.DeliveryFinding{Code: f.Code, Message: fmt.Sprintf("%s: %s; %s", f.File, f.Message, effect)}
+		if f.Severity == lint.SeverityError {
+			finding.Severity = lint.SeverityError
+		}
+		out = append(out, finding)
 	}
 	return out
 }
