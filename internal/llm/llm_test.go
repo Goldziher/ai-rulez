@@ -182,10 +182,10 @@ func TestCacheHitMissAndVersionBump(t *testing.T) {
 		t.Fatal("different base_url must not share the cache")
 	}
 	// corrupt entry is a miss, cache dir location and permissions
-	cacheDir := filepath.Join(dir, "local", "llm-cache")
+	cacheDir := CacheDirFor(Options{ConfigDir: dir})
 	entries, _ := filepath.Glob(filepath.Join(cacheDir, "*", "*.json"))
 	if len(entries) == 0 {
-		t.Fatal("no cache files written under local/llm-cache")
+		t.Fatal("no cache files written under the user cache directory")
 	}
 	if err := os.WriteFile(entries[0], []byte("{not json"), 0o600); err != nil {
 		t.Fatal(err)
@@ -211,7 +211,7 @@ func TestCacheOptOut(t *testing.T) {
 			t.Fatalf("%s: cache must be off", name)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, "local")); err == nil {
+	if _, err := os.Stat(CacheDirFor(Options{ConfigDir: dir})); err == nil {
 		t.Fatal("nothing should be written when the cache is off")
 	}
 }
@@ -647,7 +647,7 @@ func TestDiagnoseAndEstimate(t *testing.T) {
 	d.WriteText(&buf)
 	out := buf.String()
 	if strings.Contains(out, "should-never-appear") || !strings.Contains(out, "gw.internal:8443") || strings.Contains(out, "/v1") ||
-		!strings.Contains(out, "network allowed: false") || !strings.Contains(out, filepath.Join("local", "llm-cache")) || !d.APIKeySet {
+		!strings.Contains(out, "network allowed: false") || !strings.Contains(out, filepath.Join("ai-rulez", "llm")) || !d.APIKeySet {
 		t.Fatalf("diagnosis:\n%s", out)
 	}
 	if err := Ping(context.Background(), cfg, Options{}); !errors.Is(err, ErrNetworkDisabled) {
