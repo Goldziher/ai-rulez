@@ -118,7 +118,7 @@ func approvalsFor(cfg *config.Config, lock *lockfile.File, snap *contentlock.Sna
 	if opts.NoApprovals {
 		return nil
 	}
-	return newApprovalIndex(cfg, lock, snap.Items, tree, opts.RedactReviewers, now)
+	return newApprovalIndex(cfg, lock, snap.Items, tree, opts.RedactReviewers, opts.RedactKey, now)
 }
 
 // builder holds what the component constructors share.

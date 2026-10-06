@@ -143,7 +143,9 @@ that expires later does not make an unchanged SBOM drift; `approve --list` and `
 Approvals are claims recorded in the lock, not proof of review.
 
 Reviewer identities are personal data. `--redact-reviewers` replaces each with `reviewer-` and eight hex digits of a
-SHA-256 over the lock tree and the normalised identity (stable within one lock, not comparable across projects);
+SHA-256 over the lock tree and the normalised identity (stable within one lock, not comparable across projects). The salt is public, so an identity that can be guessed (an
+email, a login) can be confirmed against the token: set `AI_RULEZ_SBOM_REDACT_KEY` to key the hash (HMAC-SHA-256, still
+stable for one key) or use `--no-approvals` for a public document;
 `--no-approvals` leaves approvals out altogether.
 
 `--verify` verifies the lock attestation offline against `[signing]` trust, the way `ai-rulez verify --attestation`
