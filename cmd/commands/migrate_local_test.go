@@ -159,3 +159,33 @@ func TestMigrateV4_KeepsLegacyMCPServers(t *testing.T) {
 		})
 	}
 }
+
+func TestMigrateV4_HonoursTheConfigFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  func(dir string) string
+	}{
+		{"config file", func(dir string) string { return filepath.Join(dir, "config.yaml") }},
+		{"config directory", func(dir string) string { return dir }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: the project is elsewhere, the working directory has nothing.
+			project := t.TempDir()
+			dir := filepath.Join(project, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("version: \"3.0\"\nname: far\npresets: [claude]\n"), 0o600))
+			t.Chdir(t.TempDir())
+			old := cfgFile
+			t.Cleanup(func() { cfgFile = old })
+			cfgFile = tt.arg(dir)
+
+			// Act
+			runMigrateV4()
+
+			// Assert
+			assert.FileExists(t, filepath.Join(dir, "config.toml"))
+			assert.NoFileExists(t, filepath.Join(dir, "config.yaml"))
+		})
+	}
+}
