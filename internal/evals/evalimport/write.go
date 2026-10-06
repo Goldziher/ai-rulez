@@ -106,14 +106,49 @@ func Run(opts *Options) (*Result, error) {
 	if opts.DryRun {
 		return res, nil
 	}
+	var done []undo
 	for _, group := range files {
 		for _, f := range group {
-			if err := writeFile(filepath.Join(opts.OutDir, f.rel), f.data, opts.Force); err != nil {
+			path := filepath.Join(opts.OutDir, f.rel)
+			prev, hadPrev := readPrevious(path)
+			if err := writeFile(path, f.data, opts.Force); err != nil {
+				rollback(done)
 				return res, err
 			}
+			done = append(done, undo{path: path, prev: prev, hadPrev: hadPrev})
 		}
 	}
 	return res, nil
+}
+
+// undo reverses one written file: the content it replaced, or its removal.
+type undo struct {
+	path    string
+	prev    []byte
+	hadPrev bool
+}
+
+// readPrevious reads the regular file about to be replaced, if there is one.
+func readPrevious(path string) ([]byte, bool) {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return nil, false
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // a case file of the import's own output directory
+	return data, err == nil
+}
+
+// rollback undoes the files an import wrote before it failed, newest first, so a
+// failed import leaves the output directory as it found it (best effort).
+func rollback(done []undo) {
+	for i := len(done) - 1; i >= 0; i-- {
+		u := done[i]
+		if u.hadPrev {
+			_ = os.WriteFile(u.path, u.prev, 0o644) //nolint:gosec,errcheck // restoring a committed case file
+			continue
+		}
+		_ = os.Remove(u.path) //nolint:errcheck // best effort
+	}
 }
 
 // mapAll maps every scenario and gives each a unique case id (a repeated name gets
