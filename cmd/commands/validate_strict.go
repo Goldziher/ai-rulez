@@ -140,6 +140,13 @@ func applyRepoRoot() error {
 	if info, statErr := os.Stat(abs); statErr != nil || !info.IsDir() {
 		return oops.Errorf("--repo-root %q is not a directory", root)
 	}
+	// Without git there is no index to bound the file list, and an explicit root
+	// can be anything (a home directory, /), so the walk it would trigger is
+	// refused rather than guessed at.
+	if !gitutil.IsRepo(abs) {
+		return oops.Hint("point --repo-root at a git work tree (git must be installed), or omit it to use the " +
+			"configuration's directory").Errorf("--repo-root %q is not inside a git repository", root)
+	}
 	strictTreeCache = lint.Loader{Root: abs}
 	return nil
 }

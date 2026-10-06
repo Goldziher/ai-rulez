@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -131,10 +133,16 @@ func TestReportStrictJudgesEachRootByItsOwnThreshold(t *testing.T) {
 }
 
 func TestApplyRepoRoot(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
 	oldRoot, oldCache := validateRepoRoot, strictTreeCache
 	t.Cleanup(func() { validateRepoRoot, strictTreeCache = oldRoot, oldCache })
 
 	dir := t.TempDir()
+	if out, err := gitutil.CommandNoContext(dir, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v %s", err, out)
+	}
 	t.Setenv(repoRootEnv, dir)
 	validateRepoRoot = ""
 	if err := applyRepoRoot(); err != nil {
@@ -148,6 +156,23 @@ func TestApplyRepoRoot(t *testing.T) {
 	if err := applyRepoRoot(); err == nil {
 		t.Fatal("a missing --repo-root must be an error")
 	}
+}
+
+func TestApplyRepoRoot_RefusesADirectoryOutsideGit(t *testing.T) {
+	// Arrange: a plain directory that would otherwise be walked file by file.
+	oldRoot, oldCache := validateRepoRoot, strictTreeCache
+	t.Cleanup(func() { validateRepoRoot, strictTreeCache = oldRoot, oldCache })
+	t.Setenv(repoRootEnv, "")
+	strictTreeCache = lint.Loader{}
+	validateRepoRoot = t.TempDir()
+
+	// Act
+	err := applyRepoRoot()
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not inside a git repository")
+	assert.Empty(t, strictTreeCache.Root, "the loader keeps its default")
 }
 
 // scan always runs the strict checks and has no --strict flag, so none of its
