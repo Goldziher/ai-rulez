@@ -1459,6 +1459,79 @@
       },
       "additionalProperties": false
     },
+    "improve": {
+      "type": "object",
+      "description": "Defaults of `ai-rulez improve run`: the held-out split, the acceptance gate, limits and the optimizer. A flag always wins. `optimizer` and `env_pass` take effect from a repository config only with --trust-repo-optimizer. See docs/improve.md.",
+      "properties": {
+        "holdout_tag": {
+          "type": "string",
+          "pattern": "^\\S+$",
+          "description": "Eval cases carrying this tag are held out (default holdout)."
+        },
+        "holdout_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1,
+          "description": "Deterministic held-out share when no case carries the tag (default 0.3)."
+        },
+        "min_holdout_cases": {
+          "type": "integer",
+          "minimum": 3,
+          "description": "Fewest scored held-out cases a run needs (default and floor 3)."
+        },
+        "min_gain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Held-out pass-rate gain a candidate needs (default 0.05)."
+        },
+        "max_regressions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Held-out cases allowed to flip from pass to fail (default 0)."
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Eval runs per case and arm; the majority outcome counts (default 3)."
+        },
+        "max_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optimizer invocations (default 3)."
+        },
+        "max_holdout_evals": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Times the held-out set may be evaluated (default 3)."
+        },
+        "max_skill_growth": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 2,
+          "description": "Largest SKILL.md growth, as a factor of its original token count (default 1.25, at most 2)."
+        },
+        "require_ci_above_zero": {
+          "type": "boolean",
+          "description": "Make the lower end of the 95% bootstrap interval of the held-out gain a gate condition (default false)."
+        },
+        "isolation": {
+          "type": "string",
+          "enum": ["auto", "none", "require"],
+          "description": "How the optimizer is confined: auto (default) confines when a sandbox backend works, none never does, require refuses to run without one."
+        },
+        "env_pass": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Environment variable names forwarded to the optimizer. From a repository config only with --trust-repo-optimizer."
+        },
+        "optimizer": {
+          "type": "string",
+          "description": "Optimizer command (argv, no shell) or builtin:<adapter>. From a repository config only with --trust-repo-optimizer."
+        }
+      },
+      "additionalProperties": false
+    },
     "telemetry": {
       "type": "object",
       "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",

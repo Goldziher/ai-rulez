@@ -860,6 +860,81 @@
       },
       "type": "array"
     },
+    "improve": {
+      "additionalProperties": false,
+      "description": "Defaults of `ai-rulez improve run`: the held-out split, the acceptance gate, limits and the optimizer. A flag always wins. `optimizer` and `env_pass` take effect from a repository config only with --trust-repo-optimizer. See docs/improve.md.",
+      "properties": {
+        "env_pass": {
+          "description": "Environment variable names forwarded to the optimizer. From a repository config only with --trust-repo-optimizer.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "holdout_fraction": {
+          "description": "Deterministic held-out share when no case carries the tag (default 0.3).",
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "holdout_tag": {
+          "description": "Eval cases carrying this tag are held out (default holdout).",
+          "pattern": "^\\S+$",
+          "type": "string"
+        },
+        "isolation": {
+          "description": "How the optimizer is confined: auto (default) confines when a sandbox backend works, none never does, require refuses to run without one.",
+          "enum": ["auto", "none", "require"],
+          "type": "string"
+        },
+        "max_holdout_evals": {
+          "description": "Times the held-out set may be evaluated (default 3).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_regressions": {
+          "description": "Held-out cases allowed to flip from pass to fail (default 0).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_rounds": {
+          "description": "Optimizer invocations (default 3).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_skill_growth": {
+          "description": "Largest SKILL.md growth, as a factor of its original token count (default 1.25, at most 2).",
+          "maximum": 2,
+          "minimum": 1,
+          "type": "number"
+        },
+        "min_gain": {
+          "description": "Held-out pass-rate gain a candidate needs (default 0.05).",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "min_holdout_cases": {
+          "description": "Fewest scored held-out cases a run needs (default and floor 3).",
+          "minimum": 3,
+          "type": "integer"
+        },
+        "optimizer": {
+          "description": "Optimizer command (argv, no shell) or builtin:<adapter>. From a repository config only with --trust-repo-optimizer.",
+          "type": "string"
+        },
+        "require_ci_above_zero": {
+          "description": "Make the lower end of the 95% bootstrap interval of the held-out gain a gate condition (default false).",
+          "type": "boolean"
+        },
+        "runs": {
+          "description": "Eval runs per case and arm; the majority outcome counts (default 3).",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "includes": {
       "description": "Content sources (git repositories or local paths) to include and merge",
       "items": {
