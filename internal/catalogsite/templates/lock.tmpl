@@ -1,0 +1,15 @@
+{{define "lock"}}{{template "head" .}}
+<h1>Lock</h1>
+<table>
+<caption>Lock status</caption>
+<tbody>
+<tr><th scope="row">Lock file</th><td>{{if .Doc.Lock.Present}}present (version {{.Doc.Lock.Version}}){{else}}none{{end}}</td></tr>
+<tr><th scope="row">Content pins</th><td>{{if .Doc.Lock.HasContentPins}}yes{{else}}no{{end}}</td></tr>
+<tr><th scope="row">Enforced</th><td>{{if .Doc.Lock.Enforce}}yes{{else}}no{{end}}</td></tr>
+{{if .Doc.Lock.Tree}}<tr><th scope="row">Tree digest</th><td><code>{{s .Doc.Lock.Tree}}</code></td></tr>{{end}}
+<tr><th scope="row">Sources</th><td>{{.LockInSync}}</td></tr>
+<tr><th scope="row">Sources that differ</th><td>{{.Doc.Lock.Changed}}</td></tr>
+</tbody>
+</table>
+<p>Run <code>ai-rulez lock --check</code> to verify every digest on this site against the lock.</p>
+{{template "foot" .}}{{end}}

@@ -17,7 +17,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
-| `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
+| `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site ([Catalog](catalog.md)) |
 | `ai-rulez sbom`                 | CycloneDX 1.6 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
@@ -1725,8 +1725,24 @@ Generate for a role with `ai-rulez generate --role <name>` (or `generate --user 
 
 Print every rule, context file, skill, agent and command with its id, domain, source, owner, version, size, the
 sha256 digest `ai-rulez.lock` pins, the roles that keep it, a summary of every role and the lock status. Nothing is
-written. `--format json` is versioned (`schema/catalog.schema.json`) and is meant for a UI or an audit script; see
+written. `--format json` is versioned and is meant for a UI or an audit script; see
 [Integrating an identity tool or UI](roles.md#integrating-an-identity-tool-or-ui).
+
+```bash
+ai-rulez catalog [--format text|json] [--schema-version 1|2]
+ai-rulez catalog --html <dir> [--role R] [--include-excerpt=false] [--indexable] [--clean] [--base-title T] [--allow-findings AR001]
+```
+
+- `--schema-version` picks the JSON version: `1` (default, `schema/catalog.v1.schema.json`) or `2`
+  (`schema/catalog.schema.json`: description, source, load cost, lint result and excerpt per item).
+- `--html <dir>` writes a static website of the version 2 catalog. It opens from `file://`, makes no network
+  request and gives the same bytes for the same input. The directory must be new, empty or marked with
+  `.ai-rulez-catalog`; `--clean` removes files an earlier run wrote that are gone now. Refused when the secret
+  scanner (`AR001`) flagged an item, unless `--allow-findings AR001`.
+- `--role R` keeps only the items role `R` keeps. `--include-excerpt` (default on) controls the body excerpt;
+  `--indexable` allows crawlers and turns excerpts off unless asked for.
+
+See [Catalog](catalog.md).
 
 ## SBOM Command
 

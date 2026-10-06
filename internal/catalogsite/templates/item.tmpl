@@ -1,0 +1,52 @@
+{{define "item"}}{{template "head" .}}
+{{with .Item}}<h1 dir="auto">{{s .ID}}</h1>
+{{if .Hidden}}<p class="note"><span class="badge badge-warn">contains hidden characters</span> Invisible or direction-changing characters in the source were replaced with U+FFFD.</p>{{end}}
+{{if .Description}}<p dir="auto">{{s .Description}}</p>{{end}}
+<table>
+<caption>Properties</caption>
+<tbody>
+<tr><th scope="row">Kind</th><td>{{.Kind}}</td></tr>
+<tr><th scope="row">Reference</th><td><code dir="auto">{{s .Ref}}</code></td></tr>
+{{if .Domain}}<tr><th scope="row">Domain</th><td dir="auto">{{s .Domain}}</td></tr>{{end}}
+{{if .Path}}<tr><th scope="row">Source file</th><td><code dir="auto">{{s .Path}}</code></td></tr>{{end}}
+<tr><th scope="row">Source</th><td>{{s .Source}}</td></tr>
+{{if .Delivery}}<tr><th scope="row">Delivery</th><td>{{s .Delivery}}</td></tr>{{end}}
+{{if .Mode}}<tr><th scope="row">Skill mode</th><td>{{s .Mode}}</td></tr>{{end}}
+{{if .Owner}}<tr><th scope="row">Owner</th><td dir="auto">{{s .Owner}}</td></tr>{{end}}
+{{if .Version}}<tr><th scope="row">Version</th><td dir="auto">{{s .Version}}</td></tr>{{end}}
+<tr><th scope="row">Digest</th><td><code class="digest">{{s .Digest}}</code></td></tr>
+<tr><th scope="row">Approval</th><td>not recorded</td></tr>
+</tbody>
+</table>
+<p>Verify the digest against the lock with <code>ai-rulez lock --check</code>.</p>
+<h2>Load cost</h2>
+<table>
+<caption>Tokens this item puts into context</caption>
+<thead><tr><th scope="col">Part</th><th scope="col" class="num">Tokens</th></tr></thead>
+<tbody>
+<tr><th scope="row">Listing (always loaded: name and description)</th><td class="num">{{.Cost.ListingTokens}}</td></tr>
+<tr><th scope="row">Body (loaded on use)</th><td class="num">{{.Cost.BodyTokens}}</td></tr>
+<tr><th scope="row">Resources ({{.Cost.Resources}} bundled file(s))</th><td class="num">{{.Cost.ResourceTokens}}</td></tr>
+</tbody>
+</table>
+<p>Size on disk: {{.Bytes}} bytes.</p>
+<h2>Lint</h2>
+{{if .HasLint}}{{if .Findings}}
+<table>
+<caption>Findings for this item</caption>
+<thead><tr><th scope="col">Code</th><th scope="col">Severity</th><th scope="col" class="num">Line</th><th scope="col">Message</th></tr></thead>
+<tbody>
+{{range .Findings}}<tr><th scope="row"><a href="{{.Anchor}}">{{s .Code}}</a></th><td>{{s .Severity}}</td><td class="num">{{.Line}}</td><td dir="auto">{{s .Message}}</td></tr>
+{{end}}</tbody>
+</table>
+{{else}}<p>{{template "badge" .}} No findings.</p>{{end}}
+{{else}}<p>Lint did not run for this catalog.</p>{{end}}
+<h2>Roles</h2>
+{{if .RoleLinks}}<ul>{{range .RoleLinks}}<li>{{if .Href}}<a href="{{.Href}}">{{s .Name}}</a>{{else}}{{s .Name}}{{end}}</li>{{end}}</ul>{{else}}<p>No role keeps this item.</p>{{end}}
+{{if .RoleDelivery}}<h2>Delivery by role</h2>
+<ul>{{range .RoleDelivery}}<li>{{s .Key}}: {{s .Value}}</li>{{end}}</ul>{{end}}
+{{if .HasExcerpt}}<h2>Excerpt</h2>
+<pre dir="auto">{{s .Excerpt}}</pre>
+{{if .ExcerptTruncated}}<p class="note">The excerpt is cut; the item continues in its source file.</p>{{end}}{{end}}
+{{end}}
+{{template "foot" .}}{{end}}

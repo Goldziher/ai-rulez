@@ -134,7 +134,8 @@ The schema files are available in the repository:
 | `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.*` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
 | `schema/provider.schema.json`     | JSON Schema | V4      | Declarative provider spec referenced by `[[presets]] provider = "..."`; see [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity) |
 | `schema/roles-manifest.schema.json` | JSON Schema | v1    | `roles.json` and `roles list --format json`; see [Roles](roles.md#the-roles-manifest) |
-| `schema/catalog.schema.json`      | JSON Schema | v1      | `ai-rulez catalog --format json` |
+| `schema/catalog.schema.json`      | JSON Schema | v2      | `ai-rulez catalog --format json --schema-version 2` and the `catalog.json` of `catalog --html`; see [Catalog](catalog.md) |
+| `schema/catalog.v1.schema.json`   | JSON Schema | v1      | `ai-rulez catalog --format json` (the default until the next minor release) |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
 
 Access them at (versioned to the release; `main` is the tip):

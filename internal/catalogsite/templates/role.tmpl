@@ -1,0 +1,23 @@
+{{define "role"}}{{template "head" .}}
+{{with .Role}}<h1 dir="auto">Role {{s .Name}}</h1>
+{{if .Description}}<p dir="auto">{{s .Description}}</p>{{end}}
+<table>
+<caption>Role summary</caption>
+<tbody>
+{{if .Extends}}<tr><th scope="row">Extends</th><td dir="auto">{{s .Extends}}</td></tr>{{end}}
+<tr><th scope="row">Domains</th><td dir="auto">{{range $i, $d := .Domains}}{{if $i}}, {{end}}{{s $d}}{{else}}none{{end}}</td></tr>
+{{if .Groups}}<tr><th scope="row">Matches groups</th><td dir="auto">{{range $i, $g := .Groups}}{{if $i}}, {{end}}{{s $g}}{{end}}</td></tr>{{end}}
+<tr><th scope="row">Items</th><td>{{.Totals.Totals.Items}}</td></tr>
+<tr><th scope="row">Bytes</th><td>{{.Totals.Totals.Bytes}}</td></tr>
+<tr><th scope="row">Tokens</th><td>{{.Totals.Totals.Tokens}}</td></tr>
+<tr><th scope="row">Served skills</th><td>{{.Totals.Totals.Served}} ({{.Totals.Totals.ServedTokens}} tokens)</td></tr>
+</tbody>
+</table>
+{{if .Kinds}}<h2>Items by kind</h2>
+<ul>{{range .Kinds}}<li>{{s .Key}}: {{s .Value}}</li>{{end}}</ul>{{end}}
+{{if .Delivery}}<h2>Delivery</h2>
+<ul>{{range .Delivery}}<li>{{s .Key}}: {{s .Value}}</li>{{end}}</ul>{{end}}
+<h2>Items this role keeps</h2>
+{{if .Items}}<ul>{{range .Items}}<li><a href="{{.Href}}" dir="auto">{{s .Name}}</a></li>{{end}}</ul>{{else}}<p>No items.</p>{{end}}
+{{end}}
+{{template "foot" .}}{{end}}

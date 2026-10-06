@@ -1,0 +1,27 @@
+{{define "index"}}{{template "head" .}}
+<h1>{{s .SiteTitle}}</h1>
+<p>{{len .Rows}} item(s), {{len .Doc.Roles}} role(s). Tokenizer: <code>{{s .Doc.Tokenizer}}</code>.{{with .Doc.Project.Name}} Project: {{s .}}.{{end}}</p>
+{{range .Doc.Notes}}<p class="note">{{s .}}</p>
+{{end}}
+{{if .Rows}}
+<form class="filters" role="search">
+<label for="q">Search</label> <input id="q" type="search" autocomplete="off" placeholder="name, domain, owner, kind">
+<label for="kind">Kind</label>
+<select id="kind"><option value="">all</option>{{range .Kinds}}<option value="{{.}}">{{.}}</option>{{end}}</select>
+<label for="status">Lint</label>
+<select id="status"><option value="">all</option><option value="error">error</option><option value="warn">warning</option><option value="ok">ok</option><option value="na">n/a</option></select>
+<span id="count" role="status" aria-live="polite"></span>
+</form>
+<table id="items">
+<caption>Items</caption>
+<thead><tr><th scope="col">Kind</th><th scope="col">Name</th><th scope="col">Domain</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col" class="num">Listing tokens</th><th scope="col">Lint</th><th scope="col" class="num">Roles</th><th scope="col">Digest</th></tr></thead>
+<tbody>
+{{range .Rows}}<tr data-kind="{{.Kind}}" data-status="{{.Status}}" data-text="{{.Search}}"><td>{{.Kind}}</td><th scope="row" dir="auto"><a href="{{.Href}}">{{s .ID}}</a>{{if .Hidden}} <span class="badge badge-warn">contains hidden characters</span>{{end}}</th><td dir="auto">{{s .Domain}}</td><td dir="auto">{{s .Owner}}</td><td dir="auto">{{s .Version}}</td><td class="num">{{.Listing}}</td><td>{{template "badge" .}}</td><td class="num">{{.Roles}}</td><td><code>{{.DigestShort}}</code></td></tr>
+{{end}}</tbody>
+</table>
+{{else}}
+<p>This catalog has no items: the project defines no rules, context, skills, agents or commands.</p>
+{{end}}
+{{if .RoleLinks}}<h2>Roles</h2>
+<ul>{{range .RoleLinks}}<li><a href="{{.Href}}">{{s .Name}}</a></li>{{end}}</ul>{{end}}
+{{template "foot" .}}{{end}}
