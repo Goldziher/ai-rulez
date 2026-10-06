@@ -2,6 +2,8 @@ package includes
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,9 +21,13 @@ const (
 	skillMarkerFile  = "SKILL.md"
 )
 
-// getSkillCacheDir returns the cache directory for a given installed skill.
-func getSkillCacheDir(skillName string) (string, error) {
-	return config.CacheDir(skillCachePrefix, skillName) //nolint:wrapcheck // already contextual
+// getSkillCacheDir returns the cache directory for an installed skill: its name
+// plus a short hash of the normalized URL, so two projects that install
+// different skills under one name never share (or overwrite) a cache.
+func getSkillCacheDir(skillName, repoURL string) (string, error) {
+	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
+	dir := safeCacheName(skillName) + "-" + hex.EncodeToString(sum[:])[:12]
+	return config.CacheDir(skillCachePrefix, dir) //nolint:wrapcheck // already contextual
 }
 
 // SkillGitSource fetches a skill from a git repository.
@@ -45,7 +51,7 @@ func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitS
 		return nil, err
 	}
 
-	cacheDir, err := getSkillCacheDir(name)
+	cacheDir, err := getSkillCacheDir(name, repoURL)
 	if err != nil {
 		return nil, oops.With("skill_name", name).Wrapf(err, "failed to determine cache directory")
 	}
@@ -160,29 +166,37 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 		// Meta is valid but files are gone — fall through to re-fetch.
 	}
 
-	if err := os.RemoveAll(s.cacheDir); err != nil {
-		logger.Warn("Failed to clear skill cache", "cache_dir", s.cacheDir, "error", err)
-	}
-	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
-		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
-	}
-
 	if err := requireGit(ctx); err != nil {
 		return config.ContentFile{}, err
 	}
-	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), s.cacheDir, s.accessToken); err != nil {
+
+	// Clone into a private temp directory and swap it in, so a fetch never
+	// deletes a directory another project may be reading.
+	if err := os.MkdirAll(filepath.Dir(s.cacheDir), cacheDirMode); err != nil {
+		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
+	}
+	tmpDir, err := os.MkdirTemp(filepath.Dir(s.cacheDir), filepath.Base(s.cacheDir)+".tmp-*")
+	if err != nil {
+		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
+	}
+	defer os.RemoveAll(tmpDir) //nolint:errcheck // best-effort; a no-op after a successful swap
+
+	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), tmpDir, s.accessToken); err != nil {
 		return config.ContentFile{}, oops.
 			With("repo", RedactURL(s.repoURL)).
 			With("path", s.path).
 			Wrapf(err, "failed to clone skill %q", s.name)
 	}
 
-	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
-	_ = writeCacheMeta(s.cacheDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
+	hashes, _ := computeFileHashes(tmpDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
+	_ = writeCacheMeta(tmpDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
 		RemoteHEADSHA: currentSHA,
 		FetchedAt:     time.Now(),
 		FileHashes:    hashes,
 	})
+	if err := swapDir(tmpDir, s.cacheDir); err != nil {
+		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to install skill cache")
+	}
 
 	skillDir := s.findSkillDir()
 	if skillDir == "" {
@@ -194,18 +208,40 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 	return ScanInstalledSkillDir(skillDir, s.name)
 }
 
+// swapDir replaces final with tmp. The old directory is renamed aside first so
+// a concurrent reader sees either the old tree or the new one, never a partial.
+func swapDir(tmp, final string) error {
+	trash := ""
+	if _, err := os.Lstat(final); err == nil {
+		trash = final + ".old-" + filepath.Base(tmp)
+		if err := os.Rename(final, trash); err != nil {
+			return err //nolint:wrapcheck // wrapped by caller
+		}
+	}
+	if err := os.Rename(tmp, final); err != nil {
+		if trash != "" {
+			_ = os.Rename(trash, final) //nolint:errcheck // restore best-effort
+		}
+		return err //nolint:wrapcheck // wrapped by caller
+	}
+	if trash != "" {
+		_ = os.RemoveAll(trash) //nolint:errcheck // best-effort cleanup
+	}
+	return nil
+}
+
 // findSkillDir locates the skill directory in the cached repo content
 func (s *SkillGitSource) findSkillDir() string {
 	// Check at the configured path
 	if s.path != "" {
 		skillDir := filepath.Join(s.cacheDir, s.path)
-		if hasSkillMarker(skillDir) {
+		if hasSkillMarkerUnder(s.cacheDir, skillDir) {
 			return skillDir
 		}
 
 		// Also check under .ai-rulez/ path in case the clone extracted there
 		skillDir = filepath.Join(s.cacheDir, aiRulezDir, s.path)
-		if hasSkillMarker(skillDir) {
+		if hasSkillMarkerUnder(s.cacheDir, skillDir) {
 			return skillDir
 		}
 	}
@@ -218,11 +254,34 @@ func (s *SkillGitSource) findSkillDir() string {
 	return ""
 }
 
-// hasSkillMarker checks if a directory contains SKILL.md
+// hasSkillMarker reports whether dir holds a regular (non-symlink) SKILL.md.
+// A symlinked SKILL.md could point at any local file, so it is never a skill.
 func hasSkillMarker(dir string) bool {
-	skillPath := filepath.Join(dir, skillMarkerFile)
-	_, err := os.Stat(skillPath)
-	return err == nil
+	info, err := os.Lstat(filepath.Join(dir, skillMarkerFile))
+	return err == nil && info.Mode().IsRegular()
+}
+
+// hasSkillMarkerUnder is hasSkillMarker for a directory below root, additionally
+// requiring that no component between root and dir is a symlink.
+func hasSkillMarkerUnder(root, dir string) bool {
+	return !pathHasSymlink(root, dir) && hasSkillMarker(dir)
+}
+
+// pathHasSymlink reports whether any component of dir below root is a symlink.
+func pathHasSymlink(root, dir string) bool {
+	rel, err := filepath.Rel(root, dir)
+	if err != nil || rel == "." {
+		return false
+	}
+	cur := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		cur = filepath.Join(cur, part)
+		if info, err := os.Lstat(cur); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			logger.Warn("Skipping symlinked path in installed skill; symlinks are not followed", "path", cur)
+			return true
+		}
+	}
+	return false
 }
 
 // ScanInstalledSkillDir reads a skill directory (SKILL.md plus optional
@@ -232,6 +291,16 @@ func hasSkillMarker(dir string) bool {
 // layout in their output rather than concatenating everything inline.
 func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, error) {
 	skillPath := filepath.Join(skillDir, skillMarkerFile)
+	// Lstat before reading: a symlinked SKILL.md would be read through to any
+	// local file and rendered into the outputs.
+	info, err := os.Lstat(skillPath)
+	if err != nil {
+		return config.ContentFile{}, oops.With("path", skillPath).Wrapf(err, "read SKILL.md")
+	}
+	if !info.Mode().IsRegular() {
+		logger.Warn("Refusing SKILL.md that is not a regular file; symlinks are not followed", "path", skillPath)
+		return config.ContentFile{}, oops.With("path", skillPath).Errorf("SKILL.md at %s is a symlink or not a regular file", skillPath)
+	}
 	data, err := os.ReadFile(skillPath)
 	if err != nil {
 		return config.ContentFile{}, oops.With("path", skillPath).Wrapf(err, "read SKILL.md")
