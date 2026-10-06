@@ -504,60 +504,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 ## step 6: ai-rulez generate --dry-run --allow-local-drift
 exit: 0
 --- stdout
-create-dir: .agents
-create-dir: .agents/skills
-create-dir: .agents/skills/build
-create-dir: .agents/skills/build/agents
-create-dir: .agents/skills/deployer
-create-dir: .agents/skills/reviewer
-create-dir: .agents/skills/reviewer/references
-create-dir: .agents/skills/reviewer/scripts
-create-dir: .agents/skills/ship
-create-dir: .agents/skills/ship/agents
-create-dir: .claude
-create-dir: .claude/agents
-create-dir: .claude/rules
-create-dir: .claude/skills
-create-dir: .claude/skills/build
-create-dir: .claude/skills/deployer
-create-dir: .claude/skills/reviewer
-create-dir: .claude/skills/reviewer/references
-create-dir: .claude/skills/reviewer/scripts
-create-dir: .claude/skills/ship
-create-dir: .codex
-create-dir: .codex/agents
-create-dir: .cursor
-create-dir: .cursor/agents
-create-dir: .cursor/commands
-create-dir: .cursor/rules
-create-dir: .gemini
-create-dir: .gemini/agents
-create-dir: .github
-create-dir: .github/agents
-create-dir: .github/instructions
-create-dir: .github/prompts
-create-dir: .github/skills
-create-dir: .github/skills/deployer
-create-dir: .github/skills/reviewer
-create-dir: .github/skills/reviewer/references
-create-dir: .github/skills/reviewer/scripts
-create-dir: .kilo
-create-dir: .kilo/agents
-create-dir: .kilo/commands
-create-dir: .kilo/rules
-create-dir: .kilo/skills
-create-dir: .kilo/skills/deployer
-create-dir: .kilo/skills/reviewer
-create-dir: .kilo/skills/reviewer/references
-create-dir: .kilo/skills/reviewer/scripts
-create-dir: .opencode
-create-dir: .opencode/agents
-create-dir: .opencode/commands
-create-dir: .opencode/skills
-create-dir: .opencode/skills/deployer
-create-dir: .opencode/skills/reviewer
-create-dir: .opencode/skills/reviewer/references
-create-dir: .opencode/skills/reviewer/scripts
+profile: default
 local-only: .agents/skills/quick/SKILL.md
 local-only: .agents/skills/quick/agents/openai.yaml
 local-only: .agents/skills/scratch/SKILL.md
@@ -605,128 +552,182 @@ local-only: CLAUDE.local.md
 local-only: GEMINI.local.md
 local-only: REVIEW.md
 local-only: kilo.jsonc
-profile: default
-unchanged: .agents/skills/build/SKILL.md
-unchanged: .agents/skills/build/agents/openai.yaml
-unchanged: .agents/skills/deployer/SKILL.md
-unchanged: .agents/skills/quick/SKILL.md
-unchanged: .agents/skills/quick/agents/openai.yaml
-unchanged: .agents/skills/reviewer/SKILL.md
-unchanged: .agents/skills/reviewer/references/checklist.md
-unchanged: .agents/skills/reviewer/scripts/run.sh
-unchanged: .agents/skills/scratch/SKILL.md
-unchanged: .agents/skills/ship/SKILL.md
-unchanged: .agents/skills/ship/agents/openai.yaml
-unchanged: .claude/agents/architect.md
-unchanged: .claude/agents/helper.md
-unchanged: .claude/agents/tester.md
+create-dir: .claude
+create-dir: .claude/skills
+create-dir: .claude/agents
+create-dir: .claude/rules
+unchanged: CLAUDE.md
 unchanged: .claude/rules/always.md
-unchanged: .claude/rules/auto.md
-unchanged: .claude/rules/lab.local.md
-unchanged: .claude/rules/manual.md
-unchanged: .claude/rules/mine.local.md
-unchanged: .claude/rules/targeted.md
 unchanged: .claude/rules/typescript.md
-unchanged: .claude/settings.json
-unchanged: .claude/skills/build/SKILL.md
+unchanged: .claude/rules/auto.md
+unchanged: .claude/rules/targeted.md
+unchanged: .claude/rules/manual.md
+create-dir: .claude/skills/deployer
 unchanged: .claude/skills/deployer/SKILL.md
-unchanged: .claude/skills/quick/SKILL.md
+create-dir: .claude/skills/reviewer
 unchanged: .claude/skills/reviewer/SKILL.md
+create-dir: .claude/skills/reviewer/references
+create-dir: .claude/skills/reviewer/scripts
 unchanged: .claude/skills/reviewer/references/checklist.md
 unchanged: .claude/skills/reviewer/scripts/run.sh
-unchanged: .claude/skills/scratch/SKILL.md
+unchanged: .claude/agents/architect.md
+unchanged: .claude/agents/tester.md
+create-dir: .claude/skills/build
+unchanged: .claude/skills/build/SKILL.md
+create-dir: .claude/skills/ship
 unchanged: .claude/skills/ship/SKILL.md
+unchanged: .claude/settings.json
+unchanged: .claude/rules/mine.local.md
+unchanged: .claude/rules/lab.local.md
+unchanged: CLAUDE.local.md
+unchanged: .claude/skills/scratch/SKILL.md
+unchanged: .claude/agents/helper.md
+unchanged: .claude/skills/quick/SKILL.md
+create-dir: .codex
+create-dir: .agents/skills
+create-dir: .codex/agents
+unchanged: AGENTS.md
+create-dir: .agents/skills/deployer
+unchanged: .agents/skills/deployer/SKILL.md
+create-dir: .agents/skills/reviewer
+unchanged: .agents/skills/reviewer/SKILL.md
+create-dir: .agents/skills/reviewer/references
+create-dir: .agents/skills/reviewer/scripts
+unchanged: .agents/skills/reviewer/references/checklist.md
+unchanged: .agents/skills/reviewer/scripts/run.sh
+create-dir: .agents/skills/build
+unchanged: .agents/skills/build/SKILL.md
+create-dir: .agents/skills/build/agents
+unchanged: .agents/skills/build/agents/openai.yaml
+create-dir: .agents/skills/ship
+unchanged: .agents/skills/ship/SKILL.md
+create-dir: .agents/skills/ship/agents
+unchanged: .agents/skills/ship/agents/openai.yaml
 unchanged: .codex/agents/architect.toml
-unchanged: .codex/agents/helper.toml
 unchanged: .codex/agents/tester.toml
 unchanged: .codex/config.toml
-unchanged: .codex/hooks.json
 unchanged: .codex/rules/ai-rulez.rules
-unchanged: .cursor/BUGBOT.md
-unchanged: .cursor/agents/architect.md
-unchanged: .cursor/agents/helper.md
-unchanged: .cursor/agents/tester.md
-unchanged: .cursor/cli.json
-unchanged: .cursor/commands/build.md
-unchanged: .cursor/commands/quick.md
-unchanged: .cursor/commands/ship.md
-unchanged: .cursor/hooks.json
-unchanged: .cursor/mcp.json
-unchanged: .cursor/rules/always.mdc
-unchanged: .cursor/rules/auto.mdc
-unchanged: .cursor/rules/context-architecture.mdc
-unchanged: .cursor/rules/context-overview.mdc
-unchanged: .cursor/rules/lab.local.mdc
-unchanged: .cursor/rules/manual.mdc
-unchanged: .cursor/rules/mine.local.mdc
-unchanged: .cursor/rules/targeted.mdc
-unchanged: .cursor/rules/typescript.mdc
-unchanged: .gemini/agents/architect.md
-unchanged: .gemini/agents/helper.md
-unchanged: .gemini/agents/tester.md
-unchanged: .gemini/settings.json
-unchanged: .github/agents/architect.agent.md
-unchanged: .github/agents/helper.agent.md
-unchanged: .github/agents/tester.agent.md
+unchanged: .codex/hooks.json
+unchanged: AGENTS.override.md
+unchanged: .agents/skills/scratch/SKILL.md
+unchanged: .agents/skills/quick/SKILL.md
+unchanged: .agents/skills/quick/agents/openai.yaml
+unchanged: .codex/agents/helper.toml
+create-dir: .github
+create-dir: .github/skills
+create-dir: .github/agents
 unchanged: .github/copilot-instructions.md
-unchanged: .github/hooks/ai-rulez.json
-unchanged: .github/instructions/ai-rulez.local.instructions.md
+create-dir: .github/instructions
 unchanged: .github/instructions/always.instructions.md
-unchanged: .github/instructions/lab.local.instructions.md
-unchanged: .github/instructions/mine.local.instructions.md
 unchanged: .github/instructions/typescript.instructions.md
-unchanged: .github/prompts/build.prompt.md
-unchanged: .github/prompts/quick.prompt.md
-unchanged: .github/prompts/ship.prompt.md
+create-dir: .github/skills/deployer
 unchanged: .github/skills/deployer/SKILL.md
+create-dir: .github/skills/reviewer
 unchanged: .github/skills/reviewer/SKILL.md
+create-dir: .github/skills/reviewer/references
+create-dir: .github/skills/reviewer/scripts
 unchanged: .github/skills/reviewer/references/checklist.md
 unchanged: .github/skills/reviewer/scripts/run.sh
+unchanged: .github/agents/architect.agent.md
+unchanged: .github/agents/tester.agent.md
+create-dir: .github/prompts
+unchanged: .github/prompts/build.prompt.md
+unchanged: .github/prompts/ship.prompt.md
+unchanged: .vscode/mcp.json
+unchanged: .mcp.json
+unchanged: .vscode/settings.json
+unchanged: .github/hooks/ai-rulez.json
+unchanged: .github/instructions/mine.local.instructions.md
+unchanged: .github/instructions/lab.local.instructions.md
+unchanged: .github/instructions/ai-rulez.local.instructions.md
 unchanged: .github/skills/scratch/SKILL.md
-unchanged: .kilo/agents/architect.md
-unchanged: .kilo/agents/helper.md
-unchanged: .kilo/agents/tester.md
-unchanged: .kilo/commands/build.md
-unchanged: .kilo/commands/quick.md
-unchanged: .kilo/commands/ship.md
-unchanged: .kilo/plugins/ai-rulez-hooks.js
+unchanged: .github/agents/helper.agent.md
+unchanged: .github/prompts/quick.prompt.md
+create-dir: .cursor
+create-dir: .cursor/commands
+create-dir: .agents
+create-dir: .cursor/agents
+create-dir: .cursor/rules
+unchanged: .cursor/rules/always.mdc
+unchanged: .cursor/rules/typescript.mdc
+unchanged: .cursor/rules/auto.mdc
+unchanged: .cursor/rules/targeted.mdc
+unchanged: .cursor/rules/manual.mdc
+unchanged: .cursor/rules/context-overview.mdc
+unchanged: .cursor/rules/context-architecture.mdc
+unchanged: .cursor/commands/build.md
+unchanged: .cursor/commands/ship.md
+unchanged: .cursor/BUGBOT.md
+unchanged: .cursor/agents/architect.md
+unchanged: .cursor/agents/tester.md
+unchanged: .cursor/mcp.json
+unchanged: .cursor/cli.json
+unchanged: .cursor/hooks.json
+unchanged: .cursor/rules/mine.local.mdc
+unchanged: .cursor/rules/lab.local.mdc
+unchanged: .cursor/commands/quick.md
+unchanged: .cursor/agents/helper.md
+create-dir: .gemini
+create-dir: .gemini/agents
+unchanged: .gemini/settings.json
+unchanged: GEMINI.md
+unchanged: .gemini/agents/architect.md
+unchanged: .gemini/agents/tester.md
+unchanged: GEMINI.local.md
+unchanged: .gemini/agents/helper.md
+create-dir: .kilo
+create-dir: .kilo/skills
+create-dir: .kilo/agents
+create-dir: .kilo/commands
+create-dir: .kilo/rules
 unchanged: .kilo/rules/always.md
-unchanged: .kilo/rules/auto.md
-unchanged: .kilo/rules/lab.local.md
-unchanged: .kilo/rules/manual.md
-unchanged: .kilo/rules/mine.local.md
 unchanged: .kilo/rules/typescript.md
+unchanged: .kilo/rules/auto.md
+unchanged: .kilo/rules/manual.md
+create-dir: .kilo/skills/deployer
 unchanged: .kilo/skills/deployer/SKILL.md
+create-dir: .kilo/skills/reviewer
 unchanged: .kilo/skills/reviewer/SKILL.md
+create-dir: .kilo/skills/reviewer/references
+create-dir: .kilo/skills/reviewer/scripts
 unchanged: .kilo/skills/reviewer/references/checklist.md
 unchanged: .kilo/skills/reviewer/scripts/run.sh
-unchanged: .kilo/skills/scratch/SKILL.md
-unchanged: .mcp.json
-unchanged: .opencode/agents/architect.md
-unchanged: .opencode/agents/helper.md
-unchanged: .opencode/agents/tester.md
-unchanged: .opencode/commands/build.md
-unchanged: .opencode/commands/quick.md
-unchanged: .opencode/commands/ship.md
-unchanged: .opencode/plugins/ai-rulez-hooks.js
-unchanged: .opencode/skills/deployer/SKILL.md
-unchanged: .opencode/skills/reviewer/SKILL.md
-unchanged: .opencode/skills/reviewer/references/checklist.md
-unchanged: .opencode/skills/reviewer/scripts/run.sh
-unchanged: .opencode/skills/scratch/SKILL.md
-unchanged: .vscode/mcp.json
-unchanged: .vscode/settings.json
-unchanged: AGENTS.local.md
-unchanged: AGENTS.md
-unchanged: AGENTS.override.md
-unchanged: CLAUDE.local.md
-unchanged: CLAUDE.md
-unchanged: GEMINI.local.md
-unchanged: GEMINI.md
+unchanged: .kilo/agents/architect.md
+unchanged: .kilo/agents/tester.md
+unchanged: .kilo/commands/build.md
+unchanged: .kilo/commands/ship.md
 unchanged: REVIEW.md
 unchanged: kilo.jsonc
+unchanged: .kilo/plugins/ai-rulez-hooks.js
+unchanged: .kilo/rules/mine.local.md
+unchanged: .kilo/rules/lab.local.md
+unchanged: .kilo/skills/scratch/SKILL.md
+unchanged: .kilo/agents/helper.md
+unchanged: .kilo/commands/quick.md
+create-dir: .opencode
+create-dir: .opencode/skills
+create-dir: .opencode/agents
+create-dir: .opencode/skills/deployer
+unchanged: .opencode/skills/deployer/SKILL.md
+create-dir: .opencode/skills/reviewer
+unchanged: .opencode/skills/reviewer/SKILL.md
+create-dir: .opencode/skills/reviewer/references
+create-dir: .opencode/skills/reviewer/scripts
+unchanged: .opencode/skills/reviewer/references/checklist.md
+unchanged: .opencode/skills/reviewer/scripts/run.sh
+create-dir: .opencode/commands
+unchanged: .opencode/commands/build.md
+unchanged: .opencode/commands/ship.md
+unchanged: .opencode/agents/architect.md
+unchanged: .opencode/agents/tester.md
 unchanged: opencode.json
+unchanged: .opencode/plugins/ai-rulez-hooks.js
+unchanged: AGENTS.local.md
+unchanged: .opencode/skills/scratch/SKILL.md
+unchanged: .opencode/commands/quick.md
+unchanged: .opencode/agents/helper.md
 --- stderr
+Warning: generate will write 7 new or changed command(s) that your tools will run (from $ROOT/.ai-rulez/config.toml):
   allow      Bash(npm run test:*)  -> claude, codex, copilot, gemini, kilo, opencode
   allow      Read(./src/**)  -> claude, cursor, kilo, opencode
   allow      WebFetch(domain:example.com)  -> claude, copilot, cursor, kilo, opencode
@@ -735,33 +736,32 @@ unchanged: opencode.json
   mcp        local-tool: npx -y golden-mcp  -> claude, codex, copilot, cursor, gemini, kilo, opencode
   mcp        personal: personal-mcp --token <redacted>  -> claude, codex, copilot, cursor, gemini, kilo, opencode
 Review them before you start a tool in this project. Silence with --yes or AI_RULEZ_ACK_COMMANDS=1.
-WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
-WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
-WARN  Machine-local content has no output for this preset and was not written preset=cursor items=context lab, context notes
-WARN  Machine-local content has no output for this preset and was not written preset=kilo items=context lab, context notes
-WARN  Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written preset=gemini items=command quick
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=codex rules_in_folder=kilo
-WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
-WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
-WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
-WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
-WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
-WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
-WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
-WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
-WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
-WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
 WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
-Warning: generate will write 7 new or changed command(s) that your tools will run (from $ROOT/.ai-rulez/config.toml):
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  Machine-local content has no output for this preset and was not written preset=cursor items=context lab, context notes
+WARN  Machine-local content has no output for this preset and was not written preset=kilo items=context lab, context notes
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=codex rules_in_folder=kilo
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written preset=gemini items=command quick
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 (no change)
 --- home tree
