@@ -19,6 +19,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // SuggestPromptVersion is part of the cache key of `verifiers suggest`.
@@ -576,10 +577,12 @@ func WriteSuggestions(cfg *config.Config, res *SuggestResult) (string, error) {
 	}
 	name := "suggested-" + invalidIDChars.ReplaceAllString(strings.ToLower(res.Target.ID), "-") + ".toml"
 	dir := filepath.Join(cfg.ConfigDir, VerifiersDirName)
-	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // a project directory, like the rest of .ai-rulez
+	target := filepath.Join(dir, name)
+	// EnsureParent creates the directory and refuses a symlink at or below the
+	// config dir, so a repository cannot aim --write at a file elsewhere.
+	if err := safefs.EnsureParent(target); err != nil {
 		return "", oops.Wrapf(err, "create %s", dir)
 	}
-	target := filepath.Join(dir, name)
 	var buf bytes.Buffer
 	buf.WriteString("# Suggested by `ai-rulez verifiers suggest` for " + res.Target.Kind + " " + res.Target.ID + ".\n# Review every check, run `ai-rulez verifiers test`, then commit.\n")
 	for _, p := range usable {
