@@ -70,6 +70,9 @@ type ConvertOptions struct {
 	Fetch bool
 	// Fetcher replaces the default git fetcher; for tests.
 	Fetcher Fetcher
+	// NativePaths limits the native importer to these project paths (a file or a
+	// directory), the way `init --from .claude,CLAUDE.md` names its sources.
+	NativePaths []string
 }
 
 // Detection is what one importer recognises in a source directory.
@@ -142,7 +145,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	importers, generatedFrom := preferSources(importers, opts.From)
 
 	plan, err := runImporters(ctx, abs, importers, Options{
-		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher, Domain: opts.Domain,
+		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher, Domain: opts.Domain, NativePaths: opts.NativePaths,
 	})
 	if err != nil {
 		return nil, err
@@ -363,7 +366,11 @@ func runImporters(ctx context.Context, abs string, importers []Format, opt Optio
 	})
 	merged := &Plan{keepNames: opt.KeepNames}
 	for _, imp := range importers {
-		p, err := imp.Plan(fsys, opt)
+		source := fs.FS(fsys)
+		if imp.Name() == nativeName {
+			source = restrict(fsys, opt.NativePaths)
+		}
+		p, err := imp.Plan(source, opt)
 		if err != nil {
 			return nil, oops.With("importer", imp.Name()).Wrapf(err, "plan %s import", imp.Name())
 		}
