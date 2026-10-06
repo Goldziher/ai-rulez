@@ -66,7 +66,7 @@ type Options struct {
 	// Timestamp, when not zero, is written as the document time (CycloneDX
 	// metadata.timestamp, SPDX creationInfo.created).
 	Timestamp time.Time
-	// Now is the clock approval expiry is judged by (default: the current time).
+	// Now is the clock approval expiry is judged by; the zero value judges nothing expired.
 	Now time.Time
 }
 

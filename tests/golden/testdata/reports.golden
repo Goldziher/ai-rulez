@@ -497,6 +497,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:agent::architect",
       "group": "agent",
       "name": "architect",
+      "description": "Designs systems",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -517,6 +518,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:agent::tester",
       "group": "agent",
       "name": "tester",
+      "description": "Writes tests",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -537,6 +539,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:check::security",
       "group": "check",
       "name": "security",
+      "description": "Flags common security issues",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -557,6 +560,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:check::style",
       "group": "check",
       "name": "style",
+      "description": "Style consistency",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -577,6 +581,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:command::build",
       "group": "command",
       "name": "build",
+      "description": "Build the project",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -597,6 +602,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:command::ship",
       "group": "command",
       "name": "ship",
+      "description": "Ship a release",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -709,6 +715,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:rule::auto",
       "group": "rule",
       "name": "auto",
+      "description": "Database migrations",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -805,6 +812,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:skill::deployer",
       "group": "skill",
       "name": "deployer",
+      "description": "Deploys the service",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -825,6 +833,7 @@ exit: 0
       "bom-ref": "ai-rulez:item:skill::reviewer",
       "group": "skill",
       "name": "reviewer",
+      "description": "Reviews pull requests",
       "properties": [
         {
           "name": "ai-rulez:digest",
@@ -837,6 +846,23 @@ exit: 0
         {
           "name": "ai-rulez:path",
           "value": "skills/reviewer"
+        }
+      ],
+      "components": [
+        {
+          "type": "file",
+          "bom-ref": "ai-rulez:item:skill::reviewer:file:skills/reviewer/scripts/run.sh",
+          "name": "skills/reviewer/scripts/run.sh",
+          "properties": [
+            {
+              "name": "ai-rulez:executes",
+              "value": "true"
+            },
+            {
+              "name": "ai-rulez:kind",
+              "value": "file"
+            }
+          ]
         }
       ]
     },
@@ -861,6 +887,10 @@ exit: 0
         {
           "name": "ai-rulez:mcp-command",
           "value": "npx"
+        },
+        {
+          "name": "ai-rulez:pinned",
+          "value": "false"
         },
         {
           "name": "ai-rulez:purl-source",
