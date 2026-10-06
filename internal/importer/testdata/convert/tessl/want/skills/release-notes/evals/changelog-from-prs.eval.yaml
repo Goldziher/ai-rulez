@@ -1,0 +1,20 @@
+schema_version: 1
+cases:
+  - id: changelog-from-prs
+    description: Imported from the Tessl scenario changelog-from-prs of acme/release-tools@1.4.0
+    prompt: |-
+      Write release notes for version 2.3.0.
+
+      The merged pull requests since v2.2.0 are:
+
+      - #101 Add CSV export (label: feature)
+      - #104 Fix crash on empty input (label: fix)
+      - #107 Bump dependencies (label: chore)
+    expect_trigger: true
+    rubric: |-
+      Checks that the agent groups pull requests by label and leaves out chores.
+      The answer should satisfy these criteria:
+      - groups_by_label: Features and fixes are listed in separate sections
+      - skips_chores: The dependency bump is not listed
+      - mentions_version: The notes name version 2.3.0
+    tags: [tessl]

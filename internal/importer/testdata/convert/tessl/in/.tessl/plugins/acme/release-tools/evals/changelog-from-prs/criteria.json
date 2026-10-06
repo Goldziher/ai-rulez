@@ -1,0 +1,9 @@
+{
+  "context": "Checks that the agent groups pull requests by label and leaves out chores.",
+  "type": "weighted_checklist",
+  "checklist": [
+    { "name": "groups_by_label", "description": "Features and fixes are listed in separate sections", "max_score": 40 },
+    { "name": "skips_chores", "description": "The dependency bump is not listed", "max_score": 30 },
+    { "name": "mentions_version", "description": "The notes name version 2.3.0", "max_score": 30 }
+  ]
+}
