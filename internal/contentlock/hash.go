@@ -71,9 +71,11 @@ type Leaf struct {
 	Data []byte
 }
 
-// ModeFor returns ModeExecutable when any execute bit is set.
+// ModeFor returns ModeExecutable when the owner execute bit is set. Git records
+// only that bit (100755 versus 100644), so group and other execute bits are
+// ignored: a checkout then digests the same wherever the umask put them.
 func ModeFor(perm uint32) string {
-	if perm&0o111 != 0 {
+	if perm&0o100 != 0 {
 		return ModeExecutable
 	}
 	return ModeRegular
@@ -128,23 +130,39 @@ func leafDigest(l Leaf) [sha256.Size]byte {
 // with the files sorted by path (bytewise). Paths must be unique, relative,
 // "/"-separated and free of "." and ".." segments.
 func TreeDigest(kind string, leaves []Leaf) (string, error) {
-	sorted := append([]Leaf(nil), leaves...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Path < sorted[j].Path })
+	entries := make([]leafSum, len(leaves))
+	for i, l := range leaves {
+		entries[i] = leafSum{path: l.Path, mode: l.Mode, sum: leafDigest(l)}
+	}
+	return combineLeaves(kind, entries)
+}
+
+// leafSum is the digest of one file together with what validation needs.
+type leafSum struct {
+	path string
+	mode string
+	sum  [sha256.Size]byte
+}
+
+// combineLeaves folds per-file digests into the tree digest of kind. It is the
+// one place the tree layout lives, shared by the in-memory and streaming paths.
+func combineLeaves(kind string, entries []leafSum) (string, error) {
+	sorted := append([]leafSum(nil), entries...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].path < sorted[j].path })
 	var buf bytes.Buffer
 	lps(&buf, label(kind))
 	u64(&buf, len(sorted))
 	for i, l := range sorted {
-		if err := validLeafPath(l.Path); err != nil {
+		if err := validLeafPath(l.path); err != nil {
 			return "", err
 		}
-		if l.Mode != ModeRegular && l.Mode != ModeExecutable {
-			return "", oops.With("path", l.Path).Errorf("invalid file mode %q", l.Mode)
+		if l.mode != ModeRegular && l.mode != ModeExecutable {
+			return "", oops.With("path", l.path).Errorf("invalid file mode %q", l.mode)
 		}
-		if i > 0 && sorted[i-1].Path == l.Path {
-			return "", oops.With("path", l.Path).Errorf("duplicate path in %s tree", kind)
+		if i > 0 && sorted[i-1].path == l.path {
+			return "", oops.With("path", l.path).Errorf("duplicate path in %s tree", kind)
 		}
-		d := leafDigest(l)
-		buf.Write(d[:])
+		buf.Write(l.sum[:])
 	}
 	sum := sha256.Sum256(buf.Bytes())
 	return Algorithm + ":" + hex.EncodeToString(sum[:]), nil
