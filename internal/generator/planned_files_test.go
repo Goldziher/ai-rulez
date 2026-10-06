@@ -35,6 +35,7 @@ func TestPlannedFilesAreQuietAndLeaveTheConfigAlone(t *testing.T) {
 	dir := planProject(t, applyConfig)
 	cfg := loadPlanConfig(t, dir, nil)
 	hooks := len(cfg.Hooks)
+	collector := cfg.Diag
 
 	// Act
 	planned := NewPlannedFiles(cfg)
@@ -45,7 +46,7 @@ func TestPlannedFilesAreQuietAndLeaveTheConfigAlone(t *testing.T) {
 	assert.Contains(t, paths, "CLAUDE.md")
 	require.True(t, ok)
 	assert.Contains(t, string(content), "GENERATED FILE")
-	assert.Nil(t, cfg.Diag, "the render works on a copy")
+	assert.Same(t, collector, cfg.Diag, "the render works on a copy")
 	assert.Len(t, cfg.Hooks, hooks)
 	_, statErr := os.Stat(filepath.Join(dir, "CLAUDE.md"))
 	assert.True(t, os.IsNotExist(statErr), "planning writes nothing")
