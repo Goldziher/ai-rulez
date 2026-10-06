@@ -298,6 +298,10 @@ func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Wr
 		fmt.Fprintf(errOut, "warning: %s the repository config sets [improve] %s, which choose what runs on your machine and with which environment: ignored without --trust-repo-optimizer\n",
 			improve.CodeRepoOptimizerIgnored, strings.Join(res.IgnoredRepoKeys, " and "))
 	}
+	if len(res.LoosenedRepoKeys) > 0 {
+		fmt.Fprintf(errOut, "warning: %s the repository config sets [improve] %s looser than the defaults: ignored without --trust-repo-optimizer (a repository may tighten the gate, not weaken it)\n",
+			improve.CodeRepoOptimizerIgnored, strings.Join(res.LoosenedRepoKeys, ", "))
+	}
 	e := &res.Effective
 	changed := cmd.Flags().Changed
 	st := &improveSettings{
