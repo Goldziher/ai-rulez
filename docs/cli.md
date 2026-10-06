@@ -1353,6 +1353,7 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
+| `--self`              | boolean | false              | Verify this ai-rulez binary against its release's Sigstore bundle (see [Signing](signing.md#verifying-ai-rulez-itself)) |
 | `--bundle`, `--skill` | string  | none               | Verify the attestation of this plugin bundle or published skill directory (implies `--attestation`) |
 | `--sbom`              | string  | none               | Verify the attestation of this SBOM file (implies `--attestation`) |
 | `--source`            | string  | none               | With `--skill`: apply `[[signing.trust]]` entries scoped to this skill source or installed skill |
