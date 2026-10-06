@@ -427,7 +427,7 @@ A [role](roles.md)'s `skill_mode` is rendered through the same ownership: `gener
 
 | File | Written when | On `clean` |
 | ---- | ------------ | ---------- |
-| `.claude/settings.json` | MCP servers, plugin keys, `[[hooks]]`, `[permissions]` or managed keys are declared | only the entries ai-rulez wrote are removed; the file is deleted only if nothing else is left |
+| `.claude/settings.json` | plugin keys, `[[hooks]]`, `[permissions]` or managed keys are declared (MCP servers are not: Claude Code reads them from `.mcp.json`) | only the entries ai-rulez wrote are removed; the file is deleted only if nothing else is left |
 | `.codex/hooks.json`, `.cursor/hooks.json`, `.gemini/settings.json` | `[[hooks]]` apply to the harness | same |
 | `.opencode/plugins/ai-rulez-hooks.js`, `.kilo/plugins/ai-rulez-hooks.js`, `.mimocode/plugins/ai-rulez-hooks.js`, `.pi/extensions/ai-rulez-hooks.ts`, `.amp/plugins/ai-rulez-hooks.ts` | `[[hooks]]` apply to the harness | deleted (ai-rulez owns the whole module; the directory also holds hand-written plugins, which are left alone) |
 | `.factory/hooks.json`, `.agents/hooks.json`, `.devin/hooks.v1.json`, `.gitlab/duo/hooks.json`, `.grok/hooks/ai-rulez.json`, `.kiro/hooks/ai-rulez.json`, `.deepagents/hooks.json`, `.agents/plugins/ai-rulez/hooks/hooks.json`, `.vibe/hooks.toml` | `[[hooks]]` apply to the harness | only the hooks ai-rulez wrote are removed; the file goes when nothing else is in it |
