@@ -356,7 +356,7 @@ func writeUpdateText(rep *updateReport) {
 		if u.DigestOld != u.DigestNew {
 			fmt.Printf("  tree %s -> %s\n", u.DigestOld, u.DigestNew)
 		}
-		fmt.Println("  run `ai-rulez generate`, then `ai-rulez lock` to refresh the output pins")
+		fmt.Println("  run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)")
 	}
 	for _, r := range rep.Blocked {
 		fmt.Fprintf(os.Stderr, "refused %s %s: %s %s\n", r.Kind, r.Name, r.Code, r.Note)

@@ -201,12 +201,17 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 		return nil, err
 	}
 	res.Tag, res.TagObject = tag.Tag, tag.TagObject
-	if !res.Pinned {
+	if warnUnpinned(res, opts) {
 		logger.Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
 			"source", spec.Name, "ref", refLabel(spec.Want().Ref), "commit", commit)
 	}
 	return res, nil
 }
+
+// warnUnpinned reports whether a resolved source deserves the AR010 warning. A
+// refresh (`lock`, `update`, `update --dry-run`) is the run that pins the
+// source, so telling it to run `ai-rulez lock` is noise about its own candidate.
+func warnUnpinned(res *Resolved, opts Options) bool { return !res.Pinned && !opts.Refresh }
 
 // treeRequest describes the tree of one commit to make available.
 type treeRequest struct {
