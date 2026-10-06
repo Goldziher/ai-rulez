@@ -670,6 +670,10 @@ func (r *runner) checkGlobs(it *item, d doc) {
 			continue
 		}
 		if !r.tree.matchAny(g, r.baseRel) {
+			if always, set := it.cf.Metadata.ExtraBool(keyAlwaysApply); set && always {
+				r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q matches no tracked file; this %s is alwaysApply so it still applies, but the glob is dead", pattern, it.kind)
+				continue
+			}
 			r.add(CodeGlobNoMatch, it.abs, d.lineOf(pattern, 1), "glob %q matches no tracked file, so this %s never applies", pattern, it.kind)
 		}
 	}
