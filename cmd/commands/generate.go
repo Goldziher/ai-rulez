@@ -69,7 +69,7 @@ func init() {
 	registerRemovedCLIMCPFlags(GenerateCmd)
 	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
-		"Generate the slice of content a role selects instead of a profile (see `ai-rulez roles list`); mutually exclusive with --profile")
+		"Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile")
 	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")

@@ -32,7 +32,7 @@ var dynamicServeFlagNames = []string{
 func registerDynamicServeFlags(cmd *cobra.Command) {
 	f := cmd.Flags()
 	f.StringArray(flagServeSource, nil, "Serve the skills of a source, repeatable: [git+]<url>[@<tag|commit>][#<subdir>] or a local directory (requires --serve-skills)")
-	f.String(flagServeRole, "", "Serve only the skills of this role (see `ai-rulez roles list`), with the delivery the role sets; it is also the default role of find_skill (requires --serve-skills)")
+	f.String(flagServeRole, "", "Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (requires --serve-skills)")
 	f.Bool(flagServeFrozen, false, "Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills)")
 	f.Bool(flagServeOffline, false, "Never use the network; use cached content (requires --serve-skills)")
 	f.Bool(flagServeIncludeStatic, false, "Also serve skills whose delivery is static (requires --serve-skills)")

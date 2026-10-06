@@ -70,7 +70,7 @@ func init() {
 		"Report this profile as one column of a comparison table; repeat per column")
 	TokensCmd.Flags().StringVar(&tokensTokenizer, "tokenizer", tokens.CounterCL100KBase,
 		"Token counter to use: "+strings.Join(tokens.Names(), " or "))
-	TokensCmd.Flags().StringVar(&tokensRole, flagRole, "", "Report on this role's content slice instead of a profile (see `ai-rulez roles list`)")
+	TokensCmd.Flags().StringVar(&tokensRole, flagRole, "", "Report on this role's content slice instead of a profile (see 'ai-rulez roles list')")
 	TokensCmd.Flags().BoolVar(&tokensByRole, "by-role", false, "Report every declared role as one column of a comparison table")
 	TokensCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to report on, or a comma-separated list to compose several")
 	TokensCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
