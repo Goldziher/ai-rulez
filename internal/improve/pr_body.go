@@ -34,6 +34,9 @@ func writeResult(b *strings.Builder, r *Report, rd *RoundReport) {
 		if ci := h.CI; ci != nil {
 			fmt.Fprintf(b, " %.0f%% bootstrap interval of the gain: [%+.1f, %+.1f] points.", ci.Confidence*100, ci.Low*100, ci.High*100)
 		}
+		if n := heldEvaluations(r); n > 1 {
+			fmt.Fprintf(b, " The candidate was selected among %d held-out evaluations, so the gain is optimistic.", n)
+		}
 		b.WriteString("\n\n")
 		fmt.Fprintf(b, "- Wins: %s\n- Losses: %s\n", idList(h.Wins), idList(h.Losses))
 		if len(h.Unstable) > 0 {

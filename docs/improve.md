@@ -352,3 +352,7 @@ They appear in `improve` output and the report only; `validate` never emits them
   or reach a local model server without declaring egress.
 - **Not done:** a native-surface sibling guard (it needs a runner with the activation capability and costs money), and
   scheduled "model upgrade repair" workflow templates.
+
+The accepted candidate is the best of the rounds that were scored on the held-out set, so with more than one such round
+the gain is optimistic. `improve apply` and the pull request body say "selected among N held-out evaluations" then;
+`max_holdout_evals` bounds N.
