@@ -209,7 +209,8 @@ refuses to run when no backend can confine the process (`AR9J7`); `auto` confine
 the default `none` keeps the optimizer unconfined, so existing optimizers keep working. The report records the mode, the
 backend and what the backend enforces, and the consent summary states the same before anything runs: `unshare` (Linux
 without bubblewrap) confines the network only, and `--egress` lifts the network denial. Reads are not restricted on any
-backend: the sandbox does not hide the repository, the held-out cases or the per-user report key.
+backend: the sandbox does not hide the repository, the held-out cases or the per-user report key. `improve pr` takes
+the same `--isolation` (and `[improve] isolation`) for the commands it runs in the worktree: see [Pull request](#pull-request).
 
 The held-out gate guards against an honest-but-overfitting optimizer, not a hostile one. The held-out cases are
 files in the authored skill's `evals/` directory, readable by absolute path by a process running as you, and the
@@ -320,6 +321,16 @@ even if the run itself used them. Files are written all or nothing.
    worktree exists, so a write failure leaves no branch. improve pr itself makes no network call, but the `generate` and `lock` it runs in the worktree fetch remote includes and sources as they do anywhere (and `eval run` calls the eval runner); git and `gh` use their
    own credentials, and `gh` gets a scrubbed environment plus the usual `GH_*`/proxy names.
 
+**Isolation.** `improve pr --isolation auto|require` (or `[improve] isolation`) runs `generate`, `lock` and `eval run` in the
+worktree under the same process sandbox: writable only below the worktree's project directory, the user cache
+(`XDG_CACHE_HOME`, else `~/.cache`), `XDG_DATA_HOME`, `AI_RULEZ_HOME` and the temp directory, where they exist, with the network
+left on because `generate` and `lock` fetch remote includes and `eval run` calls a model. The candidate is the
+optimizer's text, and `eval run` lets an agent act on it, so a hostile candidate cannot write outside those
+directories. `require` refuses (`AR9J7`) before the worktree is made when no backend works; `auto` warns and runs
+unconfined. The result (`isolation` in `--format json`) and the first line printed name the backend and what it enforces.
+The version control and `gh` calls are never confined: they need your credentials. A harness that keeps state elsewhere
+(`~/.claude`, say) cannot run `--run-evals` confined; use `--isolation none` for that step.
+
 The body states what changed, the held-out table with the interval and the wins and losses, the guards that held, cost,
 egress, the environment names forwarded, the description before and after, the optimizer's own words (untrusted: inside
 code fences or code spans longer than anything they contain), a reviewer checklist, and that the change is **not
@@ -381,8 +392,9 @@ They appear in `improve` output and the report only; `validate` never emits them
 - **The sibling guard is mandatory when a sibling has trigger cases** (question 5): it is free, because it uses the offline ranker.
 - **Self-generated held-out cases** (question 6) are not detected; the report cannot tell who wrote a case. Treat a
   model-written held-out set with the scepticism the design notes call for.
-- **The sandbox is opt-in** (`--isolation`): turning it on by default would break optimizers that write caches elsewhere
-  or reach a local model server without declaring egress.
+- **The sandbox is opt-in** (`--isolation`, on `run` and on `pr`): turning it on by default would break optimizers that
+  write caches elsewhere or reach a local model server without declaring egress, and harnesses that keep state outside
+  the worktree.
 - **The native sibling guard is opt-in** (`--sibling-native`): it needs a runner with the activation capability and
   costs money, so the free offline guard stays the default.
 - **Not done:** the native guard for harnesses other than `claude` without a `--runner-command`.
