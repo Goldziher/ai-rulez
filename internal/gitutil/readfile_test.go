@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestReadIgnoreFile(t *testing.T) {
@@ -17,9 +19,7 @@ func TestReadIgnoreFile(t *testing.T) {
 	big := filepath.Join(dir, "big")
 	require.NoError(t, os.WriteFile(big, []byte("0123456789"), 0o644))
 	link := filepath.Join(dir, "link")
-	if err := os.Symlink(regular, link); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, regular, link)
 	old := maxIgnoreFileSize
 	t.Cleanup(func() { maxIgnoreFileSize = old })
 
@@ -38,7 +38,7 @@ func TestReadIgnoreFile(t *testing.T) {
 	}
 	if runtime.GOOS != "windows" { // Windows has no device files to link to
 		devLink := filepath.Join(dir, "dev")
-		require.NoError(t, os.Symlink(os.DevNull, devLink))
+		testutil.SymlinkOrSkip(t, os.DevNull, devLink)
 		tests = append(tests, struct {
 			name    string
 			path    string

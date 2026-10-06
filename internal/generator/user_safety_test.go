@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const claudeOnlyConfig = "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n"
@@ -81,7 +83,7 @@ func TestUser_SymlinkEscapeIsNeverFollowedByDeletion(t *testing.T) {
 	victim := filepath.Join(outside, "res.json")
 	require.NoError(t, os.WriteFile(victim, []byte("{}"), 0o644))
 	require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "skills"), 0o755))
-	require.NoError(t, os.Symlink(outside, filepath.Join(home, ".claude", "skills", "old")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(home, ".claude", "skills", "old"))
 	writeUserManifest(t, home, ".claude/skills/old/res.json")
 
 	_, err := gen.GenerateUser("")
@@ -97,7 +99,7 @@ func TestUser_EmptyDirPruneDoesNotFollowSymlinksOut(t *testing.T) {
 	emptied := filepath.Join(outside, "empty")
 	require.NoError(t, os.MkdirAll(emptied, 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "skills"), 0o755))
-	require.NoError(t, os.Symlink(emptied, filepath.Join(home, ".claude", "skills", "link")))
+	testutil.SymlinkOrSkip(t, emptied, filepath.Join(home, ".claude", "skills", "link"))
 
 	gen.removeEmptyDir(filepath.Join(home, ".claude", "skills", "link"))
 

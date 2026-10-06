@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func plantLink(t *testing.T, link string) (victim string) {
@@ -19,7 +21,7 @@ func plantLink(t *testing.T, link string) (victim string) {
 	}
 	victim = filepath.Join(t.TempDir(), "victim")
 	require.NoError(t, os.WriteFile(victim, []byte("keep\n"), 0o600))
-	require.NoError(t, os.Symlink(victim, link))
+	testutil.SymlinkOrSkip(t, victim, link)
 	return victim
 }
 
