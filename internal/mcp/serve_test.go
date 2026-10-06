@@ -500,3 +500,16 @@ func TestLockDigest_IgnoresTheProjectWideSourceHashOnly(t *testing.T) {
 	body := []byte("---\nname: x\n---\n\n" + strings.Repeat("filler\n", 50) + "# Source-Hash: not a header, deep in the body\n")
 	assert.Equal(t, body, contentlock.StripVolatileHeader(body), "only the leading header region is normalized")
 }
+
+func TestLoadSkill_URIReflectsThePathLoaded(t *testing.T) {
+	t.Parallel()
+	p, _ := startSkillServerWith(t, loadCatalog(t), ServeOptions{})
+
+	whole, isErr, text := callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing"})
+	require.False(t, isErr, text)
+	ref, isErr, text := callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": "references/FORMS.md"})
+	require.False(t, isErr, text)
+
+	assert.Equal(t, "skill://pdf-processing/SKILL.md", whole["uri"])
+	assert.Equal(t, "skill://pdf-processing/references/FORMS.md", ref["uri"])
+}
