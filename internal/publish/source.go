@@ -99,11 +99,21 @@ func StripCredentials(remote string) string {
 // the usual "previous release" for the release notes; "" when there is none or
 // git cannot say. The tag text is validated before it can reach an argv.
 func PreviousTag(ctx context.Context, r runner.Runner, dir, exclude string) string {
+	return PreviousTagMatching(ctx, r, dir, exclude, "")
+}
+
+// PreviousTagMatching is PreviousTag limited to tags that match the glob (such
+// as "acme-v*", the tags of one plugin of a multi-plugin release). A glob
+// outside the tag alphabet is ignored.
+func PreviousTagMatching(ctx context.Context, r runner.Runner, dir, exclude, glob string) string {
 	argv := []string{"git"}
 	if dir != "" {
 		argv = append(argv, "-C", dir)
 	}
 	argv = append(argv, "describe", "--tags", "--abbrev=0")
+	if glob != "" && tagPattern.MatchString(strings.TrimSuffix(glob, "*")) {
+		argv = append(argv, "--match", glob)
+	}
 	if exclude != "" && tagPattern.MatchString(exclude) {
 		argv = append(argv, "--exclude", exclude)
 	}
