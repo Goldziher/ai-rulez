@@ -24,16 +24,21 @@ Install `ai-rulez` using your preferred package manager.
     uv tool install ai-rulez
     ```
 
-!!! note "Building from source"
-    The Go module path is `github.com/Goldziher/ai-rulez` (without a `/v4`
-    suffix), so `go install …@latest` resolves to an old 1.x build rather than
-    the current release. To build the current version from source, clone and
-    build the `cmd` package:
+!!! note "Go"
+    The module path is `github.com/Goldziher/ai-rulez/v5`, and the binary is the
+    `cmd/ai-rulez` package. Install it with the `/v5` path (a path without it
+    resolves to an old 1.x build):
+
+    ```bash
+    go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
+    ```
+
+    Or build from a clone:
 
     ```bash
     git clone https://github.com/Goldziher/ai-rulez
     cd ai-rulez
-    go build -o ai-rulez ./cmd
+    go build -o ai-rulez ./cmd/ai-rulez
     ```
 
 ## Run Without Installing
