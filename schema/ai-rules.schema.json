@@ -1383,7 +1383,7 @@
     },
     "review": {
       "type": "object",
-      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
+      "description": "Settings of `ai-rulez review`: the rubric, what an item sends to a judge, exclusions, spend ceilings, the secret policy and the gate and fix settings. See docs/review.md.",
       "properties": {
         "rubric": {
           "type": "string",
@@ -1402,12 +1402,59 @@
         "max_cost_usd": {
           "type": "number",
           "minimum": 0,
-          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset."
+          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset. A repository value can only lower the default (0.50); the user config file and --max-cost can set any value."
         },
         "max_calls": {
           "type": "integer",
           "minimum": 0,
-          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
+          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset. Same trust rule as max_cost_usd."
+        },
+        "on_secret": {
+          "type": "string",
+          "enum": ["withhold", "redact"],
+          "description": "withhold (default): an item holding a credential is never sent. redact: the credential is masked with [REDACTED:AR001] and the item is sent, marked redacted. An item with hidden characters is always withheld."
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Hosts a judged run may send to (host or host:port; `provider-default` names the provider's own endpoint). Honoured only from the user config file; a repository value is ignored."
+        },
+        "gate": {
+          "type": "object",
+          "description": "When `review --semantic --gate` may fail a build.",
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["info", "warning", "error"],
+              "description": "Lowest severity ceiling of a dimension whose stable fail verdict fails the gate (default warning). A judge never reports above warning, so error gates no judged verdict."
+            },
+            "require_calibration": {
+              "type": "boolean",
+              "description": "Default true: --gate is refused unless a calibration record matches the rubric, prompt, golden set, model and content mode. false lets it run without one (AR9G9 still reports it)."
+            },
+            "calibration_max_age_days": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "How old a calibration record may be (default: the rubric's calibration.max_age_days, else 90)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "fix": {
+          "type": "object",
+          "description": "Settings of `ai-rulez review fix`.",
+          "properties": {
+            "model": {
+              "type": "string",
+              "description": "Model that writes the fix. It must differ from the judge model unless --allow-same-model is given."
+            },
+            "max_growth_percent": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "How much a fix may grow an item (default 25, and never less than 200 bytes)."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
