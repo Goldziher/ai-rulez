@@ -26,6 +26,11 @@
         "require_pinned": {
           "type": "boolean",
           "description": "true makes the lock enforced, so an unpinned remote source is an error (AR010)."
+        },
+        "min_release_age": {
+          "type": "string",
+          "pattern": "^[0-9]+[hdw]$",
+          "description": "The youngest a tag may be to be adopted (7d, 12h, 2w): a floor under [lock] min_release_age and each source's own. Layers take the longest."
         }
       }
     },
@@ -76,6 +81,19 @@
               "type": "integer",
               "minimum": 0,
               "description": "The most network commands the repository may allow an item before AR030 reports it; it may set a lower value."
+            }
+          }
+        },
+        "budgets": {
+          "type": "object",
+          "description": "Content kind (rule, context, skill, agent, command) to the largest size budget the repository may set ([lint.budgets.<kind>]); it may set a lower one.",
+          "propertyNames": { "enum": ["rule", "context", "skill", "agent", "command"] },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_lines": { "type": "integer", "minimum": 1 },
+              "max_tokens": { "type": "integer", "minimum": 1 }
             }
           }
         },

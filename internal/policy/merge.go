@@ -16,6 +16,7 @@ func Merge(a, b Policy) Policy {
 			Allowed:       intersect(a.Sources.Allowed, b.Sources.Allowed),
 			Deny:          union(a.Sources.Deny, b.Sources.Deny),
 			RequirePinned: a.Sources.RequirePinned || b.Sources.RequirePinned,
+			MinReleaseAge: max(a.Sources.MinReleaseAge, b.Sources.MinReleaseAge),
 		},
 		Lint: Lint{
 			RequiredCodes: union(a.Lint.RequiredCodes, b.Lint.RequiredCodes),
@@ -29,6 +30,7 @@ func Merge(a, b Policy) Policy {
 			Capability:    Capability{MaxNetworkCommands: lowerLimit(a.Lint.Capability.MaxNetworkCommands, b.Lint.Capability.MaxNetworkCommands)},
 			LoadBudgets:   lowerLimits(a.Lint.LoadBudgets, b.Lint.LoadBudgets),
 			ScannerPolicy: mergeScannerPolicy(a.Lint.ScannerPolicy, b.Lint.ScannerPolicy),
+			SizeBudgets:   mergeSizeBudgets(a.Lint.SizeBudgets, b.Lint.SizeBudgets),
 		},
 		Lock: Lock{
 			Enforce:        a.Lock.Enforce || b.Lock.Enforce,
