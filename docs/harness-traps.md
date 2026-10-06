@@ -23,6 +23,9 @@ $ ai-rulez validate --strict
   by hand).
 - Over the files git tracks (or the directory tree outside git) below the lint root, at the root or in a nested
   package. It reads files on disk, so a generated file is seen as last written; run `ai-rulez generate` first.
+  Traps that apply to generated files (`AR9C7` to `AR9C9`) also scan the gitignored output directories
+  (`.claude/skills`, `.claude/agents`) at the lint root and keep the files that carry the ai-rulez banner, because
+  Claude Code outputs are gitignored and git does not list them. A gitignored hand-written file is not checked.
 - Severity is `warning` for a hand-written file (it could be a README). A file that carries the ai-rulez banner
   and is certainly ignored by the harness is an `error`, because it means a preset is broken. An explicit
   `[lint.severity]` entry always wins.
