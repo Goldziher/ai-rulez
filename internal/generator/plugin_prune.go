@@ -61,7 +61,10 @@ func (g *Generator) planPluginPrune(outputs []config.OutputFile) ([]pluginPrune,
 			entry := pluginPrune{Obsolete: item, bundleDir: bundleDir, rel: g.convertToRelativePath(item.Path)}
 			switch {
 			case item.Edited:
-				entry.reason = "edited since it was generated"
+				entry.reason = item.Why
+				if entry.reason == "" {
+					entry.reason = plugin.WhyEdited
+				}
 			default:
 				if _, _, guardErr := g.guardWrite(item.Path); guardErr != nil {
 					entry.reason = "its path crosses a symlink that leaves the project"

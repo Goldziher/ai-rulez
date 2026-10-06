@@ -19,7 +19,17 @@ type Obsolete struct {
 	// Edited is true when the file is not exactly what ai-rulez wrote (changed
 	// content, or not a regular file), so it must be kept.
 	Edited bool
+	// Why says why an Edited file is kept, in words that fit "Kept ...: <Why>":
+	// changed content, a symlink or other non-regular file, or a link on its path.
+	Why string
 }
+
+// Reasons an obsolete file is kept.
+const (
+	WhyEdited       = "edited since it was generated"
+	WhyNotRegular   = "it is a symlink or not a regular file"
+	WhyLinkedParent = "its path crosses a symlink that leaves the bundle"
+)
 
 // ObsoleteFiles lists the files that previousSidecar records and plannedSidecar
 // does not, and that still exist under bundleDir. A file counts as unchanged
@@ -59,17 +69,21 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 				continue
 			}
 			// A link on the way that leaves the bundle is an edit, never a candidate.
-			obsolete = append(obsolete, Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: true})
+			obsolete = append(obsolete, Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: true, Why: WhyLinkedParent})
 			continue
 		}
 		item := Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: !info.Mode().IsRegular()}
-		if !item.Edited {
+		if item.Edited {
+			item.Why = WhyNotRegular
+		} else {
 			body, readErr := readRootFile(root, cleanRel)
 			if readErr != nil {
 				return nil, oops.With("path", target).Wrapf(readErr, "read obsolete plugin file")
 			}
 			body = removeProvenanceHeader(body, target, recorded.ContentHash, previous.SourceHash)
-			item.Edited = hashBytes(body) != recorded.ContentHash
+			if item.Edited = hashBytes(body) != recorded.ContentHash; item.Edited {
+				item.Why = WhyEdited
+			}
 		}
 		obsolete = append(obsolete, item)
 	}
