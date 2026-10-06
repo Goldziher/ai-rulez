@@ -277,6 +277,45 @@ func TestRepeatedFailuresStopTheRun(t *testing.T) {
 	assert.LessOrEqual(t, len(fake.ChatCalls()), maxConsecutiveFailures+1, "a systematic failure must not burn through every item")
 }
 
+func TestRepeatedMalformedRepliesStopTheRun(t *testing.T) {
+	// Arrange
+	rb := builtin(t)
+	var items []Item
+	for _, n := range []string{"a", "b", "c", "d", "e", "f", "g", "h"} {
+		items = append(items, skill(n, "Deploy the service number "+n+" to staging"))
+	}
+	res := Run(Input{Rubric: rb, Items: items})
+	fake := llm.NewFake()
+	fake.ChatFunc = func(llm.ChatRequest) (string, error) { return "I think it is fine.", nil }
+	client := llm.Wrap(fake, llm.Config{AllowNetwork: true, Model: "fake/model"}, llm.Options{})
+
+	// Act
+	out, err := RunSemantic(t.Context(), SemanticInput{Rubric: rb, Results: res, Options: SemanticOptions{Client: client, K: 1, Workers: 1}})
+
+	// Assert
+	require.Error(t, err, "a judge that never answers in the contract must stop the run")
+	assert.True(t, errors.Is(err, ErrFatal))
+	assert.True(t, out.Incomplete)
+	assert.LessOrEqual(t, len(fake.ChatCalls()), 2*(maxConsecutiveFailures+1))
+}
+
+func TestAnItemWithAnErroredDimensionMakesTheRunIncomplete(t *testing.T) {
+	// Arrange
+	rb := builtin(t)
+	res := Run(Input{Rubric: rb, Items: []Item{skill("a", "Deploy the service to staging")}})
+	fake := llm.NewFake()
+	fake.ChatFunc = func(llm.ChatRequest) (string, error) { return "I think it is fine.", nil }
+	client := llm.Wrap(fake, llm.Config{AllowNetwork: true, Model: "fake/model"}, llm.Options{})
+
+	// Act
+	out := mustRun(t, SemanticInput{Rubric: rb, Results: res, Options: SemanticOptions{Client: client, K: 1}})
+
+	// Assert
+	assert.Equal(t, SemError, semDim(t, res, "skill:a", "trigger-quality").Status)
+	assert.True(t, res.Items[0].Semantic.Incomplete)
+	assert.True(t, out.Incomplete, "an item the judge could not answer cannot vouch for the gate")
+}
+
 func TestDescriptionsModeJudgesOnlyWhatDescriptionsCanAnswer(t *testing.T) {
 	// Arrange
 	rb, res := twoSkills(t)

@@ -77,7 +77,7 @@ type SemanticResult struct {
 	Calls      int      `json:"calls"`
 	Cached     int      `json:"cached"`
 	Truncated  bool     `json:"truncated,omitempty"`
-	// Incomplete is true when the spend cap cut the votes of this item short.
+	// Incomplete is true when the spend cap cut the votes of this item short, or a dimension got no usable answer.
 	Incomplete bool `json:"incomplete,omitempty"`
 }
 
@@ -179,7 +179,6 @@ type itemUse struct{ calls, cached int }
 func (j *Judge) account(resp llm.ChatResponse, use *itemUse) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	j.failed = 0
 	if resp.Cached {
 		j.usage.Cached++
 		use.cached++
@@ -195,6 +194,13 @@ func (j *Judge) account(resp llm.ChatResponse, use *itemUse) {
 		}
 		j.usage.Models[resp.Model]++
 	}
+}
+
+// answered resets the failure streak once a reply parsed: a reply the contract rejects is a failure.
+func (j *Judge) answered() {
+	j.mu.Lock()
+	j.failed = 0
+	j.mu.Unlock()
 }
 
 func (j *Judge) hallucinated(n int) {
@@ -252,6 +258,7 @@ func (j *Judge) vote(ctx context.Context, sp callSpec, temperature float64, use 
 			lastErr = perr
 			continue
 		}
+		j.answered()
 		out := map[string]DimVerdict{}
 		halluc := 0
 		for _, d := range sp.dims {
@@ -465,6 +472,12 @@ func (j *Judge) ItemSemantic(ctx context.Context, r *ItemResult, pool []Item) (*
 				sd.Capped = true
 			}
 			byID[id] = sd
+		}
+	}
+	for _, sd := range byID {
+		if sd.Status == SemError {
+			// A dimension the judge could not answer leaves the item unvouched for.
+			res.Incomplete = true
 		}
 	}
 	for _, d := range j.rb.Dimensions {
