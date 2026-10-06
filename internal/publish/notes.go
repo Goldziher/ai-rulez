@@ -2,8 +2,10 @@ package publish
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/samber/oops"
 
@@ -110,7 +112,11 @@ func shortDigest(d string) string {
 // (or label) the previous lock came from.
 func notesSection(since string, changes []NoteChange) string {
 	var sb strings.Builder
-	sb.WriteString("\n## Changes since " + since + "\n\n")
+	label := since
+	if !tagPattern.MatchString(since) {
+		label = mdCode(since) // a tag name is plain text; anything else is quoted
+	}
+	sb.WriteString("\n## Changes since " + label + "\n\n")
 	if len(changes) == 0 {
 		sb.WriteString("No authored content or remote pin changed.\n")
 		return sb.String()
@@ -123,9 +129,9 @@ func notesSection(since string, changes []NoteChange) string {
 			if c.Change != heading.change {
 				continue
 			}
-			line := fmt.Sprintf("- %s `%s`", c.Kind, c.ID)
+			line := fmt.Sprintf("- %s %s", noteKind(c.Kind), mdCode(c.ID))
 			if c.Domain != "" {
-				line += " (domain " + c.Domain + ")"
+				line += " (domain " + mdCode(c.Domain) + ")"
 			}
 			if c.Change != ChangeRemoved && c.Digest != "" {
 				line += " " + shortDigest(c.Digest)
@@ -147,4 +153,46 @@ func parseLock(data []byte, what string) (*lockfile.File, error) {
 		return nil, oops.With("lock", what).Wrapf(err, "parse the lock for the release notes")
 	}
 	return f, nil
+}
+
+// noteKind is an item kind: the plain word for the known ones (skill, rule,
+// installed-skill, ...), a code span for anything else.
+func noteKind(kind string) string {
+	if kindWord.MatchString(kind) {
+		return kind
+	}
+	return mdCode(kind)
+}
+
+var kindWord = regexp.MustCompile(`^[a-z][a-z-]{0,31}$`)
+
+// mdCode renders untrusted text (an item id or domain from the lock, a tag) as
+// an inline code span whose delimiters cannot be closed from inside: control and
+// format characters (line breaks, bidi overrides) become spaces or are dropped,
+// and the fence is longer than any backtick run in the text.
+func mdCode(s string) string {
+	s = strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsControl(r):
+			return ' '
+		case unicode.Is(unicode.Cf, r):
+			return -1
+		}
+		return r
+	}, s)
+	longest, run := 0, 0
+	for _, r := range s {
+		if r == '`' {
+			run++
+			longest = max(longest, run)
+		} else {
+			run = 0
+		}
+	}
+	fence := strings.Repeat("`", longest+1)
+	pad := ""
+	if strings.HasPrefix(s, "`") || strings.HasSuffix(s, "`") {
+		pad = " "
+	}
+	return fence + pad + s + pad + fence
 }
