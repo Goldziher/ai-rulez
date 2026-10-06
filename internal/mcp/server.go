@@ -23,6 +23,17 @@ type Server struct {
 	catMu     sync.RWMutex
 	serve     *serveState
 	telemetry atomic.Pointer[itemTelemetry]
+	// closers run from Close, once the transport has ended.
+	closers []func()
+}
+
+// Close releases what the server started in the background, such as the
+// delivery of queued usage-sink records. Call it after the transport ends.
+func (s *Server) Close() {
+	for _, fn := range s.closers {
+		fn()
+	}
+	s.closers = nil
 }
 
 func NewServer(version string) *Server {
