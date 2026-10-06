@@ -77,8 +77,8 @@ missing is error `AR9N4` with an install hint.
 
 ### npm
 
-`--to npm` writes `npm/package/` (the bundle files plus a generated `package.json`) and plans two commands with a fixed argv,
-run from the dist directory:
+`--to npm` writes `npm/package/` (the bundle files plus a generated `package.json`) and plans two commands with a fixed argv
+(the plan lists them relative to the dist directory; `--execute` runs the hardened form described below):
 
 ```text
 npm pack --ignore-scripts --pack-destination npm ./npm/package
@@ -95,10 +95,19 @@ packs the planned directory with the real npm when it is installed.
 - `package.json` carries `files` (the bundle's top-level entries), the repository, and an `ai-rulez` key with the archive
   digest, lock tree and runtimes. A bundle that already has a `package.json` (the `opencode` runtime) is refused; drop the
   runtime with `--runtime`.
-- `--execute` first runs `npm view <package>@<version> version` and refuses a version the registry has (npm versions are
-  immutable), then packs and publishes. npm gets a filtered environment: the base set plus `NODE_AUTH_TOKEN`, `NPM_TOKEN`,
-  `NPM_CONFIG_*` for the user config, registry and cache, proxy and certificate settings. Its output is redacted before it
-  is shown.
+- `--execute` first verifies the dist directory again (an edited package file stops the run), runs
+  `npm view <package>@<version> version` and refuses a version the registry has (npm versions are immutable), then packs and
+  publishes. npm runs from an empty temporary directory with the package directory and the tarball given by absolute path and
+  `--userconfig` (your `NPM_CONFIG_USERCONFIG` or `~/.npmrc`, where `npm login` keeps credentials) and `--globalconfig` (empty
+  unless `NPM_CONFIG_GLOBALCONFIG` names one) named explicitly, so a `.npmrc` committed in the repository, which could redirect
+  the registry and receive `NODE_AUTH_TOKEN`, never applies. A `[publish.npm] registry` is also set as the scope's registry.
+  The plan output and `--execute` print the effective registry (the plan's, else the scope or default registry from your
+  environment and user npmrc, else `https://registry.npmjs.org/`) and refuse one that is not `https://`. The packed tarball is
+  digested after `npm pack`, checked again before `npm publish` and reported with its digest. npm gets a filtered environment:
+  the base set plus `NODE_AUTH_TOKEN`, `NPM_TOKEN`, `NPM_CONFIG_*` for the user config, registry and cache, proxy and
+  certificate settings. Its output is redacted before it is shown.
+- The signature covers the release archive, not the tarball npm packs, so `require_signature` fails an npm release (`AR9N7`)
+  and a signed npm release warns. Publish the signed archive with `--to github-release` or `--to oci` for a verifiable release.
 - npm provenance (`--provenance`) is not offered: it depends on the CI environment, which a plan must not.
 
 ### OCI
