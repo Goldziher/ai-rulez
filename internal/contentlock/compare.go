@@ -295,6 +295,8 @@ func (c Change) Line() string {
 		return fmt.Sprintf("remote %s %s: %s", c.Kind, c.ID, c.Detail)
 	case ScopeServed:
 		return fmt.Sprintf("served %s: %s", c.ID, c.Detail)
+	case ScopeApproval:
+		return "approval: " + c.Detail
 	}
 	what := "output " + c.Path
 	if c.Scope == ScopeSource {

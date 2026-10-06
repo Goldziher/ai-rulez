@@ -196,8 +196,24 @@
             }
           },
           "approval": {
-            "type": "null",
-            "description": "Reserved: approval state is not recorded yet."
+            "description": "Reviewer-approval state (docs/approvals.md). null unless [governance] require_approval selects the item or ai-rulez.lock records an approval of its current digest.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["required", "status", "reviewers"],
+                "additionalProperties": false,
+                "properties": {
+                  "required": { "type": "boolean" },
+                  "status": {
+                    "enum": ["not_required", "ok", "missing", "stale", "expired", "unauthorized", "insufficient"]
+                  },
+                  "reviewers": { "type": "array", "items": { "type": "string" } },
+                  "assurance": { "enum": ["asserted"] },
+                  "expires": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+                }
+              }
+            ]
           },
           "excerpt": {
             "type": "object",

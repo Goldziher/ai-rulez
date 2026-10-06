@@ -219,6 +219,7 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
+	carryApprovals(current, next, len(wanted) == 0 && kind == "")
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
 		fmtError(err)
 		return 1
