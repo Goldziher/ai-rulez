@@ -36,9 +36,14 @@ func TestReviewCLI(t *testing.T) {
 	sarif.AssertStdoutContains(t, `"version": "2.1.0"`)
 	sarif.AssertStdoutContains(t, "aiRulezReviewFingerprint/v1")
 
-	// --semantic is not in this build.
+	// --semantic is refused, and nothing is sent, until the network is opted into in user scope.
 	semantic := testutil.RunCLI(t, dir, "review", "--semantic")
 	require.Equal(t, 1, semantic.ExitCode)
+	require.Contains(t, semantic.Stderr+semantic.Stdout, "no model configured")
+	explain := testutil.RunCLIExpectSuccess(t, dir, "review", "explain", "AR9G9")
+	explain.AssertStdoutContains(t, "judge-calibration-stale")
+	gate := testutil.RunCLI(t, dir, "review", "--gate")
+	require.Equal(t, 1, gate.ExitCode, "--gate needs --semantic")
 
 	// A broken rubric is an AR9G8 error with exit 2, and review refuses to score against it.
 	rubric := filepath.Join(root, "rubrics", "mine")
