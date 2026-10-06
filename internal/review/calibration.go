@@ -204,6 +204,9 @@ func MatchCalibration(rb *Rubric, rec *CalibrationRecord, cur CalKey, now time.T
 	}
 	if t, err := time.Parse("2006-01-02", rec.Date); err == nil {
 		st.AgeDays = int(now.Sub(t).Hours() / 24)
+		if st.AgeDays < -1 {
+			stale("the record is dated %s, in the future; a record cannot outlive its own date", rec.Date)
+		}
 		if st.AgeDays > limit {
 			stale("the record is %d days old; the limit is %d", st.AgeDays, limit)
 		}
