@@ -22,7 +22,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
-| `ai-rulez verifiers run/list`   | Run the deterministic repo checks declared as `[[verifiers]]` ([details](#verifiers-command)) |
+| `ai-rulez verifiers run/list/explain/test` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
@@ -1314,27 +1314,37 @@ Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be l
 
 ## Verifiers Command
 
-### `ai-rulez verifiers run|list [config-file]`
+### `ai-rulez verifiers run|list|explain|test`
 
-Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync). Verifiers never use the network, never start a process and never write. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
+Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync) and as rule-linked specs under `.ai-rulez/verifiers/*.toml` (paired files, `all`/`any`/`not`, changed-only scope; a failure names the rule or skill it enforces). Verifiers never use the network, never start a process and never write. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
 
 ```bash
-ai-rulez verifiers run [config-file] [--strict] [--json] [--name <name>]... [--profile <name>] [--no-local] [--config-dir <name>]
-ai-rulez verifiers list [config-file] [--no-local] [--config-dir <name>]
+ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--no-local] [--config-dir <name>]
+ai-rulez verifiers list [config-file] [--json] [--no-local] [--config-dir <name>]
+ai-rulez verifiers explain <name> [config-file]
+ai-rulez verifiers test [name...]
 ```
 
 | Flag | Description |
 | --- | --- |
-| `--strict` | Also fail the run when a `warning`-severity verifier fails |
-| `--json` | Print `{"root", "summary": {"pass", "fail", "error"}, "results": [{"name", "type", "severity", "status", "description", "message"}]}` instead of the table |
+| `--since <rev>` | Evaluate only files changed since the merge base of `<rev>` and `HEAD`, plus uncommitted and untracked files. A revision that does not exist or share history with `HEAD` (a shallow clone) is an error (exit `1`), never a pass |
+| `--staged` | Evaluate only staged changes (exit `1` outside a repository or without commits) |
+| `--all` | Evaluate every file (the default); exclusive with `--since` and `--staged` |
+| `--rule <id>` | Run only the verifiers that enforce this rule, skill, agent or command |
+| `--format` | `text` (default), `json` ([`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json)), `sarif` or `junit` |
+| `--json` | Same as `--format json` |
+| `--out <file>` | Write the report to a file instead of stdout |
+| `--fail-on` | Lowest failing severity: `error` (default), `warning`, `info` or `none` |
+| `--strict` | Same as `--fail-on warning` |
+| `--strict-applicability` | Report a verifier whose `when_changed` matches no file of the repository (`AR9H5`) |
 | `--name` | Run only the named verifier (repeatable) |
 | `--profile` / `-p` | Profile for `generated_in_sync` verifiers that name none |
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared without evaluating it. Both commands (and `validate`) check the configuration first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time.
+`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`.
 
-Exit codes: `0` no verifier failed at a failing severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run. The MCP server exposes the same run as the read-only `run_verifiers` tool; it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
+Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 
 ## Tokens Command
 

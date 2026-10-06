@@ -11,6 +11,7 @@ import (
 
 type jsonReport struct {
 	Root    string         `json:"root,omitempty"`
+	Mode    string         `json:"mode,omitempty"`
 	Summary map[string]int `json:"summary"`
 	Results []Result       `json:"results"`
 }
@@ -18,9 +19,10 @@ type jsonReport struct {
 func summary(r *Report) map[string]int {
 	c := r.Counts()
 	return map[string]int{
-		string(StatusPass):  c[StatusPass],
-		string(StatusFail):  c[StatusFail],
-		string(StatusError): c[StatusError],
+		string(StatusPass):          c[StatusPass],
+		string(StatusFail):          c[StatusFail],
+		string(StatusError):         c[StatusError],
+		string(StatusNotApplicable): c[StatusNotApplicable],
 	}
 }
 
@@ -28,7 +30,7 @@ func summary(r *Report) map[string]int {
 func WriteJSON(w io.Writer, r *Report) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(jsonReport{Root: r.Root, Summary: summary(r), Results: r.Results}); err != nil {
+	if err := enc.Encode(jsonReport{Root: r.Root, Mode: r.Mode, Summary: summary(r), Results: r.Results}); err != nil {
 		return oops.Wrapf(err, "write verifiers report")
 	}
 	return nil
@@ -48,9 +50,69 @@ func WriteText(w io.Writer, r *Report) error {
 	if err := tw.Flush(); err != nil {
 		return wrapWrite(err)
 	}
+	writeDetails(w, r)
 	c := r.Counts()
-	_, err := fmt.Fprintf(w, "\n%d passed, %d failed, %d could not run\n", c[StatusPass], c[StatusFail], c[StatusError])
+	line := fmt.Sprintf("\n%d passed, %d failed, %d could not run", c[StatusPass], c[StatusFail], c[StatusError])
+	if n := c[StatusNotApplicable]; n > 0 {
+		line += fmt.Sprintf(", %d not applicable", n)
+	}
+	if r.Mode != "" {
+		line += " (" + r.Mode + ")"
+	}
+	_, err := fmt.Fprintln(w, line)
 	return wrapWrite(err)
+}
+
+// writeDetails prints, for each failed or invalid verifier, the rule it
+// enforces, every finding and the fix.
+func writeDetails(w io.Writer, r *Report) {
+	first := true
+	for _, res := range r.Results {
+		if res.Status != StatusFail && res.Code != CodeVerifierInvalid {
+			continue
+		}
+		if len(res.Findings) == 0 && res.Fix == "" && res.Target == nil {
+			continue
+		}
+		if first {
+			fmt.Fprintln(w)
+			first = false
+		}
+		head := res.Code + " " + sanitize(res.Name)
+		if res.Target != nil {
+			head += fmt.Sprintf(" (%s %q", res.Target.Kind, sanitize(res.Target.ID))
+			if res.Target.Path != "" {
+				head += ", " + sanitize(res.Target.Path)
+				if res.Target.Line > 0 {
+					head += fmt.Sprintf(":%d", res.Target.Line)
+				}
+			}
+			head += ")"
+		}
+		fmt.Fprintln(w, head)
+		for _, f := range res.Findings {
+			fmt.Fprintln(w, "  "+findingLine(f))
+		}
+		if res.Fix != "" {
+			fmt.Fprintln(w, "  fix: "+sanitize(res.Fix))
+		}
+	}
+}
+
+func findingLine(f Finding) string {
+	loc := ""
+	if f.File != "" {
+		loc = sanitize(f.File)
+		if f.Line > 0 {
+			loc += fmt.Sprintf(":%d", f.Line)
+		}
+		loc += "  "
+	}
+	line := loc + sanitize(f.Message)
+	if f.Match != "" {
+		line += "  [" + f.Match + "]"
+	}
+	return line
 }
 
 func wrapWrite(err error) error {

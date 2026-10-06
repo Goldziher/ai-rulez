@@ -31,6 +31,9 @@ const (
 	StatusPass  Status = "pass"
 	StatusFail  Status = "fail"
 	StatusError Status = "error"
+	// StatusNotApplicable means when_changed selected no changed file, so the
+	// verifier had nothing to check. It never fails a run.
+	StatusNotApplicable Status = "not_applicable"
 )
 
 const (
@@ -46,11 +49,34 @@ type Result struct {
 	Status      Status `json:"status"`
 	Description string `json:"description,omitempty"`
 	Message     string `json:"message,omitempty"`
+	// Code is the rule code of a failure: AR9H1 (a predicate did not hold),
+	// AR9H2 (the declaration is invalid) or AR9H5 (dead scope).
+	Code string `json:"code,omitempty"`
+	// Target is the rule, skill, agent or command the verifier enforces.
+	Target *Target `json:"target,omitempty"`
+	// Fix says how to make the verifier pass.
+	Fix string `json:"fix,omitempty"`
+	// Source is the declaration file of a verifier declared under verifiers/.
+	Source   string    `json:"source,omitempty"`
+	Findings []Finding `json:"findings,omitempty"`
+	// Notes list files skipped (binary, oversized) and similar.
+	Notes []string `json:"notes,omitempty"`
+}
+
+// Target is the item a verifier enforces, with the file (and heading line)
+// a reviewer should read.
+type Target struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	Path string `json:"path,omitempty"`
+	Line int    `json:"line,omitempty"`
 }
 
 // Report is the outcome of a run.
 type Report struct {
-	Root    string   `json:"root,omitempty"`
+	Root string `json:"root,omitempty"`
+	// Mode says which files counted as changed: "all", "since <rev>" or "staged".
+	Mode    string   `json:"mode,omitempty"`
 	Results []Result `json:"results"`
 	// Err is set when the run could not start (for example an unknown name was
 	// requested); no verifier ran.
@@ -69,11 +95,22 @@ func (r *Report) Counts() map[Status]int {
 // Failed reports whether a verifier failed at a failing severity: error, and
 // with strict warning too. An info-level failure never fails the run.
 func (r *Report) Failed(strict bool) bool {
+	if strict {
+		return r.FailedAt(severityWarning)
+	}
+	return r.FailedAt(severityError)
+}
+
+// FailedAt reports whether a verifier failed at or above the severity: "error",
+// "warning" or "info". "none" never fails.
+func (r *Report) FailedAt(level string) bool {
+	rank := map[string]int{"info": 1, severityWarning: 2, severityError: 3}
+	threshold, ok := rank[level]
+	if !ok {
+		return false
+	}
 	for _, res := range r.Results {
-		if res.Status != StatusFail {
-			continue
-		}
-		if res.Severity == severityError || (strict && res.Severity == severityWarning) {
+		if res.Status == StatusFail && rank[res.Severity] >= threshold {
 			return true
 		}
 	}
@@ -117,6 +154,18 @@ type Options struct {
 	// Drift lists generated files that differ from a fresh render of the
 	// profile, as "kind: path". nil renders with the generator.
 	Drift func(cfg *config.Config, profile string) ([]string, error)
+	// Since evaluates only what changed since the merge base with this
+	// revision (plus uncommitted and untracked files); Staged only what is
+	// staged. At most one may be set. A revision that does not resolve is an
+	// error, never an empty scope.
+	Since  string
+	Staged bool
+	// Rule keeps only the verifiers that enforce this rule, skill, agent or
+	// command (id or domain/id).
+	Rule string
+	// StrictApplicability reports a verifier whose when_changed matches no
+	// file of the repository (AR9H5).
+	StrictApplicability bool
 }
 
 // Env is what predicates share for one run.
@@ -129,53 +178,123 @@ type Env struct {
 	files      []string
 	unreadable []string
 	built      bool
+	scope      *scopeData
 	// rootReal is the project root with symlinks resolved, computed once.
 	rootReal string
 	rootErr  error
 	rootDone bool
 }
 
-// Run evaluates the configured verifiers in declaration order.
+// Run evaluates the configured verifiers: the [[verifiers]] of config.toml in
+// declaration order, then those of .ai-rulez/verifiers/*.toml.
 func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	rep := &Report{Root: cfg.BaseDir, Results: []Result{}}
-	selected, err := selectVerifiers(cfg.Verifiers, opts.Names)
+	if opts.Since != "" && opts.Staged {
+		rep.Err = oops.New("--since and --staged cannot be combined")
+		return rep
+	}
+	specs, problems := LoadSpecs(cfg)
+	entries := make([]entry, 0, len(cfg.Verifiers)+len(specs))
+	for i := range cfg.Verifiers {
+		entries = append(entries, entry{id: cfg.Verifiers[i].Name, legacy: &cfg.Verifiers[i]})
+	}
+	for i := range specs {
+		entries = append(entries, entry{id: specs[i].ID, spec: &specs[i]})
+	}
+	selected, err := selectEntries(entries, opts, len(problems) > 0)
 	if err != nil {
 		rep.Err = err
 		return rep
 	}
 	env := &Env{Cfg: cfg, Root: cfg.BaseDir, opts: opts}
-	for _, v := range selected {
-		rep.Results = append(rep.Results, evaluate(ctx, env, v))
+	needScope := opts.Since != "" || opts.Staged
+	for _, e := range selected {
+		needScope = needScope || e.spec != nil
+	}
+	if needScope {
+		if err := env.prepareScope(ctx); err != nil {
+			rep.Err = err
+			return rep
+		}
+		rep.Mode = env.scope.describe()
+	}
+	for _, e := range selected {
+		if e.spec != nil {
+			rep.Results = append(rep.Results, evaluateSpec(ctx, env, e.spec))
+			continue
+		}
+		rep.Results = append(rep.Results, evaluate(ctx, env, *e.legacy))
+	}
+	if len(opts.Names) == 0 && opts.Rule == "" {
+		rep.Results = append(rep.Results, problemResults(problems)...)
 	}
 	return rep
 }
 
-func selectVerifiers(all []config.VerifierConfig, names []string) ([]config.VerifierConfig, error) {
-	if len(names) == 0 {
-		return all, nil
+// entry is one declared verifier: a flat config.toml one or a spec.
+type entry struct {
+	id     string
+	legacy *config.VerifierConfig
+	spec   *Spec
+}
+
+func selectEntries(all []entry, opts Options, hasProblems bool) ([]entry, error) {
+	out := all
+	if opts.Rule != "" {
+		out = nil
+		for _, e := range all {
+			if e.spec == nil {
+				continue
+			}
+			if _, id := e.spec.TargetKind(); id == opts.Rule || strings.HasSuffix(id, "/"+opts.Rule) {
+				out = append(out, e)
+			}
+		}
+	}
+	if len(opts.Names) == 0 {
+		return out, nil
 	}
 	want := map[string]bool{}
-	for _, n := range names {
+	for _, n := range opts.Names {
 		want[n] = true
 	}
-	var out []config.VerifierConfig
-	for _, v := range all {
-		if want[v.Name] {
-			out = append(out, v)
-			delete(want, v.Name)
+	var picked []entry
+	for _, e := range out {
+		if want[e.id] {
+			picked = append(picked, e)
+			delete(want, e.id)
 		}
 	}
 	if len(want) > 0 {
 		missing := make([]string, 0, len(want))
-		for _, n := range names {
+		for _, n := range opts.Names {
 			if want[n] {
 				missing = append(missing, n)
 			}
 		}
-		return nil, oops.Hint("Run `ai-rulez verifiers list` to see the declared names.").
-			Errorf("unknown verifier(s): %s", strings.Join(missing, ", "))
+		hint := "Run `ai-rulez verifiers list` to see the declared names."
+		if hasProblems {
+			hint += " A declaration with a problem is not selectable; run without --name to see it."
+		}
+		return nil, oops.Hint(hint).Errorf("unknown verifier(s): %s", strings.Join(missing, ", "))
 	}
-	return out, nil
+	return picked, nil
+}
+
+// problemResults turns invalid declarations into AR9H2 error results.
+func problemResults(problems []Problem) []Result {
+	out := make([]Result, 0, len(problems))
+	for _, p := range problems {
+		name := p.ID
+		if name == "" {
+			name = p.File
+		}
+		out = append(out, Result{
+			Name: sanitize(name), Type: "invalid", Severity: severityError, Status: StatusError, Code: CodeVerifierInvalid,
+			Message: sanitize(p.Message), Source: p.File,
+		})
+	}
+	return out
 }
 
 func evaluate(ctx context.Context, env *Env, v config.VerifierConfig) (res Result) {
