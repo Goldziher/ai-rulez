@@ -24,7 +24,8 @@ const SubjectLabel = "ai-rulez/lock-subject/v1"
 type Subject struct {
 	// Tree is the lock's top-level "sha256:<hex>" digest, recomputed from its entries.
 	Tree string
-	// ApprovalsDigest is the digest of the approval set; empty until approvals exist.
+	// ApprovalsDigest is the digest of the approval and deny records
+	// (lockfile.File.ApprovalsDigest); empty while the lock holds none.
 	ApprovalsDigest string
 	HashVersion     int
 	// Scope is the recorded [lock] scope ("all" when the lock records none).
@@ -39,7 +40,7 @@ func SubjectOf(f *lockfile.File) Subject {
 	if scope == "" {
 		scope = config.LockScopeAll
 	}
-	return Subject{Tree: TreeOf(f), HashVersion: HashVersion, Scope: scope, OutputsPinned: f.OutputsPinned}
+	return Subject{Tree: TreeOf(f), ApprovalsDigest: f.ApprovalsDigest(), HashVersion: HashVersion, Scope: scope, OutputsPinned: f.OutputsPinned}
 }
 
 // Digest returns the lock-subject digest:
