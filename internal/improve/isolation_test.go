@@ -114,3 +114,49 @@ func TestPrepare_Isolation(t *testing.T) {
 		})
 	}
 }
+
+func TestSummary_IsolationLineStatesWhatTheBackendEnforces(t *testing.T) {
+	tests := []struct {
+		name    string
+		sb      *sandbox.Sandbox
+		egress  []string
+		want    []string
+		notWant []string
+	}{
+		{"sandbox-exec confines writes and network", sandbox.New("darwin", lookIn("sandbox-exec")).WithRunner(&runner.Fake{}), nil,
+			[]string{"writes only inside", "no network", "reads are not restricted", "report-signing key"}, []string{"NOT"}},
+		{"declared egress", sandbox.New("darwin", lookIn("sandbox-exec")).WithRunner(&runner.Fake{}), []string{"api.example.com"},
+			[]string{"network allowed (egress declared)"}, []string{"no network", "NOT"}},
+		{"unshare confines the network only", sandbox.New("linux", lookIn("unshare")).WithRunner(&runner.Fake{}), nil,
+			[]string{"writes are NOT confined", "no network"}, []string{"writes only inside"}},
+		{"unshare with egress blocks nothing", sandbox.New("linux", lookIn("unshare")).WithRunner(&runner.Fake{}), []string{"api.example.com"},
+			[]string{"writes are NOT confined", "network allowed (egress declared)"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root, configDir := project(t)
+			o := baseOptions(root, configDir, goodEval(), &runner.Fake{})
+			o.Isolation, o.Sandbox, o.Egress = sandbox.ModeAuto, tt.sb, tt.egress
+			plan := mustPrepare(t, &o)
+
+			// Act
+			text := plan.Summary()
+
+			// Assert
+			require.True(t, plan.isolation.Confined, "%v", plan.Warnings)
+			for _, w := range tt.want {
+				assert.Contains(t, text, w)
+			}
+			for _, w := range tt.notWant {
+				assert.NotContains(t, text, w)
+			}
+		})
+	}
+	t.Run("none says what stays open", func(t *testing.T) {
+		root, configDir := project(t)
+		o := baseOptions(root, configDir, goodEval(), &runner.Fake{})
+		text := mustPrepare(t, &o).Summary()
+		assert.Contains(t, text, "report-signing key")
+	})
+}

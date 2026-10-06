@@ -53,23 +53,37 @@ func (p *Plan) resolveIsolation(ctx context.Context) error {
 	p.sandbox = sb
 	p.isolation.Backend = string(sb.Backend())
 	p.isolation.Confined = true
-	// NoNetwork and NoWrites are the backend's own report, filled in when argv is wrapped.
+	// Ask the backend what it really enforces now, so the consent summary says so before anything
+	// runs (unshare confines the network only). confineArgv records the same answer for the report.
+	w, werr := sb.Wrap(sandbox.Spec{WriteDirs: []string{o.ConfigDir}, AllowNetwork: len(o.Egress) > 0}, []string{"true"})
+	if werr != nil {
+		return refuse(CodeIsolationUnavailable, "%s", Sanitize(werr.Error(), 300))
+	}
+	p.isolation.NoNetwork, p.isolation.NoWrites = w.NoNetwork, w.NoWrites
 	return nil
 }
 
-// isolationLine is the consent-summary line about confinement.
+// isolationLine is the consent-summary text about confinement. It states what the backend enforces and,
+// always, what no backend does here: reads are open, and a confined optimizer is still not trusted.
 func (p *Plan) isolationLine() string {
 	switch {
 	case p.isolation != nil && p.isolation.Confined:
-		net := "no network"
-		if len(p.Opts.Egress) > 0 {
+		writes := "writes are NOT confined by this backend"
+		if p.isolation.NoWrites {
+			writes = "writes only inside the run's workspace, home and tmp directories"
+		}
+		net := "network is NOT blocked by this backend"
+		switch {
+		case p.isolation.NoNetwork:
+			net = "no network"
+		case len(p.Opts.Egress) > 0:
 			net = "network allowed (egress declared)"
 		}
-		return fmt.Sprintf("  isolation:   %s sandbox: writes only inside the run's workspace, home and tmp directories, %s\n", p.isolation.Backend, net)
+		return fmt.Sprintf("  isolation:   %s sandbox: %s, %s; reads are not restricted, so the optimizer can still read your repository, the held-out cases and the report-signing key (see docs/improve.md)\n", p.isolation.Backend, writes, net)
 	case p.isolation != nil && p.isolation.Mode != string(sandbox.ModeNone):
 		return "  isolation:   requested but unavailable: the optimizer runs unconfined\n"
 	}
-	return "  isolation:   none (the optimizer runs as you, unconfined; --isolation auto|require confines it)\n"
+	return "  isolation:   none (the optimizer runs as you, unconfined, and can read your repository, the held-out cases and the report-signing key; --isolation auto|require confines writes and network)\n"
 }
 
 // confineArgv wraps the optimizer argv in the sandbox: writes only below the workspace, home and tmp
