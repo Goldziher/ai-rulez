@@ -21,10 +21,6 @@ type Repo struct {
 	Bare string
 	// URL is the file:// URL of the remote.
 	URL string
-	// Date, when set (a git date such as "2020-01-02T03:04:05Z"), is the author
-	// and committer date of the commits and tags made from now on, so a test can
-	// build a history of old releases and a brand-new one.
-	Date string
 }
 
 // New creates an empty repository on branch main.
@@ -45,9 +41,6 @@ func (r *Repo) git(dir string, args ...string) string {
 		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
 		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com",
 	)
-	if r.Date != "" {
-		cmd.Env = append(cmd.Env, "GIT_AUTHOR_DATE="+r.Date, "GIT_COMMITTER_DATE="+r.Date)
-	}
 	out, err := cmd.CombinedOutput()
 	require.NoError(r.t, err, "git %v: %s", args, out)
 	return strings.TrimSpace(string(out))

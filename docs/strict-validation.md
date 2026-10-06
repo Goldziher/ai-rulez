@@ -84,6 +84,8 @@ stdout.
 | AR730 | `constraint-unsatisfiable` | error | No tag of a source satisfies its `version` constraint, or the source has no semantic version tags (see [Lock file](lockfile.md#version-constraints)) |
 | AR731 | `constraint-invalid` | error | A `version` constraint does not parse, or an include, installed skill or skill source sets both `ref` and `version` |
 | AR732 | `tag-moved` | error | A tag pinned in `ai-rulez.lock` now points to another commit; raised by `lock`, `lock --outdated` and `update`, which never follow it silently |
+| AR733 | `release-held-back` | info | A tag that satisfies a `version` constraint was held back by `min_release_age`; the next older tag, or the pin, is used (see [Lock file](lockfile.md#minimum-release-age)) |
+| AR734 | `source-outdated` | off | A remote source has a newer tag its constraint allows; reported by `lock --outdated` once enabled in `[lint.severity]` |
 | AR735 | `locked-tag-missing` | warning | A tag pinned in `ai-rulez.lock` no longer exists on the remote; the pinned commit is still used |
 | AR740 | `policy-loosened` | error | The repository weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error, see [Policy](policy.md)) |
 | AR741 | `policy-digest-mismatch` | error | A policy file does not match the digest it was pinned to (reserved for pinned policies) |
@@ -211,7 +213,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR716` used, `AR717` is for the deny list, see [Approvals](approvals.md)) | allocated |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR727` used, see [Signing](signing.md)) | allocated |
-| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR732` and `AR735` used) | allocated |
+| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
@@ -471,7 +473,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `metadata` | `AR951`-`AR954` |
 | `plugin` | `AR961`-`AR964` |
 | `roles` | `AR971`-`AR973` |
-| `lock` | `AR730`, `AR732`, `AR735`, `AR981`, `AR982`, `AR995` |
+| `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
 | `delivery` | `AR989`-`AR994` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A2` |
 | `okf` | `AR9B0`-`AR9B9` |
@@ -1760,6 +1762,26 @@ a tag pinned in ai-rulez.lock now points to another commit; it is never followed
 - Why: A tag is a promise that a version never changes. A tag that moved after it was pinned is a force-push, the way a compromised maintainer or a rewritten release shows up.
 - Bad: `v1.2.4` was pinned at commit 0f3e and the remote now has it at b21c
 - Good: Review the new commit, then run `ai-rulez update <source> --accept-moved-tag` to re-pin it
+
+### AR733 release-held-back
+
+a tag that satisfies a version constraint was held back by min_release_age; the next older tag (or the pin) is used
+
+- Default severity: `info`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A tag published a moment ago may be a compromised release. `min_release_age` waits until the tag has existed for that long, and `lock` and `update` take the newest tag that is old enough. The release time comes from the forge, else from the first time this machine saw the tag, else from the commit date (`[lock] min_release_age_source`).
+- Bad: `min_release_age = "7d"` and `v1.3.1` was released two days ago: `lock` pins `v1.3.0` instead
+- Good: Wait for the tag to age, lower `min_release_age`, or run `ai-rulez lock --outdated` on a schedule so the first-seen record starts early
+
+### AR734 source-outdated
+
+a remote source has a newer tag its version constraint allows; reported by `lock --outdated` once enabled in [lint.severity]
+
+- Default severity: `off`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A pin that never moves falls behind security fixes. This finding is off by default; turn it on to make a scheduled `ai-rulez lock --outdated` fail (error) or warn (warning) when a source has a newer tag its constraint allows.
+- Bad: `v1.2.4` is pinned and `v1.3.1` satisfies `^1.2`
+- Good: Run `ai-rulez update` after reviewing the diff, or leave the rule off
 
 ### AR735 locked-tag-missing
 
