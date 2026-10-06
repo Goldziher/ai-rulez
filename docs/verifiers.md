@@ -42,7 +42,7 @@ type = "generated_in_sync"
 
 ```bash
 ai-rulez verifiers run                  # table, exit 2 when an error-severity verifier fails
-ai-rulez verifiers run --json           # machine-readable (--format json)
+ai-rulez verifiers run --json           # machine-readable (--format json; conflicts with another --format)
 ai-rulez verifiers run --strict         # warning-severity failures also fail (--fail-on warning)
 ai-rulez verifiers run --name readme    # only the named verifier (repeatable)
 ai-rulez verifiers run --since origin/main   # only what changed since the merge base
@@ -208,7 +208,11 @@ are read from the working tree. Both go through the hardened git helpers, never 
 **fail with exit `1` when the base cannot be used**: a revision that does not exist, a repository without a
 common ancestor (a shallow clone: fetch the base ref first), a directory that is not a repository, or `--staged`
 in a repository without commits. A missing base never passes vacuously. `--since`, `--staged` and `--all` are
-mutually exclusive.
+mutually exclusive. Added lines are read from a diff that always uses `a/` and `b/` prefixes, whatever
+`diff.noprefix`, `diff.mnemonicPrefix` or `diff.srcPrefix` say in the user's git configuration.
+
+Flat `[[verifiers]]` (with a `type`) check the whole repository and **ignore `--since` and `--staged`**: only specs
+are narrowed to changed files.
 
 ### Output and failure mapping
 
@@ -234,8 +238,8 @@ AR9H1 new-endpoints-have-tests (rule "api-conventions", .ai-rulez/rules/api-conv
 | --- | --- |
 | `text` | the table above plus a block per failure (default) |
 | `json` | summary, `mode` and results; follows [`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json) |
-| `sarif` | SARIF 2.1.0: `ruleId` is `AR9H1/<verifier id>`, the location is the subject file, `relatedLocations` is the declaring rule (with the anchor line), `properties.rule` is the rule id, and `partialFingerprints` hashes verifier, path and normalised matched text so a line shift keeps the identity |
-| `junit` | one suite per rule (`rule:<id>`, `skill:<id>`, or `config` for a flat verifier), one case per verifier and subject; invalid declarations are `error`, `not_applicable` is `skipped` |
+| `sarif` | SARIF 2.1.0: `ruleId` is `AR9H1/<verifier id>`, the location is the subject file, `relatedLocations` is the declaring rule (with the anchor line), `properties.rule` is the rule id, and `partialFingerprints` hashes verifier, path and normalised matched text so a line shift keeps the identity. A flat verifier has no code, so its `ruleId` is the verifier name; its results are located at the offending file (and line for `forbid`) and the rule text is the verifier's description |
+| `junit` | one suite per rule (`rule:<id>`, `skill:<id>`, or `config` for a flat verifier), one case per verifier and subject; invalid declarations are `error`, `not_applicable` is `skipped`. A failure below the `--fail-on` threshold (a warning without `--strict`) is a passing case with the text in `system-out`, so the report agrees with the exit code |
 
 `--out FILE` writes the report there (atomically) instead of stdout. `--fail-on error|warning|info|none` sets the
 lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unchanged.
