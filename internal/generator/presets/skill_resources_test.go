@@ -196,6 +196,37 @@ func TestSkillResourceOutputs(t *testing.T) {
 	})
 }
 
+func TestSkillResourceOutputsDirOrderIsSorted(t *testing.T) {
+	t.Parallel()
+
+	// Arrange: nested resources across several kinds give many directories
+	skill := config.ContentFile{
+		Resources: []config.SkillResource{
+			{Kind: config.SkillKindScripts, RelPath: "scripts/run.sh"},
+			{Kind: config.SkillKindReferences, RelPath: "references/deep/nested/a.md"},
+			{Kind: config.SkillKindAssets, RelPath: "assets/img/b.png"},
+			{Kind: config.SkillKindReferences, RelPath: "references/c.md"},
+		},
+	}
+
+	for range 50 {
+		// Act
+		var dirs []string
+		for _, o := range SkillResourceOutputs(&skill, "skill") {
+			if o.IsDir {
+				dirs = append(dirs, filepath.ToSlash(o.Path))
+			}
+		}
+
+		// Assert
+		want := []string{
+			"skill/assets", "skill/assets/img", "skill/references",
+			"skill/references/deep", "skill/references/deep/nested", "skill/scripts",
+		}
+		require.Equal(t, want, dirs)
+	}
+}
+
 func TestInlineSkillResources(t *testing.T) {
 	t.Parallel()
 
