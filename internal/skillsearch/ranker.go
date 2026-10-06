@@ -35,9 +35,14 @@ type SearchResult struct {
 	Hits     []SearchHit
 	// Embedded reports a query embedding call was made (not served from the in-memory LRU).
 	Embedded bool
-	Tokens   int
-	CostUSD  float64
-	Elapsed  time.Duration
+	// TopSim is the best cosine of any skill in scope to the query (0 without a vector list), before
+	// VectorMinSim is applied: it is what `search --eval` calibrates the threshold from.
+	TopSim float64
+	// Abstained is true when VectorMinSim left no skill: the query matches nothing confidently.
+	Abstained bool
+	Tokens    int
+	CostUSD   float64
+	Elapsed   time.Duration
 }
 
 // Ranker answers queries over a fixed item list with the configured mode. It is
@@ -123,6 +128,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	}
 	vec, reason, emb := r.vector(ctx, pool, query)
 	res.Embedded, res.Tokens, res.CostUSD = emb.Calls > 0, emb.Tokens, emb.Cost
+	res.TopSim = emb.TopSim
 	if reason != "" {
 		res.Degraded = reason
 		res.Hits = lexHits(lex)
@@ -134,7 +140,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	switch {
 	case cfg.Mode == ModeVector:
 		res.Hits = r.withoutVectors(r.fuse(nil, vec, cfg, query, true), lex)
-	case cfg.Fusion == FusionAuto && len(vec) == len(pool):
+	case cfg.Fusion == FusionAuto && emb.Covered:
 		// every skill in scope has a current vector: rank by cosine, keeping the exact-id pin
 		res.Ranking = ModeVector
 		res.Hits = r.pinFirst(r.fuse(nil, vec, cfg, query, true), query)
@@ -142,6 +148,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 		res.Hits = r.fuse(lex, vec, cfg, query, false)
 	}
 	r.markStale(res.Hits)
+	res.Abstained = cfg.VectorMinSim > 0 && emb.Dropped > 0 && len(res.Hits) == 0
 	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
 }
@@ -223,6 +230,11 @@ type embedUse struct {
 	Calls  int
 	Tokens int
 	Cost   float64
+	// TopSim is the best cosine before the threshold; Dropped how many skills VectorMinSim removed;
+	// Covered whether every skill in scope has a current vector.
+	TopSim  float64
+	Dropped int
+	Covered bool
 }
 
 // vector ranks the pool by cosine similarity, or says why it cannot.
@@ -268,6 +280,20 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 		}
 		return r.Items[out[i].item].ID < r.Items[out[j].item].ID
 	})
+	use.Covered = len(out) == len(pool)
+	if len(out) > 0 {
+		use.TopSim = math.Round(out[0].sim*1e6) / 1e6
+	}
+	if floor := r.Cfg.VectorMinSim; floor > 0 {
+		kept := out[:0:0]
+		for _, h := range out {
+			if h.sim >= floor {
+				kept = append(kept, h)
+			}
+		}
+		use.Dropped = len(out) - len(kept)
+		out = kept
+	}
 	return out, "", use
 }
 

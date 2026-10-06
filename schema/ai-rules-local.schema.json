@@ -3184,6 +3184,12 @@
           "enum": ["lexical", "hybrid", "vector"],
           "type": "string"
         },
+        "vector_min_sim": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Abstention threshold: a skill whose cosine to the query is below it is not a match, and a vector ranking with none above it returns nothing. 0 (default) always lists the nearest skills. Take the value `search --eval` calibrates; cosines differ per model."
+        },
         "query_timeout_ms": {
           "description": "Bound on the query embedding of one search; on timeout the ranking is lexical and says so (default 800).",
           "maximum": 60000,
