@@ -466,7 +466,7 @@ the server refuses a served skill whose digest differs from the lock, and one th
 `AR995`. `validate --strict` reports the same. The lock digest is a `sha256:` tree digest in the same scheme as
 the other pins ([Lock file](lockfile.md#served-skills-and-skill-sources), domain `ai-rulez/served-skill/v1`). It
 covers the rendered files but not the generated header lines that change without the skill changing (a whole
-`Source-Hash: <algorithm>:<hex>` line and the `Generated:` date stamp, in the first 40 lines of a rendered
+`Source-Hash: <algorithm>:<hex>` or `Content-Hash: <algorithm>:<hex>` line and the `Generated:` date stamp, in the first 40 lines of a rendered
 file), so editing one skill does not invalidate the others. Files of a skill source are digested exactly as
 they are: nothing in them is ignored. The digest is of
 the rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by
