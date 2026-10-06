@@ -1,18 +1,16 @@
 package skillsearch
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
 
@@ -71,16 +69,25 @@ func (e *LLMEmbedder) Model() string { return e.ModelName }
 // CommandEmbedder embeds by running a program: argv only, no shell, a scrubbed
 // environment, a 30 s timeout and a capped stdout. The program reads
 // {"input": ["text", ...]} on stdin and writes {"vectors": [[...], ...]} to
-// stdout, one vector per input in order.
+// stdout, one vector per input in order. The program runs in its own process
+// group, so the timeout also ends helpers that inherited its stdout.
 type CommandEmbedder struct {
 	Argv    []string
 	Dir     string
 	PassEnv []string
 	// ModelName is recorded in the index; the command's own model is its business.
 	ModelName string
-	// Getenv resolves the variables passed through; nil means os.Getenv.
+	// Getenv resolves the variables passed through; nil means the process environment.
 	Getenv func(string) string
+	// Runner starts the process; nil means a real one.
+	Runner runner.Runner
+	// Timeout bounds one call; 0 means 30 s.
+	Timeout time.Duration
 }
+
+// baseEnv are the variables the program always gets when set. The Windows ones
+// are what a process needs to start there at all.
+var baseEnv = []string{"PATH", "HOME", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "TEMP", "TMP", "USERPROFILE"}
 
 // Embed implements Embedder.
 func (c *CommandEmbedder) Embed(ctx context.Context, texts []string) (Embedding, error) {
@@ -91,28 +98,33 @@ func (c *CommandEmbedder) Embed(ctx context.Context, texts []string) (Embedding,
 	if err != nil {
 		return Embedding{}, oops.Wrapf(err, "encode the embedding request")
 	}
-	ctx, cancel := context.WithTimeout(ctx, commandTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, c.Argv[0], c.Argv[1:]...) //nolint:gosec // an explicit, trust-gated argv with no shell
-	cmd.Dir = c.Dir
-	cmd.Env = c.environment()
-	cmd.Stdin = bytes.NewReader(in)
-	stdout := &limitedBuffer{limit: commandMaxStdout}
-	stderr := &limitedBuffer{limit: commandMaxStderr}
-	cmd.Stdout, cmd.Stderr = stdout, stderr
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() != nil {
-			return Embedding{}, oops.Wrapf(ctx.Err(), "the embedding command %s did not finish in %s", c.Argv[0], commandTimeout)
-		}
-		return Embedding{}, oops.Errorf("the embedding command %s failed: %v: %s", c.Argv[0], err, llm.RedactSecrets(strings.TrimSpace(stderr.String())))
+	timeout := c.Timeout
+	if timeout <= 0 {
+		timeout = commandTimeout
 	}
-	if stdout.over {
+	res := runner.Or(c.Runner).Run(ctx, runner.Spec{
+		Argv: c.Argv, Dir: c.Dir, Env: c.environment(), Stdin: in, Timeout: timeout, MaxOutput: commandMaxStdout,
+	})
+	switch res.Status {
+	case runner.StatusOK:
+	case runner.StatusTimeout:
+		return Embedding{}, oops.Wrapf(context.DeadlineExceeded, "the embedding command %s did not finish in %s", c.Argv[0], timeout)
+	case runner.StatusUnavailable:
+		return Embedding{}, oops.Errorf("the embedding command %s cannot be run: %v", c.Argv[0], res.Err)
+	default:
+		if ctx.Err() != nil {
+			return Embedding{}, oops.Wrapf(ctx.Err(), "the embedding command %s did not finish", c.Argv[0])
+		}
+		stderr := truncateBytes(strings.TrimSpace(string(res.Stderr)), commandMaxStderr)
+		return Embedding{}, oops.Errorf("the embedding command %s failed: %v: %s", c.Argv[0], res.Err, llm.RedactSecrets(stderr))
+	}
+	if res.StdoutTruncated {
 		return Embedding{}, oops.Errorf("the embedding command %s wrote more than %d bytes", c.Argv[0], commandMaxStdout)
 	}
 	var out struct {
 		Vectors [][]float32 `json:"vectors"`
 	}
-	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
+	if err := json.Unmarshal(res.Stdout, &out); err != nil {
 		return Embedding{}, oops.Errorf("the embedding command %s did not print {\"vectors\": [[...]]}: %v", c.Argv[0], err)
 	}
 	if len(out.Vectors) != len(texts) {
@@ -124,10 +136,10 @@ func (c *CommandEmbedder) Embed(ctx context.Context, texts []string) (Embedding,
 func (c *CommandEmbedder) environment() []string {
 	getenv := c.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(nil)
 	}
-	var env []string
-	for _, name := range append([]string{"PATH", "HOME"}, c.PassEnv...) {
+	env := []string{}
+	for _, name := range append(append([]string{}, baseEnv...), c.PassEnv...) {
 		if v, ok := lookup(getenv, name); ok {
 			env = append(env, name+"="+v)
 		}
@@ -150,26 +162,6 @@ func (c *CommandEmbedder) Fingerprint() string {
 
 // Model implements Embedder.
 func (c *CommandEmbedder) Model() string { return c.ModelName }
-
-// limitedBuffer keeps at most limit bytes and remembers it dropped some.
-type limitedBuffer struct {
-	bytes.Buffer
-	limit int
-	over  bool
-}
-
-func (b *limitedBuffer) Write(p []byte) (int, error) {
-	if room := b.limit - b.Len(); len(p) > room {
-		b.over = true
-		if room > 0 {
-			b.Buffer.Write(p[:room])
-		}
-		return len(p), nil
-	}
-	return b.Buffer.Write(p)
-}
-
-var _ io.Writer = (*limitedBuffer)(nil)
 
 // DegradedReason maps an embedding failure to the `degraded` value a result carries.
 func DegradedReason(err error) string {
