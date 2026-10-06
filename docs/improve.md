@@ -227,6 +227,9 @@ A run lives under `.ai-rulez/local/improve/<run-id>/` (machine-local, git-ignore
 reasons, before/after scores with the bootstrap interval, the sibling guard, wins and losses, costs, declared egress,
 the environment variable names (not values), the isolation, the adapter and the description change.
 
+A run that stops on an error after measuring (a crashing eval runner, say) still writes its signed `report.json` with the
+rounds and the spend so far and the reason `stopped: ...`, then exits 1.
+
 `improve show <run-id>` prints the report and the diff (`--format json` prints `improve-show/1`). The optimizer's
 text and the candidate's text are printed with control characters and bidi controls replaced, so a candidate cannot
 write terminal escapes; `apply` does the same for its diff. `improve clean <run-id>` or `--all` deletes runs
