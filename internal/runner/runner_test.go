@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -121,6 +122,35 @@ func TestScrubEnv(t *testing.T) {
 	}
 	if again := ScrubEnv(parent, []string{"KEEP_ME"}, []string{"TERM=xterm", "HOME=/scratch"}); strings.Join(again, ",") != strings.Join(got, ",") {
 		t.Error("ScrubEnv is not deterministic")
+	}
+}
+
+func TestScrubEnvAllowlist(t *testing.T) {
+	tests := []struct {
+		name     string
+		variable string
+		kept     bool
+	}{
+		{"user", "USER", true},
+		{"home", "HOME", true},
+		{"locale language", "LANG", true},
+		{"locale category", "LC_CTYPE", true},
+		{"locale override", "LC_ALL", true},
+		{"login shell is not needed", "SHELL", false},
+		{"login name is not needed", "LOGNAME", false},
+		{"unrelated", "EDITOR", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			parent := []string{tt.variable + "=value"}
+			// Act
+			got := ScrubEnv(parent, nil, nil)
+			// Assert
+			if has := slices.Contains(got, tt.variable+"=value"); has != tt.kept {
+				t.Errorf("%s kept = %v, want %v (%v)", tt.variable, has, tt.kept, got)
+			}
+		})
 	}
 }
 
