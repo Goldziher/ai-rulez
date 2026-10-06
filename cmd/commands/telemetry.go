@@ -52,6 +52,9 @@ identifier-only events, and optionally export them to an OpenTelemetry collector
   ai-rulez telemetry hook     print the hooks that record loads (Claude Code: InstructionsLoaded,
                               SubagentStart/Stop, plus the Skill hooks of "usage hook")
   ai-rulez telemetry record   the command those hooks run; reads one hook event on stdin
+  ai-rulez telemetry enable   consent to export to one collector (stored per user; a repo cannot)
+  ai-rulez telemetry status   on or off, consent, pending events, delivery failures
+  ai-rulez telemetry disable  withdraw consent
   ai-rulez telemetry flush    ship the local outbox to the collector now
   ai-rulez telemetry doctor   show the resolved configuration, consent state and buffer
   ai-rulez telemetry preview  print exactly what an export would send (no network)
@@ -129,8 +132,10 @@ var telemetryFlushCmd = &cobra.Command{
 	Use:   "flush",
 	Short: "Send the local outbox to the OTLP collector",
 	Long: `Ship pending events to the configured collector in batches, with retry and backoff.
-Events that cannot be delivered stay in the outbox (bounded, oldest dropped first). Only one
-flush runs at a time. --background is what the hooks start: it is silent and exits 0.`,
+First it queues the usage-log events past the export cursor that the outbox does not already hold
+(see "usage export --to otlp"). Events that cannot be delivered stay in the outbox (bounded, oldest
+dropped first). Only one flush runs at a time. --background is what the hooks start: it is silent,
+bounded by the flush deadline and exits 0; failures are counted in "telemetry status".`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		p := newTelemetryPipeline("", false)
@@ -149,7 +154,7 @@ flush runs at a time. --background is what the hooks start: it is silent and exi
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		result, err := p.Exporter.Flush(ctx)
+		result, err := p.Flush(ctx)
 		if telBackground {
 			return nil
 		}
