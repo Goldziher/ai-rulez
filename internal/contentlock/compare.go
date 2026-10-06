@@ -104,18 +104,31 @@ func TreeOf(f *lockfile.File) string {
 		entries = append(entries, Entry{Kind: "output", Key: o.Path, Digest: o.Digest})
 	}
 	for _, e := range f.Include {
-		entries = append(entries, Entry{Kind: "include", Key: e.Name, Digest: e.Commit + " " + e.Digest})
+		entries = append(entries, entryOf("include", e))
 	}
 	for _, e := range f.Skill {
-		entries = append(entries, Entry{Kind: "installed-skill", Key: e.Name, Digest: e.Commit + " " + e.Digest})
+		entries = append(entries, entryOf("installed-skill", e))
 	}
 	for _, e := range f.Source {
-		entries = append(entries, Entry{Kind: "skill-source", Key: e.Name, Digest: e.Commit + " " + e.Digest})
+		entries = append(entries, entryOf("skill-source", e))
 	}
 	for _, e := range f.Served {
-		entries = append(entries, Entry{Kind: "served-skill", Key: e.Name, Digest: e.Commit + " " + e.Digest})
+		entries = append(entries, entryOf("served-skill", e))
 	}
 	return TopDigest(entries)
+}
+
+// entryOf is the top-level row of a remote entry. The key carries the serve view
+// (empty for every entry that has none, which keeps the key of a lock written
+// without views) and the digest carries where the entry came from, so editing
+// the view, source, ref or path of an entry, or swapping two entries, changes
+// the tree digest even when the content digests stay put.
+func entryOf(kind string, e lockfile.Entry) Entry {
+	key := e.Name
+	if e.View != "" {
+		key += "\x00" + e.View
+	}
+	return Entry{Kind: kind, Key: key, Digest: strings.Join([]string{e.Commit, e.Digest, e.Source, e.Ref, e.Path}, "\x00")}
 }
 
 // Compare compares the lock with a fresh snapshot. A lock without content pins

@@ -52,7 +52,7 @@ content itself. Signature or attestation verification is not implemented.
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved, including those of a legacy `mcp.yaml`/`mcp.toml`/`mcp.json`) |
 
 Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
 configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
@@ -61,10 +61,10 @@ when you rely on the lock for these.
 
 Content from remote includes and built-in packs is not listed item by item: includes are pinned by their own
 digest, built-ins by the ai-rulez version. A local-path include is pinned as one `local-include` item over its
-content directories, wherever it lives (inside the repository or outside it). A missing path, or any symlink inside
-the pinned tree, cannot be pinned: `lock` warns and `lock --check` fails until it is fixed. Symlinked content files
-are never read by the loader, in any include or in the project itself, because the target is not part of the pin;
-replace the link with the file. A `local_override` path is a development shortcut and is not pinned.
+content directories, wherever it lives (inside the repository or outside it). A missing path cannot be pinned:
+`lock` warns and `lock --check` fails until it is fixed. A symlink inside the pinned tree is never followed: it is
+pinned as its own entry, by link target (see below), and the loader does not read it. A `local_override` path is a
+development shortcut and is not pinned.
 
 Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
@@ -153,8 +153,13 @@ and the per-file and whole-skill digests the server reports (`digest`) are the s
 A fetched source tree, a remote include, an OKF include and an installed skill are digested with the same scheme
 (`contentlock.DigestDir`: the regular files below the directory as one tree, kinds `include`, `okf-include`,
 `installed-skill` and `skill-source`, with `.git` and the root `.cache_meta.json` bookkeeping left out; files are
-streamed, not read whole); all entries are covered by `tree`. A symlink anywhere in such a tree is an error, not a
-skipped file: its target is not pinned.
+streamed, not read whole); all entries are covered by `tree`. A symlink in such a tree is never followed and no
+longer an error: it is a leaf of its own, `sha256(lp("ai-rulez/symlink/v1") || lp(path) || lp(target))` with the
+link target string from `readlink` (`/`-separated), so retargeting the link changes the digest while what it points
+at is not read. A non-regular entry that is not a symlink (a Windows junction, a socket, a device) is the leaf
+`sha256(lp("ai-rulez/irregular/v1") || lp(path))` and is never read. Trees without such entries digest exactly as
+before. The `tree` digest also covers the `source`, `ref` and `path` of every remote entry and the serve `view` of a
+served entry, so editing or swapping them is detected even when the content digests do not change.
 
 `lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
 change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
@@ -277,7 +282,10 @@ run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez loc
 
 `source` lines say an authored item changed; `output` lines say what agents see changed. A source change normally
 brings output changes with it, but an output can change alone (a new ai-rulez release, a different include
-revision), and that is worth a look too. Exit codes: `0` in sync, `1` the command could not run, `2` differences.
+revision), and that is worth a look too. Exit codes: `0` in sync, `1` the command could not run, `2` differences,
+and for `lock` itself `3` when the lock was written but served skills were left unpinned because the security scan
+refuses them (`--strict` fails with `1` instead). Over several roots (`--recursive`) the most severe code wins:
+`1`, then `2`, then `3`.
 
 A change of the ai-rulez version is a note, not a failure: output digests can differ between releases, and the
 output lines then tell you which.
