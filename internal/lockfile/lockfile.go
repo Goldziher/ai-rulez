@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -160,10 +161,9 @@ func Save(configDir string, f *File) error {
 	if err := enc.Encode(out); err != nil {
 		return oops.Wrapf(err, "encode lock file")
 	}
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		return oops.With("dir", configDir).Wrapf(err, "create config directory")
-	}
-	if err := os.WriteFile(Path(configDir), buf.Bytes(), 0o644); err != nil {
+	// A committed lock symlink must not redirect the write: WriteFileAtomic
+	// replaces a link at the destination and refuses a linked parent directory.
+	if err := safefs.WriteFileAtomic(Path(configDir), buf.Bytes()); err != nil {
 		return oops.With("path", Path(configDir)).Wrapf(err, "write lock file")
 	}
 	return nil
