@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // A role's skill_mode becomes skillOverrides.<skill> in .claude/settings.json,
@@ -42,7 +43,7 @@ func (g *Generator) roleLedgerPath() string {
 }
 
 func (g *Generator) readRoleLedger() roleLedger {
-	data, err := os.ReadFile(g.roleLedgerPath())
+	data, err := safefs.ReadRegular(g.roleLedgerPath())
 	if err != nil {
 		return roleLedger{Prior: map[string]json.RawMessage{}}
 	}
@@ -56,6 +57,12 @@ func (g *Generator) readRoleLedger() roleLedger {
 func (g *Generator) writeRoleLedger(l roleLedger) error {
 	path := g.roleLedgerPath()
 	if len(l.Prior) == 0 {
+		if _, err := os.Lstat(path); err != nil {
+			return nil //nolint:nilerr // no ledger, nothing to remove
+		}
+		if err := safefs.EnsureParent(path); err != nil { // never remove through a linked directory
+			return oops.Wrapf(err, "remove the role skill ledger")
+		}
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return oops.Wrapf(err, "remove the role skill ledger")
 		}
@@ -65,10 +72,7 @@ func (g *Generator) writeRoleLedger(l roleLedger) error {
 	if err != nil {
 		return oops.Wrapf(err, "encode the role skill ledger")
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return oops.Wrapf(err, "create the local directory")
-	}
-	return oops.Wrapf(os.WriteFile(path, append(data, '\n'), 0o600), "write the role skill ledger")
+	return oops.Wrapf(safefs.WriteFileAtomic(path, append(data, '\n')), "write the role skill ledger")
 }
 
 // roleSkillOverrides is the skillOverrides the role being rendered sets, empty

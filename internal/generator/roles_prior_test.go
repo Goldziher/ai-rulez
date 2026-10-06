@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // runRole renders role (or the plain project) the way the generate command does:
@@ -105,4 +107,46 @@ func TestRoleSameValueAsHandWrittenIsNotAnOverwrite(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, map[string]any{"migrate": "name-only"}, skillOverridesOf(t, dir))
+}
+
+func TestWriteRoleLedger_DoesNotWriteThroughSymlinks(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, g *Generator, outside string) (victim string)
+	}{
+		{"ledger is a link to an outside file", func(t *testing.T, g *Generator, outside string) string {
+			victim := filepath.Join(outside, "victim")
+			require.NoError(t, os.WriteFile(victim, []byte("precious"), 0o600))
+			require.NoError(t, os.MkdirAll(filepath.Dir(g.roleLedgerPath()), 0o755))
+			testutil.SymlinkOrSkip(t, victim, g.roleLedgerPath())
+			return victim
+		}},
+		{"local directory is a link", func(t *testing.T, g *Generator, outside string) string {
+			require.NoError(t, os.MkdirAll(g.manifestDir(), 0o755))
+			testutil.SymlinkOrSkip(t, outside, filepath.Dir(g.roleLedgerPath()))
+			return filepath.Join(outside, roleLedgerName)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			g := rawGenerator(t, t.TempDir())
+			outside := t.TempDir()
+			victim := tt.setup(t, g, outside)
+			before, readErr := os.ReadFile(victim)
+
+			// Act
+			err := g.writeRoleLedger(roleLedger{Prior: map[string]json.RawMessage{"s": json.RawMessage(`"on"`)}})
+
+			// Assert
+			after, afterErr := os.ReadFile(victim)
+			if readErr != nil {
+				require.Error(t, err)
+				assert.Error(t, afterErr, "a file was created through the link")
+				return
+			}
+			require.NoError(t, afterErr)
+			assert.Equal(t, string(before), string(after))
+		})
+	}
 }

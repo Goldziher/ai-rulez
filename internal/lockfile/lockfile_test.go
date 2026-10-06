@@ -2,11 +2,14 @@ package lockfile
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestSaveLoad_RoundTripIsDeterministic(t *testing.T) {
@@ -196,4 +199,51 @@ func TestTagFieldsRoundTripAndAreOmittedWhenEmpty(t *testing.T) {
 	assert.Equal(t, "7a9c", got.Find(KindInclude, "shared").TagObject)
 	assert.Equal(t, 1, strings.Count(string(data), "tag = "), "an entry without a tag writes no tag key")
 	assert.Equal(t, 1, strings.Count(string(data), "tag_object = "))
+}
+
+func TestSave_DoesNotWriteThroughSymlinks(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, project, outside string) (configDir, victim string)
+	}{
+		{"lock file is a link to an outside file", func(t *testing.T, project, outside string) (string, string) {
+			configDir := filepath.Join(project, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(configDir, 0o755))
+			victim := filepath.Join(outside, "victim")
+			require.NoError(t, os.WriteFile(victim, []byte("precious"), 0o600))
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(configDir, FileName))
+			return configDir, victim
+		}},
+		{"lock file is a dangling link", func(t *testing.T, project, outside string) (string, string) {
+			configDir := filepath.Join(project, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(configDir, 0o755))
+			victim := filepath.Join(outside, "created-by-attacker")
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(configDir, FileName))
+			return configDir, victim
+		}},
+		{"config directory is a link", func(t *testing.T, project, outside string) (string, string) {
+			testutil.SymlinkOrSkip(t, outside, filepath.Join(project, ".ai-rulez"))
+			return filepath.Join(project, ".ai-rulez"), filepath.Join(outside, FileName)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			project, outside := t.TempDir(), t.TempDir()
+			configDir, victim := tt.setup(t, project, outside)
+			before, statErr := os.ReadFile(victim)
+
+			// Act
+			_ = Save(configDir, &File{}) //nolint:errcheck // the outside file is what is asserted
+
+			// Assert
+			after, afterErr := os.ReadFile(victim)
+			if statErr != nil {
+				assert.Error(t, afterErr, "a file was created through the link")
+				return
+			}
+			require.NoError(t, afterErr)
+			assert.Equal(t, string(before), string(after))
+		})
+	}
 }
