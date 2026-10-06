@@ -105,6 +105,7 @@ func (p Policy) Tree() map[string]any {
 	if p.Lint.Security.ScanImports != "" {
 		table("lint", "security")["scan_imports"] = p.Lint.Security.ScanImports
 	}
+	p.Lint.addKnobs(table)
 	if p.Lock.Enforce {
 		table("lock")["enforce"] = true
 	}
@@ -134,6 +135,25 @@ func (p Policy) Tree() map[string]any {
 		table("governance")["approvers"] = nonNil(g.Approvers.Items)
 	}
 	return root
+}
+
+// addKnobs adds the tuning keys of [lint] to the tree.
+func (l Lint) addKnobs(table func(path ...string) map[string]any) {
+	if len(l.Security.DirectiveTags) > 0 {
+		table("lint", "security")["directive_tags"] = l.Security.DirectiveTags
+	}
+	if l.Security.TrustedOrgs.Set {
+		table("lint", "security")["trusted_orgs"] = nonNil(l.Security.TrustedOrgs.Items)
+	}
+	if v := l.Capability.MaxNetworkCommands; v != nil {
+		table("lint", "capability")["max_network_commands"] = *v
+	}
+	if len(l.LoadBudgets) > 0 {
+		budgets := table("lint", "load_budgets")
+		for k, v := range l.LoadBudgets {
+			budgets[k] = v
+		}
+	}
 }
 
 func nonNil(s []string) []string {

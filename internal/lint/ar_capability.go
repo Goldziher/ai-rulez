@@ -143,8 +143,18 @@ func (r *runner) itemProfile(it *item) capProfile {
 }
 
 // maxNetworkCommands is how many network commands an item may run before AR030
-// calls it network-heavy.
-const maxNetworkCommands = 5
+// calls it network-heavy, unless [lint.capability] max_network_commands sets it.
+const maxNetworkCommands = DefaultMaxNetworkCommands
+
+// DefaultMaxNetworkCommands is the built-in network-command limit of AR030.
+const DefaultMaxNetworkCommands = 5
+
+func (r *runner) maxNetwork() int {
+	if c := r.lc.Capability; c != nil && c.MaxNetworkCommands != nil && *c.MaxNetworkCommands >= 0 {
+		return *c.MaxNetworkCommands
+	}
+	return maxNetworkCommands
+}
 
 // highRiskCodes are the findings that make an item "high risk" for AR031.
 var highRiskCodes = map[string]bool{CodeShellExec: true, CodeExfilCommand: true, CodeCredentialTaint: true, CodeStealthCommand: true, CodeSecretDetected: true}
@@ -196,8 +206,8 @@ func (r *runner) reportProfile(ci capItem) {
 		r.add(CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs destructive and network commands together (%s); split them or confirm the combination is intended", ci.id, ci.p.describe())
 	case c[tierInterp] > 0 && c[tierNetwork] > 0:
 		r.addSev(SeverityInfo, CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs an interpreter and network commands (%s); code it generates could reach the network", ci.id, ci.p.describe())
-	case c[tierNetwork] > maxNetworkCommands:
-		r.addSev(SeverityInfo, CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs %d network commands (%s), more than %d", ci.id, c[tierNetwork], ci.p.describe(), maxNetworkCommands)
+	case c[tierNetwork] > r.maxNetwork():
+		r.addSev(SeverityInfo, CodeCapabilityRisk, ci.it.abs, ci.line, "%s runs %d network commands (%s), more than %d", ci.id, c[tierNetwork], ci.p.describe(), r.maxNetwork())
 	}
 }
 

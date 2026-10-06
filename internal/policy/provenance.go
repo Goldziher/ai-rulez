@@ -41,6 +41,15 @@ func provenance(layers []Layer) map[string]string {
 	firstWith("lint.security.scan_imports", func(p Policy) bool {
 		return p.Lint.Security.ScanImports != "" && p.Lint.Security.ScanImports == eff.Lint.Security.ScanImports
 	})
+	all("lint.security.directive_tags", func(p Policy) bool { return len(p.Lint.Security.DirectiveTags) > 0 })
+	all("lint.security.trusted_orgs", func(p Policy) bool { return p.Lint.Security.TrustedOrgs.Set })
+	firstWith("lint.capability.max_network_commands", func(p Policy) bool {
+		v := p.Lint.Capability.MaxNetworkCommands
+		return v != nil && eff.Lint.Capability.MaxNetworkCommands != nil && *v == *eff.Lint.Capability.MaxNetworkCommands
+	})
+	for id, limit := range eff.Lint.LoadBudgets {
+		firstWith("lint.load_budgets."+id, func(p Policy) bool { v, ok := p.Lint.LoadBudgets[id]; return ok && v == limit })
+	}
 	firstWith("lock.enforce", func(p Policy) bool { return p.Lock.Enforce })
 	firstWith("lock.include_outputs", func(p Policy) bool { return p.Lock.IncludeOutputs })
 	firstWith("telemetry.allow_network", func(p Policy) bool { return p.Telemetry.Disabled })

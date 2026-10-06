@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -84,6 +85,18 @@ type Lint struct {
 	// SeverityFloor maps a rule code to the lowest severity it may have.
 	SeverityFloor map[string]string
 	Security      Security
+	// Capability governs [lint.capability].
+	Capability Capability
+	// LoadBudgets maps a load-budget id to the largest limit the repository may
+	// set for it (the lower of the layers wins).
+	LoadBudgets map[string]int
+}
+
+// Capability governs [lint.capability].
+type Capability struct {
+	// MaxNetworkCommands is the largest max_network_commands the repository may
+	// set; nil for no constraint.
+	MaxNetworkCommands *int
 }
 
 // Security governs [lint.security].
@@ -93,6 +106,12 @@ type Security struct {
 	// ScanImports is the weakest scan_imports level the repository may use:
 	// "warn" or "error", "" for no constraint.
 	ScanImports string
+	// DirectiveTags are element names the repository's directive_tags always
+	// include (it can only add more).
+	DirectiveTags []string
+	// TrustedOrgs bounds the repository's trusted_orgs: it may name only these
+	// (lower-cased).
+	TrustedOrgs List
 }
 
 // Lock governs [lock].
@@ -158,11 +177,17 @@ type fileLint struct {
 	RequiredCodes []string          `toml:"required_codes"`
 	SeverityFloor map[string]string `toml:"severity_floor"`
 	Security      *fileSecurity     `toml:"security"`
+	Capability    *struct {
+		MaxNetworkCommands *int `toml:"max_network_commands"`
+	} `toml:"capability"`
+	LoadBudgets map[string]int `toml:"load_budgets"`
 }
 
 type fileSecurity struct {
-	AllowedHosts *[]string `toml:"allowed_hosts"`
-	ScanImports  string    `toml:"scan_imports"`
+	AllowedHosts  *[]string `toml:"allowed_hosts"`
+	ScanImports   string    `toml:"scan_imports"`
+	DirectiveTags []string  `toml:"directive_tags"`
+	TrustedOrgs   *[]string `toml:"trusted_orgs"`
 }
 
 type fileNetwork struct {
@@ -306,6 +331,26 @@ func (l *Lint) fromDoc(d *fileLint) error {
 			l.SeverityFloor[code] = sev
 		}
 	}
+	if d.Capability != nil && d.Capability.MaxNetworkCommands != nil {
+		if *d.Capability.MaxNetworkCommands < 0 {
+			return fmt.Errorf("lint.capability.max_network_commands: %d must not be negative", *d.Capability.MaxNetworkCommands)
+		}
+		n := *d.Capability.MaxNetworkCommands
+		l.Capability.MaxNetworkCommands = &n
+	}
+	known := lint.LoadBudgetIDs()
+	for id, limit := range d.LoadBudgets {
+		if !slices.Contains(known, id) {
+			return fmt.Errorf("lint.load_budgets: unknown limit %q (the policy is newer than this ai-rulez, or the name is wrong; known: %s)", id, strings.Join(known, ", "))
+		}
+		if limit < 1 {
+			return fmt.Errorf("lint.load_budgets.%s: %d must be positive", id, limit)
+		}
+		if l.LoadBudgets == nil {
+			l.LoadBudgets = map[string]int{}
+		}
+		l.LoadBudgets[id] = limit
+	}
 	return l.Security.fromDoc(d.Security)
 }
 
@@ -330,6 +375,23 @@ func (s *Security) fromDoc(d *fileSecurity) error {
 		return fmt.Errorf("lint.security.scan_imports: %q is not allowed in a policy (use warn or error)", d.ScanImports)
 	}
 	s.ScanImports = level
+	for _, tag := range d.DirectiveTags {
+		if !lint.ValidDirectiveTag(tag) {
+			return fmt.Errorf("lint.security.directive_tags: %q is not an element name", tag)
+		}
+		s.DirectiveTags = append(s.DirectiveTags, strings.TrimSpace(tag))
+	}
+	s.DirectiveTags = sortedUnique(s.DirectiveTags)
+	if d.TrustedOrgs != nil {
+		orgs := make([]string, 0, len(*d.TrustedOrgs))
+		for _, o := range *d.TrustedOrgs {
+			if o = strings.ToLower(strings.TrimSpace(o)); o == "" {
+				return fmt.Errorf("lint.security.trusted_orgs: an entry is empty")
+			}
+			orgs = append(orgs, o)
+		}
+		s.TrustedOrgs = List{Set: true, Items: sortedUnique(orgs)}
+	}
 	return nil
 }
 
