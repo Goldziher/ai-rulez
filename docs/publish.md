@@ -91,12 +91,13 @@ packs the planned directory with the real npm when it is installed.
 - The package is `<scope>/<plugin name>`. A scope is required (`[publish.npm] scope` or `--npm-scope`), so a package never
   lands in the public unscoped namespace by accident. The plugin name must be a valid npm name (lower case) and the version
   a semantic version.
-- Access is `restricted` unless `[publish.npm] access = "public"` or `--public`. `--channel` is the dist-tag.
+- Access is `restricted` unless `[publish.npm] access = "public"` or `--public`. `--channel` is the dist-tag; a prerelease
+  version (`1.4.0-rc.1`) needs one, because npm 11 refuses to publish it without (`AR9N6`).
 - `package.json` carries `files` (the bundle's top-level entries), the repository, and an `ai-rulez` key with the archive
   digest, lock tree and runtimes. A bundle that already has a `package.json` (the `opencode` runtime) is refused; drop the
   runtime with `--runtime`.
 - `--execute` first verifies the dist directory again (an edited package file stops the run), runs
-  `npm view <package>@<version> version` and refuses a version the registry has (npm versions are immutable), then packs and
+  `npm view <package>@<version> version` and refuses a version the registry has (npm versions are immutable; only npm's `E404` error counts as "not there"), then packs and
   publishes. npm runs from an empty temporary directory with the package directory and the tarball given by absolute path and
   `--userconfig` (your `NPM_CONFIG_USERCONFIG` or `~/.npmrc`, where `npm login` keeps credentials) and `--globalconfig` (empty
   unless `NPM_CONFIG_GLOBALCONFIG` names one) named explicitly, so a `.npmrc` committed in the repository, which could redirect

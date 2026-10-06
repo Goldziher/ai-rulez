@@ -78,7 +78,7 @@ func NPMPublishArgv(p NPMPlan) []string {
 
 // NPMViewArgv asks the registry whether the exact version already exists.
 func NPMViewArgv(p NPMPlan, version string) []string {
-	argv := []string{"npm", "view", p.Package + "@" + version, "version"}
+	argv := []string{"npm", "view", p.Package + "@" + version, "version", "--json"}
 	if p.Registry != "" {
 		argv = append(argv, "--registry", p.Registry)
 	}

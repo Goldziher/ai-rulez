@@ -221,6 +221,10 @@ func validateInput(in Input) (targetPlan, error) {
 		if err != nil {
 			return targetPlan{}, err
 		}
+		if strings.Contains(in.Version, "-") && in.Channel == "" {
+			return targetPlan{}, newError(CodeConfig, ExitFailed, "pass --channel NAME (the npm dist-tag), such as next",
+				"npm refuses to publish the prerelease %s without a dist-tag", in.Version)
+		}
 		plan.Tag = in.Channel
 		return targetPlan{npm: &plan}, nil
 	case TargetOCI:
