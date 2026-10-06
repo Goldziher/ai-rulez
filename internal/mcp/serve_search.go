@@ -140,7 +140,6 @@ func (rt *SearchRuntime) rankerFor(cat *Catalog, res *setup.Resolved) *skillsear
 	case err == nil:
 		r.Index = idx
 	case !isNoIndex(err):
-		r.IndexErr = err
 		rt.warnOnce("index-load", "search: cannot read the index: "+err.Error())
 	}
 	rt.ranker, rt.cat, rt.stamp = r, cat, stamp

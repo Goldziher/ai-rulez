@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 const queryCacheSize = 256
@@ -48,8 +50,8 @@ type Ranker struct {
 	Embedder Embedder
 	// Timeout bounds the query embedding; 0 means no limit beyond the provider's.
 	Timeout time.Duration
-	// IndexErr is why Index is nil when loading failed for a reason other than "no index".
-	IndexErr error
+	// Clock times a search (SearchResult.Elapsed); nil is the wall clock.
+	Clock ambient.Clock
 
 	once  sync.Once
 	rows  []int // item index -> index row, -1 when none or stale
@@ -102,7 +104,7 @@ func (r *Ranker) SearchScoped(ctx context.Context, query string, allow func(item
 // SearchMode is SearchScoped with an explicit mode (lexical, hybrid or vector),
 // so one ranker, with one query cache, can serve every mode of an evaluation.
 func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(item int) bool) SearchResult {
-	start := time.Now()
+	start := r.Clock.Now()
 	r.prepare()
 	cfg := r.Cfg.Resolved()
 	cfg.Mode = mode
@@ -116,7 +118,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	res := SearchResult{Ranking: ModeLexical}
 	if cfg.Mode == ModeLexical || cfg.Mode == "" {
 		res.Hits = lexHits(lex)
-		res.Elapsed = time.Since(start)
+		res.Elapsed = r.Clock.Now().Sub(start)
 		return res
 	}
 	vec, reason, emb := r.vector(ctx, pool, query)
@@ -125,7 +127,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 		res.Degraded = reason
 		res.Hits = lexHits(lex)
 		r.markStale(res.Hits)
-		res.Elapsed = time.Since(start)
+		res.Elapsed = r.Clock.Now().Sub(start)
 		return res
 	}
 	res.Ranking = cfg.Mode
@@ -136,7 +138,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 		res.Hits = r.fuse(lex, vec, cfg, query, false)
 	}
 	r.markStale(res.Hits)
-	res.Elapsed = time.Since(start)
+	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
 }
 
