@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,9 +96,7 @@ func TestUsageExport(t *testing.T) {
 		victim := filepath.Join(dir, "victim.txt")
 		require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o600))
 		dest := filepath.Join(dir, "usage.ndjson")
-		if err := os.Symlink(victim, dest); err != nil {
-			t.Skip("symlinks unavailable")
-		}
+		testutil.SymlinkOrSkip(t, victim, dest)
 		usageExportTo = "file"
 
 		require.NoError(t, runUsageExport(&bytes.Buffer{}, []string{dest}))
