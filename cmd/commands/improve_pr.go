@@ -9,9 +9,11 @@ import (
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/improve"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
 
 var improvePRFlags struct {
@@ -54,7 +56,12 @@ confirm (or pass --yes), it pushes the branch with git and opens the pull reques
 (--repo names the repository the remote URL points at); otherwise it prints the two commands. improve pr itself makes no network
 call, but the generate and lock it runs in the worktree fetch remote includes and sources as they do anywhere. The pull request body names what changed, the held-out numbers with their interval, the guards,
 the cost and egress, and a reviewer checklist, and says the change is NOT approved: nothing here sets approval.
-The worktree is removed afterwards; the branch stays. Commits skip git hooks. Refusals carry AR9J8.`,
+The worktree is removed afterwards; the branch stays. Commits skip git hooks. Refusals carry AR9J8.
+
+With --isolation auto|require (or [improve] isolation) the commands run in the worktree run under the process
+sandbox: writable only below the worktree, the user cache, ai-rulez's state directory and the temp directory, with
+the network on (generate and lock fetch remote includes; eval run calls a model). require refuses (AR9J7) when no
+backend works. A harness that keeps its state elsewhere needs --isolation none for --run-evals.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := commandContext(cmd)
@@ -79,12 +86,17 @@ The worktree is removed afterwards; the branch stays. Commits skip git hooks. Re
 		if asJSON {
 			out = cmd.ErrOrStderr() // stdout carries the result document only
 		}
+		isolation, err := resolvePRIsolationMode(cmd, cfg)
+		if err != nil {
+			return err
+		}
 		opts := &improve.PROptions{
 			ConfigDir: configDirAbs, RepoDir: repo, RunID: args[0], Base: improvePRFlags.base, Remote: improvePRFlags.remote,
 			Draft: improvePRFlags.draft, NoPush: improvePRFlags.noPush, Yes: improveFlags.yes, Confirm: confirmProceed, Out: out,
 			Git: gitutil.Git{}, Exec: runner.Exec{}, RunEvals: improvePRFlags.runEvals, EvalArgs: improvePRFlags.evalArgs,
 			GHEnv: runner.ScrubEnv(os.Environ(), ghEnvPass, []string{"GH_PROMPT_DISABLED=1", "GH_NO_UPDATE_NOTIFIER=1"}),
 			Env:   improvePRChildEnv(os.Environ(), improvePRFlags.envPass), AllowScripts: improveFlags.allowScripts, AllowFrontmatter: improveFlags.allowFrontmatter,
+			Isolation: isolation,
 		}
 		if self, serr := improveSelf(); serr == nil {
 			opts.Self = self
@@ -103,8 +115,27 @@ The worktree is removed afterwards; the branch stays. Commits skip git hooks. Re
 	},
 }
 
+// resolvePRIsolationMode is the confinement of the commands run in the worktree: --isolation, else [improve]
+// isolation, else none.
+func resolvePRIsolationMode(cmd *cobra.Command, cfg *config.Config) (sandbox.Mode, error) {
+	mode := improveFlags.isolation
+	if !cmd.Flags().Changed("isolation") {
+		res, err := cfg.ResolveImprove(false, nil)
+		if err != nil {
+			return "", oops.Wrap(err)
+		}
+		mode = res.Effective.Isolation
+	}
+	if mode == "" {
+		return sandbox.ModeNone, nil
+	}
+	parsed, err := sandbox.ParseMode(mode)
+	return parsed, oops.Wrap(err)
+}
+
 func init() {
 	f := improvePRCmd.Flags()
+	f.StringVar(&improveFlags.isolation, "isolation", "", "Confine the ai-rulez commands run in the worktree (generate, lock, eval run): none (default), auto (when a sandbox backend works) or require (refuse without one)")
 	f.StringVar(&improvePRFlags.base, "base", "", "Branch or commit the worktree starts from and the pull request targets (default: the current branch)")
 	f.StringVar(&improvePRFlags.remote, "remote", improve.DefaultRemote, "Remote to push the branch to")
 	f.BoolVar(&improvePRFlags.draft, "draft", false, "Open the pull request as a draft")
