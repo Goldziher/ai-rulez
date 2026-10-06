@@ -31,17 +31,18 @@ const (
 const okfFailNone = "none"
 
 var (
-	okfOut     string
-	okfProfile string
-	okfRole    string
-	okfInclude []string
-	okfCheck   bool
-	okfFormat  string
-	okfFailOn  string
-	okfInto    string
-	okfDomain  string
-	okfForce   bool
-	okfDryRun  bool
+	okfOut        string
+	okfProfile    string
+	okfRole       string
+	okfInclude    []string
+	okfCheck      bool
+	okfFormat     string
+	okfFailOn     string
+	okfInto       string
+	okfDomain     string
+	okfForce      bool
+	okfDryRun     bool
+	okfIndexStyle string
 )
 
 // OKFCmd groups the commands that work on OKF bundles directly.
@@ -81,7 +82,9 @@ var exportOKFCmd = &cobra.Command{
 	Long: `Write the project's content as an OKF v0.2 bundle: one concept per rule, context
 file, skill, agent, command and check, a root index.md with okf_version, and an
 index.md per directory. The output is deterministic (sorted, no timestamps), so it
-diffs cleanly in git.
+diffs cleanly in git. Links between exported items point at bundle paths.
+--index-style frontmatter writes index.md as title, version and entries in the
+frontmatter instead of the OKF 0.2 body listing (default, okf.index_style).
 
 Without --out the bundle goes to okf.dir (default docs/okf). --out replaces the
 contents of that directory, but only when it is empty or already an OKF bundle.
@@ -139,6 +142,7 @@ func init() {
 	exportOKFCmd.Flags().StringVarP(&okfProfile, "profile", "p", "", "Profile to export (default: from config or 'default')")
 	exportOKFCmd.Flags().StringVar(&okfRole, "role", "", "Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile")
 	exportOKFCmd.Flags().StringSliceVar(&okfInclude, "include", nil, "Kinds to export: rules,context,skills,agents,commands,checks (default: okf.include or all)")
+	exportOKFCmd.Flags().StringVar(&okfIndexStyle, "index-style", "", "index.md scheme: body (OKF 0.2 listing, default) or frontmatter (title, version, entries); default: okf.index_style")
 	exportOKFCmd.Flags().BoolVar(&okfCheck, "check", false, "Write nothing; exit 2 when the bundle on disk differs")
 	exportOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ExportCmd.AddCommand(exportOKFCmd)
@@ -234,7 +238,7 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]any{
 			"bundle": spec, "okf_spec": okf.SpecVersion,
-			"concepts": len(b.Concepts), "findings": findings,
+			"concepts": len(b.Concepts), "index_style": b.IndexStyle(), "findings": findings,
 		})
 	}
 	w := reportWriter{out}
@@ -248,8 +252,8 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		}
 		w.printf("%s: %s %s (%s) %s\n", loc, f.Severity, f.Code, f.Name, f.Message)
 	}
-	w.printf("%d concepts, %d errors, %d warnings, %d info (OKF spec %s)\n",
-		len(b.Concepts), counts[okf.SeverityError], counts[okf.SeverityWarning], counts[okf.SeverityInfo], okf.SpecVersion)
+	w.printf("%d concepts, %d errors, %d warnings, %d info (OKF spec %s, index style: %s)\n",
+		len(b.Concepts), counts[okf.SeverityError], counts[okf.SeverityWarning], counts[okf.SeverityInfo], okf.SpecVersion, indexStyleLabel(b.IndexStyle()))
 	return nil
 }
 
@@ -277,7 +281,15 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitOKFCannotRun
 	}
-	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{Include: kinds})
+	style := okfIndexStyle
+	if style == "" {
+		style = cfg.OKFIndexStyle()
+	}
+	if style != okf.StyleBody && style != okf.StyleFrontmatter {
+		fmtError(oops.Errorf("unknown --index-style %q (use %s or %s)", style, okf.StyleBody, okf.StyleFrontmatter))
+		return exitOKFCannotRun
+	}
+	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{Include: kinds, IndexStyle: style})
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun
@@ -438,7 +450,7 @@ func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.Import
 		return enc.Encode(map[string]any{
 			keySource: spec, "target": targetDir, "dry_run": okfDryRun,
 			"actions": nonNilActions(res.Actions), "findings": res.Findings,
-			"security": res.Security, "skipped": res.Skipped,
+			"security": res.Security, "skipped": res.Skipped, "index_style": res.IndexStyle,
 		})
 	}
 	w := reportWriter{out}
@@ -462,6 +474,9 @@ func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.Import
 	for _, f := range res.Security {
 		w.printf("security: %s %s:%d %s (%s)\n", f.Code, f.File, f.Line, f.Message, f.Severity)
 	}
+	if res.IndexStyle != "" {
+		w.printf("index style: %s\n", res.IndexStyle)
+	}
 	w.printf("Summary: %d created, %d overwritten, %d unchanged, %d conflicts, %d skipped\n",
 		res.Count(okfbridge.StatusCreated), res.Count(okfbridge.StatusOverwritten),
 		res.Count(okfbridge.StatusUnchanged), res.Count(okfbridge.StatusConflict), len(res.Skipped))
@@ -473,4 +488,11 @@ func nonNilActions(a []okfbridge.Action) []okfbridge.Action {
 		return []okfbridge.Action{}
 	}
 	return a
+}
+
+func indexStyleLabel(style string) string {
+	if style == "" {
+		return "none"
+	}
+	return style
 }

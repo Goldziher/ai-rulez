@@ -112,6 +112,10 @@ func (b *Bundle) checkReserved() []Finding {
 		if !fm.Present {
 			continue
 		}
+		if idx.Style == StyleFrontmatter {
+			out = append(out, frontmatterStyleFindings(p, idx)...)
+			continue
+		}
 		if p != IndexFile {
 			out = append(out, NewFinding(CodeReservedStructure, p, 1, "only the bundle-root index may carry frontmatter (SPEC section 8)"))
 			continue
@@ -134,6 +138,28 @@ func (b *Bundle) checkReserved() []Finding {
 				out = append(out, f)
 			}
 		}
+	}
+	return out
+}
+
+// frontmatterStyleFindings checks an index in the frontmatter style: only title,
+// version and entries (plus okf_version at the root), and an info note that the
+// bundle uses the scheme OKF 0.2 does not describe.
+func frontmatterStyleFindings(p string, idx *IndexFileDoc) []Finding {
+	var out []Finding
+	for _, k := range idx.Frontmatter.Keys() {
+		if frontmatterStyleKeys[k] || (k == "okf_version" && p == IndexFile) {
+			continue
+		}
+		out = append(out, NewFinding(CodeReservedStructure, p, 1, "index frontmatter may only contain title, version, entries and (at the root) okf_version, found %q", k))
+	}
+	if v := idx.Frontmatter.Lookup("okf_version"); v != nil && p == IndexFile {
+		out = append(out, versionFinding(p, strings.TrimSpace(v.Value))...)
+	}
+	if p == IndexFile {
+		f := NewFinding(CodeVersionInvalid, p, 1, "the index uses the frontmatter style (title, version %s, entries), not the body listing of OKF %s", idx.Frontmatter.Scalar("version"), SpecVersion)
+		f.Severity = SeverityInfo
+		out = append(out, f)
 	}
 	return out
 }
@@ -201,7 +227,7 @@ func (b *Bundle) checkIndexes() []Finding {
 			if !ok {
 				continue
 			}
-			line := idx.BodyOffset + e.Line
+			line := e.fileLine(idx.BodyOffset)
 			if !inside || !b.exists(target) {
 				out = append(out, NewFinding(CodeIndexMismatch, p, line, "entry %q points at %s, which is not in the bundle", e.Title, e.Target))
 				continue

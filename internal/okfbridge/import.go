@@ -79,6 +79,9 @@ type ImportResult struct {
 	Security []SecurityFinding `json:"security,omitempty"`
 	// Skipped lists bundle files that were not imported, with the reason.
 	Skipped []string `json:"skipped,omitempty"`
+	// IndexStyle is the index.md scheme the bundle uses (okf.StyleBody or
+	// okf.StyleFrontmatter), "" when no index lists anything. Both import alike.
+	IndexStyle string `json:"index_style,omitempty"`
 }
 
 // Count returns the number of actions with a status.
@@ -128,15 +131,16 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	if opts.Into != "" && opts.Into != KindRule && opts.Into != KindContext && opts.Into != KindSkill {
 		return nil, fmt.Errorf("--into must be rules, context or skills, got %q", opts.Into)
 	}
-	res := &ImportResult{}
-	if err := rejectUnsafe(b); err != nil {
+	res := &ImportResult{IndexStyle: b.IndexStyle()}
+	p := &planner{opts: opts, res: res, taken: map[string]string{}, owners: map[string]ownerDir{}, targets: map[string]string{}}
+	if err := p.rejectUnsafe(b); err != nil {
 		return nil, err
 	}
-	p := &planner{opts: opts, res: res, taken: map[string]string{}, owners: map[string]ownerDir{}}
 	for _, cp := range b.ConceptPaths() {
 		p.concept(b.Concepts[cp])
 	}
 	p.files(b)
+	p.finish()
 	sort.Slice(p.out, func(i, j int) bool { return p.out[i].rel < p.out[j].rel })
 
 	res.Security = scan(opts.Scan, p.out)
@@ -152,9 +156,20 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	return res, nil
 }
 
-func rejectUnsafe(b *okf.Bundle) error {
+// rejectUnsafe refuses a bundle whose paths could collide (differ only in case)
+// or escape it. Symlinks and oversize files are not followed or read: they are
+// skipped with a warning and the rest of the bundle is imported.
+func (p *planner) rejectUnsafe(b *okf.Bundle) error {
+	skipped := map[string]bool{}
+	for _, pr := range b.Problems {
+		skipped[pr.Path] = true
+		f := okf.NewFinding(okf.CodePathUnsafe, pr.Path, 0, "%s; skipped", pr.Message)
+		f.Severity = okf.SeverityWarning
+		p.res.Findings = append(p.res.Findings, f)
+		p.skip(pr.Path, pr.Message)
+	}
 	for _, f := range b.Validate() {
-		if f.Code == okf.CodePathUnsafe && f.Severity == okf.SeverityError {
+		if f.Code == okf.CodePathUnsafe && f.Severity == okf.SeverityError && !skipped[f.Path] {
 			return fmt.Errorf("refusing to import a bundle with unsafe paths: %s %s", f.Path, f.Message)
 		}
 	}
@@ -181,6 +196,21 @@ type planner struct {
 	out    []planned
 	taken  map[string]string // rel path -> source, to dedupe ids
 	owners map[string]ownerDir
+	// targets maps a bundle path to the path (relative to the config dir) it is
+	// imported to; links between imported files are rewritten through it.
+	targets map[string]string
+	pending []pendingBody
+}
+
+// pendingBody is a markdown file whose text is built once every target path is
+// known, so its links can be rewritten.
+type pendingBody struct {
+	out      int // index into planner.out
+	concept  *okf.Concept
+	ext      extInfo
+	kind     Kind
+	id       string
+	resource bool
 }
 
 type extInfo struct {
@@ -271,8 +301,65 @@ func (p *planner) concept(c *okf.Concept) {
 	if kind == KindSkill || path.Base(rel) == fileCommand {
 		p.owners[path.Dir(c.Path)] = ownerDir{kind: kind, id: path.Base(path.Dir(rel)), domain: dir}
 	}
-	data := p.render(c, ext, kind, id)
-	p.out = append(p.out, planned{rel: rel, data: data, kind: kind, source: c.Path})
+	p.targets[c.Path] = rel
+	p.pending = append(p.pending, pendingBody{out: len(p.out), concept: c, ext: ext, kind: kind, id: id})
+	p.out = append(p.out, planned{rel: rel, kind: kind, source: c.Path})
+}
+
+// finish renders every markdown file now that all target paths are known.
+func (p *planner) finish() {
+	for _, pb := range p.pending {
+		out := &p.out[pb.out]
+		body := p.rewriteLinks(pb.concept, out.rel)
+		if pb.resource {
+			out.data = []byte(body)
+			continue
+		}
+		out.data = p.render(pb.concept, pb.ext, pb.kind, pb.id, body)
+	}
+}
+
+// rewriteLinks points the links of concept c, imported to target, at the files
+// the linked concepts were imported to. A link to something that was not
+// imported is left as written and reported as AR9B9. Fenced code and inline code
+// are not touched.
+func (p *planner) rewriteLinks(c *okf.Concept, target string) string {
+	srcDir := path.Dir(c.Path)
+	targetDir := path.Dir(target)
+	return okf.RewriteLinks(c.Body, func(dest string, line int) (string, bool) {
+		_, suffix, internal := okf.SplitDest(dest)
+		if !internal {
+			return "", false
+		}
+		bundlePath, _, inside := okf.ResolveLink(srcDir, dest)
+		if inside {
+			if to, ok := p.targets[bundlePath]; ok {
+				return okf.JoinDest(relPath(targetDir, to), suffix), true
+			}
+		}
+		p.res.Findings = append(p.res.Findings, okf.NewFinding(okf.CodeLossyMapping, c.Path, c.BodyOffset+line,
+			"link %s points at a file that was not imported; left unchanged", dest))
+		return "", false
+	})
+}
+
+// relPath is the slash-separated path from directory fromDir to file to, both
+// relative to the same root.
+func relPath(fromDir, to string) string {
+	var from []string
+	if fromDir != "." && fromDir != "" {
+		from = strings.Split(fromDir, "/")
+	}
+	dst := strings.Split(to, "/")
+	i := 0
+	for i < len(from) && i < len(dst)-1 && from[i] == dst[i] {
+		i++
+	}
+	parts := make([]string, 0, len(from)-i+len(dst)-i)
+	for range from[i:] {
+		parts = append(parts, "..")
+	}
+	return strings.Join(append(parts, dst[i:]...), "/")
 }
 
 // targetPath is where a concept of kind lands below base.
@@ -312,7 +399,7 @@ func (p *planner) unique(rel, source string) string {
 }
 
 // render builds the ai-rulez source file of a concept.
-func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id string) []byte {
+func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string) []byte {
 	var fields []okf.Field
 	desc := c.Frontmatter.Lookup(keyDescription)
 	if desc != nil && desc.Kind == yaml.ScalarNode && strings.TrimSpace(desc.Value) != "" {
@@ -341,13 +428,13 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id string) []by
 		fields = append(fields, okf.Field{Key: "okf", Value: memory})
 	}
 	if len(fields) == 0 {
-		return []byte(c.Body)
+		return []byte(body)
 	}
 	head, err := okf.MarshalFrontmatter(fields)
 	if err != nil {
-		return []byte(c.Body)
+		return []byte(body)
 	}
-	return append(append(head, '\n'), c.Body...)
+	return append(append(head, '\n'), body...)
 }
 
 // okfMemory collects the OKF keys that have no ai-rulez home, so an export can
@@ -395,7 +482,9 @@ func (p *planner) resource(c *okf.Concept, ext extInfo) {
 	dir := p.domainDir(ext.domain)
 	target := path.Join(dir, string(kind), ext.id, rel)
 	p.taken[strings.ToLower(target)] = c.Path
-	p.out = append(p.out, planned{rel: target, data: []byte(c.Body), kind: kind, source: c.Path})
+	p.targets[c.Path] = target
+	p.pending = append(p.pending, pendingBody{out: len(p.out), concept: c, kind: kind, resource: true})
+	p.out = append(p.out, planned{rel: target, kind: kind, source: c.Path})
 }
 
 // files imports the non-markdown resources that sit next to a skill or command.
@@ -418,6 +507,7 @@ func (p *planner) files(b *okf.Bundle) {
 			continue
 		}
 		p.taken[strings.ToLower(target)] = f
+		p.targets[f] = target
 		p.out = append(p.out, planned{rel: target, kind: owner.kind, source: f, data: p.readFile(b, f), mode: b.Mode(f)})
 	}
 }

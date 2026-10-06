@@ -52,12 +52,13 @@ Research was done on 2026-10-05.
 ### Where okf.md and the spec disagree
 
 The marketing site describes a different shape than the normative spec. ai-rulez
-follows the spec and reads the site's shape only leniently.
+writes the spec's shape by default, writes the site's `index.md` shape with
+`index_style = "frontmatter"` (see [Index styles](#index-styles)), and reads both.
 
 | okf.md home page claims | Normative SPEC.md v0.2 |
 | --- | --- |
 | "Three rules": index.md per bundle, typed frontmatter, git-native history | Three rules: parseable frontmatter, non-empty `type`, reserved files well formed. `index.md` is optional. Git is a recommendation, not a rule |
-| `index.md` frontmatter has `title`, `version` (semver `0.1.0`) and `entries` | `index.md` has no frontmatter except `okf_version` at the root; the listing is the body |
+| `index.md` frontmatter has `title`, `version` (semver `0.1.0`) and `entries` | `index.md` has no frontmatter except `okf_version` at the root; the listing is the body. Both are accepted on read; `index_style` picks the one written |
 | `type` is one of `concept`, `howto`, `reference`, `decision`, `metric` | Free text; the examples are `Metric`, `Playbook`, `Reference`, `BigQuery Table`, `Attested Computation` |
 | "semantic versioning protecting the investment" | `<major>.<minor>` only |
 | Browser validator, "coming soon" | No validator is specified |
@@ -190,13 +191,13 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 | AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
 | AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or `type` missing or empty (conformance rules 1 and 2). Unknown type *values* are allowed by the spec and not reported |
 | AR9B2 | `okf-link-broken` | warning | A relative or bundle-relative markdown link whose target is not in the bundle (the spec tolerates these, so never an error by default) |
-| AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2` |
+| AR9B3 | `okf-version-invalid` | warning | Root `okf_version` is not `MAJOR.MINOR`; info when it is well formed but not `0.2`, and info when the root index uses the frontmatter style (the scheme OKF 0.2 does not describe) |
 | AR9B4 | `okf-orphan` | info | A concept reachable from no index entry and no link (only checked when the bundle has an index) |
 | AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
-| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one, or `log.md` headings that are not ISO dates |
+| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one), or `log.md` headings that are not ISO dates |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, or two paths differing only in case |
-| AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
+| AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
 
 ## Format details
 
@@ -219,6 +220,7 @@ docs/okf/
 - Every directory with a concept gets an `index.md` (SPEC section 8): no frontmatter except `okf_version` at the root,
   entries sorted by path, each with the concept's one-line description. Subdirectories are listed as
   `[name](name/index.md)`, the shape used by the official `acme_retail` bundle.
+- The `index.md` shape depends on `index_style`, see [Index styles](#index-styles). Concept files are identical in both.
 - No `log.md` is written: history is git's, and a log would need timestamps that break determinism.
 - `title` is the item id in words (`code-style` becomes "Code Style") unless an `okf.title` is kept (see below). No
   `generated`, `verified`, `sources` or `timestamp` fields are written, for the same reason.
@@ -229,6 +231,66 @@ docs/okf/
   path) so it stays a conformant concept; a resource called `index.md` or `log.md` is stored as `index_.md` /
   `log_.md`, because those names are reserved. The wrapper is removed on import.
 - Executable bits of scripts are kept.
+
+### Index styles
+
+Two `index.md` schemes are in circulation. ai-rulez writes either and reads both; only `index.md` files (root and
+nested) differ, every concept file is byte-identical.
+
+| Style | `index_style` | Shape |
+| --- | --- | --- |
+| Body (default) | `"body"` | The OKF 0.2 scheme: no frontmatter except `okf_version` at the root; `# Concepts` and `# Subdirectories` headings with `* [Title](file.md) - description` bullets |
+| Frontmatter | `"frontmatter"` | `title`, `version: 0.1.0` and `entries` (a list of `title`, `path`, `description`) in the frontmatter, no body. The root also keeps `okf_version` so a spec reader still finds the version |
+
+```yaml
+---
+okf_version: "0.2"
+title: Index
+version: 0.1.0
+entries:
+  - title: rules
+    path: rules/index.md
+    description: Rules exported from ai-rulez
+---
+```
+
+Set it with `[okf] index_style` or `export okf --index-style` (the flag wins). `generate --check` and `export okf --check`
+compare the configured style, so a bundle in the other style is drift. `okf validate` and `import okf` accept both and
+report the detected style (`index style:` in text output, `index_style` in JSON). A frontmatter-style root index is
+reported as AR9B3 info, unless the project configured that style. `import okf` ignores indexes, so either style yields
+the same `.ai-rulez/` tree. The default stays `body` until one scheme is clearly adopted; a change would be announced in
+the changelog.
+
+### Links
+
+Links inside concept bodies follow the files they point at.
+
+- `import okf`: a bundle-absolute (`/tables/orders.md`) or relative (`./orders.md`, `../x.md`) link between imported
+  concepts becomes the relative path of the created file (`../context/tables-orders.md`), with `#fragment` and `?query`
+  kept. Resources next to a skill are mapped the same way. A link to a file that was not imported (a skipped or
+  non-markdown file, a missing target, an `index.md`) is left as written and reported as AR9B9 with its line.
+- `export okf`: a relative link between exported items (`../context/architecture.md`) becomes a bundle-absolute link
+  (`/context/architecture.md`). A relative link to anything outside the export (a repository file, an item excluded by
+  `--include`, a skipped builtin domain) is left unchanged and printed as a `note:`. Bundle-absolute and external links
+  are never touched.
+- Links in fenced code blocks and inline code are never rewritten. Only inline `[text](target)` links and images are;
+  reference-style definitions (`[id]: target`) and autolinks are left alone.
+- Link spelling is normalized: a foreign `./x.md` or `../x.md` comes back as `/kind/x.md` after an export. Every link
+  keeps resolving to the same concept, and `export`, `import`, `export` is byte-identical.
+
+### Titles and conflicts
+
+`title` is the item id in words unless the item carries `okf.title`. An import keeps a bundle title that differs from the
+derived one as `okf.title`, so an edited title survives `export`, edit, `import --force`, `export`. When both sides
+changed a title, the rule is deterministic and never silent:
+
+- `import okf` never overwrites a source file that differs; without `--force` it reports a conflict (exit 2), with
+  `--force` the bundle wins.
+- `export okf` and `generate` write the sources' title, so a title edited only in the bundle is drift. `generate --check`,
+  `export okf --check` and `validate --strict` report it as AR9B5, naming the edited title and both ways out
+  (`generate` restores the source, `import okf --force` adopts the edit).
+
+A title edit on a markdown skill resource is not kept: its wrapper is rebuilt from the file name.
 
 ### Keeping foreign OKF keys
 
@@ -261,7 +323,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 
 | Command | Does |
 | --- | --- |
-| `ai-rulez export okf [--out dir] [--profile p \| --role r] [--include kinds] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
+| `ai-rulez export okf [--out dir] [--profile p \| --role r] [--include kinds] [--index-style body\|frontmatter] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
 | `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
@@ -283,6 +345,7 @@ presets = ["claude", "okf"]      # opt in; without it only the commands above ex
 dir = "docs/okf"                 # default
 include = ["rules", "context", "skills"]   # default: all six kinds
 spec = "0.2"                     # the only accepted value
+index_style = "body"             # or "frontmatter", see Index styles
 ```
 
 The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`). Domains
@@ -319,7 +382,8 @@ domain like other includes. Configure with `includes[].format`; the only value i
 
 ## Security
 
-- Import refuses a bundle containing symlinks or paths that differ only in case, writes only below the target
+- Import never follows symlinks in a bundle: each one is skipped with a warning (AR9B8, listed under `skipped`) and the
+  rest of the bundle is imported. A bundle with paths that differ only in case is refused. Import writes only below the target
   directory (through `os.Root`, so symlinks in the target cannot redirect a write), and rejects `x-ai-rulez` ids and
   resource paths that are not plain names (`..`, absolute paths, separators, and resource folders other than
   `references/`, `scripts/`, `assets/`).
@@ -359,22 +423,20 @@ ai-rulez import okf https://github.com/GoogleCloudPlatform/open-knowledge-format
 - The trust, provenance and lifecycle families (`sources`, `generated`, `verified`, `status`, `stale_after`) and the
   `Attested Computation` type are preserved as opaque keys but have no meaning in ai-rulez. A failing or stale status
   is not acted on.
-- Links inside a concept body are not rewritten on import or export; they keep pointing at bundle paths. An
-  imported rule that links to `/tables/orders.md` has a dead link in `.ai-rulez/`.
 - Non-markdown files in a foreign bundle are skipped unless they sit in `references/`, `scripts/` or `assets/` next to a
   skill. `log.md` is not imported.
 - A foreign concept maps to exactly one kind; a long `Playbook` becomes a skill named after its path
   (`runbooks-deploy`). Hand-tune names and descriptions afterwards: skills need a trigger-oriented description.
-- `title` is derived, so a title edited in a bundle is lost on the next export unless it was imported (kept as
-  `okf.title`).
+- A title edited in a bundle is kept only through `import okf --force` (see [Titles](#titles-and-conflicts)); a bundle
+  that is exported again without importing loses the edit and is reported as drift.
 - Roles: `export okf --role r` filters content like `generate --role`, but a knowledge export is not written for a harness, so skills a role serves (`delivery = "served"`) are exported like static ones and a skill's own `delivery` key travels in its `x-ai-rulez.metadata`. `skill_mode` is a Claude Code setting and is not exported. While `generate --role` runs, the `okf` preset leaves the committed bundle untouched instead of shrinking it to the role's slice.
 - Agents, commands and checks have no OKF type and travel as `Reference` with `x-ai-rulez.kind`. A third-party tool
   that drops unknown keys loses that information.
 
 ## Open questions
 
-- The spec is single-vendor and pre-1.0; okf.md describes a different `index.md` and version scheme (see above). If
-  the ecosystem converges on that scheme, the writer would need a second mode.
+- The spec is single-vendor and pre-1.0; okf.md describes a different `index.md` and version scheme (see above). Both
+  are supported through `index_style`; the default (`body`) should be revisited once one scheme is clearly adopted.
 - Whether `Decision`, `Concept` and `Playbook` are the right type names for consumers that route by `type`. The spec
   leaves it open; they are easy to change in one table.
 - Whether exporting `agents`, `commands` and `checks` by default is wanted, or only rules, context and skills.
