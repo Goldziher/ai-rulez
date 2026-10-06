@@ -2320,6 +2320,7 @@ These flags work with all commands:
 | `--policy-digest`  | string  | The digest (`sha256:<hex>`) the `--policy` file or URL must have; a URL policy is never loaded without one (`AR741`) |
 | `--policy-offline` | boolean | Load a URL policy from the user cache only (also `AI_RULEZ_POLICY_OFFLINE=1`) |
 | `--policy-max-stale` | string | How long a cached URL policy may stand in for an unreachable URL (`7d` default, `0` for none; also `AI_RULEZ_POLICY_MAX_STALE`) |
+| `--discover-org`   | boolean | Also load the organization policy of the repository's GitHub owner (`ai-rulez-policy.toml` in `<owner>/.github`); needs a digest (`[policy.digests]` in the user config, or `--policy-trust-tofu`). Also `[policy] discover = "org"` in the user config |
 | `--policy-trust-tofu` | boolean | Record the digest of an unpinned `--policy` URL once, in a terminal only |
 | `--policy-mode`    | string  | `enforce` (default) or `warn`: with `warn` a repository that loosens the [policy](policy.md) is reported as warnings and the run does not fail; the policy values are still enforced |
 | `--verbose` / `-V` | boolean | Enable verbose output                                                           |
