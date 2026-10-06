@@ -148,3 +148,27 @@ func TestLiveErrorClassificationParity(t *testing.T) {
 		}
 	}
 }
+
+// The built-in judge must work on every backend; its schema once used
+// additionalProperties, which Gemini's native API rejects.
+func TestLiveJudge(t *testing.T) {
+	for _, backend := range liveBackends(t) {
+		t.Run(backend, func(t *testing.T) {
+			// Arrange
+			c := liveClient(t, backend, os.Getenv)
+			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+			defer cancel()
+
+			// Act
+			v, err := Judge(ctx, c, "The assistant must greet the user.", "user: hi\nassistant: Hello! How can I help?")
+
+			// Assert
+			if err != nil {
+				t.Fatalf("judge: %v", err)
+			}
+			if v.Score < 0.5 {
+				t.Errorf("a plain greeting scored %.2f (%s)", v.Score, v.Rationale)
+			}
+		})
+	}
+}
