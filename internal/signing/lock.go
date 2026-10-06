@@ -133,9 +133,9 @@ type LockReport struct {
 }
 
 // VerifyLock verifies a lock attestation against lock under policy, offline. It
-// runs, in order: the cryptographic check (AR721, AR725, AR726), the signer
-// check (AR722), the subject check (AR724), the minimum hash version (AR724),
-// freshness (AR723) and rollback (AR727). It does not update the rollback state:
+// runs, in order: the cryptographic check (AR721, AR725, AR726), the subject
+// check and the minimum hash version (AR724), the signer check (AR722), a signing
+// time in the future and freshness (AR723) and rollback (AR727). It does not update the rollback state:
 // call Commit after the caller has accepted the result.
 func VerifyLock(data []byte, lock *lockfile.File, p LockPolicy) (*LockReport, error) {
 	now := p.Now

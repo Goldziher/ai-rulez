@@ -3,6 +3,7 @@ package signing
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -93,6 +94,38 @@ func TestPrepareLockCheckTrustedRootResolution(t *testing.T) {
 	_, err = PrepareLockCheck(cfg, VerifyOptions{NoState: true, TrustedRoot: filepath.Join(t.TempDir(), "nope.json")})
 	require.Error(t, err)
 	assert.Equal(t, CodeRootUnavailable, CodeOf(err))
+}
+
+func TestPrepareLockCheckWarnsWhenTheSignersComeFromTheRepositoryAlone(t *testing.T) {
+	_, pub, err := GenerateKeyPair(nil)
+	require.NoError(t, err)
+	outside := filepath.Join(t.TempDir(), "ci.pub")
+	require.NoError(t, os.WriteFile(outside, pub, 0o644))
+	tests := []struct {
+		name     string
+		opts     VerifyOptions
+		wantWarn bool
+	}{
+		{"signers only from the repository config", VerifyOptions{NoState: true}, true},
+		{"a signer supplied on the command line", VerifyOptions{NoState: true, PublicKeys: []string{outside}}, false},
+		{"an identity supplied on the command line", VerifyOptions{NoState: true, Identity: "me", Issuer: "https://issuer.example"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := policyProject(t, &config.SigningConfig{KeyFile: "release.pub"})
+			require.NoError(t, os.WriteFile(filepath.Join(cfg.BaseDir, "release.pub"), pub, 0o644))
+
+			check, err := PrepareLockCheck(cfg, tt.opts)
+
+			require.NoError(t, err)
+			joined := strings.Join(check.Warnings, "\n")
+			if tt.wantWarn {
+				assert.Contains(t, joined, "this repository's own [signing] configuration")
+				return
+			}
+			assert.NotContains(t, joined, "this repository's own")
+		})
+	}
 }
 
 func TestRequiredLockFindings(t *testing.T) {
