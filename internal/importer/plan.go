@@ -88,26 +88,52 @@ type Item struct {
 	Sources   []string
 	Main      []byte
 	Resources []File
-	hash      string
+	// Local items are personal: they are written below local/ (the machine-local
+	// tree, which git ignores) instead of the shared content directories.
+	Local bool
+	hash  string
+}
+
+// localDir is the machine-local content tree inside the config directory.
+const localDir = "local"
+
+// root is the directory the item's kind directories sit in.
+func (it *Item) root() string {
+	if it.Local {
+		return localDir + "/"
+	}
+	return ""
 }
 
 // Rel returns the main file path relative to the config directory.
 func (it *Item) Rel() string {
 	switch it.Kind {
 	case KindRule:
-		return "rules/" + it.Name + ".md"
+		return it.root() + "rules/" + it.Name + ".md"
 	case KindContext:
-		return "context/" + it.Name + ".md"
+		return it.root() + "context/" + it.Name + ".md"
 	case KindAgent:
-		return "agents/" + it.Name + ".md"
+		return it.root() + "agents/" + it.Name + ".md"
 	case KindCommand:
-		return "commands/" + it.Name + ".md"
+		return it.root() + "commands/" + it.Name + ".md"
 	case KindCheck:
-		return "checks/" + it.Name + ".md"
+		return it.root() + "checks/" + it.Name + ".md"
 	case KindSkill:
-		return "skills/" + it.Name + "/SKILL.md"
+		return it.root() + "skills/" + it.Name + "/SKILL.md"
 	}
 	return it.Name
+}
+
+// placed puts a path relative to the config directory below a domain. Local
+// content keeps its local/ prefix in front: local/domains/<d>/rules/x.md.
+func placed(domain, rel string) string {
+	if domain == "" {
+		return rel
+	}
+	if rest, ok := strings.CutPrefix(rel, localDir+"/"); ok {
+		return localDir + "/domains/" + domain + "/" + rest
+	}
+	return "domains/" + domain + "/" + rel
 }
 
 // Files returns every file of the item, relative to the config directory, in
@@ -118,7 +144,7 @@ func (it *Item) Files() []File {
 		res := append([]File(nil), it.Resources...)
 		sort.Slice(res, func(i, j int) bool { return res[i].Path < res[j].Path })
 		for _, r := range res {
-			out = append(out, File{Path: "skills/" + it.Name + "/" + r.Path, Data: r.Data})
+			out = append(out, File{Path: it.root() + "skills/" + it.Name + "/" + r.Path, Data: r.Data})
 		}
 	}
 	return out
@@ -226,6 +252,9 @@ func (p *Plan) Finalize() {
 	}
 	sort.SliceStable(p.Items, func(i, j int) bool {
 		a, b := &p.Items[i], &p.Items[j]
+		if a.Local != b.Local {
+			return !a.Local
+		}
 		if a.Kind != b.Kind {
 			return a.Kind < b.Kind
 		}
@@ -239,15 +268,15 @@ func (p *Plan) Finalize() {
 	byContent := map[string]int{}
 	used := map[string]bool{}
 	for _, it := range p.Items {
-		contentKey := string(it.Kind) + "\x00" + it.hash
+		contentKey := it.root() + string(it.Kind) + "\x00" + it.hash
 		if it.Kind != KindContext {
-			contentKey = string(it.Kind) + "\x00" + it.Name + "\x00" + it.hash
+			contentKey = it.root() + string(it.Kind) + "\x00" + it.Name + "\x00" + it.hash
 		}
 		if idx, ok := byContent[contentKey]; ok {
 			out[idx].Sources = append(out[idx].Sources, it.Sources...)
 			continue
 		}
-		key := string(it.Kind) + "\x00" + it.Name
+		key := it.root() + string(it.Kind) + "\x00" + it.Name
 		if used[key] {
 			orig := it.Name
 			src := ""
@@ -260,7 +289,7 @@ func (p *Plan) Finalize() {
 			}
 			p.add(newFinding(StatusApproximated, src, "name", it.Rel(),
 				"name "+orig+" is already used by different content; renamed with a stable suffix"))
-			key = string(it.Kind) + "\x00" + it.Name
+			key = it.root() + string(it.Kind) + "\x00" + it.Name
 		}
 		used[key] = true
 		byContent[contentKey] = len(out)
