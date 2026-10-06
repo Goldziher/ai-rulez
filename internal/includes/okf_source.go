@@ -30,7 +30,7 @@ type OKFSource struct {
 	include []string
 }
 
-func (r *Resolver) createOKFSource(c *config.IncludeConfig) (Source, error) {
+func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig) (Source, error) {
 	source := c.Source
 	if c.LocalOverride != "" && !refreshing(lockfile.KindInclude, c.Name) {
 		if err := checkLocalOverride(r.cfg, "includes", c.Name); err != nil {
@@ -44,13 +44,18 @@ func (r *Resolver) createOKFSource(c *config.IncludeConfig) (Source, error) {
 		return &OKFSource{name: c.Name, dir: p, include: c.Include}, nil
 	}
 	if DetectSourceType(source) == SourceTypeGit {
-		p, err := pinFor(r.cfg, r.lock, lockfile.Want{
+		w := withVersion(lockfile.Want{
 			Kind: lockfile.KindInclude, Name: c.Name, Source: RedactURL(source), Path: c.Path, Ref: c.Ref,
-		})
+		}, c.VersionSpec())
+		p, err := pinFor(r.cfg, r.lock, w)
 		if err != nil {
 			return nil, err
 		}
-		src, err := NewOKFGitSource(c.Name, source, c.Path, p.effectiveRef(c.Ref), r.baseDir, c.Include, r.accessToken)
+		ref, err := versionRef(withHardenedGit(ctx), r.lock, w, p, source, r.accessToken, r.baseDir)
+		if err != nil {
+			return nil, err
+		}
+		src, err := NewOKFGitSource(c.Name, source, c.Path, ref, r.baseDir, c.Include, r.accessToken)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
 		}

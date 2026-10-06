@@ -73,14 +73,19 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 
 	switch sourceType {
 	case SourceTypeGit:
-		p, err := pinFor(cfg, lock, lockfile.Want{
+		w := withVersion(lockfile.Want{
 			Kind: lockfile.KindSkill, Name: skillConf.Name, Source: RedactURL(skillConf.Source),
 			Path: skillPath, Ref: skillConf.Ref,
-		})
+		}, skillConf.VersionSpec())
+		p, err := pinFor(cfg, lock, w)
 		if err != nil {
 			return config.ContentFile{}, err
 		}
-		source, err := NewSkillGitSource(skillConf.Name, skillConf.Source, skillPath, p.effectiveRef(skillConf.Ref), accessToken)
+		ref, err := versionRef(ctx, lock, w, p, skillConf.Source, accessToken, baseDir)
+		if err != nil {
+			return config.ContentFile{}, err
+		}
+		source, err := NewSkillGitSource(skillConf.Name, skillConf.Source, skillPath, ref, accessToken)
 		if err != nil {
 			return config.ContentFile{}, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
 		}
