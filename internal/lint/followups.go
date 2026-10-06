@@ -74,6 +74,9 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 		add(claudeAgentKeys)
 	case kindCheck:
 		add(checkKeys)
+	case kindContext:
+		// summary is rendered into the inline context section.
+		add(ruleKeys, []string{"summary"})
 	default:
 		add(ruleKeys)
 	}
