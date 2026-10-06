@@ -211,7 +211,7 @@ func runPublishMulti(out io.Writer, pc *publishContext, emitOnly string) error {
 	if err != nil {
 		return err
 	}
-	agg, err := pc.buildAggregate(plugins)
+	agg, err := pc.buildAggregate(plugins, dists)
 	if err != nil {
 		return err
 	}
@@ -289,21 +289,22 @@ func emitPluginOf(spec *pluginSpec, d *publish.Dist) pemit.Plugin {
 	}
 }
 
-// buildAggregate builds the aggregate directory, or nil when neither a pinned
-// index nor an emitter was asked for.
-func (pc *publishContext) buildAggregate(plugins []pemit.Plugin) (*publish.Dist, error) {
+// buildAggregate builds the aggregate directory: the pinned index and the
+// emitter output when asked for, and always the list of the plugins the release
+// holds, so a plugin directory missing later is noticed by verify.
+func (pc *publishContext) buildAggregate(plugins []pemit.Plugin, dists []*publish.Dist) (*publish.Dist, error) {
 	pin, err := pc.pinFor(publishTag)
 	if err != nil {
 		return nil, err
 	}
-	req := pc.emitRequestFor("")
-	if pin == nil && req == nil {
-		return nil, nil //nolint:nilnil // nothing to aggregate
+	refs := make([]publish.PluginRef, len(dists))
+	for i, d := range dists {
+		refs[i] = publish.NewPluginRef(d)
 	}
 	return publish.BuildAggregate(pc.market().Name, publish.Extras{
 		Channel: publishChannel, Pin: pin, PinCommit: pc.src.Source.Commit, PinDirty: pc.src.Source.Dirty,
-		Emit: req, Plugins: plugins,
-	})
+		Emit: pc.emitRequestFor(""), Plugins: plugins,
+	}, refs)
 }
 
 // writeMulti writes every plugin dist and the aggregate below the dist directory.

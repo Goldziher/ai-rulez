@@ -692,17 +692,23 @@ func verifyTree(dir string, checks publish.VerifyChecks) ([]verifyResult, error)
 		}
 		out = append(out, verifyResult{Dir: filepath.ToSlash(sub), VerifyResult: res})
 	}
+	if len(out) == 0 {
+		return nil, publish.Errorf(publish.CodeVerify, publish.ExitFailed, "run `ai-rulez publish` first", "%s holds no release to verify", dir)
+	}
+	agg := verifyResult{Dir: "aggregate"}
 	if fileExists(filepath.Join(dir, "aggregate", publish.SumsFile)) {
 		res, err := publish.VerifySums(filepath.Join(dir, "aggregate"))
 		if err != nil {
 			return nil, err //nolint:wrapcheck // a publish.Error carries the exit status
 		}
-		out = append(out, verifyResult{Dir: "aggregate", VerifyResult: res})
+		agg.VerifyResult = res
+	} else {
+		agg.Problems = []publish.Problem{}
 	}
-	if len(out) == 0 {
-		return nil, publish.Errorf(publish.CodeVerify, publish.ExitFailed, "run `ai-rulez publish` first", "%s holds no release to verify", dir)
-	}
-	return out, nil
+	// The aggregate names the plugins of the release: a plugin directory that is
+	// gone (or one that was never part of it) is a mismatch, not a clean verify.
+	agg.Problems = append(agg.Problems, publish.VerifyPluginList(dir)...)
+	return append(out, agg), nil
 }
 
 func fileExists(path string) bool {

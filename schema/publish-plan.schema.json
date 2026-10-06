@@ -63,6 +63,7 @@
               "emitted",
               "signature",
               "attestation",
+              "plugins",
               "sbom",
               "marketplace",
               "npm-package",

@@ -143,13 +143,16 @@ plugin. The plugins are the entries of the generated Claude marketplace index, s
 
 ```text
 dist/plugins/<name>/        a complete dist directory per plugin (publish verify works on it)
-dist/aggregate/             marketplace/ and emit/ for all plugins, with SHA256SUMS and a plan
+dist/aggregate/             plugins.json, marketplace/ and emit/ for all plugins, with SHA256SUMS and a plan
 ```
 
 `--only NAME` limits the plugins. Two plugins with one name (case-insensitively) are refused (`AR9N6`), because their dist directories and release files would overwrite each other. `--to` runs per plugin: GitHub tags are `<name>-v<version>`, the npm package is
 `<scope>/<name>`, the OCI repository is `<ref>/<name>`. `--tag` does not apply; a pinned index needs a ref from
 `[publish.marketplace] channels` or `--tag`. `--runtime` applies to domain plugins; members are separate projects with their
-own configuration and cannot be filtered. `publish verify dist` verifies every plugin and the aggregate checksums.
+own configuration and cannot be filtered. `aggregate/plugins.json` is always written: it lists every plugin of the release
+with its directory and the digests of its manifest and archive. `publish verify dist` verifies every plugin and the aggregate
+checksums, and fails (`AR9N5`) when a listed plugin directory is missing or changed, when a directory is not listed, or when
+the aggregate does not name the plugins at all, so a release with a plugin deleted does not verify clean.
 
 ## Pinned marketplace and channels
 

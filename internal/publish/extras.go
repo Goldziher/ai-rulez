@@ -85,11 +85,20 @@ func BuildExtras(x Extras) (files map[string][]byte, warnings []string, err erro
 // BuildAggregate builds the dist directory of what belongs to every plugin of a
 // multi-plugin publish: the pinned marketplace index and the emitter output. It
 // has checksums and a plan but no bundle manifest, so `publish verify` checks
-// its checksums only. name is the marketplace name.
-func BuildAggregate(name string, x Extras) (*Dist, error) {
+// its checksums and plugin list only. name is the marketplace name; plugins are
+// the plugins the release promises, recorded in plugins.json so a missing plugin
+// directory is noticed.
+func BuildAggregate(name string, x Extras, plugins []PluginRef) (*Dist, error) {
 	files, warnings, err := BuildExtras(x)
 	if err != nil {
 		return nil, err
+	}
+	if len(plugins) > 0 {
+		list, err := PluginList{Plugins: plugins}.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		files[PluginsFile] = list
 	}
 	if len(files) == 0 {
 		return nil, newError(CodeConfig, ExitFailed, "pass --marketplace or --emit NAME", "a multi-plugin publish has no marketplace index or emitter to aggregate")
@@ -101,6 +110,12 @@ func BuildAggregate(name string, x Extras) (*Dist, error) {
 		if strings.HasPrefix(p, MarketplaceDir+"/") {
 			roles[p] = "marketplace"
 		}
+	}
+	if _, ok := files[PluginsFile]; ok {
+		roles[PluginsFile] = "plugins"
+	}
+	if _, ok := files[PluginsFile]; ok {
+		roles[PluginsFile] = "plugins"
 	}
 	sums := make([]SumEntry, 0, len(d.Files))
 	for p, data := range d.Files {
