@@ -247,3 +247,32 @@ func TestSave_DoesNotWriteThroughSymlinks(t *testing.T) {
 		})
 	}
 }
+
+func TestLoad_RefusesASymlinkedLockFile(t *testing.T) {
+	tests := []struct {
+		name   string
+		target func(t *testing.T, outside string) string
+	}{
+		{"link to a valid lock", func(t *testing.T, outside string) string {
+			target := filepath.Join(outside, "other.lock")
+			require.NoError(t, os.WriteFile(target, []byte("version = 1\n"), 0o600))
+			return target
+		}},
+		{"dangling link", func(t *testing.T, outside string) string { return filepath.Join(outside, "missing") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			configDir, outside := t.TempDir(), t.TempDir()
+			testutil.SymlinkOrSkip(t, tt.target(t, outside), filepath.Join(configDir, FileName))
+
+			// Act
+			got, err := Load(configDir)
+
+			// Assert
+			require.Error(t, err)
+			assert.Nil(t, got)
+			assert.Contains(t, err.Error(), "symlink")
+		})
+	}
+}
