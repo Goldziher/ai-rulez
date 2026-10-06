@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/samber/oops"
 )
@@ -34,6 +35,14 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 	if err := unmarshalProvenance(plannedSidecar, &planned); err != nil {
 		return nil, err
 	}
+	root, err := os.OpenRoot(bundleDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, oops.With("path", bundleDir).Wrapf(err, "open plugin bundle")
+	}
+	defer root.Close() //nolint:errcheck // read only
 	var obsolete []Obsolete
 	for rel, recorded := range previous.Outputs {
 		if _, keep := planned.Outputs[rel]; keep {
@@ -43,16 +52,19 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 		if err != nil {
 			return nil, err
 		}
-		info, statErr := os.Lstat(target)
+		cleanRel := filepath.Clean(filepath.FromSlash(rel))
+		info, statErr := root.Lstat(cleanRel)
 		if statErr != nil {
 			if os.IsNotExist(statErr) {
 				continue
 			}
-			return nil, oops.With("path", target).Wrapf(statErr, "inspect obsolete plugin file")
+			// A link on the way that leaves the bundle is an edit, never a candidate.
+			obsolete = append(obsolete, Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: true})
+			continue
 		}
 		item := Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: !info.Mode().IsRegular()}
 		if !item.Edited {
-			body, readErr := os.ReadFile(target)
+			body, readErr := readRootFile(root, cleanRel)
 			if readErr != nil {
 				return nil, oops.With("path", target).Wrapf(readErr, "read obsolete plugin file")
 			}
@@ -66,14 +78,25 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 }
 
 // RemoveObsolete deletes one obsolete file and then every directory it leaves
-// empty, stopping at bundleDir, which is never removed.
+// empty, stopping at bundleDir, which is never removed. The removal runs through
+// an os.Root on bundleDir, so a symlinked parent that leads out of the bundle is
+// refused instead of followed.
 func RemoveObsolete(bundleDir, path string) error {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	bundleDir = filepath.Clean(bundleDir)
+	rel, err := filepath.Rel(bundleDir, filepath.Clean(path))
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return oops.With("path", path).With("bundle", bundleDir).Errorf("obsolete plugin file is outside its bundle")
+	}
+	root, err := os.OpenRoot(bundleDir)
+	if err != nil {
+		return oops.With("path", bundleDir).Wrapf(err, "open plugin bundle")
+	}
+	defer root.Close() //nolint:errcheck // nothing is written through the handle
+	if err := root.Remove(rel); err != nil && !os.IsNotExist(err) {
 		return oops.With("path", path).Wrapf(err, "remove obsolete plugin file")
 	}
-	bundleDir = filepath.Clean(bundleDir)
-	for dir := filepath.Dir(path); dir != bundleDir && len(dir) > len(bundleDir); dir = filepath.Dir(dir) {
-		if err := os.Remove(dir); err != nil {
+	for dir := filepath.Dir(rel); dir != "." && dir != ""; dir = filepath.Dir(dir) {
+		if err := root.Remove(dir); err != nil {
 			break // not empty: something that is not generated lives there
 		}
 	}

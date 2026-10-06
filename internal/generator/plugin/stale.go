@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -17,6 +18,9 @@ import (
 // is sorted.
 func StalePluginDirs(outputRoot string, keep map[string]bool) ([]string, error) {
 	base := filepath.Join(outputRoot, DomainPluginsDir)
+	if info, err := os.Lstat(base); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return nil, nil // a linked plugins directory leads out of the output root
+	}
 	entries, err := os.ReadDir(base)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -30,7 +34,7 @@ func StalePluginDirs(outputRoot string, keep map[string]bool) ([]string, error) 
 			continue
 		}
 		dir := filepath.Join(base, entry.Name())
-		if _, statErr := os.Stat(filepath.Join(dir, provenanceFileName)); statErr == nil {
+		if info, statErr := os.Lstat(filepath.Join(dir, provenanceFileName)); statErr == nil && info.Mode().IsRegular() {
 			stale = append(stale, dir)
 		}
 	}
@@ -40,11 +44,21 @@ func StalePluginDirs(outputRoot string, keep map[string]bool) ([]string, error) 
 
 // RemoveGeneratedPluginDir deletes the files a generated plugin directory's
 // provenance sidecar lists, the sidecar itself, and the directories that are
-// left empty. A file the sidecar does not list (something a person added) is
-// kept, so are the directories holding it, and its path is returned.
+// left empty. A file the sidecar does not list (something a person added), one
+// whose content no longer matches its recorded hash, and one reached through a
+// symlink is kept, so are the directories holding it, and its path is returned.
+// The directory is opened as an os.Root, so no removal can leave it.
 func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	sidecarPath := filepath.Join(dir, provenanceFileName)
-	data, err := os.ReadFile(sidecarPath)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, oops.With("path", dir).Wrapf(err, "open stale plugin directory")
+	}
+	defer root.Close() //nolint:errcheck // nothing is written through the handle
+	if info, statErr := root.Lstat(provenanceFileName); statErr != nil || !info.Mode().IsRegular() {
+		return nil, oops.With("path", sidecarPath).Errorf("plugin provenance is missing or not a regular file")
+	}
+	data, err := readRootFile(root, provenanceFileName)
 	if err != nil {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "read plugin provenance")
 	}
@@ -52,16 +66,19 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "parse plugin provenance")
 	}
-	for rel := range document.Outputs {
+	for rel, recorded := range document.Outputs {
 		target, pathErr := safeOutputPath(dir, rel)
 		if pathErr != nil {
 			return nil, pathErr
 		}
-		if rmErr := os.Remove(target); rmErr != nil && !os.IsNotExist(rmErr) {
+		if !unchangedInRoot(root, filepath.Clean(filepath.FromSlash(rel)), target, recorded, document.SourceHash) {
+			continue
+		}
+		if rmErr := root.Remove(filepath.Clean(filepath.FromSlash(rel))); rmErr != nil && !os.IsNotExist(rmErr) {
 			return nil, oops.With("path", target).Wrapf(rmErr, "remove stale plugin file")
 		}
 	}
-	if err := os.Remove(sidecarPath); err != nil && !os.IsNotExist(err) {
+	if err := root.Remove(provenanceFileName); err != nil && !os.IsNotExist(err) {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "remove plugin provenance")
 	}
 	pruneEmptyDirs(dir)
@@ -80,6 +97,34 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	sort.Strings(kept)
 	return kept, nil
 }
+
+// unchangedInRoot reports whether rel is a regular file inside root (no link on
+// the way) whose content, minus the generated header, still hashes to the
+// recorded value. A missing file is not "unchanged": there is nothing to remove.
+func unchangedInRoot(root *os.Root, rel, target string, recorded provenanceOutput, sourceHash string) bool {
+	info, err := root.Lstat(rel)
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	body, err := readRootFile(root, rel)
+	if err != nil {
+		return false
+	}
+	body = removeProvenanceHeader(body, target, recorded.ContentHash, sourceHash)
+	return hashBytes(body) == recorded.ContentHash
+}
+
+func readRootFile(root *os.Root, rel string) ([]byte, error) {
+	f, err := root.Open(rel)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // callers wrap with the path
+	}
+	defer f.Close() //nolint:errcheck // read only
+	return io.ReadAll(io.LimitReader(f, maxProvenanceFileBytes))
+}
+
+// maxProvenanceFileBytes bounds one generated file read to verify its hash.
+const maxProvenanceFileBytes = 64 << 20
 
 // pruneEmptyDirs removes empty directories under root, deepest first, and root
 // itself when nothing is left in it.
