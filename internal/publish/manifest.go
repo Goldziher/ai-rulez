@@ -38,7 +38,7 @@ type Manifest struct {
 	SBOM          *SBOMInfo      `json:"sbom"`
 }
 
-// ApprovalInfo summarises the approval state of the lock at publish time. It
+// ApprovalInfo summarizes the approval state of the lock at publish time. It
 // is present when the [governance] policy selects content for approval.
 type ApprovalInfo struct {
 	// Required counts the items the policy selects, Approved those with a valid approval.

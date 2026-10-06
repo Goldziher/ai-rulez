@@ -185,42 +185,49 @@ func ValidateTarget(tag, repo string) error {
 	return nil
 }
 
+// targetPlan is what validating a target resolves: the npm package of the npm
+// target, or the reference of the oci target.
+type targetPlan struct {
+	npm    *NPMPlan
+	ociRef string
+}
+
 // validateInput checks the target-independent and target-specific fields.
-func validateInput(in Input) (*NPMPlan, string, error) {
+func validateInput(in Input) (targetPlan, error) {
 	if err := ValidateName(in.Name, in.Version); err != nil {
-		return nil, "", err
+		return targetPlan{}, err
 	}
 	if in.Channel != "" && !ValidChannel(in.Channel) {
-		return nil, "", newError(CodeConfig, ExitFailed, "channels are lower-case letters, digits and '-'", "invalid channel name %q", in.Channel)
+		return targetPlan{}, newError(CodeConfig, ExitFailed, "channels are lower-case letters, digits and '-'", "invalid channel name %q", in.Channel)
 	}
 	if len(in.Lock) == 0 {
-		return nil, "", newError(CodePreflight, ExitGate, "run `ai-rulez lock`", "ai-rulez.lock is missing or empty")
+		return targetPlan{}, newError(CodePreflight, ExitGate, "run `ai-rulez lock`", "ai-rulez.lock is missing or empty")
 	}
 	if in.RequireSignature && in.Sign == nil {
-		return nil, "", newError(CodeUnsigned, ExitGate, "sign with --sign-key FILE or --sign-keyless", "require_signature is set and the bundle is not being signed")
+		return targetPlan{}, newError(CodeUnsigned, ExitGate, "sign with --sign-key FILE or --sign-keyless", "require_signature is set and the bundle is not being signed")
 	}
 	switch in.Target {
 	case "":
-		return nil, "", nil
+		return targetPlan{}, nil
 	case TargetGitHubRelease:
-		return nil, "", ValidateTarget(in.Tag, in.Repo)
+		return targetPlan{}, ValidateTarget(in.Tag, in.Repo)
 	case TargetNPM:
 		plan, err := ValidateNPM(in.NPM, in.Name, in.Version)
 		if err != nil {
-			return nil, "", err
+			return targetPlan{}, err
 		}
 		plan.Tag = in.Channel
-		return &plan, "", nil
+		return targetPlan{npm: &plan}, nil
 	case TargetOCI:
 		ref, err := ociReference(in.OCIRepository, in.Version)
-		return nil, ref, err
+		return targetPlan{ociRef: ref}, err
 	}
-	return nil, "", newError(CodeConfig, ExitFailed, "use one of: "+strings.Join(Targets, ", "), "unknown target %q", in.Target)
+	return targetPlan{}, newError(CodeConfig, ExitFailed, "use one of: "+strings.Join(Targets, ", "), "unknown target %q", in.Target)
 }
 
 // Build assembles the dist directory in memory.
 func Build(in Input) (*Dist, error) {
-	npmPlan, ociRef, err := validateInput(in)
+	tp, err := validateInput(in)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +280,7 @@ func Build(in Input) (*Dist, error) {
 	if err := addExtras(d, roles, in, manifest); err != nil {
 		return nil, err
 	}
-	if err := addTargetFiles(d, roles, in, manifest, manifestBytes, npmPlan, ociRef); err != nil {
+	if err := addTargetFiles(d, roles, in, manifestBytes, tp); err != nil {
 		return nil, err
 	}
 	notes, err := releaseNotes(in, manifest)
@@ -288,7 +295,7 @@ func Build(in Input) (*Dist, error) {
 	}
 	d.Files[SumsFile], roles[SumsFile] = FormatSums(sums), "checksums"
 
-	d.Plan = buildPlan(in, d, roles, npmPlan, ociRef)
+	d.Plan = buildPlan(in, d, roles, tp)
 	planBytes, err := marshalJSON(d.Plan)
 	if err != nil {
 		return nil, err
@@ -345,10 +352,11 @@ func emitPlugin(in Input, m Manifest) emit.Plugin {
 }
 
 // addTargetFiles adds the files a target needs besides the common ones.
-func addTargetFiles(d *Dist, roles map[string]string, in Input, m Manifest, manifestBytes []byte, npmPlan *NPMPlan, ociRef string) error {
+func addTargetFiles(d *Dist, roles map[string]string, in Input, manifestBytes []byte, tp targetPlan) error {
+	m := d.Manifest
 	switch in.Target {
 	case TargetNPM:
-		files, err := npmPackageFiles(in, m, *npmPlan)
+		files, err := npmPackageFiles(in, m, *tp.npm)
 		if err != nil {
 			return err
 		}
@@ -356,7 +364,7 @@ func addTargetFiles(d *Dist, roles map[string]string, in Input, m Manifest, mani
 			d.Files[name], roles[name] = data, "npm-package"
 		}
 	case TargetOCI:
-		packed, err := packOCI(m, manifestBytes, d.Files, in.Mtime, ociRef)
+		packed, err := packOCI(m, manifestBytes, d.Files, in.Mtime)
 		if err != nil {
 			return err
 		}
@@ -378,7 +386,7 @@ func uploadList(m Manifest) []string {
 	return up
 }
 
-func buildPlan(in Input, d *Dist, roles map[string]string, npmPlan *NPMPlan, ociRef string) Plan {
+func buildPlan(in Input, d *Dist, roles map[string]string, tp targetPlan) Plan {
 	plan := Plan{
 		SchemaVersion: SchemaVersion, Name: in.Name, Version: in.Version, Target: in.Target, Channel: in.Channel,
 		Preflight: []Step{{"validate-strict", "ok"}, {"lock-check", "ok"}, {"verify-plugin", "ok"}, {"secret-scan", "ok"}},
@@ -394,11 +402,11 @@ func buildPlan(in Input, d *Dist, roles map[string]string, npmPlan *NPMPlan, oci
 		plan.Commands = []Command{{Argv: ReleaseCreateArgv(in.Name, in.Version, in.Tag, in.Repo, plan.Upload), Cwd: "."}}
 		plan.Credentials = "gh authentication (GH_TOKEN or `gh auth login`); not read by ai-rulez"
 	case TargetNPM:
-		plan.NPM = npmPlan
-		plan.Commands = []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*npmPlan), Cwd: "."}}
+		plan.NPM = tp.npm
+		plan.Commands = []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*tp.npm), Cwd: "."}}
 		plan.Credentials = "npm authentication (npm login, or NODE_AUTH_TOKEN in an .npmrc); not read by ai-rulez"
 	case TargetOCI:
-		plan.Ref = ociRef
+		plan.Ref = tp.ociRef
 		plan.OCIDigest = Digest(d.Files[OCIManifestFile])
 		plan.Upload = ociUploadList(d.Manifest)
 		plan.Credentials = "registry credentials from the Docker credential store (`docker login`), read only for the registry named by ref"

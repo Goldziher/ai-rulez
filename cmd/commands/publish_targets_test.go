@@ -268,8 +268,8 @@ func TestPublish_NPMDryRunPrintsThePackCommands(t *testing.T) {
 	out, err := runPublishCapture(t)
 
 	require.NoError(t, err)
-	assert.Contains(t, out, "npm pack --ignore-scripts --pack-destination npm npm/package")
-	assert.Contains(t, out, "npm publish npm/acme-acme-1.4.0.tgz --access restricted --ignore-scripts")
+	assert.Contains(t, out, "npm pack --ignore-scripts --pack-destination npm ./npm/package")
+	assert.Contains(t, out, "npm publish ./npm/acme-acme-1.4.0.tgz --access restricted --ignore-scripts")
 	assert.NoDirExists(t, filepath.Join(root, "dist"))
 }
 
@@ -551,9 +551,7 @@ func multiProject(t *testing.T) string {
 
 func TestPublish_MultiPluginWritesOneDistPerPluginAndAnAggregate(t *testing.T) {
 	root := multiProject(t)
-	publishMarketplace, publishTag = true, "v2.0.0"
-	publishTag = ""
-	publishChannel = "stable"
+	publishMarketplace, publishChannel = true, "stable"
 	publishEmit = []string{"kiro-steering"}
 	publishExperimental = true
 
@@ -562,7 +560,6 @@ func TestPublish_MultiPluginWritesOneDistPerPluginAndAnAggregate(t *testing.T) {
 	// A pinned multi-plugin index needs one ref: no --tag and no channel ref is an error.
 	requirePublishError(t, err, publish.CodeConfig, publish.ExitFailed)
 
-	publishTag = ""
 	reconfigure(t, root, publishDomainsConfig+"\n[publish.marketplace.channels]\nstable = \"main\"\n")
 	_, err = runPublishCapture(t)
 	require.NoError(t, err)
@@ -584,7 +581,6 @@ func TestPublish_MultiPluginWritesOneDistPerPluginAndAnAggregate(t *testing.T) {
 	assert.Contains(t, out.String(), "plugins/acme-alpha: verified acme-alpha 1.4.0")
 	assert.Contains(t, out.String(), "aggregate: verified")
 
-	files = readDist(t, dist)
 	require.NoError(t, os.WriteFile(filepath.Join(dist, "plugins", "acme-beta", "ai-rulez.lock"), []byte("tampered"), 0o600))
 	_, _ = capture(t, func() { err = runPublishVerify(context.Background(), &out, dist) })
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
@@ -632,7 +628,7 @@ func TestPublish_MultiPluginExecutesEachPluginsTarget(t *testing.T) {
 	var published []string
 	for _, c := range fake.Calls() {
 		if c.Argv[0] == "npm" && c.Argv[1] == "publish" {
-			published = append(published, c.Argv[2])
+			published = append(published, strings.TrimPrefix(c.Argv[2], "./"))
 		}
 	}
 	assert.Equal(t, []string{"npm/acme-acme-alpha-1.4.0.tgz", "npm/acme-acme-beta-1.4.0.tgz"}, published)
@@ -649,4 +645,32 @@ func TestPublish_MultiPluginRuntimeFilter(t *testing.T) {
 	files := readDist(t, filepath.Join(root, "dist"))
 	require.NoError(t, json.Unmarshal([]byte(files["plugins/acme-alpha/acme-alpha-1.4.0.manifest.json"]), &m))
 	assert.Equal(t, []string{"claude"}, m.Runtimes)
+}
+
+func TestPublish_MultiPluginPinnedIndexTakesTheRefFromTag(t *testing.T) {
+	root := multiProject(t)
+	publishMarketplace, publishTag = true, "v1.4.0"
+
+	_, err := runPublishCapture(t)
+
+	require.NoError(t, err)
+	files := readDist(t, filepath.Join(root, "dist"))
+	assert.Contains(t, files["aggregate/marketplace/.claude-plugin/marketplace.json"], `"ref": "v1.4.0"`)
+	assert.Contains(t, files["aggregate/marketplace/.claude-plugin/marketplace.json"], `"sha": "`+manifestSource(t, files).Commit+`"`)
+}
+
+func TestPublish_MultiPluginGitHubReleaseRejectsATag(t *testing.T) {
+	multiProject(t)
+	publishTo, publishTag, publishDryRun = publish.TargetGitHubRelease, "v1", true
+
+	_, err := runPublishCapture(t)
+
+	requirePublishError(t, err, publish.CodeConfig, publish.ExitFailed)
+}
+
+func manifestSource(t *testing.T, files map[string]string) publish.Source {
+	t.Helper()
+	var m publish.Manifest
+	require.NoError(t, json.Unmarshal([]byte(files["plugins/acme-alpha/acme-alpha-1.4.0.manifest.json"]), &m))
+	return m.Source
 }
