@@ -276,7 +276,10 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 	}
 	p.run.Digest, p.run.CasesDigest = digest, casesDigest
 	// A skill the lock cannot digest keeps the evals digest and joins by id only.
-	p.run.LockDigest, _ = contentlock.SkillDirDigest(skill.Dir) //nolint:errcheck // an empty digest is the legacy join class
+	if p.run.LockDigest, err = lockDigestOf(skill.Dir); err != nil {
+		p.run.LockDigest = ""
+		p.run.Warnings = append(p.run.Warnings, "the lock digest of the skill could not be computed ("+err.Error()+"); usage joins by skill id only")
+	}
 	p.req = &Request{
 		Version: ProtocolVersion, Harness: e.opts.Harness, Model: e.opts.Model, Ablation: e.opts.Ablation,
 		Skill: SkillRef{ID: skill.ID, Dir: skill.Dir, Digest: digest}, Cases: cases,
@@ -296,6 +299,10 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 	}
 	return p, nil
 }
+
+// lockDigestOf computes the lock's digest of a skill directory; a variable so a
+// test can make it fail.
+var lockDigestOf = contentlock.SkillDirDigest
 
 // relativize makes problem paths relative to the project (the directory holding
 // the config directory), so reports do not differ between checkouts.

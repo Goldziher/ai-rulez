@@ -2,8 +2,10 @@ package evals
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
@@ -66,4 +68,22 @@ func TestStoreMarshal_OmitsAnEmptyLockDigest(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "lock_digest", "a legacy record keeps its bytes")
+}
+
+func TestRun_WarnsWhenTheLockDigestCannotBeComputed(t *testing.T) {
+	cfg := projectWithSkills(t)
+	previous := lockDigestOf
+	lockDigestOf = func(string) (string, error) { return "", errors.New("walk failed") }
+	t.Cleanup(func() { lockDigestOf = previous })
+
+	report, err := Run(context.Background(), baseOptions(cfg, goodRunner()))
+
+	require.NoError(t, err)
+	var warned bool
+	for _, sk := range report.Skills {
+		for _, w := range sk.Warnings {
+			warned = warned || (strings.Contains(w, "lock digest") && strings.Contains(w, "walk failed"))
+		}
+	}
+	assert.True(t, warned, "the usage join silently degraded to by-id only; say so")
 }

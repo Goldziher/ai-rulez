@@ -85,13 +85,7 @@ func runReportEvals(out io.Writer) error {
 	}
 	in := evals.RankInput{Store: store, MinPassRate: reportEvalsFlags.minPass, MinTrigger: reportEvalsFlags.minTrigger}
 	for i := range skills {
-		rs := evals.RankSkill{ID: skills[i].ID}
-		if data, err := os.ReadFile(filepath.Join(skills[i].Dir, "SKILL.md")); err == nil { //nolint:gosec // the project's own skill
-			rs.SkillTokens = counter.Count(string(data))
-		}
-		if digest, err := evals.SkillDigest(skills[i].Dir); err == nil {
-			rs.Digest = digest
-		}
+		rs := rankSkillFor(skills[i].ID, skills[i].Dir, counter)
 		in.Skills = append(in.Skills, rs)
 	}
 	if err := joinRankUsage(&in, cfgDir); err != nil {
@@ -106,6 +100,26 @@ func runReportEvals(out io.Writer) error {
 	}
 	writeEvalsReport(reportWriter{out}, rows, in.Uses != nil)
 	return nil
+}
+
+// rankSkillFor measures one skill for the ranking. What cannot be measured is
+// recorded as a note on the skill, not dropped: a skill without a digest is never
+// reported stale, and the reader should know why.
+func rankSkillFor(id, dir string, counter tokens.Counter) evals.RankSkill {
+	rs := evals.RankSkill{ID: id}
+	data, err := os.ReadFile(filepath.Join(dir, "SKILL.md")) //nolint:gosec // the project's own skill
+	if err != nil {
+		rs.Notes = append(rs.Notes, "could not read SKILL.md, so its token cost is unknown: "+err.Error())
+	} else {
+		rs.SkillTokens = counter.Count(string(data))
+	}
+	digest, err := evals.SkillDigest(dir)
+	if err != nil {
+		rs.Notes = append(rs.Notes, "could not digest the skill, so staleness was not checked: "+err.Error())
+	} else {
+		rs.Digest = digest
+	}
+	return rs
 }
 
 // joinRankUsage reads the usage and feedback logs into the ranking input. A log
@@ -175,6 +189,9 @@ func writeEvalsReport(w reportWriter, rows []evals.RankRow, haveUsage bool) {
 		w.printf("\n")
 		for _, reason := range row.Reasons {
 			w.printf("      - %s\n", reason)
+		}
+		for _, note := range row.Notes {
+			w.printf("      note: %s\n", note)
 		}
 	}
 }

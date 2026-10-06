@@ -31,6 +31,9 @@ type RankSkill struct {
 	SkillTokens int
 	// Digest is the skill's current content digest, used to detect staleness.
 	Digest string
+	// Notes are things the caller could not compute for this skill (a digest, a
+	// token count); they are shown with the row, never silently dropped.
+	Notes []string
 }
 
 // RankInput joins eval results with usage data.
@@ -69,6 +72,9 @@ type RankRow struct {
 	Join string `json:"join,omitempty"`
 	// JoinUses counts the uses behind Join by class.
 	JoinUses map[string]int `json:"join_uses,omitempty"`
+	// Notes list inputs that could not be computed for the skill, so a missing
+	// staleness check or token count is visible.
+	Notes []string `json:"notes,omitempty"`
 }
 
 // Join classes of usage evidence against an eval record.
@@ -92,7 +98,7 @@ func joinClass(in *RankInput, id string, record *SkillRecord) (string, map[strin
 		return JoinNone, nil
 	}
 	counts := map[string]int{}
-	if record.LockDigest == "" {
+	if record.LockDigest == "" || in.UseDigests == nil {
 		counts[JoinLegacy] = uses
 		return JoinLegacy, counts
 	}
@@ -164,7 +170,7 @@ func rateOrInf(v *float64) float64 {
 }
 
 func rankOne(in *RankInput, skill RankSkill) RankRow {
-	row := RankRow{ID: skill.ID, SkillTokens: skill.SkillTokens, Feedback: in.Feedback[skill.ID]}
+	row := RankRow{ID: skill.ID, SkillTokens: skill.SkillTokens, Feedback: in.Feedback[skill.ID], Notes: skill.Notes}
 	var record *SkillRecord
 	if in.Store != nil {
 		record, _ = in.Store.Get(skill.ID)
