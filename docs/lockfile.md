@@ -67,6 +67,11 @@ content directories, wherever it lives (inside the repository or outside it). A 
 pinned as its own entry, by link target (see below), and the loader does not read it. A `local_override` path is a
 development shortcut and is not pinned.
 
+The lock file itself is never followed through a symlink. `lock` replaces a symlinked `ai-rulez.lock` with a
+regular file on write (it never writes through the link), and every command that only reads the lock refuses a
+symlinked one with an error, so a link cannot point the pins at another file. Delete the link and run
+`ai-rulez lock` to recreate it.
+
 Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
 not `[header] timestamp` is on. Not pinned: machine-local outputs, outputs that may carry resolved secrets, and
