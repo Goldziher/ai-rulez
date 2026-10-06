@@ -289,7 +289,7 @@ func listingNotes(report *TokenReport) []string {
 		"A harness bounds its listing (Codex: a share of the context window; Claude Code: a total " +
 			"budget on top of the per-entry description cap) and shortens or omits entries beyond it. " +
 			"The listing lines do not apply that bound, so a very large skill set is an upper estimate. " +
-			"Presets absent from the listing table (amp, antigravity, baz, continue-dev, hermes, xum) " +
+			"Presets absent from the listing table (amp, antigravity, baz, hermes, xum) " +
 			"are not modeled and report no listing. Skills written only to the shared .agents/skills " +
 			"tree by agents_md are not attributed to a preset.",
 	}
