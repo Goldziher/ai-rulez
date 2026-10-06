@@ -61,6 +61,12 @@ var codeownersLocations = []string{".github/CODEOWNERS", "CODEOWNERS", "docs/COD
 // git top level of the configuration directory, else baseDir. It never returns
 // nil: a file that cannot be read is an OwnerSet with a Problem.
 func LoadOwnerSet(baseDir, configDir, from string) *OwnerSet {
+	return loadOwnerSet(baseDir, configDir, from, readOwnersFile)
+}
+
+// loadOwnerSet is LoadOwnerSet with the way a file is read supplied: from the
+// working tree, or from a revision (LoadOwnerSetAt).
+func loadOwnerSet(baseDir, configDir, from string, read func(root, rel string) ([]byte, error)) *OwnerSet {
 	root := baseDir
 	if top := (gitutil.Git{}).TopLevel(configDir); top != "" {
 		root = top
@@ -75,7 +81,7 @@ func LoadOwnerSet(baseDir, configDir, from string) *OwnerSet {
 		candidates = []string{filepath.ToSlash(from)}
 	}
 	for _, rel := range candidates {
-		data, err := readOwnersFile(root, rel)
+		data, err := read(root, rel)
 		if err != nil {
 			continue
 		}
