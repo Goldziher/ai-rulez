@@ -1,0 +1,10 @@
+wrote deploy-to-staging.eval.yaml, deploy-to-staging.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   1 criteria -> rubric (weights kept as text)
+mapped:   activation block -> 2 near_miss prompt(s)
+assumed:  no pass threshold; the eval default 0.70 applies
+assumed:  expect_trigger: true (the scenario targets a skill)
+unmapped (3), AR9A5:
+  $.activation.should_not_trigger[0] value "Explain how staging differs from production"
+  $.activation.should_not_trigger[1] value "  Roll back the last production deploy  "
+  $.activation.should_trigger  value "true"

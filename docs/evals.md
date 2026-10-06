@@ -431,6 +431,78 @@ cap skips the rest, as for case runs. `--timeout` bounds one skill's runner call
   `AR9A2` (an unsigned one is reported as unverified, like `AR997`).
 - Not implemented: `--description-from` (a candidate description for one run, from the design's phase 5).
 
+## Importing scenarios
+
+```bash
+ai-rulez eval import --from tessl ./scenarios/add-health-endpoint --skill http-service
+ai-rulez eval import --from tessl ./scenarios --out ./tmp-cases --dry-run --report import.json
+```
+
+`eval import` turns scenarios written for another tool into case files. It is offline: it reads local files only,
+never contacts a service or needs its token, runs nothing it reads, and treats the input as untrusted text. Only
+`--from tessl` exists; the code is a `Source` interface (`Detect`, `Load`, `Map`) so another format can be added.
+
+A Tessl scenario is a task (`task.md`) plus a weighted checklist (`criteria.json`). **The shape of `criteria.json` is
+not verified**: the importer follows public notes (a task, a weighted checklist, a pass percentage), not a schema or a
+sample of the service's real files, so the mapping is tolerant (a few spellings of each field are read) and anything
+it does not read is reported instead of guessed at. The documented shape, which is illustrative:
+
+```json
+{
+  "scenario": "add-health-endpoint",
+  "criteria": [
+    { "name": "adds route", "description": "Registers GET /health on the router", "weight": 3 },
+    { "name": "returns 200", "description": "Handler returns status 200 with a JSON body", "weight": 2 },
+    { "name": "no new dependency", "description": "Does not add a dependency", "weight": 1 }
+  ],
+  "pass_threshold": 0.7
+}
+```
+
+| Input | Becomes | Notes |
+| --- | --- | --- |
+| `task.md` | `prompt_file: <id>.task.md` | exact; the file is written beside the case |
+| scenario name (`scenario`, `name`, `id`, `title`, else the directory) | case `id`, slugged to `[a-z0-9._-]` | a repeated name gets `-2`, `-3` |
+| (the scenario targets a skill) | `expect_trigger: true`, tag `imported:tessl` | an assumption, reported |
+| `criteria` (a list of objects or strings, or an object) | `rubric` with a numbered, weighted checklist (`--rubric-mode single`, the default), or `rubric_items` with the weights kept (`--rubric-mode items`) | name, description and weight are read as `name`/`title`/`id`, `description`/`criterion`/`text`/`check`/`prompt`, `weight`/`points`/`score`/`max_score`; no weights means every criterion weighs 1 |
+| `pass_threshold` (also `passing_score`, `pass_score`, `passing_threshold`, `threshold`) | `rubric_min_score` | a fraction (0-1), or a percent (above 1 up to 100, or `"70%"`); the unit it was read as is reported; none means the default 0.7, noted |
+| `files`, `fixtures`, `starting_files`, `setup_files` | `files` | inline `content`, or a `source` copied to `fixtures/<id>/...` beside the case; paths are checked like case paths |
+| `activation` block with `should_not_trigger` prompts | `near_miss` | reported |
+| anything else (`baseline`, `repeats`, `agent`, `model`, unknown fields) | not imported | listed as **unmapped** (`AR9A5`, informational) with its JSON path, a short value and, where there is one, the flag it belongs to (`--ablation`, `--runs`, `--model`) |
+
+A criterion with weight 0 is dropped (and reported as unmapped); a negative weight, a checklist whose weights sum to 0,
+a missing task, or a threshold above 100 is an error.
+
+`--lift-assertions` (off by default) also converts criteria that state a mechanical check in a fixed phrasing, with the
+path or the text quoted, into assertions: `The file "x" exists` / `is created` / `is present`, `The file "x" does not
+exist`, `The output|answer|response contains|includes|mentions "y"` and `... does not contain "y"`. It is
+conservative (an unquoted value, two quoted values or a path that is absolute or leaves the directory is not lifted),
+never removes the criterion from the rubric, puts a `# lifted from criterion "<name>"` comment on each assertion and
+lists every lift in the report. It is off by default because a wrong lift silently changes what is graded.
+
+Output goes to `.ai-rulez/skills/<skill>/evals/` (`--skill`) or `--out`: `<id>.eval.yaml` with a provenance header
+(importer version and a sha256 of the input files), the task, and any fixture copies. The command prints what was
+mapped, assumed, lifted and left unmapped (`--format json` prints the same as JSON; `--report FILE` also writes it):
+
+```console
+$ ai-rulez eval import --from tessl ./scenarios/add-health-endpoint --skill http-service
+wrote add-health-endpoint.eval.yaml, add-health-endpoint.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   3 criteria -> rubric (weights kept as text)
+mapped:   pass_threshold -> rubric_min_score 0.7 (read as a fraction)
+assumed:  expect_trigger: true (the scenario targets a skill)
+```
+
+**Safety.** Nothing is written unless every scenario maps, and an existing file is not overwritten without `--force`
+(a symlink at a target is replaced, never written through). Input files are capped at 2 MiB and JSON at 32 levels,
+must be UTF-8, and must be regular files (a symlinked `task.md` or fixture that resolves outside the scenario is
+refused). Fixture and file paths follow the case format's rules (relative, no `..`). The text of the task, the criteria,
+fixtures and near-miss prompts is scanned with the security rules: hidden characters (`AR002`) and credentials
+(`AR001`) refuse the scenario (the credential is masked in the message); an instruction-override phrase (`AR004`) is
+flagged in the report as a warning, since a criterion ends up in a rubric a grader model reads. JSON keys that are not
+plain identifiers are shown quoted in the report, so a hostile key cannot reach a terminal raw. Every file written
+loads through the normal case parser (the `AR996` check) before it is written.
+
 ## Scores and the results file
 
 Per skill, over the run's cases (near misses included, skipped cases excluded):
@@ -479,7 +551,7 @@ failing run, which is what freshness compares against.
 
 ## Linting cases and results
 
-Four more rules join `AR962` in [strict validation](strict-validation.md):
+These rules join `AR962` in [strict validation](strict-validation.md):
 
 | Code | Name | Default | Reports |
 | --- | --- | --- | --- |
@@ -489,6 +561,9 @@ Four more rules join `AR962` in [strict validation](strict-validation.md):
 | `AR9A0` | `eval-results-invalid` | error | `eval-results.json` cannot be parsed or has an unsupported `schema_version` |
 | `AR9A1` | `activation-low` | off | The recorded [activation](#activation-mode) recall or precision is below `[lint.evals] min_activation_recall` or `min_activation_precision` (0-1); setting either turns the rule on at error |
 | `AR9A2` | `skill-confusable` | off | A sibling won at least `[lint.evals] confusion_threshold` (0-1) of the skill's positive activation prompts; setting it turns the rule on at warning |
+| `AR9A3` | `activation-policy-conflict` | warning | A case expects a trigger (`expect_trigger: true`) for a skill whose frontmatter sets `disable-model-invocation: true` (or its `disable_model_invocation` misspelling) or `allow_implicit_invocation: false`: the model never starts it, so the case can never pass. Negative cases hold trivially and are not reported |
+| `AR9A4` | `activation-prompt-names-skill` | off | A positive prompt contains the skill's id or name as a whole word (case-insensitive, `/name` included): it tests an explicit invocation, not whether the model chooses the skill. Enable with `[lint.severity] AR9A4 = "warning"` |
+| `AR9A5` | `eval-import-unmapped` | info | Reported by [`eval import`](#importing-scenarios), never by `validate`: input fields with no counterpart |
 
 Only records signed with your own key (`eval-results.key` in the user config directory, written by `eval run`) count
 as evidence. A record without a valid signature (committed from another machine, edited by hand or forged) is
@@ -510,6 +585,9 @@ min_pass_rate = 0.8       # AR998, and the default pass mark of eval run
 min_activation_recall = 0.8     # AR9A1
 min_activation_precision = 0.9  # AR9A1
 confusion_threshold = 0.25      # AR9A2
+
+[lint.evals.estimate]           # assumptions of the cost estimate, see "Cost controls"
+overhead_tokens = 25000
 ```
 
 A skill with no recorded passing run is not reported stale (that is what `AR962` and the score are for).

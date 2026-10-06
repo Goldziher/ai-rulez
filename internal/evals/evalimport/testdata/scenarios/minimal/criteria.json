@@ -1,0 +1,9 @@
+{
+  "scenario": "add-health-endpoint",
+  "criteria": [
+    { "name": "adds route", "description": "Registers GET /health on the router", "weight": 3 },
+    { "name": "returns 200", "description": "Handler returns status 200 with a JSON body", "weight": 2 },
+    { "name": "no new dependency", "description": "Does not add a dependency", "weight": 1 }
+  ],
+  "pass_threshold": 0.7
+}

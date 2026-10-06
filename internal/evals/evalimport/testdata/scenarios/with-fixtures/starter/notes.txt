@@ -1,0 +1,1 @@
+The staging environment is called "stage" in the old docs.

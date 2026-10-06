@@ -430,6 +430,11 @@ func assertionTypes() []string {
 	return []string{AssertContains, AssertNotContains, AssertRegex, AssertFileExists, AssertCommandExit}
 }
 
+// CheckRelPath is the case format's path rule for other packages (the importer):
+// it returns a problem description for a path that is not a clean relative path
+// inside its base, or "".
+func CheckRelPath(p string) string { return checkRelPath(p) }
+
 // checkRelPath returns a problem description for a path that is not a clean
 // relative path inside its base, or "".
 func checkRelPath(p string) string {
