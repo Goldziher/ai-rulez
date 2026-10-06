@@ -88,3 +88,32 @@ func TestImportDoesNotFollowSymlinks(t *testing.T) {
 		}
 	}
 }
+
+func TestImportRefusesToWriteThroughSymlinkedOutput(t *testing.T) {
+	tests := []struct {
+		name string
+		link string // relative to .ai-rulez
+	}{
+		{"rules directory", "rules"},
+		{"skills directory", "skills"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			project, outside := filepath.Join(root, "project"), filepath.Join(root, "outside")
+			require.NoError(t, os.MkdirAll(outside, 0o755))
+			writeSymlinkTree(t, project, map[string]string{"CLAUDE.md": "# Rule\nUse tabs.\n", ".claude/skills/s/SKILL.md": "---\nname: s\n---\nbody\n"})
+			out := filepath.Join(project, ".ai-rulez")
+			symlinkOrSkip(t, outside, filepath.Join(out, tt.link))
+
+			// Act
+			err := NewImporter(project, out).Import("CLAUDE.md,.claude/skills")
+
+			// Assert
+			require.Error(t, err)
+			entries, _ := os.ReadDir(outside) //nolint:errcheck // empty is the expectation
+			assert.Empty(t, entries, "nothing was written through the link")
+		})
+	}
+}
