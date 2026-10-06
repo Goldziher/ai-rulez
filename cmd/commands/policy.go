@@ -20,18 +20,42 @@ var policyFlag string
 // policyModeFlag is --policy-mode: "enforce" (default) or "warn".
 var policyModeFlag string
 
+// URL policy flags: the digest the --policy URL must have, offline use of the
+// cached copy, how stale that copy may be, and trust-on-first-use.
+var (
+	policyDigestFlag   string
+	policyOfflineFlag  bool
+	policyMaxStaleFlag string
+	policyTOFUFlag     bool
+)
+
 // validateShowPolicy is validate --show-policy.
 var validateShowPolicy bool
 
 // policyEnforcer discovers the policy lazily, from the flag, AI_RULEZ_POLICY
 // and the managed location, never from the repository being loaded.
 var policyEnforcer = policy.NewEnforcer(func() policy.DiscoverOptions {
-	return policy.DiscoverOptions{Flag: policyFlag, Mode: policyModeFlag}
+	return policy.DiscoverOptions{
+		Flag: policyFlag, FlagDigest: policyDigestFlag, Mode: policyModeFlag,
+		Offline: policyOfflineFlag, MaxStale: policyMaxStaleFlag,
+		TrustOnFirstUse: policyTOFUFlag, Interactive: stdinIsTerminal(),
+	}
 })
+
+// --policy-trust-tofu uses stdinIsTerminal (approve.go): it refuses to run in a
+// pipe or in CI, where nobody reviews the digest.
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&policyFlag, "policy", "",
-		"Organization policy file (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md")
+		"Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md")
+	RootCmd.PersistentFlags().StringVar(&policyDigestFlag, "policy-digest", "",
+		"The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741)")
+	RootCmd.PersistentFlags().BoolVar(&policyOfflineFlag, "policy-offline", false,
+		"Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed")
+	RootCmd.PersistentFlags().StringVar(&policyMaxStaleFlag, "policy-max-stale", "",
+		"How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE)")
+	RootCmd.PersistentFlags().BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
+		"Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards")
 	RootCmd.PersistentFlags().StringVar(&policyModeFlag, "policy-mode", "",
 		"How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced)")
 	ValidateCmd.Flags().BoolVar(&validateShowPolicy, "show-policy", false,

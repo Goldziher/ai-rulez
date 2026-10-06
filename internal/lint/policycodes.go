@@ -32,8 +32,8 @@ var policyCodes = []string{
 func init() {
 	registerRules(
 		RuleInfo{CodePolicyLoosened, "policy-loosened", SeverityError, "the repository configuration weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error)"},
-		RuleInfo{CodePolicyDigestMismatch, "policy-digest-mismatch", SeverityError, "a policy file does not match the digest it was pinned to (reserved for pinned policies)"},
-		RuleInfo{CodePolicyUnavailable, "policy-unavailable", SeverityError, "a policy that was demanded by --policy or AI_RULEZ_POLICY cannot be read; ai-rulez fails closed instead of running without it"},
+		RuleInfo{CodePolicyDigestMismatch, "policy-digest-mismatch", SeverityError, "a policy file or URL does not match the digest it is pinned to, or a policy URL has no digest (a URL policy is never loaded unpinned)"},
+		RuleInfo{CodePolicyUnavailable, "policy-unavailable", SeverityError, "a policy that was demanded by --policy or AI_RULEZ_POLICY cannot be read, or its URL cannot be reached and no cached copy younger than max_stale exists; ai-rulez fails closed instead of running without it"},
 		RuleInfo{CodePolicyInvalid, "policy-invalid", SeverityError, "a policy file is unusable: not TOML, an unknown key, a bad pattern, or newer than this ai-rulez"},
 		RuleInfo{CodePolicyRequiredMissing, "policy-required-missing", SeverityError, "the repository turns off or ignores a rule code the organization policy requires"},
 		RuleInfo{CodeSourceNotAllowed, "source-not-allowed", SeverityError, "an include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies"},
@@ -47,14 +47,14 @@ func init() {
 			Good: "Remove the entry, or ask the policy owners to widen the policy; the repository cannot",
 		},
 		CodePolicyDigestMismatch: {
-			Why:  "A pinned policy file that changed is indistinguishable from a tampered one, so it is refused.",
-			Bad:  "A policy whose SHA-256 differs from the pinned `sha256:` value",
-			Good: "Review the new policy, then update the pin where it is configured",
+			Why:  "A pinned policy that changed is indistinguishable from a tampered one, so it is refused. A URL is content someone else controls, so a URL policy without a digest is not loaded at all.",
+			Bad:  "A policy whose SHA-256 differs from the pinned `sha256:` value, or `--policy https://policy.example.org/base.toml` with no digest",
+			Good: "Review the new policy, then update the pin where it is configured (`@sha256:<hex>`, `--policy-digest`, `AI_RULEZ_POLICY_DIGEST`)",
 		},
 		CodePolicyUnavailable: {
-			Why:  "A policy named by `--policy` or `AI_RULEZ_POLICY` was demanded. Skipping it when it cannot be read would let breaking the path switch the policy off, so the run fails instead.",
-			Bad:  "`AI_RULEZ_POLICY=/etc/missing.toml ai-rulez generate`",
-			Good: "Point the variable at a readable policy file, or unset it where no policy is meant to apply",
+			Why:  "A policy named by `--policy` or `AI_RULEZ_POLICY` was demanded. Skipping it when it cannot be read would let breaking the path, or the network, switch the policy off, so the run fails instead. A cached copy of a pinned URL policy may stand in for at most max_stale (7d by default).",
+			Bad:  "`AI_RULEZ_POLICY=/etc/missing.toml ai-rulez generate`, or a policy URL that is down with no cached copy",
+			Good: "Point the variable at a readable policy file, restore the URL, or unset it where no policy is meant to apply",
 		},
 		CodePolicyInvalid: {
 			Why:  "A typo in a policy must not silently loosen it, so unknown keys, bad patterns, unknown rule codes and a `policy_version` this build does not read are errors.",

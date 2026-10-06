@@ -13,13 +13,35 @@ Layers, strongest anchor first. Every layer found is loaded and merged tighten-o
 
 | Layer | Source | Use |
 | --- | --- | --- |
-| `flag` | `--policy <file>` | a CI step the organization owns |
-| `env` | `AI_RULEZ_POLICY=<file>` | managed machines, CI images |
+| `flag` | `--policy <file or https URL>` | a CI step the organization owns |
+| `env` | `AI_RULEZ_POLICY=<file or https URL>` | managed machines, CI images |
 | `managed` | `/etc/ai-rulez/policy.toml` (Linux and others), `/Library/Application Support/ai-rulez/policy.toml` (macOS), `%ProgramData%\ai-rulez\policy.toml` (Windows) | a machine-wide baseline |
 
 A flag or variable that is set but cannot be loaded is an error (`AR742`), never a skip: breaking the path must not
 switch the policy off. An absent managed file is not an error; a present but unreadable or invalid one is. A policy
 file must be a regular file of at most 256 KiB. The same file named twice is one layer.
+
+### Policy URLs
+
+A policy may be an `https` URL, so one file serves every repository. The rules are strict, because a URL is
+content someone else controls:
+
+- **A digest is required.** Pin it on the reference (`https://policy.example.org/base.toml@sha256:<hex>`), with
+  `--policy-digest` for `--policy`, or `AI_RULEZ_POLICY_DIGEST` for `AI_RULEZ_POLICY`. The digest is the SHA-256 of
+  the file with CRLF normalized to LF, the one `validate --show-policy` prints. A URL with no digest is not loaded
+  (`AR741`). A digest that does not match is `AR741` and fails closed; a cached copy never papers over it.
+- **`--policy-trust-tofu`** records the digest of an unpinned URL once, and only in a terminal (a pipe or CI refuses),
+  in the user cache with an HMAC. Later runs use the recorded digest. The warning it prints names the digest to pin.
+- **https only**, no credentials in the URL (`file:` and `http:` are refused), no credentials sent, the response is at
+  most 256 KiB, redirects stay on the same host over https (at most 5), and the content type is ignored.
+- **Cache.** A good copy is stored by URL and digest in the user cache (`~/.cache/ai-rulez/policy`), with an HMAC under
+  a per-user secret kept in the user config directory. An entry that fails its HMAC, or whose body no longer hashes to
+  the pin, is a miss, so a checkout or restored cache cannot plant a policy.
+- **Offline and `max_stale`.** When the URL cannot be reached (any network error or non-200 answer), the cached copy
+  of the pinned digest stands in for it for at most `max_stale` (default `7d`: `--policy-max-stale`, or
+  `AI_RULEZ_POLICY_MAX_STALE`; `0` allows none). `--policy-offline` (or `AI_RULEZ_POLICY_OFFLINE=1`) uses the cache
+  without asking the network. Past `max_stale`, or with no cached copy, the run fails with `AR742`. There is no
+  "skip the policy because it is unreachable". `validate --show-policy` marks a layer served from the cache.
 
 Policy is never read from the repository or from `config.local.*`. Set `AI_RULEZ_POLICY` from the trusted side
 (organization secrets and variables, a required workflow), not from a repository-level workflow file that a fork pull
@@ -253,9 +275,8 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 
 ## Design decisions
 
-- **Phase 1 scope.** Policy from `--policy`, `AI_RULEZ_POLICY` and the managed path, over the keys that already exist
-  in `config.toml`. URL policies with digests, `extends`, org-repo discovery, `--policy-digest`, `--policy-mode warn`,
-  and the signing, MCP and hooks sections are later phases (`AR741` is reserved for a digest mismatch).
+- **URL policies.** `AR741` is a missing or mismatched digest; a stale or absent cache after a failed fetch is `AR742`.
+  Trust-on-first-use is terminal-only so that nobody can script past the review of a digest.
 - **Fail closed everywhere.** A demanded policy that cannot be read is `AR742`, and an unusable policy locks
   telemetry and LLM network use.
 - **An explicit empty allowlist means nothing is allowed.** `lint.security.allowed_hosts = []` in a policy is

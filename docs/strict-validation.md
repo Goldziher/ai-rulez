@@ -88,8 +88,8 @@ stdout.
 | AR734 | `source-outdated` | off | A remote source has a newer tag its constraint allows; reported by `lock --outdated` once enabled in `[lint.severity]` |
 | AR735 | `locked-tag-missing` | warning | A tag pinned in `ai-rulez.lock` no longer exists on the remote; the pinned commit is still used |
 | AR740 | `policy-loosened` | error | The repository weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error, see [Policy](policy.md)) |
-| AR741 | `policy-digest-mismatch` | error | A policy file does not match the digest it was pinned to (reserved for pinned policies) |
-| AR742 | `policy-unavailable` | error | A policy demanded by `--policy` or `AI_RULEZ_POLICY` cannot be read; ai-rulez fails closed |
+| AR741 | `policy-digest-mismatch` | error | A policy file or URL does not match the digest it is pinned to, or a policy URL has no digest |
+| AR742 | `policy-unavailable` | error | A policy demanded by `--policy` or `AI_RULEZ_POLICY` cannot be read, or its URL cannot be reached and no cached copy younger than `max_stale` exists; ai-rulez fails closed |
 | AR743 | `policy-invalid` | error | A policy file is unusable: not TOML, an unknown key or rule, a bad pattern, or newer than this ai-rulez |
 | AR744 | `policy-required-missing` | error | The repository turns off or ignores a rule code the organization policy requires |
 | AR745 | `source-not-allowed` | error | An include, installed skill or skill source comes from a host the organization policy does not allow or denies |
@@ -224,7 +224,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR719` used, see [Approvals](approvals.md)) | allocated |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
-| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745`, `AR748` and `AR749` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
+| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745`, `AR748` and `AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
@@ -1881,23 +1881,23 @@ the repository configuration weakens a key the organization policy only lets it 
 
 ### AR741 policy-digest-mismatch
 
-a policy file does not match the digest it was pinned to (reserved for pinned policies)
+a policy file or URL does not match the digest it is pinned to, or a policy URL has no digest (a URL policy is never loaded unpinned)
 
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
-- Why: A pinned policy file that changed is indistinguishable from a tampered one, so it is refused.
-- Bad: A policy whose SHA-256 differs from the pinned `sha256:` value
-- Good: Review the new policy, then update the pin where it is configured
+- Why: A pinned policy that changed is indistinguishable from a tampered one, so it is refused. A URL is content someone else controls, so a URL policy without a digest is not loaded at all.
+- Bad: A policy whose SHA-256 differs from the pinned `sha256:` value, or `--policy https://policy.example.org/base.toml` with no digest
+- Good: Review the new policy, then update the pin where it is configured (`@sha256:<hex>`, `--policy-digest`, `AI_RULEZ_POLICY_DIGEST`)
 
 ### AR742 policy-unavailable
 
-a policy that was demanded by --policy or AI_RULEZ_POLICY cannot be read; ai-rulez fails closed instead of running without it
+a policy that was demanded by --policy or AI_RULEZ_POLICY cannot be read, or its URL cannot be reached and no cached copy younger than max_stale exists; ai-rulez fails closed instead of running without it
 
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
-- Why: A policy named by `--policy` or `AI_RULEZ_POLICY` was demanded. Skipping it when it cannot be read would let breaking the path switch the policy off, so the run fails instead.
-- Bad: `AI_RULEZ_POLICY=/etc/missing.toml ai-rulez generate`
-- Good: Point the variable at a readable policy file, or unset it where no policy is meant to apply
+- Why: A policy named by `--policy` or `AI_RULEZ_POLICY` was demanded. Skipping it when it cannot be read would let breaking the path, or the network, switch the policy off, so the run fails instead. A cached copy of a pinned URL policy may stand in for at most max_stale (7d by default).
+- Bad: `AI_RULEZ_POLICY=/etc/missing.toml ai-rulez generate`, or a policy URL that is down with no cached copy
+- Good: Point the variable at a readable policy file, restore the URL, or unset it where no policy is meant to apply
 
 ### AR743 policy-invalid
 

@@ -2317,6 +2317,10 @@ These flags work with all commands:
 | `--config` / `-C`  | string  | Config file path (auto-discovered if not specified)                             |
 | `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 | `--policy`         | string  | [Organization policy](policy.md) file (tighten-only); also `AI_RULEZ_POLICY` and the managed path |
+| `--policy-digest`  | string  | The digest (`sha256:<hex>`) the `--policy` file or URL must have; a URL policy is never loaded without one (`AR741`) |
+| `--policy-offline` | boolean | Load a URL policy from the user cache only (also `AI_RULEZ_POLICY_OFFLINE=1`) |
+| `--policy-max-stale` | string | How long a cached URL policy may stand in for an unreachable URL (`7d` default, `0` for none; also `AI_RULEZ_POLICY_MAX_STALE`) |
+| `--policy-trust-tofu` | boolean | Record the digest of an unpinned `--policy` URL once, in a terminal only |
 | `--policy-mode`    | string  | `enforce` (default) or `warn`: with `warn` a repository that loosens the [policy](policy.md) is reported as warnings and the run does not fail; the policy values are still enforced |
 | `--verbose` / `-V` | boolean | Enable verbose output                                                           |
 | `--debug` / `-D`   | boolean | Enable debug output                                                             |
