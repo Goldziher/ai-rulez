@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // driftRef is the baseline plugin output is compared against.
@@ -42,6 +43,12 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	if top == "" {
 		return nil, nil
 	}
+	// The committed side is read from a snapshot of HEAD, not from the work tree.
+	// A repository without a commit has no baseline, so nothing drifts.
+	snap, err := workspace.GitSnapshot(g.context(), top, driftRef, g.host().Runner)
+	if err != nil {
+		return nil, nil //nolint:nilerr // no baseline is not an error
+	}
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
@@ -59,7 +66,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 			continue
 		}
 		bundle := filepath.Dir(path)
-		found, ok := driftFor(g.git(), top, bundle, sidecar, byPath)
+		found, ok := driftFor(snap, top, bundle, sidecar, byPath)
 		if ok {
 			drift = append(drift, found)
 		}
@@ -68,9 +75,9 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	return drift, nil
 }
 
-func driftFor(git gitutil.Git, top, bundle string, sidecar config.OutputFile, byPath map[string]config.OutputFile) (lint.PluginDrift, bool) {
-	baseline, ok := git.ShowFile(top, driftRef, gitutil.RepoRelative(top, filepath.Join(bundle, plugin.ProvenanceFileName)))
-	if !ok {
+func driftFor(snap workspace.Workspace, top, bundle string, sidecar config.OutputFile, byPath map[string]config.OutputFile) (lint.PluginDrift, bool) {
+	baseline, err := snap.ReadFile(gitutil.RepoRelative(top, filepath.Join(bundle, plugin.ProvenanceFileName)))
+	if err != nil {
 		return lint.PluginDrift{}, false
 	}
 	nowHashes, nowSource, err := plugin.ProvenanceOutputs(outputBytes(sidecar))
@@ -91,8 +98,8 @@ func driftFor(git gitutil.Git, top, bundle string, sidecar config.OutputFile, by
 		if now.version == "" {
 			return lint.PluginDrift{}, false
 		}
-		before, had := git.ShowFile(top, driftRef, gitutil.RepoRelative(top, manifest.Path))
-		if !had || manifestFields(before).version != now.version {
+		before, err := snap.ReadFile(gitutil.RepoRelative(top, manifest.Path))
+		if err != nil || manifestFields(before).version != now.version {
 			return lint.PluginDrift{}, false
 		}
 		return lint.PluginDrift{

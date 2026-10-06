@@ -2,8 +2,10 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // baseLockOf reads the lock as it was at the merge base of rev and HEAD. A base
@@ -35,9 +38,16 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 	if rel == "" {
 		return nil, "", oops.Errorf("%s is outside the git work tree", lockfile.Path(cfg.ConfigDir))
 	}
-	data, ok := git.ShowFile(top, base, rel)
-	if !ok {
+	snap, err := workspace.GitSnapshot(context.Background(), top, base, nil)
+	if err != nil {
+		return nil, base, err //nolint:wrapcheck // already contextual
+	}
+	data, err := snap.ReadFile(rel)
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, base, nil
+	}
+	if err != nil {
+		return nil, base, oops.With("rev", base).Wrapf(err, "read %s at the base revision", lockfile.FileName)
 	}
 	lock, err := lockfile.Parse(data)
 	if err != nil {
