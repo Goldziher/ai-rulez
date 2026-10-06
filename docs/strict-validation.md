@@ -132,7 +132,7 @@ stdout.
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
 | AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
 | AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped |
-| AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#convert)) |
+| AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
 | AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
 | AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
 | AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, hooks not imported (convert report only) |

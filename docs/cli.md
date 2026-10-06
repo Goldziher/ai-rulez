@@ -26,10 +26,16 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez verifiers run/list/explain/test` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
-| `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
+| `ai-rulez migrate`              | Migrate configuration versions (`migrate v4` is the only target) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
+| `ai-rulez search`               | Rank skills against a query; `--eval` measures the ranking ([details](#search-command)) |
+| `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
+| `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
+| `ai-rulez telemetry`            | Item-load telemetry and opt-in OTLP export ([details](#usage-commands)) |
+| `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
+| `ai-rulez llm`                  | Inspect the `[llm]` setup ([details](#llm-commands)) |
 | `ai-rulez version`              | Show version                                        |
-| `ai-rulez mcp`                  | Start MCP server                                    |
+| `ai-rulez mcp`                  | Start MCP server (`--serve-skills` serves skills read-only) |
 | `ai-rulez local`                | Manage the machine-local config overlay ([details](#local-configuration)) |
 | `ai-rulez builtins list`        | List available built-in domains                     |
 | `ai-rulez builtins show <name>` | Show bundled content for a built-in domain          |
@@ -41,11 +47,11 @@ Aliases: `generate` → `gen`, `g`; `clean` → `clear`; `validate` → `val`, `
 | Command                                           | Description              |
 | ------------------------------------------------- | ------------------------ |
 | `ai-rulez domain add/remove/list`                 | Manage domains           |
-| `ai-rulez add rule/context/skill/agent/command`   | Create content files     |
-| `ai-rulez remove rule/context/skill/agent/command` | Delete content files    |
-| `ai-rulez list rules/context/skills/agents/commands` | List content files    |
+| `ai-rulez add rule/context/skill/agent/command/check` | Create content files |
+| `ai-rulez remove rule/context/skill/agent/command/check` | Delete content files |
+| `ai-rulez list rules/context/skills/agents/commands/checks` | List content files |
 | `ai-rulez include add/remove/list`                | Manage external includes |
-| `ai-rulez skill install/remove/list`              | Manage installed skills  |
+| `ai-rulez skill install/remove/list/update`       | Manage installed skills; `update` re-pins them in `ai-rulez.lock` |
 | `ai-rulez profile add/remove/list`                | Manage profiles          |
 | `ai-rulez profile set-default`                    | Set default profile      |
 
@@ -62,7 +68,14 @@ AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` 
 counterparts.
 
 `add check`, `remove check` and `list checks` manage code-review guidelines (see [Checks](checks.md));
-they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`) but have no `--local`.
+they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--force`/`-f` for `remove`) but have no `--local`.
+
+`ai-rulez list --placement [--profile <name>]` prints where every skill and command ends up (core or plugin-only),
+the plugins that bundle it, and flags plugin-only items nothing makes reachable.
+
+`ai-rulez skill update [name...]` re-resolves the named installed skills (all without names) and records the commit
+and digest in `ai-rulez.lock`; it is `ai-rulez lock --kind skill`. A skill with a `version` range keeps a pin that still
+satisfies it; [`ai-rulez update`](#update-command) moves range pins.
 
 ### Domain Management
 
@@ -884,7 +897,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Exit codes:** 0 done (the report may contain losses), 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
 
-`ai-rulez init --from` keeps working unchanged. Formats not yet covered (rulesync, APM, Tessl, OKF) are planned for later phases.
+`ai-rulez init --from` keeps working unchanged. APM and Tessl projects are not supported; Open Knowledge Format bundles are imported with [`import okf`](#ai-rulez-import-okf).
 
 ## Initialization Command
 
@@ -1007,13 +1020,18 @@ ai-rulez generate [config-file] [flags]
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 | `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
-| `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell)                                                              |
+| `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell); always, do not warn about new hook and MCP commands (same as `AI_RULEZ_ACK_COMMANDS=1`) |
+| `--strict`                      | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate --strict` (deep content checks) |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
 `--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` are hidden deprecated no-ops kept so existing scripts keep working: `generate` only writes MCP config files and never configures CLI tools, so there is nothing to skip.
 
-`--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` leaves it alone until its sources change).
+`--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
+
+Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`.
+
+Exit codes: `0` written, `1` a configuration failed to load, validate or generate (every root of a `--recursive` run is still processed), `2` `--check` found drift or `--locked`/`--frozen` found an authored source that differs from the lock (also a recursive run where every failure is lock drift). See [Exit Codes](#exit-codes).
 
 #### Detecting drift
 
@@ -1586,24 +1604,31 @@ ai-rulez validate [config-path] [flags]
 | `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
 | `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
-| `--format`            | string  | With `--strict`: `text` (default), `json`, `sarif`, `github`, `junit` or `markdown` |
+| `--format`            | string  | `text` (default), `json`, `sarif`, `github`, `junit` or `markdown`; any value implies `--strict` |
 | `--output`            | string  | With `--strict`: write the report to this file instead of stdout |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
+| `--allow-egress`      | strings | With `--external`: allow the named scanners that declare `egress = true` to run (repeatable; a name no `[[lint.external]]` declares is an error) |
+| `--write-baseline`, `--reason`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
 | `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
 | `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
 | `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
-| `--fix`               | boolean | With `--strict`: apply the safe automatic fixes (executable bits, frontmatter key renames) to authored sources; never generated outputs or security findings |
-| `--fix-unsafe`        | boolean | With `--strict`: also apply fixes that can change meaning (skill name normalization); implies `--fix` |
-| `--dry-run`           | boolean | With `--fix`/`--fix-unsafe`: print the unified diff and change nothing |
-| `--analyzer`          | strings | With `--strict`: report only these analyzers (`security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`) |
+| `--since-depth`       | string  | With `--since` or `--changed`: how many reference hops to follow from the changed files, a number or `all` (default `1`); each JSON finding carries a `hop` (`changed`, `dependent`, `transitive(n)`) |
+| `--since-max-files`   | int     | With `--since` or `--changed`: report at most this many files besides the changed ones, nearest first (`0`: no cap) |
+| `--repo-root`         | string  | Repository root that repo-relative paths and git-tracked globs resolve against (env `AI_RULEZ_REPO_ROOT`; default the git top level, else the config's parent); an error outside a git repository |
+| `--fix`               | boolean | With `--strict`: apply the safe automatic fixes to authored sources: executable bits (`AR502`, `AR503`, `AR505`), frontmatter key renames (`AR303`), quoted booleans (`AR304`), unclosed fences (`AR806`) and missing final newlines (`AR807`); never generated outputs or security findings |
+| `--fix-unsafe`        | boolean | With `--strict`: also apply fixes that can change meaning (skill name normalization, `AR804`); implies `--fix` |
+| `--dry-run`           | boolean | With `--fix`/`--fix-unsafe`: print the unified diff (applies with `git apply`) and change nothing |
+| `--analyzer`          | strings | With `--strict`: run only these analyzers (repeatable or comma separated; replaces `[lint] analyzers`; unknown names are rejected): `security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`, `config`, `roles`, `lock`, `delivery`, `evals`, `okf`, `traps`, `convert`, `search`, `verifiers` |
 | `--lint-profile`      | string  | With `--strict`: lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
+
+Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` (with `--strict`) findings at or above `--fail-on`.
 
 **Examples:**
 
@@ -1681,7 +1706,7 @@ review a lock diff. It records:
   are included): the entries [`[lock] enforce`](lockfile.md#served-skills-and-skill-sources) checks at serve time;
 - a digest of each generated output, and one `tree` digest over everything.
 
-Local-path sources live in the repository and are not locked as remotes. Credentials in a source URL are redacted.
+Local-path includes are pinned as `local-include` items, and project scripts run by agent, skill and command frontmatter `hooks` are pinned with their item. Sources are recorded as written in the config, with credentials in a URL redacted. A symlink inside a pinned tree is pinned by its link target.
 
 ```bash
 ai-rulez lock                     # pin everything (uses the network for remotes)
@@ -1712,10 +1737,18 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--fail-on-outdated` | With `--outdated`: exit 2 when any source has an allowed update |
 | `--offline` | With `--outdated`: refuses to run (it needs the network); `--check` is the offline verification |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
-| `--format text\|json` | Output format of `--check` and `--diff`; with `--check` the JSON goes to stdout and the exit code still gates |
+| `--format text\|json` | Output format of `--check`, `--diff`, `--outdated` and `--subject`; any other mode rejects it. With `--check` the JSON goes to stdout and the exit code still gates |
+| `--output <file>` | With `--subject`: write the JSON statement to this file (not with `--recursive`) |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
+| `--role <name>` | Also pin the skills this role serves, as a view of their own (see `mcp --serve-skills --role`) |
+| `--include-static` | Also pin the view that serves static skills too |
+| `--source <src>` | Also pin the view with this extra skill source (repeatable, as `mcp --serve-skills --source`). A view is recorded next to the default one as `[[served]]` entries with a `view` key, and a plain `lock` re-pins views recorded earlier |
+| `--strict` | Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
 | `--kind include\|skill\|source\|served` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |
+| `--config-dir` / `-n` | Configuration directory name for non-default layouts |
+
+Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` with no `ai-rulez.lock`, or an unknown name), `2` `--check` found drift (also a lock without content pins; with `[lock] enforce`, a missing lock too), or `--outdated` found a moved tag (`AR732`), a deleted one (`AR735`) or an unsatisfiable constraint (`AR730`), `3` the lock was written but served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`.
 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
@@ -1800,10 +1833,10 @@ See [Catalog](catalog.md).
 ### `ai-rulez sbom`
 
 ```bash
-ai-rulez sbom [--format cyclonedx] [-o file] [-n config-dir]
+ai-rulez sbom [--format cyclonedx] [--online] [-o file] [-n config-dir]
 ```
 
-Print a CycloneDX 1.6 JSON bill of materials: authored items, remote sources, MCP servers. No timestamp, no secrets,
+Print a CycloneDX 1.6 JSON bill of materials: authored items, remote sources, MCP servers. Remote sources come from the lock and the cache; `--online` also allows `git ls-remote`. No timestamp, no secrets,
 byte-identical across runs, operating systems and line endings. The machine-local overlay is never included. Nothing is
 rendered; the only file written is `-o`. See [SBOM](sbom.md).
 
@@ -1811,7 +1844,7 @@ rendered; the only file written is `-o`. See [SBOM](sbom.md).
 
 ### `ai-rulez scan [config-path]`
 
-Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
+Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. `scan` runs only the `security` analyzer, so hook and config findings (`AR504`, `AR9K0`, ...) belong to `validate --strict`. Flags: `--recursive`/`-r`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--lint-profile`, `--external`, `--allow-egress`, `--baseline`, `--update-baseline`, `--baseline-reason`, `--strict-baseline`, `--changed`, `--since`, `--since-depth`, `--since-max-files`, `--repo-root`, `--no-local`, `--config-dir`/`-n`. The baseline and changed-only flags mean the same as on [`validate`](#validation-command) (without needing `--strict`). Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 
 With `--external`, the scanners of `[[lint.external]]` also run (see [External scanners](strict-validation.md#staged-input-severity-and-baseline)). Scanner flags, also on `validate --strict`:
 
@@ -1867,6 +1900,17 @@ ai-rulez okf validate <dir|git-url[@ref][#subdir]> [--format text|json] [--fail-
 
 Lints any OKF bundle with the `AR9B0`-`AR9B9` checks. The default `--fail-on error` only fails on conformance problems.
 
+## LLM Commands
+
+Read-only inspection of the `[llm]` model-access setup; neither command sends a prompt unless `doctor --ping` is allowed. See [LLM access](llm.md).
+
+```bash
+ai-rulez llm doctor [config-file] [--ping] [--format text|json] [--no-local] [--config-dir <name>]
+ai-rulez llm estimate <file> [--max-output <tokens>] [--format text|json]
+```
+
+`doctor` prints the resolved backend, model, endpoint host, whether the key variable is set (never its value), whether network use is allowed and the cache directory; `--ping` makes one 1-token call and refuses unless `allow_network = true`. `estimate` approximates the prompt tokens of a file and the worst-case cost offline. A failure exits `1`.
+
 ## Migrate Command
 
 ### `ai-rulez migrate v4`
@@ -1881,7 +1925,7 @@ ai-rulez migrate v4
 
 **Arguments:**
 
-- `v4`, `4`, or `4.0` (required): Target configuration version.
+- `v4`, `4`, or `4.0` (required): Target configuration version. Any other target exits `1` and names the supported ones.
 
 The migrate command has no command-local flags. The global `-C, --config PATH` is honoured: pass the config file (or the config directory) of a project elsewhere and its directory is migrated instead of `./.ai-rulez`.
 
@@ -2017,13 +2061,16 @@ ai-rulez generate --config ./ai-policy/config.toml
 
 ## Exit Codes
 
-The CLI uses standard exit codes:
+Every command follows one contract, so a script can tell a failed run from a failed check:
 
-| Code | Meaning                                                          |
-| ---- | ---------------------------------------------------------------- |
-| 0    | Success                                                          |
-| 1    | Error (config not found, validation failed, bad flags, etc.)     |
-| 2    | `tokens --budget` exceeded — a hook can tell over-budget from failure; also `validate --strict` / `scan` findings, drift reported by `generate --check` / `verify`, and `lock --check` mismatches |
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Success |
+| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand or `migrate` target, a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
+| 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` fails instead) |
+
+When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
 
 ## Output Examples
 
