@@ -71,7 +71,7 @@ mode        = "hybrid"      # lexical (default) | hybrid | vector
 fields      = ["name", "triggers", "keywords", "description"]   # the text sent to the embedder
 index_body  = false         # true adds the first body_chars of SKILL.md
 body_chars  = 1200
-fusion      = "rrf"         # rrf | weighted
+fusion      = "auto"        # auto | rrf | weighted
 rrf_k       = 60
 weights     = { lexical = 1.0, vector = 1.0 }
 candidates  = 50            # per list, before fusion
@@ -100,10 +100,31 @@ overrides the repository's, key by key.
 
 Fusion. Each list is cut to `candidates` and the two are combined:
 
-- `rrf` (default): reciprocal rank fusion, `score = sum(weight / (rrf_k + rank))` over the lists a skill is in.
+- `auto` (default): while every skill in scope has a current vector, rank by cosine alone (the `ranking` field then
+  says `vector`; an exact skill id in the query still pins first), because that beat every fusion on this
+  repository's evaluation (below). As soon as one skill is new or changed since indexing, fall back to `rrf`
+  so that skill still ranks lexically. Set `fusion = "rrf"` or `"weighted"` to always fuse.
+- `rrf`: reciprocal rank fusion, `score = sum(weight / (rrf_k + rank))` over the lists a skill is in.
   It needs no tuning of score ranges, because BM25 scores are unbounded and cosines are not comparable to them.
 - `weighted`: each list's scores are min-max normalised to [0, 1] over its candidates and mixed with
   `a = weights.lexical / (weights.lexical + weights.vector)`. More sensitive to the score distribution.
+
+Why `auto`. Evaluated with Gemini `gemini-embedding-001` on 36 labelled queries (plus 6 negatives) over this repository's
+25 served skills, cut-off k = 3:
+
+| Ranking | top-1 | hit@3 | MRR | nDCG@3 |
+| --- | --- | --- | --- | --- |
+| lexical | 0.750 | 0.806 | 0.783 | 0.743 |
+| hybrid, rrf (1:1, k = 60) | 0.778 | 0.861 | 0.833 | 0.792 |
+| hybrid, rrf (1:2, k = 10) | 0.750 | 0.889 | 0.834 | 0.802 |
+| hybrid, weighted (1:2) | 0.833 | 0.917 | 0.896 | 0.847 |
+| hybrid, weighted (1:4) | 0.861 | 0.944 | 0.907 | 0.872 |
+| vector (also `auto` on a fresh index) | 0.861 | 0.972 | 0.910 | 0.894 |
+
+No weight, `rrf_k` or fusion setting tried beat cosine alone, and only the vector ranking's paired gain over lexical
+excluded 0 (MRR +0.126, 95% interval 0.007 to 0.261; the default RRF's was -0.004 to 0.110). Thirty-six queries is
+small and the lexical-versus-paraphrase mix is this catalog's, so run `search --eval --mode lexical,vector,hybrid`
+on your own cases before relying on it.
 
 Ties order by name. A query that contains a skill's exact id as whole words ("use the deploy-staging skill") pins
 that skill first. An id that is one ordinary word (`test`, `build`, `fix`) pins only when the query calls it a
