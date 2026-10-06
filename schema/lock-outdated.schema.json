@@ -62,7 +62,10 @@
         "total": { "type": "integer" },
         "updatable": { "type": "integer" },
         "major_available": { "type": "integer" },
-        "held_back": { "type": "integer", "description": "Sources with at least one tag held back by min_release_age." },
+        "held_back": {
+          "type": "integer",
+          "description": "Sources with at least one tag held back by min_release_age."
+        },
         "tag_moved": { "type": "integer" },
         "errors": { "type": "integer" }
       }
@@ -79,8 +82,15 @@
         "released": { "type": "string", "format": "date-time" },
         "released_from": { "enum": ["forge", "first-seen", "commit"] },
         "age_days": { "type": "integer", "description": "Whole days since the release; 0 when the time is unknown." },
-        "eligible_at": { "type": "string", "format": "date-time", "description": "When the tag passes min_release_age." },
-        "reason": { "type": "string", "description": "Set when the release time could not be found: the tag is held back (fail closed)." }
+        "eligible_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the tag passes min_release_age."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Set when the release time could not be found: the tag is held back (fail closed)."
+        }
       }
     },
     "tagRef": {

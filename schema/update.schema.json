@@ -41,7 +41,11 @@
             "description": "Newer tags min_release_age held back (AR733).",
             "items": { "$ref": "#/definitions/held" }
           },
-          "released": { "type": "string", "format": "date-time", "description": "Recorded release time of the new tag." },
+          "released": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Recorded release time of the new tag."
+          },
           "released_from": { "enum": ["forge", "first-seen", "commit"] },
           "scan": {
             "type": "object",
@@ -106,21 +110,11 @@
   "definitions": {
     "row": {
       "type": "object",
-      "required": [
-        "kind",
-        "name",
-        "source",
-        "constraint",
-        "status"
-      ],
+      "required": ["kind", "name", "source", "constraint", "status"],
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": [
-            "include",
-            "skill",
-            "source"
-          ]
+          "enum": ["include", "skill", "source"]
         },
         "name": {
           "type": "string"
@@ -155,20 +149,10 @@
           ]
         },
         "code": {
-          "enum": [
-            "AR730",
-            "AR731",
-            "AR732",
-            "AR734",
-            "AR735"
-          ]
+          "enum": ["AR730", "AR731", "AR732", "AR734", "AR735"]
         },
         "severity": {
-          "enum": [
-            "error",
-            "warning",
-            "info"
-          ],
+          "enum": ["error", "warning", "info"],
           "description": "Severity of an AR734 (source-outdated) finding, set when [lint.severity] enables it."
         },
         "held_back": {
@@ -193,9 +177,7 @@
     },
     "tagRef": {
       "type": "object",
-      "required": [
-        "tag"
-      ],
+      "required": ["tag"],
       "additionalProperties": false,
       "properties": {
         "tag": {
@@ -208,10 +190,7 @@
     },
     "held": {
       "type": "object",
-      "required": [
-        "tag",
-        "age_days"
-      ],
+      "required": ["tag", "age_days"],
       "additionalProperties": false,
       "properties": {
         "tag": {
@@ -225,11 +204,7 @@
           "format": "date-time"
         },
         "released_from": {
-          "enum": [
-            "forge",
-            "first-seen",
-            "commit"
-          ]
+          "enum": ["forge", "first-seen", "commit"]
         },
         "age_days": {
           "type": "integer",
