@@ -18,11 +18,11 @@ func TestSessionBudget_CoversEveryReadPath(t *testing.T) {
 		_, isErr, text := callTool(t, p, "read_skill_file", map[string]any{"uri": forms})
 		require.False(t, isErr, text)
 	}
-	assert.Equal(t, 2000, srv.Used(""))
+	assert.Equal(t, 2000, usedTotal(srv))
 
 	resp := p.call("resources/read", map[string]any{"uri": forms})
 	assert.NotNil(t, resp["error"], "the third 1000 bytes exceed the cap; resources/read is charged like the tools")
-	assert.Equal(t, 2000, srv.Used(""))
+	assert.Equal(t, 2000, usedTotal(srv))
 }
 
 func TestSessionBudget_RefusesPastTheCapOnEveryPath(t *testing.T) {
@@ -47,7 +47,7 @@ func TestSessionBudget_RefusesPastTheCapOnEveryPath(t *testing.T) {
 	}
 	_, isErr, _ = callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": "references/FORMS.md"})
 	assert.True(t, isErr, "load_skill shares the same budget")
-	assert.LessOrEqual(t, srv.Used(""), 1500)
+	assert.LessOrEqual(t, usedTotal(srv), 1500)
 }
 
 func TestSessionBudget_TracksABoundedNumberOfSessions(t *testing.T) {
