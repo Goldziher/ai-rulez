@@ -1,9 +1,14 @@
 package publish
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -64,6 +69,9 @@ func ExecuteNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecute
 	if err != nil {
 		return "", newError(CodeTarget, ExitFailed, "", "npm pack did not write %s: %v", path.Base(plan.NPM.Tarball), err)
 	}
+	if err := sess.snapshot.verifyTarball(packed); err != nil {
+		return "", err
+	}
 	digest := Digest(packed)
 
 	publishArgv := NPMPublishArgv(*plan.NPM)
@@ -99,6 +107,8 @@ type npmSession struct {
 	tmp   string
 	flags []string
 	run   func(argv []string) runner.Result
+	// snapshot is the package directory as it was when the dist directory verified.
+	snapshot *packageSnapshot
 }
 
 func (s *npmSession) close() { os.RemoveAll(s.tmp) } //nolint:errcheck // best effort cleanup of our own directory
@@ -120,6 +130,10 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	if err := requireVerifiedDist(abs); err != nil {
 		return nil, err
 	}
+	snap, err := snapshotPackage(filepath.Join(abs, filepath.FromSlash(NPMPackageDir)))
+	if err != nil {
+		return nil, err
+	}
 	tmp, err := os.MkdirTemp("", "ai-rulez-npm-*")
 	if err != nil {
 		return nil, newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
@@ -131,7 +145,7 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	}
 	r = runner.Or(r)
 	sess := &npmSession{
-		plan: plan, abs: abs, tmp: tmp, flags: cfg.flags(*plan.NPM),
+		plan: plan, abs: abs, tmp: tmp, flags: cfg.flags(*plan.NPM), snapshot: snap,
 		run: func(argv []string) runner.Result {
 			return r.Run(ctx, runner.Spec{Argv: argv, Dir: tmp, Env: opts.Env, Timeout: uploadTimeout})
 		},
@@ -192,7 +206,9 @@ func checkNPMRegistry(p NPMPlan, registry, confirmed string) error {
 	return nil
 }
 
-func normalizeRegistry(u string) string { return strings.ToLower(strings.TrimRight(strings.TrimSpace(u), "/")) }
+func normalizeRegistry(u string) string {
+	return strings.ToLower(strings.TrimRight(strings.TrimSpace(u), "/"))
+}
 
 // checkFree refuses a version the registry already holds (npm versions are immutable).
 func (s *npmSession) checkFree() error {
@@ -358,4 +374,110 @@ func npmNotFound(res runner.Result) bool {
 		}
 	}
 	return false
+}
+
+// packageSnapshot is the digest of every file of the package directory and its package.json, taken right
+// after the dist directory verified. npm pack reads the directory itself, later; comparing its tarball with the
+// snapshot (not with the directory, which the same swap would have changed) catches a file replaced or added in
+// between.
+type packageSnapshot struct {
+	digests     map[string]string
+	packageJSON []byte
+}
+
+func snapshotPackage(pkgDir string) (*packageSnapshot, error) {
+	snap := &packageSnapshot{digests: map[string]string{}}
+	err := filepath.WalkDir(pkgDir, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return err //nolint:wrapcheck // reported below
+		}
+		data, rerr := readRegular(p)
+		if rerr != nil {
+			return rerr
+		}
+		rel, rerr := filepath.Rel(pkgDir, p)
+		if rerr != nil {
+			return rerr //nolint:wrapcheck // reported below
+		}
+		name := filepath.ToSlash(rel)
+		snap.digests[name] = Digest(data)
+		if name == "package.json" {
+			snap.packageJSON = data
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, newError(CodeTarget, ExitFailed, "rebuild the dist directory with `ai-rulez publish`", "cannot read the package directory: %v", err)
+	}
+	return snap, nil
+}
+
+// verifyTarball checks that the tarball npm pack wrote holds what the snapshot holds: every entry is a regular
+// file under package/ that the snapshot has with the same digest. package.json is compared by its keys, because
+// npm may re-serialize it, and may not carry scripts. A file npm leaves out is harmless and not an error.
+func (snap *packageSnapshot) verifyTarball(tarball []byte) error {
+	zr, err := gzip.NewReader(bytes.NewReader(tarball))
+	if err != nil {
+		return npmTarballError("is not a gzip archive: %v", err)
+	}
+	tr := tar.NewReader(zr)
+	var total int64
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return npmTarballError("cannot be read: %v", err)
+		}
+		if hdr.Typeflag == tar.TypeDir {
+			continue // holds no content; a path below it is checked on its own
+		}
+		name := strings.TrimPrefix(hdr.Name, "package/")
+		if hdr.Typeflag != tar.TypeReg || name == hdr.Name || !ValidPath(name) {
+			return npmTarballError("holds %q, which is not a regular file of the package", hdr.Name)
+		}
+		want, ok := snap.digests[name]
+		if !ok {
+			return npmTarballError("holds %q, which the dist directory does not", name)
+		}
+		if hdr.Size < 0 || hdr.Size > maxVerifyBytes-total {
+			return npmTarballError("exceeds the %d byte verification limit", maxVerifyBytes)
+		}
+		total += hdr.Size
+		body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
+		if err != nil || int64(len(body)) != hdr.Size {
+			return npmTarballError("entry %q is truncated", name)
+		}
+		if name == "package.json" {
+			if err := samePackageJSON(body, snap.packageJSON); err != nil {
+				return err
+			}
+		} else if Digest(body) != want {
+			return npmTarballError("holds %q with other bytes than the dist directory", name)
+		}
+	}
+}
+
+func npmTarballError(format string, args ...any) error {
+	return newError(CodeTarget, ExitFailed, "rerun `ai-rulez publish --execute`", "the packed tarball "+format, args...)
+}
+
+// samePackageJSON compares the packed package.json with the planned one key by key: npm may add bookkeeping
+// keys, but whatever the plan set must be unchanged and no scripts may appear.
+func samePackageJSON(packed, planned []byte) error {
+	var got, want map[string]json.RawMessage
+	if json.Unmarshal(packed, &got) != nil || json.Unmarshal(planned, &want) != nil {
+		return npmTarballError("holds a package.json that is not JSON")
+	}
+	if _, ok := got["scripts"]; ok {
+		return npmTarballError("holds a package.json with scripts")
+	}
+	for key, w := range want {
+		var a, b any
+		if json.Unmarshal(got[key], &a) != nil || json.Unmarshal(w, &b) != nil || !reflect.DeepEqual(a, b) {
+			return npmTarballError("holds a package.json whose %q differs from the plan", key)
+		}
+	}
+	return nil
 }

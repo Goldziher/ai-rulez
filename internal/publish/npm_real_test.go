@@ -33,5 +33,11 @@ func TestNPMPack_RealNPMWritesThePlannedTarball(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 
 	require.NoError(t, err, string(out))
-	assert.FileExists(t, filepath.Join(dir, filepath.FromSlash(d.Plan.NPM.Tarball)))
+	tarball := filepath.Join(dir, filepath.FromSlash(d.Plan.NPM.Tarball))
+	assert.FileExists(t, tarball)
+	packed, err := os.ReadFile(tarball) //nolint:gosec // a temp dist
+	require.NoError(t, err)
+	snap, err := snapshotPackage(filepath.Join(dir, filepath.FromSlash(NPMPackageDir)))
+	require.NoError(t, err)
+	assert.NoError(t, snap.verifyTarball(packed), "what real npm packs matches the dist directory")
 }
