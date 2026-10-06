@@ -207,3 +207,8 @@ func TestNoFlagUsageHasBackticks(t *testing.T) {
 	}
 	walk(RootCmd)
 }
+
+func TestScanLongTextDoesNotPromiseNothingRuns(t *testing.T) {
+	assert.NotContains(t, ScanCmd.Long, "Nothing is fetched or executed.", "--external runs programs")
+	assert.Contains(t, ScanCmd.Long, "--external")
+}
