@@ -25,8 +25,12 @@ strict superset of the version 1 fields, plus:
 | `items[].lint` | `status` (`ok`, `warn`, `error`), counts and findings, from the same engine as `validate --strict`; absent when lint could not run |
 | `items[].excerpt` | first 2 KiB of the body, plain text; off with `--include-excerpt=false` |
 | `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}` when `[governance]` requires approval of the item or the lock records one; see [Approvals](approvals.md) |
+| `mcp_servers` | the project's MCP servers: `ref`, `name`, `transport`, `command_basename`, `enabled`, `profiles`, `pinned` (exact version or digest in a package-runner launch; `null` when not applicable), and the *names* of `env` and `headers` entries, each marked `literal` or with the variable it references (`ref`); `warnings` flags an unpinned launch or a credential written as a literal |
 | `lint` | project totals, counts per code, and the findings no item owns |
 | `notes` | why a section is missing or narrowed |
+
+MCP servers never expose arguments, URLs, env values or header values: a catalog is published, and those carry launch
+secrets and internal hostnames. Only the executable's file name and the names of env and header entries appear.
 
 Paths are relative to the configuration directory; no absolute path of the machine appears. A consumer must refuse
 a `schema_version` it does not know. The MCP `catalog` tool prints version 1, equal to the CLI default.
@@ -39,7 +43,7 @@ ai-rulez catalog --html site/ --role backend --clean
 ```
 
 Writes a directory with an overview (search by name, domain, owner, kind and lint status), one page per item and
-per role, the lock status, the lint findings, an About page, `catalog.json` (the version 2 document the pages are
+per role, the MCP servers, the lock status, the lint findings, an About page, `catalog.json` (the version 2 document the pages are
 rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
 
 - **Offline.** All links are relative, so the site works from `file://` and under any URL path. Nothing is fetched:
@@ -89,6 +93,6 @@ configuration directory it describes.
 
 ## Not yet built
 
-MCP servers page, eval and usage sections, `--check` freshness gate, `--no-lint-messages`, `--no-owners`,
+eval and usage sections, `--check` freshness gate, `--no-lint-messages`, `--no-owners`,
 `--link-sources`, `--single-file` and Markdown rendering of bodies are later phases of the
 design.

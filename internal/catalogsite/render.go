@@ -119,6 +119,12 @@ type lintGroup struct {
 	Entries      []lintEntry
 }
 
+type mcpRow struct {
+	Name, Anchor, Transport, Command, Profiles, Pinned, Env, Headers, Description string
+	Enabled, Hidden                                                               bool
+	Warnings                                                                      []string
+}
+
 type page struct {
 	Title, Root, SiteTitle, Version, Digest, DigestShort, Current string
 	Indexable                                                     bool
@@ -129,6 +135,7 @@ type page struct {
 	Role                                                          *rolePage
 	RoleLinks                                                     []linkRef
 	Groups                                                        []lintGroup
+	MCP                                                           []mcpRow
 	LockInSync                                                    string
 	SchemaVersion                                                 int
 }
@@ -230,7 +237,7 @@ func (b *builder) emit(path, name string, data page) error {
 
 func (b *builder) render() error {
 	b.assignPaths()
-	steps := []func() error{b.renderIndex, b.renderItems, b.renderRoles, b.renderLock, b.renderLint, b.renderAbout}
+	steps := []func() error{b.renderIndex, b.renderItems, b.renderRoles, b.renderLock, b.renderMCP, b.renderLint, b.renderAbout}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -451,4 +458,54 @@ func (b *builder) renderAbout() error {
 		p.RoleLinks = append(p.RoleLinks, linkRef{Name: b.doc.Roles[i].Name, Href: b.roleHref[b.doc.Roles[i].Name]})
 	}
 	return b.emit("about.html", "about", p)
+}
+
+// mcpNames lists the names of env or header entries: a variable that references
+// another one reads "NAME (from ${REF})", a literal value reads "NAME (literal
+// value)". The values themselves are not in the catalog.
+func mcpNames(values []govview.MCPValue) string {
+	parts := make([]string, 0, len(values))
+	for _, v := range values {
+		switch {
+		case v.Ref != "":
+			parts = append(parts, v.Name+" (from ${"+v.Ref+"})")
+		case v.Literal:
+			parts = append(parts, v.Name+" (literal value)")
+		default:
+			parts = append(parts, v.Name)
+		}
+	}
+	if len(parts) == 0 {
+		return "none"
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (b *builder) renderMCP() error {
+	p := b.base("MCP servers", "", "mcp")
+	anchors := newSlugger()
+	for i := range b.doc.MCPServers {
+		m := &b.doc.MCPServers[i]
+		pinned := "n/a"
+		if m.Pinned != nil {
+			pinned = "no"
+			if *m.Pinned {
+				pinned = "yes"
+			}
+		}
+		profiles := "all"
+		if len(m.Profiles) > 0 {
+			profiles = strings.Join(m.Profiles, ", ")
+		}
+		command := m.CommandBasename
+		if command == "" {
+			command = "-"
+		}
+		anchor := strings.TrimSuffix(anchors.path("", []string{m.Name}, m.Ref), ".html")
+		p.MCP = append(p.MCP, mcpRow{Name: m.Name, Anchor: "mcp-" + anchor, Transport: m.Transport, Command: command,
+			Profiles: profiles, Pinned: pinned, Env: mcpNames(m.Env), Headers: mcpNames(m.Headers), Description: m.Description,
+			Enabled: m.Enabled, Warnings: m.Warnings,
+			Hidden: hasHidden(m.Name) || hasHidden(m.Description) || hasHidden(m.CommandBasename)})
+	}
+	return b.emit("mcp.html", "mcp", p)
 }

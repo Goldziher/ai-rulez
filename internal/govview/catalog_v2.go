@@ -162,10 +162,13 @@ type CatalogDocV2 struct {
 	Project       CatalogProject   `json:"project"`
 	Tokenizer     string           `json:"tokenizer"`
 	Items         []CatalogItemV2  `json:"items"`
-	Roles         []CatalogRole    `json:"roles"`
-	Lock          CatalogLock      `json:"lock"`
-	Lint          CatalogLint      `json:"lint"`
-	Notes         []string         `json:"notes"`
+	// MCPServers are the project's MCP servers: names, transports and the names
+	// of their env and header entries, never their values (see CatalogMCPServer).
+	MCPServers []CatalogMCPServer `json:"mcp_servers"`
+	Roles      []CatalogRole      `json:"roles"`
+	Lock       CatalogLock        `json:"lock"`
+	Lint       CatalogLint        `json:"lint"`
+	Notes      []string           `json:"notes"`
 }
 
 // CatalogOptions tunes BuildCatalogV2.
@@ -191,6 +194,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		Project:       CatalogProject{Name: cfg.Name, Description: cfg.Description, LockTree: v1.Lock.Tree},
 		Tokenizer:     v1.Tokenizer,
 		Items:         make([]CatalogItemV2, 0, len(v1.Items)),
+		MCPServers:    catalogMCPServers(cfg),
 		Roles:         v1.Roles,
 		Lock:          v1.Lock,
 		Notes:         append([]string{}, v1.notes...),

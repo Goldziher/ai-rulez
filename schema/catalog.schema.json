@@ -4,7 +4,18 @@
   "title": "ai-rulez catalog (version 2)",
   "description": "Output of `ai-rulez catalog --format json --schema-version 2`, and the catalog.json of `ai-rulez catalog --html`: every item with its description, source, load cost, lint result and excerpt, a summary of every role, the lock status and the project lint overview. Version 1 is schema/catalog.v1.schema.json. A consumer must refuse an unknown schema_version.",
   "type": "object",
-  "required": ["schema_version", "generated_by", "project", "tokenizer", "items", "roles", "lock", "lint", "notes"],
+  "required": [
+    "schema_version",
+    "generated_by",
+    "project",
+    "tokenizer",
+    "items",
+    "mcp_servers",
+    "roles",
+    "lock",
+    "lint",
+    "notes"
+  ],
   "additionalProperties": false,
   "definitions": {
     "delivery": {
@@ -27,6 +38,17 @@
           "type": "integer",
           "minimum": 0
         }
+      }
+    },
+    "mcpValue": {
+      "type": "object",
+      "description": "An environment variable or header of an MCP server: its name and where its value comes from, never the value.",
+      "required": ["name", "literal"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "ref": { "type": "string", "description": "The variable a placeholder names." },
+        "literal": { "type": "boolean", "description": "The value is written into the configuration, not referenced." }
       }
     },
     "finding": {
@@ -243,6 +265,31 @@
               "$ref": "#/definitions/delivery"
             }
           }
+        }
+      }
+    },
+    "mcp_servers": {
+      "type": "array",
+      "description": "The project's MCP servers. No arguments, URLs, env values or header values appear here.",
+      "items": {
+        "type": "object",
+        "required": ["ref", "name", "transport", "enabled", "profiles", "pinned", "env", "headers", "warnings"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string", "description": "mcp/<name>; a repeated name gets a #2 suffix." },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "transport": { "enum": ["stdio", "http", "sse"] },
+          "command_basename": { "type": "string", "description": "The executable's file name only." },
+          "enabled": { "type": "boolean" },
+          "profiles": { "type": "array", "items": { "type": "string" }, "description": "Empty means every profile." },
+          "pinned": {
+            "type": ["boolean", "null"],
+            "description": "true when a package runner launches an exact version or digest, false when it does not, null when not applicable."
+          },
+          "env": { "type": "array", "items": { "$ref": "#/definitions/mcpValue" } },
+          "headers": { "type": "array", "items": { "$ref": "#/definitions/mcpValue" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
         }
       }
     },
