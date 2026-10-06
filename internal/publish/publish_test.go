@@ -598,3 +598,25 @@ func TestSchemas_RejectAnUnknownField(t *testing.T) {
 	// Act + Assert
 	assert.False(t, schema.Validate(mutated).IsValid())
 }
+
+func TestPublicRemote(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"https://github.com/acme/skills.git", "https://github.com/acme/skills.git"},
+		{"https://user:token@github.com/acme/skills.git", "https://github.com/acme/skills.git"},
+		{"git@github.com:acme/skills.git", "git@github.com:acme/skills.git"},
+		{"acme/skills", "acme/skills"},
+		{"/Users/alice/work/skills", ""},
+		{"../skills", ""},
+		{"./skills", ""},
+		{"~/skills", ""},
+		{"file:///Users/alice/work/skills", ""},
+		{"C:\\Users\\alice\\skills", ""},
+		{"C:/Users/alice/skills", ""},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			assert.Equal(t, tt.want, PublicRemote(tt.in))
+		})
+	}
+}

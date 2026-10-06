@@ -83,7 +83,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 	if cfg.Plugin != nil {
 		pluginRepo = cfg.Plugin.Repository
 	}
-	pc.src.Source.Repo = publish.StripCredentials(pluginRepo)
+	pc.src.Source.Repo = publish.PublicRemote(pluginRepo)
 	if pc.src.Source.Repo == "" {
 		pc.src.Source.Repo = pc.src.Remote
 	}
