@@ -551,3 +551,28 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 	}
 	return problems
 }
+
+// ListTags lists the tags of a git source.
+func ListTags(ctx context.Context, spec Spec) ([]tagresolve.RawTag, error) {
+	url := gitURL(spec.URL)
+	if err := checkRemote(url, ""); err != nil {
+		return nil, err
+	}
+	return tagresolve.ListTags(ctx, func(ctx context.Context, args ...string) (string, error) { return runGit(ctx, "", args...) }, url) //nolint:wrapcheck // already contextual
+}
+
+// CachedTreeDir is the cached tree of commit of a git source ("" when it is not cached).
+func CachedTreeDir(spec Spec, commit string, cacheDir string) string {
+	root, err := cacheRoot(cacheDir)
+	if err != nil || !lockCommit.MatchString(commit) {
+		return ""
+	}
+	dir := cacheTree(root, spec.URL, commit, spec.Path)
+	if spec.Path != "" {
+		dir = filepath.Join(dir, filepath.FromSlash(spec.Path))
+	}
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		return ""
+	}
+	return dir
+}

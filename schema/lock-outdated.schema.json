@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/lock-outdated.schema.json",
+  "title": "ai-rulez lock outdated",
+  "description": "Output of `ai-rulez lock --outdated --format json`: for every source that uses a version constraint, the pinned tag, the newest tag the constraint allows and the newest tag overall.",
+  "type": "object",
+  "required": ["schema_version", "sources", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "name", "source", "constraint", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["include", "skill", "source"] },
+          "name": { "type": "string" },
+          "source": { "type": "string", "description": "The source URL, credentials redacted." },
+          "constraint": { "type": "string" },
+          "locked": { "$ref": "#/definitions/tagRef" },
+          "allowed": { "$ref": "#/definitions/tagRef" },
+          "latest": { "$ref": "#/definitions/tagRef" },
+          "status": {
+            "enum": [
+              "up-to-date",
+              "updatable",
+              "not-locked",
+              "tag-moved",
+              "tag-missing",
+              "unsatisfiable",
+              "invalid",
+              "downgrade-only"
+            ]
+          },
+          "code": { "enum": ["AR730", "AR731", "AR732", "AR735"] },
+          "note": { "type": "string" },
+          "downgrade": { "type": "boolean", "description": "The newest allowed tag is below the pinned one; update needs --allow-downgrade." },
+          "major_available": { "type": "boolean", "description": "A newer major version than the allowed one exists." }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "updatable", "major_available", "tag_moved", "errors"],
+      "additionalProperties": false,
+      "properties": {
+        "total": { "type": "integer" },
+        "updatable": { "type": "integer" },
+        "major_available": { "type": "integer" },
+        "tag_moved": { "type": "integer" },
+        "errors": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "tagRef": {
+      "type": "object",
+      "required": ["tag"],
+      "additionalProperties": false,
+      "properties": {
+        "tag": { "type": "string" },
+        "commit": { "type": "string" }
+      }
+    }
+  }
+}
