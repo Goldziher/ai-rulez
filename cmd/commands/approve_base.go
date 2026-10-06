@@ -2,10 +2,8 @@ package commands
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"strings"
 	"time"
 
@@ -38,16 +36,9 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 	if rel == "" {
 		return nil, "", oops.Errorf("%s is outside the git work tree", lockfile.Path(cfg.ConfigDir))
 	}
-	snap, err := workspace.GitSnapshot(context.Background(), top, base, nil)
-	if err != nil {
-		return nil, base, err //nolint:wrapcheck // already contextual
-	}
-	data, err := snap.ReadFile(rel)
-	if errors.Is(err, fs.ErrNotExist) {
+	data, ok := workspace.ReadFileAt(context.Background(), top, base, rel, nil)
+	if !ok {
 		return nil, base, nil
-	}
-	if err != nil {
-		return nil, base, oops.With("rev", base).Wrapf(err, "read %s at the base revision", lockfile.FileName)
 	}
 	lock, err := lockfile.Parse(data)
 	if err != nil {

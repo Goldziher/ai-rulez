@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // approveGit runs git for the approval checks that read history: the commit the
@@ -47,7 +48,7 @@ func (g *approveGit) rel(abs string) string { return gitutil.RepoRelative(g.top,
 // an error (fetch the pull request head); a commit without a lock, or whose lock
 // does not pin s, answers "not pinned".
 func (g *approveGit) pinnedAt(s approval.Subject) func(ctx context.Context, sha string) (string, bool, error) {
-	return func(_ context.Context, sha string) (string, bool, error) {
+	return func(ctx context.Context, sha string) (string, bool, error) {
 		if err := gitutil.CheckArg("commit", sha); err != nil {
 			return "", false, err //nolint:wrapcheck // names the argument
 		}
@@ -58,7 +59,7 @@ func (g *approveGit) pinnedAt(s approval.Subject) func(ctx context.Context, sha 
 		if rel == "" {
 			return "", false, oops.Errorf("%s is outside the git work tree", lockfile.Path(g.cfg.ConfigDir))
 		}
-		data, ok := (gitutil.Git{}).ShowFile(g.top, sha, rel) //nolint:contextcheck // gitutil reads without a context
+		data, ok := workspace.ReadFileAt(ctx, g.top, sha, rel, nil)
 		if !ok {
 			return "", false, nil
 		}

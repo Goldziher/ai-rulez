@@ -1,6 +1,7 @@
 package approval
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // LoadOwnerSetAt is LoadOwnerSet reading CODEOWNERS from the git revision rev
@@ -19,7 +21,7 @@ import (
 // CODEOWNERS.
 func LoadOwnerSetAt(baseDir, configDir, from, rev string) *OwnerSet {
 	return loadOwnerSet(baseDir, configDir, from, func(root, rel string) ([]byte, error) {
-		data, ok := (gitutil.Git{}).ShowFile(root, rev, rel)
+		data, ok := workspace.ReadFileAt(context.Background(), root, rev, rel, nil)
 		if !ok {
 			return nil, oops.Errorf("%s does not exist at %s", rel, rev)
 		}
@@ -45,7 +47,7 @@ func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
 		}
 		for _, rel := range candidates {
 			head, headErr := readOwnersFile(top, rel)
-			base, baseOK := git.ShowFile(top, rev, rel)
+			base, baseOK := workspace.ReadFileAt(context.Background(), top, rev, rel, nil)
 			if (headErr == nil) != baseOK || (headErr == nil && string(head) != string(base)) {
 				out = append(out, "the CODEOWNERS file "+rel+" changed since "+short(rev)+"; approvers_from is read from the base, so a change cannot authorize its own approvals")
 			}
@@ -56,7 +58,7 @@ func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
 		return out, nil
 	}
 	headRaw, _ := os.ReadFile(filepath.Join(top, filepath.FromSlash(rel))) //nolint:gosec,errcheck // a missing file is an empty table
-	baseRaw, _ := git.ShowFile(top, rev, rel)
+	baseRaw, _ := workspace.ReadFileAt(context.Background(), top, rev, rel, nil)
 	if !reflect.DeepEqual(governanceTable(headRaw), governanceTable(baseRaw)) {
 		out = append(out, "the [governance] table of "+rel+" changed since "+short(rev)+"; the policy that authorizes approvals is part of the reviewed change")
 	}
