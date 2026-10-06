@@ -387,7 +387,11 @@ func (r *runner) ingestExternal(ex config.LintExternal, scope scanScope, res cmd
 	outOfScope, firstOut := 0, ""
 	for _, f := range found {
 		abs, inside := "", true
-		if f.File != "" {
+		f.Line = min(max(f.Line, 0), maxScannerLine)
+		if f.File == "" {
+			// A result with no location belongs to the configuration that ran the scanner.
+			abs, f.Line = r.configFilePath(), 1
+		} else {
 			if scope.stage != nil {
 				abs, inside = scope.stage.resolve(f.File)
 			} else {
