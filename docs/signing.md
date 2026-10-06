@@ -113,7 +113,9 @@ key_file = "keys/release.pub"
   event. A date bound is inclusive and UTC.
 - `tlog` defaults to `required` when a certificate identity is trusted and to `off` when only keys are. `off` works with
   keys only (a certificate is meaningful only at the time a log recorded it). `optional` accepts a log entry or a signed
-  timestamp, and for a key signature neither.
+  timestamp, and for a key signature neither. A key bundle with a log entry and no trusted root is accepted on its
+  signature alone: the entry is not checked, so the signing time stays unknown (`weak`). `required` fails it with
+  `AR725`.
 - `key_file`, `trusted_root` and `attestation` are project-relative and must stay inside it; a committed config cannot
   point at files elsewhere on the machine. A symlink out of the project is refused.
 - A machine-local config overlay cannot add a signer: `[signing]` there is ignored with a warning.
