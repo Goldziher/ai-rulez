@@ -76,7 +76,7 @@ func elementsOwnedKey(sc *SidecarSpec, cfg *config.Config, outputPath string) (k
 		}
 		for _, claim := range cfg.Run.PreviousClaims(rel) {
 			if slices.Equal(claim.Path, e.Key) {
-				previous = append(previous, claim.Elements...)
+				previous = append(previous, claim.ElementsIn(existing)...)
 			}
 		}
 	}

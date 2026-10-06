@@ -235,7 +235,7 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 	var previous []any
 	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
 		if equalPath(claim.Path, path) {
-			previous = append(previous, claim.Elements...)
+			previous = append(previous, claim.ElementsIn(existing)...)
 		}
 	}
 	value := make([]any, 0, len(existing)+len(ours))

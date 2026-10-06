@@ -103,13 +103,16 @@ func arrayKey(cfg *config.Config, docPath string, path []string, ours []json.Raw
 			existing = nil // a non-array value is the consumer's; Apply reports it
 		}
 	}
+	// A claim records digests, not values, so what an earlier run owned is read
+	// off the elements the document holds now.
 	var previous []json.RawMessage
 	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
 		if !equalPath(claim.Path, path) {
 			continue
 		}
-		for _, element := range claim.Elements {
-			if raw, err := json.Marshal(element); err == nil {
+		for _, raw := range existing {
+			var value any
+			if json.Unmarshal(raw, &value) == nil && claim.OwnsElement(value) {
 				previous = append(previous, raw)
 			}
 		}

@@ -43,6 +43,7 @@ func TestMarkdownShapeRules(t *testing.T) {
 		{"missing final newline", goodRule + "last line", goodRule + "last line\n", []string{CodeFinalNewline}},
 		{"unclosed fence and no final newline are one fix", goodRule + "```\ncode", goodRule + "```\ncode\n```\n", []string{CodeFenceUnclosed, CodeFinalNewline}},
 		{"unclosed fence in a CRLF file", "---\r\ndescription: a rule\r\n---\r\n```\r\ncode\r\n", "---\r\ndescription: a rule\r\n---\r\n```\r\ncode\r\n```\r\n", []string{CodeFenceUnclosed}},
+		{"unclosed fence and no newline in a CRLF file", "---\r\ndescription: a rule\r\n---\r\n```\r\ncode", "---\r\ndescription: a rule\r\n---\r\n```\r\ncode\r\n```\r\n", []string{CodeFenceUnclosed, CodeFinalNewline}},
 		{"missing newline in a CRLF file", "---\r\ndescription: a rule\r\n---\r\n# T\r\nlast", "---\r\ndescription: a rule\r\n---\r\n# T\r\nlast\r\n", []string{CodeFinalNewline}},
 	}
 	for _, tt := range tests {
@@ -202,4 +203,19 @@ func TestRuleDocsMentionBadAndGoodForTheMarkdownRules(t *testing.T) {
 		assert.NotEmpty(t, e.Good)
 		assert.True(t, strings.Contains(e.Why, "validate --fix"), code)
 	}
+}
+
+func TestMarkdownFixDryRunDiffShowsTheMissingNewline(t *testing.T) {
+	root, file := markdownProject(t, goodRule+"```\ncode")
+	rep := lintReport(t, root)
+	opts := fixOptions(root)
+	opts.DryRun = true
+
+	res, err := ApplyFixes(rep.Findings, opts)
+
+	require.NoError(t, err)
+	assert.Equal(t, goodRule+"```\ncode", readFile(t, file))
+	want := "@@ -3,4 +3,5 @@\n ---\n # Title\n ```\n-code\n\\ No newline at end of file\n+code\n+```\n"
+	assert.Contains(t, res.Diff, want)
+	assert.NotContains(t, res.Diff, "+\n", "the final newline is not shown as an empty added line")
 }

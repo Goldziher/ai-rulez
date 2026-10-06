@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -19,7 +20,11 @@ import (
 //
 //   - Path alone: the key at Path (an MCP server entry, a scalar) is ours.
 //   - Elements: the key at Path is the consumer's array and only these elements
-//     of it are ours.
+//     of it are ours. A record read back from a manifest holds ElementSums, the
+//     digests of those elements, instead: an element can carry a resolved secret
+//     (an MCP server's env), so the manifest never stores the values. Elements
+//     is the in-memory form a merge produces and tests build; both name
+//     elements through the methods below.
 //   - Equals, when set, restricts removal to a value that still equals it.
 //   - Sum does the same with a digest of the value (see Digest). The record a
 //     merge leaves behind carries Sum rather than Equals, because the value can
@@ -39,9 +44,11 @@ import (
 type Claim struct {
 	Path     []string `json:"path"`
 	Elements []any    `json:"elements,omitempty"`
-	Equals   any      `json:"equals,omitempty"`
-	Sum      string   `json:"sum,omitempty"`
-	Alone    bool     `json:"alone,omitempty"`
+	// ElementSums is the persisted form of Elements: the Digest of each element.
+	ElementSums []string `json:"elementSums,omitempty"`
+	Equals      any      `json:"equals,omitempty"`
+	Sum         string   `json:"sum,omitempty"`
+	Alone       bool     `json:"alone,omitempty"`
 
 	Preexisting [][]string `json:"preexisting,omitempty"`
 
@@ -49,6 +56,104 @@ type Claim struct {
 	// ai-rulez first merged into it (Apply adds one), so Unmerge takes the newline
 	// it added back out and restores the original bytes.
 	NoFinalNewline bool `json:"noFinalNewline,omitempty"`
+}
+
+// claimWire is the manifest encoding of a Claim: element digests, never values.
+type claimWire struct {
+	Path           []string   `json:"path"`
+	Elements       []any      `json:"elements,omitempty"`
+	ElementSums    []string   `json:"elementSums,omitempty"`
+	Equals         any        `json:"equals,omitempty"`
+	Sum            string     `json:"sum,omitempty"`
+	Alone          bool       `json:"alone,omitempty"`
+	Preexisting    [][]string `json:"preexisting,omitempty"`
+	NoFinalNewline bool       `json:"noFinalNewline,omitempty"`
+}
+
+// MarshalJSON writes the claim with its elements as digests: a manifest records
+// which elements are ours without copying their values, which can be secrets.
+func (c Claim) MarshalJSON() ([]byte, error) {
+	return json.Marshal(claimWire{
+		Path: c.Path, ElementSums: c.ElementDigests(), Equals: c.Equals, Sum: c.Sum, Alone: c.Alone,
+		Preexisting: c.Preexisting, NoFinalNewline: c.NoFinalNewline,
+	})
+}
+
+// UnmarshalJSON reads a claim. A record written before elements were digested
+// carries their values; they are folded into digests on the way in so no value
+// stays in memory or is written back.
+func (c *Claim) UnmarshalJSON(data []byte) error {
+	var wire claimWire
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err //nolint:wrapcheck // decoding error is self-describing
+	}
+	*c = Claim{
+		Path: wire.Path, ElementSums: wire.ElementSums, Equals: wire.Equals, Sum: wire.Sum, Alone: wire.Alone,
+		Preexisting: wire.Preexisting, NoFinalNewline: wire.NoFinalNewline,
+	}
+	if wire.Elements != nil {
+		c.ElementSums = c.digestsWith(wire.Elements)
+	}
+	return nil
+}
+
+// HasElements reports whether the claim covers only some elements of an array.
+func (c Claim) HasElements() bool { return c.Elements != nil || c.ElementSums != nil }
+
+// ElementDigests lists the digests of the claimed elements, sorted and distinct.
+func (c Claim) ElementDigests() []string { return c.digestsWith(c.Elements) }
+
+func (c Claim) digestsWith(values []any) []string {
+	if values == nil && c.ElementSums == nil {
+		return nil
+	}
+	sums := append([]string{}, c.ElementSums...)
+	for _, v := range values {
+		if sum := Digest(v); sum != "" {
+			sums = append(sums, sum)
+		}
+	}
+	sort.Strings(sums)
+	return slices.Compact(sums)
+}
+
+// OwnsElement reports whether value is one of the claimed elements, compared as
+// JSON the way a claim read back from a manifest is.
+func (c Claim) OwnsElement(value any) bool {
+	sum := Digest(value)
+	return sum != "" && slices.Contains(c.ElementDigests(), sum)
+}
+
+// ownsRaw is OwnsElement for an element still in its raw JSON form.
+func (c Claim) ownsRaw(raw json.RawMessage) bool {
+	sum := digestRaw(raw)
+	return sum != "" && slices.Contains(c.ElementDigests(), sum)
+}
+
+// ElementsIn returns the candidates the claim owns, in order. It is how a caller
+// holding the document's current elements learns which of them an earlier run
+// claimed, without the claim storing their values.
+func (c Claim) ElementsIn(candidates []any) []any {
+	var owned []any
+	for _, candidate := range candidates {
+		if c.OwnsElement(candidate) {
+			owned = append(owned, candidate)
+		}
+	}
+	return owned
+}
+
+// WithoutElements returns the claim minus the elements other claims.
+func (c Claim) WithoutElements(other Claim) Claim {
+	drop := other.ElementDigests()
+	kept := []string{}
+	for _, sum := range c.ElementDigests() {
+		if !slices.Contains(drop, sum) {
+			kept = append(kept, sum)
+		}
+	}
+	c.Elements, c.ElementSums = nil, kept
+	return c
 }
 
 // Digest is the canonical fingerprint of a JSON value: the hex SHA-256 of its
@@ -311,7 +416,7 @@ func unmergeLeaf(members []jsonMember, idx int, claim Claim, depth int, indent, 
 	if !claim.Matches(members[idx].Raw) {
 		return members, false, true, nil
 	}
-	if claim.Elements == nil {
+	if !claim.HasElements() {
 		return removeMember(members, head), true, false, nil
 	}
 
@@ -321,7 +426,7 @@ func unmergeLeaf(members []jsonMember, idx int, claim Claim, depth int, indent, 
 	}
 	kept := make([]json.RawMessage, 0, len(elements))
 	for _, element := range elements {
-		if !anyEquals(element, claim.Elements) {
+		if !claim.ownsRaw(element) {
 			kept = append(kept, element)
 		}
 	}

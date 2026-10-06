@@ -323,12 +323,13 @@ func previousClaimedNames(cfg *config.Config, settingsPath string) []string {
 		if !slices.Equal(claim.Path, geminiContextFileNamePath) {
 			continue
 		}
-		if claim.Elements == nil {
+		if !claim.HasElements() {
 			names = append(names, geminiRootFile, string(config.SharedAgentsMD), geminiLocalContextFile)
 			continue
 		}
-		for _, element := range claim.Elements {
-			if name, ok := element.(string); ok {
+		// The claim holds digests, so the names are the known ones it covers.
+		for _, name := range []string{geminiRootFile, string(config.SharedAgentsMD), geminiLocalContextFile} {
+			if claim.OwnsElement(name) {
 				names = append(names, name)
 			}
 		}
