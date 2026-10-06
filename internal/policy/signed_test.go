@@ -153,6 +153,34 @@ func TestSignedFilePolicyRollback(t *testing.T) {
 	require.NoError(t, againErr, "the same signing time is not a rollback")
 }
 
+func TestSignedBlobPolicyWithoutSigningTimeCannotBeRolledBack(t *testing.T) {
+	// Arrange: a key-signed blob bundle has no signing time, so time cannot order
+	// versions; the machine must still refuse a version it has already replaced.
+	key := newKey(t)
+	v1 := "policy_version = 1\n[lock]\nenforce = true\n"
+	v2 := v1 + "[guard]\ngenerated = true\n"
+	home := t.TempDir()
+	opts := func(path string) DiscoverOptions {
+		o := signedOpts(t, path, func(o *DiscoverOptions) { o.Signature.KeyFiles = []string{key.pubPath} })
+		o.Env = ambient.MapEnv{Vars: map[string]string{}, Home: home}
+		return o
+	}
+	path := writeSigned(t, t.TempDir(), v1, key.blob(t, v1))
+	// Act
+	_, firstErr := Discover(opts(path))
+	require.NoError(t, os.WriteFile(path, []byte(v2), 0o600))
+	require.NoError(t, os.WriteFile(path+SidecarSuffix, key.blob(t, v2), 0o600))
+	_, newerErr := Discover(opts(path))
+	require.NoError(t, os.WriteFile(path, []byte(v1), 0o600))
+	require.NoError(t, os.WriteFile(path+SidecarSuffix, key.blob(t, v1), 0o600))
+	_, rollbackErr := Discover(opts(path))
+	// Assert
+	require.NoError(t, firstErr)
+	require.NoError(t, newerErr)
+	require.Error(t, rollbackErr)
+	assert.Contains(t, rollbackErr.Error(), "AR727")
+}
+
 func TestSignedPolicyIdentityTrustNeedsAnIssuer(t *testing.T) {
 	// Arrange
 	path := writePolicy(t, t.TempDir(), "p.toml", minimalPolicy)

@@ -304,6 +304,18 @@ func (v *verifier) verify(ref Ref, raw, bundle []byte) (signer string, err error
 		return "", fmt.Errorf("signed in the future (%s)", at.UTC().Format(time.RFC3339))
 	}
 	key := "policy|" + signerKey(res.Signer) + "|" + redactURL(ref.Location)
+	if v.state != nil && at.IsZero() {
+		// No signing time at all (a key-signed blob bundle without a log entry):
+		// neither skew nor time-ordered rollback can be judged, so the digests
+		// already replaced on this machine are the rollback record.
+		d := digest(raw)
+		if err := v.state.CheckDigest(key, d); err != nil {
+			return "", err //nolint:wrapcheck // AR727
+		}
+		if err := v.state.AdvanceDigest(key, d); err != nil {
+			logger.Debug("cannot record the policy digest", "error", err)
+		}
+	}
 	if v.state != nil && !at.IsZero() {
 		if err := v.state.Check(key, at); err != nil {
 			return "", err //nolint:wrapcheck // AR727
