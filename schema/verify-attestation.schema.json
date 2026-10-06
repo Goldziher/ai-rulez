@@ -28,7 +28,7 @@
         "required": ["subject", "status"],
         "additionalProperties": false,
         "properties": {
-          "subject": { "enum": ["lock", "bundle", "skill", "sbom"], "description": "What was verified." },
+          "subject": { "enum": ["lock", "bundle", "skill", "sbom", "release"], "description": "What was verified." },
           "status": { "enum": ["valid", "invalid", "missing"] },
           "code": {
             "type": "string",

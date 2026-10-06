@@ -298,6 +298,27 @@ stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so 
 behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
 and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`.
 
+## Verifying ai-rulez itself
+
+`ai-rulez verify --self` checks the running binary against the Sigstore bundle its release published: an in-toto SLSA
+provenance statement (`https://slsa.dev/provenance/v1`, what `actions/attest-build-provenance` writes) whose subject is
+the binary's `sha256`. The signer must be the release workflow, pinned in the binary:
+
+- identity `^https://github\.com/Goldziher/ai-rulez/\.github/workflows/publish\.yaml@refs/tags/v[0-9][^/]*$`;
+- issuer `https://token.actions.githubusercontent.com`;
+- a transparency-log proof (required for a certificate identity).
+
+```bash
+ai-rulez trust update                       # once: cache the public-good trusted root
+ai-rulez verify --self --attestation-file ai-rulez_5.0.0_linux_amd64.sigstore.json
+```
+
+Without `--attestation-file` the bundle is read from `<binary>.sigstore.json`, next to the resolved binary (symlinks
+from a package manager are followed). It is offline, keeps no rollback state and is independent of any project. For a
+build that did not come from the official workflow, `--public-key` or `--identity` with `--issuer` replace the pinned
+identity. Exit codes as for `--attestation`: `0` official build, `1` could not run (no trusted root), `2` failed
+(`AR720` no bundle, `AR722` other signer, `AR724` different bytes). The result's subject is `release`.
+
 ## Served skills and publisher-signed skills
 
 `ai-rulez mcp --serve-skills` refuses skills the policy does not vouch for. It uses the refusal path of the security
@@ -385,7 +406,6 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 ## Not done yet
 
-- `verify --self` for ai-rulez's own releases.
 
 Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
 part of the default test run.

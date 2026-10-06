@@ -37,6 +37,14 @@ bundle, a published skill or an SBOM file the same way (they imply --attestation
 --public-key or --identity with --issuer can stand in for a project's [signing]
 table). See docs/signing.md.
 
+With --self, verify the running ai-rulez binary against the Sigstore bundle its release
+published (an SLSA provenance statement naming the binary's sha256, signed by the
+release workflow; default next to the binary as <binary>.sigstore.json, else
+--attestation-file). It needs the cached trusted root ('ai-rulez trust update'),
+changes nothing and is independent of any project. --public-key or --identity with
+--issuer replace the pinned release identity, to verify a fork's build. See
+docs/signing.md.
+
 With --approvals, verify instead re-checks the signed approvals recorded in the lock
 against their attestations and the [[signing.trust]] entries for approvals, offline;
 --online also asks the forge whether each review-linked approval still holds. See
@@ -50,6 +58,13 @@ no longer holds).`,
 		if err := rejectApprovalFlags(cmd); err != nil {
 			fmtError(err)
 			os.Exit(1)
+		}
+		if err := checkVerifySelfFlags(cmd); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		if verifySelf {
+			os.Exit(runVerifySelf("", nil, cmd.OutOrStdout()))
 		}
 		if verifyApprovals {
 			os.Exit(runVerifyApprovals(args, cmd.OutOrStdout()))
@@ -116,6 +131,7 @@ func init() {
 	f.StringArrayVar(&verifyPublicKeys, "public-key", nil, "With --attestation: also trust this PEM public key for the lock (repeatable)")
 	f.StringVar(&verifyIdentity, "identity", "", "With --attestation: also trust this certificate identity (needs --issuer)")
 	f.StringVar(&verifyIssuer, "issuer", "", "With --attestation: the OIDC issuer of --identity")
+	f.BoolVar(&verifySelf, "self", false, "Verify this ai-rulez binary against its release's Sigstore bundle (offline)")
 	f.BoolVar(&verifyApprovals, "approvals", false, "Re-check the signed and review-linked approvals that apply to the current content")
 	f.BoolVar(&verifyOnline, "online", false, "With --approvals: also check review-linked approvals against the forge (needs the network and a token)")
 	f.BoolVar(&verifyNoState, "no-state", false, "With --attestation: do not read or update the per-user rollback state")
