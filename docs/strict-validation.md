@@ -71,7 +71,7 @@ stdout.
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist |
 | AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`) |
-| AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file (frontmatter also a `./...` script, resolved against the project directory) that does not exist |
+| AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file, or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
 | AR504 | `hook-source-missing` | error | A `script` of a top-level `[[hooks]]` entry in `config.toml` does not exist |
@@ -789,9 +789,12 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
 
 - Name references are matched by pattern, so prose such as ``the skill `argument-hint` `` reports AR301; use
   `known_names` or an inline ignore for intentional cases.
-- Hook checks read `.claude/settings.json` only, and only commands that start with `$CLAUDE_PROJECT_DIR` or
-  `${CLAUDE_PROJECT_DIR}`. A script run through a launcher (`bash ./x.sh`, `node hook.js`) or by a bare relative path
-  is not resolved, so a missing or non-executable one is not reported there.
+- Hook checks read `.claude/settings.json` only. A command that runs a `$CLAUDE_PROJECT_DIR/...` file is resolved
+  (AR501, AR502), and so is the script given to a common interpreter (`sh`, `bash`, `zsh`, `dash`, `python`,
+  `python3`, `node`, `ruby`, `perl`, also behind `env` or `VAR=value`): `bash ./x.sh`, `sh x.sh`, `bash -e x.sh` and
+  `/usr/bin/env bash x.sh` report AR501 when the file is missing. The execute bit is not checked for a launched script,
+  and inline code (`bash -c`, `node -e`), absolute paths and paths with a variable are skipped. A bare relative path
+  without a launcher is resolved only in agent, skill and command frontmatter.
 - Anchors use GitHub-style heading slugs.
 - The MCP command check depends on the `PATH` of the machine running the command.
 

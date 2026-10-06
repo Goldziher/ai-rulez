@@ -1064,6 +1064,7 @@ func (r *runner) checkHooks(baseAbs string) {
 }
 
 func (r *runner) checkHookCommand(settings, event, command string) {
+	r.checkLauncherScripts(settings, event, command)
 	trimmed := strings.TrimLeft(command, `"' `)
 	for _, m := range projectVarRe.FindAllStringSubmatchIndex(command, -1) {
 		rel := command[m[2]:m[3]]
