@@ -19,6 +19,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
@@ -142,12 +143,44 @@ func TestPublish_WritesAVerifiableDist(t *testing.T) {
 	assert.Contains(t, verifyOut.String(), "verified acme 1.4.0")
 }
 
+// addExecutableSkillScript adds a skill resource with the given mode and
+// regenerates the bundle, so the script reaches the archive as an executable.
+func addExecutableSkillScript(t *testing.T, root string, mode os.FileMode) string {
+	t.Helper()
+	script := filepath.Join(root, ".ai-rulez", "skills", "deploy", "scripts", "run.sh")
+	writeFile(t, script, "#!/bin/sh\necho deploy\n")
+	require.NoError(t, os.Chmod(script, mode))
+	cfg, err := config.LoadConfig(context.Background(), ".", config.WithoutLocal())
+	require.NoError(t, err)
+	require.NoError(t, generator.NewGenerator(cfg).GeneratePlugin(""))
+	require.Equal(t, 0, writeLockAt("", "", nil), "lock")
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "script")
+	return script
+}
+
+func archiveModes(t *testing.T, dist map[string]string) map[string]int64 {
+	t.Helper()
+	zr, err := gzip.NewReader(strings.NewReader(dist["acme-1.4.0.tar.gz"]))
+	require.NoError(t, err)
+	tr := tar.NewReader(zr)
+	modes := map[string]int64{}
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			return modes
+		}
+		modes[hdr.Name] = hdr.Mode
+	}
+}
+
 func TestPublish_IsByteIdenticalAcrossRunsAndUmasks(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("umask is not available")
 	}
-	// Arrange
-	publishProject(t)
+	// Arrange: a bundle with an executable file, so the mode path is exercised.
+	root := publishProject(t)
+	addExecutableSkillScript(t, root, 0o755)
 	outside := t.TempDir()
 	run := func(umask int, dist string) map[string]string {
 		old := setUmask(umask)
@@ -164,6 +197,84 @@ func TestPublish_IsByteIdenticalAcrossRunsAndUmasks(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, first, second)
+	var executable []string
+	for name, mode := range archiveModes(t, first) {
+		if mode == 0o755 {
+			executable = append(executable, name)
+		}
+	}
+	require.Len(t, executable, 1, "exactly the script is executable in the archive")
+	assert.True(t, strings.HasSuffix(executable[0], "scripts/run.sh"), executable[0])
+}
+
+func TestPublish_ArchiveChangesWhenAFileModeChanges(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not portable")
+	}
+	// Arrange
+	root := publishProject(t)
+	script := addExecutableSkillScript(t, root, 0o755)
+	outside := t.TempDir()
+	build := func(dist string) map[string]string {
+		publishDist = filepath.Join(outside, dist)
+		_, err := runPublishCapture(t)
+		require.NoError(t, err)
+		return readDist(t, publishDist)
+	}
+	executable := build("dist-x")
+
+	// Act: drop the executable bit and regenerate.
+	require.NoError(t, os.Chmod(script, 0o644))
+	cfg, err := config.LoadConfig(context.Background(), ".", config.WithoutLocal())
+	require.NoError(t, err)
+	require.NoError(t, generator.NewGenerator(cfg).GeneratePlugin(""))
+	require.Equal(t, 0, writeLockAt("", "", nil), "lock")
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "plain", "--allow-empty")
+	plain := build("dist-y")
+
+	// Assert
+	assert.NotEqual(t, executable["acme-1.4.0.tar.gz"], plain["acme-1.4.0.tar.gz"])
+}
+
+func TestPublish_ShippedLockDropsApprovalsAndStaysValid(t *testing.T) {
+	// Arrange: approve the deploy skill so the repository lock carries a reviewer.
+	root := publishProject(t)
+	lockDir := filepath.Join(root, ".ai-rulez")
+	lock, err := lockfile.Load(lockDir)
+	require.NoError(t, err)
+	require.NotNil(t, lock)
+	lock.Approval = []lockfile.Approval{{
+		Kind: "rule", ID: "care", Digest: "sha256:" + strings.Repeat("a", 64), Reviewer: "jane@example.com",
+		Assurance: lockfile.AssuranceAsserted, ApprovedAt: "2026-01-02T03:04:05Z",
+	}}
+	require.NoError(t, lockfile.Save(lockDir, lock))
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "approve")
+
+	// Act
+	_, err = runPublishCapture(t)
+
+	// Assert
+	require.NoError(t, err)
+	dist := readDist(t, filepath.Join(root, "dist"))
+	shipped := dist["ai-rulez.lock"]
+	assert.NotContains(t, shipped, "jane@example.com")
+	assert.NotContains(t, shipped, "[[approval]]")
+	copyDir := t.TempDir()
+	writeFile(t, filepath.Join(copyDir, lockfile.FileName), shipped)
+	got, err := lockfile.Load(copyDir)
+	require.NoError(t, err)
+	assert.Equal(t, lock.Tree, got.Tree, "the tree pin survives")
+	assert.Equal(t, lock.Item, got.Item)
+	assert.Empty(t, got.Approval)
+	var manifest publish.Manifest
+	require.NoError(t, json.Unmarshal([]byte(dist["acme-1.4.0.manifest.json"]), &manifest))
+	assert.Equal(t, publish.Digest([]byte(shipped)), manifest.Lock.FileDigest)
+	assert.Equal(t, lock.Tree, manifest.Lock.Tree)
+	res, verr := publish.Verify(filepath.Join(root, "dist"))
+	require.NoError(t, verr)
+	assert.True(t, res.OK(), "%v", res.Problems)
 }
 
 func TestPublish_SourceDateEpochSetsTheArchiveTime(t *testing.T) {
@@ -208,7 +319,7 @@ func TestPublish_DryRunWritesNothing(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoDirExists(t, filepath.Join(root, "dist"))
 	assert.Contains(t, out, "would write")
-	assert.Contains(t, out, "would run   gh release create v1.4.0 --repo acme/skills --title acme 1.4.0 --notes-file RELEASE_NOTES.md --verify-tag")
+	assert.Contains(t, out, "would run   gh release create v1.4.0 --repo acme/skills --title 'acme 1.4.0' --notes-file RELEASE_NOTES.md --verify-tag")
 }
 
 func TestPublish_JSONFormatPrintsThePlan(t *testing.T) {
@@ -549,4 +660,22 @@ func appendFile(t *testing.T, path, s string) {
 	_, err = f.WriteString(s)
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
+}
+
+func TestShellJoin(t *testing.T) {
+	tests := []struct {
+		name string
+		argv []string
+		want string
+	}{
+		{"plain", []string{"gh", "release", "--repo", "a/b"}, "gh release --repo a/b"},
+		{"space", []string{"--title", "acme 1.4.0"}, "--title 'acme 1.4.0'"},
+		{"quote", []string{"it's"}, `'it'\''s'`},
+		{"empty", []string{""}, "''"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, shellJoin(tt.argv))
+		})
+	}
 }

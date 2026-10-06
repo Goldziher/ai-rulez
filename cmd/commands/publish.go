@@ -208,7 +208,11 @@ func runPublish(ctx context.Context, out io.Writer) error {
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
-	logger.Success("Published", "tag", dist.Plan.Tag, "repo", dist.Plan.Repo, "result", url)
+	if url != "" {
+		logger.Success("Published", "tag", dist.Plan.Tag, "repo", dist.Plan.Repo, "result", url)
+	} else {
+		logger.Success("Published", "tag", dist.Plan.Tag, "repo", dist.Plan.Repo)
+	}
 	return nil
 }
 
@@ -302,6 +306,10 @@ func publishInput(ctx context.Context, cfg *config.Config, files []generator.Plu
 	if err != nil || lock == nil {
 		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "cannot read %s", lockfile.FileName)
 	}
+	lockBytes, err = shippedLock(lockBytes, lock)
+	if err != nil {
+		return nil, err
+	}
 	distRel := ""
 	if top := gitutil.New(publishRunner).TopLevel(cfg.BaseDir); top != "" {
 		distRel = gitutil.RepoRelative(top, distAbs)
@@ -350,6 +358,33 @@ func publishInput(ctx context.Context, cfg *config.Config, files []generator.Plu
 	return in, nil
 }
 
+// shippedLock returns the lock bytes that go into the dist directory. Reviewer
+// approvals (emails, notes) are repository-internal and outside the tree
+// digest, so the shipped copy is the same lock without its [[approval]]
+// records: its tree, content pins and output pins are unchanged and
+// `lock --check` against it behaves as against the original. A lock without
+// approvals ships byte for byte.
+func shippedLock(raw []byte, lock *lockfile.File) ([]byte, error) {
+	if len(lock.Approval) == 0 {
+		return raw, nil
+	}
+	tmp, err := os.MkdirTemp("", "ai-rulez-lock-*")
+	if err != nil {
+		return nil, oops.Wrapf(err, "create temporary directory")
+	}
+	defer os.RemoveAll(tmp) //nolint:errcheck // best effort cleanup of our own directory
+	stripped := *lock
+	stripped.Approval = nil
+	if err := lockfile.Save(tmp, &stripped); err != nil {
+		return nil, oops.Wrapf(err, "render the shipped lock copy")
+	}
+	out, err := os.ReadFile(lockfile.Path(tmp)) //nolint:gosec // the file Save just wrote in our temp directory
+	if err != nil {
+		return nil, oops.Wrapf(err, "read the shipped lock copy")
+	}
+	return out, nil
+}
+
 // sourceDateEpoch resolves the archive mtime: SOURCE_DATE_EPOCH, else commitTime.
 func sourceDateEpoch(commitTime int64) (int64, error) {
 	raw := os.Getenv("SOURCE_DATE_EPOCH")
@@ -383,12 +418,27 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 		if publishExecute {
 			verb = "running"
 		}
-		fmt.Fprintf(out, "%-11s %s\n", verb, strings.Join(c.Argv, " "))
+		fmt.Fprintf(out, "%-11s %s\n", verb, shellJoin(c.Argv))
 	}
 	if d.Plan.Credentials != "" {
 		fmt.Fprintf(out, "credentials %s\n", d.Plan.Credentials)
 	}
 	return nil
+}
+
+// shellJoin renders argv so it can be pasted into a POSIX shell: arguments with
+// characters outside a safe set are single-quoted. The argv itself never goes
+// through a shell.
+func shellJoin(argv []string) string {
+	parts := make([]string, len(argv))
+	for i, a := range argv {
+		if a != "" && strings.Trim(a, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@%+=:,./_-") == "" {
+			parts[i] = a
+			continue
+		}
+		parts[i] = "'" + strings.ReplaceAll(a, "'", `'\''`) + "'"
+	}
+	return strings.Join(parts, " ")
 }
 
 func runPublishVerify(out io.Writer, dir string) error {
