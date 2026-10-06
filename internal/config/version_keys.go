@@ -15,6 +15,8 @@ type VersionSpec struct {
 	Constraint        string
 	TagPrefix         string
 	IncludePrerelease bool
+	// MinReleaseAge is the source's own minimum release age ("" defers to [lock]).
+	MinReleaseAge string
 }
 
 // Active reports whether the source asks for a version range.
@@ -37,7 +39,7 @@ func IsVersionConstraintRef(ref string) bool {
 }
 
 // resolveVersionSpec merges the version key and the ref shorthand of one source.
-func resolveVersionSpec(ref, version, prefix string, prerelease bool) VersionSpec {
+func resolveVersionSpec(ref, version, prefix string, prerelease bool, minAge string) VersionSpec {
 	constraint := strings.TrimSpace(version)
 	if constraint == "" && IsVersionSugar(ref) {
 		constraint = strings.TrimSpace(ref)
@@ -45,12 +47,12 @@ func resolveVersionSpec(ref, version, prefix string, prerelease bool) VersionSpe
 	if constraint == "" {
 		return VersionSpec{}
 	}
-	return VersionSpec{Constraint: constraint, TagPrefix: prefix, IncludePrerelease: prerelease}
+	return VersionSpec{Constraint: constraint, TagPrefix: prefix, IncludePrerelease: prerelease, MinReleaseAge: strings.TrimSpace(minAge)}
 }
 
 // VersionSpec returns the version constraint of the include.
 func (c *IncludeConfig) VersionSpec() VersionSpec {
-	return resolveVersionSpec(c.Ref, c.Version, c.TagPrefix, c.IncludePrerelease)
+	return resolveVersionSpec(c.Ref, c.Version, c.TagPrefix, c.IncludePrerelease, c.MinReleaseAge)
 }
 
 // RequestedRef is what the lock records as the requested ref: the constraint
@@ -59,7 +61,7 @@ func (c *IncludeConfig) RequestedRef() string { return requestedRef(c.Ref, c.Ver
 
 // VersionSpec returns the version constraint of the installed skill.
 func (s *InstalledSkillConfig) VersionSpec() VersionSpec {
-	return resolveVersionSpec(s.Ref, s.Version, s.TagPrefix, s.IncludePrerelease)
+	return resolveVersionSpec(s.Ref, s.Version, s.TagPrefix, s.IncludePrerelease, s.MinReleaseAge)
 }
 
 // RequestedRef is what the lock records as the requested ref.
@@ -67,7 +69,7 @@ func (s *InstalledSkillConfig) RequestedRef() string { return requestedRef(s.Ref
 
 // VersionSpec returns the version constraint of the skill source.
 func (s *SkillSourceConfig) VersionSpec() VersionSpec {
-	return resolveVersionSpec(s.Ref, s.Version, s.TagPrefix, s.IncludePrerelease)
+	return resolveVersionSpec(s.Ref, s.Version, s.TagPrefix, s.IncludePrerelease, s.MinReleaseAge)
 }
 
 // RequestedRef is what the lock records as the requested ref.
@@ -86,7 +88,7 @@ const codeConstraintInvalid = "AR731"
 // validateVersionKeys checks the version, tag_prefix and include_prerelease keys
 // of one source: ref and version are exclusive, the constraint must parse, and
 // the refinements need a constraint.
-func validateVersionKeys(kind, name, ref, version, prefix string, prerelease bool) error {
+func validateVersionKeys(kind, name, ref, version, prefix string, prerelease bool, minAge string) error {
 	field := func(key string) string { return fmt.Sprintf("%s.%s", kind, key) }
 	bad := func(key, format string, args ...any) error {
 		return oops.With("field", field(key)).With("name", name).
@@ -103,6 +105,9 @@ func validateVersionKeys(kind, name, ref, version, prefix string, prerelease boo
 		if prerelease {
 			return bad("include_prerelease", "needs version")
 		}
+		if strings.TrimSpace(minAge) != "" {
+			return bad("min_release_age", "needs version")
+		}
 		return nil
 	}
 	constraint := version
@@ -116,6 +121,9 @@ func validateVersionKeys(kind, name, ref, version, prefix string, prerelease boo
 	if strings.ContainsAny(prefix, " \t\n") || strings.HasPrefix(prefix, "-") || hasControl(prefix) {
 		return bad("tag_prefix", "must not contain whitespace or start with '-'")
 	}
+	if _, err := semver.ParseAge(minAge); err != nil {
+		return bad("min_release_age", "is invalid: %s", err.Error())
+	}
 	return nil
 }
 
@@ -123,19 +131,19 @@ func validateVersionKeys(kind, name, ref, version, prefix string, prerelease boo
 func (c *Config) validateVersionKeys() error {
 	for i := range c.Includes {
 		inc := &c.Includes[i]
-		if err := validateVersionKeys("includes", inc.Name, inc.Ref, inc.Version, inc.TagPrefix, inc.IncludePrerelease); err != nil {
+		if err := validateVersionKeys("includes", inc.Name, inc.Ref, inc.Version, inc.TagPrefix, inc.IncludePrerelease, inc.MinReleaseAge); err != nil {
 			return err
 		}
 	}
 	for i := range c.InstalledSkills {
 		sk := &c.InstalledSkills[i]
-		if err := validateVersionKeys("installed_skills", sk.Name, sk.Ref, sk.Version, sk.TagPrefix, sk.IncludePrerelease); err != nil {
+		if err := validateVersionKeys("installed_skills", sk.Name, sk.Ref, sk.Version, sk.TagPrefix, sk.IncludePrerelease, sk.MinReleaseAge); err != nil {
 			return err
 		}
 	}
 	for i := range c.SkillSources {
 		src := &c.SkillSources[i]
-		if err := validateVersionKeys("skill_sources", src.Name, src.Ref, src.Version, src.TagPrefix, src.IncludePrerelease); err != nil {
+		if err := validateVersionKeys("skill_sources", src.Name, src.Ref, src.Version, src.TagPrefix, src.IncludePrerelease, src.MinReleaseAge); err != nil {
 			return err
 		}
 	}
