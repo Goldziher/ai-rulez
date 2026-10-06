@@ -16,6 +16,8 @@ const (
 	methodSkillsList = "skills/list"
 	methodSkillsGet  = "skills/get"
 
+	methodResourcesRead = "resources/read"
+
 	resultTypeComplete = "complete"
 	defaultSearchLimit = 10
 	maxSearchLimit     = 50
@@ -60,6 +62,7 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
 
 	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog, serve: newServeState(opts)}
+	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
 	srv.registerSkillResources()
 	srv.registerSkillTools()
 	srv.registerServeTools()
@@ -78,7 +81,7 @@ func (s *Server) registerSkillResources() {
 func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest) (*sdkmcp.ReadResourceResult, error) {
 	file, ok := s.cat().File(req.Params.URI)
 	if !ok {
-		return nil, sdkmcp.ResourceNotFoundError(req.Params.URI)
+		return nil, resourceNotFound(req.Params.URI)
 	}
 	session := s.serve.sessionID(req.Session)
 	if err := s.chargeRead(session, len(file.Content)); err != nil {
@@ -91,6 +94,35 @@ func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest
 		contents.Blob = file.Content
 	}
 	return &sdkmcp.ReadResourceResult{Contents: []*sdkmcp.ResourceContents{contents}}, nil
+}
+
+// resourceNotFound is the -32002 error the SDK would build, with the URI
+// escaped: the SDK formats it with %q, which emits \x escapes for control
+// characters, produces invalid JSON and used to end the session on marshal.
+func resourceNotFound(uri string) error {
+	data, err := json.Marshal(map[string]string{keyURI: uri})
+	if err != nil {
+		data = []byte("{}")
+	}
+	return &jsonrpc.Error{Code: sdkmcp.CodeResourceNotFound, Message: "Resource not found", Data: data}
+}
+
+// unknownResourceMiddleware answers resources/read of a URI that is not a
+// served file itself. The SDK would build that error from the raw URI with %q,
+// which is invalid JSON for control characters and ended the session.
+func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
+	return func(next sdkmcp.MethodHandler) sdkmcp.MethodHandler {
+		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
+			if method == methodResourcesRead {
+				if req, ok := request.(*sdkmcp.ReadResourceRequest); ok && req.Params != nil {
+					if _, served := s.cat().File(req.Params.URI); !served {
+						return nil, resourceNotFound(req.Params.URI)
+					}
+				}
+			}
+			return next(ctx, method, request)
+		}
+	}
 }
 
 func (s *Server) registerSkillTools() {
