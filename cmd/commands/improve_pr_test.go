@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/improve"
 )
 
@@ -40,7 +41,7 @@ func TestImprovePR_OpensAPullRequestWithAFakeGH(t *testing.T) {
 	var report improve.Report
 	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
 	run := func(dir string, args ...string) string {
-		cmd := exec.Command("git", append([]string{"-C", dir, "-c", "commit.gpgsign=false", "-c", "user.email=t@example.test", "-c", "user.name=t"}, args...)...) //nolint:gosec // test
+		cmd := gitutil.CommandNoContext("", append([]string{"-C", dir, "-c", "commit.gpgsign=false", "-c", "user.email=t@example.test", "-c", "user.name=t"}, args...)...)
 		b, gerr := cmd.CombinedOutput()
 		require.NoError(t, gerr, string(b))
 		return strings.TrimSpace(string(b))
