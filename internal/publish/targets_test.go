@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http/httptest"
@@ -897,4 +898,40 @@ func TestBuild_ApprovalSummaryIsRecorded(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &ApprovalInfo{Required: 3, Approved: 3}, d.Manifest.Approval)
 	schemaValid(t, "publish-manifest.schema.json", d.Files["acme-1.4.0.manifest.json"])
+}
+
+func TestPullOCI_RefusesALayerThatShadowsAnotherFile(t *testing.T) {
+	tests := []struct {
+		name   string
+		titles []string
+	}{
+		{"titled like the manifest", []string{"acme-1.4.0.manifest.json"}},
+		{"titled like the checksums", []string{SumsFile}},
+		{"two layers with one title", []string{"acme-1.4.0.tar.gz", "acme-1.4.0.tar.gz"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: a registry artifact whose layer titles collide with files PullOCI writes itself.
+			host := newRegistry(t)
+			_, d := writeBuilt(t, ociInput(host+"/acme/skills/acme"))
+			art := oci.Artifact{Config: d.Files["acme-1.4.0.manifest.json"], Version: "1.4.0"}
+			for i, title := range tt.titles {
+				art.Layers = append(art.Layers, oci.Layer{MediaType: oci.BundleMediaType, Title: title, Data: []byte(fmt.Sprintf("layer %d", i))})
+			}
+			ref := host + "/other/shadow:1"
+			_, err := oci.Push(context.Background(), oci.Target{Ref: ref}, art)
+			require.NoError(t, err)
+			pulled := t.TempDir()
+
+			// Act
+			_, err = PullOCI(context.Background(), oci.Target{Ref: ref}, pulled)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "layer")
+			entries, derr := os.ReadDir(pulled)
+			require.NoError(t, derr)
+			assert.Empty(t, entries, "nothing is written for a refused artifact")
+		})
+	}
 }
