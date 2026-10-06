@@ -8,7 +8,7 @@ import "strings"
 // Version identifies the table. Bump it whenever a price changes: internal/llm
 // folds it into its cache identity, so a cost recorded under old prices is never
 // replayed under new ones.
-const Version = "2026-07"
+const Version = "2026-10"
 
 // Price is a model price in USD per million tokens.
 type Price struct {
@@ -19,7 +19,10 @@ type Price struct {
 // table is a small, approximate list for common models. It is a convenience for
 // budget estimates, not a billing source: prices change, and unknown models have
 // no entry. Keys are matched against the model name with any provider prefix
-// removed, longest prefix first. The bare haiku, sonnet and opus keys are the
+// removed, longest prefix first. The Gemini rows are the paid-tier standard text
+// prices from https://ai.google.dev/gemini-api/docs/pricing, checked 2026-10-06
+// (gemini-embedding-001 is the figure documented for that model; the page now
+// lists its successor first, so re-check it when updating). The bare haiku, sonnet and opus keys are the
 // short names eval cases and --model use.
 var table = map[string]Price{
 	"gpt-4o-mini":            {0.15, 0.60},
@@ -28,6 +31,9 @@ var table = map[string]Price{
 	"gpt-4.1":                {2.00, 8.00},
 	"text-embedding-3-small": {0.02, 0},
 	"text-embedding-3-large": {0.13, 0},
+	"gemini-2.5-flash-lite":  {0.10, 0.40},
+	"gemini-2.5-flash":       {0.30, 2.50},
+	"gemini-embedding-001":   {0.15, 0},
 	"claude-haiku":           {1.00, 5.00},
 	"claude-sonnet":          {3.00, 15.00},
 	"claude-opus":            {15.00, 75.00},
