@@ -42,7 +42,7 @@ accepted_findings = ["AR005"]
 ```
 
 - **Naming.** `kind:id` or `kind:domain/id`; a bare id works when unambiguous. Kinds are the pinned item kinds
-  (`rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`, `settings`, `local-include`) and the
+  (`rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`, `settings`, `verifier`, `local-include`) and the
   remote entries of the lock: `include`, `installed-skill`, `source`, `served` (a served skill, with the serve view as
   its domain). Only pinned content can be approved: run `ai-rulez lock` first. `approve` never fetches.
 - **What approve shows.** The files behind the item, the security scan findings, and any earlier approval. It refuses

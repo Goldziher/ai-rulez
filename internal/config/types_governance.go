@@ -48,7 +48,7 @@ const (
 // the remote entry kinds. "mcp_server" selects the pinned MCP server
 // declarations (the settings item "mcp-servers").
 var ApprovalKinds = []string{
-	"rule", "context", "skill", "agent", "command", "check", "hook", "role", "settings", "local-include",
+	"rule", "context", "skill", "agent", "command", "check", "hook", "role", "settings", "verifier", "local-include",
 	"include", "installed-skill", "source", "served", "mcp_server",
 }
 
