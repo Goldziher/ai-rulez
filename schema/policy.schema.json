@@ -55,8 +55,34 @@
             "scan_imports": {
               "enum": ["warn", "error"],
               "description": "The weakest scan_imports level the repository may use."
+            },
+            "directive_tags": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$" },
+              "description": "Element names AR018 always treats as imitating a privileged message; the repository may add more."
+            },
+            "trusted_orgs": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Bounds the repository's lint.security.trusted_orgs: it may name only these organizations (case-insensitive). An empty list trusts no organization."
             }
           }
+        },
+        "capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_network_commands": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "The most network commands the repository may allow an item before AR030 reports it; it may set a lower value."
+            }
+          }
+        },
+        "load_budgets": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 },
+          "description": "Load-budget id (AR964, for example claude-skill-listing) to the largest limit the repository may set; it may set a lower one."
         }
       }
     },

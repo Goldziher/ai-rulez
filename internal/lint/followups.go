@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -419,6 +420,7 @@ func validateNewSettings(lc *config.LintConfig) []string {
 	var problems []string
 	problems = append(problems, validateMetadataRules(lc.Metadata)...)
 	problems = append(problems, validateSecurity(lc.Security)...)
+	problems = append(problems, validateCapabilityAndLoadBudgets(lc)...)
 	problems = append(problems, validateExternal(lc.External)...)
 	return problems
 }
@@ -465,9 +467,41 @@ func validateSecurity(sec *config.LintSecurity) []string {
 			problems = append(problems, fmt.Sprintf("lint.security.secret_patterns.%s: invalid regex: %v", p.Name, err))
 		}
 	}
+	for _, tag := range sec.DirectiveTags {
+		if !ValidDirectiveTag(tag) {
+			problems = append(problems, fmt.Sprintf("lint.security.directive_tags: %q is not an element name (letters, digits, '-', '_', ':' and '.', starting with a letter)", tag))
+		}
+	}
+	for _, org := range sec.TrustedOrgs {
+		if strings.TrimSpace(org) == "" {
+			problems = append(problems, "lint.security.trusted_orgs: an entry is empty")
+		}
+	}
 	for _, h := range sec.AllowedHosts {
 		if strings.Contains(h, "/") {
 			problems = append(problems, fmt.Sprintf("lint.security.allowed_hosts: %q must be a bare host such as example.com or *.example.com", h))
+		}
+	}
+	return problems
+}
+
+var directiveTagRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._:-]*$`)
+
+// ValidDirectiveTag reports whether tag can be a [lint.security] directive_tags entry.
+func ValidDirectiveTag(tag string) bool { return directiveTagRe.MatchString(strings.TrimSpace(tag)) }
+
+func validateCapabilityAndLoadBudgets(lc *config.LintConfig) []string {
+	var problems []string
+	if c := lc.Capability; c != nil && c.MaxNetworkCommands != nil && *c.MaxNetworkCommands < 0 {
+		problems = append(problems, fmt.Sprintf("lint.capability.max_network_commands: %d must not be negative", *c.MaxNetworkCommands))
+	}
+	known := LoadBudgetIDs()
+	for id, limit := range lc.LoadBudgets {
+		switch {
+		case !slices.Contains(known, id):
+			problems = append(problems, fmt.Sprintf("lint.load_budgets: unknown limit %q (known: %s)", id, strings.Join(known, ", ")))
+		case limit < 1:
+			problems = append(problems, fmt.Sprintf("lint.load_budgets.%s: %d must be positive", id, limit))
 		}
 	}
 	return problems
