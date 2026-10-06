@@ -18,14 +18,13 @@ func TestInitCommand(t *testing.T) {
 	flags := commands.InitCmd.Flags()
 
 	// Flags
-	assert.NotNil(t, flags.Lookup("format"))
+	assert.Nil(t, flags.Lookup("format"), "init writes config.toml only")
 	assert.NotNil(t, flags.Lookup("domains"))
 	assert.NotNil(t, flags.Lookup("skip-content"))
 	assert.NotNil(t, flags.Lookup("from"))
 	assert.NotNil(t, flags.Lookup("setup-hooks"))
 	assert.NotNil(t, flags.Lookup("yes"))
 	assert.NotNil(t, flags.Lookup("config-dir"))
-	assert.Equal(t, "f", flags.Lookup("format").Shorthand)
 	assert.Equal(t, "d", flags.Lookup("domains").Shorthand)
 	assert.Equal(t, "s", flags.Lookup("skip-content").Shorthand)
 	assert.Equal(t, "F", flags.Lookup("from").Shorthand)
@@ -169,35 +168,6 @@ func TestInit_WithExampleContent(t *testing.T) {
 	assert.Contains(t, string(aiRulezContent), "Use AI-Rulez correctly in user projects")
 	assert.Contains(t, string(aiRulezContent), "Prefer the AI-Rulez MCP server")
 	assert.Contains(t, string(aiRulezContent), "Run ai-rulez generate after source changes")
-}
-
-func TestInit_JSONFormat(t *testing.T) {
-	tmpDir := t.TempDir()
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer os.Chdir(originalDir)
-
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err)
-
-	// Set flags
-	commands.InitCmd.Flags().Set("format", "json")
-	commands.InitCmd.Flags().Set("skip-content", "true")
-	defer commands.InitCmd.Flags().Set("format", "toml")
-	defer commands.InitCmd.Flags().Set("skip-content", "false")
-
-	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
-
-	// Assert config.json exists (not config.toml)
-	assert.FileExists(t, ".ai-rulez/config.json")
-	assert.NoFileExists(t, ".ai-rulez/config.toml")
-
-	// Verify JSON content
-	content, err := os.ReadFile(".ai-rulez/config.json")
-	require.NoError(t, err)
-	assert.Contains(t, string(content), `"version": "4.0"`)
-	assert.Contains(t, string(content), `"name": "test-project"`)
 }
 
 func TestInit_SkipContent(t *testing.T) {

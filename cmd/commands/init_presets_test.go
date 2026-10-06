@@ -14,7 +14,6 @@ func TestGeneratedConfigListsEveryBuiltinPreset(t *testing.T) {
 		name     string
 		generate func(string) string
 	}{
-		{"yaml", generateConfig},
 		{"toml", generateConfigTOML},
 	}
 	for _, tt := range tests {
