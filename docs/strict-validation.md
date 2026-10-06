@@ -134,9 +134,6 @@ stdout.
 | AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
-| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
-| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands only) |
-| AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` only) |
 
 ### Code ranges
 
@@ -175,7 +172,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E4` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220)) | reserved |
-| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
+| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221)); `verifiers run` emits none yet | reserved |
 | `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227)) | reserved |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
@@ -1990,35 +1987,8 @@ the security scan of the planned tree blocked the write (convert report only)
 - Bad: A converted rule that contains `curl ... | sh`
 - Good: Remove or rewrite the flagged text in the source file and convert again
 
-### AR9H1 verifier-failed
 
-a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (verifiers report only)
 
-- Default severity: `warning`
-- Analyzer: `verifiers` (scope `item`)
-- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). Only `ai-rulez verifiers run` reports it.
-- Bad: A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one
-- Good: Apply the verifier's `fix`: add the section, or change the verifier if the rule changed
-
-### AR9H2 verifier-invalid
-
-a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (verifiers report only)
-
-- Default severity: `error`
-- Analyzer: `verifiers` (scope `item`)
-- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. Only `ai-rulez verifiers run`, `list` and `test` report it.
-- Bad: `rule = "ghost"` naming a rule that does not exist, or `regex = "("`
-- Good: Name an existing rule, skill, agent or command and a valid RE2 regex
-
-### AR9H5 verifier-dead-scope
-
-a verifier's when_changed matches no file in the repository, so it can never apply (verifiers report only, with --strict-applicability)
-
-- Default severity: `warning`
-- Analyzer: `verifiers` (scope `item`)
-- Why: A `when_changed` glob that matches no file of the repository means the verifier silently stopped working. Only `ai-rulez verifiers run --strict-applicability` reports it.
-- Bad: `when_changed = ["src/handlres/**"]` after a typo or a directory rename
-- Good: Fix the glob, or delete the verifier
 
 ### AR9K0 telemetry-config-invalid
 
