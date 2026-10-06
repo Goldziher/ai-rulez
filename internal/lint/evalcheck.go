@@ -81,6 +81,19 @@ func validateEvalSettings(lc *config.LintConfig) []string {
 			problems = append(problems, "lint.evals."+f.name+": must be between 0 and 1")
 		}
 	}
+	if e := lc.Evals.Estimate; e != nil {
+		for _, f := range []struct {
+			name string
+			v    float64
+		}{
+			{"overhead_tokens", float64(e.OverheadTokens)}, {"assumed_output_tokens", float64(e.AssumedOutputTokens)},
+			{"activation_output_tokens", float64(e.ActivationOutputTokens)}, {"tool_loop_factor", e.ToolLoopFactor},
+		} {
+			if f.v < 0 {
+				problems = append(problems, "lint.evals.estimate."+f.name+": must be >= 0")
+			}
+		}
+	}
 	return problems
 }
 

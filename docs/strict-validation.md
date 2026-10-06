@@ -119,6 +119,9 @@ stdout.
 | AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
 | AR9A1 | `activation-low` | off | A skill's recorded activation recall or precision (`eval run --mode activation`) is below `[lint.evals] min_activation_recall` or `min_activation_precision`; setting either turns the rule on at error (see [Evals](evals.md#activation-mode)) |
 | AR9A2 | `skill-confusable` | off | A sibling skill won at least `[lint.evals] confusion_threshold` of this skill's positive activation prompts; setting it turns the rule on at warning |
+| AR9A3 | `activation-policy-conflict` | warning | An eval case expects a skill to trigger (`expect_trigger: true`) although its frontmatter sets `disable-model-invocation: true` or `allow_implicit_invocation: false`, so the case can never pass (see [Evals](evals.md#linting-cases-and-results)) |
+| AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
+| AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
 | AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
 | AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
@@ -240,7 +243,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR980`-`AR988` | Lock drift (`AR981`, `AR982`) | allocated |
 | `AR989`-`AR995` | Served skills and delivery (`AR989`-`AR995`) | allocated |
 | `AR996`-`AR999` | Eval cases and results (`AR996`-`AR998`) | allocated |
-| `AR9A0`-`AR9A9` | Eval results file and activation (`AR9A0`-`AR9A2` used; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A3`-`AR9A5` for later phases) | allocated |
+| `AR9A0`-`AR9A9` | Eval results file and activation (`AR9A0`-`AR9A5` used) | allocated |
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
 | `AR9C0`-`AR9CA` | Harness traps (`AR9C0`-`AR9CA` used; see [Harness traps](harness-traps.md)) | allocated |
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D0`-`AR9D4` used, `AR9D5`-`AR9D9` free) | allocated |
@@ -364,6 +367,9 @@ min_pass_rate = 0.8                # AR998: recorded pass rate floor; also the p
 min_activation_recall = 0.8        # AR9A1: recorded activation recall floor
 min_activation_precision = 0.9     # AR9A1: recorded activation precision floor
 confusion_threshold = 0.25         # AR9A2: share of a skill's prompts a sibling may win
+
+[lint.evals.estimate]              # assumptions of the `eval run` cost estimate; `eval calibrate-estimate` proposes values
+overhead_tokens = 25000
 ```
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
@@ -494,7 +500,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `roles` | `AR971`-`AR973` |
 | `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
 | `delivery` | `AR989`-`AR994` |
-| `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A2` |
+| `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables) |
@@ -2364,6 +2370,36 @@ a sibling skill won at least lint.evals.confusion_threshold of this skill's posi
 - Why: When a sibling ranks first for a share of a skill's own prompts, the agent loads the wrong skill and the right one never gets its turn.
 - Bad: A deploy skill whose prompts a release-notes skill wins a third of the time with `confusion_threshold = 0.25`
 - Good: Separate the two descriptions, or merge the skills
+
+### AR9A3 activation-policy-conflict
+
+an eval case expects a skill to trigger although the skill's frontmatter stops the model from invoking it (disable-model-invocation: true or allow_implicit_invocation: false)
+
+- Default severity: `warning`
+- Analyzer: `evals` (scope `item`)
+- Why: A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes.
+- Bad: A case with `expect_trigger: true` for a skill with `disable-model-invocation: true`
+- Good: Drop the case (or make it a negative one), or allow model invocation in the skill
+
+### AR9A4 activation-prompt-names-skill
+
+a positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill (off by default; enable it in [lint.severity])
+
+- Default severity: `off`
+- Analyzer: `evals` (scope `item`)
+- Why: A prompt that names the skill ("use deploy-staging to ...") fires it by explicit invocation. The activation rate then measures that the model can follow a name, not that the description makes it choose the skill.
+- Bad: `prompt: Use the deploy-staging skill to ship billing` for the skill `deploy-staging`
+- Good: `prompt: Ship the billing service to staging`
+
+### AR9A5 eval-import-unmapped
+
+fields of an imported eval scenario that have no counterpart in the case format (reported by `ai-rulez eval import`, never by `validate`)
+
+- Default severity: `info`
+- Analyzer: `evals` (scope `item`)
+- Why: An importer that drops what it cannot map without saying so makes an imported eval look complete. The report lists every input field that was not imported and where it belongs in ai-rulez.
+- Bad: A scenario whose `baseline` and `repeats` fields vanished on import
+- Good: `$.baseline` and `$.repeats` listed as unmapped, with `eval run --ablation` and `--runs N` as the places they belong
 
 ### AR9B0 okf-index-mismatch
 
