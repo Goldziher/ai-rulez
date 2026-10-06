@@ -10,10 +10,6 @@ import (
 	"github.com/samber/oops"
 )
 
-func init() {
-	register(config.PluginRuntimeCodex, renderCodex)
-}
-
 // codexMCPRef is the relative path Codex's plugin.json uses to reference its
 // external MCP server file.
 const codexMCPRef = "./.mcp.json"

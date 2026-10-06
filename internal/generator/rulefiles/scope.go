@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // ScopeOf returns the ScopeInfo of the scope cfg is generating, or the zero
@@ -58,9 +59,13 @@ func RulesDirPath(cfg *config.Config, baseDir string, t Target, name string) str
 // registry local to the caller.
 func RegistryFor(cfg *config.Config, preset string) *Registry {
 	if cfg == nil || cfg.Run == nil {
-		return NewRegistry()
+		r := NewRegistry()
+		if cfg != nil {
+			r.diag = cfg.Diag
+		}
+		return r
 	}
-	return &Registry{claims: cfg.Run.ClaimsFor(preset), root: cfg.ConfigDir}
+	return &Registry{claims: cfg.Run.ClaimsFor(preset), root: cfg.ConfigDir, diag: cfg.Diag}
 }
 
 // WarnUnreadScopeFile warns, in a scope run, that rules and context left inline
@@ -77,7 +82,7 @@ func WarnUnreadScopeFile(cfg *config.Config, preset, file string, rules, context
 	for _, c := range context {
 		names = append(names, "context "+c.Name)
 	}
-	warnSink()(preset+" reads "+file+" at the repository root only, so these items in the scope's copy are never loaded; "+
+	cfg.Diag.Raise(preset+" reads "+file+" at the repository root only, so these items in the scope's copy are never loaded; "+
 		"use path-scoped rules or [rules] mode = \"split\"",
 		"scope", cfg.Run.Scope.Path, "items", strings.Join(names, ", "))
 }
@@ -88,7 +93,7 @@ func WarnScopeLegacyRules(cfg *config.Config, preset, dir string) {
 	if !InScope(cfg) {
 		return
 	}
-	warnSink()(preset+" does not support split rule files, so a scope's rules are written to "+dir+
+	cfg.Diag.Raise(preset+" does not support split rule files, so a scope's rules are written to "+dir+
 		" inside the scope directory",
 		"scope", cfg.Run.Scope.Path)
 }

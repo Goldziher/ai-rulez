@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 func TestScopeHelpers(t *testing.T) {
@@ -96,11 +97,11 @@ func TestWarnUnreadScopeFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			var args [][]any
-			restore := SetWarnSink(func(_ string, a ...any) { args = append(args, a) })
-			defer restore()
+			cfg := *tt.cfg
+			cfg.Diag = diag.New(func(_ string, a ...any) { args = append(args, a) })
 
 			// Act
-			WarnUnreadScopeFile(tt.cfg, "copilot", ".github/copilot-instructions.md", tt.rules, tt.ctx)
+			WarnUnreadScopeFile(&cfg, "copilot", ".github/copilot-instructions.md", tt.rules, tt.ctx)
 
 			// Assert
 			if !tt.wantWarn {

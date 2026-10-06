@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/toolnames"
 )
 
@@ -91,8 +91,8 @@ func (r *hookRender) add(event string, raw json.RawMessage) {
 // warn reports a declaration the harness cannot express. The channel is the one
 // presets use for generate-time advice, so it is deduplicated per run and
 // silenced by clean.
-func warn(harness, msg string, kv ...any) {
-	rulefiles.Warn(fmt.Sprintf("[[hooks]] not generated for %s: %s", harness, msg), kv...)
+func warn(d *diag.Collector, harness, msg string, kv ...any) {
+	d.Warn(fmt.Sprintf("[[hooks]] not generated for %s: %s", harness, msg), kv...)
 }
 
 // renderHooks renders cfg.Hooks for a harness.
@@ -105,11 +105,11 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 		}
 		native, ok := spec.events[g.Event]
 		if !ok {
-			warn(spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
+			warn(cfg.Diag, spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
 				"hint", "restrict the group with targets, or remove it")
 			continue
 		}
-		matcher, ok := groupMatcher(g, spec)
+		matcher, ok := groupMatcher(cfg.Diag, g, spec)
 		if !ok {
 			continue
 		}
@@ -117,7 +117,7 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 			matcher = spec.defaultMatcher
 		}
 		if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
-			warn(spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
+			warn(cfg.Diag, spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
 				"hint", "remove the matcher or set targets to leave this harness out")
 			continue
 		}
@@ -159,7 +159,7 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 // over to a harness with other tool names, so it is rewritten through the
 // harness's tool vocabulary (internal/toolnames) where the vendor documents it,
 // and otherwise needs an explicit override.
-func groupMatcher(g *config.HookGroup, spec hookSpec) (string, bool) {
+func groupMatcher(d *diag.Collector, g *config.HookGroup, spec hookSpec) (string, bool) {
 	override, hasOverride := g.Matchers[spec.name]
 	matcher := g.Matcher
 	if hasOverride {
@@ -176,12 +176,12 @@ func groupMatcher(g *config.HookGroup, spec hookSpec) (string, bool) {
 		if ok {
 			return translated, true
 		}
-		warn(spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools; %s documents no equivalent of %q",
+		warn(d, spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools; %s documents no equivalent of %q",
 			matcher, g.Event, spec.name, unmapped),
 			"hint", fmt.Sprintf("set matchers.%s to the %s equivalent, or restrict the group with targets", spec.name, spec.name))
 		return "", false
 	}
-	warn(spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools", matcher, g.Event),
+	warn(d, spec.name, fmt.Sprintf("the matcher %q of the %s group names Claude Code tools", matcher, g.Event),
 		"hint", fmt.Sprintf("set matchers.%s to the %s equivalent, or restrict the group with targets", spec.name, spec.name))
 	return "", false
 }
@@ -194,25 +194,25 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 ) (raw json.RawMessage, ok bool, err error) {
 	matcher := hc.matcher
 	if action.Type != "" && action.Type != config.HookTypeCommand {
-		warn(spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
 		return nil, false, nil
 	}
 	if action.If != "" && !spec.condition {
-		warn(spec.name, fmt.Sprintf("a %s handler sets 'if', which %s has no equivalent of; running it unconditionally would widen it", g.Event, spec.name))
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler sets 'if', which %s has no equivalent of; running it unconditionally would widen it", g.Event, spec.name))
 		return nil, false, nil
 	}
 	if action.Async && !spec.async {
-		warn(spec.name, fmt.Sprintf("a %s handler is async, which %s cannot express", g.Event, spec.name))
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler is async, which %s cannot express", g.Event, spec.name))
 		return nil, false, nil
 	}
 	if action.Script != "" && !config.IsSafeHookScript(action.Script) {
-		warn(spec.name, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
 			g.Event, action.Script))
 		return nil, false, nil
 	}
 	command, args, ok := handlerCommand(cfg, spec, action)
 	if !ok {
-		warn(spec.name, fmt.Sprintf("a %s handler uses script %q, but %s documents no way to address a project file", g.Event, action.Script, spec.name),
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler uses script %q, but %s documents no way to address a project file", g.Event, action.Script, spec.name),
 			"hint", "use 'command' with a path the harness resolves, or set targets to leave this harness out")
 		return nil, false, nil
 	}
@@ -311,7 +311,7 @@ func HookKeys(cfg *config.Config, harness, docPath string) ([]jsonmerge.OwnedKey
 	}
 	if spec.userOnly && !cfg.UserScope {
 		if targetsAny(cfg, harness) {
-			warn(harness, harness+" ignores project-level hooks, so they are only generated with --user")
+			warn(cfg.Diag, harness, harness+" ignores project-level hooks, so they are only generated with --user")
 		}
 		return nil, nil
 	}
@@ -320,7 +320,7 @@ func HookKeys(cfg *config.Config, harness, docPath string) ([]jsonmerge.OwnedKey
 		return nil, err
 	}
 	if len(rendered.events) > 0 && spec.note != "" {
-		rulefiles.Warn(fmt.Sprintf("[[hooks]] for %s: %s", harness, spec.note))
+		cfg.Diag.Warn(fmt.Sprintf("[[hooks]] for %s: %s", harness, spec.note))
 	}
 	keys := make([]jsonmerge.OwnedKey, 0, len(rendered.events)+2)
 	container := spec.containerPath(cfg)
@@ -349,7 +349,7 @@ func (s hookSpec) requiredKeys(cfg *config.Config, docPath string) []jsonmerge.O
 		}
 		if existing := readPath(docPath, req.path); existing != nil && !hookClaimedBefore(cfg, docPath, req.path) {
 			if wanted, err := json.Marshal(req.value); err == nil && !equalJSON(existing, wanted) {
-				rulefiles.Warn(fmt.Sprintf("[[hooks]] for %s: %s is %s, but the hooks need %s; the existing value is kept, so they may not run",
+				cfg.Diag.Warn(fmt.Sprintf("[[hooks]] for %s: %s is %s, but the hooks need %s; the existing value is kept, so they may not run",
 					s.name, strings.Join(req.path, "."), existing, wanted))
 			}
 			continue

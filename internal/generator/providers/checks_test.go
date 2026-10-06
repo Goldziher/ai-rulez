@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 func TestSanitizeCheckName(t *testing.T) {
@@ -56,7 +57,7 @@ filter = "include_if_targeting_provider"
 	require.NoError(t, err)
 	orig := checkItems
 	t.Cleanup(func() { checkItems = orig })
-	checkItems = func(*config.ContentTree) []config.ContentFile {
+	checkItems = func(*config.Config, *config.ContentTree) []config.ContentFile {
 		return []config.ContentFile{
 			{Name: "empty-body", Metadata: &config.Metadata{Extra: map[string]string{"description": "From description."}}},
 			{Name: "other-tool", Content: "Not for kilo.", Metadata: &config.Metadata{Targets: []string{"cursor"}}},
@@ -96,7 +97,7 @@ renames = { severity = "severity-default" }
 	require.NoError(t, err)
 	orig := checkItems
 	t.Cleanup(func() { checkItems = orig })
-	checkItems = func(*config.ContentTree) []config.ContentFile {
+	checkItems = func(*config.Config, *config.ContentTree) []config.ContentFile {
 		return []config.ContentFile{{Name: "sec", Content: "Body.", Metadata: &config.Metadata{
 			Tools: []string{"Read"}, Extra: map[string]string{"description": "D", "severity": "high"}}}}
 	}
@@ -152,7 +153,7 @@ file = "REVIEW.md"
 `), "kilo.toml", FormatAuto)
 	require.NoError(t, err)
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
+	restore := diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
 	t.Cleanup(restore)
 	g := New(spec)
 	cfg := &config.Config{}

@@ -10,22 +10,39 @@ import (
 	"github.com/samber/oops"
 )
 
-// init wires the provider DSL into the config package's custom-preset hooks.
-// It lives here (rather than in config) because providers imports config, not
-// the other way around.
-func init() {
-	config.ProviderSpecGeneratorFactory = func(preset config.Preset, baseDir string) (config.PresetGenerator, error) {
+// Register adds every embedded provider spec to r under its declared name, and the
+// factory provider-backed custom presets are built with. It replaces the init()
+// that used to do this, so the registry a caller gets is the one it built. An
+// embedded spec that does not parse is a build-time bug, so it panics.
+func Register(r *config.Registry) {
+	names, err := BuiltinNames()
+	if err != nil {
+		panic("providers: enumerate builtin specs: " + err.Error())
+	}
+	for _, name := range names {
+		gen, err := LoadBuiltin(name)
+		if err != nil {
+			panic("providers: load builtin " + name + ": " + err.Error())
+		}
+		r.Register(name, gen)
+	}
+	r.Provider = func(preset config.Preset, baseDir string) (config.PresetGenerator, error) {
 		gen, err := loadCustomProvider(preset, baseDir)
 		if err != nil {
 			return nil, err
 		}
 		return gen, nil
 	}
+}
 
-	config.ProviderSpecValidator = func(preset config.Preset, baseDir string) error {
-		_, err := loadCustomProvider(preset, baseDir)
-		return err
+// SplitRulesDir implements config.RulesDirOwner: the folder of a split rules
+// output, which is shared with hand-written rule files and so gets the protections
+// the built-in rules folders have.
+func (g *Generator) SplitRulesDir() string {
+	if out := g.Spec.Outputs[OutputTypeRules]; out != nil && out.Split {
+		return out.Dir
 	}
+	return ""
 }
 
 // loadCustomProvider resolves, reads, and validates a preset's provider spec,

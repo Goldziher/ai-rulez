@@ -30,6 +30,14 @@ type LocalDoc struct {
 	baseDir       string
 	configDirName string
 	release       func()
+	resolvers     Resolvers
+}
+
+// WithResolvers makes the validation load of Save resolve includes and installed
+// skills the way the caller's own loads do.
+func (d *LocalDoc) WithResolvers(r Resolvers) *LocalDoc {
+	d.resolvers = r
+	return d
 }
 
 // ParseLocalPath splits an overlay key path such as
@@ -617,7 +625,7 @@ func (d *LocalDoc) validate(ctx context.Context) error {
 }
 
 func (d *LocalDoc) validateMerged(ctx context.Context) (*Config, error) {
-	cfg, err := LoadConfigFromFile(WithOfflineIncludes(ctx), filepath.Join(d.configDir, d.mainFile))
+	cfg, err := LoadConfigFromFile(WithOfflineIncludes(ctx), filepath.Join(d.configDir, d.mainFile), WithResolvers(d.resolvers))
 	if err != nil {
 		return nil, err
 	}

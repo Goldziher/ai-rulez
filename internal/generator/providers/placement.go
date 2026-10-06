@@ -5,7 +5,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // generatedPathScheme prefixes the path of a synthetic skill (the catalog); such
@@ -40,7 +39,7 @@ func ResolvePlacement(cfg *config.Config, typ string, item config.ContentFile, c
 			return v
 		case "":
 		default:
-			logger.Warn("Ignoring unknown placement in frontmatter; use core or plugin", "item", item.Path, "placement", v)
+			cfg.Warn("Ignoring unknown placement in frontmatter; use core or plugin", "item", item.Path, "placement", v)
 		}
 	}
 	if cfg == nil || cfg.Placement == nil || strings.HasPrefix(item.Path, generatedPathScheme) {

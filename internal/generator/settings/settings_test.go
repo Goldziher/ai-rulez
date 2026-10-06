@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
@@ -51,7 +51,7 @@ func sampleConfig(baseDir string) *config.Config {
 func captureWarnings(t *testing.T) *[]string {
 	t.Helper()
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
+	restore := diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
 	t.Cleanup(restore)
 	return &warnings
 }

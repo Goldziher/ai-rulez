@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // Include merge strategies accepted by the include resolver. Kept in sync with
@@ -35,7 +37,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -108,7 +110,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -155,7 +157,7 @@ func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error)
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).

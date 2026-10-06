@@ -21,8 +21,8 @@ func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
 	quiet := NewGenerator(&cfg)
 	quiet.role = g.role
 	g = quiet
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	render, err := g.renderPresets(profile)
 	if err != nil {

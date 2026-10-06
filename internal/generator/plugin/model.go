@@ -14,9 +14,9 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Manifest is the resolved, runtime-agnostic plugin model. It is built once
@@ -159,10 +159,10 @@ func resolveMCP(p *config.PluginAuthoring, cfg *config.Config, runtimes []string
 	for _, name := range names {
 		s := cfg.MCPServers[name]
 		if len(s.Headers) > 0 {
-			logger.Warn("MCP server headers are not included in plugin bundles", "server", name)
+			cfg.Warn("MCP server headers are not included in plugin bundles", "server", name)
 		}
 		if !s.IsEnabled() && slices.ContainsFunc(runtimes, func(r string) bool { return r != config.PluginRuntimeOpenCode }) {
-			logger.Warn("A disabled MCP server is bundled enabled; only the OpenCode bundle carries the disabled flag",
+			cfg.Warn("A disabled MCP server is bundled enabled; only the OpenCode bundle carries the disabled flag",
 				"server", name)
 		}
 		out = append(out, config.PluginMCPLaunch{

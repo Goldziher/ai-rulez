@@ -5,35 +5,34 @@ import (
 	"testing"
 )
 
-func TestRegisterPreset(t *testing.T) {
-	// Create a mock generator
-	mockGen := &mockPresetGenerator{name: "test-preset"}
+func TestRegistry_Register(t *testing.T) {
+	// Arrange
+	r := NewRegistry()
+	r.Register("test-preset", &mockPresetGenerator{name: "test-preset"})
 
-	// Register it
-	RegisterPreset("test-preset", mockGen)
+	// Act
+	gen, err := r.Generator("test-preset")
 
-	// Verify it was registered
-	gen, err := GetPresetGenerator("test-preset")
+	// Assert
 	if err != nil {
-		t.Fatalf("GetPresetGenerator() error = %v", err)
+		t.Fatalf("Generator() error = %v", err)
 	}
-
 	if gen.GetName() != "test-preset" {
-		t.Errorf("GetPresetGenerator() got name %v, want %v", gen.GetName(), "test-preset")
+		t.Errorf("Generator() got name %v, want %v", gen.GetName(), "test-preset")
 	}
-
-	// Clean up
-	delete(PresetRegistry, "test-preset")
+	if names := r.Names(); len(names) != 1 || names[0] != "test-preset" {
+		t.Errorf("Names() = %v", names)
+	}
 }
 
-func TestGetPresetGenerator_NotFound(t *testing.T) {
-	_, err := GetPresetGenerator("nonexistent-preset")
-	if err == nil {
-		t.Error("GetPresetGenerator() expected error for nonexistent preset")
-	}
-
-	if !errors.Is(err, ErrInvalidPreset) {
-		t.Errorf("GetPresetGenerator() error = %v, want %v", err, ErrInvalidPreset)
+func TestRegistry_Generator_NotFound(t *testing.T) {
+	for name, r := range map[string]*Registry{"empty": NewRegistry(), "nil": nil} {
+		t.Run(name, func(t *testing.T) {
+			_, err := r.Generator("nonexistent-preset")
+			if !errors.Is(err, ErrInvalidPreset) {
+				t.Errorf("Generator() error = %v, want %v", err, ErrInvalidPreset)
+			}
+		})
 	}
 }
 
@@ -55,14 +54,14 @@ func TestGeneratePresets_NoContent(t *testing.T) {
 
 func TestGeneratePresets_BuiltIn(t *testing.T) {
 	// Register a mock generator
-	mockGen := &mockPresetGenerator{name: "mock"}
-	RegisterPreset("mock", mockGen)
-	defer delete(PresetRegistry, "mock")
+	reg := NewRegistry()
+	reg.Register("mock", &mockPresetGenerator{name: "mock"})
 
 	cfg := &Config{
-		Name:    "test",
-		Version: "4.0",
-		BaseDir: "/test",
+		Registry: reg,
+		Name:     "test",
+		Version:  "4.0",
+		BaseDir:  "/test",
 		Presets: []Preset{
 			{BuiltIn: "mock"},
 		},
@@ -94,16 +93,14 @@ func TestGeneratePresets_BuiltIn(t *testing.T) {
 
 func TestGeneratePresets_CustomPreset(t *testing.T) {
 	// Set up custom preset factory
-	originalFactory := CustomPresetGeneratorFactory
-	CustomPresetGeneratorFactory = func(preset Preset) PresetGenerator {
-		return &mockPresetGenerator{name: preset.Name}
-	}
-	defer func() { CustomPresetGeneratorFactory = originalFactory }()
+	reg := NewRegistry()
+	reg.Custom = func(preset Preset) PresetGenerator { return &mockPresetGenerator{name: preset.Name} }
 
 	cfg := &Config{
-		Name:    "test",
-		Version: "4.0",
-		BaseDir: "/test",
+		Registry: reg,
+		Name:     "test",
+		Version:  "4.0",
+		BaseDir:  "/test",
 		Presets: []Preset{
 			{
 				Name: "custom-preset",
@@ -138,15 +135,12 @@ func TestGeneratePresets_CustomPreset(t *testing.T) {
 }
 
 func TestGeneratePresets_CustomPresetFactoryNotSet(t *testing.T) {
-	// Save and clear factory
-	originalFactory := CustomPresetGeneratorFactory
-	CustomPresetGeneratorFactory = nil
-	defer func() { CustomPresetGeneratorFactory = originalFactory }()
-
+	// A registry with no custom factory
 	cfg := &Config{
-		Name:    "test",
-		Version: "4.0",
-		BaseDir: "/test",
+		Registry: NewRegistry(),
+		Name:     "test",
+		Version:  "4.0",
+		BaseDir:  "/test",
 		Presets: []Preset{
 			{
 				Name: "custom-preset",

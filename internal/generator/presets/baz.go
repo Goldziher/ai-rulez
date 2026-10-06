@@ -41,10 +41,6 @@ const bazPresetName = "baz"
 // the same directory as subagents.
 const bazClaudeAgentsDir = ".claude/agents"
 
-func init() {
-	config.RegisterPreset(bazPresetName, &BazPresetGenerator{})
-}
-
 // BazPresetGenerator generates what the Baz reviewer reads: AGENTS.md at the
 // root and, for path-scoped rules, in the directories the globs point into;
 // skills under .agents/skills; agents under .claude/agents. It writes no
@@ -324,7 +320,7 @@ func bazNestedOutputs(content *config.ContentTree, baseDir string, cfg *config.C
 		b.WriteString(generateCodexPresetHeader(cfg, rel, len(rules[dir]), 0, 0))
 		b.WriteString("# " + dir + "\n\n")
 		fmt.Fprintf(&b, "Instructions for `%s/` and everything below it.\n\n", dir)
-		opts := rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}
+		opts := rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}
 		rulefiles.WriteInlineRules(&b, rules[dir], opts, nil)
 		rulefiles.WriteInlineContext(&b, contexts[dir], opts, nil)
 		outputs = append(outputs, config.OutputFile{

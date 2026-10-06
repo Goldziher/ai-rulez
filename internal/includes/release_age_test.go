@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 )
 
 var ageNow = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)

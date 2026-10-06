@@ -67,22 +67,22 @@ func ClineHookScripts(cfg *config.Config) []HookScript {
 		}
 		native, ok := clineEvents[g.Event]
 		if !ok {
-			warn(harness, fmt.Sprintf("the event %s has no equivalent", g.Event), "hint", "restrict the group with targets, or remove it")
+			warn(cfg.Diag, harness, fmt.Sprintf("the event %s has no equivalent", g.Event), "hint", "restrict the group with targets, or remove it")
 			continue
 		}
 		if matcher := g.Matchers[harness]; g.Matcher != "" || matcher != "" {
-			warn(harness, fmt.Sprintf("Cline hooks have no matcher, so the %s group would run on every occurrence", g.Event),
+			warn(cfg.Diag, harness, fmt.Sprintf("Cline hooks have no matcher, so the %s group would run on every occurrence", g.Event),
 				"hint", "remove the matcher or set targets to leave this harness out")
 			continue
 		}
 		for j := range g.Hooks {
 			action := &g.Hooks[j]
 			if reason := clineUnsupported(action); reason != "" {
-				warn(harness, fmt.Sprintf("a %s handler %s", g.Event, reason))
+				warn(cfg.Diag, harness, fmt.Sprintf("a %s handler %s", g.Event, reason))
 				continue
 			}
 			if action.Script != "" && !config.IsSafeHookScript(action.Script) {
-				warn(harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+				warn(cfg.Diag, harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
 					g.Event, action.Script))
 				continue
 			}

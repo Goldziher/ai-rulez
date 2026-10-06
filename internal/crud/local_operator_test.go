@@ -117,7 +117,7 @@ func TestLocalOperator_RoutesConfigMutationsToOverlay(t *testing.T) {
 			if runtime.GOOS != "windows" { // Windows has no Unix permission bits
 				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 			}
-			merged, err := config.LoadConfig(ctx, p.baseDir)
+			merged, err := loadWithResolvers(ctx, p.baseDir)
 			require.NoError(t, err)
 			tt.check(t, merged)
 		})
@@ -135,7 +135,7 @@ func TestLocalOperator_RemoveProfile(t *testing.T) {
 
 		require.NoError(t, op.Local().RemoveProfile(ctx, "mine"))
 
-		merged, err := config.LoadConfig(ctx, p.baseDir)
+		merged, err := loadWithResolvers(ctx, p.baseDir)
 		require.NoError(t, err)
 		assert.NotContains(t, merged.Profiles, "mine")
 	})

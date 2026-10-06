@@ -84,7 +84,7 @@ func withLocalItems(shared, local *config.ContentTree) *config.ContentTree {
 // same ID as a shared one: both would be written to the same file, and a machine-local
 // file must never replace a shared one. Skills and commands share one output
 // namespace, so they are compared together.
-func checkLocalCollisions(shared, local *config.ContentTree) error {
+func checkLocalCollisions(cfg *config.Config, shared, local *config.ContentTree) error {
 	type source struct{ kind, name, path string }
 	index := func(t *config.ContentTree) map[string]source {
 		byKey := map[string]source{}
@@ -97,7 +97,7 @@ func checkLocalCollisions(shared, local *config.ContentTree) error {
 		for _, f := range presets.AllAgents(t) {
 			byKey["agent:"+f.Name] = source{"agent", f.Name, f.Path}
 		}
-		for _, f := range presets.AllChecks(t) {
+		for _, f := range presets.AllChecks(cfg, t) {
 			byKey["check:"+strings.ToLower(f.Name)] = source{"check", f.Name, f.Path}
 		}
 		return byKey
@@ -134,7 +134,7 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 		return nil
 	}
 	items := perItemContent(local)
-	if err := checkLocalCollisions(cfg.Content, items); err != nil {
+	if err := checkLocalCollisions(cfg, cfg.Content, items); err != nil {
 		return err
 	}
 
@@ -266,7 +266,7 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		{kindSkill, presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false, false) }},
 		{"agent", presets.AllAgents, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, true, false, false) }},
 		{"command", presets.AllCommands, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, true, false) }},
-		{"check", presets.AllChecks, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, false, true) }},
+		{"check", func(t *config.ContentTree) []config.ContentFile { return presets.AllChecks(cfg, t) }, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, false, true) }},
 	}
 	dropped := map[string][]string{}
 	for _, kind := range kinds {

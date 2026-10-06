@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers/builtin"
 )
 
 // RulesDirs lists the native rules folders ai-rulez writes one file per rule
@@ -12,7 +14,9 @@ import (
 // an existing unmanaged file is never overwritten.
 //
 // The list lives in config, which both the generator and the rule-file planner
-// already import, so neither needs to import the other.
+// already import, so neither needs to import the other. The folders of the
+// declarative built-in presets (split rules outputs) are added from the specs
+// embedded in internal/generator/providers/builtin.
 var RulesDirs = [...]string{
 	".claude/rules/",
 	".cursor/rules/",
@@ -25,42 +29,61 @@ var RulesDirs = [...]string{
 }
 
 var (
-	extraRulesDirsMu sync.RWMutex
-	extraRulesDirs   []string
+	builtinRulesDirsOnce sync.Once
+	builtinRulesDirs     []string
 )
 
-// RegisterRulesDir adds a rules folder beyond the built-in list, so that files
-// a custom provider spec writes there (outputs.rules with split = true) get the
-// same protections: the overwrite guard, hashes in the banner and per-file
-// gitignore entries. It is process-wide because those checks are pure functions
-// of an output path (InRulesDir is called from gitignore, hash injection and
-// the overwrite guard, none of which carry a Config), so carrying the folders
-// on Config would mean threading it through all of them. The cost is a set that
-// only grows by the distinct folders of loaded specs, which is small and bounded
-// by the specs a process loads. Registering the same folder twice is a no-op;
-// UnregisterRulesDir lets tests undo a registration.
-func RegisterRulesDir(dir string) {
+// baseRulesDirs is RulesDirs plus the rules folders of the embedded provider
+// specs, derived once from embedded data.
+func baseRulesDirs() []string {
+	builtinRulesDirsOnce.Do(func() {
+		dirs := slices.Clone(RulesDirs[:])
+		for _, spec := range builtin.Summaries() {
+			if dir, ok := normalizeRulesDir(spec.RulesDir); ok && !slices.Contains(dirs, dir) {
+				dirs = append(dirs, dir)
+			}
+		}
+		builtinRulesDirs = dirs
+	})
+	return builtinRulesDirs
+}
+
+// RulesDirSet is the set of rules folders of one project: the built-in ones plus
+// the folders custom provider specs write rule files into. The custom folders come
+// from the project's own config, so they belong to its Config and are never shared
+// with another project in the same process. A nil *RulesDirSet is the built-in set.
+type RulesDirSet struct {
+	mu    sync.RWMutex
+	extra []string
+}
+
+// Add makes dir a rules folder of this project, so that files a custom provider
+// spec writes there (outputs.rules with split = true) get the same protections
+// as the built-in folders: the overwrite guard, hashes in the banner and per-file
+// gitignore entries. Adding the same folder twice is a no-op.
+func (s *RulesDirSet) Add(dir string) {
 	dir, ok := normalizeRulesDir(dir)
 	if !ok {
 		return
 	}
-	extraRulesDirsMu.Lock()
-	defer extraRulesDirsMu.Unlock()
-	if !slices.Contains(RulesDirs[:], dir) && !slices.Contains(extraRulesDirs, dir) {
-		extraRulesDirs = append(extraRulesDirs, dir)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !slices.Contains(baseRulesDirs(), dir) && !slices.Contains(s.extra, dir) {
+		s.extra = append(s.extra, dir)
 	}
 }
 
-// UnregisterRulesDir removes a folder added by RegisterRulesDir. The built-in
-// folders cannot be removed. It exists for tests.
-func UnregisterRulesDir(dir string) {
-	dir, ok := normalizeRulesDir(dir)
-	if !ok {
-		return
+func (s *RulesDirSet) all() []string {
+	base := baseRulesDirs()
+	if s == nil {
+		return base
 	}
-	extraRulesDirsMu.Lock()
-	defer extraRulesDirsMu.Unlock()
-	extraRulesDirs = slices.DeleteFunc(extraRulesDirs, func(d string) bool { return d == dir })
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if len(s.extra) == 0 {
+		return base
+	}
+	return append(slices.Clone(base), s.extra...)
 }
 
 func normalizeRulesDir(dir string) (string, bool) {
@@ -72,18 +95,12 @@ func normalizeRulesDir(dir string) (string, bool) {
 	return dir + "/", true
 }
 
-func allRulesDirs() []string {
-	extraRulesDirsMu.RLock()
-	defer extraRulesDirsMu.RUnlock()
-	return append(slices.Clone(RulesDirs[:]), extraRulesDirs...)
-}
-
-// RulesDirRemainder reports whether relPath is a rules folder, or something
-// inside one, at the repo root or nested under a subproject. rest is the path
-// relative to the rules folder ("" for the folder itself).
-func RulesDirRemainder(relPath string) (rest string, ok bool) {
+// Remainder reports whether relPath is a rules folder, or something inside one,
+// at the repo root or nested under a subproject. rest is the path relative to the
+// rules folder ("" for the folder itself).
+func (s *RulesDirSet) Remainder(relPath string) (rest string, ok bool) {
 	relPath = strings.TrimPrefix(strings.ReplaceAll(relPath, "\\", "/"), "./")
-	for _, dir := range allRulesDirs() {
+	for _, dir := range s.all() {
 		if strings.HasPrefix(relPath, dir) {
 			return strings.TrimPrefix(relPath, dir), true
 		}
@@ -98,8 +115,45 @@ func RulesDirRemainder(relPath string) (rest string, ok bool) {
 	return "", false
 }
 
-// InRulesDir reports whether relPath is a file inside a rules folder.
-func InRulesDir(relPath string) bool {
-	rest, ok := RulesDirRemainder(relPath)
+// In reports whether relPath is a file inside a rules folder.
+func (s *RulesDirSet) In(relPath string) bool {
+	rest, ok := s.Remainder(relPath)
 	return ok && rest != ""
+}
+
+// RulesDirRemainder is Remainder for the built-in rules folders only; use
+// Config.RulesDirRemainder where a project's custom folders matter.
+func RulesDirRemainder(relPath string) (rest string, ok bool) {
+	return (*RulesDirSet)(nil).Remainder(relPath)
+}
+
+// InRulesDir is In for the built-in rules folders only; use Config.InRulesDir
+// where a project's custom folders matter.
+func InRulesDir(relPath string) bool {
+	return (*RulesDirSet)(nil).In(relPath)
+}
+
+// AddRulesDir makes dir a rules folder of this project (see RulesDirSet.Add).
+func (c *Config) AddRulesDir(dir string) {
+	if c.RulesDirs == nil {
+		c.RulesDirs = &RulesDirSet{}
+	}
+	c.RulesDirs.Add(dir)
+}
+
+// InRulesDir reports whether relPath is a file inside a rules folder of this project.
+func (c *Config) InRulesDir(relPath string) bool {
+	return c.rulesDirs().In(relPath)
+}
+
+// RulesDirRemainder is RulesDirSet.Remainder for this project's folders.
+func (c *Config) RulesDirRemainder(relPath string) (rest string, ok bool) {
+	return c.rulesDirs().Remainder(relPath)
+}
+
+func (c *Config) rulesDirs() *RulesDirSet {
+	if c == nil {
+		return nil
+	}
+	return c.RulesDirs
 }

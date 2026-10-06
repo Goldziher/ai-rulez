@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 type call struct {
@@ -244,20 +245,17 @@ func TestWriteInlineRules_AppliesToWithRecorder(t *testing.T) {
 
 func TestDowngrades_AggregatedIntoOneWarning(t *testing.T) {
 	var calls [][]any
-	orig := warn
-	warn = func(_ string, args ...any) { calls = append(calls, args) }
-	t.Cleanup(func() { warn = orig })
+	d := diag.New(func(_ string, args ...any) { calls = append(calls, args) })
 
 	manual := config.ContentFile{Name: "m", Content: "b", Metadata: &config.Metadata{Activation: "manual"}}
 	other := config.ContentFile{Name: "a", Content: "b", Metadata: &config.Metadata{Activation: "manual"}}
-	ResetDowngrades()
 	for range 3 { // the same rule rendered into several root files
 		var b strings.Builder
-		WriteInlineRules(&b, []config.ContentFile{manual, other}, InlineOpts{AppliesTo: true}, nil)
-		WriteInlineContext(&b, []config.ContentFile{manual}, InlineOpts{AppliesTo: true}, nil)
+		WriteInlineRules(&b, []config.ContentFile{manual, other}, InlineOpts{Diag: d, AppliesTo: true}, nil)
+		WriteInlineContext(&b, []config.ContentFile{manual}, InlineOpts{Diag: d, AppliesTo: true}, nil)
 	}
-	FlushDowngrades()
-	FlushDowngrades() // already cleared: must not warn again
+	d.Flush()
+	d.Flush() // already cleared: must not warn again
 
 	if len(calls) != 1 {
 		t.Fatalf("got %d warnings, want 1", len(calls))

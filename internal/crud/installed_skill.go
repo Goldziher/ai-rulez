@@ -3,9 +3,11 @@ package crud
 import (
 	"context"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // InstallSkill adds a new installed skill entry to the config
@@ -20,7 +22,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -81,7 +83,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -118,7 +120,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}

@@ -22,7 +22,7 @@ func TestAllChecks_RootBeatsDomainAndSortsByName(t *testing.T) {
 	}
 
 	// Act
-	got := AllChecks(content)
+	got := AllChecks(nil, content)
 
 	// Assert
 	require.Len(t, got, 2)
@@ -133,7 +133,7 @@ func TestAllChecks_SkipsInvalidNamesAndCaseCollisions(t *testing.T) {
 	}
 
 	// Act
-	got := AllChecks(content)
+	got := AllChecks(nil, content)
 
 	// Assert
 	names := make([]string, len(got))

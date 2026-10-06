@@ -9,10 +9,6 @@ import (
 	"github.com/samber/oops"
 )
 
-func init() {
-	register(config.PluginRuntimeGemini, renderGemini)
-}
-
 // defaultGeminiContextFile is the context filename Gemini loads when the plugin
 // does not override it.
 const defaultGeminiContextFile = "GEMINI.md"

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 )
 
@@ -452,8 +452,7 @@ func TestChecks_YAMLMerge_UnclaimedUserEntryWithTheSameNameIsKept(t *testing.T) 
 	require.NoError(t, os.WriteFile(augmentPath,
 		[]byte("areas:\n  security:\n    description: my area\n    globs: [\"src/**\"]\n    rules: []\n"), 0o600))
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
-	defer restore()
+	defer diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })()
 
 	// Act
 	require.NoError(t, NewGenerator(mustLoad(t, base)).Generate(""))

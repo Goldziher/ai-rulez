@@ -24,7 +24,7 @@ func TestLocalOperator_WorksWithARemoteIncludeOffline(t *testing.T) {
 
 	require.NoError(t, op.Local().AddProfile(ctx, "mine", []string{"backend"}))
 
-	merged, err := config.LoadConfig(config.WithOfflineIncludes(ctx), p.baseDir)
+	merged, err := loadWithResolvers(config.WithOfflineIncludes(ctx), p.baseDir)
 	require.NoError(t, err)
 	assert.Contains(t, merged.Profiles, "mine")
 }

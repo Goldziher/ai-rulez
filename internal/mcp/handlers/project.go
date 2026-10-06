@@ -7,14 +7,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/preflight"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 	"github.com/Goldziher/ai-rulez/v5/schema"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -27,7 +29,7 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 
 	// The editable view is the shared config; the machine-local overlay is
 	// reported separately and by key path only (it may hold secrets).
-	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, dir, config.WithoutLocal())
 	if err != nil {
 		return ToolError(err)
 	}
@@ -348,7 +350,7 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return updateLocalConfig(ctx, request, dir)
 	}
 
-	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, dir, config.WithoutLocal())
 	if err != nil {
 		return ToolError(err)
 	}
@@ -705,13 +707,13 @@ func loadProjectConfigWith(ctx context.Context, request *ToolRequest, baseDir st
 		if !filepath.IsAbs(configFile) {
 			configFile = filepath.Join(baseDir, configFile)
 		}
-		return config.LoadConfigFromFile(ctx, configFile, opts...)
+		return project.LoadFile(ctx, configFile, opts...)
 	}
 	configDirName := request.GetString("config_dir", "")
 	if configDirName != "" {
-		return config.LoadConfigFromDir(ctx, baseDir, configDirName, opts...)
+		return project.LoadDir(ctx, baseDir, configDirName, opts...)
 	}
-	return config.LoadConfig(ctx, baseDir, opts...)
+	return project.Load(ctx, baseDir, opts...)
 }
 
 // curatedPresets is the provider set emitted for the "all providers" and

@@ -7,7 +7,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -58,7 +58,7 @@ type Applier interface {
 // runLifecycle is the per-run bookkeeping around an apply.
 type runLifecycle struct {
 	// downgrades collects the rule-file downgrade warnings of the run and issues
-	// them when it ends (the collector is process-global, see generateMu).
+	// them when it ends.
 	downgrades bool
 	// forgetState drops the state a run leaves on the Generator once it ends.
 	forgetState bool
@@ -81,11 +81,12 @@ var (
 // Plan renders the outputs for profile ("" is the configured default) and
 // returns them without writing anything.
 func (g *Generator) Plan(profile string) (*RunPlan, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
+	d := g.diagnostics()
+	d.Reset()
+	defer d.Flush()
 	return g.render(profile)
 }
 
@@ -95,12 +96,13 @@ func (g *Generator) Apply(p *RunPlan, a Applier) (*ApplyResult, error) {
 	if p == nil || p.owner != g {
 		return nil, oops.Errorf("apply: the plan was not made by this generator")
 	}
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	lc := a.lifecycle()
 	if lc.downgrades {
-		rulefiles.ResetDowngrades()
-		defer rulefiles.FlushDowngrades()
+		d := g.diagnostics()
+		d.Reset()
+		defer d.Flush()
 	}
 	if lc.forgetState {
 		defer g.resetRunState()
@@ -111,13 +113,14 @@ func (g *Generator) Apply(p *RunPlan, a Applier) (*ApplyResult, error) {
 // run is Plan and Apply as one serialized run, which is how generate, --dry-run,
 // --check and --emit-plan execute.
 func (g *Generator) run(profile string, a Applier) (*ApplyResult, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	lc := a.lifecycle()
 	if lc.downgrades {
-		rulefiles.ResetDowngrades()
-		defer rulefiles.FlushDowngrades()
+		d := g.diagnostics()
+		d.Reset()
+		defer d.Flush()
 	}
 	if lc.forgetState {
 		defer g.resetRunState()
@@ -129,7 +132,7 @@ func (g *Generator) run(profile string, a Applier) (*ApplyResult, error) {
 	return a.apply(g, p)
 }
 
-// render renders the outputs of a plan. The caller holds generateMu.
+// render renders the outputs of a plan. The caller holds g.mu.
 func (g *Generator) render(profile string) (*RunPlan, error) {
 	outputs, active, err := g.collectOutputs(profile)
 	if err != nil {
@@ -319,4 +322,18 @@ func (describeApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		return doc.Removals[i].Reason < doc.Removals[j].Reason
 	})
 	return &ApplyResult{Document: doc}, nil
+}
+
+// diagnostics is the warning collector of the config this Generator renders,
+// created on first use. It issues through the host logger when the Generator has
+// one, else through the default sink (the CLI's logger).
+func (g *Generator) diagnostics() *diag.Collector {
+	if g.config.Diag == nil {
+		var sink diag.Sink
+		if h := g.host(); h.Log != nil {
+			sink = func(msg string, args ...any) { h.Log.Warn(msg, args...) }
+		}
+		g.config.Diag = diag.New(sink)
+	}
+	return g.config.Diag
 }

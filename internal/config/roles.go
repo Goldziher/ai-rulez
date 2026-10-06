@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Roles map a person's job to the slice of the shared content they need: which
@@ -203,7 +201,7 @@ func (c *Config) validateRoles() error {
 		}
 	}
 	for _, p := range c.roleExtendsProblems() {
-		logger.Warn("Role inheritance problem; `ai-rulez validate --strict` reports it as AR972", "role", p.Role, "problem", p.Message)
+		c.Warn("Role inheritance problem; `ai-rulez validate --strict` reports it as AR972", "role", p.Role, "problem", p.Message)
 	}
 	return nil
 }

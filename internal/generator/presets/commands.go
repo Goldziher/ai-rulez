@@ -6,10 +6,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 )
 
 // commandFilesSpec describes a folder of one-file-per-command markdown files that
@@ -108,7 +109,7 @@ func renderCommandMarkdown(command config.ContentFile, spec commandFilesSpec) (s
 // .agents/skills tree, so two presets writing the same command write the same
 // bytes; it is marked disable-model-invocation because a command runs only when
 // the user asks. A command whose name is already a skill's keeps the skill.
-func commandAsSkills(content *config.ContentTree, preset string) []config.ContentFile {
+func commandAsSkills(d *diag.Collector, content *config.ContentTree, preset string) []config.ContentFile {
 	taken := map[string]bool{}
 	for _, skill := range allSkills(content) {
 		taken[extractSkillID(skill.Path)] = true
@@ -120,7 +121,7 @@ func commandAsSkills(content *config.ContentTree, preset string) []config.Conten
 			continue
 		}
 		if taken[id] {
-			rulefiles.Warn(fmt.Sprintf("command %q is not written as a %s skill: a skill or another command already has the id %q",
+			d.Warn(fmt.Sprintf("command %q is not written as a %s skill: a skill or another command already has the id %q",
 				command.Name, preset, id), "hint", "rename the command or the skill so both are available")
 			continue
 		}

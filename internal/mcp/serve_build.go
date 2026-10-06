@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	proj "github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
@@ -304,7 +305,7 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
 		return &config.Config{BaseDir: abs}, nil
 	}
-	cfg, err := config.LoadConfig(ctx, wd)
+	cfg, err := proj.Load(ctx, wd)
 	if err != nil {
 		return nil, oops.Wrapf(err, "load configuration")
 	}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // MCP entry dialects of a generic "mcp" sidecar. Each is the per-server shape a
@@ -142,7 +141,7 @@ func mcpDialectEntriesFor(d mcpDialect, cfg *config.Config, opts *mcpEntryOpts) 
 			continue
 		}
 		if why := incompleteMCPServer(server); why != "" {
-			logger.Warn("skipping MCP server that cannot be written: "+why, "server", name)
+			cfg.Warn("skipping MCP server that cannot be written: "+why, "server", name)
 			continue
 		}
 		if entry := d.build(server); entry != nil {

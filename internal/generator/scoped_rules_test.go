@@ -8,10 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // registers the includes resolver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // registers the includes resolver
 )
 
 const scopedRulesConfig = `version = "4.0"
@@ -91,7 +92,7 @@ func writeProject(t *testing.T, configTOML string, extra map[string]string) stri
 
 func generateScopedProfile(t *testing.T, root, profile string) error {
 	t.Helper()
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := loadWithResolvers(context.Background(), root)
 	require.NoError(t, err)
 	return NewGenerator(cfg).Generate(profile)
 }
@@ -112,7 +113,7 @@ func copiesOf(t *testing.T, root, body string) int {
 
 func generateScopedProject(t *testing.T, root string) error {
 	t.Helper()
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := loadWithResolvers(context.Background(), root)
 	require.NoError(t, err)
 	return NewGenerator(cfg).Generate("default")
 }
@@ -353,7 +354,7 @@ func TestScopedRules_IdempotentAndStaleCleanup(t *testing.T) {
 func TestScopedRules_CleanRemovesScopedFiles(t *testing.T) {
 	// Arrange
 	root := writeScopedRulesProject(t, "split", nil)
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := loadWithResolvers(context.Background(), root)
 	require.NoError(t, err)
 	gen := NewGenerator(cfg)
 	require.NoError(t, gen.Generate("default"))
@@ -527,7 +528,7 @@ func TestScopedRules_InvalidScopePathsAreRejected(t *testing.T) {
 			require.NoError(t, os.WriteFile(cfgPath, []byte(text), 0o644))
 
 			// Act
-			cfg, loadErr := config.LoadConfig(context.Background(), root)
+			cfg, loadErr := loadWithResolvers(context.Background(), root)
 			var validateErr error
 			if loadErr == nil {
 				validateErr = cfg.Validate()
@@ -545,7 +546,7 @@ func TestScopedRules_InvalidScopePathsAreRejected(t *testing.T) {
 func TestScopedRules_CleanKeepsUserFilesAndScopeDirs(t *testing.T) {
 	// Arrange
 	root := writeScopedRulesProject(t, "split", nil)
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := loadWithResolvers(context.Background(), root)
 	require.NoError(t, err)
 	gen := NewGenerator(cfg)
 	require.NoError(t, gen.Generate("default"))
@@ -571,7 +572,7 @@ func TestScopedRules_CleanKeepsUserFilesAndScopeDirs(t *testing.T) {
 func TestScopedRules_TokenAttributionOfRootFolderFiles(t *testing.T) {
 	// Arrange
 	root := writeScopedRulesProject(t, "split", nil)
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := loadWithResolvers(context.Background(), root)
 	require.NoError(t, err)
 	collector := config.NewAnalysisCollector()
 	cfg.Analysis = collector

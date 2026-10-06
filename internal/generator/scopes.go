@@ -5,9 +5,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/samber/oops"
 )
 
 // generateScopedOutputs renders the outputs of every [[scopes]] entry. rootContent
@@ -48,7 +49,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string, rootContent *con
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "generate scoped presets")
 		}
 		applySharedOutputs(outputsByPreset, scopeCfg, scopeCfg.Content)
-		flat, err := flattenPresetOutputs(outputsByPreset)
+		flat, err := flattenPresetOutputs(g.config.Diag, outputsByPreset)
 		if err != nil {
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "merge scoped presets")
 		}
@@ -120,7 +121,7 @@ func (g *Generator) warnGeminiOnlyInScope(scope config.ScopeConfig) {
 			return
 		}
 	}
-	rulefiles.Warn("agents_md is on and gemini is configured for a scope but not for the root, so Gemini CLI gets no "+
+	g.config.Diag.Warn("agents_md is on and gemini is configured for a scope but not for the root, so Gemini CLI gets no "+
 		"instructions for it (the root run points Gemini at AGENTS.md); add gemini to the root presets",
 		"scope", scope.Path)
 }

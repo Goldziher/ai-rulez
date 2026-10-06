@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 // Dialects of the `checks` sidecar: the YAML review-guideline files that tools
@@ -83,8 +83,8 @@ func gitlabInstructions(checks []config.ContentFile) []any {
 }
 
 // checksSidecarItems are the checks a checks sidecar renders for this provider.
-func (g *Generator) checksSidecarItems(content *config.ContentTree) []config.ContentFile {
-	return presets.ChecksForPreset(checkItems(content), g.Spec.Name)
+func (g *Generator) checksSidecarItems(cfg *config.Config, content *config.ContentTree) []config.ContentFile {
+	return presets.ChecksForPreset(checkItems(cfg, content), g.Spec.Name)
 }
 
 // renderChecksSidecar merges the checks into the YAML review document at
@@ -191,7 +191,7 @@ func claimableAugmentAreas(checks []config.ContentFile, cfg *config.Config, outp
 		if claim, wasClaimed := claimed[name]; wasClaimed && (claim.Sum == "" || claim.Sum == jsonmerge.Digest(current)) {
 			continue
 		}
-		rulefiles.Warn(fmt.Sprintf("%s already has an area %q that ai-rulez did not write, so the check of that name is not written there",
+		cfg.Diag.Warn(fmt.Sprintf("%s already has an area %q that ai-rulez did not write, so the check of that name is not written there",
 			sidecarPath, name), "hint", "rename the area or the check")
 		delete(areas, name)
 	}
@@ -260,7 +260,7 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 		case isOurs && name != "":
 			if !skipped[name] {
 				skipped[name] = true
-				rulefiles.Warn(fmt.Sprintf("%s already has an instruction group %q that ai-rulez did not write, "+
+				cfg.Diag.Warn(fmt.Sprintf("%s already has an instruction group %q that ai-rulez did not write, "+
 					"so the check of that name is not written there", sidecarPath, name), "hint", "rename the group or the check")
 			}
 			entries = append(entries, element)

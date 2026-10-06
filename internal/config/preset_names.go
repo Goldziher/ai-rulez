@@ -26,10 +26,8 @@ const (
 // AllPresetNames returns every built-in preset name, sorted. It is derived from
 // the builtInPresets registry so it cannot drift from validation.
 //
-// The declarative provider presets register themselves from the init of
-// internal/generator/providers, so the result is complete only in a binary that
-// links that package (any program importing internal/generator does). A program
-// that imports config alone sees just the Go-implemented presets.
+// The declarative provider presets are read from the specs embedded in
+// internal/generator/providers/builtin, so the result is the same in every program.
 func AllPresetNames() []string {
 	return sortedPresetNames(false)
 }
@@ -47,15 +45,14 @@ func IndividualPresetNames() []string {
 }
 
 func sortedPresetNames(excludeMCP bool) []string {
-	builtInPresetsMu.RLock()
-	names := make([]string, 0, len(builtInPresets))
-	for name := range builtInPresets {
+	set := builtInPresetSet()
+	names := make([]string, 0, len(set))
+	for name := range set {
 		if excludeMCP && (name == string(PresetMCP) || name == PresetOKF) {
 			continue
 		}
 		names = append(names, name)
 	}
-	builtInPresetsMu.RUnlock()
 	sort.Strings(names)
 	return names
 }

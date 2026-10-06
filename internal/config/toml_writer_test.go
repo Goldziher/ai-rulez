@@ -37,7 +37,7 @@ func TestSaveConfig_TOMLProjectWritesTOMLNotYAML(t *testing.T) {
 	configDir := filepath.Join(baseDir, aiRulezDirName)
 	assert.NoFileExists(t, filepath.Join(configDir, "config.yaml"), "a TOML project must not sprout config.yaml")
 
-	reloaded, err := LoadConfig(context.Background(), baseDir)
+	reloaded, err := LoadConfig(context.Background(), baseDir, WithoutRemote())
 	require.NoError(t, err)
 	require.Len(t, reloaded.InstalledSkills, 1)
 	assert.Equal(t, "demo", reloaded.InstalledSkills[0].Name)

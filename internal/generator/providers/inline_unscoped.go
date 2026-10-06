@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
@@ -18,8 +19,8 @@ func (g *Generator) planSplit(spec *OutputSpec, rules, ctx []config.ContentFile,
 	if !spec.InlineUnscoped {
 		return rulefiles.Plan(rules, ctx, target, routing, rulefiles.ScopeOf(cfg), reg)
 	}
-	ruleCands, ruleStay := g.splitUnscoped(rules, "rule", rulefiles.KindRule, *target)
-	ctxCands, ctxStay := g.splitUnscoped(ctx, "context", rulefiles.KindContext, *target)
+	ruleCands, ruleStay := g.splitUnscoped(cfg.Diag, rules, "rule", rulefiles.KindRule, *target)
+	ctxCands, ctxStay := g.splitUnscoped(cfg.Diag, ctx, "context", rulefiles.KindContext, *target)
 	files, planRules, planContext, err := rulefiles.Plan(ruleCands, ctxCands, target, routing, rulefiles.ScopeOf(cfg), reg)
 	if err != nil {
 		return nil, nil, nil, err
@@ -32,7 +33,7 @@ func (g *Generator) planSplit(spec *OutputSpec, rules, ctx []config.ContentFile,
 // that stay in the root file. Of the latter, only those whose targets still allow
 // the root file are returned as inline; an item aimed solely at the rules folder is
 // reported and dropped, since the folder cannot apply it.
-func (g *Generator) splitUnscoped(all []config.ContentFile, noun string, kind rulefiles.Kind, target rulefiles.Target,
+func (g *Generator) splitUnscoped(d *diag.Collector, all []config.ContentFile, noun string, kind rulefiles.Kind, target rulefiles.Target,
 ) (candidates, inline []config.ContentFile) {
 	stay := func(cf config.ContentFile) {
 		if rulefiles.InlineAllowed(cf, target) {
@@ -49,7 +50,7 @@ func (g *Generator) splitUnscoped(all []config.ContentFile, noun string, kind ru
 		case mode == config.ActivationAuto || mode == config.ActivationManual:
 			stay(cf)
 		case rulefiles.OnlyNegatedGlobs(cf):
-			rulefiles.WarnOnlyNegated(noun, cf, g.Spec.Root.File)
+			rulefiles.WarnOnlyNegated(d, noun, cf, g.Spec.Root.File)
 			stay(cf)
 		default:
 			candidates = append(candidates, cf)

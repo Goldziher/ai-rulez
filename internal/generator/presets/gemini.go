@@ -10,16 +10,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
+
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -28,10 +28,6 @@ const (
 	// geminiRootFile is the root instructions file of the gemini preset.
 	geminiRootFile = "GEMINI.md"
 )
-
-func init() {
-	config.RegisterPreset(presetNameGemini, &GeminiPresetGenerator{})
-}
 
 // GeminiPresetGenerator generates Gemini preset files
 type GeminiPresetGenerator struct{}
@@ -209,7 +205,7 @@ func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.
 	}
 	result, err = applyMergedDocument(settingsPath, owned)
 	if err != nil && len(cfg.MCPServers) == 0 && len(cfg.Hooks) == 0 {
-		rulefiles.Warn(".gemini/settings.json could not be merged into, so "+geminiLocalContextFile+
+		cfg.Diag.Warn(".gemini/settings.json could not be merged into, so "+geminiLocalContextFile+
 			" is not added to context.fileName and Gemini CLI does not load machine-local content: "+err.Error(),
 			"hint", "add \""+geminiLocalContextFile+"\" to context.fileName by hand, or remove the comments",
 			"path", settingsPath)
@@ -277,7 +273,7 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 		claimed[i] = name
 	}
 	if !cfg.AgentsMD {
-		g.warnUnreachableGeminiMD(settingsPath, kept, isList)
+		g.warnUnreachableGeminiMD(cfg.Diag, settingsPath, kept, isList)
 	}
 	return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: kept, Elements: claimed}), true, nil
 }
@@ -353,14 +349,14 @@ func isOwnedContextFileNames(names []string) bool {
 
 // warnUnreachableGeminiMD warns, with agents_md off, about a user-authored
 // context.fileName under which Gemini CLI ignores the generated GEMINI.md.
-func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(settingsPath string, names []string, isList bool) {
+func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(d *diag.Collector, settingsPath string, names []string, isList bool) {
 	switch {
 	case isList && slices.Equal(names, []string{string(config.SharedAgentsMD)}):
-		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
+		d.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
 			"ignores the generated GEMINI.md; the file is not one ai-rulez wrote, so the value is left alone",
 			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
 	case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, geminiRootFile):
-		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
+		d.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
 			"so Gemini CLI ignores the generated GEMINI.md",
 			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
 	}
@@ -490,11 +486,11 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	}
 
 	// Add rules section
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
 	allContext := rootContext(content, cfg, presetNameGemini, "GEMINI.md")
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
@@ -543,25 +539,22 @@ func resolveGeminiModel(agent config.ContentFile, cfg *config.Config) string {
 	if model == "" || !geminiClaudeAlias.MatchString(model) {
 		return model
 	}
-	warnGeminiAliasOnce(agent.Name, model)
+	warnGeminiAliasOnce(cfg, agent.Name, model)
 	return ""
 }
 
 // warnGeminiAliasOnce warns that an agent's Claude alias was dropped, once per
 // agent and model: an overlay renders the shared baseline as well as the merged
 // view, so the same agent is resolved twice per run. It reports whether it warned.
-func warnGeminiAliasOnce(agent, model string) bool {
-	if _, seen := geminiAliasWarned.LoadOrStore(agent+"\x00"+model, struct{}{}); seen {
+func warnGeminiAliasOnce(cfg *config.Config, agent, model string) bool {
+	if !cfg.OnceKey("gemini-alias\x00" + agent + "\x00" + model) {
 		return false
 	}
-	logger.Warn("Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model",
+	cfg.Warn("Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model",
 		"agent", agent, "model", model,
 		"hint", "set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini")
 	return true
 }
-
-// geminiAliasWarned records the agent/model pairs already warned about.
-var geminiAliasWarned sync.Map
 
 // buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file. Gemini
 // requires name and description; an agent without a description gets a generic one.

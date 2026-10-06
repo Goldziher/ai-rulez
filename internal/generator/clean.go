@@ -8,12 +8,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 // CleanOptions controls Clean behavior.
@@ -58,13 +58,13 @@ func (p *CleanPlan) Empty() bool {
 // corresponding Keep* option is set. With DryRun the plan is computed but nothing
 // is deleted.
 func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	// Rendering the outputs to learn their paths also runs the generate-time
 	// advice (a context.fileName that misses a name, ...), which says nothing
 	// useful while the outputs are being removed.
-	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { g.log().Debug(msg) })()
+	defer g.diagnostics().SetSink(func(msg string, _ ...any) { g.log().Debug(msg) })()
 
 	g.lenientMCP = true // clean needs paths and claims, never secret values
 	defer func() { g.lenientMCP = false }()

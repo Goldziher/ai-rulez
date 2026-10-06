@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register includes resolver
 )
 
@@ -47,7 +46,7 @@ full = ["golang", "react"]
 `
 	must(os.WriteFile(filepath.Join(localAIRulez, "config.toml"), []byte(configYAML), 0o644))
 
-	cfg, err := config.LoadConfig(context.Background(), baseDir)
+	cfg, err := loadWithResolvers(context.Background(), baseDir)
 	must(err)
 
 	if err := cfg.Validate(); err != nil {

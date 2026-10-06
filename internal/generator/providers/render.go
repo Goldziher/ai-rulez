@@ -7,12 +7,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/samber/oops"
 )
 
 // Generator is a config.PresetGenerator backed by a declarative ProviderSpec.
@@ -136,7 +138,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 				continue
 			}
 		}
-		items := collectItemsByType(content, typ)
+		items := collectItemsByType(cfg, content, typ)
 		if spec.Mode == OutputModeAggregate {
 			aggregated, aggErr := g.renderAggregate(typ, spec, items, baseDir, cfg)
 			if aggErr != nil {
@@ -179,7 +181,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 		var rendered sidecarRender
 		var err error
 		if sidecar.Kind == SidecarChecks {
-			checks := g.checksSidecarItems(content)
+			checks := g.checksSidecarItems(cfg, content)
 			if len(checks) == 0 {
 				continue // no checks, no document
 			}
@@ -223,7 +225,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 // preset-agnostic. Every per-item output writes to a name-derived path, so the
 // deduplication is load-bearing: without it two same-named items both render and
 // the one written last replaces the other.
-func collectItemsByType(content *config.ContentTree, typ string) []config.ContentFile {
+func collectItemsByType(cfg *config.Config, content *config.ContentTree, typ string) []config.ContentFile {
 	switch typ {
 	case OutputTypeRules:
 		return presets.AllInlineRules(content)
@@ -234,7 +236,7 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 	case OutputTypeCommands:
 		return presets.AllCommands(content)
 	case OutputTypeChecks:
-		return checkItems(content)
+		return checkItems(cfg, content)
 	}
 	return nil
 }
@@ -486,7 +488,7 @@ func (g *Generator) renderRuleFiles(plan *rulesPlan, content *config.ContentTree
 			return nil, oops.With("preset", g.Spec.Name, "rule", it.File.Name).Wrapf(err, "render rule file")
 		}
 		outputPath := rulefiles.RulesDirPath(cfg, baseDir, *plan.target, rulefiles.FileName(*plan.target, *it))
-		rulefiles.ReportNotes(outputPath, notes)
+		rulefiles.ReportNotes(cfg.Diag, outputPath, notes)
 		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRuleFile, it.ID, it.File.Path).
 			AddPart(config.PartKindItemBody, "body", it.File.Path, text)
 		outputs = append(outputs, config.OutputFile{Path: outputPath, Content: text})
@@ -959,10 +961,10 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 			// Rules and context are recorded per entry, not per section: a cost
 			// report has to be able to name the rule that is expensive. Path-scoped
 			// rules move to the tool's rules directory instead of the root file.
-			writeInlineRules(&b, plan.inlineRules, cfg.IsCompact(), recorder)
+			writeInlineRules(&b, plan.inlineRules, cfg.IsCompact(), cfg.Diag, recorder)
 			continue
 		case SectionRootContextInline:
-			writeInlineContext(&b, plan.inlineContext, cfg.IsCompact(), g.contextSummary(), recorder)
+			writeInlineContext(&b, plan.inlineContext, cfg.IsCompact(), g.contextSummary(), cfg.Diag, recorder)
 			continue
 		case SectionRootAgentsDelegation:
 			allAgents := presets.AllAgents(content)
@@ -995,22 +997,22 @@ func countContent(content *config.ContentTree, plan *rulesPlan) (rules, agents i
 // renderClaudeMarkdown — heading + entries with **Priority:** when set and
 // markdown-processed content. rules is the already routed and deduplicated
 // slice the root file inlines.
-func writeInlineRules(b *strings.Builder, rules []config.ContentFile, compact bool, recorder *partRecorder) {
+func writeInlineRules(b *strings.Builder, rules []config.ContentFile, compact bool, d *diag.Collector, recorder *partRecorder) {
 	if len(rules) == 0 {
 		return
 	}
-	rulefiles.WriteInlineRules(b, rules, rulefiles.InlineOpts{Compact: compact, AppliesTo: true}, recorder)
+	rulefiles.WriteInlineRules(b, rules, rulefiles.InlineOpts{Diag: d, Compact: compact, AppliesTo: true}, recorder)
 }
 
 // writeInlineContext mirrors the "## Context" block produced by the legacy
 // renderClaudeMarkdown, including the per-entry "summary" extras handling. When
 // compact is true the per-entry summary line is suppressed, mirroring the
 // compact suppression of the inline-rules priority line.
-func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, compact, summary bool, recorder *partRecorder) {
+func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, compact, summary bool, d *diag.Collector, recorder *partRecorder) {
 	if len(contextFiles) == 0 {
 		return
 	}
-	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: summary}, recorder)
+	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Diag: d, Compact: compact, AppliesTo: true, ContextSummary: summary}, recorder)
 }
 
 // userOnlyOutput is the output of a tool that keeps skills in a user-level store

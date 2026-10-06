@@ -7,8 +7,6 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // DynamicSkillsName is the name of the single generated stub skill that tells
@@ -315,7 +313,7 @@ func (c *Config) warnDuplicateStub(n int) {
 	fallbackWarned[key] = true
 	fallbackWarnMu.Unlock()
 	if !done {
-		logger.Warn(fmt.Sprintf("%d authored skills are named %q; they replace the generated stub and collide in a harness skill tree: rename all but one", n, DynamicSkillsName))
+		c.Warn(fmt.Sprintf("%d authored skills are named %q; they replace the generated stub and collide in a harness skill tree: rename all but one", n, DynamicSkillsName))
 	}
 }
 
@@ -368,7 +366,7 @@ func (c *Config) WarnDeliveryFallbacks() {
 		fallbackWarned[key] = true
 		fallbackWarnMu.Unlock()
 		if !done {
-			logger.Warn(fmt.Sprintf("Preset %q has no MCP support: skills from [[skill_sources]] are served only and never reach it (AR992)", preset))
+			c.Warn(fmt.Sprintf("Preset %q has no MCP support: skills from [[skill_sources]] are served only and never reach it (AR992)", preset))
 		}
 	}
 	for _, fb := range c.DeliveryFallbacks(c.Content) {
@@ -380,7 +378,7 @@ func (c *Config) WarnDeliveryFallbacks() {
 		if done {
 			continue
 		}
-		logger.Warn(fmt.Sprintf("Preset %q has no MCP support: %d served skill(s) are written statically for it instead (AR992)", fb.Preset, len(fb.Skills)),
+		c.Warn(fmt.Sprintf("Preset %q has no MCP support: %d served skill(s) are written statically for it instead (AR992)", fb.Preset, len(fb.Skills)),
 			"skills", strings.Join(fb.Skills, ", "))
 	}
 }

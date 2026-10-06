@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 const (
@@ -184,7 +184,7 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 	for name := range byName {
 		p := byName[name]
 		if p.ContentCount() == 0 {
-			logger.Warn("Skipping domain plugin without bundleable content", "plugin", p.Name)
+			cfg.Warn("Skipping domain plugin without bundleable content", "plugin", p.Name)
 			continue
 		}
 		plan = append(plan, p)
@@ -207,7 +207,7 @@ func planDeclared(cfg *config.Config, tree *config.ContentTree, decl *config.Mar
 		p.Agents = mergeByName(p.Agents, seenA, bundleable(d.Agents))
 	}
 	if len(decl.Domains) > 0 && len(p.Domains) == 0 {
-		logger.Warn("Marketplace plugin names domains that do not exist", "plugin", decl.Name, "domains", decl.Domains)
+		cfg.Warn("Marketplace plugin names domains that do not exist", "plugin", decl.Name, "domains", decl.Domains)
 	}
 	p.Skills = mergeByName(p.Skills, seenS, pickByName(bundleable(tree.Skills), decl.Skills))
 	p.Commands = mergeByName(p.Commands, seenC, pickByName(bundleable(tree.Commands), decl.Commands))
