@@ -46,6 +46,10 @@ type Entry struct {
 	Commit string `toml:"commit"`
 	// Digest is "sha256:<hex>" over the imported file tree (contentlock.DigestDir).
 	Digest string `toml:"digest"`
+	// View names the serve view a KindServed entry belongs to ("role:backend",
+	// "profile:x", "static", joined by "+"); empty for the default view and for
+	// every other kind, so a project without views writes the same lock as before.
+	View string `toml:"view,omitempty"`
 }
 
 // Item pins one authored item: a rule, skill, agent, command, context file,
@@ -183,18 +187,26 @@ func sortedOutputs(in []OutputPin) []OutputPin {
 
 func sorted(in []Entry) []Entry {
 	out := append([]Entry(nil), in...)
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].View < out[j].View
+	})
 	return out
 }
 
-// Find returns the entry for kind and name, or nil.
-func (f *File) Find(kind, name string) *Entry {
+// Find returns the entry for kind and name (of the default view), or nil.
+func (f *File) Find(kind, name string) *Entry { return f.FindView(kind, name, "") }
+
+// FindView returns the entry for kind and name in the given serve view, or nil.
+func (f *File) FindView(kind, name, view string) *Entry {
 	if f == nil {
 		return nil
 	}
 	list := *f.list(kind)
 	for i := range list {
-		if list[i].Name == name {
+		if list[i].Name == name && list[i].View == view {
 			return &list[i]
 		}
 	}
@@ -214,11 +226,11 @@ func (f *File) list(kind string) *[]Entry {
 	return &f.Include
 }
 
-// Set replaces or adds an entry of the given kind.
+// Set replaces or adds an entry of the given kind, keyed by name and view.
 func (f *File) Set(kind string, e Entry) {
 	list := f.list(kind)
 	for i := range *list {
-		if (*list)[i].Name == e.Name {
+		if (*list)[i].Name == e.Name && (*list)[i].View == e.View {
 			(*list)[i] = e
 			return
 		}

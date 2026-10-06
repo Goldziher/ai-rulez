@@ -114,3 +114,34 @@ func TestSaveSortsContentPinsAndIsStable(t *testing.T) {
 	assert.Equal(t, "team", got.Item[1].Owner)
 	assert.NotContains(t, string(first), "Z\n", "no timestamps")
 }
+
+func TestServedEntriesAreKeyedByNameAndView(t *testing.T) {
+	// Arrange
+	dir := t.TempDir()
+	f := &File{Version: Version}
+	f.Set(KindServed, Entry{Name: "pdf", Digest: "sha256:default"})
+	f.Set(KindServed, Entry{Name: "pdf", View: "role:backend", Digest: "sha256:backend"})
+	f.Set(KindServed, Entry{Name: "pdf", View: "role:backend", Digest: "sha256:backend2"})
+
+	// Act
+	require.NoError(t, Save(dir, f))
+	loaded, err := Load(dir)
+	require.NoError(t, err)
+
+	// Assert
+	require.Len(t, loaded.Served, 2, "setting the same name and view again replaces it")
+	assert.Equal(t, "sha256:default", loaded.Find(KindServed, "pdf").Digest, "Find reads the default view")
+	assert.Equal(t, "sha256:backend2", loaded.FindView(KindServed, "pdf", "role:backend").Digest)
+	assert.Nil(t, loaded.FindView(KindServed, "pdf", "role:frontend"))
+	assert.Equal(t, "", loaded.Served[0].View, "entries are written by name, then view")
+}
+
+func TestSavedLockWithoutViewsHasNoViewKey(t *testing.T) {
+	dir := t.TempDir()
+	f := &File{Version: Version}
+	f.Set(KindServed, Entry{Name: "pdf", Digest: "sha256:x"})
+	require.NoError(t, Save(dir, f))
+	data, err := os.ReadFile(Path(dir))
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "view")
+}
