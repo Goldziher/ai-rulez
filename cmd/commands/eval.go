@@ -34,6 +34,9 @@ var evalFlags struct {
 	ablation      bool
 	dryRun        bool
 	estimate      bool
+	mode          string
+	surface       string
+	scope         string
 	format        string
 	out           string
 	maxCost       float64
@@ -78,7 +81,13 @@ unverified and re-run. CI without the user key therefore re-runs committed recor
 trusting them; --force also forces a re-run. Flags are
 checked before anything is run, and each skill's result is saved as soon as it finishes. --dry-run lists what would run and an estimated cost without
 calling any runner; --estimate is an alias. The estimate is a range (low, expected, high), and
-each recorded run keeps the estimate next to what the runner reported. The command exits 2 when a skill fails its pass threshold, errors, or has
+each recorded run keeps the estimate next to what the runner reported.
+
+--mode activation measures only whether the right skill is chosen for a prompt. --surface retrieval
+ranks the prompts of the cases with the offline find_skill ranker (no model, no cost) and reports
+activation rates with Wilson intervals, recall@k and a confusion matrix between sibling skills;
+--scope picks which skills compete. --surface native needs a runner that declares the activation
+capability and is refused otherwise. The command exits 2 when a skill fails its pass threshold, errors, or has
 invalid cases.`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -107,6 +116,9 @@ func init() {
 	f.BoolVar(&evalFlags.ablation, "ablation", false, "Also run every case without the skill and report the delta")
 	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost range; call no runner and write nothing")
 	f.BoolVar(&evalFlags.estimate, "estimate", false, "Alias of --dry-run")
+	f.StringVar(&evalFlags.mode, "mode", evals.ModeCases, "What to measure: cases (full eval cases through a runner) or activation (only whether the right skill is chosen)")
+	f.StringVar(&evalFlags.surface, "surface", "", "With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner with the activation capability)")
+	f.StringVar(&evalFlags.scope, "scope", evals.ScopeDomain, "With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
 	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
@@ -135,6 +147,9 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	cfg, err := loadConfigForCommand(ctx, nil)
 	if err != nil {
 		return false, err
+	}
+	if evalFlags.mode == evals.ModeActivation {
+		return runEvalActivation(ctx, cmd, skills, cfg.ConfigDir, cfg.BaseDir)
 	}
 	opts, err := buildEvalOptions(cmd, skills, cfg.ConfigDir, cfg.BaseDir)
 	if err != nil {
@@ -218,6 +233,9 @@ func validateEvalFlags(cmd *cobra.Command) error {
 	}
 	if evalFlags.runs < 0 {
 		return oops.Errorf("--runs must be >= 0, got %d", evalFlags.runs)
+	}
+	if err := validateActivationFlags(cmd); err != nil {
+		return err
 	}
 	if evalFlags.timeout < 0 {
 		return oops.Errorf("--timeout must be >= 0, got %s", evalFlags.timeout)
