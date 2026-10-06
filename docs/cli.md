@@ -1493,11 +1493,12 @@ Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be l
 Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync) and as rule-linked specs under `.ai-rulez/verifiers/*.toml` (paired files, `all`/`any`/`not`, changed-only scope; a failure names the rule or skill it enforces). Verifiers never write. Two predicates of a rule-linked verifier are opt-in per run: `command` starts a program (`--allow-exec`) and `llm` sends the changed lines to a model (`--allow-llm`); without the flags nothing runs and nothing leaves the machine. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
 
 ```bash
-ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--role <name>] [--allow-exec] [--allow-llm] [--max-cost <usd>] [--estimate] [--no-local] [--config-dir <name>]
+ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--role <name>] [--allow-exec] [--allow-llm] [--gate-llm] [--max-cost <usd>] [--estimate] [--no-local] [--config-dir <name>]
 ai-rulez verifiers list [config-file] [--format json] [--no-local] [--config-dir <name>]
 ai-rulez verifiers explain <name> [config-file]
 ai-rulez verifiers test [name...] [--allow-exec]
-ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposals <n>] [--write] [--allow-llm] [--max-cost <usd>] [--estimate] [--format json]
+ai-rulez verifiers calibrate [name...] [--allow-llm] [--max-cost <usd>] [--estimate] [--no-write] [--format json]
+ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposals <n>] [--replay <n>] [--write] [--allow-llm] [--max-cost <usd>] [--estimate] [--format json]
 ```
 
 | Flag | Description |
@@ -1517,6 +1518,7 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--role` | Active role, same meaning |
 | `--allow-exec` | Let `command` predicates run a program (env `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1` in CI). Without it a command verifier is `AR9H3`, exit `1`. Never implied by another flag |
 | `--allow-llm` | Evaluate `llm` verifiers: sends the changed lines to the configured model. Needs `allow_network = true` in the user config; otherwise the verifier is `skipped` (`AR9H4`) |
+| `--gate-llm` | Let a failing `llm` verifier declared at `error` keep that severity when its calibration record (`verifiers calibrate`) is current and meets the bar; otherwise every `llm` verdict is capped at `warning` |
 | `--max-cost <usd>` | Most an `llm` run may cost (default `0.50`, `0` removes the cap; `[llm]` limits still apply) |
 | `--estimate` | Print which files and how many bytes the `llm` verifiers would send and the cost bound; calls nothing |
 | `--no-local` | Ignore the machine-local overlay and `local/` content |

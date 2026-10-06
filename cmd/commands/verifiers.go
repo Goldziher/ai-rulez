@@ -161,6 +161,7 @@ func init() {
 	f.BoolVar(&verifiersDead, "strict-applicability", false, "Report a verifier whose when_changed matches no file (AR9H5)")
 	f.BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates run a program (or set "+verifiersAllowExecEnv+"=1); never implied by another flag")
 	f.BoolVar(&verifiersAllowLLM, "allow-llm", false, "Evaluate llm verifiers: sends the changed lines to the configured model (needs allow_network in the user config)")
+	f.BoolVar(&verifiersGateLLM, "gate-llm", false, "Let a failing llm verifier of error severity fail the run when its calibration record (verifiers calibrate) is current and meets the bar; otherwise every llm verdict stays a warning")
 	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most an llm verifier run may cost in USD (0 removes this cap; [llm] limits still apply)")
 	f.BoolVar(&verifiersEstimate, "estimate", false, "Print which files and how many bytes llm verifiers would send and the cost bound, and call nothing")
 	VerifiersTestCmd.Flags().BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates of the examples run a program (or set "+verifiersAllowExecEnv+"=1)")
