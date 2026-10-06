@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -142,6 +143,8 @@ func TestSearch_FlagErrors(t *testing.T) {
 		{"query with eval", map[string]string{"eval": "c.yaml"}, []string{"q"}},
 		{"max-flips without baseline", map[string]string{"eval": "c.yaml", "max-flips": "1"}, nil},
 		{"role and profile", map[string]string{"role": "x", "profile": "y"}, []string{"q"}},
+		{"eval k above the maximum", map[string]string{"eval": "c.yaml", "k": "101"}, nil},
+		{"eval negative k", map[string]string{"eval": "c.yaml", "k": "-1"}, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -289,4 +292,28 @@ func TestSearchEval_NegativeKIsRejected(t *testing.T) {
 	code, _, _ := execSearch(t)
 
 	assert.Equal(t, 1, code)
+}
+
+func TestSearchEval_TextShowsTagsAndNegativesAligned(t *testing.T) {
+	// Arrange
+	searchProject(t)
+	resetSearch(t)
+	cases := writeCases(t, "version: 1\nk: 100\ncases:\n  - {id: ok, query: pull request, expect: [git-workflow], tags: [paraphrase]}\n  - {id: none, query: zebra crossing, expect: [], tags: [off-topic]}\n")
+	setSearchFlag(t, "eval", cases)
+
+	// Act
+	code, out, errOut := execSearch(t)
+
+	// Assert
+	require.Equal(t, 0, code, errOut)
+	assert.Contains(t, out, "by tag:")
+	assert.Contains(t, out, "paraphrase")
+	assert.Contains(t, out, "negatives (")
+	assert.Contains(t, out, "none")
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "top1") || strings.HasPrefix(line, "recall@") || strings.HasPrefix(line, "hit@") || strings.HasPrefix(line, "mrr") {
+			assert.Regexp(t, `^\S+ +\d\.\d{4}`, line)
+			assert.Equal(t, 12, strings.Index(line, strings.Fields(line)[1]), line)
+		}
+	}
 }
