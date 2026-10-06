@@ -195,7 +195,13 @@ func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.
 	}
 	now := reviewNow()
 	alias := rv.IsFloatingAlias(js.lc.FullModel())
-	pre := rv.MatchCalibration(rb, rec, cur, now, maxAge)
+	// The record holds the model id the provider reported (often dated), the request the id asked for:
+	// when the record's id extends the requested one the model is compared after the first call.
+	preKey := cur
+	if rec != nil && strings.HasPrefix(rv.TrimModel(rec.Model), rv.TrimModel(cur.Model)+"-") {
+		preKey.Model = ""
+	}
+	pre := rv.MatchCalibration(rb, rec, preKey, now, maxAge)
 	if recErr != nil {
 		pre = rv.CalStatus{State: rv.CalStale, Reasons: []string{"the calibration record cannot be read: " + recErr.Error()}}
 	}

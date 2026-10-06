@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -80,6 +81,30 @@ func useFakeModel(t *testing.T, f *fakeModel) {
 		fake := llm.NewFake()
 		fake.ChatFunc = f.chat
 		return llm.Wrap(fake, lc, opts), nil
+	}
+	t.Cleanup(func() { reviewClientFactory = old })
+}
+
+// resolvingClient answers under another model id than the one asked for, as a provider does for an alias.
+type resolvingClient struct {
+	llm.Client
+	resolved string
+}
+
+func (c resolvingClient) Chat(ctx context.Context, req llm.ChatRequest) (llm.ChatResponse, error) {
+	resp, err := c.Client.Chat(ctx, req)
+	resp.Model = c.resolved
+	return resp, err
+}
+
+// useResolvingModel is useFakeModel for a provider that reports a dated id.
+func useResolvingModel(t *testing.T, f *fakeModel, resolved string) {
+	t.Helper()
+	old := reviewClientFactory
+	reviewClientFactory = func(lc llm.Config, opts llm.Options) (llm.Client, error) {
+		fake := llm.NewFake()
+		fake.ChatFunc = f.chat
+		return resolvingClient{Client: llm.Wrap(fake, lc, opts), resolved: resolved}, nil
 	}
 	t.Cleanup(func() { reviewClientFactory = old })
 }
@@ -413,6 +438,19 @@ func TestReviewGateIsEarnedByACalibrationRecord(t *testing.T) {
 		assert.Equal(t, exitReviewRefused, exit)
 		require.NotNil(t, rep.Gate)
 		assert.Contains(t, rep.Gate.Refused, "skill:release")
+	})
+
+	t.Run("a record for the resolved dated id matches the requested model id", func(t *testing.T) {
+		judgedProject(t, "")
+		writeCalibrationFor(t, "model-2026-01-01", "pass", map[string]string{"trigger-quality": "pass"})
+		reviewFlags.gate = true
+		useResolvingModel(t, &fakeModel{verdicts: failing}, "model-2026-01-01")
+
+		rep, exit, err := runJudged(t)
+
+		require.NoError(t, err)
+		assert.Equal(t, exitReviewGate, exit)
+		assert.Equal(t, "matched", rep.Calibration.Status)
 	})
 
 	t.Run("a record for another model is stale", func(t *testing.T) {
