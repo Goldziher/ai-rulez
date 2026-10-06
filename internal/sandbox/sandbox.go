@@ -9,6 +9,13 @@
 // (network only). On any other platform, or when no tool is installed, Wrap
 // refuses with ErrUnavailable: a caller that wants to run anyway must say so
 // explicitly with ModeNone, never by ignoring the error.
+//
+// Confinement is best effort, not a security boundary against a determined
+// attacker. The macOS profile starts from "allow default" and denies the
+// network, file writes and the Mach services that start applications
+// (LaunchServices, Apple Events), but it does not hide the rest of the user
+// session. bubblewrap adds a new session and PID namespace and is the stronger
+// of the two; unshare confines the network only.
 package sandbox
 
 import (
@@ -16,12 +23,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // Mode is how a caller wants confinement applied.
@@ -85,18 +93,26 @@ type Wrapped struct {
 type Sandbox struct {
 	goos     string
 	lookPath func(string) (string, error)
+	run      runner.Runner
 
 	once     sync.Once
 	probeErr error
 }
 
 // Default is the sandbox of the running system.
-func Default() *Sandbox { return New(runtime.GOOS, exec.LookPath) }
+func Default() *Sandbox { return New(runtime.GOOS, runner.LookPath) }
 
 // New builds a sandbox for goos with lookPath finding the tools. Tests use it
 // to build the argv of another platform.
 func New(goos string, lookPath func(string) (string, error)) *Sandbox {
-	return &Sandbox{goos: goos, lookPath: lookPath}
+	return &Sandbox{goos: goos, lookPath: lookPath, run: runner.Exec{}}
+}
+
+// WithRunner makes the availability probe start its process through r (a test,
+// or a host that records every command). Call it before the first Check.
+func (s *Sandbox) WithRunner(r runner.Runner) *Sandbox {
+	s.run = runner.Or(r)
+	return s
 }
 
 // Backend returns the backend that would be used (preferring one that confines
@@ -122,9 +138,15 @@ func (s *Sandbox) find() (Backend, string) {
 	return BackendNone, ""
 }
 
+// probeTimeout bounds the availability probe.
+const probeTimeout = 10 * time.Second
+
 // Check runs a trivial command under the backend once and caches the answer, so
 // a tool that is installed but cannot work (user namespaces disabled, already
 // inside a sandbox) is reported as unavailable instead of failing every scan.
+// The answer outlives the call, so the probe does not inherit ctx's
+// cancellation: a caller that gives up must not leave every later caller
+// (isolation = "auto") believing there is no backend.
 func (s *Sandbox) Check(ctx context.Context) error {
 	s.once.Do(func() {
 		b, _ := s.find()
@@ -147,11 +169,10 @@ func (s *Sandbox) Check(ctx context.Context) error {
 			s.probeErr = err
 			return
 		}
-		pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		if out, err := exec.CommandContext(pctx, w.Argv[0], w.Argv[1:]...).CombinedOutput(); err != nil { //nolint:gosec // the argv is built by Wrap from fixed tools
-			s.probeErr = fmt.Errorf("%s is installed but cannot confine a process: %w (%s)", b, err, strings.TrimSpace(string(out)))
-			return
+		res := s.run.Run(context.WithoutCancel(ctx), runner.Spec{Argv: w.Argv, Dir: dir, Timeout: probeTimeout, MaxOutput: 64 << 10})
+		if res.Status != runner.StatusOK {
+			detail := strings.TrimSpace(string(res.Stdout) + " " + string(res.Stderr))
+			s.probeErr = fmt.Errorf("%s is installed but cannot confine a process: %v (%s)", b, res.Err, detail)
 		}
 	})
 	return s.probeErr
@@ -207,6 +228,18 @@ func (s *Sandbox) Wrap(spec Spec, argv []string) (Wrapped, error) {
 	return Wrapped{}, ErrUnavailable
 }
 
+// launchServices are the Mach services through which a confined process can
+// make a daemon outside the sandbox start or script an application.
+var launchServices = []string{
+	`(global-name "com.apple.coreservices.launchservicesd")`,
+	`(global-name "com.apple.coreservices.appleevents")`,
+	`(global-name-prefix "com.apple.lsd.")`,
+	`(global-name "com.apple.pasteboard.1")`,
+	`(global-name-prefix "com.apple.axserver")`,
+	`(global-name "com.apple.windowserver.active")`,
+	`(global-name "com.apple.dock.server")`,
+}
+
 // sandboxProfile denies the network and every write except the parameters
 // W0..Wn (passed with -D, never spliced into the profile text) and a few device
 // files every program opens.
@@ -216,6 +249,13 @@ func sandboxProfile(spec Spec, n int) string {
 	if !spec.AllowNetwork {
 		b.WriteString("(deny network*)\n")
 	}
+	// Without these, `open -b <bundle id>` asks launchservicesd (outside the
+	// sandbox) to start an application, which then runs unconfined.
+	b.WriteString("(deny mach-lookup\n")
+	for _, svc := range launchServices {
+		fmt.Fprintf(&b, "  %s\n", svc)
+	}
+	b.WriteString(")\n")
 	b.WriteString("(deny file-write*)\n(allow file-write*\n")
 	b.WriteString("  (literal \"/dev/null\") (literal \"/dev/dtracehelper\") (literal \"/dev/tty\")\n")
 	for i := range n {
@@ -236,7 +276,7 @@ func wrapSandboxExec(tool string, spec Spec, dirs, argv []string) Wrapped {
 }
 
 func wrapBwrap(tool string, spec Spec, dirs, argv []string) Wrapped {
-	out := []string{tool, "--die-with-parent", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"}
+	out := []string{tool, "--die-with-parent", "--new-session", "--unshare-pid", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"}
 	if !spec.AllowNetwork {
 		out = append(out, "--unshare-net")
 	}
