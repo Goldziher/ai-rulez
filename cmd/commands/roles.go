@@ -128,6 +128,46 @@ func runRolesList(out io.Writer) error {
 	return tw.Flush() //nolint:wrapcheck // writer error
 }
 
+// roleModeOutcomes is what each skill_mode of the role comes to on the configured
+// harnesses (see roles.PlanSkillModes).
+func roleModeOutcomes(cfg *config.Config, name string) ([]roles.SkillOutcome, error) {
+	res, err := cfg.ResolveRole(name)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	outcomes := roles.PlanSkillModes(cfg, res)
+	if outcomes == nil {
+		outcomes = []roles.SkillOutcome{}
+	}
+	return outcomes, nil
+}
+
+// printModeOutcomes lists the skill modes that a configured harness cannot honour,
+// with what generate does instead.
+func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
+	header := false
+	for _, o := range outcomes {
+		if len(o.Degraded) == 0 {
+			continue
+		}
+		if !header {
+			w.printf("\nskill_mode not honoured on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):\n")
+			header = true
+		}
+		w.printf("  %s = %s: not applied on %s; %s\n", o.Key(), o.Mode, strings.Join(o.Degraded, ", "), modeFallbackText(o))
+	}
+}
+
+func modeFallbackText(o roles.SkillOutcome) string {
+	switch o.Action {
+	case roles.ActionDrop:
+		return "the skill is left out (skill_mode_fallback = drop)"
+	case roles.ActionServe:
+		return "the skill is served over MCP (skill_mode_fallback = serve)"
+	}
+	return "the skill stays listed there"
+}
+
 func dash(s string) string {
 	if s == "" {
 		return "-"
@@ -237,8 +277,12 @@ func runRolesResolve(out io.Writer, name string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
+	outcomes, err := roleModeOutcomes(cfg, name)
+	if err != nil {
+		return err
+	}
 	if rolesFormat == formatJSON {
-		return writeJSON(out, map[string]any{"schema_version": roles.SchemaVersion, "tokenizer": counter.Name(), "role": role})
+		return writeJSON(out, map[string]any{"schema_version": roles.SchemaVersion, "tokenizer": counter.Name(), "role": role, "skill_modes": outcomes})
 	}
 	w := reportWriter{out}
 	w.printf("role %s: %d item(s), %d bytes, ~%d tokens (%s)\n", role.Name, role.Totals.Items, role.Totals.Bytes, role.Totals.Tokens, counter.Name())
@@ -252,5 +296,9 @@ func runRolesResolve(out io.Writer, name string) error {
 		it := &role.Items[i]
 		tp.printf("%s\t%s\t%s\t%s\t%s\t%d\t%d\n", it.Kind, dash(it.Domain), it.ID, dash(it.Mode), dash(it.Delivery), it.Bytes, it.Tokens)
 	}
-	return tw.Flush() //nolint:wrapcheck // writer error
+	if err := tw.Flush(); err != nil {
+		return err //nolint:wrapcheck // writer error
+	}
+	printModeOutcomes(w, outcomes)
+	return nil
 }
