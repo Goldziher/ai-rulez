@@ -349,6 +349,11 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	if err != nil {
 		return err
 	}
+	if emitOnly != "" {
+		// `publish emit` builds in memory and writes review files; there is no
+		// release to sign, so require_signature has nothing to gate.
+		opts.requireSignature = false
+	}
 	distAbs, err := filepath.Abs(publishDist)
 	if err != nil {
 		return oops.Wrapf(err, "resolve --dist")
