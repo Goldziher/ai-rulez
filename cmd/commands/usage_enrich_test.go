@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
@@ -199,4 +200,60 @@ func TestReportEvals_RanksSkills(t *testing.T) {
 	require.NoError(t, runReportEvals(&out))
 	assert.Contains(t, out.String(), "No usage log found")
 	assert.NotContains(t, out.String(), "never used")
+}
+
+func TestReportEvals_JoinClasses(t *testing.T) {
+	resetEnrichFlags(t)
+	root := t.TempDir()
+	t.Chdir(root)
+	names := []string{"exact", "stale", "legacy", "none"}
+	store := evals.NewStore()
+	var lines strings.Builder
+	for _, name := range names {
+		dir := filepath.Join(root, ".ai-rulez", "skills", name)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: "+name+"\n---\nbody\n"), 0o600))
+		lock, err := contentlock.SkillDirDigest(dir)
+		require.NoError(t, err)
+		record := evals.SkillRecord{ID: name, Digest: "sha256:" + name, Passing: true, Score: evals.SkillScore{Scored: 4, PassRate: 1}}
+		if name != "legacy" {
+			record.LockDigest = lock
+		}
+		store.Put(record)
+		line := func(digest, scheme string) {
+			entry := usage.Entry{Time: "t", Event: usage.EventSkillInvoked, Skill: name, ID: name, Digest: digest, DigestScheme: scheme}
+			data, marshalErr := json.Marshal(entry)
+			require.NoError(t, marshalErr)
+			lines.Write(append(data, '\n'))
+		}
+		switch name {
+		case "exact":
+			line(lock, usage.DigestSchemeSkill)
+		case "stale":
+			line("sha256:"+strings.Repeat("0", 64), usage.DigestSchemeSkill)
+		case "legacy":
+			line("", "") // a v2 line
+		}
+	}
+	require.NoError(t, store.Save(filepath.Join(root, ".ai-rulez", evals.StoreFileName)))
+	log := filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
+	require.NoError(t, os.MkdirAll(filepath.Dir(log), 0o750))
+	require.NoError(t, os.WriteFile(log, []byte(lines.String()), 0o600))
+
+	reportEvalsFlags.json = true
+	var out bytes.Buffer
+	require.NoError(t, runReportEvals(&out))
+
+	var decoded struct{ Skills []evals.RankRow }
+	require.NoError(t, json.Unmarshal(out.Bytes(), &decoded))
+	got := map[string]string{}
+	for _, row := range decoded.Skills {
+		got[row.ID] = row.Join
+	}
+	assert.Equal(t, map[string]string{"exact": "exact", "stale": "stale", "legacy": "legacy", "none": "none"}, got)
+
+	reportEvalsFlags.json = false
+	out.Reset()
+	require.NoError(t, runReportEvals(&out))
+	assert.Contains(t, out.String(), "join stale")
 }

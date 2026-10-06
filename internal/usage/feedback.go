@@ -104,7 +104,7 @@ func RecordFeedback(skill, kind string, options FeedbackOptions) (*FeedbackEntry
 	entry := &FeedbackEntry{
 		Version: FeedbackSchemaVersion, Time: stamp.Format(time.RFC3339), Event: EventFeedback,
 		Skill: strings.TrimSpace(skill), ID: id, Kind: kind, Harness: options.Harness, Role: strings.TrimSpace(options.Role),
-		Hash: lookupHash(options.IndexPath, "", id),
+		Hash: feedbackHash(options.IndexPath, id),
 	}
 	if options.NoteFile != "" {
 		note, err := keepNote(options.NoteFile, filepath.Join(filepath.Dir(options.LogPath), notesDirName), stamp, id, kind)
@@ -230,4 +230,10 @@ func readNote(source string) ([]byte, error) {
 		return nil, oops.With("path", source).Errorf("note is larger than %d bytes", maxNoteBytes)
 	}
 	return data, nil
+}
+
+// feedbackHash is the index's content hash of the skill a feedback record names.
+func feedbackHash(indexPath, id string) string {
+	hash, _ := lookupIdentity(indexPath, "", id)
+	return hash
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/zeebo/blake3"
 )
@@ -80,6 +81,11 @@ func (g *Generator) skillRecord(domain, kind, id string, skill *config.ContentFi
 	if skill.Metadata != nil {
 		record.Owner = strings.TrimSpace(skill.Metadata.Extra["owner"])
 		record.Version = strings.TrimSpace(skill.Metadata.Extra["version"])
+	}
+	// The lock's item digest, the identity usage logs and eval results join on.
+	// A skill that cannot be digested keeps the blake3 hash and joins by id only.
+	if digest, err := contentlock.SkillDigest(skill, g.config.BaseDir); err == nil {
+		record.Digest = digest
 	}
 	for preset, paths := range outputsByID[id] {
 		record.Outputs[preset] = paths

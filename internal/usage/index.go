@@ -50,7 +50,11 @@ type SkillRecord struct {
 	Source string `json:"source"`
 	// Hash is a blake3 digest over the authored skill: SKILL.md and its bundled
 	// resources. It changes whenever the skill's authored content changes.
-	Hash    string `json:"hash"`
+	Hash string `json:"hash"`
+	// Digest is the lock's item digest of the skill ("sha256:...", scheme
+	// "ai-rulez/skill/v1"): the identity usage logs and eval results join on.
+	// Empty in an index written before digests existed.
+	Digest  string `json:"digest,omitempty"`
 	Owner   string `json:"owner,omitempty"`
 	Version string `json:"version,omitempty"`
 	// Outputs lists, per preset, the generated SKILL.md files relative to the
