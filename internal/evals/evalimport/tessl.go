@@ -285,9 +285,16 @@ func (t Tessl) Map(sc *Scenario, opts MapOptions) (*Mapped, error) {
 
 	if opts.LiftAssertions {
 		lifted := liftAssertions(criteria)
+		text := false
 		for _, l := range lifted {
 			m.Case.Assertions = append(m.Case.Assertions, l.assertion)
 			rep.Lifted = append(rep.Lifted, Lift{Criterion: l.criterion, Assertion: describeAssertion(l.assertion)})
+			text = text || l.assertion.Type == evals.AssertContains || l.assertion.Type == evals.AssertNotContains
+		}
+		if text {
+			// The criterion's wording is matched case-insensitively, the assertion it
+			// becomes is not: say so, since a not_contains misses "Draft" for "DRAFT".
+			rep.Assumed = append(rep.Assumed, "lifted contains and not_contains assertions match case-sensitively; the criteria they came from do not say so")
 		}
 	}
 	m.Report.Unmapped = unmappedFields(doc, used)
