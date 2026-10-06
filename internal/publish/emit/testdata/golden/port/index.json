@@ -1,0 +1,15 @@
+{
+  "blueprint": "agent_skill",
+  "entities": [
+    {
+      "file": "entities/acme-conventions.json",
+      "identifier": "acme-conventions",
+      "request": "POST /v1/blueprints/agent_skill/entities?upsert=true"
+    },
+    {
+      "file": "entities/acme-conventions-deploy.json",
+      "identifier": "acme-conventions-deploy",
+      "request": "POST /v1/blueprints/agent_skill/entities?upsert=true"
+    }
+  ]
+}

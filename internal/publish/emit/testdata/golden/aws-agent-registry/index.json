@@ -1,0 +1,14 @@
+{
+  "records": [
+    {
+      "file": "records/acme-conventions.json",
+      "name": "acme-conventions",
+      "record_type": "CUSTOM"
+    },
+    {
+      "file": "records/acme-conventions_deploy.json",
+      "name": "acme-conventions/deploy",
+      "record_type": "SKILL"
+    }
+  ]
+}
