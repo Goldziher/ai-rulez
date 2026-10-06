@@ -1705,12 +1705,15 @@ ai-rulez validate [config-path] [flags]
 | `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
 | `--allow-egress`      | strings | With `--external`: allow the named scanners that declare `egress = true` to run (repeatable; a name no `[[lint.external]]` declares is an error) |
 | `--write-baseline`, `--reason`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
+| `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
+| `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
 | `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
 | `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
 | `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--verifiers`         | boolean | With `--strict`: also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
 | `--approvals-base`    | string  | With `--strict`: also report approvals added since this git revision for content that also changed since it (`AR716`, see [Approvals](approvals.md#approvals-are-assertions)) |
 | `--since-depth`       | string  | With `--since` or `--changed`: how many reference hops to follow from the changed files, a number or `all` (default `1`); each JSON finding carries a `hop` (`changed`, `dependent`, `transitive(n)`) |
 | `--since-max-files`   | int     | With `--since` or `--changed`: report at most this many files besides the changed ones, nearest first (`0`: no cap) |
@@ -1745,9 +1748,6 @@ Validate every config in a monorepo (all roots are checked; exit status 1 if any
 ```bash
 ai-rulez validate --recursive
 ```
-| `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
-| `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
-| `--verifiers`         | boolean | With `--strict`: also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
 
 Validate current configuration:
 
