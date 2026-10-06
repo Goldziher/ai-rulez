@@ -95,8 +95,12 @@ type Options struct {
 	// MaxCostUSD is required (> 0): measured eval cost plus reported optimizer cost.
 	MaxCostUSD        float64
 	StopAtFirstAccept bool
-	AllowFrontmatter  bool
-	AllowScripts      bool
+	// MaxSkillGrowth bounds SKILL.md growth as a factor of the original tokens (0: 1.25).
+	MaxSkillGrowth float64
+	// RequireCIAboveZero makes the bootstrap interval of the gain part of the gate.
+	RequireCIAboveZero bool
+	AllowFrontmatter   bool
+	AllowScripts       bool
 
 	// Git answers git questions for the clean-tree check; nil skips it.
 	Git evals.GitFunc
@@ -289,7 +293,7 @@ func (p *Plan) loadSkill() error {
 		return fmt.Errorf("digest cases: %w", err)
 	}
 	p.OrigTokens = p.Opts.Counter.Count(string(skillMD.Data))
-	p.Constraints = DefaultConstraints(p.OrigTokens, p.Opts.AllowFrontmatter, p.Opts.AllowScripts)
+	p.Constraints = ConstraintsFor(p.OrigTokens, p.Opts.MaxSkillGrowth, p.Opts.AllowFrontmatter, p.Opts.AllowScripts)
 	rel, err := filepath.Rel(p.Opts.RepoDir, p.Skill.Dir)
 	if err != nil || strings.HasPrefix(rel, "..") {
 		rel, err = filepath.Rel(filepath.Dir(p.Opts.ConfigDir), p.Skill.Dir)

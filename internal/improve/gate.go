@@ -223,6 +223,8 @@ type Comparison struct {
 	Unstable     []string  `json:"unstable,omitempty"`
 	Table        []PairRow `json:"table"`
 	Underpowered bool      `json:"underpowered"`
+	// CI is the bootstrap interval of Gain over the paired cases.
+	CI *CI `json:"gain_ci,omitempty"`
 	// BaseScored and Skipped are gate inputs, not part of the report: the
 	// cases the baseline scored, and those of them the candidate did not.
 	BaseScored int      `json:"-"`
@@ -233,6 +235,10 @@ type Comparison struct {
 type Gate struct {
 	MinGain        float64
 	MaxRegressions int
+	// RequireCIAboveZero makes the lower end of the bootstrap interval of the
+	// gain a gate condition. Off by default: suites of 5-20 cases almost never
+	// clear it, so the interval is reported, not enforced.
+	RequireCIAboveZero bool
 }
 
 // Verdict is the gate's decision for one round.
@@ -277,7 +283,8 @@ func Compare(base, cand []CaseOutcome) Comparison {
 	}
 	cmp.Base, cmp.Cand = MetricsOf(b, both), MetricsOf(c, both)
 	cmp.Gain = roundRate(cmp.Cand.PassRate - cmp.Base.PassRate)
-	cmp.Underpowered = len(both) < underpoweredBelow
+	cmp.CI = BootstrapGain(cmp.Table, BootstrapResamples)
+	cmp.Underpowered = len(both) < underpoweredBelow || (cmp.CI != nil && cmp.CI.IncludesZero())
 	return cmp
 }
 
@@ -293,6 +300,9 @@ func (g Gate) Decide(cmp Comparison) Verdict {
 	}
 	if cmp.Gain+epsilon < g.MinGain {
 		reasons = append(reasons, fmt.Sprintf("below gain: %+.1f points, need %+.1f", cmp.Gain*100, g.MinGain*100))
+	}
+	if g.RequireCIAboveZero && (cmp.CI == nil || cmp.CI.Low <= epsilon) {
+		reasons = append(reasons, "below confidence: the 95% bootstrap interval of the gain includes zero")
 	}
 	if len(cmp.Losses) > g.MaxRegressions {
 		reasons = append(reasons, fmt.Sprintf("regression: %d held-out case(s) flipped pass to fail, allowed %d", len(cmp.Losses), g.MaxRegressions))
@@ -330,6 +340,11 @@ func (v Verdict) Decision() string {
 	for _, r := range v.Reasons {
 		if strings.HasPrefix(r, "regression") {
 			return "rejected: regression"
+		}
+	}
+	for _, r := range v.Reasons {
+		if strings.HasPrefix(r, "below confidence") {
+			return "rejected: below confidence"
 		}
 	}
 	return "rejected: below gain"

@@ -157,3 +157,10 @@ func contains(s string, subs ...string) bool {
 	}
 	return false
 }
+
+func mustSkills(t *testing.T, configDir string) []evals.Skill {
+	t.Helper()
+	skills, err := evals.FindSkills(configDir)
+	require.NoError(t, err)
+	return skills
+}

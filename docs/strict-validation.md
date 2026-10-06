@@ -213,6 +213,12 @@ stdout.
 | AR9J1 | `improve-run-stale` | info | A saved `improve` run's original digest no longer matches the skill; `improve apply` refuses (see [Improve](improve.md)) |
 | AR9J2 | `improve-no-holdout` | off | A skill has fewer than three scored held-out eval cases, or none that is negative, so `improve` refuses to run |
 | AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (report only; the round is rejected before any eval spend) |
+| AR9J4 | `improve-sibling-regression` | error | A candidate lowered another skill's trigger recall under the offline ranker (report only; the round is rejected before any held-out spend) |
+| AR9J5 | `improve-underpowered` | info | The held-out gain of a candidate cannot be told from zero: fewer than eight cases, or the bootstrap interval includes zero (report only) |
+| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer` or `env_pass` of a repository config was not used because `--trust-repo-optimizer` was not given |
+| AR9J7 | `improve-isolation-unavailable` | warning | The requested optimizer isolation could not be applied: `require` refuses to run, `auto` runs unconfined |
+| AR9J8 | `improve-pr-refused` | error | `improve pr` refused: unsigned or unaccepted run, a different skill at the base, an existing branch, or unusable git |
+| AR9J9 | `improve-adapter-refused` | error | A bundled adapter (`builtin:review-fix`) could not run: no model, no network opt-in or no declared egress |
 
 ### Code ranges
 
@@ -252,7 +258,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G9` are used by `review` and `rubric lint`) | allocated |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`-`AR9H6` used, never emitted by `validate` unless `--verifiers` is given) | allocated |
-| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J3` used; never emitted by `validate`) | allocated |
+| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J9` used; never emitted by `validate`) | allocated |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
@@ -2968,7 +2974,7 @@ a saved improve run's original digest no longer matches the skill (improve apply
 
 - Default severity: `info`
 - Analyzer: `evals` (scope `item`)
-- Why: The skill was edited after the run measured it, so applying the candidate would overwrite those edits or mix two baselines. Only `improve apply` reports it.
+- Why: The skill was edited after the run measured it, so applying the candidate would overwrite those edits or mix two baselines. `improve apply` and `improve pr` report it.
 - Bad: Edit `SKILL.md`, then run `ai-rulez improve apply imp-1a2b3c4d` for a run made before the edit
 - Good: Re-run `ai-rulez improve run <skill>` against the current skill
 
@@ -2991,6 +2997,66 @@ a candidate round broke the diff policy (improve report only)
 - Why: The optimizer changed something it may not: a file outside the editable set, an executable bit, a frontmatter key such as `allowed-tools`, a script reference, a symlink, a larger token budget, or text that adds a security finding. The round is rejected before any eval spend. Only the improve report carries it.
 - Bad: A candidate that adds `Bash` to `allowed-tools` or a new `scripts/run.sh`
 - Good: Keep edits to `SKILL.md` and `references/**`; widen the policy deliberately with `--allow-frontmatter` or `--allow-scripts`
+
+### AR9J4 improve-sibling-regression
+
+a candidate lowered another skill's trigger recall (improve report only)
+
+- Default severity: `error`
+- Analyzer: `evals` (scope `item`)
+- Why: A rewritten description can pull prompts away from another skill. The sibling guard re-runs the trigger cases of every other skill with the offline ranker, with the original and with the candidate, and rejects a candidate that lowers any sibling's trigger recall. The round is rejected before any held-out spend. Only the improve report carries it.
+- Bad: A candidate description for `deploy` that now also matches the prompts of `rollback`
+- Good: Keep the description specific to what the skill does, or fix the sibling's own triggers first
+
+### AR9J5 improve-underpowered
+
+the held-out gain of a candidate cannot be told from zero (improve report only)
+
+- Default severity: `info`
+- Analyzer: `evals` (scope `item`)
+- Why: With few held-out cases, or a bootstrap interval of the gain that includes zero, an accepted gain is weak evidence. The report says so; `--require-ci-above-zero` turns it into a gate. Only the improve report carries it.
+- Bad: Accepting a +5 point gain measured on six held-out cases
+- Good: Add held-out cases, or review the diff with the interval in mind
+
+### AR9J6 improve-repo-optimizer-ignored
+
+an [improve] optimizer or env_pass of the repository config was not used (improve only)
+
+- Default severity: `warning`
+- Analyzer: `evals` (scope `item`)
+- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. Without it they are reported and ignored.
+- Bad: A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`
+- Good: Pass `--with`, or review the config and add `--trust-repo-optimizer`
+
+### AR9J7 improve-isolation-unavailable
+
+the requested optimizer isolation could not be applied (improve only)
+
+- Default severity: `warning`
+- Analyzer: `evals` (scope `item`)
+- Why: `--isolation require` needs a sandbox backend (sandbox-exec on macOS, bubblewrap or unshare on Linux). When none can confine the optimizer, `require` refuses to run and `auto` runs it unconfined and says so.
+- Bad: `improve run --isolation require` on a system with no usable sandbox backend
+- Good: Install bubblewrap, run in a container, or use `--isolation auto` knowing the optimizer is not confined
+
+### AR9J8 improve-pr-refused
+
+improve pr refused to open a pull request (improve only)
+
+- Default severity: `error`
+- Analyzer: `evals` (scope `item`)
+- Why: `improve pr` refuses when it cannot make the pull request safely: the run is not accepted or not signed by this user, the skill at the base differs from the run's original, the branch exists, or git or the base ref is unusable.
+- Bad: `ai-rulez improve pr imp-1a2b3c4d --base release` when the skill differs on `release`
+- Good: Re-run `improve run` against the base, or pick the base the run measured
+
+### AR9J9 improve-adapter-refused
+
+a bundled optimizer adapter could not run (improve only)
+
+- Default severity: `error`
+- Analyzer: `evals` (scope `item`)
+- Why: A bundled adapter (`builtin:review-fix`) needs a model, the network opt-in and a declared egress host; it never calls a model on its own. It refuses when one is missing.
+- Bad: `improve run --with builtin:review-fix` without `[llm] model` and `allow_network = true` in the user config
+- Good: Set the model and the opt-in in the user config, and pass `--egress` for the provider host
 
 ### AR9K0 telemetry-config-invalid
 
