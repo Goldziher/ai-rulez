@@ -412,7 +412,7 @@ func TestLocalRoot_MigratesFilesWrittenBy4_23_0(t *testing.T) {
 			root := t.TempDir()
 			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{tt.preset}, "", ""))
 			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
-			writeAgentsMDFile(t, root, tt.stale, "<!--\nGenerated\n-->\n\nOLD_LOCAL_BODY\n")
+			writeAgentsMDFile(t, root, tt.stale, hashedFixture(tt.stale, "<!--\nGenerated\n-->\n\nOLD_LOCAL_BODY\n"))
 			writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.local.json",
 				`{"version":"1","files":["`+tt.stale+`"]}`)
 

@@ -1686,9 +1686,9 @@ func TestGenerator_DryRunPlansWritesAndDeletesWithoutMutation(t *testing.T) {
 		0o644,
 	))
 
-	stalePath := filepath.Join(tempDir, "STALE.md")
-	require.NoError(t, os.WriteFile(stalePath, []byte("stale\n"), 0o644))
-	manifest := generatedManifest{Version: "1", Files: []string{"STALE.md"}}
+	stalePath := filepath.Join(tempDir, "CLAUDE.md")
+	require.NoError(t, os.WriteFile(stalePath, []byte(hashedFixture("CLAUDE.md", "<!--\nGenerated\n-->\n\nstale\n")), 0o644))
+	manifest := generatedManifest{Version: "1", Files: []string{"CLAUDE.md"}}
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, generatedManifestName), data, 0o644))
@@ -1700,7 +1700,7 @@ func TestGenerator_DryRunPlansWritesAndDeletesWithoutMutation(t *testing.T) {
 
 	joined := strings.Join(plan, "\n")
 	assert.Contains(t, joined, "write-file: AGENTS.md")
-	assert.Contains(t, joined, "delete-stale: STALE.md")
+	assert.Contains(t, joined, "delete-stale: CLAUDE.md")
 	require.FileExists(t, stalePath)
 	assert.NoFileExists(t, filepath.Join(tempDir, "AGENTS.md"))
 }
@@ -2538,7 +2538,11 @@ func TestStaleManifestFilesProtectsScopedMergedDocuments(t *testing.T) {
 			baseDir := t.TempDir()
 			absPath := filepath.Join(baseDir, filepath.FromSlash(testCase.relPath))
 			require.NoError(t, os.MkdirAll(filepath.Dir(absPath), 0o755))
-			require.NoError(t, os.WriteFile(absPath, []byte(`{"hand":"written"}`), 0o644))
+			body := `{"hand":"written"}`
+			if testCase.wantStale {
+				body = hashedFixture(testCase.relPath, "<!--\nGenerated\n-->\n\nold\n")
+			}
+			require.NoError(t, os.WriteFile(absPath, []byte(body), 0o644))
 
 			manifestPath := filepath.Join(baseDir, ".ai-rulez", generatedManifestName)
 			require.NoError(t, os.MkdirAll(filepath.Dir(manifestPath), 0o755))
@@ -2780,7 +2784,7 @@ func TestGenerator_CursorAgentMigration(t *testing.T) {
 			require.NoError(t, os.MkdirAll(agentsDir, 0o755))
 			oldX := filepath.Join(agentsDir, "x.md")
 			otherY := filepath.Join(agentsDir, "y.md")
-			require.NoError(t, os.WriteFile(oldX, []byte("old cursor agent\n"), 0o644))
+			require.NoError(t, os.WriteFile(oldX, []byte(hashedFixture(".agents/agents/x.md", "<!--\nGenerated\n-->\n\nold cursor agent\n")), 0o644))
 			require.NoError(t, os.WriteFile(otherY, []byte("written by another tool\n"), 0o644))
 
 			manifest := "{\n  \"version\": \"1\",\n  \"files\": [\n    \".agents/agents/x.md\"\n  ]\n}\n"
@@ -2795,7 +2799,7 @@ func TestGenerator_CursorAgentMigration(t *testing.T) {
 			if tc.wantXRemains {
 				content, err := os.ReadFile(oldX)
 				require.NoError(t, err)
-				assert.NotEqual(t, "old cursor agent\n", string(content), "antigravity rewrites its own x.md")
+				assert.NotContains(t, string(content), "old cursor agent", "antigravity rewrites its own x.md")
 			} else {
 				assert.NoFileExists(t, oldX, "the old Cursor agent is removed")
 			}
@@ -2832,7 +2836,7 @@ func TestGenerator_GeminiAgentMigration(t *testing.T) {
 			require.NoError(t, os.MkdirAll(agentsDir, 0o755))
 			oldX := filepath.Join(agentsDir, "x.md")
 			otherY := filepath.Join(agentsDir, "y.md")
-			require.NoError(t, os.WriteFile(oldX, []byte("old gemini agent\n"), 0o644))
+			require.NoError(t, os.WriteFile(oldX, []byte(hashedFixture(".agents/agents/x.md", "<!--\nGenerated\n-->\n\nold gemini agent\n")), 0o644))
 			require.NoError(t, os.WriteFile(otherY, []byte("written by another tool\n"), 0o644))
 
 			manifest := "{\n  \"version\": \"1\",\n  \"files\": [\n    \".agents/agents/x.md\"\n  ]\n}\n"
@@ -2847,7 +2851,7 @@ func TestGenerator_GeminiAgentMigration(t *testing.T) {
 			if tc.wantXRemains {
 				content, err := os.ReadFile(oldX)
 				require.NoError(t, err)
-				assert.NotEqual(t, "old gemini agent\n", string(content), "antigravity rewrites its own x.md")
+				assert.NotContains(t, string(content), "old gemini agent", "antigravity rewrites its own x.md")
 			} else {
 				assert.NoFileExists(t, oldX, "the old Gemini agent is removed")
 			}
