@@ -151,12 +151,13 @@ ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --de
 | ---- | ------- |
 | `--profile` | Profile whose skills are served. Default: the configured default profile. A profile is the role: it selects the domains whose skills apply. |
 | `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
-| `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. |
+| `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
 `SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
-preset. Nothing is written. Restart the server to pick up edits.
+preset. Nothing is written. Edits are picked up by [live reload](#live-reload).
+When the filters remove every skill, the start-up warning names each filter and how many skills it leaves.
 
 ### What is exposed
 
@@ -189,7 +190,10 @@ skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full
 - A skill URI uses the skill name as its path, so two served skills must not share a name; the server
   refuses to start when they do.
 - The extension requires every skill to have a `name` and a `description`. A skill without a
-  description is not served and a warning on stderr names it; the rest are unaffected.
+  description is served under its name as the description, and a warning on stderr names it (add a
+  `description` so `find_skill` can rank it). The served bytes are not rewritten. A skill whose frontmatter
+  cannot be parsed, or whose name is not a valid `skill://` path segment, is skipped with a warning; the
+  rest are unaffected.
 - Semantic (embedding) search is not implemented; the ranking is lexical.
 
 ## Dynamic skill loading
@@ -259,9 +263,13 @@ into generated frontmatter.
 - A skill whose delivery is `served` is not written to any preset's skill tree. `static` and `both` skills are.
 - When any skill is `served` or `both`, or a `[[skill_sources]]` entry is configured (its skills are served,
   never written), one stub skill named `dynamic-skills` is added to the root skills of
-  every preset whose harness can call MCP tools. A skill you author with that name is used instead of the stub.
+  every preset whose harness can call MCP tools. A skill you author with that name, at the root or in a domain
+  that is active, is used instead of the stub; if several are authored, a warning asks you to rename all but one.
 - A preset whose harness cannot call MCP (for example `cline`, `rovodev`, or any custom preset) keeps every
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
+  Skills of `[[skill_sources]]` are served only, by design: they never reach a preset without MCP support
+  (nothing is written for them), and `generate` and `validate --strict` warn (`AR992`) for each such preset
+  when `[[skill_sources]]` is configured.
 - `ai-rulez mcp --serve-skills` renders the served skills itself; it never depends on the generated trees.
 
 ### Serving
@@ -324,10 +332,13 @@ working as described above. All tools are annotated read-only.
 - **Budget.** Each session may read `--budget-bytes` bytes of skill content; `load_skill`, `get_skill`,
   `read_skill_file` and `resources/read` draw on the same budget (listing tools cost nothing, and a repeated
   read is charged again). A read that would exceed the
-  remainder is refused and is not charged (`load_skill` reports the bytes left); the server tracks at most 1024 sessions; `budget_bytes` on one call truncates that
+  remainder is refused and is not charged (`load_skill` reports the bytes left; `resources/read` fails with
+  JSON-RPC error `-32600`); the server tracks at most 1024 sessions; `budget_bytes` on one call truncates that
   call's file (at a character boundary) and reports `truncated` and `total_bytes`. Supporting files count too.
 - **Path.** `path` is relative to the skill. Absolute paths, `..`, backslashes and names that are not valid
-  `skill://` path segments are rejected. Binary files are read with `resources/read`.
+  `skill://` path segments are rejected. A path with `.` or `..` segments that normalises to a file inside the
+  skill (`references/../SKILL.md`) is accepted as that file; one that would leave the skill is rejected. The
+  result's `uri` is the URI of the file loaded (`skill://<name>/<path>`). Binary files are read with `resources/read`.
 - **Provenance.** Every result carries `provenance`: `digest` (served bytes), `lock_digest` (what the lock pins),
   `locked`, `source`, `ref`, `pinned`, `commit` for a source skill, `delivery`, and `scan_warnings`.
 
@@ -348,6 +359,7 @@ trust = "error"                                # scan level: error (default) or 
 max_skills = 200                               # optional: skills the source may load (default 200)
 max_bytes = 67108864                           # optional: bytes of skill files it may load (default 64 MiB)
 max_clone_bytes = 268435456                    # optional: size limit of the git clone (default 256 MiB)
+max_clone_files = 20000                        # optional: entries of the git clone (default 20000)
 ```
 
 `--source` takes the same thing on the command line: `[git+]<url>[@<tag|commit>][#<subdir>]` or a directory,
@@ -409,7 +421,9 @@ file is not served at all (`load_skill`, `resources/read` and the file list omit
 refuses the skill. At `trust = "warn"` (skills authored in the project) the file is served with the warning.
 A skill that fails is not served: it is absent from `resources/list`,
 `skills/list` and `find_skill`, a warning names the finding on stderr, and `load_skill` says why. Inline
-`ai-rulez-lint-ignore` comments are not honored. The level is `trust` for a source skill:
+`ai-rulez-lint-ignore` comments are not honored. `validate --strict` runs this same scan over the served
+skills, authored and from sources alike, and reports `AR989` for each file it cannot read (see the table below).
+The level is `trust` for a source skill:
 
 | Level | Blocks |
 | ----- | ------ |
@@ -464,7 +478,9 @@ excluded before it can be served under enforcement.
 ### Usage telemetry
 
 Each successful `load_skill` goes through the usage recorder as one identifier-only JSON line: time, skill name,
-salted session hash, harness (the MCP client name), the role the server runs under, `outcome: "loaded"`, content
+salted session hash (a stdio connection has no transport session id, so the server gives each connection a random
+one; a new connection gets a new hash and a new byte budget, the same pipe keeps both; the salt file is created next
+to the log on first use), harness (the MCP client name), the role the server runs under, `outcome: "loaded"`, content
 hash from the skills index, the served digest, and `served: true` (log format `v: 2`, the same as hook-recorded
 loads).
 A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
@@ -474,7 +490,8 @@ or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage
 ### Live reload
 
 The server checks the configuration directory (and local source directories) every two seconds. When a file
-changes it rebuilds the catalog, swaps it in, and sends `notifications/resources/list_changed`. A rebuild that
+changes it rebuilds the catalog and swaps it in. `notifications/resources/list_changed` is sent only when the
+catalog changed (a skill added, removed or edited); an edit that leaves every served skill identical sends nothing. A rebuild that
 fails keeps the previous catalog serving and is retried with a growing pause (up to a minute) until it works or
 the files change again. Usage logs (`.jsonl` files in a `local/` directory, or `--usage-log`) do not count as
 changes. Polling keeps the dependency set unchanged; git sources are immutable
@@ -490,7 +507,7 @@ per commit and are not re-fetched.
 | `AR993` | warning | Skills are served but no `[[mcp_servers]]` entry runs `--serve-skills` |
 | `AR994` | error | `delivery` frontmatter is not static, served or both |
 | `AR995` | error | `[lock] enforce` and a served skill is unpinned or its digest differs |
-| `AR989` | warning / error | A served file cannot be scanned (binary or over 512 KiB); an error for `SKILL.md` |
+| `AR989` | warning / error | A served file cannot be scanned (binary or over 512 KiB). An error for `SKILL.md` at any trust level (the server refuses the skill). For a supporting file: a warning at `trust = "warn"` (served with the warning) and, at `trust = "error"`, a finding that names the unserved files |
 
 See [Strict validation](strict-validation.md) for the full table.
 
