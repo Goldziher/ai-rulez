@@ -42,7 +42,11 @@ type Snapshot interface {
 // resolved inside the tree only, a submodule appears as an empty directory.
 // Machine-local files (.ai-rulez/local, config.local.toml) are not in a commit,
 // so a snapshot behaves like a load with --no-local.
-func GitSnapshot(ctx context.Context, repoDir, rev string, r runner.Runner) (Snapshot, error) {
+//
+// With paths (slash paths relative to the repository root, literal), only those
+// files and directories are listed: reading one file of a large repository does
+// not list the whole tree.
+func GitSnapshot(ctx context.Context, repoDir, rev string, r runner.Runner, paths ...string) (Snapshot, error) {
 	rev = strings.TrimSpace(rev)
 	if err := gitutil.CheckArg("revision", rev); err != nil || rev == "" {
 		return nil, oops.With("rev", rev).Errorf("invalid git revision %q", rev)
@@ -53,7 +57,12 @@ func GitSnapshot(ctx context.Context, repoDir, rev string, r runner.Runner) (Sna
 		return nil, oops.With("rev", rev, "dir", repoDir).Wrapf(err, "resolve revision")
 	}
 	commit := strings.TrimSpace(string(res.Stdout))
-	res = g.Exec(ctx, repoDir, nil, "ls-tree", "-r", "-z", "--long", commit)
+	args := []string{"ls-tree", "-r", "-z", "--long", "--full-tree", commit}
+	if len(paths) > 0 {
+		args = append(args, "--")
+		args = append(args, paths...)
+	}
+	res = g.Exec(ctx, repoDir, nil, args...)
 	if err := gitutil.ResultErr(res); err != nil {
 		return nil, oops.With("rev", rev, "commit", commit).Wrapf(err, "list the tree")
 	}
@@ -326,4 +335,17 @@ func (d *dirFile) ReadDir(count int) ([]fs.DirEntry, error) {
 	}
 	d.pos += count
 	return rest[:count], nil
+}
+
+// ReadFileAt returns the file rel (relative to the repository root) as it was at
+// rev, the way `git show rev:rel` does, without listing the rest of the tree. ok is
+// false when the file does not exist at rev, the revision is unknown or git cannot
+// run.
+func ReadFileAt(ctx context.Context, repoDir, rev, rel string, r runner.Runner) (content []byte, ok bool) {
+	snap, err := GitSnapshot(ctx, repoDir, rev, r, rel)
+	if err != nil {
+		return nil, false
+	}
+	data, err := snap.ReadFile(rel)
+	return data, err == nil
 }

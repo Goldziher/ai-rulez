@@ -20,6 +20,7 @@ import (
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // publishContext is what a publish run resolves once and every plugin shares.
@@ -210,7 +211,7 @@ func (pc *publishContext) previousLock(top string) (data []byte, label string, e
 	if tag == "" {
 		return nil, "", nil
 	}
-	data, ok := gitutil.New(publishRunner).ShowFile(pc.cfg.BaseDir, tag, lockRel)
+	data, ok := workspace.ReadFileAt(pc.ctx, pc.cfg.BaseDir, tag, lockRel, publishRunner)
 	if !ok {
 		if explicit {
 			return nil, "", publish.Errorf(publish.CodeConfig, publish.ExitFailed, "pass a tag that contains "+lockRel,
