@@ -92,7 +92,7 @@ Claude Code only; Codex and Cursor agents are recorded from the subagent events.
 enabled         = false                    # local recording of item events
 allow_network   = false                    # OTLP export needs this AND an endpoint; user scope only
 otlp_endpoint   = "https://collector.example.org:4318"   # user scope only
-otlp_protocol   = "http/json"              # the only implemented value
+otlp_protocol   = "http/json"              # or "http/protobuf" or "grpc"; same attributes on all three
 headers_env     = ["OTLP_HEADERS"]         # env var NAMES holding "k=v,k2=v2"; user scope only
 service_name    = "ai-rulez"               # user scope only: it labels data on your collector
 sample          = 1.0                      # fraction of sessions exported, decided per session hash
@@ -186,7 +186,8 @@ Hooks are short-lived processes, so the recorder never touches the network:
    delayed. A recorder call with a dead collector measures well under the 50 ms budget (there is a test for it).
 2. When the outbox is big enough or the last flush is older than 5 minutes, the recorder starts one detached
    `ai-rulez telemetry flush --background` (at most one start a minute, no inherited descriptors, 8 second deadline).
-3. The flush sends batches of 200 events to `/v1/logs` and `/v1/metrics` as gzipped OTLP/HTTP JSON, retrying 429, 502,
+3. The flush sends batches of 200 events to `/v1/logs` and `/v1/metrics` as gzipped OTLP/HTTP (JSON or protobuf; see
+   [Transports](#transports)), retrying 429, 502,
    503, 504 and network errors with exponential backoff (1 s, 2 s, 4 s, plus jitter; `Retry-After` honored up to
    30 s) and giving up until the next flush, which leaves the events in the outbox. Every other status is
    permanent (400, 401, 403, 404, 413, a 3xx redirect, 500 and the rest): the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time, guarded by a lock file that holds the owner's token (release removes only its own lock; a lock left by a crash is taken over after 60 s, serialised so two processes cannot both take it). A flush is capped at 30 seconds whatever the caller asks, and `telemetry flush --timeout` above 30s is refused, so a running flush is never mistaken for a crashed one.
@@ -227,6 +228,23 @@ is neither listed nor mapped to the record envelope, so a new field cannot leave
 | `ai_rulez.agent.duration` | histogram, `ms`, bounds 100, 500, 1000, 5000, 15000, 60000, 300000 | `kind`, `id`, `harness` |
 
 Session and path are never metric labels.
+
+## Transports
+
+`otlp_protocol` (user scope only) picks the transport; the exported attributes are identical on all three.
+
+| Value | Wire | Endpoint |
+| --- | --- | --- |
+| `http/json` (default) | OTLP/HTTP, gzipped JSON body, `Content-Type: application/json` | base URL; `/v1/logs` and `/v1/metrics` are appended |
+| `http/protobuf` | OTLP/HTTP, gzipped protobuf body, `Content-Type: application/x-protobuf` | same as above |
+| `grpc` | OTLP/gRPC `LogsService` and `MetricsService`, gzip-compressed calls | `host[:port]` (default port 4317), no path; `https` uses TLS, `http` is loopback only and plaintext |
+
+Headers from `headers_env` travel as HTTP headers or gRPC metadata (keys lower-cased). Retry classes are the same: gRPC
+`Unavailable`, `ResourceExhausted`, `DeadlineExceeded`, `Aborted` and `Canceled` are retried (a server `RetryInfo` delay
+replaces the backoff, capped at 30 s); every other code drops the batch as rejected. A grpc endpoint with a path is
+`AR9K0`. `telemetry preview` always prints the JSON body: the protobuf and gRPC messages are decoded from exactly that JSON
+(an unknown field fails the decode), and `transport_test.go` decodes all three transports and asserts they are the same
+messages and that every attribute is on the allowlist.
 
 ## Previewing an export
 
@@ -318,6 +336,16 @@ It is skipped unless docker is reachable and `AI_RULEZ_E2E_OTELCOL=1` is set, so
 Last run: passed against collector 0.130.0 on 2026-10-06. `Retry-After` and partial-success handling stay covered by the
 fake-server tests only, because a real collector does not emit them on demand.
 
+A second opt-in test, `TestLiveCollectorAcceptsEveryTransport`, runs the same pinned collector with the OTLP `http` and
+`grpc` receivers and sends one batch over each of `http/json`, `http/protobuf` and `grpc`:
+
+```console
+AI_RULEZ_LIVE_OTEL=1 go test ./internal/telemetry -run TestLiveCollector -v
+```
+
+It needs docker and is skipped otherwise. The default test run covers the three transports against local fakes: an
+`httptest` server for both HTTP encodings and an in-process gRPC server.
+
 ## Data egress and residency
 
 Only the allowlisted attributes above leave the machine, to the one endpoint the user configured, over https (http only
@@ -349,8 +377,10 @@ from the handler.
 
 The exporter is a hand-written OTLP/HTTP JSON encoder on `net/http` (`internal/telemetry/otlp.go`), not the OpenTelemetry Go SDK. The SDK would add a large dependency tree to a tool that
 reviewers read for its egress behavior, brings resource detectors that add host data by default, and its batching
-assumes a long-lived process while hooks exit in milliseconds. Protobuf and gRPC are left for a later phase behind the
-same `Encoder` seam; `otlp_protocol` rejects them today instead of silently falling back.
+assumes a long-lived process while hooks exit in milliseconds. `http/protobuf` and `grpc` add only the generated OTLP
+messages (`go.opentelemetry.io/proto/otlp`) and `google.golang.org/grpc`: the encoder still builds the one JSON form,
+which is decoded into the messages, so there is no second attribute mapping to keep in step. Together they add about
+5.9 MB (14%) to the release binary, measured on darwin/arm64 (`transport.go`).
 
 ## Strict-validation codes
 

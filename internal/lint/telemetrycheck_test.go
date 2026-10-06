@@ -17,7 +17,8 @@ func TestTelemetryConfigInvalid(t *testing.T) {
 		"insecure endpoint":  "[telemetry]\notlp_endpoint = \"http://collector.example.org\"\n",
 		"literal credential": "[telemetry]\nheaders_env = [\"Bearer abc123\"]\n",
 		"bad sample":         "[telemetry]\nsample = 2\n",
-		"grpc":               "[telemetry]\notlp_protocol = \"grpc\"\n",
+		"unknown protocol":   "[telemetry]\notlp_protocol = \"carrier-pigeon\"\n",
+		"grpc endpoint path": "[telemetry]\notlp_protocol = \"grpc\"\notlp_endpoint = \"https://collector.example.org/v1/logs\"\n",
 	}
 	for name, toml := range cases {
 		t.Run(name, func(t *testing.T) {

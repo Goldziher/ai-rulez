@@ -84,7 +84,7 @@ func (s Settings) RecordActive() bool { return s.Enabled && s.Killed == "" }
 
 // ExportActive reports whether OTLP export is on: every gate must be open.
 func (s Settings) ExportActive() bool {
-	return s.RecordActive() && s.AllowNetwork && s.Endpoint != "" && s.Protocol == config.TelemetryProtocolHTTPJSON && len(s.blocking) == 0
+	return s.RecordActive() && s.AllowNetwork && s.Endpoint != "" && config.ValidTelemetryProtocol(s.Protocol) && len(s.blocking) == 0
 }
 
 // Sources of settings. Repo is a repository's own config plus its local overlay
