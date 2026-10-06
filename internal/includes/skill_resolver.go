@@ -34,8 +34,8 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 				return resolveInstalledSkill(config.WithOfflineIncludes(ctx), cfg, lock, skillConf, accessToken)
 			})
 		if err != nil {
-			if errors.Is(err, config.ErrLockViolation) {
-				violations = append(violations, err)
+			if errors.Is(err, config.ErrLockViolation) || strictLock(cfg) {
+				violations = append(violations, oops.Wrapf(err, "installed skill %q", skillConf.Name))
 			}
 			logger.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
 			continue

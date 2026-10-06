@@ -93,6 +93,13 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	return wants
 }
 
+// strictLock reports whether a source that cannot be resolved must fail the run
+// instead of being skipped with a warning: generate --locked, --frozen, or an
+// enforced lock under `generate`.
+func strictLock(cfg *config.Config) bool {
+	return Mode == LockRequire || Mode == LockFrozen || (RequireWhenEnforced && cfg.LockEnforced())
+}
+
 // pin is the resolved lock entry a source must match.
 type pin struct {
 	entry lockfile.Entry
@@ -113,7 +120,7 @@ func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, err
 			return nil, violation(w, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", w.Ref, entry.Commit)
 		}
 		return &pin{entry: *entry, kind: w.Kind, name: w.Name}, nil
-	case Mode == LockRequire || Mode == LockFrozen || (RequireWhenEnforced && cfg.LockEnforced()):
+	case strictLock(cfg):
 		if lock == nil {
 			return nil, violation(w, "%s not found in %s; run `ai-rulez lock` and commit it", lockfile.FileName, cfg.ConfigDir)
 		}
