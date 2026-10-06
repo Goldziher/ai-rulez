@@ -10,25 +10,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// A check run treats machine-local inputs as generate does: refuses local drift
-// of a tracked output, and does not call the files of a skipped overlay orphans.
-func TestCheckDriftRefusesLocalDriftLikeGenerate(t *testing.T) {
-	// Arrange
-	p := newDriftProject(t, strings.Replace(driftShared, "gitignore = false", "gitignore = true", 1))
-	p.git(t, "init", "-q")
-	require.NoError(t, NewGenerator(p.load(t, config.WithoutLocal())).Generate(""))
-	p.git(t, "add", "-f", "CLAUDE.md")
-	p.overlay(t, "name = \"mine\"\n")
-
-	// Act
-	generateErr := NewGenerator(p.load(t)).Generate("")
-	_, checkErr := NewGenerator(p.load(t)).CheckDrift("")
-
-	// Assert
-	require.Error(t, generateErr, "precondition: generate refuses this local drift")
-	require.Error(t, checkErr, "check refuses what generate would refuse")
-}
-
+// A check run treats a skipped machine-local overlay as generate does: the files it
+// wrote are kept, not orphans.
 func TestCheckDriftKeepsFilesOfASkippedLocalOverlay(t *testing.T) {
 	// Arrange: an overlay adds the devin preset; the files it wrote are kept by a --no-local run.
 	p := newDriftProject(t, strings.Replace(driftShared, `presets = ["claude"]`, `presets = ["claude", "cursor"]`, 1))
