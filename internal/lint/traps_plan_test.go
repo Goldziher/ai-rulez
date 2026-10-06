@@ -45,6 +45,7 @@ func TestKiroAndKiloTraps(t *testing.T) {
 		{name: "AR9C6 good: horizontal rules without inclusion", files: map[string]string{cfg: kiro, ".kiro/steering/s.md": "# s\n---\nfoo: bar\n---\n"}, code: CodeKiroSteeringFirst},
 		{name: "AR9C9 bad: Kilo REVIEW.md over 10000 chars", files: map[string]string{cfg: kilo, "REVIEW.md": strings.Repeat("x", 10001)}, code: CodeHarnessLimitExceeded, want: 1, line: 1},
 		{name: "AR9C9 good: Kilo REVIEW.md at the limit", files: map[string]string{cfg: kilo, "REVIEW.md": strings.Repeat("x", 10000)}, code: CodeHarnessLimitExceeded},
+		{name: "AR9C9 good: a file that only ends in REVIEW.md is not the Kilo file", files: map[string]string{cfg: kilo, "PRE-REVIEW.md": strings.Repeat("x", 10001)}, code: CodeHarnessLimitExceeded},
 		{name: "AR9C9 good: nested REVIEW.md is not read by Kilo", files: map[string]string{cfg: kilo, "docs/REVIEW.md": strings.Repeat("x", 10001)}, code: CodeHarnessLimitExceeded},
 	}
 	for _, tc := range tests {
@@ -93,6 +94,9 @@ keys = ["title"]
 		{name: "unknown field is reported", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": strings.Replace(row, "hint =", "hnt =", 1)}, want: 1, match: "invalid trap file"},
 		{name: "scope outside the project is refused", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": strings.Replace(row, `dir = "docs"`, `dir = "../docs"`, 1)}, want: 1, match: "inside the project"},
 		{name: "size-over without a limit is refused", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": "[[trap]]\nname = \"x\"\nharness = \"t\"\nmessage = \"m\"\n[trap.scope]\ndir = \"a\"\n[trap.predicate]\nkind = \"size-over\"\nmeasure = \"file-bytes\"\n"}, want: 1, match: "limit > 0"},
+		{name: "dir . is the project root", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": strings.Replace(row, `dir = "docs"`, `dir = "."`, 1), "a.md": "# a\n"}, want: 1, match: "docs pages need a title"},
+		{name: "a backslash dir is refused", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": strings.Replace(row, `dir = "docs"`, `dir = "docs\\sub"`, 1)}, want: 1, match: "forward slashes"},
+		{name: "ext-not-in without allowed is refused", files: map[string]string{cfg: base, ".ai-rulez/traps/b.toml": "[[trap]]\nname = \"x\"\nharness = \"t\"\nmessage = \"m\"\n[trap.scope]\ndir = \"a\"\n[trap.predicate]\nkind = \"ext-not-in\"\n", "a/f.txt": "x"}, want: 1, match: "needs allowed"},
 		{name: "no traps directory", files: map[string]string{cfg: base, "docs/a.md": "# a\n"}},
 	}
 	for _, tc := range tests {
@@ -162,5 +166,43 @@ func TestTrapFixIsIdempotent(t *testing.T) {
 	// Assert
 	if len(again) != 0 {
 		t.Fatalf("finding remains after the fix: %+v", again)
+	}
+}
+
+func TestTrapFixKeyRenameNeverDuplicatesAKey(t *testing.T) {
+	tests := []struct {
+		name        string
+		frontmatter string
+		wantKeys    int // occurrences of allowed-tools after the fix
+		wantFixes   int
+	}{
+		{"canonical key already present", "name: h\nallowed-tools: Read\nallowed_tools: Bash\n", 1, 0},
+		{"two misspellings of one key", "name: h\nallowed_tools: Read\nallowedTools: Bash\n", 1, 1},
+		{"one misspelling", "name: h\nallowed_tools: Read\n", 1, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":     trapConfig(`"claude"`, ""),
+				".claude/skills/h/SKILL.md": "---\n" + tt.frontmatter + "---\nbody\n",
+			})
+			gitAdd(t, root)
+			findings := codeHits(lintDir(t, root), "AR9C7")
+			// Act
+			res, err := ApplyFixes(findings, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez")})
+			// Assert
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Applied) != tt.wantFixes {
+				t.Fatalf("want %d fixes, got %+v", tt.wantFixes, res.Applied)
+			}
+			data, _ := os.ReadFile(filepath.Join(root, ".claude/skills/h/SKILL.md")) //nolint:errcheck // a missing file fails the assertion
+			if got := strings.Count(string(data), "allowed-tools:"); got != tt.wantKeys {
+				t.Errorf("want %d allowed-tools keys, got %d:\n%s", tt.wantKeys, got, data)
+			}
+		})
 	}
 }
