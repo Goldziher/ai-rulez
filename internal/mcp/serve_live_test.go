@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"os"
 	"path/filepath"
 
 	"context"
@@ -148,4 +149,44 @@ func TestServeSetup_InitialFingerprintAgreesWithTheWatcherForALogInTheConfigDir(
 
 	// Assert
 	assert.Equal(t, poll, baseline, "the first poll must not see a change that is only the usage files")
+}
+
+func TestServeSetup_UsageSinkRecordsCarryTheSaltedSessionAndDoNotBlock(t *testing.T) {
+	tests := []struct {
+		name        string
+		sink        func(out string) string
+		wantSession bool
+		wantFast    bool
+	}{
+		{"sink only records the session like a log line", func(out string) string { return "cat >> '" + out + "'" }, true, true},
+		{"a hanging sink does not delay the load", func(string) string { return "sleep 30" }, false, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			out := filepath.Join(dir, "sink.out")
+			st := &ServeSetup{UsageSink: tt.sink(out)}
+			record, closeSink := st.telemetry(&config.Config{ConfigDir: filepath.Join(dir, ".ai-rulez")})
+
+			// Act
+			start := time.Now()
+			record(SessionTelemetry{Skill: "kit", Session: "conn-1", Client: "c"})
+			elapsed := time.Since(start)
+			if tt.wantSession {
+				closeSink(5 * time.Second)
+			} else {
+				closeSink(0)
+			}
+
+			// Assert
+			assert.Less(t, elapsed, time.Second, "load latency must not depend on the sink")
+			if tt.wantSession {
+				got, err := os.ReadFile(out)
+				require.NoError(t, err)
+				assert.Contains(t, string(got), `"session":"`)
+				assert.Contains(t, string(got), `"v":3`)
+			}
+		})
+	}
 }

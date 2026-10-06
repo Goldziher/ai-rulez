@@ -146,6 +146,9 @@ type RecordOptions struct {
 	// standard input. ai-rulez itself makes no network call; what the command
 	// does is the user's choice.
 	SinkCommand string
+	// AsyncSink, when set, delivers the sink line in the background instead of
+	// running SinkCommand inline (a long-running server must not wait for it).
+	AsyncSink *AsyncSink
 	// IndexPath locates the skills index used to resolve hashes. Empty means
 	// <event cwd>/.ai-rulez/skills-index.json; a missing index is not an error.
 	IndexPath string
@@ -225,7 +228,10 @@ func emit(entry *Entry, options RecordOptions) (*Entry, error) {
 			errs = append(errs, err)
 		}
 	}
-	if options.SinkCommand != "" {
+	switch {
+	case options.AsyncSink != nil:
+		options.AsyncSink.Send(line)
+	case options.SinkCommand != "":
 		if err := runSink(options.SinkCommand, line); err != nil {
 			errs = append(errs, err)
 		}
