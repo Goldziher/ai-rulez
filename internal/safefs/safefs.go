@@ -206,6 +206,27 @@ func ReadRegular(path string) ([]byte, error) {
 	return data, oops.With("path", path).Wrapf(err, "read file")
 }
 
+// OpenRegular opens a regular file for streaming, refusing a symlink or anything
+// else, for files too large for ReadRegular. The caller closes it.
+func OpenRegular(path string) (*os.File, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // callers test os.ErrNotExist
+	}
+	if !info.Mode().IsRegular() {
+		return nil, refuse(path, "it is a symlink or not a regular file")
+	}
+	file, err := os.OpenFile(path, os.O_RDONLY, 0) //nolint:gosec // Lstat-checked machine-local file
+	if err != nil {
+		return nil, err //nolint:wrapcheck // callers test os.ErrNotExist
+	}
+	if opened, statErr := file.Stat(); statErr != nil || !os.SameFile(info, opened) {
+		_ = file.Close() //nolint:errcheck // read-only
+		return nil, refuse(path, "it changed while it was opened")
+	}
+	return file, nil
+}
+
 // EnsureParent creates the directories above path with the same symlink checks
 // as OpenAppend, so a caller that writes beside path (a temp file) does not
 // create files through a planted link.
