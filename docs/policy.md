@@ -22,6 +22,16 @@ A flag or variable that is set but cannot be loaded is an error (`AR742`), never
 switch the policy off. An absent managed file is not an error; a present but unreadable or invalid one is. A policy
 file must be a regular file of at most 256 KiB. The same file named twice is one layer.
 
+### Managed locations
+
+The managed file is `/etc/ai-rulez/policy.toml` on Linux and other Unix systems,
+`/Library/Application Support/ai-rulez/policy.toml` on macOS and `%ProgramData%\ai-rulez\policy.toml` on Windows
+(`C:\ProgramData` when `ProgramData` is not an absolute path: a relative value would resolve against the repository
+being evaluated). Make the file writable by administrators only. Apart from the `ProgramData` system variable on
+Windows (keep it out of repository-controlled environment files), nothing moves it: a flag or variable a repository could
+set would let it replace the managed anchor with an empty file. (The end-to-end tests build a binary with the location
+moved by a link-time variable; a release binary never sets it.)
+
 ### Policy URLs
 
 A policy may be an `https` URL, so one file serves every repository. The rules are strict, because a URL is

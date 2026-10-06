@@ -164,20 +164,39 @@ func managedPaths(opts DiscoverOptions) []string {
 	}
 	goos := opts.GOOS
 	if goos == "" {
+		if managedRoot != "" {
+			return []string{filepath.Join(managedRoot, "ai-rulez", "policy.toml")}
+		}
 		goos = hostOS()
 	}
 	switch goos {
 	case "darwin":
 		return []string{"/Library/Application Support/ai-rulez/policy.toml"}
 	case "windows":
-		base := ambient.Getenv(opts.Env, "ProgramData")
-		if base == "" {
-			base = `C:\ProgramData`
-		}
-		return []string{base + `\ai-rulez\policy.toml`}
+		return []string{programData(opts.Env) + `\ai-rulez\policy.toml`}
 	}
 	return []string{"/etc/ai-rulez/policy.toml"}
 }
+
+// defaultProgramData is where Windows keeps machine-wide application data.
+const defaultProgramData = `C:\ProgramData`
+
+// programData is the Windows machine-wide data directory: %ProgramData%, which the
+// system sets, when it is an absolute path (a drive path or a UNC share), else the
+// default. A relative value is refused because it would resolve against the
+// directory of the repository being evaluated.
+func programData(env ambient.Env) string {
+	base := strings.TrimRight(strings.TrimSpace(ambient.Getenv(env, "ProgramData")), `\/`)
+	if len(base) > 3 && base[1] == ':' && isLetter(base[0]) && (base[2] == '\\' || base[2] == '/') {
+		return base
+	}
+	if strings.HasPrefix(base, `\\`) && len(base) > 2 {
+		return base
+	}
+	return defaultProgramData
+}
+
+func isLetter(b byte) bool { return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') }
 
 // loader carries the state of one Discover call.
 type loader struct {
