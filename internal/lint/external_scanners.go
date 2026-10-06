@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
+	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
 
@@ -107,7 +107,7 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 // or a path relative to dir. It returns "" when there is none.
 func lookExecutable(name, dir string) string {
 	if !strings.ContainsAny(name, `/\`) {
-		p, err := exec.LookPath(name)
+		p, err := procrunner.LookPath(name)
 		if err != nil { // includes exec.ErrDot: found only through a relative PATH entry
 			return ""
 		}

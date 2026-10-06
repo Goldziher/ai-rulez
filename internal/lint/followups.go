@@ -9,9 +9,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -29,7 +29,7 @@ const (
 )
 
 // now is the clock of the freshness checks; tests replace it.
-var now = time.Now
+var now = ambient.Clock(nil).Now
 
 // Frontmatter keys that are known without configuration. The sources are the
 // Agent Skills specification, the Claude Code skill and subagent references,

@@ -13,6 +13,10 @@ const maxLinks = 255
 // ErrNoWorkspace is returned by a zero View.
 var ErrNoWorkspace = errors.New("no workspace")
 
+// ErrTooManyLinks is returned when resolving a name follows more symlinks than
+// the operating system allows, which is how a link cycle shows.
+var ErrTooManyLinks = errors.New("too many links")
+
 // View reads a Workspace through the absolute paths the engine keeps in its data
 // model (Config.BaseDir, ContentFile.Path, ...). Errors name the absolute path,
 // so messages read as they did when the files were read from the disk directly.
@@ -197,8 +201,9 @@ func Resolve(ws Workspace, name string) (string, error) {
 			done = append(done, part)
 			continue
 		}
-		if links++; links > maxLinks {
-			return "", &fs.PathError{Op: "evalsymlinks", Path: name, Err: errors.New("too many links")}
+		links++
+		if links > maxLinks {
+			return "", &fs.PathError{Op: "evalsymlinks", Path: name, Err: ErrTooManyLinks}
 		}
 		target, err := ws.ReadLink(cand)
 		if err != nil {

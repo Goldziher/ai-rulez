@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 )
 
@@ -228,7 +229,7 @@ func (r *runner) checkTableAge() {
 
 // trapNow is the package clock of the age checks; tests replace it. An injected
 // host clock (WithHost) takes precedence.
-var trapNow = time.Now
+var trapNow = ambient.Clock(nil).Now
 
 func (r *runner) trapClock() time.Time {
 	if r.host.Clock != nil {
