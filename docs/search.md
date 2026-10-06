@@ -141,9 +141,12 @@ The embedded text of a skill is a fixed template over the configured fields (`na
 `keywords:` lines, then `body:` when `index_body` is set). A vector is reused when the provider, the model, the
 fields and the SHA-256 of the exact text match, so editing a skill's body (with `index_body = false`) costs nothing, one edited description costs one
 text (so does a rename, since the name is part of the text unless `fields` leaves it out), and a changed model or field set re-embeds everything:
-vectors of different models are never mixed. The build stops on a budget or provider error after writing the
-vectors that finished (atomically: `vectors.bin`, then `manifest.json`), prints the skills still missing and exits
-2; those rank lexically. A second concurrent run is refused by `index.lock`.
+vectors of different models are never mixed. A batch the provider rejects (a 4xx, an over-long input) is split in halves
+until the refused skill stands alone, which is then skipped and named on stderr (`rejected` in the JSON summary);
+the run goes on and exits 2. Five rejections in a row stop the build, since that is a broken provider rather than
+bad skills. A budget, network, key or transient provider error stops the build too. Either way the vectors that
+finished are written (atomically: `vectors.bin`, then `manifest.json`), the skills still missing are printed and the
+run exits 2; those rank lexically. A second concurrent run is refused by `index.lock`.
 
 `search status` reads files only and reports `none`, `unreadable`, `incompatible` (other provider, model, fields or
 template), `stale` or `fresh`, with the skills that are current, changed since indexing (the embedded text
