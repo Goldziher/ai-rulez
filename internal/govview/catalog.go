@@ -4,8 +4,11 @@ package govview
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
+
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
@@ -207,4 +210,63 @@ func relToConfig(cfg *config.Config, p string) string {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)
+}
+
+// Bounds of the MCP views; the CLI documents are not limited.
+const (
+	DefaultLimit = 200
+	MaxLimit     = 1000
+)
+
+// ClampLimit applies the default and the maximum to a requested limit.
+func ClampLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return DefaultLimit
+	case limit > MaxLimit:
+		return MaxLimit
+	}
+	return limit
+}
+
+// CatalogView is a catalog narrowed by kind and role and capped at a limit. With
+// no filter and fewer items than the limit it serialises exactly as CatalogDoc.
+type CatalogView struct {
+	*CatalogDoc
+	// TotalItems is the number of matching items before the cap; set only when
+	// the list was cut.
+	TotalItems int  `json:"total_items,omitempty"`
+	Truncated  bool `json:"truncated,omitempty"`
+}
+
+// ViewCatalog narrows doc to the items of kind and kept by role, and keeps at
+// most limit of them (see ClampLimit). The roles list shrinks to role.
+func ViewCatalog(doc *CatalogDoc, kind, role string, limit int) (*CatalogView, error) {
+	kinds := append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)
+	if kind != "" && !slices.Contains(kinds, kind) {
+		return nil, oops.Errorf("unknown kind %q (use %s)", kind, strings.Join(kinds, ", "))
+	}
+	out := *doc
+	if role != "" {
+		idx := slices.IndexFunc(doc.Roles, func(r CatalogRole) bool { return r.Name == role })
+		if idx < 0 {
+			return nil, oops.Errorf("role %q is not defined", role)
+		}
+		out.Roles = []CatalogRole{doc.Roles[idx]}
+	}
+	if kind != "" || role != "" {
+		out.Items = []CatalogItem{}
+		for i := range doc.Items {
+			it := &doc.Items[i]
+			if (kind == "" || it.Kind == kind) && (role == "" || slices.Contains(it.Roles, role)) {
+				out.Items = append(out.Items, *it)
+			}
+		}
+	}
+	view := &CatalogView{CatalogDoc: &out}
+	if limit = ClampLimit(limit); len(out.Items) > limit {
+		view.TotalItems, view.Truncated = len(out.Items), true
+		out.Items = out.Items[:limit]
+	}
+	return view, nil
 }
