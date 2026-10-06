@@ -46,12 +46,16 @@ var injectionPhrases = []*regexp.Regexp{
 }
 
 var (
-	htmlCommentRe   = regexp.MustCompile(`(?s)<!--(.*?)-->`)
-	imperativeRe    = regexp.MustCompile(`(?i)\b(?:curl|wget|eval|sudo|exfiltrate|secretly|silently|execute)\b|\brun\s*:`)
-	pipeToShellRe   = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
-	pipeToInterpRe  = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
-	procSubstRe     = regexp.MustCompile(`(?i)(?:\b(?:ba|z)?sh|\bsource|\.)\s+<\(\s*(?:curl|wget)\b`)
-	evalRe          = regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval(?:\\s+[\"'$`]|\\s*\\()")
+	htmlCommentRe  = regexp.MustCompile(`(?s)<!--(.*?)-->`)
+	imperativeRe   = regexp.MustCompile(`(?i)\b(?:curl|wget|eval|sudo|exfiltrate|secretly|silently|execute)\b|\brun\s*:`)
+	pipeToShellRe  = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
+	pipeToInterpRe = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
+	procSubstRe    = regexp.MustCompile(`(?i)(?:\b(?:ba|z)?sh|\bsource|\.)\s+<\(\s*(?:curl|wget)\b`)
+	// evalRe matches a call eval(...), or the shell builtin in command position
+	// (line start, after ; & | ( { ` $( then do else) followed by an argument. A
+	// word after another command (`playwright-cli eval "document.title"`) is a
+	// subcommand, not the builtin.
+	evalRe          = regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval\\s*\\(|(?:^|[;&|({`]|\\$\\(|\\b(?:then|do|else))\\s*(?:[-*>]\\s+)*(?:\\$\\s+)?eval\\s+[\"'$`]")
 	evalBenignRe    = regexp.MustCompile(`(?i)\beval\s+"?\$\(\s*(?:ssh-agent|pyenv|rbenv|nodenv|direnv|brew\s+shellenv|fnm|starship|zoxide|mise|rtx|asdf|opam|thefuck)\b`)
 	base64ExecRe    = regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
 	writeOutsideRe  = regexp.MustCompile(`(?:>>?|\btee(?:\s+-a)?)\s*(?:~/|\$HOME/|\$\{HOME\}/|/etc/|/usr/|/opt/|/var/|/root/)`)
