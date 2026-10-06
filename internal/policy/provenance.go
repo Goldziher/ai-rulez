@@ -45,6 +45,12 @@ func provenance(layers []Layer) map[string]string {
 	firstWith("lock.include_outputs", func(p Policy) bool { return p.Lock.IncludeOutputs })
 	firstWith("telemetry.allow_network", func(p Policy) bool { return p.Telemetry.Disabled })
 	firstWith("llm.allow_network", func(p Policy) bool { return p.LLM.Disabled })
+	firstWith("governance.enforce", func(p Policy) bool { return p.Governance.Enforce })
+	all("governance.require_approval", func(p Policy) bool { return len(p.Governance.RequireApproval) > 0 })
+	firstWith("governance.min_approvers", func(p Policy) bool {
+		return p.Governance.MinApprovers > 0 && p.Governance.MinApprovers == eff.Governance.MinApprovers
+	})
+	all("governance.approvers", func(p Policy) bool { return p.Governance.Approvers.Set })
 	firstWith("guard.generated", func(p Policy) bool { return p.Guard.Generated })
 	return out
 }

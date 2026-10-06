@@ -1,6 +1,9 @@
 package policy
 
-import "sort"
+import (
+	"slices"
+	"sort"
+)
 
 // Merge combines two policies into the tighter of the two, key by key:
 // allowlists intersect, denylists and required sets union, severities and
@@ -29,6 +32,12 @@ func Merge(a, b Policy) Policy {
 		Telemetry: Network{Disabled: a.Telemetry.Disabled || b.Telemetry.Disabled},
 		LLM:       Network{Disabled: a.LLM.Disabled || b.LLM.Disabled},
 		Guard:     Guard{Generated: a.Guard.Generated || b.Guard.Generated},
+		Governance: Governance{
+			Enforce:         a.Governance.Enforce || b.Governance.Enforce,
+			RequireApproval: union(a.Governance.RequireApproval, b.Governance.RequireApproval),
+			MinApprovers:    max(a.Governance.MinApprovers, b.Governance.MinApprovers),
+			Approvers:       intersectExact(a.Governance.Approvers, b.Governance.Approvers),
+		},
 	}
 }
 
@@ -60,6 +69,24 @@ func intersect(a, b List) List {
 		return a
 	}
 	items := append(coveredBy(a.Items, b.Items), coveredBy(b.Items, a.Items)...)
+	return List{Set: true, Items: sortedUnique(items)}
+}
+
+// intersectExact is the allowlist meet for lists of plain names (no patterns):
+// the entries both sides list. An unset list constrains nothing.
+func intersectExact(a, b List) List {
+	if !a.Set {
+		return b
+	}
+	if !b.Set {
+		return a
+	}
+	var items []string
+	for _, x := range a.Items {
+		if slices.Contains(b.Items, x) {
+			items = append(items, x)
+		}
+	}
 	return List{Set: true, Items: sortedUnique(items)}
 }
 

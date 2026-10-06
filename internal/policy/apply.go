@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
@@ -73,6 +75,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.lock()
 	a.networks()
 	a.guard()
+	a.governance()
 	sort.SliceStable(a.out.Violations, func(i, j int) bool {
 		x, y := a.out.Violations[i], a.out.Violations[j]
 		if x.Code != y.Code {
@@ -392,4 +395,66 @@ func (a *applier) guardTablePresent() bool {
 		}
 	}
 	return false
+}
+
+// governance clamps [governance] to the policy floor: enforce on, the policy's
+// selectors always required (PolicyFloor, which exempt cannot narrow), at least
+// min_approvers, and only the policy's approvers counting. A repository that
+// writes a [governance] table loosening one of them is reported; one without
+// the table is forced silently.
+func (a *applier) governance() {
+	pol := a.res.Policy.Governance
+	if !pol.Enforce && len(pol.RequireApproval) == 0 && pol.MinApprovers == 0 && !pol.Approvers.Set {
+		return
+	}
+	repoHas := a.cfg.Governance != nil
+	if !repoHas {
+		a.cfg.Governance = &config.GovernanceConfig{}
+	}
+	g := a.cfg.Governance
+	if pol.Enforce {
+		if repoHas && !g.Enforce {
+			a.violate(lint.CodePolicyLoosened, "governance.enforce", "[governance]",
+				"[governance] does not enable enforce, which the policy requires (origin: %s); approvals are enforced", a.origin("governance.enforce"))
+		}
+		g.Enforce = true
+	}
+	g.PolicyFloor = append([]string(nil), pol.RequireApproval...)
+	if pol.MinApprovers > g.MinApprovers {
+		if g.MinApprovers > 0 {
+			a.violate(lint.CodePolicyLoosened, "governance.min_approvers", "min_approvers",
+				"[governance] min_approvers = %d is below the policy minimum %d (origin: %s); %d is enforced", g.MinApprovers, pol.MinApprovers, a.origin("governance.min_approvers"), pol.MinApprovers)
+		}
+		g.MinApprovers = pol.MinApprovers
+	}
+	if pol.Approvers.Set {
+		a.governanceApprovers(g, pol.Approvers)
+	}
+}
+
+// governanceApprovers keeps the repository's approvers that the policy list
+// also names; a repository without any left (or none) gets the policy list. An
+// empty policy list means nobody may approve, which approval.NobodyMayApprove stands for.
+func (a *applier) governanceApprovers(g *config.GovernanceConfig, pol List) {
+	var kept []string
+	for _, r := range g.Approvers {
+		n := approval.NormalizeReviewer(r)
+		if slices.Contains(pol.Items, n) {
+			kept = append(kept, n)
+			continue
+		}
+		a.violate(lint.CodePolicyLoosened, "governance.approvers", r,
+			"[governance] approvers entry %q is not in the policy list %s (origin: %s); it is dropped", r, quoteList(pol.Items), a.origin("governance.approvers"))
+	}
+	switch {
+	case len(kept) > 0:
+		if !sameSet(kept, pol.Items) {
+			a.accept = append(a.accept, fmt.Sprintf("governance.approvers (narrowed to %s)", quoteList(sortedUnique(kept))))
+		}
+		g.Approvers = sortedUnique(kept)
+	case len(pol.Items) == 0:
+		g.Approvers = []string{approval.NobodyMayApprove}
+	default:
+		g.Approvers = append([]string(nil), pol.Items...)
+	}
 }

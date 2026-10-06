@@ -15,6 +15,8 @@ import (
 
 	toml "github.com/pelletier/go-toml/v2"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/approval"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
@@ -41,12 +43,27 @@ type List struct {
 // Policy is the normalized content of one policy file, or the merge of several.
 // The zero value constrains nothing and is the identity of Merge.
 type Policy struct {
-	Sources   Sources
-	Lint      Lint
-	Lock      Lock
-	Telemetry Network
-	LLM       Network
-	Guard     Guard
+	Sources    Sources
+	Lint       Lint
+	Lock       Lock
+	Telemetry  Network
+	LLM        Network
+	Guard      Guard
+	Governance Governance
+}
+
+// Governance governs [governance] (docs/approvals.md): the approval floor the
+// repository can raise but not lower.
+type Governance struct {
+	// Enforce makes missing approvals fail lock --check, generate --locked and the skills server.
+	Enforce bool
+	// RequireApproval lists selectors whose content always needs approval; the
+	// repository's exempt list cannot remove them.
+	RequireApproval []string
+	// MinApprovers is the fewest distinct reviewers a digest needs.
+	MinApprovers int
+	// Approvers, when set, is the only list of reviewers that count (lower-cased).
+	Approvers List
 }
 
 // Sources governs where remote content may come from.
@@ -121,6 +138,14 @@ type fileDoc struct {
 	Guard     *struct {
 		Generated *bool `toml:"generated"`
 	} `toml:"guard"`
+	Governance *fileGovernance `toml:"governance"`
+}
+
+type fileGovernance struct {
+	Enforce         *bool     `toml:"enforce"`
+	RequireApproval []string  `toml:"require_approval"`
+	MinApprovers    *int      `toml:"min_approvers"`
+	Approvers       *[]string `toml:"approvers"`
 }
 
 type fileSources struct {
@@ -185,6 +210,7 @@ func Parse(path string, data []byte) (name string, p Policy, err error) {
 	for _, step := range []func() error{
 		func() error { return p.Sources.fromDoc(doc.Sources) },
 		func() error { return p.Lint.fromDoc(doc.Lint) },
+		func() error { return p.Governance.fromDoc(doc.Governance) },
 	} {
 		if err := step(); err != nil {
 			return fail("%v", err)
@@ -204,6 +230,35 @@ func Parse(path string, data []byte) (name string, p Policy, err error) {
 		p.Guard.Generated = doc.Guard.Generated != nil && *doc.Guard.Generated
 	}
 	return doc.Name, p, nil
+}
+
+func (g *Governance) fromDoc(d *fileGovernance) error {
+	if d == nil {
+		return nil
+	}
+	g.Enforce = d.Enforce != nil && *d.Enforce
+	for _, sel := range d.RequireApproval {
+		if _, err := config.ParseApprovalSelector(sel); err != nil {
+			return fmt.Errorf("governance.require_approval: %w", err)
+		}
+	}
+	g.RequireApproval = sortedUnique(d.RequireApproval)
+	if d.MinApprovers != nil {
+		if *d.MinApprovers < 0 {
+			return fmt.Errorf("governance.min_approvers: %d must not be negative", *d.MinApprovers)
+		}
+		g.MinApprovers = *d.MinApprovers
+	}
+	if d.Approvers != nil {
+		items := make([]string, 0, len(*d.Approvers))
+		for _, a := range *d.Approvers {
+			if n := approval.NormalizeReviewer(a); n != "" {
+				items = append(items, n)
+			}
+		}
+		g.Approvers = List{Set: true, Items: sortedUnique(items)}
+	}
+	return nil
 }
 
 func (s *Sources) fromDoc(d *fileSources) error {

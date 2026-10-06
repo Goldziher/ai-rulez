@@ -341,3 +341,9 @@ func TestEvaluate_RecordedNamesReviewersOfFailingRecords(t *testing.T) {
 	assert.Empty(t, expired.Reviewers)
 	assert.Equal(t, []string{"alice"}, expired.Recorded)
 }
+
+func TestAuthorized_NobodyMayApproveRefusesEveryone(t *testing.T) {
+	p := Policy{Approvers: []string{NobodyMayApprove}}
+	assert.False(t, p.Authorized("alice"))
+	assert.False(t, p.Authorized(NobodyMayApprove), "the sentinel itself is not a reviewer")
+}
