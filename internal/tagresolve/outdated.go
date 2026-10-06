@@ -26,6 +26,9 @@ const (
 	StatusUnsatisfied = "unsatisfiable"
 	StatusInvalid     = "invalid"
 	StatusLowerOnly   = "downgrade-only"
+	// StatusLockedNonVersion marks a source pinned at a tag that is not a version
+	// (pinned by an arbitrary ref before a constraint was added); moving it needs consent.
+	StatusLockedNonVersion = "locked-non-version"
 )
 
 // TagRef is a tag and the commit it resolves to.
@@ -121,7 +124,8 @@ func Evaluate(kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []
 	}
 	switch {
 	case !parsed:
-		row.Status = StatusNotLocked
+		row.Status = StatusLockedNonVersion
+		row.Note = fmt.Sprintf("the pinned tag %s is not a version; moving to %s needs --allow-downgrade", entry.Tag, sel.Chosen.Tag.Name)
 	case sel.Chosen.Version.Compare(locked) > 0:
 		row.Status = StatusUpdatable
 	case sel.Chosen.Version.Compare(locked) < 0:
@@ -153,6 +157,9 @@ func NewReport(rows []Row) *Report {
 		case StatusTagMoved:
 			rep.Summary.TagMoved++
 			rep.Summary.Errors++
+		case StatusTagMissing:
+			// A vanished pin is a supply-chain signal (the history may have been rewritten): fail the check.
+			rep.Summary.Errors++
 		case StatusUnsatisfied, StatusInvalid:
 			rep.Summary.Errors++
 		}
@@ -163,8 +170,8 @@ func NewReport(rows []Row) *Report {
 	return rep
 }
 
-// Failing reports whether the report holds an error finding: a moved tag or an
-// unresolvable constraint.
+// Failing reports whether the report holds an error finding: a moved or missing
+// pinned tag, or an unresolvable constraint.
 func (r *Report) Failing() bool { return r.Summary.Errors > 0 }
 
 // WriteJSON writes the report as indented JSON.
