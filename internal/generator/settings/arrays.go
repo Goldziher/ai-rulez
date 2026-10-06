@@ -122,57 +122,10 @@ func previousElementClaims(cfg *config.Config, docPath string, path []string) []
 	return claims
 }
 
-// planElements decides an array in which ai-rulez owns only some elements. The
-// array keeps the consumer's elements in their order and appends the elements of
-// ours it lacks; an element an earlier run claimed that ours no longer wants
-// leaves, one copy per claimed copy, so a hand-written duplicate stays. claimed
-// is what this run added or already owned: an identical element the consumer
-// wrote is theirs and is never claimed, so clean cannot take it back. Elements
-// are compared by digest, which is how a manifest records them.
+// planElements decides an array in which ai-rulez owns only some elements, from
+// the claims an earlier run recorded for it (see jsonmerge.PlanElements).
 func planElements[T any](previous []jsonmerge.Claim, existing, ours []T) (value, claimed []T) {
-	matchers := make([]*jsonmerge.ElementMatcher, len(previous))
-	for i, claim := range previous {
-		matchers[i] = claim.NewElementMatcher()
-	}
-	wanted := make(map[string]bool, len(ours))
-	for _, element := range ours {
-		wanted[jsonmerge.Digest(element)] = true
-	}
-	present := make(map[string]bool, len(existing)+len(ours))
-	retained := map[string]int{} // copies an earlier run claimed that stay
-	value = make([]T, 0, len(existing)+len(ours))
-	for _, element := range existing {
-		sum := jsonmerge.Digest(element)
-		owned := false
-		for _, matcher := range matchers {
-			if matcher.Take(element) {
-				owned = true
-				break
-			}
-		}
-		if owned && !wanted[sum] {
-			continue
-		}
-		value = append(value, element)
-		present[sum] = true
-		if owned {
-			retained[sum]++
-		}
-	}
-	for _, element := range ours {
-		sum := jsonmerge.Digest(element)
-		switch {
-		case !present[sum]:
-			present[sum] = true
-			value = append(value, element)
-		case retained[sum] > 0:
-			retained[sum]--
-		default:
-			continue // identical to an element the consumer wrote: theirs
-		}
-		claimed = append(claimed, element)
-	}
-	return value, claimed
+	return jsonmerge.PlanElements(jsonmerge.ClaimsOwner[T](previous), existing, ours)
 }
 
 func equalPath(a, b []string) bool { return slices.Equal(a, b) }

@@ -278,7 +278,7 @@ func TestKilo_InstructionsRegistersRulesFolder(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(base, "kilo.jsonc"), []byte(`{"instructions":"x.md"}`), 0o644))
 		outputs, err := gen.Generate(&config.ContentTree{}, base, &config.Config{Name: "demo", BaseDir: base})
 		require.NoError(t, err)
-		assert.Contains(t, requireFile(t, outputs, "kilo.jsonc").Content, `"instructions": "x.md"`)
+		assert.Equal(t, `{"instructions":"x.md"}`, requireFile(t, outputs, "kilo.jsonc").Content)
 	})
 }
 
