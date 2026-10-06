@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -13,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -45,6 +47,9 @@ type ClaudePluginEval struct {
 	ExtraArgs []string
 	// KeepDir, when set, is where the throwaway plugin is built and kept.
 	KeepDir string
+	// Timeout bounds one invocation (one skill); the process tree is killed when it
+	// ends. Default 30 minutes, like the command runner.
+	Timeout time.Duration
 	Stderr  io.Writer
 	// Exec runs the tool; tests replace it. Nil uses os/exec.
 	Exec func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error
@@ -55,7 +60,11 @@ func (*ClaudePluginEval) Name() string { return RunnerClaudePluginEval }
 
 // Fingerprint implements Fingerprinter: the settings that change what claude runs.
 func (r *ClaudePluginEval) Fingerprint() string {
-	return fmt.Sprintf("bin=%s runs=%d judge=%s args=%q", r.Bin, r.Runs, r.JudgeModel, r.ExtraArgs)
+	bin := r.Bin
+	if bin == "" {
+		bin = "claude"
+	}
+	return fmt.Sprintf("bin=%s binfile=%s runs=%d judge=%s args=%q", bin, executableStamp(bin), r.Runs, r.JudgeModel, r.ExtraArgs)
 }
 
 // Run implements Runner.
@@ -87,8 +96,17 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	if run == nil {
 		run = execCommand
 	}
+	timeout := r.Timeout
+	if timeout <= 0 {
+		timeout = DefaultRunnerTimeout
+	}
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	var stdout bytes.Buffer
-	runErr := run(ctx, bin, args, &stdout, r.Stderr)
+	runErr := run(runCtx, bin, args, &cappedWriter{w: &stdout, n: maxToolOutputBytes}, r.Stderr)
+	if errors.Is(runCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		runErr = fmt.Errorf("timed out after %s (raise --timeout): %w", timeout, runErr)
+	}
 	data, readErr := os.ReadFile(resultFile) //nolint:gosec // the file this run was told to write
 	if readErr != nil {
 		if runErr != nil {
@@ -129,10 +147,43 @@ func (r *ClaudePluginEval) args(dir, resultFile string, req *Request) []string {
 	return append(args, r.ExtraArgs...)
 }
 
+// maxToolOutputBytes caps what is kept of the tool's standard output and what is
+// forwarded of its standard error: the result is read from a file, so anything
+// beyond this is noise that must not exhaust memory.
+const maxToolOutputBytes = 8 << 20
+
+// execCommand runs the tool in its own process group and kills the whole group
+// when ctx ends, so a hung or forking claude cannot outlive the timeout.
 func execCommand(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
 	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // the user chose the runner binary
-	cmd.Stdout, cmd.Stderr = stdout, stderr
+	killTreeOnCancel(cmd)
+	cmd.Stdout = stdout
+	if stderr != nil {
+		cmd.Stderr = &cappedWriter{w: stderr, n: maxToolOutputBytes}
+	}
 	return cmd.Run()
+}
+
+// cappedWriter forwards at most n bytes and silently drops the rest, so the
+// child never blocks on a full pipe and memory stays bounded.
+type cappedWriter struct {
+	w io.Writer
+	n int
+}
+
+func (c *cappedWriter) Write(p []byte) (int, error) {
+	if c.n <= 0 {
+		return len(p), nil
+	}
+	keep := p
+	if len(keep) > c.n {
+		keep = keep[:c.n]
+	}
+	c.n -= len(keep)
+	if _, err := c.w.Write(keep); err != nil {
+		return 0, err //nolint:wrapcheck // the sink's own error
+	}
+	return len(p), nil
 }
 
 // ClaudeTranslation records how the cases were translated.

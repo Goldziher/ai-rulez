@@ -133,7 +133,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--harness` | Harness the cases run against (default `claude`); recorded in the results. |
 | `--runner`, `--runner-command` | `claude-plugin-eval` or `command`. The default is `claude-plugin-eval` for the claude harness and `command` when `--runner-command` is set. |
 | `--claude-bin`, `--runner-arg`, `--runs`, `--judge-model` | `claude-plugin-eval` only: the executable, extra arguments (repeatable, for example `--runner-arg --trust-plugin`), runs per case, grader model. |
-| `--timeout` | `command` runner: time limit for one skill (default 30m). |
+| `--timeout` | Time limit for one skill with either runner (default 30m). When it ends the runner's whole process tree is killed (a process group on Unix); the output the runner may produce is capped (8 MiB for `claude`, 64 MiB for a `command` runner's answer). |
 | `--model` | Model for the cases. |
 | `--ablation` | Also run every case without the skill and report the delta. |
 | `--dry-run` | List what would run with an estimated cost. Calls no runner, writes nothing. |
@@ -218,7 +218,7 @@ Cases are self-contained: near misses are expanded and `prompt_file` and fixture
 
 A skill is not re-run when the results file already holds a run with the same cache key: the skill's sha256 digest,
 the digest of its eval material (cases, fixtures, rubrics and graders), the runner and its own settings (the
-`--runner-command` text, or `--claude-bin`, `--runs`, `--judge-model` and `--runner-arg` for `claude-plugin-eval`),
+`--runner-command` text and the content hash of its first word when that is a file, so editing the script re-runs; or `--claude-bin`, `--runs`, `--judge-model` and `--runner-arg` for `claude-plugin-eval`),
 harness, model, the ablation setting, `--allow-exec` (it changes how `command_exit` assertions grade) and the
 ai-rulez version. Editing a case or the skill, or changing any of those, re-runs it. `--force` ignores the cache.
 Only real grading results are cached: a run in which any case errored (rate limit, missing credentials, no result
@@ -226,17 +226,24 @@ from the runner) or nothing was scored is not stored and is retried on the next 
 cached failure. A failed grade (a case that ran and did not pass) is a result and is cached. The pass/fail verdict is recomputed from the stored
 score against the current threshold, so lowering `--threshold` needs no re-run.
 
+**The results file is not signed.** It is a committed file, and the cache key is an unkeyed hash anyone can compute, so
+a pull request can add a record that claims a pass. ai-rulez replays a stored run only when its recorded skill and
+cases digests also match the files on disk, which means an edited skill always re-runs unless the record was forged
+to match the edit as well. That is not a defence against someone who can edit the file. **A CI gate must use
+`eval run --force`** (always run, never replay), or verify the provenance of `eval-results.json` (for example, produce it
+in a trusted job and compare it) before trusting it.
+
 ### Cost controls
 
 - `--dry-run` prints the number of agent runs, estimated tokens and USD. The estimate is deterministic and offline:
   the harness's own overhead (2,000 tokens), the prompt, fixtures, the skill's `SKILL.md` (counted with the embedded
   `cl100k_base` tokenizer, an approximation), 600 output tokens per run, an extra grader call per rubric, times the
-  runs per case (3 for `claude-plugin-eval` unless `--runs`), times two arms with `--ablation`. Prices come from a
+  runs per case (3 for `claude-plugin-eval` unless `--runs`; the same number is passed to claude with `--runs`, so the estimate and the run agree), times two arms with `--ablation`. Prices come from a
   model tier (haiku, sonnet, opus; sonnet for anything else) and go stale: override with `--price-in` and `--price-out`.
   Treat it as an order of magnitude.
-- `--max-cost USD` refuses to start when the estimate exceeds it, hands each runner the remaining budget
+- `--max-cost USD` is an advisory per-skill cap, not a hard limit. It refuses to start when the estimate exceeds it, hands each runner the remaining budget
   (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
-  reported spend reaches it (status `skipped-over-budget`, exit 2). Spend is counted conservatively: the larger of
+  reported spend reaches it (status `skipped-over-budget`, exit 2). It is checked between skills; inside one skill only the runner can enforce it, and `--timeout` bounds the time. When a runner reports more than the budget it was given, the report carries a warning. A runner that reports no cost and no tokens at all is assumed to have spent the whole remaining budget (with a warning), so the run stops instead of continuing on an unknown spend. Spend is counted conservatively: the larger of
   the sum of per-case costs and the runner's own total, tokens priced with `--price-in`/`--price-out` when no cost is
   reported, and a runner call that fails is assumed to have spent the whole remaining budget, so the run stops. A
   `command` runner should enforce `max_cost_usd` itself: it is the only one that knows what it spends. Negative or
