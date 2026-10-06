@@ -57,7 +57,8 @@ accepted_findings = ["AR005"]
   expired approval.
 - **Re-approving** replaces that reviewer's earlier record of the item; other reviewers' records stay until they approve
   again. `--revoke <item>` removes the records of an item (`--reviewer` limits it); `--prune` removes records of content
-  that no longer exists or whose digest changed.
+  that no longer exists or whose digest changed. Both also delete the `attestations/*.sigstore.json` bundle of a removed signed
+  record unless another record still names it. `--reviewer` is compared as an identity (`github:Alice` and `alice` match).
 - **Time.** `approved_at` is stored once and re-emitted byte for byte when the lock is rewritten, so `ai-rulez lock`
   never makes an approval diff. `--at` (not in the future) and `SOURCE_DATE_EPOCH` make the stamp reproducible; they
   never move the clock expiry is judged by.
@@ -276,6 +277,8 @@ denied include:shared sha256:7ab0…
 digest = "sha256:7ab0…"
 reason = "exfiltrates ~/.ssh in scripts/setup.sh"
 ```
+
+`--reason` is committed to the lock, so it is scanned for secrets and refused when one is found.
 
 A denied digest can be neither approved nor used, whether or not `[governance]` selects the item:
 
