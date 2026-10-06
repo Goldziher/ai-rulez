@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
@@ -139,6 +140,10 @@ type Config struct {
 	// falls back to the wall clock for callers that render a preview without a
 	// generation run. Only read when [header] timestamp opts the line back in.
 	GeneratedAt time.Time `yaml:"-" json:"-" toml:"-"`
+	// Host is the environment, clock, process runner and logger this config was
+	// loaded with (WithHost); the zero value is the real process. Generation,
+	// includes and lint read them from here instead of the process.
+	Host ambient.Host `yaml:"-" json:"-" toml:"-"`
 
 	// UserScope is set while rendering for `generate --user`: outputs are mapped
 	// into the person's home config directories, so renderers leave out keys that
@@ -989,8 +994,11 @@ func (c *Config) ShowHeaderTimestamp() bool {
 // Generation resolves it once into GeneratedAt; the wall-clock fallback covers
 // callers that render a header outside a generation run, such as a preview.
 func (c *Config) HeaderTimestamp() time.Time {
-	if c == nil || c.GeneratedAt.IsZero() {
-		return ResolveGenerationTime()
+	if c == nil {
+		return ResolveGenerationTimeIn(ambient.Host{})
+	}
+	if c.GeneratedAt.IsZero() {
+		return ResolveGenerationTimeIn(c.Host)
 	}
 	return c.GeneratedAt
 }
@@ -1004,14 +1012,18 @@ const sourceDateEpochEnv = "SOURCE_DATE_EPOCH"
 // wall clock. A malformed value falls through to the clock rather than failing
 // generation or silently stamping the epoch, which would be indistinguishable
 // from a deliberate pin to 1970.
-func ResolveGenerationTime() time.Time {
-	raw, ok := os.LookupEnv(sourceDateEpochEnv)
+func ResolveGenerationTime() time.Time { return ResolveGenerationTimeIn(ambient.Host{}) }
+
+// ResolveGenerationTimeIn is ResolveGenerationTime with the environment and
+// clock taken from host.
+func ResolveGenerationTimeIn(host ambient.Host) time.Time {
+	raw, ok := host.LookupEnv(sourceDateEpochEnv)
 	if !ok {
-		return time.Now()
+		return host.Now()
 	}
 	seconds, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
 	if err != nil {
-		return time.Now()
+		return host.Now()
 	}
 	return time.Unix(seconds, 0)
 }

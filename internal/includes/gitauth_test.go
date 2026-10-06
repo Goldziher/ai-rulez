@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"context"
 	"encoding/base64"
 	"os"
 	"os/exec"
@@ -50,7 +51,7 @@ func TestWithAuth(t *testing.T) {
 			base := []string{"A=b"}
 
 			// Act
-			env := withAuth(base, tt.url, tt.token)
+			env := withAuth(context.Background(), base, tt.url, tt.token)
 
 			// Assert
 			if !tt.wantSent {
@@ -67,7 +68,7 @@ func TestWithAuth(t *testing.T) {
 
 func TestWithAuthAppendsToExistingGitConfigEnv(t *testing.T) {
 	t.Setenv(TokenHostsEnv, "")
-	env := withAuth([]string{"GIT_CONFIG_COUNT=2", "GIT_CONFIG_KEY_0=a.b", "GIT_CONFIG_VALUE_0=1"}, "https://github.com/o/r", "tok")
+	env := withAuth(context.Background(), []string{"GIT_CONFIG_COUNT=2", "GIT_CONFIG_KEY_0=a.b", "GIT_CONFIG_VALUE_0=1"}, "https://github.com/o/r", "tok")
 
 	assert.Equal(t, "3", authValue(env, "GIT_CONFIG_COUNT="))
 	assert.Equal(t, "http.https://github.com/.extraHeader", authValue(env, "GIT_CONFIG_KEY_2="))

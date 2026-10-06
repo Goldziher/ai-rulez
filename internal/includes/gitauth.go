@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -25,8 +27,8 @@ var defaultTokenHosts = []string{"github.com"}
 var warnedHosts sync.Map
 
 // tokenHosts returns the lower-cased hosts the token may be sent to.
-func tokenHosts() []string {
-	raw := strings.TrimSpace(os.Getenv(TokenHostsEnv))
+func tokenHosts(host ambient.Host) []string {
+	raw := strings.TrimSpace(host.GetEnv(TokenHostsEnv))
 	if raw == "" {
 		return defaultTokenHosts
 	}
@@ -45,13 +47,13 @@ func tokenHosts() []string {
 // tokenAllowedFor reports whether token may be sent to the https repository at
 // rawURL, and the origin ("https://host[:port]") to scope the header to. Plain
 // http, ssh, file and scp-style remotes never receive it.
-func tokenAllowedFor(rawURL string) (origin string, ok bool) {
+func tokenAllowedFor(h ambient.Host, rawURL string) (origin string, ok bool) {
 	u, err := url.Parse(strings.TrimPrefix(strings.TrimSpace(rawURL), "git+"))
 	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Hostname() == "" {
 		return "", false
 	}
 	host := strings.ToLower(u.Hostname())
-	for _, allowed := range tokenHosts() {
+	for _, allowed := range tokenHosts(h) {
 		if host == allowed {
 			return "https://" + strings.ToLower(u.Host), true
 		}
@@ -64,11 +66,11 @@ func tokenAllowedFor(rawURL string) (origin string, ok bool) {
 // repoURL. The token is never part of a URL, so it reaches neither argv nor
 // the cloned repository's .git/config. With no token, or a host the user did not
 // allow (see TokenHostsEnv), env is returned unchanged.
-func withAuth(env []string, repoURL, token string) []string {
+func withAuth(ctx context.Context, env []string, repoURL, token string) []string {
 	if token == "" {
 		return env
 	}
-	origin, ok := tokenAllowedFor(repoURL)
+	origin, ok := tokenAllowedFor(ambient.FromContext(ctx), repoURL)
 	if !ok {
 		if strings.HasPrefix(strings.ToLower(strings.TrimPrefix(repoURL, "git+")), "https://") {
 			warnTokenWithheld(repoURL)
@@ -118,9 +120,8 @@ func scrubLegacyCredentials(ctx context.Context, cacheDir, cleanURL string) {
 	if err != nil || !userinfoRe.Match(cfg) {
 		return
 	}
-	cmd := gitCmd(ctx, cacheDir, "remote", "set-url", "origin", cleanURL)
-	cmd.Env = gitEnvFor(ctx)
-	if out, err := cmd.CombinedOutput(); err != nil {
+	res := gitRun(ctx, cacheDir, gitEnvFor(ctx), "remote", "set-url", "origin", cleanURL)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		logger.Warn("could not scrub a credential from the include cache; delete it", "cache_dir", cacheDir, "error", err, "output", RedactURL(string(out)))
 	}
 }

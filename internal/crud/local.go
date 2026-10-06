@@ -162,7 +162,7 @@ func (op *OperatorImpl) addIncludeLocal(ctx context.Context, req *AddIncludeRequ
 				Errorf("include with name '%s' already exists", req.Name)
 		}
 	}
-	sourceType, err := validateIncludeSource(req.Source)
+	sourceType, err := validateIncludeSource(op.env, req.Source)
 	if err != nil {
 		return err
 	}

@@ -67,7 +67,7 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 
 	// Scan the directory structure using the config loader's scanner which keeps
 	// root content and domain content separate (avoids duplication in generated output)
-	contentTree, err := config.ScanContentTree(scanDir)
+	contentTree, err := config.ScanContentTreeContext(ctx, scanDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")
 	}

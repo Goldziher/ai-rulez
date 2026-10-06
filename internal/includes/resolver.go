@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -196,7 +197,8 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, err
 		}
-		source, err := NewGitSource(
+		source, err := NewGitSourceIn(
+			r.host(),
 			includeConf.Name,
 			includeConf.Source,
 			includeConf.Path,
@@ -503,4 +505,13 @@ func extractDomainName(installTo string) string {
 		return installTo
 	}
 	return ""
+}
+
+// host is the ambient host of the config being resolved (the real process when
+// there is none).
+func (r *Resolver) host() ambient.Host {
+	if r.cfg == nil {
+		return ambient.Host{}
+	}
+	return r.cfg.Host
 }

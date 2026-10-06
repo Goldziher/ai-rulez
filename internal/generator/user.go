@@ -13,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -72,14 +71,14 @@ func (g *Generator) SetUserScope() {
 func (g *Generator) IsUserScope() bool { return g.userMode }
 
 // SetUserEnv sets the environment lookup the layouts' home variables are read
-// through (default os.Getenv); tests use it to relocate a tool's home.
+// through (default: the host environment); tests use it to relocate a tool's home.
 func (g *Generator) SetUserEnv(getenv func(string) string) { g.userGetenv = getenv }
 
 func (g *Generator) userEnv() func(string) string {
 	if g.userGetenv != nil {
 		return g.userGetenv
 	}
-	return os.Getenv
+	return g.host().GetEnv
 }
 
 // resolveUserLayouts resolves the user-scope layout of every built-in preset
@@ -146,7 +145,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 			"hint", "supported: "+strings.Join(userscope.Supported(layouts), ", "))
 	}
 	if g.config.GeneratedAt.IsZero() {
-		g.config.GeneratedAt = config.ResolveGenerationTime()
+		g.config.GeneratedAt = config.ResolveGenerationTimeIn(g.host())
 	}
 
 	stage, err := os.MkdirTemp("", "ai-rulez-user-")
@@ -530,7 +529,7 @@ func (g *Generator) userMayTouch(abs string) bool {
 		return false
 	}
 	if err := g.checkSymlinkEscape(abs); err != nil {
-		logger.Warn("Skipping a path that resolves outside the home directory", "path", abs)
+		g.log().Warn("Skipping a path that resolves outside the home directory", "path", abs)
 		return false
 	}
 	return true
@@ -571,11 +570,11 @@ func (g *Generator) userDestination(abs string, dirOnly bool) bool {
 func (g *Generator) userManifestEntryOK(rel, abs string) bool {
 	if slices.Contains(strings.Split(filepath.ToSlash(rel), "/"), "..") &&
 		!slices.ContainsFunc(g.userHomes, func(home string) bool { return isUnderBaseDir(home, abs) }) {
-		logger.Warn("Ignoring a manifest entry that climbs out of the home directory", "path", rel)
+		g.log().Warn("Ignoring a manifest entry that climbs out of the home directory", "path", rel)
 		return false
 	}
 	if !g.userDestination(abs, false) {
-		logger.Warn("Ignoring a manifest entry that is not a user-level destination", "path", rel)
+		g.log().Warn("Ignoring a manifest entry that is not a user-level destination", "path", rel)
 		return false
 	}
 	return true
@@ -659,7 +658,7 @@ func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
 		return nil, err
 	}
 	g.beginRun()
-	logger.Info("Generating user-level configuration", "profile", plan.Profile, "home", g.config.BaseDir)
+	g.log().Info("Generating user-level configuration", "profile", plan.Profile, "home", g.config.BaseDir)
 
 	stale := g.userStale(kept)
 	g.noteCreatedUserDirs(kept)
@@ -673,7 +672,7 @@ func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
 	if err := g.writeGeneratedManifest(kept); err != nil {
 		return nil, oops.Wrapf(err, "write the user manifest")
 	}
-	logger.Info("User-level generation complete", "files", len(plan.Writes)+len(plan.Merges))
+	g.log().Info("User-level generation complete", "files", len(plan.Writes)+len(plan.Merges))
 	return plan, nil
 }
 
@@ -771,7 +770,7 @@ func (g *Generator) loadUserDirs() {
 	g.userDirsRecorded = true
 	for _, rel := range *recorded {
 		if slices.Contains(strings.Split(rel, "/"), "..") || filepath.IsAbs(filepath.FromSlash(rel)) {
-			logger.Warn("Ignoring a manifest directory that climbs out of the home directory", "path", rel)
+			g.log().Warn("Ignoring a manifest directory that climbs out of the home directory", "path", rel)
 			continue
 		}
 		if abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)); g.userDirEligible(abs) {

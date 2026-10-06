@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,7 +103,7 @@ func TestNewGitSourceCreation(t *testing.T) {
 	if len(source.include) != 2 {
 		t.Errorf("expected 2 include items, got %d", len(source.include))
 	}
-	expectedCacheDir, _ := getIncludeCacheDir(name, url)
+	expectedCacheDir, _ := getIncludeCacheDir(ambient.Host{}, name, url)
 	if source.cacheDir != expectedCacheDir {
 		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}
@@ -611,7 +612,7 @@ func TestCacheDirCreation(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedCacheDir, _ := getIncludeCacheDir(sourceName, "https://github.com/owner/repo")
+	expectedCacheDir, _ := getIncludeCacheDir(ambient.Host{}, sourceName, "https://github.com/owner/repo")
 	if source.cacheDir != expectedCacheDir {
 		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}
@@ -877,8 +878,8 @@ func TestGetIncludeCacheDir(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange / Act
-			a, errA := getIncludeCacheDir(tt.a[0], tt.a[1])
-			b, errB := getIncludeCacheDir(tt.b[0], tt.b[1])
+			a, errA := getIncludeCacheDir(ambient.Host{}, tt.a[0], tt.a[1])
+			b, errB := getIncludeCacheDir(ambient.Host{}, tt.b[0], tt.b[1])
 
 			// Assert
 			require.NoError(t, errA)
@@ -889,12 +890,12 @@ func TestGetIncludeCacheDir(t *testing.T) {
 }
 
 func TestGetIncludeCacheDir_NameCannotEscapeTheCacheRoot(t *testing.T) {
-	root, err := getIncludeCacheDir("x", "https://github.com/o/r")
+	root, err := getIncludeCacheDir(ambient.Host{}, "x", "https://github.com/o/r")
 	require.NoError(t, err)
 	includesRoot := filepath.Dir(root)
 
 	for _, name := range []string{"../../etc", "a/b", `a\b`, "..", ""} {
-		dir, err := getIncludeCacheDir(name, "https://github.com/o/r")
+		dir, err := getIncludeCacheDir(ambient.Host{}, name, "https://github.com/o/r")
 		require.NoError(t, err)
 		assert.Equal(t, includesRoot, filepath.Dir(dir), name)
 	}
@@ -954,7 +955,7 @@ func TestNewGitSourceAcceptsGitPlusPrefix(t *testing.T) {
 			if strings.HasPrefix(strings.ToLower(source.originalURL), "git+") {
 				t.Errorf("originalURL %q still carries git+, so git cannot clone it", source.originalURL)
 			}
-			wantCache, _ := getIncludeCacheDir("n", plain)
+			wantCache, _ := getIncludeCacheDir(ambient.Host{}, "n", plain)
 			if source.cacheDir != wantCache {
 				t.Errorf("a git+ URL must share the cache of the plain one: %q vs %q", source.cacheDir, wantCache)
 			}

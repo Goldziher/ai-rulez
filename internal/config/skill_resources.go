@@ -93,7 +93,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	if itemKind == ItemKindCommand {
 		marker = commandMarkerFile
 	}
-	filter := newBundleFilter(root, marker, extraExcludes)
+	filter := newBundleFilter(s.git, root, marker, extraExcludes)
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {

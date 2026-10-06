@@ -7,7 +7,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -35,7 +34,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string, rootContent *con
 			return nil, err
 		}
 		if skip {
-			logger.Debug("Scope has no content beyond the root run, skipping", "scope", scope.Path)
+			g.log().Debug("Scope has no content beyond the root run, skipping", "scope", scope.Path)
 			continue
 		}
 

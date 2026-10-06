@@ -240,3 +240,65 @@ func LogError(msg string, err error, args ...any) {
 	allArgs := append([]any{"error", err}, args...)
 	Get().Error(msg, allArgs...)
 }
+
+// Logger is the logging surface library code uses when a caller may want its
+// own destination. *slog.Logger satisfies it, so a service passes slog directly;
+// Std is the CLI's logger.
+type Logger interface {
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+}
+
+// std forwards to the package-level logger, so the level the CLI sets with
+// SetLevel keeps applying.
+type std struct{}
+
+func (std) Debug(msg string, args ...any) { Debug(msg, args...) }
+func (std) Info(msg string, args ...any)  { Info(msg, args...) }
+func (std) Warn(msg string, args ...any)  { Warn(msg, args...) }
+func (std) Error(msg string, args ...any) { Error(msg, args...) }
+
+// Std is the Logger that writes through the package-level functions: what every
+// caller used before loggers were injectable.
+func Std() Logger { return std{} }
+
+type discard struct{}
+
+func (discard) Debug(string, ...any) {}
+func (discard) Info(string, ...any)  {}
+func (discard) Warn(string, ...any)  {}
+func (discard) Error(string, ...any) {}
+
+// Discard is the Logger that drops everything, the right default for a service.
+func Discard() Logger { return discard{} }
+
+// Or returns l, or Std when l is nil.
+func Or(l Logger) Logger {
+	if l == nil {
+		return Std()
+	}
+	return l
+}
+
+type ctxKey struct{}
+
+// WithContext returns ctx carrying l, for call chains that pass a context but no
+// options. A nil l leaves ctx unchanged.
+func WithContext(ctx context.Context, l Logger) context.Context {
+	if l == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, ctxKey{}, l)
+}
+
+// FromContext returns the Logger ctx carries, or Std when it carries none.
+func FromContext(ctx context.Context) Logger {
+	if ctx != nil {
+		if l, ok := ctx.Value(ctxKey{}).(Logger); ok {
+			return l
+		}
+	}
+	return Std()
+}

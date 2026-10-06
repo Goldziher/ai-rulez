@@ -166,7 +166,7 @@ func (r *runner) checkMetadataValue(it *item, key string, rule config.LintMetada
 			return
 		}
 		if rule.MaxAgeDays > 0 {
-			age := int(now().Sub(t).Hours() / 24)
+			age := int(r.clock().Sub(t).Hours() / 24)
 			switch {
 			case age < 0:
 				r.add(CodeMetadataInvalid, it.abs, k.Line, "metadata %q is %s, a date in the future", key, t.Format("2006-01-02"))
@@ -380,16 +380,18 @@ func (r *runner) scanImported() {
 // `generate` calls before writing when lint.security.scan_imports is set, so
 // nothing from a remote is written until it has been checked. The findings carry
 // the scan_imports severity.
-func ScanImports(cfg *config.Config) ([]Finding, error) {
+func ScanImports(cfg *config.Config, opts ...Option) ([]Finding, error) {
 	top, _ := filepath.Abs(cfg.BaseDir) //nolint:errcheck // falls back to the given dir
 	r := &runner{cfg: cfg, tree: &Tree{Top: top}, docs: map[string]doc{}}
+	for _, opt := range opts {
+		opt(r)
+	}
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
 	if _, on := r.importLevel(); !on {
 		return nil, nil
 	}
-	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
 	r.resolveSettings()
 	r.collect()
 	r.scanImported()
