@@ -27,6 +27,8 @@ var (
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
+	// validateApprovalsBase is --approvals-base: the git revision approvals are compared with (AR716).
+	validateApprovalsBase string
 	// validateRepoRoot is --repo-root: the directory repo-relative paths and
 	// tracked-file globs resolve against (default: the git toplevel, else the
 	// directory holding the configuration).
@@ -49,7 +51,7 @@ var (
 func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
-		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet()
+		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != ""
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.

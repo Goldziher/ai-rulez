@@ -347,3 +347,41 @@ func TestAuthorized_NobodyMayApproveRefusesEveryone(t *testing.T) {
 	assert.False(t, p.Authorized("alice"))
 	assert.False(t, p.Authorized(NobodyMayApprove), "the sentinel itself is not a reviewer")
 }
+
+func TestSelfApprovals(t *testing.T) {
+	baseLock := func(approvals ...lockfile.Approval) *lockfile.File {
+		return &lockfile.File{
+			Item:     []lockfile.Item{{Kind: "rule", ID: "old", Digest: digestA}, {Kind: "rule", ID: "moved", Digest: digestA}},
+			Include:  []lockfile.Entry{{Name: "shared", Digest: digestA}},
+			Approval: approvals,
+		}
+	}
+	tests := []struct {
+		name string
+		base *lockfile.File
+		cur  []lockfile.Approval
+		want []string
+	}{
+		{"a new approval of unchanged content is a later review", baseLock(), []lockfile.Approval{rec("rule", "old", digestA, "bob")}, nil},
+		{"an approval already in the base is not new", baseLock(rec("rule", "old", digestA, "bob")), []lockfile.Approval{rec("rule", "old", digestA, "BOB")}, nil},
+		{"content changed and approved together", baseLock(), []lockfile.Approval{rec("rule", "moved", digestB, "bob")}, []string{"rule:moved"}},
+		{"new content approved together", baseLock(), []lockfile.Approval{rec("rule", "fresh", digestB, "bob")}, []string{"rule:fresh"}},
+		{"a remote entry that moved", baseLock(), []lockfile.Approval{rec("include", "shared", digestB, "bob")}, []string{"include:shared"}},
+		{"a remote entry approved at its base digest", baseLock(), []lockfile.Approval{rec("include", "shared", digestA, "bob")}, nil},
+		{"no base lock: everything is new", nil, []lockfile.Approval{rec("rule", "old", digestA, "bob")}, []string{"rule:old"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := SelfApprovals(tt.base, &lockfile.File{Approval: tt.cur})
+
+			// Assert
+			var refs []string
+			for _, s := range got {
+				refs = append(refs, s.Ref)
+				assert.Contains(t, s.Message(), "same change")
+			}
+			assert.Equal(t, tt.want, refs)
+		})
+	}
+}

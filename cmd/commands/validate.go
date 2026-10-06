@@ -128,6 +128,7 @@ func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
 	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
+	ValidateCmd.Flags().StringVar(&validateApprovalsBase, "approvals-base", "", "With --strict, report approvals added since this git revision for content that also changed since it (AR716)")
 	ValidateCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ValidateCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...) // --format implies --strict
 	addJSONFlagAlias(ValidateCmd.Flags())

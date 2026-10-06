@@ -44,11 +44,25 @@ func carryApprovals(current, next *lockfile.File, full bool) {
 	next.Approval = kept
 }
 
-// approvalFindingsFor returns the AR710 to AR715 findings for strict validation.
+// approvalFindingsFor returns the AR710 to AR715 findings for strict validation,
+// and AR716 when --approvals-base names a revision.
 // It reports nothing without a lock, and nothing for a project that sets no
 // [governance] policy and has no approval records. A policy that cannot be
 // evaluated is itself a finding: enforcement never fails open.
 func approvalFindingsFor(cfg *config.Config) []lint.ApprovalFinding {
+	out := approvalStatusFindings(cfg)
+	if validateApprovalsBase == "" {
+		return out
+	}
+	lockRel := filepath.ToSlash(filepath.Join(relToBase(cfg, cfg.ConfigDir), lockfile.FileName))
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil {
+		return append(out, lint.ApprovalFinding{Code: approval.CodeSelf, Path: lockRel, Message: fmt.Sprintf("cannot compare approvals with %q: %v", validateApprovalsBase, err)})
+	}
+	return append(out, selfApprovalFindings(cfg, lock, validateApprovalsBase, lockRel)...)
+}
+
+func approvalStatusFindings(cfg *config.Config) []lint.ApprovalFinding {
 	policy := approval.PolicyOf(cfg)
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	lockRel := filepath.ToSlash(filepath.Join(relToBase(cfg, cfg.ConfigDir), lockfile.FileName))
