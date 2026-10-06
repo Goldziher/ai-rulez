@@ -87,7 +87,7 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockOffline, "offline", false, "With --outdated: refuse to run (it needs the network); use --check to verify the lock offline")
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
-	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check, --diff and --subject: text (default) or json")
+	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check, --diff, --outdated and --subject: text (default) or json")
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
@@ -95,37 +95,55 @@ func init() {
 }
 
 func runLock(_ *cobra.Command, args []string) {
-	if lockKind != "" && !knownLockKind(lockKind) {
-		fmtError(oops.Errorf("unknown --kind %q (use include, skill, source or served)", lockKind))
-		os.Exit(1)
-	}
-	if lockFormat != "" && lockFormat != formatText && lockFormat != formatJSON {
-		fmtError(oops.Errorf("unknown --format %q (use text or json)", lockFormat))
-		os.Exit(1)
-	}
-	if lockCheck && lockDiffFlag {
-		fmtError(oops.Errorf("--check and --diff are mutually exclusive"))
-		os.Exit(1)
-	}
-	if lockSubjectOutput != "" && !lockSubject {
-		fmtError(oops.Errorf("--output needs --subject"))
-		os.Exit(1)
-	}
-	if (lockFailOnOutdated || lockOffline) && !lockOutdated {
-		fmtError(oops.Errorf("--fail-on-outdated and --offline need --outdated"))
-		os.Exit(1)
-	}
-	if lockOutdated && (lockCheck || lockDiffFlag || lockContentOnly || lockSubject) {
-		fmtError(oops.Errorf("--outdated only reads the remote: it cannot be combined with --check, --diff, --content-only or --subject"))
-		os.Exit(1)
-	}
-	if lockSubject && (lockCheck || lockDiffFlag || lockContentOnly || lockKind != "" || len(args) > 0) {
-		fmtError(oops.Errorf("--subject only reads the lock: it cannot be combined with --check, --diff, --content-only, --kind or names"))
+	if err := validateLockFlags(args); err != nil {
+		fmtError(err)
 		os.Exit(1)
 	}
 	if code := runLockFor(lockKind, args); code != 0 {
 		os.Exit(code)
 	}
+}
+
+// checkFormatFlag validates a --format value shared by the commands that print
+// text or json. An empty value is accepted when the command has no default.
+func checkFormatFlag(value string) error {
+	switch value {
+	case "", formatText, formatJSON:
+		return nil
+	}
+	return oops.Errorf("unknown --format %q (use text or json)", value)
+}
+
+// validateLockFlags rejects flag combinations `lock` cannot honour.
+func validateLockFlags(args []string) error {
+	if lockKind != "" && !knownLockKind(lockKind) {
+		return oops.Errorf("unknown --kind %q (use include, skill, source or served)", lockKind)
+	}
+	if err := checkFormatFlag(lockFormat); err != nil {
+		return err
+	}
+	if lockFormat != "" && !lockCheck && !lockDiffFlag && !lockSubject && !lockOutdated {
+		return oops.Errorf("--format applies to --check, --diff, --outdated and --subject only")
+	}
+	if lockCheck && lockDiffFlag {
+		return oops.Errorf("--check and --diff are mutually exclusive")
+	}
+	if lockSubjectOutput != "" && !lockSubject {
+		return oops.Errorf("--output needs --subject")
+	}
+	if lockSubjectOutput != "" && lockRecursive {
+		return oops.Errorf("--output cannot be combined with --recursive: every root would overwrite the same file")
+	}
+	if (lockFailOnOutdated || lockOffline) && !lockOutdated {
+		return oops.Errorf("--fail-on-outdated and --offline need --outdated")
+	}
+	if lockOutdated && (lockCheck || lockDiffFlag || lockContentOnly || lockSubject) {
+		return oops.Errorf("--outdated only reads the remote: it cannot be combined with --check, --diff, --content-only or --subject")
+	}
+	if lockSubject && (lockCheck || lockDiffFlag || lockContentOnly || lockKind != "" || len(args) > 0) {
+		return oops.Errorf("--subject only reads the lock: it cannot be combined with --check, --diff, --content-only, --kind or names")
+	}
+	return nil
 }
 
 // runLockFor locks (or checks) one root, or every root with --recursive. names
