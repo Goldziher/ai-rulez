@@ -474,6 +474,23 @@
                   }
                 }
               }
+            },
+            "unmeasured": {
+              "type": "array",
+              "description": "Skills the guard left out because they cannot be copied safely (a symlinked or oversized SKILL.md, too many eval files).",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["skill", "reason"],
+                "properties": {
+                  "skill": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           }
         },

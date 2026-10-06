@@ -135,6 +135,10 @@ The guard uses the retrieval surface of activation mode: no model, no cost, the 
 whenever another skill has trigger cases (design question 5: mandatory, because it is free). It never copies the
 target skill's eval cases into its scratch tree.
 
+A sibling that cannot be copied safely (a symlinked or oversized `SKILL.md`, too many eval files) is left out of both
+arms and listed under `unmeasured` in the report, with a warning on the round; the guard measures the others instead
+of failing every round.
+
 ## Acceptance gate
 
 Baseline and candidate are both measured in the run on the held-out set, `--runs` times each, with the majority
