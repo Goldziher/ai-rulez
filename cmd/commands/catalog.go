@@ -42,7 +42,7 @@ const catalogSchemaVersion = govview.CatalogSchemaVersion
 // renders the same data as a static website.
 var CatalogCmd = &cobra.Command{
 	Use:   "catalog",
-	Short: "List every item with owner, version, tokens, roles and lock status; --html writes a static site",
+	Short: "List every item with owner, version, tokens, roles and lock status, or a static site",
 	Long: `Print the project's catalog: every rule, skill, agent, command and context file
 with its id, domain, source, owner and version, size, sha256 digest (the one
 ai-rulez.lock pins), the roles that keep it, plus a summary of every role and the
