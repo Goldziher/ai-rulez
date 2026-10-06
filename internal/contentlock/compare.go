@@ -87,13 +87,13 @@ func (d *Diff) scoped(scope string) []Change {
 // Build fills the content pins of f from snap and recomputes the tree digest.
 // Remote entries already in f are kept.
 func Build(f *lockfile.File, snap *Snapshot) {
-	f.Version = lockfile.Version
 	f.AIRulezVersion = snap.Options.ToolVersion
 	f.Profile = snap.Options.Profile
 	f.Scope = snap.Options.scope()
 	f.OutputsPinned = snap.Options.IncludeOutputs
 	f.Item = append([]lockfile.Item(nil), snap.Items...)
 	f.Output = append([]lockfile.OutputPin(nil), snap.Outputs...)
+	f.Version = f.FormatVersion()
 	f.Tree = TreeOf(f)
 }
 

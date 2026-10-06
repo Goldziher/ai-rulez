@@ -79,7 +79,7 @@ func TestIsFullSHA(t *testing.T) {
 
 func TestLoadRefusesOtherVersionsWithAnActionableError(t *testing.T) {
 	dir := t.TempDir()
-	for _, body := range []string{"version = 0\n", "version = 2\n", "version = 99\n", "[[include]]\nname = \"a\"\n"} {
+	for _, body := range []string{"version = 0\n", "version = 3\n", "version = 99\n", "[[include]]\nname = \"a\"\n"} {
 		require.NoError(t, os.WriteFile(Path(dir), []byte(body), 0o644))
 		_, err := Load(dir)
 		require.Error(t, err, body)
@@ -300,4 +300,43 @@ func TestRoleOutputPinsRoundTrip(t *testing.T) {
 	out.SetRoleOutputs([]OutputPin{{Role: "ops", Digest: "sha256:cc"}})
 	assert.Len(t, out.DefaultOutputs(), 1)
 	assert.Equal(t, "ops", out.RoleOutputs()[0].Role)
+}
+
+func TestSaveWritesVersionTwoOnlyWhenRolePinsArePresent(t *testing.T) {
+	tests := []struct {
+		name string
+		out  []OutputPin
+		want int
+	}{
+		{"no outputs", nil, Version},
+		{"default outputs only", []OutputPin{{Path: "CLAUDE.md", Digest: "sha256:a"}}, Version},
+		{"a role pin", []OutputPin{{Path: "CLAUDE.md", Digest: "sha256:a"}, {Role: "dev", Digest: "sha256:b"}}, VersionRolePins},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+
+			// Act
+			require.NoError(t, Save(dir, &File{Version: Version, Output: tt.out}))
+			got, err := Load(dir)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Version)
+			assert.Equal(t, len(tt.out), len(got.Output))
+		})
+	}
+}
+
+func TestAnOlderReaderRefusesALockWithRolePins(t *testing.T) {
+	// Arrange: the check an older binary runs, which accepts only version 1
+	dir := t.TempDir()
+	require.NoError(t, Save(dir, &File{Output: []OutputPin{{Role: "dev", Digest: "sha256:b"}}}))
+	f, err := read(dir)
+	require.NoError(t, err)
+
+	// Assert: it carries a version that reader rejects instead of reading a role pin as a path-less default pin
+	assert.NotEqual(t, Version, f.Version)
+	assert.Equal(t, VersionRolePins, f.Version)
 }
