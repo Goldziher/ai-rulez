@@ -1,6 +1,7 @@
 package tagresolve
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -49,9 +50,13 @@ type Row struct {
 	// Latest is the newest version tag whatever the constraint says.
 	Latest *TagRef `json:"latest,omitempty"`
 	Status string  `json:"status"`
+	// Held lists the newer tags min_release_age holds back (AR733).
+	Held []Held `json:"held_back,omitempty"`
 	// Code is the rule code of an error or warning status (AR730, AR731, AR732, AR735).
 	Code string `json:"code,omitempty"`
-	Note string `json:"note,omitempty"`
+	// Severity is set for an AR734 finding: "error", "warning" or "info".
+	Severity string `json:"severity,omitempty"`
+	Note     string `json:"note,omitempty"`
 	// Downgrade is true when the newest allowed tag is below the pinned one.
 	Downgrade bool `json:"downgrade,omitempty"`
 	// MajorAvailable is true when Latest is a newer major version than Allowed.
@@ -73,17 +78,29 @@ type Summary struct {
 	Total          int `json:"total"`
 	Updatable      int `json:"updatable"`
 	MajorAvailable int `json:"major_available"`
+	HeldBack       int `json:"held_back"`
 	TagMoved       int `json:"tag_moved"`
 	Errors         int `json:"errors"`
 }
 
 // Evaluate compares one source's lock entry (nil when unlocked) with the remote's tags.
 func Evaluate(kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []RawTag) Row {
+	return EvaluateGated(context.Background(), kind, name, w, entry, tags, nil)
+}
+
+// EvaluateGated is Evaluate with a minimum release age: the allowed tag is the
+// newest one that passes the gate (the pinned tag always does), and the tags the
+// gate held back are listed.
+func EvaluateGated(ctx context.Context, kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []RawTag, gate *AgeGate) Row {
 	row := Row{Kind: kind, Name: name, Source: w.Source, Constraint: w.Constraint}
 	if entry != nil && entry.Tag != "" {
 		row.Locked = &TagRef{Tag: entry.Tag, Commit: entry.Commit}
 	}
-	sel, err := Select(tags, Spec{Constraint: w.Constraint, TagPrefix: w.TagPrefix, IncludePrerelease: w.IncludePrerelease})
+	spec := Spec{Constraint: w.Constraint, TagPrefix: w.TagPrefix, IncludePrerelease: w.IncludePrerelease}
+	if entry != nil {
+		spec.Pinned = entry.Tag
+	}
+	sel, err := SelectGated(ctx, tags, spec, gate)
 	if err != nil {
 		row.Status, row.Code, row.Note = StatusUnsatisfied, CodeUnsatisfiable, err.Error()
 		var coded *Error
@@ -98,6 +115,7 @@ func Evaluate(kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []
 	}
 	row.Allowed = &TagRef{Tag: sel.Chosen.Tag.Name, Commit: sel.Chosen.Tag.Commit}
 	row.Latest = &TagRef{Tag: sel.Latest.Tag.Name, Commit: sel.Latest.Tag.Commit}
+	row.Held = sel.Held
 	row.MajorAvailable = sel.Latest.Version.Major > sel.Chosen.Version.Major
 	if len(sel.Notes) > 0 {
 		row.Note = strings.Join(sel.Notes, "; ")
@@ -166,8 +184,32 @@ func NewReport(rows []Row) *Report {
 		if r.MajorAvailable {
 			rep.Summary.MajorAvailable++
 		}
+		if len(r.Held) > 0 {
+			rep.Summary.HeldBack++
+		}
 	}
 	return rep
+}
+
+// MarkOutdated reports every updatable source as an AR734 (source-outdated)
+// finding of the given severity ("error", "warning" or "info"; anything else,
+// including "off", changes nothing). An error finding makes the report fail.
+func (r *Report) MarkOutdated(severity string) {
+	switch severity {
+	case "error", "warning", "info":
+	default:
+		return
+	}
+	for i := range r.Sources {
+		row := &r.Sources[i]
+		if row.Status != StatusUpdatable || row.Code != "" {
+			continue
+		}
+		row.Code, row.Severity = CodeOutdated, severity
+		if severity == "error" {
+			r.Summary.Errors++
+		}
+	}
 }
 
 // Failing reports whether the report holds an error finding: a moved or missing
@@ -197,8 +239,12 @@ func (r *Report) WriteText(w io.Writer) error {
 		return err //nolint:wrapcheck // writer error
 	}
 	s := r.Summary
-	_, err := fmt.Fprintf(w, "%d source(s): %d updatable, %d with a newer major, %d moved tag(s), %d error(s)\n",
-		s.Total, s.Updatable, s.MajorAvailable, s.TagMoved, s.Errors)
+	held := ""
+	if s.HeldBack > 0 {
+		held = fmt.Sprintf(", %d held back", s.HeldBack)
+	}
+	_, err := fmt.Fprintf(w, "%d source(s): %d updatable%s, %d with a newer major, %d moved tag(s), %d error(s)\n",
+		s.Total, s.Updatable, held, s.MajorAvailable, s.TagMoved, s.Errors)
 	return err //nolint:wrapcheck // writer error
 }
 
@@ -224,6 +270,9 @@ func rowNote(r Row) string {
 	}
 	if r.Note != "" {
 		parts = append(parts, r.Note)
+	}
+	for _, h := range r.Held {
+		parts = append(parts, h.String())
 	}
 	if r.MajorAvailable {
 		parts = append(parts, "newer major available")
