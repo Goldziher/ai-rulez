@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,6 +33,32 @@ type ActivationOptions struct {
 	PassThreshold *float64
 	// Store, when non-nil, receives each measured skill's activation record.
 	Store *Store
+
+	// Surface is SurfaceRetrieval (default) or SurfaceNative. The settings below
+	// belong to the native surface.
+	Surface string
+	// Runner drives the harness; it must declare the activation capability and the
+	// native surface.
+	Runner  Runner
+	Harness string
+	Model   string
+	// Runs is how often each prompt is repeated (default DefaultActivationRuns).
+	Runs int
+	// DryRun estimates and calls no runner.
+	DryRun bool
+	// Force repeats a measurement the store already holds.
+	Force bool
+	// Timeout bounds one runner call (one skill); zero means no limit here.
+	Timeout time.Duration
+	// MaxCostUSD refuses a run whose estimate exceeds it (the figure MaxCostMode
+	// names) and stops between skills once spend reaches it. Zero means no limit.
+	MaxCostUSD float64
+	// MaxCostMode is CostModeHigh (default for activation) or CostModeExpected.
+	MaxCostMode string
+	Price       Price
+	Params      EstimateParams
+	Counter     tokens.Counter
+	ToolVersion string
 }
 
 // skillMeta is the searchable text of one skill read from its SKILL.md.
@@ -43,25 +71,7 @@ type skillMeta struct {
 // the offline find_skill ranker. It calls no model and no network, so it is free
 // and deterministic.
 func RunActivationRetrieval(ctx context.Context, opts *ActivationOptions) (*ActivationReport, error) {
-	scope := opts.Scope
-	if scope == "" {
-		scope = ScopeDomain
-	}
-	if scope != ScopeDomain && scope != ScopeAll {
-		return nil, fmt.Errorf("unknown scope %q (use %s or %s)", opts.Scope, ScopeDomain, ScopeAll)
-	}
-	threshold := defaultThreshold
-	if opts.PassThreshold != nil {
-		threshold = *opts.PassThreshold
-		if threshold < 0 || threshold > 1 {
-			return nil, fmt.Errorf("pass threshold must be between 0 and 1, got %v", threshold)
-		}
-	}
-	all, err := FindSkills(opts.ConfigDir)
-	if err != nil {
-		return nil, err
-	}
-	selected, err := selectSkills(all, opts.Skills)
+	scope, threshold, all, selected, err := activationSetup(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +98,32 @@ func RunActivationRetrieval(ctx context.Context, opts *ActivationOptions) (*Acti
 	return report, nil
 }
 
+// activationSetup validates the scope and the pass threshold and lists the
+// skills: every skill, and the ones selected for the run.
+func activationSetup(opts *ActivationOptions) (scope string, threshold float64, all, selected []Skill, err error) {
+	scope = opts.Scope
+	if scope == "" {
+		scope = ScopeDomain
+	}
+	if scope != ScopeDomain && scope != ScopeAll {
+		return "", 0, nil, nil, fmt.Errorf("unknown scope %q (use %s or %s)", opts.Scope, ScopeDomain, ScopeAll)
+	}
+	threshold = defaultThreshold
+	if opts.PassThreshold != nil {
+		threshold = *opts.PassThreshold
+		if threshold < 0 || threshold > 1 {
+			return "", 0, nil, nil, fmt.Errorf("pass threshold must be between 0 and 1, got %v", threshold)
+		}
+	}
+	if all, err = FindSkills(opts.ConfigDir); err != nil {
+		return "", 0, nil, nil, err
+	}
+	if selected, err = selectSkills(all, opts.Skills); err != nil {
+		return "", 0, nil, nil, err
+	}
+	return scope, threshold, all, selected, nil
+}
+
 // activationEnv is what one retrieval run shares between its skills.
 type activationEnv struct {
 	all          []Skill
@@ -99,31 +135,43 @@ type activationEnv struct {
 	report       *ActivationReport
 }
 
-// activate measures one skill and adds its positive prompts to the report's
-// confusion matrix.
-func (e *activationEnv) activate(skill *Skill) ActivationSkill {
-	all, metas, metaProblems, scope, threshold, opts, report := e.all, e.metas, e.metaProblems, e.scope, e.threshold, e.opts, e.report
-	run := ActivationSkill{ID: skill.ID}
+// activationPlan is one skill after preparation: its provisional run record and,
+// when the skill has something to measure, the cases and the competing set.
+type activationPlan struct {
+	skill     *Skill
+	run       ActivationSkill
+	cases     []Case
+	competing []string
+	docs      []skillsearch.Doc
+	digests   map[string]string
+	// ready is false when the run record is already final (not changed, no cases,
+	// invalid, unreadable).
+	ready bool
+}
+
+// prepare loads the skill's cases and its competing set.
+func (e *activationEnv) prepare(skill *Skill) *activationPlan {
+	all, metas, metaProblems, scope, opts := e.all, e.metas, e.metaProblems, e.scope, e.opts
+	plan := &activationPlan{skill: skill, run: ActivationSkill{ID: skill.ID}}
+	run := &plan.run
 	if opts.Changed != nil && !opts.Changed[skill.ID] {
 		run.Status = RunNotChanged
-		return run
+		return plan
 	}
 	authored, problems := LoadCases(skill)
 	switch {
 	case len(authored) == 0 && len(problems) == 0:
 		run.Status = RunNoCases
-		return run
+		return plan
 	case len(problems) > 0:
 		run.Status, run.Problems = RunInvalid, relativeProblems(opts.ConfigDir, problems)
-		return run
+		return plan
 	}
 	if why, bad := metaProblems[skill.ID]; bad {
 		run.Status, run.Error = RunError, why
-		return run
+		return plan
 	}
-	var competing []string
-	var docs []skillsearch.Doc
-	digests := map[string]string{}
+	plan.digests = map[string]string{}
 	for i := range all {
 		other := &all[i]
 		if scope == ScopeDomain && other.Domain != skill.Domain && other.Domain != "" {
@@ -134,16 +182,29 @@ func (e *activationEnv) activate(skill *Skill) ActivationSkill {
 			run.Warnings = append(run.Warnings, fmt.Sprintf("skill %q was left out of the competing set: %s", other.ID, metaProblems[other.ID]))
 			continue
 		}
-		competing = append(competing, other.ID)
-		docs = append(docs, meta.doc)
-		digests[other.ID] = meta.digest
+		plan.competing = append(plan.competing, other.ID)
+		plan.docs = append(plan.docs, meta.doc)
+		plan.digests[other.ID] = meta.digest
 	}
-	run.Status, run.Competing = RunRan, competing
-	run.Digest, run.SetDigest = digests[skill.ID], setDigest(competing, digests)
-	if len(competing) < 2 {
+	run.Status, run.Competing = RunRan, plan.competing
+	run.Digest, run.SetDigest = plan.digests[skill.ID], setDigest(plan.competing, plan.digests)
+	if len(plan.competing) < 2 {
 		run.Warnings = append(run.Warnings, "no other skill competes for these prompts, so a stolen trigger cannot be measured")
 	}
-	measure(&run, skill, Expand(authored), competing, docs, threshold)
+	plan.cases, plan.ready = Expand(authored), true
+	return plan
+}
+
+// activate measures one skill with the offline ranker and adds its positive
+// prompts to the report's confusion matrix.
+func (e *activationEnv) activate(skill *Skill) ActivationSkill {
+	plan := e.prepare(skill)
+	run := plan.run
+	if !plan.ready {
+		return run
+	}
+	measure(&run, skill, plan.cases, plan.competing, plan.docs, e.threshold)
+	report := e.report
 	for _, st := range run.StolenBy {
 		addConfusion(report.Confusion, skill.ID, st.Skill, st.Prompts)
 	}
@@ -173,7 +234,7 @@ func measure(run *ActivationSkill, skill *Skill, cases []Case, competing []strin
 	stolen := map[string]int{}
 	for i := range cases {
 		c := &cases[i]
-		if len(c.Files) > 0 || len(c.Assertions) > 0 || c.Rubric != "" {
+		if len(c.Files) > 0 || len(c.Assertions) > 0 || c.HasRubric() {
 			run.Ignored++
 		}
 		hits := skillsearch.Rank(docs, c.Prompt)

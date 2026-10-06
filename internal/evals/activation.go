@@ -23,8 +23,8 @@ const (
 const (
 	// SurfaceRetrieval ranks prompts with the offline find_skill ranker; no model, no cost.
 	SurfaceRetrieval = "retrieval"
-	// SurfaceNative would ask a harness's model to choose; a runner must declare
-	// CapabilityActivation for it, and none does yet.
+	// SurfaceNative asks a harness's model to choose with every competing skill
+	// installed; a runner must declare CapabilityActivation and this surface.
 	SurfaceNative = "native"
 )
 
@@ -140,12 +140,20 @@ type ActivationPrompt struct {
 	Rate float64 `json:"rate"`
 	Runs int     `json:"runs"`
 	// Rank is the 1-based rank of the skill among the competing skills; null when
-	// it did not rank at all.
-	Rank   *int   `json:"rank"`
+	// it did not rank at all (always null on the native surface).
+	Rank *int `json:"rank"`
+	// Winner is the skill that ranked first (retrieval) or fired most often
+	// (native); "none" when nothing did.
 	Winner string `json:"winner"`
-	// TopScore is the score of the winner.
+	// TopScore is the score of the winner (retrieval only).
 	TopScore float64 `json:"top_score"`
 	Status   string  `json:"status"`
+	// Interval is the Wilson interval of Rate over Runs; FiredCounts how often each
+	// skill loaded (native only).
+	Interval    *Interval      `json:"interval,omitempty"`
+	FiredCounts map[string]int `json:"fired_counts,omitempty"`
+	// Error says why a native prompt has no result.
+	Error string `json:"error,omitempty"`
 }
 
 // StolenBy counts the positive prompts of a skill that a sibling won.
@@ -172,6 +180,11 @@ type ActivationSkill struct {
 	Precision       *Rate `json:"precision"`
 	Recall          *Rate `json:"recall"`
 	FalseActivation *Rate `json:"false_activation"`
+	// RunRecall and RunFalseActivation pool the repeated runs of a native measurement
+	// (fires over runs, across the positive or the negative prompts); null on the
+	// retrieval surface, where a prompt is one run.
+	RunRecall          *Rate `json:"run_recall,omitempty"`
+	RunFalseActivation *Rate `json:"run_false_activation,omitempty"`
 	// RecallAt1, RecallAt3 and MRR are rank metrics over the positive prompts.
 	RecallAt1 *float64 `json:"recall_at_1"`
 	RecallAt3 *float64 `json:"recall_at_3"`
@@ -184,6 +197,10 @@ type ActivationSkill struct {
 	Warnings []string           `json:"warnings,omitempty"`
 	Problems []Problem          `json:"problems,omitempty"`
 	Error    string             `json:"error,omitempty"`
+	// CostUSD and EstimateVsActual are what a native run cost and how that compares
+	// with the projection.
+	CostUSD          float64         `json:"cost_usd,omitempty"`
+	EstimateVsActual *EstimateRecord `json:"estimate_vs_actual,omitempty"`
 }
 
 // ActivationReport is the JSON document of `eval run --mode activation`.
@@ -194,6 +211,14 @@ type ActivationReport struct {
 	Scope         string `json:"scope"`
 	Note          string `json:"note"`
 	Date          string `json:"date,omitempty"`
+	// Runner, Harness, Model, Runs and DryRun describe a native run.
+	Runner  string `json:"runner,omitempty"`
+	Harness string `json:"harness,omitempty"`
+	Model   string `json:"model,omitempty"`
+	Runs    int    `json:"runs,omitempty"`
+	DryRun  bool   `json:"dry_run,omitempty"`
+	// Estimate is the projected size and cost range of a native run.
+	Estimate *Estimate `json:"estimate,omitempty"`
 	// Cost is always zero for the retrieval surface: no model is called.
 	Cost   ActivationCost    `json:"cost"`
 	Skills []ActivationSkill `json:"skills"`
@@ -224,6 +249,15 @@ type ActivationRecord struct {
 	Recall    *float64   `json:"recall"`
 	Precision *float64   `json:"precision"`
 	StolenBy  []StolenBy `json:"stolen_by,omitempty"`
+	// The rest describe a native run: what it ran on, whether it passed, and the
+	// cache key that decides whether it is repeated.
+	Runner   string          `json:"runner,omitempty"`
+	Harness  string          `json:"harness,omitempty"`
+	Model    string          `json:"model,omitempty"`
+	Runs     int             `json:"runs,omitempty"`
+	Passing  bool            `json:"passing,omitempty"`
+	CacheKey string          `json:"cache_key,omitempty"`
+	Estimate *EstimateRecord `json:"estimate,omitempty"`
 }
 
 // Record is the summary of a measured skill for the results store.
@@ -276,7 +310,15 @@ func (r *ActivationReport) writeMarkdown(w io.Writer) error {
 	if r.Date != "" {
 		fmt.Fprintf(&b, ", date %s", r.Date)
 	}
-	b.WriteString(", cost $0.00.\n\n" + r.Note + ".\n\n")
+	if r.Surface == SurfaceNative {
+		fmt.Fprintf(&b, ", runner %#q, harness %#q, model %#q, %d runs per prompt, cost $%.2f", r.Runner, r.Harness, r.Model, r.Runs, r.Cost.ActualUSD)
+		if r.DryRun && r.Estimate != nil {
+			b.WriteString(" (dry run: " + nativeEstimateLine(r.Estimate) + ")")
+		}
+		b.WriteString(".\n\n" + r.Note + ".\n\n")
+	} else {
+		b.WriteString(", cost $0.00.\n\n" + r.Note + ".\n\n")
+	}
 	b.WriteString("| Skill | Status | Prompts | Recall | Precision | False activation | recall@1 | recall@3 | MRR |\n")
 	b.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for i := range r.Skills {
@@ -340,11 +382,26 @@ func activationDetail(s *ActivationSkill) []string {
 		lines = append(lines, fmt.Sprintf("- %#q ranked first on %d of the positive prompts (%.0f%%)", st.Skill, st.Prompts, st.Share*100))
 	}
 	for i := range s.Prompts {
-		if p := &s.Prompts[i]; p.Status != PromptPassed {
+		p := &s.Prompts[i]
+		switch {
+		case p.Status == PromptPassed:
+		case p.Interval != nil || p.Status == PromptError:
+			lines = append(lines, nativePromptLine(p))
+		default:
 			lines = append(lines, fmt.Sprintf("- %#q: expected %s, %s ranked first (rank of this skill: %s)", p.Case, firesWord(p.Expect), winnerText(p.Winner), rankText(p.Rank)))
 		}
 	}
 	return lines
+}
+
+// nativePromptLine describes a native prompt that did not plainly pass.
+func nativePromptLine(p *ActivationPrompt) string {
+	if p.Status == PromptError {
+		return fmt.Sprintf("- %#q: no result (%s)", p.Case, p.Error)
+	}
+	fired := int(math.Round(p.Rate * float64(p.Runs)))
+	return fmt.Sprintf("- %#q (%s): expected %s, fired in %d of %d runs (%.0f%%, interval %.0f-%.0f%%); most fired: %s",
+		p.Case, p.Status, firesWord(p.Expect), fired, p.Runs, p.Rate*100, p.Interval.Low*100, p.Interval.High*100, winnerText(p.Winner))
 }
 
 func firesWord(expect bool) string {

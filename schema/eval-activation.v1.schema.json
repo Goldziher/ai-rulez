@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/eval-activation.v1.schema.json",
   "title": "ai-rulez eval run --mode activation result",
-  "description": "Output of `ai-rulez eval run --mode activation --surface retrieval --format json`: per-prompt activation of each skill, rates with Wilson 95% intervals, rank metrics and the confusion between sibling skills.",
+  "description": "Output of `ai-rulez eval run --mode activation --format json`, on the retrieval surface (offline ranking) or the native one (a harness's model, repeated runs): per-prompt activation of each skill, rates with Wilson 95% intervals, rank metrics (retrieval) and the confusion between sibling skills.",
   "type": "object",
   "required": ["schema_version", "mode", "surface", "scope", "note", "cost", "skills", "confusion", "failed"],
   "additionalProperties": false,
@@ -16,6 +16,12 @@
     },
     "note": { "type": "string", "description": "What the surface measures and what it does not." },
     "date": { "type": "string" },
+    "runner": { "type": "string", "description": "Native surface: the runner that ran the prompts." },
+    "harness": { "type": "string" },
+    "model": { "type": "string" },
+    "runs": { "type": "integer", "minimum": 1, "description": "Native surface: how often each prompt was repeated." },
+    "dry_run": { "type": "boolean", "description": "The run only estimated; no runner was called." },
+    "estimate": { "$ref": "#/definitions/estimate" },
     "cost": {
       "type": "object",
       "required": ["estimate_usd", "actual_usd"],
@@ -28,12 +34,49 @@
     "skills": { "type": "array", "items": { "$ref": "#/definitions/skill" } },
     "confusion": {
       "type": "object",
-      "description": "confusion[expected][won]: positive prompts of skill `expected` that skill `won` ranked first on; `none` when nothing ranked.",
+      "description": "confusion[expected][won]: retrieval counts the positive prompts of skill `expected` that skill `won` ranked first on, native counts the runs on which `won` loaded; `none` when nothing ranked or loaded.",
       "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
     },
     "failed": { "type": "boolean" }
   },
   "definitions": {
+    "estimate": {
+      "type": "object",
+      "description": "Projected size and cost: the unsuffixed fields are the expected figure, the low and high fields bound it.",
+      "required": ["agent_runs", "input_tokens", "output_tokens", "cost_usd", "cost_low_usd", "cost_high_usd"],
+      "properties": {
+        "agent_runs": { "type": "integer", "minimum": 0 },
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "input_tokens_low": { "type": "integer", "minimum": 0 },
+        "input_tokens_high": { "type": "integer", "minimum": 0 },
+        "output_tokens_low": { "type": "integer", "minimum": 0 },
+        "output_tokens_high": { "type": "integer", "minimum": 0 },
+        "cost_low_usd": { "type": "number", "minimum": 0 },
+        "cost_high_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "estimate_record": {
+      "type": "object",
+      "description": "The projection of a run next to what the runner reported.",
+      "required": ["low_usd", "expected_usd", "high_usd", "expected_tokens"],
+      "properties": {
+        "low_usd": { "type": "number" },
+        "expected_usd": { "type": "number" },
+        "high_usd": { "type": "number" },
+        "expected_tokens": { "type": "integer" },
+        "agent_runs": { "type": "integer" },
+        "expected_input_tokens": { "type": "integer" },
+        "expected_output_tokens": { "type": "integer" },
+        "actual_usd": { "type": "number" },
+        "actual_tokens": { "type": "integer" },
+        "actual_input_tokens": { "type": "integer" },
+        "actual_output_tokens": { "type": "integer" },
+        "error": { "type": "number", "description": "actual/expected - 1 over USD." },
+        "in_range": { "type": "boolean" }
+      }
+    },
     "interval": {
       "type": "object",
       "required": ["low", "high"],
@@ -50,7 +93,11 @@
       "additionalProperties": false,
       "properties": {
         "value": { "type": "number", "minimum": 0, "maximum": 1 },
-        "n": { "type": "integer", "minimum": 1 },
+        "n": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Trials behind the rate; 0 on a replayed stored figure, which keeps only the value."
+        },
         "interval": { "$ref": "#/definitions/interval" }
       }
     },
@@ -79,15 +126,32 @@
           "maximum": 1,
           "description": "Fraction of runs in which the skill fired."
         },
-        "runs": { "type": "integer", "minimum": 1 },
+        "runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Runs behind the rate; 0 for a prompt the runner gave no result for."
+        },
+        "interval": { "$ref": "#/definitions/interval" },
+        "fired_counts": {
+          "type": "object",
+          "description": "Native surface: how often each skill loaded over the runs; `none` counts runs in which no skill loaded.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "error": { "type": "string", "description": "Native surface: why the prompt has no result." },
         "rank": {
           "type": ["integer", "null"],
           "minimum": 1,
           "description": "1-based rank of the skill among the competing skills; null when it did not rank."
         },
-        "winner": { "type": "string", "description": "The skill that ranked first, or `none`." },
+        "winner": {
+          "type": "string",
+          "description": "The skill that ranked first (retrieval) or loaded most often (native), or `none`."
+        },
         "top_score": { "type": "number", "minimum": 0 },
-        "status": { "enum": ["passed", "failed", "borderline"] }
+        "status": {
+          "enum": ["passed", "failed", "borderline", "error"],
+          "description": "borderline: passes, but one run the other way would fail it (native, 3 or more runs, never a perfect score)."
+        }
       }
     },
     "skill": {
@@ -106,7 +170,18 @@
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
-        "status": { "enum": ["ran", "no-cases", "invalid", "error", "skipped-unchanged"] },
+        "status": {
+          "enum": [
+            "ran",
+            "cached",
+            "dry-run",
+            "no-cases",
+            "invalid",
+            "error",
+            "skipped-unchanged",
+            "skipped-over-budget"
+          ]
+        },
         "competing": { "type": "array", "items": { "type": "string" } },
         "digest": { "type": "string" },
         "set_digest": {
@@ -117,6 +192,16 @@
         "precision": { "$ref": "#/definitions/rate" },
         "recall": { "$ref": "#/definitions/rate" },
         "false_activation": { "$ref": "#/definitions/rate" },
+        "run_recall": {
+          "$ref": "#/definitions/rate",
+          "description": "Native: fires over runs across the positive prompts."
+        },
+        "run_false_activation": {
+          "$ref": "#/definitions/rate",
+          "description": "Native: fires over runs across the negative prompts."
+        },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "estimate_vs_actual": { "$ref": "#/definitions/estimate_record" },
         "recall_at_1": { "$ref": "#/definitions/fraction" },
         "recall_at_3": { "$ref": "#/definitions/fraction" },
         "mrr": { "$ref": "#/definitions/fraction" },
