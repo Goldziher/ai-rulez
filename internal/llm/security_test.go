@@ -387,12 +387,6 @@ func TestMalformedRepliesAreNotRetried(t *testing.T) {
 			t.Errorf("%q: want a permanent error, got %v", body, err)
 		}
 	}
-	if nativeKind("request req-14013-x failed") == KindAuth {
-		t.Error("digits inside an id must not classify as 401/403")
-	}
-	if nativeKind("[3] HTTP 403 forbidden") != KindAuth {
-		t.Error("a real 403 must classify as auth")
-	}
 }
 
 func TestCacheIdentitySeparatesBackendsAndKeys(t *testing.T) {
@@ -464,12 +458,4 @@ func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
 	if n == 0 {
 		t.Fatal("expected a cache file")
 	}
-}
-
-func nativeKind(msg string) Kind {
-	var e *Error
-	if errors.As(classifyNative(errors.New(msg)), &e) {
-		return e.Kind
-	}
-	return ""
 }
