@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/plan.schema.json",
+  "title": "ai-rulez generation plan",
+  "description": "Output of `ai-rulez generate --emit-plan FILE` and generator.PlanOutputs: every file a generate run would write, merge into or remove, computed without touching disk. Deterministic (paths sorted, no timestamp) and free of secrets: MCP placeholders stay as written and the content digest of a sensitive output is omitted.",
+  "type": "object",
+  "required": ["schema", "renderer", "files", "removals"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1,
+      "description": "Version of this document. A new field is additive; a removed or re-typed one raises it."
+    },
+    "renderer": {
+      "type": "string",
+      "description": "The generator's render-schema version; a renderer change changes digests."
+    },
+    "profile": { "type": "string", "description": "The profile that was rendered (absent for a role run)." },
+    "role": { "type": "string", "description": "The role that was rendered (absent for a profile run)." },
+    "files": {
+      "type": "array",
+      "description": "The outputs, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": ["path", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "description": "Slash-separated, relative to the project root." },
+          "action": {
+            "enum": ["write", "merge", "mkdir"],
+            "description": "write: ai-rulez writes the file whole; merge: a document shared with the consumer, only the keys ai-rulez owns are written; mkdir: an empty directory."
+          },
+          "mode": {
+            "type": "string",
+            "pattern": "^[0-7]{4}$",
+            "description": "Permission bits in octal; absent for a directory."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Bytes of the rendered content, before the header's Generated stamp and hash lines."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 of the same bytes. Omitted for a sensitive output."
+          },
+          "local_only": { "type": "boolean", "description": "A machine-local output: gitignored, never committed." },
+          "sensitive": { "type": "boolean", "description": "May carry a secret: git-ignored and written owner-only." },
+          "raw": { "type": "boolean", "description": "A verbatim payload (skill resources) without a header." }
+        }
+      }
+    },
+    "removals": {
+      "type": "array",
+      "description": "What a run takes back, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "reason": {
+            "enum": ["stale", "unmerge", "delete"],
+            "description": "stale: a file an earlier run recorded and this one no longer renders; unmerge: entries ai-rulez earlier merged into a shared document are taken out; delete: the document holds nothing user-authored once they are."
+          }
+        }
+      }
+    }
+  }
+}
