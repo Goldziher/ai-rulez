@@ -127,7 +127,7 @@ Every project has one name; the value is used verbatim in generated headers.
 
 A symlinked file or directory under your project's `.ai-rulez/` (including `domains/` and `local/`) is followed only
 when its fully resolved target is inside the project (the git top-level, else the directory holding `.ai-rulez/`). Any
-other symlink, including a dangling one, is refused: `generate` prints a warning naming it (even with `--quiet`) and
+other symlink, including a dangling one, is refused: `generate` fails with an error naming it and
 `ai-rulez validate` reports it as an error. Content from includes, installed skills, skill sources and OKF bundles
 never follows symlinks; see [Includes](includes.md).
 
@@ -751,10 +751,9 @@ so a resolved secret in a merged server entry is not copied into `.generated-man
   is already at `.agents/mcp_config.json` untouched. The exceptions are `.gemini/settings.json`
   (`context.fileName`) and `opencode.json` (`instructions`), which carry the entry that loads
   machine-local content.
-- **JSONC**: A document containing comments or trailing commas is not valid JSON, and rewriting it
-  would delete the comments. When MCP servers must be written into it, generation fails with a hint
-  naming the path. When only the Gemini `context.fileName` or OpenCode `instructions` entry would be
-  written, the document is left untouched with a warning and generation continues.
+- **JSONC**: A document with comments or trailing commas is merged in place: ai-rulez adds or updates
+  only the keys it owns (the MCP servers, the Gemini `context.fileName` or OpenCode `instructions`
+  entry) and every comment and the rest of the document stay as written.
 - **Taking keys back out**: `ai-rulez clean`, and `generate` after a preset or server is removed,
   remove the keys ai-rulez merged in, as long as they still hold the value it wrote, and keep the rest
   of the document; see
