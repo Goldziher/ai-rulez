@@ -144,7 +144,7 @@ func applyRepoRoot() error {
 	// can be anything (a home directory, /), so the walk it would trigger is
 	// refused rather than guessed at.
 	if !gitutil.IsRepo(abs) {
-		return oops.Hint("point --repo-root at a git work tree (git must be installed), or omit it to use the " +
+		return oops.Hint("point --repo-root at a git work tree (git must be installed), or omit it to use the "+
 			"configuration's directory").Errorf("--repo-root %q is not inside a git repository", root)
 	}
 	strictTreeCache = lint.Loader{Root: abs}
