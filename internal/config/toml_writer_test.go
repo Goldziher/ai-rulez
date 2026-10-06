@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -161,4 +163,49 @@ skill = ["owner"]
 	again, err := LoadConfigFromFile(context.Background(), path)
 	require.NoError(t, err)
 	assert.Equal(t, cfg.Lint, again.Lint, "[lint] must survive a config rewrite")
+}
+
+// tomlKeys lists the TOML key of every serialized field of a struct type.
+func tomlKeys(t reflect.Type) map[string]bool {
+	keys := map[string]bool{}
+	for i := 0; i < t.NumField(); i++ {
+		tag := t.Field(i).Tag.Get("toml")
+		name := strings.Split(tag, ",")[0]
+		if name == "" || name == "-" {
+			continue
+		}
+		keys[name] = true
+	}
+	return keys
+}
+
+// A key Config reads but tomlOutput lacks is silently dropped by every config
+// rewrite (CRUD, MCP, migrate, convert).
+func TestTOMLOutputCarriesEveryConfigKey(t *testing.T) {
+	// Arrange
+	want := tomlKeys(reflect.TypeOf(Config{}))
+	got := tomlKeys(reflect.TypeOf(tomlOutput{}))
+
+	// Act
+	var missing []string
+	for k := range want {
+		if !got[k] {
+			missing = append(missing, k)
+		}
+	}
+
+	// Assert
+	assert.Empty(t, missing, "tomlOutput is missing Config keys")
+}
+
+func TestMarshalTOMLKeepsOKFTable(t *testing.T) {
+	// Arrange
+	cfg := &Config{Version: "4.0", Name: "x", OKF: &OKFConfig{Dir: "docs/okf"}}
+
+	// Act
+	out, err := MarshalTOML(cfg)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "[okf]")
 }
