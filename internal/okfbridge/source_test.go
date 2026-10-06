@@ -41,7 +41,7 @@ func TestFetchLocalGitRepoAtRef(t *testing.T) {
 	}
 	repo := t.TempDir()
 	run := func(args ...string) {
-		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...)
 		cmd.Dir = repo
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, string(out))
