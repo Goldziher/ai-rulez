@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -244,6 +245,11 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	}
 	leaves := make([]contentlock.Leaf, 0, len(src.Files))
 	for _, f := range src.Files {
+		if signing.IsSignatureFile(f.RelPath) {
+			// A publisher's attestation of the skill (serve_signing.go) is not skill
+			// content: it is neither served, scanned nor part of the digests.
+			continue
+		}
 		leaf := contentlock.Leaf{Path: f.RelPath, Mode: contentlock.ModeRegular, Data: f.Content}
 		leaves = append(leaves, leaf)
 		skill.Files = append(skill.Files, CatalogFile{

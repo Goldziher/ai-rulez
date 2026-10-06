@@ -42,6 +42,9 @@ type Admission struct {
 	Pinning bool
 	// View is the serve view whose pins the lock is read at (see ServeSetup.ViewKey).
 	View string
+	// Signatures applies [signing] require = ["served", "skill"] (serve_signing.go);
+	// nil admits every skill.
+	Signatures *SignatureGate
 	// DefaultTrust is the scan level for a skill that names none: "warn" for
 	// skills authored in the project, "error" for everything that came from a
 	// remote. nil means "warn".
@@ -120,6 +123,9 @@ func (c *Catalog) Refusals() []Refusal {
 
 func (a Admission) check(s *CatalogSkill) *Refusal {
 	if r := a.scan(s); r != nil {
+		return r
+	}
+	if r := a.Signatures.Check(s); r != nil {
 		return r
 	}
 	entry := servedPin(a.Lock, a.View, s.Name)
