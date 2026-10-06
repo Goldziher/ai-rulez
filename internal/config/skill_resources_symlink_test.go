@@ -68,7 +68,7 @@ func TestProjectSkillResources_SymlinkPolicy(t *testing.T) {
 			old := contentWarnWriter
 			contentWarnWriter = &warned
 			t.Cleanup(func() { contentWarnWriter = old })
-			s := newProjectScanner(project)
+			s := newProjectScanner(osView(project))
 
 			// Act
 			skills, err := s.skills(filepath.Join(project, ".ai-rulez", "skills"), nil)

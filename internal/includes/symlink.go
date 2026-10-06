@@ -4,13 +4,19 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // isRealDir reports whether path is a directory that is not a symlink. Included
 // content never follows symlinks, so a symlinked .ai-rulez/ or content
 // directory is skipped with a warning that names it.
 func isRealDir(path string) bool {
-	info, err := os.Lstat(path)
+	return isRealDirIn(workspace.OSView(path), path)
+}
+
+// isRealDirIn is isRealDir reading through v.
+func isRealDirIn(v workspace.View, path string) bool {
+	info, err := v.Lstat(path)
 	if err != nil {
 		return false
 	}

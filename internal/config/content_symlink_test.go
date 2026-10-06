@@ -107,7 +107,7 @@ func TestProjectScanner_SymlinkPolicy(t *testing.T) {
 			old := contentWarnWriter
 			contentWarnWriter = &warned
 			t.Cleanup(func() { contentWarnWriter = old })
-			s := newProjectScanner(project)
+			s := newProjectScanner(osView(project))
 
 			// Act
 			tree, err := scanContentTree(s, filepath.Join(project, ".ai-rulez"), nil)
