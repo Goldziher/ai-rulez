@@ -276,7 +276,7 @@ func bundlePathFor(cfg *config.Config, o VerifyOptions) string {
 func buildTrust(cfg *config.Config, o VerifyOptions) (TrustSet, error) {
 	var set TrustSet
 	for _, t := range cfg.Signing.SigningTrustEntries() {
-		e := TrustEntry{Subject: t.Subject, Source: t.Source, Identity: t.Identity, IdentityRegexp: t.IdentityRegexp, Issuer: t.Issuer}
+		e := TrustEntry{Subject: t.Subject, Source: t.Source, Identity: t.Identity, IdentityRegexp: t.IdentityRegexp, Issuer: t.Issuer, Reviewer: t.Reviewer}
 		var err error
 		if t.ValidFrom != "" {
 			if e.ValidFrom, err = config.ParseSigningTime(t.ValidFrom, false); err != nil {
