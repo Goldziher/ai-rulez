@@ -1,0 +1,29 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude', 'copilot']
+
+[[mcp_servers]]
+name = 'docs'
+transport = 'http'
+url = 'https://docs.example.com/mcp'
+
+[[mcp_servers]]
+name = 'local-tools'
+command = 'npx'
+args = ['-y', '@example/tools-mcp']
+
+[mcp_servers.env]
+EXAMPLE_API_KEY = '${EXAMPLE_API_KEY}'
+
+# Imported by `ai-rulez convert` and DISABLED: review, then uncomment or rerun convert with --enable-hooks / --enable-permissions.
+# Each hook runs a command on your machine; read every command first.
+# [[hooks]]
+# event = 'PostToolUse'
+# matcher = 'Edit|Write'
+#
+# [[hooks.hooks]]
+# command = 'ruff format .'
+# timeout = 30
