@@ -21,6 +21,7 @@ const (
 	KindSkill   Kind = "skill"
 	KindAgent   Kind = "agent"
 	KindCommand Kind = "command"
+	KindCheck   Kind = "check"
 )
 
 // Status says what happened to one input construct.
@@ -101,6 +102,8 @@ func (it *Item) Rel() string {
 		return "agents/" + it.Name + ".md"
 	case KindCommand:
 		return "commands/" + it.Name + ".md"
+	case KindCheck:
+		return "checks/" + it.Name + ".md"
 	case KindSkill:
 		return "skills/" + it.Name + "/SKILL.md"
 	}
@@ -173,7 +176,7 @@ type Format interface {
 
 // Registry returns every format importer, sorted by name.
 func Registry() []Format {
-	return []Format{nativeImporter{}, skillsLockImporter{}}
+	return []Format{nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}}
 }
 
 // Lookup returns the importer with the given name.

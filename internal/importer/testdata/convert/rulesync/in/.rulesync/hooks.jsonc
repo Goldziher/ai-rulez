@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "type": "command", "command": "git pull" }],
+    "afterFileEdit": [{ "type": "command", "command": "pnpm lint --fix" }],
+  },
+}

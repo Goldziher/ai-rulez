@@ -188,6 +188,7 @@ type ruleFM struct {
 	Activation  string   `yaml:"activation,omitempty"`
 	Globs       []string `yaml:"globs,omitempty"`
 	Priority    string   `yaml:"priority,omitempty"`
+	Targets     []string `yaml:"targets,omitempty"`
 }
 
 var validActivations = map[string]bool{"always": true, "glob": true, "auto": true, "manual": true}
@@ -322,7 +323,7 @@ func dedupeSorted(in []string) []string {
 // renderRule writes a rule file: optional frontmatter, then the body.
 func renderRule(meta ruleFM, body string) ([]byte, error) {
 	var b strings.Builder
-	if meta.Description != "" || meta.Activation != "" || len(meta.Globs) > 0 || meta.Priority != "" {
+	if meta.Description != "" || meta.Activation != "" || len(meta.Globs) > 0 || meta.Priority != "" || len(meta.Targets) > 0 {
 		var buf bytes.Buffer
 		enc := yaml.NewEncoder(&buf)
 		enc.SetIndent(2)
