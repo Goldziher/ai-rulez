@@ -158,17 +158,35 @@ type trapEnv struct {
 	exists func(dir, suffix string) bool
 }
 
+// scopeDir is the scope directory as a clean slash path; "." and "" are the
+// root.
+func (s TrapScope) scopeDir() string {
+	dir := path.Clean(strings.Trim(s.Dir, "/"))
+	if dir == "." {
+		return ""
+	}
+	return dir
+}
+
 // matches reports whether rel (slash path from the lint root) is inside the
-// scope directory, at the root or in a nested package, and has the suffix.
+// scope directory, at the root or in a nested package, and has the suffix. A
+// suffix that starts with neither "." nor "/" ("REVIEW.md") names a whole file
+// name, so "PRE-REVIEW.md" does not match it.
 func (s TrapScope) matches(rel string) bool {
-	dir := strings.Trim(s.Dir, "/")
+	dir := s.scopeDir()
 	if s.RootOnly && dir == "" && strings.Contains(rel, "/") {
 		return false
 	}
 	if dir != "" && !(strings.HasPrefix(rel, dir+"/") || strings.Contains(rel, "/"+dir+"/")) {
 		return false
 	}
-	return s.Suffix == "" || strings.HasSuffix(strings.ToLower(rel), strings.ToLower(s.Suffix))
+	if s.Suffix == "" {
+		return true
+	}
+	if s.Suffix[0] != '.' && s.Suffix[0] != '/' {
+		return strings.EqualFold(path.Base(rel), s.Suffix)
+	}
+	return strings.HasSuffix(strings.ToLower(rel), strings.ToLower(s.Suffix))
 }
 
 func (s TrapScope) hasKind(kind string) bool {
