@@ -83,6 +83,7 @@ func TestUpdate_LockResolvesAndKeepsThenUpdateMoves(t *testing.T) {
 	var code int
 	stdout := captureStdout(t, func() { code = runUpdate(nil) })
 	require.Equal(t, 0, code)
+	validateAgainst(t, "../../schema/update.schema.json", []byte(stdout))
 	var dry updateReport
 	require.NoError(t, json.Unmarshal([]byte(stdout), &dry), stdout)
 	require.Len(t, dry.Updates, 1)
@@ -116,6 +117,7 @@ func TestUpdate_OutdatedReportsAndGates(t *testing.T) {
 	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
 
 	assert.Equal(t, 0, code, "an allowed update does not fail by default")
+	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
 	var rep tagresolve.Report
 	require.NoError(t, json.Unmarshal([]byte(stdout), &rep), stdout)
 	require.Len(t, rep.Sources, 1)
