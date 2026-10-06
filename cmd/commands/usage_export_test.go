@@ -18,7 +18,7 @@ func resetExportFlags(t *testing.T) {
 	t.Helper()
 	clear := func() {
 		usageExportTo, usageExportFile, usageExportDryRun, usageLog = "", "", false, ""
-		usageExportAll, usageExportMaxBatches = false, 10
+		usageExportWithEvals, usageExportAll, usageExportMaxBatches, usageExportEvalsFile = false, false, 10, ""
 	}
 	clear()
 	t.Cleanup(clear)
