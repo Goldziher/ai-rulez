@@ -92,9 +92,12 @@ type Config struct {
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir       string `yaml:"-" json:"-" toml:"-"`
-	ConfigDir     string `yaml:"-" json:"-" toml:"-"`
-	ConfigDirName string `yaml:"-" json:"-" toml:"-"`
+	BaseDir string `yaml:"-" json:"-" toml:"-"`
+	// ContentProblems lists project content paths refused by the symlink
+	// policy; validate reports them as errors.
+	ContentProblems []ContentProblem `yaml:"-" json:"-" toml:"-"`
+	ConfigDir       string           `yaml:"-" json:"-" toml:"-"`
+	ConfigDirName   string           `yaml:"-" json:"-" toml:"-"`
 	// Run is the state of the generation in progress; nil outside one.
 	Run        *RunState    `yaml:"-" json:"-" toml:"-"`
 	ConfigFile string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
