@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Codes of signing findings (docs/strict-validation.md, AR720 to AR729). The
+// Codes of signing findings (docs/strict-validation.md, AR720 to AR727; AR728 and AR729 are reserved). The
 // same codes are registered in internal/lint; a test keeps the two equal.
 const (
 	CodeMissing          = "AR720"
