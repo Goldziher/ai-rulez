@@ -1236,6 +1236,9 @@
           "minimum": 0,
           "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
         }
+      },
+      "additionalProperties": false
+    },
     "search": {
       "type": "object",
       "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
@@ -1325,9 +1328,6 @@
           },
           "additionalProperties": false
         }
-      },
-      "additionalProperties": false
-    },
       },
       "additionalProperties": false
     },
