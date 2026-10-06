@@ -25,6 +25,8 @@ type embedServer struct {
 	mu    sync.Mutex
 	texts []string
 	fail  bool
+	// reject makes the server answer 400 to any request carrying a text with this word.
+	reject string
 }
 
 var embedConcepts = [][]string{
@@ -46,6 +48,12 @@ func newEmbedServer(t *testing.T) *embedServer {
 		if s.fail {
 			http.Error(w, `{"error":{"message":"boom"}}`, http.StatusBadRequest)
 			return
+		}
+		for _, text := range req.Input {
+			if s.reject != "" && strings.Contains(text, s.reject) {
+				http.Error(w, `{"error":{"message":"input rejected"}}`, http.StatusBadRequest)
+				return
+			}
 		}
 		s.texts = append(s.texts, req.Input...)
 		type item struct {
