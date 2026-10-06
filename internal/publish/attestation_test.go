@@ -159,3 +159,40 @@ func TestOCI_ASignedReleaseVerifiesAfterAPullThroughTheRegistry(t *testing.T) {
 	assert.True(t, res.OK(), "%v", res.Problems)
 	assert.Equal(t, "verified", res.Signature)
 }
+
+func TestVerifyWith_NeverReadsAFileTheManifestNamesOutsideTheExpectedNames(t *testing.T) {
+	tests := []struct{ name, old, new string }{
+		{"a signature outside the dist", `"file": "acme-1.4.0.tar.gz.sigstore.json"`, `"file": "../outside.json"`},
+		{"an attestation outside the dist", `"attestation": "acme-1.4.0.attestation.sigstore.json"`, `"attestation": "../outside.json"`},
+		{"a signature that is another listed file", `"file": "acme-1.4.0.tar.gz.sigstore.json"`, `"file": "acme-1.4.0.manifest.json"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: a signed release whose manifest points at a file the verifier must not open.
+			signer, trust := keyPair(t)
+			dir, _ := writeBuilt(t, signedInput(t, signer))
+			require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(dir), "outside.json"), []byte("PLANTED-CONTENT"), 0o600))
+			replaceIn(t, filepath.Join(dir, "acme-1.4.0.manifest.json"), tt.old, tt.new)
+
+			// Act
+			res, err := VerifyWith(dir, VerifyChecks{Signature: trust})
+
+			// Assert: the name is refused as such; the file behind it is never read, so nothing of it is reported.
+			require.NoError(t, err)
+			require.False(t, res.OK())
+			all := strings.Join(problemMessages(res), "\n")
+			assert.NotContains(t, all, "does not verify", "the named file was parsed as a bundle")
+			assert.NotContains(t, all, "unreadable")
+			assert.NotContains(t, all, "PLANTED")
+			assert.Equal(t, "unverified", res.Signature)
+		})
+	}
+}
+
+func problemMessages(res VerifyResult) []string {
+	out := make([]string, 0, len(res.Problems))
+	for _, p := range res.Problems {
+		out = append(out, p.Message)
+	}
+	return out
+}
