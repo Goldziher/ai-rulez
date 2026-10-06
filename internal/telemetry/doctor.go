@@ -9,6 +9,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // DoctorReport is what `telemetry doctor` prints: the resolved configuration and
@@ -241,10 +243,18 @@ const hiddenHeaderName = "(invalid, hidden)"
 
 var headerEnvName = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 
+// plausibleHeaderEnvName reports whether a headers_env entry is an environment
+// variable name rather than a pasted credential. An upper-case string that is
+// shaped like a credential (a long access-key id with no underscore) is not
+// plausible, whatever the character set allows.
+func plausibleHeaderEnvName(name string) bool {
+	return headerEnvName.MatchString(name) && config.ValidateTelemetryEnvName(name) == ""
+}
+
 // displayHeaderName returns name when it is a plausible environment variable
 // name and the placeholder otherwise.
 func displayHeaderName(name string) string {
-	if headerEnvName.MatchString(name) {
+	if plausibleHeaderEnvName(name) {
 		return name
 	}
 	return hiddenHeaderName
