@@ -8,6 +8,9 @@ const (
 	// repository. Skills become [[installed_skills]] pinned to the commit that was
 	// fetched; rules are copied.
 	remoteSkills remoteKind = "skills"
+	// remoteRules is the rules selection of a rulesync source: direct .md files of
+	// the repository's rules directory, copied into the tree.
+	remoteRules remoteKind = "rules"
 	// remotePackage is an APM dependency: a package whose .apm/ content is copied
 	// into the tree, or a single skill that becomes an [[installed_skills]] entry.
 	remotePackage remoteKind = "package"
@@ -28,9 +31,7 @@ type Remote struct {
 	Commit string
 	// Path is the subdirectory of the repository the source selects.
 	Path string
-	// Skills and Rules name what to take from a remoteSkills source; empty Skills
-	// with no Rules means every skill.
+	// Skills and Rules name what to take from a remoteSkills or remoteRules
+	// source; no names (or "*") means every one.
 	Skills, Rules []string
-	// SkillsPath and RulesPath are the directories of those, inside Path's repository.
-	SkillsPath, RulesPath string
 }

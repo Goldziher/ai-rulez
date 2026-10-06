@@ -82,6 +82,9 @@ type apmPlanner struct {
 	onSkip func(name, reason string)
 	// lock maps "<repo url>#<virtual path>" to the commit apm.lock.yaml resolved.
 	lock map[string]string
+	// rootName names a skill found at the root of a fetched checkout, which has
+	// no directory name of its own.
+	rootName string
 }
 
 func (apmImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
@@ -99,7 +102,7 @@ func (apmImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 		return nil, err
 	}
 	b.importManifest(doc)
-	b.importPackage("", "this project")
+	b.importPackage("", "this project", true)
 	b.importModules()
 	b.importPolicy()
 	r.flushProblems(p)
@@ -408,7 +411,7 @@ func (b *apmPlanner) importDependency(field string, v any) {
 		if isDir, ok := b.r.exists(dir); ok && isDir {
 			b.p.add(newFinding(StatusApproximated, apmManifest, field, dir,
 				"installed copy imported as local files; the dependency link to "+dep.url()+" is not kept, so it no longer updates"))
-			b.importPackage(dir, dir)
+			b.importPackage(dir, dir, false)
 			return
 		}
 	}
@@ -425,7 +428,7 @@ func (b *apmPlanner) importLocalDependency(field, dir string) {
 	}
 	b.p.add(newFinding(StatusApproximated, apmManifest, field, dir,
 		"local package imported as local files; the dependency link is not kept"))
-	b.importPackage(dir, dir)
+	b.importPackage(dir, dir, false)
 }
 
 // apmModuleDirs are the places `apm install` puts a dependency inside apm_modules.
@@ -466,7 +469,7 @@ func (b *apmPlanner) importModules() {
 				if !b.alreadyImported(sub) {
 					b.p.add(newFinding(StatusApproximated, sub, "", sub,
 						"installed package imported as local files; the dependency link is not kept, so it no longer updates"))
-					b.importPackage(sub, sub)
+					b.importPackage(sub, sub, false)
 				}
 				continue
 			}
@@ -498,15 +501,16 @@ func (b *apmPlanner) alreadyImported(dir string) bool {
 }
 
 // importPackage imports the primitives of a package rooted at root ("" for the
-// project): its .apm/ directory, else the plugin-style layout of a skill or
-// agent bundle.
-func (b *apmPlanner) importPackage(root, label string) {
+// project or a fetched checkout): its .apm/ directory, else the plugin-style
+// layout of a skill or agent bundle. The project root itself only has .apm/:
+// its other directories are not a package.
+func (b *apmPlanner) importPackage(root, label string, project bool) {
 	dir := path.Join(root, apmDir)
 	if isDir, ok := b.r.exists(dir); ok && isDir {
 		b.importPrimitives(dir)
 		return
 	}
-	if root == "" {
+	if root == "" && project {
 		return
 	}
 	b.importBundle(root, label)
@@ -582,7 +586,11 @@ func (b *apmPlanner) importRootSkill(root, label string) {
 		return
 	}
 	text := normalizeText(string(data))
-	name, _ := safeName(path.Base(root))
+	base := path.Base(root)
+	if root == "" {
+		base = b.rootName
+	}
+	name, _ := safeName(base)
 	if fm, _, has := splitFrontmatter(text); has {
 		meta, _ := parseFrontmatter(fm)
 		if n := stringOf(meta["name"]); n != "" {
