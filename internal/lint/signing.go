@@ -31,7 +31,7 @@ func init() {
 		RuleInfo{CodeAttestationSubject, "attestation-subject-mismatch", SeverityError, "the signed digest or hash_version differs from the lock: the lock changed after it was signed"},
 		RuleInfo{CodeTrustedRootMissing, "trusted-root-unavailable", SeverityError, "a certificate-signed attestation needs a Sigstore trusted root and none is configured or cached"},
 		RuleInfo{CodeTLogProofMissing, "tlog-proof-missing", SeverityError, "[signing] tlog requires a transparency log entry and the bundle has none"},
-		RuleInfo{CodeSignatureRollback, "signature-rollback", SeverityError, "the lock attestation is older than one this machine already verified for the repository"},
+		RuleInfo{CodeSignatureRollback, "signature-rollback", SeverityError, "the lock attestation is older than one this machine already verified for the same signer and project"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodeSignatureMissing: {
