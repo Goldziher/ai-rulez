@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,7 @@ func TestResolver_CreateSource_RefusesCommittedLocalOverrideUnderLock(t *testing
 	r := &Resolver{baseDir: t.TempDir(), cfg: &config.Config{}}
 
 	// Act
-	_, err := r.createSource(&config.IncludeConfig{Name: "shared", Source: "https://example.com/r.git", LocalOverride: "../x"})
+	_, err := r.createSource(context.Background(), &config.IncludeConfig{Name: "shared", Source: "https://example.com/r.git", LocalOverride: "../x"})
 
 	// Assert
 	assert.ErrorIs(t, err, config.ErrLockViolation)

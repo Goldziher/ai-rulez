@@ -66,6 +66,7 @@ func ResetObserved() {
 	observedMu.Lock()
 	observedBy = map[string]observed{}
 	observedMu.Unlock()
+	resetTags()
 }
 
 // refreshing reports whether the source is being re-resolved by `ai-rulez lock`.
@@ -81,16 +82,28 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	for i := range cfg.Includes {
 		inc := &cfg.Includes[i]
 		if DetectSourceType(inc.Source) == SourceTypeGit {
-			wants = append(wants, lockfile.Want{Kind: lockfile.KindInclude, Name: inc.Name, Source: RedactURL(inc.Source), Path: inc.Path, Ref: inc.Ref})
+			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindInclude, Name: inc.Name, Source: RedactURL(inc.Source), Path: inc.Path, Ref: inc.Ref}, inc.VersionSpec()))
 		}
 	}
 	for i := range cfg.InstalledSkills {
 		sk := &cfg.InstalledSkills[i]
 		if DetectSourceType(sk.Source) == SourceTypeGit {
-			wants = append(wants, lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: RedactURL(sk.Source), Path: sk.GetPath(), Ref: sk.Ref})
+			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: RedactURL(sk.Source), Path: sk.GetPath(), Ref: sk.Ref}, sk.VersionSpec()))
 		}
 	}
 	return wants
+}
+
+// withVersion turns a want into a version-constraint want: the constraint takes
+// the place of the ref, which is what the lock records as the requested ref.
+func WithVersion(w lockfile.Want, v config.VersionSpec) lockfile.Want { return withVersion(w, v) }
+
+func withVersion(w lockfile.Want, v config.VersionSpec) lockfile.Want {
+	if !v.Active() {
+		return w
+	}
+	w.Ref, w.Constraint, w.TagPrefix, w.IncludePrerelease = v.Constraint, v.Constraint, v.TagPrefix, v.IncludePrerelease
+	return w
 }
 
 // strictLock reports whether a source that cannot be resolved must fail the run
@@ -115,7 +128,7 @@ func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, err
 	}
 	entry := lock.Find(w.Kind, w.Name)
 	switch {
-	case entry.Covers(lockfile.Want{Source: w.Source, Path: w.Path, Ref: w.Ref}):
+	case entry.Covers(w):
 		if lockfile.IsFullSHA(w.Ref) && w.Ref != entry.Commit {
 			return nil, violation(w, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", w.Ref, entry.Commit)
 		}
@@ -197,10 +210,19 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 		o, ok := observedBy[observedKey(cfg.BaseDir, w.Kind, w.Name)]
 		observedMu.Unlock()
 		if !ok || o.commit == "" || o.digest == "" {
-			problems = append(problems, fmt.Sprintf("%s %q could not be resolved; see the warnings above", w.Kind, w.Name))
+			if msg := recordedProblem(cfg.BaseDir, w.Kind, w.Name); msg != "" {
+				problems = append(problems, fmt.Sprintf("%s %q: %s", w.Kind, w.Name, msg))
+			} else {
+				problems = append(problems, fmt.Sprintf("%s %q could not be resolved; see the warnings above", w.Kind, w.Name))
+			}
 			continue
 		}
-		out.Set(w.Kind, lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest})
+		entry := lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest}
+		if w.Constraint != "" {
+			t, _ := recordedTag(cfg.BaseDir, w.Kind, w.Name)
+			entry.Tag, entry.TagObject = t.tag, t.tagObject
+		}
+		out.Set(w.Kind, entry)
 	}
 	sort.Strings(problems)
 	return out, problems
