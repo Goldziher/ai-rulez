@@ -25,6 +25,7 @@ var (
 	lockRecursive   bool
 	lockKind        string
 	lockProfile     string
+	lockRoles       bool
 
 	lockSubject       bool
 	lockSubjectOutput string
@@ -58,6 +59,10 @@ includes or skills; the other pins (and the content pins) are kept.
                                 newer tag than the pinned one (network; --format
                                 json, --fail-on-outdated); "ai-rulez update"
                                 moves the pins
+  ai-rulez lock --roles         also pin the rendered outputs of every role
+                                (roles with pin = true are always pinned);
+                                --role r pins the outputs of r too, and limits
+                                the role comparison of --check and --diff to r
   ai-rulez lock --subject       print the lock-subject digest to sign with
                                 cosign (--output <file> writes the statement,
                                 --format json prints it); offline, read-only
@@ -89,6 +94,7 @@ func init() {
 	addJSONFlagAlias(LockCmd.Flags())
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
+	LockCmd.Flags().BoolVar(&lockRoles, "roles", false, "Also pin the rendered outputs of every role (roles with pin = true are always pinned)")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
 	LockCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -128,6 +134,12 @@ func validateLockFlags(args []string) error {
 	}
 	if lockOutdated && (lockCheck || lockDiffFlag || lockContentOnly || lockSubject) {
 		return oops.Errorf("--outdated only reads the remote: it cannot be combined with --check, --diff, --content-only or --subject")
+	}
+	if lockRoles && (lockCheck || lockDiffFlag || lockSubject || lockOutdated) {
+		return oops.Errorf("--roles pins every role: use it without --check, --diff, --outdated or --subject (name roles with --role to limit a check)")
+	}
+	if lockRoles && (lockKind != "" || len(args) > 0) {
+		return oops.Errorf("--roles pins rendered outputs: it cannot be combined with --kind or names")
 	}
 	if lockSubject && (lockCheck || lockDiffFlag || lockContentOnly || lockKind != "" || len(args) > 0) {
 		return oops.Errorf("--subject only reads the lock: it cannot be combined with --check, --diff, --content-only, --kind or names")
@@ -215,7 +227,10 @@ func writeLockAt(path, kind string, names []string) int {
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
 	}
 	if next.HasContentPins() {
-		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.Output), next.Tree)
+		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.DefaultOutputs()), next.Tree)
+		for _, r := range next.RoleOutputs() {
+			fmt.Printf("pinned outputs of role %s %s\n", r.Role, r.Digest)
+		}
 	}
 	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
 	if len(lockUnpinned) > unpinnedBefore {
@@ -283,7 +298,7 @@ func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, w
 		if profileName == "" && current != nil {
 			profileName = current.Profile
 		}
-		snap, err := lockSnapshot(cfg, profileName, false)
+		snap, err := lockRoleSnapshot(cfg, profileName, false, govview.RoleSelection{Write: true, All: lockRoles, Only: lockRoleNames()})
 		if err != nil {
 			return err
 		}
@@ -332,7 +347,7 @@ func checkLockAt(path string) int {
 		fmtError(oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		return 1
 	}
-	diff, err := govview.CheckLock(cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges)
+	diff, err := govview.CheckLockRoles(cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
 	if err != nil {
 		fmtError(err)
 		return 1

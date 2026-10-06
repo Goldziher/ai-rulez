@@ -28,7 +28,12 @@
           "path": { "type": "string" },
           "old": { "type": "string" },
           "new": { "type": "string" },
-          "detail": { "type": "string" }
+          "detail": { "type": "string" },
+          "files": {
+            "type": "object",
+            "description": "Per-file output digests of a role's outputs, only in `lock --diff`.",
+            "additionalProperties": { "type": "string" }
+          }
         }
       }
     },

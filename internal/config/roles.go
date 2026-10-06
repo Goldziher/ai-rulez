@@ -76,6 +76,9 @@ type RoleConfig struct {
 	// EffectiveDelivery) and is inherited through extends like SkillMode.
 	Delivery map[string]string `yaml:"delivery,omitempty" json:"delivery,omitempty" toml:"delivery,omitempty"`
 	Match    *RoleMatch        `yaml:"match,omitempty" json:"match,omitempty" toml:"match,omitempty"`
+	// Pin records the digest of this role's rendered outputs in ai-rulez.lock
+	// (lock --roles pins every role). It is not inherited through extends.
+	Pin bool `yaml:"pin,omitempty" json:"pin,omitempty" toml:"pin,omitempty"`
 }
 
 // RoleManifestConfig is the [role_manifest] table. The role list itself is the

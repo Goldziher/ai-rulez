@@ -18,6 +18,13 @@ import (
 // are machine-local are left out; the merged settings document is pinned through
 // its hook, permission and role sources instead.
 func (g *Generator) LockOutputs(profile string) ([]contentlock.Output, error) {
+	return g.lockOutputs(profile, false)
+}
+
+// lockOutputs is LockOutputs; withPartial also returns the part of a merged
+// document (settings.json) that ai-rulez renders, which a role pin needs because
+// a role's skill_mode lands there.
+func (g *Generator) lockOutputs(profile string, withPartial bool) ([]contentlock.Output, error) {
 	// Render without the Generated stamp, which is the only timestamp a header
 	// can carry; stripGeneratedStamp below covers a renderer that adds one anyway.
 	cfg := *g.config
@@ -50,7 +57,7 @@ func (g *Generator) LockOutputs(profile string) ([]contentlock.Output, error) {
 	g.markSensitiveOutputs(outputs)
 	var pins []contentlock.Output
 	for _, output := range outputs {
-		if output.IsDir || output.PartiallyOwned || output.Sensitive || output.LocalOnly {
+		if output.IsDir || (output.PartiallyOwned && !withPartial) || output.Sensitive || output.LocalOnly {
 			continue
 		}
 		data := output.RawContent

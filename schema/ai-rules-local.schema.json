@@ -2340,6 +2340,10 @@
             "type": "object"
           },
           "skills": {
+          "pin": {
+            "description": "Record the digest of this role's rendered outputs in ai-rulez.lock, checked by `lock --check` and `generate --check --locked --role`. Not inherited through extends.",
+            "type": "boolean"
+          },
             "additionalProperties": false,
             "description": "Include/exclude selectors for skills. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
             "properties": {

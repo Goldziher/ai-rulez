@@ -54,6 +54,14 @@ type Options struct {
 	// SourcesOnly makes Compare ignore the output pins (and the settings that
 	// govern them), for a check that must not render anything.
 	SourcesOnly bool
+	// RoleOutputs are the rendered outputs of the roles to pin, by role name.
+	RoleOutputs map[string][]Output
+	// CheckRoles makes Compare check the role pins; OnlyRoles limits that to the
+	// named roles; RoleFiles adds the per-file digests to a role's change (for
+	// `lock --diff`). A snapshot built without CheckRoles never reports a role pin.
+	CheckRoles bool
+	OnlyRoles  []string
+	RoleFiles  bool
 }
 
 // Snapshot is the computed content pins.
@@ -61,6 +69,8 @@ type Snapshot struct {
 	Options Options
 	Items   []lockfile.Item
 	Outputs []lockfile.OutputPin
+	// RoleFiles holds the per-file digests behind each role's aggregate pin.
+	RoleFiles map[string][]lockfile.OutputPin
 	// Problems are things that could not be pinned (for example a hook script
 	// outside the project). Compare reports each as a lock-scope change, so a
 	// check fails on them instead of the pinning aborting.
@@ -94,6 +104,11 @@ func Compute(cfg *config.Config, opts Options) (*Snapshot, error) {
 			snap.Outputs = append(snap.Outputs, lockfile.OutputPin{Path: out.Path, Digest: digest})
 		}
 		sort.Slice(snap.Outputs, func(i, j int) bool { return snap.Outputs[i].Path < snap.Outputs[j].Path })
+	}
+	if !opts.SourcesOnly {
+		if err := computeRoleOutputs(snap, opts.RoleOutputs); err != nil {
+			return nil, err
+		}
 	}
 	return snap, nil
 }
