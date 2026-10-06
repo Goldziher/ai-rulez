@@ -221,3 +221,24 @@ func TestHandleHook_InstructionsLoadedIsClaudeOnly(t *testing.T) {
 		assert.Nil(t, event, harness)
 	}
 }
+
+func TestHandleHook_InactiveRecordingDoesNotReadOrParseTheInput(t *testing.T) {
+	off, _, _ := pipelineFor(t, Settings{})
+
+	event, err := off.HandleHook(context.Background(), strings.NewReader("not json"), HookOptions{})
+
+	require.NoError(t, err)
+	assert.Nil(t, event)
+}
+
+func TestHandleHook_SubagentWithoutATypeIsSkipped(t *testing.T) {
+	p, _, _ := pipelineFor(t, enabled())
+	for _, name := range []string{"SubagentStart", "SubagentStop"} {
+		t.Run(name, func(t *testing.T) {
+			event, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"`+name+`","agent_id":"a1"`), HookOptions{})
+
+			require.NoError(t, err, "a hook must not fail the harness over a missing field")
+			assert.Nil(t, event)
+		})
+	}
+}
