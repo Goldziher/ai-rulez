@@ -166,7 +166,10 @@ become `regex` and `file_exists` graders; `rubric` becomes an `llm` grader. It t
 claude plugin eval <plugin dir> --json <file> --no-publish --threshold 0 --ablation with-without|none [--runs N] [--model M] [--judge-model M] [--max-cost-usd X]
 ```
 
-and reads the per-run JSON back, taking a majority vote over a case's runs. Cases the tool cannot express
+and reads the per-run JSON back, taking a majority vote over a case's runs. Any result file, results directory or case
+directory left by an earlier run is deleted first, and a run that times out (`--timeout`) or is interrupted is an
+error: a partial result is never scored. A non-zero exit that still wrote a complete result is scored, and the cases it
+missed count as errors. On Windows the whole process tree is killed through a Job Object. Cases the tool cannot express
 (`command_exit` assertions, `files` fixtures) are reported as **skipped**, not failed, and left out of the score.
 The adapter never adds `--trust-plugin` itself: pass `--runner-arg --trust-plugin` once you trust the plugin
 directory. It was written against the help text and interview prompt of Claude Code 2.1.289; the JSON shape it reads
@@ -226,12 +229,18 @@ from the runner) or nothing was scored is not stored and is retried on the next 
 cached failure. A failed grade (a case that ran and did not pass) is a result and is cached. The pass/fail verdict is recomputed from the stored
 score against the current threshold, so lowering `--threshold` needs no re-run.
 
-**The results file is not signed.** It is a committed file, and the cache key is an unkeyed hash anyone can compute, so
-a pull request can add a record that claims a pass. ai-rulez replays a stored run only when its recorded skill and
-cases digests also match the files on disk, which means an edited skill always re-runs unless the record was forged
-to match the edit as well. That is not a defence against someone who can edit the file. **A CI gate must use
-`eval run --force`** (always run, never replay), or verify the provenance of `eval-results.json` (for example, produce it
-in a trusted job and compare it) before trusting it.
+**Records are signed per user.** `eval-results.json` is a committed file, and the cache key is an unkeyed hash anyone
+can compute, so a pull request could add a record that claims a pass. Each record therefore carries a `mac`
+(HMAC-SHA256 of the record) made with a per-user key, `eval-results.key` in the user config directory (`$XDG_CONFIG_HOME/ai-rulez/`, else
+`~/.config/ai-rulez/`; 32 random bytes, mode 0600, never in the repository). A record without a valid `mac` for your
+key (committed from another machine, hand-edited, or when no key can be stored) is **unverified**: it is still shown
+and linted, but it never satisfies a cache hit. The skill re-runs, the run reports a warning (`the stored result is
+unverified ... re-running`), and the fresh record is signed. A record is also required to match the skill and cases
+digests on disk. Consequence: results committed by CI or a teammate re-run once on each machine; a CI job that
+restores `eval-results.json` from its own cache replays only if it keeps the same key file. Treat the key like
+`llm-cache.key`: `XDG_CONFIG_HOME` set from an untrusted `.envrc` relocates it. A CI gate should still use
+`eval run --force`, or verify the provenance of `eval-results.json`, since anyone who can edit the file can also
+delete the `mac`.
 
 ### Cost controls
 
@@ -398,7 +407,7 @@ ai-rulez eval run --changed-only --base origin/main \
   it is byte-stable. Point your CI's test reporter at it.
 - **Caching by digest.** Commit `.ai-rulez/eval-results.json`, or restore it from your CI cache. A skill whose digest
   and cases digest match the stored run is reported as `cached` with its stored score and is not run again, so an
-  unchanged skill costs nothing even without `--changed-only`. Commit the updated file (or save it back to the cache)
+  unchanged skill costs nothing even without `--changed-only` (only records signed with your own key replay; see [Caching](#caching)). Commit the updated file (or save it back to the cache)
   after a run that changed it; `validate --strict` with `require_fresh` then fails the next change that edits a skill
   without re-running its evals.
 - **Cost controls.** Run `eval run --dry-run` first to see the estimate; set `--max-cost` so a runaway suite stops
