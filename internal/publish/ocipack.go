@@ -50,6 +50,9 @@ func ociUploadList(m Manifest) []string {
 	}
 	if m.Signature != nil {
 		up = append(up, m.Signature.File)
+		if m.Signature.Attestation != "" {
+			up = append(up, m.Signature.Attestation)
+		}
 	}
 	return up
 }

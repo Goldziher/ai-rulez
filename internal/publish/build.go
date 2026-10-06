@@ -92,8 +92,9 @@ type Input struct {
 	PreviousLabel string
 	// RequireSignature makes Build fail unless Sign is set (AR9N7).
 	RequireSignature bool
-	// Sign signs the release archive; nil builds an unsigned release.
-	Sign func(archive []byte) (*SignResult, error)
+	// Sign signs the release archive and the statement binding its name,
+	// version and digests; nil builds an unsigned release.
+	Sign func(SignRequest) (*SignResult, error)
 	// SBOM is the CycloneDX document to ship; empty ships none.
 	SBOM     []byte
 	Approval *ApprovalInfo
@@ -256,19 +257,28 @@ func Build(in Input) (*Dist, error) {
 	d := &Dist{Files: map[string][]byte{bundleName: archive, LockFile: in.Lock}}
 	roles := map[string]string{bundleName: "bundle", manifestName: "manifest", LockFile: "lock"}
 
+	if len(in.SBOM) > 0 {
+		sbomName := base + ".sbom.cdx.json"
+		manifest.SBOM = &SBOMInfo{Format: SBOMCycloneDX, File: sbomName, Digest: Digest(in.SBOM)}
+		d.Files[sbomName], roles[sbomName] = in.SBOM, "sbom"
+	}
 	if in.Sign != nil {
-		sig, err := in.Sign(archive)
+		st, err := ReleaseStatement(manifest)
+		if err != nil {
+			return nil, err
+		}
+		sig, err := in.Sign(SignRequest{Archive: archive, Statement: st})
 		if err != nil {
 			return nil, oops.Wrapf(err, "sign the release archive")
 		}
 		sigName := bundleName + ".sigstore.json"
 		manifest.Signature = &SignatureInfo{Type: SignatureSigstoreBundle, File: sigName, Signer: sig.Signer}
 		d.Files[sigName], roles[sigName] = sig.Bundle, "signature"
-	}
-	if len(in.SBOM) > 0 {
-		sbomName := base + ".sbom.cdx.json"
-		manifest.SBOM = &SBOMInfo{Format: SBOMCycloneDX, File: sbomName, Digest: Digest(in.SBOM)}
-		d.Files[sbomName], roles[sbomName] = in.SBOM, "sbom"
+		if len(sig.Attestation) > 0 {
+			attName := base + ".attestation.sigstore.json"
+			manifest.Signature.Attestation = attName
+			d.Files[attName], roles[attName] = sig.Attestation, "attestation"
+		}
 	}
 	manifestBytes, err := manifest.Marshal()
 	if err != nil {
@@ -379,6 +389,9 @@ func uploadList(m Manifest) []string {
 	up := []string{m.Bundle.File, m.Name + "-" + m.Version + ".manifest.json", LockFile, SumsFile}
 	if m.Signature != nil {
 		up = append(up, m.Signature.File)
+		if m.Signature.Attestation != "" {
+			up = append(up, m.Signature.Attestation)
+		}
 	}
 	if m.SBOM != nil {
 		up = append(up, m.SBOM.File)

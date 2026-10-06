@@ -34,6 +34,7 @@ directory are ignored.
 | `<name>-<version>.manifest.json` | files with digests, source, lock tie, bundle digest, and the approval, signature and SBOM slots ([schema](schema.md)) |
 | `ai-rulez.lock` | a copy of the repository's lock without its `[[approval]]` records (reviewer emails and notes stay in the repository). Tree, content pins and output pins are unchanged, so `ai-rulez lock --check` against the copy behaves as against the original; only `[[approval]]` checks differ. With no approvals the copy is byte-identical |
 | `<name>-<version>.tar.gz.sigstore.json` | with `--sign-key` or `--sign-keyless`: the signature, see [Signing](#signing) |
+| `<name>-<version>.attestation.sigstore.json` | with signing: the signed statement that binds name, version and the archive, lock and SBOM digests |
 | `<name>-<version>.sbom.cdx.json` | with `--sbom`: the CycloneDX SBOM of the project ([SBOM](sbom.md)) |
 | `SHA256SUMS` | `sha256sum -c` format, every file except itself and the plan |
 | `RELEASE_NOTES.md` | bundle, runtimes, lock tree, commit, and the [changes since the previous release](#release-notes) |
@@ -111,7 +112,7 @@ config        application/vnd.ai-rulez.manifest.v1+json   the bundle manifest
 layers        application/vnd.ai-rulez.bundle.v1.tar+gzip  the archive
               application/vnd.ai-rulez.lock.v1+toml        the lock
               application/vnd.cyclonedx+json               the SBOM, with --sbom
-              application/vnd.dev.sigstore.bundle.v0.3+json  the signature, when signed
+              application/vnd.dev.sigstore.bundle.v0.3+json  the signature and the attestation, when signed
 annotations   org.opencontainers.image.{created,version,source,revision}
 ```
 
@@ -200,6 +201,17 @@ the certificate names your identity and goes to a public log, so use a key for a
 The signature is a Sigstore bundle holding a message signature over the exact bytes of the tar.gz, the form
 `cosign sign-blob --bundle` writes, so `cosign verify-blob --bundle <name>.tar.gz.sigstore.json --key cosign.pub <name>.tar.gz`
 verifies a release signed here. The manifest's `signature` records the file and what the bundle claims about its signer.
+
+A signature over the archive alone does not bind the manifest, the lock copy or the SBOM, so a release is signed twice:
+the archive (above) and a DSSE in-toto statement, `<name>-<version>.attestation.sigstore.json`, of predicate type
+`https://github.com/Goldziher/ai-rulez/attestations/publish/v1`. Its subjects are the archive, the lock copy and the SBOM
+(sha256) and its predicate carries the plugin `name`, `version`, lock tree and those digests. The manifest cannot be signed
+itself (it records the signature), so the statement is what ties it to the signed files. Keyless signing makes two
+certificates and two log entries. `publish verify` with a trusted signer checks the statement's signature and signer, that
+it names the manifest's name and version, and that the digests equal the files in the directory; a signed release without
+the statement is a mismatch (`AR9N7`). Independently of signing, verify compares the `name` and `version` in the archive's
+own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabelled as another
+plugin or version is flagged.
 
 `publish verify` reports a signed bundle as `unverified` until you name who to trust: `--key PUBLIC.pem` (repeatable), or
 `--identity` and `--issuer` for a keyless signature, with `--trusted-root` or the root `ai-rulez trust update` cached. A valid

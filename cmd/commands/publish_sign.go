@@ -78,12 +78,13 @@ func publishKeyPassword(env ambient.Env) string {
 	return ambient.Getenv(env, signCosignPasswordEnv)
 }
 
-// signFunc turns a signer into the callback Build calls with the archive.
-func signFunc(ctx context.Context, s signing.Signer) func([]byte) (*publish.SignResult, error) {
+// signFunc turns a signer into the callback Build calls with the archive and
+// the release statement.
+func signFunc(ctx context.Context, s signing.Signer) func(publish.SignRequest) (*publish.SignResult, error) {
 	if s == nil {
 		return nil
 	}
-	return func(archive []byte) (*publish.SignResult, error) { return publish.SignArchive(ctx, s, archive) }
+	return func(req publish.SignRequest) (*publish.SignResult, error) { return publish.SignRelease(ctx, s, req) }
 }
 
 // approvalGate reads the approval state of the lock. It returns the summary the

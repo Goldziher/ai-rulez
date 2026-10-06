@@ -54,9 +54,12 @@ const SignatureSigstoreBundle = "sigstore-bundle"
 // sign-blob --bundle` writes). Signer is what the bundle claims; trusting it is
 // the verifier's decision.
 type SignatureInfo struct {
-	Type   string     `json:"type"`
-	File   string     `json:"file"`
-	Signer SignerInfo `json:"signer"`
+	Type string `json:"type"`
+	File string `json:"file"`
+	// Attestation is the Sigstore bundle of the signed DSSE statement that
+	// binds the plugin name, version and the archive, lock and SBOM digests.
+	Attestation string     `json:"attestation,omitempty"`
+	Signer      SignerInfo `json:"signer"`
 }
 
 // SignerInfo is who signed: a key (KeyID, "sha256:<hex>") or a certificate

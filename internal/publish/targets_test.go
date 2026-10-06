@@ -720,7 +720,7 @@ func keyPair(t *testing.T) (signing.Signer, VerifyOptions) {
 func signedInput(t *testing.T, signer signing.Signer) Input {
 	t.Helper()
 	in := committedInput()
-	in.Sign = func(archive []byte) (*SignResult, error) { return SignArchive(context.Background(), signer, archive) }
+	in.Sign = func(req SignRequest) (*SignResult, error) { return SignRelease(context.Background(), signer, req) }
 	return in
 }
 
@@ -751,7 +751,7 @@ func TestBuild_SignedReleaseIsUploadedWithItsSignature(t *testing.T) {
 	d, err := Build(in)
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"acme-1.4.0.tar.gz", "acme-1.4.0.manifest.json", "ai-rulez.lock", "SHA256SUMS", "acme-1.4.0.tar.gz.sigstore.json"}, d.Plan.Upload)
+	assert.Equal(t, []string{"acme-1.4.0.tar.gz", "acme-1.4.0.manifest.json", "ai-rulez.lock", "SHA256SUMS", "acme-1.4.0.tar.gz.sigstore.json", "acme-1.4.0.attestation.sigstore.json"}, d.Plan.Upload)
 }
 
 func TestBuild_RequireSignatureNeedsASigner(t *testing.T) {
@@ -768,7 +768,7 @@ func TestBuild_RequireSignatureNeedsASigner(t *testing.T) {
 
 func TestBuild_ASigningFailureStopsTheBuild(t *testing.T) {
 	in := committedInput()
-	in.Sign = func([]byte) (*SignResult, error) { return nil, os.ErrPermission }
+	in.Sign = func(SignRequest) (*SignResult, error) { return nil, os.ErrPermission }
 
 	_, err := Build(in)
 
