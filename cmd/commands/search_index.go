@@ -169,7 +169,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 			Errorf("search index would send %d texts (%d bytes) to %s, but the network is disabled", plan.ToEmbed, plan.Bytes, prov.Host))
 		return 1
 	}
-	release2, err := skillsearch.Lock(dir)
+	release2, err := skillsearch.Lock(dir, nil)
 	if err != nil {
 		fmtError(err)
 		return 1
