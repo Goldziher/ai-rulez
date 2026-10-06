@@ -87,8 +87,10 @@ Codex and Cursor have no Skill tool: they load a skill by reading its `SKILL.md`
 `Shell`) events, whose names and matchers come from ai-rulez's own [hook support](settings.md). The recorder then logs a
 skill load when a read tool (`Read`, `read_file`, `view`, `open`) is given a `file_path` or `path` of
 `skills/<id>/SKILL.md`, or a shell command runs a reader (`cat`, `head`, `tail`, `less`, `more`, `bat`, `nl`,
-`sed` without `-i`, `Get-Content`) on that path (after `cd x &&`, `VAR=1` prefixes and inside pipelines). Writes,
-edits, `git add`, `rm` and other commands that merely mention the path are not loads. Only the `<id>` is kept; the
+`sed` without `-i`, `Get-Content`) on that path (after `cd x &&`, `VAR=1` prefixes and inside pipelines). Writes
+and edits are never loads: `Write`/edit tools, `sed -i`, `tee`, an output redirect into the file (`cat x > skills/a/SKILL.md`),
+`git add`, `rm`, a linter and any other command that merely mentions the path. Shell text is parsed only for shell tools
+(`Bash`, `Shell`), so an `apply_patch` body is never read as a command. Only the `<id>` is kept; the
 rest of the command is matched and discarded. This is still an inference from a path, not a harness-confirmed skill
 load, so the entry carries `invocation: "read"`. The generated Cursor template matches only the `Shell` tool and the Codex one only `Bash`, so a skill read through a file-read tool is counted only if you widen the hook matcher; the count is a lower bound, never inflated by edits. The payload field names for those two harnesses are
 inferred, not verified: check the log after wiring the hook. Any other harness (`--harness gemini`, `copilot`, ...)

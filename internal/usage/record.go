@@ -243,8 +243,20 @@ func skillRead(event *hookEvent) string {
 			return id
 		}
 	}
-	return skillFromReadingCommand(event.ToolInput.Command)
+	if shellTools[strings.ToLower(event.Tool)] {
+		return skillFromReadingCommand(event.ToolInput.Command)
+	}
+	return ""
 }
+
+// shellTools are the tool names whose command field is a shell command line; the
+// command of any other tool (apply_patch carries a patch) is not parsed.
+var shellTools = map[string]bool{"bash": true, "shell": true, "local_shell": true, "exec_command": true, "run_terminal_cmd": true}
+
+// redirection matches an output redirect and its target ("> f", ">>f", "2>f"), so
+// a skill path that is only written to is not read. Input redirects and heredocs
+// ("<<EOF") are left alone.
+var redirection = regexp.MustCompile(`(?:\d*|&)>>?\s*\S+`)
 
 var shellSeparators = regexp.MustCompile(`&&|\|\||[;|\n]`)
 
@@ -260,7 +272,7 @@ func skillFromReadingCommand(command string) string {
 		if strings.EqualFold(filepath.Base(fields[0]), "sed") && sedEditsInPlace(fields[1:]) {
 			continue
 		}
-		if id := skillFromPath(strings.Join(fields[1:], " ")); id != "" {
+		if id := skillFromPath(redirection.ReplaceAllString(strings.Join(fields[1:], " "), " ")); id != "" {
 			return id
 		}
 	}
