@@ -50,7 +50,7 @@ Counts are approximations (Claude's tokenizer is not published).`,
 
 func init() {
 	f := CostCmd.Flags()
-	f.StringVar(&costFormat, "format", "text", "Output format: text, json or markdown")
+	addFormatFlag(f, &costFormat, formatText, formatText, formatText, formatJSON, "markdown")
 	f.StringVar(&costTarget, "target", "", "Preset whose runtime totals to report (default: the runtime with the largest always-loaded surface)")
 	f.IntVar(&costTop, "top", 10, "How many top offenders to list")
 	f.IntVarP(&costBudget, "budget", "b", 0, "Exit 2 when the always-loaded tokens of the target exceed this ceiling")

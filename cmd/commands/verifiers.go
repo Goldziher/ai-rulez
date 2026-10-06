@@ -126,7 +126,7 @@ var VerifiersListCmd = &cobra.Command{
 func init() {
 	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd)
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
-	VerifiersRunCmd.Flags().BoolVar(&verifiersJSON, "json", false, "Print the report as JSON")
+	addJSONAlias(VerifiersRunCmd.Flags(), &verifiersJSON, "")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
 	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Profile for generated_in_sync verifiers that name none (default: from config)")
 	f := VerifiersRunCmd.Flags()
@@ -134,11 +134,11 @@ func init() {
 	f.BoolVar(&verifiersStaged, "staged", false, "Evaluate only staged changes")
 	f.BoolVar(&verifiersAll, "all", false, "Evaluate every file (the default)")
 	f.StringVar(&verifiersRule, "rule", "", "Run only the verifiers that enforce this rule, skill, agent or command")
-	f.StringVar(&verifiersFormat, "format", "", "Report format: text (default), json, sarif or junit")
+	addFormatFlag(f, &verifiersFormat, "", formatText, formatText, formatJSON, "sarif", "junit")
 	f.StringVar(&verifiersFailOn, "fail-on", "", "Lowest failing severity: error (default), warning, info or none")
 	f.StringVar(&verifiersOut, "out", "", "Write the report to this file instead of stdout")
 	f.BoolVar(&verifiersDead, "strict-applicability", false, "Report a verifier whose when_changed matches no file (AR9H5)")
-	VerifiersListCmd.Flags().BoolVar(&verifiersListJSON, "json", false, "Print the list as JSON")
+	addJSONFormat(VerifiersListCmd.Flags(), &verifiersListJSON, "")
 	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd} {
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")

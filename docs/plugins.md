@@ -502,7 +502,7 @@ against a running Claude Code; it is phrased as a caveat for that reason.
 
 #### Placement report
 
-`ai-rulez list --placement` (`--profile`, `--json`) prints every skill and command of the profile
+`ai-rulez list --placement` (`--profile`, `--format json`) prints every skill and command of the profile
 with its destination: `core` (written to the assistants' own directories) or `plugin` (kept out of
 them by `[placement]`), the domain it came from, and the plugins that bundle it. A plugin-only item
 is flagged when no plugin bundles it, or when none of its plugins is enabled through
