@@ -23,7 +23,13 @@ func acceptedRun(t *testing.T) (root, configDir string, plan *Plan, report *Repo
 // acceptedRunWith is acceptedRun with the text the optimizer appends and a hook over the run options.
 func acceptedRunWith(t *testing.T, appended string, tune func(*Options)) (root, configDir string, plan *Plan, report *Report) {
 	t.Helper()
-	root, configDir = project(t)
+	return acceptedRunAt(t, ".ai-rulez", appended, tune)
+}
+
+// acceptedRunAt is acceptedRunWith with the config directory at rel below the project root.
+func acceptedRunAt(t *testing.T, rel, appended string, tune func(*Options)) (root, configDir string, plan *Plan, report *Report) {
+	t.Helper()
+	root, configDir = projectIn(t, rel)
 	opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) {
 		appendSkill(t, dir, appended)
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "references"), 0o750))
