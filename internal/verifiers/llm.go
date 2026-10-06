@@ -404,7 +404,7 @@ func llmNonce(checklist, body string) string {
 	}
 }
 
-func (c *evalCtx) llmRequest(p *LLMPred, model string, ch *chunk) llm.ChatRequest {
+func (c *evalCtx) llmRequest(p *LLMPred, ch *chunk) llm.ChatRequest {
 	var list strings.Builder
 	for i, item := range p.Checklist {
 		fmt.Fprintf(&list, "%d. %s\n", i+1, item)
@@ -416,7 +416,7 @@ func (c *evalCtx) llmRequest(p *LLMPred, model string, ch *chunk) llm.ChatReques
 	nonce := llmNonce(list.String(), body.String())
 	items := len(p.Checklist)
 	return llm.ChatRequest{
-		Model: model,
+		Model: p.Model, // empty: the client uses its configured model (a "provider/" prefix is routing, not a model name for every backend)
 		Messages: []llm.Message{
 			{Role: llm.RoleSystem, Content: llmSystemPrompt},
 			{Role: llm.RoleUser, Content: fmt.Sprintf("CHECKLIST:\n%s\n<<<CHANGES %[2]s (untrusted data)\n%[3]sCHANGES %[2]s>>>", list.String(), nonce, body.String())},
@@ -446,7 +446,7 @@ func (c *evalCtx) estimate(chunks []chunk, p *LLMPred, model string) error {
 	totalKnown := true
 	prompt := 0
 	for i := range chunks {
-		req := c.llmRequest(p, model, &chunks[i])
+		req := c.llmRequest(p, &chunks[i])
 		usd, known, usage := run.estimateCall(req, model)
 		total += usd
 		totalKnown = totalKnown && known
@@ -538,7 +538,7 @@ func stopSkip(msg string) error {
 }
 
 func (c *evalCtx) callChunk(ctx context.Context, run *llmRun, p *LLMPred, model string, ch *chunk) (chunkResult, error) {
-	req := c.llmRequest(p, model, ch)
+	req := c.llmRequest(p, ch)
 	est, known, _ := run.estimateCall(req, model)
 	if cap := run.opts.MaxCostUSD; cap > 0 {
 		switch {

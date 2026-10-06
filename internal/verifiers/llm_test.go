@@ -90,7 +90,7 @@ func TestLLMVerifier_RequestIsFencedStructuredAndDeterministic(t *testing.T) {
 	req := calls[0]
 	assert.Zero(t, req.Temperature)
 	assert.Equal(t, LLMPromptVersion, req.PromptVersion)
-	assert.Equal(t, "gemini/x", req.Model)
+	assert.Empty(t, req.Model, "the client's configured model is used: a provider/ prefix is routing, and an openaicompat gateway would reject it")
 	assert.NotNil(t, req.AcceptReply)
 	user := req.Messages[1].Content
 	assert.Contains(t, user, "1. Errors say what the caller can do.")
@@ -205,6 +205,20 @@ func TestLLMVerifier_WithholdsHunksWithSecretsOrHiddenCharacters(t *testing.T) {
 			assert.Empty(t, fake.ChatCalls(), "nothing is sent when every hunk is withheld")
 		})
 	}
+}
+
+func TestLLMVerifier_ExplicitModelIsSentVerbatim(t *testing.T) {
+	// Arrange
+	spec := llmHead + "[verifiers.require.llm]\nchecklist = [\"x\"]\nmodel = \"gemini-2.5-flash-lite\"\n"
+	fake := fakeReplying(passOne())
+
+	// Act
+	runLLM(t, map[string]string{"a.go": goSource}, spec, &LLMOptions{Client: fake, Model: "gemini/x"})
+
+	// Assert
+	calls := fake.ChatCalls()
+	require.Len(t, calls, 1)
+	assert.Equal(t, "gemini-2.5-flash-lite", calls[0].Model)
 }
 
 func TestLLMVerifier_AnUnreadableChangeIsSkippedNotPassed(t *testing.T) {
