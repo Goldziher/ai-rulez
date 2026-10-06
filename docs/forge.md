@@ -20,7 +20,7 @@
 ## Safety properties
 
 - **Token.** Only from the environment: `GITHUB_TOKEN`, then `GH_TOKEN`, then `gh auth token --hostname <host>` (fixed argv, started through the injected runner, no credential variable passed). Never from a config file or a flag, never logged, never in an error. With no token the client is anonymous, which is enough for release and commit dates of public repositories.
-- **Hosts.** A repository is contacted only when its host is on the git-token allowlist (`AI_RULEZ_GIT_TOKEN_HOSTS`, default `github.com`), over https. Any other host is `ErrHostNotAllowed` and gets no request, with or without a token. GitHub Enterprise Server is `https://<host>/api/v3` once its host is allowlisted.
+- **Hosts.** A repository is contacted only when its host is on the forge allowlist (`AI_RULEZ_FORGE_HOSTS`, comma separated, environment only, default `github.com`), over https. It is separate from `AI_RULEZ_GIT_TOKEN_HOSTS`, so a GitLab host trusted with a clone token never receives the GitHub token. Any other host is `ErrHostNotAllowed` and gets no request, with or without a token. GitHub Enterprise Server is `https://<host>/api/v3` once its host is in `AI_RULEZ_FORGE_HOSTS`.
 - **Redirects.** Followed only to https on the same host (at most 3); a pagination link that leaves the API host is refused. The token cannot follow a redirect elsewhere.
 - **Caps.** A response body is capped at 4 MiB (CODEOWNERS 3 MiB, GitHub's own limit): larger is `ErrTooLarge`. A listing reads at most 10 pages of 100; the items read so far are returned with `ErrTruncated`.
 - **Input.** Owner, repository, team, login, tag, ref and commit id are validated before they become part of a URL.

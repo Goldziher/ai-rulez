@@ -11,8 +11,8 @@
 // Safety properties, all enforced by HTTPClient and tested:
 //   - the token comes only from the environment (GITHUB_TOKEN, GH_TOKEN) or
 //     `gh auth token` (fixed argv), never from a project file or a flag;
-//   - a request goes only to a host on the git-token allowlist
-//     (AI_RULEZ_GIT_TOKEN_HOSTS, default github.com), over https, and the token
+//   - a request goes only to a host on the forge allowlist
+//     (AI_RULEZ_FORGE_HOSTS, default github.com), over https, and the token
 //     never leaves that host: a redirect to any other host is refused;
 //   - every response body is size capped, every listing page capped (a capped
 //     listing returns what it has with ErrTruncated), and every identifier that
