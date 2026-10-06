@@ -108,14 +108,9 @@ func (s *Spool) AppendMany(events []Event) error {
 	if len(events) == 0 {
 		return nil
 	}
-	var buf bytes.Buffer
-	for i := range events {
-		line, err := json.Marshal(&events[i])
-		if err != nil {
-			return oops.Wrapf(err, "encode telemetry event")
-		}
-		buf.Write(line)
-		buf.WriteByte('\n')
+	buf, err := encodeEvents(events)
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return oops.With("path", s.Dir).Wrapf(err, "create telemetry directory")
@@ -125,13 +120,30 @@ func (s *Spool) AppendMany(events []Event) error {
 		return err
 	}
 	defer release()
-	if err := appendLine(s.outbox(), buf.Bytes()); err != nil {
+	return s.appendManyLocked(buf)
+}
+
+func (s *Spool) appendManyLocked(lines []byte) error {
+	if err := appendLine(s.outbox(), lines); err != nil {
 		return err
 	}
 	if info, statErr := os.Stat(s.outbox()); statErr == nil && info.Size() > int64(s.maxEvents())*bytesPerEvent {
 		return s.trimLocked()
 	}
 	return nil
+}
+
+func encodeEvents(events []Event) ([]byte, error) {
+	var buf bytes.Buffer
+	for i := range events {
+		line, err := json.Marshal(&events[i])
+		if err != nil {
+			return nil, oops.Wrapf(err, "encode telemetry event")
+		}
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+	return buf.Bytes(), nil
 }
 
 // CatchUpOptions configures CatchUp.
@@ -189,7 +201,27 @@ func LogID(path string) (id string, firstLen int64, err error) {
 // CatchUp reads the usage log from the cursor, queues the events that are not
 // already in the outbox or delivered, and moves the cursor to the end of what it
 // read. Only complete lines are read, so a hook mid-append is picked up next time.
+//
+// Unless it is a DryRun it holds the spool lock from reading the cursor to writing
+// it back: two catch-ups (a background flush and an export) would otherwise read
+// the same cursor and queue the same events twice.
 func (s *Spool) CatchUp(logPath string, o CatchUpOptions) (CatchUpResult, error) {
+	if o.DryRun {
+		return s.catchUp(logPath, o)
+	}
+	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
+		return CatchUpResult{}, oops.With("path", s.Dir).Wrapf(err, "create telemetry directory")
+	}
+	release, err := lock(filepath.Join(s.Dir, lockFileName), rewriteLockWait, staleLock)
+	if err != nil {
+		return CatchUpResult{}, err
+	}
+	defer release()
+	return s.catchUp(logPath, o)
+}
+
+// catchUp is CatchUp with the spool lock held (or not needed: DryRun).
+func (s *Spool) catchUp(logPath string, o CatchUpOptions) (CatchUpResult, error) {
 	var result CatchUpResult
 	logID, _, err := LogID(logPath)
 	if err != nil {
@@ -211,7 +243,7 @@ func (s *Spool) CatchUp(logPath string, o CatchUpOptions) (CatchUpResult, error)
 		if err != nil || o.DryRun {
 			return result, err
 		}
-		return result, s.UpdateCursor(func(c *Cursor) { c.LogID, c.Offset = logID, end })
+		return result, s.updateCursorLocked(func(c *Cursor) { c.LogID, c.Offset = logID, end })
 	}
 	skip, err := s.knownIDs(cur)
 	if err != nil {
@@ -225,10 +257,16 @@ func (s *Spool) CatchUp(logPath string, o CatchUpOptions) (CatchUpResult, error)
 	if o.DryRun {
 		return result, nil
 	}
-	if err := s.AppendMany(result.Events); err != nil {
-		return result, err // the cursor stays: the events are read again next time
+	if len(result.Events) > 0 {
+		lines, err := encodeEvents(result.Events)
+		if err != nil {
+			return result, err
+		}
+		if err := s.appendManyLocked(lines); err != nil {
+			return result, err // the cursor stays: the events are read again next time
+		}
 	}
-	return result, s.UpdateCursor(func(c *Cursor) {
+	return result, s.updateCursorLocked(func(c *Cursor) {
 		c.LogID, c.Offset = logID, tail.end
 		if tail.lastID != "" {
 			c.LastEventID = tail.lastID
