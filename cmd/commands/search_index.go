@@ -182,10 +182,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 		return 1
 	}
 	sum.Embedded, sum.Reused, sum.Calls, sum.Tokens, sum.Missing = res.Embedded, res.Reused, res.Calls, res.Tokens, res.Missing
-	for _, r := range res.Rejected {
-		sum.Rejected = append(sum.Rejected, r.ID)
-		reportWriter{errOut}.printf("search index: the provider rejected skill %q even alone (%s); it ranks lexically only\n", r.ID, r.Reason)
-	}
+	sum.Rejected = reportRejected(errOut, res.Rejected)
 	if res.CostKnown {
 		sum.CostUSD = &res.CostUSD
 	} else {
@@ -211,15 +208,31 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 	} else {
 		printIndexResult(out, sum, dir)
 	}
-	if res.Err == nil && len(res.Rejected) > 0 {
+	return indexExitCode(errOut, res, &sum)
+}
+
+// indexExitCode reports why a build did not index every skill and returns the exit status: 2 for a skill the
+// provider rejected or a stop (budget, provider), 0 for a complete build.
+func indexExitCode(errOut io.Writer, res *skillsearch.BuildResult, sum *indexSummaryJSON) int {
+	switch {
+	case res.Err == nil && len(res.Rejected) > 0:
 		reportWriter{errOut}.printf("search index skipped %d skills the provider rejected: %s\n", len(res.Rejected), strings.Join(sum.Rejected, ", "))
-		return exitSearchGateFailed
-	}
-	if res.Err != nil {
+	case res.Err != nil:
 		reportWriter{errOut}.printf("search index stopped early: %s\n  %d skills have no vector and rank lexically: %s\n", sum.Stopped, len(res.Missing), strings.Join(res.Missing, ", "))
-		return exitSearchGateFailed
+	default:
+		return 0
 	}
-	return 0
+	return exitSearchGateFailed
+}
+
+// reportRejected prints the skills the provider refused even alone and returns their ids.
+func reportRejected(errOut io.Writer, rejected []skillsearch.Rejection) []string {
+	ids := []string{}
+	for _, r := range rejected {
+		ids = append(ids, r.ID)
+		reportWriter{errOut}.printf("search index: the provider rejected skill %q even alone (%s); it ranks lexically only\n", r.ID, r.Reason)
+	}
+	return ids
 }
 
 func withheldIDs(p *skillsearch.Plan) []string {

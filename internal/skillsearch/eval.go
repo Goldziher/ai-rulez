@@ -227,24 +227,7 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 			cr.TopSim = sr.TopSim
 			mr.Cases = append(mr.Cases, cr)
 		}
-		mr.Metrics = aggregate(mr.Cases, mr.Negatives)
-		if mode != ModeLexical && len(mr.Negatives) > 0 {
-			abstained := 0
-			for i := range mr.Negatives {
-				if mr.Negatives[i].Top == "" && mr.Negatives[i].Degraded == "" {
-					abstained++
-				}
-			}
-			rate := round(float64(abstained) / float64(len(mr.Negatives)))
-			mr.Metrics.AbstainRate = &rate
-		}
-		mr.Tags = tagMetrics(mr.Cases)
-		mr.CI95 = bootstrap(mr.Cases)
-		for i := range mr.Cases {
-			if !mr.Cases[i].Hit {
-				mr.Misses = append(mr.Misses, mr.Cases[i])
-			}
-		}
+		mr.finish(mode)
 		byMode[mode] = mr
 		res.Modes[mode] = mr.Metrics
 	}
@@ -264,6 +247,28 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 		}
 	}
 	return res, nil
+}
+
+// finish computes the metrics, intervals and misses of a mode from its scored cases.
+func (mr *ModeResult) finish(mode string) {
+	mr.Metrics = aggregate(mr.Cases, mr.Negatives)
+	if mode != ModeLexical && len(mr.Negatives) > 0 {
+		abstained := 0
+		for i := range mr.Negatives {
+			if mr.Negatives[i].Top == "" && mr.Negatives[i].Degraded == "" {
+				abstained++
+			}
+		}
+		rate := round(float64(abstained) / float64(len(mr.Negatives)))
+		mr.Metrics.AbstainRate = &rate
+	}
+	mr.Tags = tagMetrics(mr.Cases)
+	mr.CI95 = bootstrap(mr.Cases)
+	for i := range mr.Cases {
+		if !mr.Cases[i].Hit {
+			mr.Misses = append(mr.Misses, mr.Cases[i])
+		}
+	}
 }
 
 // calibrateModes calibrates the threshold from the vector ranking when it was evaluated, else the hybrid one.

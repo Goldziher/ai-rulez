@@ -183,6 +183,27 @@ func (c *Config) Validate() []string {
 	if c.BodyChars < 0 || c.BodyChars > maxBodyChars {
 		add("search.body_chars must be between 0 and %d", maxBodyChars)
 	}
+	c.validateNumbers(add)
+	if c.IndexDir != "" {
+		if err := checkIndexDir(c.IndexDir); err != "" {
+			add("search.index_dir %s", err)
+		}
+	}
+	if e := c.Embeddings; e != nil {
+		if len(e.Command) > 0 && strings.TrimSpace(e.Command[0]) == "" {
+			add("search.embeddings.command must start with a program")
+		}
+		for _, name := range e.PassEnv {
+			if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "=\x00") {
+				add("search.embeddings.pass_env holds an invalid variable name %q", name)
+			}
+		}
+	}
+	return p
+}
+
+// validateNumbers checks the numeric keys of the table.
+func (c *Config) validateNumbers(add func(format string, a ...any)) {
 	if c.RRFK < 0 {
 		add("search.rrf_k must not be negative")
 	}
@@ -201,22 +222,6 @@ func (c *Config) Validate() []string {
 	if c.QueryTimeoutMS < 0 || c.QueryTimeoutMS > maxQueryTimeoutMS {
 		add("search.query_timeout_ms must be between 0 and %d", maxQueryTimeoutMS)
 	}
-	if c.IndexDir != "" {
-		if err := checkIndexDir(c.IndexDir); err != "" {
-			add("search.index_dir %s", err)
-		}
-	}
-	if e := c.Embeddings; e != nil {
-		if len(e.Command) > 0 && strings.TrimSpace(e.Command[0]) == "" {
-			add("search.embeddings.command must start with a program")
-		}
-		for _, name := range e.PassEnv {
-			if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "=\x00") {
-				add("search.embeddings.pass_env holds an invalid variable name %q", name)
-			}
-		}
-	}
-	return p
 }
 
 // checkIndexDir returns why dir cannot be an index directory: it must stay
