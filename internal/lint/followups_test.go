@@ -358,3 +358,32 @@ func loadNoRemote(t *testing.T, root string) *config.Config {
 	}
 	return cfg
 }
+
+func TestGlobNoMatchMessageForAlwaysApply(t *testing.T) {
+	tests := []struct {
+		name, front, want, not string
+	}{
+		{name: "plain rule never applies", front: "globs: [\"nothing/**\"]\n", want: "never applies"},
+		{name: "alwaysApply rule still applies", front: "alwaysApply: true\nglobs: [\"nothing/**\"]\n", want: "still applies", not: "never applies"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			files := map[string]string{".ai-rulez/config.toml": baseConfig, ".ai-rulez/rules/r.md": "---\n" + tt.front + "---\nbody\n"}
+
+			// Act
+			got := lintFiles(t, files)
+
+			// Assert
+			for _, f := range got {
+				if f.Code == CodeGlobNoMatch {
+					if !strings.Contains(f.Message, tt.want) || (tt.not != "" && strings.Contains(f.Message, tt.not)) {
+						t.Fatalf("message %q", f.Message)
+					}
+					return
+				}
+			}
+			t.Fatalf("no AR101:\n%s", dump(got))
+		})
+	}
+}
