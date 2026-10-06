@@ -20,6 +20,7 @@ const (
 	CodeSourceNotAllowed      = "AR745"
 	// AR746 to AR749 are in their own block so each lands with its feature.
 	CodePolicySignature      = "AR746"
+	CodeDigestDenied         = "AR747"
 	CodeCapabilityNotAllowed = "AR748"
 	CodePolicyBudgetExceeded = "AR749"
 )
@@ -27,7 +28,7 @@ const (
 var policyCodes = []string{
 	CodePolicyLoosened, CodePolicyDigestMismatch, CodePolicyUnavailable,
 	CodePolicyInvalid, CodePolicyRequiredMissing, CodeSourceNotAllowed,
-	CodePolicySignature, CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
+	CodePolicySignature, CodeDigestDenied, CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
 }
 
 func init() {
@@ -39,6 +40,7 @@ func init() {
 		RuleInfo{CodePolicyRequiredMissing, "policy-required-missing", SeverityError, "the repository turns off or ignores a rule code the organization policy requires"},
 		RuleInfo{CodeSourceNotAllowed, "source-not-allowed", SeverityError, "an include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies"},
 		RuleInfo{CodePolicySignature, "policy-signature-invalid", SeverityError, "a policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed)"},
+		RuleInfo{CodeDigestDenied, "digest-denied", SeverityError, "ai-rulez.lock pins content whose digest is on the organization policy's sources.deny_digests list; a denied include, installed skill or skill source is not loaded (always an error)"},
 		RuleInfo{CodePolicyBudgetExceeded, "policy-budget-exceeded", SeverityError, "a rule has more findings than the organization policy's lint.max_findings ceiling allows (0 allows none); always an error"},
 		RuleInfo{CodeCapabilityNotAllowed, "capability-not-allowed", SeverityError, "an MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded"},
 	)
@@ -77,6 +79,11 @@ func init() {
 			Why:  "A signature lets an organization publish a policy without every machine pinning its digest, but only if the signer is one the machine trusts and the signature covers exactly this policy. A bad or missing signature is refused, never skipped, so stripping the signature cannot switch the policy off.",
 			Bad:  "A policy whose `.sigstore.json` was made by an identity the machine does not trust, or by a key that signed a different file, or `--policy-require-signed` with no signature published",
 			Good: "Sign the policy with the organization's signer (`cosign sign-blob --bundle policy.toml.sigstore.json policy.toml`), and configure the trusted signer outside the repository",
+		},
+		CodeDigestDenied: {
+			Why:  "An organization that learns a piece of content is malicious or compromised needs to block it everywhere at once. The deny list names the digest, so renaming the include or moving the file does not help; a denied remote is not fetched.",
+			Bad:  "An include whose pinned tree digest is on `sources.deny_digests`, or an authored rule whose digest in `ai-rulez.lock` is",
+			Good: "Remove the content, or re-pin to a version that is not denied; ask the policy owners if the digest was listed by mistake",
 		},
 		CodePolicyBudgetExceeded: {
 			Why:  "A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.",

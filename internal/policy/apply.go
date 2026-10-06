@@ -80,6 +80,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 		}
 	}
 	a.sources()
+	a.denyDigests()
 	a.severities()
 	a.securityHosts()
 	a.scanImports()
