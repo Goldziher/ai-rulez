@@ -283,6 +283,11 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	config.Host = lo.host
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 
+	// The organization policy clamps the configuration before anything is fetched.
+	if err := applyPolicy(ctx, config); err != nil {
+		return nil, err
+	}
+
 	// Convert inline MCP servers to map
 	config.MCPServers = serversToMap(config.MCPServersRaw)
 

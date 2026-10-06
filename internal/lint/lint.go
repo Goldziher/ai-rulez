@@ -369,6 +369,7 @@ func (r *runner) resolveSettings() {
 			r.ignore[rule.Code] = true
 		}
 	}
+	r.applyPolicy()
 	r.ignorePaths = compileGlobs(r.lc.IgnorePaths)
 	r.exampleGlobs = compileGlobs(r.lc.ExamplePaths)
 	r.allow = compileGlobs(r.lc.AllowPaths)

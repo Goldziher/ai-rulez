@@ -37,6 +37,9 @@ schema compliance, and structural issues.`,
 			}
 			return
 		}
+		if validateShowPolicy {
+			os.Exit(runShowPolicy(ctx, args, cmd.OutOrStdout()))
+		}
 		if err := checkStrictFlags(); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -96,6 +99,14 @@ schema compliance, and structural issues.`,
 			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
 			fmtError(err)
 			os.Exit(1)
+		}
+
+		if !validateStrict {
+			// A strict run reports the same attempts as AR74x findings.
+			if err := policyGate(cfg); err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
 		}
 
 		logger.Success("Configuration is valid", "path", cfg.ConfigDir)

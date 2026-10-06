@@ -109,6 +109,11 @@ type Config struct {
 	ContentProblems []ContentProblem `yaml:"-" json:"-" toml:"-"`
 	ConfigDir       string           `yaml:"-" json:"-" toml:"-"`
 	ConfigDirName   string           `yaml:"-" json:"-" toml:"-"`
+
+	// PolicyOutcome is what the organization policy clamped and reported at load
+	// time (docs/policy.md); nil when no policy is in force.
+	PolicyOutcome *PolicyOutcome `yaml:"-" json:"-" toml:"-"`
+
 	// Run is the state of the generation in progress; nil outside one.
 	Run        *RunState    `yaml:"-" json:"-" toml:"-"`
 	ConfigFile string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")

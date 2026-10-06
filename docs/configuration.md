@@ -443,6 +443,7 @@ migrate = "name-only"
 `[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `true` whenever `ai-rulez.lock` exists, `enforce = false` opts out) makes `validate --strict`
 report content drift (or an unreadable lock) as `AR981` / `AR982`, makes `generate` refuse a remote include or installed skill the lock does not pin (and `AR010` an error), and makes `generate --locked` require content pins (`lock --check` always does); `include_outputs`
 (default `true`) pins generated outputs; `scope` is `all` (default) or `skills`. See [Lock file](lockfile.md).
+An [organization policy](policy.md) can force `enforce` and `include_outputs` on.
 
 ### `scopes`
 
@@ -1217,6 +1218,7 @@ skill = ["owner"]
 ```
 
 Every key, the finding codes and the exit codes are in [Strict validation](strict-validation.md).
+An [organization policy](policy.md) bounds `severity`, `ignore` and `security` from outside the repository: a repository can raise them, not lower them.
 
 ### `verifiers`
 

@@ -1,0 +1,17 @@
+policy: 3 layers
+  flag      ./extra.toml               sha256:0c3d00000000…
+  env       /ci/team.toml              sha256:a90b00000000…  (team)
+  managed   /etc/ai-rulez/policy.toml  sha256:5c1e00000000…  (example-org baseline)
+effective (origin in brackets)
+  guard.generated            = true                                        [flag]
+  lint.required_codes        = ["AR001", "AR005"]                          [managed]
+  lint.security.scan_imports = error                                       [env]
+  lint.severity_floor.AR005  = error                                       [managed]
+  lint.severity_floor.AR008  = error                                       [env]
+  lock.enforce               = true                                        [env]
+  sources.allowed_hosts      = ["*.example.org", "github.com/example-org"] [managed]
+  sources.require_pinned     = true                                        [managed]
+  telemetry.allow_network    = false                                       [managed]
+repo overrides rejected: 2
+  AR740 config.toml:1  [lint.security] scan_imports = "warn" is weaker than the policy level "error" (origin: env); "error" is enforced
+  AR740 config.toml:1  [lint.severity] AR008 = "warning" is below the policy floor "error" (origin: env); "error" is enforced

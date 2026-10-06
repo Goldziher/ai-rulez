@@ -34,6 +34,7 @@ nav = [
     { "SBOM" = "sbom.md" },
     { "Publish" = "publish.md" },
     { "Trust Model" = "trust-model.md" },
+    { "Organization Policy" = "policy.md" },
     { "Harness Traps" = "harness-traps.md" },
     { "Verifiers" = "verifiers.md" },
     { "Hooks and Permissions" = "settings.md" },
