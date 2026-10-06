@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
@@ -90,6 +91,10 @@ type Generator struct {
 	// role is the flattened role a `generate --role` run renders; nil otherwise.
 	// It replaces the profile selection (see roles.go).
 	role *config.RoleConfig
+
+	// hostOverride replaces config.Host when hostSet (see SetHost).
+	hostOverride ambient.Host
+	hostSet      bool
 }
 
 type generatedManifest struct {
@@ -108,6 +113,30 @@ type generatedManifest struct {
 	// those once empty and never one that existed before. Nil: not recorded.
 	Dirs *[]string `json:"dirs,omitempty"`
 }
+
+// SetHost makes the generator use host's environment, clock, process runner and
+// logger instead of the ones its config was loaded with (the real process by
+// default).
+func (g *Generator) SetHost(h ambient.Host) {
+	g.hostSet, g.hostOverride = true, h
+}
+
+// host is the generator's ambient facilities: SetHost's, else the config's.
+func (g *Generator) host() ambient.Host {
+	if g.hostSet {
+		return g.hostOverride
+	}
+	if g.config != nil {
+		return g.config.Host
+	}
+	return ambient.Host{}
+}
+
+// git answers repository questions through the host's runner.
+func (g *Generator) git() gitutil.Git { return gitutil.New(g.host().Runner) }
+
+// log is the host's logger (the CLI's when unset).
+func (g *Generator) log() logger.Logger { return g.host().Logger() }
 
 // NewGenerator creates a new generator
 func NewGenerator(cfg *config.Config) *Generator {
@@ -159,12 +188,12 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 
 	if role := g.Role(); role != "" {
 		// A role renders its own slice of the content, not a profile.
-		logger.Info("Generating with configuration", "role", role)
+		g.log().Info("Generating with configuration", "role", role)
 	} else {
-		logger.Info("Generating with configuration", "profile", activeProfile)
+		g.log().Info("Generating with configuration", "profile", activeProfile)
 	}
 	if g.config.HasGuard() {
-		logger.Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
+		g.log().Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
 			"harnesses", config.GuardHarnesses)
 	}
 
@@ -202,7 +231,7 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 			// Without the local manifest a later run cannot clean these files up.
 			return 0, oops.Wrapf(err, "write the generated manifests")
 		}
-		logger.Warn("Failed to write generated manifest", "error", err)
+		g.log().Warn("Failed to write generated manifest", "error", err)
 	}
 
 	g.finishGitignore(flatOutputs, ignoredEarly)
@@ -214,7 +243,7 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		}
 	}
 
-	logger.Info("Generation complete", "files", written)
+	g.log().Info("Generation complete", "files", written)
 
 	return written, nil
 }
@@ -243,7 +272,7 @@ func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bo
 	}
 	if g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets() {
 		if err := g.updateGitignore(outputs); err != nil {
-			logger.Warn("Failed to update .gitignore", "error", err)
+			g.log().Warn("Failed to update .gitignore", "error", err)
 		}
 	}
 }
@@ -283,7 +312,7 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 			written++
 		}
 	}
-	logger.Info("Plugin generation complete", "files", written)
+	g.log().Info("Plugin generation complete", "files", written)
 	return written, nil
 }
 
@@ -507,7 +536,7 @@ func (g *Generator) warnUnreadConsumerFiles() {
 	if len(files) == 0 {
 		return
 	}
-	logger.Warn("[[plugins]] is written to a file no tool reads; it is deprecated and will be removed. "+
+	g.log().Warn("[[plugins]] is written to a file no tool reads; it is deprecated and will be removed. "+
 		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); "+
 		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml",
 		"files", strings.Join(files, ", "))
@@ -542,12 +571,12 @@ func (g *Generator) removeStalePluginDirs(dirs []string) {
 		rel := g.convertToRelativePath(dir)
 		switch {
 		case err != nil:
-			logger.Warn("Could not remove a stale plugin directory", "dir", rel, "error", err)
+			g.log().Warn("Could not remove a stale plugin directory", "dir", rel, "error", err)
 		case len(kept) > 0:
-			logger.Warn("Removed the generated files of a stale plugin directory; files that are not generated were kept",
+			g.log().Warn("Removed the generated files of a stale plugin directory; files that are not generated were kept",
 				"dir", rel, "kept", strings.Join(kept, ", "))
 		default:
-			logger.Info("Removed stale plugin directory", "dir", rel)
+			g.log().Info("Removed stale plugin directory", "dir", rel)
 		}
 	}
 }
@@ -654,7 +683,7 @@ func (g *Generator) withCatalogSkill(tree *config.ContentTree) (*config.ContentT
 	skill := plugin.CatalogSkill(g.config, plan)
 	for i := range tree.Skills {
 		if tree.Skills[i].Name == skill.Name {
-			logger.Warn("A skill named like the catalog skill exists; not generating the catalog", "skill", skill.Name)
+			g.log().Warn("A skill named like the catalog skill exists; not generating the catalog", "skill", skill.Name)
 			return tree, nil
 		}
 	}
@@ -752,7 +781,7 @@ func (g *Generator) warnUnbundledPluginOnly(tree *config.ContentTree) {
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
-		logger.Warn("Plugin-only skills or commands are in no plugin and are not generated anywhere",
+		g.log().Warn("Plugin-only skills or commands are in no plugin and are not generated anywhere",
 			"count", len(missing), "names", strings.Join(missing, ", "))
 	}
 }
@@ -902,7 +931,7 @@ func (g *Generator) disambiguateRuleCollisions(outputs []config.OutputFile) {
 		if g.isUnmanagedRuleFile(g.absOutputPath(renamed.Path), g.finalContent(renamed)) {
 			continue // the new name is taken by a hand-written file too: the guard skips it
 		}
-		logger.Warn("A hand-written rule file has the same name as a generated rule; "+
+		g.log().Warn("A hand-written rule file has the same name as a generated rule; "+
 			"the generated rule was written under another name, rename one of them to silence this",
 			"hand_written", output.Path, "generated", renamed.Path)
 		outputs[i] = renamed
@@ -975,7 +1004,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 		return nil, err
 	}
 
-	logger.Debug("Content scanned",
+	g.log().Debug("Content scanned",
 		"rules", len(contentTree.Rules),
 		"context", len(contentTree.Context),
 		"skills", len(contentTree.Skills),
@@ -998,7 +1027,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	// otherwise — disagree whenever the two renders straddled a second boundary.
 	// A caller that set GeneratedAt explicitly keeps its value.
 	if g.config.GeneratedAt.IsZero() {
-		g.config.GeneratedAt = config.ResolveGenerationTime()
+		g.config.GeneratedAt = config.ResolveGenerationTimeIn(g.host())
 	}
 
 	// Create a temporary config with the filtered content and MCP servers
@@ -1035,14 +1064,14 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	if len(mcpServers) > 0 || g.config.HasSelfServer() {
 		mcpGen, err := config.GetPresetGenerator("mcp")
 		if err != nil {
-			logger.Warn("Failed to resolve MCP preset generator", "error", err)
+			g.log().Warn("Failed to resolve MCP preset generator", "error", err)
 		} else {
 			mcpOutputs, err := mcpGen.Generate(contentTree, g.config.BaseDir, &tempCfg)
 			if err != nil {
-				logger.Warn("Failed to generate MCP output", "error", err)
+				g.log().Warn("Failed to generate MCP output", "error", err)
 			} else if len(mcpOutputs) > 0 {
 				allOutputs["mcp"] = mcpOutputs
-				logger.Debug("Auto-generated MCP output", "count", len(mcpOutputs))
+				g.log().Debug("Auto-generated MCP output", "count", len(mcpOutputs))
 			}
 		}
 	}
@@ -1092,7 +1121,7 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 		done[name] = true
 		generator, err := config.GetPresetGenerator(preset.BuiltIn)
 		if err != nil {
-			logger.Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
+			g.log().Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
 			continue
 		}
 		rules := allRules
@@ -1558,7 +1587,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 				Hint(fmt.Sprintf("Check directory permissions for: %s", absPath)).
 				Wrapf(err, "create directory")
 		}
-		logger.Debug("Created directory", "path", output.Path)
+		g.log().Debug("Created directory", "path", output.Path)
 		return nil
 	}
 
@@ -1577,12 +1606,12 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		}
 		g.skippedPaths[filepath.ToSlash(g.convertToRelativePath(absPath))] = true
 		if output.LocalOnly {
-			logger.Warn("Skipped existing hand-written file that collides with a machine-local rule file; "+
+			g.log().Warn("Skipped existing hand-written file that collides with a machine-local rule file; "+
 				"*.local.* names in rules folders are reserved for ai-rulez local rules, rename the file",
 				"path", output.Path)
 			return nil
 		}
-		logger.Warn("Skipped existing hand-written rule file that collides with a generated rule; rename one of them"+
+		g.log().Warn("Skipped existing hand-written rule file that collides with a generated rule; rename one of them"+
 			g.unmanagedHint(),
 			"path", output.Path, "rule", strings.TrimSuffix(filepath.Base(output.Path), filepath.Ext(output.Path)))
 		return nil
@@ -1594,7 +1623,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 				return oops.With("path", absPath).Wrapf(err, "restrict permissions of a file carrying secrets")
 			}
 		}
-		logger.Debug("Skipped unchanged file", "path", output.Path)
+		g.log().Debug("Skipped unchanged file", "path", output.Path)
 		return nil
 	}
 
@@ -1616,7 +1645,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 				Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
 				Wrapf(err, "write file")
 		}
-		logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent), "mode", sensitiveFileMode)
+		g.log().Debug("Wrote file", "path", output.Path, "size", len(finalContent), "mode", sensitiveFileMode)
 		return nil
 	}
 
@@ -1629,7 +1658,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 			Wrapf(err, "write file")
 	}
 
-	logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent))
+	g.log().Debug("Wrote file", "path", output.Path, "size", len(finalContent))
 	return nil
 }
 
@@ -2564,7 +2593,7 @@ func (g *Generator) readManifest(path string) generatedManifest {
 // ignored: a repository can commit that file with forged claims and digests, and
 // .gitignore does not stop a tracked one. It warns once per Generator.
 func (g *Generator) localManifestUntrusted() bool {
-	reason := gitutil.UntrustedLocalFile(g.localManifestPath())
+	reason := g.git().UntrustedLocalFile(g.localManifestPath())
 	if reason == "" {
 		return false
 	}
@@ -2591,7 +2620,7 @@ func (g *Generator) localManifestFix(reason string) string {
 // run never writes claims into such a file: a hostile repository could have
 // pre-filled it, and the write would turn into a tracked change.
 func (g *Generator) localManifestTracked() bool {
-	if !gitutil.IsTracked(g.localManifestPath()) {
+	if !g.git().IsTracked(g.localManifestPath()) {
 		return false
 	}
 	g.warnOnce("Not writing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
@@ -2648,7 +2677,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if g.userMode && filepath.IsAbs(filepath.FromSlash(rel)) {
 			// No relative form (another volume): a later run could not resolve the entry.
-			logger.Warn("Not recording a generated file the manifest cannot express", "path", rel)
+			g.log().Warn("Not recording a generated file the manifest cannot express", "path", rel)
 			continue
 		}
 		switch {
@@ -2826,7 +2855,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
 		if !g.withinScope(absPath) {
-			logger.Warn("Skipping generated manifest path outside project", "path", relPath)
+			g.log().Warn("Skipping generated manifest path outside project", "path", relPath)
 			continue
 		}
 		if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
@@ -2856,7 +2885,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 		// A rules folder is shared with hand-written rules: delete only a file that
 		// still looks generated, even when a manifest lists it.
 		if config.InRulesDir(relPath) && !looksGenerated(absPath) {
-			logger.Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
+			g.log().Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
 			continue
 		}
 		stale = append(stale, absPath)
@@ -2963,13 +2992,13 @@ func (g *Generator) removeStaleFile(filePath string) {
 		return
 	}
 	if !g.removalConfined(filePath) {
-		logger.Warn("Not removing a generated file behind a symlink that leaves the project", "path", filePath)
+		g.log().Warn("Not removing a generated file behind a symlink that leaves the project", "path", filePath)
 		return
 	}
 	if err := os.Remove(filePath); err != nil {
-		logger.Warn("Failed to remove stale file", "path", filePath, "error", err)
+		g.log().Warn("Failed to remove stale file", "path", filePath, "error", err)
 	} else {
-		logger.Debug("Removed stale file", "path", filePath)
+		g.log().Debug("Removed stale file", "path", filePath)
 	}
 }
 
@@ -3250,7 +3279,7 @@ func coversCommitted(dirPattern string, committed []string) bool {
 // named after local content are excluded per clone and stay in .git/info/exclude,
 // which such a run leaves alone; only outside a repository do they need the block.
 func (g *Generator) skippedLocalPattern(rel string) string {
-	if stableLocalName(rel) || gitutil.InfoExcludePath(g.config.BaseDir) == "" {
+	if stableLocalName(rel) || g.git().InfoExcludePath(g.config.BaseDir) == "" {
 		return localGitignorePattern(rel)
 	}
 	return ""
@@ -3558,7 +3587,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	// deliberately un-ignored by one.
 	paths, overridden := g.neededGitignorePatterns(outputs)
 	for _, o := range overridden {
-		logger.Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
+		g.log().Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
 			"path", o.Pattern, "rule", o.Rule, "source", o.Source)
 	}
 
@@ -3581,7 +3610,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	sortedPaths := dropUserPatterns(paths, existingContent)
 
 	if len(sortedPaths) == 0 {
-		logger.Debug("No paths to add to .gitignore")
+		g.log().Debug("No paths to add to .gitignore")
 		// Nothing is left to add: drop a block from an earlier run rather than
 		// leave an empty fence behind.
 		if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
@@ -3629,7 +3658,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 			Wrapf(err, "write .gitignore")
 	}
 
-	logger.Debug("Updated .gitignore", "entries", len(sortedPaths))
+	g.log().Debug("Updated .gitignore", "entries", len(sortedPaths))
 	return nil
 }
 

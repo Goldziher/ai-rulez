@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // gitignoreProbeNames stand in for the unknown file under a directory (or the
@@ -84,7 +83,7 @@ func withoutManagedBlock(content string) string {
 // missing or failing), so callers fall back to adding everything.
 func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMatch {
 	rootRel := ".gitignore"
-	if prefix := gitutil.RepoRelative(gitutil.TopLevel(g.config.BaseDir), g.config.BaseDir); prefix != "" && prefix != "." {
+	if prefix := gitutil.RepoRelative(g.git().TopLevel(g.config.BaseDir), g.config.BaseDir); prefix != "" && prefix != "." {
 		rootRel = prefix + "/.gitignore"
 	}
 	begin, end := g.excludeMarkers()
@@ -102,12 +101,12 @@ func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMa
 	var rules map[string]gitutil.IgnoreMatch
 	var err error
 	if g.hasOwnIgnoreBlock(begin) {
-		rules, err = gitutil.IgnoreRulesMirrored(g.config.BaseDir, probes, rewrite)
+		rules, err = g.git().IgnoreRulesMirrored(g.config.BaseDir, probes, rewrite)
 	} else {
-		rules, err = gitutil.IgnoreRules(g.config.BaseDir, probes)
+		rules, err = g.git().IgnoreRules(g.config.BaseDir, probes)
 	}
 	if err != nil {
-		logger.Debug("Could not ask git about ignore rules; adding every entry", "error", err)
+		g.log().Debug("Could not ask git about ignore rules; adding every entry", "error", err)
 		return nil
 	}
 	return rules
@@ -121,7 +120,7 @@ func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
 			return true
 		}
 	}
-	if exclude := gitutil.InfoExcludePath(g.config.BaseDir); exclude != "" {
+	if exclude := g.git().InfoExcludePath(g.config.BaseDir); exclude != "" {
 		fallbackBegin, _ := gitignore.FallbackMarkers(g.config.BaseDir)
 		if data, err := gitutil.ReadIgnoreFileOrEmpty(exclude); err == nil &&
 			(strings.Contains(string(data), excludeBegin) || strings.Contains(string(data), fallbackBegin)) {
@@ -190,7 +189,7 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 		match, covered := coverage(rules, probes[ranges[i][0]:ranges[i][1]])
 		switch {
 		case covered:
-			logger.Debug("Already ignored by git", "pattern", pattern, "rule", match.Pattern, "source", match.Source)
+			g.log().Debug("Already ignored by git", "pattern", pattern, "rule", match.Pattern, "source", match.Source)
 		case match.Negated():
 			if g.isProtectedPattern(pattern, protected) {
 				overridden = append(overridden, unignoredProtected{Pattern: pattern, Rule: match.Pattern, Source: match.Source})

@@ -309,12 +309,12 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 			if cfg.Includes[i].Name != w.Name {
 				continue
 			}
-			newSource := NewGitSource
+			newSource := NewGitSourceIn
 			treeKind = contentlock.KindInclude
 			if cfg.Includes[i].Format == config.IncludeFormatOKF {
-				newSource, treeKind = NewOKFGitSource, contentlock.KindOKFInclude
+				newSource, treeKind = NewOKFGitSourceIn, contentlock.KindOKFInclude
 			}
-			src, err := newSource(w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, cfg.Includes[i].Ref, cfg.BaseDir, nil, "")
+			src, err := newSource(cfg.Host, w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, cfg.Includes[i].Ref, cfg.BaseDir, nil, "")
 			if err != nil {
 				return "", "", treeKind
 			}
@@ -326,7 +326,7 @@ func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind st
 				continue
 			}
 			sk := &cfg.InstalledSkills[i]
-			src, err := NewSkillGitSource(w.Name, sk.Source, sk.GetPath(), sk.Ref, "")
+			src, err := NewSkillGitSourceIn(cfg.Host, w.Name, sk.Source, sk.GetPath(), sk.Ref, "")
 			if err != nil {
 				return "", "", treeKind
 			}

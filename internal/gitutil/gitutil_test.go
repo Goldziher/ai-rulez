@@ -248,7 +248,7 @@ func TestTrackedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}} {
-			if _, _, err := run(dir, nil, args...); err != nil {
+			if _, _, err := (Git{}).run(dir, nil, args...); err != nil {
 				t.Skipf("git unavailable: %v", err)
 			}
 		}

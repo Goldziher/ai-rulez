@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,7 +21,7 @@ func TestConvertOKFBundleSkipsSymlinks(t *testing.T) {
 	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "linked"))
 	testutil.SymlinkOrSkip(t, filepath.Join(outside, "secret.md"), filepath.Join(dir, "link.md"))
 	// Act
-	tree, err := convertOKFBundle(dir, "kb", nil)
+	tree, err := convertOKFBundle(context.Background(), dir, "kb", nil)
 	// Assert
 	require.NoError(t, err)
 	require.Len(t, tree.Rules, 1)

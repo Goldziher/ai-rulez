@@ -11,7 +11,7 @@ import (
 // owned by the current user, or when anyone but the owner may write to it. A file
 // that does not exist is trusted (there is nothing to believe). A symlink is
 // untrusted: the state file is always a regular file ai-rulez wrote itself.
-func UntrustedLocalFile(path string) string {
+func (g Git) UntrustedLocalFile(path string) string {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return ""
@@ -25,7 +25,7 @@ func UntrustedLocalFile(path string) string {
 	if !ownedByCurrentUser(info) {
 		return "it is not owned by the current user"
 	}
-	if IsTracked(path) {
+	if g.IsTracked(path) {
 		return "git tracks it"
 	}
 	return ""
@@ -33,9 +33,9 @@ func UntrustedLocalFile(path string) string {
 
 // IsTracked reports whether git tracks the file at path. Outside a repository it
 // is false; when git fails inside one it is true, so the caller fails closed.
-func IsTracked(path string) bool {
+func (g Git) IsTracked(path string) bool {
 	dir, name := filepath.Dir(path), filepath.Base(path)
-	tracked, err := TrackedAmong(dir, []string{name})
+	tracked, err := g.TrackedAmong(dir, []string{name})
 	if err != nil {
 		return true
 	}

@@ -32,12 +32,18 @@ func LoadTree(base string) (*Tree, error) {
 // checked out away from its repository (a scratch copy, a CI artifact) resolves
 // repo-relative paths and globs against the real tree.
 func LoadTreeAt(base, root string) (*Tree, error) {
+	return LoadTreeWith(gitutil.Git{}, base, root)
+}
+
+// LoadTreeWith is LoadTreeAt with the git questions answered through git, so a
+// caller can inject the runner that starts the process.
+func LoadTreeWith(git gitutil.Git, base, root string) (*Tree, error) {
 	base = gitutil.Resolve(base)
 	t := &Tree{files: map[string]uint32{}, dirs: map[string]struct{}{}, topNames: map[string]struct{}{}}
 	if root != "" {
 		root = gitutil.Resolve(root)
 		t.Explicit = true
-		files, ok, err := gitutil.TrackedFiles(root)
+		files, ok, err := git.TrackedFiles(root)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
@@ -50,8 +56,8 @@ func LoadTreeAt(base, root string) (*Tree, error) {
 		t.index()
 		return t, nil
 	}
-	if top := gitutil.TopLevel(base); top != "" {
-		files, ok, err := gitutil.TrackedFiles(top)
+	if top := git.TopLevel(base); top != "" {
+		files, ok, err := git.TrackedFiles(top)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}

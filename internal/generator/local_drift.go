@@ -20,7 +20,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -102,7 +101,7 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 		return nil, nil
 	}
 	if g.config.GeneratedAt.IsZero() {
-		g.config.GeneratedAt = config.ResolveGenerationTime()
+		g.config.GeneratedAt = config.ResolveGenerationTimeIn(g.host())
 	}
 
 	baseline, baselineHash, err := g.renderBaseline(profile)
@@ -344,10 +343,10 @@ func stripURLCredentials(value string) string {
 // ones count for them. When git cannot answer, every candidate counts as tracked.
 func (g *Generator) findViolations(plan *localPlan, merged []config.OutputFile) []localViolation {
 	candidates := append(append([]string(nil), plan.localOnly...), plan.drift...)
-	tracked, err := gitutil.TrackedAmong(g.config.BaseDir, candidates)
+	tracked, err := g.git().TrackedAmong(g.config.BaseDir, candidates)
 	failClosed := err != nil
 	if failClosed {
-		logger.Warn("Could not ask git which files are tracked; treating local outputs as tracked", "error", err)
+		g.log().Warn("Could not ask git which files are tracked; treating local outputs as tracked", "error", err)
 	}
 	isTracked := func(rel string) bool { return failClosed || tracked[rel] }
 
@@ -389,9 +388,9 @@ func (g *Generator) ignoredSet(rels, pending []string) map[string]bool {
 	if len(rels) == 0 {
 		return ignored
 	}
-	byGit, err := gitutil.IgnoredAmong(g.config.BaseDir, rels)
+	byGit, err := g.git().IgnoredAmong(g.config.BaseDir, rels)
 	if err != nil {
-		logger.Warn("Could not ask git which files are ignored; using the built-in matcher", "error", err)
+		g.log().Warn("Could not ask git which files are ignored; using the built-in matcher", "error", err)
 	}
 	if byGit != nil {
 		for _, rel := range rels {
@@ -472,18 +471,18 @@ func (g *Generator) excludeMarkers() (begin, end string) {
 // managed .gitignore block. plan may be nil: a run with no local inputs removes
 // a block left by an earlier run.
 func (g *Generator) syncMachineExcludes(plan *localPlan) error {
-	exclude := gitutil.InfoExcludePath(g.config.BaseDir)
+	exclude := g.git().InfoExcludePath(g.config.BaseDir)
 	if exclude == "" {
 		if plan != nil && len(plan.machineLocal) > 0 {
 			for rel := range plan.machineLocal {
 				plan.inGitignore[rel] = true
 			}
-			logger.Warn("Not a git repository; ignoring machine-local outputs through .gitignore instead of .git/info/exclude")
+			g.log().Warn("Not a git repository; ignoring machine-local outputs through .gitignore instead of .git/info/exclude")
 		}
 		return nil
 	}
 
-	top := gitutil.TopLevel(g.config.BaseDir)
+	top := g.git().TopLevel(g.config.BaseDir)
 	var patterns []string
 	if plan != nil {
 		for rel := range plan.machineLocal {

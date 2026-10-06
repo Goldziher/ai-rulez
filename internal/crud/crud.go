@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/samber/oops"
 )
@@ -62,7 +63,15 @@ type OperatorImpl struct {
 	baseDir    string // project directory that owns the config directory
 	aiRulezDir string // config directory: .ai-rulez/ or .config/ai-rulez/
 	filesMgr   *FileManager
-	local      bool // route config mutations to the config.local.* overlay (see Local)
+	local      bool        // route config mutations to the config.local.* overlay (see Local)
+	env        ambient.Env // environment for ~ and $VAR in local include paths; nil is the real one
+}
+
+// WithEnv returns a copy of the operator that reads the environment from env.
+func (op *OperatorImpl) WithEnv(env ambient.Env) *OperatorImpl {
+	c := *op
+	c.env = env
+	return &c
 }
 
 // NewOperator creates a new Operator for the given base directory. The config

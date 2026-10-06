@@ -125,7 +125,7 @@ func (g *Generator) resolvePlaceholderMap(
 				allFromProcess = false
 				return replacement
 			}
-			if replacement, ok := os.LookupEnv(name); ok {
+			if replacement, ok := g.host().LookupEnv(name); ok {
 				return replacement
 			}
 			allFromProcess = false

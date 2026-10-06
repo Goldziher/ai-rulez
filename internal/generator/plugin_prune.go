@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -53,7 +52,7 @@ func (g *Generator) planPluginPrune(outputs []config.OutputFile) ([]pluginPrune,
 		bundleDir := filepath.Dir(sidecarPath)
 		obsolete, err := plugin.ObsoleteFiles(bundleDir, previous, planned)
 		if err != nil {
-			logger.Warn("Could not compare a plugin bundle with its previous run; obsolete files are not pruned",
+			g.log().Warn("Could not compare a plugin bundle with its previous run; obsolete files are not pruned",
 				"bundle", g.convertToRelativePath(bundleDir), "error", err)
 			continue
 		}
@@ -108,15 +107,15 @@ func (g *Generator) PluginPrunePlan(profile string) (PluginPruneReport, error) {
 func (g *Generator) applyPluginPrune(items []pluginPrune) {
 	for _, item := range items {
 		if item.reason != "" {
-			logger.Warn("Kept an obsolete generated plugin file: "+item.reason+"; delete it by hand if it is not needed",
+			g.log().Warn("Kept an obsolete generated plugin file: "+item.reason+"; delete it by hand if it is not needed",
 				"file", item.rel)
 			continue
 		}
 		if err := plugin.RemoveObsolete(item.bundleDir, item.Path); err != nil {
-			logger.Warn("Could not remove an obsolete generated plugin file", "file", item.rel, "error", err)
+			g.log().Warn("Could not remove an obsolete generated plugin file", "file", item.rel, "error", err)
 			continue
 		}
-		logger.Info("Removed obsolete generated plugin file", "file", item.rel)
+		g.log().Info("Removed obsolete generated plugin file", "file", item.rel)
 	}
 }
 

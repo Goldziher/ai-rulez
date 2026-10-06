@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"io"
 	"io/fs"
 	"os"
@@ -53,6 +54,10 @@ type ClaudePluginEval struct {
 	Stderr  io.Writer
 	// Exec runs the tool; tests replace it. Nil uses os/exec.
 	Exec func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error
+	// Runner starts the tool when Exec is nil: with a Runner the command goes
+	// through it (and so can be denied or recorded) instead of os/exec. The
+	// timeout still applies through the context.
+	Runner runner.Runner
 }
 
 // Name implements Runner.
@@ -102,6 +107,9 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	run := r.Exec
 	if run == nil {
 		run = execCommand
+		if r.Runner != nil {
+			run = execThrough(r.Runner)
+		}
 	}
 	timeout := r.Timeout
 	if timeout <= 0 {
@@ -174,6 +182,30 @@ func execCommand(ctx context.Context, bin string, args []string, stdout, stderr 
 		cmd.Stderr = &cappedWriter{w: stderr, n: maxToolOutputBytes}
 	}
 	return runTree(cmd)
+}
+
+// execThrough runs the tool through r. Output is captured by the runner (capped
+// at maxToolOutputBytes per stream) and written to the sinks when the tool ends.
+func execThrough(r runner.Runner) func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
+	return func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
+		res := r.Run(ctx, runner.Spec{
+			Argv: append([]string{bin}, args...), InheritEnv: true,
+			Timeout: runner.MaxTimeout, MaxOutput: maxToolOutputBytes,
+		})
+		if stdout != nil {
+			_, _ = stdout.Write(res.Stdout) //nolint:errcheck // the sink caps and never fails
+		}
+		if stderr != nil {
+			_, _ = stderr.Write(res.Stderr) //nolint:errcheck // best-effort forwarding
+		}
+		if res.Status == runner.StatusOK {
+			return nil
+		}
+		if res.Err != nil {
+			return res.Err
+		}
+		return fmt.Errorf("exit status %d", res.ExitCode)
+	}
 }
 
 // cappedWriter forwards at most n bytes and silently drops the rest, so the

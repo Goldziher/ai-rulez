@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ func TestScannerDate_RejectsMalformedValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(TodayEnv, tt.env)
-			got := ScannerOptions{Today: tt.opt}.today()
+			got := ScannerOptions{Today: tt.opt}.today(ambient.Host{})
 			switch {
 			case tt.opt != "":
 				assert.Equal(t, tt.opt, got)

@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,9 +51,9 @@ func TestGetSkillCacheDir_KeyedByNameAndURL(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	// Act
-	a, errA := getSkillCacheDir("kreuzberg", "https://github.com/a/skills.git")
-	b, errB := getSkillCacheDir("kreuzberg", "https://github.com/b/skills.git")
-	a2, _ := getSkillCacheDir("kreuzberg", "https://github.com/a/skills.git/")
+	a, errA := getSkillCacheDir(ambient.Host{}, "kreuzberg", "https://github.com/a/skills.git")
+	b, errB := getSkillCacheDir(ambient.Host{}, "kreuzberg", "https://github.com/b/skills.git")
+	a2, _ := getSkillCacheDir(ambient.Host{}, "kreuzberg", "https://github.com/a/skills.git/")
 
 	// Assert
 	require.NoError(t, errA)

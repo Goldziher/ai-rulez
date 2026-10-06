@@ -200,7 +200,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	}
 	return lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
-		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "",
+		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
 	}, opts...)
 }
 
@@ -394,7 +394,7 @@ func warnFrontmatter(cfg *config.Config) {
 	if err != nil {
 		return
 	}
-	for _, f := range lint.FrontmatterWarnings(cfg, tree) {
+	for _, f := range lint.FrontmatterWarnings(cfg, tree, lint.WithCwd(workingDir())) {
 		logger.Warn(fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
 	}
 }
@@ -404,7 +404,7 @@ func warnFrontmatter(cfg *config.Config) {
 // error-level finding (every finding at level "error") stops the run; the rest
 // are logged.
 func enforceScanImports(cfg *config.Config) error {
-	findings, err := lint.ScanImports(cfg)
+	findings, err := lint.ScanImports(cfg, lint.WithCwd(workingDir()))
 	if err != nil {
 		return oops.Wrapf(err, "scan imported content")
 	}

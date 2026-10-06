@@ -8,7 +8,6 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -201,7 +200,7 @@ func skillsWithKeys(skills []config.ContentFile, domain string, keys map[string]
 func (g *Generator) warnRoleSkillModeHarnesses(name string, outcomes []roles.SkillOutcome) {
 	for _, o := range outcomes {
 		if len(o.Overridden) > 0 {
-			logger.Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Overridden, ", ")+
+			g.log().Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Overridden, ", ")+
 				": the skill's own frontmatter sets disable-model-invocation or user-invocable to another value, and an author's key is never overwritten",
 				"role", name, "skill", o.Key())
 		}
@@ -210,13 +209,13 @@ func (g *Generator) warnRoleSkillModeHarnesses(name string, outcomes []roles.Ski
 		}
 		switch o.Action {
 		case roles.ActionDrop:
-			logger.Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
+			g.log().Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
 				"; the skill is left out ([role_manifest] skill_mode_fallback = \"drop\")", "role", name, "skill", o.Key())
 		case roles.ActionServe:
-			logger.Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
+			g.log().Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
 				"; the skill is served over MCP instead ([role_manifest] skill_mode_fallback = \"serve\")", "role", name, "skill", o.Key())
 		default:
-			logger.Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Degraded, ", ")+
+			g.log().Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Degraded, ", ")+
 				": no documented per-skill setting; the skill stays listed there", "role", name, "skill", o.Key())
 		}
 	}

@@ -64,7 +64,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	// Rendering the outputs to learn their paths also runs the generate-time
 	// advice (a context.fileName that misses a name, ...), which says nothing
 	// useful while the outputs are being removed.
-	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { logger.Debug(msg) })()
+	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { g.log().Debug(msg) })()
 
 	g.lenientMCP = true // clean needs paths and claims, never secret values
 	defer func() { g.lenientMCP = false }()
@@ -145,7 +145,7 @@ func (g *Generator) removableLocalManifest() string {
 	if !pathIsFile(mp) {
 		return ""
 	}
-	if gitutil.IsTracked(mp) {
+	if g.git().IsTracked(mp) {
 		g.warnOnce("Not removing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
 			"fix", "git rm --cached "+g.localManifestRel())
 		return ""
@@ -160,7 +160,7 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
 		if !g.withinScope(abs) {
-			logger.Warn("Skipping generated path outside project", "path", output.Path)
+			g.log().Warn("Skipping generated path outside project", "path", output.Path)
 			continue
 		}
 		// A merged document that also holds hand-authored content is not ours to
@@ -462,7 +462,7 @@ func (g *Generator) cleanGitignore(opts CleanOptions, plan *CleanPlan) {
 	}
 	if plan.GitignoreEdited {
 		if err := g.stripGitignoreManagedBlock(); err != nil {
-			logger.Warn("Failed to strip .gitignore managed block", "error", err)
+			g.log().Warn("Failed to strip .gitignore managed block", "error", err)
 			plan.GitignoreEdited = false
 		}
 	}
@@ -470,7 +470,7 @@ func (g *Generator) cleanGitignore(opts CleanOptions, plan *CleanPlan) {
 		// This project's block in .git/info/exclude names machine-local outputs
 		// that were just removed; no paths means the block is dropped.
 		if err := g.syncMachineExcludes(nil); err != nil {
-			logger.Warn("Failed to remove .git/info/exclude block", "error", err)
+			g.log().Warn("Failed to remove .git/info/exclude block", "error", err)
 		}
 	}
 }

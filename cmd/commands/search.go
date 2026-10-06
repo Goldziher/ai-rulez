@@ -116,7 +116,7 @@ func runSearch(cmd *cobra.Command, out, errOut io.Writer, args []string) int {
 	setup := &mcp.ServeSetup{
 		Version: Version, Profile: searchFlags.profile, Preset: searchFlags.targets, Role: searchFlags.role,
 		Sources: searchFlags.sources, IncludeStatic: searchFlags.includeStatic, Frozen: searchFlags.frozen,
-		Offline: searchFlags.offline, NoWatch: true,
+		Offline: searchFlags.offline, NoWatch: true, WorkDir: workingDir(),
 	}
 	setup.Filter.Domains, setup.Filter.Allow, setup.Filter.Deny = searchFlags.domains, searchFlags.allow, searchFlags.deny
 	applyServeNetworkPolicy(setup.Frozen, setup.Offline)

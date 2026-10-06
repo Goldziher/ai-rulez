@@ -1,17 +1,17 @@
 package lint
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	proc "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // CodePluginManifest reports a plugin or marketplace manifest the Claude Code
@@ -329,18 +329,15 @@ type claudeIssue struct {
 // directory and merges its report. It is skipped when the binary is missing,
 // times out or prints something unparseable: the built-in checks already ran.
 func (r *runner) delegatePluginValidate(dir string) {
-	bin, err := exec.LookPath("claude")
-	if err != nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	var out bytes.Buffer
-	cmd := exec.CommandContext(ctx, bin, "plugin", "validate", dir, "--json") //nolint:gosec // bin comes from LookPath and the arguments are fixed; dir is a tracked plugin directory
-	cmd.Stdout = &out
-	_ = cmd.Run() //nolint:errcheck // a non-zero exit is how it reports errors; the JSON decides
+	// A missing binary, a timeout and a non-zero exit (how the tool reports errors)
+	// all leave the built-in checks as the answer; only parseable JSON is merged.
+	res := r.host.Run().Run(context.Background(), proc.Spec{
+		Argv:       []string{"claude", "plugin", "validate", dir, "--json"},
+		InheritEnv: true,
+		Timeout:    60 * time.Second,
+	})
 	var rep claudeValidation
-	if json.Unmarshal(out.Bytes(), &rep) != nil {
+	if res.Status == proc.StatusUnavailable || json.Unmarshal(res.Stdout, &rep) != nil {
 		return
 	}
 	manifest := filepath.Join(dir, ".claude-plugin", "plugin.json")

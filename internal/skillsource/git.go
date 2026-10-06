@@ -1,7 +1,6 @@
 package skillsource
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
 
@@ -48,14 +48,11 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	defer cancel()
 	// Everything a skill source names is untrusted: no hooks, helpers or submodules,
 	// and only the https, ssh and file transports (never ext::).
-	cmd := gitutil.Command(ctx, dir, append(gitutil.HardenedConfig(), args...)...)
-	cmd.Env = gitutil.HardenedEnv(nil)
-	var out, errOut bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errOut
-	if err := cmd.Run(); err != nil {
-		return "", oops.With("output", includes.RedactURL(strings.TrimSpace(errOut.String()))).Wrapf(err, "git %s", args[0])
+	res := gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, gitutil.HardenedEnv(nil), append(gitutil.HardenedConfig(), args...)...)
+	if err := gitutil.ResultErr(res); err != nil {
+		return "", oops.With("output", includes.RedactURL(strings.TrimSpace(string(res.Stderr)))).Wrapf(err, "git %s", args[0])
 	}
-	return strings.TrimSpace(out.String()), nil
+	return strings.TrimSpace(string(res.Stdout)), nil
 }
 
 // lsRemote resolves ref to a commit on the remote and says what kind of ref it

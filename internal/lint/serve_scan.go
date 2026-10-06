@@ -62,7 +62,7 @@ func UnscannableReason(content []byte) string {
 // cannot read (see UnscannableReason) is reported as CodeServedUnscannable, not
 // silently passed: an error for SKILL.md, otherwise a warning that the caller
 // turns into excluding the file from what it serves.
-func ScanServed(cfg *config.Config, name string, files []ServedFile, level string) []Finding {
+func ScanServed(cfg *config.Config, name string, files []ServedFile, level string, opts ...Option) []Finding {
 	top := ""
 	if cfg != nil {
 		top, _ = filepath.Abs(cfg.BaseDir) //nolint:errcheck // falls back to the given dir
@@ -71,10 +71,12 @@ func ScanServed(cfg *config.Config, name string, files []ServedFile, level strin
 		cfg = &config.Config{}
 	}
 	r := &runner{cfg: cfg, tree: &Tree{Top: top}, docs: map[string]doc{}, noInlineIgnore: true}
+	for _, opt := range opts {
+		opt(r)
+	}
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
-	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
 	r.resolveSettings()
 	if level == config.TrustError {
 		r.forceSev = SeverityError
