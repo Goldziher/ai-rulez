@@ -343,7 +343,8 @@ func (p *Plan) checkSecrets() error {
 }
 
 func caseTexts(c *evals.Case) []string {
-	texts := []string{c.Prompt, c.Rubric}
+	// RubricText covers both rubric and rubric_items: the optimizer receives either.
+	texts := []string{c.Prompt, c.RubricText()}
 	for _, a := range c.Assertions {
 		texts = append(texts, a.Value, a.Command)
 	}
