@@ -194,23 +194,13 @@ func runPublishMulti(out io.Writer, pc *publishContext, emitOnly string) error {
 	if err != nil {
 		return err
 	}
-	if publishTag != "" {
-		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "tags are <plugin>-v<version> for each plugin; --tag names the ref the marketplace index pins",
-			"--tag does not apply to a multi-plugin release")
+	if publishTag != "" && publishTo == publish.TargetGitHubRelease {
+		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "tags are <plugin>-v<version> for each plugin; --tag only names the ref a pinned marketplace index uses",
+			"--tag does not apply to a multi-plugin github release")
 	}
-	var dists []*publish.Dist
-	var plugins []pemit.Plugin
-	for _, spec := range specs {
-		in, err := pc.newInput(spec)
-		if err != nil {
-			return err
-		}
-		d, err := publish.Build(*in)
-		if err != nil {
-			return err //nolint:wrapcheck // a publish.Error carries the exit status
-		}
-		dists = append(dists, d)
-		plugins = append(plugins, emitPluginOf(spec, d))
+	dists, plugins, err := pc.buildAll(specs)
+	if err != nil {
+		return err
 	}
 	agg, err := pc.buildAggregate(plugins)
 	if err != nil {
@@ -227,18 +217,8 @@ func runPublishMulti(out io.Writer, pc *publishContext, emitOnly string) error {
 			return err
 		}
 	}
-	for i, d := range dists {
-		warnAll(d.Warnings)
-		if err := printMultiPlugin(out, specs[i], d, filepath.Join(pc.distAbs, multiPluginsDir, specs[i].name)); err != nil {
-			return err
-		}
-	}
-	if agg != nil {
-		warnAll(agg.Warnings)
-		fmt.Fprintf(out, "aggregate   %d files to %s\n", len(agg.Files), filepath.Join(pc.distAbs, multiAggregateDir))
-		for _, a := range agg.Plan.Artifacts {
-			fmt.Fprintf(out, "            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
-		}
+	if err := pc.printMulti(out, specs, dists, agg); err != nil {
+		return err
 	}
 	if !publishExecute {
 		return nil
@@ -247,6 +227,43 @@ func runPublishMulti(out io.Writer, pc *publishContext, emitOnly string) error {
 		if err := executeDist(pc.ctx, d, filepath.Join(pc.distAbs, multiPluginsDir, specs[i].name)); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// buildAll builds the dist of every plugin and describes each to the emitters.
+func (pc *publishContext) buildAll(specs []*pluginSpec) ([]*publish.Dist, []pemit.Plugin, error) {
+	var dists []*publish.Dist
+	var plugins []pemit.Plugin
+	for _, spec := range specs {
+		in, err := pc.newInput(spec)
+		if err != nil {
+			return nil, nil, err
+		}
+		d, err := publish.Build(*in)
+		if err != nil {
+			return nil, nil, err //nolint:wrapcheck // a publish.Error carries the exit status
+		}
+		dists = append(dists, d)
+		plugins = append(plugins, emitPluginOf(spec, d))
+	}
+	return dists, plugins, nil
+}
+
+func (pc *publishContext) printMulti(out io.Writer, specs []*pluginSpec, dists []*publish.Dist, agg *publish.Dist) error {
+	for i, d := range dists {
+		warnAll(d.Warnings)
+		if err := printMultiPlugin(out, specs[i], d, filepath.Join(pc.distAbs, multiPluginsDir, specs[i].name)); err != nil {
+			return err
+		}
+	}
+	if agg == nil {
+		return nil
+	}
+	warnAll(agg.Warnings)
+	fmt.Fprintf(out, "aggregate   %d files to %s\n", len(agg.Files), filepath.Join(pc.distAbs, multiAggregateDir))
+	for _, a := range agg.Plan.Artifacts {
+		fmt.Fprintf(out, "            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
 	}
 	return nil
 }

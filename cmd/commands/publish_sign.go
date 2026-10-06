@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/samber/oops"
@@ -195,7 +196,7 @@ func cachedTrustedRoot(env ambient.Env) root.TrustedMaterial {
 	if err != nil {
 		return nil
 	}
-	data, err := readKeyFile(dir + string(os.PathSeparator) + signing.TrustedRootFile)
+	data, err := readKeyFile(filepath.Join(dir, signing.TrustedRootFile))
 	if err != nil {
 		return nil
 	}

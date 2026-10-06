@@ -28,19 +28,18 @@ type publishContext struct {
 	distAbs string
 	multi   bool
 
-	lockBytes   []byte
-	lock        *lockfile.File
-	src         publish.SourceInfo
-	mtime       int64
-	repo        string
-	approval    *publish.ApprovalInfo
-	sbom        []byte
-	signer      signing.Signer
-	prevLock    []byte
-	prevLabel   string
-	repoPath    string
-	ctx         context.Context
-	emitRequest *publish.EmitRequest
+	lockBytes []byte
+	lock      *lockfile.File
+	src       publish.SourceInfo
+	mtime     int64
+	repo      string
+	approval  *publish.ApprovalInfo
+	sbom      []byte
+	signer    signing.Signer
+	prevLock  []byte
+	prevLabel string
+	repoPath  string
+	ctx       context.Context
 }
 
 // newPublishContext resolves the lock, the source, the policy gates, the SBOM,
@@ -128,7 +127,7 @@ func (pc *publishContext) resolveRepo(pluginRepo string) string {
 // previousLock reads the lock the release notes diff against: the lock at
 // --since (an error when it cannot be read), else at the previous tag (skipped
 // quietly when there is none or it held no lock).
-func (pc *publishContext) previousLock(top string) ([]byte, string, error) {
+func (pc *publishContext) previousLock(top string) (data []byte, label string, err error) {
 	lockRel := gitutil.RepoRelative(top, lockfile.Path(pc.cfg.ConfigDir))
 	if top == "" || lockRel == "" {
 		if publishSince != "" {
