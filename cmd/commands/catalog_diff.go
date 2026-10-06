@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	projectload "github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -196,7 +197,7 @@ func revisionSide(ctx context.Context, project *catalogDiffProject, rev string) 
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
-	revCfg, err := config.LoadConfigFromDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
+	revCfg, err := projectload.LoadDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("rev", rev).Wrapf(err, "load the configuration at revision %q", rev)
 	}
