@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
@@ -186,4 +187,36 @@ func (g *Generator) outputMatcher(outputs []config.OutputFile) *outputMatcher {
 		m.add(g.config.OKFDir(), true)
 	}
 	return m
+}
+
+// wholeMergedDocuments lists the merged documents (manifest paths) this run wrote
+// without any content of the user's: ai-rulez created them, so it may delete them
+// once its keys leave.
+func (g *Generator) wholeMergedDocuments(outputs []config.OutputFile) map[string]bool {
+	whole := map[string]bool{}
+	for _, output := range outputs {
+		if output.IsDir || output.PartiallyOwned || len(output.MergeClaims) == 0 {
+			continue
+		}
+		whole[g.relSlash(g.absOutputPath(output.Path))] = true
+	}
+	return whole
+}
+
+// addMergedDigests records the digest of each whole merged document claimed in
+// merged, as written to disk.
+func (g *Generator) addMergedDigests(digests *map[string]string, merged map[string][]jsonmerge.Claim, whole map[string]bool) {
+	for rel := range merged {
+		if !whole[rel] {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
+		if err != nil {
+			continue
+		}
+		if *digests == nil {
+			*digests = map[string]string{}
+		}
+		(*digests)[rel] = fileDigest(data)
+	}
 }
