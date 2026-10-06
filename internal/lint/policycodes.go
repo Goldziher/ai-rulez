@@ -1,6 +1,13 @@
 package lint
 
-import "path/filepath"
+import (
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+)
 
 // Codes of the organization policy (internal/policy, docs/policy.md). AR74x is
 // the policy block of the allocation table in docs/strict-validation.md.
@@ -89,6 +96,7 @@ func (r *runner) applyPolicy() {
 		return
 	}
 	out := r.cfg.PolicyOutcome
+	r.protected = ProtectedCodes(out)
 	for _, code := range policyCodes {
 		r.sev[code] = SeverityError
 		delete(r.ignore, code)
@@ -129,3 +137,121 @@ func (r *runner) checkPolicy() {
 		r.add(v.Code, file, max(v.Line, 1), "%s", v.Message)
 	}
 }
+
+// ProtectedCodes lists the rule codes a policy shields from suppression: its
+// required codes, the codes it floors and its own AR740-AR745. Ignore comments,
+// ignore_paths, baselines and [lint.tolerate] do not apply to them. It is nil
+// without a policy.
+func ProtectedCodes(out *config.PolicyOutcome) map[string]bool {
+	if out == nil {
+		return nil
+	}
+	set := map[string]bool{}
+	for _, code := range policyCodes {
+		set[code] = true
+	}
+	for code := range out.SeverityFloor {
+		set[resolveOrKeep(code)] = true
+	}
+	for _, code := range out.RequiredCodes {
+		set[resolveOrKeep(code)] = true
+	}
+	return set
+}
+
+func resolveOrKeep(key string) string {
+	if code, ok := ResolveCode(key); ok {
+		return code
+	}
+	return key
+}
+
+// Suppression routes named in the AR740 finding of an attempt.
+const (
+	routeIgnorePaths = "[lint] ignore_paths"
+	routeInline      = "ai-rulez-lint-ignore comment"
+	routeBaseline    = "baseline"
+	routeTolerate    = "[lint.tolerate]"
+)
+
+// suppressed reports whether path or inline ignores hide a finding. A code the
+// policy protects is never hidden: the attempt is recorded for one report.
+func (r *runner) suppressed(code, abs string, line int) bool {
+	if r.pathIgnored(abs) {
+		if !r.refuseSuppression(code, routeIgnorePaths) {
+			return true
+		}
+	}
+	if r.inlineIgnored(abs, line, code) {
+		if !r.refuseSuppression(code, routeInline) {
+			return true
+		}
+	}
+	return false
+}
+
+// pathSuppresses is suppressed for the path route alone.
+func (r *runner) pathSuppresses(code, abs string) bool {
+	return r.pathIgnored(abs) && !r.refuseSuppression(code, routeIgnorePaths)
+}
+
+// refuseSuppression records an attempted suppression of a protected code and
+// reports true; it reports false for an unprotected one.
+func (r *runner) refuseSuppression(code, route string) bool {
+	if !r.protected[code] {
+		return false
+	}
+	if r.attempts == nil {
+		r.attempts = map[string]map[string]bool{}
+	}
+	if r.attempts[route] == nil {
+		r.attempts[route] = map[string]bool{}
+	}
+	r.attempts[route][code] = true
+	return true
+}
+
+// reportSuppressionAttempts emits one AR740 per route that tried to hide a
+// protected code. It appends directly: AR740 itself is not suppressible.
+func (r *runner) reportSuppressionAttempts() {
+	routes := make([]string, 0, len(r.attempts))
+	for route := range r.attempts {
+		routes = append(routes, route)
+	}
+	sort.Strings(routes)
+	file := r.configFilePath()
+	for _, route := range routes {
+		codes := make([]string, 0, len(r.attempts[route]))
+		for code := range r.attempts[route] {
+			codes = append(codes, code)
+		}
+		sort.Strings(codes)
+		r.findings = append(r.findings, suppressionAttempt(r.display(file), route, codes, r.display(r.rootAbs())))
+	}
+}
+
+func suppressionAttempt(file, route string, codes []string, root string) Finding {
+	rule, _ := lookupRule(CodePolicyLoosened) //nolint:errcheck // registered
+	return Finding{
+		Code: CodePolicyLoosened, Name: rule.Name, Severity: SeverityError, File: file, Line: 1, Root: root,
+		Message: fmt.Sprintf("%s tries to hide %s; the organization policy protects these codes, so the findings are reported anyway",
+			route, strings.Join(codes, ", ")),
+	}
+}
+
+// refuse adds the one AR740 finding per route that tried to
+// accept or tolerate a protected code through a baseline or [lint.tolerate].
+func (r *Report) refuse(route string, codes []string) {
+	if len(codes) == 0 {
+		return
+	}
+	sort.Strings(codes)
+	f := suppressionAttempt(r.ConfigFile, route, codes, r.Root)
+	f.meta().Path = r.ConfigFile
+	annotateAnalyzer(&f)
+	r.Findings = append(r.Findings, f)
+}
+
+// RefuseTolerate reports a [lint.tolerate] entry for protected codes, which the
+// caller dropped from the budgets.
+func (r *Report) RefuseTolerate(codes []string) { r.refuse(routeTolerate, codes) }

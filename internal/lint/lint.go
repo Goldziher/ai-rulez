@@ -74,6 +74,13 @@ type Report struct {
 	// [lint] analyzers); nil when every analyzer ran. Baseline entries of the
 	// analyzers that did not run are neither stale nor rewritten.
 	Analyzers []string `json:"-"`
+	// Protected holds the codes the organization policy protects from
+	// suppression (required or floored codes and AR740-AR745): a baseline never
+	// accepts them and [lint.tolerate] never tolerates them.
+	Protected map[string]bool `json:"-"`
+	// ConfigFile is the display path of the configuration file, where the
+	// policy reports a suppression attempt.
+	ConfigFile string `json:"-"`
 	// Units counts the units (checks and scans) the run executed, by name: the
 	// proof that an analyzer that was not selected did not run.
 	Units map[string]int `json:"-"`
@@ -139,6 +146,10 @@ type runner struct {
 	docs         map[string]doc
 	counter      tokens.Counter
 	findings     []Finding
+	// protected holds the codes the organization policy protects from every
+	// suppression route; attempts records the routes a repository tried on them.
+	protected map[string]bool
+	attempts  map[string]map[string]bool
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
 	forceSev Severity
@@ -291,6 +302,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	}
 	r.unit(unitOf("settings-config", AnalyzerHooks, AnalyzerSecurity), r.checkSettingsConfig)
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
+	r.reportSuppressionAttempts()
 	r.keepSelected()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
@@ -304,7 +316,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
 		Units: map[string]int{}, unitRuns: r.units}
 	for name, u := range r.units {
 		rep.Units[name] = u.count
@@ -451,7 +463,7 @@ func (r *runner) addWithSeverity(code string, override Severity, abs string, lin
 	if sev == SeverityOff || r.ignore[code] {
 		return
 	}
-	if r.pathIgnored(abs) || r.inlineIgnored(abs, line, code) {
+	if r.suppressed(code, abs, line) {
 		return
 	}
 	if exampleAware[code] && r.inExample(abs, line) {

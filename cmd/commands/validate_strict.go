@@ -295,6 +295,7 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 	if err := applyBaselines(reports, cfgs); err != nil {
 		return fail(err)
 	}
+	reportRefusedBudgets(reports, cfgs)
 	excess = make([][]lint.BudgetExcess, len(reports))
 	for i, report := range reports {
 		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)

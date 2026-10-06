@@ -124,7 +124,7 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 	if r.opts.Scanner.WriteBaseline && path != "" {
 		r.writeScannerBaseline(path, all, findings, ran)
 	}
-	rep := &Report{Findings: findings}
+	rep := &Report{Findings: findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), Root: r.display(r.rootAbs())}
 	var res BaselineResult
 	if path != "" {
 		b, err := LoadBaseline(path)
@@ -134,6 +134,7 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 			res = ApplyBaseline(rep, b, path, r.opts.Scanner.today(r.host))
 		}
 	}
+	r.findings = append(r.findings, rep.Findings[len(findings):]...) // policy refusals of the baseline
 	for _, e := range res.Expired {
 		r.addAt(CodeScannerBaselineExpired, path, fmt.Sprintf("[%s] the baseline entry for %s in %s expired on %s; the finding is reported again (remove the entry or renew it with --write-baseline)",
 			e.Scanner, e.Rule, e.File, e.Expires))

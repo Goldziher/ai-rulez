@@ -2,6 +2,7 @@ package lint
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -109,5 +110,84 @@ func TestPolicyCodesAreRegisteredAndClassified(t *testing.T) {
 	}
 	if code, ok := ResolveCode("secret-detected"); !ok || code != CodeSecretDetected {
 		t.Errorf("ResolveCode(name) = %q, %v", code, ok)
+	}
+}
+
+func TestPolicyCodesCannotBeSuppressedByPathOrInlineIgnores(t *testing.T) {
+	protected := []*config.PolicyOutcome{
+		{RequiredCodes: []string{"AR001"}},
+		{SeverityFloor: map[string]string{"AR001": "error"}},
+	}
+	tests := []struct {
+		name      string
+		table     string
+		rule      string
+		attempted string // route named by the AR740 finding; "" when no suppression is attempted
+	}{
+		{"ignore_paths", "[lint]\nignore_paths = [\".ai-rulez/rules/r.md\", \"rules/r.md\"]\n",
+			"---\nname: r\n---\nkey AKIAIOSFODNN7EXAMPLE\n", "ignore_paths"},
+		{"inline code", "", "---\nname: r\n---\n<!-- ai-rulez-lint-ignore: AR001 -->\nkey AKIAIOSFODNN7EXAMPLE\n", "ai-rulez-lint-ignore"},
+		{"inline blanket", "", "---\nname: r\n---\n<!-- ai-rulez-lint-ignore -->\nkey AKIAIOSFODNN7EXAMPLE\n", "ai-rulez-lint-ignore"},
+		{"nothing attempted", "", "---\nname: r\n---\nkey AKIAIOSFODNN7EXAMPLE\n", ""},
+	}
+	for _, out := range protected {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				// Arrange
+				root := t.TempDir()
+				files := policyFixture(tt.table)
+				files[".ai-rulez/rules/r.md"] = tt.rule
+				writeFiles(t, root, files)
+				gitAdd(t, root)
+				// Act
+				findings := lintWithOutcome(t, root, out)
+				// Assert
+				if countCode(findings, CodeSecretDetected) != 1 {
+					t.Fatalf("AR001 must still be reported once: %v", findings)
+				}
+				wantAttempts := 0
+				if tt.attempted != "" {
+					wantAttempts = 1
+				}
+				attempts := 0
+				for _, f := range findings {
+					if f.Code == CodePolicyLoosened && strings.Contains(f.Message, tt.attempted) && tt.attempted != "" {
+						attempts++
+					}
+				}
+				if attempts != wantAttempts {
+					t.Fatalf("suppression attempts via %q = %d, want %d: %v", tt.attempted, attempts, wantAttempts, findings)
+				}
+			})
+		}
+	}
+}
+
+func TestUnprotectedCodesStillHonorIgnores(t *testing.T) {
+	// Arrange: the policy protects another code, so AR001 keeps its ignore.
+	root := t.TempDir()
+	writeFiles(t, root, policyFixture("[lint]\nignore_paths = [\".ai-rulez/rules/r.md\", \"rules/r.md\"]\n"))
+	gitAdd(t, root)
+	// Act
+	findings := lintWithOutcome(t, root, &config.PolicyOutcome{RequiredCodes: []string{"AR008"}})
+	// Assert
+	if countCode(findings, CodeSecretDetected) != 0 || countCode(findings, CodePolicyLoosened) != 0 {
+		t.Fatalf("an unprotected code keeps its ignore and nothing is reported: %v", findings)
+	}
+}
+
+func TestPolicyFindingsIgnoreIgnorePaths(t *testing.T) {
+	// Arrange: ignore_paths covers the config file the policy findings point at.
+	root := t.TempDir()
+	writeFiles(t, root, policyFixture("[lint]\nignore_paths = [\".ai-rulez/config.toml\", \"config.toml\"]\n"))
+	gitAdd(t, root)
+	out := &config.PolicyOutcome{Violations: []config.PolicyViolation{
+		{Code: CodePolicyLoosened, Key: "lint.severity.AR008", Line: 3, Message: "below the floor"},
+	}}
+	// Act
+	findings := lintWithOutcome(t, root, out)
+	// Assert
+	if countCode(findings, CodePolicyLoosened) == 0 {
+		t.Fatalf("AR740 must survive ignore_paths: %v", findings)
 	}
 }
