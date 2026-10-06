@@ -36,7 +36,10 @@
           },
           "code": { "enum": ["AR730", "AR731", "AR732", "AR735"] },
           "note": { "type": "string" },
-          "downgrade": { "type": "boolean", "description": "The newest allowed tag is below the pinned one; update needs --allow-downgrade." },
+          "downgrade": {
+            "type": "boolean",
+            "description": "The newest allowed tag is below the pinned one; update needs --allow-downgrade."
+          },
           "major_available": { "type": "boolean", "description": "A newer major version than the allowed one exists." }
         }
       }

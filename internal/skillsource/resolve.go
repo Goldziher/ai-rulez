@@ -203,7 +203,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	res.Tag, res.TagObject = tag.Tag, tag.TagObject
 	if !res.Pinned {
 		logger.Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
-			"source", spec.Name, "ref", refLabel(spec.Ref), "commit", commit)
+			"source", spec.Name, "ref", refLabel(spec.Want().Ref), "commit", commit)
 	}
 	return res, nil
 }
@@ -338,7 +338,7 @@ func pickVersion(ctx context.Context, spec Spec, opts Options, q commitSearch, w
 	list := func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return tagresolve.ListTags(ctx, func(ctx context.Context, args ...string) (string, error) { return runGit(ctx, "", args...) }, q.url)
 	}
-	res, err := includes.ResolveVersion(ctx, opts.Lock, w, opts.Refresh, q.offline, list)
+	res, err := includes.ResolveVersion(ctx, opts.Lock, w, includes.RunMode{Refresh: opts.Refresh, Offline: q.offline}, list)
 	if err != nil {
 		return "", "", res, oops.With("url", spec.Redacted()).Wrapf(err, "skill source %q", spec.Name)
 	}
