@@ -48,16 +48,66 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 // selfApprovalsAgainst lists the approvals of lock that arrived together with
 // the content they approve, relative to rev.
 func selfApprovalsAgainst(cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
-	base, _, err := baseLockOf(cfg, rev)
+	base, mergeBase, err := baseLockOf(cfg, rev)
 	if err != nil {
 		return nil, err
 	}
 	found := approval.SelfApprovals(base, lock)
+	changes, err := approval.OwnershipChanges(cfg, mergeBase)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
+	for _, note := range changes {
+		found = append(found, approval.SelfApproval{Note: note})
+	}
+	found = append(found, unownedAtBase(cfg, lock, base, found, mergeBase)...)
 	authored, err := authorSelfApprovals(cfg, lock, rev)
 	if err != nil {
 		return nil, err
 	}
 	return append(found, authored...), nil
+}
+
+// unownedAtBase flags the approvals added in the range (absent from base) whose reviewer does not
+// own the item according to CODEOWNERS as it was at the merge base, so editing
+// CODEOWNERS in the change cannot make an approval authorized. It applies only
+// with approvers_from set.
+func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approval.SelfApproval, mergeBase string) []approval.SelfApproval {
+	if lock == nil || cfg.Governance == nil || cfg.Governance.ApproversFrom == "" || mergeBase == "" {
+		return nil
+	}
+	policy := approval.PolicyOf(cfg)
+	owners := approval.LoadOwnerSetAt(cfg.BaseDir, cfg.ConfigDir, cfg.Governance.ApproversFrom, mergeBase)
+	subjects := map[string]approval.Subject{}
+	for _, s := range approval.SubjectsOf(lock, lock.Item) {
+		subjects[s.Key()] = s
+	}
+	already := map[string]bool{}
+	for _, s := range added {
+		already[s.Ref+"\x00"+approval.NormalizeReviewer(s.Approval.Reviewer)] = true
+	}
+	had := map[string]bool{}
+	if base != nil {
+		for _, a := range base.Approval {
+			had[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] = true
+		}
+	}
+	var out []approval.SelfApproval
+	for _, a := range lock.Approval {
+		s, ok := subjects[a.ItemKey()]
+		if !ok || s.Digest != a.Digest || had[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] {
+			continue
+		}
+		if o, covered := owners.OwnersOf(s); covered && policy.Teams.Matches(o, a.Reviewer) {
+			continue
+		}
+		if already[s.Ref()+"\x00"+approval.NormalizeReviewer(a.Reviewer)] {
+			continue
+		}
+		note := fmt.Sprintf("the approval of %s by %s is not by an owner of it in CODEOWNERS at %s (the base of the range)", s.Ref(), a.Reviewer, mergeBase[:min(len(mergeBase), 12)])
+		out = append(out, approval.SelfApproval{Note: note})
+	}
+	return out
 }
 
 // authorSelfApprovals is forbid_self_approval: the approvals of the current
