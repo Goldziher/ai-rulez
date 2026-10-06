@@ -119,7 +119,7 @@ func withVersion(w lockfile.Want, v config.VersionSpec) lockfile.Want {
 	if !v.Active() {
 		return w
 	}
-	w.Ref, w.Constraint, w.TagPrefix, w.IncludePrerelease, w.MinReleaseAge = v.Constraint, v.Constraint, v.TagPrefix, v.IncludePrerelease, v.MinReleaseAge
+	w.Ref, w.Constraint, w.TagPrefix, w.IncludePrerelease = v.Constraint, v.Constraint, v.TagPrefix, v.IncludePrerelease
 	return w
 }
 
@@ -237,7 +237,7 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 		entry := lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest}
 		if w.Constraint != "" {
 			t, _ := recordedTag(cfg.BaseDir, w.Kind, w.Name)
-			entry.Tag, entry.TagObject, entry.Released, entry.ReleasedFrom = t.tag, t.tagObject, t.released, t.releasedFrom
+			entry.Tag, entry.TagObject = t.tag, t.tagObject
 		}
 		out.Set(w.Kind, entry)
 	}

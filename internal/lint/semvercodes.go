@@ -10,6 +10,8 @@ const (
 	CodeConstraintUnsatisfiable = "AR730"
 	CodeConstraintInvalid       = "AR731"
 	CodeTagMoved                = "AR732"
+	CodeReleaseHeldBack         = "AR733"
+	CodeSourceOutdated          = "AR734"
 	CodeLockedTagMissing        = "AR735"
 )
 
@@ -18,6 +20,8 @@ func init() {
 		RuleInfo{CodeConstraintUnsatisfiable, "constraint-unsatisfiable", SeverityError, "no tag of the source satisfies its version constraint (or the source has no semantic version tags)"},
 		RuleInfo{CodeConstraintInvalid, "constraint-invalid", SeverityError, "a version constraint does not parse, or an include, installed skill or skill source sets both ref and version"},
 		RuleInfo{CodeTagMoved, "tag-moved", SeverityError, "a tag pinned in ai-rulez.lock now points to another commit; it is never followed silently"},
+		RuleInfo{CodeReleaseHeldBack, "release-held-back", SeverityInfo, "a tag that satisfies a version constraint was held back by min_release_age; the next older tag (or the pin) is used"},
+		RuleInfo{CodeSourceOutdated, "source-outdated", SeverityOff, "a remote source has a newer tag its version constraint allows; reported by `lock --outdated` once enabled in [lint.severity]"},
 		RuleInfo{CodeLockedTagMissing, "locked-tag-missing", SeverityWarning, "a tag pinned in ai-rulez.lock no longer exists on the remote; the pinned commit is still used"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
@@ -36,6 +40,16 @@ func init() {
 			Bad:  "`v1.2.4` was pinned at commit 0f3e and the remote now has it at b21c",
 			Good: "Review the new commit, then run `ai-rulez update <source> --accept-moved-tag` to re-pin it",
 		},
+		CodeReleaseHeldBack: {
+			Why:  "A tag published a moment ago may be a compromised release. `min_release_age` waits until the tag has existed for that long, and `lock` and `update` take the newest tag that is old enough. The release time comes from the forge, else from the first time this machine saw the tag, else from the commit date (`[lock] min_release_age_source`).",
+			Bad:  "`min_release_age = \"7d\"` and `v1.3.1` was released two days ago: `lock` pins `v1.3.0` instead",
+			Good: "Wait for the tag to age, lower `min_release_age`, or run `ai-rulez lock --outdated` on a schedule so the first-seen record starts early",
+		},
+		CodeSourceOutdated: {
+			Why:  "A pin that never moves falls behind security fixes. This finding is off by default; turn it on to make a scheduled `ai-rulez lock --outdated` fail (error) or warn (warning) when a source has a newer tag its constraint allows.",
+			Bad:  "`v1.2.4` is pinned and `v1.3.1` satisfies `^1.2`",
+			Good: "Run `ai-rulez update` after reviewing the diff, or leave the rule off",
+		},
 		CodeLockedTagMissing: {
 			Why:  "The tag was deleted from the remote. The pinned commit may still be fetchable, so generation continues, but the version label can no longer be checked.",
 			Bad:  "A release tag removed after the lock was written",
@@ -45,5 +59,7 @@ func init() {
 	SetAnalyzer(CodeConstraintUnsatisfiable, AnalyzerLock, ScopeBundle)
 	SetAnalyzer(CodeConstraintInvalid, AnalyzerConfig, ScopeBundle)
 	SetAnalyzer(CodeTagMoved, AnalyzerLock, ScopeBundle)
+	SetAnalyzer(CodeReleaseHeldBack, AnalyzerLock, ScopeBundle)
+	SetAnalyzer(CodeSourceOutdated, AnalyzerLock, ScopeBundle)
 	SetAnalyzer(CodeLockedTagMissing, AnalyzerLock, ScopeBundle)
 }

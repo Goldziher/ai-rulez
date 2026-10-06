@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -97,7 +98,11 @@ func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File
 		if err != nil {
 			return nil, err
 		}
-		rows = append(rows, tagresolve.Evaluate(s.kind, s.name, s.want, lock.Find(s.kind, s.name), tags))
+		var gate *tagresolve.AgeGate
+		if includes.ReleaseGate != nil {
+			gate = includes.ReleaseGate(s.want)
+		}
+		rows = append(rows, tagresolve.EvaluateGated(ctx, s.kind, s.name, s.want, lock.Find(s.kind, s.name), tags, gate))
 	}
 	return rows, nil
 }
@@ -122,6 +127,7 @@ func outdatedAt(path string, kind string, names []string) int {
 	for _, n := range names {
 		wanted[n] = true
 	}
+	defer installReleaseGateFor(cfg)()
 	srcs := versionSources(cfg, kind, wanted)
 	if err := checkNamesMatched(srcs, wanted); err != nil {
 		fmtError(err)
@@ -133,6 +139,7 @@ func outdatedAt(path string, kind string, names []string) int {
 		return 1
 	}
 	report := tagresolve.NewReport(rows)
+	report.MarkOutdated(lintSeverityOf(cfg, tagresolve.CodeOutdated, "source-outdated"))
 	if lockFormat == formatJSON {
 		err = report.WriteJSON(os.Stdout)
 	} else {
@@ -143,6 +150,20 @@ func outdatedAt(path string, kind string, names []string) int {
 		return 1
 	}
 	return outdatedExit(report)
+}
+
+// lintSeverityOf is the [lint.severity] value for a rule given by code or name,
+// lower case; "" when the table does not name it.
+func lintSeverityOf(cfg *config.Config, code, name string) string {
+	if cfg == nil || cfg.Lint == nil {
+		return ""
+	}
+	for key, val := range cfg.Lint.Severity {
+		if strings.EqualFold(key, code) || strings.EqualFold(key, name) {
+			return strings.ToLower(strings.TrimSpace(val))
+		}
+	}
+	return ""
 }
 
 // outdatedExit: 2 for an error finding (a moved tag, an unresolvable constraint)
