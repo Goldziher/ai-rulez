@@ -213,7 +213,7 @@ func TestDryRunStartsNothingAndPrintsThePlan(t *testing.T) {
 	assert.Empty(t, scannerFindings(findings))
 	assert.Equal(t, 0, runs(t, counter), "a dry run starts no scanner")
 	plan := out.String()
-	assert.Contains(t, plan, "scanner count (egress = false")
+	assert.Contains(t, plan, "scanner count (egress = false, format = sarif)", "an unset format is shown as its default")
 	assert.Contains(t, plan, bin)
 	assert.Contains(t, plan, "<stage>")
 	assert.Contains(t, plan, ".ai-rulez/rules/r.md")
