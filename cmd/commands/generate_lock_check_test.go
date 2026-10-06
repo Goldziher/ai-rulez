@@ -36,7 +36,7 @@ func TestGenerateCheck_LockedFlagsRequireTheLockToMatch(t *testing.T) {
 		recursive bool
 		want      int
 	}{
-		{"plain check ignores the lock", false, false, false, 0},
+		{"plain check verifies an enforced lock", false, false, false, exitDrift},
 		{"locked", true, false, false, exitDrift},
 		{"frozen", false, true, false, exitDrift},
 		{"locked recursive", true, false, true, exitDrift},

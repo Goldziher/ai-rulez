@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,30 @@ import (
 // generated files match, 1 means the check could not run (bad configuration, no
 // manifest), 2 means at least one generated file differs.
 const exitDrift = 2
+
+// exitRank orders exit codes by severity: a tool error (1) outranks drift (2),
+// which outranks a partial result (3, `lock` left skills unpinned).
+func exitRank(code int) int {
+	switch code {
+	case 0:
+		return 0
+	case 1:
+		return 3
+	case exitDrift:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// worstExit returns the more severe of two exit codes (1 wins over 2 wins over
+// 3 wins over 0), the rule `generate` and `lock` share over several roots.
+func worstExit(a, b int) int {
+	if exitRank(b) > exitRank(a) {
+		return b
+	}
+	return a
+}
 
 // driftMode selects how a config is checked.
 type driftMode int
@@ -88,17 +113,32 @@ func displayDriftPath(cfg *config.Config, rel string) string {
 // runDriftCheck checks a single root (args) or every root under the working
 // directory (recursive) and returns the process exit code.
 func runDriftCheck(args []string, isRecursive bool, mode driftMode) int {
+	return runDriftCheckGated(args, isRecursive, mode, nil)
+}
+
+// runDriftCheckGated is runDriftCheck with a gate run on every loaded config
+// before its generated files are compared, so one load serves both. A gate error
+// that is lock drift (errLockedSourceDrift or config.ErrLockViolation) counts as
+// drift (exit 2), any other gate error as a failure (exit 1).
+func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate func(*config.Config) error) int {
 	fix := "run `ai-rulez generate` and commit the result"
 	if isRecursive {
-		return runRecursiveDrift(mode, fix)
+		return runRecursiveDrift(mode, fix, gate)
 	}
 	cfg, err := loadConfigForCommand(context.Background(), args, driftLoadOptions(mode)...)
 	if err != nil {
 		fmtError(err)
+		if gate != nil && errors.Is(err, config.ErrLockViolation) {
+			return exitDrift // remote content disagrees with the lock: drift, not a tool failure
+		}
 		return 1
 	}
 	if err := cfg.Validate(); err != nil {
 		fmtError(err)
+		return 1
+	}
+	gateDrift, gateErr := runGate(gate, cfg)
+	if gateErr {
 		return 1
 	}
 	applyGenerateOverrides(cfg)
@@ -107,16 +147,35 @@ func runDriftCheck(args []string, isRecursive bool, mode driftMode) int {
 		fmtError(err)
 		return 1
 	}
+	if gateDrift {
+		return exitDrift
+	}
 	return finishDrift(n, 1, fix)
 }
 
-func runRecursiveDrift(mode driftMode, fix string) int {
+// runGate runs the gate on cfg and reports whether it found lock drift or failed.
+func runGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed bool) {
+	if gate == nil {
+		return false, false
+	}
+	err := gate(cfg)
+	if err == nil {
+		return false, false
+	}
+	fmtError(err)
+	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation) {
+		return true, false
+	}
+	return false, true
+}
+
+func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) error) int {
 	paths := findConfigFilesRecursively()
 	if len(paths) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
 	}
-	total, failed := 0, 0
+	total, failed, gateDrift := 0, 0, 0
 	for _, path := range paths {
 		cfg, err := config.LoadConfigFromFile(context.Background(), path, driftLoadOptions(mode)...)
 		if err == nil {
@@ -124,8 +183,20 @@ func runRecursiveDrift(mode driftMode, fix string) int {
 		}
 		if err != nil {
 			fmtError(oops.With("config", path).Wrapf(err, "load configuration"))
+			if gate != nil && errors.Is(err, config.ErrLockViolation) {
+				gateDrift++
+			} else {
+				failed++
+			}
+			continue
+		}
+		drift, gateFailed := runGate(gate, cfg)
+		if gateFailed {
 			failed++
 			continue
+		}
+		if drift {
+			gateDrift++
 		}
 		applyGenerateOverrides(cfg)
 		n, err := checkConfigDrift(cfg, mode)
@@ -138,6 +209,9 @@ func runRecursiveDrift(mode driftMode, fix string) int {
 	}
 	if failed > 0 {
 		return 1
+	}
+	if total == 0 && gateDrift > 0 {
+		return exitDrift
 	}
 	return finishDrift(total, len(paths), fix)
 }
