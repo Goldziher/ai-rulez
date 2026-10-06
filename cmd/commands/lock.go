@@ -135,6 +135,12 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
+	// Pin only what generate would accept: a lock for a configuration that
+	// fails validation would record content no run can use.
+	if err := cfg.Validate(); err != nil {
+		fmtError(err)
+		return 1
+	}
 	current, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
 		fmtError(err)
