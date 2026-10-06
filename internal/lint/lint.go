@@ -411,8 +411,17 @@ func (r *runner) display(abs string) string {
 // add records a finding unless it is disabled, ignored in config, or ignored
 // by an inline `ai-rulez-lint-ignore` comment on the line or the one above.
 func (r *runner) add(code, abs string, line int, format string, args ...any) {
+	r.addWithSeverity(code, "", abs, line, format, args...)
+}
+
+// addWithSeverity is add with a caller-chosen severity in place of the rule's
+// configured one; "" keeps it. A rule switched off stays off.
+func (r *runner) addWithSeverity(code string, override Severity, abs string, line int, format string, args ...any) {
 	r.audit(code)
 	sev := r.sev[code]
+	if override != "" && sev != SeverityOff {
+		sev = override
+	}
 	if sev == SeverityOff || r.ignore[code] {
 		return
 	}

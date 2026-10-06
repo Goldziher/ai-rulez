@@ -30,7 +30,7 @@ const CodeServedUnscannable = "AR989"
 
 func init() {
 	registerRules(RuleInfo{CodeServedUnscannable, "served-file-unscannable", SeverityWarning,
-		"a served skill file is binary or larger than 512 KiB, so the security scan cannot read it; the server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one"})
+		"a skill file the server would serve is binary or larger than 512 KiB, so the security scan cannot read it; reported for authored skills too. The server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one"})
 	registerRuleDocs(map[string]RuleDoc{
 		CodeServedUnscannable: {
 			Why:  "The security scan only reads text of bounded size, so a binary or oversized served file would reach the agent unscanned; the server refuses it from a remote source and refuses a skill whose SKILL.md is one.",
@@ -45,7 +45,7 @@ func init() {
 func UnscannableReason(content []byte) string {
 	switch {
 	case len(content) > MaxServedScanBytes:
-		return fmt.Sprintf("larger than %d KiB", MaxServedScanBytes/1024)
+		return fmt.Sprintf("is larger than %d KiB", MaxServedScanBytes/1024)
 	case bytes.IndexByte(content, 0) >= 0:
 		return "contains a NUL byte"
 	case !utf8.Valid(content):
