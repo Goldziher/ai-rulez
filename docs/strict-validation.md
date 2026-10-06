@@ -126,6 +126,14 @@ stdout.
 | AR714 | `approval-insufficient` | error | Fewer distinct reviewers approved the current digest than `[governance] min_approvers` asks for |
 | AR715 | `approval-orphan` | warning | An approval names content that no longer exists; `ai-rulez approve --prune` removes it |
 | AR716 | `approval-with-change` | error | An approval was added in the same change as the content it approves (reported only by `--approvals-base` or `approve --verify-base`) |
+| AR720 | `signature-missing` | error | `[signing] require` asks for a signed lock and the attestation file is missing (see [Signing](signing.md)) |
+| AR721 | `signature-invalid` | error | The attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof |
+| AR722 | `signer-not-trusted` | error | The signer's identity, issuer or key matches no `[[signing.trust]]` entry, or the entry is outside its validity window; also an `identity_regexp` that is not anchored |
+| AR723 | `signature-stale` | error | The signature is older than `[signing] max_age` |
+| AR724 | `attestation-subject-mismatch` | error | The signed lock-subject digest or `hash_version` differs from the lock, or is below `min_hash_version` |
+| AR725 | `trusted-root-unavailable` | error | A certificate-signed attestation needs a trusted root and none is configured or cached |
+| AR726 | `tlog-proof-missing` | error | `[signing] tlog = "required"` and the bundle has no transparency log entry |
+| AR727 | `signature-rollback` | error | The attestation is older than one this machine already verified for the repository |
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
@@ -202,7 +210,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR716` used, `AR717` is for the deny list, see [Approvals](approvals.md)) | allocated |
-| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); no codes registered yet) | reserved |
+| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR727` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR732` and `AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
@@ -1642,6 +1650,86 @@ an approval was added in the same change as the content it approves (found only 
 - Why: An approval in the committed lock is an assertion, not authentication: whoever edits the lock can add one. When an approval arrives in the same change as the content it approves, nobody but the author vouched for it, so CI should demand a second reviewer.
 - Bad: A pull request that edits a skill's script and adds `[[approval]]` for the new digest
 - Good: Land the content change first, then approve it in a separate, separately reviewed change
+
+### AR720 signature-missing
+
+[signing] require asks for a signed lock and no attestation file exists
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: [signing] require = ["lock"] says the committed lock must be signed, and there is no attestation file next to it.
+- Bad: `require = ["lock"]` and no `.ai-rulez/ai-rulez.lock.sigstore.json`
+- Good: Run `ai-rulez sign --lock` in the release workflow and commit the bundle
+
+### AR721 signature-invalid
+
+the lock attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: The bundle is truncated, edited, signed by a certificate the trusted root does not chain to, or carries a bad log proof.
+- Bad: A bundle whose payload was edited after signing
+- Good: Sign again with `ai-rulez sign --lock`; verify with `ai-rulez verify --attestation`
+
+### AR722 signer-not-trusted
+
+the lock was signed by an identity, issuer or key that no [[signing.trust]] entry accepts, or an identity_regexp is not anchored
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A valid signature only says who signed. The identity and issuer (or key) must match a trust entry, exactly or by an anchored identity_regexp, and be inside its validity window.
+- Bad: A lock signed by a contributor's own GitHub identity when only the release workflow is trusted
+- Good: Sign from the trusted workflow, or add a reviewed `[[signing.trust]]` entry
+
+### AR723 signature-stale
+
+the lock signature is older than [signing] max_age
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: max_age bounds how old an accepted signature may be, so a stale but valid lock cannot be replayed indefinitely.
+- Bad: `max_age = "30d"` and a signature from three months ago
+- Good: Re-run `ai-rulez lock` and `ai-rulez sign --lock` on your release cadence
+
+### AR724 attestation-subject-mismatch
+
+the signed digest or hash_version differs from the lock: the lock changed after it was signed
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: The attestation covers one lock-subject digest. Any change to the lock (or a different hash_version) makes it attest something else.
+- Bad: `ai-rulez lock` re-pinned a source after the lock was signed
+- Good: Sign after the final `ai-rulez lock`
+
+### AR725 trusted-root-unavailable
+
+a certificate-signed attestation needs a Sigstore trusted root and none is configured or cached
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A keyless certificate is checked against the Sigstore trusted root. Verification is offline, so the root must be a file you pass or cache.
+- Bad: A keyless attestation and neither `trusted_root` nor a cached root
+- Good: Run `ai-rulez trust update` once, or commit a trusted root and set `trusted_root`
+
+### AR726 tlog-proof-missing
+
+[signing] tlog requires a transparency log entry and the bundle has none
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A short-lived certificate is only meaningful at the time the log recorded the signature. Without a log entry there is no trustworthy signing time.
+- Bad: A key bundle signed with `--no-tlog` under `tlog = "required"`
+- Good: Sign with a log entry, or set `tlog = "off"` for a key-only setup
+
+### AR727 signature-rollback
+
+the lock attestation is older than one this machine already verified for the repository
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: This machine has already verified a newer attestation for the repository. Accepting an older one would roll the lock back to a state that was valid once.
+- Bad: Presenting last quarter's signed lock after this quarter's was verified
+- Good: Use the current attestation; the per-user high-water mark lives in the state directory (docs/signing.md)
 
 ### AR730 constraint-unsatisfiable
 
