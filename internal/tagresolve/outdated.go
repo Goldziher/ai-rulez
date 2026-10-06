@@ -85,14 +85,15 @@ type Summary struct {
 
 // Evaluate compares one source's lock entry (nil when unlocked) with the remote's tags.
 func Evaluate(kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []RawTag) Row {
-	return EvaluateGated(context.Background(), kind, name, w, entry, tags, nil)
+	w.Kind, w.Name = kind, name
+	return EvaluateGated(context.Background(), w, entry, tags, nil)
 }
 
 // EvaluateGated is Evaluate with a minimum release age: the allowed tag is the
 // newest one that passes the gate (the pinned tag always does), and the tags the
-// gate held back are listed.
-func EvaluateGated(ctx context.Context, kind, name string, w lockfile.Want, entry *lockfile.Entry, tags []RawTag, gate *AgeGate) Row {
-	row := Row{Kind: kind, Name: name, Source: w.Source, Constraint: w.Constraint}
+// gate held back are listed. The source is named by w.Kind and w.Name.
+func EvaluateGated(ctx context.Context, w lockfile.Want, entry *lockfile.Entry, tags []RawTag, gate *AgeGate) Row {
+	row := Row{Kind: w.Kind, Name: w.Name, Source: w.Source, Constraint: w.Constraint}
 	if entry != nil && entry.Tag != "" {
 		row.Locked = &TagRef{Tag: entry.Tag, Commit: entry.Commit}
 	}

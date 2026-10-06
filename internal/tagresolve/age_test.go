@@ -33,6 +33,14 @@ func (f *fakeTimer) ReleaseTime(_ context.Context, tag RawTag) (ReleaseTime, err
 
 const day = 24 * time.Hour
 
+func heldTags(sel *Selection) []string {
+	var held []string
+	for _, h := range sel.Held {
+		held = append(held, h.Tag)
+	}
+	return held
+}
+
 func TestSelectGated(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -105,11 +113,7 @@ func TestSelectGated(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantTag, sel.Chosen.Tag.Name)
-			var held []string
-			for _, h := range sel.Held {
-				held = append(held, h.Tag)
-			}
-			assert.Equal(t, tt.wantHeld, held)
+			assert.Equal(t, tt.wantHeld, heldTags(sel))
 			if tt.wantCalls != nil || tt.min == 0 {
 				assert.Equal(t, tt.wantCalls, timer.calls)
 			}
@@ -170,7 +174,7 @@ func TestEvaluateGated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gate := &AgeGate{Min: 7 * day, Now: gateNow, Timer: &fakeTimer{ages: tt.ages}}
 
-			row := EvaluateGated(context.Background(), "include", "shared", want, entry, tags, gate)
+			row := EvaluateGated(context.Background(), want, entry, tags, gate)
 
 			assert.Equal(t, tt.wantStatus, row.Status)
 			assert.Equal(t, tt.wantAllow, row.Allowed.Tag)
@@ -180,7 +184,7 @@ func TestEvaluateGated(t *testing.T) {
 	}
 	t.Run("report counts and renders the held tags", func(t *testing.T) {
 		gate := &AgeGate{Min: 7 * day, Now: gateNow, Timer: &fakeTimer{ages: map[string]time.Duration{"v1.3.1": day, "v1.3.0": day}}}
-		row := EvaluateGated(context.Background(), "include", "shared", want, entry, tags, gate)
+		row := EvaluateGated(context.Background(), want, entry, tags, gate)
 		rep := NewReport([]Row{row})
 		assert.Equal(t, 1, rep.Summary.HeldBack)
 		var out strings.Builder
