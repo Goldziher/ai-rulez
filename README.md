@@ -70,6 +70,10 @@ Need the same knowledge outside coding agents? `ai-rulez export okf` writes rule
 | **Merges** | JSON, JSONC, TOML and YAML settings files you also edit are merged key by key; your keys and comments survive `generate` and `clean` | [configuration](docs/configuration.md#settings-document-merge-behavior) |
 | **Native MCP env references** | A `${VAR}` placeholder is written as the tool's own reference where it expands one, so no secret lands in the file | [configuration](docs/configuration.md#mcp_servers) |
 | **Watch and doctor** | `generate --watch` regenerates on save; `ai-rulez doctor` reports drift, removed presets, unresolved placeholders and missing tools | [CLI](docs/cli.md) |
+| **Lock and updates** | `ai-rulez lock` pins remote includes, installed skills, skill sources, authored content and outputs by commit and sha256; `generate --locked` is the CI mode, `version = "^1.2"` ranges are moved by `ai-rulez update` | [lock file](docs/lockfile.md) |
+| **Dynamic skills and roles** | `delivery = "served"` skills are loaded on demand through `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`) instead of written to every harness; `[[roles]]` render a slice of the content per job | [MCP server](docs/mcp-server.md#dynamic-skill-loading), [roles](docs/roles.md) |
+| **Validation and verifiers** | `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
+| **Inventory** | `ai-rulez sbom` (CycloneDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
 
 ## Generate Plugins, Not Just Config
 
@@ -374,6 +378,17 @@ pipx install ai-rulez
 </details>
 
 <details>
+<summary><strong>Go</strong></summary>
+
+```bash
+go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
+```
+
+The module path needs `/v5`; without it `@latest` resolves to an old build.
+
+</details>
+
+<details>
 <summary><strong>pre-commit hook</strong></summary>
 
 Add to `.pre-commit-config.yaml`:
@@ -396,7 +411,8 @@ Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`,
 <summary><strong>poly hook source</strong></summary>
 
 Add ai-rulez as a managed source in your existing `poly.toml` and select the hooks your
-repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
+repository needs. This requires Poly 0.14.0+; pin `revision` to the AI-Rulez release you want (the
+hooks run that release):
 
 ```toml
 [[hooks.sources]]

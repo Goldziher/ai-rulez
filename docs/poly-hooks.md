@@ -4,7 +4,9 @@ AI-Rulez publishes a reusable Poly hook catalog in `poly-hooks.toml`. Consumer
 repositories declare Git or local sources in their existing `poly.toml` and select
 the hooks they need. Consumers do not create another `poly-hooks.toml`.
 
-This integration requires AI-Rulez 4.9.0 or later and Poly 0.14.0 or later.
+The catalog exists since AI-Rulez 4.9.0 and needs Poly 0.14.0 or later. Each catalog revision runs the
+`ai-rulez` release it belongs to (revision `v5.0.0` runs `ai-rulez@5.0.0`), so pin `revision` to the
+release you want.
 
 ## Add AI-Rulez to a repository
 
