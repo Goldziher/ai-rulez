@@ -1680,6 +1680,7 @@ ai-rulez validate [config-path] [flags]
 | `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
 | `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
+| `--show-policy`       | boolean | Print the effective [organization policy](policy.md) with the origin of every value and what the repository tried to loosen (text, or `--format json`), then exit; exit 1 when the repository loosens it |
 | `--format`            | string  | `text` (default), `json`, `sarif`, `github`, `junit` or `markdown`; any value implies `--strict` |
 | `--output`            | string  | With `--strict`: write the report to this file instead of stdout |
 | `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
@@ -2129,6 +2130,7 @@ These flags work with all commands:
 | ------------------ | ------- | ------------------------------------------------------------------------------- |
 | `--config` / `-C`  | string  | Config file path (auto-discovered if not specified)                             |
 | `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+| `--policy`         | string  | [Organization policy](policy.md) file (tighten-only); also `AI_RULEZ_POLICY` and the managed path |
 | `--verbose` / `-V` | boolean | Enable verbose output                                                           |
 | `--debug` / `-D`   | boolean | Enable debug output                                                             |
 | `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |

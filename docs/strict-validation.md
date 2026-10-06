@@ -1579,7 +1579,7 @@ a policy file is unusable: not TOML, an unknown key, a bad pattern, or newer tha
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
 - Why: A typo in a policy must not silently loosen it, so unknown keys, bad patterns, unknown rule codes and a `policy_version` this build does not read are errors.
-- Bad: `[lint] requierd_codes = ["AR001"]`
+- Bad: `[lint] required_code = ["AR001"]` (the key is required_codes)
 - Good: Fix the key; for a policy newer than the binary, upgrade ai-rulez
 
 ### AR744 policy-required-missing
