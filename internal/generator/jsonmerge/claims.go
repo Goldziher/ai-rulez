@@ -25,11 +25,14 @@ import (
 //     (an MCP server's env), so the manifest never stores the values. Elements
 //     is the in-memory form a merge produces and tests build; both name
 //     elements through the methods below.
-//   - Equals, when set, restricts removal to a value that still equals it.
+//   - Equals, when set, restricts removal to a value that still equals it. It is
+//     an in-memory convenience: a claim written to or read from a manifest holds
+//     the digest in Sum instead (see textClaim for the one exception).
 //   - Sum does the same with a digest of the value (see Digest). The record a
 //     merge leaves behind carries Sum rather than Equals, because the value can
 //     hold a resolved secret (a header, an env variable) that must not be copied
-//     into another file.
+//     into another file. A record an earlier version wrote with Equals is
+//     converted to Sum on read, so no legacy value is written back.
 //   - Alone restricts removal to when no other top-level key remains.
 //   - Preexisting names ancestor paths of Path that were already in the document,
 //     holding nothing, when ai-rulez first merged into it (a user's empty
@@ -73,10 +76,34 @@ type claimWire struct {
 // MarshalJSON writes the claim with its elements as digests: a manifest records
 // which elements are ours without copying their values, which can be secrets.
 func (c Claim) MarshalJSON() ([]byte, error) {
+	equals, sum := c.persistedGuard()
 	return json.Marshal(claimWire{
-		Path: c.Path, ElementSums: c.ElementDigests(), Equals: c.Equals, Sum: c.Sum, Alone: c.Alone,
+		Path: c.Path, ElementSums: c.ElementDigests(), Equals: equals, Sum: sum, Alone: c.Alone,
 		Preexisting: c.Preexisting, NoFinalNewline: c.NoFinalNewline,
 	})
+}
+
+// textClaim reports whether the claim names the one piece of text a document
+// keeps verbatim: the generated header above a Markdown block (docmerge's
+// "header" key), which unmerge must read back to know what to strip. It is
+// ai-rulez's own banner, never a configured value.
+func (c Claim) textClaim() bool {
+	_, isText := c.Equals.(string)
+	return isText && len(c.Path) == 1 && c.Path[0] == textClaimKey
+}
+
+const textClaimKey = "header"
+
+// persistedGuard is the guard as a manifest stores it: Equals becomes the digest
+// of its value, because a value can hold a secret.
+func (c Claim) persistedGuard() (equals any, sum string) {
+	if c.Equals == nil || c.textClaim() {
+		return c.Equals, c.Sum
+	}
+	if c.Sum != "" {
+		return nil, c.Sum
+	}
+	return nil, Digest(c.Equals)
 }
 
 // UnmarshalJSON reads a claim. A record written before elements were digested
@@ -91,6 +118,7 @@ func (c *Claim) UnmarshalJSON(data []byte) error {
 		Path: wire.Path, ElementSums: wire.ElementSums, Equals: wire.Equals, Sum: wire.Sum, Alone: wire.Alone,
 		Preexisting: wire.Preexisting, NoFinalNewline: wire.NoFinalNewline,
 	}
+	c.Equals, c.Sum = c.persistedGuard()
 	if wire.Elements != nil {
 		c.ElementSums = c.digestsWith(wire.Elements)
 	}
@@ -100,7 +128,10 @@ func (c *Claim) UnmarshalJSON(data []byte) error {
 // HasElements reports whether the claim covers only some elements of an array.
 func (c Claim) HasElements() bool { return c.Elements != nil || c.ElementSums != nil }
 
-// ElementDigests lists the digests of the claimed elements, sorted and distinct.
+// ElementDigests lists the digests of the claimed elements, sorted. It is a
+// multiset: an element ai-rulez wrote twice is listed twice, so unmerge removes
+// only as many identical elements as ai-rulez added and leaves a hand-written
+// copy of the same value.
 func (c Claim) ElementDigests() []string { return c.digestsWith(c.Elements) }
 
 func (c Claim) digestsWith(values []any) []string {
@@ -114,7 +145,7 @@ func (c Claim) digestsWith(values []any) []string {
 		}
 	}
 	sort.Strings(sums)
-	return slices.Compact(sums)
+	return sums
 }
 
 // OwnsElement reports whether value is one of the claimed elements, compared as
@@ -128,6 +159,37 @@ func (c Claim) OwnsElement(value any) bool {
 func (c Claim) ownsRaw(raw json.RawMessage) bool {
 	sum := digestRaw(raw)
 	return sum != "" && slices.Contains(c.ElementDigests(), sum)
+}
+
+// ElementMatcher hands out the claimed elements one at a time: Take reports
+// whether a value is a claimed element that has not been matched yet, so a
+// document holding more identical elements than the claim lists keeps the extra
+// ones. It is not safe for concurrent use.
+type ElementMatcher struct {
+	left map[string]int
+}
+
+// NewElementMatcher counts the claim's element digests.
+func (c Claim) NewElementMatcher() *ElementMatcher {
+	m := &ElementMatcher{left: map[string]int{}}
+	for _, sum := range c.ElementDigests() {
+		m.left[sum]++
+	}
+	return m
+}
+
+// Take consumes one claimed occurrence of value.
+func (m *ElementMatcher) Take(value any) bool { return m.takeSum(Digest(value)) }
+
+// TakeRaw is Take for an element still in its raw JSON form.
+func (m *ElementMatcher) TakeRaw(raw json.RawMessage) bool { return m.takeSum(digestRaw(raw)) }
+
+func (m *ElementMatcher) takeSum(sum string) bool {
+	if sum == "" || m.left[sum] == 0 {
+		return false
+	}
+	m.left[sum]--
+	return true
 }
 
 // ElementsIn returns the candidates the claim owns, in order. It is how a caller
@@ -145,10 +207,10 @@ func (c Claim) ElementsIn(candidates []any) []any {
 
 // WithoutElements returns the claim minus the elements other claims.
 func (c Claim) WithoutElements(other Claim) Claim {
-	drop := other.ElementDigests()
+	drop := other.NewElementMatcher()
 	kept := []string{}
 	for _, sum := range c.ElementDigests() {
-		if !slices.Contains(drop, sum) {
+		if !drop.takeSum(sum) {
 			kept = append(kept, sum)
 		}
 	}
@@ -425,8 +487,9 @@ func unmergeLeaf(members []jsonMember, idx int, claim Claim, depth int, indent, 
 		return members, false, false, nil //nolint:nilerr // not an array: the consumer's value, left alone
 	}
 	kept := make([]json.RawMessage, 0, len(elements))
+	matcher := claim.NewElementMatcher()
 	for _, element := range elements {
-		if !claim.ownsRaw(element) {
+		if !matcher.TakeRaw(element) {
 			kept = append(kept, element)
 		}
 	}
