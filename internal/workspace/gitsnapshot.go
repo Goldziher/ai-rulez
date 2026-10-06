@@ -120,8 +120,13 @@ func (s *snapshot) add(record string) error {
 	default:
 		n.mode = 0o644
 	}
+	if _, dup := s.nodes[name]; dup {
+		return nil
+	}
 	s.nodes[name] = n
-	// Register the entry with every ancestor directory.
+	// Register the entry with its parent, and with every ancestor that is new: an
+	// existing directory already hangs off its own parent, so each name is
+	// appended exactly once and no membership scan is needed.
 	for child := name; child != "."; {
 		parent := path.Dir(child)
 		p, exists := s.nodes[parent]
@@ -129,22 +134,13 @@ func (s *snapshot) add(record string) error {
 			p = &node{mode: fs.ModeDir | 0o755}
 			s.nodes[parent] = p
 		}
-		base := path.Base(child)
-		if !contains(p.children, base) {
-			p.children = append(p.children, base)
+		p.children = append(p.children, path.Base(child))
+		if exists {
+			break
 		}
 		child = parent
 	}
 	return nil
-}
-
-func contains(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *snapshot) Commit() string { return s.commit }
