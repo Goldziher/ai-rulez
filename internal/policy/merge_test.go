@@ -3,6 +3,7 @@ package policy
 import (
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,6 +78,15 @@ func randomPolicy(rng *rand.Rand) Policy {
 	p.MCP.AllowedCommands = randomList(rng, []string{"npx", "uvx", "node", "bash"})
 	p.MCP.DenyTransports = pick(rng, mcpTransports)
 	p.Hooks.Forbidden = rng.Intn(3) == 0
+	if rng.Intn(2) == 0 {
+		p.Signing.RequireVerified = []string{"lock"}
+	}
+	p.Signing.TLog = []string{"", "optional", "required"}[rng.Intn(3)]
+	if rng.Intn(2) == 0 {
+		p.Signing.MaxAge = time.Duration(1+rng.Intn(400)) * 24 * time.Hour
+	}
+	p.Signing.MinHashVersion = rng.Intn(4)
+	p.Signing.Trust = randomList(rng, []string{"subject=lock identity=a issuer=i", "subject=lock identity=b issuer=i", "subject=lock identity_regexp=^c$ issuer=i"})
 	return p
 }
 
@@ -203,6 +213,17 @@ func TestMergeOnlyTightens(t *testing.T) {
 			}
 			assert.Subset(t, m.MCP.DenyTransports, side.MCP.DenyTransports)
 			assert.True(t, !side.Hooks.Forbidden || m.Hooks.Forbidden)
+			assert.Subset(t, m.Signing.RequireVerified, side.Signing.RequireVerified)
+			assert.GreaterOrEqual(t, tlogRank[m.Signing.TLog], tlogRank[side.Signing.TLog])
+			if side.Signing.MaxAge > 0 {
+				assert.Positive(t, m.Signing.MaxAge)
+				assert.LessOrEqual(t, m.Signing.MaxAge, side.Signing.MaxAge)
+			}
+			assert.GreaterOrEqual(t, m.Signing.MinHashVersion, side.Signing.MinHashVersion)
+			if side.Signing.Trust.Set {
+				assert.True(t, m.Signing.Trust.Set)
+				assert.Subset(t, side.Signing.Trust.Items, m.Signing.Trust.Items, "a signer escaped the policy list")
+			}
 		}
 	}
 }

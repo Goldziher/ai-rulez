@@ -181,6 +181,56 @@
         }
       }
     },
+    "signing": {
+      "type": "object",
+      "description": "Floor under the repository's [signing] table (docs/signing.md). The repository may raise it, never lower it.",
+      "additionalProperties": false,
+      "properties": {
+        "require_verified": {
+          "type": "array",
+          "description": "Subjects that must carry a valid attestation; the repository's own list is added. Layers union.",
+          "items": { "const": "lock" }
+        },
+        "allow_repo_identities": {
+          "type": "boolean",
+          "description": "false means the repository may trust only the signers listed in [[signing.trust]] (none when the list is empty). true is accepted only without [[signing.trust]] and constrains nothing."
+        },
+        "tlog": {
+          "enum": ["optional", "required"],
+          "description": "The weakest transparency-log mode the repository may use."
+        },
+        "max_age": {
+          "type": "string",
+          "pattern": "^[0-9]+d$|^[0-9]+(\\.[0-9]+)?(h|m|s|ms|us|ns)",
+          "description": "The oldest signature the repository may accept (180d, 720h). It may set a shorter age."
+        },
+        "min_hash_version": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The lowest attestation hash scheme the repository may accept. Layers take the largest."
+        },
+        "trust": {
+          "type": "array",
+          "description": "The only signers the repository may trust: certificate identities. A repository entry not listed here is dropped; with none left the policy list applies. Layers intersect.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["issuer"],
+            "properties": {
+              "subject": { "const": "lock" },
+              "identity": { "type": "string", "minLength": 1, "pattern": "^\\S+$" },
+              "identity_regexp": {
+                "type": "string",
+                "pattern": "^\\^\\S+\\$$",
+                "description": "Anchored with ^ and $."
+              },
+              "issuer": { "type": "string", "minLength": 1, "pattern": "^\\S+$" }
+            },
+            "oneOf": [{ "required": ["identity"] }, { "required": ["identity_regexp"] }]
+          }
+        }
+      }
+    },
     "mcp": {
       "type": "object",
       "description": "Bounds the repository's [[mcp_servers]]. A server outside the bound is not loaded and is reported (AR748).",
