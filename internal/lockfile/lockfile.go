@@ -137,15 +137,15 @@ type File struct {
 	Output []OutputPin `toml:"output,omitempty"`
 	// Approval records reviewer approvals (approval.go); outside the tree digest.
 	Approval []Approval `toml:"approval,omitempty"`
+	// Scan records external scanner results over the staged content (scan.go);
+	// outside the tree digest.
+	Scan []Scan `toml:"scan,omitempty"`
 }
 
 // HasContentPins reports whether the lock pins authored content.
 func (f *File) HasContentPins() bool {
 	return f != nil && (f.Tree != "" || len(f.Item) > 0 || len(f.Output) > 0)
 }
-	// Scan records external scanner results over the staged content (scan.go);
-	// outside the tree digest.
-	Scan []Scan `toml:"scan,omitempty"`
 
 // Path returns the lock path for a configuration directory.
 func Path(configDir string) string { return filepath.Join(configDir, FileName) }
@@ -209,13 +209,13 @@ func Save(configDir string, f *File) error {
 	out.Source, out.Served = sorted(f.Source), sorted(f.Served)
 	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
 	out.Approval = sortedApprovals(f.Approval)
+	out.Scan = sortedScans(f.Scan)
 	var buf bytes.Buffer
 	buf.WriteString("# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.\n")
 	buf.WriteString("# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.\n\n")
 	enc := toml.NewEncoder(&buf)
 	if err := enc.Encode(out); err != nil {
 		return oops.Wrapf(err, "encode lock file")
-	out.Scan = sortedScans(f.Scan)
 	}
 	// A committed lock symlink must not redirect the write: WriteFileAtomic
 	// replaces a link at the destination and refuses a linked parent directory.
