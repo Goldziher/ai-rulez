@@ -29,7 +29,7 @@ func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
 		Class: approval.ServedClass(s.Source, s.Ref, s.Commit),
 	}
 	if a.Lock == nil {
-		if policy.Enforce && policy.Requires(subject) {
+		if policy.Enforce && !a.Pinning && policy.Requires(subject) {
 			return &Refusal{Name: s.Name, Code: approval.CodeMissing, Reason: "[governance] enforce is on and there is no " + lockfile.FileName + " to hold approvals: " + approval.Result{Subject: subject, Status: approval.StatusMissing}.Message()}
 		}
 		return nil

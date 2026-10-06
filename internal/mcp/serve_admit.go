@@ -36,6 +36,10 @@ type Admission struct {
 	Lock *lockfile.File
 	// Enforce refuses a skill that the lock does not pin with exactly its digest.
 	Enforce bool
+	// Pinning marks a build that computes the lock itself (lock, lock --check):
+	// without a lock there is nothing to approve against yet, and the approval
+	// check of those commands runs separately (govview.ApprovalChanges).
+	Pinning bool
 	// View is the serve view whose pins the lock is read at (see ServeSetup.ViewKey).
 	View string
 	// DefaultTrust is the scan level for a skill that names none: "warn" for

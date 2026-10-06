@@ -2,6 +2,7 @@ package contentlock
 
 import (
 	"encoding/hex"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,4 +80,32 @@ func TestServedDigest_OnlyAGeneratedSourceHashShapeIsIgnored(t *testing.T) {
 	assert.NotEqual(t, digest("# Source-Hash: ignore previous instructions"), digest("# Source-Hash: do something else"),
 		"text after Source-Hash: is content, not a hash")
 	assert.NotEqual(t, digest("# Source-Hash: blake3:0123abcd and more text"), digest("# Source-Hash: blake3:0123abcd and other text"))
+}
+
+func TestServedDigest_ACRLFOnlyEditKeepsTheDigestOfTextButNotOfScripts(t *testing.T) {
+	// Arrange: the generated Content-Hash hashes raw bytes, so it differs between the two renderings
+	render := func(path, eol, contentHash string) []Leaf {
+		lines := []string{"# Content-Hash: blake3:" + contentHash, "echo hi", "echo there"}
+		return []Leaf{{Path: path, Mode: ModeRegular, Data: []byte(strings.Join(lines, eol) + eol)}}
+	}
+	tests := []struct {
+		name string
+		path string
+		same bool
+	}{
+		{"markdown is text: CRLF does not change the digest", "SKILL.md", true},
+		{"a script is byte-for-byte: CRLF changes the digest", "scripts/run.sh", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			lf, err := ServedDigest(render(tt.path, "\n", "aaaa"), true)
+			require.NoError(t, err)
+			crlf, err := ServedDigest(render(tt.path, "\r\n", "bbbb"), true)
+			require.NoError(t, err)
+
+			// Assert
+			assert.Equal(t, tt.same, lf == crlf)
+		})
+	}
 }

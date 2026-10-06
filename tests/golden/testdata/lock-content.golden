@@ -3,11 +3,11 @@
 ## step 1: ai-rulez lock --content-only
 exit: 0
 --- stdout
-locked build  sha256:cd2710c2f894127765d847d8bfd7e904bd3233725858e0e802cdd78b4e0dec7d
-locked deployer  sha256:38b763182c727249a4a318e6b5a06a197390be3123c5c3f57b7f3f592cbaf468
-locked reviewer  sha256:f4a0b43c2ea485c89d802446fc55849358682123ae37b7c975afe67b6a56e5f9
-locked ship  sha256:48c04610998811d6e7be9ab67eb713709f07022ba62b86b6a6fdd4297f651a6a
-pinned 19 item(s) and 35 output(s), tree sha256:92de8524343f6a64633cbc309309ddc55de67198b19fd1cea7cd439eaf3dab2e
+locked build  sha256:5e10c5e6f0fa6f31aa6153e92cf573c60956206438b3e63f7cbd2a437714ab0f
+locked deployer  sha256:208f31ab4e4383de261c2e2d13b9acd4aa8ce8bce0288f132b7d892279cc2c08
+locked reviewer  sha256:0acf41ff879036c70ea80f1659eaf6a83575c7afe707e4eac920b616979f63f3
+locked ship  sha256:2d9318d52196b1813e252b22eb0364eb383e66c2b0e60b4bc02cdb4b3a25224a
+pinned 19 item(s) and 35 output(s), tree sha256:68fee9b6d2766b56a58ba2a2d44890eb583487d0b0e7bc9564b6046482e427fa
 --- stderr
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -17,7 +17,7 @@ INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
-.ai-rulez/ai-rulez.lock file 0600 8330 a7fb9d83185b46c49bba2593658400f18d2954617a0fa96672ce2f7ee27d18fb
+.ai-rulez/ai-rulez.lock file 0600 8330 f3e56aa66bc5dc3919d1ed1425481e13b53663e4f21a91df3007a8d5845bd526
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
@@ -96,7 +96,7 @@ WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: 
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
-.ai-rulez/ai-rulez.lock file 0600 8330 a7fb9d83185b46c49bba2593658400f18d2954617a0fa96672ce2f7ee27d18fb
+.ai-rulez/ai-rulez.lock file 0600 8330 f3e56aa66bc5dc3919d1ed1425481e13b53663e4f21a91df3007a8d5845bd526
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
