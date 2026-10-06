@@ -398,3 +398,57 @@ func TestExternalBatchesLargeFileLists(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalLocationlessAndHugeLineResults(t *testing.T) {
+	noLoc := `{"version":"2.1.0","runs":[{"results":[{"ruleId":"X1","level":"error","message":{"text":"no place"}}]}]}`
+	hugeLine := `{"version":"2.1.0","runs":[{"results":[{"ruleId":"X2","level":"error","message":{"text":"far away"},` +
+		`"locations":[{"physicalLocation":{"artifactLocation":{"uri":".ai-rulez/rules/r.md"},"region":{"startLine":999999999999}}}]}]}]}`
+	tests := []struct {
+		name, sarif, msg, wantFile string
+		maxLine                    int
+	}{
+		{name: "location-less result is attributed to the config file", sarif: noLoc, msg: "no place", wantFile: "config.toml", maxLine: 1},
+		{name: "start line is clamped", sarif: hugeLine, msg: "far away", wantFile: "r.md", maxLine: 10_000_000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			findings := externalRun(t, "echo '"+tt.sarif+"'\n", "egress = false\n", Options{})
+
+			// Assert
+			for _, f := range findings {
+				if f.Code == CodeExternalFinding && strings.Contains(f.Message, tt.msg) {
+					if filepath.Base(f.File) != tt.wantFile || f.Line < 1 || f.Line > tt.maxLine {
+						t.Fatalf("got %s:%d, want file %s line 1..%d", f.File, f.Line, tt.wantFile, tt.maxLine)
+					}
+					return
+				}
+			}
+			t.Fatalf("no AR011 finding for %q:\n%s", tt.msg, dump(findings))
+		})
+	}
+}
+
+func TestWriteMarkdownEscapesMessages(t *testing.T) {
+	// Arrange
+	c := Combined{Findings: []Finding{{Code: "AR303", Name: "n", Severity: SeverityWarning, File: "a.md", Line: 1,
+		Message: "<img src=x onerror=1> [click](http://evil.example) `code` a|b"}}, Summary: Summary{Total: 1, Warnings: 1}}
+	var sb strings.Builder
+
+	// Act
+	err := WriteMarkdown(&sb, c)
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := sb.String()
+	for _, bad := range []string{"<img", "[click](", "`code`"} {
+		if strings.Contains(out, bad) {
+			t.Errorf("markdown output contains unescaped %q:\n%s", bad, out)
+		}
+	}
+	if !strings.Contains(out, `\[click\]`) || !strings.Contains(out, `a\|b`) {
+		t.Errorf("escapes missing:\n%s", out)
+	}
+}

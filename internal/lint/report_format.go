@@ -214,7 +214,8 @@ func WriteJUnit(w io.Writer, c Combined, failOn string) error {
 }
 
 func mdEscape(s string) string {
-	return strings.NewReplacer("|", `\|`, "\n", " ").Replace(s)
+	return strings.NewReplacer(`\`, `\\`, "|", `\|`, "\n", " ", "\r", " ", "<", "&lt;", ">", "&gt;",
+		"[", `\[`, "]", `\]`, "`", "'").Replace(s)
 }
 
 // WriteMarkdown prints a summary meant for a pull-request comment, grouped by
@@ -243,7 +244,7 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 		fmt.Fprintf(&sb, "### %s (%d)\n\n| Rule | Location | Message |\n| --- | --- | --- |\n", strings.ToUpper(string(sev[:1]))+string(sev[1:])+"s", len(group))
 		for _, f := range group {
 			path := f.RepoPath()
-			fmt.Fprintf(&sb, "| `%s` %s | `%s:%d` | %s |\n", f.Code, f.Name, path, f.Line, mdEscape(f.Message))
+			fmt.Fprintf(&sb, "| `%s` %s | `%s:%d` | %s |\n", f.Code, f.Name, strings.ReplaceAll(path, "`", "'"), f.Line, mdEscape(f.Message))
 		}
 		sb.WriteString("\n")
 	}
