@@ -58,6 +58,14 @@ func buildGrader(cmd *cobra.Command, cfg *config.Config) (evals.RubricGrader, fu
 	if cap := evalFlags.graderMaxCost; cap > 0 && (lc.MaxCostUSD == 0 || cap < lc.MaxCostUSD) {
 		lc.MaxCostUSD = cap // the budget guard enforces it, failing closed
 	}
+	if lc.MaxCostUSD > 0 {
+		// The budget guard refuses a model it cannot price, per call, after the runner has been
+		// paid for: say so now instead.
+		if _, known := llm.NewPricing(lc).Cost(lc.FullModel(), llm.Usage{PromptTokens: 1, CompletionTokens: 1}); !known {
+			return nil, noop, oops.Hint("Set price_input_per_mtok and price_output_per_mtok under [llm] in the user config, or pass --grader-max-cost 0 to drop the cap").
+				Errorf("--grader builtin: no price is known for model %q, so the spend cap cannot be enforced", lc.FullModel())
+		}
+	}
 	managed, err := llm.New(lc, llm.Options{ConfigDir: cfg.ConfigDir})
 	if err != nil {
 		return nil, noop, oops.Wrapf(err, "start the grader's model client")
