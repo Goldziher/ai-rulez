@@ -31,7 +31,11 @@ const HookBuiltinGuard = "guard"
 // GuardHarnesses are the harnesses whose documented PreToolUse hook blocks a tool
 // call when the hook exits with code 2 and writes the reason to stderr. A harness
 // outside this list is skipped, never approximated.
-var GuardHarnesses = []string{HarnessClaude, HarnessCodex, HarnessGemini, HarnessCursor, HarnessFactory}
+//
+// Evidence, read 2026-10-06 (docs/settings.md [guard] lists the URLs): Claude Code,
+// Codex, Gemini CLI, Cursor, Factory and Copilot each document exit code 2 as a
+// block of the pre-tool call.
+var GuardHarnesses = []string{HarnessClaude, HarnessCodex, HarnessGemini, HarnessCursor, HarnessFactory, HarnessCopilot}
 
 // guardMatcher selects the file-editing tools in Claude Code's vocabulary; each
 // harness's own names are derived through internal/toolnames.
@@ -104,9 +108,9 @@ func (c *Config) EnableGuardHooks(binaryVersion string) {
 		Event:   "PreToolUse",
 		Matcher: guardMatcher,
 		Targets: append([]string(nil), GuardHarnesses...),
-		// Factory documents no MultiEdit tool; Codex edits files through apply_patch,
-		// which Edit and Write also select.
-		Matchers: map[string]string{HarnessFactory: "Edit|Create", HarnessCodex: "apply_patch|Edit|Write"},
+		// Factory documents no MultiEdit tool but an ApplyPatch one; Codex edits
+		// files through apply_patch, which Edit and Write also select.
+		Matchers: map[string]string{HarnessFactory: "Edit|Create|ApplyPatch", HarnessCodex: "apply_patch|Edit|Write"},
 		Builtin:  HookBuiltinGuard,
 		Hooks: []HookAction{{
 			Type:    HookTypeCommand,
