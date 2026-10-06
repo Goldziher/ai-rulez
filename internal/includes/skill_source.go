@@ -47,6 +47,7 @@ type SkillGitSource struct {
 
 // NewSkillGitSource creates a new SkillGitSource for fetching a skill from a git repo
 func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitSource, error) {
+	repoURL = stripGitPlus(repoURL)
 	if err := validateGitURL(repoURL); err != nil {
 		return nil, err
 	}

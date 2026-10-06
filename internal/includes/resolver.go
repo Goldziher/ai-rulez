@@ -189,7 +189,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, err
 		}
-		ref, err := versionRef(ctx, r.lock, w, p, includeConf.Source, r.accessToken, r.baseDir)
+		ref, err := versionRef(ctx, r.lock, w, p, stripGitPlus(includeConf.Source), r.accessToken, r.baseDir)
 		if err != nil {
 			return nil, err
 		}
