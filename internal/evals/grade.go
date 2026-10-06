@@ -187,10 +187,10 @@ func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string
 	}
 	cmd.Dir = workDir
 	killTreeOnCancel(cmd)
-	if err := cmd.Start(); err != nil {
+	err := runTree(cmd)
+	if cmd.Process == nil {
 		return fmt.Sprintf("command did not run: %v", err)
 	}
-	err := cmd.Wait()
 	killTree(cmd) // stragglers left behind by a command that exited
 	want := 0
 	if a.ExitCode != nil {
