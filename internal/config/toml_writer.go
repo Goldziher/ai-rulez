@@ -76,8 +76,7 @@ type tomlOutput struct {
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
-// It is the TOML counterpart of the YAML/JSON paths in SaveConfig and is also
-// used by the v4 migration command so both stay in sync.
+// SaveConfig and the importer write config.toml through it.
 func MarshalTOML(cfg *Config) ([]byte, error) {
 	if cfg == nil {
 		return nil, oops.Hint("Provide a valid Config struct").Errorf("config is nil")
@@ -120,8 +119,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		}
 	}
 
-	// The as-written servers (author order) followed by the servers merged from a
-	// legacy mcp.yaml, sorted: dropping the latter would lose them on migration.
+	// The as-written servers (author order) followed by programmatically added ones, sorted.
 	mcpServers := cfg.EffectiveMCPServers()
 
 	return tomlOutput{
