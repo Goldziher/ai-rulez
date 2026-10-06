@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -95,33 +94,12 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	return wants
 }
 
-// lockSource is the source as the lock records it: credentials redacted, and a
-// file:// URL written relative to the project (file://./vendor/x, file://../x)
-// so the lock does not carry a machine-specific absolute path.
-func lockSource(baseDir, source string) string {
-	redacted := RedactURL(source)
-	prefix := ""
-	rest := redacted
-	if after, ok := strings.CutPrefix(rest, "git+"); ok {
-		prefix, rest = "git+", after
-	}
-	path, ok := strings.CutPrefix(rest, "file://")
-	if !ok || !filepath.IsAbs(path) || baseDir == "" {
-		return redacted
-	}
-	base, err := filepath.Abs(baseDir)
-	if err != nil {
-		return redacted
-	}
-	rel, err := filepath.Rel(base, filepath.Clean(path))
-	if err != nil {
-		return redacted
-	}
-	rel = filepath.ToSlash(rel)
-	if rel != "." && !strings.HasPrefix(rel, "../") {
-		rel = "./" + rel
-	}
-	return prefix + "file://" + rel
+// lockSource is the source as the lock records it: the source as written in the
+// config with credentials redacted and a trailing slash dropped. A file:// URL is
+// never rewritten relative to the project: that made the lock depend on where
+// the project is checked out.
+func lockSource(_, source string) string {
+	return strings.TrimRight(RedactURL(source), "/")
 }
 
 // withVersion turns a want into a version-constraint want: the constraint takes
