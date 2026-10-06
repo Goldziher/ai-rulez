@@ -1,5 +1,7 @@
 package lint
 
+import "path/filepath"
+
 // Codes of the SBOM findings (internal/sbom, docs/sbom.md). AR75x is the SBOM
 // block of the allocation table in docs/strict-validation.md. `ai-rulez sbom`
 // reports them (AR750 and AR751 with --strict-pins, AR752 with --require-lock,
@@ -11,6 +13,37 @@ const (
 	CodeSBOMLockStale     = "AR752"
 	CodeSBOMDrift         = "AR753"
 )
+
+// SBOMFinding is one SBOM problem: Code is one of the codes above and Path the
+// file it is shown against ("" for the configuration file). `validate --strict`
+// builds the SBOM (internal/sbom, which this package cannot import) and passes
+// the findings in with WithSBOM.
+type SBOMFinding struct {
+	Code    string
+	Path    string
+	Message string
+}
+
+// WithSBOM supplies the SBOM findings to report (AR750 to AR753).
+func WithSBOM(findings []SBOMFinding) Option {
+	return func(r *runner) { r.sbom = findings }
+}
+
+// checkSBOM reports the supplied SBOM findings.
+func (r *runner) checkSBOM() {
+	for _, f := range r.sbom {
+		abs := f.Path
+		if abs == "" {
+			abs = r.configFilePath()
+			if abs == "" {
+				abs = filepath.Join(r.rootAbs(), ".ai-rulez", "config.toml")
+			}
+		} else if !filepath.IsAbs(abs) {
+			abs = filepath.Join(r.rootAbs(), filepath.FromSlash(abs))
+		}
+		r.add(f.Code, abs, 1, "%s", f.Message)
+	}
+}
 
 func init() {
 	registerRules(
@@ -44,4 +77,5 @@ func init() {
 	for _, code := range []string{CodeSBOMUnpinned, CodeSBOMUnknownCoords, CodeSBOMLockStale, CodeSBOMDrift} {
 		SetAnalyzer(code, AnalyzerConfig, ScopeBundle)
 	}
+	registerRunCheck((*runner).checkSBOM, AnalyzerConfig)
 }
