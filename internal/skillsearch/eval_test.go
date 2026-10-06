@@ -236,3 +236,25 @@ func TestCompareBaselineRefusesADifferentK(t *testing.T) {
 	assert.Contains(t, err.Error(), "k=3")
 	assert.Nil(t, cur.Flips, "no flips are reported from incomparable runs")
 }
+
+func TestBootstrap_PinnedIntervals(t *testing.T) {
+	t.Parallel()
+	cases := []CaseResult{
+		{ID: "a", top1: 1, recall: 1, Rank: ptr(1)},
+		{ID: "b", top1: 0, recall: 1, Rank: ptr(3)},
+		{ID: "c", top1: 0, recall: 0},
+		{ID: "d", top1: 1, recall: 1, Rank: ptr(1)},
+		{ID: "e", top1: 0, recall: 0.5, Rank: ptr(2)},
+	}
+
+	got := bootstrap(cases)
+
+	assert.Equal(t, map[string]Interval{
+		"mrr":         {Low: 0.2, High: 0.9},
+		"recall_at_k": {Low: 0.3, High: 1},
+		"top1":        {Low: 0, High: 0.8},
+	}, got, "the resampling seed and count are part of the report format: a change here moves every published interval")
+	assert.Equal(t, got, bootstrap(cases), "the same cases give the same interval")
+}
+
+func ptr(n int) *int { return &n }
