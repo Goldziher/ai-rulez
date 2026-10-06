@@ -2,9 +2,11 @@ package lint
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,6 +93,28 @@ func TestStrict_UnpinnedSkillSourceIsAR010(t *testing.T) {
 			assert.Equal(t, SeverityWarning, f.Severity)
 		}
 	}
+}
+
+func TestStrict_VersionSkillSourceCoveredByLockIsNotAR010(t *testing.T) {
+	// Arrange: a source following a version range, with a lock that covers it.
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":       baseConfig + "\n[[skill_sources]]\nname = \"ranged\"\nurl = \"https://example.com/org/skills.git\"\nversion = \"^1.2\"\n",
+		".ai-rulez/skills/a/SKILL.md": "---\nname: a\ndescription: Plain static skill. Use when testing source pinning findings.\n---\nBody.\n",
+	})
+	lock := &lockfile.File{}
+	lock.Set(lockfile.KindSource, lockfile.Entry{
+		Name: "ranged", Source: "https://example.com/org/skills.git", Ref: "^1.2",
+		Commit: "0123456789abcdef0123456789abcdef01234567", Tag: "v1.2.3",
+	})
+	require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), lock))
+	gitAdd(t, root)
+
+	// Act
+	fs := lintDir(t, root)
+
+	// Assert
+	assert.Zero(t, countCode(fs, CodeUnpinnedRemote), "%v", fs)
 }
 
 func TestDeliveryRulesAreRegistered(t *testing.T) {

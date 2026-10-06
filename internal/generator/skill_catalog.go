@@ -188,7 +188,7 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 				o.triggers = f.Metadata.ExtraList("triggers")
 			}
 			if inst, ok := installed[f.Name]; ok {
-				o.source, o.ref, o.pinned = inst.Source, inst.Ref, isCommitSHA(inst.Ref)
+				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
 			}
 			owners[id] = o
 		}
