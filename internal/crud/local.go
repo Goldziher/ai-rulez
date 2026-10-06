@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 const (
@@ -45,13 +46,13 @@ func (op *OperatorImpl) openLocalDoc() (*config.LocalDoc, error) {
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "open local config")
 	}
-	return doc, nil
+	return doc.WithResolvers(project.Resolvers()), nil
 }
 
 // loadMerged loads the shared config plus the local overlay, for existence
 // checks that must see both layers.
 func (op *OperatorImpl) loadMerged(ctx context.Context) (*config.Config, error) {
-	cfg, err := config.LoadConfig(config.WithOfflineIncludes(ctx), op.baseDir)
+	cfg, err := project.Load(config.WithOfflineIncludes(ctx), op.baseDir)
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "load config")
 	}
@@ -59,7 +60,7 @@ func (op *OperatorImpl) loadMerged(ctx context.Context) (*config.Config, error) 
 }
 
 func (op *OperatorImpl) loadShared(ctx context.Context) (*config.Config, error) {
-	cfg, err := config.LoadConfig(config.WithOfflineIncludes(ctx), op.baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithOfflineIncludes(ctx), op.baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "load config")
 	}

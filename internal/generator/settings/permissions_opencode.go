@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // OpenCode, Kilo Code and MiMo Code share one permission surface: the
@@ -54,7 +53,7 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 		}
 		if r := e.Rule; (r.Kind == KindRead || r.Kind == KindEdit) && !r.Bare && e.Action != ActionAllow &&
 			(r.Path.Anchor == AnchorHome || r.Path.Anchor == AnchorAbsolute) {
-			rulefiles.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
+			t.cfg.Diag.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
 				"so a home or absolute path pattern may never apply", e.Action, r.Raw, t.harness),
 				"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
 		}

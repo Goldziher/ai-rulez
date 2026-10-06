@@ -8,15 +8,17 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/schema"
-	"github.com/samber/oops"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var validateRecursive bool
@@ -209,7 +211,7 @@ func runRecursiveValidate() int {
 // validateConfigFile applies the same checks as single-root validate (schema,
 // then structural validation) to one config file.
 func validateConfigFile(configPath string) (*config.Config, error) {
-	cfg, err := config.LoadConfigFromFile(context.Background(), configPath, pluginLoadOptions(false)...)
+	cfg, err := project.LoadFile(context.Background(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
 		return nil, err
 	}

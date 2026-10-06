@@ -142,13 +142,14 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 	}
 	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
 	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
-		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo))
+		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo), config.WithResolvers(g.config.Resolve))
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // wrapped by planLocal
 	}
 	cfg.MCPEnvOverrides = g.config.MCPEnvOverrides
 	cfg.MCPEnvFiles = g.config.MCPEnvFiles
 	cfg.GeneratedAt = g.config.GeneratedAt
+	cfg.Diag = g.diagnostics() // one run: a message both renders produce is shown once
 
 	bg := NewGenerator(cfg)
 	bg.ctx = g.ctx
@@ -617,7 +618,7 @@ func (g *Generator) localOutputPattern(relPath string) string {
 	if g.plan != nil && g.plan.machineLocal[relPath] && !g.plan.inGitignore[relPath] {
 		return ""
 	}
-	return localGitignorePattern(relPath)
+	return localGitignorePattern(g.config.RulesDirs, relPath)
 }
 
 // stableLocalName reports whether a file's name marks it as machine-local

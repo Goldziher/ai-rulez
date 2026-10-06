@@ -6,15 +6,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 const presetNameCopilot = "copilot"
@@ -28,10 +30,6 @@ var copilotRulesTarget = rulefiles.Target{
 	Dialect:   rulefiles.DialectCopilot,
 	Recursive: true,
 	Banner:    true,
-}
-
-func init() {
-	config.RegisterPreset(presetNameCopilot, &CopilotPresetGenerator{})
 }
 
 // CopilotPresetGenerator generates GitHub Copilot preset files
@@ -253,8 +251,8 @@ func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Con
 	target := copilotRulesTarget
 	// Items Copilot cannot apply automatically stay inline and never reach
 	// Plan, so they cannot collide with the files that do get written.
-	ruleCands, ruleInline := splitCopilotCandidates(allRules, "rule", target)
-	ctxCands, ctxInline := splitCopilotCandidates(allContext, "context", target)
+	ruleCands, ruleInline := splitCopilotCandidates(cfg.Diag, allRules, "rule", target)
+	ctxCands, ctxInline := splitCopilotCandidates(cfg.Diag, allContext, "context", target)
 	planned, plannedRules, plannedContext, err := rulefiles.Plan(ruleCands, ctxCands, &target, routing,
 		scope, reg)
 	if err != nil {
@@ -282,7 +280,7 @@ func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Con
 // files from the ones that stay in copilot-instructions.md (auto, manual and
 // negated-only-glob items). The second result holds the latter that their
 // targets still allow in that file.
-func splitCopilotCandidates(all []config.ContentFile, kind string, target rulefiles.Target,
+func splitCopilotCandidates(d *diag.Collector, all []config.ContentFile, kind string, target rulefiles.Target,
 ) (candidates, inline []config.ContentFile) {
 	stay := func(cf config.ContentFile) {
 		if rulefiles.InlineAllowed(cf, target) {
@@ -299,7 +297,7 @@ func splitCopilotCandidates(all []config.ContentFile, kind string, target rulefi
 		case mode == config.ActivationAuto || mode == config.ActivationManual:
 			stay(cf)
 		case rulefiles.OnlyNegatedGlobs(cf):
-			rulefiles.WarnOnlyNegated(kind, cf, "copilot-instructions.md")
+			rulefiles.WarnOnlyNegated(d, kind, cf, "copilot-instructions.md")
 			stay(cf)
 		default:
 			candidates = append(candidates, cf)
@@ -335,7 +333,7 @@ func renderCopilotRuleFiles(items []rulefiles.Item, baseDir string, cfg *config.
 			return nil, oops.With("preset", presetNameCopilot, "rule", it.File.Name).Wrapf(err, "render copilot instructions")
 		}
 		path := rulefiles.RulesDirPath(cfg, baseDir, t, rulefiles.FileName(t, it))
-		rulefiles.ReportNotes(path, notes)
+		rulefiles.ReportNotes(cfg.Diag, path, notes)
 		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}
 	return outputs, nil
@@ -364,10 +362,10 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(cfg *config.Config, allR
 	}
 
 	// Add rules section
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Skills are generated to .github/skills/ directory, not inlined
 

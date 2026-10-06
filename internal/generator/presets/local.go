@@ -53,8 +53,8 @@ func RenderLocalRootRulesFor(local *config.ContentTree, allRules []config.Conten
 // file, with the exact formatting of the committed root files.
 func localSections(allRules, allContext []config.ContentFile, cfg *config.Config) string {
 	var builder strings.Builder
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true, ContextSummary: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true, ContextSummary: true}, nil)
 	return builder.String()
 }
 

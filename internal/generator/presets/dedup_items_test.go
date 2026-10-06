@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 // skillFile builds a directory-form skill whose Name matches its output id, the
@@ -216,14 +217,14 @@ func TestAllSkills_sameSourceListedTwiceCollapses(t *testing.T) {
 func TestCommandAsSkills_WarnsWhenACommandIDCollides(t *testing.T) {
 	// Arrange
 	var warnings []string
-	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) }))
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) }))
 	content := &config.ContentTree{
 		Skills:   []config.ContentFile{{Name: "ship", Path: "skills/ship/SKILL.md", Content: "skill"}},
 		Commands: []config.ContentFile{{Name: "ship", Path: "commands/ship.md", Content: "cmd"}, {Name: "my-cmd", Path: "commands/a.md", Content: "d1"}, {Name: "my_cmd", Path: "commands/b.md", Content: "d2"}},
 	}
 
 	// Act
-	skills := commandAsSkills(content, "codex")
+	skills := commandAsSkills(nil, content, "codex")
 
 	// Assert
 	require.Len(t, skills, 1)

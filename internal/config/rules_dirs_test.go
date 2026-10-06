@@ -50,8 +50,7 @@ func TestRulesDirRemainder(t *testing.T) {
 	}
 }
 
-func TestRegisterRulesDir(t *testing.T) {
-	// Not parallel: registration is process-wide.
+func TestRulesDirSet_Add(t *testing.T) {
 	tests := []struct {
 		name       string
 		register   string
@@ -68,14 +67,38 @@ func TestRegisterRulesDir(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			RegisterRulesDir(tt.register)
-			RegisterRulesDir(tt.register) // idempotent
-			t.Cleanup(func() { UnregisterRulesDir(tt.register) })
+			set := &RulesDirSet{}
+			set.Add(tt.register)
+			set.Add(tt.register) // idempotent
 
-			rest, ok := RulesDirRemainder(tt.path)
+			rest, ok := set.Remainder(tt.path)
 
 			assert.Equal(t, tt.wantInDir, ok && rest != "")
 			assert.Equal(t, tt.wantRemain, rest)
 		})
+	}
+}
+
+func TestRulesDirSet_IsPerProject(t *testing.T) {
+	// Arrange: one project registers a custom folder, another does not.
+	a, b := &Config{}, &Config{}
+	a.AddRulesDir("custom-a/rules")
+
+	// Assert: the folder belongs to the first project only, and to no global state.
+	if !a.InRulesDir("custom-a/rules/x.md") {
+		t.Error("the project that added the folder must see it")
+	}
+	if b.InRulesDir("custom-a/rules/x.md") || InRulesDir("custom-a/rules/x.md") {
+		t.Error("another project, and the built-in set, must not see it")
+	}
+	if !b.InRulesDir(".claude/rules/x.md") {
+		t.Error("the built-in folders apply to every project")
+	}
+}
+
+func TestRulesDirSet_IncludesTheFoldersOfEmbeddedSpecs(t *testing.T) {
+	// the aiassistant spec writes split rule files into .aiassistant/rules
+	if !InRulesDir(".aiassistant/rules/x.md") {
+		t.Error("a split rules folder of an embedded spec is a rules folder without any registration")
 	}
 }

@@ -2,10 +2,14 @@ package presets
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/schema"
+
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
@@ -13,13 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
-
-func init() {
-	config.RegisterPreset(presetNameAntigravity, &AntigravityPresetGenerator{})
-}
 
 // AntigravityPresetGenerator generates Antigravity preset files
 type AntigravityPresetGenerator struct{}
@@ -186,9 +184,9 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		msg := "antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
 			"so all rules stay inline; set rules.mode_by_preset.antigravity to override"
 		if planErr == nil && len(wouldBe) > 0 {
-			logger.Info(msg)
+			cfg.Log().Info(msg)
 		} else {
-			logger.Debug(msg)
+			cfg.Log().Debug(msg)
 		}
 	}
 	if len(files) > 0 && !rulefiles.InScope(cfg) {
@@ -205,7 +203,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 				Wrapf(err, "render antigravity rule file")
 		}
 		path := rulefiles.RulesDirPath(cfg, baseDir, antigravityRulesTarget, rulefiles.FileName(antigravityRulesTarget, *it))
-		rulefiles.ReportNotes(path, notes)
+		rulefiles.ReportNotes(cfg.Diag, path, notes)
 		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}
 
@@ -221,7 +219,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	// Generate skill files to .agents/skills/. Workflows (the custom slash
 	// commands) retire on 2026-11-01 in favour of skills, so a command is written
 	// as a skill, which Antigravity runs on an explicit invocation.
-	allSkills := append(allSkills(content), commandAsSkills(content, presetNameAntigravity)...)
+	allSkills := append(allSkills(content), commandAsSkills(cfg.Diag, content, presetNameAntigravity)...)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
@@ -349,9 +347,9 @@ func (g *AntigravityPresetGenerator) renderMarkdown(
 		builder.WriteString("\n\n")
 	}
 
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 

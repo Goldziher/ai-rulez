@@ -15,8 +15,6 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 const governanceConfig = `version = "4.0"
@@ -180,7 +178,7 @@ func TestGovernanceTools_NeverFetch(t *testing.T) {
 	dir := governanceProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \"https://example.invalid/shared.git\"\nref = \"main\"\n")
 
 	// Control: a load that is allowed to fetch does reach git.
-	_, _ = config.LoadConfig(context.Background(), dir) //nolint:errcheck // a failed include fetch is only a warning
+	_, _ = loadWithResolvers(context.Background(), dir) //nolint:errcheck // a failed include fetch is only a warning
 	_, statErr := os.Stat(marker)
 	require.NoError(t, statErr, "the control load must have called the git shim")
 	require.NoError(t, os.Remove(marker))

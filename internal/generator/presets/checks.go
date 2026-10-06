@@ -5,13 +5,12 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
+
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 // ChecksBlockName names the marker-delimited block ai-rulez owns in a review-check
@@ -46,16 +45,6 @@ func getAllDomainChecks(content *config.ContentTree) []config.ContentFile {
 	return checks
 }
 
-// checkWarned remembers the warnings AllChecks already issued: every preset
-// renders the same checks, and a warning per preset would repeat itself.
-var checkWarned sync.Map
-
-func warnCheckOnce(msg string, kv ...any) {
-	if _, seen := checkWarned.LoadOrStore(msg, struct{}{}); !seen {
-		logger.Warn(msg, kv...)
-	}
-}
-
 // AllChecks returns the checks of the root and every selected domain, root first
 // where names collide, sorted by name. The tree is already profile-selected.
 //
@@ -65,23 +54,28 @@ func warnCheckOnce(msg string, kv ...any) {
 // names that differ only in case are one check (the output files collide on a
 // case-insensitive file system); the first, by precedence, is kept and the other
 // reported.
-func AllChecks(content *config.ContentTree) []config.ContentFile {
+//
+// Each warning is shown once per run: every preset renders the same checks, and a
+// warning per preset would repeat itself.
+func AllChecks(cfg *config.Config, content *config.ContentTree) []config.ContentFile {
 	if content == nil {
 		return nil
 	}
+	// A message is shown once per run, however many presets render the checks.
+	warnOnce := func(msg string, kv ...any) { cfg.WarnOnce(msg, msg, kv...) }
 	combined := append(append([]config.ContentFile(nil), content.Checks...), getAllDomainChecks(content)...)
 	seen := make(map[string]string, len(combined))
 	kept := make([]config.ContentFile, 0, len(combined))
 	for _, check := range combined {
 		if !config.IsValidCheckName(check.Name) {
-			warnCheckOnce("Skipping a check with an invalid name; it is rendered into file names and markers, "+
+			warnOnce("Skipping a check with an invalid name; it is rendered into file names and markers, "+
 				"so only letters, digits, '.', '_' and '-' are allowed", "name", check.Name, "path", check.Path)
 			continue
 		}
 		key := strings.ToLower(check.Name)
 		if first, dup := seen[key]; dup {
 			if first != check.Name {
-				warnCheckOnce("Skipping check \""+check.Name+"\": its name differs only in case from \""+first+
+				warnOnce("Skipping check \""+check.Name+"\": its name differs only in case from \""+first+
 					"\", and their files would collide on a case-insensitive file system", "path", check.Path)
 			}
 			continue
@@ -183,7 +177,7 @@ func cursorCheckOutputs(content *config.ContentTree, baseDir string, cfg *config
 	if cfg != nil && cfg.UserScope {
 		return nil, nil
 	}
-	text := RenderCheckSections(ChecksForPreset(AllChecks(content), presetNameCursor), "")
+	text := RenderCheckSections(ChecksForPreset(AllChecks(cfg, content), presetNameCursor), "")
 	if text == "" {
 		return nil, nil
 	}

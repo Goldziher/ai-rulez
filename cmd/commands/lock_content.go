@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // lockSnapshot computes the content pins of cfg (see govview.Snapshot).
@@ -101,7 +102,7 @@ func sharedConfig(cfg *config.Config) (*config.Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}
-	reloaded, err := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal())
+	reloaded, err := project.LoadFile(context.Background(), path, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}

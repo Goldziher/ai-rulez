@@ -11,13 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
-func init() {
-	// Register the custom preset generator factory
-	config.CustomPresetGeneratorFactory = func(preset config.Preset) config.PresetGenerator {
-		return NewCustomPresetGenerator(&preset)
-	}
-}
-
 // CustomPresetGenerator handles custom preset generation
 type CustomPresetGenerator struct {
 	Preset config.Preset

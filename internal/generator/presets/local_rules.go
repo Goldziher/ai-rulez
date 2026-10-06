@@ -3,9 +3,10 @@ package presets
 import (
 	"path/filepath"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/samber/oops"
 )
 
 // localRuleOutputs renders already planned local rule items as personal rule
@@ -24,7 +25,7 @@ func localRuleOutputs(t rulefiles.Target, items []rulefiles.Item, baseDir string
 		for j := range notes {
 			notes[j].Name += " (local)"
 		}
-		rulefiles.ReportNotes(path, notes)
+		rulefiles.ReportNotes(cfg.Diag, path, notes)
 		analysis := cfg.Analysis.Begin(path, t.Preset, config.OutputKindRuleFile, it.ID, it.File.Path)
 		if analysis != nil {
 			analysis.MachineLocal = true
@@ -145,6 +146,6 @@ func renderLocalRootRuleFile(t rulefiles.Target, root rulefiles.Target, local *c
 		return config.OutputFile{}, oops.With("preset", t.Preset).Wrapf(err, "render local %s rule file", t.Preset)
 	}
 	path := filepath.Join(baseDir, filepath.FromSlash(rulefiles.LocalPath(t, localRootID)))
-	rulefiles.ReportNotes(path, notes)
+	rulefiles.ReportNotes(cfg.Diag, path, notes)
 	return config.OutputFile{Path: path, Content: text, LocalOnly: true}, nil
 }

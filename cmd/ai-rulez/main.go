@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
-	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // Register includes resolver callback
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 

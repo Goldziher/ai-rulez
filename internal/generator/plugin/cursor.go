@@ -6,10 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func init() {
-	register(config.PluginRuntimeCursor, renderCursor)
-}
-
 // cursorManifest is the shape of .cursor-plugin/plugin.json. Unlike Claude,
 // Cursor references its skills directory explicitly.
 type cursorManifest struct {

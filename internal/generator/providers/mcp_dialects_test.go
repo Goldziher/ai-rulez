@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
 func dialectServers() *config.Config {
@@ -260,7 +261,7 @@ header = "# Bugbot rules\n"
 			// Arrange
 			orig := checkItems
 			t.Cleanup(func() { checkItems = orig })
-			checkItems = func(*config.ContentTree) []config.ContentFile { return tt.items }
+			checkItems = func(*config.Config, *config.ContentTree) []config.ContentFile { return tt.items }
 
 			// Act
 			outputs, err := gen.Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t"})
@@ -296,7 +297,7 @@ sections = ["frontmatter", "content"]
 	require.NoError(t, err)
 	orig := checkItems
 	t.Cleanup(func() { checkItems = orig })
-	checkItems = func(*config.ContentTree) []config.ContentFile {
+	checkItems = func(*config.Config, *config.ContentTree) []config.ContentFile {
 		return []config.ContentFile{{Name: "Perf Check", Content: "Look at hot loops."}}
 	}
 

@@ -43,7 +43,7 @@ func gitAdd(t *testing.T, root string) {
 
 func lintDir(t *testing.T, base string) []Finding {
 	t.Helper()
-	cfg, err := config.LoadConfig(context.Background(), base)
+	cfg, err := loadWithResolvers(context.Background(), base)
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}

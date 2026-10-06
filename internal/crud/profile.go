@@ -5,10 +5,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // AddProfile adds a new profile to the config
@@ -31,7 +33,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -135,7 +137,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -191,7 +193,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -229,7 +231,7 @@ func (op *OperatorImpl) ListProfiles(ctx context.Context) ([]ProfileInfo, error)
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).

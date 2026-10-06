@@ -2,11 +2,12 @@ package includes
 
 import (
 	"context"
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +60,7 @@ format = "okf"
 
 func (f *okfLockFixture) load(t *testing.T) (*config.Config, error) {
 	t.Helper()
-	return config.LoadConfig(context.Background(), f.project, config.WithoutLocal())
+	return loadWithResolvers(context.Background(), f.project, config.WithoutLocal())
 }
 
 func (f *okfLockFixture) body(cfg *config.Config) string {
@@ -128,7 +129,7 @@ func TestOKFInclude_MovedTagKeepsThePinUntilRelocked(t *testing.T) {
 
 func TestOKFInclude_LockCheckReportsStaleAndTamperedEntries(t *testing.T) {
 	f := newOKFLockFixture(t, "v1")
-	cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+	cfg, err := loadWithResolvers(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
 	require.NoError(t, err)
 	problems, _ := CheckLock(cfg, nil)
 	require.Len(t, problems, 1, "an OKF include from git is lockable like any other")
@@ -190,7 +191,7 @@ func TestOKFInclude_MovingRefIsUnpinnedUntilLocked(t *testing.T) {
 	for name, ref := range map[string]string{"branch": "main", "tag": "v1", "none": ""} {
 		t.Run(name, func(t *testing.T) {
 			f := newOKFLockFixture(t, ref)
-			cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+			cfg, err := loadWithResolvers(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
 			require.NoError(t, err)
 			unpinned := Unpinned(cfg)
 			require.Len(t, unpinned, 1)
@@ -210,7 +211,7 @@ func TestOKFInclude_FullCommitIsPinnedWithoutALock(t *testing.T) {
 	raw, err := os.ReadFile(cfgPath)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(cfgPath, append(raw, []byte("ref = \""+sha+"\"\n")...), 0o644))
-	cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+	cfg, err := loadWithResolvers(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
 	require.NoError(t, err)
 	assert.Empty(t, Unpinned(cfg))
 }

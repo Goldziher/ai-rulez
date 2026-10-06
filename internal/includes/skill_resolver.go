@@ -5,15 +5,15 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 // ResolveInstalledSkills resolves all configured installed skills and returns their content
 func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken string) ([]config.ContentFile, error) {
-	logger.Debug("Resolving installed skills", "count", len(cfg.InstalledSkills))
+	cfg.Log().Debug("Resolving installed skills", "count", len(cfg.InstalledSkills))
 
 	var skills []config.ContentFile
 	var violations []error
@@ -37,12 +37,12 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 			if errors.Is(err, config.ErrLockViolation) || strictLock(cfg) {
 				violations = append(violations, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "installed skill %q", skillConf.Name))
 			}
-			logger.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
+			cfg.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
 			continue
 		}
 
 		skills = append(skills, contentFile)
-		logger.Debug("Successfully resolved installed skill", "name", skillConf.Name)
+		cfg.Log().Debug("Successfully resolved installed skill", "name", skillConf.Name)
 	}
 
 	if len(violations) > 0 {
@@ -61,10 +61,10 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		}
 		localDir := resolveSkillLocalOverride(baseDir, skillConf)
 		if localDir != "" {
-			logger.Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
+			cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
 			return ScanInstalledSkillDir(localDir, skillConf.Name)
 		}
-		logger.Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
+		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
 		return config.ContentFile{}, oops.Errorf("local override path not found for skill '%s'", skillConf.Name)
 	}
 
