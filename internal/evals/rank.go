@@ -2,6 +2,7 @@ package evals
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -67,6 +68,9 @@ type RankRow struct {
 	SkillTokens      int            `json:"skill_tokens"`
 	Feedback         map[string]int `json:"feedback,omitempty"`
 	Stale            bool           `json:"stale,omitempty"`
+	// Unverified says the skill has an eval record that is unsigned or signed by
+	// another key. Its numbers are not used: it counts as "no eval results".
+	Unverified bool `json:"unverified,omitempty"`
 	// Join says how far the usage evidence is tied to the evaluated skill: see
 	// the Join* constants. Empty when no usage log was given.
 	Join string `json:"join,omitempty"`
@@ -174,6 +178,11 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 	var record *SkillRecord
 	if in.Store != nil {
 		record, _ = in.Store.Get(skill.ID)
+	}
+	if record != nil && !record.Verified() {
+		row.Unverified = true
+		row.Notes = append(slices.Clone(row.Notes), "the eval record is unverified (unsigned, or signed with another key): ignored; run `ai-rulez eval run` to record a signed result")
+		record = nil
 	}
 	if in.Uses != nil {
 		n := in.Uses[skill.ID]

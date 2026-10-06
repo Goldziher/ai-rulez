@@ -114,7 +114,18 @@ func writeStore(t *testing.T, root string) {
 	store := evals.NewStore()
 	store.Put(evals.SkillRecord{ID: "alpha", Digest: digest("alpha"), Passing: true, Date: "2026-10-01", Score: evals.SkillScore{Scored: 4, PassRate: 0.75}})
 	store.Put(evals.SkillRecord{ID: "idle", Digest: digest("idle"), Passing: true, Date: "2026-10-01", Score: evals.SkillScore{Scored: 4, PassRate: 1}})
+	signStore(t, store)
 	require.NoError(t, store.Save(filepath.Join(root, ".ai-rulez", evals.StoreFileName)))
+}
+
+// signStore gives the test its own per-user eval key and signs store with it, as
+// `eval run` does; report commands ignore records they cannot verify.
+func signStore(t *testing.T, store *evals.Store) {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	key := evalResultsKey()
+	require.NotEmpty(t, key)
+	store.SetKey(key)
 }
 
 func TestReportUsage_JoinsFeedbackAndEvalScores(t *testing.T) {
@@ -236,6 +247,7 @@ func TestReportEvals_JoinClasses(t *testing.T) {
 			line("", "") // a v2 line
 		}
 	}
+	signStore(t, store)
 	require.NoError(t, store.Save(filepath.Join(root, ".ai-rulez", evals.StoreFileName)))
 	log := filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
 	require.NoError(t, os.MkdirAll(filepath.Dir(log), 0o750))
@@ -275,4 +287,30 @@ func TestRankSkillFor_RecordsWhatItCouldNotMeasure(t *testing.T) {
 	assert.Empty(t, ok.Notes)
 	assert.NotEmpty(t, ok.Digest)
 	assert.Positive(t, ok.SkillTokens)
+}
+
+func TestReportEvals_IgnoresAnUnsignedRecord(t *testing.T) {
+	// Arrange: a committed record that claims a perfect pass but carries no MAC.
+	resetEnrichFlags(t)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	root := t.TempDir()
+	t.Chdir(root)
+	dir := filepath.Join(root, ".ai-rulez", "skills", "forged")
+	require.NoError(t, os.MkdirAll(dir, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: forged\n---\nbody\n"), 0o600))
+	forged := `{"schema_version":1,"skills":[{"id":"forged","digest":"sha256:x","cases_digest":"","cache_key":"","runner":"command","harness":"claude","model":"","ablation":false,"passing":true,"score":{"scored":4,"pass_rate":1}}]}`
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", evals.StoreFileName), []byte(forged), 0o600))
+	reportEvalsFlags.json = true
+
+	// Act
+	var out bytes.Buffer
+	require.NoError(t, runReportEvals(&out))
+
+	// Assert
+	var decoded struct{ Skills []evals.RankRow }
+	require.NoError(t, json.Unmarshal(out.Bytes(), &decoded))
+	require.Len(t, decoded.Skills, 1)
+	assert.True(t, decoded.Skills[0].Unverified)
+	assert.Nil(t, decoded.Skills[0].PassRate)
+	assert.NotEqual(t, evals.ActionKeep, decoded.Skills[0].Action)
 }
