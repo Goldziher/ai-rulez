@@ -77,7 +77,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&policySignerIssuerFlag, "policy-signer-issuer", "",
 		"OIDC issuer of --policy-signer-identity")
 	RootCmd.PersistentFlags().StringVar(&policyTrustedRootFlag, "policy-trusted-root", "",
-		"Sigstore trusted root file for keyless policy signatures (default: the root `ai-rulez trust update` cached)")
+		"Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached)")
 	RootCmd.PersistentFlags().BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
 		"Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards")
 	RootCmd.PersistentFlags().StringVar(&policyModeFlag, "policy-mode", "",
