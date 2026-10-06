@@ -1,0 +1,22 @@
+needs-action | (hooks) | hooks | config.toml | 7 hook group(s) were written as a commented block, not enabled: each runs a command on your machine. Review them, then uncomment or rerun with --enable-hooks
+needs-action | (permissions) | permissions.allow | config.toml | 4 allow rule(s) were written as a commented block, not enabled: an allow would apply to every harness. Review them, then uncomment or rerun with --enable-permissions
+mapped | .claude/settings.json | hooks.PostToolUse | hooks.PostToolUse | 
+mapped | .claude/settings.json | hooks.PreToolUse | hooks.PreToolUse | 
+mapped | .claude/settings.json | hooks.Stop | hooks.Stop | 
+dropped | .claude/settings.json | model |  | settings key is not imported; set it by hand (env and skillOverrides can live in [claude.settings.managed])
+mapped | .claude/settings.json | permissions.allow | permissions.allow | 
+mapped | .claude/settings.json | permissions.ask | permissions.ask | 
+dropped | .claude/settings.json | permissions.defaultMode |  | the default permission mode has no ai-rulez setting
+mapped | .claude/settings.json | permissions.deny | permissions.deny | 
+mapped | .codex/hooks.json | hooks.SessionStart | hooks.SessionStart | 
+mapped | .codex/hooks.json | hooks.Stop | hooks.Stop | 
+approximated | .cursor/cli.json | permissions.allow | permissions.allow | Cursor rules were rewritten to Claude Code syntax (Shell to Bash, Write to Edit, Mcp to mcp__server__tool); review them
+approximated | .cursor/cli.json | permissions.deny | permissions.deny | Cursor rules were rewritten to Claude Code syntax (Shell to Bash, Write to Edit, Mcp to mcp__server__tool); review them
+unsupported | .cursor/hooks.json | hooks |  | events with no ai-rulez hook event were not imported: afterFileEdit
+mapped | .cursor/hooks.json | hooks.PreToolUse | hooks.PreToolUse | 
+approximated | .cursor/hooks.json | hooks.preToolUse[0].matcher | hooks.matchers.cursor | the matcher uses cursor's own tool names, so it is kept as matchers.cursor and the group is restricted to that harness
+approximated | .gemini/settings.json | hooks.BeforeTool[0].matcher | hooks.matchers.gemini | the matcher uses gemini's own tool names, so it is kept as matchers.gemini and the group is restricted to that harness
+mapped | .gemini/settings.json | hooks.PreToolUse | hooks.PreToolUse | 
+unsupported | .gemini/settings.json | tools |  | Gemini tool allow and exclude lists are not translated back to permission rules; add them to [permissions] by hand
+mapped | .github/hooks/team.json | hooks.Stop | hooks.Stop | 
+mapped | CLAUDE.md | context | context/claude.md | 

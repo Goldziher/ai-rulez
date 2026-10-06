@@ -146,13 +146,23 @@ type Plan struct {
 	Presets         []string
 	MCPServers      []config.MCPServer
 	InstalledSkills []config.InstalledSkillConfig
-	Findings        []Finding
+	// Hooks and Permissions are read from tool files; convert writes them
+	// disabled unless the caller opts in (see hooks.go).
+	Hooks       []config.HookGroup
+	Permissions config.Permissions
+	Findings    []Finding
 
 	// presetDefaulted is set when no preset was inferred and claude was chosen.
 	presetDefaulted bool
 }
 
 func (p *Plan) add(f Finding) { p.Findings = append(p.Findings, f) }
+
+// empty reports whether the plan carries nothing to write.
+func (p *Plan) empty() bool {
+	return len(p.Items) == 0 && len(p.MCPServers) == 0 && len(p.InstalledSkills) == 0 &&
+		len(p.Hooks) == 0 && p.Permissions.IsEmpty()
+}
 
 // Options tune a Plan call.
 type Options struct {
@@ -200,6 +210,10 @@ func (p *Plan) merge(other *Plan) {
 	p.Presets = append(p.Presets, other.Presets...)
 	p.MCPServers = append(p.MCPServers, other.MCPServers...)
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
+	p.Hooks = append(p.Hooks, other.Hooks...)
+	p.Permissions.Allow = append(p.Permissions.Allow, other.Permissions.Allow...)
+	p.Permissions.Ask = append(p.Permissions.Ask, other.Permissions.Ask...)
+	p.Permissions.Deny = append(p.Permissions.Deny, other.Permissions.Deny...)
 	p.Findings = append(p.Findings, other.Findings...)
 }
 
@@ -269,6 +283,8 @@ func (p *Plan) Finalize() {
 	p.Presets = dedupeStrings(p.Presets)
 	p.MCPServers = dedupeServers(p.MCPServers)
 	p.InstalledSkills = dedupeInstalled(p.InstalledSkills)
+	p.Hooks = mergeHookGroups(p.Hooks)
+	dedupePermissions(&p.Permissions)
 
 	sort.SliceStable(p.Findings, func(i, j int) bool {
 		a, b := p.Findings[i], p.Findings[j]
