@@ -1,7 +1,6 @@
 package jsonmerge
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"reflect"
 	"slices"
 	"sort"
-	"strings"
 
 	"github.com/samber/oops"
 )
@@ -334,169 +332,15 @@ func Unmerge(path string, claims []Claim) (Unmerged, error) {
 // UnmergeDocument is Unmerge for a document already read; path only names it in
 // errors.
 func UnmergeDocument(path, existing string, claims []Claim) (Unmerged, error) {
+	// The in-place editor patches only what it removes, so every document comes back
+	// byte for byte whatever its layout; it reports a document it cannot parse.
 	bom, existing := SplitBOM(existing)
-	members, err := decodeObjectMembers([]byte(existing))
-	if err != nil || hasCompactContainer(existing, members) {
-		result, err := unmergeJSONC(path, existing, claims, err)
-		if result.Changed && !result.Empty {
-			result.Body = bom + result.Body
-		}
-		return result, err
+	_, err := decodeObjectMembers([]byte(existing))
+	result, err := unmergeJSONC(path, existing, claims, err)
+	if result.Changed && !result.Empty {
+		result.Body = bom + result.Body
 	}
-
-	indent := detectTopLevelIndent(existing)
-	newline := detectLineEnding(existing)
-	members, changed, kept, err := unmergeAll(members, claims, indent, newline)
-	if err != nil {
-		return Unmerged{}, oops.With("path", path).Wrapf(err, "remove ai-rulez content from JSON settings document")
-	}
-	if !changed {
-		return Unmerged{Kept: kept}, nil
-	}
-	rendered, err := renderMembers(members, 1, indent, newline)
-	if err != nil {
-		return Unmerged{}, oops.With("path", path).Wrapf(err, "encode JSON settings document")
-	}
-	body := RestoreFinalNewline(claims, rendered+newline)
-	if err := checkPreservedDocuments(existing, body, func(before, after map[string]any) error {
-		return CheckPreservedUnmerge(before, after, claims)
-	}); err != nil {
-		return Unmerged{}, oops.With("path", path).
-			Hint("ai-rulez could not remove its keys from this JSON document without altering the rest of it; the file was left untouched").
-			Wrapf(err, "unmerged JSON settings document does not preserve the existing content")
-	}
-	empty := len(members) == 0
-	if !empty {
-		body = bom + body
-	}
-	return Unmerged{Body: body, Changed: true, Empty: empty, Kept: kept}, nil
-}
-
-// unmergeAll applies the claims in order, the Alone ones last and only while a
-// single top-level member remains. It also returns the claimed paths that were
-// left because their value is not the recorded one and are still present once
-// every claim has run (a later claim may match what an earlier one did not).
-func unmergeAll(members []jsonMember, claims []Claim, indent, newline string,
-) (result []jsonMember, changed bool, kept [][]string, err error) {
-	var mismatched [][]string
-	for _, alone := range []bool{false, true} {
-		for _, claim := range claims {
-			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(members) != 1) {
-				continue
-			}
-			next, did, mismatch, err := unmergeClaim(members, claim.Path, claim, 1, indent, newline)
-			if err != nil {
-				return nil, false, nil, err
-			}
-			members, changed = next, changed || did
-			if mismatch {
-				mismatched = append(mismatched, claim.Path)
-			}
-		}
-	}
-	seen := map[string]bool{}
-	for _, path := range mismatched {
-		key := strings.Join(path, "\x00")
-		if !seen[key] && memberPresent(members, path) {
-			seen[key] = true
-			kept = append(kept, path)
-		}
-	}
-	return members, changed, kept, nil
-}
-
-// memberPresent reports whether the key path addresses a member of the document.
-func memberPresent(members []jsonMember, path []string) bool {
-	for _, member := range members {
-		if member.Key != path[0] {
-			continue
-		}
-		if len(path) == 1 {
-			return true
-		}
-		raw := bytes.TrimSpace(member.Raw)
-		if len(raw) == 0 || raw[0] != '{' {
-			return false
-		}
-		child, err := decodeObjectMembers(raw)
-		return err == nil && memberPresent(child, path[1:])
-	}
-	return false
-}
-
-// unmergeClaim removes the member (or array elements) the claim addresses,
-// dropping an ancestor object the removal leaves empty. mismatch reports a member
-// found at the path whose value the claim's guard rejected.
-func unmergeClaim(members []jsonMember, path []string, claim Claim, depth int, indent, newline string,
-) (result []jsonMember, changed, mismatch bool, err error) {
-	head, rest := path[0], path[1:]
-	idx := -1
-	for i, member := range members {
-		if member.Key == head {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return members, false, false, nil
-	}
-
-	if len(rest) == 0 {
-		return unmergeLeaf(members, idx, claim, depth, indent, newline)
-	}
-	raw := bytes.TrimSpace(members[idx].Raw)
-	if len(raw) == 0 || raw[0] != '{' {
-		return members, false, false, nil
-	}
-	child, err := decodeObjectMembers(raw)
-	if err != nil {
-		return nil, false, false, err
-	}
-	child, did, mismatch, err := unmergeClaim(child, rest, claim, depth+1, indent, newline)
-	if err != nil || !did {
-		return members, false, mismatch, err
-	}
-	if len(child) == 0 {
-		return removeMember(members, head), true, false, nil
-	}
-	rendered, err := renderMembers(child, depth+1, indent, newline)
-	if err != nil {
-		return nil, false, false, err
-	}
-	members[idx] = jsonMember{Key: head, Raw: []byte(rendered)}
-	return members, true, false, nil
-}
-
-// unmergeLeaf applies a claim to the member at members[idx].
-func unmergeLeaf(members []jsonMember, idx int, claim Claim, depth int, indent, newline string,
-) (result []jsonMember, changed, mismatch bool, err error) {
-	head := members[idx].Key
-	if !claim.Matches(members[idx].Raw) {
-		return members, false, true, nil
-	}
-	if !claim.HasElements() {
-		return removeMember(members, head), true, false, nil
-	}
-
-	var elements []json.RawMessage
-	if json.Unmarshal(members[idx].Raw, &elements) != nil {
-		return members, false, false, nil //nolint:nilerr // not an array: the consumer's value, left alone
-	}
-	kept := make([]json.RawMessage, 0, len(elements))
-	matcher := claim.NewElementMatcher()
-	for _, element := range elements {
-		if !matcher.TakeRaw(element) {
-			kept = append(kept, element)
-		}
-	}
-	if len(kept) == len(elements) {
-		return members, false, false, nil
-	}
-	if len(kept) == 0 {
-		return removeMember(members, head), true, false, nil
-	}
-	rendered, err := replaceMemberValue(members, head, kept, depth, indent, newline)
-	return rendered, true, false, err
+	return result, err
 }
 
 // anyEquals reports whether raw equals any of the candidates.
