@@ -83,6 +83,9 @@ type Sources struct {
 	// MinReleaseAge is the youngest a tag may be to be adopted: the floor under
 	// [lock] min_release_age and each source's own. 0 for no floor.
 	MinReleaseAge time.Duration
+	// DenyDigests lists sha256 digests of known-bad content: no include, installed
+	// skill, skill source or authored item the lock pins may have one of them.
+	DenyDigests []string
 }
 
 // Lint governs the strict-validation settings.
@@ -204,6 +207,7 @@ type fileSources struct {
 	DenyHosts     []string  `toml:"deny_hosts"`
 	RequirePinned *bool     `toml:"require_pinned"`
 	MinReleaseAge string    `toml:"min_release_age"`
+	DenyDigests   []string  `toml:"deny_digests"`
 }
 
 type fileLint struct {
@@ -371,6 +375,14 @@ func (s *Sources) fromDoc(d *fileSources) error {
 	}
 	s.Deny = deny
 	s.RequirePinned = d.RequirePinned != nil && *d.RequirePinned
+	for _, dd := range d.DenyDigests {
+		n := strings.ToLower(strings.TrimSpace(dd))
+		if !digestPattern.MatchString(n) {
+			return fmt.Errorf("sources.deny_digests: %q is not a digest (use sha256: and 64 hex digits)", dd)
+		}
+		s.DenyDigests = append(s.DenyDigests, n)
+	}
+	s.DenyDigests = sortedUnique(s.DenyDigests)
 	if d.MinReleaseAge != "" {
 		age, err := parseMinReleaseAge(d.MinReleaseAge)
 		if err != nil {

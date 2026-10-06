@@ -68,6 +68,7 @@ func TestPolicySchemaRejectsWhatTheParserRejects(t *testing.T) {
 		{"unknown transport", "policy_version = 1\n[mcp]\ndeny_transports = [\"ws\"]\n"},
 		{"too many extends", "policy_version = 1\nextends = [\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\"]\n"},
 		{"empty extends entry", "policy_version = 1\nextends = [\"\"]\n"},
+		{"bad denied digest", "policy_version = 1\n[sources]\ndeny_digests = [\"abc\"]\n"},
 		{"negative ceiling", "policy_version = 1\n[lint.max_findings]\nAR001 = -1\n"},
 		{"bad release age", "policy_version = 1\n[sources]\nmin_release_age = \"soon\"\n"},
 		{"unknown budget kind", "policy_version = 1\n[lint.budgets.poem]\nmax_lines = 3\n"},
