@@ -162,8 +162,13 @@ func TestUnifiedDiff_HunksAndEdgeCases(t *testing.T) {
 }
 
 func TestReport_ValidatesAgainstTheSchema(t *testing.T) {
-	// Arrange
 	_, _, _, report := acceptedRun(t)
+	assertReportSchema(t, report)
+}
+
+// assertReportSchema checks a report against schema/improve-report.schema.json.
+func assertReportSchema(t *testing.T, report *Report) {
+	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "..", "schema", "improve-report.schema.json"))
 	require.NoError(t, err)
 	compiled, err := jsonschema.NewCompiler().Compile(raw)

@@ -87,6 +87,8 @@ type RoundReport struct {
 	CostUSD     float64     `json:"cost_usd"`
 	OptCostUSD  float64     `json:"optimizer_cost_usd"`
 	Description *DescChange `json:"description,omitempty"`
+	// Siblings is the sibling trigger guard's measurement (AR9J4 when it regressed).
+	Siblings *SiblingReport `json:"siblings,omitempty"`
 }
 
 // DescChange shows the description lines the optimizer rewrote.
@@ -150,6 +152,8 @@ type GateReport struct {
 	MaxRegressions  int     `json:"max_regressions"`
 	MaxRounds       int     `json:"max_rounds"`
 	MaxHoldoutEvals int     `json:"max_holdout_evals"`
+	// RequireCIAboveZero records --require-ci-above-zero.
+	RequireCIAboveZero bool `json:"require_ci_above_zero,omitempty"`
 }
 
 // Accepted reports whether a candidate was accepted.
@@ -208,7 +212,7 @@ func (p *Plan) Execute(ctx context.Context) (*Report, error) {
 		Schema: ReportSchema, RunID: p.RunID, Skill: p.Skill.ID, SkillPath: p.SkillRel, Date: o.Date, ToolVersion: o.ToolVersion,
 		OriginalDigest: p.OrigDigest, Harness: o.Harness, Model: o.Model, EvalRunner: o.Eval.Name(), Optimizer: Sanitize(o.OptimizerArgv[0], 200),
 		Runs: o.Runs, Constraints: p.Constraints, Egress: o.Egress, EnvPass: o.EnvPass, Warnings: append([]string(nil), p.Warnings...),
-		Gate:  GateReport{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, MaxRounds: o.MaxRounds, MaxHoldoutEvals: o.MaxHoldoutEvals},
+		Gate:  GateReport{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, MaxRounds: o.MaxRounds, MaxHoldoutEvals: o.MaxHoldoutEvals, RequireCIAboveZero: o.RequireCIAboveZero},
 		Split: SplitReport{Method: p.Split.Method, Tag: p.Split.Tag, Fraction: p.Split.Fraction, Train: IDs(p.Split.Train), HeldOut: IDs(p.Split.Held)},
 		Costs: Costs{MaxUSD: o.MaxCostUSD},
 	}
@@ -333,7 +337,9 @@ func (x *execution) loop() (*bestRound, error) {
 			if cerr != nil {
 				return nil, cerr
 			}
-			holdoutEvals++
+			if cand.heldEvaluated {
+				holdoutEvals++
+			}
 			if cand.train != nil {
 				scores = cand.train
 			}
@@ -371,7 +377,11 @@ type roundResult struct {
 	dir    string
 }
 
-type candidateEval struct{ train *trainScores }
+type candidateEval struct {
+	train *trainScores
+	// heldEvaluated is set when the held-out set was consumed by this round.
+	heldEvaluated bool
+}
 
 // round invokes the optimizer once and applies the diff policy. A non-empty
 // report.Decision means the round is already decided (rejected) and no eval was
@@ -433,6 +443,22 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	p, o := x.p, &x.p.Opts
 	out := &candidateEval{}
 	digest := rep.Digest
+	// The sibling guard is free (the offline ranker), so it runs before any eval spend.
+	sib, serr := p.checkSiblings(x.ctx, rr.cand)
+	switch {
+	case serr != nil:
+		rep.Decision = "rejected: sibling guard failed"
+		rep.Reasons = append(rep.Reasons, "the sibling trigger guard could not run, so the candidate cannot be cleared: "+Sanitize(serr.Error(), 300))
+		x.prev = rr.cand
+		return out, nil
+	case len(sib.Regressions()) > 0:
+		rep.Siblings = sib
+		rep.Decision = "rejected: regression"
+		rep.Reasons = append(rep.Reasons, sib.Reasons()...)
+		x.prev = rr.cand
+		return out, nil
+	}
+	rep.Siblings = sib
 	if !x.overBudget() {
 		train, err := x.eval.Eval(x.ctx, p.Skill.ID, rr.dir, digest, p.trainCases, x.left())
 		if train != nil {
@@ -459,13 +485,14 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	if err != nil {
 		return nil, fmt.Errorf("round %d: evaluate the candidate on held-out cases: %w", round, err)
 	}
+	out.heldEvaluated = true
 	cmp := Compare(baseHeld.Outcomes, held.Outcomes)
 	rep.Held = &cmp
-	verdict := Gate{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions}.Decide(cmp)
+	verdict := Gate{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, RequireCIAboveZero: o.RequireCIAboveZero}.Decide(cmp)
 	rep.Decision = verdict.Decision()
 	rep.Reasons = append(rep.Reasons, verdict.Reasons...)
 	if cmp.Underpowered {
-		rep.Warnings = append(rep.Warnings, fmt.Sprintf("underpowered: %d held-out case(s), fewer than %d", len(cmp.Table), underpoweredBelow))
+		rep.Warnings = append(rep.Warnings, underpoweredWarning(&cmp))
 	}
 	if held.NoCost {
 		rep.Warnings = append(rep.Warnings, "the eval runner reported no cost; the whole remaining budget was charged")
