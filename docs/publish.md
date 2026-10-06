@@ -32,7 +32,7 @@ missing from the commit a pinned marketplace names, so publish fails (`AR9N3`) u
 | File | Content |
 | --- | --- |
 | `<name>-<version>.tar.gz` | the bundle: every file `generate --plugin` writes for the published runtimes |
-| `<name>-<version>.manifest.json` | files with digests, source, lock tie, bundle digest, and the approval, signature and SBOM slots ([schema](schema.md)) |
+| `<name>-<version>.manifest.json` | files with digests, source (the repository is `[plugin] repository` or the origin URL without credentials; a local-path origin is left empty), lock tie, bundle digest, and the approval, signature and SBOM slots ([schema](schema.md)) |
 | `ai-rulez.lock` | a copy of the repository's lock without its `[[approval]]` records (reviewer emails and notes stay in the repository). Tree, content pins and output pins are unchanged, so `ai-rulez lock --check` against the copy behaves as against the original; only `[[approval]]` checks differ. With no approvals the copy is byte-identical |
 | `<name>-<version>.tar.gz.sigstore.json` | with `--sign-key` or `--sign-keyless`: the signature, see [Signing](#signing) |
 | `<name>-<version>.attestation.sigstore.json` | with signing: the signed statement that binds name, version and the archive, lock and SBOM digests |
