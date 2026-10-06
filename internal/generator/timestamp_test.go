@@ -24,8 +24,8 @@ func timestampProject(t *testing.T, header string) string {
 	tempDir := t.TempDir()
 	configDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
-		"version: \"4.0\"\nname: stamped\npresets:\n  - claude\n  - codex\ngitignore: false\nrules:\n  mode: inline\n"+header),
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"4.0\"\nname = \"stamped\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"+header),
 		0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 		[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
@@ -94,7 +94,7 @@ func TestGenerator_SiblingRootFilesAgree(t *testing.T) {
 func TestGenerator_TimestampOptInSharedAcrossOutputs(t *testing.T) {
 	t.Parallel()
 
-	tempDir := timestampProject(t, "header:\n  timestamp: true\n")
+	tempDir := timestampProject(t, "\n[header]\ntimestamp = true\n")
 
 	cfg, err := config.LoadConfig(context.Background(), tempDir)
 	require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestGenerator_TimestampOptInSharedAcrossOutputs(t *testing.T) {
 func TestGenerator_SourceDateEpochPinsTimestamp(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1700000000")
 
-	tempDir := timestampProject(t, "header:\n  timestamp: true\n")
+	tempDir := timestampProject(t, "\n[header]\ntimestamp = true\n")
 	generateProfile(t, tempDir, "default")
 
 	want := "Generated: " + time.Unix(1700000000, 0).Format("2006-01-02 15:04:05")
@@ -129,7 +129,7 @@ func TestGenerator_SourceDateEpochPinsTimestamp(t *testing.T) {
 func TestGenerator_SourceDateEpochIgnoredWhenUnparsable(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "not-a-number")
 
-	tempDir := timestampProject(t, "header:\n  timestamp: true\n")
+	tempDir := timestampProject(t, "\n[header]\ntimestamp = true\n")
 	generateProfile(t, tempDir, "default")
 
 	line := generatedLine.FindString(readFile(t, filepath.Join(tempDir, "CLAUDE.md")))
@@ -152,12 +152,9 @@ func TestGenerator_SharedAgentsMDIdenticalAcrossPresets(t *testing.T) {
 		configDir := filepath.Join(dir, ".ai-rulez")
 		require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 		require.NoError(t, os.MkdirAll(filepath.Join(configDir, "context"), 0o755))
-		list := ""
-		for _, p := range presets {
-			list += "  - " + p + "\n"
-		}
-		require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
-			"version: \"4.0\"\nname: shared\npresets:\n"+list+"gitignore: false\nrules:\n  mode: inline\n"), 0o644))
+		list := "[\"" + strings.Join(presets, "\", \"") + "\"]"
+		require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+			"version = \"4.0\"\nname = \"shared\"\npresets = "+list+"\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 			[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(configDir, "context", "arch.md"),

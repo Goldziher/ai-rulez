@@ -6,21 +6,21 @@
     "estimate": false
   },
   "headline_preset": "claude",
-  "headline_always": 564,
+  "headline_always": 572,
   "headline_listing": 203,
-  "headline_always_legacy": 382,
+  "headline_always_legacy": 390,
   "listing_entry_overhead": 27,
   "runtimes": [
     {
       "preset": "claude",
       "files": 9,
-      "always": 564,
+      "always": 572,
       "conditional": 0,
-      "on_demand": 1088,
+      "on_demand": 1144,
       "unmodeled": 0,
       "listing": 203,
       "listed_items": 5,
-      "always_legacy": 382,
+      "always_legacy": 390,
       "conditional_legacy": 47,
       "detailed": true,
       "root_files": 1,
@@ -28,13 +28,13 @@
         {
           "label": "CLAUDE.md",
           "bucket": "always",
-          "tokens": 213,
+          "tokens": 221,
           "artifacts": 1,
           "children": [
             {
               "label": "header",
               "bucket": "always",
-              "tokens": 85,
+              "tokens": 86,
               "artifacts": 1
             },
             {
@@ -66,7 +66,7 @@
             {
               "label": "provenance hashes and section boundaries",
               "bucket": "always",
-              "tokens": 95,
+              "tokens": 102,
               "artifacts": 1
             }
           ]
@@ -194,7 +194,7 @@
         {
           "label": "per-file provenance hashes",
           "bucket": "on_demand",
-          "tokens": 654,
+          "tokens": 710,
           "artifacts": 8
         }
       ]
@@ -203,7 +203,7 @@
   "domains": [
     {
       "name": "(root)",
-      "always": 338,
+      "always": 339,
       "conditional": 0,
       "on_demand": 394
     },

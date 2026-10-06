@@ -35,7 +35,7 @@ func TestSaveConfig_TOMLProjectWritesTOMLNotYAML(t *testing.T) {
 	require.NoError(t, SaveConfig(cfg, cfg.ConfigDir))
 
 	configDir := filepath.Join(baseDir, aiRulezDirName)
-	assert.NoFileExists(t, filepath.Join(configDir, configYAMLFilename), "a TOML project must not sprout config.yaml")
+	assert.NoFileExists(t, filepath.Join(configDir, "config.yaml"), "a TOML project must not sprout config.yaml")
 
 	reloaded, err := LoadConfig(context.Background(), baseDir)
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestSaveConfig_DefaultsToTOMLWhenNoConfigExists(t *testing.T) {
 
 	require.NoError(t, SaveConfig(cfg, configDir))
 	assert.FileExists(t, filepath.Join(configDir, configTOMLFilename))
-	assert.NoFileExists(t, filepath.Join(configDir, configYAMLFilename))
+	assert.NoFileExists(t, filepath.Join(configDir, "config.yaml"))
 }
 
 func TestMarshalTOML_RoundTripsAllPresetKinds(t *testing.T) {

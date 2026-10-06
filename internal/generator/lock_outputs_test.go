@@ -31,9 +31,9 @@ func lockOutputDigests(t *testing.T, headerBlock string) map[string]string {
 
 func TestLockOutputsAreStableAcrossHeaderModesAndStamps(t *testing.T) {
 	full := lockOutputDigests(t, "")
-	assert.Equal(t, full, lockOutputDigests(t, "header:\n  hashes: content\n"))
-	assert.Equal(t, full, lockOutputDigests(t, "header:\n  hashes: none\n"))
-	assert.Equal(t, full, lockOutputDigests(t, "header:\n  timestamp: true\n"), "the Generated stamp is not part of the digest")
+	assert.Equal(t, full, lockOutputDigests(t, "[header]\nhashes = \"content\"\n"))
+	assert.Equal(t, full, lockOutputDigests(t, "[header]\nhashes = \"none\"\n"))
+	assert.Equal(t, full, lockOutputDigests(t, "[header]\ntimestamp = true\n"), "the Generated stamp is not part of the digest")
 	assert.Contains(t, full, "CLAUDE.md")
 	for path := range full {
 		assert.False(t, strings.HasSuffix(path, "settings.json"), path)

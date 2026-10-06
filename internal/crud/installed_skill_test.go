@@ -16,12 +16,11 @@ func setupTestProject(t *testing.T) string {
 	aiRulezDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configContent := `version: "3.0"
-name: test-project
-presets:
-  - claude
+	configContent := `version = "4.0"
+name = "test-project"
+presets = ["claude"]
 `
-	err := os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configContent), 0o644)
+	err := os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configContent), 0o644)
 	require.NoError(t, err)
 
 	return dir

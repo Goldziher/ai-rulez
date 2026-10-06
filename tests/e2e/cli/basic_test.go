@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
@@ -91,4 +93,34 @@ func (s *BasicCLITestSuite) TestInvalidCommand() {
 func (s *BasicCLITestSuite) TestInvalidFlag() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "--invalid-flag")
 	result.AssertStderrContains(s.T(), "unknown flag")
+}
+
+// TestLegacyConfigIsRefused covers a project that has only a V2/V3 config: every
+// command that loads a config exits 1 and names the file and the 4.x migration.
+func (s *BasicCLITestSuite) TestLegacyConfigIsRefused() {
+	tests := []struct {
+		name string
+		file string
+	}{
+		{"V3 directory config", ".ai-rulez/config.yaml"},
+		{"V2 flat file", "ai-rulez.yaml"},
+	}
+	for _, tt := range tests {
+		for _, command := range []string{"generate", "validate", "doctor"} {
+			s.Run(tt.name+" "+command, func() {
+				// Arrange
+				dir := testutil.CreateTempDir(s.T())
+				s.Require().NoError(os.MkdirAll(filepath.Dir(filepath.Join(dir, tt.file)), 0o755))
+				testutil.WriteFile(s.T(), dir, tt.file, "version: \"3.0\"\nname: legacy\npresets:\n  - claude\n")
+
+				// Act
+				result := testutil.RunCLI(s.T(), dir, command)
+
+				// Assert
+				s.Equal(1, result.ExitCode)
+				result.AssertOutputContains(s.T(), tt.file)
+				result.AssertOutputContains(s.T(), "npx ai-rulez@4 migrate v4")
+			})
+		}
+	}
 }

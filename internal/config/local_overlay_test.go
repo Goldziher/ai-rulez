@@ -31,20 +31,6 @@ name = "srv"
 command = "x"
 args = ["1"]
 `
-	overlayMainYAML = `version: "4.0"
-name: shared
-presets: [claude, cursor]
-default: base
-profiles:
-  base: [a]
-mcp_servers:
-  - name: srv
-    command: x
-    args: ["1"]
-`
-	overlayMainJSON = `{"version":"4.0","name":"shared","presets":["claude","cursor"],"default":"base",` +
-		`"profiles":{"base":["a"]},"mcp_servers":[{"name":"srv","command":"x","args":["1"]}]}`
-
 	overlayLocalTOML = `name = "mine"
 presets = ["!cursor", "codex"]
 
@@ -55,16 +41,6 @@ dev = ["b"]
 name = "srv"
 args = ["2"]
 `
-	overlayLocalYAML = `name: mine
-presets: ["!cursor", codex]
-profiles:
-  dev: [b]
-mcp_servers:
-  - name: srv
-    args: ["2"]
-`
-	overlayLocalJSON = `{"name":"mine","presets":["!cursor","codex"],"profiles":{"dev":["b"]},` +
-		`"mcp_servers":[{"name":"srv","args":["2"]}]}`
 )
 
 func presetNames(cfg *Config) []string {
@@ -84,9 +60,6 @@ func TestLoadConfig_AppliesLocalOverlay(t *testing.T) {
 		localBody string
 	}{
 		{"toml main and local", "config.toml", overlayMainTOML, "config.local.toml", overlayLocalTOML},
-		{"yaml main and local", "config.yaml", overlayMainYAML, "config.local.yaml", overlayLocalYAML},
-		{"json main and local", "config.json", overlayMainJSON, "config.local.json", overlayLocalJSON},
-		{"toml main with yaml local", "config.toml", overlayMainTOML, "config.local.yml", overlayLocalYAML},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,40 +138,9 @@ func TestLoadConfig_NoOverlayIsUntouched(t *testing.T) {
 	assert.Equal(t, "shared", cfg.Name)
 }
 
-func TestLoadConfig_LocalOverlay_MultipleFilesError(t *testing.T) {
-	// Arrange
-	base := t.TempDir()
-	dir := filepath.Join(base, ".ai-rulez")
-	writeProjectFile(t, dir, "config.toml", overlayMainTOML)
-	writeProjectFile(t, dir, "config.local.toml", overlayLocalTOML)
-	writeProjectFile(t, dir, "config.local.yaml", overlayLocalYAML)
-
-	// Act
-	_, err := LoadConfig(context.Background(), base)
-
-	// Assert
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "multiple local config files")
-	assert.Contains(t, err.Error(), "config.local.toml")
-	assert.Contains(t, err.Error(), "config.local.yaml")
-}
-
-func TestLoadConfig_LocalOverlay_FormatMismatchWarns(t *testing.T) {
-	// Arrange
-	dir := t.TempDir()
-	writeProjectFile(t, dir, "config.local.yaml", overlayLocalYAML)
-
-	// Act
-	path, err := findLocalConfigFile(dir, "config.toml")
-
-	// Assert: a differing format is accepted (it only logs a warning).
-	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(dir, "config.local.yaml"), path)
-}
-
 func TestFindLocalConfigFile_None(t *testing.T) {
 	// Act
-	path, err := findLocalConfigFile(t.TempDir(), "config.toml")
+	path, err := findLocalConfigFile(t.TempDir())
 
 	// Assert
 	require.NoError(t, err)
@@ -260,7 +202,7 @@ func TestLoadConfig_LocalOverlayErrorsNameTheLocalFile(t *testing.T) {
 	}{
 		{"syntax error", "config.local.toml", "name = ", "config.local.toml"},
 		{"unknown key", "config.local.toml", "nmea = \"x\"", "config.local.toml"},
-		{"version mismatch", "config.local.yaml", "version: \"3.0\"\n", "config.local.yaml"},
+		{"version mismatch", "config.local.toml", "version = \"3.0\"\n", "config.local.toml"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -319,37 +261,6 @@ func TestSaveConfig_RefusesMergedConfig(t *testing.T) {
 	})
 }
 
-const yamlRichFixture = `version: 4.0
-name: x
-presets: [claude, {name: mine, path: OUT.md, type: markdown}]
-builtins: [go, "!security"]
-header: {style: compact, timestamp: true}
-defaults:
-  effort_by_preset: {claude: high}
-scopes:
-  - name: api
-    path: svc/api
-    profile: base
-profiles:
-  base: [a, b]
-mcp_servers:
-  - name: s
-    command: c
-    args: [1, two, 3.5]
-    env: {PORT: 8080, FLAG: true, NAME: plain}
-plugin:
-  name: p
-  version: 1.0
-`
-
-const jsonRichFixture = `{"$schema":"https://example.com/s.json","version":"4.0","name":"x",` +
-	`"presets":["claude",{"name":"mine","path":"OUT.md","type":"markdown"}],` +
-	`"builtins":false,"header":{"style":"compact","timestamp":true},` +
-	`"defaults":{"effort_by_preset":{"claude":"high"}},` +
-	`"scopes":[{"name":"api","path":"svc/api"}],` +
-	`"mcp_servers":[{"name":"s","command":"c","args":["1"],"env":{"PORT":"8080"}}],` +
-	`"plugin":{"name":"p","version":"1.0"}}`
-
 func TestDecodeViaJSONEquivalence(t *testing.T) {
 	repoConfig, err := os.ReadFile(filepath.Join("..", "..", ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
@@ -368,29 +279,14 @@ presets = ["claude", {name = "mine", path = "OUT.md", type = "markdown"}]
 		{"toml builtins bool", "config.toml", "version = \"4.0\"\nname = \"x\"\nbuiltins = false\n"},
 		{"toml builtins list", "config.toml", "version = \"4.0\"\nname = \"x\"\nbuiltins = [\"go\", \"!security\"]\n"},
 		{"toml full", "config.toml", overlayMainTOML + "\n[header]\nstyle = \"compact\"\n\n[defaults.effort_by_preset]\nclaude = \"high\"\n"},
-		{"yaml", "config.yaml", overlayMainYAML},
-		{"yaml unquoted version", "config.yaml", "version: 4.0\nname: x\n"},
-		{"yaml numeric env and int args", "config.yaml", yamlRichFixture},
-		{"yaml with schema key", "config.yaml", "$schema: https://example.com/s.json\nversion: \"4.0\"\nname: x\n"},
-		{"yml extension", "config.yml", yamlRichFixture},
-		{"json rich", "config.json", jsonRichFixture},
-		{"json", "config.json", overlayMainJSON},
+		{"toml with schema key", "config.toml", "schema = \"https://example.com/s.json\"\nversion = \"4.0\"\nname = \"x\"\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			path := filepath.Join(t.TempDir(), tt.file)
 			data := []byte(tt.body)
-			var native *Config
-			var err error
-			switch tt.file {
-			case "config.toml":
-				native, err = decodeConfigTOML(data, path)
-			case "config.yaml", "config.yml":
-				native, err = decodeConfigYAML(data, path)
-			default:
-				native, err = decodeConfigJSON(data, path)
-			}
+			native, err := decodeConfigTOML(data, path)
 			require.NoError(t, err)
 
 			// Act

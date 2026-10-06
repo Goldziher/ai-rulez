@@ -48,12 +48,11 @@ func (f SchemaFinding) String() string {
 
 // SchemaFindings runs the same schema validation as `ai-rulez validate`
 // (schema.ValidateFile for the configuration, schema.ValidateLocalFile for the
-// machine-local overlay) and returns every finding. A V3 configuration is
-// skipped: the schema is V4-shaped. An error is returned only when a file could
-// not be read at all.
+// machine-local overlay) and returns every finding. An error is returned only
+// when a file could not be read at all.
 func SchemaFindings(cfg *Config) ([]SchemaFinding, error) {
 	var out []SchemaFinding
-	if !cfg.IsV3() && cfg.ConfigFile != "" {
+	if cfg.ConfigFile != "" {
 		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
 		found, err := findingsOf(path, schema.ValidateFile(path))
 		if err != nil {

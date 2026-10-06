@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"math"
 	"os"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/schema"
@@ -24,8 +22,6 @@ import (
 type LocalDoc struct {
 	// Path is the overlay file path (existing, or where Save will create it).
 	Path string
-	// Format is "toml", "yaml" or "json".
-	Format string
 	// Doc is the overlay document being edited.
 	Doc map[string]any
 
@@ -136,7 +132,7 @@ func checkSegments(segs []string) error {
 }
 
 func mainConfigFileName(configDir string) string {
-	for _, name := range []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename} {
+	for _, name := range []string{configTOMLFilename} {
 		if fileExists(filepath.Join(configDir, name)) {
 			return name
 		}
@@ -232,7 +228,7 @@ func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error
 }
 
 func (d *LocalDoc) load() error {
-	existing, err := findLocalConfigFile(d.configDir, d.mainFile)
+	existing, err := findLocalConfigFile(d.configDir)
 	if err != nil {
 		return err
 	}
@@ -242,16 +238,10 @@ func (d *LocalDoc) load() error {
 			return err
 		}
 		d.Path = existing
-		d.Format = localConfigFormatByExt[filepath.Ext(existing)]
 		d.Doc = normalizeConfigDocKeys(doc)
 		return nil
 	}
-	ext := extTOML
-	if f := localConfigFormatByExt[filepath.Ext(d.mainFile)]; f != "" {
-		ext = filepath.Ext(d.mainFile)
-	}
-	d.Format = localConfigFormatByExt[ext]
-	d.Path = filepath.Join(d.configDir, localVariantName("config"+ext))
+	d.Path = filepath.Join(d.configDir, localVariantName(configTOMLFilename))
 	d.Doc = map[string]any{}
 	return nil
 }
@@ -533,18 +523,11 @@ const localFileHeaderTOML = "# Machine-local ai-rulez overrides, merged onto con
 
 // marshal encodes the overlay in its format.
 func (d *LocalDoc) marshal() ([]byte, error) {
-	switch d.Format {
-	case formatJSON:
-		return json.MarshalIndent(DocForJSON(d.Doc), "", "  ")
-	case formatYAML:
-		return yaml.Marshal(DocForJSON(d.Doc))
-	default:
-		data, err := toml.Marshal(tomlSafeValue(d.Doc))
-		if err != nil {
-			return nil, err //nolint:wrapcheck // wrapped by Save
-		}
-		return append([]byte(localFileHeaderTOML), data...), nil
+	data, err := toml.Marshal(tomlSafeValue(d.Doc))
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by Save
 	}
+	return append([]byte(localFileHeaderTOML), data...), nil
 }
 
 // gitignorePatterns are the entries that keep the overlay (and its lock and
@@ -725,12 +708,6 @@ func initLocalOverlay(configDir, mainFile string) (path string, created bool, er
 		return "", false, oops.Hint("Run 'ai-rulez init' first").Errorf("no main config file found in %s", d.configDir)
 	}
 	body := localSkeletonTOML
-	switch d.Format {
-	case formatYAML:
-		body = localSkeletonYAML
-	case formatJSON:
-		body = "{}\n"
-	}
 	if err := refuseSymlink(d.Path); err != nil {
 		return "", false, err
 	}
@@ -760,24 +737,6 @@ const localSkeletonTOML = `# Machine-local ai-rulez overrides, merged onto confi
 # args = ["-y", "my-server"]
 # [mcp_servers.env]
 # MY_TOKEN = "..."
-`
-
-const localSkeletonYAML = `# Machine-local ai-rulez overrides, merged onto config.yaml. Gitignored; may hold secrets.
-# Scalars and maps override the shared value; lists of maps (mcp_servers,
-# includes, plugins, ...) merge by name; set remove: true to delete a shared entry.
-
-# default: dev
-
-# presets: [codex, "!cursor"]   # "!name" drops a shared preset
-
-# profiles:
-#   dev: [backend]
-
-# mcp_servers:
-#   - name: my-server
-#     command: npx
-#     args: ["-y", "my-server"]
-#     env: {MY_TOKEN: "..."}
 `
 
 // OverlayChange is one key set by the overlay with the shared value it overrides.
@@ -829,7 +788,7 @@ func describeLocalOverlay(d *LocalDoc) (*LocalOverlay, []OverlayChange, error) {
 		}
 		shared = normalizeConfigDocKeys(doc)
 	}
-	overlay := &LocalOverlay{Path: d.Path, Format: d.Format, Doc: d.Doc}
+	overlay := &LocalOverlay{Path: d.Path, Doc: d.Doc}
 	var changes []OverlayChange
 	walkLeaves(nil, d.Doc, func(segs []string, v any) {
 		sv, has := lookupSegs(shared, segs)
@@ -1098,9 +1057,8 @@ func namedEntryNames(list []any) ([]string, bool) {
 	return names, true
 }
 
-// tomlSafeValue prepares a decoded document for TOML encoding: YAML numbers
-// kept as source text become numbers again and nulls (which TOML cannot hold)
-// are dropped.
+// tomlSafeValue prepares a decoded document for TOML encoding: nulls (which
+// TOML cannot hold) are dropped and whole-valued floats become integers.
 func tomlSafeValue(v any) any {
 	switch t := v.(type) {
 	case map[string]any:
@@ -1124,14 +1082,6 @@ func tomlSafeValue(v any) any {
 			return int64(t)
 		}
 		return t
-	case rawScalar:
-		if i, err := strconv.ParseInt(string(t), 0, 64); err == nil {
-			return i
-		}
-		if f, err := strconv.ParseFloat(string(t), 64); err == nil {
-			return f
-		}
-		return string(t)
 	}
 	return v
 }
