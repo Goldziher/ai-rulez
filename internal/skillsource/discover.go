@@ -73,6 +73,10 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 			return nil, oops.With("path", root).Wrapf(err, "read skill source %q", spec.Name)
 		}
 		for _, e := range entries {
+			if e.Type()&os.ModeSymlink != 0 {
+				logger.Warn("Skipping a symlink in a skill source; symlinks are not followed", "source", spec.Name, "path", filepath.Join(root, e.Name()))
+				continue
+			}
 			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && fileExists(filepath.Join(root, e.Name(), skillFile)) {
 				dirs = append(dirs, filepath.Join(root, e.Name()))
 			}
@@ -131,6 +135,9 @@ func selected(spec Spec, name string) bool {
 
 func fileExists(p string) bool {
 	info, err := os.Lstat(p)
+	if err == nil && info.Mode()&os.ModeSymlink != 0 {
+		logger.Warn("Ignoring a symlinked SKILL.md in a skill source; symlinks are not followed", "path", p)
+	}
 	return err == nil && info.Mode().IsRegular()
 }
 
@@ -159,6 +166,9 @@ func readSkill(dir, sourceRoot string) ([]File, error) {
 			return err //nolint:wrapcheck // wrapped below
 		}
 		if !info.Mode().IsRegular() {
+			if info.Mode()&os.ModeSymlink != 0 {
+				logger.Warn("Skipping a symlink in a skill; symlinks are not followed", "path", p)
+			}
 			return nil // symlinks and devices are not served
 		}
 		if skip, limitErr := checkFileLimits(p, info.Size(), len(files), &total); limitErr != nil || skip {
