@@ -210,7 +210,7 @@ would write 40 events in 1 batches to usage.ndjson (nothing written)
   `include_paths` are on in your user configuration. [`telemetry preview`](telemetry.md#previewing-an-export) shows the
   same bytes and the exported and withheld fields.
 - **Deterministic**: events keep log order and are de-duplicated by `event_id`; a line without one (version 2 and older)
-  gets an id derived from its text; the observation time is the newest event time, so no clock is read. The same
+  gets an id derived from its text and line number (two identical lines stay two events); the observation time is the newest event time, so no clock is read. The same
   log gives the same file, which is replaced atomically (mode 0600; a symlink at the destination is replaced, never
   written through; the destination may not be the log itself).
 - `--to otlp` is not available here; `telemetry flush` sends the outbox.

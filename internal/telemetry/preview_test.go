@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const previewLog = `{"ts":"2026-10-01T08:00:00Z","event":"skill_invoked","skill":"deploy","id":"deploy","invocation":"tool","harness":"claude","session":"raw-session-id-from-v1"}
@@ -164,4 +164,22 @@ func TestSettingsEncoderMatchesTheExporterWiring(t *testing.T) {
 	en := s.Encoder("5.0.0")
 
 	assert.Equal(t, Encoder{ServiceName: "svc", ServiceVersion: "5.0.0", Resource: map[string]string{"team": "x"}, IncludePaths: true}, en)
+}
+
+func TestReadLogEvents_IdenticalLegacyLinesStayTwoEvents(t *testing.T) {
+	line := `{"v":2,"ts":"2026-10-02T08:00:00Z","event":"skill_invoked","skill":"deploy","id":"deploy","invocation":"tool","harness":"claude"}` + "\n"
+	path := writeLog(t, line+line)
+
+	read, err := ReadLogEvents(path)
+
+	require.NoError(t, err)
+	require.Len(t, read.Events, 2)
+	assert.NotEqual(t, read.Events[0].EventID, read.Events[1].EventID)
+	// Appending keeps the ids of the lines already there.
+	require.NoError(t, os.WriteFile(path, []byte(line+line+line), 0o600))
+	longer, err := ReadLogEvents(path)
+	require.NoError(t, err)
+	require.Len(t, longer.Events, 3)
+	assert.Equal(t, read.Events[0].EventID, longer.Events[0].EventID)
+	assert.Equal(t, read.Events[1].EventID, longer.Events[1].EventID)
 }

@@ -254,7 +254,7 @@ Nothing was sent.
 - The events come from the outbox when export is active (what the next flush sends), otherwise from the usage log;
   `--log FILE` previews another log. A log is read through the same validators as the exporter: a field that fails
   its pattern is dropped, an event whose kind or id fails is left out and counted, raw session ids from version 1
-  lines are never exported, and an event with no `event_id` (log version 2 and older) gets one derived from its line.
+  lines are never exported, and an event with no `event_id` (log version 2 and older) gets one derived from its line text and line number.
 - `--limit N` previews the first N events (default 5, `0` for all). Sampling applies to a log as it would on recording.
 - The destination shows the scheme, host and path of the endpoint only: user info and query are dropped, headers
   (`headers_env`) are never shown. Without an endpoint it says `<no endpoint configured>`.
