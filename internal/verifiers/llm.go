@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/samber/oops"
 
@@ -74,8 +75,8 @@ type LLMUsage struct {
 type llmRun struct {
 	opts  LLMOptions
 	usage LLMUsage
-	// reserved is the estimated cost of calls made so far, the figure the cap is
-	// checked against (the actual cost replaces the estimate once known).
+	// spent is the cost of calls made so far (the estimate where the price is
+	// unknown), the figure the cap is checked against.
 	spent float64
 }
 
@@ -155,7 +156,7 @@ func (c *evalCtx) evalLLM(ctx context.Context, p *LLMPred) (evalOut, error) {
 		}
 		return evalOut{}, llmSkip("LLM use is off (%s); the checklist was not evaluated", reason)
 	}
-	hunks, withheld, err := c.buildHunks(ctx)
+	hunks, withheld, unreadable, err := c.buildHunks(ctx)
 	if err != nil {
 		return evalOut{}, err
 	}
@@ -163,8 +164,11 @@ func (c *evalCtx) evalLLM(ctx context.Context, p *LLMPred) (evalOut, error) {
 		c.note("withheld %s: %s", w.file, w.why)
 	}
 	if len(hunks) == 0 {
-		if len(withheld) > 0 {
+		switch {
+		case len(withheld) > 0:
 			return evalOut{}, llmSkip("every changed hunk was withheld (a secret or hidden characters), so nothing was sent")
+		case unreadable > 0:
+			return evalOut{}, llmSkip("every changed file was binary or too large to read, so nothing was sent")
 		}
 		return evalOut{pass: true}, nil
 	}
@@ -186,16 +190,16 @@ func (c *evalCtx) evalLLM(ctx context.Context, p *LLMPred) (evalOut, error) {
 type withheldHunk struct{ file, why string }
 
 // buildHunks cuts the scoped files into hunks of added lines plus context and
-// withholds the ones that carry a secret or hidden characters.
-func (c *evalCtx) buildHunks(ctx context.Context) ([]hunk, []withheldHunk, error) {
-	var out []hunk
-	var withheld []withheldHunk
+// withholds the ones that carry a secret or hidden characters. unreadable counts
+// the changed files that were binary or too large to read.
+func (c *evalCtx) buildHunks(ctx context.Context) (out []hunk, withheld []withheldHunk, unreadable int, err error) {
 	for _, f := range c.scoped {
 		data, ok, err := c.content(ctx, f)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, 0, err
 		}
 		if !ok {
+			unreadable++
 			continue
 		}
 		ch := c.env.scope.changed[f]
@@ -209,7 +213,7 @@ func (c *evalCtx) buildHunks(ctx context.Context) ([]hunk, []withheldHunk, error
 			for n := r[0]; n <= r[1]; n++ {
 				text := lines[n-1]
 				if len(text) > maxHunkLine {
-					text = text[:maxHunkLine] + "..."
+					text = truncateUTF8(text, maxHunkLine) + "..."
 				}
 				h.lines = append(h.lines, hunkLine{n: n, text: text, added: added[n]})
 			}
@@ -220,7 +224,7 @@ func (c *evalCtx) buildHunks(ctx context.Context) ([]hunk, []withheldHunk, error
 			out = append(out, h)
 		}
 	}
-	return out, withheld, nil
+	return out, withheld, unreadable, nil
 }
 
 // hunkRanges returns the inclusive [start, end] line ranges (1-based) of the
@@ -608,8 +612,19 @@ func (c *evalCtx) verify(p *LLMPred, ch *chunk, results []llmResult) chunkResult
 	return out
 }
 
-// locateQuote finds the added line of file that holds quote, ignoring whitespace
-// differences, and returns its number.
+const (
+	// minQuoteAlnum is the fewest letters and digits a quoted whole line needs: a
+	// quote of "}" or "a" says nothing about the line it points at.
+	minQuoteAlnum = 3
+	// minQuoteFragment is the shortest quote that may be only part of a line.
+	minQuoteFragment = 10
+)
+
+// locateQuote finds the added line of file that the model's quote points at and
+// returns its number. Whitespace differences are ignored. The quote must be the
+// whole line (with at least minQuoteAlnum letters or digits) or a fragment of
+// at least minQuoteFragment characters that starts and ends on a token
+// boundary, so a short or mid-word quote cannot "verify" a made-up verdict.
 func locateQuote(ch *chunk, file, quote string) (int, bool) {
 	want := collapseSpace(quote)
 	if want == "" {
@@ -620,12 +635,66 @@ func locateQuote(ch *chunk, file, quote string) (int, bool) {
 			continue
 		}
 		for _, l := range h.lines {
-			if l.added && strings.Contains(collapseSpace(l.text), want) {
+			if l.added && quoteMatches(collapseSpace(l.text), want) {
 				return l.n, true
 			}
 		}
 	}
 	return 0, false
+}
+
+func quoteMatches(line, want string) bool {
+	if line == want {
+		return alnumCount(want) >= minQuoteAlnum
+	}
+	if utf8.RuneCountInString(want) < minQuoteFragment {
+		return false
+	}
+	for from := 0; from < len(line); {
+		i := strings.Index(line[from:], want)
+		if i < 0 {
+			return false
+		}
+		start, end := from+i, from+i+len(want)
+		if tokenBoundary(line, start) && tokenBoundary(line, end) {
+			return true
+		}
+		from = start + 1
+	}
+	return false
+}
+
+// tokenBoundary reports whether no word character continues across index i of s.
+func tokenBoundary(s string, i int) bool {
+	if i <= 0 || i >= len(s) {
+		return true
+	}
+	before, _ := utf8.DecodeLastRuneInString(s[:i])
+	after, _ := utf8.DecodeRuneInString(s[i:])
+	return !(isWordRune(before) && isWordRune(after))
+}
+
+func isWordRune(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) }
+
+func alnumCount(s string) int {
+	n := 0
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			n++
+		}
+	}
+	return n
+}
+
+// truncateUTF8 cuts s to at most n bytes without splitting a rune.
+func truncateUTF8(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }
 
 func collapseSpace(s string) string { return strings.Join(strings.Fields(s), " ") }
