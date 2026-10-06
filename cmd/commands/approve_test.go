@@ -253,9 +253,9 @@ func TestApprove_ExpiryComesFromMaxAgeOrTheFlag(t *testing.T) {
 	mustApprove(t, "rule:style")
 	assert.Contains(t, lockText(t, root), `expires = "2026-11-04"`)
 
-	approveExpires = "2026-10-06"
+	approveExpires = "2099-10-06"
 	mustApprove(t, "skill:deploy")
-	assert.Contains(t, lockText(t, root), `expires = "2026-10-06"`)
+	assert.Contains(t, lockText(t, root), `expires = "2099-10-06"`)
 
 	approveExpires = "2026-10-01"
 	code, _, stderr := runApproveCmd(t, "rule:style")
@@ -407,4 +407,125 @@ func TestApprove_CatalogV2CarriesTheApprovalState(t *testing.T) {
 	require.NotNil(t, byRef["skill:deploy"])
 	assert.Equal(t, "missing", byRef["skill:deploy"].Status)
 	assert.True(t, byRef["skill:deploy"].Required)
+}
+
+func TestApprove_GovernanceFailsClosedWithoutALockOrPins(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(t *testing.T, lockPath string)
+	}{
+		{"lock deleted", func(t *testing.T, lockPath string) { require.NoError(t, os.Remove(lockPath)) }},
+		{"lock stripped to a bare header", func(t *testing.T, lockPath string) {
+			require.NoError(t, os.WriteFile(lockPath, []byte("version = 1\n"), 0o600))
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := approveProject(t, "")
+			tt.mutate(t, filepath.Join(root, ".ai-rulez", lockfile.FileName))
+			cfg := mustLoadConfig(t)
+
+			// Act
+			lines, err := verifyLockedSources(cfg)
+			diff, diffErr := lockDiff(cfg, nil, "", false)
+			findings := approvalFindingsFor(cfg)
+
+			// Assert
+			require.NoError(t, err)
+			require.NoError(t, diffErr)
+			assert.Contains(t, strings.Join(lines, "\n"), "AR710", "generate --locked refuses")
+			assertHasCode(t, findings, "AR710", lockfile.FileName)
+			var found bool
+			for i := range diff.Changes {
+				found = found || strings.Contains(diff.Changes[i].Detail, "AR710")
+			}
+			assert.True(t, found, "lock --check reports it: %+v", diff.Changes)
+		})
+	}
+}
+
+func TestApprove_NoGovernanceMeansNoLockRequirement(t *testing.T) {
+	// Arrange: a project without [governance]
+	root := lockProject(t, "")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", lockfile.FileName)))
+	cfg := mustLoadConfig(t)
+
+	// Act
+	lines, err := verifyLockedSources(cfg)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, lines)
+	assert.Empty(t, approvalFindingsFor(cfg))
+}
+
+func TestApprove_ReviewerIsNormalisedOnWriteAndRevoke(t *testing.T) {
+	// Arrange
+	root := approveProject(t, "\napprovers = [\"alice@example.org\"]\n")
+	approveYes, approveReviewer = true, "  Alice@Example.ORG "
+
+	// Act
+	code := mustApprove(t, "rule:style")
+
+	// Assert
+	require.Equal(t, 0, code)
+	assert.Contains(t, lockText(t, root), `reviewer = "alice@example.org"`)
+
+	// Act: revoke by another casing
+	resetApproveFlags()
+	approveRevoke, approveReviewer = true, "ALICE@example.org"
+	code, out, stderr := runApproveCmd(t, "rule:style")
+
+	// Assert
+	require.Equal(t, 0, code, stderr)
+	assert.Contains(t, out, "revoked 1")
+}
+
+func TestApprove_AtMustNotBeInTheFutureAndExpiryIsJudgedByTheWallClock(t *testing.T) {
+	root := approveProject(t, "")
+	approveYes, approveReviewer = true, "alice@example.org"
+	before := lockText(t, root)
+
+	tests := []struct {
+		name    string
+		at      string
+		expires string
+		want    string
+	}{
+		{"future --at would win newest()", "2999-01-01T00:00:00Z", "", "future"},
+		{"expiry already passed on the real clock", "2019-01-01", "2020-01-01", "past"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			approveAt, approveExpires = tt.at, tt.expires
+
+			code, _, stderr := runApproveCmd(t, "rule:style")
+
+			assert.Equal(t, 1, code)
+			assert.Contains(t, stderr, tt.want)
+			assert.Equal(t, before, lockText(t, root))
+		})
+	}
+}
+
+func TestApprove_ExpiryIgnoresSourceDateEpoch(t *testing.T) {
+	// Arrange: an approval that expired in 2020 and a clock pinned to 2019
+	approveProject(t, "")
+	approveYes, approveReviewer, approveAt = true, "alice@example.org", "2019-01-01"
+	require.Equal(t, 0, mustApprove(t, "rule:style"))
+	lock, err := lockfile.Load(filepath.Join(mustLoadConfig(t).ConfigDir))
+	require.NoError(t, err)
+	require.Len(t, lock.Approval, 1)
+	lock.Approval[0].Expires = "2020-01-01"
+	require.NoError(t, lockfile.Save(mustLoadConfig(t).ConfigDir, lock))
+	t.Setenv("SOURCE_DATE_EPOCH", "1546300800") // 2019-01-01
+
+	// Act
+	resetApproveFlags()
+	findings := approvalFindingsFor(mustLoadConfig(t))
+
+	// Assert
+	assertHasCode(t, findings, "AR712", "rule:style")
 }

@@ -61,6 +61,9 @@ func approvalFindingsFor(cfg *config.Config) []lint.ApprovalFinding {
 		}
 		return nil
 	}
+	if msg := policy.LockProblem(lock); msg != "" {
+		return []lint.ApprovalFinding{{Code: approval.CodeMissing, Path: lockRel, Message: msg}}
+	}
 	if lock == nil || (!policy.Active() && len(lock.Approval) == 0) {
 		return nil
 	}

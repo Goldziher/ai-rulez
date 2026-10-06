@@ -3,33 +3,38 @@ package mcp
 import (
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
-// approvalNow is the clock approval expiry is judged by: SOURCE_DATE_EPOCH, else the wall clock.
-func approvalNow() time.Time { return config.ResolveGenerationTime() }
+// approvalNow is the clock approval expiry is judged by: always the wall clock.
+// SOURCE_DATE_EPOCH only stamps generated files; letting it decide expiry would
+// let an environment variable revive an expired approval.
+func approvalNow() time.Time { return ambient.Clock(nil).Now() }
 
 // admitApproval applies [governance] to one served skill. A skill the policy
 // requires approval for gets Approved and Approvers set from the lock's records;
 // under [governance] enforce a skill without a valid approval of its served digest
-// is refused with the AR71x code of the reason. Without a lock there is nothing
-// to approve against (the lock command builds without one), so nothing is checked.
+// is refused with the AR71x code of the reason. Under enforce a missing lock (or
+// --ignore-lock) refuses every skill the policy selects: with no lock there is
+// no record to approve against, and that must not read as "approved".
 func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
-	if a.Lock == nil {
-		return nil
-	}
 	policy := approval.PolicyOf(a.Config)
 	if !policy.Active() {
 		return nil
 	}
-	class := approval.ClassServedLocal
-	if s.Imported || approval.RemoteServed(s.Source, s.Ref, s.Commit) {
-		class = approval.ClassRemote
+	subject := approval.Subject{
+		Kind: approval.KindServed, Domain: a.View, ID: s.Name, Digest: s.LockDigest,
+		Class: approval.ServedClass(s.Source, s.Ref, s.Commit),
 	}
-	res := policy.Evaluate(a.Lock.Approval, approval.Subject{
-		Kind: approval.KindServed, Domain: a.View, ID: s.Name, Digest: s.LockDigest, Class: class,
-	}, approvalNow())
+	if a.Lock == nil {
+		if policy.Enforce && policy.Requires(subject) {
+			return &Refusal{Name: s.Name, Code: approval.CodeMissing, Reason: "[governance] enforce is on and there is no " + lockfile.FileName + " to hold approvals: " + approval.Result{Subject: subject, Status: approval.StatusMissing}.Message()}
+		}
+		return nil
+	}
+	res := policy.Evaluate(a.Lock.Approval, subject, approvalNow())
 	if !res.Required {
 		return nil
 	}

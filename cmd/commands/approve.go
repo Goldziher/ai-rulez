@@ -359,7 +359,7 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 		kept := e.lock.Approval[:0:0]
 		n := 0
 		for _, a := range e.lock.Approval {
-			if a.ItemKey() == s.Key() && (approveReviewer == "" || a.Reviewer == approveReviewer) {
+			if a.ItemKey() == s.Key() && (approveReviewer == "" || approval.NormalizeReviewer(a.Reviewer) == approval.NormalizeReviewer(approveReviewer)) {
 				n++
 				continue
 			}
@@ -500,16 +500,20 @@ func (e *approveEnv) reviewer() (string, error) {
 	case !e.policy.Authorized(r):
 		return "", oops.Hint("the allowed reviewers are set in [governance] approvers").Errorf("%s is not in [governance] approvers", safeText(r))
 	}
-	return r, nil
+	return approval.NormalizeReviewer(r), nil
 }
 
 // approvedAt resolves the time of the record: --at, else the approval clock.
 func (e *approveEnv) approvedAt() (time.Time, error) {
+	// The stamp may follow SOURCE_DATE_EPOCH (reproducible runs); expiry never does.
 	if approveAt == "" {
-		return e.now.UTC().Truncate(time.Second), nil
+		return config.ResolveGenerationTime().UTC().Truncate(time.Second), nil
 	}
 	for _, layout := range []string{time.RFC3339, time.DateOnly} {
 		if t, err := time.Parse(layout, approveAt); err == nil {
+			if t.After(e.now) {
+				return time.Time{}, oops.Errorf("--at %s is in the future: a record stamped ahead of the clock would win over every later approval", approveAt)
+			}
 			return t.UTC(), nil
 		}
 	}
@@ -523,7 +527,7 @@ func (e *approveEnv) expiry(at time.Time) (string, error) {
 		if err != nil {
 			return "", oops.Errorf("invalid --expires %q: use YYYY-MM-DD", approveExpires)
 		}
-		if approval.ExpiredAt(approveExpires, at) {
+		if approval.ExpiredAt(approveExpires, e.now) {
 			return "", oops.Errorf("--expires %s is in the past", t.Format(time.DateOnly))
 		}
 		return approveExpires, nil
@@ -628,7 +632,7 @@ func sortedCopy(in []string) []string {
 func (e *approveEnv) supersede(rec *lockfile.Approval) {
 	kept := e.lock.Approval[:0:0]
 	for _, a := range e.lock.Approval {
-		if a.ItemKey() == rec.ItemKey() && a.Reviewer == rec.Reviewer && a.Digest != rec.Digest {
+		if a.ItemKey() == rec.ItemKey() && approval.NormalizeReviewer(a.Reviewer) == rec.Reviewer && a.Digest != rec.Digest {
 			continue
 		}
 		kept = append(kept, a)

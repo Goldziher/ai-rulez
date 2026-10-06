@@ -233,3 +233,84 @@ func TestExpiredAt(t *testing.T) {
 	assert.True(t, ExpiredAt("not a date", testNow))
 	assert.False(t, ExpiredAt(strings.Repeat("9", 4)+"-01-01", testNow), "a far future year is a valid date")
 }
+
+func TestReviewerIdentityIsCaseAndSpaceInsensitive(t *testing.T) {
+	// Arrange
+	include := Subject{Kind: KindInclude, ID: "shared", Digest: digestB, Class: ClassRemote}
+	recs := []lockfile.Approval{
+		rec("include", "shared", digestB, "Alice@Example.org"),
+		rec("include", "shared", digestB, " alice@example.org "),
+	}
+	tests := []struct {
+		name   string
+		policy Policy
+		want   string
+	}{
+		{"allowlist matches any casing", Policy{Selectors: []string{"remote"}, Approvers: []string{"ALICE@example.org"}}, StatusOK},
+		{"two casings of one reviewer count once", Policy{Selectors: []string{"remote"}, MinApprovers: 2}, StatusInsufficient},
+		{"an outsider is still refused", Policy{Selectors: []string{"remote"}, Approvers: []string{"bob@example.org"}}, StatusUnauthorized},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := tt.policy.Evaluate(recs, include, testNow)
+
+			// Assert
+			assert.Equal(t, tt.want, got.Status)
+		})
+	}
+	assert.Equal(t, "alice@example.org", NormalizeReviewer("  Alice@Example.ORG "))
+}
+
+func TestServedClass_IsOneRuleForTheLockAndTheServer(t *testing.T) {
+	tests := []struct {
+		name                string
+		source, ref, commit string
+		want                string
+	}{
+		{"authored in the project", "skills/mine", "", "", ClassServedLocal},
+		{"names a ref", "skills/mine", "v1", "", ClassRemote},
+		{"names a commit", "skills/mine", "", "abc", ClassRemote},
+		{"git source", "https://github.com/o/r.git", "", "", ClassRemote},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := ServedClass(tt.source, tt.ref, tt.commit)
+			subs := SubjectsOf(&lockfile.File{Served: []lockfile.Entry{{Name: "s", Source: tt.source, Ref: tt.ref, Commit: tt.commit, Digest: digestA}}}, nil)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+			require.Len(t, subs, 1)
+			assert.Equal(t, got, subs[0].Class)
+		})
+	}
+}
+
+func TestGovernanceLockProblem_FailsClosedUnderEnforce(t *testing.T) {
+	pinned := &lockfile.File{Item: []lockfile.Item{{Kind: "rule", ID: "a", Digest: digestA}}}
+	tests := []struct {
+		name   string
+		policy Policy
+		lock   *lockfile.File
+		want   bool
+	}{
+		{"enforced, no lock", Policy{Selectors: []string{"remote"}, Enforce: true}, nil, true},
+		{"enforced, lock without pins", Policy{Selectors: []string{"remote"}, Enforce: true}, &lockfile.File{}, true},
+		{"enforced, pinned lock", Policy{Selectors: []string{"remote"}, Enforce: true}, pinned, false},
+		{"not enforced, no lock", Policy{Selectors: []string{"remote"}}, nil, false},
+		{"enforce without selectors requires nothing", Policy{Enforce: true}, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			msg := tt.policy.LockProblem(tt.lock)
+
+			// Assert
+			assert.Equal(t, tt.want, msg != "", msg)
+			if tt.want {
+				assert.Contains(t, msg, CodeMissing)
+			}
+		})
+	}
+}
