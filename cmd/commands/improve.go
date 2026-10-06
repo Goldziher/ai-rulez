@@ -250,6 +250,11 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	}
 	report, err := plan.Execute(ctx)
 	if err != nil {
+		if report != nil { // stopped mid-run: the spend and the rounds so far are in the saved report
+			if perr := printImproveReport(cmd.OutOrStdout(), report); perr != nil {
+				return false, perr
+			}
+		}
 		return false, oops.Wrap(err)
 	}
 	if err := printImproveReport(cmd.OutOrStdout(), report); err != nil {

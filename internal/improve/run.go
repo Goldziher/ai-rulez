@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -207,7 +208,10 @@ type execution struct {
 }
 
 // Execute runs the loop. A nil error means the run completed (accepted or not);
-// the report says which. Errors mean the run could not run (exit 1).
+// the report says which. An error means the run could not run or stopped early
+// (exit 1); when the run got as far as measuring, the report written for it is
+// returned with the error (status no-candidate, or accepted when an earlier round
+// had already passed the gate, with the reason "stopped: ...").
 func (p *Plan) Execute(ctx context.Context) (*Report, error) {
 	o := &p.Opts
 	x := &execution{p: p, ctx: ctx, dir: filepath.Join(o.ConfigDir, LocalDir, p.RunID)}
@@ -229,7 +233,14 @@ func (p *Plan) Execute(ctx context.Context) (*Report, error) {
 	}
 	best, err := x.loop()
 	if err != nil {
-		return nil, err
+		// The money was spent and the rounds so far are real: keep them in a signed report
+		// instead of dropping the run, and return the report with the error.
+		x.report.Reason = "stopped: " + Sanitize(err.Error(), 300)
+		rep, ferr := x.finish(best)
+		if ferr != nil {
+			return nil, errors.Join(err, ferr)
+		}
+		return rep, err
 	}
 	return x.finish(best)
 }
@@ -342,7 +353,8 @@ func (x *execution) loop() (*bestRound, error) {
 		if rr.cand != nil && rr.report.Decision == "" {
 			cand, cerr := x.evaluateCandidate(round, rr, baseHeld, rr.report)
 			if cerr != nil {
-				return nil, cerr
+				x.report.Rounds = append(x.report.Rounds, *rr.report)
+				return best, cerr
 			}
 			if cand.heldEvaluated {
 				holdoutEvals++
