@@ -35,6 +35,8 @@ func TestValidatePublish(t *testing.T) {
 		{"template escapes", &PublishConfig{Emitters: []PublishEmitter{{Name: "template", Template: "../x.tmpl"}}}, "inside the project"},
 		{"template absolute", &PublishConfig{Emitters: []PublishEmitter{{Name: "template", Template: "/etc/x.tmpl"}}}, "inside the project"},
 		{"template output path", &PublishConfig{Emitters: []PublishEmitter{{Name: "template", Template: "x.tmpl", Output: "a/b"}}}, "plain file name"},
+		{"bad option key", &PublishConfig{Emitters: []PublishEmitter{{Name: "port", Options: map[string]string{"Bad Key": "x"}}}}, "invalid option"},
+		{"option ok", &PublishConfig{Emitters: []PublishEmitter{{Name: "port", Options: map[string]string{"blueprint": "skill"}}}}, ""},
 		{"template on a vendor emitter", &PublishConfig{Emitters: []PublishEmitter{{Name: "port", Template: "x.tmpl"}}}, "emitter only"},
 	}
 	for _, tt := range tests {
