@@ -8,6 +8,8 @@ import (
 	"text/template"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 )
 
 // Dist file names.
@@ -17,9 +19,17 @@ const (
 	LockFile  = "ai-rulez.lock"
 	NotesFile = "RELEASE_NOTES.md"
 	EmitDir   = "emit"
-	// TargetGitHubRelease is the only upload target of this release.
-	TargetGitHubRelease = "github-release"
 )
+
+// Upload targets.
+const (
+	TargetGitHubRelease = "github-release"
+	TargetNPM           = "npm"
+	TargetOCI           = "oci"
+)
+
+// Targets lists every upload target, in the order documented.
+var Targets = []string{TargetGitHubRelease, TargetNPM, TargetOCI}
 
 var (
 	namePattern    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
@@ -35,9 +45,23 @@ type Template struct {
 	Body string
 }
 
+// EmitRequest asks for emitters (internal/publish/emit) to run.
+type EmitRequest struct {
+	// Names are the emitters, by name; duplicates run once.
+	Names []string
+	// Experimental allows an emitter whose format is not verified against vendor
+	// documentation. Without it such an emitter is refused.
+	Experimental bool
+	// Base is everything the emitters read besides the plugins, which Build adds.
+	Base emit.Input
+	// Options are per-emitter settings, by emitter name.
+	Options map[string]map[string]string
+}
+
 // Input is everything Build needs; nothing is read from the environment.
 type Input struct {
 	Name, Version  string
+	Description    string
 	AIRulezVersion string
 	Runtimes       []string
 	Files          []File
@@ -47,11 +71,32 @@ type Input struct {
 	Source         Source
 	// Mtime is the fixed modification time (Unix seconds) of every archive entry.
 	Mtime int64
-	// Target is "" (build only) or TargetGitHubRelease.
+	// Target is "" (build only) or one of Targets.
 	Target string
-	// Tag and Repo are used by the github-release target.
+	// Tag and Repo are used by the github-release target; Repo also names the
+	// repository a pinned marketplace points at.
 	Tag, Repo string
-	Templates []Template
+	// Channel names the release channel; it selects the pinned index directory
+	// and is the npm dist-tag.
+	Channel string
+	NPM     NPMOptions
+	// OCIRepository is "host/path" without a tag; the tag is the version.
+	OCIRepository string
+	Templates     []Template
+	// Pin asks for a marketplace index pinned to the release commit.
+	Pin  *Pin
+	Emit *EmitRequest
+	// PreviousLock is the lock of the previous release, for the release notes;
+	// PreviousLabel names it (the tag it came from).
+	PreviousLock  []byte
+	PreviousLabel string
+	// RequireSignature makes Build fail unless Sign is set (AR9N7).
+	RequireSignature bool
+	// Sign signs the release archive; nil builds an unsigned release.
+	Sign func(archive []byte) (*SignResult, error)
+	// SBOM is the CycloneDX document to ship; empty ships none.
+	SBOM     []byte
+	Approval *ApprovalInfo
 }
 
 // Artifact is one dist file in the plan.
@@ -81,8 +126,12 @@ type Plan struct {
 	Name          string     `json:"name"`
 	Version       string     `json:"version"`
 	Target        string     `json:"target,omitempty"`
+	Channel       string     `json:"channel,omitempty"`
 	Tag           string     `json:"tag,omitempty"`
 	Repo          string     `json:"repo,omitempty"`
+	Ref           string     `json:"ref,omitempty"`
+	OCIDigest     string     `json:"oci_digest,omitempty"`
+	NPM           *NPMPlan   `json:"npm,omitempty"`
 	Preflight     []Step     `json:"preflight"`
 	Artifacts     []Artifact `json:"artifacts"`
 	Upload        []string   `json:"upload,omitempty"`
@@ -96,6 +145,9 @@ type Dist struct {
 	Plan     Plan
 	// Files maps a dist-relative slash path to its bytes.
 	Files map[string][]byte
+	// Warnings are notes for the operator (an experimental emitter, a field a
+	// format cannot express); they never fail the build.
+	Warnings []string
 }
 
 // Paths returns the dist-relative paths in sorted order.
@@ -133,21 +185,44 @@ func ValidateTarget(tag, repo string) error {
 	return nil
 }
 
-// Build assembles the dist directory in memory.
-func Build(in Input) (*Dist, error) {
+// validateInput checks the target-independent and target-specific fields.
+func validateInput(in Input) (*NPMPlan, string, error) {
 	if err := ValidateName(in.Name, in.Version); err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	if in.Target != "" && in.Target != TargetGitHubRelease {
-		return nil, newError(CodeTarget, ExitFailed, "only github-release is supported", "unknown target %q", in.Target)
-	}
-	if in.Target == TargetGitHubRelease {
-		if err := ValidateTarget(in.Tag, in.Repo); err != nil {
-			return nil, err
-		}
+	if in.Channel != "" && !ValidChannel(in.Channel) {
+		return nil, "", newError(CodeConfig, ExitFailed, "channels are lower-case letters, digits and '-'", "invalid channel name %q", in.Channel)
 	}
 	if len(in.Lock) == 0 {
-		return nil, newError(CodePreflight, ExitGate, "run `ai-rulez lock`", "ai-rulez.lock is missing or empty")
+		return nil, "", newError(CodePreflight, ExitGate, "run `ai-rulez lock`", "ai-rulez.lock is missing or empty")
+	}
+	if in.RequireSignature && in.Sign == nil {
+		return nil, "", newError(CodeUnsigned, ExitGate, "sign with --sign-key FILE or --sign-keyless", "require_signature is set and the bundle is not being signed")
+	}
+	switch in.Target {
+	case "":
+		return nil, "", nil
+	case TargetGitHubRelease:
+		return nil, "", ValidateTarget(in.Tag, in.Repo)
+	case TargetNPM:
+		plan, err := ValidateNPM(in.NPM, in.Name, in.Version)
+		if err != nil {
+			return nil, "", err
+		}
+		plan.Tag = in.Channel
+		return &plan, "", nil
+	case TargetOCI:
+		ref, err := ociReference(in.OCIRepository, in.Version)
+		return nil, ref, err
+	}
+	return nil, "", newError(CodeConfig, ExitFailed, "use one of: "+strings.Join(Targets, ", "), "unknown target %q", in.Target)
+}
+
+// Build assembles the dist directory in memory.
+func Build(in Input) (*Dist, error) {
+	npmPlan, ociRef, err := validateInput(in)
+	if err != nil {
+		return nil, err
 	}
 	archive, err := BuildArchive(in.Files, in.Mtime)
 	if err != nil {
@@ -168,35 +243,52 @@ func Build(in Input) (*Dist, error) {
 		Source:   in.Source,
 		Lock:     LockInfo{Version: in.LockVersion, Tree: in.LockTree, FileDigest: Digest(in.Lock)},
 		Runtimes: runtimes, Files: entries,
-		Bundle: BundleInfo{File: bundleName, Digest: Digest(archive), Size: len(archive)},
+		Bundle:   BundleInfo{File: bundleName, Digest: Digest(archive), Size: len(archive)},
+		Approval: in.Approval,
+	}
+	d := &Dist{Files: map[string][]byte{bundleName: archive, LockFile: in.Lock}}
+	roles := map[string]string{bundleName: "bundle", manifestName: "manifest", LockFile: "lock"}
+
+	if in.Sign != nil {
+		sig, err := in.Sign(archive)
+		if err != nil {
+			return nil, oops.Wrapf(err, "sign the release archive")
+		}
+		sigName := bundleName + ".sigstore.json"
+		manifest.Signature = &SignatureInfo{Type: SignatureSigstoreBundle, File: sigName, Signer: sig.Signer}
+		d.Files[sigName], roles[sigName] = sig.Bundle, "signature"
+	}
+	if len(in.SBOM) > 0 {
+		sbomName := base + ".sbom.cdx.json"
+		manifest.SBOM = &SBOMInfo{Format: SBOMCycloneDX, File: sbomName, Digest: Digest(in.SBOM)}
+		d.Files[sbomName], roles[sbomName] = in.SBOM, "sbom"
 	}
 	manifestBytes, err := manifest.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	d := &Dist{Manifest: manifest, Files: map[string][]byte{
-		bundleName: archive, manifestName: manifestBytes, LockFile: in.Lock,
-	}}
-	roles := map[string]string{bundleName: "bundle", manifestName: "manifest", LockFile: "lock"}
-	emitted, err := renderTemplates(in, manifest)
+	d.Manifest = manifest
+	d.Files[manifestName] = manifestBytes
+
+	if err := addExtras(d, roles, in, manifest); err != nil {
+		return nil, err
+	}
+	if err := addTargetFiles(d, roles, in, manifest, manifestBytes, npmPlan, ociRef); err != nil {
+		return nil, err
+	}
+	notes, err := releaseNotes(in, manifest)
 	if err != nil {
 		return nil, err
 	}
-	for name, data := range emitted {
-		d.Files[name] = data
-		roles[name] = "emitted"
-	}
-	d.Files[NotesFile] = releaseNotes(in, manifest)
-	roles[NotesFile] = "notes"
+	d.Files[NotesFile], roles[NotesFile] = notes, "notes"
 
 	sums := make([]SumEntry, 0, len(d.Files))
 	for p, data := range d.Files {
 		sums = append(sums, SumEntry{Path: p, Digest: Digest(data)})
 	}
-	d.Files[SumsFile] = FormatSums(sums)
-	roles[SumsFile] = "checksums"
+	d.Files[SumsFile], roles[SumsFile] = FormatSums(sums), "checksums"
 
-	d.Plan = buildPlan(in, d, roles, bundleName, manifestName)
+	d.Plan = buildPlan(in, d, roles, npmPlan, ociRef)
 	planBytes, err := marshalJSON(d.Plan)
 	if err != nil {
 		return nil, err
@@ -205,26 +297,116 @@ func Build(in Input) (*Dist, error) {
 	return d, nil
 }
 
-func buildPlan(in Input, d *Dist, roles map[string]string, bundleName, manifestName string) Plan {
+// addExtras adds the templates, the pinned marketplace index and the emitters.
+func addExtras(d *Dist, roles map[string]string, in Input, m Manifest) error {
+	emitted, err := renderTemplates(in, m)
+	if err != nil {
+		return err
+	}
+	for name, data := range emitted {
+		d.Files[name], roles[name] = data, "emitted"
+	}
+	files, warnings, err := BuildExtras(Extras{
+		Channel: in.Channel, Pin: in.Pin, PinCommit: in.Source.Commit, PinDirty: in.Source.Dirty, Emit: in.Emit,
+		Plugins: []emit.Plugin{emitPlugin(in, m)},
+	})
+	if err != nil {
+		return err
+	}
+	for name, data := range files {
+		d.Files[name] = data
+		roles[name] = "emitted"
+		if strings.HasPrefix(name, MarketplaceDir+"/") {
+			roles[name] = "marketplace"
+		}
+	}
+	d.Warnings = append(d.Warnings, warnings...)
+	return nil
+}
+
+// emitPlugin describes the bundle to an emitter.
+func emitPlugin(in Input, m Manifest) emit.Plugin {
+	files := make([]emit.File, 0, len(in.Files))
+	for _, f := range in.Files {
+		files = append(files, emit.File{Path: f.Path, Data: f.Data})
+	}
+	p := emit.Plugin{
+		Name: in.Name, Description: in.Description, Version: in.Version, Runtimes: m.Runtimes,
+		BundleFile: m.Bundle.File, BundleDigest: m.Bundle.Digest, Files: files,
+	}
+	if in.Emit != nil {
+		for _, pl := range in.Emit.Base.Plugins {
+			if pl.Name == in.Name {
+				p.Category, p.Keywords = pl.Category, pl.Keywords
+			}
+		}
+	}
+	return p
+}
+
+// addTargetFiles adds the files a target needs besides the common ones.
+func addTargetFiles(d *Dist, roles map[string]string, in Input, m Manifest, manifestBytes []byte, npmPlan *NPMPlan, ociRef string) error {
+	switch in.Target {
+	case TargetNPM:
+		files, err := npmPackageFiles(in, m, *npmPlan)
+		if err != nil {
+			return err
+		}
+		for name, data := range files {
+			d.Files[name], roles[name] = data, "npm-package"
+		}
+	case TargetOCI:
+		packed, err := packOCI(m, manifestBytes, d.Files, in.Mtime, ociRef)
+		if err != nil {
+			return err
+		}
+		d.Files[OCIManifestFile], roles[OCIManifestFile] = packed.Manifest, "oci-manifest"
+	}
+	return nil
+}
+
+// uploadList is what a github release carries: the archive, the manifest, the
+// lock and the checksums, plus the signature and the SBOM when there are any.
+func uploadList(m Manifest) []string {
+	up := []string{m.Bundle.File, m.Name + "-" + m.Version + ".manifest.json", LockFile, SumsFile}
+	if m.Signature != nil {
+		up = append(up, m.Signature.File)
+	}
+	if m.SBOM != nil {
+		up = append(up, m.SBOM.File)
+	}
+	return up
+}
+
+func buildPlan(in Input, d *Dist, roles map[string]string, npmPlan *NPMPlan, ociRef string) Plan {
 	plan := Plan{
-		SchemaVersion: SchemaVersion, Name: in.Name, Version: in.Version, Target: in.Target,
+		SchemaVersion: SchemaVersion, Name: in.Name, Version: in.Version, Target: in.Target, Channel: in.Channel,
 		Preflight: []Step{{"validate-strict", "ok"}, {"lock-check", "ok"}, {"verify-plugin", "ok"}, {"secret-scan", "ok"}},
 		Commands:  []Command{},
 	}
-	paths := d.Paths()
-	for _, p := range paths {
+	for _, p := range d.Paths() {
 		plan.Artifacts = append(plan.Artifacts, Artifact{Path: p, Role: roles[p], Digest: Digest(d.Files[p]), Size: len(d.Files[p])})
 	}
-	if in.Target == TargetGitHubRelease {
+	switch in.Target {
+	case TargetGitHubRelease:
 		plan.Tag, plan.Repo = in.Tag, in.Repo
-		plan.Upload = []string{bundleName, manifestName, LockFile, SumsFile}
+		plan.Upload = uploadList(d.Manifest)
 		plan.Commands = []Command{{Argv: ReleaseCreateArgv(in.Name, in.Version, in.Tag, in.Repo, plan.Upload), Cwd: "."}}
 		plan.Credentials = "gh authentication (GH_TOKEN or `gh auth login`); not read by ai-rulez"
+	case TargetNPM:
+		plan.NPM = npmPlan
+		plan.Commands = []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*npmPlan), Cwd: "."}}
+		plan.Credentials = "npm authentication (npm login, or NODE_AUTH_TOKEN in an .npmrc); not read by ai-rulez"
+	case TargetOCI:
+		plan.Ref = ociRef
+		plan.OCIDigest = Digest(d.Files[OCIManifestFile])
+		plan.Upload = ociUploadList(d.Manifest)
+		plan.Credentials = "registry credentials from the Docker credential store (`docker login`), read only for the registry named by ref"
 	}
 	return plan
 }
 
-func releaseNotes(in Input, m Manifest) []byte {
+func releaseNotes(in Input, m Manifest) ([]byte, error) {
 	var sb strings.Builder
 	sb.WriteString("# " + in.Name + " " + in.Version + "\n\n")
 	sb.WriteString("- Bundle: `" + m.Bundle.File + "` (" + m.Bundle.Digest + ")\n")
@@ -233,8 +415,29 @@ func releaseNotes(in Input, m Manifest) []byte {
 	if in.Source.Commit != "" {
 		sb.WriteString("- Source commit: " + in.Source.Commit + "\n")
 	}
+	if m.Signature != nil {
+		sb.WriteString("- Signature: `" + m.Signature.File + "`\n")
+	}
+	if m.SBOM != nil {
+		sb.WriteString("- SBOM: `" + m.SBOM.File + "`\n")
+	}
+	if len(in.PreviousLock) > 0 {
+		prev, err := parseLock(in.PreviousLock, in.PreviousLabel)
+		if err != nil {
+			return nil, err
+		}
+		cur, err := parseLock(in.Lock, in.Name)
+		if err != nil {
+			return nil, err
+		}
+		label := in.PreviousLabel
+		if label == "" {
+			label = "the previous release"
+		}
+		sb.WriteString(notesSection(label, DiffLocks(prev, cur)))
+	}
 	sb.WriteString("\nVerify the download with `ai-rulez publish verify <dir>` or `sha256sum -c SHA256SUMS`.\n")
-	return []byte(sb.String())
+	return []byte(sb.String()), nil
 }
 
 // templateData is what an emitter template sees: plain values, no methods.

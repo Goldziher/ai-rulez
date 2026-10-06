@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
 )
 
 // maxVerifyBytes caps what verify reads: each dist file and the total
@@ -31,10 +34,23 @@ type Problem struct {
 
 // VerifyResult is the outcome of verifying a dist directory.
 type VerifyResult struct {
-	Name     string    `json:"name,omitempty"`
-	Version  string    `json:"version,omitempty"`
-	Files    int       `json:"files"`
-	Problems []Problem `json:"problems"`
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+	Files   int    `json:"files"`
+	// Signature is "none" (the bundle is unsigned), "unverified" (it is signed
+	// and no trusted signer was given) or "verified" (the signature checks out
+	// and its signer is trusted).
+	Signature string    `json:"signature,omitempty"`
+	Signer    string    `json:"signer,omitempty"`
+	Problems  []Problem `json:"problems"`
+}
+
+// VerifyChecks refine Verify.
+type VerifyChecks struct {
+	// Signature says whom to trust; with no signer named the signature is not checked.
+	Signature VerifyOptions
+	// RequireSignature turns an unsigned or unverified bundle into a problem.
+	RequireSignature bool
 }
 
 // OK reports whether nothing mismatched.
@@ -49,7 +65,10 @@ func (r *VerifyResult) add(path, format string, args ...any) {
 // manifest, and the archive's headers against the determinism rules. Nothing
 // is written. A dist directory that cannot be read at all is an error; a
 // mismatch is a Problem in the result.
-func Verify(dir string) (VerifyResult, error) {
+func Verify(dir string) (VerifyResult, error) { return VerifyWith(dir, VerifyChecks{}) }
+
+// VerifyWith is Verify plus the signature checks.
+func VerifyWith(dir string, checks VerifyChecks) (VerifyResult, error) {
 	res := VerifyResult{Problems: []Problem{}}
 	sumsRaw, err := readRegular(filepath.Join(dir, SumsFile))
 	if err != nil {
@@ -87,8 +106,50 @@ func Verify(dir string) (VerifyResult, error) {
 	checkManifest(dir, manifest, recorded, &res)
 	checkPlan(dir, manifest, recorded, &res)
 	checkLockCopy(dir, manifest, &res)
+	checkSignature(dir, manifest, checks, &res)
 	sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
 	return res, nil
+}
+
+// checkSignature verifies the release signature when a trusted signer was
+// named, and enforces RequireSignature. Without a named signer a present
+// signature is reported as unverified: a valid bundle alone only says who
+// signed, never that the signer is one the caller trusts.
+func checkSignature(dir string, m Manifest, checks VerifyChecks, res *VerifyResult) {
+	if m.Signature == nil {
+		res.Signature = "none"
+		if checks.RequireSignature {
+			res.add(m.Bundle.File, "%s the bundle is not signed", CodeUnsigned)
+		}
+		return
+	}
+	res.Signature = "unverified"
+	if !checks.Signature.Trusts() {
+		if checks.RequireSignature {
+			res.add(m.Signature.File, "%s a signature is present but no trusted key or identity was given to verify it", CodeUnsigned)
+		}
+		return
+	}
+	bundle, err := readRegular(filepath.Join(dir, filepath.FromSlash(m.Signature.File)))
+	if err != nil {
+		res.add(m.Signature.File, "%s unreadable: %v", CodeUnsigned, err)
+		return
+	}
+	archive, err := readRegular(filepath.Join(dir, m.Bundle.File))
+	if err != nil {
+		return // reported by the SHA256SUMS pass
+	}
+	out, err := VerifyArchiveSignature(bundle, archive, checks.Signature)
+	if err != nil {
+		res.add(m.Signature.File, "%s the signature does not verify: %v", CodeUnsigned, err)
+		return
+	}
+	res.Signature = "verified"
+	if out.Signer.Kind == "key" {
+		res.Signer = "key " + out.Signer.KeyID
+	} else {
+		res.Signer = out.Signer.Identity + " (issuer " + out.Signer.Issuer + ")"
+	}
 }
 
 // checkUnlisted flags every file below dir that SHA256SUMS does not list. The
@@ -150,18 +211,8 @@ func loadManifest(dir string, res *VerifyResult) (Manifest, bool) {
 		res.add(filepath.Base(matches[0]), "unreadable: %v", err)
 		return Manifest{}, false
 	}
-	var m Manifest
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&m); err != nil {
-		res.add(filepath.Base(matches[0]), "invalid manifest: %v", err)
-		return Manifest{}, false
-	}
-	if m.SchemaVersion != SchemaVersion {
-		res.add(filepath.Base(matches[0]), "unsupported schema_version %d", m.SchemaVersion)
-		return Manifest{}, false
-	}
-	if err := ValidateName(m.Name, m.Version); err != nil {
+	m, err := decodeManifest(raw)
+	if err != nil {
 		res.add(filepath.Base(matches[0]), "%v", err)
 		return Manifest{}, false
 	}
@@ -169,6 +220,23 @@ func loadManifest(dir string, res *VerifyResult) (Manifest, bool) {
 		res.add(filepath.Base(matches[0]), "named for a different bundle than its content (%s)", want)
 	}
 	return m, true
+}
+
+// decodeManifest parses and sanity-checks a manifest document.
+func decodeManifest(raw []byte) (Manifest, error) {
+	var m Manifest
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&m); err != nil {
+		return Manifest{}, oops.Errorf("invalid manifest: %v", err)
+	}
+	if m.SchemaVersion != SchemaVersion {
+		return Manifest{}, oops.Errorf("unsupported schema_version %d", m.SchemaVersion)
+	}
+	if err := ValidateName(m.Name, m.Version); err != nil {
+		return Manifest{}, err //nolint:wrapcheck // a publish.Error carries the code
+	}
+	return m, nil
 }
 
 func checkManifest(dir string, m Manifest, recorded map[string]string, res *VerifyResult) {
@@ -185,6 +253,7 @@ func checkManifest(dir string, m Manifest, recorded map[string]string, res *Veri
 	if d, ok := recorded[LockFile]; !ok || d != m.Lock.FileDigest {
 		res.add(LockFile, "manifest lock.file_digest %s differs from %s (%s)", m.Lock.FileDigest, SumsFile, d)
 	}
+	checkAttachments(m, recorded, res)
 	archive, err := readRegular(filepath.Join(dir, m.Bundle.File))
 	if err != nil {
 		return // already reported as unreadable by the SHA256SUMS pass
@@ -270,25 +339,117 @@ func checkPlan(dir string, m Manifest, recorded map[string]string, res *VerifyRe
 			res.add(p, "listed in %s but not in the plan", SumsFile)
 		}
 	}
-	checkPlanCommands(plan, m, res)
+	checkPlanCommands(dir, plan, m, res)
 }
 
-func checkPlanCommands(plan Plan, m Manifest, res *VerifyResult) {
+// checkAttachments requires the signature and SBOM files the manifest names to
+// be listed in SHA256SUMS with the digest the manifest records for the SBOM.
+func checkAttachments(m Manifest, recorded map[string]string, res *VerifyResult) {
+	if s := m.Signature; s != nil {
+		switch {
+		case s.Type != SignatureSigstoreBundle:
+			res.add(m.Bundle.File, "unknown signature type %q", s.Type)
+		case s.File != m.Bundle.File+".sigstore.json":
+			res.add(s.File, "signature.file must be %s.sigstore.json", m.Bundle.File)
+		default:
+			if _, ok := recorded[s.File]; !ok {
+				res.add(s.File, "the manifest names this signature but %s does not list it", SumsFile)
+			}
+		}
+	}
+	if s := m.SBOM; s != nil {
+		d, ok := recorded[s.File]
+		switch {
+		case s.Format != SBOMCycloneDX || s.File != m.Name+"-"+m.Version+".sbom.cdx.json":
+			res.add(s.File, "the manifest names an unsupported SBOM format or file")
+		case !ok:
+			res.add(s.File, "the manifest names this SBOM but %s does not list it", SumsFile)
+		case d != s.Digest:
+			res.add(s.File, "manifest sbom.digest %s differs from %s (%s)", s.Digest, SumsFile, d)
+		}
+	}
+}
+
+func checkPlanCommands(dir string, plan Plan, m Manifest, res *VerifyResult) {
 	if plan.Target == "" {
-		if len(plan.Commands) != 0 || len(plan.Upload) != 0 {
+		if len(plan.Commands) != 0 || len(plan.Upload) != 0 || plan.NPM != nil || plan.Ref != "" {
 			res.add(PlanFile, "plan has no target but lists commands or uploads")
 		}
 		return
 	}
-	if plan.Target != TargetGitHubRelease {
+	switch plan.Target {
+	case TargetGitHubRelease:
+		checkGitHubPlan(plan, m, res)
+	case TargetNPM:
+		checkNPMPlanFile(plan, m, res)
+	case TargetOCI:
+		checkOCIPlan(dir, plan, m, res)
+	default:
 		res.add(PlanFile, "unknown plan target %q", plan.Target)
+	}
+}
+
+func checkNPMPlanFile(plan Plan, m Manifest, res *VerifyResult) {
+	if plan.NPM == nil {
+		res.add(PlanFile, "an npm plan needs its npm section")
 		return
 	}
+	if err := checkNPMPlan(*plan.NPM, m.Name, m.Version); err != nil {
+		res.add(PlanFile, "%v", err)
+		return
+	}
+	want := []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*plan.NPM), Cwd: "."}}
+	if !reflect.DeepEqual(plan.Commands, want) || len(plan.Upload) != 0 {
+		res.add(PlanFile, "plan commands differ from the ones `publish --execute` builds for the npm target")
+	}
+}
+
+func checkOCIPlan(dir string, plan Plan, m Manifest, res *VerifyResult) {
+	ref, err := ociReference(strings.TrimSuffix(plan.Ref, ":"+OCITag(m.Version)), m.Version)
+	if err != nil || ref != plan.Ref {
+		res.add(PlanFile, "plan ref %q is not a repository tagged %s", plan.Ref, OCITag(m.Version))
+		return
+	}
+	if len(plan.Commands) != 0 {
+		res.add(PlanFile, "an oci plan runs no process but lists commands")
+	}
+	if !reflect.DeepEqual(plan.Upload, ociUploadList(m)) {
+		res.add(PlanFile, "plan uploads %v, expected %v", plan.Upload, ociUploadList(m))
+	}
+	packed, err := readRegular(filepath.Join(dir, filepath.FromSlash(OCIManifestFile)))
+	if err != nil {
+		res.add(OCIManifestFile, "an oci plan needs its packed manifest: %v", err)
+		return
+	}
+	if got := Digest(packed); got != plan.OCIDigest {
+		res.add(PlanFile, "plan oci_digest %s differs from %s (%s)", plan.OCIDigest, OCIManifestFile, got)
+	}
+	files, manifest, manifestBytes, err := readDistFiles(dir, plan)
+	if err != nil {
+		res.add(PlanFile, "cannot rebuild the OCI manifest: %v", err)
+		return
+	}
+	a, err := ociArtifact(manifest, manifestBytes, files, archiveMtime(files[manifest.Bundle.File]))
+	if err != nil {
+		res.add(PlanFile, "%v", err)
+		return
+	}
+	rebuilt, err := oci.Pack(context.Background(), a)
+	if err != nil {
+		res.add(OCIManifestFile, "cannot rebuild the OCI manifest: %v", err)
+		return
+	}
+	if rebuilt.Digest != plan.OCIDigest {
+		res.add(OCIManifestFile, "the dist files pack to %s, the plan records %s", rebuilt.Digest, plan.OCIDigest)
+	}
+}
+
+func checkGitHubPlan(plan Plan, m Manifest, res *VerifyResult) {
 	if err := ValidateTarget(plan.Tag, plan.Repo); err != nil {
 		res.add(PlanFile, "%v", err)
 		return
 	}
-	upload := []string{m.Bundle.File, m.Name + "-" + m.Version + ".manifest.json", LockFile, SumsFile}
+	upload := uploadList(m)
 	want := Command{Argv: ReleaseCreateArgv(m.Name, m.Version, plan.Tag, plan.Repo, upload), Cwd: "."}
 	if !reflect.DeepEqual(plan.Upload, upload) {
 		res.add(PlanFile, "plan uploads %v, expected %v", plan.Upload, upload)

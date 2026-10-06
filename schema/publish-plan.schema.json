@@ -7,12 +7,24 @@
   "required": ["schema_version", "name", "version", "preflight", "artifacts", "commands"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
-    "name": { "type": "string" },
-    "version": { "type": "string" },
-    "target": { "const": "github-release" },
-    "tag": { "type": "string" },
-    "repo": { "type": "string" },
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "target": {
+      "enum": ["github-release", "npm", "oci"]
+    },
+    "tag": {
+      "type": "string"
+    },
+    "repo": {
+      "type": "string"
+    },
     "preflight": {
       "type": "array",
       "items": {
@@ -20,8 +32,12 @@
         "required": ["name", "status"],
         "additionalProperties": false,
         "properties": {
-          "name": { "enum": ["validate-strict", "lock-check", "verify-plugin", "secret-scan"] },
-          "status": { "const": "ok" }
+          "name": {
+            "enum": ["validate-strict", "lock-check", "verify-plugin", "secret-scan"]
+          },
+          "status": {
+            "const": "ok"
+          }
         }
       }
     },
@@ -33,17 +49,42 @@
         "required": ["path", "role", "digest", "size"],
         "additionalProperties": false,
         "properties": {
-          "path": { "type": "string", "minLength": 1 },
-          "role": { "enum": ["bundle", "manifest", "lock", "notes", "checksums", "emitted"] },
-          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-          "size": { "type": "integer", "minimum": 0 }
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "enum": [
+              "bundle",
+              "manifest",
+              "lock",
+              "notes",
+              "checksums",
+              "emitted",
+              "signature",
+              "sbom",
+              "marketplace",
+              "npm-package",
+              "oci-manifest"
+            ]
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     },
     "upload": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "The artifacts the github-release command uploads."
+      "items": {
+        "type": "string"
+      },
+      "description": "The artifacts the github-release command uploads, or the files that become the layers of the oci artifact."
     },
     "commands": {
       "type": "array",
@@ -52,11 +93,58 @@
         "required": ["argv", "cwd"],
         "additionalProperties": false,
         "properties": {
-          "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-          "cwd": { "const": "." }
+          "argv": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "cwd": {
+            "const": "."
+          }
         }
       }
     },
-    "credentials": { "type": "string" }
+    "credentials": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$",
+      "description": "Release channel: the pinned index directory and the npm dist-tag."
+    },
+    "ref": {
+      "type": "string",
+      "description": "oci: the reference the artifact is pushed to (repository and tag)."
+    },
+    "oci_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "oci: digest of oci/manifest.json, the digest the registry reports after the push."
+    },
+    "npm": {
+      "type": "object",
+      "required": ["package", "tarball", "access"],
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "type": "string"
+        },
+        "tarball": {
+          "type": "string"
+        },
+        "access": {
+          "enum": ["restricted", "public"]
+        },
+        "registry": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
   }
 }
