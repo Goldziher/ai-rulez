@@ -132,6 +132,9 @@ stdout.
 | AR714 | `approval-insufficient` | error | Fewer distinct reviewers approved the current digest than `[governance] min_approvers` asks for |
 | AR715 | `approval-orphan` | warning | An approval names content that no longer exists; `ai-rulez approve --prune` removes it |
 | AR716 | `approval-with-change` | error | An approval was added in the same change as the content it approves (reported only by `--approvals-base` or `approve --verify-base`) |
+| AR717 | `approval-denied` | error | The content's digest is on the `[[deny]]` list in `ai-rulez.lock`: it can be neither approved nor used |
+| AR718 | `approval-unverified` | error | Every approval of the current digest claims an assurance (`signed`, `review-linked`) that could not be verified |
+| AR719 | `approver-unresolved` | error | `[governance] approvers_from` or a team cannot be resolved (no CODEOWNERS file, or a team with no member list), so nobody is authorized by it |
 | AR720 | `signature-missing` | error | `[signing] require` asks for a signed lock and the attestation file is missing (see [Signing](signing.md)) |
 | AR721 | `signature-invalid` | error | The attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof |
 | AR722 | `signer-not-trusted` | error | The signer's identity, issuer or key matches no `[[signing.trust]]` entry, or the entry is outside its validity window; also an `identity_regexp` that is not anchored |
@@ -220,7 +223,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR500`-`AR599` | Hooks and permissions (`AR501`-`AR507`) | allocated |
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
-| `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR716` used, `AR717` is for the deny list, see [Approvals](approvals.md)) | allocated |
+| `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR719` used, see [Approvals](approvals.md)) | allocated |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
@@ -1677,6 +1680,36 @@ an approval was added in the same change as the content it approves (found only 
 - Why: An approval in the committed lock is an assertion, not authentication: whoever edits the lock can add one. When an approval arrives in the same change as the content it approves, nobody but the author vouched for it, so CI should demand a second reviewer.
 - Bad: A pull request that edits a skill's script and adds `[[approval]]` for the new digest
 - Good: Land the content change first, then approve it in a separate, separately reviewed change
+
+### AR717 approval-denied
+
+content's digest is on the deny list in ai-rulez.lock: it can be neither approved nor used
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A `[[deny]]` entry names a digest that was found harmful. Approving it, or serving it after a re-pin, would reintroduce it, so the digest is refused whether or not [governance] selects the item.
+- Bad: A skill whose digest equals a `[[deny]]` entry after a downgrade to an old version
+- Good: Remove or replace the content; `ai-rulez approve --revoke <item> --deny --reason ...` adds an entry
+
+### AR718 approval-unverified
+
+every approval of the current digest claims an assurance (signed, review-linked) that could not be verified
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A signed approval counts only when its attestation verifies against `[[signing.trust]]` entries with `subject = "approval"`; a review-linked one needs its `ref`. A record that fails this proves nothing about who reviewed.
+- Bad: `assurance = "signed"` with an attestation signed by a key no trust entry names
+- Good: Have a trusted signer run `ai-rulez approve --sign`, or trust the signer in `[[signing.trust]]` through a reviewed change
+
+### AR719 approver-unresolved
+
+[governance] approvers_from or a team cannot be resolved (no CODEOWNERS file, or a team with no member list), so nobody is authorized by it
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: `approvers_from` restricts approval to the owners of an item's path. When the CODEOWNERS file is missing, or an owner is a team whose members are unknown, ai-rulez fails closed instead of letting anyone approve.
+- Bad: `approvers_from = "CODEOWNERS"` with no CODEOWNERS file, or `@acme/security` owning the lock with no `[governance.teams]` entry
+- Good: Add the CODEOWNERS file, list the team's members in `[governance.teams]`, or resolve them with `approve --resolve-teams`
 
 ### AR720 signature-missing
 

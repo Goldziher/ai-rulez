@@ -1006,7 +1006,26 @@
         "approvers": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer."
+          "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer. An @org/team entry is expanded through teams."
+        },
+        "approvers_from": {
+          "type": "string",
+          "description": "CODEOWNERS (found in .github/, the root or docs/) or a path inside the project to a CODEOWNERS file: only the owners of an item's source path may approve it."
+        },
+        "teams": {
+          "type": "object",
+          "propertyNames": { "pattern": "^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+          "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "description": "Maps a team (@org/team) to the reviewers it stands for, so teams in approvers and CODEOWNERS resolve offline."
+        },
+        "min_assurance": {
+          "type": "string",
+          "enum": ["asserted", "review-linked", "signed"],
+          "description": "Weakest assurance an approval may have to count. Default asserted."
+        },
+        "forbid_self_approval": {
+          "type": "boolean",
+          "description": "Reject an approval by an author of the content it approves (commit authors of the item's path since the base revision)."
         },
         "max_age": {
           "type": "string",
@@ -1066,8 +1085,8 @@
             "properties": {
               "subject": {
                 "type": "string",
-                "enum": ["lock", "bundle", "skill", "sbom"],
-                "description": "What the signer may vouch for. Default lock."
+                "enum": ["lock", "bundle", "skill", "sbom", "approval"],
+                "description": "What the signer may vouch for: the lock, a bundle, a skill, an SBOM or signed approvals (docs/approvals.md). Default lock."
               },
               "source": {
                 "type": "string",

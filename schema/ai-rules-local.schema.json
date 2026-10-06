@@ -591,11 +591,15 @@
       "description": "Which pinned content needs a recorded reviewer approval in ai-rulez.lock (see docs/approvals.md).",
       "properties": {
         "approvers": {
-          "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer.",
+          "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer. An @org/team entry is expanded through teams.",
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "approvers_from": {
+          "description": "CODEOWNERS (found in .github/, the root or docs/) or a path inside the project to a CODEOWNERS file: only the owners of an item's source path may approve it.",
+          "type": "string"
         },
         "enforce": {
           "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate --strict reports it either way.",
@@ -608,6 +612,10 @@
           },
           "type": "array"
         },
+        "forbid_self_approval": {
+          "description": "Reject an approval by an author of the content it approves (commit authors of the item's path since the base revision).",
+          "type": "boolean"
+        },
         "max_age": {
           "description": "Default lifetime of a new approval, such as 365d or 720h. Empty means no expiry.",
           "pattern": "^([0-9]+d|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
@@ -618,6 +626,11 @@
           "minimum": 0,
           "type": "integer"
         },
+        "min_assurance": {
+          "description": "Weakest assurance an approval may have to count. Default asserted.",
+          "enum": ["asserted", "review-linked", "signed"],
+          "type": "string"
+        },
         "require_approval": {
           "description": "Content that needs approval: remote (includes, installed skills, skill sources, remote served skills), local (every authored item), all, or kind:<kind> (kind:hook, kind:mcp_server, kind:skill, ...).",
           "items": {
@@ -625,6 +638,20 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "teams": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Maps a team (@org/team) to the reviewers it stands for, so teams in approvers and CODEOWNERS resolve offline.",
+          "propertyNames": {
+            "pattern": "^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+          },
+          "type": "object"
         }
       },
       "type": "object"
@@ -2996,8 +3023,8 @@
                 "type": "string"
               },
               "subject": {
-                "description": "What the signer may vouch for. Default lock.",
-                "enum": ["lock", "bundle", "skill", "sbom"],
+                "description": "What the signer may vouch for: the lock, a bundle, a skill, an SBOM or signed approvals (docs/approvals.md). Default lock.",
+                "enum": ["lock", "bundle", "skill", "sbom", "approval"],
                 "type": "string"
               },
               "valid_from": {
