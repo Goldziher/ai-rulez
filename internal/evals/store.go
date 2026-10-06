@@ -1,6 +1,7 @@
 package evals
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -45,13 +46,46 @@ type SkillRecord struct {
 	Score   SkillScore `json:"score"`
 	// LastPass is the most recent passing run, kept when a later run fails.
 	LastPass *PassMark `json:"last_pass,omitempty"`
+	// MAC authenticates the record with the user's own key (hmac-sha256 over the
+	// record without this field). A record without a valid MAC, such as one
+	// committed from another machine, is "unverified": it is shown but never
+	// replayed as a cache hit, so the run is repeated and re-signed.
+	MAC string `json:"mac,omitempty"`
+
+	// verified is set for records this process produced or whose MAC checked out.
+	verified bool
 }
+
+// Verified says the record was produced here or carries a valid MAC of this
+// user's key.
+func (r *SkillRecord) Verified() bool { return r.verified }
+
+// macOf computes the MAC of a record under key.
+func macOf(key []byte, r SkillRecord) string {
+	r.MAC = ""
+	data, err := json.Marshal(r)
+	if err != nil {
+		return ""
+	}
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write(data) //nolint:errcheck // hash writes never fail
+	return macPrefix + hex.EncodeToString(mac.Sum(nil))
+}
+
+const macPrefix = "hmac-sha256:"
 
 // Store is the on-disk results file.
 type Store struct {
 	SchemaVersion int           `json:"schema_version"`
 	Skills        []SkillRecord `json:"skills"`
+
+	// key signs records on Marshal and verifies them on load; nil means no key
+	// could be obtained, so nothing loaded is verified and nothing is signed.
+	key []byte
 }
+
+// SetKey sets the per-user key that signs this store's records.
+func (s *Store) SetKey(key []byte) { s.key = key }
 
 // NewStore returns an empty store.
 func NewStore() *Store { return &Store{SchemaVersion: StoreSchemaVersion} }
@@ -60,10 +94,17 @@ func NewStore() *Store { return &Store{SchemaVersion: StoreSchemaVersion} }
 func DefaultStorePath(configDir string) string { return filepath.Join(configDir, StoreFileName) }
 
 // LoadStore reads a store. A missing file is an empty store.
-func LoadStore(path string) (*Store, error) {
+func LoadStore(path string) (*Store, error) { return LoadStoreKeyed(path, nil) }
+
+// LoadStoreKeyed reads a store and verifies each record's MAC against key (the
+// per-user eval-results key). Records that fail, or all of them when key is nil,
+// stay readable but are not Verified.
+func LoadStoreKeyed(path string, key []byte) (*Store, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // the project's own results file
 	if errors.Is(err, os.ErrNotExist) {
-		return NewStore(), nil
+		store := NewStore()
+		store.key = key
+		return store, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read eval results: %w", err)
@@ -74,6 +115,11 @@ func LoadStore(path string) (*Store, error) {
 	}
 	if store.SchemaVersion != StoreSchemaVersion {
 		return nil, fmt.Errorf("%s has schema_version %d; this ai-rulez reads %d", path, store.SchemaVersion, StoreSchemaVersion)
+	}
+	store.key = key
+	for i := range store.Skills {
+		r := &store.Skills[i]
+		r.verified = len(key) > 0 && r.MAC != "" && hmac.Equal([]byte(r.MAC), []byte(macOf(key, *r)))
 	}
 	return &store, nil
 }
@@ -91,6 +137,7 @@ func (s *Store) Get(id string) (*SkillRecord, bool) {
 // Put stores a record, replacing the skill's previous one and carrying its
 // last-pass mark forward unless the new run passed.
 func (s *Store) Put(record SkillRecord) {
+	record.verified = true
 	if old, ok := s.Get(record.ID); ok {
 		if record.Passing {
 			record.LastPass = &PassMark{Digest: record.Digest, Date: record.Date}
@@ -121,6 +168,13 @@ func (s *Store) Marshal() ([]byte, error) {
 	sorted := *s
 	sorted.SchemaVersion = StoreSchemaVersion
 	sorted.Skills = append([]SkillRecord(nil), s.Skills...)
+	if len(s.key) > 0 {
+		for i := range sorted.Skills {
+			if sorted.Skills[i].verified { // never sign a record this process did not produce or verify
+				sorted.Skills[i].MAC = macOf(s.key, sorted.Skills[i])
+			}
+		}
+	}
 	sort.SliceStable(sorted.Skills, func(a, b int) bool { return sorted.Skills[a].ID < sorted.Skills[b].ID })
 	if sorted.Skills == nil {
 		sorted.Skills = []SkillRecord{}
