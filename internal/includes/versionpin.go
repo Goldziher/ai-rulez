@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -32,10 +33,19 @@ var (
 	// AcceptMovedTag re-pins a tag that now points to another commit instead of
 	// failing with AR732.
 	AcceptMovedTag bool
+	// ReleaseGate returns the minimum release age gate for a source, or nil for
+	// none. `lock` and `update` set it; it is only consulted when a range is
+	// resolved to a new tag (a pin that still satisfies its constraint is kept
+	// without a lookup, its age having been decided when it was pinned).
+	ReleaseGate func(w lockfile.Want) *tagresolve.AgeGate
 )
 
 // tagInfo is the tag a version constraint resolved to.
-type tagInfo struct{ tag, tagObject string }
+type tagInfo struct {
+	tag, tagObject string
+	// released and releasedFrom are the recorded release time (RFC 3339) and its source.
+	released, releasedFrom string
+}
 
 var (
 	tagsMu   sync.Mutex
@@ -119,7 +129,7 @@ func versionRef(ctx context.Context, lock *lockfile.File, w lockfile.Want, p *pi
 		return p.effectiveRef(w.Ref), nil
 	}
 	if p != nil {
-		recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject})
+		recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject, p.entry.Released, p.entry.ReleasedFrom})
 		return p.entry.Commit, nil
 	}
 	ref, info, err := resolveConstraint(ctx, lock, w, repoURL, token)
@@ -146,6 +156,11 @@ type RunMode struct {
 // Resolution is the commit and tag a version constraint resolved to.
 type Resolution struct {
 	Commit, Tag, TagObject string
+	// Released and ReleasedFrom are the release time of Tag (RFC 3339) and its
+	// source, when a min_release_age looked it up or the pin already had it.
+	Released, ReleasedFrom string
+	// Held lists the newer tags min_release_age held back (AR733).
+	Held []tagresolve.Held
 }
 
 // resolveConstraint picks the commit of a constraint source that has no usable pin.
@@ -153,7 +168,7 @@ func resolveConstraint(ctx context.Context, lock *lockfile.File, w lockfile.Want
 	res, err := ResolveVersion(ctx, lock, w, RunMode{Refresh: refreshing(w.Kind, w.Name), Offline: offline(ctx)}, func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return ListRemoteTags(ctx, repoURL, token)
 	})
-	return res.Commit, tagInfo{res.Tag, res.TagObject}, err
+	return res.Commit, tagInfo{res.Tag, res.TagObject, res.Released, res.ReleasedFrom}, err
 }
 
 // ResolveVersion resolves w's constraint against the tags list returns. A
@@ -166,7 +181,7 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 	keep := run.Refresh && entry.Covers(w) && !advance
 	if run.Offline {
 		if keep {
-			return Resolution{entry.Commit, entry.Tag, entry.TagObject}, nil
+			return keptResolution(entry), nil
 		}
 		return Resolution{}, oops.Hint("Run `ai-rulez lock` with network access").
 			Errorf("version constraint %q of %s %q cannot be resolved offline", w.Constraint, w.Kind, w.Name)
@@ -177,20 +192,44 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 	}
 	if keep {
 		commit, t, err := keepPin(entry, tags, w)
-		return Resolution{commit, t.tag, t.tagObject}, err
+		return Resolution{Commit: commit, Tag: t.tag, TagObject: t.tagObject, Released: t.released, ReleasedFrom: t.releasedFrom}, err
 	}
-	sel, err := tagresolve.Select(tags, TagSpec(w))
+	spec := TagSpec(w)
+	if entry != nil {
+		spec.Pinned = entry.Tag
+	}
+	var gate *tagresolve.AgeGate
+	if ReleaseGate != nil {
+		gate = ReleaseGate(w)
+	}
+	sel, err := tagresolve.SelectGated(ctx, tags, spec, gate)
 	if err != nil {
 		return Resolution{}, err //nolint:wrapcheck // carries the rule code
 	}
 	for _, n := range sel.Notes {
 		logger.Warn("Ambiguous version tags", "source", w.Name, "note", n)
 	}
+	for _, h := range sel.Held {
+		logger.Info(h.String(), "source", w.Name, "min_release_age", gate.Min.String())
+	}
 	if err := refuseDowngrade(entry, sel.Chosen, w); err != nil {
 		return Resolution{}, err
 	}
 	c := sel.Chosen.Tag
-	return Resolution{c.Commit, c.Name, c.TagObject()}, nil
+	res := Resolution{Commit: c.Commit, Tag: c.Name, TagObject: c.TagObject(), Held: sel.Held}
+	switch {
+	case sel.Release != nil:
+		res.Released, res.ReleasedFrom = sel.Release.At.UTC().Format(time.RFC3339), sel.Release.From
+	case entry != nil && entry.Tag == c.Name && entry.Commit == c.Commit:
+		// The pinned tag was chosen again (exempt from the gate): its record stays.
+		res.Released, res.ReleasedFrom = entry.Released, entry.ReleasedFrom
+	}
+	return res, nil
+}
+
+// keptResolution is the resolution of a pin that is kept as it is.
+func keptResolution(e *lockfile.Entry) Resolution {
+	return Resolution{Commit: e.Commit, Tag: e.Tag, TagObject: e.TagObject, Released: e.Released, ReleasedFrom: e.ReleasedFrom}
 }
 
 // refuseDowngrade stops an update that would select a tag below the pinned one:
@@ -216,12 +255,12 @@ func keepPin(entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (
 			return "", tagInfo{}, tagresolve.MovedError(entry.Tag, entry.Commit, now.Commit)
 		}
 		logger.Warn("Accepted a moved tag", "source", w.Name, "tag", entry.Tag, "was", shortSHA(entry.Commit), "now", shortSHA(now.Commit))
-		return now.Commit, tagInfo{now.Name, now.TagObject()}, nil
+		return now.Commit, tagInfo{tag: now.Name, tagObject: now.TagObject()}, nil
 	case tagresolve.StatusMissing:
 		logger.Warn(fmt.Sprintf("%s tag %q of %s %q no longer exists on the remote; keeping the pinned commit", tagresolve.CodeLockedTagMissed, entry.Tag, w.Kind, w.Name))
 	case tagresolve.StatusOK:
 	}
-	return entry.Commit, tagInfo{entry.Tag, entry.TagObject}, nil
+	return entry.Commit, tagInfo{entry.Tag, entry.TagObject, entry.Released, entry.ReleasedFrom}, nil
 }
 
 func shortSHA(s string) string {
