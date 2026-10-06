@@ -211,8 +211,16 @@ func (pc *publishContext) previousLock(top string) (data []byte, label string, e
 	if tag == "" {
 		return nil, "", nil
 	}
-	data, ok := workspace.ReadFileAt(pc.ctx, pc.cfg.BaseDir, tag, lockRel, publishRunner)
-	if !ok {
+	data, found, readErr := workspace.ReadFileAt(pc.ctx, pc.cfg.BaseDir, tag, lockRel, publishRunner)
+	if readErr != nil {
+		if explicit {
+			return nil, "", publish.Errorf(publish.CodeConfig, publish.ExitFailed, "pass a tag that contains "+lockRel,
+				"cannot read %s at %s for the release notes: %v", lockfile.FileName, tag, readErr)
+		}
+		logger.Warn("Cannot read the previous lock; release notes will not diff against it", "tag", tag, "error", readErr)
+		return nil, "", nil
+	}
+	if !found {
 		if explicit {
 			return nil, "", publish.Errorf(publish.CodeConfig, publish.ExitFailed, "pass a tag that contains "+lockRel,
 				"cannot read %s at %s for the release notes", lockfile.FileName, tag)
