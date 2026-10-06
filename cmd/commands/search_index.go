@@ -437,7 +437,7 @@ func runSearchMine(ctx context.Context, out, errOut io.Writer) int {
 		return 1
 	}
 	if len(entries) == 0 {
-		reportWriter{errOut}.printf("the query log %s is empty; set [search] log_queries = true and use find_skill first\n", path)
+		reportWriter{errOut}.printf("the query log %s is empty; set [search] log_queries = true in the user config (or AI_RULEZ_SEARCH_LOG_QUERIES=1) and use find_skill first\n", path)
 	}
 	mined := skillsearch.Mine(entries, skillsearch.MineOptions{Known: skillsearch.IDs(env.items), MinCount: searchSubFlags.minCount})
 	raw, err := skillsearch.CasesYAML(0, mined.Cases)

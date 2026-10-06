@@ -1648,7 +1648,7 @@ A hybrid or vector search that cannot embed the query ranks lexically and report
 
 ### `ai-rulez search mine`
 
-Turn the opt-in query log (`[search] log_queries = true`) into candidate cases: `--out file` (default stdout), `--min-count n`, `--purge` (delete the log afterwards).
+Turn the opt-in query log (`[search] log_queries = true` in the user config, or `AI_RULEZ_SEARCH_LOG_QUERIES=1`) into candidate cases: `--out file` (default stdout), `--min-count n`, `--purge` (delete the log afterwards).
 
 ### `ai-rulez improve run <skill> --with CMD` (experimental)
 

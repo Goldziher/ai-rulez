@@ -181,7 +181,9 @@ func TestFindSkill_IndexOfAnotherModelIsNotUsed(t *testing.T) {
 }
 
 func TestFindSkill_QueryLogRecordsQueryAndLoad(t *testing.T) {
-	// Arrange
+	// Arrange: only user scope (here the environment) turns the log on
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv(setup.LogQueriesEnv, "1")
 	emb := searchEmbedder()
 	p, dir := searchServer(t, skillsearch.ModeLexical, true, emb)
 	_ = p
@@ -202,6 +204,23 @@ func TestFindSkill_QueryLogRecordsQueryAndLoad(t *testing.T) {
 	assert.Equal(t, []string{"deploy-staging"}, entries[0].Results)
 	assert.Equal(t, "loaded", entries[1].Event)
 	assert.Equal(t, "deploy-staging", entries[1].Skill)
+}
+
+func TestFindSkill_RepositoryCannotEnableTheQueryLog(t *testing.T) {
+	// Arrange
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv(setup.LogQueriesEnv, "")
+	_, dir := searchServer(t, skillsearch.ModeLexical, true, searchEmbedder())
+	cfg := &config.Config{ConfigDir: dir, Search: &skillsearch.Config{Mode: skillsearch.ModeLexical, LogQueries: true}}
+	p, _ := startSkillServerWith(t, searchCatalog(t), ServeOptions{Search: NewSearchRuntime(func() *config.Config { return cfg })})
+
+	// Act
+	_, _, _ = callTool(t, p, "find_skill", map[string]any{"task": "staging cluster"})
+
+	// Assert
+	entries, err := skillsearch.ReadLog(skillsearch.LogPath(dir))
+	require.NoError(t, err)
+	assert.Empty(t, entries, "a repository config must not start recording queries")
 }
 
 func TestFindSkill_NoQueryLogByDefault(t *testing.T) {

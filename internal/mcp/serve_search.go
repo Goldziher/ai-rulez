@@ -75,6 +75,7 @@ func (rt *SearchRuntime) rank(ctx context.Context, cat *Catalog, task string) ra
 		rt.cfg = cfg
 		rt.resolved, rt.resErr = setup.Resolve(cfg, setup.Options{})
 		rt.dropClient()
+		rt.warnNotes()
 	}
 	resolved, resErr := rt.resolved, rt.resErr
 	if resErr != nil {
@@ -146,6 +147,17 @@ func (rt *SearchRuntime) rankerFor(cat *Catalog, res *setup.Resolved) *skillsear
 	return r
 }
 
+// warnNotes reports what Resolve ignored (a repository command, a repository log_queries), once per resolution.
+// Caller holds rt.mu.
+func (rt *SearchRuntime) warnNotes() {
+	if rt.resolved == nil {
+		return
+	}
+	for _, note := range rt.resolved.Notes {
+		rt.warnOnce("note:"+note, note)
+	}
+}
+
 func (rt *SearchRuntime) dropClient() {
 	if rt.release != nil {
 		rt.release()
@@ -208,6 +220,7 @@ func (rt *SearchRuntime) Log() *skillsearch.QueryLog {
 		rt.cfg = cfg
 		rt.resolved, rt.resErr = setup.Resolve(cfg, setup.Options{})
 		rt.dropClient()
+		rt.warnNotes()
 	}
 	if rt.resErr != nil || rt.resolved == nil {
 		return nil

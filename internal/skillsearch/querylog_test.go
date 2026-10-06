@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -126,4 +127,44 @@ func TestCasesYAML_RoundTrips(t *testing.T) {
 	assert.Equal(t, cases[0].Expect, got.Cases[0].Expect)
 	assert.Equal(t, []string{"x"}, got.Cases[1].Avoid)
 	assert.Empty(t, got.Cases[1].Expect)
+}
+
+func TestQueryLog_NeverWritesThroughASymlink(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		link func(t *testing.T, dir, victim string) string // returns the log path
+	}{
+		{"symlinked log file", func(t *testing.T, dir, victim string) string {
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, "local"), 0o750))
+			path := filepath.Join(dir, "local", QueryLogFile)
+			testutil.SymlinkOrSkip(t, victim, path)
+			return path
+		}},
+		{"symlinked local directory", func(t *testing.T, dir, victim string) string {
+			testutil.SymlinkOrSkip(t, filepath.Dir(victim), filepath.Join(dir, "local"))
+			return filepath.Join(dir, "local", QueryLogFile)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := filepath.Join(t.TempDir(), ".ai-rulez")
+			require.NoError(t, os.MkdirAll(dir, 0o750))
+			victim := filepath.Join(t.TempDir(), "victim.txt")
+			require.NoError(t, os.WriteFile(victim, []byte("keep\n"), 0o600))
+			l := &QueryLog{Path: tt.link(t, dir, victim)}
+
+			// Act
+			l.Query("s", "customer wants money back", "", []string{"a"})
+
+			// Assert
+			got, err := os.ReadFile(victim)
+			require.NoError(t, err)
+			assert.Equal(t, "keep\n", string(got), "the symlink target must not be appended to")
+			entries, err := os.ReadDir(filepath.Dir(victim))
+			require.NoError(t, err)
+			assert.Len(t, entries, 1, "nothing is created beside the victim")
+		})
+	}
 }

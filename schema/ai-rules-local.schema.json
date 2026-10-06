@@ -2829,7 +2829,7 @@
           "type": "string"
         },
         "log_queries": {
-          "description": "Record find_skill and search query text, and the skill loaded after each, in <config dir>/local/search-queries.jsonl for `search mine`. Off by default: queries can hold user data.",
+          "description": "Record find_skill and search query text, and the skill loaded after each, in <config dir>/local/search-queries.jsonl for `search mine`. Off by default: queries can hold user data. Honoured only from the user config file or AI_RULEZ_SEARCH_LOG_QUERIES; a repository config cannot turn it on.",
           "type": "boolean"
         },
         "mode": {

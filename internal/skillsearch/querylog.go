@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,7 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +25,8 @@ import (
 // Query log. It is opt-in ([search] log_queries = true) because it records what
 // an agent asked: query text, which can hold user data. It is a separate local
 // file, never sent anywhere, never committed (it lives under local/), and the
-// usage log, which holds identifiers only, is untouched.
+// usage log, which holds identifiers only, is untouched. Only user scope turns it
+// on: a repository must not be able to start recording what its users ask.
 const (
 	// QueryLogFile is the log's name inside <config dir>/local.
 	QueryLogFile = "search-queries.jsonl"
@@ -54,8 +58,8 @@ type LogEntry struct {
 type QueryLog struct {
 	Path    string
 	Scanner SecretScanner
-	// Now is the clock; nil means time.Now.
-	Now func() time.Time
+	// Now is the clock; nil is the wall clock.
+	Now ambient.Clock
 
 	mu     sync.Mutex
 	warned bool
@@ -112,39 +116,39 @@ func truncateBytes(s string, n int) string {
 func (l *QueryLog) append(e *LogEntry) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	now := time.Now
-	if l.Now != nil {
-		now = l.Now
-	}
-	e.Version, e.Time = queryLogVersion, now().UTC().Format(time.RFC3339)
+	e.Version, e.Time = queryLogVersion, l.Now.Now().UTC().Format(time.RFC3339)
 	line, err := json.Marshal(e)
 	if err != nil {
 		return
 	}
-	if info, statErr := os.Stat(l.Path); statErr == nil && info.Size() > maxLogBytes {
-		if !l.warned {
-			l.warned = true
-			logger.Warn("The search query log is full; not recording more queries (mine it, then run 'ai-rulez search mine --purge')", "path", l.Path, "limit_mib", maxLogBytes>>20)
-		}
-		return
-	}
-	if err := os.MkdirAll(filepath.Dir(l.Path), 0o700); err != nil {
-		return
-	}
-	f, err := os.OpenFile(l.Path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600) //nolint:gosec // a project-local file named by the config directory
+	// The log sits in a directory a repository can plant symlinks in; safefs never follows one.
+	f, err := safefs.OpenAppend(l.Path)
 	if err != nil {
+		l.warnOnce("cannot open the search query log; not recording queries", "path", l.Path, "error", err.Error())
+		return
+	}
+	defer f.Close() //nolint:errcheck // logging must never fail a search
+	if info, statErr := f.Stat(); statErr == nil && info.Size() > maxLogBytes {
+		l.warnOnce("The search query log is full; not recording more queries (mine it, then run 'ai-rulez search mine --purge')", "path", l.Path, "limit_mib", maxLogBytes>>20)
 		return
 	}
 	_, _ = f.Write(append(line, '\n')) //nolint:errcheck // logging must never fail a search
-	_ = f.Close()                      //nolint:errcheck // same
+}
+
+func (l *QueryLog) warnOnce(msg string, args ...any) {
+	if l.warned {
+		return
+	}
+	l.warned = true
+	logger.Warn(msg, args...)
 }
 
 // ReadLog reads the entries of a log file; a missing file is an empty log.
 // Lines that do not parse are skipped.
 func ReadLog(path string) ([]LogEntry, error) {
-	raw, err := os.ReadFile(path) //nolint:gosec // a project-local file
+	raw, err := safefs.ReadRegular(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, oops.Wrapf(err, "read the query log")
