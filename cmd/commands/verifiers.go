@@ -1,12 +1,16 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 	"github.com/samber/oops"
@@ -24,10 +28,19 @@ const (
 )
 
 var (
-	verifiersStrict  bool
-	verifiersJSON    bool
-	verifiersNames   []string
-	verifiersProfile string
+	verifiersStrict   bool
+	verifiersJSON     bool
+	verifiersNames    []string
+	verifiersProfile  string
+	verifiersSince    string
+	verifiersStaged   bool
+	verifiersAll      bool
+	verifiersRule     string
+	verifiersFormat   string
+	verifiersFailOn   string
+	verifiersOut      string
+	verifiersDead     bool
+	verifiersListJSON bool
 )
 
 // VerifiersCmd groups the deterministic repo checks declared as [[verifiers]].
@@ -38,7 +51,11 @@ var VerifiersCmd = &cobra.Command{
 declare in .ai-rulez/config.toml as [[verifiers]]: a file exists or is absent, a
 glob matches a bounded number of files, a regex is present in (or forbidden from)
 files, a JSON, YAML or TOML key has a value, generated files match their sources.
-They never use the network and never start a process.`,
+They never use the network and never start a process.
+
+Larger sets, rule-linked verifiers (failures name the rule or skill they enforce), the
+paired predicate and all/any/not combinators live in .ai-rulez/verifiers/*.toml
+(see docs/verifiers.md).`,
 }
 
 // VerifiersRunCmd evaluates the verifiers.
@@ -48,13 +65,47 @@ var VerifiersRunCmd = &cobra.Command{
 	Long: `Evaluate every [[verifiers]] entry (or only those named with --name) and print a
 table, or JSON with --json.
 
-Exit codes: 0 no verifier failed at error severity (with --strict, also none at
-warning severity), 2 at least one failed (even if another could not be evaluated),
+--since REV evaluates only the files changed since the merge base of REV and HEAD
+(plus uncommitted and untracked files); --staged only what is staged. A base that does
+not exist or share history with HEAD (a shallow clone) is an error, never a pass.
+Formats: text (default), json, sarif and junit; --out writes the report to a file.
+
+Exit codes: 0 no verifier failed at the --fail-on severity (error by default; --strict
+means warning), 2 at least one failed (even if another could not be evaluated),
 1 the run could not complete and nothing failed: the configuration does not load or
 validate, a --name is unknown, or a verifier could not be evaluated.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if code := runVerifiers(watchParentContext(cmd), args, os.Stdout); code != 0 {
+			os.Exit(code)
+		}
+	},
+}
+
+// VerifiersExplainCmd describes one verifier.
+var VerifiersExplainCmd = &cobra.Command{
+	Use:   "explain <name> [config-file]",
+	Short: "Explain what a verifier checks, the rule it enforces and how to fix it",
+	Args:  cobra.RangeArgs(1, 2),
+	Run: func(cmd *cobra.Command, args []string) {
+		if code := explainVerifier(watchParentContext(cmd), args[0], args[1:], os.Stdout); code != 0 {
+			os.Exit(code)
+		}
+	},
+}
+
+// VerifiersTestCmd runs the self-test examples of the verifiers.
+var VerifiersTestCmd = &cobra.Command{
+	Use:   "test [name...]",
+	Short: "Run the self-test examples of the verifiers offline",
+	Long: `Run the [[verifiers.examples]] of verifiers declared under .ai-rulez/verifiers/.
+Each example gets a temporary directory with its synthetic files, in which the listed
+changed files count as entirely added; git and the real project are never touched.
+
+Exit codes: 0 every example produced its expected outcome, 2 one did not (or a
+declaration is invalid), 1 the configuration does not load or a name is unknown.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if code := testVerifiers(watchParentContext(cmd), args, os.Stdout); code != 0 {
 			os.Exit(code)
 		}
 	},
@@ -73,12 +124,22 @@ var VerifiersListCmd = &cobra.Command{
 }
 
 func init() {
-	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd)
+	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd)
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
 	VerifiersRunCmd.Flags().BoolVar(&verifiersJSON, "json", false, "Print the report as JSON")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
 	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Profile for generated_in_sync verifiers that name none (default: from config)")
-	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd} {
+	f := VerifiersRunCmd.Flags()
+	f.StringVar(&verifiersSince, "since", "", "Evaluate only files changed since the merge base of REV and HEAD (plus uncommitted and untracked)")
+	f.BoolVar(&verifiersStaged, "staged", false, "Evaluate only staged changes")
+	f.BoolVar(&verifiersAll, "all", false, "Evaluate every file (the default)")
+	f.StringVar(&verifiersRule, "rule", "", "Run only the verifiers that enforce this rule, skill, agent or command")
+	f.StringVar(&verifiersFormat, "format", "", "Report format: text (default), json, sarif or junit")
+	f.StringVar(&verifiersFailOn, "fail-on", "", "Lowest failing severity: error (default), warning, info or none")
+	f.StringVar(&verifiersOut, "out", "", "Write the report to this file instead of stdout")
+	f.BoolVar(&verifiersDead, "strict-applicability", false, "Report a verifier whose when_changed matches no file (AR9H5)")
+	VerifiersListCmd.Flags().BoolVar(&verifiersListJSON, "json", false, "Print the list as JSON")
+	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd} {
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
@@ -107,7 +168,11 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
-	opts := verifiers.Options{Names: verifiersNames}
+	opts, format, failOn, err := verifierRunOptions()
+	if err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
 	if verifiersProfile != "" {
 		for i := range cfg.Verifiers {
 			if cfg.Verifiers[i].Type == config.VerifierGeneratedInSync && cfg.Verifiers[i].Profile == "" {
@@ -120,10 +185,19 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(report.Err)
 		return exitVerifiersCannotRun
 	}
-	if verifiersJSON {
-		err = verifiers.WriteJSON(out, report)
-	} else {
-		err = verifiers.WriteText(out, report)
+	var buf bytes.Buffer
+	switch format {
+	case "json":
+		err = verifiers.WriteJSON(&buf, report)
+	case "sarif":
+		err = verifiers.WriteSARIF(&buf, report, Version)
+	case "junit":
+		err = verifiers.WriteJUnit(&buf, report)
+	default:
+		err = verifiers.WriteText(&buf, report)
+	}
+	if err == nil {
+		err = emitReport(out, buf.Bytes())
 	}
 	if err != nil {
 		fmtError(err)
@@ -131,11 +205,129 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 	}
 	// A failure outranks a verifier that could not be evaluated: the failure is
 	// real and actionable, and exit 1 must not hide it. Both are in the report.
-	if report.Failed(verifiersStrict) {
+	if report.FailedAt(failOn) {
 		return exitVerifiersFindings
 	}
 	if report.CannotRun() {
 		return exitVerifiersCannotRun
+	}
+	return 0
+}
+
+// verifierRunOptions validates the run flags and builds the options.
+func verifierRunOptions() (opts verifiers.Options, format, failOn string, err error) {
+	modes := 0
+	for _, set := range []bool{verifiersSince != "", verifiersStaged, verifiersAll} {
+		if set {
+			modes++
+		}
+	}
+	if modes > 1 {
+		return opts, "", "", oops.New("use only one of --since, --staged and --all")
+	}
+	format = verifiersFormat
+	if format == "" && verifiersJSON {
+		format = "json"
+	}
+	switch format {
+	case "", "text", "json", "sarif", "junit":
+	default:
+		return opts, "", "", oops.Hint("Use text, json, sarif or junit.").Errorf("unknown --format %q", format)
+	}
+	failOn = verifiersFailOn
+	if failOn == "" {
+		failOn = "error"
+		if verifiersStrict {
+			failOn = "warning"
+		}
+	}
+	switch failOn {
+	case "error", "warning", "info", "none":
+	default:
+		return opts, "", "", oops.Hint("Use error, warning, info or none.").Errorf("unknown --fail-on %q", failOn)
+	}
+	if verifiersSince != "" {
+		if err := gitutil.CheckArg("--since", verifiersSince); err != nil {
+			return opts, "", "", oops.Wrap(err)
+		}
+	}
+	return verifiers.Options{
+		Names: verifiersNames, Since: verifiersSince, Staged: verifiersStaged,
+		Rule: verifiersRule, StrictApplicability: verifiersDead,
+	}, format, failOn, nil
+}
+
+// emitReport writes the report to --out (atomically) or to out.
+func emitReport(out io.Writer, data []byte) error {
+	if verifiersOut == "" {
+		_, err := out.Write(data)
+		return oops.Wrapf(err, "write report")
+	}
+	return oops.Wrapf(gitutil.WriteFileAtomic(verifiersOut, data, 0o644), "write %s", verifiersOut)
+}
+
+// explainVerifier prints what a verifier checks.
+func explainVerifier(ctx context.Context, name string, args []string, out io.Writer) int {
+	cfg, err := loadVerifierConfig(ctx, args)
+	if err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
+	if err := verifiers.Explain(out, cfg, name); err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
+	return 0
+}
+
+// testVerifiers runs the self-test examples and prints one line per example.
+func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
+	cfg, err := loadVerifierConfig(ctx, nil)
+	if err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
+	report, err := verifiers.RunExamples(ctx, cfg, names)
+	if err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
+	var sb strings.Builder
+	passed := 0
+	for _, r := range report.Results {
+		status := "ok  "
+		if r.OK {
+			passed++
+		} else {
+			status = "FAIL"
+		}
+		sb.WriteString(status + " " + r.Verifier + ": " + r.Example)
+		if !r.OK {
+			sb.WriteString(" (expected " + r.Want + ", got " + string(r.Got))
+			if r.Message != "" {
+				sb.WriteString(": " + r.Message)
+			}
+			sb.WriteString(")")
+		}
+		sb.WriteString("\n")
+	}
+	for _, p := range report.Problems {
+		id := p.ID
+		if id == "" {
+			id = p.File
+		}
+		sb.WriteString("FAIL " + verifiers.CodeVerifierInvalid + " " + id + ": " + p.Message + "\n")
+	}
+	fmt.Fprintf(&sb, "%d of %d examples passed\n", passed, len(report.Results))
+	if len(report.Untested) > 0 {
+		sb.WriteString("no examples: " + strings.Join(report.Untested, ", ") + "\n")
+	}
+	if _, err := io.WriteString(out, sb.String()); err != nil {
+		fmtError(oops.Wrapf(err, "write test report"))
+		return exitVerifiersCannotRun
+	}
+	if report.Failed() {
+		return exitVerifiersFindings
 	}
 	return 0
 }
@@ -147,18 +339,26 @@ func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
-	if len(cfg.Verifiers) == 0 {
+	rows := verifiers.List(cfg)
+	if verifiersListJSON {
+		if err := writeJSON(out, rows); err != nil {
+			fmtError(err)
+			return exitVerifiersCannotRun
+		}
+		return 0
+	}
+	if len(rows) == 0 {
 		_, _ = io.WriteString(out, "No verifiers configured.\n")
 		return 0
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	_, _ = io.WriteString(tw, "NAME\tTYPE\tSEVERITY\tDESCRIPTION\n")
-	for _, v := range cfg.Verifiers {
-		sev := v.Severity
-		if sev == "" {
-			sev = "error"
+	_, _ = io.WriteString(tw, "NAME\tTYPE\tSEVERITY\tENFORCES\tDESCRIPTION\n")
+	for _, r := range rows {
+		target := "-"
+		if r.Target != "" {
+			target = r.Target
 		}
-		_, _ = io.WriteString(tw, v.Name+"\t"+v.Type+"\t"+sev+"\t"+v.Description+"\n")
+		_, _ = io.WriteString(tw, r.Name+"\t"+r.Type+"\t"+r.Severity+"\t"+target+"\t"+r.Description+"\n")
 	}
 	if err := tw.Flush(); err != nil {
 		fmtError(oops.Wrapf(err, "write verifiers list"))
