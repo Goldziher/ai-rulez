@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/search-eval.v1.schema.json",
+  "title": "ai-rulez search --eval result",
+  "description": "Output of `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes and a later run takes as `--baseline`.",
+  "type": "object",
+  "required": ["schema_version", "k", "n", "n_negative", "modes", "ci95", "cases", "misses"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "k": { "type": "integer", "minimum": 1 },
+    "n": { "type": "integer", "minimum": 0, "description": "Positive cases (cases with expected skills)." },
+    "n_negative": { "type": "integer", "minimum": 0 },
+    "modes": {
+      "type": "object",
+      "description": "Metrics per ranking mode; only lexical exists in this release.",
+      "additionalProperties": { "$ref": "#/definitions/metrics" }
+    },
+    "tags": { "type": "object", "additionalProperties": { "$ref": "#/definitions/metrics" } },
+    "ci95": {
+      "type": "object",
+      "description": "95% bootstrap intervals (1000 resamples, fixed seed); informational, never gated on.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["low", "high"],
+        "additionalProperties": false,
+        "properties": { "low": { "type": "number" }, "high": { "type": "number" } }
+      }
+    },
+    "cases": { "type": "array", "items": { "$ref": "#/definitions/case" } },
+    "misses": { "type": "array", "items": { "$ref": "#/definitions/case" } },
+    "negatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "top_score"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "top": { "type": "string" },
+          "top_score": { "type": "number" },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "flips_vs_baseline": {
+      "type": "object",
+      "required": ["regressed", "fixed"],
+      "additionalProperties": false,
+      "properties": {
+        "regressed": { "type": "array", "items": { "type": "string" } },
+        "fixed": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "gate_failures": { "type": "array", "items": { "type": "string" } }
+  },
+  "definitions": {
+    "metrics": {
+      "type": "object",
+      "required": ["n", "top1", "recall_at_k", "hit_at_k", "mrr"],
+      "additionalProperties": false,
+      "properties": {
+        "n": { "type": "integer", "minimum": 0 },
+        "top1": { "type": "number", "minimum": 0, "maximum": 1 },
+        "recall_at_k": { "type": "number", "minimum": 0, "maximum": 1 },
+        "hit_at_k": { "type": "number", "minimum": 0, "maximum": 1 },
+        "mrr": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["id", "expected", "got", "rank", "hit"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "query": { "type": "string" },
+        "expected": { "type": "array", "items": { "type": "string" } },
+        "got": { "type": "array", "items": { "type": "string" } },
+        "rank": { "type": ["integer", "null"], "minimum": 1 },
+        "hit": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

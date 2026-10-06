@@ -39,6 +39,7 @@ nav = [
     { "Authoring Plugins" = "plugins.md" },
     { "Evals" = "evals.md" },
     { "Usage Telemetry" = "usage-telemetry.md" },
+    { "Skill Search" = "search.md" },
     { "LLM Access" = "llm.md" },
     { "Item-Load Telemetry (OTLP)" = "telemetry.md" },
     { "Poly Hooks" = "poly-hooks.md" },

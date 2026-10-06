@@ -1517,6 +1517,34 @@ Documented in [Evals](evals.md).
 | --- | --- |
 | `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n] [--timeout d] [--claude-bin b] [--runner-arg a] [--judge-model m] [--results f] [--no-write] [--price-in usd] [--price-out usd] [-n dir]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
 
+## Search Command
+
+Documented in [Skill Search](search.md).
+
+### `ai-rulez search <query>`
+
+Rank the skills `mcp --serve-skills` would serve against a query, with the ranker `find_skill` uses (lexical BM25F, offline, deterministic).
+
+| Flag | Meaning |
+| --- | --- |
+| `--limit n` | Maximum results (default 5, max 20) |
+| `--format text\|json` | Output format (default `text`) |
+| `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
+
+### `ai-rulez search --eval <cases.yaml>`
+
+Measure the ranking against labelled queries: top-1, recall@k, hit@k and MRR.
+
+| Flag | Meaning |
+| --- | --- |
+| `--k n` | Cut-off of recall@k and hit@k (default: the file's `k`, then 5) |
+| `--min metric=value,...` | Fail when a metric (`top1`, `recall`, `hit`, `mrr`) is below the floor |
+| `--baseline result.json` | Compare with an earlier `--out` file; counts cases that went from found to missed |
+| `--max-flips n` | With `--baseline`: allowed regressions (default 0) |
+| `--out result.json` | Also write the result as JSON |
+
+Exit codes: 0 pass, 1 cannot run (bad flags, invalid cases file `AR9D2`, no catalog), 2 a gate failed (`AR9D4`).
+
 ## Validation Command
 
 ### `ai-rulez validate [config-path]`
