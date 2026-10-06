@@ -504,7 +504,7 @@ the text report says how many were left out. Each finding carries a `hop` in `--
 `dependent` (one hop) or `transitive(n)`, so CI can filter.
 
 The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
-`changed_only` object (`depth`, `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
+`changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
 finding, and a `[lint.budget]` is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
