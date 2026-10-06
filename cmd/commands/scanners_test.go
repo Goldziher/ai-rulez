@@ -3,6 +3,9 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -60,4 +63,45 @@ func TestCheckScannersFormatRejectsUnknown(t *testing.T) {
 		scannersFormat = format
 		assert.Equal(t, wantErr, checkScannersFormat(nil, nil) != nil, format)
 	}
+}
+
+func TestWriteDoctor_StartsTheScannerOnlyWithExternal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script scanner")
+	}
+	tests := []struct {
+		name        string
+		probe       bool
+		wantStarted bool
+		wantText    string
+	}{
+		{"default does not probe", false, false, "not probed (pass --external)"},
+		{"external probes", true, true, "9.9.9"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: a scanner that records that it ran.
+			dir := t.TempDir()
+			marker := filepath.Join(dir, "ran")
+			script := filepath.Join(dir, "scanner")
+			require.NoError(t, os.WriteFile(script, []byte("#!/bin/sh\ntouch '"+marker+"'\necho 9.9.9\n"), 0o755)) //nolint:gosec // test script
+			info := lint.ScannerInfo{Name: "s", Command: "scanner", Path: script, Egress: "false", Format: "sarif", Timeout: time.Second}
+			var buf bytes.Buffer
+
+			// Act
+			writeDoctor(t.Context(), &buf, info, tt.probe)
+
+			// Assert
+			_, err := os.Stat(marker)
+			assert.Equal(t, tt.wantStarted, err == nil)
+			assert.Contains(t, buf.String(), tt.wantText)
+		})
+	}
+}
+
+func TestRunScannersDoctorJSON_DoesNotProbeWithoutExternal(t *testing.T) {
+	var buf bytes.Buffer
+	require.NoError(t, writeScannersJSON(&buf, []lint.ScannerInfo{{Name: "s", Command: "s", Path: "/bin/s"}}, true, nil))
+
+	assert.NotContains(t, buf.String(), `"version"`)
 }
