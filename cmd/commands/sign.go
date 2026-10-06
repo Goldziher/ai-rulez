@@ -45,25 +45,55 @@ var (
 	signEmbedItems  bool
 	signOutput      string
 	signInteractive bool
+	signBundle      string
+	signSkill       string
+	signSBOM        string
+	signProvenance  bool
+	signBuilderID   string
+	signAppend      bool
+	signPublicOut   string
 )
 
 // SignCmd signs the lock-subject statement into a Sigstore bundle.
 var SignCmd = &cobra.Command{
 	Use:   "sign [config-file]",
-	Short: "Sign the lock into a Sigstore bundle (DSSE over an in-toto statement)",
-	Long: `Sign the lock-subject statement of ai-rulez.lock (see "lock --subject") and write a
-Sigstore bundle next to the lock (.ai-rulez/ai-rulez.lock.sigstore.json). The
-bundle holds a DSSE envelope over an in-toto statement whose subject is the
-lock-subject digest, so it survives re-formatting of the TOML and verifies with
-"ai-rulez verify --attestation" or cosign verify-blob-attestation.
+	Short: "Sign the lock, a plugin bundle, a skill or an SBOM into a Sigstore bundle",
+	Long: `Sign one subject into a Sigstore bundle: a DSSE envelope over an in-toto statement.
+
+  ai-rulez sign --lock                 the lock-subject statement of ai-rulez.lock (see
+                                       "lock --subject"), written next to the lock
+                                       (.ai-rulez/ai-rulez.lock.sigstore.json)
+  ai-rulez sign --bundle <dir>         a generated plugin bundle: the tree digest of every
+                                       file in the directory, written to
+                                       <dir>/.ai-rulez.sigstore.json; --provenance also
+                                       writes a SLSA v1 provenance statement beside it
+  ai-rulez sign --skill <dir>          a skill directory a publisher ships, written to
+                                       <dir>/.ai-rulez.sigstore.json; consumers verify it
+                                       against [[signing.trust]] entries with subject = "skill"
+  ai-rulez sign --sbom <file>          any SBOM file (ai-rulez sbom, SPDX, CycloneDX),
+                                       written to <file>.sigstore.json
+
+The lock statement survives re-formatting of the TOML. All of them verify with
+"ai-rulez verify --attestation" (--bundle, --skill, --sbom) or cosign
+verify-blob-attestation.
 
   ai-rulez sign --lock --key cosign.key      sign with a key (offline)
+  ai-rulez sign --lock --key awskms:///alias/release
+                                             sign with a key held in a KMS (awskms://,
+                                             gcpkms://, azurekms://, hashivault://)
   ai-rulez sign --lock --keyless             sign with a Fulcio certificate and a
                                              Rekor log entry (network, opt-in)
+  ai-rulez sign --lock --key other.key --append
+                                             add a second signer's file
+                                             (ai-rulez.lock.2.sigstore.json) for
+                                             [signing] thresholds
 
 Key mode reads a PEM private key: ECDSA P-256/P-384/P-521 or ed25519, PKCS#8 or a
 cosign key. An encrypted key's password comes from AI_RULEZ_SIGNING_KEY_PASSWORD
 or COSIGN_PASSWORD (--key-password-env names another variable); it is never a flag.
+A KMS key never leaves the KMS: the provider's usual credentials (AWS_*,
+GOOGLE_APPLICATION_CREDENTIALS, AZURE_*, VAULT_*) are read from the environment.
+--public-key-out writes the key's PEM public key, to trust it in [signing].
 
 Keyless mode sends the OIDC token to the certificate authority and the signature,
 the certificate (which names your identity), the repository claim and the subject
@@ -86,7 +116,14 @@ stale (its tree does not match its entries).`,
 func init() {
 	f := SignCmd.Flags()
 	f.BoolVar(&signLock, "lock", false, "Sign the lock-subject statement of ai-rulez.lock")
-	f.StringVar(&signKey, "key", "", "PEM private key to sign with (ECDSA or ed25519; cosign keys work)")
+	f.StringVar(&signBundle, "bundle", "", "Sign the plugin bundle directory (tree digest of its files) into <dir>/.ai-rulez.sigstore.json")
+	f.StringVar(&signSkill, "skill", "", "Sign a skill directory a publisher ships into <dir>/.ai-rulez.sigstore.json")
+	f.StringVar(&signSBOM, "sbom", "", "Sign an SBOM file into <file>.sigstore.json")
+	f.BoolVar(&signProvenance, "provenance", false, "With --bundle: also write a SLSA v1 provenance statement (.ai-rulez.provenance.sigstore.json); it is the signer's own account of the build")
+	f.StringVar(&signBuilderID, "builder-id", "", "With --provenance: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own)")
+	f.BoolVar(&signAppend, "append", false, "Write a co-signature file next to the existing attestation instead of replacing it (for [signing] thresholds)")
+	f.StringVar(&signPublicOut, "public-key-out", "", "With --key: write the signing key's PEM public key to this file")
+	f.StringVar(&signKey, "key", "", "PEM private key file, or a KMS key URI (awskms://, gcpkms://, azurekms://, hashivault://), to sign with")
 	f.StringVar(&signKeyPassEnv, "key-password-env", "", "Environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD)")
 	f.BoolVar(&signKeyless, "keyless", false, "Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log)")
 	f.StringVar(&signTokenEnv, "identity-token-env", "", "With --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
@@ -100,9 +137,27 @@ func init() {
 }
 
 func validateSignFlags() error {
+	subjects := 0
+	for _, set := range []bool{signLock, signBundle != "", signSkill != "", signSBOM != ""} {
+		if set {
+			subjects++
+		}
+	}
 	switch {
-	case !signLock:
-		return oops.Hint("pass --lock").Errorf("nothing to sign")
+	case subjects == 0:
+		return oops.Hint("pass --lock, --bundle <dir>, --skill <dir> or --sbom <file>").Errorf("nothing to sign")
+	case subjects > 1:
+		return oops.Errorf("--lock, --bundle, --skill and --sbom are mutually exclusive: sign one subject at a time")
+	case signProvenance && signBundle == "":
+		return oops.Errorf("--provenance applies to --bundle")
+	case signProvenance && signAppend:
+		return oops.Errorf("--provenance and --append do not combine: provenance is one statement by the builder")
+	case signBuilderID != "" && !signProvenance:
+		return oops.Errorf("--builder-id applies to --provenance")
+	case signEmbedItems && !signLock:
+		return oops.Errorf("--embed-items applies to --lock")
+	case signPublicOut != "" && signKey == "":
+		return oops.Errorf("--public-key-out applies to --key")
 	case signKey == "" && !signKeyless:
 		return oops.Hint("pass --key <file> for key mode, or --keyless").Errorf("choose how to sign")
 	case signKey != "" && signKeyless:
@@ -149,6 +204,9 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 		fmtError(err)
 		return 1
 	}
+	if signBundle != "" || signSkill != "" || signSBOM != "" {
+		return runSignArtifact(ctx, env)
+	}
 	path := ""
 	if len(args) > 0 {
 		path = args[0]
@@ -170,6 +228,10 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 		fmtError(err)
 		return 1
 	}
+	if err := exportPublicKey(signer); err != nil {
+		fmtError(err)
+		return 1
+	}
 	bundle, err := signing.SignLock(ctx, signer, lock, meta)
 	if err != nil {
 		fmtError(err)
@@ -181,6 +243,10 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	out := signOutput
 	if out == "" {
 		out = filepath.Join(cfg.ConfigDir, filepath.FromSlash(attestationName(cfg)))
+	}
+	if out, err = appendTarget(out); err != nil {
+		fmtError(err)
+		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
 		fmtError(err)
@@ -237,16 +303,52 @@ func newSigner(ctx context.Context, env ambient.Env) (signing.Signer, error) {
 		}
 		return signing.NewKeylessSigner(signing.KeylessOptions{IDToken: tok, FulcioURL: signFulcioURL, RekorURL: signRekorURL})
 	}
-	data, err := readKeyFile(signKey)
-	if err != nil {
-		return nil, err
-	}
-	ks, err := signing.LoadKeySigner(data, []byte(keyPassword(env)))
-	if err != nil {
-		return nil, oops.With("path", signKey).Wrap(err)
+	var ks *signing.KeySigner
+	if signing.IsKMSRef(signKey) {
+		var err error
+		if ks, err = signing.LoadKMSSigner(ctx, signKey); err != nil {
+			return nil, err //nolint:wrapcheck // already contextual
+		}
+	} else {
+		data, err := readKeyFile(signKey)
+		if err != nil {
+			return nil, err
+		}
+		if ks, err = signing.LoadKeySigner(data, []byte(keyPassword(env))); err != nil {
+			return nil, oops.With("path", signKey).Wrap(err)
+		}
 	}
 	ks.TLog, ks.RekorURL = signTLog, signRekorURL
 	return ks, nil
+}
+
+// exportPublicKey writes the PEM public key of a --key signer to --public-key-out,
+// so a KMS key can be named in [signing] without another tool.
+func exportPublicKey(s signing.Signer) error {
+	if signPublicOut == "" {
+		return nil
+	}
+	ks, ok := s.(*signing.KeySigner)
+	if !ok {
+		return oops.Errorf("--public-key-out applies to --key")
+	}
+	pemText, err := ks.Key.GetPublicKeyPem()
+	if err != nil {
+		return oops.Wrapf(err, "encode the public key")
+	}
+	return writeBundle(signPublicOut, []byte(pemText))
+}
+
+// appendTarget turns the attestation path into the first free co-signature file
+// when --append is set; the primary must exist.
+func appendTarget(out string) (string, error) {
+	if !signAppend {
+		return out, nil
+	}
+	if _, err := os.Stat(out); err != nil {
+		return "", oops.Hint("sign without --append first").Errorf("--append adds a co-signature to an existing attestation, and %s does not exist", out)
+	}
+	return signing.NextCosignaturePath(out), nil
 }
 
 // readKeyFile reads a signing key, refusing a file over maxSigningKeyBytes

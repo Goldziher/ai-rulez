@@ -1,6 +1,6 @@
 package lint
 
-// Codes of lock attestations (docs/signing.md). The commands verify the
+// Codes of attestations (docs/signing.md). The commands verify the
 // attestation (internal/signing) and pass the failures in with WithSigning,
 // because this package must not import the signing machinery. The same codes are
 // declared in internal/signing; a test keeps the two equal.
@@ -13,9 +13,11 @@ const (
 	CodeTrustedRootMissing = "AR725"
 	CodeTLogProofMissing   = "AR726"
 	CodeSignatureRollback  = "AR727"
+	CodeSignatureThreshold = "AR728"
+	CodeProvenanceInvalid  = "AR729"
 )
 
-// WithSigning supplies the signing findings to report (AR720 to AR727). They are
+// WithSigning supplies the signing findings to report (AR720 to AR729). They are
 // reported like approval findings: one line per finding against the lock file.
 // Apply it after WithApprovals so the two lists are joined, not replaced.
 func WithSigning(findings []ApprovalFinding) Option {
@@ -32,6 +34,8 @@ func init() {
 		RuleInfo{CodeTrustedRootMissing, "trusted-root-unavailable", SeverityError, "a certificate-signed attestation needs a Sigstore trusted root and none is configured or cached"},
 		RuleInfo{CodeTLogProofMissing, "tlog-proof-missing", SeverityError, "[signing] tlog requires a transparency log entry and the bundle has none"},
 		RuleInfo{CodeSignatureRollback, "signature-rollback", SeverityError, "the lock attestation is older than one this machine already verified for the same signer and project"},
+		RuleInfo{CodeSignatureThreshold, "signature-threshold-not-met", SeverityError, "fewer distinct trusted signers signed than [signing] thresholds asks for"},
+		RuleInfo{CodeProvenanceInvalid, "provenance-invalid", SeverityError, "the SLSA provenance of a bundle is missing, malformed or names a builder that [signing] builders does not list"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodeSignatureMissing: {
@@ -74,8 +78,18 @@ func init() {
 			Bad:  "Presenting last quarter's signed lock after this quarter's was verified",
 			Good: "Use the current attestation; the per-user high-water mark lives in the state directory (docs/signing.md)",
 		},
+		CodeSignatureThreshold: {
+			Why:  "[signing] thresholds = { lock = 2 } asks for two distinct trusted signers. One signature, or two bundles by the same signer, do not meet it.",
+			Bad:  "A lock signed once under `thresholds = { lock = 2 }`",
+			Good: "Have a second trusted signer run `ai-rulez sign --lock --append` and commit the co-signature file",
+		},
+		CodeProvenanceInvalid: {
+			Why:  "require_provenance or --require-provenance asks for SLSA provenance next to a plugin bundle. It is missing, is not SLSA provenance v1, or its builder id is not on the [signing] builders list.",
+			Bad:  "A bundle without `.ai-rulez.provenance.sigstore.json` under `require_provenance = true`",
+			Good: "Sign the bundle with `ai-rulez sign --bundle <dir> --provenance` in the release workflow and commit both files",
+		},
 	})
-	for _, code := range []string{CodeSignatureMissing, CodeSignatureInvalid, CodeSignerNotTrusted, CodeSignatureStale, CodeAttestationSubject, CodeTrustedRootMissing, CodeTLogProofMissing, CodeSignatureRollback} {
+	for _, code := range []string{CodeSignatureMissing, CodeSignatureInvalid, CodeSignerNotTrusted, CodeSignatureStale, CodeAttestationSubject, CodeTrustedRootMissing, CodeTLogProofMissing, CodeSignatureRollback, CodeSignatureThreshold, CodeProvenanceInvalid} {
 		SetAnalyzer(code, AnalyzerLock, ScopeBundle)
 	}
 }

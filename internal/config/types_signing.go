@@ -13,8 +13,18 @@ import (
 
 // Signing subjects and TLog modes of the [signing] table (docs/signing.md).
 const (
-	// SigningSubjectLock is the lock attestation, the only subject so far.
+	// SigningSubjectLock is the lock attestation.
 	SigningSubjectLock = "lock"
+	// SigningSubjectBundle is a generated plugin bundle's attestation (sign --bundle).
+	SigningSubjectBundle = "bundle"
+	// SigningSubjectSkill is a publisher's attestation of one skill directory (sign --skill).
+	SigningSubjectSkill = "skill"
+	// SigningSubjectSBOM is an attestation of an SBOM file (sign --sbom).
+	SigningSubjectSBOM = "sbom"
+	// SigningSubjectServed gates `mcp --serve-skills` on the signed lock: a served
+	// skill must be pinned in a lock whose attestation verifies. It names no
+	// trust entries of its own; the lock's signers apply.
+	SigningSubjectServed = "served"
 	// SigningTLogRequired, SigningTLogOptional and SigningTLogOff are the tlog modes.
 	SigningTLogRequired = "required"
 	SigningTLogOptional = "optional"
@@ -27,8 +37,10 @@ const (
 // signature must be. Nothing is enforced unless require names a subject; signing
 // itself is always opt-in.
 type SigningConfig struct {
-	// Require lists the subjects that must carry a valid attestation: "lock".
-	// `lock --check` and `generate --locked` fail without one.
+	// Require lists the subjects that must carry a valid attestation: "lock"
+	// (`lock --check` and `generate --locked` fail without one), "served" (the
+	// MCP skill server refuses a skill the signed lock does not pin) and "skill"
+	// (it refuses a remote skill without a trusted publisher attestation).
 	Require []string `yaml:"require,omitempty" json:"require,omitempty" toml:"require,omitempty"`
 	// TLog is "required", "optional" or "off". Default: required when a trusted
 	// signer is a certificate identity, off when only keys are trusted.
@@ -52,13 +64,26 @@ type SigningConfig struct {
 
 	// Trust is the full form: scoped, repeatable trust entries.
 	Trust []SigningTrust `yaml:"trust,omitempty" json:"trust,omitempty" toml:"trust,omitempty"`
+
+	// Thresholds sets, per subject, how many distinct trusted signers must have
+	// signed it (k of n); the default is 1. The signatures are separate bundle files.
+	Thresholds map[string]int `yaml:"thresholds,omitempty" json:"thresholds,omitempty" toml:"thresholds,omitempty"`
+	// RequireProvenance makes verifying a bundle demand a signed SLSA provenance
+	// statement next to it.
+	RequireProvenance bool `yaml:"require_provenance,omitempty" json:"require_provenance,omitempty" toml:"require_provenance,omitempty"` //nolint:tagliatelle
+	// Builders, when set, are the only builder ids a provenance statement may name.
+	Builders []string `yaml:"builders,omitempty" json:"builders,omitempty" toml:"builders,omitempty"`
 }
 
 // SigningTrust is one [[signing.trust]] entry: a certificate identity (Identity
 // or IdentityRegexp, with Issuer) or a public key (KeyFile).
 type SigningTrust struct {
-	// Subject is what the signer may vouch for; default "lock".
+	// Subject is what the signer may vouch for: lock, bundle, skill or sbom;
+	// default "lock".
 	Subject string `yaml:"subject,omitempty" json:"subject,omitempty" toml:"subject,omitempty"`
+	// Source scopes a skill entry to one [[skill_sources]] or [[installed_skills]]
+	// name, so a publisher trusted for one source cannot vouch for another.
+	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`
 	// Identity is matched exactly against the certificate subject alternative name.
 	Identity string `yaml:"identity,omitempty" json:"identity,omitempty" toml:"identity,omitempty"`
 	// IdentityRegexp is matched against the whole identity and must be anchored (^...$).
@@ -168,8 +193,8 @@ func (c *Config) validateSigning() error {
 		return oops.With("field", "signing."+field).Errorf(format, args...)
 	}
 	for _, r := range s.Require {
-		if r != SigningSubjectLock {
-			return fail("require", "invalid subject %q (only %q is supported)", r, SigningSubjectLock)
+		if !slices.Contains(requirableSigningSubjects, r) {
+			return fail("require", "invalid subject %q (use %s)", r, strings.Join(requirableSigningSubjects, ", "))
 		}
 	}
 	if !slices.Contains([]string{"", SigningTLogRequired, SigningTLogOptional, SigningTLogOff}, s.TLog) {
@@ -202,19 +227,89 @@ func (c *Config) validateSigning() error {
 	if len(s.Require) > 0 && len(s.SigningTrustEntries()) == 0 {
 		return fail("require", "require needs a trusted signer: set identity and issuer, key_file or [[signing.trust]]")
 	}
-	if s.TLog == SigningTLogOff {
-		for _, t := range s.SigningTrustEntries() {
-			if t.KeyFile == "" {
-				return fail("tlog", "tlog = %q only works with keys: a certificate identity needs a transparency log", SigningTLogOff)
-			}
+	if err := s.validateSigningPolicy(fail); err != nil {
+		return err
+	}
+	return s.validateTLogOff(fail)
+}
+
+// validateTLogOff refuses tlog = "off" next to a certificate identity: a
+// short-lived certificate is only meaningful at the time a log recorded it.
+func (s *SigningConfig) validateTLogOff(fail func(field, format string, args ...any) error) error {
+	if s.TLog != SigningTLogOff {
+		return nil
+	}
+	for _, t := range s.SigningTrustEntries() {
+		if t.KeyFile == "" {
+			return fail("tlog", "tlog = %q only works with keys: a certificate identity needs a transparency log", SigningTLogOff)
 		}
 	}
 	return nil
 }
 
+// requirableSigningSubjects are the subjects [signing] require may name: the
+// ones a command enforces. bundle and sbom are verified on request only.
+var requirableSigningSubjects = []string{SigningSubjectLock, SigningSubjectServed, SigningSubjectSkill}
+
+// trustSigningSubjects are the subjects a trust entry may be scoped to.
+var trustSigningSubjects = []string{SigningSubjectLock, SigningSubjectBundle, SigningSubjectSkill, SigningSubjectSBOM}
+
+// validateSigningPolicy checks the thresholds, builders and the trust entries a
+// required subject depends on.
+func (s *SigningConfig) validateSigningPolicy(fail func(field, format string, args ...any) error) error {
+	for subject, k := range s.Thresholds {
+		if !slices.Contains(trustSigningSubjects, subject) {
+			return fail("thresholds", "invalid subject %q (use %s)", subject, strings.Join(trustSigningSubjects, ", "))
+		}
+		if k < 1 {
+			return fail("thresholds", "threshold for %q must be at least 1", subject)
+		}
+		if k > 1 && !s.canReachThreshold(subject, k) {
+			return fail("thresholds", "threshold %d for %q needs at least %d trusted signers for it; add [[signing.trust]] entries", k, subject, k)
+		}
+	}
+	for _, b := range s.Builders {
+		if strings.TrimSpace(b) == "" {
+			return fail("builders", "a builder id must not be empty")
+		}
+	}
+	if s.Requires(SigningSubjectSkill) && !s.hasTrustFor(SigningSubjectSkill) {
+		return fail("require", "require = [%q] needs a [[signing.trust]] entry with subject = %q", SigningSubjectSkill, SigningSubjectSkill)
+	}
+	return nil
+}
+
+func (s *SigningConfig) hasTrustFor(subject string) bool {
+	for _, t := range s.SigningTrustEntries() {
+		if t.Subject == subject {
+			return true
+		}
+	}
+	return false
+}
+
+// canReachThreshold reports whether k distinct signers can exist for subject:
+// k entries, or a pattern entry (which may match many identities).
+func (s *SigningConfig) canReachThreshold(subject string, k int) bool {
+	n := 0
+	for _, t := range s.SigningTrustEntries() {
+		if t.Subject != subject {
+			continue
+		}
+		if t.IdentityRegexp != "" {
+			return true
+		}
+		n++
+	}
+	return n >= k
+}
+
 func validateSigningTrust(t SigningTrust) error {
-	if t.Subject != "" && t.Subject != SigningSubjectLock {
-		return fmt.Errorf("invalid subject %q (only %q is supported)", t.Subject, SigningSubjectLock)
+	if t.Subject != "" && !slices.Contains(trustSigningSubjects, t.Subject) {
+		return fmt.Errorf("invalid subject %q (use %s)", t.Subject, strings.Join(trustSigningSubjects, ", "))
+	}
+	if t.Source != "" && t.Subject != SigningSubjectSkill {
+		return fmt.Errorf("source scopes a trust entry with subject = %q only", SigningSubjectSkill)
 	}
 	byIdentity := t.Identity != "" || t.IdentityRegexp != ""
 	switch {
@@ -237,6 +332,11 @@ func validateSigningTrust(t SigningTrust) error {
 	if err := validateSigningPath(t.KeyFile); err != nil {
 		return fmt.Errorf("key_file: %w", err)
 	}
+	return validateTrustWindow(t)
+}
+
+// validateTrustWindow checks the validity bounds of a trust entry.
+func validateTrustWindow(t SigningTrust) error {
 	var from, until time.Time
 	var err error
 	if t.ValidFrom != "" {

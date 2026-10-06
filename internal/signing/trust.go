@@ -13,8 +13,13 @@ import (
 // An entry is either a certificate identity (Identity or IdentityRegexp, with
 // Issuer) or a key.
 type TrustEntry struct {
-	// Subject is what the signer may vouch for ("lock"); empty means any subject.
+	// Subject is what the signer may vouch for ("lock", "bundle", "skill",
+	// "sbom"); empty means any subject.
 	Subject string
+	// Source scopes a skill entry to one skill source or installed skill name;
+	// empty applies to every source. A scoped entry never applies to a check
+	// made without a source.
+	Source string
 	// Identity is matched exactly against the certificate SAN.
 	Identity string
 	// IdentityRegexp is matched against the whole SAN; it must be anchored.
@@ -40,6 +45,11 @@ type TrustSet struct {
 
 func (e TrustEntry) appliesTo(subject string) bool { return e.Subject == "" || e.Subject == subject }
 
+// appliesToSource also honours the entry's source scope.
+func (e TrustEntry) appliesToSource(subject, source string) bool {
+	return e.appliesTo(subject) && (e.Source == "" || e.Source == source)
+}
+
 // Keys returns the public keys trusted for subject.
 func (t TrustSet) Keys(subject string) []crypto.PublicKey {
 	var out []crypto.PublicKey
@@ -49,6 +59,17 @@ func (t TrustSet) Keys(subject string) []crypto.PublicKey {
 		}
 	}
 	return out
+}
+
+// CountFor returns how many entries may vouch for subject.
+func (t TrustSet) CountFor(subject string) int {
+	n := 0
+	for _, e := range t.Entries {
+		if e.appliesTo(subject) {
+			n++
+		}
+	}
+	return n
 }
 
 // HasIdentities reports whether any entry for subject trusts a certificate
@@ -88,13 +109,19 @@ func (e TrustEntry) validAt(t time.Time) bool {
 // Check reports AR722 unless a trust entry for subject accepts the signer of res
 // at the time it signed (the log time, else now).
 func (t TrustSet) Check(res *Result, subject string, now time.Time) error {
+	return t.CheckFor(res, subject, "", now)
+}
+
+// CheckFor is Check for a subject that comes from a named source (a skill from
+// one skill source): entries scoped to another source do not apply.
+func (t TrustSet) CheckFor(res *Result, subject, source string, now time.Time) error {
 	at := res.SignedAt
 	if at.IsZero() {
 		at = now
 	}
 	matched := false
 	for _, e := range t.Entries {
-		if !e.appliesTo(subject) || !e.matches(res.Signer) {
+		if !e.appliesToSource(subject, source) || !e.matches(res.Signer) {
 			continue
 		}
 		if e.validAt(at) {

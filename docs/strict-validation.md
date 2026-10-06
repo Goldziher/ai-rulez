@@ -140,6 +140,8 @@ stdout.
 | AR725 | `trusted-root-unavailable` | error | A certificate-signed attestation needs a trusted root and none is configured or cached |
 | AR726 | `tlog-proof-missing` | error | `[signing] tlog = "required"` and the bundle has no transparency log entry |
 | AR727 | `signature-rollback` | error | The attestation is older than one this machine already verified for the same signer and project |
+| AR728 | `signature-threshold-not-met` | error | Fewer distinct trusted signers signed than `[signing] thresholds` asks for |
+| AR729 | `provenance-invalid` | error | The SLSA provenance of a bundle is missing, is not SLSA provenance v1, or names a builder that `[signing] builders` does not list |
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
@@ -219,7 +221,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR716` used, `AR717` is for the deny list, see [Approvals](approvals.md)) | allocated |
-| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR727` used, see [Signing](signing.md)) | allocated |
+| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom`, see [SBOM](sbom.md)) | allocated |
@@ -1755,6 +1757,26 @@ the lock attestation is older than one this machine already verified for the sam
 - Why: This machine has already verified a newer attestation for the repository. Accepting an older one would roll the lock back to a state that was valid once.
 - Bad: Presenting last quarter's signed lock after this quarter's was verified
 - Good: Use the current attestation; the per-user high-water mark lives in the state directory (docs/signing.md)
+
+### AR728 signature-threshold-not-met
+
+fewer distinct trusted signers signed than [signing] thresholds asks for
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: [signing] thresholds = { lock = 2 } asks for two distinct trusted signers. One signature, or two bundles by the same signer, do not meet it.
+- Bad: A lock signed once under `thresholds = { lock = 2 }`
+- Good: Have a second trusted signer run `ai-rulez sign --lock --append` and commit the co-signature file
+
+### AR729 provenance-invalid
+
+the SLSA provenance of a bundle is missing, malformed or names a builder that [signing] builders does not list
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: require_provenance or --require-provenance asks for SLSA provenance next to a plugin bundle. It is missing, is not SLSA provenance v1, or its builder id is not on the [signing] builders list.
+- Bad: A bundle without `.ai-rulez.provenance.sigstore.json` under `require_provenance = true`
+- Good: Sign the bundle with `ai-rulez sign --bundle <dir> --provenance` in the release workflow and commit both files
 
 ### AR730 constraint-unsatisfiable
 

@@ -32,12 +32,18 @@ provenance hashes.
 With --attestation, verify instead checks the Sigstore bundle that "ai-rulez sign
 --lock" wrote against the lock and the [signing] policy, offline: the signature,
 who signed (identity and issuer, or key), the log proof, freshness and rollback.
-See docs/signing.md.
+--bundle <dir>, --skill <dir> and --sbom <file> verify the attestation of a plugin
+bundle, a published skill or an SBOM file the same way (they imply --attestation;
+--public-key or --identity with --issuer can stand in for a project's [signing]
+table). See docs/signing.md.
 
 Exit codes: 0 verified, 1 the check could not run, 2 generated files differ (with
 --attestation: the attestation failed verification).`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if verifyArtifactMode() {
+			verifyAttestation = true // --bundle, --skill and --sbom imply --attestation
+		}
 		if err := rejectAttestationFlags(cmd); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -98,6 +104,11 @@ func init() {
 	f.StringVar(&verifyIdentity, "identity", "", "With --attestation: also trust this certificate identity (needs --issuer)")
 	f.StringVar(&verifyIssuer, "issuer", "", "With --attestation: the OIDC issuer of --identity")
 	f.BoolVar(&verifyNoState, "no-state", false, "With --attestation: do not read or update the per-user rollback state")
+	f.StringVar(&verifyBundleDir, "bundle", "", "Verify the attestation of this plugin bundle directory (implies --attestation)")
+	f.StringVar(&verifySkillDir, "skill", "", "Verify the publisher attestation of this skill directory (implies --attestation)")
+	f.StringVar(&verifySBOMFile, "sbom", "", "Verify the attestation of this SBOM file (implies --attestation)")
+	f.StringVar(&verifySource, "source", "", "With --skill: the skill source or installed skill name, to apply [[signing.trust]] entries scoped by source")
+	f.BoolVar(&verifyRequireProvenance, "require-provenance", false, "With --bundle: require a verified SLSA provenance statement next to the bundle attestation")
 	addFormatFlag(f, &verifyFormat, "", formatText, formatText, formatJSON)
 	addJSONFlagAlias(f)
 	VerifyCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
