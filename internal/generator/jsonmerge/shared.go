@@ -433,6 +433,15 @@ func (c Claim) IsPreexisting(path []string) bool {
 	return slices.ContainsFunc(c.Preexisting, func(p []string) bool { return slices.Equal(p, path) })
 }
 
+// removalRefused reports whether a guarded removal rightly left value in place.
+func removalRefused(key OwnedKey, value any) bool {
+	if key.RemoveIf == nil {
+		return false
+	}
+	raw, err := json.Marshal(value)
+	return err == nil && !key.RemoveIf(raw)
+}
+
 // VerifyOwned checks that every owned value is in the decoded document as
 // written and every removed key is gone.
 func VerifyOwned(tree map[string]any, owned []OwnedKey) error {
@@ -444,7 +453,7 @@ func VerifyOwned(tree map[string]any, owned []OwnedKey) error {
 		got, present := LookupTree(tree, segs)
 		switch {
 		case key.Remove:
-			if present {
+			if present && !removalRefused(key, got) {
 				return fmt.Errorf("%s was not removed", strings.Join(segs, "."))
 			}
 		case key.Members:

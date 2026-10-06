@@ -92,9 +92,12 @@ a config-file argument. The full write list is printed before the first write, w
 - **Clean removes only what was recorded.** The manifest is `~/.config/ai-rulez/.generated-manifest.json`
   (plus `.generated-manifest.local.json` for the keys merged into shared documents). `clean --user`,
   and `generate --user` after you drop content, remove a file only if it is listed there and, for files
-  that carry a generated header, still looks generated. Directories a removal leaves empty
-  (`~/.claude/skills/<id>`, `~/.copilot/hooks`, ...) are pruned; the first-level directories (`~/.claude`,
-  `~/.codex`, `~/.config`, ...) and a relocated tool home are never removed, and the user config is never touched beyond its two manifest files. Keep `~/.config/ai-rulez` in your dotfiles repository if you
+  that carry a generated header, still looks generated. The manifest also records the directories `generate --user` created below your home directory
+  (`~/.cursor`, `~/.claude/skills/<id>`, ...); `clean --user` removes those once empty. A directory that
+  existed before ai-rulez ran is never removed, and neither is one that still holds a file of yours. A
+  manifest written by an older version records no directories, so the first `generate --user` after upgrading
+  starts the record. A relocated tool home is never removed, and the user config is never touched beyond its
+  two manifest files. Keep `~/.config/ai-rulez` in your dotfiles repository if you
   like, but add the two manifest files to its ignore list.
 - **`--dry-run` writes nothing**, not even the manifest.
 

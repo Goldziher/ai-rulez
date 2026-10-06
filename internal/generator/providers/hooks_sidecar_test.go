@@ -35,7 +35,7 @@ func TestHooksSidecar_RendersTheDialectsDocument(t *testing.T) {
 			spec:     "[[sidecars]]\nkind = \"hooks\"\ndialect = \"qwen\"\npath = \".qwen/settings.json\"\n",
 			path:     ".qwen/settings.json",
 			existing: `{"model": "mine", "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "mine"}]}]}}`,
-			want:     []string{`"model": "mine"`, `"command": "mine"`, `"matcher": "Bash"`, `"command": "echo guard"`, `"timeout": 10`},
+			want:     []string{`"model": "mine"`, `"command": "mine"`, `"matcher":"Bash"`, `"command":"echo guard"`, `"timeout":10`},
 		},
 		{
 			name:     "toml flat list keeps the consumer's hook",

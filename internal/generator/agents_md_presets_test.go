@@ -200,7 +200,7 @@ func TestAgentsMD_GeminiSettingsMerge(t *testing.T) {
 				assert.Equal(t, value, all[key])
 			}
 			if strings.Contains(tc.existing, "discoveryMaxDirs") {
-				assert.Contains(t, first, `"discoveryMaxDirs": 7`)
+				assert.Contains(t, first, `"discoveryMaxDirs":7`)
 			}
 
 			runAgentsMDGenerate(t, root)

@@ -124,10 +124,10 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 			assert.Equal(t, tc.wantWarn, countContaining(*warned, "GEMINI.md") > 0, *warned)
 			assert.Contains(t, readAgentsMDFile(t, root, "GEMINI.md"), "ALWAYS_BODY")
 			if strings.Contains(tc.existing, "theme") {
-				assert.Contains(t, settings, `"theme": "dark"`)
+				assert.Contains(t, settings, `"theme":"dark"`)
 			}
 			if strings.Contains(tc.existing, "discoveryMaxDirs") {
-				assert.Contains(t, settings, `"discoveryMaxDirs": 7`)
+				assert.Contains(t, settings, `"discoveryMaxDirs":7`)
 			}
 			if tc.mcp != "" {
 				assert.Contains(t, settings, `"mcpServers"`)
