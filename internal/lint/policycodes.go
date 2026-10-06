@@ -18,11 +18,14 @@ const (
 	CodePolicyInvalid         = "AR743"
 	CodePolicyRequiredMissing = "AR744"
 	CodeSourceNotAllowed      = "AR745"
+	// AR746 to AR749 are in their own block so each lands with its feature.
+	CodeCapabilityNotAllowed = "AR748"
 )
 
 var policyCodes = []string{
 	CodePolicyLoosened, CodePolicyDigestMismatch, CodePolicyUnavailable,
 	CodePolicyInvalid, CodePolicyRequiredMissing, CodeSourceNotAllowed,
+	CodeCapabilityNotAllowed,
 }
 
 func init() {
@@ -33,6 +36,7 @@ func init() {
 		RuleInfo{CodePolicyInvalid, "policy-invalid", SeverityError, "a policy file is unusable: not TOML, an unknown key, a bad pattern, or newer than this ai-rulez"},
 		RuleInfo{CodePolicyRequiredMissing, "policy-required-missing", SeverityError, "the repository turns off or ignores a rule code the organization policy requires"},
 		RuleInfo{CodeSourceNotAllowed, "source-not-allowed", SeverityError, "an include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies"},
+		RuleInfo{CodeCapabilityNotAllowed, "capability-not-allowed", SeverityError, "an MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodePolicyLoosened: {
@@ -64,6 +68,11 @@ func init() {
 			Why:  "The policy lists the hosts remote content may come from, so a typosquatted or attacker-controlled include cannot be added by editing the repository. The source is dropped from the run and reported.",
 			Bad:  "An include from `github.com/other-org/rules` under `sources.allowed_hosts = [\"github.com/example-org\"]`",
 			Good: "Mirror the content into an allowed organization, or ask the policy owners to allow the host",
+		},
+		CodeCapabilityNotAllowed: {
+			Why:  "An MCP server runs a command or reaches a remote endpoint, and a hook runs a command on every tool event, so the organization bounds both. A server or hook outside the bound is dropped from the run and reported, so a pull request cannot add one that the policy bars.",
+			Bad:  "`[[mcp_servers]] command = \"bash\"` under `mcp.allowed_commands = [\"npx\", \"uvx\"]`, or any `[[hooks]]` group when the policy sets `hooks.allow = false`",
+			Good: "Use an allowed command, or ask the policy owners to widen the policy; the repository cannot",
 		},
 	})
 	for _, code := range policyCodes {
