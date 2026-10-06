@@ -1,0 +1,56 @@
+dropped | (native files) |  |  | CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from .rulesync/ and were not imported; use --from native,rulesync to import both
+dropped | .rulesync/.aiignore |  |  | 2 ignore pattern(s) not imported: ignore files are deprecated upstream and ai-rulez has no ignore feature; deny reads with [permissions] instead
+mapped | .rulesync/checks/security.md | check | checks/security.md | 
+mapped | .rulesync/commands/git/commit.md | command | commands/git-commit.md | 
+approximated | .rulesync/commands/git/commit.md | name | commands/git-commit | the directory is part of the name; ai-rulez commands are flat
+mapped | .rulesync/commands/review-pr.md | command | commands/review-pr.md | 
+dropped | .rulesync/commands/review-pr.md | copilot |  | tool-specific section is not carried (keys: agent); ai-rulez has no per-tool overrides
+dropped | .rulesync/commands/review-pr.md | roo |  | tool-specific section is not carried (keys: mode); ai-rulez has no per-tool overrides
+needs-action | .rulesync/hooks.jsonc | hooks |  | hooks are not imported yet (afterFileEdit, sessionStart); add [[hooks]] to config.toml by hand and review it (imported hooks are never enabled automatically)
+dropped | .rulesync/mcp.jsonc | claudecode.mcpServers |  | servers scoped to claudecode (claude-only) are not imported; ai-rulez MCP servers are not scoped per tool, add them by hand if every preset may use them
+mapped | .rulesync/mcp.jsonc | mcpServers.context7 | mcp_servers.context7 | 
+dropped | .rulesync/mcp.jsonc | mcpServers.context7.disabledTools |  | per-tool filtering has no ai-rulez equivalent
+mapped | .rulesync/mcp.jsonc | mcpServers.deepwiki | mcp_servers.deepwiki | 
+approximated | .rulesync/mcp.jsonc | mcpServers.deepwiki.targets |  | per-server targets are not carried; the server is generated for every preset
+needs-action | .rulesync/permissions.jsonc | permissions |  | permissions are not imported yet (bash, read); add [permissions] to config.toml by hand and review it (imported permissions are never enabled automatically)
+approximated | .rulesync/rules/.curated/shared-style.md |  |  | installed from a remote source by `rulesync install`; imported as a local file and no longer tracked
+mapped | .rulesync/rules/.curated/shared-style.md | rule | rules/shared-style.md | 
+dropped | .rulesync/rules/ci/github-actions.md | copilot |  | tool-specific section is not carried (keys: excludeAgent, name); ai-rulez has no per-tool overrides
+mapped | .rulesync/rules/ci/github-actions.md | rule | rules/ci-github-actions.md | 
+approximated | .rulesync/rules/ci/github-actions.md | targets | targets | no ai-rulez preset for claudecode-plugin; the file is not written for them
+dropped | .rulesync/rules/coding-guidelines.md | cursor |  | tool-specific section is not carried (keys: description); ai-rulez has no per-tool overrides
+mapped | .rulesync/rules/coding-guidelines.md | rule | rules/coding-guidelines.md | 
+mapped | .rulesync/rules/overview.md | context | context/overview.md | 
+approximated | .rulesync/rules/overview.md | root | context/overview.md | root rules are written into every tool's root file; ai-rulez does that with context
+needs-action | .rulesync/rules/personal.md | localRoot |  | personal local rule is not imported into the committed tree; copy it to .ai-rulez/local/rules/ or .ai-rulez/local/context/ by hand
+dropped | .rulesync/rules/testing.md | devin |  | tool-specific section is not carried (keys: description); ai-rulez has no per-tool overrides
+approximated | .rulesync/rules/testing.md | devin.trigger | rules | activation taken from this section; it applies to every tool
+mapped | .rulesync/rules/testing.md | rule | rules/testing.md | 
+dropped | .rulesync/rules/testing.md | trae |  | tool-specific section is not carried (keys: scene); ai-rulez has no per-tool overrides
+mapped | .rulesync/skills/pr-review | skill | skills/pr-review/SKILL.md | 
+dropped | .rulesync/skills/pr-review/SKILL.md | claudecode |  | tool-specific section is not carried (keys: context); ai-rulez has no per-tool overrides
+approximated | .rulesync/skills/pr-review/SKILL.md | claudecode.allowed-tools | allowed-tools | lifted out of the claudecode section; it applies to every preset
+approximated | .rulesync/skills/pr-review/SKILL.md | disable-model-invocation |  | kept as written; ai-rulez has no field for it, so only presets that copy unknown keys render it
+mapped | .rulesync/subagents/planner.md | agent | agents/planner.md | 
+dropped | .rulesync/subagents/planner.md | claudecode |  | tool-specific section is not carried (keys: maxTurns, permissionMode); ai-rulez has no per-tool overrides
+approximated | .rulesync/subagents/planner.md | claudecode.model | model | lifted out of the claudecode section; it applies to every preset
+approximated | .rulesync/subagents/planner.md | claudecode.tools | tools | lifted out of the claudecode section; it applies to every preset
+dropped | .rulesync/subagents/planner.md | cursor |  | tool-specific section is not carried (keys: readonly); ai-rulez has no per-tool overrides
+dropped | rulesync.jsonc | delete |  | rulesync output cleanup; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | language |  | ai-rulez has no response-language setting; add the instruction as a rule if you need it
+dropped | rulesync.jsonc | outputRoots |  | rulesync output directories; ai-rulez has no equivalent setting
+needs-action | rulesync.jsonc | sources.acme/shared-skills |  | remote source is not fetched (convert never uses the network); add it as [[includes]] or [[installed_skills]] in config.toml, then run `ai-rulez lock`
+approximated | rulesync.jsonc | targets.agentsmd |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+unsupported | rulesync.jsonc | targets.agentsmd |  | AGENTS.md is written by several presets (codex, opencode, amp, xum, pi); enable one of them or set agents_md
+approximated | rulesync.jsonc | targets.claudecode |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.claudecode | presets.claude | 
+unsupported | rulesync.jsonc | targets.claudecode-plugin |  | plugin packaging targets have no ai-rulez preset
+approximated | rulesync.jsonc | targets.codexcli |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.codexcli | presets.codex | 
+approximated | rulesync.jsonc | targets.copilot |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.copilot | presets.copilot | 
+mapped | rulesync.jsonc | targets.cursor | presets.cursor | 
+mapped | rulesync.jsonc | targets.opencode | presets.opencode | 
+dropped | rulesync.jsonc | verbose |  | rulesync logging; ai-rulez has no equivalent setting
+needs-action | rulesync.local.jsonc |  |  | machine-local rulesync overrides are not imported; put personal settings in .ai-rulez/config.local.toml
+needs-action | rulesync.lock |  |  | pins remote sources by commit; not carried because remote sources are not fetched. After adding them as [[includes]] or [[installed_skills]], run `ai-rulez lock`

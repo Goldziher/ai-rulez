@@ -1,0 +1,6 @@
+{
+  "permission": {
+    "bash": { "git status": "allow", "rm *": "deny" },
+    "read": { ".env": "deny" },
+  },
+}

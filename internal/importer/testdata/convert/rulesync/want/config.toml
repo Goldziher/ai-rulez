@@ -1,0 +1,20 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude', 'codex', 'copilot', 'cursor', 'opencode']
+
+[[mcp_servers]]
+name = 'context7'
+description = 'Library docs'
+command = 'npx'
+args = ['-y', '@upstash/context7-mcp']
+
+[mcp_servers.env]
+CONTEXT7_TOKEN = '${CONTEXT7_TOKEN}'
+
+[[mcp_servers]]
+name = 'deepwiki'
+transport = 'http'
+url = 'https://mcp.deepwiki.com/mcp'

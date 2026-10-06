@@ -1,0 +1,19 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+
+  // Per-target features, object form.
+  "targets": {
+    "claudecode": { "rules": true, "commands": true, "mcp": true, "subagents": true, "skills": true, "hooks": true },
+    "cursor": ["*"],
+    "copilot": { "rules": { "ruleDiscoveryMode": "explicit" }, "commands": true, "mcp": false },
+    "codexcli": { "rules": true, "commands": false },
+    "opencode": true,
+    "agentsmd": ["rules"],
+    "claudecode-plugin": true,
+  },
+  "outputRoots": ["."],
+  "delete": true,
+  "verbose": false,
+  "language": "ja",
+  "sources": [{ "source": "acme/shared-skills", "skills": ["release-notes"] }],
+}
