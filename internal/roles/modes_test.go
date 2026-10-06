@@ -97,3 +97,41 @@ func TestPlanSkillModes(t *testing.T) {
 		})
 	}
 }
+
+func TestPlanSkillModesReportsFrontmatterOverrides(t *testing.T) {
+	tests := []struct {
+		name           string
+		extra          map[string]string
+		wantOverridden []string
+		wantHonoured   bool
+	}{
+		{name: "no frontmatter keys", wantHonoured: true},
+		{name: "same value", extra: map[string]string{"disable-model-invocation": "true"}, wantHonoured: true},
+		{name: "author says false", extra: map[string]string{"disable-model-invocation": "false"}, wantOverridden: []string{"cursor"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := fixtureConfig(t)
+			cfg.Presets = presetList("claude", "cursor")
+			cfg.Content.Domains["backend"].Skills[0].Metadata.Extra = map[string]string{}
+			for k, v := range tt.extra {
+				cfg.Content.Domains["backend"].Skills[0].Metadata.Extra[k] = v
+			}
+			cfg.Roles[0].SkillMode = map[string]string{"migrate": ModeUserInvocable}
+			res, err := cfg.ResolveRole("zeta")
+			require.NoError(t, err)
+
+			// Act
+			got := PlanSkillModes(cfg, res)
+
+			// Assert
+			require.Len(t, got, 1)
+			assert.Equal(t, tt.wantOverridden, got[0].Overridden)
+			_, honoured := got[0].Honoured["cursor"]
+			assert.Equal(t, tt.wantHonoured, honoured)
+			_, viaSettings := got[0].Honoured["claude"]
+			assert.True(t, viaSettings, "claude is honoured through settings whatever the frontmatter says")
+		})
+	}
+}
