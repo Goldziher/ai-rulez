@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/samber/oops"
@@ -36,13 +37,26 @@ type State struct {
 	path      string
 	secret    []byte
 	highwater map[string]time.Time
+	heads     map[string]digestHead
 	// Reset is true when the file existed but failed authentication and was
 	// discarded; the caller should warn.
 	Reset bool
 }
 
+// digestHead is the rollback record of a signed body that carries no signing
+// time (a key-signed blob bundle): the body last accepted and the ones it
+// replaced. A retired body can never be accepted again on this machine.
+type digestHead struct {
+	Current string   `json:"current"`
+	Retired []string `json:"retired,omitempty"`
+}
+
+// maxRetired bounds the replaced digests kept per key.
+const maxRetired = 64
+
 type statePayload struct {
-	Highwater map[string]time.Time `json:"highwater"`
+	Highwater map[string]time.Time  `json:"highwater"`
+	Heads     map[string]digestHead `json:"heads,omitempty"`
 }
 
 type stateEnvelope struct {
@@ -77,7 +91,7 @@ func OpenState(path, secretPath string) (*State, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "load the signing state secret")
 	}
-	s := &State{path: path, secret: secret, highwater: map[string]time.Time{}}
+	s := &State{path: path, secret: secret, highwater: map[string]time.Time{}, heads: map[string]digestHead{}}
 	data, err := safefs.ReadRegular(path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -101,6 +115,9 @@ func OpenState(path, secretPath string) (*State, error) {
 	}
 	if p.Highwater != nil {
 		s.highwater = p.Highwater
+	}
+	if p.Heads != nil {
+		s.heads = p.Heads
 	}
 	return s, nil
 }
@@ -133,7 +150,40 @@ func (s *State) Advance(key string, signedAt time.Time) error {
 		return nil
 	}
 	s.highwater[key] = signedAt.UTC()
-	payload, err := json.Marshal(statePayload{Highwater: s.highwater})
+	return s.save()
+}
+
+// CheckDigest reports AR727 when digest is a body this machine has already
+// replaced under key. It is the rollback check for an attestation with no
+// signing time, where Check has nothing to compare: it covers the versions this
+// machine has seen, no more.
+func (s *State) CheckDigest(key, digest string) error {
+	if slices.Contains(s.heads[key].Retired, digest) {
+		return Errorf(CodeRollback, "%s was replaced by a newer version this machine has already verified; the signature has no signing time, so the old version cannot be told from a rollback; if the newer one was wrong, delete %s (or pass --no-state)", digest, s.path)
+	}
+	return nil
+}
+
+// AdvanceDigest records digest as the current body of key, retiring the one it
+// replaces, and writes the state.
+func (s *State) AdvanceDigest(key, digest string) error {
+	head := s.heads[key]
+	if head.Current == digest {
+		return nil
+	}
+	if head.Current != "" && !slices.Contains(head.Retired, head.Current) {
+		head.Retired = append(head.Retired, head.Current)
+		if len(head.Retired) > maxRetired {
+			head.Retired = head.Retired[len(head.Retired)-maxRetired:]
+		}
+	}
+	head.Current = digest
+	s.heads[key] = head
+	return s.save()
+}
+
+func (s *State) save() error {
+	payload, err := json.Marshal(statePayload{Highwater: s.highwater, Heads: s.heads})
 	if err != nil {
 		return oops.Wrapf(err, "encode the signing state")
 	}

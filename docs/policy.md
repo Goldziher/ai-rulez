@@ -397,6 +397,11 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   weaker value learns it does nothing.
 - **URL policies.** `AR741` is a missing or mismatched digest; a stale or absent cache after a failed fetch is `AR742`.
   Trust-on-first-use is terminal-only so that nobody can script past the review of a digest.
+- **Rollback of a signed policy.** A signature with a signing time (a keyless bundle, a log entry or the policy
+  attestation's `issued_at`) is checked against the newest time this machine verified (`AR727`) and against clock
+  skew. A key-signed `cosign sign-blob` bundle without a log entry has no time: the machine instead remembers the
+  bodies a newer one replaced and refuses them (`AR727`). That covers the versions this machine has seen, like the time
+  check; a fresh machine starts empty, and skew cannot be judged.
 - **Fail closed everywhere.** A demanded policy that cannot be read is `AR742`, and an unusable policy locks
   telemetry and LLM network use.
 - **An explicit empty allowlist means nothing is allowed.** `lint.security.allowed_hosts = []` in a policy is
