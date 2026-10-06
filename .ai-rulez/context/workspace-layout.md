@@ -13,10 +13,10 @@ targets:
 
 Key directories:
 
-- `cmd/main.go` boots the CLI; `cmd/commands/` holds Cobra commands.
+- `cmd/ai-rulez/main.go` boots the CLI; `cmd/commands/` holds Cobra commands.
 - `internal/` contains service packages for config loading, generation, templates, includes, CRUD, MCP, validation, logging, and migration.
 - `schema/` holds JSON schemas for config and MCP files.
-- `docs/`, `mkdocs.yaml`, and `site/` contain documentation sources and generated site output.
+- `docs/`, `zensical.toml`, and `site/` contain documentation sources and generated site output.
 - `release/npm` and `release/pypi` hold JavaScript and Python wrappers around the Go binary.
 - `tests/` contains fixtures, integration, e2e CLI coverage, and platform tests.
 
