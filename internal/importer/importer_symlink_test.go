@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,9 +26,7 @@ func writeSymlinkTree(t *testing.T, root string, files map[string]string) {
 func symlinkOrSkip(t *testing.T, target, name string) {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(filepath.Dir(name), 0o755))
-	if err := os.Symlink(target, name); err != nil {
-		t.Skip("symlinks unavailable")
-	}
+	testutil.SymlinkOrSkip(t, target, name)
 }
 
 func TestImportDoesNotFollowSymlinks(t *testing.T) {
