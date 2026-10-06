@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
@@ -55,6 +56,9 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
+	}
+	if msg := approval.PolicyOf(cfg).LockProblem(lock); msg != "" {
+		return []string{msg}, nil
 	}
 	if lock == nil || !lock.HasContentPins() {
 		if cfg.LockEnforced() {
