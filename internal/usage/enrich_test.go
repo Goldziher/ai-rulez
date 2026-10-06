@@ -118,6 +118,10 @@ func TestRecord_CodexAndCursorSkillReads(t *testing.T) {
 		{"tee is a write", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo x | tee skills/deploy/SKILL.md"}}`, ""},
 		{"apply_patch text is not a command", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Update File: skills/deploy/SKILL.md\n+cat skills/deploy/SKILL.md"}}`, ""},
 		{"linter is not a load", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"markdownlint skills/deploy/SKILL.md"}}`, ""},
+		{"windows path with backslashes", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"type .agents\\skills\\win\\SKILL.md"}}`, "win"},
+		{"windows read tool path", HarnessCursor, `{"hook_event_name":"preToolUse","tool_name":"Read","tool_input":{"file_path":"C:\\p\\.cursor\\skills\\winread\\SKILL.md"}}`, "winread"},
+		{"a separator inside quotes does not start a command", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git commit -m \"x; cat skills/quoted/SKILL.md\""}}`, ""},
+		{"a reader after a quoted separator is still a load", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo 'a && b' && cat skills/after/SKILL.md"}}`, "after"},
 		{"codex other event", HarnessCodex, `{"hook_event_name":"Stop","tool_input":{"command":"cat skills/alpha/SKILL.md"}}`, ""},
 		{"claude payload under codex", HarnessCodex, claudeSkillEvent, ""},
 	}
@@ -369,4 +373,15 @@ func TestFeedback_NoteIsBoundedBeforeReadingAndDirIsPrivate(t *testing.T) {
 	info, err := os.Stat(notes)
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+}
+
+func TestRecord_StderrRedirectDoesNotHideTheRead(t *testing.T) {
+	t.Setenv(SaltEnv, "s")
+	event := `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat skills/redir/SKILL.md 2>&1"}}`
+
+	entry, err := Record(strings.NewReader(event), RecordOptions{LogPath: filepath.Join(t.TempDir(), "u.jsonl"), Harness: HarnessCodex, Now: fixedClock})
+
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	assert.Equal(t, "redir", entry.ID)
 }
