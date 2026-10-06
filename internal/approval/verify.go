@@ -3,6 +3,7 @@ package approval
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
@@ -20,10 +21,17 @@ type SelfApproval struct {
 	Ref      string
 	// BaseDigest is the digest the base lock pinned ("" when it did not pin the item).
 	BaseDigest string
+	// Author, when set, makes this a forbid_self_approval finding: the reviewer
+	// is the author of commits that touched the item since the base revision.
+	Author string
 }
 
 // Message is a complete sentence for a finding.
 func (s SelfApproval) Message() string {
+	if s.Author != "" {
+		return fmt.Sprintf("the approval of %s by %s comes from the author of a change to it (%s) and [governance] forbid_self_approval is set; another reviewer must approve",
+			s.Ref, s.Approval.Reviewer, s.Author)
+	}
 	if s.BaseDigest == "" {
 		return fmt.Sprintf("the approval of %s by %s was added in the same change that introduced %s; content and its approval must not arrive together",
 			s.Ref, s.Approval.Reviewer, short(s.Approval.Digest))
@@ -69,4 +77,25 @@ func SelfApprovals(base, cur *lockfile.File) []SelfApproval {
 
 func recordKey(a lockfile.Approval) string {
 	return a.ItemKey() + "\x00" + a.Digest + "\x00" + NormalizeReviewer(a.Reviewer)
+}
+
+// AuthorIs reports whether a commit author's email is the reviewer: the same
+// email, or the GitHub noreply address of the reviewer's login
+// ("<id>+login@users.noreply.github.com" or "login@users.noreply.github.com").
+func AuthorIs(reviewer, authorEmail string) bool {
+	who, email := Identity(reviewer), NormalizeReviewer(authorEmail)
+	if who == "" || email == "" {
+		return false
+	}
+	if who == email {
+		return true
+	}
+	local, ok := strings.CutSuffix(email, "@users.noreply.github.com")
+	if !ok {
+		return false
+	}
+	if _, login, hasID := strings.Cut(local, "+"); hasID {
+		local = login
+	}
+	return who == local
 }

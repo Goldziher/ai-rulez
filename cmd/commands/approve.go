@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 var (
@@ -37,6 +39,14 @@ var (
 	approveFormat   string
 	// approveVerifyBase is --verify-base: the git revision approvals are compared with.
 	approveVerifyBase string
+	// approveBase is --base: the revision forbid_self_approval counts authors from.
+	approveBase string
+	// approveFromReview is --from-github-review: the pull request whose approving reviews are linked.
+	approveFromReview   int
+	approveResolveTeams bool
+	approveSign         bool
+	approveDeny         bool
+	approveReason       string
 )
 
 // ApproveCmd records, lists and revokes reviewer approvals in ai-rulez.lock.
@@ -62,6 +72,9 @@ a bare id works when it is unambiguous. Remote content must be pinned first
   ai-rulez approve --revoke include:shared
   ai-rulez approve --prune                 drop stale and orphaned records
   ai-rulez approve --verify-base origin/main   CI: approvals added with the content they approve
+  ai-rulez approve include:shared --from-github-review 42 --yes   link the approving reviews of a pull request
+  ai-rulez approve include:shared --sign --key approver.key --yes   record a signed approval (DSSE)
+  ai-rulez approve --revoke include:shared --deny --reason "exfiltrates ~/.ssh"   revoke and deny the digest
 
 approve prints the files and the security scan findings first. It refuses
 content with an error-level finding unless you name its code with --accept (the
@@ -76,6 +89,17 @@ compares the lock with the one at the merge base of <rev> and HEAD and reports
 (AR716) every approval added since for content that was added or changed in the
 same range. See docs/approvals.md.
 
+--from-github-review <pr> records one review-linked approval per approving review
+of the pull request (reviewer github:<login>, ref the review URL), after checking
+through the forge API that the review is APPROVED, not withdrawn, and made on the
+commit the content is at (or the pull request's final head when nothing under the
+configuration directory changed since). --sign signs the approval as an in-toto
+statement (DSSE) with --key or --keyless; the signer's identity becomes the
+reviewer and [[signing.trust]] entries with subject = "approval" say who may sign.
+--resolve-teams reads @org/team members from the forge for [governance]
+approvers and approvers_from. Verify them later with
+"ai-rulez verify --approvals [--online]".
+
 Exit codes: 0 ok; 1 the command could not run or refused; 2 --verify-base found
 an approval added together with its content.`,
 	Args: cobra.ArbitraryArgs,
@@ -89,6 +113,20 @@ func init() {
 	f.BoolVar(&approveRevoke, "revoke", false, "Remove the approvals of the named items (with --reviewer: only that reviewer's)")
 	f.BoolVar(&approveDiff, "diff", false, "Show the files, scan findings and previous approval of the named items; writes nothing")
 	f.StringVar(&approveVerifyBase, "verify-base", "", "Report approvals added since this git revision for content that also changed since it (AR716); exit 2 when found; writes nothing")
+	f.IntVar(&approveFromReview, "from-github-review", 0, "Record review-linked approvals from the approving reviews of this pull request number (needs the network and a token)")
+	f.BoolVar(&approveResolveTeams, "resolve-teams", false, "Expand @org/team entries of approvers and CODEOWNERS from the forge (needs a token with read:org)")
+	f.BoolVar(&approveSign, "sign", false, "Sign the approval (DSSE attestation) with --key or --keyless; the signer's identity becomes the reviewer")
+	f.StringVar(&signKey, "key", "", "With --sign: PEM private key to sign with (ECDSA or ed25519; cosign keys work)")
+	f.StringVar(&signKeyPassEnv, "key-password-env", "", "With --sign --key: environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD)")
+	f.BoolVar(&signKeyless, "keyless", false, "With --sign: Fulcio certificate and Rekor log entry (network; the log is public)")
+	f.StringVar(&signTokenEnv, "identity-token-env", "", "With --sign --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
+	f.BoolVar(&signInteractive, "interactive", false, "With --sign --keyless: open a browser for the OIDC login when no token is available")
+	f.StringVar(&signFulcioURL, "fulcio-url", "", "With --sign --keyless: Fulcio URL (default "+signing.DefaultFulcioURL+")")
+	f.StringVar(&signRekorURL, "rekor-url", "", "With --sign: Rekor URL for --keyless or --tlog (default "+signing.DefaultRekorURL+")")
+	f.BoolVar(&signTLog, "tlog", false, "With --sign --key: also record the signature in the Rekor transparency log (network; public log)")
+	f.BoolVar(&approveDeny, "deny", false, "With --revoke: also add the digest of the item to the deny list (AR717)")
+	f.StringVar(&approveReason, "reason", "", "With --deny: why the digest is denied (stored in the lock; scanned for secrets)")
+	f.StringVar(&approveBase, "base", "", "With [governance] forbid_self_approval: count authors of changes since this revision (default: the branch's upstream)")
 	f.BoolVar(&approvePrune, "prune", false, "Remove approvals of content that no longer exists or whose digest changed")
 	f.BoolVar(&approveYes, "yes", false, "Do not ask for confirmation (required without a terminal)")
 	f.StringSliceVar(&approveAccept, "accept", nil, "Accept this scan finding code (repeatable); stored with the approval")
@@ -117,7 +155,7 @@ func runApprove(_ *cobra.Command, args []string) {
 }
 
 func validateApproveFlags(args []string) error {
-	if err := checkFormatFlag(approveFormat); err != nil {
+	if err := validateFormatAndAssurance(); err != nil {
 		return err
 	}
 	modes := 0
@@ -164,8 +202,10 @@ type approveEnv struct {
 	now      time.Time
 }
 
-func loadApproveEnv() (*approveEnv, error) {
-	cfg, _, err := loadForLockCheck("")
+func loadApproveEnv() (*approveEnv, error) { return loadApproveEnvAt("") }
+
+func loadApproveEnvAt(path string) (*approveEnv, error) {
+	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
 		return nil, err
 	}
@@ -236,6 +276,9 @@ type approveListPolicy struct {
 	MinApprovers    int      `json:"min_approvers"`
 	Approvers       []string `json:"approvers"`
 	Enforce         bool     `json:"enforce"`
+	MinAssurance    string   `json:"min_assurance,omitempty"`
+	ApproversFrom   string   `json:"approvers_from,omitempty"`
+	ForbidSelf      bool     `json:"forbid_self_approval,omitempty"`
 }
 
 type approveListItem struct {
@@ -248,8 +291,10 @@ type approveListItem struct {
 	Status         string   `json:"status"`
 	Code           string   `json:"code,omitempty"`
 	Reviewers      []string `json:"reviewers"`
+	Assurance      string   `json:"assurance,omitempty"`
 	Expires        string   `json:"expires,omitempty"`
 	ApprovedDigest string   `json:"approved_digest,omitempty"`
+	Detail         string   `json:"detail,omitempty"`
 }
 
 type approveListOrphan struct {
@@ -272,7 +317,7 @@ func (e *approveEnv) listDoc() *approveListDoc {
 	doc := &approveListDoc{
 		SchemaVersion: ApproveListSchemaVersion,
 		Policy: approveListPolicy{RequireApproval: emptyIfNil(p.Selectors), Exempt: emptyIfNil(p.Exempt), MinApprovers: max(p.MinApprovers, 1),
-			Approvers: emptyIfNil(p.Approvers), Enforce: p.Enforce},
+			Approvers: emptyIfNil(p.Approvers), Enforce: p.Enforce, MinAssurance: p.MinAssurance, ApproversFrom: e.approversFrom(), ForbidSelf: p.ForbidSelf},
 		Items: []approveListItem{}, Orphans: []approveListOrphan{}, Summary: map[string]int{},
 	}
 	hasRecord := map[string]bool{}
@@ -289,7 +334,8 @@ func (e *approveEnv) listDoc() *approveListDoc {
 		}
 		doc.Items = append(doc.Items, approveListItem{
 			Ref: r.Ref(), Kind: r.Kind, ID: r.ID, Domain: r.Domain, Digest: r.Digest, Required: r.Required, Status: r.Status,
-			Code: approval.CodeOf(r.Status), Reviewers: emptyIfNil(who), Expires: r.Expires, ApprovedDigest: r.ApprovedDigest,
+			Code: approval.CodeOf(r.Status), Reviewers: emptyIfNil(who), Assurance: r.Assurance, Expires: r.Expires, ApprovedDigest: r.ApprovedDigest,
+			Detail: safeText(r.Detail),
 		})
 		if r.Required {
 			doc.Summary["required"]++
@@ -310,7 +356,17 @@ func shortDigest(d string) string {
 	return hex
 }
 
+func (e *approveEnv) approversFrom() string {
+	if e.cfg.Governance == nil {
+		return ""
+	}
+	return e.cfg.Governance.ApproversFrom
+}
+
 func (e *approveEnv) list(out io.Writer) error {
+	if err := e.resolveTeams(context.Background(), e.subjects); err != nil {
+		return err
+	}
 	doc := e.listDoc()
 	if approveFormat == formatJSON {
 		enc := json.NewEncoder(out)
@@ -326,7 +382,7 @@ func (e *approveEnv) list(out io.Writer) error {
 		return err
 	}
 	tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "KIND\tID\tDIGEST\tSTATUS\tREVIEWER\tEXPIRES") //nolint:errcheck // flushed below
+	fmt.Fprintln(tw, "KIND\tID\tDIGEST\tSTATUS\tREVIEWER\tEXPIRES\tASSURANCE") //nolint:errcheck // flushed below
 	for _, it := range doc.Items {
 		reviewer, expires := "-", "-"
 		if len(it.Reviewers) > 0 {
@@ -343,22 +399,36 @@ func (e *approveEnv) list(out io.Writer) error {
 		if it.Domain != "" {
 			id = it.Domain + "/" + id
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", it.Kind, safeText(id), shortDigest(it.Digest), status, reviewer, expires) //nolint:errcheck // flushed below
+		assurance := "-"
+		if it.Assurance != "" {
+			assurance = it.Assurance
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", it.Kind, safeText(id), shortDigest(it.Digest), status, reviewer, expires, assurance) //nolint:errcheck // flushed below
 	}
 	for _, o := range doc.Orphans {
 		id := o.ID
 		if o.Domain != "" {
 			id = o.Domain + "/" + id
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\torphan\t%s\t-\n", o.Kind, safeText(id), shortDigest(o.Digest), safeText(o.Reviewer)) //nolint:errcheck // flushed below
+		fmt.Fprintf(tw, "%s\t%s\t%s\torphan\t%s\t-\t-\n", o.Kind, safeText(id), shortDigest(o.Digest), safeText(o.Reviewer)) //nolint:errcheck // flushed below
 	}
 	if err := tw.Flush(); err != nil {
 		return oops.Wrapf(err, "write the list")
 	}
 	s := doc.Summary
-	_, err := fmt.Fprintf(out, "%d require approval: %d ok, %d stale, %d missing, %d expired, %d unauthorized, %d insufficient\n",
+	_, err := fmt.Fprintf(out, "%d require approval: %d ok, %d stale, %d missing, %d expired, %d unauthorized, %d insufficient",
 		s["required"], s[approval.StatusOK], s[approval.StatusStale], s[approval.StatusMissing], s[approval.StatusExpired],
 		s[approval.StatusUnauthorized], s[approval.StatusInsufficient])
+	if err != nil {
+		return err //nolint:wrapcheck // write error
+	}
+	if s[approval.StatusDenied] > 0 || s[approval.StatusUnverified] > 0 {
+		_, err = fmt.Fprintf(out, ", %d denied, %d unverified", s[approval.StatusDenied], s[approval.StatusUnverified])
+		if err != nil {
+			return err //nolint:wrapcheck // write error
+		}
+	}
+	_, err = fmt.Fprintln(out)
 	return err
 }
 
@@ -396,6 +466,12 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 		removed += n
 		if _, err := fmt.Fprintf(out, "revoked %d approval(s) of %s\n", n, safeText(s.Ref())); err != nil {
 			return oops.Wrapf(err, "write output")
+		}
+		if approveDeny {
+			e.lock.SetDeny(lockfile.Deny{Digest: s.Digest, Reason: approveReason})
+			if _, err := fmt.Fprintf(out, "denied %s %s\n", safeText(s.Ref()), s.Digest); err != nil {
+				return oops.Wrapf(err, "write output")
+			}
 		}
 	}
 	if removed == 0 {
@@ -521,8 +597,6 @@ func (e *approveEnv) reviewer() (string, error) {
 		return "", oops.Hint("pass --reviewer, or set $AI_RULEZ_REVIEWER or git user.email").Errorf("no reviewer: cannot tell who is approving")
 	case !approveReviewerPattern.MatchString(r):
 		return "", oops.Errorf("the reviewer %q is not a single line of at most 200 characters", safeText(r))
-	case !e.policy.Authorized(r):
-		return "", oops.Hint("the allowed reviewers are set in [governance] approvers").Errorf("%s is not in [governance] approvers", safeText(r))
 	}
 	return approval.NormalizeReviewer(r), nil
 }
@@ -562,11 +636,19 @@ func (e *approveEnv) expiry(at time.Time) (string, error) {
 }
 
 func (e *approveEnv) approve(out io.Writer, refs []string) error {
+	ctx := context.Background()
 	subs, err := e.resolveAll(refs)
 	if err != nil {
 		return err
 	}
-	reviewer, err := e.reviewer()
+	if err := e.refuseBeforeReview(ctx, subs); err != nil {
+		return err
+	}
+	how, err := e.newAttester(ctx)
+	if err != nil {
+		return err
+	}
+	self, err := e.newSelfAuthors(ctx)
 	if err != nil {
 		return err
 	}
@@ -581,50 +663,109 @@ func (e *approveEnv) approve(out io.Writer, refs []string) error {
 	if err := e.checkNote(); err != nil {
 		return err
 	}
-	accepted := map[string]bool{}
-	for _, c := range approveAccept {
-		accepted[strings.ToUpper(c)] = true
+	taken, err := e.showAndScan(out, subs)
+	if err != nil {
+		return err
 	}
-	records := make([]lockfile.Approval, 0, len(subs))
-	var blocked []string
-	for _, s := range subs {
-		rv := e.review(s)
-		e.printReview(out, &rv)
-		var taken []string
-		for _, f := range rv.findings {
-			switch {
-			case accepted[f.Code]:
-				taken = appendUnique(taken, f.Code)
-			case f.Severity == lint.SeverityError:
-				blocked = appendUnique(blocked, s.Ref()+" "+f.Code)
-			}
-		}
-		records = append(records, lockfile.Approval{
-			Kind: s.Kind, ID: s.ID, Domain: s.Domain, Digest: s.Digest, Reviewer: reviewer, Assurance: lockfile.AssuranceAsserted,
-			ApprovedAt: at.Format(time.RFC3339), Expires: expires, Note: approveNote, AcceptedFindings: sortedCopy(taken),
-		})
-	}
-	if len(blocked) > 0 {
-		return oops.Hint("read the findings above; pass --accept <code> only for a finding you reviewed and accept").
-			Errorf("refusing to approve content with error-level scan findings: %s", strings.Join(blocked, ", "))
-	}
-	if err := e.confirm(out, len(subs), reviewer); err != nil {
+	if err := e.confirm(out, len(subs), how.label()); err != nil {
 		return err
 	}
 	if err := e.recheck(subs); err != nil {
 		return err
 	}
-	for i := range records {
-		e.supersede(&records[i])
-		e.lock.SetApproval(records[i])
-		fmt.Fprintf(out, "approved %s at %s (assurance=%s%s)\n", safeText(subs[i].Ref()), shortDigest(subs[i].Digest), //nolint:errcheck // terminal output
-			lockfile.AssuranceAsserted, expiryText(expires))
+	batch, err := e.record(ctx, out, subs, taken, how, self, draftInput{at: at, expires: expires})
+	if err != nil {
+		return err
+	}
+	if err := e.writeBundles(batch.drafts); err != nil {
+		return err
+	}
+	for i := range batch.records {
+		e.supersede(&batch.records[i])
+		e.lock.SetApproval(batch.records[i])
+		fmt.Fprintf(out, "approved %s at %s by %s (assurance=%s%s)\n", safeText(batch.subjects[i].Ref()), shortDigest(batch.subjects[i].Digest), //nolint:errcheck // terminal output
+			safeText(batch.records[i].Reviewer), batch.records[i].Assurance, expiryText(expires))
 	}
 	if err := e.save(); err != nil {
 		return err
 	}
 	logger.Success("Updated lock file", "path", lockfile.Path(e.cfg.ConfigDir))
 	return nil
+}
+
+// refuseBeforeReview stops what no review can fix: a denied digest, role outputs
+// whose pin is stale, and teams that cannot be read.
+func (e *approveEnv) refuseBeforeReview(ctx context.Context, subs []approval.Subject) error {
+	if err := e.refuseDenied(subs); err != nil {
+		return err
+	}
+	if err := e.checkRoleOutputs(subs); err != nil { //nolint:contextcheck // rendering a role has no context to pass
+		return err
+	}
+	return e.resolveTeams(ctx, subs)
+}
+
+// showAndScan prints what each item is, scans it, and returns the finding codes
+// the reviewer accepted per item. An error-level finding that is not accepted
+// refuses the whole approval.
+func (e *approveEnv) showAndScan(out io.Writer, subs []approval.Subject) ([][]string, error) {
+	accepted := map[string]bool{}
+	for _, c := range approveAccept {
+		accepted[strings.ToUpper(c)] = true
+	}
+	taken := make([][]string, len(subs))
+	var blocked []string
+	for i, s := range subs {
+		rv := e.review(s)
+		e.printReview(out, &rv)
+		for _, f := range rv.findings {
+			switch {
+			case accepted[f.Code]:
+				taken[i] = appendUnique(taken[i], f.Code)
+			case f.Severity == lint.SeverityError:
+				blocked = appendUnique(blocked, s.Ref()+" "+f.Code)
+			}
+		}
+	}
+	if len(blocked) > 0 {
+		return nil, oops.Hint("read the findings above; pass --accept <code> only for a finding you reviewed and accept").
+			Errorf("refusing to approve content with error-level scan findings: %s", strings.Join(blocked, ", "))
+	}
+	return taken, nil
+}
+
+// approvalBatch is what an approve run is about to write.
+type approvalBatch struct {
+	subjects []approval.Subject
+	drafts   []approvalDraft
+	records  []lockfile.Approval
+}
+
+// record asks the attester for the approvals of every subject and settles
+// authorization and self-approval, without writing anything.
+func (e *approveEnv) record(ctx context.Context, out io.Writer, subs []approval.Subject, taken [][]string, how attester, self *selfAuthors, in draftInput) (*approvalBatch, error) {
+	batch := &approvalBatch{}
+	notice := func(msg string) { fmt.Fprintln(out, msg) } //nolint:errcheck // terminal output
+	for i, s := range subs {
+		in.accepted = sortedCopy(taken[i])
+		drafts, err := how.drafts(ctx, s, in)
+		if err != nil {
+			return nil, err
+		}
+		if drafts, err = e.settle(s, drafts, self, notice); err != nil { //nolint:contextcheck // the history probes of gitutil take no context
+			return nil, err
+		}
+		for _, d := range drafts {
+			batch.subjects = append(batch.subjects, s)
+			batch.drafts = append(batch.drafts, d)
+			batch.records = append(batch.records, lockfile.Approval{
+				Kind: s.Kind, ID: s.ID, Domain: s.Domain, Digest: s.Digest, Reviewer: d.reviewer, Assurance: d.assurance,
+				ApprovedAt: in.at.Format(time.RFC3339), Expires: in.expires, Note: approveNote, AcceptedFindings: in.accepted,
+				Ref: d.ref, Attestation: d.attestation,
+			})
+		}
+	}
+	return batch, nil
 }
 
 func expiryText(expires string) string {
@@ -656,7 +797,7 @@ func sortedCopy(in []string) []string {
 func (e *approveEnv) supersede(rec *lockfile.Approval) {
 	kept := e.lock.Approval[:0:0]
 	for _, a := range e.lock.Approval {
-		if a.ItemKey() == rec.ItemKey() && approval.NormalizeReviewer(a.Reviewer) == rec.Reviewer && a.Digest != rec.Digest {
+		if a.ItemKey() == rec.ItemKey() && approval.SameReviewer(a.Reviewer, rec.Reviewer) && a.Digest != rec.Digest {
 			continue
 		}
 		kept = append(kept, a)
@@ -678,14 +819,14 @@ func (e *approveEnv) checkNote() error {
 }
 
 // confirm asks on a terminal; without --yes and without a terminal it refuses.
-func (e *approveEnv) confirm(out io.Writer, n int, reviewer string) error {
+func (e *approveEnv) confirm(out io.Writer, n int, who string) error {
 	if approveYes {
 		return nil
 	}
 	if !stdinIsTerminal() {
 		return oops.Hint("pass --yes to approve non-interactively").Errorf("not a terminal: refusing to approve without --yes")
 	}
-	if !askYesNo(fmt.Sprintf("Approve %d item(s) as %s? (y/N): ", n, safeText(reviewer))) {
+	if !askYesNo(fmt.Sprintf("Approve %d item(s) as %s? (y/N): ", n, safeText(who))) {
 		fmt.Fprintln(out, "not approved") //nolint:errcheck // terminal output
 		return oops.Errorf("not approved")
 	}
