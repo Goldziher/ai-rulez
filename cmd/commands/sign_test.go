@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -227,6 +228,13 @@ func TestRequireLockSignatureGates(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "AR720")
+		assert.ErrorIs(t, err, errLockedSignature, "a signing failure is not content drift")
+		assert.NotErrorIs(t, err, errLockedSourceDrift)
+		assert.True(t, isLockedDrift(err), "it still exits with the drift code")
+		oe, ok := oops.AsOops(err)
+		require.True(t, ok)
+		assert.Contains(t, oe.Hint(), "ai-rulez sign --lock")
+		assert.NotContains(t, oe.Hint(), "run `ai-rulez lock`", "re-locking would invalidate the signature")
 	})
 
 	t.Run("validate --strict reports it", func(t *testing.T) {

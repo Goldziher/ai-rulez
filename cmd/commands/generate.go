@@ -577,7 +577,7 @@ func lockDriftError(err error) bool {
 	if !generateLocked && !generateFrozen {
 		return false
 	}
-	return errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation)
+	return isLockedDrift(err)
 }
 
 // processConfigFile generates from one config. A non-nil error means the config
@@ -824,6 +824,18 @@ func applyRole(gen *generator.Generator) error {
 // content no longer matches ai-rulez.lock.
 var errLockedSourceDrift = errors.New("authored content differs from " + "ai-rulez.lock")
 
+// errLockedSignature marks a `generate --locked` refusal because [signing]
+// require is not met by the lock attestation (AR720 to AR727). Re-locking does not
+// fix it: it changes the lock and invalidates the signature.
+var errLockedSignature = errors.New("the lock attestation does not satisfy [signing] require")
+
+// isLockedDrift reports whether err is a lock refusal that exits with exitDrift:
+// authored content or a remote disagreeing with the lock, or a missing or invalid
+// attestation.
+func isLockedDrift(err error) bool {
+	return errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) || errors.Is(err, config.ErrLockViolation)
+}
+
 // exitOnLockedDrift exits with the drift code when err says authored content no
 // longer matches the lock, and with 1 on any other error.
 func exitOnLockedDrift(err error) {
@@ -831,7 +843,7 @@ func exitOnLockedDrift(err error) {
 		return
 	}
 	fmtError(err)
-	if errors.Is(err, errLockedSourceDrift) {
+	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) {
 		os.Exit(exitDrift)
 	}
 	os.Exit(1)
@@ -855,10 +867,15 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	if err != nil {
 		return err
 	}
-	lines = append(lines, signingRequiredLines(cfg)...)
-	if len(lines) == 0 {
+	signLines := signingRequiredLines(cfg)
+	switch {
+	case len(lines) == 0 && len(signLines) == 0:
 		return nil
+	case len(lines) == 0:
+		return oops.Hint("Sign the current lock with `ai-rulez sign --lock` (running `ai-rulez lock` again would invalidate the signature)").
+			Wrapf(errLockedSignature, "%s lacks the attestation [signing] require asks for:\n  %s", "ai-rulez.lock", strings.Join(signLines, "\n  "))
 	}
-	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it").
+	lines = append(lines, signLines...)
+	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it (and `ai-rulez sign --lock` when [signing] require is set)").
 		Wrapf(errLockedSourceDrift, "%s does not match the sources:\n  %s", "ai-rulez.lock", strings.Join(lines, "\n  "))
 }
