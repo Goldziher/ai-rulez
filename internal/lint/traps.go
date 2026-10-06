@@ -35,6 +35,8 @@ const (
 	predFrontmatterMissing = "frontmatter-missing-all"
 	predKeyMisspelt        = "key-misspelt"
 	predSizeOver           = "size-over"
+	predFrontmatterFirst   = "frontmatter-first"
+	predJSONKeyRequiredIf  = "json-key-required-if"
 )
 
 // File kinds a trap can apply to.
@@ -65,6 +67,10 @@ type Trap struct {
 	Quote          string        `toml:"quote"`
 	VerifiedOn     string        `toml:"verified_on"`
 	HarnessVersion string        `toml:"harness_version"`
+
+	// Project marks a row from .ai-rulez/traps/*.toml: it runs for every
+	// project that has it, whatever the presets, and reports AR9CA.
+	Project bool `toml:"-"`
 }
 
 // TrapScope selects the files a trap looks at: files below Dir (at the repo or
@@ -74,6 +80,8 @@ type TrapScope struct {
 	Dir    string   `toml:"dir"`
 	Suffix string   `toml:"suffix"`
 	Kinds  []string `toml:"kinds"`
+	// RootOnly limits a scope without Dir to the lint root (no nested package).
+	RootOnly bool `toml:"root_only"`
 }
 
 // TrapPredicate is the condition of a trap; only the fields of its Kind are read.
@@ -94,6 +102,14 @@ type TrapPredicate struct {
 	// file-chars, file-bytes, or chain-bytes (the AGENTS.md files from the lint
 	// root down to the file).
 	Measure string `toml:"measure"`
+
+	// Limit is a project row's own size limit (size-over without limit_id).
+	Limit int `toml:"limit"`
+	// WhenDir and WhenSuffix name the files json-key-required-if looks for: the
+	// key is required only while a file with WhenSuffix exists in WhenDir, a
+	// directory relative to the package that holds the scope directory.
+	WhenDir    string `toml:"when_dir"`
+	WhenSuffix string `toml:"when_suffix"`
 
 	limit harnesslimits.Limit // resolved from LimitID when the table loads
 }
@@ -125,12 +141,30 @@ func Traps() ([]Trap, error) {
 type trapHit struct {
 	line   int
 	detail string
+	// fix is a safe correction of the flagged line, set only by predicates that
+	// can state one (a misspelt key).
+	fix *lineFix
+}
+
+// lineFix replaces the whole line at the hit's line.
+type lineFix struct {
+	old, new, description string
+}
+
+// trapEnv is what a predicate may ask about the repository around a file.
+type trapEnv struct {
+	// exists reports whether the directory (relative to the package that holds
+	// the scope directory) has a regular file ending in suffix.
+	exists func(dir, suffix string) bool
 }
 
 // matches reports whether rel (slash path from the lint root) is inside the
 // scope directory, at the root or in a nested package, and has the suffix.
 func (s TrapScope) matches(rel string) bool {
 	dir := strings.Trim(s.Dir, "/")
+	if s.RootOnly && dir == "" && strings.Contains(rel, "/") {
+		return false
+	}
 	if dir != "" && !(strings.HasPrefix(rel, dir+"/") || strings.Contains(rel, "/"+dir+"/")) {
 		return false
 	}
@@ -143,6 +177,10 @@ func (s TrapScope) hasKind(kind string) bool {
 
 // eval runs the predicate against one file.
 func (p TrapPredicate) eval(rel string, content []byte) []trapHit {
+	return p.evalIn(rel, content, trapEnv{})
+}
+
+func (p TrapPredicate) evalIn(rel string, content []byte, env trapEnv) []trapHit {
 	name := path.Base(rel)
 	if slices.ContainsFunc(p.IgnoreNames, func(n string) bool { return strings.EqualFold(n, name) }) {
 		return nil
@@ -165,6 +203,10 @@ func (p TrapPredicate) eval(rel string, content []byte) []trapHit {
 		return p.evalMisspelt(content)
 	case predSizeOver:
 		return p.evalSize(content)
+	case predFrontmatterFirst:
+		return p.evalFirst(content)
+	case predJSONKeyRequiredIf:
+		return p.evalJSONKey(content, env)
 	}
 	return nil
 }
@@ -252,7 +294,7 @@ func (r *runner) activeHarnesses() map[string]bool {
 func (r *runner) checkTraps() {
 	r.checkTableAge()
 	traps, err := Traps()
-	if err != nil || len(traps) == 0 {
+	if err != nil {
 		return
 	}
 	active := r.activeHarnesses()
@@ -261,6 +303,10 @@ func (r *runner) checkTraps() {
 		if active[t.Harness] {
 			relevant = append(relevant, t)
 		}
+	}
+	relevant = append(relevant, r.projectTraps()...)
+	if len(relevant) == 0 {
+		return
 	}
 	if len(relevant) == 0 {
 		return
@@ -296,7 +342,8 @@ func (r *runner) checkTraps() {
 				chains[t.Code+"/"+t.Harness] = append(chains[t.Code+"/"+t.Harness], chainFile{rel: rel, abs: abs, size: len(content), generated: generated})
 				continue
 			}
-			for _, hit := range t.Predicate.eval(rel, content) {
+			env := trapEnv{exists: r.existsBeside(rel, t.Scope)}
+			for _, hit := range t.Predicate.evalIn(rel, content, env) {
 				r.addTrap(t, abs, hit, generated)
 			}
 		}
@@ -399,6 +446,14 @@ func (r *runner) addTrap(t Trap, abs string, hit trapHit, generated bool) {
 	}
 	f := &r.findings[n]
 	f.Trap = &TrapInfo{Harness: t.Harness, Evidence: t.Source, VerifiedOn: t.VerifiedOn, Hint: t.Hint}
+	if hit.fix != nil && !generated && isRegularFile(abs) {
+		f.meta().Fix = &Fix{
+			Description: hit.fix.description,
+			Confidence:  FixSafe,
+			Edits:       []Edit{{File: abs, Line: hit.line, Old: hit.fix.old, New: hit.fix.new}},
+			Outside:     true,
+		}
+	}
 	if generated && t.CertainlyInert && !r.severityConfigured(t.Code) {
 		f.Severity = SeverityError
 	}
