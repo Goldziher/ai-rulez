@@ -56,6 +56,30 @@ func Warn(msg string, args ...any) {
 	}
 }
 
+// Silence drops the warnings issued until the returned function runs, and keeps
+// them out of the "already issued" set, so a later real render still shows each
+// one. It is for a caller that renders a document only to learn whether it holds
+// anything.
+func Silence() (restore func()) {
+	downgradeMu.Lock()
+	prevSink := warn
+	prevSeen := make(map[string]struct{}, len(warnedMessages))
+	for k := range warnedMessages {
+		prevSeen[k] = struct{}{}
+	}
+	warn = func(string, ...any) {}
+	downgradeMu.Unlock()
+	return func() {
+		downgradeMu.Lock()
+		defer downgradeMu.Unlock()
+		warn = prevSink
+		clear(warnedMessages)
+		for k := range prevSeen {
+			warnedMessages[k] = struct{}{}
+		}
+	}
+}
+
 func warnSink() func(string, ...any) {
 	downgradeMu.Lock()
 	defer downgradeMu.Unlock()
