@@ -50,7 +50,12 @@ detects something, skills-lock first):
                 .kiro/steering, .windsurf, .roo, .clinerules, .qwen, .junie,
                 .agents/skills, skills, agents and commands of every supported preset,
                 and MCP files (.mcp.json, .cursor/mcp.json, .vscode/mcp.json, ...)
+  rulesync      rulesync.jsonc and .rulesync/ (rules, commands, subagents, skills, checks,
+                mcp.jsonc, ignore); hooks and permissions are reported, not yet imported
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
+
+When a rulesync project is detected, auto skips native: the tool files next to
+.rulesync/ are its generated output. Use --from native,rulesync to read both.
 
 Nothing is written unless --write is given. Without --write or --dry-run, a
 terminal gets a dry run and a script is asked to choose. Existing .ai-rulez/
@@ -74,7 +79,7 @@ validation, or --fail-on matched.`,
 
 func init() {
 	f := ConvertCmd.Flags()
-	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, skills-lock or auto (every detected importer)")
+	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, skills-lock or auto (every detected importer)")
 	f.StringVar(&convertSource, "source", ".", "Directory to read")
 	f.StringVar(&convertInto, "into", importer.DefaultConfigDir, "Config directory to write: relative to --source unless absolute; never written through a symlink")
 	f.StringVar(&convertDomain, "domain", "", "Put the imported content in this domain (safe next to an existing tree)")
