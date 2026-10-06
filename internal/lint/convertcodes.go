@@ -40,12 +40,12 @@ func init() {
 			Good: "Re-create the intent by hand if it matters, or accept the loss",
 		},
 		CodeConvertNeedsAction: {
-			Why:  "The conversion is incomplete until a person acts: a literal credential in an MCP server was replaced by a `${VAR}` reference, a lock hash was not carried over, or hooks were not imported. Only the convert report carries it.",
+			Why:  "The conversion is incomplete until a person acts: a literal credential in an MCP server was replaced by a `${VAR}` reference, a lock hash was not carried over, a hook or an allow rule was written disabled, or a remote source was not fetched. Only the convert report carries it.",
 			Bad:  "An MCP server with `--api-key sk-...` in its arguments",
-			Good: "Export the variable named in the reference and run `ai-rulez lock`, or re-add the hook by hand",
+			Good: "Export the variable named in the reference and run `ai-rulez lock`, review a disabled hook and uncomment it (or rerun with `--enable-hooks`), or rerun with `--fetch`",
 		},
 		CodeConvertUnsupported: {
-			Why:  "The source kind is out of scope (a `node_modules` or local skills-lock source, a transport helper URL). Only the convert report carries it.",
+			Why:  "The source kind is out of scope (a `node_modules` or local skills-lock source, a transport helper URL, an SSH or marketplace APM dependency, an MCP registry reference, an npm rulesync source). Only the convert report carries it.",
 			Bad:  "A skills-lock entry whose source is `file:///tmp/skill`",
 			Good: "Install the skill from an https or ssh Git source and convert again",
 		},
