@@ -274,7 +274,9 @@ retrieved) and `hit`.
 | `--baseline prev.json --max-flips N` | more than N cases went from `hit` to a miss since the baseline (default 0) |
 
 With a small set one case moves `top1` by several points, so prefer the flip count to a raw floor. Cases present in
-only one of the two runs are not compared.
+only one of the two runs are not compared. A baseline must come from the same primary
+mode and the same `--k`; otherwise the run is refused (exit 1). `--out` is not written when the embeddings were
+degraded, so a fallback run cannot become a baseline.
 
 Exit codes: `0` every gate passed, `1` the command could not run (bad flags, invalid cases file, unknown skill,
 unreadable baseline, a mode without an index, degraded embeddings), `2` a gate failed (or `search index` stopped

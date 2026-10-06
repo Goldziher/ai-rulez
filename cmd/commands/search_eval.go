@@ -133,7 +133,9 @@ func runSearchEval(ctx context.Context, out, errOut io.Writer, env *searchEnv) i
 		maxFlips = searchFlags.maxFlips
 	}
 	res.GateFailures = res.Gate(mins, maxFlips)
-	if searchFlags.out != "" {
+	degraded := degradedEvalMessage(res)
+	if searchFlags.out != "" && degraded == "" {
+		// A run that fell back to lexical does not measure the requested ranking: never a baseline.
 		if err := writeJSONFile(searchFlags.out, res); err != nil {
 			return fail(err)
 		}
@@ -145,9 +147,9 @@ func runSearchEval(ctx context.Context, out, errOut io.Writer, env *searchEnv) i
 	} else {
 		printEvalText(out, res)
 	}
-	if msg := degradedEvalMessage(res); msg != "" {
+	if degraded != "" {
 		// The numbers would not measure the ranker asked for: never a pass.
-		reportWriter{errOut}.printf("%s\nCheck 'ai-rulez search status' and the [llm] budget and network settings\n", msg)
+		reportWriter{errOut}.printf("%s\nCheck 'ai-rulez search status' and the [llm] budget and network settings\n", degraded)
 		return 1
 	}
 	for _, msg := range res.GateFailures {
@@ -169,10 +171,12 @@ func degradedEvalMessage(r *skillsearch.Result) string {
 		}
 		reason := ""
 		for i := range mr.Cases {
-			if mr.Cases[i].Degraded != "" {
-				reason = mr.Cases[i].Degraded
+			if reason = mr.Cases[i].Degraded; reason != "" {
 				break
 			}
+		}
+		for i := 0; reason == "" && i < len(mr.Negatives); i++ {
+			reason = mr.Negatives[i].Degraded
 		}
 		parts = append(parts, fmt.Sprintf("%s: %d cases fell back to lexical (%s)", mode, mr.DegradedCases, reason))
 	}
