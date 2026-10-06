@@ -332,8 +332,10 @@ func TestHostAllowlist(t *testing.T) {
 	}{
 		{"github by default", repo, nil, false, 1},
 		{"other host refused by default", forge.Repo{Host: "gitlab.com", Owner: "o", Name: "r"}, map[string]string{"GITHUB_TOKEN": tok}, true, 0},
-		{"enterprise host allowed by env", forge.Repo{Host: "ghe.example.com", Owner: "o", Name: "r"}, map[string]string{"AI_RULEZ_GIT_TOKEN_HOSTS": "ghe.example.com"}, false, 1},
-		{"default host no longer allowed once the env narrows it", repo, map[string]string{"AI_RULEZ_GIT_TOKEN_HOSTS": "ghe.example.com"}, true, 0},
+		{"enterprise host allowed by env", forge.Repo{Host: "ghe.example.com", Owner: "o", Name: "r"}, map[string]string{"AI_RULEZ_FORGE_HOSTS": "ghe.example.com"}, false, 1},
+		{"default host no longer allowed once the env narrows it", repo, map[string]string{"AI_RULEZ_FORGE_HOSTS": "ghe.example.com"}, true, 0},
+		{"a clone-token host is not a forge host (it would receive the GitHub token)", forge.Repo{Host: "gitlab.example.com", Owner: "o", Name: "r"},
+			map[string]string{"AI_RULEZ_GIT_TOKEN_HOSTS": "github.com,gitlab.example.com", "GITHUB_TOKEN": tok}, true, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
