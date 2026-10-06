@@ -48,6 +48,9 @@ type SuggestOptions struct {
 	MaxProposals int
 	// LLM is the model access; a Client is required unless Estimate is set.
 	LLM LLMOptions
+	// Replay is how many of the newest merged diffs (first-parent history) each
+	// usable proposal is tried on; 0 replays none.
+	Replay int
 }
 
 // Proposal is one candidate verifier and what was learned by trying it.
@@ -63,6 +66,8 @@ type Proposal struct {
 	// (`in = "diff-added"`) or too broad.
 	Hits     int      `json:"hits"`
 	HitFiles []string `json:"hit_files,omitempty"`
+	// Replay is the candidate tried on the last N merged diffs; nil when not replayed.
+	Replay *Replay `json:"replay,omitempty"`
 	// Examples reports whether the candidate's own pass and fail examples
 	// behaved as claimed when run offline: "verified", "none" or "failed".
 	Examples string `json:"examples"`
@@ -257,6 +262,15 @@ func Suggest(ctx context.Context, cfg *config.Config, opts SuggestOptions) (*Sug
 	}
 	for i := range proposals {
 		res.Proposals = append(res.Proposals, assess(ctx, cfg, kind, opts.ID, &proposals[i], taken))
+	}
+	var usable []*Proposal
+	for i := range res.Proposals {
+		if res.Proposals[i].Rejected == "" {
+			usable = append(usable, &res.Proposals[i])
+		}
+	}
+	if note := replayProposals(ctx, cfg, usable, opts.Replay); note != "" {
+		res.Notes = append(res.Notes, note)
 	}
 	return res, nil
 }

@@ -14,10 +14,14 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 )
 
+// defaultSuggestReplay is how many merged diffs `verifiers suggest` replays by default.
+const defaultSuggestReplay = 10
+
 var (
 	suggestKind         string
 	suggestMaxProposals int
 	suggestWrite        bool
+	suggestReplay       int
 	suggestFormat       bool
 )
 
@@ -50,6 +54,7 @@ func init() {
 	f := VerifiersSuggestCmd.Flags()
 	f.StringVar(&suggestKind, "kind", "rule", "What the id names: rule, skill, agent or command")
 	f.IntVar(&suggestMaxProposals, "max-proposals", 5, "Most candidates to ask for and keep")
+	f.IntVar(&suggestReplay, "replay", defaultSuggestReplay, "Try each usable proposal on the last N merged diffs (first-parent history) and report how many it would have flagged; 0 turns it off")
 	f.BoolVar(&suggestWrite, "write", false, "Save the usable proposals to .ai-rulez/verifiers/suggested-<id>.toml (never overwrites)")
 	f.BoolVar(&verifiersAllowLLM, "allow-llm", false, "Send the rule text and a repository summary to the configured model (needs allow_network in the user config)")
 	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most the call may cost in USD (0 removes this cap; [llm] limits still apply)")
@@ -83,7 +88,7 @@ func suggestVerifiers(ctx context.Context, id string, out io.Writer) int {
 		return exitVerifiersCannotRun
 	}
 	defer release()
-	res, err := verifiers.Suggest(ctx, cfg, verifiers.SuggestOptions{Kind: suggestKind, ID: id, MaxProposals: suggestMaxProposals, LLM: *opts})
+	res, err := verifiers.Suggest(ctx, cfg, verifiers.SuggestOptions{Kind: suggestKind, ID: id, MaxProposals: suggestMaxProposals, Replay: suggestReplay, LLM: *opts})
 	if err != nil {
 		fmtError(err)
 		return exitVerifiersCannotRun
@@ -130,7 +135,15 @@ func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bo
 		if len(p.HitFiles) > 0 {
 			fmt.Fprintf(&b, " (%s)", strings.Join(p.HitFiles, ", "))
 		}
-		fmt.Fprintf(&b, "; examples: %s\n%s", p.Examples, p.TOML)
+		fmt.Fprintf(&b, "; examples: %s\n", p.Examples)
+		if r := p.Replay; r != nil {
+			fmt.Fprintf(&b, "# replay: would have flagged %d of %d merged diff(s)", r.Flagged, r.Diffs)
+			if len(r.FlaggedCommits) > 0 {
+				fmt.Fprintf(&b, " (%s)", strings.Join(r.FlaggedCommits, "; "))
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString(p.TOML)
 	}
 	if rejected > 0 {
 		b.WriteString("\nRejected:\n")
