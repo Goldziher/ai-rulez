@@ -279,6 +279,34 @@ func TestReviewSemanticAllowedHostsAreUserScopeOnly(t *testing.T) {
 		assert.Zero(t, f.calls)
 	})
 
+	t.Run("no allow-list and a custom endpoint warns that any host is accepted", func(t *testing.T) {
+		judgedProject(t, "")
+		t.Setenv("AI_RULEZ_LLM_BASE_URL", "https://elsewhere.example/v1")
+		useFakeModel(t, &fakeModel{})
+		var stderr bytes.Buffer
+		ReviewCmd.SetErr(&stderr)
+		t.Cleanup(func() { ReviewCmd.SetErr(nil) })
+
+		_, _, err := runJudged(t)
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, strings.Count(stderr.String(), "allowed_hosts is empty"), stderr.String())
+		assert.Contains(t, stderr.String(), "elsewhere.example")
+	})
+
+	t.Run("no allow-list and the provider's own endpoint is silent", func(t *testing.T) {
+		judgedProject(t, "")
+		useFakeModel(t, &fakeModel{})
+		var stderr bytes.Buffer
+		ReviewCmd.SetErr(&stderr)
+		t.Cleanup(func() { ReviewCmd.SetErr(nil) })
+
+		_, _, err := runJudged(t)
+
+		require.NoError(t, err)
+		assert.NotContains(t, stderr.String(), "allowed_hosts is empty")
+	})
+
 	t.Run("a listed host is allowed", func(t *testing.T) {
 		judgedProject(t, "")
 		t.Setenv("AI_RULEZ_REVIEW_ALLOWED_HOSTS", "gateway.internal")
