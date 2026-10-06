@@ -581,7 +581,7 @@ func RunSemantic(ctx context.Context, in SemanticInput) (*SemanticOutcome, error
 					mu.Lock()
 					if errors.Is(err, ErrFatal) {
 						// A call cut short by the stop another worker asked for is not a second failure.
-						if fatalErr == nil && !(budget && errors.Is(err, context.Canceled)) {
+						if fatalErr == nil && (!budget || !errors.Is(err, context.Canceled)) {
 							fatalErr = err
 							cancel()
 						}

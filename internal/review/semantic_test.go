@@ -366,8 +366,8 @@ func TestRedactModeSendsTheMaskedItemAndNeverTheCredential(t *testing.T) {
 	rb := builtin(t)
 	leak := skill("leak", "Rotate the cloud credentials when asked, key AKIAIOSFODNN7EXAMPLE")
 	leak.Raw = "---\nname: leak\ndescription: Rotate the cloud credentials, key AKIAIOSFODNN7EXAMPLE\n---\nbody\n"
-	hidden := skill("hidden", "Deploy​ the service")
-	hidden.Raw = "---\nname: hidden\ndescription: Deploy​ the service\n---\n"
+	hidden := skill("hidden", "Deploy\u200b the service")
+	hidden.Raw = "---\nname: hidden\ndescription: Deploy\u200b the service\n---\n"
 	other := skill("other", "Summarise a pull request for the changelog")
 
 	t.Run("on_secret = redact masks the credential", func(t *testing.T) {
