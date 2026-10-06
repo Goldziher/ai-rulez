@@ -126,6 +126,23 @@ func (c commandItem) line() string {
 // allow rules the configuration makes generate write, by where they land.
 func collectCommandItems(cfg *config.Config) []commandItem {
 	presets := presetNames(cfg)
+	items := hookItems(cfg, presets)
+	items = append(items, mcpItems(cfg, presets)...)
+	if cfg.Permissions != nil && contains(presets, config.HarnessClaude) {
+		for _, rule := range cfg.Permissions.Allow {
+			items = append(items, commandItem{Kind: "allow", Command: rule, Where: []string{"permissions"}})
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Kind != items[j].Kind {
+			return items[i].Kind < items[j].Kind
+		}
+		return items[i].Command < items[j].Command
+	})
+	return items
+}
+
+func hookItems(cfg *config.Config, presets []string) []commandItem {
 	var items []commandItem
 	for i := range cfg.Hooks {
 		group := &cfg.Hooks[i]
@@ -148,38 +165,30 @@ func collectCommandItems(cfg *config.Config) []commandItem {
 			if command == "" {
 				command = action.Script
 			}
-			if command == "" {
-				continue
+			if command != "" {
+				items = append(items, commandItem{Kind: "hook", Command: label + ": " + joinCommand(command, action.Args), Where: where})
 			}
-			items = append(items, commandItem{Kind: "hook", Command: label + ": " + joinCommand(command, action.Args), Where: where})
 		}
 	}
-	var mcpWhere []string
+	return items
+}
+
+func mcpItems(cfg *config.Config, presets []string) []commandItem {
+	var where []string
 	for _, p := range presets {
 		if config.HarnessSupportsMCP(p) {
-			mcpWhere = append(mcpWhere, p)
+			where = append(where, p)
 		}
 	}
-	if len(mcpWhere) == 0 {
-		mcpWhere = []string{"mcp"}
+	if len(where) == 0 {
+		where = []string{"mcp"}
 	}
+	var items []commandItem
 	for _, server := range cfg.MCPServers {
-		if server == nil || !server.IsEnabled() || server.Command == "" {
-			continue
-		}
-		items = append(items, commandItem{Kind: "mcp", Command: server.Name + ": " + joinCommand(server.Command, server.Args), Where: mcpWhere})
-	}
-	if cfg.Permissions != nil && len(cfg.Permissions.Allow) > 0 && contains(presets, config.HarnessClaude) {
-		for _, rule := range cfg.Permissions.Allow {
-			items = append(items, commandItem{Kind: "allow", Command: rule, Where: []string{"permissions"}})
+		if server != nil && server.IsEnabled() && server.Command != "" {
+			items = append(items, commandItem{Kind: "mcp", Command: server.Name + ": " + joinCommand(server.Command, server.Args), Where: where})
 		}
 	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].Kind != items[j].Kind {
-			return items[i].Kind < items[j].Kind
-		}
-		return items[i].Command < items[j].Command
-	})
 	return items
 }
 

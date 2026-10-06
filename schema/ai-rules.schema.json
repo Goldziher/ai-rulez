@@ -843,6 +843,11 @@
         "enabled": {
           "type": "boolean",
           "description": "Write <config dir>/roles.json on generate: every role with its resolved item ids, byte sizes and token estimates."
+        },
+        "skill_mode_fallback": {
+          "type": "string",
+          "enum": ["drop", "serve"],
+          "description": "What generate --role does with a skill whose skill_mode is off on a harness with no documented per-skill setting: drop (default) leaves it out, serve moves it to served delivery. Lives here because TOML cannot use roles as both an array and a table."
         }
       },
       "additionalProperties": false

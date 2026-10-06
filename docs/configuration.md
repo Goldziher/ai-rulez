@@ -382,7 +382,7 @@ domains only, never other profiles. See
 
 `[[roles]]` maps a job to a slice of the content (domains, per-kind include/exclude selectors, inheritance, a
 per-skill `skill_mode` rendered as Claude Code `skillOverrides`), selected with `ai-rulez generate --role <name>`.
-`[role_manifest] enabled = true` writes `<config dir>/roles.json`. See [Roles](roles.md).
+`[role_manifest] enabled = true` writes `<config dir>/roles.json`; `skill_mode_fallback = "drop" | "serve"` says what an `off` skill does on a harness with no setting for it. See [Roles](roles.md).
 
 ```toml
 [role_manifest]
