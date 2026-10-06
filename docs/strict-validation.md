@@ -119,7 +119,7 @@ stdout.
 | AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
 | AR9A1 | `activation-low` | off | A skill's recorded activation recall or precision (`eval run --mode activation`) is below `[lint.evals] min_activation_recall` or `min_activation_precision`; setting either turns the rule on at error (see [Evals](evals.md#activation-mode)) |
 | AR9A2 | `skill-confusable` | off | A sibling skill won at least `[lint.evals] confusion_threshold` of this skill's positive activation prompts; setting it turns the rule on at warning |
-| AR9A3 | `activation-policy-conflict` | warning | An eval case expects a skill to trigger (`expect_trigger: true`) although its frontmatter sets `disable-model-invocation: true` or `allow_implicit_invocation: false`, so the case can never pass (see [Evals](evals.md#linting-cases-and-results)) |
+| AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
 | AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
@@ -2384,13 +2384,13 @@ a sibling skill won at least lint.evals.confusion_threshold of this skill's posi
 
 ### AR9A3 activation-policy-conflict
 
-an eval case expects a skill to trigger although the skill's frontmatter stops the model from invoking it (disable-model-invocation: true or allow_implicit_invocation: false)
+an eval case contradicts the skill's invocation policy: it expects a trigger although the frontmatter stops the model from invoking the skill, or expects none for a skill only ever started explicitly (disable-model-invocation: true or allow_implicit_invocation: false)
 
 - Default severity: `warning`
 - Analyzer: `evals` (scope `item`)
-- Why: A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes.
-- Bad: A case with `expect_trigger: true` for a skill with `disable-model-invocation: true`
-- Good: Drop the case (or make it a negative one), or allow model invocation in the skill
+- Why: A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes. A case that expects no trigger for such a skill can never fail, so it pads the pass rate.
+- Bad: A case with `expect_trigger: true`, or `false`, for a skill with `disable-model-invocation: true`
+- Good: Drop the case, or allow model invocation in the skill
 
 ### AR9A4 activation-prompt-names-skill
 

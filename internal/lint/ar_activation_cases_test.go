@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -23,16 +24,17 @@ func TestActivationPolicyConflict(t *testing.T) {
 		cases       string
 		want        int
 	}{
-		{name: "model invocation disabled and a positive case", frontmatter: "disable-model-invocation: true\n", cases: positiveCase, want: 1},
-		{name: "implicit invocation disallowed", frontmatter: "allow_implicit_invocation: false\n", cases: positiveCase, want: 1},
-		{name: "the underscore spelling counts too", frontmatter: "disable_model_invocation: true\n", cases: positiveCase, want: 1},
-		{name: "a string true counts", frontmatter: "disable-model-invocation: \"true\"\n", cases: positiveCase, want: 1},
+		{name: "model invocation disabled and a positive case", frontmatter: "disable-model-invocation: true\n", cases: positiveCase, want: 2},
+		{name: "implicit invocation disallowed", frontmatter: "allow_implicit_invocation: false\n", cases: positiveCase, want: 2},
+		{name: "the underscore spelling counts too", frontmatter: "disable_model_invocation: true\n", cases: positiveCase, want: 2},
+		{name: "a string true counts", frontmatter: "disable-model-invocation: \"true\"\n", cases: positiveCase, want: 2},
 		{name: "a skill the model may invoke", frontmatter: "", cases: positiveCase, want: 0},
 		{name: "disabled false is not a conflict", frontmatter: "disable-model-invocation: false\n", cases: positiveCase, want: 0},
 		{name: "implicit allowed", frontmatter: "allow_implicit_invocation: true\n", cases: positiveCase, want: 0},
-		{name: "only negative cases hold trivially", frontmatter: "disable-model-invocation: true\n", cases: "prompt: bake bread\nexpect_trigger: false\nid: q\n", want: 0},
-		{name: "one finding per positive case", frontmatter: "disable-model-invocation: true\n",
-			cases: positiveCase + "  - id: second\n    prompt: roll out billing\n    expect_trigger: true\n", want: 2},
+		{name: "a negative case of an explicit-only skill can never fail", frontmatter: "disable-model-invocation: true\n", cases: "prompt: bake bread\nexpect_trigger: false\nid: q\n", want: 1},
+		{name: "a negative case of a skill the model may invoke is fine", frontmatter: "", cases: "prompt: bake bread\nexpect_trigger: false\nid: q\n", want: 0},
+		{name: "one finding per case", frontmatter: "disable-model-invocation: true\n",
+			cases: positiveCase + "  - id: second\n    prompt: roll out billing\n    expect_trigger: true\n", want: 3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,5 +125,28 @@ func TestValidateSettings_EstimateAssumptionsMustBeNonNegative(t *testing.T) {
 				t.Errorf("ValidateSettings = %v, want problems: %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestActivationPolicyConflict_NamesTheClause(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	writeFiles(t, root, activationCaseFixture("", "disable-model-invocation: true\n", positiveCase))
+	gitAdd(t, root)
+
+	// Act
+	findings := lintDir(t, root)
+
+	// Assert
+	var positive, negative bool
+	for _, f := range findings {
+		if f.Code != CodeActivationPolicyConflict {
+			continue
+		}
+		positive = positive || strings.Contains(f.Message, "can never pass")
+		negative = negative || strings.Contains(f.Message, "can never fail")
+	}
+	if !positive || !negative {
+		t.Errorf("want one message per clause (never pass, never fail), got %v", findings)
 	}
 }
