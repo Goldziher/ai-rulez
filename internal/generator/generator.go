@@ -98,6 +98,10 @@ type generatedManifest struct {
 	// merged_claims.go): in the committed manifest for a document it wrote whole,
 	// in the machine-local manifest for one shared with the user.
 	Merged map[string][]jsonmerge.Claim `json:"merged,omitempty"`
+	// Digests holds the SHA-256 of each listed file that has no Content-Hash of
+	// its own (JSON, TOML, raw files). Deletion of such a file needs a digest
+	// match, so a forged entry cannot delete a file ai-rulez did not write.
+	Digests map[string]string `json:"digests,omitempty"`
 	// Dirs lists, in the user manifest only, the directories ai-rulez created
 	// below the home directory (slash paths relative to it), so clean removes
 	// those once empty and never one that existed before. Nil: not recorded.
@@ -2582,7 +2586,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
 	defer func() { g.manifests = nil }()
-	if err := g.writeManifest(g.manifestPath(), shared, committedMerged); err != nil {
+	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, manifestDigests(g.config.BaseDir, shared)); err != nil {
 		return err
 	}
 	if g.localSkipped {
@@ -2596,29 +2600,31 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		}
 		return nil
 	}
-	return g.writeManifest(g.localManifestPath(), local, localMerged)
+	return g.writeManifest(g.localManifestPath(), local, localMerged, manifestDigests(g.config.BaseDir, local))
 }
 
 // writeManifest writes a manifest after refusing a symlink that leaves the project.
-func (g *Generator) writeManifest(path string, files []string, merged map[string][]jsonmerge.Claim) error {
+func (g *Generator) writeManifest(path string, files []string, merged map[string][]jsonmerge.Claim,
+	digests map[string]string) error {
 	resolved, _, err := g.guardWrite(path)
 	if err != nil {
 		return err
 	}
-	return writeManifestFileDirs(resolved, files, merged, g.manifestDirs(path))
+	return writeManifestFileDirs(resolved, files, merged, digests, g.manifestDirs(path))
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
-	return writeManifestFileDirs(path, files, merged, nil)
+	return writeManifestFileDirs(path, files, merged, nil, nil)
 }
 
-func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim, dirs *[]string) error {
+func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim,
+	digests map[string]string, dirs *[]string) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Dirs: dirs}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Digests: digests, Dirs: dirs}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}
@@ -2689,6 +2695,8 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 
 	g.keepForRole(previous, next)
 
+	digests := g.manifestDigestSet()
+	var matcher *outputMatcher
 	var stale []string
 	for _, relPath := range previous {
 		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
@@ -2703,6 +2711,20 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			continue
 		}
 		if _, err := os.Stat(absPath); err != nil {
+			continue
+		}
+		if !g.userMode {
+			if matcher == nil {
+				matcher = g.outputMatcher(outputs)
+			}
+			if !matcher.matches(relPath) {
+				g.warnOnce("Stale file not removed: " + relPath + " is not a path any preset writes")
+				continue
+			}
+		}
+		if !provablyGenerated(relPath, absPath, digests) {
+			g.warnOnce("Stale file not removed: cannot verify "+relPath+" was generated",
+				"hint", "delete it by hand if it is no longer needed")
 			continue
 		}
 		// A rules folder is shared with hand-written rules: delete only a file that
