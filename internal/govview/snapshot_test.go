@@ -147,3 +147,22 @@ func TestExtractRevision_SymlinksAreReportedNotMaterialised(t *testing.T) {
 	_, statErr := os.Lstat(filepath.Join(dest, ".ai-rulez", "rules", "link.md"))
 	assert.True(t, os.IsNotExist(statErr))
 }
+
+func TestExtractRevisionAll(t *testing.T) {
+	// Arrange
+	dir, first, _ := snapRepo(t)
+	dest := t.TempDir()
+
+	// Act
+	snap, err := ExtractRevisionAll(context.Background(), dir, first, dest)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, first, snap.Commit)
+	assert.Equal(t, 3, snap.Files)
+	got, readErr := os.ReadFile(filepath.Join(dest, "svc", ".ai-rulez", "rules", "a.md"))
+	require.NoError(t, readErr)
+	assert.Equal(t, "one\n", string(got))
+	assert.FileExists(t, filepath.Join(dest, "outside.txt"), "the whole repository, not one directory")
+	assert.NoFileExists(t, filepath.Join(dest, "svc", ".ai-rulez", "local", "private.md"))
+}
