@@ -488,6 +488,10 @@ result with `error` or `skipped` needs neither. `input_tokens`, `output_tokens` 
   own Claude Code configuration do not compete; the harness's built-in skills and any enabled plugins still do, and
   Claude Code's own system prompt makes each run cost far more input than the default estimate assumes (see
   `eval calibrate-estimate`). Run it with `--model haiku` unless you mean to pay for a larger model.
+  The plugin holds only each skill's `SKILL.md` reduced to `name` and `description`: `hooks`, `allowed-tools`, scripts
+  and references are not installed, and a skill with an error-level security finding is refused before any run. The
+  `claude` process gets a scrubbed environment (`PATH`, `HOME`, locale, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` and
+  `CLAUDE_CODE_*` authentication and provider variables); cloud and forge credentials are not passed.
 - **`codex-native`** (harness `codex`): writes the set to `<work>/.agents/skills/<id>/` and runs `codex exec --json
   --ephemeral --ignore-user-config --ignore-rules -s read-only` from stdin. Codex loads a skill by reading its
   `SKILL.md`, which shows up as a shell command; the run is killed as soon as one is read or after three commands, so
