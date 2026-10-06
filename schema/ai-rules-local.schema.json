@@ -2749,12 +2749,12 @@
           "type": "boolean"
         },
         "otlp_endpoint": {
-          "description": "OTLP/HTTP collector base URL (https, or http on loopback). /v1/logs and /v1/metrics are appended. Ignored in a repository config.",
+          "description": "OTLP/HTTP collector base URL (https, or http on loopback). /v1/logs and /v1/metrics are appended; for grpc, host[:port] without a path. Ignored in a repository config.",
           "type": "string"
         },
         "otlp_protocol": {
-          "description": "OTLP encoding. Only http/json is implemented.",
-          "enum": ["http/json"],
+          "description": "OTLP transport: http/json (default), http/protobuf or grpc. Ignored in a repository config.",
+          "enum": ["http/json", "http/protobuf", "grpc"],
           "type": "string"
         },
         "resource": {
