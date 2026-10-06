@@ -3,7 +3,7 @@ package telemetry
 import (
 	"bufio"
 	"encoding/json"
-	"os"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
@@ -62,7 +62,7 @@ type ItemsReport struct {
 // ReadItemEvents reads the item events of a usage log, skipping skill lines,
 // feedback lines and anything unreadable.
 func ReadItemEvents(path string) ([]Event, error) {
-	file, err := os.Open(path) //nolint:gosec // user-chosen log path
+	file, err := safefs.OpenRegular(path)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "open usage log")
 	}

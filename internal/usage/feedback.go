@@ -3,6 +3,7 @@ package usage
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"io"
 	"os"
 	"path/filepath"
@@ -159,7 +160,7 @@ func keepNote(source, dir string, stamp time.Time, id, kind string) (string, err
 // ReadFeedback reads a feedback log; unreadable lines are counted, not fatal. A
 // missing file is an error so callers can tell "no log" from "empty log".
 func ReadFeedback(path string) (entries []FeedbackEntry, skipped int, err error) {
-	file, err := os.Open(path) //nolint:gosec // user-chosen log path
+	file, err := safefs.OpenRegular(path)
 	if err != nil {
 		return nil, 0, oops.With("path", path).Wrapf(err, "open feedback log")
 	}

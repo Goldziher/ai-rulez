@@ -133,8 +133,8 @@ func (s *Spool) Pending() (events []Event, corrupt int, err error) {
 
 // Size returns the outbox size in bytes, 0 when absent.
 func (s *Spool) Size() int64 {
-	info, err := os.Stat(s.outbox())
-	if err != nil {
+	info, err := os.Lstat(s.outbox())
+	if err != nil || !info.Mode().IsRegular() {
 		return 0
 	}
 	return info.Size()
@@ -167,7 +167,7 @@ func (s *Spool) Remove(ids map[string]bool) error {
 // ReadState returns the exporter bookkeeping; a missing file is the zero State.
 func (s *Spool) ReadState() State {
 	var st State
-	if data, err := os.ReadFile(s.statePath()); err == nil { //nolint:gosec // machine-local state file
+	if data, err := safefs.ReadRegular(s.statePath()); err == nil {
 		_ = json.Unmarshal(data, &st) //nolint:errcheck // a corrupt state file reads as empty
 	}
 	return st
@@ -232,7 +232,7 @@ func (s *Spool) SpawnDue(now time.Time, interval time.Duration) bool {
 }
 
 func readLines(path string) ([][]byte, error) {
-	file, err := os.Open(path) //nolint:gosec // machine-local spool
+	file, err := safefs.OpenRegular(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
