@@ -79,7 +79,7 @@ func TestParseReplyIsStrict(t *testing.T) {
 func TestCheckEvidence(t *testing.T) {
 	trigger := dimsOf(t, "trigger-quality")[0] // allow_absence
 	body := dimsOf(t, "body-accuracy")[0]
-	corpus := []string{"deploy-staging", "Helps with   deployments\nand more", "body text here"}
+	corpus := []string{"deploy-staging", "Helps with   deployments\nand more", "body text here", strings.Repeat("word ", 30)}
 	tests := []struct {
 		name         string
 		dim          Dimension
@@ -99,6 +99,9 @@ func TestCheckEvidence(t *testing.T) {
 		{"absence needs no quote", trigger, VerdictWarn, nil, VerdictWarn, 0, 0, false, true},
 		{"absence with an invented quote keeps the verdict and counts it", trigger, VerdictFail, []string{"invented"}, VerdictFail, 0, 1, false, true},
 		{"a pass is untouched", body, VerdictPass, []string{"invented"}, VerdictPass, 0, 1, false, false},
+		{"a one-character quote is not evidence", body, VerdictWarn, []string{"e"}, VerdictPass, 0, 1, true, false},
+		{"a quote under eight characters is not evidence", body, VerdictWarn, []string{"body te"}, VerdictPass, 0, 1, true, false},
+		{"a quote over twenty words is not evidence", body, VerdictWarn, []string{strings.Repeat("word ", 21)}, VerdictPass, 0, 1, true, false},
 		{"quotes are case sensitive", body, VerdictWarn, []string{"HELPS WITH DEPLOYMENTS"}, VerdictPass, 0, 1, true, false},
 	}
 	for _, tt := range tests {
