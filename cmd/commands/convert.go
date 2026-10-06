@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -39,6 +40,10 @@ var (
 	convertAllowFindings []string
 	convertEnableHooks   bool
 	convertEnablePerms   bool
+	convertMerge         bool
+	convertKeepNames     bool
+	convertLock          bool
+	convertDelivery      string
 )
 
 // ConvertCmd converts another tool's configuration into an .ai-rulez/ tree.
@@ -79,6 +84,14 @@ a scratch directory first, and a blocked scan writes nothing. Scan findings name
 the source file and line they came from (the planned .ai-rulez path is added in
 parentheses); --allow-findings CODE lets a code through.
 
+--merge adds beside an existing tree without touching any of its files: an item
+whose file exists with other content is imported as NAME-imported. --keep-names
+never renames to settle a collision; it is reported instead. --delivery
+static|served|both sets how the imported skills reach the agent ([skills]
+delivery, or the domain's with --domain). --lock runs ` + "`ai-rulez lock`" + ` after the write
+to pin remote sources, authored content and outputs; convert never imports a
+foreign lock hash.
+
 Exit codes: 0 done, 1 could not run or would overwrite, 2 blocked by the scan or
 validation, or --fail-on matched.`,
 	Args: cobra.NoArgs,
@@ -105,6 +118,10 @@ func init() {
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
 	f.StringSliceVar(&convertAllowFindings, "allow-findings", nil, "Write despite security findings of these codes (for example AR001, a secret in the source); they stay in the report. Discouraged")
+	f.BoolVar(&convertMerge, "merge", false, "Add beside an existing tree without touching a file of it: an item whose file exists with other content is imported as NAME-imported (excludes --force)")
+	f.BoolVar(&convertKeepNames, "keep-names", false, "Never rename to resolve a name collision (between imported items, or with an existing file under --merge): report it instead")
+	f.StringVar(&convertDelivery, "delivery", "", "How the imported skills reach the agent: static, served or both ([skills] delivery, or the domain's with --domain)")
+	f.BoolVar(&convertLock, "lock", false, "After writing, run `ai-rulez lock` on the converted config to pin remote sources, authored content and outputs (needs --write)")
 	f.BoolVar(&convertEnableHooks, "enable-hooks", false, "Write imported hooks as live [[hooks]]; without it they are a commented block you review first (a hook runs a command on your machine)")
 	f.BoolVar(&convertEnablePerms, "enable-permissions", false, "Write imported allow rules as live [permissions]; without it they are commented (an allow applies to every harness). Ask and deny rules are always live")
 	f.BoolVar(&convertList, "list", false, "List the importers and what each detects in --source")
@@ -116,6 +133,42 @@ func stdoutIsTerminal() bool {
 }
 
 var allowCodeRe = regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`)
+
+// checkConvertFlags rejects flag combinations convert cannot honour.
+func checkConvertFlags(interactive bool) error {
+	switch {
+	case convertWrite && convertDryRun:
+		return fmt.Errorf("--write and --dry-run cannot be combined")
+	case !convertWrite && !convertDryRun && !interactive:
+		return fmt.Errorf("pass --write to convert or --dry-run to preview; a script never converts by surprise")
+	case convertMerge && convertForce:
+		return fmt.Errorf("--merge and --force cannot be combined: --merge keeps every existing file, --force replaces them")
+	case convertLock && !convertWrite:
+		return fmt.Errorf("--lock pins what was written: it needs --write")
+	}
+	for _, c := range convertAllowFindings {
+		if !allowCodeRe.MatchString(strings.TrimSpace(c)) {
+			return fmt.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c)
+		}
+	}
+	for _, s := range convertFailOn {
+		switch strings.ReplaceAll(s, "_", "-") {
+		case "approximated", "dropped", "needs-action", "unsupported":
+		default:
+			return fmt.Errorf("unknown --fail-on status %q", s)
+		}
+	}
+	return nil
+}
+
+func convertOptions(write bool) importer.ConvertOptions {
+	return importer.ConvertOptions{
+		Source: convertSource, Into: convertInto, From: convertFrom, Domain: convertDomain,
+		Write: write, Force: convertForce, SplitHeadings: convertSplitHeadings, BestEffort: convertBestEffort,
+		AllowFindings: convertAllowFindings, EnableHooks: convertEnableHooks, EnablePermissions: convertEnablePerms,
+		Merge: convertMerge, KeepNames: convertKeepNames, Delivery: convertDelivery,
+	}
+}
 
 // runConvert runs the command and returns the process exit code.
 func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
@@ -129,35 +182,13 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	if convertList {
 		return listImporters(out)
 	}
-	if convertWrite && convertDryRun {
-		fmtError(fmt.Errorf("--write and --dry-run cannot be combined"))
+	if err := checkConvertFlags(interactive); err != nil {
+		fmtError(err)
 		return exitConvertCannotRun
 	}
 	write := convertWrite
-	if !convertWrite && !convertDryRun && !interactive {
-		fmtError(fmt.Errorf("pass --write to convert or --dry-run to preview; a script never converts by surprise"))
-		return exitConvertCannotRun
-	}
-	for _, c := range convertAllowFindings {
-		if !allowCodeRe.MatchString(strings.TrimSpace(c)) {
-			fmtError(fmt.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c))
-			return exitConvertCannotRun
-		}
-	}
-	for _, s := range convertFailOn {
-		switch strings.ReplaceAll(s, "_", "-") {
-		case "approximated", "dropped", "needs-action", "unsupported":
-		default:
-			fmtError(fmt.Errorf("unknown --fail-on status %q", s))
-			return exitConvertCannotRun
-		}
-	}
 
-	report, err := importer.Convert(ctx, importer.ConvertOptions{
-		Source: convertSource, Into: convertInto, From: convertFrom, Domain: convertDomain,
-		Write: write, Force: convertForce, SplitHeadings: convertSplitHeadings, BestEffort: convertBestEffort,
-		AllowFindings: convertAllowFindings, EnableHooks: convertEnableHooks, EnablePermissions: convertEnablePerms,
-	})
+	report, err := importer.Convert(ctx, convertOptions(write))
 	if report != nil {
 		if werr := printConvertReport(out, report); werr != nil {
 			fmtError(werr)
@@ -171,13 +202,43 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	if report.Security.Blocked || report.Validation.Errors > 0 {
 		return exitConvertBlocked
 	}
+	if write && convertLock {
+		if code := lockConverted(); code != 0 {
+			return exitConvertCannotRun
+		}
+	}
 	if len(convertFailOn) > 0 && report.Matches(normalizeStatuses(convertFailOn)) {
 		return exitConvertBlocked
 	}
-	if !write && convertFormat == formatText {
-		fmt.Fprintln(out, "\nDry run: nothing was written. Rerun with --write to create the files.")
+	if convertFormat == formatText {
+		switch {
+		case !write:
+			fmt.Fprintln(out, "\nDry run: nothing was written. Rerun with --write to create the files.")
+		case report.NeedsLock() && !convertLock:
+			fmt.Fprintln(out, "\nNext: run `ai-rulez lock` to pin the imported remote skills (or rerun with --lock).")
+		}
 	}
 	return 0
+}
+
+// lockConverted runs `ai-rulez lock` on the config convert wrote. The lock prints
+// to stdout; with --format json that would corrupt the report, so it goes to stderr.
+func lockConverted() int {
+	abs, err := filepath.Abs(convertSource)
+	if err != nil {
+		fmtError(err)
+		return exitConvertCannotRun
+	}
+	into := convertInto
+	if !filepath.IsAbs(into) {
+		into = filepath.Join(abs, into)
+	}
+	if convertFormat == formatJSON {
+		saved := os.Stdout
+		os.Stdout = os.Stderr
+		defer func() { os.Stdout = saved }()
+	}
+	return writeLockAt(filepath.Join(into, "config.toml"), "", nil)
 }
 
 func normalizeStatuses(in []string) []string {

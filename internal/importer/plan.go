@@ -3,6 +3,7 @@ package importer
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io/fs"
 	"path"
 	"sort"
@@ -180,6 +181,10 @@ type Plan struct {
 
 	// presetDefaulted is set when no preset was inferred and claude was chosen.
 	presetDefaulted bool
+	// keepNames makes Finalize report a name collision instead of renaming; the
+	// collisions found are listed in collisions.
+	keepNames  bool
+	collisions []string
 }
 
 func (p *Plan) add(f Finding) { p.Findings = append(p.Findings, f) }
@@ -198,6 +203,9 @@ type Options struct {
 	BestEffort bool
 	// SkipSkills names skills another importer owns (installed from a lock).
 	SkipSkills map[string]bool
+	// KeepNames reports a name collision between imported items instead of
+	// renaming one of them.
+	KeepNames bool
 }
 
 // Format reads one foreign format. Plan must not write, run commands or use
@@ -267,6 +275,7 @@ func (p *Plan) Finalize() {
 	var out []Item
 	byContent := map[string]int{}
 	used := map[string]bool{}
+	firstSource := map[string]string{}
 	for _, it := range p.Items {
 		contentKey := it.root() + string(it.Kind) + "\x00" + it.hash
 		if it.Kind != KindContext {
@@ -283,6 +292,10 @@ func (p *Plan) Finalize() {
 			if len(it.Sources) > 0 {
 				src = it.Sources[0]
 			}
+			if p.keepNames {
+				p.collisions = append(p.collisions, fmt.Sprintf("%s %q from %s collides with %s", it.Kind, orig, src, firstSource[key]))
+				continue
+			}
 			it.Name = orig + "-" + shortHash(src)
 			if it.Kind == KindSkill {
 				it.Main = []byte(setFrontmatterName(string(it.Main), it.Name))
@@ -292,6 +305,9 @@ func (p *Plan) Finalize() {
 			key = it.root() + string(it.Kind) + "\x00" + it.Name
 		}
 		used[key] = true
+		if len(it.Sources) > 0 {
+			firstSource[key] = it.Sources[0]
+		}
 		byContent[contentKey] = len(out)
 		out = append(out, it)
 	}

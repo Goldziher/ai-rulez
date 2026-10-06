@@ -22,6 +22,7 @@ func resetConvertFlags(t *testing.T, source string) {
 	convertReport, convertFormat, convertFailOn = "", "text", nil
 	convertBestEffort, convertSplitHeadings, convertList = false, false, false
 	convertEnableHooks, convertEnablePerms = false, false
+	convertMerge, convertKeepNames, convertLock, convertDelivery = false, false, false, ""
 	t.Cleanup(func() { resetConvertFlags2() })
 }
 
@@ -29,6 +30,7 @@ func resetConvertFlags2() {
 	convertFrom, convertSource, convertInto, convertDomain = []string{"auto"}, ".", ".ai-rulez", ""
 	convertDryRun, convertWrite, convertForce, convertReport, convertFormat, convertFailOn = false, false, false, "", "text", nil
 	convertEnableHooks, convertEnablePerms = false, false
+	convertMerge, convertKeepNames, convertLock, convertDelivery = false, false, false, ""
 }
 
 func convertProject(t *testing.T) string {
@@ -193,6 +195,77 @@ func TestRunConvert_EnableFlagsDecideWhetherHooksAreLive(t *testing.T) {
 			assert.Equal(t, tt.wantAllow, allow)
 		})
 	}
+}
+
+func TestCheckConvertFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func()
+		wantErr string
+	}{
+		{name: "merge and force", setup: func() { convertWrite, convertMerge, convertForce = true, true, true }, wantErr: "--merge and --force"},
+		{name: "lock needs write", setup: func() { convertDryRun, convertLock = true, true }, wantErr: "--lock pins what was written"},
+		{name: "merge alone", setup: func() { convertWrite, convertMerge = true, true }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetConvertFlags(t, t.TempDir())
+			tt.setup()
+
+			err := checkConvertFlags(false)
+
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestRunConvert_MergeKeepsExistingAndDeliverySetsTheDefault(t *testing.T) {
+	// Arrange
+	dir := convertProject(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".claude", "skills", "lint"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".claude", "skills", "lint", "SKILL.md"), []byte("---\nname: lint\ndescription: Lint\n---\nRun lint.\n"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez", "context"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "context", "claude.md"), []byte("Mine.\n"), 0o644))
+	resetConvertFlags(t, dir)
+	convertWrite, convertMerge, convertDelivery = true, true, "served"
+
+	// Act
+	code := runConvert(context.Background(), &bytes.Buffer{}, false)
+
+	// Assert
+	require.Equal(t, 0, code)
+	kept, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "context", "claude.md"))
+	require.NoError(t, err)
+	assert.Equal(t, "Mine.\n", string(kept))
+	_, err = os.Stat(filepath.Join(dir, ".ai-rulez", "context", "claude-imported.md"))
+	assert.NoError(t, err)
+	cfg, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(cfg), "delivery = 'served'")
+}
+
+func TestRunConvert_LockPinsTheConvertedTree(t *testing.T) {
+	// Arrange
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, "cache"))
+	dir := convertProject(t)
+	resetConvertFlags(t, dir)
+	convertWrite, convertLock = true, true
+
+	// Act
+	code := runConvert(context.Background(), &bytes.Buffer{}, false)
+
+	// Assert
+	require.Equal(t, 0, code)
+	_, err := os.Stat(filepath.Join(dir, ".ai-rulez", "ai-rulez.lock"))
+	assert.NoError(t, err, "--lock writes the lock next to the converted config")
 }
 
 func TestPrintConvertReport_ReportsAFailureToWriteTheFile(t *testing.T) {
