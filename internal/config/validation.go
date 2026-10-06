@@ -623,6 +623,9 @@ func (c *Config) defaultFromOverlay() bool {
 
 // validateInstalledSkills validates the installed_skills section
 func (c *Config) validateInstalledSkills() error {
+	if err := c.validateVersionKeys(); err != nil {
+		return err
+	}
 	return ValidateInstalledSkills(c.InstalledSkills)
 }
 
