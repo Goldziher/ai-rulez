@@ -70,9 +70,11 @@ func findBlock(lines []string, table, name string) (span, error) {
 			found = append(found, span{start, end})
 		}
 	}
+	depth := 0 // unclosed `[` of a multi-line array value: its lines are never headers
 	for i, l := range lines {
 		trimmed := strings.TrimRight(l, "\r\n")
-		if !headerRe.MatchString(trimmed) {
+		if depth > 0 || !headerRe.MatchString(trimmed) {
+			depth = max(0, depth+bracketDelta(trimmed))
 			continue
 		}
 		closeBlock(i)
@@ -90,6 +92,33 @@ func findBlock(lines []string, table, name string) (span, error) {
 		return found[0], nil
 	}
 	return span{}, oops.Errorf("%d [[%s]] entries are named %q in config.toml; edit it by hand", len(found), table, name)
+}
+
+// bracketDelta is the net count of `[` opened on a line outside strings and
+// comments: a `key = [` line opens an array value, its `]` line closes it.
+func bracketDelta(line string) int {
+	delta := 0
+	var quote byte
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		switch {
+		case quote != 0:
+			if c == '\\' && quote == '"' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+		case c == '"' || c == '\'':
+			quote = c
+		case c == '#':
+			return delta
+		case c == '[':
+			delta++
+		case c == ']':
+			delta--
+		}
+	}
+	return delta
 }
 
 func blockName(block []string) string {

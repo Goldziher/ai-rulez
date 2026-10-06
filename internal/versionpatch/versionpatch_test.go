@@ -61,6 +61,11 @@ func TestSetConstraint(t *testing.T) {
 			name: "CRLF line endings survive", src: "[[includes]]\r\nname = \"a\"\r\nsource = \"x\"\r\nversion = \"^1\"\r\n", table: "includes", entry: "a", constraint: "^2",
 			want: "version = \"^2\"\r\n",
 		},
+		{
+			name:  "a nested array element line is not a table header",
+			src:   "[[includes]]\nname = \"a\"\nsource = \"x\"\npaths = [\n  [\"x\"],\n  [\"y\"]\n]\nversion = \"^1\"\n",
+			table: "includes", entry: "a", constraint: "^2", want: `version = "^2"`,
+		},
 		{name: "missing entry", src: base, table: "includes", entry: "nope", constraint: "^2", wantErr: `no [[includes]] entry named "nope"`},
 		{
 			name: "duplicate names are ambiguous", src: "[[includes]]\nname = \"a\"\nversion = \"^1\"\n[[includes]]\nname = \"a\"\nversion = \"^1\"\n",
