@@ -86,7 +86,7 @@ Includes can be:
 !!! warning "Local paths must stay inside the project"
     A local path (or `local_override`) in the project's committed config must resolve inside the project, after
     symlinks are resolved: a repository could otherwise name `../victim` or `~/.config` and have that content
-    written into its generated outputs. A path outside the project fails with an error naming it. Set it in the
+    written into its generated outputs. A path outside the project stops loading with an error naming it (it is not skipped with a warning). Set it in the
     machine-local overlay (`config.local.toml`), declare the include in your user config (`generate --user`), or use a
     git include instead. The examples below that use `../` or an absolute path need one of these.
 

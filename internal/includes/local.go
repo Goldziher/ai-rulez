@@ -192,7 +192,7 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
 		return oops.With("name", name).With("path", abs).With("project", project).
 			Hint("Put the path in config.local.toml (machine-local, not committed), declare the include in your user config, or copy the content into the project").
-			Errorf("include %q: local path %s is outside the project %s; a local include in the project config must stay inside the project", name, abs, project)
+			Wrapf(config.ErrIncludeOutsideProject, "include %q: local path %s is outside the project %s; a local include in the project config must stay inside the project", name, abs, project)
 	}
 	return nil
 }

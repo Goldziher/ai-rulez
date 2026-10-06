@@ -64,6 +64,9 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 		if err := r.processInclude(ctx, &mergedContent, &cfg.Includes[i]); err != nil {
 			if errors.Is(err, config.ErrLockViolation) {
 				violations = append(violations, err)
+			} else if errors.Is(err, config.ErrIncludeOutsideProject) {
+				// A path the committed config must not name is an error, not a skipped include.
+				return nil, oops.Wrapf(err, "include %q", cfg.Includes[i].Name)
 			} else {
 				// ErrLockViolation also makes the config loader propagate it
 				// instead of continuing with local content only.
