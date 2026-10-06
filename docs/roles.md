@@ -179,7 +179,10 @@ approximated: a role that must restrict skills on another harness does it with `
 
 With `[role_manifest] enabled = true`, `generate` writes `<config dir>/roles.json`. `roles list --format json`
 prints the same document. It is deterministic (no timestamps; roles sorted by name, items by kind, domain and id),
-so it is safe to commit, and it is versioned by `schema_version`. The JSON schema is
+so it is safe to commit, and it is versioned by `schema_version`. It is built from the shared sources only: roles
+declared in `config.local.toml` and items under `local/` never appear in it, so the committed file is the same on every
+machine and `generate --check` does not report it as drifted. Local roles still work with `generate --role` and
+`roles list`. The JSON schema is
 [`schema/roles-manifest.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-manifest.schema.json).
 
 ```json
