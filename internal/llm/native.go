@@ -126,9 +126,14 @@ func classifyNative(err error) error {
 		e.Kind = KindTimeout
 	case "ServerError", "ServiceUnavailable":
 		e.permanent = !ne.NativeTransient() && e.Status == 0
+	case "Network", "InternalError":
+		// liter-llm reports a transport failure as Network, and as InternalError once the
+		// error has been cloned across the binding; openaicompat retries the same failure.
+		e.permanent = false
 	default:
-		// BadRequest, NotFound, ContentPolicy, Serialization, ...: a retry cannot fix them.
-		e.permanent = true
+		// BadRequest, NotFound, ContentPolicy, Serialization, ...: a retry cannot fix them,
+		// unless liter-llm itself marks the variant transient.
+		e.permanent = !ne.NativeTransient()
 	}
 	return e
 }
