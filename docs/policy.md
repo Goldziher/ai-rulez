@@ -149,7 +149,15 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 - `validate` and `validate --strict`: the clamp is applied at load. `--strict` reports each attempt as an `AR74x`
   finding; plain `validate` fails with the same lines. The severity floor and required codes are enforced inside the
   lint run, so a floored finding cannot be demoted by a lint profile.
-- `generate` refuses to run on a configuration that loosens the policy.
+- `generate` refuses to run on a configuration that loosens the policy, and so does each root of `generate
+  --recursive` and `validate --recursive`; a root that fails is reported and the exit code is 1.
+- The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
+  `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
+- No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
+  AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, baseline entries and
+  `[lint.tolerate]` budgets are not applied. The finding stays at its enforced severity and counts toward the exit
+  code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `ai-rulez-lint-ignore comment`,
+  `baseline`, `[lint.tolerate]`) and the codes it tried to hide.
 - Remote sources a policy refuses are dropped before anything is fetched.
 
 ## Design decisions
@@ -168,7 +176,6 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   reported only when the repository wrote a `[guard]` table without `generated = true`.
 - **Provenance** names the strongest layer that decides a key (a tie goes to the stronger anchor), and every
   contributing layer for a set.
-- **Known gaps.** Inline `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, baselines and `[lint.tolerate]` can
-  still hide a finding; `no_inline_ignore` and budget ceilings are later phases. A policy value is not checked
-  against the secret scanner yet.
+- **Known gaps.** `no_inline_ignore` and budget ceilings for unprotected codes are later phases. A policy value is not
+  checked against the secret scanner yet.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).
