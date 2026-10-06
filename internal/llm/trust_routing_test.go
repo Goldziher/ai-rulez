@@ -1,6 +1,8 @@
 package llm
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -129,6 +131,87 @@ func TestBudgetChargesAmbiguousFailuresConservatively(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := unbilled(tt.err); got != tt.free {
 				t.Fatalf("unbilled=%v, want %v", got, tt.free)
+			}
+		})
+	}
+}
+
+// A request model chosen by the repository (verifier llm.model, [search.embeddings] model)
+// must not reroute the user's key to another provider: the literllm backend routes on the
+// provider/ prefix of the model it is given.
+func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
+	tests := []struct {
+		name      string
+		reqModel  string
+		wantModel string
+		wantErr   bool
+	}{
+		{"no override uses the configured model", "", "openai/gpt-4o-mini", false},
+		{"same provider prefix", "openai/gpt-4o", "openai/gpt-4o", false},
+		{"bare model is pinned to the configured provider", "gpt-4o", "openai/gpt-4o", false},
+		{"other provider prefix is refused", "evil/gpt-4o", "", true},
+		{"nested prefix on another provider is refused", "evil/openai/gpt-4o", "", true},
+	}
+	for _, tt := range tests {
+		for _, kind := range []string{"chat", "embed"} {
+			t.Run(kind+" "+tt.name, func(t *testing.T) {
+				// Arrange
+				var sent string
+				record := func(b []byte) ([]byte, error) {
+					var w struct {
+						Model string `json:"model"`
+					}
+					if err := json.Unmarshal(b, &w); err != nil {
+						return nil, err
+					}
+					sent = w.Model
+					if kind == "chat" {
+						return []byte(`{"model":"x","choices":[{"message":{"content":"ok"}}],"usage":{}}`), nil
+					}
+					return []byte(`{"data":[{"index":0,"embedding":[1]}],"usage":{}}`), nil
+				}
+				l := &literLLM{native: &stubNative{chat: record, embed: record}, provider: "openai", model: "openai/gpt-4o-mini", embedModel: "openai/gpt-4o-mini"}
+
+				// Act
+				var err error
+				if kind == "chat" {
+					_, err = l.Chat(context.Background(), ChatRequest{Model: tt.reqModel, Messages: []Message{{Role: RoleUser, Content: "hi"}}})
+				} else {
+					_, err = l.Embed(context.Background(), EmbedRequest{Model: tt.reqModel, Input: []string{"a"}})
+				}
+
+				// Assert
+				if tt.wantErr {
+					var e *Error
+					if !errors.As(err, &e) || e.Kind != KindConfig || sent != "" {
+						t.Fatalf("want a config refusal with nothing sent, got err=%v sent=%q", err, sent)
+					}
+					return
+				}
+				if err != nil || sent != tt.wantModel {
+					t.Fatalf("err=%v sent=%q, want %q", err, sent, tt.wantModel)
+				}
+			})
+		}
+	}
+}
+
+func TestResolveShouldFlagRepoEmbeddingModelRoute(t *testing.T) {
+	tests := []struct {
+		name       string
+		repo, user *Config
+		want       bool
+	}{
+		{"repo prefix, user provider differs", &Config{EmbeddingModel: "evil/e"}, &Config{Provider: "openai"}, true},
+		{"repo prefix equals user provider", &Config{EmbeddingModel: "openai/e"}, &Config{Provider: "openai"}, false},
+		{"user sets the embedding model", &Config{EmbeddingModel: "evil/e"}, &Config{Provider: "openai", EmbeddingModel: "e"}, false},
+		{"bare repo model", &Config{EmbeddingModel: "e"}, &Config{Provider: "openai"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, _ := Resolve(tt.repo, tt.user)
+			if got := strings.Contains(strings.Join(cfg.RoutingFromRepo(), ","), "embedding_model"); got != tt.want {
+				t.Errorf("RoutingFromRepo = %v, want embedding_model=%v", cfg.RoutingFromRepo(), tt.want)
 			}
 		})
 	}
