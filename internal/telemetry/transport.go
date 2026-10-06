@@ -116,7 +116,7 @@ type grpcState struct {
 // GRPCTarget turns an endpoint URL into the host:port a gRPC client dials and
 // reports whether TLS applies (https). A missing port is the OTLP/gRPC default.
 func GRPCTarget(endpoint string) (target string, useTLS bool, err error) {
-	parsed, perr := url.Parse(strings.TrimRight(endpoint, "/"))
+	parsed, perr := url.Parse(strings.TrimRight(config.NormalizeTelemetryEndpoint(endpoint, config.TelemetryProtocolGRPC), "/"))
 	if perr != nil || parsed.Host == "" {
 		return "", false, oops.Errorf("invalid gRPC endpoint")
 	}

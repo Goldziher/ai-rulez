@@ -73,6 +73,7 @@ func runTelemetryEnable(out io.Writer) error {
 	includeSession := telEnableSession || fromConfig("include_session", settings.IncludeSession)
 	includePaths := telEnablePaths || fromConfig("include_paths", settings.IncludePaths)
 
+	endpoint = config.NormalizeTelemetryEndpoint(endpoint, protocol)
 	candidate := config.TelemetryConfig{OTLPEndpoint: endpoint, OTLPProtocol: protocol}
 	if problems := candidate.Validate(); len(problems) > 0 {
 		return oops.Hint("See docs/telemetry.md for the accepted endpoint and protocol forms.").Errorf("%s", strings.Join(problems, "; "))
