@@ -25,23 +25,28 @@ type Source interface {
 	GetName() string
 }
 
-// DetectSourceType determines if source is a git URL or local path
+// gitURLSchemes are the URL schemes git can fetch from. Anything else with a
+// scheme-like prefix is a local path.
+var gitURLSchemes = []string{"http://", "https://", "file://", "ssh://", "git://", "git+ssh://", "git+https://", "git+http://"}
+
+// DetectSourceType determines if source is a git URL or local path.
+//
+// Git sources are URLs with a git-capable scheme (http, https, file, ssh, git
+// and the git+ forms) and scp-like addresses, "[user@]host:path" with an "@"
+// before the first ":" and no "/" before it ("git@github.com:org/repo.git").
+// Everything else, including Windows drive paths (C:\x, C:/x), is local.
 func DetectSourceType(source string) SourceType {
-	// Git URLs start with http://, https://, or file://
-	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "file://") {
-		return SourceTypeGit
-	}
-	// SSH Git URLs (e.g., git@github.com:user/repo.git or user@host:path/repo.git)
-	// Pattern: contains @ followed by : (but not :// which would be http/https)
-	if strings.Contains(source, "@") && strings.Contains(source, ":") {
-		atIndex := strings.Index(source, "@")
-		colonIndex := strings.Index(source, ":")
-		// Check that @ comes before : and : is not part of ://
-		if atIndex < colonIndex && !strings.HasPrefix(source[colonIndex:], "://") {
+	lower := strings.ToLower(source)
+	for _, scheme := range gitURLSchemes {
+		if strings.HasPrefix(lower, scheme) {
 			return SourceTypeGit
 		}
 	}
-	// Everything else is treated as a local path
+	colon := strings.Index(source, ":")
+	at := strings.Index(source, "@")
+	if colon > 0 && at > 0 && at < colon && !strings.ContainsAny(source[:colon], `/\`) {
+		return SourceTypeGit
+	}
 	return SourceTypeLocal
 }
 
