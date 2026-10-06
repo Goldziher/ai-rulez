@@ -24,8 +24,11 @@ const maxVerifierFileBytes = 1 << 20
 // command predicate unless the include is named in [verifiers_settings]
 // trust_exec_from.
 type ImportedVerifierFile struct {
-	// Include is the name of the include the file came from.
+	// Include is the name of the include (or installed skill) the file came from.
 	Include string
+	// Skill is true when it came from an installed skill's verifiers/ directory.
+	// A skill's verifiers never use the command predicate, trusted or not.
+	Skill bool
 	// Name is the file name under the include's verifiers/ directory.
 	Name string
 	// Data is the file content.

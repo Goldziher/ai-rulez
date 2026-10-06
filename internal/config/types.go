@@ -755,6 +755,10 @@ type ContentFile struct {
 	// loaded alongside SKILL.md. Always empty for non-skill content.
 	Resources []SkillResource `yaml:"-" json:"-"`
 
+	// Verifiers holds the verifier declaration files an installed skill ships in
+	// its verifiers/ directory. They are data: see ImportedVerifierFile.
+	Verifiers []ImportedVerifierFile `yaml:"-" json:"-"`
+
 	// MalformedFrontmatter is true when the source file contained a delimited
 	// YAML frontmatter block (---...---) but its content was unparseable.
 	// It is set during loading and used by Config.Validate to fail fast.
