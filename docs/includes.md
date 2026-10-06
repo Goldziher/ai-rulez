@@ -330,7 +330,7 @@ generate:
 - **`ref`**: (Git only) Branch, tag, or commit SHA. Defaults to the remote's default branch (`HEAD`), not necessarily `main`.
 - **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`, `commands`. MCP servers are not importable from an include.
 - **`install_to`**: (Optional) Import the included content into a specific domain instead of the root.
-- **`local_override`**: (Optional) A local path used **instead of** `source` (for example a checkout you are developing). It is resolved against the project directory, and `path` is appended to it. If the directory does not exist, the include is skipped silently (an info line is logged); the remote source is not used as a fallback.
+- **`local_override`**: (Optional) A local path used **instead of** `source` (for example a checkout you are developing). It is resolved against the project directory, and `path` is appended to it. If the directory does not exist, the include is skipped silently (an info line is logged); the remote source is not used as a fallback. `local_override` bypasses the lock, so it is honoured only when set in the machine-local overlay (`config.local.toml`) or when no lock is enforced: `generate --locked`, `--frozen` and an enforced lock fail on a `local_override` in the committed config.
 - **`merge_strategy`**: How to handle conflicts:
   - `local-override`: local content takes precedence (default)
   - `include-override`: the included content takes precedence
@@ -346,9 +346,12 @@ warning. Under `generate --locked`, `generate --frozen` or an enforced lock (`[l
 `ai-rulez.lock` exists), it is an error instead: generating without the include would produce output the lock never
 saw.
 
-Symlinked content files are never read: a rule, skill, agent, command, context or check file that is a symlink is
-skipped with a warning naming it, so an include cannot point at an arbitrary local file. Replace the link with the
-file. Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path`;
+Included content never follows symlinks: a symlinked file or directory (a rule, skill, agent, command, context or
+check file, `rules/`, `skills/` and so on, domains, or the include's `.ai-rulez/` itself) is skipped with a warning
+naming it, so an include cannot point at an arbitrary local file. Replace the link with the real file or directory.
+An installed skill's `SKILL.md` and any symlinked path inside its clone are refused the same way. (Your own project's
+`.ai-rulez/` may use symlinks that stay inside the project; see [Configuration](configuration.md#symlinks-in-content).)
+Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path`;
 anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash of the
 URL>` with mode `0700`.
 
