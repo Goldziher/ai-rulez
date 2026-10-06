@@ -104,8 +104,8 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	progress.SetQuiet(true)
 	defer progress.SetQuiet(false)
 
-	if convertFormat != formatText && convertFormat != formatJSON {
-		fmtError(fmt.Errorf("unknown --format %q (use text or json)", convertFormat))
+	if err := checkFormatFlag(convertFormat); err != nil {
+		fmtError(err)
 		return exitConvertCannotRun
 	}
 	if convertList {

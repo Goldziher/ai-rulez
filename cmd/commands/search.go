@@ -130,8 +130,8 @@ func runSearch(cmd *cobra.Command, out, errOut io.Writer, args []string) int {
 }
 
 func checkSearchFlags(cmd *cobra.Command, args []string) error {
-	if f := searchFlags.format; f != formatText && f != formatJSON {
-		return oops.Errorf("unknown --format %q (use text or json)", f)
+	if err := checkFormatFlag(searchFlags.format); err != nil {
+		return err
 	}
 	if searchFlags.limit < 1 || searchFlags.limit > searchMaxLimit {
 		return oops.Errorf("--limit must be between 1 and %d", searchMaxLimit)
