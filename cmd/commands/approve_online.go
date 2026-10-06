@@ -154,6 +154,7 @@ func (e *approveEnv) checkOne(ctx context.Context, r *approvalCheckResult, a loc
 type onlineCheck struct {
 	repo forge.Repo
 	git  *approveGit
+	env  *approveEnv
 }
 
 func (e *approveEnv) newOnlineCheck(ctx context.Context) (*onlineCheck, error) {
@@ -165,12 +166,12 @@ func (e *approveEnv) newOnlineCheck(ctx context.Context) (*onlineCheck, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &onlineCheck{repo: repo, git: g}, nil
+	return &onlineCheck{repo: repo, git: g, env: e}, nil
 }
 
 func (o *onlineCheck) verify(ctx context.Context, a lockfile.Approval, s approval.Subject) error {
 	return approval.VerifyReviewRecord(ctx, approveForge(), a.Reviewer, a.Ref,
-		approval.ReviewQuery{Repo: o.repo, Digest: s.Digest, PinnedAt: o.git.pinnedAt(s)})
+		approval.ReviewQuery{Repo: o.repo, Digest: s.Digest, PinnedAt: o.git.pinnedAt(s), Named: o.env.namedFor(s)})
 }
 
 // forgeUnavailable reports a failure to reach or use the forge, as opposed to a

@@ -23,7 +23,7 @@ var (
 const approvedDigest = "sha256:aaaa"
 
 func review(id int64, login, state, commit string, minutes int) forge.Review {
-	return forge.Review{ID: id, Login: login, State: state, CommitID: commit, Submitted: baseTime.Add(time.Duration(minutes) * time.Minute)}
+	return forge.Review{ID: id, Login: login, State: state, CommitID: commit, Submitted: baseTime.Add(time.Duration(minutes) * time.Minute), AuthorAssociation: forge.AssociationCollaborator}
 }
 
 // fakeForge serves pull request 7 (authored by dave), whose final head is headSHA.

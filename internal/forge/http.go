@@ -593,10 +593,11 @@ func (c *HTTPClient) Reviews(ctx context.Context, repo Repo, pr int) ([]Review, 
 		State       string    `json:"state"`
 		CommitID    string    `json:"commit_id"`
 		SubmittedAt time.Time `json:"submitted_at"`
+		Association string    `json:"author_association"`
 	}](ctx, c, req)
 	out := make([]Review, 0, len(items))
 	for _, it := range items {
-		out = append(out, Review{ID: it.ID, Login: it.User.Login, State: strings.ToUpper(it.State), CommitID: it.CommitID, Submitted: it.SubmittedAt})
+		out = append(out, Review{ID: it.ID, Login: it.User.Login, State: strings.ToUpper(it.State), CommitID: it.CommitID, Submitted: it.SubmittedAt, AuthorAssociation: strings.ToUpper(it.Association)})
 	}
 	return out, err
 }
