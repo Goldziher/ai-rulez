@@ -1,6 +1,9 @@
 package improve
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
@@ -98,4 +101,62 @@ func TestCheckDiff_PreexistingFindingsDoNotBlock(t *testing.T) {
 
 	// Assert
 	assert.Empty(t, vs)
+}
+
+func TestViolationString_CannotCarryTerminalEscapes(t *testing.T) {
+	// Arrange
+	v := violation("outside-editable", "evil\x1b[2Jname.md", "wrote \x1b]0;pwned\x07 here")
+
+	// Act
+	text := v.String()
+
+	// Assert
+	assert.NotContains(t, text, "\x1b")
+	assert.NotContains(t, text, "\x07")
+	assert.Contains(t, text, "evil")
+}
+
+func TestReadTree_RefusesNamesWithControlCharacters(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file names cannot hold control characters on Windows")
+	}
+	// Arrange
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillBody), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "evil\x1b[2Jname.md"), []byte("x"), 0o600))
+
+	// Act
+	tree, err := ReadTree(dir)
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, tree.Odd, 1)
+	assert.Equal(t, "evil\x1b[2Jname.md", OddPath(tree.Odd[0]))
+	assert.NotContains(t, tree.Files, "evil\x1b[2Jname.md")
+	vs, _ := CheckDiff(&PolicyInput{Original: tree, Candidate: tree, Constraints: DefaultConstraints(50, false, false)})
+	require.NotEmpty(t, vs, "a candidate holding such a name breaks the policy")
+	for _, v := range vs {
+		assert.NotContains(t, v.String(), "\x1b")
+	}
+}
+
+func TestRefusal_CannotCarryTerminalEscapes(t *testing.T) {
+	// Act
+	err := refuse("", "%s contains symlinks (%s)", "deploy", "a\x1b[31mb")
+
+	// Assert
+	assert.NotContains(t, err.Error(), "\x1b")
+}
+
+func TestFormatReport_CannotCarryTerminalEscapes(t *testing.T) {
+	// Arrange
+	r := &Report{RunID: "imp-00000000", Skill: "dep\x1b[2Jloy", Status: StatusNoCandidate, Rounds: []RoundReport{{
+		Round: 1, Decision: "rejected: policy\x1b[1m", Violations: []Violation{violation("not-regular", "x\x1b[2Jy", "d\x1b[0m")},
+	}}}
+
+	// Act
+	text := FormatReport(r)
+
+	// Assert
+	assert.NotContains(t, text, "\x1b")
 }
