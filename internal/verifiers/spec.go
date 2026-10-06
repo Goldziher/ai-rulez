@@ -67,59 +67,15 @@ type Spec struct {
 	source string
 }
 
-// Require is one predicate or combinator; exactly one field is set.
-type Require struct {
-	Regex      *RegexPred      `toml:"regex,omitempty" json:"regex,omitempty"`
-	Forbid     *RegexPred      `toml:"forbid,omitempty" json:"forbid,omitempty"`
-	FileExists *FileExistsPred `toml:"file_exists,omitempty" json:"file_exists,omitempty"`
-	Paired     *PairedPred     `toml:"paired,omitempty" json:"paired,omitempty"`
-	GlobCount  *GlobCountPred  `toml:"glob_count,omitempty" json:"glob_count,omitempty"`
-	All        []Require       `toml:"all,omitempty" json:"all,omitempty"`
-	Any        []Require       `toml:"any,omitempty" json:"any,omitempty"`
-	Not        *Require        `toml:"not,omitempty" json:"not,omitempty"`
-}
-
-// RegexPred is the body of `regex` (must match) and `forbid` (must not match).
-type RegexPred struct {
-	// Regex is an RE2 expression.
-	Regex string `toml:"regex" json:"regex"`
-	// In is same-file (default), diff-added or any-file.
-	In string `toml:"in,omitempty" json:"in,omitempty"`
-	// Files selects the files of an any-file predicate; it defaults to the scope.
-	Files string `toml:"files,omitempty" json:"files,omitempty"`
-}
-
-// FileExistsPred holds when Path exists (or, with Exists = false, does not).
-type FileExistsPred struct {
-	Path   string `toml:"path" json:"path"`
-	Exists *bool  `toml:"exists,omitempty" json:"exists,omitempty"`
-}
-
-// PairedPred requires, for every scoped file matching ForEach, that the path
-// derived by the template was changed (RequiresChanged) or exists (RequiresExists).
-type PairedPred struct {
-	ForEach         string `toml:"for_each" json:"for_each"`
-	RequiresChanged string `toml:"requires_changed,omitempty" json:"requires_changed,omitempty"`
-	RequiresExists  string `toml:"requires_exists,omitempty" json:"requires_exists,omitempty"`
-}
-
-// GlobCountPred bounds how many files in the repository match Files.
-type GlobCountPred struct {
-	Files   string   `toml:"files" json:"files"`
-	Exclude []string `toml:"exclude,omitempty" json:"exclude,omitempty"`
-	Min     *int     `toml:"min,omitempty" json:"min,omitempty"`
-	Max     *int     `toml:"max,omitempty" json:"max,omitempty"`
-}
-
-// Example is one offline self-test of a verifier (`verifiers test`): a
-// synthetic file set, the files that count as changed (and entirely added),
-// and the expected outcome (pass, fail or not_applicable).
-type Example struct {
-	Name    string            `toml:"name" json:"name"`
-	Files   map[string]string `toml:"files,omitempty" json:"files,omitempty"`
-	Changed []string          `toml:"changed,omitempty" json:"changed,omitempty"`
-	Expect  string            `toml:"expect" json:"expect"`
-}
+// The predicate types live in vspec so config.toml can declare them inline.
+type (
+	Require        = vspec.Require
+	RegexPred      = vspec.RegexPred
+	FileExistsPred = vspec.FileExistsPred
+	PairedPred     = vspec.PairedPred
+	GlobCountPred  = vspec.GlobCountPred
+	Example        = vspec.Example
+)
 
 // Problem is a declaration that cannot be used: reported as AR9H2 and never
 // silently dropped.
@@ -153,24 +109,56 @@ func (s *Spec) TargetKind() (kind, id string) {
 // Source returns the declaration file relative to the project root.
 func (s *Spec) Source() string { return s.source }
 
-// LoadSpecs reads `<config dir>/verifiers/*.toml`, validates every declaration
-// against cfg and returns the usable specs (sorted by file, then declaration
-// order) and the problems. A symlink, a non-regular file, an oversized file,
+// inlineSource is the declaration file reported for a spec declared in config.toml.
+const inlineSource = "config.toml"
+
+// specFromConfig converts a spec-form [[verifiers]] entry; its name is the id.
+func specFromConfig(v *config.VerifierConfig) Spec {
+	return Spec{
+		ID: v.Name, Description: v.Description, Rule: v.Rule, Skill: v.Skill, Agent: v.Agent, Command: v.Command,
+		Anchor: v.Anchor, Severity: v.Severity, Message: v.Message, Fix: v.Fix, WhenChanged: v.WhenChanged,
+		Exclude: v.Exclude, Require: v.Require, Examples: v.Examples, source: inlineSource,
+	}
+}
+
+// LoadSpecs returns the usable specs and the problems of the spec-form
+// [[verifiers]] of config.toml (declaration order) and of
+// `<config dir>/verifiers/*.toml` (sorted by file, then declaration order),
+// each validated against cfg. A symlink, a non-regular file, an oversized file,
 // an unknown key and a duplicate id are problems, never silently skipped.
 func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
+	seen := map[string]string{}
+	for i := range cfg.Verifiers {
+		if v := &cfg.Verifiers[i]; !v.IsSpec() {
+			seen[v.Name] = inlineSource
+		}
+	}
+	for i := range cfg.Verifiers {
+		v := &cfg.Verifiers[i]
+		if !v.IsSpec() {
+			continue
+		}
+		sp := specFromConfig(v)
+		if msg := validateSpec(cfg, &sp); msg != "" {
+			problems = append(problems, Problem{ID: sp.ID, File: inlineSource, Message: msg})
+			continue
+		}
+		if prev, dup := seen[sp.ID]; dup {
+			problems = append(problems, Problem{ID: sp.ID, File: inlineSource, Message: "duplicate verifier id (already declared in " + prev + ")"})
+			continue
+		}
+		seen[sp.ID] = inlineSource
+		specs = append(specs, sp)
+	}
 	dir := filepath.Join(cfg.ConfigDir, VerifiersDirName)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if !isMissing(err) {
 			problems = append(problems, Problem{File: relTo(cfg.BaseDir, dir), Message: "cannot read directory: " + err.Error()})
 		}
-		return nil, problems
+		return specs, problems
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
-	seen := map[string]string{}
-	for _, v := range cfg.Verifiers {
-		seen[v.Name] = "config.toml"
-	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".toml") {
 			continue

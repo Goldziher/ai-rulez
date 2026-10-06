@@ -19,7 +19,7 @@ func Explain(w io.Writer, cfg *config.Config, name string) error {
 		}
 	}
 	for i := range cfg.Verifiers {
-		if cfg.Verifiers[i].Name == name {
+		if !cfg.Verifiers[i].IsSpec() && cfg.Verifiers[i].Name == name {
 			return explainLegacy(w, &cfg.Verifiers[i])
 		}
 	}
@@ -151,6 +151,9 @@ type ListRow struct {
 func List(cfg *config.Config) []ListRow {
 	rows := []ListRow{}
 	for _, v := range cfg.Verifiers {
+		if v.IsSpec() {
+			continue
+		}
 		sev := v.Severity
 		if sev == "" {
 			sev = severityError

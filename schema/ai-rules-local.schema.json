@@ -42,6 +42,134 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "verifierExample": {
+      "additionalProperties": false,
+      "properties": {
+        "changed": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expect": {
+          "enum": ["pass", "fail", "not_applicable"]
+        },
+        "files": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "verifierRegex": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "description": "Glob selecting the files of an any-file predicate.",
+          "type": "string"
+        },
+        "in": {
+          "default": "same-file",
+          "enum": ["same-file", "diff-added", "any-file"]
+        },
+        "regex": {
+          "description": "An RE2 expression.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "verifierRequire": {
+      "additionalProperties": false,
+      "description": "Exactly one predicate or combinator.",
+      "maxProperties": 1,
+      "minProperties": 1,
+      "properties": {
+        "all": {
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "any": {
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "file_exists": {
+          "additionalProperties": false,
+          "properties": {
+            "exists": {
+              "default": true,
+              "type": "boolean"
+            },
+            "path": {
+              "description": "May use {path}, {dir}, {stem}, {ext}, {rel} of each scoped file.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "forbid": {
+          "$ref": "#/$defs/verifierRegex"
+        },
+        "glob_count": {
+          "additionalProperties": false,
+          "properties": {
+            "exclude": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "files": {
+              "type": "string"
+            },
+            "max": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "min": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "not": {
+          "$ref": "#/$defs/verifierRequire"
+        },
+        "paired": {
+          "additionalProperties": false,
+          "oneOf": [{}, {}],
+          "properties": {
+            "for_each": {
+              "description": "A literal path with {rel}, or a glob.",
+              "type": "string"
+            },
+            "requires_changed": {
+              "type": "string"
+            },
+            "requires_exists": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "regex": {
+          "$ref": "#/$defs/verifierRegex"
+        }
+      },
+      "type": "object"
     }
   },
   "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-local.schema.json",
@@ -2534,7 +2662,25 @@
       "description": "Deterministic repo checks run by `ai-rulez verifiers run`.",
       "items": {
         "additionalProperties": false,
+        "oneOf": [
+          {},
+          {
+            "oneOf": [{}, {}, {}, {}]
+          }
+        ],
         "properties": {
+          "agent": {
+            "description": "Spec form: the agent this verifier enforces.",
+            "type": "string"
+          },
+          "anchor": {
+            "description": "Spec form: a heading line of the enforced file; findings point at it.",
+            "type": "string"
+          },
+          "command": {
+            "description": "Spec form: the command this verifier enforces.",
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -2542,12 +2688,22 @@
             "description": "Expected scalar value, compared as text (key_equals).",
             "type": "string"
           },
+          "examples": {
+            "items": {
+              "$ref": "#/$defs/verifierExample"
+            },
+            "type": "array"
+          },
           "exclude": {
             "description": "Globs removed from the selection.",
             "items": {
               "type": "string"
             },
             "type": "array"
+          },
+          "fix": {
+            "description": "Spec form: how to fix a failure.",
+            "type": "string"
           },
           "glob": {
             "description": "Files to select (glob_count, regex, forbid).",
@@ -2561,6 +2717,10 @@
             "description": "Maximum match count (glob_count).",
             "minimum": 0,
             "type": "integer"
+          },
+          "message": {
+            "description": "Spec form: text shown with a failure.",
+            "type": "string"
           },
           "min": {
             "description": "Minimum match count (glob_count).",
@@ -2584,15 +2744,33 @@
             "description": "Generate profile to render (generated_in_sync).",
             "type": "string"
           },
+          "require": {
+            "$ref": "#/$defs/verifierRequire"
+          },
+          "rule": {
+            "description": "Spec form: the rule this verifier enforces (id or domain/id).",
+            "type": "string"
+          },
           "severity": {
             "description": "Defaults to error.",
             "enum": ["error", "warning", "info"],
             "type": "string"
           },
+          "skill": {
+            "description": "Spec form: the skill this verifier enforces.",
+            "type": "string"
+          },
           "type": {
-            "description": "Predicate type.",
+            "description": "Predicate type of the flat form. Omit it to declare a spec (rule, skill, agent or command plus require).",
             "enum": ["file_exists", "file_absent", "glob_count", "regex", "forbid", "key_equals", "generated_in_sync"],
             "type": "string"
+          },
+          "when_changed": {
+            "description": "Spec form: globs; the verifier checks the changed files that match.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "type": "object"

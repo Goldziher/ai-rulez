@@ -369,6 +369,10 @@ func TestVerifiersSection(t *testing.T) {
 	}{
 		{"valid", head + "[[verifiers]]\nname = \"a\"\ntype = \"glob_count\"\nglob = \"*.go\"\nmin = 1\nexclude = [\"vendor/**\"]\n", false},
 		{"missing type", head + "[[verifiers]]\nname = \"a\"\n", true},
+		{"spec form", head + "[[verifiers]]\nname = \"a\"\nrule = \"style\"\nfix = \"do it\"\nwhen_changed = [\"*.go\"]\n[verifiers.require.forbid]\nregex = \"TODO\"\n", false},
+		{"spec form without require", head + "[[verifiers]]\nname = \"a\"\nrule = \"style\"\n", true},
+		{"spec form with two targets", head + "[[verifiers]]\nname = \"a\"\nrule = \"style\"\nskill = \"s\"\n[verifiers.require.forbid]\nregex = \"x\"\n", true},
+		{"spec form with two predicates", head + "[[verifiers]]\nname = \"a\"\nrule = \"style\"\n[verifiers.require.forbid]\nregex = \"x\"\n[verifiers.require.regex]\nregex = \"y\"\n", true},
 		{"unknown type", head + "[[verifiers]]\nname = \"a\"\ntype = \"command\"\n", true},
 		{"unknown key", head + "[[verifiers]]\nname = \"a\"\ntype = \"file_exists\"\nbogus = 1\n", true},
 		{"bad severity", head + "[[verifiers]]\nname = \"a\"\ntype = \"file_exists\"\nseverity = \"loud\"\n", true},
