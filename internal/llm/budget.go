@@ -208,8 +208,18 @@ func (c *budgetClient) Embed(ctx context.Context, req EmbedRequest) (EmbedRespon
 	if usage.Total() == 0 {
 		usage = worst
 	}
+	if resp.Requests > 1 {
+		c.b.addCalls(resp.Requests - 1)
+	}
 	resp.CostUSD, resp.CostKnown = res.settle(resp.Model, usage)
 	return resp, nil
+}
+
+// addCalls counts requests a call made beyond the one reserve counted.
+func (b *Budget) addCalls(n int) {
+	b.mu.Lock()
+	b.spent.Calls += n
+	b.mu.Unlock()
 }
 
 func (c *budgetClient) Close() error { return c.next.Close() }

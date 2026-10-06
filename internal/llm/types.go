@@ -103,6 +103,9 @@ type EmbedResponse struct {
 	CostUSD   float64     `json:"cost_usd"`
 	CostKnown bool        `json:"cost_known"`
 	Cached    bool        `json:"cached,omitempty"`
+	// Requests is how many provider requests the call took when that is more than one (a batch the
+	// backend had to split); 0 means one. The budget counts every one of them against max_calls.
+	Requests int `json:"-"`
 }
 
 // Client is the one interface features use to reach a model.
