@@ -250,6 +250,11 @@ type LintEvalsEstimate struct {
 	ActivationOutputTokens int `yaml:"activation_output_tokens,omitempty" json:"activation_output_tokens,omitempty" toml:"activation_output_tokens,omitempty"` //nolint:tagliatelle
 	// ToolLoopFactor scales the tool-loop re-read in the high figure.
 	ToolLoopFactor float64 `yaml:"tool_loop_factor,omitempty" json:"tool_loop_factor,omitempty" toml:"tool_loop_factor,omitempty"` //nolint:tagliatelle
+	// PriceInPerMTok and PriceOutPerMTok are the USD per million tokens the runs are
+	// really billed at (a harness with prompt caching bills most input at a fraction
+	// of the list price). --price-in and --price-out win; zero keeps the price table.
+	PriceInPerMTok  float64 `yaml:"price_in_per_mtok,omitempty" json:"price_in_per_mtok,omitempty" toml:"price_in_per_mtok,omitempty"`    //nolint:tagliatelle
+	PriceOutPerMTok float64 `yaml:"price_out_per_mtok,omitempty" json:"price_out_per_mtok,omitempty" toml:"price_out_per_mtok,omitempty"` //nolint:tagliatelle
 }
 
 // LintDescription tunes description quality checks.

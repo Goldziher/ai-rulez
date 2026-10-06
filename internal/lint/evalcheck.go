@@ -88,6 +88,7 @@ func validateEvalSettings(lc *config.LintConfig) []string {
 		}{
 			{"overhead_tokens", float64(e.OverheadTokens)}, {"assumed_output_tokens", float64(e.AssumedOutputTokens)},
 			{"activation_output_tokens", float64(e.ActivationOutputTokens)}, {"tool_loop_factor", e.ToolLoopFactor},
+			{"price_in_per_mtok", e.PriceInPerMTok}, {"price_out_per_mtok", e.PriceOutPerMTok},
 		} {
 			if f.v < 0 {
 				problems = append(problems, "lint.evals.estimate."+f.name+": must be >= 0")
