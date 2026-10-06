@@ -141,6 +141,9 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if round := acceptedRound(report); round != nil && round.Held != nil {
 		fmt.Fprintf(out, "Held-out pass rate %.0f%% -> %.0f%% (%+.1f points), %d win(s), %d loss(es)\n",
 			round.Held.Base.PassRate*100, round.Held.Cand.PassRate*100, round.Held.Gain*100, len(round.Held.Wins), len(round.Held.Losses))
+		if n := heldEvaluations(report); n > 1 {
+			fmt.Fprintf(out, "Selected among %d held-out evaluations: the gain is optimistic.\n", n)
+		}
 		if round.Held.Underpowered {
 			fmt.Fprintln(out, "Underpowered: few held-out cases, treat the gain as weak evidence.")
 		}
@@ -157,6 +160,18 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	}
 	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120))
 	return res, nil
+}
+
+// heldEvaluations counts the rounds that scored a candidate on the held-out set: best-of-N selection over
+// them makes the accepted gain optimistic.
+func heldEvaluations(r *Report) int {
+	n := 0
+	for i := range r.Rounds {
+		if r.Rounds[i].Held != nil {
+			n++
+		}
+	}
+	return n
 }
 
 func acceptedRound(r *Report) *RoundReport {
