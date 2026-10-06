@@ -143,6 +143,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		return res
 	}
 	matched := map[string]bool{}
+	refused := map[string]bool{}
 	byFP := map[string]BaselineEntry{}
 	for _, e := range b.Entries {
 		byFP[e.Fingerprint] = e
@@ -158,6 +159,10 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 			res.Expired = append(res.Expired, e)
 			continue
 		}
+		if r.Protected[f.Code] {
+			refused[f.Code] = true // policy wins: the finding stays reported
+			continue
+		}
 		m := f.meta()
 		m.Accepted, m.AcceptReason = true, e.Reason
 		res.Accepted++
@@ -167,6 +172,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 			res.Stale = append(res.Stale, e)
 		}
 	}
+	r.refuse(routeBaseline, sortedSet(refused))
 	return res
 }
 
@@ -235,6 +241,33 @@ func ResolveBudgets(raw map[string]int) Budgets {
 			out[rule.Code] = limit
 		}
 	}
+	return out
+}
+
+// Without drops the budgets of the protected codes, which a policy never lets a
+// repository tolerate, and lists the codes it dropped.
+func (b Budgets) Without(protected map[string]bool) (Budgets, []string) {
+	if len(protected) == 0 {
+		return b, nil
+	}
+	out := Budgets{}
+	dropped := map[string]bool{}
+	for code, limit := range b {
+		if protected[code] {
+			dropped[code] = true
+			continue
+		}
+		out[code] = limit
+	}
+	return out, sortedSet(dropped)
+}
+
+func sortedSet(set map[string]bool) []string {
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	sort.Strings(out)
 	return out
 }
 

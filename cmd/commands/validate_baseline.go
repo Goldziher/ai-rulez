@@ -126,7 +126,21 @@ func budgetsFor(cfg *config.Config) lint.Budgets {
 	if cfg == nil || cfg.Lint == nil {
 		return nil
 	}
-	return lint.ResolveBudgets(cfg.Lint.Tolerated())
+	budgets, _ := lint.ResolveBudgets(cfg.Lint.Tolerated()).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
+	return budgets
+}
+
+// reportRefusedBudgets reports, once per report, a [lint.tolerate] entry for a
+// code the organization policy protects: the entry is ignored.
+func reportRefusedBudgets(reports []*lint.Report, cfgs []*config.Config) {
+	for i, r := range reports {
+		cfg := cfgAt(cfgs, i)
+		if cfg == nil || cfg.Lint == nil {
+			continue
+		}
+		_, dropped := lint.ResolveBudgets(cfg.Lint.Tolerated()).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
+		r.RefuseTolerate(dropped)
+	}
 }
 
 // baselineBlocks reports whether --strict-baseline turns stale or expired

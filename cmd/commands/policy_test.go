@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 func TestPolicyGate(t *testing.T) {
@@ -56,4 +57,25 @@ func TestShowPolicyWithoutPolicyPrintsNone(t *testing.T) {
 	// Assert
 	assert.Equal(t, 0, code)
 	assert.Contains(t, out.String(), "policy: none")
+}
+
+func TestBudgetsForRefusesPolicyProtectedCodes(t *testing.T) {
+	// Arrange
+	cfg := &config.Config{
+		Lint:          &config.LintConfig{Tolerate: map[string]int{"AR001": 5, "AR201": 2}},
+		PolicyOutcome: &config.PolicyOutcome{RequiredCodes: []string{"AR001"}},
+	}
+	rep := &lint.Report{Root: "r", ConfigFile: ".ai-rulez/config.toml"}
+
+	// Act
+	budgets := budgetsFor(cfg)
+	reportRefusedBudgets([]*lint.Report{rep}, []*config.Config{cfg})
+
+	// Assert
+	if _, ok := budgets["AR001"]; ok || budgets["AR201"] != 2 {
+		t.Fatalf("budgets = %v, want only AR201", budgets)
+	}
+	if len(rep.Findings) != 1 || rep.Findings[0].Code != lint.CodePolicyLoosened {
+		t.Fatalf("want exactly one AR740, got %v", rep.Findings)
+	}
 }

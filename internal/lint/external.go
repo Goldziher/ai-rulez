@@ -487,7 +487,7 @@ func (st *scannerStage) lookup(raw, base string) (string, bool) {
 // externalFinding builds one AR011 finding; keep is false when the rule is off,
 // ignored, or the file is ignored by configuration.
 func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, msg string) (Finding, bool) {
-	if r.sev[CodeExternalFinding] == SeverityOff || r.ignore[CodeExternalFinding] || (abs != "" && r.pathIgnored(abs)) {
+	if r.sev[CodeExternalFinding] == SeverityOff || r.ignore[CodeExternalFinding] || (abs != "" && r.pathSuppresses(CodeExternalFinding, abs)) {
 		return Finding{}, false
 	}
 	rule, _ := lookupRule(CodeExternalFinding) //nolint:errcheck // registered
@@ -512,7 +512,7 @@ func (r *runner) addRun(code, scanner, msg string) {
 	rule, _ := lookupRule(code) //nolint:errcheck // registered
 	file := ""
 	if abs := r.configFilePath(); abs != "" {
-		if r.pathIgnored(abs) {
+		if r.pathSuppresses(code, abs) {
 			return
 		}
 		file = r.display(abs)

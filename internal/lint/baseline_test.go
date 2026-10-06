@@ -139,3 +139,49 @@ func TestValidateSettingsBudget(t *testing.T) {
 	problems := ValidateSettings(&config.LintConfig{Budget: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
 	assert.Equal(t, []string{"lint.budget.AR201: -1 is negative", `lint.budget: unknown rule "AR999"`}, problems)
 }
+
+func TestApplyBaselineRefusesPolicyProtectedCodes(t *testing.T) {
+	// Arrange: AR001 is protected; the baseline accepts it and AR002-like finding.
+	r := &Report{
+		Root: "root", ConfigFile: ".ai-rulez/config.toml",
+		Protected: map[string]bool{CodeSecretDetected: true},
+		Findings: []Finding{
+			finding(CodeSecretDetected, "a.md", 3, "fp-secret"),
+			finding(CodePathMissing, "a.md", 9, "fp-path"),
+		},
+	}
+	b := &Baseline{Version: 1, Entries: []BaselineEntry{{Fingerprint: "fp-secret"}, {Fingerprint: "fp-path"}}}
+
+	// Act
+	res := ApplyBaseline(r, b, "b.json", "2026-10-05")
+
+	// Assert
+	assert.Equal(t, 1, res.Accepted)
+	assert.False(t, r.Findings[0].IsAccepted(), "a protected code is never accepted")
+	assert.True(t, r.Findings[1].IsAccepted())
+	assert.Empty(t, res.Stale, "the refused entry matched a finding")
+	require.Len(t, r.Findings, 3)
+	attempt := r.Findings[2]
+	assert.Equal(t, CodePolicyLoosened, attempt.Code)
+	assert.Equal(t, SeverityError, attempt.Severity)
+	assert.Contains(t, attempt.Message, "baseline")
+	assert.Contains(t, attempt.Message, CodeSecretDetected)
+	assert.True(t, Failed(r.Findings, "error"))
+}
+
+func TestBudgetsWithoutDropsProtectedCodes(t *testing.T) {
+	// Arrange
+	b := Budgets{CodeSecretDetected: 5, CodePathMissing: 2}
+	findings := []Finding{finding(CodeSecretDetected, "a.md", 1, "x")}
+
+	// Act
+	kept, dropped := b.Without(map[string]bool{CodeSecretDetected: true})
+
+	// Assert
+	assert.Equal(t, Budgets{CodePathMissing: 2}, kept)
+	assert.Equal(t, []string{CodeSecretDetected}, dropped)
+	assert.True(t, FailedWith(findings, "error", kept), "the protected finding counts against the exit code")
+	same, none := b.Without(nil)
+	assert.Equal(t, b, same)
+	assert.Empty(t, none)
+}
