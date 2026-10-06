@@ -301,3 +301,21 @@ func TestScanRecordsReadTheCacheWithoutStartingAnything(t *testing.T) {
 	assert.False(t, changed[0].Cached)
 	assert.NotEqual(t, before[0].Tree, changed[0].Tree)
 }
+
+func TestUserScanCacheIsOnePerProjectWhateverTheSpelling(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config"))
+	real := filepath.Join(t.TempDir(), "project", ".ai-rulez")
+	require.NoError(t, os.MkdirAll(real, 0o755)) //nolint:gosec // test directory
+	link := filepath.Join(t.TempDir(), "link")
+	testutil.SymlinkOrSkip(t, filepath.Dir(real), link)
+
+	byReal := UserScanCache(real)
+	byLink := UserScanCache(filepath.Join(link, ".ai-rulez"))
+
+	require.NotNil(t, byReal)
+	require.NotNil(t, byLink)
+	assert.Equal(t, byReal.dir, byLink.dir)
+	assert.Contains(t, byReal.dir, filepath.Join(".cache", "ai-rulez", "scan"))
+	assert.Contains(t, byReal.secretPath, filepath.Join("config", "ai-rulez", "scan-cache.key"))
+}
