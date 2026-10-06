@@ -214,3 +214,45 @@ func (s *PolicyCLITestSuite) TestFlagAndEnvironmentLayersMerge() {
 	s.Contains(res.Stdout, "[flag]", "the flag raised AR008 from warning to error")
 	s.Contains(res.Stdout, "[env]")
 }
+
+// A repository cannot approve its own way past an organization's [governance] floor.
+func (s *PolicyCLITestSuite) TestGovernanceFloorIsClampedAndReported() {
+	extra := `policy_version = 1
+
+[governance]
+enforce = true
+require_approval = ["local"]
+min_approvers = 2
+approvers = ["alice@example.org", "bob@example.org"]
+`
+	s.Require().NoError(os.WriteFile(s.policy, []byte(extra), 0o644))
+	s.config(`[governance]
+min_approvers = 1
+approvers = ["mallory@example.org"]
+exempt = ["rule:*"]
+`)
+
+	res, found := s.strict()
+
+	s.Equal(2, res.ExitCode, res.Stdout)
+	var joined []string
+	for _, f := range found {
+		joined = append(joined, f.Message)
+	}
+	all := strings.Join(joined, "\n")
+	s.Contains(all, "does not enable enforce")
+	s.Contains(all, "min_approvers = 1 is below the policy minimum 2")
+	s.Contains(all, `"mallory@example.org" is not in the policy list`)
+
+	// The policy value is what runs: the repository's exempt glob does not remove the floor,
+	// so the local rule still needs approval.
+	s.config("[governance]\nenforce = true\nexempt = [\"rule:*\"]\n")
+	locked := s.run(nil, "lock", "--policy", s.policy)
+	s.Require().Equal(0, locked.ExitCode, locked.Stderr)
+	list := s.run(nil, "approve", "--list", "--format", "json", "--policy", s.policy)
+	s.Require().Equal(0, list.ExitCode, list.Stderr)
+	s.Contains(list.Stdout, `"enforce": true`)
+	s.Contains(list.Stdout, `"min_approvers": 2`)
+	s.Contains(list.Stdout, "alice@example.org")
+	s.Contains(list.Stdout, `"status": "missing"`, "the exempt glob did not remove the policy floor")
+}
