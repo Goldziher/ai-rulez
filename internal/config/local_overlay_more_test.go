@@ -35,7 +35,7 @@ func TestFindLocalConfigFile_StatErrorIsReturned(t *testing.T) {
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
 
 	// Act
-	_, err := findLocalConfigFile(file)
+	_, err := findLocalConfigFile(osView(file), file)
 
 	// Assert
 	require.Error(t, err)

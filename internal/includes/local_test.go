@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // Test helper to create temporary directories with .ai-rulez structure
@@ -162,7 +163,7 @@ func TestValidatePathNonExistent(t *testing.T) {
 	source := NewLocalSource("test", "/nonexistent/path", "/base", nil)
 
 	// Act
-	err := source.validatePath("/nonexistent/path")
+	err := source.validatePath(workspace.OSView("/nonexistent/path"), "/nonexistent/path")
 
 	// Assert
 	if err == nil {
@@ -182,7 +183,7 @@ func TestValidatePathNotDirectory(t *testing.T) {
 	source := NewLocalSource("test", tmpFile.Name(), "/base", nil)
 
 	// Act
-	err = source.validatePath(tmpFile.Name())
+	err = source.validatePath(workspace.OSView(tmpFile.Name()), tmpFile.Name())
 
 	// Assert
 	if err == nil {
@@ -196,7 +197,7 @@ func TestValidatePathDirectory(t *testing.T) {
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
-	err := source.validatePath(tmpDir)
+	err := source.validatePath(workspace.OSView(tmpDir), tmpDir)
 
 	// Assert
 	if err != nil {
@@ -211,7 +212,7 @@ func TestFindAIRulesDirInPath(t *testing.T) {
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(tmpDir)
+	found := source.findAIRulezDir(workspace.OSView(tmpDir), tmpDir)
 
 	// Assert
 	expected := filepath.Join(tmpDir, ".ai-rulez")
@@ -227,7 +228,7 @@ func TestFindAIRulesDirWhenIsAIRulez(t *testing.T) {
 	source := NewLocalSource("test", aiRulezPath, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(aiRulezPath)
+	found := source.findAIRulezDir(workspace.OSView(aiRulezPath), aiRulezPath)
 
 	// Assert
 	if found != aiRulezPath {
@@ -242,7 +243,7 @@ func TestFindAIRulesDirNotFound(t *testing.T) {
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(tmpDir)
+	found := source.findAIRulezDir(workspace.OSView(tmpDir), tmpDir)
 
 	// Assert
 	if found != "" {

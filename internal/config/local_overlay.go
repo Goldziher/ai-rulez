@@ -13,6 +13,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // LocalOverlay records the machine-local config.local.* document merged into a
@@ -52,12 +53,12 @@ func isLocalConfigFilename(base string) bool {
 // findLocalConfigFile probes configDir for config.local.toml. It returns "" when
 // there is none, and an error for a V3 config.local.yaml, .yml or .json, which
 // v5 no longer reads (ignoring it would silently drop the overrides).
-func findLocalConfigFile(configDir string) (path string, err error) {
-	if legacy := firstExistingFile(configDir, legacyLocalNames); legacy != "" {
+func findLocalConfigFile(v workspace.View, configDir string) (path string, err error) {
+	if legacy := firstExistingFile(v, configDir, legacyLocalNames); legacy != "" {
 		return "", newLegacyConfigError(legacy)
 	}
 	name := localVariantName(configTOMLFilename)
-	info, statErr := os.Stat(filepath.Join(configDir, name))
+	info, statErr := v.Stat(filepath.Join(configDir, name))
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
 			return "", nil
@@ -82,8 +83,8 @@ func decodeConfigDoc(path string, data []byte) (map[string]any, error) {
 	return doc, nil
 }
 
-func readConfigDoc(path string) (map[string]any, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // config path chosen by the user
+func readConfigDoc(v workspace.View, path string) (map[string]any, error) {
+	data, err := v.ReadFile(path)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "read %s", filepath.Base(path))
 	}
@@ -92,20 +93,20 @@ func readConfigDoc(path string) (map[string]any, error) {
 
 // withLocalOverlay applies a config.local.* overlay found beside the main
 // config, unless disabled. Without an overlay cfg is returned untouched.
-func withLocalOverlay(cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, error) {
+func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, error) {
 	if lo.withoutLocal {
 		return cfg, nil
 	}
-	localPath, err := findLocalConfigFile(configDir)
+	localPath, err := findLocalConfigFile(v, configDir)
 	if err != nil || localPath == "" {
 		return cfg, err
 	}
 
-	mainDoc, err := readConfigDoc(mainPath)
+	mainDoc, err := readConfigDoc(v, mainPath)
 	if err != nil {
 		return nil, err
 	}
-	localDoc, err := readConfigDoc(localPath)
+	localDoc, err := readConfigDoc(v, localPath)
 	if err != nil {
 		return nil, err
 	}
@@ -173,11 +174,12 @@ func decodeJSONDoc(doc map[string]any, path string) (*Config, error) {
 // configDir without loading the rest of the configuration. It returns nil when
 // there is none.
 func ReadLocalOverlay(configDir string) (*LocalOverlay, error) {
-	localPath, err := findLocalConfigFile(configDir)
+	v := osView(configDir)
+	localPath, err := findLocalConfigFile(v, configDir)
 	if err != nil || localPath == "" {
 		return nil, err
 	}
-	doc, err := readConfigDoc(localPath)
+	doc, err := readConfigDoc(v, localPath)
 	if err != nil {
 		return nil, err
 	}

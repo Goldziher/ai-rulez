@@ -9,8 +9,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // SkillResourceKind identifiers for the canonical Agent Skills layout.
@@ -81,7 +82,7 @@ func LoadResources(root, itemKind string) ([]SkillResource, error) {
 // itemKind is one of the ItemKind constants and selects the entry file name
 // (SKILL.md, COMMAND.md) and the diagnostics wording.
 func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillResource, error) {
-	return (&contentScanner{}).loadResources(root, itemKind, extraExcludes)
+	return newIncludeScanner(osView(root)).loadResources(root, itemKind, extraExcludes)
 }
 
 // loadResources is LoadResourcesWith under the scanner's symlink policy: with no
@@ -101,7 +102,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 		// A symlinked kind directory is admitted only under the scanner's
 		// policy: an installed skill with `references -> /etc` must not let
 		// the walk into an attacker-controlled tree.
-		info, err := os.Lstat(kindDir)
+		info, err := s.v.Lstat(kindDir)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -113,7 +114,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 				continue
 			}
 		}
-		if info, err = os.Stat(kindDir); err != nil || !info.IsDir() {
+		if info, err = s.v.Stat(kindDir); err != nil || !info.IsDir() {
 			continue
 		}
 
@@ -128,7 +129,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	// not being included in generated output. Only directories are checked;
 	// regular files in the item root (like SKILL.md, .gitignore) are expected
 	// and not warned about.
-	warnings, err := unrecognizedSubdirectoryWarnings(root, itemKind)
+	warnings, err := s.unrecognizedSubdirectoryWarnings(root, itemKind)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +170,8 @@ type resourceWarning struct {
 // Regular files in the item root are ignored — only subdirectories are
 // checked. Symlinked directories are ignored because the kind walk already
 // refuses to follow them and warns separately.
-func unrecognizedSubdirectoryWarnings(root, itemKind string) ([]resourceWarning, error) {
-	entries, err := os.ReadDir(root)
+func (s *contentScanner) unrecognizedSubdirectoryWarnings(root, itemKind string) ([]resourceWarning, error) {
+	entries, err := s.v.ReadDir(root)
 	if err != nil {
 		return nil, oops.With("path", root).Wrapf(err, "read %s directory for unrecognized subdirs", itemKind)
 	}
@@ -230,14 +231,14 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 
 	var visit func(dir string) error
 	visit = func(dir string) error {
-		if real, err := filepath.EvalSymlinks(dir); err == nil {
+		if real, err := s.v.EvalSymlinks(dir); err == nil {
 			if visited[real] {
 				return nil // a link cycle inside the project
 			}
 			visited[real] = true
 			defer delete(visited, real)
 		}
-		entries, err := os.ReadDir(dir)
+		entries, err := s.v.ReadDir(dir)
 		if err != nil {
 			return oops.With("path", dir).Wrapf(err, "walk skill resource dir")
 		}
@@ -273,14 +274,14 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 				continue
 			}
 
-			data, err := readCapped(path)
+			data, err := readCapped(s.v, path)
 			if err != nil {
 				return oops.With("path", path).Wrapf(err, "read skill resource")
 			}
 
 			// Capture file mode (of the target, for a followed link) so the
 			// executable bit on bundled scripts survives generation.
-			info, err := os.Stat(path)
+			info, err := s.v.Stat(path)
 			if err != nil {
 				return oops.With("path", path).Wrapf(err, "stat skill resource")
 			}

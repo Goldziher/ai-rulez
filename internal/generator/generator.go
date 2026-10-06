@@ -499,7 +499,8 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 		return nil, err
 	}
 	if g.config.Plugin.ContentRoot != "" {
-		contentTree, err = config.ScanContentTree(filepath.Join(g.config.BaseDir, g.config.Plugin.ContentRoot))
+		contentDir := filepath.Join(g.config.BaseDir, g.config.Plugin.ContentRoot)
+		contentTree, err = config.ScanContentTreeIn(g.context(), g.config.ViewFor(contentDir), contentDir)
 		if err != nil {
 			return nil, oops.With("content_root", g.config.Plugin.ContentRoot).Wrapf(err, "scan plugin content")
 		}

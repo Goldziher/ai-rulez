@@ -2,13 +2,13 @@ package includes
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // SourceType represents the type of include source
@@ -49,7 +49,7 @@ func IsLocalPath(source string) bool {
 // and returns the names of all subdirectories (domain names).
 func discoverDomainDirs(aiRulezDir string) []string {
 	domainsPath := filepath.Join(aiRulezDir, "domains")
-	entries, err := os.ReadDir(domainsPath)
+	entries, err := workspace.OSView(aiRulezDir).ReadDir(domainsPath)
 	if err != nil {
 		return nil
 	}

@@ -1,15 +1,17 @@
 package config
 
 import (
-	"os"
+	"errors"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // semverLike matches a lenient semantic-version shape (major.minor[.patch][-pre]).
@@ -114,12 +116,15 @@ func validatePluginPaths(p *PluginAuthoring) error {
 // makes `validate` report it first instead of leaving it to generation. A path
 // that cannot be resolved is not treated as an escape — the os.Stat below
 // reports the missing file with a better message.
-func escapesProject(baseDir, resolved string) bool {
-	root, err := filepath.EvalSymlinks(baseDir)
+func escapesProject(v workspace.View, baseDir, resolved string) bool {
+	root, err := v.EvalSymlinks(baseDir)
 	if err != nil {
 		return false
 	}
-	resolvedReal, err := filepath.EvalSymlinks(resolved)
+	resolvedReal, err := v.EvalSymlinks(resolved)
+	if errors.Is(err, workspace.ErrOutside) {
+		return true
+	}
 	if err != nil {
 		return false
 	}
@@ -437,7 +442,8 @@ func (c *Config) validateHookAction(pluginName, event string, index int, action 
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(c.BaseDir, resolved)
 	}
-	if escapesProject(c.BaseDir, resolved) {
+	v := c.View()
+	if escapesProject(v, c.BaseDir, resolved) {
 		return oops.
 			With("field", fieldHookActions).
 			With("event", event).
@@ -445,7 +451,7 @@ func (c *Config) validateHookAction(pluginName, event string, index int, action 
 			Hint("A symlink out of the project would copy that file into the published bundle; point 'script' at a file inside the project").
 			Errorf("plugin %q hook %s[%d] hook script resolves outside the project: %q", pluginName, event, index, action.Script)
 	}
-	info, err := os.Stat(resolved)
+	info, err := v.Stat(resolved)
 	if err != nil {
 		return oops.
 			With("field", fieldHookActions).

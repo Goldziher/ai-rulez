@@ -33,7 +33,7 @@ func TestReadCapped(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := bigFile(t, dir, tt.name, tt.size)
-			data, err := readCapped(p)
+			data, err := readCapped(osView(dir), p)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "MiB limit")
@@ -48,14 +48,14 @@ func TestReadCapped(t *testing.T) {
 func TestOversizedRepositoryFilesAreRefused(t *testing.T) {
 	dir := t.TempDir()
 	big := bigFile(t, dir, "big.md", maxContentFileBytes+1)
-	loaders := map[string]func(string) (*Config, error){"toml": loadConfigTOML}
+	loaders := map[string]func(string) (*Config, error){"toml": func(p string) (*Config, error) { return loadConfigTOML(osView(dir), p) }}
 	for ext, load := range loaders {
 		cfg := bigFile(t, dir, "config."+ext, maxContentFileBytes+1)
 		_, err := load(cfg)
 		require.Error(t, err, ext)
 		assert.Contains(t, err.Error(), "MiB limit", ext)
 	}
-	_, err := readContentFile(big)
+	_, err := readContentFile(osView(dir), big)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MiB limit")
 }

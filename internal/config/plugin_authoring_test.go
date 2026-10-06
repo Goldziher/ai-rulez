@@ -68,7 +68,7 @@ email = "nhirschfeld@gmail.com"
 `
 	require.NoError(t, os.WriteFile(configFile, []byte(content), 0o644))
 
-	cfg, err := loadConfigTOML(configFile)
+	cfg, err := loadConfigTOML(osView(filepath.Dir(configFile)), configFile)
 	require.NoError(t, err)
 
 	require.NotNil(t, cfg.Plugin)
@@ -259,7 +259,7 @@ func TestLoadConfigTOML_HookHandlerFields(t *testing.T) {
 	configFile := filepath.Join(t.TempDir(), "config.toml")
 	require.NoError(t, os.WriteFile(configFile, []byte(hookHandlerTOML), 0o644))
 
-	cfg, err := loadConfigTOML(configFile)
+	cfg, err := loadConfigTOML(osView(filepath.Dir(configFile)), configFile)
 	require.NoError(t, err)
 
 	require.NotNil(t, cfg.Plugin)

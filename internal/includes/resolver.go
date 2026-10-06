@@ -3,15 +3,15 @@ package includes
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 const (
@@ -174,7 +174,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 			localPath,
 			r.baseDir,
 			includeConf.Include,
-		), nil
+		).In(viewFor(r.cfg, r.baseDir)), nil
 	}
 
 	sourceType := DetectSourceType(includeConf.Source)
@@ -189,7 +189,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 			includeConf.Source,
 			r.baseDir,
 			includeConf.Include,
-		), nil
+		).In(viewFor(r.cfg, r.baseDir)), nil
 	case SourceTypeGit:
 		w := withVersion(lockfile.Want{
 			Kind: lockfile.KindInclude, Name: includeConf.Name, Source: lockSource(r.baseDir, includeConf.Source),
@@ -242,7 +242,7 @@ func (r *Resolver) resolveLocalOverride(includeConf *config.IncludeConfig) strin
 	}
 
 	// Check existence
-	info, err := os.Stat(overridePath)
+	info, err := viewFor(r.cfg, r.baseDir).For(overridePath).Stat(overridePath)
 	if err != nil || !info.IsDir() {
 		return ""
 	}

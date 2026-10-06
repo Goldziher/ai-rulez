@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // VerifiersDirName is the directory under a configuration directory that holds
@@ -34,8 +36,13 @@ type ImportedVerifierFile struct {
 // order. Symlinks, non-regular files and files over 1 MiB are skipped, never
 // followed. A missing directory is not an error.
 func ScanVerifierFiles(configDir string) ([]ImportedVerifierFile, error) {
+	return ScanVerifierFilesIn(osView(configDir), configDir)
+}
+
+// ScanVerifierFilesIn is ScanVerifierFiles reading through v.
+func ScanVerifierFilesIn(v workspace.View, configDir string) ([]ImportedVerifierFile, error) {
 	dir := filepath.Join(configDir, VerifiersDirName)
-	entries, err := os.ReadDir(dir)
+	entries, err := v.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -49,11 +56,11 @@ func ScanVerifierFiles(configDir string) ([]ImportedVerifierFile, error) {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		info, err := os.Lstat(path)
+		info, err := v.Lstat(path)
 		if err != nil || !info.Mode().IsRegular() {
 			continue // a symlink or special file is never followed
 		}
-		f, err := os.Open(path) //nolint:gosec // a regular file inside the include
+		f, err := v.Open(path) //nolint:gosec // a regular file inside the include
 		if err != nil {
 			continue
 		}

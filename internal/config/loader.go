@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	toml "github.com/pelletier/go-toml/v2"
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -16,9 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
-	toml "github.com/pelletier/go-toml/v2"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 const (
@@ -57,8 +59,13 @@ func ResolveConfigDirName(baseDir string) string {
 	if err != nil {
 		return ""
 	}
+	return resolveConfigDirName(osView(absDir), absDir)
+}
+
+// resolveConfigDirName is ResolveConfigDirName reading through v; absDir is absolute.
+func resolveConfigDirName(v workspace.View, absDir string) string {
 	for _, dirName := range configDirCandidates {
-		if hasConfigFile(filepath.Join(absDir, filepath.FromSlash(dirName))) {
+		if hasConfigFile(v, filepath.Join(absDir, filepath.FromSlash(dirName))) {
 			return dirName
 		}
 	}
@@ -116,7 +123,12 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 // The baseDir should contain an .ai-rulez/ subdirectory (or, as a fallback,
 // .config/ai-rulez/) with config.toml.
 func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Config, error) {
-	dirName := ResolveConfigDirName(baseDir)
+	lo := applyLoadOptions(opts)
+	v, absDir, err := lo.baseView(baseDir)
+	if err != nil {
+		return nil, err
+	}
+	dirName := resolveConfigDirName(v, absDir)
 	if dirName == "" {
 		dirName = aiRulezDirName
 	}
@@ -126,12 +138,9 @@ func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Confi
 // LoadConfigFromDir loads configuration from configDirName below baseDir.
 func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts ...LoadOption) (*Config, error) {
 	lo := applyLoadOptions(opts)
-	absDir, err := filepath.Abs(baseDir)
+	v, absDir, err := lo.baseView(baseDir)
 	if err != nil {
-		return nil, oops.
-			With("path", baseDir).
-			Hint("Check if the directory path is valid and accessible").
-			Wrapf(err, "resolve absolute path")
+		return nil, err
 	}
 
 	if configDirName == "" {
@@ -139,9 +148,9 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 	}
 	configDir := filepath.Join(absDir, filepath.FromSlash(configDirName))
 
-	if info, err := os.Stat(configDir); err != nil {
+	if info, err := v.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
-			if legacy := FindLegacyConfig(absDir); legacy != "" {
+			if legacy := findLegacyConfig(v, absDir); legacy != "" {
 				return nil, newLegacyConfigError(legacy)
 			}
 			return nil, oops.
@@ -160,12 +169,12 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 			Errorf("%s exists but is not a directory", configDirName)
 	}
 
-	config, err := loadConfigFile(configDir, lo)
+	config, err := loadConfigFile(v, configDir, lo)
 	if err != nil {
 		return nil, err
 	}
 
-	return finishLoadConfig(ctx, config, absDir, configDir, lo)
+	return finishLoadConfig(ctx, v, config, absDir, configDir, lo)
 }
 
 // LoadConfigFromFile loads a configuration from an exact config file path or
@@ -173,15 +182,26 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 // the parent of the config directory (skipping a generic .config/ wrapper).
 func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*Config, error) {
 	lo := applyLoadOptions(opts)
-	absPath, err := filepath.Abs(path)
+	absPath := filepath.Clean(path)
+	switch {
+	case filepath.IsAbs(absPath):
+	case lo.ws != nil:
+		absPath = filepath.Join(lo.ws.Root(), absPath)
+	default:
+		var err error
+		if absPath, err = filepath.Abs(path); err != nil {
+			return nil, oops.
+				With("path", path).
+				Hint("Check if the config path is valid and accessible").
+				Wrapf(err, "resolve absolute config path")
+		}
+	}
+	v, absPath, err := lo.fileView(absPath)
 	if err != nil {
-		return nil, oops.
-			With("path", path).
-			Hint("Check if the config path is valid and accessible").
-			Wrapf(err, "resolve absolute config path")
+		return nil, err
 	}
 
-	info, err := os.Stat(absPath)
+	info, err := v.Stat(absPath)
 	if err != nil {
 		return nil, oops.
 			With("path", absPath).
@@ -189,15 +209,15 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	}
 
 	if info.IsDir() {
-		if legacy := legacyConfigIn(absPath); legacy != "" && !hasConfigFile(absPath) {
+		if legacy := legacyConfigIn(v, absPath); legacy != "" && !hasConfigFile(v, absPath) {
 			return nil, newLegacyConfigError(legacy)
 		}
-		if hasConfigFile(absPath) {
-			cfg, loadErr := loadConfigFile(absPath, lo)
+		if hasConfigFile(v, absPath) {
+			cfg, loadErr := loadConfigFile(v, absPath, lo)
 			if loadErr != nil {
 				return nil, loadErr
 			}
-			return finishLoadConfig(ctx, cfg, projectBaseDir(absPath), absPath, lo)
+			return finishLoadConfig(ctx, v, cfg, projectBaseDir(absPath), absPath, lo)
 		}
 		return LoadConfig(ctx, absPath, opts...)
 	}
@@ -212,35 +232,35 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 			Errorf("%s is a local overlay, not a main config", filepath.Base(absPath))
 	}
 
-	cfg, err := loadConfigFilePath(absPath, lo)
+	cfg, err := loadConfigFilePath(v, absPath, lo)
 	if err != nil {
 		return nil, err
 	}
 	configDir := filepath.Dir(absPath)
-	if looksLikeProjectRoot(configDir) {
+	if looksLikeProjectRoot(v, configDir) {
 		return nil, oops.
 			With("path", absPath).
 			Hint("Place config files inside a configuration directory such as .ai-rulez/config.toml, or pass a config directory path. This keeps generated outputs rooted in the project instead of the parent directory.").
 			Errorf("directory layout required for root-level config file")
 	}
-	return finishLoadConfig(ctx, cfg, projectBaseDir(configDir), configDir, lo)
+	return finishLoadConfig(ctx, v, cfg, projectBaseDir(configDir), configDir, lo)
 }
 
-func looksLikeProjectRoot(dir string) bool {
+func looksLikeProjectRoot(v workspace.View, dir string) bool {
 	for _, marker := range []string{gitDirName, "go.mod", "package.json", "Cargo.toml", "pyproject.toml", "Taskfile.yml", "Taskfile.yaml"} {
-		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+		if v.Exists(filepath.Join(dir, marker)) {
 			return true
 		}
 	}
 	return false
 }
 
-func hasConfigFile(dir string) bool {
-	info, err := os.Stat(filepath.Join(dir, configTOMLFilename))
-	return err == nil && !info.IsDir()
+func hasConfigFile(v workspace.View, dir string) bool {
+	return v.IsRegularFile(filepath.Join(dir, configTOMLFilename))
 }
 
-func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
+func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
+	config.Workspace = v.W
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
 	config.Host = lo.host
@@ -255,7 +275,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	config.MCPServers = serversToMap(config.MCPServersRaw)
 
 	// Scan content directories
-	scanner := newProjectScanner(baseDir)
+	scanner := newProjectScanner(v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
@@ -395,18 +415,18 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 
 // loadConfigFile loads config.toml from a config directory. A directory that
 // holds only a V2/V3 file is reported as such rather than as a missing config.
-func loadConfigFile(configDir string, lo loadOptions) (*Config, error) {
+func loadConfigFile(v workspace.View, configDir string, lo loadOptions) (*Config, error) {
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
-	if _, err := os.Stat(tomlPath); err == nil {
-		cfg, err := loadConfigTOML(tomlPath)
+	if v.Exists(tomlPath) {
+		cfg, err := loadConfigTOML(v, tomlPath)
 		if err != nil {
 			return nil, err
 		}
 		cfg.ConfigFile = configTOMLFilename
-		return withLocalOverlay(cfg, tomlPath, configDir, lo)
+		return withLocalOverlay(v, cfg, tomlPath, configDir, lo)
 	}
 
-	if legacy := legacyConfigIn(configDir); legacy != "" {
+	if legacy := legacyConfigIn(v, configDir); legacy != "" {
 		return nil, newLegacyConfigError(legacy)
 	}
 
@@ -417,22 +437,22 @@ func loadConfigFile(configDir string, lo loadOptions) (*Config, error) {
 		Errorf("no config file found (tried %s)", configTOMLFilename)
 }
 
-func loadConfigFilePath(path string, lo loadOptions) (*Config, error) {
-	cfg, err := loadConfigFilePathMain(path)
+func loadConfigFilePath(v workspace.View, path string, lo loadOptions) (*Config, error) {
+	cfg, err := loadConfigFilePathMain(v, path)
 	if err != nil {
 		return nil, err
 	}
-	return withLocalOverlay(cfg, path, filepath.Dir(path), lo)
+	return withLocalOverlay(v, cfg, path, filepath.Dir(path), lo)
 }
 
-func loadConfigFilePathMain(path string) (*Config, error) {
+func loadConfigFilePathMain(v workspace.View, path string) (*Config, error) {
 	if filepath.Base(path) != configTOMLFilename {
 		return nil, oops.
 			With("path", path).
 			Hint("Use config.toml inside a config directory").
 			Errorf("unsupported config filename: %s", filepath.Base(path))
 	}
-	cfg, err := loadConfigTOML(path)
+	cfg, err := loadConfigTOML(v, path)
 	if err != nil {
 		return nil, err
 	}
@@ -441,8 +461,8 @@ func loadConfigFilePathMain(path string) (*Config, error) {
 }
 
 // loadConfigTOML loads a config from TOML
-func loadConfigTOML(path string) (*Config, error) {
-	data, err := readCapped(path)
+func loadConfigTOML(v workspace.View, path string) (*Config, error) {
+	data, err := readCapped(v, path)
 	if err != nil {
 		return nil, oops.
 			With("path", path).
@@ -644,14 +664,26 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 // ScanContentTreeWith is ScanContentTree with extra bundle_exclude patterns
 // applied to the resources of every skill and command.
 func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
-	return scanContentTree(&contentScanner{}, configDir, bundleExclude)
+	return scanContentTree(newIncludeScanner(osView(configDir)), configDir, bundleExclude)
 }
 
 // ScanContentTreeContext is ScanContentTree whose git questions (which files a
 // work tree ignores) run through the runner ctx carries (runner.WithContext);
 // without one it runs real git.
 func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree, error) {
-	return scanContentTree(&contentScanner{git: gitutil.New(runner.FromContext(ctx))}, configDir, nil)
+	s := newIncludeScanner(osView(configDir))
+	s.git = gitutil.New(runner.FromContext(ctx))
+	return scanContentTree(s, configDir, nil)
+}
+
+// ScanContentTreeIn is ScanContentTreeContext reading through v, for content that
+// lives inside a workspace (a local include) rather than in a directory of the
+// real file system. configDir is an absolute path below v's root. Symlinks are
+// never followed, as for any included content.
+func ScanContentTreeIn(ctx context.Context, v workspace.View, configDir string) (*ContentTree, error) {
+	s := newIncludeScanner(v)
+	s.git = gitutil.New(runner.FromContext(ctx))
+	return scanContentTree(s, configDir, nil)
 }
 
 // scanContentTree scans configDir under the symlink policy held by s.
@@ -749,7 +781,7 @@ func ScanLocalContentTree(configDir string) (*ContentTree, error) {
 
 // ScanLocalContentTreeWith is ScanLocalContentTree with extra bundle_exclude patterns.
 func ScanLocalContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
-	return scanLocalContentTree(&contentScanner{}, configDir, bundleExclude)
+	return scanLocalContentTree(newIncludeScanner(osView(configDir)), configDir, bundleExclude)
 }
 
 func scanLocalContentTree(s *contentScanner, configDir string, bundleExclude []string) (*ContentTree, error) {
@@ -813,7 +845,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 		}
 
 		skillPath := filepath.Join(skillRoot, skillMarkerFile)
-		if _, err := os.Lstat(skillPath); os.IsNotExist(err) {
+		if _, err := s.v.Lstat(skillPath); os.IsNotExist(err) {
 			// No SKILL.md file, skip this directory
 			continue
 		}
@@ -853,7 +885,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 // COMMAND.md files in subdirectories (directory form with optional resources/).
 // Mirrors the structure of scanSkills to support bundled reference material.
 func scanCommands(commandsDir string) ([]ContentFile, error) {
-	return (&contentScanner{}).commands(commandsDir, nil)
+	return newIncludeScanner(osView(commandsDir)).commands(commandsDir, nil)
 }
 
 func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([]ContentFile, error) {
@@ -877,7 +909,7 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 			// Directory structure: commands/name/COMMAND.md
 			commandRoot := entryPath
 			commandPath := filepath.Join(commandRoot, commandMarkerFile)
-			if _, err := os.Lstat(commandPath); os.IsNotExist(err) {
+			if _, err := s.v.Lstat(commandPath); os.IsNotExist(err) {
 				// No COMMAND.md file, skip this directory
 				continue
 			}
@@ -1057,7 +1089,7 @@ func (s *contentScanner) domains(domainsDir string, bundleExclude []string) (map
 
 // scanAgents scans one agents directory without following symlinks.
 func scanAgents(agentsPath string) ([]ContentFile, error) {
-	return (&contentScanner{}).agents(agentsPath)
+	return newIncludeScanner(osView(agentsPath)).agents(agentsPath)
 }
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
@@ -1245,20 +1277,20 @@ func stringSliceFromAny(v interface{}) []string {
 // A symlinked file is refused and its target is never read: an include (or a
 // cloned repository) could otherwise point a content file at any local file and
 // have it rendered into the outputs, and the content lock does not pin it.
-func loadContentFile(path string) (ContentFile, error) {
-	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+func loadContentFile(v workspace.View, path string) (ContentFile, error) {
+	if info, err := v.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		logger.Warn("Skipping symlinked content file; symlinks are not followed", "path", path)
 		return ContentFile{}, oops.
 			With("path", path).
 			Errorf("content file %s is a symlink; symlinks are not followed", path)
 	}
-	return readContentFile(path)
+	return readContentFile(v, path)
 }
 
 // readContentFile reads and parses a content file the caller has already
 // cleared under the symlink policy.
-func readContentFile(path string) (ContentFile, error) {
-	data, err := readCapped(path)
+func readContentFile(v workspace.View, path string) (ContentFile, error) {
+	data, err := readCapped(v, path)
 	if err != nil {
 		return ContentFile{}, oops.
 			With("path", path).
