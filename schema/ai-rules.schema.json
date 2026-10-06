@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json",
   "title": "AI Rules Configuration",
   "description": "Schema for ai-rulez directory-based configuration files (V4, accepting V3)",
   "type": "object",
@@ -2411,7 +2411,7 @@
   "additionalProperties": false,
   "examples": [
     {
-      "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3.schema.json",
+      "$schema": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json",
       "version": "3.0",
       "name": "my-project",
       "description": "Example V3 configuration",
