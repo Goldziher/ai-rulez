@@ -33,6 +33,7 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() error {
+	requireKnownSubcommands(RootCmd)
 	return RootCmd.Execute()
 }
 
@@ -79,8 +80,8 @@ func init() {
 	RootCmd.AddCommand(LockCmd)
 	RootCmd.AddCommand(RolesCmd)
 	RootCmd.AddCommand(CatalogCmd)
-	RootCmd.AddCommand(TokensCmd)
 	RootCmd.AddCommand(SBOMCmd)
+	RootCmd.AddCommand(TokensCmd)
 	RootCmd.AddCommand(CostCmd)
 	RootCmd.AddCommand(UsageCmd)
 	RootCmd.AddCommand(ReportCmd)
@@ -90,6 +91,7 @@ func init() {
 	RootCmd.AddCommand(ExportCmd)
 	RootCmd.AddCommand(ImportCmd)
 	RootCmd.AddCommand(LLMCmd)
+	RootCmd.AddCommand(SearchCmd)
 }
 
 func initConfig() {
