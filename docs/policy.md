@@ -72,7 +72,9 @@ discover = "org"
 example-org = "sha256:<hex>"
 ```
 
-An owner with no policy file (HTTP 404) has no organization policy; any other failure fails closed (`AR742`), with
+An owner with no policy file (HTTP 404) has no organization policy only while nothing anchors one: a pinned digest, a
+digest recorded by `--policy-trust-tofu` or a required signature turns a 404 into `AR742`, like any other failure
+(a withdrawn policy is not "no policy"), with
 the cached copy standing in for at most `max_stale`. The owner is fetched once per run however many repositories
 share it. A remote that is not on GitHub, or no remote at all, skips discovery with a warning, unless
 `--discover-org` was given on the command line, which then fails closed.

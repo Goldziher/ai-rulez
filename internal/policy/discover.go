@@ -476,11 +476,13 @@ func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle 
 	}
 	body, bun, at, ok := c.get(ref.Location, ref.Digest)
 	if !ok {
-		return nil, nil, "", fmt.Errorf("%w, and there is no cached copy", cause)
+		return nil, nil, "", fmt.Errorf("%v, and there is no cached copy", cause)
 	}
+	// Past the cache lookup the cause is flattened (%v): an expired or offline
+	// answer must not keep a statusError that LoadOrg would read as "no policy".
 	age := l.opts.Clock.Now().Sub(at)
 	if l.maxStale < 0 || age > l.maxStale {
-		return nil, nil, "", fmt.Errorf("%w, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
+		return nil, nil, "", fmt.Errorf("%v, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
 	}
 	note = fmt.Sprintf("cached copy fetched %s (%v)", at.UTC().Format(time.RFC3339), cause)
 	logger.Warn("Using the cached organization policy because the URL cannot be reached",
