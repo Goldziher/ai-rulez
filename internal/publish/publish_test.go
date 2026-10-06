@@ -150,7 +150,7 @@ func TestBuild_ValidatesNameVersionAndTarget(t *testing.T) {
 		{"unsafe name", func(i *Input) { i.Name = "../evil" }, "cannot name release files"},
 		{"leading dash tag", func(i *Input) { i.Target, i.Tag, i.Repo = TargetGitHubRelease, "-rf", "a/b" }, "invalid release tag"},
 		{"bad repo", func(i *Input) { i.Target, i.Tag, i.Repo = TargetGitHubRelease, "v1", "not a repo" }, "OWNER/REPO"},
-		{"unknown target", func(i *Input) { i.Target = "npm" }, "unknown target"},
+		{"unknown target", func(i *Input) { i.Target = "ftp" }, "unknown target"},
 		{"no lock", func(i *Input) { i.Lock = nil }, "ai-rulez.lock is missing"},
 	}
 	for _, tt := range tests {
