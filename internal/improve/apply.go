@@ -145,7 +145,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 			fmt.Fprintln(out, "Underpowered: few held-out cases, treat the gain as weak evidence.")
 		}
 	}
-	fmt.Fprintf(out, "\n%s\n", patch)
+	fmt.Fprintf(out, "\n%s\n", SanitizeMultiline(patch)) // the candidate is untrusted text: no terminal escapes
 	if !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Write this change into %s?", report.SkillPath))) {
 		return nil, refuse("", "not confirmed: nothing was written (use --yes to skip the prompt)")
 	}
