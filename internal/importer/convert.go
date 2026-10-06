@@ -12,11 +12,9 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
-	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 )
@@ -115,25 +113,59 @@ func absDir(source string) (string, error) {
 	return abs, nil
 }
 
+// conversion is the state of one Convert run between planning and writing.
+type conversion struct {
+	abs, into, intoAbs string
+	importers          []Format
+	plan               *Plan
+}
+
 // Convert reads the source in the selected formats, builds the report and, with
 // opts.Write, writes the converted tree. It never modifies the source files.
 func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
+	c, err := planConversion(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	p, report, err := c.prepare(ctx, opts)
+	if err != nil || p == nil {
+		return report, err
+	}
+	if report.Security.Blocked || report.Validation.Errors > 0 || !opts.Write {
+		return report, nil
+	}
+	if report.Conflicts() > 0 && !opts.Force {
+		return report, oops.Hint("Rerun with --force to replace the existing files, or --domain NAME to import beside them").
+			Wrap(ErrConflicts)
+	}
+	if err := writeFiles(report, p.files, c.intoAbs); err != nil {
+		return report, err
+	}
+	report.Written = true
+	if err := ignoreLocalTree(c.abs, c.intoAbs, p.files); err != nil {
+		return report, err
+	}
+	return report, nil
+}
+
+// planConversion resolves the paths, runs the importers and makes room for the
+// items of a --merge run. Nothing is written.
+func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, error) {
 	abs, err := absDir(opts.Source)
 	if err != nil {
 		return nil, err
 	}
-	into := opts.Into
-	if into == "" {
-		into = DefaultConfigDir
+	c := &conversion{abs: abs, into: opts.Into}
+	if c.into == "" {
+		c.into = DefaultConfigDir
 	}
-	intoAbs := into
-	if !filepath.IsAbs(intoAbs) {
-		intoAbs = filepath.Join(abs, intoAbs)
+	c.intoAbs = c.into
+	if !filepath.IsAbs(c.intoAbs) {
+		c.intoAbs = filepath.Join(abs, c.intoAbs)
 	}
 	if opts.Domain != "" && utils.SanitizeName(opts.Domain) != opts.Domain {
 		return nil, oops.Hint("Use lowercase letters, digits and hyphens").Errorf("invalid domain name %q", opts.Domain)
 	}
-
 	if opts.Merge && opts.Force {
 		return nil, oops.Hint("--merge keeps every existing file; --force replaces them").Errorf("--merge and --force cannot be combined")
 	}
@@ -143,43 +175,54 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return nil, err
 	}
 	importers, generatedFrom := preferSources(importers, opts.From)
-
-	plan, err := runImporters(ctx, abs, importers, Options{
-		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher, Domain: opts.Domain, NativePaths: opts.NativePaths,
+	c.importers = importers
+	c.plan, err = runImporters(ctx, abs, importers, Options{
+		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch,
+		Fetcher: opts.Fetcher, Domain: opts.Domain, NativePaths: opts.NativePaths,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(plan.collisions) > 0 {
+	if len(c.plan.collisions) > 0 {
 		return nil, oops.Hint("Rename one of the sources, or drop --keep-names to give the later one a stable suffix").
-			Errorf("name collisions with --keep-names: %s", describeCollisions(plan.collisions))
+			Errorf("name collisions with --keep-names: %s", describeCollisions(c.plan.collisions))
 	}
 	if generatedFrom != "" {
-		plan.add(newFinding(StatusDropped, "(native files)", "", "",
+		c.plan.add(newFinding(StatusDropped, "(native files)", "", "",
 			"CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from "+generatedFrom+" and were not imported; use --from native,"+strings.Join(importerNames(importers), ",")+" to import both"))
-		sortFindings(plan)
+		sortFindings(c.plan)
 	}
-	names := importerNames(importers)
-	if plan.empty() {
+	if c.plan.empty() {
 		hint := "Run `ai-rulez convert --list` to see what each importer detects"
-		if len(plan.Remotes) > 0 {
-			hint = fmt.Sprintf("The input names %d remote source(s) that are not on disk; rerun with --fetch to import them", len(plan.Remotes))
+		if len(c.plan.Remotes) > 0 {
+			hint = fmt.Sprintf("The input names %d remote source(s) that are not on disk; rerun with --fetch to import them", len(c.plan.Remotes))
 		}
 		return nil, oops.Hint(hint).
 			Errorf("nothing to convert: the selected importers found no importable content in %s", abs)
 	}
-
 	if opts.Merge {
-		if err := mergeRename(plan, intoAbs, opts.Domain, opts.KeepNames); err != nil {
+		if err := mergeRename(c.plan, c.intoAbs, opts.Domain, opts.KeepNames); err != nil {
 			return nil, err
 		}
 	}
+	return c, nil
+}
+
+// prepared is the planned tree: every file, keyed by path below the config directory.
+type prepared struct {
+	files map[string][]byte
+}
+
+// prepare renders the config and the files, classifies them against the disk and
+// runs the scan and validation of the planned tree. It writes nothing.
+func (c *conversion) prepare(ctx context.Context, opts ConvertOptions) (*prepared, *Report, error) {
+	plan := c.plan
 	reportDisabled(plan, opts.EnableHooks, opts.EnablePermissions)
 	live, off := splitEnabled(plan, opts.EnableHooks, opts.EnablePermissions)
-	cfg := buildConfig(plan, filepath.Base(abs))
+	cfg := buildConfig(plan, filepath.Base(c.abs))
 	cfg.Hooks, cfg.Permissions = live.Hooks, live.Permissions
 	if err := applyDelivery(cfg, plan, opts.Delivery, opts.Domain); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sortFindings(plan)
 	// The staged copy carries every imported hook and rule, live or not, so
@@ -192,9 +235,9 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	}
 	report := &Report{
 		SchemaVersion: ReportSchemaVersion,
-		Importer:      strings.Join(names, ","),
+		Importer:      strings.Join(importerNames(c.importers), ","),
 		Source:        displayPath(opts.Source),
-		Into:          filepath.ToSlash(into),
+		Into:          filepath.ToSlash(c.into),
 		Findings:      plan.Findings,
 		plan:          planSummary(plan),
 		needsLock:     len(plan.InstalledSkills) > 0,
@@ -202,41 +245,28 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 
 	files, err := buildFiles(plan, cfg, opts.Domain)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if err := checkTargets(abs, intoAbs, files); err != nil {
-		return report, err
+	if err := checkTargets(c.abs, c.intoAbs, files); err != nil {
+		return nil, report, err
 	}
-	cfgAction, err := resolveConfig(intoAbs, cfg, plan, report, files, &off)
+	cfgAction, err := resolveConfig(c.intoAbs, cfg, plan, report, files, &off)
 	if err != nil {
-		return report, err
+		return nil, report, err
 	}
 	block, err := off.render()
 	if err != nil {
-		return report, err
+		return nil, report, err
 	}
 	cfgAction = appendDisabled(files, block, cfgAction)
-	classify(report, files, intoAbs, opts.Force, cfgAction)
+	classify(report, files, c.intoAbs, opts.Force, cfgAction)
 	report.count()
 
-	if err := checkStaged(ctx, report, files, &stage, scanContext{srcDir: abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings, fetched: plan.fetchedText}); err != nil {
-		return nil, err
+	sc := scanContext{srcDir: c.abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings, fetched: plan.fetchedText}
+	if err := checkStaged(ctx, report, files, &stage, sc); err != nil {
+		return nil, nil, err
 	}
-	if report.Security.Blocked || report.Validation.Errors > 0 || !opts.Write {
-		return report, nil
-	}
-	if report.Conflicts() > 0 && !opts.Force {
-		return report, oops.Hint("Rerun with --force to replace the existing files, or --domain NAME to import beside them").
-			Wrap(ErrConflicts)
-	}
-	if err := writeFiles(report, files, intoAbs); err != nil {
-		return report, err
-	}
-	report.Written = true
-	if err := ignoreLocalTree(abs, intoAbs, files); err != nil {
-		return report, err
-	}
-	return report, nil
+	return &prepared{files: files}, report, nil
 }
 
 // ignoreLocalTree keeps the personal content convert wrote below local/ out of
@@ -657,175 +687,6 @@ func quoteAll(in []string) []string {
 		out[i] = fmt.Sprintf("%q", s)
 	}
 	return out
-}
-
-// checkStaged writes the planned tree to a scratch project and loads and scans
-// it, so a tree that does not validate or carries a secret is never written to
-// the real project. installed_skills are validated field by field instead of
-// loaded: loading them would fetch from the network. The security scan always
-// runs, also when validation fails, and also covers config.toml, which the
-// project scan does not read, with inline suppression comments ignored.
-func checkStaged(ctx context.Context, report *Report, files map[string][]byte, cfg *config.Config, sc scanContext) error {
-	tmp, err := os.MkdirTemp("", "ai-rulez-convert-*")
-	if err != nil {
-		return oops.Wrapf(err, "create scratch directory")
-	}
-	defer os.RemoveAll(tmp)
-
-	root := filepath.Join(tmp, DefaultConfigDir)
-	for rel, data := range files {
-		if err := writeFileAtomic(filepath.Join(root, filepath.FromSlash(rel)), data, 0o644); err != nil {
-			return oops.Wrapf(err, "stage %s", rel)
-		}
-	}
-	staged := *cfg
-	staged.InstalledSkills = nil
-	data, err := config.MarshalTOML(&staged)
-	if err != nil {
-		return oops.Wrapf(err, "render staged config")
-	}
-	if err := writeFileAtomic(filepath.Join(root, configTOML), data, 0o644); err != nil {
-		return oops.Wrapf(err, "stage %s", configTOML)
-	}
-
-	invalid := func(err error) {
-		report.Validation.Errors++
-		report.Validation.Messages = append(report.Validation.Messages, firstLine(err.Error()))
-	}
-	if err := config.ValidateInstalledSkills(cfg.InstalledSkills); err != nil {
-		invalid(err)
-	}
-	loaded, err := config.LoadConfigFromDir(ctx, tmp, DefaultConfigDir, config.WithoutLocal(), config.WithoutRemote())
-	if err == nil {
-		err = loaded.Validate()
-	}
-	if err != nil {
-		invalid(err)
-	}
-
-	var found []lint.Finding
-	if loaded != nil {
-		var loader lint.Loader
-		tree, lerr := loader.Load(loaded.BaseDir)
-		if lerr != nil {
-			return oops.Wrapf(lerr, "index scratch project")
-		}
-		lr, rerr := lint.RunWith(loaded, tree, lint.Options{SecurityOnly: true})
-		if rerr != nil {
-			return oops.Wrapf(rerr, "security scan")
-		}
-		found = append(found, lr.Findings...)
-	}
-	// The project scan honours inline ignore comments and skips config.toml;
-	// converted text is not trusted to silence itself, so scan every staged text again.
-	rels := make([]string, 0, len(files)+1)
-	for rel := range files {
-		if rel != configTOML {
-			rels = append(rels, rel)
-		}
-	}
-	sort.Strings(rels)
-	for _, rel := range rels {
-		if isText(files[rel]) {
-			found = append(found, lint.ScanText(DefaultConfigDir+"/"+rel, string(files[rel]))...)
-		}
-	}
-	found = append(found, lint.ScanText(DefaultConfigDir+"/"+configTOML, string(data))...)
-	names := make([]string, 0, len(sc.fetched))
-	for name := range sc.fetched {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		found = append(found, lint.ScanText(name, sc.fetched[name])...)
-	}
-
-	report.Security.Findings = []SecurityFinding{}
-	seen := map[string]bool{}
-	for _, f := range found {
-		sf := SecurityFinding{Code: f.Code, Severity: string(f.Severity), File: stagedRel(f.File), Line: f.Line, Message: f.Message}
-		sc.locate(&sf, files)
-		key := fmt.Sprintf("%s|%s|%d|%s", sf.Code, sf.File, sf.Line, sf.Message)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		sf.Allowed = f.Severity == lint.SeverityError && sc.allows(f.Code)
-		report.Security.Findings = append(report.Security.Findings, sf)
-		if f.Severity == lint.SeverityError && !sf.Allowed {
-			report.Security.Blocked = true
-		}
-	}
-	sort.SliceStable(report.Security.Findings, func(i, j int) bool {
-		a, b := report.Security.Findings[i], report.Security.Findings[j]
-		if a.File != b.File {
-			return a.File < b.File
-		}
-		if a.Line != b.Line {
-			return a.Line < b.Line
-		}
-		return a.Code < b.Code
-	})
-	if report.Security.Blocked {
-		report.Security.Code = CodeBlockedScan
-	}
-	return nil
-}
-
-// scanContext carries what the scan needs to report where a finding came from
-// and which codes the caller let through.
-type scanContext struct {
-	srcDir  string
-	origins map[string][]string
-	allow   []string
-	// fetched is the text of fetched files that are referenced, not copied,
-	// keyed by display name; the scan covers it like a planned file.
-	fetched map[string]string
-}
-
-func (sc scanContext) allows(code string) bool {
-	for _, a := range sc.allow {
-		if strings.EqualFold(strings.TrimSpace(a), code) {
-			return true
-		}
-	}
-	return false
-}
-
-// locate rewrites a finding in the planned tree (.ai-rulez/rules/x.md:28) to the
-// source file and line the text was read from; the planned location is kept in
-// Planned. A finding in a generated file (config.toml) stays as it is.
-func (sc scanContext) locate(sf *SecurityFinding, files map[string][]byte) {
-	rel := strings.TrimPrefix(sf.File, DefaultConfigDir+"/")
-	sources := sc.origins[rel]
-	if len(sources) == 0 {
-		return
-	}
-	planned := fmt.Sprintf("%s:%d", sf.File, sf.Line)
-	if src, line, ok := sourceLocation(sc.srcDir, sources, files[rel], sf.Line); ok {
-		sf.File, sf.Line, sf.Planned = src, line, planned
-		return
-	}
-	sf.File, sf.Line, sf.Planned = sources[0], 1, planned
-}
-
-func isText(data []byte) bool {
-	return utf8.Valid(data) && !bytes.Contains(data, []byte{0})
-}
-
-func stagedRel(file string) string {
-	file = filepath.ToSlash(file)
-	if i := strings.Index(file, "/"+DefaultConfigDir+"/"); i >= 0 {
-		return file[i+1:]
-	}
-	return file
-}
-
-func firstLine(s string) string {
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		return s[:i]
-	}
-	return s
 }
 
 // checkTargets refuses to write through a symlink: every component below the
