@@ -1443,6 +1443,11 @@
           },
           "type": "array"
         },
+        "index_style": {
+          "description": "index.md scheme: body (default, the OKF 0.2 listing in the body) or frontmatter (title, version and entries in the frontmatter). Only index.md files differ.",
+          "enum": ["body", "frontmatter"],
+          "type": "string"
+        },
         "spec": {
           "description": "OKF spec version to write. Only 0.2 is implemented.",
           "enum": ["0.2"],
@@ -2305,6 +2310,11 @@
           },
           "max_clone_bytes": {
             "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_clone_files": {
+            "description": "Limit on the number of entries (files, directories, links) of the clone of a git source (default 20000; the AI_RULEZ_MAX_CLONE_FILES environment variable sets it for every source). Each entry counts as at least 4096 bytes toward max_clone_bytes. A larger clone is an error and nothing is cached.",
             "minimum": 0,
             "type": "integer"
           },
