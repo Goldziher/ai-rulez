@@ -2,7 +2,11 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync/atomic"
+
+	"github.com/samber/oops"
 )
 
 // PolicyViolation is one place where the repository configuration tried to
@@ -88,4 +92,20 @@ func applyPolicy(ctx context.Context, cfg *Config) error {
 	}
 	cfg.PolicyOutcome = out
 	return nil
+}
+
+// CheckPolicy fails when the installed policy had to clamp cfg: generation,
+// validation and the MCP servers refuse a configuration that tried to loosen
+// the policy. It is nil without a policy or a violation.
+func CheckPolicy(cfg *Config) error {
+	if cfg == nil || cfg.PolicyOutcome == nil || len(cfg.PolicyOutcome.Violations) == 0 {
+		return nil
+	}
+	lines := make([]string, 0, len(cfg.PolicyOutcome.Violations))
+	for _, v := range cfg.PolicyOutcome.Violations {
+		lines = append(lines, fmt.Sprintf("%s %s:%d  %s", v.Code, v.File, max(v.Line, 1), v.Message))
+	}
+	return oops.With("violations", lines).
+		Hint("The organization policy only lets a repository add restrictions; remove the entries above or ask the policy owners to change the policy").
+		Errorf("the configuration loosens the organization policy:\n  %s", strings.Join(lines, "\n  "))
 }

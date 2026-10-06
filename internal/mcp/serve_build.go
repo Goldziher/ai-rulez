@@ -233,7 +233,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
 	if bo.admit {
-		adm := Admission{Config: cfg, Enforce: cfg.LockEnforced() && !bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
+		adm := Admission{Config: cfg, Enforce: cfg.LockEnforced() && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
 		if !bo.ignoreLock {
 			adm.Lock = lock
 		}
@@ -305,6 +305,9 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	cfg, err := config.LoadConfig(ctx, wd)
 	if err != nil {
 		return nil, oops.Wrapf(err, "load configuration")
+	}
+	if err := config.CheckPolicy(cfg); err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
 	}
 	return cfg, nil
 }
