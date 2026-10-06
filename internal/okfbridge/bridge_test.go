@@ -319,3 +319,32 @@ func TestImportOfficialAcmeRetail(t *testing.T) {
 		assert.NotEqual(t, okf.SeverityError, f.Severity, "%s %s %s", f.Code, f.Path, f.Message)
 	}
 }
+
+func TestRoundTripAddsNoKeysToASkillWithoutNameOrDescription(t *testing.T) {
+	// Arrange: a skill whose frontmatter has neither key.
+	root := t.TempDir()
+	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/skills/bare/SKILL.md", "---\nallowed-tools: Read\n---\n\nSteps.\n")
+	first := exportProject(t, root)
+	bundleDir := t.TempDir() + "/b"
+	writeBundle(t, bundleDir, first.Files)
+	b, err := okf.Load(os.DirFS(bundleDir))
+	require.NoError(t, err)
+	fresh := t.TempDir()
+	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+
+	// Act
+	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
+	require.NoError(t, err)
+	second := exportProject(t, fresh)
+
+	// Assert: the second export is the first, and the source file is unchanged.
+	require.Equal(t, len(first.Files), len(second.Files))
+	for i := range first.Files {
+		assert.Equal(t, string(first.Files[i].Data), string(second.Files[i].Data), first.Files[i].Path)
+	}
+	got, err := os.ReadFile(filepath.Join(fresh, ".ai-rulez/skills/bare/SKILL.md"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(got), "name:")
+	assert.NotContains(t, string(got), "description:")
+}
