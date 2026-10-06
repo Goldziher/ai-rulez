@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -52,7 +53,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	defer stop()
 
 	var last *config.Config // the most recent successfully loaded configuration
-	outputs := newGeneratedOutputFilter()
+	outputs := newGeneratedOutputFilter(initialConfigDir(args))
 	run := func(ctx context.Context, triggers []string) error {
 		if changed := changedPaths(triggers); len(changed) > 0 {
 			logger.Info("Change detected, regenerating", "changed", describeTriggers(changed))
@@ -110,13 +111,32 @@ func changedPaths(triggers []string) []string {
 // generated. An include source can sit on a tree that also holds outputs; their
 // rewrite must not count as a change, or every run would trigger the next.
 type generatedOutputFilter struct {
-	paths atomic.Pointer[map[string]bool]
+	paths     atomic.Pointer[map[string]bool]
+	configDir atomic.Pointer[string]
 }
 
-func newGeneratedOutputFilter() *generatedOutputFilter { return &generatedOutputFilter{} }
+// newGeneratedOutputFilter starts with the configuration directory the watch will
+// use before any run has loaded it, so the files the first run creates inside it
+// (roles.json) are already known to be outputs.
+func newGeneratedOutputFilter(configDir string) *generatedOutputFilter {
+	f := &generatedOutputFilter{}
+	f.setConfigDir(configDir)
+	return f
+}
+
+func (f *generatedOutputFilter) setConfigDir(dir string) {
+	if dir == "" {
+		return
+	}
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	f.configDir.Store(&dir)
+}
 
 // refresh reads the manifests the finished run left behind.
 func (f *generatedOutputFilter) refresh(cfg *config.Config) {
+	f.setConfigDir(cfg.ConfigDir)
 	set := map[string]bool{}
 	for _, p := range generator.NewGenerator(cfg).GeneratedPaths() {
 		set[filepath.Clean(p)] = true
@@ -125,8 +145,25 @@ func (f *generatedOutputFilter) refresh(cfg *config.Config) {
 }
 
 func (f *generatedOutputFilter) ignore(path string) bool {
+	if dir := f.configDir.Load(); dir != nil && slices.Contains(generator.ConfigDirOutputNames(), filepath.Base(path)) {
+		if abs, err := filepath.Abs(filepath.Dir(path)); err == nil && abs == *dir {
+			return true
+		}
+	}
 	set := f.paths.Load()
 	return set != nil && (*set)[filepath.Clean(path)]
+}
+
+// initialConfigDir is the directory a watch started with these arguments will
+// watch, before any configuration is loaded: the directory of the targets that
+// are not a single file.
+func initialConfigDir(args []string) string {
+	for _, t := range fallbackTargets(args) {
+		if !t.File {
+			return t.Path
+		}
+	}
+	return ""
 }
 
 // generateOnce is the single-root path of `generate`, returning errors rather

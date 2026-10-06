@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 )
 
 // Read-only inspection helpers for `ai-rulez doctor`. None of them writes.
@@ -113,6 +114,15 @@ func (g *Generator) GeneratedPaths() []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+// ConfigDirOutputNames are the files a run writes directly inside the
+// configuration directory: the two generation manifests and the roles manifest.
+// A watcher on that directory must not treat their rewrite as a source change.
+// The roles manifest is listed whether or not it is enabled or exists yet, since
+// the first run creates it.
+func ConfigDirOutputNames() []string {
+	return []string{generatedManifestName, generatedLocalManifestName, roles.FileName}
 }
 
 // MissingMCPEnv is an MCP ${VAR} placeholder no source can resolve.
