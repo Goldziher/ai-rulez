@@ -6,13 +6,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/samber/oops"
 )
 
-// Claude Code hook event names handled by HandleHook. Verified against the
-// hook input schemas in Claude Code 2.1.289 (see docs/telemetry.md).
+// Hook event names handled by HandleHook. Claude Code's are verified against the
+// hook input schemas in Claude Code 2.1.289; Codex uses the same SubagentStart and
+// SubagentStop names and Cursor the camelCase forms (matched case-insensitively),
+// both per their documentation (see docs/telemetry.md).
 const (
 	HookInstructionsLoaded = "InstructionsLoaded"
 	HookSubagentStart      = "SubagentStart"
@@ -39,6 +42,25 @@ type hookPayload struct {
 	LoadReason string `json:"load_reason"`
 	AgentID    string `json:"agent_id"`
 	AgentType  string `json:"agent_type"`
+	// Cursor: conversation_id is the session, subagent_id / subagent_type name the
+	// subagent, and subagentStop reports duration_ms itself.
+	ConversationID string `json:"conversation_id"`
+	SubagentID     string `json:"subagent_id"`
+	SubagentType   string `json:"subagent_type"`
+	DurationMS     int64  `json:"duration_ms"`
+}
+
+// normalize folds the Cursor field names into the Claude/Codex ones.
+func (h *hookPayload) normalize() {
+	if h.SessionID == "" {
+		h.SessionID = h.ConversationID
+	}
+	if h.AgentID == "" {
+		h.AgentID = h.SubagentID
+	}
+	if h.AgentType == "" {
+		h.AgentType = h.SubagentType
+	}
 }
 
 // HookOptions configures HandleHook.
@@ -63,6 +85,7 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 	if !p.Settings.RecordActive() {
 		return nil, nil
 	}
+	payload.normalize()
 	harness := options.Harness
 	if harness == "" {
 		harness = "claude"
@@ -71,8 +94,13 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 		Source: SourceHook, Harness: harness, Role: options.Role,
 		Session: p.Session(payload.SessionID), Outcome: OutcomeLoaded,
 	}
-	switch payload.Name {
-	case HookInstructionsLoaded:
+	name := strings.ToLower(payload.Name)
+	if harness != "claude" && !strings.HasPrefix(name, "subagent") {
+		// Codex and Cursor document no instruction-load event, so a stray one is not recorded.
+		return nil, nil
+	}
+	switch name {
+	case strings.ToLower(HookInstructionsLoaded):
 		item := ClassifyInstruction(p.Root, payload.CWD, payload.FilePath)
 		event.Kind, event.ID = item.Kind, item.ID
 		event.LoadReason, event.MemoryType = payload.LoadReason, payload.MemoryType
@@ -82,13 +110,16 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 				event.Path = item.Path
 			}
 		}
-	case HookSubagentStart:
+	case strings.ToLower(HookSubagentStart):
 		event.Kind, event.ID, event.LoadReason = KindAgent, payload.AgentType, ReasonSubagentStart
 		p.noteAgentStart(payload)
-	case HookSubagentStop:
+	case strings.ToLower(HookSubagentStop):
 		event.Kind, event.ID, event.LoadReason = KindAgent, payload.AgentType, ReasonSubagentStop
 		event.Outcome = OutcomeUsed
-		event.DurationMS = p.agentDuration(payload)
+		event.DurationMS = payload.DurationMS
+		if event.DurationMS == 0 {
+			event.DurationMS = p.agentDuration(payload)
+		}
 	default:
 		return nil, nil
 	}
