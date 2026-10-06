@@ -428,7 +428,7 @@ func executeDist(ctx context.Context, d *publish.Dist, dir string) error {
 		})
 	case publish.TargetNPM:
 		result, err = publish.ExecuteNPM(ctx, publishRunner, d.Plan, publish.NPMExecuteOptions{
-			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil),
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil), Notice: func(msg string) { logger.Info(msg) },
 		})
 	case publish.TargetOCI:
 		result, err = publish.ExecuteOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir})
@@ -603,6 +603,10 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 			verb = "running"
 		}
 		fmt.Fprintf(out, "%-11s %s\n", verb, shellJoin(c.Argv))
+	}
+	if d.Plan.NPM != nil {
+		fmt.Fprintf(out, "registry    %s (npm runs from an empty temporary directory with explicit --userconfig and --globalconfig; no project .npmrc applies)\n",
+			publish.NPMEffectiveRegistry(*d.Plan.NPM, runner.ScrubEnv(os.Environ(), npmEnvPass, nil)))
 	}
 	if d.Plan.Credentials != "" {
 		fmt.Fprintf(out, "credentials %s\n", d.Plan.Credentials)

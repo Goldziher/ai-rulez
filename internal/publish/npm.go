@@ -1,7 +1,6 @@
 package publish
 
 import (
-	"context"
 	"regexp"
 	"sort"
 	"strings"
@@ -197,56 +196,11 @@ func npmPackageFiles(in Input, m Manifest, plan NPMPlan) (map[string][]byte, err
 	return files, nil
 }
 
-// NPMExecuteOptions configure ExecuteNPM.
-type NPMExecuteOptions struct {
-	// Dir is the written dist directory, the working directory of npm.
-	Dir string
-	// Env is the complete environment of npm, built by the caller (runner.ScrubEnv).
-	Env []string
-}
-
-// ExecuteNPM packs and publishes through the npm CLI. It refuses a version the
-// registry already has (npm versions are immutable). ai-rulez never sees a
-// credential: npm authenticates itself from its own configuration and the
-// environment the caller passed.
-func ExecuteNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOptions) (string, error) {
-	if plan.Target != TargetNPM || plan.NPM == nil || len(plan.Commands) != 2 {
-		return "", newError(CodeTarget, ExitFailed, "", "the plan has no npm commands to run")
-	}
-	r = runner.Or(r)
-	run := func(argv []string) runner.Result {
-		return r.Run(ctx, runner.Spec{Argv: argv, Dir: opts.Dir, Env: opts.Env, Timeout: uploadTimeout})
-	}
-	view := run(NPMViewArgv(*plan.NPM, plan.Version))
-	switch view.Status {
-	case runner.StatusOK:
-		if strings.TrimSpace(string(view.Stdout)) != "" {
-			return "", newError(CodeTarget, ExitFailed, "bump [plugin] version; npm versions cannot be replaced",
-				"%s@%s already exists in the registry", plan.NPM.Package, plan.Version)
-		}
-	case runner.StatusUnavailable:
-		return "", npmMissing()
-	case runner.StatusExit:
-		low := strings.ToLower(string(view.Stderr))
-		if !strings.Contains(low, "e404") && !strings.Contains(low, "404") && !strings.Contains(low, "not found") {
-			return "", npmFailure("npm view", view)
-		}
-	default:
-		return "", npmFailure("npm view", view)
-	}
-	for _, c := range plan.Commands {
-		res := run(c.Argv)
-		if res.Status != runner.StatusOK {
-			return "", npmFailure(strings.Join(c.Argv[:2], " "), res)
-		}
-	}
-	return plan.NPM.Package + "@" + plan.Version, nil
-}
-
 func npmMissing() error {
 	return newError(CodeTarget, ExitFailed, "install Node.js and npm (https://nodejs.org) and authenticate with `npm login`", "npm was not found on PATH")
 }
 
+// npmFailure reports a failed npm run without echoing credentials.
 func npmFailure(what string, res runner.Result) error {
 	if res.Status == runner.StatusUnavailable {
 		return npmMissing()
