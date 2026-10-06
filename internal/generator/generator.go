@@ -1474,7 +1474,9 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.O
 		}
 	}
 	for _, path := range omittingPaths {
-		logger.Warn("Presets with a rules folder and presets without one write the same file; "+
+		// Through the shared sink, which says each message once per run: this
+		// function runs more than once (rootAgentsMD, scopes) and clean silences it.
+		rulefiles.Warn("Presets with a rules folder and presets without one write the same file ("+path+"); "+
 			"keeping the version that inlines every rule. Set agents_md = true or rules.mode = \"inline\" to share it",
 			"path", path, "kept_from", seenPaths[path].preset, "rules_in_folder", strings.Join(omitting[path], ", "))
 	}
