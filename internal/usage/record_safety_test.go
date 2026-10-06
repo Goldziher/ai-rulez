@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const skillEvent = `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"deploy"},"session_id":"s1"}`
@@ -27,21 +29,21 @@ func TestAppendLine_RefusesSymlinks(t *testing.T) {
 			require.NoError(t, os.WriteFile(victim, []byte("keep\n"), 0o600))
 			local := filepath.Join(root, ".ai-rulez", "local")
 			require.NoError(t, os.MkdirAll(local, 0o750))
-			require.NoError(t, os.Symlink(victim, filepath.Join(local, "usage.jsonl")))
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(local, "usage.jsonl"))
 			return filepath.Join(local, "usage.jsonl"), victim
 		}},
 		{"local directory is a symlink", func(t *testing.T, root string) (string, string) {
 			target := filepath.Join(root, "elsewhere")
 			require.NoError(t, os.MkdirAll(target, 0o750))
 			require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
-			require.NoError(t, os.Symlink(target, filepath.Join(root, ".ai-rulez", "local")))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(root, ".ai-rulez", "local"))
 			return filepath.Join(root, ".ai-rulez", "local", "usage.jsonl"), filepath.Join(target, "usage.jsonl")
 		}},
 		{"dangling symlink to a new file", func(t *testing.T, root string) (string, string) {
 			local := filepath.Join(root, ".ai-rulez", "local")
 			require.NoError(t, os.MkdirAll(local, 0o750))
 			victim := filepath.Join(root, "created-by-attacker")
-			require.NoError(t, os.Symlink(victim, filepath.Join(local, "usage.jsonl")))
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(local, "usage.jsonl"))
 			return filepath.Join(local, "usage.jsonl"), victim
 		}},
 	}
@@ -162,7 +164,7 @@ func TestLoadSalt_IgnoresASymlinkedSaltFile(t *testing.T) {
 	victim := filepath.Join(dir, "victim")
 	require.NoError(t, os.WriteFile(victim, []byte("planted-salt\n"), 0o644))
 	path := filepath.Join(dir, "usage.salt")
-	require.NoError(t, os.Symlink(victim, path))
+	testutil.SymlinkOrSkip(t, victim, path)
 
 	salt := loadSalt(path)
 
@@ -181,7 +183,7 @@ func TestLoadSalt_DoesNotCreateAFileThroughASymlinkedDirectory(t *testing.T) {
 	target := filepath.Join(root, "elsewhere")
 	require.NoError(t, os.MkdirAll(target, 0o750))
 	require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
-	require.NoError(t, os.Symlink(target, filepath.Join(root, ".ai-rulez", "local")))
+	testutil.SymlinkOrSkip(t, target, filepath.Join(root, ".ai-rulez", "local"))
 
 	salt := loadSalt(filepath.Join(root, ".ai-rulez", "local", "usage.salt"))
 

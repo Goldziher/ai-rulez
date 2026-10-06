@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestLocalDoc_LockTimesOutInsteadOfHanging(t *testing.T) {
@@ -38,7 +40,7 @@ func TestLocalDoc_LockRefusesToFollowASymlink(t *testing.T) {
 	_, configDir := overlayProject(t, securityShared)
 	victim := filepath.Join(t.TempDir(), "victim.txt")
 	require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o644))
-	require.NoError(t, os.Symlink(victim, filepath.Join(configDir, localLockName)))
+	testutil.SymlinkOrSkip(t, victim, filepath.Join(configDir, localLockName))
 
 	// Act
 	d, err := OpenLocalDoc(configDir, "config.toml")

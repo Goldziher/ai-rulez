@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // TestPassthroughFileRejectsSymlinkEscape covers the bundling counterpart of the
@@ -26,7 +28,7 @@ func TestPassthroughFileRejectsSymlinkEscape(t *testing.T) {
 
 		sourceDir := t.TempDir()
 		link := filepath.Join(sourceDir, "bootstrap.sh")
-		require.NoError(t, os.Symlink(secret, link))
+		testutil.SymlinkOrSkip(t, secret, link)
 
 		_, err := passthroughFile(sourceDir, "bootstrap.sh", filepath.Join(t.TempDir(), "bootstrap.sh"))
 
@@ -41,7 +43,7 @@ func TestPassthroughFileRejectsSymlinkEscape(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(outside, "passwd"), []byte("root:x:0:0"), 0o644))
 
 		sourceDir := t.TempDir()
-		require.NoError(t, os.Symlink(outside, filepath.Join(sourceDir, "vendor")))
+		testutil.SymlinkOrSkip(t, outside, filepath.Join(sourceDir, "vendor"))
 
 		// No ".." and no absolute prefix, so the lexical guard never fires.
 		_, err := passthroughFile(sourceDir, "vendor/passwd", filepath.Join(t.TempDir(), "passwd"))
@@ -56,7 +58,7 @@ func TestPassthroughFileRejectsSymlinkEscape(t *testing.T) {
 		real := filepath.Join(sourceDir, "scripts", "bootstrap.sh")
 		require.NoError(t, os.MkdirAll(filepath.Dir(real), 0o755))
 		require.NoError(t, os.WriteFile(real, []byte("#!/bin/sh\necho hi\n"), 0o755))
-		require.NoError(t, os.Symlink(real, filepath.Join(sourceDir, "bootstrap.sh")))
+		testutil.SymlinkOrSkip(t, real, filepath.Join(sourceDir, "bootstrap.sh"))
 
 		out, err := passthroughFile(sourceDir, "bootstrap.sh", filepath.Join(t.TempDir(), "bootstrap.sh"))
 

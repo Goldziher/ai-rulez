@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // A symlinked content file must never be read: its target can be any local file
@@ -23,10 +25,10 @@ func TestScanContentTree_RefusesSymlinkedContentFiles(t *testing.T) {
 	rules := filepath.Join(root, "rules")
 	require.NoError(t, os.MkdirAll(rules, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(rules, "real.md"), []byte("# real\n"), 0o644))
-	require.NoError(t, os.Symlink(secret, filepath.Join(rules, "leak.md")))
+	testutil.SymlinkOrSkip(t, secret, filepath.Join(rules, "leak.md"))
 	skill := filepath.Join(root, "skills", "evil")
 	require.NoError(t, os.MkdirAll(skill, 0o755))
-	require.NoError(t, os.Symlink(secret, filepath.Join(skill, "SKILL.md")))
+	testutil.SymlinkOrSkip(t, secret, filepath.Join(skill, "SKILL.md"))
 
 	// Act
 	tree, err := ScanContentTree(root)
@@ -46,7 +48,7 @@ func TestLoadContentFile_SymlinkErrorNamesFileAndNeverReadsTarget(t *testing.T) 
 	secret := filepath.Join(t.TempDir(), "secret.txt")
 	require.NoError(t, os.WriteFile(secret, []byte("TOP-SECRET"), 0o600))
 	link := filepath.Join(dir, "leak.md")
-	require.NoError(t, os.Symlink(secret, link))
+	testutil.SymlinkOrSkip(t, secret, link)
 
 	_, err := loadContentFile(link)
 

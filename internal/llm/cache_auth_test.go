@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func cacheFixture(t *testing.T) (m *Managed, f *Fake, opts Options) {
@@ -166,9 +168,7 @@ func TestCacheIgnoresSymlinkedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.Remove(files[0]) //nolint:errcheck,gosec // test
-	if err := os.Symlink(target, files[0]); err != nil {
-		t.Fatal(err)
-	}
+	testutil.SymlinkOrSkip(t, target, files[0])
 	if r, _ := m.Chat(ctx, chatReq("q")); r.Cached { //nolint:errcheck // test
 		t.Fatal("a symlinked entry must not be followed")
 	}
@@ -243,9 +243,7 @@ func TestLoadOrCreateSecret_ReplacesUnusableFilesAndRefusesSymlinks(t *testing.T
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(victim, path); err != nil {
-		t.Fatal(err)
-	}
+	testutil.SymlinkOrSkip(t, victim, path)
 	if _, err := loadOrCreateSecret(path); err == nil {
 		t.Fatal("a symlinked secret must be refused")
 	}

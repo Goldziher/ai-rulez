@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // pruneProject generates the root plugin bundle of a project with runtimes
@@ -131,7 +133,7 @@ func TestGeneratePlugin_DoesNotPruneThroughSymlinkOutOfProject(t *testing.T) {
 	// Replace the skill directory with a link leaving the project.
 	require.NoError(t, os.Rename(filepath.Join(dir, "skills", "core-s", "SKILL.md"), filepath.Join(outside, "SKILL.md")))
 	require.NoError(t, os.RemoveAll(filepath.Join(dir, "skills", "core-s")))
-	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "skills", "core-s")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "skills", "core-s"))
 	removeCoreSkill(t, dir)
 
 	require.NoError(t, loadDomainsProject(t, dir).GeneratePlugin(""))

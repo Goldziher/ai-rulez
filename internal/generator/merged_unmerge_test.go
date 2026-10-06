@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const userClaudeSettings = `{
@@ -327,7 +329,7 @@ func TestWriteFileAtomic_WritesThroughSymlink(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o750))
 	require.NoError(t, os.WriteFile(target, []byte("old"), 0o600))
 	link := filepath.Join(dir, "settings.json")
-	require.NoError(t, os.Symlink(target, link))
+	testutil.SymlinkOrSkip(t, target, link)
 
 	// Act
 	require.NoError(t, writeFileAtomic(link, []byte("new")))

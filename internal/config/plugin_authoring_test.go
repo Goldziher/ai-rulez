@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 func TestLoadConfigTOML_PluginAuthoring(t *testing.T) {
@@ -529,7 +531,7 @@ func TestValidateHookActionRejectsSymlinkEscape(t *testing.T) {
 		require.NoError(t, os.WriteFile(secret, []byte("PRIVATE KEY"), 0o600))
 
 		baseDir := t.TempDir()
-		require.NoError(t, os.Symlink(secret, filepath.Join(baseDir, "bootstrap.sh")))
+		testutil.SymlinkOrSkip(t, secret, filepath.Join(baseDir, "bootstrap.sh"))
 
 		cfg := &Config{BaseDir: baseDir}
 		err := cfg.validateHookAction("basemind", "SessionStart", 0, &HookAction{Script: "bootstrap.sh"})
