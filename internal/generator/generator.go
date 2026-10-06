@@ -1484,10 +1484,15 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.O
 			conflicts = append(conflicts, fmt.Sprintf("%s (%s differs from %s)",
 				path, strings.Join(conflicting[path], ", "), seenPaths[path].preset))
 		}
+		hint := "Presets that write the same file must render identical content; " +
+			"drop one of the presets or report the divergence"
+		if slices.Contains(conflicting[".mcp.json"], "qoder") || seenPaths[".mcp.json"].preset == "qoder" {
+			hint += ". qoder documents no ${VAR} expansion, so it cannot share .mcp.json with a tool " +
+				"that reads references; drop one of them or supply the secret through --env or .env"
+		}
 		return flatOutputs, oops.
 			With("conflicts", strings.Join(conflicts, "; ")).
-			Hint("Presets that write the same file must render identical content; "+
-				"drop one of the presets or report the divergence").
+			Hint(hint).
 			Errorf("presets write different content to the same path: %s", strings.Join(conflicts, "; "))
 	}
 	return flatOutputs, nil
