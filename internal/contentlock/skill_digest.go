@@ -1,6 +1,8 @@
 package contentlock
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -24,8 +26,14 @@ const SkillDigestScheme = "ai-rulez/skill/v1"
 // git index decides file modes on Windows; any directory inside the project does.
 func SkillDigest(skill *config.ContentFile, root string) (string, error) {
 	primary, err := os.ReadFile(skill.Path)
-	if err != nil {
-		primary = []byte(skill.Content)
+	switch {
+	case err == nil:
+	case errors.Is(err, fs.ErrNotExist):
+		primary = []byte(skill.Content) // in memory only (a builtin): there is no file to read
+	default:
+		// The file exists but cannot be read: digesting the in-memory copy would
+		// silently pin content that is not on disk.
+		return "", oops.With("path", skill.Path).Wrapf(err, "read skill")
 	}
 	modes := newModeResolver()
 	mode := ModeRegular
