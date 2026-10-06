@@ -159,15 +159,18 @@ invalid reply is retried once; then the dimension is `error`, never `pass`.
 only be answered from the body (`needs_body = true`: `body-accuracy`, `injection-intent`, `scope-creep`,
 `instruction-conflict`, `body-structure` in the built-in rubric) is then **not judged** and is reported `skipped`
 ("needs --content full") instead of being guessed from a description. `full` adds the frontmatter and the body (and a
-1.5 KB excerpt of each sibling body for the contextual call). A truncated body caps that item's verdicts at `info`.
+1.5 KB excerpt of each sibling body for the contextual call). A truncated body caps that item's verdicts at `info` and **refuses `--gate`** (exit 1): the middle of a long body is
+never seen, so the run cannot vouch for the item.
 
 **Evidence.** Every `quote` a verdict cites must appear verbatim (whitespace-normalised) in what was sent. A quote
 that does not is dropped and counted (`hallucinated_evidence` in the report); a `warn` or `fail` left with no valid
 quote is dropped and reported as a `pass`, unless the dimension has `allow_absence` (the problem is that something is
-missing). Model-reported confidence is not requested: it is poorly calibrated. Confidence is the vote agreement.
+missing). A quote must be at least 8 characters and at most 20 words (a one-character quote is found in any text).
+Model-reported confidence is not requested: it is poorly calibrated. Confidence is the vote agreement.
 
 **Votes.** The first vote runs at `first_temperature`. If it passes a dimension, that is accepted (precision over
-recall). A flagged dimension gets up to `--k` votes (default the rubric's `votes.max`, 3) at `extra_temperature`, each
+recall), except `injection-intent`: a single pass is the verdict an injected text asks for, so that dimension is always
+voted on again (one extra call per judged item). A flagged dimension gets up to `--k` votes (default the rubric's `votes.max`, 3) at `extra_temperature`, each
 with the dimensions reshuffled and the siblings reversed (vote 2) or shuffled (later votes) from a seed derived from
 the item, so a re-run reproduces every vote and each vote is cached on its own. Voting stops early once two votes agree
 on every flagged dimension. The verdict is the **median** (`pass < warn < fail`, a tie goes to the lower level);
@@ -188,7 +191,8 @@ flags can set any value.
 
 **Where it goes.** The only egress is the model layer. A user-scope `[review] allowed_hosts` (or
 `AI_RULEZ_REVIEW_ALLOWED_HOSTS`) restricts the hosts a judged run may send to (`provider-default` names the provider's
-own endpoint); a run to another host is refused before anything is sent. A repository `allowed_hosts` is ignored and
+own endpoint); a run to another host is refused before anything is sent. With no allow-list the judge accepts any `base_url` host and
+says so in a warning. A repository `allowed_hosts` is ignored and
 reported. See [Data egress](llm.md#data-egress-and-residency).
 
 **Findings.** One AR code per dimension (`AR9G1`-`AR9G7`), at the dimension's severity ceiling, `advisory: true`,
@@ -246,7 +250,8 @@ younger than `max_age_days` (`[review.gate] calibration_max_age_days` overrides 
 alias (`...-latest`) and when the model that answers is not the one the record names. It then exits 2 when a **stable**
 `fail` verdict exists on a dimension whose calibration passed, at or above `--gate-level` (the lowest severity ceiling
 that gates: `warning` by default; a judge never reports above `warning`, so `error` gates no judged verdict). Unstable,
-pre-empted, errored, truncated and baselined verdicts never gate; dimensions the record did not calibrate never gate.
+pre-empted, errored, truncated and baselined verdicts never gate (and an errored dimension or a truncated item refuses the
+run: it is incomplete); a calibration record dated in the future is stale; dimensions the record did not calibrate never gate.
 `[review.gate] require_calibration = false` lets `--gate` run without a record (every dimension counts and `AR9G9`
 still says so).
 
@@ -280,9 +285,10 @@ the file; the unified diff is built from them, not asked of the model). A propos
 with up to two attempts (the second sees why the first was rejected), else the item reports "no safe fix":
 
 1. the edits apply exactly and change the file;
-2. the frontmatter still parses and **only `description` changed** in it: the `name` and the tool list are untouched;
+2. the frontmatter still parses and **only `description` changed** in it: the `name` and the tool list are untouched, and
+   a file without frontmatter gets none;
 3. the item grew by at most `[review.fix] max_growth_percent` (default 25%, never less than 200 bytes);
-4. the security scan finds nothing new, no credential or hidden character was added, and no link was added;
+4. the security scan finds nothing new, no credential or hidden character was added, no link was added, and no executable line (shebang, shell prompt, command substitution, shell fence) was added;
 5. a judge, **a different model from the fixer** unless `--allow-same-model` (self-preference), rates every targeted
    dimension better and no other dimension worse.
 
@@ -303,11 +309,12 @@ has a header with the item digest, the finding, the models and the rubric versio
 
 `--apply` writes the verified edits to the item files. It refuses a file whose digest differs from the patch header
 (**stale patch**), a file with uncommitted changes in git or outside a git repository, and never touches more than the
-item file; it keeps the file mode and replaces the file atomically, then tells you to run `ai-rulez lock` (the lock
+item files; every file is checked before the first is written, so a refused file leaves all of them unchanged; it keeps the file mode and replaces the file atomically, then tells you to run `ai-rulez lock` (the lock
 pins the changed item; with `[governance]` approvals the change needs a new approval). A second run proposes nothing
 (empty patch, exit 0): the fix was rated better and that answer is cached. `--patch FILE` takes a patch written
 earlier instead of asking a model: it verifies the digest, the hunks, the checks and the security scan, and `--apply`
-writes it. Exit 2 when a finding had no safe fix. The fix settings are `[review.fix]`; the judge model is `--judge-model`,
+writes it. A patch is a file anyone can hand over, so it may name only an item a fix run could have edited (never
+`config.toml`, the lock, a script or a calibration record). Exit 2 when a finding had no safe fix. The fix settings are `[review.fix]`; the judge model is `--judge-model`,
 else `[llm] model`; the fixer is `--model`, else `[review.fix] model`.
 
 ## Selecting items
