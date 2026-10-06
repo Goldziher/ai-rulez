@@ -121,6 +121,9 @@
         },
         "max_holdout_evals": {
           "type": "integer"
+        },
+        "require_ci_above_zero": {
+          "type": "boolean"
         }
       }
     },
@@ -311,7 +314,29 @@
           }
         },
         "underpowered": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Fewer than 8 held-out cases, or the bootstrap interval of the gain includes zero."
+        },
+        "gain_ci": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["low", "high", "confidence", "resamples"],
+          "description": "Percentile bootstrap interval of the pass-rate gain over the paired held-out cases (seeded from the case ids, so it is reproducible).",
+          "properties": {
+            "low": {
+              "type": "number"
+            },
+            "high": {
+              "type": "number"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "resamples": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
         }
       }
     },
@@ -374,6 +399,52 @@
         },
         "optimizer_cost_usd": {
           "type": "number"
+        },
+        "siblings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["surface"],
+          "description": "The sibling trigger guard (AR9J4): the other skills' trigger cases re-run with the offline ranker, with the original and with the candidate.",
+          "properties": {
+            "surface": {
+              "const": "retrieval"
+            },
+            "skipped": {
+              "type": "string"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["skill", "positives", "baseline_recall", "candidate_recall", "regressed"],
+                "properties": {
+                  "skill": {
+                    "type": "string"
+                  },
+                  "positives": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "baseline_recall": {
+                    "type": ["number", "null"]
+                  },
+                  "candidate_recall": {
+                    "type": ["number", "null"]
+                  },
+                  "stolen": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regressed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
         },
         "description": {
           "type": "object",
