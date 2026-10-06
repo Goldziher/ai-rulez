@@ -336,8 +336,6 @@ without examples are listed.
   with an `include = [...]` filter brings none, and installed skills do not ship verifiers.
 - An `llm` verdict is advisory. Gating on a model verdict (the design's calibration record) is not implemented, so the
   severity of an `llm` verifier is capped at `warning` and there is no flag that lifts the cap.
-- `verifiers suggest` evaluates candidates on the current tree. The design's false-positive rate on the last N merged
-  diffs is not implemented; the count of findings today is the signal.
 
 ## Local overlay
 
@@ -430,7 +428,14 @@ Each candidate is checked without the model: it must pass the same validation as
 globs, templates, scope), the pass and fail example the model supplied must behave as claimed when run offline
 (otherwise it is rejected), and it is run against the repository to count its findings today. A candidate that fails
 widely is a ratchet candidate (`in = "diff-added"`) or too broad; a rule that cannot be checked mechanically gets
-`No verifier proposed` with the model's reason. In a live run against Gemini (`gemini-2.5-flash-lite`) on this repository's architecture rule, one of five candidates survived; the others were rejected because their own examples did not behave as claimed. Exit `0` even with no proposal, `1` when it could not run.
+`No verifier proposed` with the model's reason.
+
+Each usable candidate is also replayed over the last `--replay N` merged diffs (default 10; 0 turns it off): every
+commit of the first-parent history (a merge commit, a squash commit or a direct commit) is evaluated the way a CI run
+on that change would have been, with the changed files against the tree as of that commit. A merged change passed
+review, so a candidate that "would have flagged" many of them is noisy: the line `replay: would have flagged 2 of 8
+merged diff(s)` names the first few. A project outside a repository, a root commit, or a revision too large to extract
+is noted and skipped, never fatal. In a live run against Gemini (`gemini-2.5-flash-lite`) on this repository's architecture rule, one of five candidates survived; the others were rejected because their own examples did not behave as claimed. Exit `0` even with no proposal, `1` when it could not run.
 
 ## Settings
 
@@ -457,5 +462,4 @@ include's tree is already pinned by commit and digest.
 
 ## Not done
 
-`verifiers suggest` does not replay candidates over the last merged diffs to estimate a false-positive rate; it
-counts findings on the current tree.
+Nothing is listed here at the moment.
