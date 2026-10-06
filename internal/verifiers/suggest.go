@@ -263,16 +263,21 @@ func Suggest(ctx context.Context, cfg *config.Config, opts SuggestOptions) (*Sug
 	for i := range proposals {
 		res.Proposals = append(res.Proposals, assess(ctx, cfg, kind, opts.ID, &proposals[i], taken))
 	}
+	if note := replayProposals(ctx, cfg, usableProposals(res), opts.Replay); note != "" {
+		res.Notes = append(res.Notes, note)
+	}
+	return res, nil
+}
+
+// usableProposals points at the proposals that were not rejected.
+func usableProposals(res *SuggestResult) []*Proposal {
 	var usable []*Proposal
 	for i := range res.Proposals {
 		if res.Proposals[i].Rejected == "" {
 			usable = append(usable, &res.Proposals[i])
 		}
 	}
-	if note := replayProposals(ctx, cfg, usable, opts.Replay); note != "" {
-		res.Notes = append(res.Notes, note)
-	}
-	return res, nil
+	return usable
 }
 
 // suggestEstimate states what a real call would send and cost.
