@@ -62,9 +62,11 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 		return true
 	case PredicateHasMCPServers:
 		return cfg != nil && len(cfg.MCPServers) > 0
-	case PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings() ||
-			(predicate == PredicateHasClaudeSettings && cfg.HasClaudeSettingsContent()))
+	case PredicateHasMCPServersOrPluginSettings:
+		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings())
+	case PredicateHasClaudeSettings:
+		// MCP servers are not a reason: Claude Code reads them from .mcp.json.
+		return cfg != nil && (cfg.ManagesClaudeSettings() || cfg.HasClaudeSettingsContent())
 	case PredicateHasHooks:
 		return cfg != nil && cfg.HasSettingsHooks()
 	case PredicateHasPermissions:
@@ -198,8 +200,8 @@ func (g *Generator) resolveGlobalEffort(cfg *config.Config) string {
 
 // mcpJSONServerEntries builds the .mcp.json server map. Lifted verbatim from
 // the legacy MCPPresetGenerator.Generate body so the output is byte-identical.
-// Difference from claudeMCPServerEntries: `disabled` is emitted unconditionally
-// (true or false), not only when the server is disabled.
+// `disabled` is emitted unconditionally (true or false), not only when the
+// server is disabled.
 func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 	mcpServers := make(map[string]any)
 	if cfg == nil {
@@ -258,11 +260,15 @@ func (g *Generator) ampSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKe
 }
 
 // claudeSettingsOwnedKeys decides what ai-rulez owns in .claude/settings.json:
-// the configured MCP servers, and with [claude.settings] manage = true the
-// marketplace registration and plugin switches. The plugin keys are owned entry
+// with [claude.settings] manage = true the marketplace registration and plugin
+// switches. MCP servers are not written here: Claude Code reads project servers
+// from .mcp.json, and settings.json only has enableAllProjectMcpServers and
+// enabledMcpjsonServers to approve those, so a mcpServers key in it would be dead
+// weight carrying resolved secrets into a file teams commit. The plugin keys are owned entry
 // by entry (Members), so every other marketplace and plugin the file lists
 // survives, and an entry dropped from the config is removed by the previous
-// run's ownership record. An MCP-less config does not claim mcpServers at all.
+// run's ownership record. A mcpServers entry an earlier version wrote is taken back
+// by that record.
 //
 // [[hooks]], [permissions] and [claude.settings.managed] add their own keys (see
 // package settings): hooks and permission rules element by element, env and
@@ -270,9 +276,6 @@ func (g *Generator) ampSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKe
 // and plugin registration are project concepts.
 func claudeSettingsOwnedKeys(cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
 	var owned []jsonmerge.OwnedKey
-	if cfg != nil && !cfg.UserScope && len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true})
-	}
 	extra, err := settings.ClaudeKeys(cfg, outputPath)
 	if err != nil {
 		return nil, fmt.Errorf("render .claude/settings.json settings: %w", err)
@@ -339,14 +342,11 @@ func marketplaceDirPath(cfg *config.Config) string {
 	return dir
 }
 
-// claudeMCPServerEntries builds the .claude/settings.json server map. Lifted
-// verbatim from the legacy claude.go::renderSettingsJSON so the migrated output
-// is byte-for-byte identical.
-func claudeMCPServerEntries(cfg *config.Config) map[string]any {
+// legacyClaudeMCPServerEntries is the server map earlier versions wrote to
+// .claude/settings.json. It only recognises what they left behind (see
+// serverLegacyClaims); nothing renders it any more.
+func legacyClaudeMCPServerEntries(cfg *config.Config) map[string]any {
 	mcpServers := make(map[string]any)
-	if cfg == nil {
-		return mcpServers
-	}
 	for name, server := range cfg.MCPServers {
 		entry := map[string]any{}
 		applyMCPTransport(entry, server)
@@ -490,6 +490,12 @@ func serverLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		var err error
 		if owned, err = claudeSettingsOwnedKeys(cfg, ""); err != nil {
 			return nil
+		}
+		// Earlier versions also wrote the servers here. A clean with no record of
+		// the run that wrote them still takes back an entry that is exactly what
+		// they rendered, and only that.
+		if len(cfg.MCPServers) > 0 && !cfg.UserScope {
+			owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyMCPServers, Value: legacyClaudeMCPServerEntries(cfg), Members: true})
 		}
 	case presets.MergedDocMCPJSON:
 		owned = mcpJSONOwnedKeys(cfg)
