@@ -181,6 +181,9 @@ type Plan struct {
 	// only when the caller asks to fetch (see fetch.go).
 	Remotes  []Remote
 	Findings []Finding
+	// fetchedText is the text of fetched files that are referenced rather than
+	// copied (installed skills), keyed by display name, for the scan.
+	fetchedText map[string]string
 
 	// presetDefaulted is set when no preset was inferred and claude was chosen.
 	presetDefaulted bool
@@ -209,6 +212,10 @@ type Options struct {
 	// KeepNames reports a name collision between imported items instead of
 	// renaming one of them.
 	KeepNames bool
+	// Fetch lets the importers' remote sources be read over the network; Fetcher
+	// replaces the default git fetcher (tests).
+	Fetch   bool
+	Fetcher Fetcher
 }
 
 // Format reads one foreign format. Plan must not write, run commands or use
@@ -249,6 +256,12 @@ func (p *Plan) merge(other *Plan) {
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
 	p.Hooks = append(p.Hooks, other.Hooks...)
 	p.Remotes = append(p.Remotes, other.Remotes...)
+	for k, v := range other.fetchedText {
+		if p.fetchedText == nil {
+			p.fetchedText = map[string]string{}
+		}
+		p.fetchedText[k] = v
+	}
 	p.Permissions.Allow = append(p.Permissions.Allow, other.Permissions.Allow...)
 	p.Permissions.Ask = append(p.Permissions.Ask, other.Permissions.Ask...)
 	p.Permissions.Deny = append(p.Permissions.Deny, other.Permissions.Deny...)

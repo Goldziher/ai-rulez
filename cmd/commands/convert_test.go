@@ -22,7 +22,7 @@ func resetConvertFlags(t *testing.T, source string) {
 	convertReport, convertFormat, convertFailOn = "", "text", nil
 	convertBestEffort, convertSplitHeadings, convertList = false, false, false
 	convertEnableHooks, convertEnablePerms = false, false
-	convertMerge, convertKeepNames, convertLock, convertDelivery = false, false, false, ""
+	convertMerge, convertKeepNames, convertLock, convertDelivery, convertFetch = false, false, false, "", false
 	t.Cleanup(func() { resetConvertFlags2() })
 }
 
@@ -30,7 +30,7 @@ func resetConvertFlags2() {
 	convertFrom, convertSource, convertInto, convertDomain = []string{"auto"}, ".", ".ai-rulez", ""
 	convertDryRun, convertWrite, convertForce, convertReport, convertFormat, convertFailOn = false, false, false, "", "text", nil
 	convertEnableHooks, convertEnablePerms = false, false
-	convertMerge, convertKeepNames, convertLock, convertDelivery = false, false, false, ""
+	convertMerge, convertKeepNames, convertLock, convertDelivery, convertFetch = false, false, false, "", false
 }
 
 func convertProject(t *testing.T) string {
@@ -195,6 +195,24 @@ func TestRunConvert_EnableFlagsDecideWhetherHooksAreLive(t *testing.T) {
 			assert.Equal(t, tt.wantAllow, allow)
 		})
 	}
+}
+
+func TestRunConvert_WithoutFetchRemoteSourcesStayOffline(t *testing.T) {
+	// Arrange: a rulesync source on an unroutable host; any fetch would hang or fail.
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".rulesync", "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "rulesync.jsonc"), []byte(`{"sources":[{"source":"acme/skills","skills":["x"]}]}`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".rulesync", "rules", "r.md"), []byte("Rule.\n"), 0o644))
+	resetConvertFlags(t, dir)
+	convertDryRun, convertFormat = true, "json"
+	var out bytes.Buffer
+
+	// Act
+	code := runConvert(context.Background(), &out, false)
+
+	// Assert
+	require.Equal(t, 0, code)
+	assert.Contains(t, out.String(), "convert uses the network only with --fetch")
 }
 
 func TestCheckConvertFlags(t *testing.T) {

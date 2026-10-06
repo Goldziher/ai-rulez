@@ -64,6 +64,12 @@ type ConvertOptions struct {
 	// Delivery sets how the imported skills reach the agent: static, served or
 	// both ([skills] delivery, or the domain's when Domain is set).
 	Delivery string
+	// Fetch lets convert read the remote git sources the input names (rulesync
+	// sources, APM dependencies that are not installed) over the network. Without
+	// it nothing is fetched and each source is reported.
+	Fetch bool
+	// Fetcher replaces the default git fetcher; for tests.
+	Fetcher Fetcher
 }
 
 // Detection is what one importer recognises in a source directory.
@@ -135,7 +141,9 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	}
 	importers, generatedFrom := preferSources(importers, opts.From)
 
-	plan, err := runImporters(abs, importers, Options{SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames})
+	plan, err := runImporters(ctx, abs, importers, Options{
+		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +157,6 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		sortFindings(plan)
 	}
 	names := importerNames(importers)
-	plan.reportUnfetched()
 	if plan.empty() {
 		hint := "Run `ai-rulez convert --list` to see what each importer detects"
 		if len(plan.Remotes) > 0 {
@@ -209,7 +216,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	classify(report, files, intoAbs, opts.Force, cfgAction)
 	report.count()
 
-	if err := checkStaged(ctx, report, files, &stage, scanContext{srcDir: abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings}); err != nil {
+	if err := checkStaged(ctx, report, files, &stage, scanContext{srcDir: abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings, fetched: plan.fetchedText}); err != nil {
 		return nil, err
 	}
 	if report.Security.Blocked || report.Validation.Errors > 0 || !opts.Write {
@@ -349,7 +356,7 @@ func autoImporters(abs string) ([]Format, error) {
 
 // runImporters plans every importer and merges the plans. The skills-lock
 // importer runs first so the native importer skips the skills it tracks.
-func runImporters(abs string, importers []Format, opt Options) (*Plan, error) {
+func runImporters(ctx context.Context, abs string, importers []Format, opt Options) (*Plan, error) {
 	fsys := os.DirFS(abs)
 	sort.SliceStable(importers, func(i, j int) bool {
 		return importers[i].Name() == skillsLockName && importers[j].Name() != skillsLockName
@@ -367,6 +374,9 @@ func runImporters(abs string, importers []Format, opt Options) (*Plan, error) {
 			}
 		}
 		merged.merge(p)
+	}
+	if err := merged.resolveRemotes(ctx, opt); err != nil {
+		return nil, err
 	}
 	merged.Finalize()
 	return merged, nil
@@ -708,6 +718,14 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 		}
 	}
 	found = append(found, lint.ScanText(DefaultConfigDir+"/"+configTOML, string(data))...)
+	names := make([]string, 0, len(sc.fetched))
+	for name := range sc.fetched {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		found = append(found, lint.ScanText(name, sc.fetched[name])...)
+	}
 
 	report.Security.Findings = []SecurityFinding{}
 	seen := map[string]bool{}
@@ -747,6 +765,9 @@ type scanContext struct {
 	srcDir  string
 	origins map[string][]string
 	allow   []string
+	// fetched is the text of fetched files that are referenced, not copied,
+	// keyed by display name; the scan covers it like a planned file.
+	fetched map[string]string
 }
 
 func (sc scanContext) allows(code string) bool {

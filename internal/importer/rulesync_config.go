@@ -127,22 +127,6 @@ func (b *rulesyncPlanner) importFeatures(raw json.RawMessage) {
 		"restricting rulesync to some features is not carried; ai-rulez presets write every kind the tool supports"))
 }
 
-func (b *rulesyncPlanner) importSources(raw json.RawMessage) {
-	var entries []map[string]any
-	if err := json.Unmarshal(raw, &entries); err != nil {
-		b.p.add(newFinding(StatusUnsupported, rulesyncConfigFile, "sources", "", "sources is not a list of objects"))
-		return
-	}
-	for i, e := range entries {
-		name := stringOf(e["source"])
-		if name == "" {
-			name = fmt.Sprintf("#%d", i)
-		}
-		b.p.add(newFinding(StatusNeedsAction, rulesyncConfigFile, "sources."+name, "",
-			"remote source is not fetched (convert never uses the network); add it as [[includes]] or [[installed_skills]] in config.toml, then run `ai-rulez lock`"))
-	}
-}
-
 // readJSONC reads a JSON or JSONC input file; a file that cannot be parsed is
 // reported and skipped.
 func (b *rulesyncPlanner) readJSONC(file string) (map[string]json.RawMessage, bool) {

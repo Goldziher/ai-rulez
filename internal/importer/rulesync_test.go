@@ -481,13 +481,13 @@ func TestRulesyncPlan_Config(t *testing.T) {
 		},
 		{
 			name: "settings of the generator are reported",
-			cfg:  `{"delete":true,"language":"ja","global":true,"simulateSkills":true,"mystery":1,"sources":[{"source":"a/b"}]}`,
+			cfg:  `{"delete":true,"language":"ja","global":true,"simulateSkills":true,"mystery":1}`,
 			wantFinding: []struct {
 				status Status
 				field  string
 			}{
 				{StatusDropped, "delete"}, {StatusDropped, "language"}, {StatusDropped, "global"},
-				{StatusDropped, "simulateSkills"}, {StatusDropped, "mystery"}, {StatusNeedsAction, "sources.a/b"},
+				{StatusDropped, "simulateSkills"}, {StatusDropped, "mystery"},
 			},
 		},
 		{
@@ -560,7 +560,7 @@ func TestRulesyncPlan_IgnoreAndLocalFiles(t *testing.T) {
 	assert.Contains(t, ignore.Reason, "2 ignore pattern")
 	assert.NotNil(t, findingFor(p, StatusDropped, ".rulesyncignore", ""))
 	assert.NotNil(t, findingFor(p, StatusNeedsAction, "rulesync.local.jsonc", ""))
-	assert.NotNil(t, findingFor(p, StatusNeedsAction, "rulesync-npm.lock.json", ""))
+	assert.NotNil(t, findingFor(p, StatusUnsupported, "rulesync-npm.lock.json", ""))
 	assert.NotNil(t, findingFor(p, StatusDropped, ".rulesync/notes.txt", ""))
 }
 
