@@ -179,13 +179,19 @@ When the filters remove every skill, the start-up warning names each filter and 
 Search and `get_skill` results carry `digest` (a sha256 over the digests of all the skill's files, so
 it changes when any file does), `source` (the authored path, or the repository of an installed
 skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full commit SHA). Log the
-`digest` to record exactly what a session loaded.
+`digest` to record exactly what a session loaded. The digest covers the skill's whole file tree, including files
+the server does not serve (unscannable files at `trust = "error"`), exactly like `lock_digest`; the served files
+are listed with their own digests.
 
 ### Notes and limits
 
 - The Go SDK dispatches only the methods it knows, so `skills/list` and `skills/get` are answered in a
   thin JSON-RPC layer in front of the SDK; everything else, including resources and tools, is served
   by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers.
+- A malformed line never ends the session. Input that is not valid JSON gets `-32700`; a frame that is not a
+  JSON-RPC 2.0 request (wrong or missing `jsonrpc`, an object or boolean `id`, an empty or invalid batch) gets
+  `-32600`; a line over 16 MiB is dropped with `-32600`. The server keeps reading after each. A `resources/read`
+  of an unknown URI gets the not-found error with the URI escaped.
 - `skills/list` returns the whole catalog in one page (no `nextCursor`).
 - A skill URI uses the skill name as its path, so two served skills must not share a name; the server
   refuses to start when they do.
@@ -193,7 +199,8 @@ skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full
   description is served under its name as the description, and a warning on stderr names it (add a
   `description` so `find_skill` can rank it). The served bytes are not rewritten. A skill whose frontmatter
   cannot be parsed, or whose name is not a valid `skill://` path segment, is skipped with a warning; the
-  rest are unaffected.
+  rest are unaffected. A skill whose frontmatter is not valid YAML (`validate` fails on it) is refused:
+  `load_skill` and `get_skill` answer `malformed-frontmatter` with the reason, and `generate` fails the same way.
 - Semantic (embedding) search is not implemented; the ranking is lexical.
 
 ## Dynamic skill loading
@@ -441,7 +448,8 @@ The level is `trust` for a source skill:
 | `warn` | Findings that are errors by their own severity (secrets, hidden characters, risky shell). Default for skills authored in the project. |
 
 Skills that come from an `[[includes]]` entry are remote content: they are scanned at `error` like installed skills
-(`scan_imports = "warn"` lowers them to `warn`), as is any skill file outside the project root. Their lock `source`
+(`scan_imports = "warn"` lowers them to `warn`), as is any skill file outside the project root. This holds wherever
+the include lives, including a local include inside the project (`source = "./shared"`). Their lock `source`
 is `include:<name>/<path>`, identical on every machine.
 
 ### Lock enforcement
@@ -495,11 +503,16 @@ Each successful `load_skill` goes through the usage recorder as one identifier-o
 salted session hash (a stdio connection has no transport session id, so the server gives each connection a random
 one; a new connection gets a new hash and a new byte budget, the same pipe keeps both; the salt file is created next
 to the log on first use), harness (the MCP client name), the role the server runs under, `outcome: "loaded"`, content
-hash from the skills index, the served digest, and `served: true` (log format `v: 2`, the same as hook-recorded
+hash from the skills index, the served digest, and `served: true` (log format `v: 3`, the same as hook-recorded
 loads).
 A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
 `ai-rulez report usage`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
 or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage.jsonl`.
+
+A `--usage-sink` receives exactly the line the log gets, salted session included. Without a `--usage-log` the salt
+lives in `<config dir>/local/usage.salt`. The sink command runs in the background: records wait in a queue of 256,
+so a slow or hanging sink never delays `load_skill`. A full queue drops the new record and logs a warning with the
+number dropped. Queued records are delivered at shutdown, waiting up to three seconds.
 
 ### Live reload
 
