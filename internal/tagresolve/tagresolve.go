@@ -214,7 +214,12 @@ func cause(err error) string { return err.Error() }
 func duplicateNotes(cands []Candidate) []string {
 	var notes []string
 	for i := 1; i < len(cands); i++ {
-		if cands[i-1].Version.Compare(cands[i].Version) == 0 && cands[i-1].Version.Build == cands[i].Version.Build {
+		if cands[i-1].Version.Compare(cands[i].Version) != 0 {
+			continue
+		}
+		if cands[i-1].Version.Build != cands[i].Version.Build {
+			notes = append(notes, fmt.Sprintf("tags %q and %q differ only in build metadata, which semver precedence ignores; using %q", cands[i-1].Tag.Name, cands[i].Tag.Name, cands[i-1].Tag.Name))
+		} else {
 			notes = append(notes, fmt.Sprintf("tags %q and %q name the same version; using %q", cands[i-1].Tag.Name, cands[i].Tag.Name, cands[i-1].Tag.Name))
 		}
 	}
