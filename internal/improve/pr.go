@@ -160,22 +160,12 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		return nil, refuse(CodePRRefused, "create the worktree: %v", err)
 	}
 	committed := false
-	defer func() {
-		_ = g.WorktreeRemove(ctx, top, wt) //nolint:errcheck // best effort; the directory is removed next
-		_ = os.RemoveAll(scratch)          //nolint:errcheck // a temp directory
-		if !committed {
-			_ = g.BranchDelete(ctx, top, branch) //nolint:errcheck // leave no trace of a pull request that was not made
-		}
-		_ = g.WorktreePrune(ctx, top) //nolint:errcheck // drops a stale entry
-	}()
+	tmp := tempWorktree{g: g, top: top, wt: wt, scratch: scratch, branch: branch}
+	defer func() { tmp.remove(ctx, committed) }()
 
-	relProject := gitutil.RepoRelative(top, opts.RepoDir)
-	if relProject == "" {
-		return nil, refuse(CodePRRefused, "%s is not inside the repository %s", opts.RepoDir, top)
-	}
-	relConfig, err := filepath.Rel(gitutil.Resolve(opts.RepoDir), gitutil.Resolve(opts.ConfigDir))
-	if err != nil || !filepath.IsLocal(relConfig) {
-		return nil, refuse(CodePRRefused, "the config directory %s is not inside the project %s", opts.ConfigDir, opts.RepoDir)
+	relProject, relConfig, err := prLocations(opts, top)
+	if err != nil {
+		return nil, err
 	}
 	p.configRel = relConfig
 	projDir := filepath.Join(wt, relProject)
@@ -197,6 +187,36 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	committed = true
 	fmt.Fprintf(opts.Out, "Committed %s on %s (from %s); your checkout was not touched.\n", res.Commit[:min(12, len(res.Commit))], branch, base)
 	return res, p.publish(ctx, opts, top, res)
+}
+
+// tempWorktree is the temporary worktree of a pull request and the branch made for it.
+type tempWorktree struct {
+	g                        gitutil.Git
+	top, wt, scratch, branch string
+}
+
+// remove deletes the worktree and, when nothing was committed, its branch.
+func (t tempWorktree) remove(ctx context.Context, committed bool) {
+	_ = t.g.WorktreeRemove(ctx, t.top, t.wt) //nolint:errcheck // best effort; the directory is removed next
+	_ = os.RemoveAll(t.scratch)              //nolint:errcheck // a temp directory
+	if !committed {
+		_ = t.g.BranchDelete(ctx, t.top, t.branch) //nolint:errcheck // leave no trace of a pull request that was not made
+	}
+	_ = t.g.WorktreePrune(ctx, t.top) //nolint:errcheck // drops a stale entry
+}
+
+// prLocations are the project's directory relative to the repository top and the config directory relative to
+// the project, both of which must stay inside.
+func prLocations(opts *PROptions, top string) (relProject, relConfig string, err error) {
+	relProject = gitutil.RepoRelative(top, opts.RepoDir)
+	if relProject == "" {
+		return "", "", refuse(CodePRRefused, "%s is not inside the repository %s", opts.RepoDir, top)
+	}
+	relConfig, err = filepath.Rel(gitutil.Resolve(opts.RepoDir), gitutil.Resolve(opts.ConfigDir))
+	if err != nil || !filepath.IsLocal(relConfig) {
+		return "", "", refuse(CodePRRefused, "the config directory %s is not inside the project %s", opts.ConfigDir, opts.RepoDir)
+	}
+	return relProject, relConfig, nil
 }
 
 // prRun is a verified, accepted run.
