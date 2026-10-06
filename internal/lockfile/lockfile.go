@@ -7,6 +7,7 @@ package lockfile
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -132,10 +133,19 @@ func Load(configDir string) (*File, error) {
 }
 
 func read(configDir string) (*File, error) {
-	data, err := os.ReadFile(Path(configDir))
+	// A symlinked lock is refused rather than followed, as the write side replaces
+	// it: reading through a link would let the lock be pointed at another file.
+	file, err := safefs.OpenRegular(Path(configDir))
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, oops.With("path", Path(configDir)).
+			Hint("If the lock is a symlink, delete it and run `ai-rulez lock`, which writes a regular file").
+			Wrapf(err, "read lock file")
+	}
+	defer file.Close() //nolint:errcheck // read-only
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, oops.With("path", Path(configDir)).Wrapf(err, "read lock file")
 	}
