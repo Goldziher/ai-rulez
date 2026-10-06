@@ -263,9 +263,13 @@ func (e *approveEnv) listDoc() *approveListDoc {
 		if !r.Required && !approveAll && !hasRecord[r.Key()] {
 			continue
 		}
+		who := r.Reviewers
+		if len(who) == 0 {
+			who = r.Recorded // an expired or unauthorized row still says who approved it
+		}
 		doc.Items = append(doc.Items, approveListItem{
 			Ref: r.Ref(), Kind: r.Kind, ID: r.ID, Domain: r.Domain, Digest: r.Digest, Required: r.Required, Status: r.Status,
-			Code: approval.CodeOf(r.Status), Reviewers: emptyIfNil(r.Reviewers), Expires: r.Expires, ApprovedDigest: r.ApprovedDigest,
+			Code: approval.CodeOf(r.Status), Reviewers: emptyIfNil(who), Expires: r.Expires, ApprovedDigest: r.ApprovedDigest,
 		})
 		if r.Required {
 			doc.Summary["required"]++

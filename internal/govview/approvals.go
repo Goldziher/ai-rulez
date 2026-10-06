@@ -73,6 +73,7 @@ func ApprovalChanges(cfg *config.Config, lock *lockfile.File, items []lockfile.I
 // approvalIndex answers the approval status of catalog items.
 type approvalIndex struct {
 	policy approval.Policy
+	lock   *lockfile.File
 	recs   []lockfile.Approval
 	now    time.Time
 }
@@ -83,16 +84,30 @@ type approvalIndex struct {
 func newApprovalIndex(cfg *config.Config) *approvalIndex {
 	idx := &approvalIndex{policy: approval.PolicyOf(cfg), now: ApprovalNow()}
 	if lock, err := lockfile.Load(cfg.ConfigDir); err == nil && lock != nil {
-		idx.recs = lock.Approval
+		idx.lock, idx.recs = lock, lock.Approval
 	}
 	return idx
 }
 
+// forItem is the approval state of a catalog item. A skill is also served, and
+// the served skill is a subject of its own (kind served, same name): when the
+// policy selects that, the item carries its state too, and the worst of the
+// subjects that apply is the one reported.
 func (x *approvalIndex) forItem(kind, domain, id, digest string) *ItemApproval {
 	if digest == "" {
 		return nil
 	}
-	r := x.policy.Evaluate(x.recs, approval.Subject{Kind: kind, Domain: domain, ID: id, Digest: digest, Class: approval.ClassLocal}, x.now)
+	results := []approval.Result{x.policy.Evaluate(x.recs, approval.Subject{Kind: kind, Domain: domain, ID: id, Digest: digest, Class: approval.ClassLocal}, x.now)}
+	if kind == "skill" && x.lock != nil {
+		for _, e := range x.lock.Served {
+			if e.Name == id {
+				results = append(results, x.policy.Evaluate(x.recs, approval.Subject{
+					Kind: approval.KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: approval.ServedClass(e.Source, e.Ref, e.Commit),
+				}, x.now))
+			}
+		}
+	}
+	r := pickApproval(results)
 	if !r.Required && len(r.Reviewers) == 0 {
 		return nil
 	}
@@ -104,4 +119,20 @@ func (x *approvalIndex) forItem(kind, domain, id, digest string) *ItemApproval {
 		out.Assurance = lockfile.AssuranceAsserted
 	}
 	return out
+}
+
+// pickApproval chooses the result that describes a group of subjects: the first
+// required one that fails, else the first required one, else the first result.
+func pickApproval(results []approval.Result) approval.Result {
+	for _, r := range results {
+		if r.Failing() {
+			return r
+		}
+	}
+	for _, r := range results {
+		if r.Required {
+			return r
+		}
+	}
+	return results[0]
 }

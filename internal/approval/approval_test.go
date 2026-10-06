@@ -314,3 +314,30 @@ func TestGovernanceLockProblem_FailsClosedUnderEnforce(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluate_UnknownAssuranceNeverCounts(t *testing.T) {
+	// Arrange
+	include := Subject{Kind: KindInclude, ID: "shared", Digest: digestB, Class: ClassRemote}
+	forged := rec("include", "shared", digestB, "alice", func(a *lockfile.Approval) { a.Assurance = "signed" })
+	policy := Policy{Selectors: []string{"remote"}}
+
+	// Act
+	got := policy.Evaluate([]lockfile.Approval{forged}, include, testNow)
+
+	// Assert
+	assert.Equal(t, StatusMissing, got.Status, "nothing here can verify a signature, so it is no approval")
+}
+
+func TestEvaluate_RecordedNamesReviewersOfFailingRecords(t *testing.T) {
+	// Arrange
+	include := Subject{Kind: KindInclude, ID: "shared", Digest: digestB, Class: ClassRemote}
+	policy := Policy{Selectors: []string{"remote"}}
+
+	// Act
+	expired := policy.Evaluate([]lockfile.Approval{rec("include", "shared", digestB, "Alice", expires("2020-01-01"))}, include, testNow)
+
+	// Assert
+	assert.Equal(t, StatusExpired, expired.Status)
+	assert.Empty(t, expired.Reviewers)
+	assert.Equal(t, []string{"alice"}, expired.Recorded)
+}

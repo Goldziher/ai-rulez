@@ -108,3 +108,24 @@ func TestApprovalChanges_FailClosedWithoutALock(t *testing.T) {
 	assert.Contains(t, changes[0].Detail, "AR710")
 	assert.Equal(t, contentlock.ScopeApproval, changes[0].Scope)
 }
+
+func TestApprovalIndex_ASkillCarriesTheApprovalOfItsServedEntry(t *testing.T) {
+	// Arrange: skill deploy is served from a git source; only remote content needs approval
+	cfg := &config.Config{Governance: &config.GovernanceConfig{RequireApproval: []string{"remote"}, Enforce: true}}
+	lock := &lockfile.File{Served: []lockfile.Entry{{Name: "deploy", Source: "https://github.com/o/r.git", Digest: "sha256:served"}}}
+	idx := &approvalIndex{policy: approval.PolicyOf(cfg), lock: lock, recs: lock.Approval, now: approvalTestNow}
+
+	// Act
+	missing := idx.forItem("skill", "", "deploy", "sha256:item")
+	idx.recs = []lockfile.Approval{{Kind: "served", ID: "deploy", Digest: "sha256:served", Reviewer: "alice", Assurance: lockfile.AssuranceAsserted}}
+	approved := idx.forItem("skill", "", "deploy", "sha256:item")
+
+	// Assert
+	require.NotNil(t, missing)
+	assert.True(t, missing.Required)
+	assert.Equal(t, approval.StatusMissing, missing.Status)
+	require.NotNil(t, approved)
+	assert.Equal(t, approval.StatusOK, approved.Status)
+	assert.Equal(t, []string{"alice"}, approved.Reviewers)
+	assert.Nil(t, idx.forItem("rule", "", "style", "sha256:r"), "an unrelated local item needs nothing")
+}
