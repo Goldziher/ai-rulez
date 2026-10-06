@@ -236,10 +236,20 @@ func (e *editor) removeIn(cur *yaml.Node, path, done []string, claim Claim) erro
 	}
 }
 
+// keyWithoutLeadingComments is a copy of a member's key without its head comment.
+// A re-rendered member replaces the span from the key's line, which starts below
+// the comment lines above it, so rendering them again would duplicate them.
+func keyWithoutLeadingComments(key *yaml.Node) *yaml.Node {
+	clone := *key
+	clone.HeadComment = ""
+	return &clone
+}
+
 // restoreEmptyMap rewrites the member at cur.Content[2*idx] as an empty flow map.
 func (e *editor) restoreEmptyMap(cur *yaml.Node, idx int) error {
-	key := cur.Content[2*idx]
-	empty := &yaml.Node{Kind: yaml.MappingNode, Style: yaml.FlowStyle}
+	key := keyWithoutLeadingComments(cur.Content[2*idx])
+	empty := &yaml.Node{Kind: yaml.MappingNode, Style: yaml.FlowStyle, LineComment: key.LineComment}
+	key.LineComment = ""
 	pair := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{key, empty}}
 	rendered, err := marshal(pair, e.unit)
 	if err != nil {
@@ -313,7 +323,11 @@ func (e *editor) removeMember(cur *yaml.Node, idx int) {
 // flow mapping, after mutate has changed its nodes. With dropIfEmpty, a mapping
 // the mutation empties takes its member with it.
 func (e *editor) editFlowMember(cur *yaml.Node, idx int, dropIfEmpty bool, mutate func(*yaml.Node) error) error {
-	key, flow := cur.Content[2*idx], cur.Content[2*idx+1]
+	key, flow := keyWithoutLeadingComments(cur.Content[2*idx]), cur.Content[2*idx+1]
+	if key.LineComment == "" && len(flow.Content) == 0 {
+		// `key: {} # note`: keep the note on the key once the braces are gone.
+		key.LineComment, flow.LineComment = flow.LineComment, ""
+	}
 	if len(flow.Content) == 0 {
 		flow.Style &^= yaml.FlowStyle
 	}
