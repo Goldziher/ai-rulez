@@ -15,11 +15,11 @@ import (
 // The zero value checks nothing about roles.
 type RoleSelection struct {
 	// Write selects the roles to pin (`lock`): the roles with pin = true, every
-	// role when All is set, and Only. Without Write it selects the roles to
+	// role when All is set, Only, and the roles Lock already pins. Without Write it selects the roles to
 	// check: those with pin = true and those pinned in Lock, narrowed to Only.
 	Write bool
 	All   bool
-	// Lock is the lock being checked.
+	// Lock is the lock being checked, or the current lock `lock` re-pins from.
 	Lock *lockfile.File
 	// Only names roles to pin in addition (Write) or the roles to check.
 	Only []string
@@ -39,8 +39,10 @@ func (s RoleSelection) names(cfg *config.Config) ([]string, error) {
 			pinned[cfg.Roles[i].Name] = true
 		}
 	}
+	// A role the lock already pins stays pinned (a role pinned with `lock
+	// --roles` survives a plain `lock`) unless the role left the config.
 	for _, o := range s.Lock.RoleOutputs() {
-		if !s.Write && exists[o.Role] {
+		if exists[o.Role] {
 			pinned[o.Role] = true
 		}
 	}

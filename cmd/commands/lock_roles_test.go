@@ -231,3 +231,38 @@ func TestValidateLockFlags_Roles(t *testing.T) {
 		})
 	}
 }
+
+func TestLockRoles_PlainLockKeepsRolePinnedWithRolesFlag(t *testing.T) {
+	// Arrange: ops is pinned only through --roles
+	root := roleLockProject(t, "off")
+	lockRoles = true
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockRoles = false
+	require.Equal(t, []string{"dev", "ops"}, pinnedRoles(t, root))
+
+	// Act: a plain lock re-pins it
+	require.Equal(t, 0, writeLockAt("", "", nil))
+
+	// Assert
+	assert.Equal(t, []string{"dev", "ops"}, pinnedRoles(t, root))
+}
+
+func TestLockRoles_PlainLockDropsAPinnedRoleRemovedFromConfig(t *testing.T) {
+	// Arrange
+	root := roleLockProject(t, "off")
+	lockRoles = true
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockRoles = false
+	path := filepath.Join(root, ".ai-rulez", "config.toml")
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	i := strings.Index(string(data), "[[roles]]\nname = \"ops\"")
+	require.Positive(t, i)
+	require.NoError(t, os.WriteFile(path, data[:i], 0o644))
+
+	// Act
+	require.Equal(t, 0, writeLockAt("", "", nil))
+
+	// Assert
+	assert.Equal(t, []string{"dev"}, pinnedRoles(t, root))
+}
