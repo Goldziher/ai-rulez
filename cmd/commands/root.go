@@ -18,10 +18,15 @@ var (
 )
 
 var RootCmd = &cobra.Command{
-	Use:          "ai-rulez",
-	Short:        "Lightning-fast CLI tool for managing AI assistant rules",
-	Long:         `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules \nacross multiple platforms including Claude, Cursor, Devin, GitHub Copilot, \nand more. It provides a unified configuration format with support for remote \nincludes, dynamic generation, and MCP server integration.`,
+	Use:   "ai-rulez",
+	Short: "Lightning-fast CLI tool for managing AI assistant rules",
+	Long: `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules
+across multiple platforms including Claude, Cursor, Devin, GitHub Copilot,
+and more. It provides a unified configuration format with support for remote
+includes, dynamic generation, and MCP server integration.`,
 	SilenceUsage: true,
+	// main prints the returned error once; cobra's own "Error:" line would repeat it.
+	SilenceErrors: true,
 	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		switch {
 		case viper.GetBool("debug"):
