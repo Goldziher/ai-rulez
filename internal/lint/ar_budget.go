@@ -44,6 +44,27 @@ var loadBudgets = []loadBudget{
 	{ID: "agent-skills-tokens", Scope: scopeFile, Unit: "tokens", Limit: 5000, Source: "https://agentskills.io/specification", Checked: loadBudgetsChecked, CoveredBy: CodeSizeTokens},
 }
 
+// LoadBudgetIDs lists the ids [lint.load_budgets] may override, in table order.
+func LoadBudgetIDs() []string {
+	var ids []string
+	for i := range loadBudgets {
+		if loadBudgets[i].CoveredBy == "" {
+			ids = append(ids, loadBudgets[i].ID)
+		}
+	}
+	return ids
+}
+
+// LoadBudgetDefault is the built-in limit of a load budget id, 0 when unknown.
+func LoadBudgetDefault(id string) int {
+	for i := range loadBudgets {
+		if loadBudgets[i].ID == id {
+			return loadBudgets[i].Limit
+		}
+	}
+	return 0
+}
+
 func (b loadBudget) applies(presets map[string]bool) bool {
 	if b.CoveredBy != "" {
 		return false
@@ -71,9 +92,13 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 	cfgPath := r.configFilePath()
 	cfgLines := r.fileLines(cfgPath)
 	for i := range loadBudgets {
-		b := &loadBudgets[i]
+		own := loadBudgets[i]
+		b := &own
 		if !b.applies(presets) {
 			continue
+		}
+		if v := r.lc.LoadBudgets[b.ID]; v > 0 {
+			b.Limit = v
 		}
 		total, name := 0, 0
 		for i := range r.items {

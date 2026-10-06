@@ -106,7 +106,7 @@ func init() {
 			Good: "Keep credential readers and network callers in separate bundles",
 		},
 		CodePublisherMismatch: {
-			Why:  "An installed skill that credits a publisher who does not own its source repository is impersonating that publisher.",
+			Why:  "An installed skill or included content that credits a publisher who does not own its source repository is impersonating that publisher.",
 			Bad:  "A skill from `someone/fork` whose description says it is by Anthropic",
 			Good: "Install from the publisher's own repository",
 		},

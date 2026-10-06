@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
@@ -353,6 +354,15 @@ func TestApplyIsMonotonic(t *testing.T) {
 		assert.True(t, !enforced(cfgBase) || enforced(cfgTight))
 		assert.LessOrEqual(t, len(cfgTight.Includes), len(cfgBase.Includes))
 		assert.GreaterOrEqual(t, scanRankOf(cfgTight), scanRankOf(cfgBase))
+		assert.Subset(t, cfgTight.Lint.Security.DirectiveTags, cfgBase.Lint.Security.DirectiveTags, "tags only grow (seed %d)", seed)
+		assert.LessOrEqual(t, networkLimit(cfgTight), networkLimit(cfgBase), "network limit (seed %d)", seed)
+		for _, id := range budgetPool {
+			assert.LessOrEqual(t, budgetOf(cfgTight, id), budgetOf(cfgBase, id), "budget %s (seed %d)", id, seed)
+		}
+		if tight.Lint.Security.TrustedOrgs.Set {
+			assert.NotEmpty(t, cfgTight.Lint.Security.TrustedOrgs)
+			assert.Subset(t, tight.Lint.Security.TrustedOrgs.Items, orgsOrSentinel(cfgTight), "org outside the policy (seed %d)", seed)
+		}
 	}
 }
 
@@ -371,6 +381,19 @@ func randomRepoConfig(t *testing.T, seed int64) *config.Config {
 	}
 	lc.Security.AllowedHosts = pick(rng, secHosts)
 	lc.Security.ScanImports = []string{"", "off", "warn", "error"}[rng.Intn(4)]
+	lc.Security.DirectiveTags = pick(rng, tagPool)
+	lc.Security.TrustedOrgs = pick(rng, orgPool)
+	if rng.Intn(2) == 0 {
+		lc.Capability = &config.LintCapability{MaxNetworkCommands: intPtr(rng.Intn(12))}
+	}
+	for _, id := range budgetPool {
+		if rng.Intn(2) == 0 {
+			if lc.LoadBudgets == nil {
+				lc.LoadBudgets = map[string]int{}
+			}
+			lc.LoadBudgets[id] = 100 * (1 + rng.Intn(20))
+		}
+	}
 	cfg.Lint = lc
 	if rng.Intn(2) == 0 {
 		cfg.Lock = &config.LockConfig{Enforce: boolPtr(rng.Intn(2) == 0)}
@@ -405,3 +428,30 @@ func enforced(cfg *config.Config) bool {
 }
 
 func scanRankOf(cfg *config.Config) int { return scanImportsRank[cfg.Lint.Security.ScanImports] }
+
+// networkLimit is the effective max_network_commands: the default (5) when unset.
+func networkLimit(cfg *config.Config) int {
+	if c := cfg.Lint.Capability; c != nil && c.MaxNetworkCommands != nil {
+		return *c.MaxNetworkCommands
+	}
+	return 5
+}
+
+// budgetOf is the effective load budget: the built-in limit when unset.
+func budgetOf(cfg *config.Config, id string) int {
+	if v := cfg.Lint.LoadBudgets[id]; v > 0 {
+		return v
+	}
+	return lint.LoadBudgetDefault(id)
+}
+
+// orgsOrSentinel is the effective trusted_orgs without the nobody sentinel.
+func orgsOrSentinel(cfg *config.Config) []string {
+	var out []string
+	for _, o := range cfg.Lint.Security.TrustedOrgs {
+		if o != noHostSentinel {
+			out = append(out, o)
+		}
+	}
+	return out
+}

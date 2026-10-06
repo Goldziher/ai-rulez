@@ -21,9 +21,13 @@ func Merge(a, b Policy) Policy {
 			RequiredCodes: union(a.Lint.RequiredCodes, b.Lint.RequiredCodes),
 			SeverityFloor: mergeFloor(a.Lint.SeverityFloor, b.Lint.SeverityFloor),
 			Security: Security{
-				AllowedHosts: intersect(a.Lint.Security.AllowedHosts, b.Lint.Security.AllowedHosts),
-				ScanImports:  stricterScan(a.Lint.Security.ScanImports, b.Lint.Security.ScanImports),
+				AllowedHosts:  intersect(a.Lint.Security.AllowedHosts, b.Lint.Security.AllowedHosts),
+				ScanImports:   stricterScan(a.Lint.Security.ScanImports, b.Lint.Security.ScanImports),
+				DirectiveTags: union(a.Lint.Security.DirectiveTags, b.Lint.Security.DirectiveTags),
+				TrustedOrgs:   intersectExact(a.Lint.Security.TrustedOrgs, b.Lint.Security.TrustedOrgs),
 			},
+			Capability:  Capability{MaxNetworkCommands: lowerLimit(a.Lint.Capability.MaxNetworkCommands, b.Lint.Capability.MaxNetworkCommands)},
+			LoadBudgets: lowerLimits(a.Lint.LoadBudgets, b.Lint.LoadBudgets),
 		},
 		Lock: Lock{
 			Enforce:        a.Lock.Enforce || b.Lock.Enforce,
@@ -113,6 +117,38 @@ func mergeFloor(a, b map[string]string) map[string]string {
 		for code, sev := range m {
 			if cur, ok := out[code]; !ok || severityRank[sev] > severityRank[cur] {
 				out[code] = sev
+			}
+		}
+	}
+	return out
+}
+
+// lowerLimit is the meet of two upper bounds: the lower one; nil is no bound.
+func lowerLimit(a, b *int) *int {
+	switch {
+	case a == nil && b == nil:
+		return nil
+	case a == nil:
+		v := *b
+		return &v
+	case b == nil || *a <= *b:
+		v := *a
+		return &v
+	}
+	v := *b
+	return &v
+}
+
+// lowerLimits merges per-key upper bounds, keeping the lower value of each key.
+func lowerLimits(a, b map[string]int) map[string]int {
+	if len(a) == 0 && len(b) == 0 {
+		return nil
+	}
+	out := make(map[string]int, len(a)+len(b))
+	for _, m := range []map[string]int{a, b} {
+		for k, v := range m {
+			if cur, ok := out[k]; !ok || v < cur {
+				out[k] = v
 			}
 		}
 	}

@@ -72,6 +72,10 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.severities()
 	a.securityHosts()
 	a.scanImports()
+	a.directiveTags()
+	a.trustedOrgs()
+	a.maxNetworkCommands()
+	a.loadBudgets()
 	a.lock()
 	a.networks()
 	a.guard()
@@ -325,6 +329,132 @@ func (a *applier) scanImports() {
 			"[lint.security] scan_imports = %q is weaker than the policy level %q (origin: %s); %q is enforced", have, want, a.origin("lint.security.scan_imports"), want)
 	}
 	sec.ScanImports = want
+}
+
+// lintSecurity returns the repository's [lint.security], created when absent.
+func (a *applier) lintSecurity() *config.LintSecurity {
+	if a.cfg.Lint == nil {
+		a.cfg.Lint = &config.LintConfig{}
+	}
+	if a.cfg.Lint.Security == nil {
+		a.cfg.Lint.Security = &config.LintSecurity{}
+	}
+	return a.cfg.Lint.Security
+}
+
+// directiveTags adds the policy's tags to the repository's. The repository's own
+// list only ever adds, so there is nothing to loosen and nothing to report.
+func (a *applier) directiveTags() {
+	pol := a.res.Policy.Lint.Security.DirectiveTags
+	if len(pol) == 0 {
+		return
+	}
+	sec := a.lintSecurity()
+	sec.DirectiveTags = sortedUnique(append(append([]string(nil), pol...), sec.DirectiveTags...))
+}
+
+// trustedOrgs keeps the repository's trusted_orgs the policy list names, like
+// governance approvers: the intersection, the policy list when none is left,
+// and a sentinel when the policy trusts nobody (an empty list means built-in).
+func (a *applier) trustedOrgs() {
+	pol := a.res.Policy.Lint.Security.TrustedOrgs
+	if !pol.Set {
+		return
+	}
+	sec := a.lintSecurity()
+	var kept []string
+	for _, org := range sec.TrustedOrgs {
+		n := strings.ToLower(strings.TrimSpace(org))
+		if slices.Contains(pol.Items, n) {
+			kept = append(kept, n)
+			continue
+		}
+		a.violate(lint.CodePolicyLoosened, "lint.security.trusted_orgs", org,
+			"[lint.security] trusted_orgs entry %q is not in the policy list %s (origin: %s); it is dropped", org, quoteList(pol.Items), a.origin("lint.security.trusted_orgs"))
+	}
+	switch {
+	case len(kept) > 0:
+		if !sameSet(kept, pol.Items) {
+			a.accept = append(a.accept, fmt.Sprintf("lint.security.trusted_orgs (narrowed to %s)", quoteList(sortedUnique(kept))))
+		}
+		sec.TrustedOrgs = sortedUnique(kept)
+	case len(pol.Items) == 0:
+		sec.TrustedOrgs = []string{noHostSentinel}
+	default:
+		sec.TrustedOrgs = append([]string(nil), pol.Items...)
+	}
+}
+
+// maxNetworkCommands clamps [lint.capability] max_network_commands to the
+// policy's bound; a lower value is a narrowing and is accepted.
+func (a *applier) maxNetworkCommands() {
+	pol := a.res.Policy.Lint.Capability.MaxNetworkCommands
+	if pol == nil {
+		return
+	}
+	if a.cfg.Lint == nil {
+		a.cfg.Lint = &config.LintConfig{}
+	}
+	if a.cfg.Lint.Capability == nil {
+		a.cfg.Lint.Capability = &config.LintCapability{}
+	}
+	c := a.cfg.Lint.Capability
+	// An unset repository value runs at the built-in default; a policy bound
+	// above it must not raise it.
+	limit := *pol
+	unsetLimit := min(limit, lint.DefaultMaxNetworkCommands)
+	switch have := c.MaxNetworkCommands; {
+	case have == nil:
+		limit = unsetLimit
+	case *have > limit:
+		a.violate(lint.CodePolicyLoosened, "lint.capability.max_network_commands", "max_network_commands",
+			"[lint.capability] max_network_commands = %d is above the policy limit %d (origin: %s); %d is enforced", *have, limit, a.origin("lint.capability.max_network_commands"), limit)
+	case *have < limit:
+		a.accept = append(a.accept, fmt.Sprintf("lint.capability.max_network_commands (lowered to %d)", *have))
+		return
+	default:
+		return
+	}
+	c.MaxNetworkCommands = &limit
+}
+
+// loadBudgets clamps [lint.load_budgets] to the policy's per-limit bounds.
+func (a *applier) loadBudgets() {
+	pol := a.res.Policy.Lint.LoadBudgets
+	if len(pol) == 0 {
+		return
+	}
+	if a.cfg.Lint == nil {
+		a.cfg.Lint = &config.LintConfig{}
+	}
+	lc := a.cfg.Lint
+	ids := make([]string, 0, len(pol))
+	for id := range pol {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		limit := pol[id]
+		key := "lint.load_budgets." + id
+		have, set := lc.LoadBudgets[id]
+		switch {
+		case set && have > limit:
+			a.violate(lint.CodePolicyLoosened, key, id,
+				"[lint.load_budgets] %s = %d is above the policy limit %d (origin: %s); %d is enforced", id, have, limit, a.origin(key), limit)
+		case set && have > 0 && have < limit:
+			a.accept = append(a.accept, fmt.Sprintf("%s (lowered to %d)", key, have))
+			continue
+		case set && have == limit:
+			continue
+		}
+		if lc.LoadBudgets == nil {
+			lc.LoadBudgets = map[string]int{}
+		}
+		if !set || have <= 0 {
+			limit = min(limit, lint.LoadBudgetDefault(id)) // unset runs at the built-in; a bound above it must not raise it
+		}
+		lc.LoadBudgets[id] = limit
+	}
 }
 
 func (a *applier) lock() {

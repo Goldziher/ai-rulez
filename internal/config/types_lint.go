@@ -45,6 +45,13 @@ type LintConfig struct {
 	// Budgets maps a content kind (rule, context, skill, agent, command) to its size
 	// limits (max_lines, max_tokens). Not to be confused with Tolerate.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
+	// Capability tunes the capability analysis (AR030).
+	Capability *LintCapability `yaml:"capability,omitempty" json:"capability,omitempty" toml:"capability,omitempty"`
+	// LoadBudgets overrides the harness load limits AR964 checks, keyed by the
+	// limit's id (for example "claude-skill-listing"); the value is in the
+	// limit's own unit. Not to be confused with Budgets, which caps the size of
+	// a content kind.
+	LoadBudgets map[string]int `yaml:"load_budgets,omitempty" json:"load_budgets,omitempty" toml:"load_budgets,omitempty"` //nolint:tagliatelle
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.
 	RequireMetadata map[string][]string `yaml:"require_metadata,omitempty" json:"require_metadata,omitempty" toml:"require_metadata,omitempty"` //nolint:tagliatelle
 	// AllowOverrides lists content names ("name") or domain-qualified names
@@ -109,6 +116,21 @@ type LintSecurity struct {
 	SecretPatterns []LintSecretPattern `yaml:"secret_patterns,omitempty" json:"secret_patterns,omitempty" toml:"secret_patterns,omitempty"` //nolint:tagliatelle
 	// InjectionPhrases adds case-insensitive phrases to the prompt-injection detector.
 	InjectionPhrases []string `yaml:"injection_phrases,omitempty" json:"injection_phrases,omitempty" toml:"injection_phrases,omitempty"` //nolint:tagliatelle
+	// DirectiveTags adds element names (for example "assistant") to the tags the
+	// fake-directive-tag check (AR018) treats as imitating a privileged message,
+	// next to the built-in <system> and <override>.
+	DirectiveTags []string `yaml:"directive_tags,omitempty" json:"directive_tags,omitempty" toml:"directive_tags,omitempty"` //nolint:tagliatelle
+	// TrustedOrgs replaces the built-in list of organizations (repository
+	// owners) a skill or include may call itself official, verified or trusted
+	// for (AR033). Unset keeps the built-in list.
+	TrustedOrgs []string `yaml:"trusted_orgs,omitempty" json:"trusted_orgs,omitempty" toml:"trusted_orgs,omitempty"` //nolint:tagliatelle
+}
+
+// LintCapability tunes the capability analysis (AR030).
+type LintCapability struct {
+	// MaxNetworkCommands is how many network commands an item may run before
+	// AR030 calls it network-heavy. Unset keeps the default (5); 0 is valid.
+	MaxNetworkCommands *int `yaml:"max_network_commands,omitempty" json:"max_network_commands,omitempty" toml:"max_network_commands,omitempty"` //nolint:tagliatelle
 }
 
 // LintSecretPattern is a named secret detector.

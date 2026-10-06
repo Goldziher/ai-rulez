@@ -127,6 +127,8 @@ type item struct {
 type runner struct {
 	cfg          *config.Config
 	mcpOnce      sync.Once
+	fakeTagOnce  sync.Once
+	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer
 	lc           config.LintConfig
 	tree         *Tree

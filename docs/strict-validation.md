@@ -290,7 +290,15 @@ scan_imports = "error"             # unset (default: scan, errors block) | off |
 allowed_hosts = ["github.com", "*.example.org"]   # enables AR008
 allowed_tools = ["Bash"]           # unrestricted allowed-tools entries that are accepted (AR007)
 injection_phrases = ["as root user"]
+directive_tags = ["assistant"]     # element names AR018 reports next to <system> and <override>
+trusted_orgs = ["acme"]            # owners AR033 accepts "official" for; replaces the built-in list
 secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
+
+[lint.capability]
+max_network_commands = 3           # AR030 network-heavy limit; default 5, 0 allowed
+
+[lint.load_budgets]                # AR964 harness limits by id, in the limit's own unit; positive integers
+claude-skill-listing = 1200        # ids: claude-skill-listing, codex-agents-chain, codex-skill-listing, windsurf-rule-file, cursor-rule-lines
 
 [[lint.external]]                  # run with --external only
 name = "my-scanner"
@@ -825,8 +833,8 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR028 | `credential-taint-flow` | warning | A shell block or script that reads a credential (a path from AR006's table, or a secret variable such as `$GITHUB_TOKEN`) and passes it to `curl`, `wget`, `nc`, `ssh`, `scp`, `rsync`, `dig` and the like through a variable (`T=$(cat ~/.aws/credentials)`; `curl -d "$T"`), a pipe or a temporary file (`> /tmp/k`; `curl -F f=@/tmp/k`). Line-based and conservative: it follows `VAR=...`, `read VAR < file` and redirects inside one fenced block or one script, clears a variable that is reassigned, ignores prose, treats a variable copied from an environment secret as safe in an authentication header, and skips a line AR014 already reported or whose URLs are all in `lint.security.allowed_hosts`. Never suppressed by surrounding text |
 | AR030 | `capability-profile-risk` | warning | The commands a skill runs (fenced shell blocks of `SKILL.md` and its markdown resources, and its shell scripts) are classified into tiers (read-only, mutating, destructive, network, privilege, stealth, interpreter; one table of about 150 commands in `internal/lint/ar_capability.go`) and combined: destructive plus network is a warning, an interpreter plus network and more than five network commands are info. The message carries the profile (`destructive:1 network:2`). Prose that only names a command does not count, `rm` without `-r`/`-f` is not destructive, and the finding sits on the `name:` line so a `# ai-rulez-lint-ignore: AR030` comment in the frontmatter silences it for a build or deploy skill |
 | AR031 | `cross-item-exfil-chain` | warning | Skills of one bundle (the root, or one domain) that split a dangerous capability: one reads credentials and has no network while another has network and reads none (warning), stealth commands beside a skill with a high-risk finding (warning), privileged commands beside network access and a credential reader beside an interpreter (both info). One summary finding per pattern and bundle, on the first skill, naming both and how many more pairs match. A single skill that does both is reported by AR028 and AR014 instead |
-| AR032 | `publisher-mismatch` | warning | An installed skill whose name or description credits a publisher ("by Acme Corp", "made by @acme") that is not the owner of the repository in its `installed_skills` `source` (compared loosely, ignoring `Corp`, `Inc`, `Team`, punctuation and case). Local sources are skipped. Reported on the skill's entry in `config.toml`. A heuristic: only "by <Capitalised Name>" and "<verb> by" forms count, not "from CSV" |
-| AR033 | `authority-claim` | info | An installed skill whose description says *official*, *verified*, *trusted*, *authorized*, *endorsed* or *certified* while its source owner is not in a built-in list of well-known organizations (`anthropics`, `openai`, `github`, `vercel`, ...). Local sources are skipped |
+| AR032 | `publisher-mismatch` | warning | An installed skill, or a skill, agent or command from a git include, whose name or description credits a publisher ("by Acme Corp", "made by @acme") that is not the owner of the repository in its `installed_skills` or `includes` `source` (compared loosely, ignoring `Corp`, `Inc`, `Team`, punctuation and case). Local sources are skipped. Reported on the entry in `config.toml`. A heuristic: only "by <Capitalised Name>" and "<verb> by" forms count, not "from CSV" |
+| AR033 | `authority-claim` | info | An installed skill, or content from a git include, whose description says *official*, *verified*, *trusted*, *authorized*, *endorsed* or *certified* while its source owner is not in a built-in list of well-known organizations (`anthropics`, `openai`, `github`, `vercel`, ...) or in `[lint.security] trusted_orgs`, which replaces that list. Local sources are skipped |
 | AR034 | `low-analyzability` | info | Less than 70% of the bytes in a skill directory could be scanned: binaries, archives, WebAssembly, images, files over 1 MiB and files with NUL bytes are opaque to the text rules. The message names the largest opaque files |
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
@@ -848,9 +856,18 @@ Rules that report mild and serious cases at different levels say so in the table
 
 The command-shaped rules (AR021 to AR025) do not report inside example regions (an `example` fenced block, an `<!-- ai-rulez-example -->` marker or a `[lint] example_paths` glob such as `**/references/**`), nor on lines (or under a heading, or before a fenced block) that talk *about* a bad example ("never run", "avoid", "dangerous", "anti-pattern", ...). AR014, AR028 and AR029 are never suppressed this way, because an attack hides in exactly that text; use an inline ignore for a security-training document.
 
+### Tuning the heuristics
+
+`[lint.security] directive_tags` adds element names to the tags AR018 treats as imitating a privileged message (a tag is
+matched whole, so `assistant` does not match `<assistants-guide>`). `trusted_orgs` replaces the built-in organization
+list of AR033. `[lint.capability] max_network_commands` sets the AR030 network-heavy limit. `[lint.load_budgets]`
+overrides one AR964 harness limit by id; it is a different table from `[lint.budgets]`, which sizes a content kind. An
+unknown id or a value below 1 is a config error. Under an [organization policy](policy.md) all four are tighten-only: a
+repository may add tags, narrow `trusted_orgs`, and lower a limit, and a looser value is clamped and reported as `AR740`.
+
 ### Not implemented
 
-`[lint.security] directive_tags` and `trusted_orgs`, `[lint.capability]` thresholds and `[lint.budgets]` per harness are not configurable yet: the tag list, trusted organizations, network-command limit (5) and load budgets are constants in `internal/lint`. AR032 and AR033 compare installed skills only, not includes. The optional `claude plugin validate` step of AR963 runs with `--external` only.
+The optional `claude plugin validate` step of AR963 runs with `--external` only.
 
 The rule ideas AR016 to AR034 come from a review of what other skill scanners detect. The patterns, the command tiers and the credential table were written from the public conventions of each tool (where ssh, aws, gpg, kubectl, docker and so on keep secrets); no scanner code, table or message text was copied.
 <!-- lint-rules-notes:end -->
@@ -1175,17 +1192,17 @@ items of one bundle split a dangerous capability between them: one reads credent
 
 ### AR032 publisher-mismatch
 
-an installed skill's name or description credits a publisher that is not the owner of the repository it was installed from
+an installed skill's, or a git include's skill, agent or command, name or description credits a publisher that is not the owner of the repository it came from
 
 - Default severity: `warning`
 - Analyzer: `security` (scope `item`)
-- Why: An installed skill that credits a publisher who does not own its source repository is impersonating that publisher.
+- Why: An installed skill or included content that credits a publisher who does not own its source repository is impersonating that publisher.
 - Bad: A skill from `someone/fork` whose description says it is by Anthropic
 - Good: Install from the publisher's own repository
 
 ### AR033 authority-claim
 
-an installed skill's description claims to be official, verified or trusted, but its source owner is not a known organization
+an installed skill's or git include's description claims to be official, verified or trusted, but its source owner is not a known or configured trusted organization
 
 - Default severity: `info`
 - Analyzer: `security` (scope `item`)
