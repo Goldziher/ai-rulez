@@ -867,7 +867,10 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	if err != nil {
 		return err
 	}
-	signLines := signingRequiredLines(cfg)
+	signLines, err := signingRequiredLines(cfg)
+	if err != nil {
+		return err
+	}
 	switch {
 	case len(lines) == 0 && len(signLines) == 0:
 		return nil

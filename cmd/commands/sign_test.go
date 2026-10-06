@@ -275,6 +275,34 @@ func TestRequireLockSignatureGates(t *testing.T) {
 	})
 }
 
+func TestLockCheckDoesNotReportUpToDateBeforeASignatureFailure(t *testing.T) {
+	newSignFixture(t, "\n[signing]\nrequire = [\"lock\"]\nkey_file = \"keys/release.pub\"\n")
+
+	var code int
+	var report func()
+	capture(t, func() { code, report = checkLockContentAt("") })
+
+	// The content comparison passes but only hands back the success report: the
+	// caller prints it after the signature check, never before.
+	assert.Equal(t, 0, code)
+	assert.NotNil(t, report)
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, exitDrift, code)
+	assert.Contains(t, stderr, "AR720")
+}
+
+func TestLockCheckWithAnUnbuildablePolicyCouldNotRun(t *testing.T) {
+	f := newSignFixture(t, "\n[signing]\nrequire = [\"lock\"]\nkey_file = \"keys/release.pub\"\n")
+	require.NoError(t, os.WriteFile(f.pubKey, []byte("not a key"), 0o644))
+
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+
+	assert.Equal(t, 1, code, "verify --attestation exits 1 for the same policy; lock --check agrees")
+	assert.Contains(t, stderr, "public key")
+	assert.NotContains(t, stderr, "AR720")
+}
+
 func TestSignFlagValidation(t *testing.T) {
 	tests := []struct {
 		name string
