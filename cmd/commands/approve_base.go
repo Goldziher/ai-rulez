@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/samber/oops"
 
@@ -116,7 +117,8 @@ func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approv
 // commit author emails (and GitHub noreply addresses) against the reviewer
 // string, so a reviewer recorded under another name is not caught.
 func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
-	if lock == nil || len(lock.Approval) == 0 || !approval.PolicyOf(cfg).ForbidSelf {
+	policy := approval.PolicyOf(cfg)
+	if lock == nil || len(lock.Approval) == 0 || !policy.ForbidSelf {
 		return nil, nil
 	}
 	g, err := newApproveGit(context.Background(), cfg)
@@ -135,6 +137,12 @@ func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([
 		if !ok || s.Digest != a.Digest {
 			continue
 		}
+		who := signerOf(policy, a, s)
+		if a.Assurance == lockfile.AssuranceSigned && strings.HasPrefix(approval.Identity(who), "key:") {
+			note := fmt.Sprintf("the signed approval of %s is by %s, a key that names no author: [governance] forbid_self_approval cannot tell whether the signer wrote the change; sign with a keyless identity", s.Ref(), who)
+			out = append(out, approval.SelfApproval{Approval: a, Ref: s.Ref(), Note: note})
+			continue
+		}
 		emails, seen := cache[s.Key()]
 		if !seen {
 			if emails, err = g.authors(rev, g.subjectPaths(s)); err != nil {
@@ -143,13 +151,24 @@ func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([
 			cache[s.Key()] = emails
 		}
 		for _, email := range emails {
-			if approval.AuthorIs(a.Reviewer, email) {
+			if approval.AuthorIs(who, email) {
 				out = append(out, approval.SelfApproval{Approval: a, Ref: s.Ref(), Author: email})
 				break
 			}
 		}
 	}
 	return out, nil
+}
+
+// signerOf is the identity a record stands for: the verified signer of a signed
+// approval (the record's own reviewer string is not trusted), else the reviewer.
+func signerOf(policy approval.Policy, a lockfile.Approval, s approval.Subject) string {
+	if a.Assurance == lockfile.AssuranceSigned {
+		if who, err := policy.VerifyAssurance(a, s, time.Now()); err == nil && who != "" {
+			return who
+		}
+	}
+	return a.Reviewer
 }
 
 // verifyBase is `approve --verify-base <rev>`: it prints each approval added
