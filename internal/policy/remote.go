@@ -63,12 +63,18 @@ func redactURL(raw string) string {
 // or a policy URL with no digest at all (AR741).
 type DigestError struct {
 	Path string
+	// Hint replaces the default advice for a policy with no digest.
+	Hint string
 	// Want is the pinned digest, "" when the reference has none.
 	Want string
 	Got  string
 }
 
 func (e *DigestError) Error() string {
+	if e.Want == "" && e.Hint != "" {
+		return fmt.Sprintf("%s: policy %s has no digest; %s. A URL policy is never loaded unpinned, because whoever controls the URL would control the policy",
+			lint.CodePolicyDigestMismatch, e.Path, e.Hint)
+	}
 	if e.Want == "" {
 		return fmt.Sprintf("%s: policy %s has no digest; pin it with @sha256:<hex> (or --policy-digest), or record it once with --policy-trust-tofu in a terminal. "+
 			"A URL policy is never loaded unpinned, because whoever controls the URL would control the policy",
@@ -127,6 +133,11 @@ type networkError struct{ err error }
 func (e *networkError) Error() string { return e.err.Error() }
 func (e *networkError) Unwrap() error { return e.err }
 
+// statusError is an HTTP status other than 200.
+type statusError struct{ code int }
+
+func (e *statusError) Error() string { return fmt.Sprintf("HTTP %d", e.code) }
+
 // httpClient returns the client a fetch uses: the injected one (tests), else a
 // default; either way redirects are limited to https on the same host.
 func (o DiscoverOptions) httpClient() *http.Client {
@@ -175,7 +186,7 @@ func fetch(ctx context.Context, client *http.Client, ref Ref) ([]byte, error) {
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only
 	if resp.StatusCode != http.StatusOK {
-		return nil, &networkError{err: fmt.Errorf("HTTP %d", resp.StatusCode)}
+		return nil, &networkError{err: &statusError{code: resp.StatusCode}}
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxPolicyBytes+1))
 	if err != nil {

@@ -27,6 +27,7 @@ var (
 	policyOfflineFlag  bool
 	policyMaxStaleFlag string
 	policyTOFUFlag     bool
+	discoverOrgFlag    bool
 )
 
 // validateShowPolicy is validate --show-policy.
@@ -38,7 +39,7 @@ var policyEnforcer = policy.NewEnforcer(func() policy.DiscoverOptions {
 	return policy.DiscoverOptions{
 		Flag: policyFlag, FlagDigest: policyDigestFlag, Mode: policyModeFlag,
 		Offline: policyOfflineFlag, MaxStale: policyMaxStaleFlag,
-		TrustOnFirstUse: policyTOFUFlag, Interactive: stdinIsTerminal(),
+		TrustOnFirstUse: policyTOFUFlag, Interactive: stdinIsTerminal(), DiscoverOrg: discoverOrgFlag,
 	}
 })
 
@@ -54,6 +55,8 @@ func init() {
 		"Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed")
 	RootCmd.PersistentFlags().StringVar(&policyMaxStaleFlag, "policy-max-stale", "",
 		"How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE)")
+	RootCmd.PersistentFlags().BoolVar(&discoverOrgFlag, "discover-org", false,
+		"Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md")
 	RootCmd.PersistentFlags().BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
 		"Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards")
 	RootCmd.PersistentFlags().StringVar(&policyModeFlag, "policy-mode", "",
@@ -80,15 +83,23 @@ func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 		return 1
 	}
 	var result *policy.Result
-	if resolved != nil {
-		if cfg, lerr := loadConfigForCommand(ctx, args, config.WithoutRemote()); lerr == nil {
-			result = &policy.Result{Outcome: cfg.PolicyOutcome}
-			if cfg.PolicyOutcome != nil {
-				result.Accepted = cfg.PolicyOutcome.Accepted
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "no configuration to compare with the policy: %v\n", lerr)
+	cfg, lerr := loadConfigForCommand(ctx, args, config.WithoutRemote())
+	switch {
+	case lerr == nil:
+		// The organization policy of the repository's owner, when discovery is on,
+		// is a layer of this repository only.
+		withOrg, oerr := policyEnforcer.LoadFor(cfg.BaseDir)
+		if oerr != nil {
+			fmtError(oerr)
+			return 1
 		}
+		resolved = withOrg
+		result = &policy.Result{Outcome: cfg.PolicyOutcome}
+		if cfg.PolicyOutcome != nil {
+			result.Accepted = cfg.PolicyOutcome.Accepted
+		}
+	case resolved != nil:
+		fmt.Fprintf(os.Stderr, "no configuration to compare with the policy: %v\n", lerr)
 	}
 	report := policy.BuildReport(resolved, result)
 	if structuredFormat(validateFormat) && validateFormat != formatJSON {

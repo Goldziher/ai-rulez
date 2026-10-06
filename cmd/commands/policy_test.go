@@ -45,7 +45,7 @@ func TestPolicyGate(t *testing.T) {
 
 func TestPolicyFlagIsGlobalAndShowPolicyIsOnValidate(t *testing.T) {
 	assert.NotNil(t, RootCmd.PersistentFlags().Lookup("policy"))
-	for _, name := range []string{"policy-mode", "policy-digest", "policy-offline", "policy-max-stale", "policy-trust-tofu"} {
+	for _, name := range []string{"policy-mode", "policy-digest", "policy-offline", "policy-max-stale", "policy-trust-tofu", "discover-org"} {
 		assert.NotNil(t, RootCmd.PersistentFlags().Lookup(name), name)
 	}
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("show-policy"))

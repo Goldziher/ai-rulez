@@ -15,6 +15,7 @@ Layers, strongest anchor first. Every layer found is loaded and merged tighten-o
 | --- | --- | --- |
 | `flag` | `--policy <file or https URL>` | a CI step the organization owns |
 | `env` | `AI_RULEZ_POLICY=<file or https URL>` | managed machines, CI images |
+| `org` | the policy of the repository's GitHub owner, with `--discover-org` or `[policy] discover = "org"` in the user config | a convenience for an organization's repositories (see below; not an anchor) |
 | `managed` | `/etc/ai-rulez/policy.toml` (Linux and others), `/Library/Application Support/ai-rulez/policy.toml` (macOS), `%ProgramData%\ai-rulez\policy.toml` (Windows) | a machine-wide baseline |
 
 A flag or variable that is set but cannot be loaded is an error (`AR742`), never a skip: breaking the path must not
@@ -42,6 +43,35 @@ content someone else controls:
   `AI_RULEZ_POLICY_MAX_STALE`; `0` allows none). `--policy-offline` (or `AI_RULEZ_POLICY_OFFLINE=1`) uses the cache
   without asking the network. Past `max_stale`, or with no cached copy, the run fails with `AR742`. There is no
   "skip the policy because it is unreachable". `validate --show-policy` marks a layer served from the cache.
+
+### Organization discovery
+
+`--discover-org` (or `[policy] discover = "org"` in the user config, `~/.config/ai-rulez/config.toml`) also loads
+`ai-rulez-policy.toml` from the root of the `<owner>/.github` repository, where `<owner>` is the GitHub owner of the
+repository's `origin` remote (`https://github.com/<owner>/...`, `git@github.com:<owner>/...`, `ssh://`). It is
+fetched from `raw.githubusercontent.com` (public `.github` repositories only) and is the weakest layer. It is the
+same as any policy URL: a digest is required, from `[policy.digests]` in the user config or recorded once with
+`--policy-trust-tofu`, never from the repository.
+
+```toml
+# ~/.config/ai-rulez/config.toml  (the user config, outside every repository)
+[policy]
+discover = "org"
+
+[policy.digests]
+example-org = "sha256:<hex>"
+```
+
+An owner with no policy file (HTTP 404) has no organization policy; any other failure fails closed (`AR742`), with
+the cached copy standing in for at most `max_stale`. The owner is fetched once per run however many repositories
+share it. A remote that is not on GitHub, or no remote at all, skips discovery with a warning, unless
+`--discover-org` was given on the command line, which then fails closed.
+
+Discovery is a **convenience, not an anchor**. The owner comes from the repository's own git configuration, so a
+pull request can point `origin` at an owner whose policy is looser. A looser org policy cannot loosen anything (layers
+only add restrictions), but discovery alone does not bind a repository either. Enforce with `--policy`,
+`AI_RULEZ_POLICY` or the managed path, and use discovery to add the owner's policy on top. The `telemetry` and `llm`
+network locks read only the anchored layers, since they apply before any repository is known.
 
 ### `extends`
 
@@ -297,6 +327,9 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 
 ## Design decisions
 
+- **Discovery reads the owner from `origin`.** A repository can change its own remote, so the org layer is additive
+  only. The design asked whether discovering from the git remote is acceptable at all (it is an implicit fetch):
+  it is opt-in per user or per invocation, pinned by digest, and fails closed once demanded.
 - **`extends` is checked, not just folded.** Merging already makes the chain at least as strict as each parent, so a
   looser child value would be silently dropped. Reporting it (`AR743`) is the safer choice: a team lead who writes a
   weaker value learns it does nothing.

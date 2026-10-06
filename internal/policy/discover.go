@@ -71,7 +71,22 @@ type DiscoverOptions struct {
 	Interactive bool
 	// Clock is the time source for cache ages; the zero value is the wall clock.
 	Clock ambient.Clock
+
+	// DiscoverOrg is --discover-org: also look for the organization policy of the
+	// repository's GitHub owner (see OrgRef). [policy] discover = "org" in the user
+	// config does the same.
+	DiscoverOrg bool
+	// ProjectDir is the repository being evaluated, for organization discovery. It
+	// only selects the owner; a policy is never read from it.
+	ProjectDir string
+	// RemoteURL reads the origin remote of a repository (tests); nil runs git.
+	RemoteURL func(dir string) (string, error)
+	// OrgRawBase replaces https://raw.githubusercontent.com (tests).
+	OrgRawBase string
 }
+
+// context is the context of a load.
+func (o DiscoverOptions) context() context.Context { return context.Background() }
 
 // Policy modes (--policy-mode).
 const (
@@ -103,7 +118,7 @@ func (o DiscoverOptions) cacheKey() string {
 	return strings.Join([]string{
 		o.Flag, o.FlagDigest, o.envPolicy(), ambient.Getenv(o.Env, EnvPolicyDigest), ambient.Getenv(o.Env, EnvPolicyMaxStale),
 		ambient.Getenv(o.Env, EnvPolicyOffline), o.GOOS, o.Mode, o.MaxStale,
-		fmt.Sprint(o.Offline, o.TrustOnFirstUse, o.Interactive), fmt.Sprintf("%p", o.HTTPClient),
+		fmt.Sprint(o.Offline, o.TrustOnFirstUse, o.Interactive, o.DiscoverOrg), fmt.Sprintf("%p", o.HTTPClient), o.OrgRawBase,
 	}, "\x00")
 }
 
@@ -182,7 +197,7 @@ func Discover(opts DiscoverOptions) ([]Layer, error) {
 	if err != nil {
 		return nil, err
 	}
-	l := &loader{opts: opts, ctx: context.Background(), maxStale: stale, seen: map[string]bool{}}
+	l := &loader{opts: opts, ctx: opts.context(), maxStale: stale, seen: map[string]bool{}}
 	if p := strings.TrimSpace(opts.Flag); p != "" {
 		if err := l.add(OriginFlag, p, opts.FlagDigest, true); err != nil {
 			return nil, err
