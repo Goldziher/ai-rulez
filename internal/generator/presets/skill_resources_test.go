@@ -50,6 +50,19 @@ func TestRenderSkillResourcesIndex(t *testing.T) {
 		assert.Contains(t, out, "`assets/logo.png`")
 	})
 
+	t.Run("caps an over-long description", func(t *testing.T) {
+		t.Parallel()
+		skill := config.ContentFile{
+			Resources: []config.SkillResource{
+				{Kind: config.SkillKindReferences, RelPath: "references/big.md",
+					Description: strings.Repeat("word ", 130000) + "\nsecond line"},
+			},
+		}
+		out := RenderSkillResourcesIndex(&skill)
+		assert.Less(t, len(out), 1000)
+		assert.NotContains(t, out, "second line")
+	})
+
 	t.Run("omits empty kind sections", func(t *testing.T) {
 		t.Parallel()
 		skill := config.ContentFile{
