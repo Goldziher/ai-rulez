@@ -60,6 +60,10 @@ type Config struct {
 	// ServeMode is set while a skills server renders: every skill is rendered,
 	// served ones included, and no dynamic-skills stub is added.
 	ServeMode bool `yaml:"-" json:"-" toml:"-"`
+	// QuietDeliveryWarnings keeps GeneratePresets from logging the AR992
+	// fallback warnings: a check that renders only to inspect the result (the
+	// validate stub check) reports them as findings instead.
+	QuietDeliveryWarnings bool `yaml:"-" json:"-" toml:"-"`
 	// roleDelivery is the per-skill delivery of the role being rendered (see
 	// SetRoleDelivery); nil when no role is active.
 	roleDelivery map[string]string
