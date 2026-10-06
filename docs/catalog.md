@@ -132,7 +132,8 @@ rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
   `.ai-rulez` folder is always refused. The marker is written before the files, so an interrupted run leaves the
   directory marked. Writes never follow a symlink out of the directory.
 - **Secrets.** The run is refused when the secret scanner (`AR001`) flagged an item and the site would publish its
-  excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged).
+  excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged). The published description and excerpt are also scanned
+  directly, so a lint that did not run, a baselined finding or an inline ignore does not let a secret through.
 
 ### Configuration and pages
 

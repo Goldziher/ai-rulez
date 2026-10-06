@@ -359,14 +359,8 @@ func refuseSecrets(doc *govview.CatalogDocV2, allow []string) error {
 	var flagged []string
 	for i := range doc.Items {
 		it := &doc.Items[i]
-		if it.Lint == nil {
-			continue
-		}
-		for _, f := range it.Lint.Findings {
-			if f.Code == lint.CodeSecretDetected {
-				flagged = append(flagged, it.Ref)
-				break
-			}
+		if itemLintFlagged(it) || publishedTextHasSecret(it) {
+			flagged = append(flagged, it.Ref)
 		}
 	}
 	if len(flagged) == 0 {
@@ -374,6 +368,36 @@ func refuseSecrets(doc *govview.CatalogDocV2, allow []string) error {
 	}
 	return oops.Hint("remove the secret, or pass --allow-findings AR001 to publish anyway (discouraged)").
 		Errorf("refusing to publish: the secret scanner (%s) flagged %s", lint.CodeSecretDetected, strings.Join(flagged, ", "))
+}
+
+// itemLintFlagged says the item's lint findings include the secret code.
+func itemLintFlagged(it *govview.CatalogItemV2) bool {
+	if it.Lint == nil {
+		return false
+	}
+	for _, f := range it.Lint.Findings {
+		if f.Code == lint.CodeSecretDetected {
+			return true
+		}
+	}
+	return false
+}
+
+// publishedTextHasSecret scans the text of the item the site would publish (its
+// description and excerpt) directly. The lint findings alone are not enough: the
+// lint may not have run, or the finding may be baselined or suppressed, and the
+// text would still go out. Inline ignore comments are not honoured.
+func publishedTextHasSecret(it *govview.CatalogItemV2) bool {
+	text := it.Description
+	if it.Excerpt != nil {
+		text += "\n" + it.Excerpt.Text
+	}
+	for _, f := range lint.ScanText(it.Ref, text) {
+		if f.Code == lint.CodeSecretDetected {
+			return true
+		}
+	}
+	return false
 }
 
 func lockSummary(l catalogLock) string {
