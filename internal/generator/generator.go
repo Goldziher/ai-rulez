@@ -145,6 +145,7 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		return 0, err
 	}
 	g.markSensitiveOutputs(flatOutputs)
+	g.planLocalManifest(flatOutputs)
 
 	ignoredEarly, err := g.ignoreBeforeWriting(flatOutputs)
 	if err != nil {
@@ -2463,6 +2464,26 @@ func (g *Generator) localManifestPath() string {
 // and again to apply it, and the user should see each only once.
 func (g *Generator) beginRun() {
 	g.manifests = nil
+	g.localManifestPending = false
+}
+
+// planLocalManifest records whether this run is going to write the machine-local
+// manifest, so the gitignore pass that precedes the write already lists it: the
+// file on disk is not there yet on a first run, and the two runs would otherwise
+// leave different .gitignore blocks.
+func (g *Generator) planLocalManifest(outputs []config.OutputFile) {
+	g.localManifestPending = false
+	if g.localSkipped {
+		return
+	}
+	for _, output := range outputs {
+		if !output.IsDir && !output.PartiallyOwned && output.LocalOnly {
+			g.localManifestPending = true
+			return
+		}
+	}
+	_, localMerged := g.splitMergedClaims(outputs)
+	g.localManifestPending = len(localMerged) > 0
 }
 
 // readManifest reads a manifest at most once per run, so a corrupt one is
@@ -2884,7 +2905,8 @@ func (g *Generator) localInputPatterns() []string {
 // .ai-rulez/local/ source subtree). The local manifest counts: besides local
 // outputs it records what ai-rulez merged into hand-authored documents.
 func (g *Generator) hasLocalGitignoreTargets() bool {
-	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || pathIsFile(g.localManifestPath())
+	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || g.localManifestPending ||
+		pathIsFile(g.localManifestPath())
 }
 
 // localGitignorePatternsOnDisk lists the machine-local ignore patterns for the
