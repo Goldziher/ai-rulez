@@ -13,6 +13,11 @@ import (
 type FindHit struct {
 	Skill *CatalogSkill
 	Score float64
+	// LexRank and VecRank are the ranks in the lexical and vector candidate
+	// lists of a hybrid ranking (0: not in that list); StaleVector says the
+	// skill changed since it was indexed and ranked lexically only.
+	LexRank, VecRank int
+	StaleVector      bool
 }
 
 // bm25Rank scores skills against the query. Skills with no matching term are

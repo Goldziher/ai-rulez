@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/samber/oops"
@@ -25,15 +26,67 @@ const (
 	maxQueryBytes       = 4096
 	maxCasesPerFile     = 10000
 	maxExpectedPerQuery = 50
+	maxGrade            = 9
 )
 
+// Relevant is one relevant skill of a case, with its grade. A bare skill name
+// has grade 1; `{id, grade}` sets one (higher is more relevant) and makes the
+// case graded, which enables nDCG.
+type Relevant struct {
+	ID     string
+	Grade  int
+	Graded bool
+}
+
+// UnmarshalYAML reads `skill-name` or `{id: skill-name, grade: 2}`; any other
+// key is an error.
+func (r *Relevant) UnmarshalYAML(n *yaml.Node) error {
+	switch n.Kind {
+	case yaml.ScalarNode:
+		r.ID, r.Grade, r.Graded = n.Value, 1, false
+		return nil
+	case yaml.MappingNode:
+		r.Grade, r.Graded = 1, false
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			key, val := n.Content[i].Value, n.Content[i+1]
+			switch key {
+			case "id":
+				r.ID = val.Value
+			case "grade":
+				g, err := strconv.Atoi(val.Value)
+				if err != nil {
+					return fmt.Errorf("line %d: grade %q is not an integer", val.Line, val.Value)
+				}
+				r.Grade, r.Graded = g, true
+			default:
+				return fmt.Errorf("line %d: field %q not found in an expect entry (want id and grade)", n.Content[i].Line, key)
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("line %d: an expect entry is a skill name or {id, grade}", n.Line)
+}
+
 // Case is one labeled query: the skills that are relevant to it. A case with
-// no expected skills is negative: nothing is relevant.
+// no expected skills is negative: nothing is relevant. Avoid lists skills that
+// must not rank first (a near-miss of that skill); Role scopes the ranking to the
+// skills of that role.
 type Case struct {
-	ID     string   `yaml:"id"`
-	Query  string   `yaml:"query"`
-	Expect []string `yaml:"expect"`
-	Tags   []string `yaml:"tags"`
+	ID     string     `yaml:"id"`
+	Query  string     `yaml:"query"`
+	Expect []Relevant `yaml:"expect"`
+	Avoid  []string   `yaml:"avoid"`
+	Role   string     `yaml:"role"`
+	Tags   []string   `yaml:"tags"`
+}
+
+// ExpectIDs returns the ids of the relevant skills.
+func (c Case) ExpectIDs() []string {
+	out := make([]string, len(c.Expect))
+	for i, r := range c.Expect {
+		out[i] = r.ID
+	}
+	return out
 }
 
 // CaseFile is a `search --eval` cases file (`version: 1`).
@@ -44,8 +97,7 @@ type CaseFile struct {
 }
 
 // LoadCases reads and validates a cases file. Every problem is reported at once
-// as one AR9D2 error. Unknown fields (including `role` and graded `expect`
-// entries, which later phases add) are errors, so a file never silently means
+// as one AR9D2 error. Unknown fields are errors, so a file never silently means
 // less than it says.
 func LoadCases(path string) (*CaseFile, error) {
 	info, err := os.Stat(path)
@@ -117,18 +169,29 @@ func (f *CaseFile) validate() []string {
 			problems = append(problems, fmt.Sprintf("%s: more than %d expected skills", where, maxExpectedPerQuery))
 		}
 		dup := map[string]bool{}
-		for _, id := range c.Expect {
-			if dup[id] {
-				problems = append(problems, fmt.Sprintf("%s: %q is listed twice in expect", where, id))
+		for _, r := range c.Expect {
+			switch {
+			case strings.TrimSpace(r.ID) == "":
+				problems = append(problems, where+": an expect entry has no id")
+			case dup[r.ID]:
+				problems = append(problems, fmt.Sprintf("%s: %q is listed twice in expect", where, r.ID))
 			}
-			dup[id] = true
+			dup[r.ID] = true
+			if r.Graded && (r.Grade < 1 || r.Grade > maxGrade) {
+				problems = append(problems, fmt.Sprintf("%s: grade of %q must be between 1 and %d", where, r.ID, maxGrade))
+			}
+		}
+		for _, id := range c.Avoid {
+			if dup[id] {
+				problems = append(problems, fmt.Sprintf("%s: %q is both expected and avoided", where, id))
+			}
 		}
 	}
 	return problems
 }
 
-// CheckSkills reports, as one AR9D2 error, every expected skill id that is not
-// in the catalog the cases run against.
+// CheckSkills reports, as one AR9D2 error, every expected or avoided skill id
+// that is not in the catalog the cases run against.
 func (f *CaseFile) CheckSkills(known []string) error {
 	have := make(map[string]bool, len(known))
 	for _, k := range known {
@@ -136,9 +199,14 @@ func (f *CaseFile) CheckSkills(known []string) error {
 	}
 	var problems []string
 	for i := range f.Cases {
-		for _, id := range f.Cases[i].Expect {
+		for _, id := range f.Cases[i].ExpectIDs() {
 			if !have[id] {
 				problems = append(problems, fmt.Sprintf("case %q expects unknown skill %q", f.Cases[i].ID, id))
+			}
+		}
+		for _, id := range f.Cases[i].Avoid {
+			if !have[id] {
+				problems = append(problems, fmt.Sprintf("case %q avoids unknown skill %q", f.Cases[i].ID, id))
 			}
 		}
 	}

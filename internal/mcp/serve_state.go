@@ -103,6 +103,8 @@ type ServeOptions struct {
 	Baseline string
 	// PollInterval is how often Fingerprint is checked; 0 selects two seconds.
 	PollInterval time.Duration
+	// Search ranks find_skill with the configured mode; nil ranks lexically.
+	Search *SearchRuntime
 }
 
 func (o ServeOptions) budget() int {

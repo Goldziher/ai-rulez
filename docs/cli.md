@@ -29,7 +29,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
-| `ai-rulez search`               | Rank skills against a query; `--eval` measures the ranking ([details](#search-command)) |
+| `ai-rulez search`               | Rank skills against a query (lexical or hybrid with embeddings); `index`, `status`, `mine`; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
 | `ai-rulez review` / `rubric`    | Offline score of skills against a rubric, egress manifest with `--estimate` ([details](#review-commands)) |
 | `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
@@ -1629,13 +1629,26 @@ Documented in [Skill Search](search.md).
 
 ### `ai-rulez search <query>`
 
-Rank the skills `mcp --serve-skills` would serve against a query, with the ranker `find_skill` uses (lexical BM25F, offline, deterministic).
+Rank the skills `mcp --serve-skills` would serve against a query, with the ranker `find_skill` uses: lexical BM25F (offline, deterministic) by default, or hybrid with an embedding index.
 
 | Flag | Meaning |
 | --- | --- |
 | `--limit n` | Maximum results (default 5, max 20) |
 | `--format text\|json` | Output format (default `text`) |
+| `--mode lexical\|hybrid\|vector` | Ranking for this run (default `[search] mode`, then lexical) |
+| `--explain` | Show each skill's rank in the lexical and vector lists and how the query was embedded |
+| `--allow-exec` | Honour `[search.embeddings] command` from the repository config (it runs a program) |
 | `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
+
+A hybrid or vector search that cannot embed the query ranks lexically and reports `degraded` (`no_index`, `provider_unavailable`, `timeout`, `budget`, `network_disabled`).
+
+### `ai-rulez search index` and `ai-rulez search status`
+
+`index` embeds the served skills and writes the index `find_skill` and `search --mode hybrid` read; only skills whose embedded text changed are sent. `--dry-run` shows the host, the number of texts and bytes and an estimate first; `--rebuild` re-embeds everything; `--items a,b` re-embeds only those skills. A skill whose text looks like it holds a secret is withheld (`AR9D3`). Exit 2 when a budget or provider stop left skills without a vector (the finished ones are written). `status` reports the index against the served skills (`none`, `unreadable`, `incompatible`, `stale`, `fresh`) without any network call. See [Skill Search](search.md#building-the-index).
+
+### `ai-rulez search mine`
+
+Turn the opt-in query log (`[search] log_queries = true`) into candidate cases: `--out file` (default stdout), `--min-count n`, `--purge` (delete the log afterwards).
 
 ### `ai-rulez improve run <skill> --with CMD` (experimental)
 
