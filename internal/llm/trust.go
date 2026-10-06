@@ -81,6 +81,8 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 	merged.repoProvider = u.Provider == "" && cfg.Provider != ""
 	merged.repoModelRoute = u.Model == "" && strings.Contains(cfg.Model, "/") &&
 		(u.Provider == "" || modelPrefix(cfg.Model) != u.Provider)
+	merged.repoEmbedRoute = u.EmbeddingModel == "" && strings.Contains(cfg.EmbeddingModel, "/") &&
+		(u.Provider == "" || modelPrefix(cfg.EmbeddingModel) != u.Provider)
 	// Without a user config the flags still apply: an env-only user (AI_RULEZ_LLM_*)
 	// sends a key too, and WithEnv clears the flags when the env sets the routing.
 	merged.MaxCostUSD = tighterFloat(u.MaxCostUSD, cfg.MaxCostUSD)
@@ -94,7 +96,7 @@ func modelPrefix(model string) string {
 	return prefix
 }
 
-// RoutingFromRepo names the provider-routing keys ("provider", "model") whose
+// RoutingFromRepo names the provider-routing keys ("provider", "model", "embedding_model") whose
 // value came from a repository config. They choose the service a literllm call
 // goes to, so the literllm backend refuses to send a user-scope key along them
 // (see newLiterLLM); set them in user scope, or via AI_RULEZ_LLM_*.
@@ -105,6 +107,9 @@ func (c Config) RoutingFromRepo() []string {
 	}
 	if c.repoModelRoute {
 		out = append(out, "model")
+	}
+	if c.repoEmbedRoute {
+		out = append(out, "embedding_model")
 	}
 	return out
 }

@@ -172,3 +172,57 @@ func TestLiveJudge(t *testing.T) {
 		})
 	}
 }
+
+// A per-request model naming another provider must not send the Gemini key there; a bare
+// override stays on the configured provider.
+func TestLiveRequestModelCannotRerouteKey(t *testing.T) {
+	for _, backend := range liveBackends(t) {
+		if backend != BackendLiterLLM {
+			continue
+		}
+		t.Run(backend, func(t *testing.T) {
+			// Arrange
+			m := liveClient(t, backend, os.Getenv)
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			msgs := []Message{{Role: RoleUser, Content: "Reply with the single word: pong"}}
+
+			// Act
+			_, rerouted := m.Chat(ctx, ChatRequest{Model: "openai/gpt-4o-mini", Messages: msgs, MaxTokens: 16})
+			bare, err := m.Chat(ctx, ChatRequest{Model: liveChatModel, Messages: msgs, MaxTokens: 64})
+
+			// Assert
+			var e *Error
+			if !errors.As(rerouted, &e) || e.Kind != KindConfig {
+				t.Fatalf("a request model on another provider must be refused locally, got %v", rerouted)
+			}
+			if err != nil || bare.Text == "" {
+				t.Fatalf("a bare request model must stay on the configured provider: %q %v", bare.Text, err)
+			}
+		})
+	}
+}
+
+// A connection failure is transient for both backends.
+func TestLiveConnectionFailureIsTransient(t *testing.T) {
+	for _, backend := range liveBackends(t) {
+		t.Run(backend, func(t *testing.T) {
+			// Arrange
+			cfg := liveConfig(backend)
+			cfg.BaseURL = "http://127.0.0.1:1/v1"
+			m, err := New(cfg, Options{Getenv: os.Getenv})
+			if err != nil {
+				t.Fatalf("%s: %v", backend, err)
+			}
+			t.Cleanup(func() { _ = m.Close() })
+
+			// Act
+			_, err = m.Chat(context.Background(), ChatRequest{Messages: []Message{{Role: RoleUser, Content: "hi"}}, MaxTokens: 8})
+
+			// Assert
+			if err == nil || !IsTransient(err) {
+				t.Fatalf("a refused connection must be transient: %v", err)
+			}
+		})
+	}
+}
