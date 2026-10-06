@@ -45,7 +45,7 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	if err != nil {
 		return nil, err
 	}
-	res, err := okfbridge.Export(content, okfbridge.ExportOptions{Include: kinds})
+	res, err := okfbridge.Export(content, okfbridge.ExportOptions{Include: kinds, IndexStyle: cfg.OKFIndexStyle()})
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ func resetOKFFlags(t *testing.T) {
 	reset := func() {
 		okfOut, okfProfile, okfRole, okfInclude, okfCheck, okfFormat = "", "", "", nil, false, ""
 		okfFailOn, okfInto, okfDomain, okfForce, okfDryRun = "error", "", "", false, false
+		okfIndexStyle = ""
 		noLocal, configDir = false, ""
 	}
 	reset()
@@ -371,4 +372,50 @@ func TestGenerateWithRoleLeavesTheCommittedOKFBundleAlone(t *testing.T) {
 	t.Cleanup(func() { generateRole = "" })
 	require.Equal(t, 0, runRecursiveGenerate())
 	assert.Equal(t, before, listFiles(t, bundle), "generate --role must not shrink the project-wide bundle")
+}
+
+func TestOKFIndexStyleFlagConfigAndDetection(t *testing.T) {
+	root := okfProject(t)
+	bundle := filepath.Join(root, "docs", "okf")
+
+	// --index-style frontmatter writes the frontmatter scheme; validate reports it.
+	okfIndexStyle = "frontmatter"
+	require.Equal(t, 0, mustExport(t))
+	index, err := os.ReadFile(filepath.Join(bundle, "index.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(index), "version: 0.1.0\nentries:\n")
+	var out bytes.Buffer
+	assert.Equal(t, 0, runOKFValidate(context.Background(), bundle, &out), out.String())
+	assert.Contains(t, out.String(), "index style: frontmatter")
+	assert.Contains(t, out.String(), "AR9B3")
+
+	// --check compares the requested style.
+	code, out2 := exportRun(t, true)
+	assert.Equal(t, 0, code, out2)
+	okfIndexStyle = "body"
+	code, out2 = exportRun(t, true)
+	assert.Equal(t, exitOKFProblems, code)
+	assert.Contains(t, out2, "changed: index.md")
+
+	// The configured style is the default; the flag overrides it.
+	okfIndexStyle = ""
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[okf]\nindex_style = \"frontmatter\"\n")
+	code, out2 = exportRun(t, true)
+	assert.Equal(t, 0, code, out2)
+
+	// The body style is detected too, and JSON carries it.
+	okfIndexStyle = "body"
+	require.Equal(t, 0, mustExport(t))
+	okfFormat = "json"
+	out.Reset()
+	assert.Equal(t, 0, runOKFValidate(context.Background(), bundle, &out))
+	var decoded struct {
+		IndexStyle string `json:"index_style"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &decoded))
+	assert.Equal(t, "body", decoded.IndexStyle)
+
+	// An unknown style cannot run.
+	okfIndexStyle = "yaml"
+	assert.Equal(t, exitOKFCannotRun, mustExport(t))
 }

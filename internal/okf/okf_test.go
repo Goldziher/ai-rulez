@@ -79,8 +79,8 @@ func TestConformanceFailures(t *testing.T) {
 		"empty.md":     "---\ntype: \"\"\n---\n",
 		"bad.md":       "---\ntype: [\n---\n",
 		"good.md":      "---\ntype: X\n---\n",
-		"sub/index.md": "---\ntitle: nope\n---\n",
-		"index.md":     "---\nokf_version: \"0.2\"\ntitle: no\n---\n* [Good](good.md)\n",
+		"sub/index.md": "---\nowner: nope\n---\n",
+		"index.md":     "---\nokf_version: \"0.2\"\nowner: no\n---\n* [Good](good.md)\n",
 	})
 	got := codes(b.Validate())
 	assert.Contains(t, got, "AR9B1 no-fm.md")
@@ -189,8 +189,8 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 		{Path: "skills/s/SKILL.md", Title: "S"},
 		{Path: "skills/s/references/r.md", Title: "R"},
 	}
-	one := BuildIndexes(in, DirLabel{"rules": "the rules"})
-	two := BuildIndexes([]IndexInput{in[3], in[2], in[1], in[0]}, DirLabel{"rules": "the rules"})
+	one := BuildIndexes(in, DirLabel{"rules": "the rules"}, "")
+	two := BuildIndexes([]IndexInput{in[3], in[2], in[1], in[0]}, DirLabel{"rules": "the rules"}, "")
 	assert.Equal(t, one, two)
 	assert.Equal(t, "---\nokf_version: \"0.2\"\n---\n\n# Subdirectories\n\n* [rules](rules/index.md) - the rules\n* [skills](skills/index.md)\n", string(one["index.md"]))
 	assert.Equal(t, "# Concepts\n\n* [A](a.md) - first\n* [B](b.md) - second\n", string(one["rules/index.md"]))
@@ -200,7 +200,7 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 		files[p] = string(d)
 	}
 	for _, c := range in {
-		files[c.Path] = "---\ntype: X\ntitle: " + c.Title + "\n---\n"
+		files[c.Path] = "---\ntype: X\ntitle: '" + c.Title + "'\n---\n"
 	}
 	assert.Empty(t, load(t, files).Validate())
 }
@@ -275,8 +275,8 @@ func FuzzSplitFrontmatter(f *testing.F) {
 	})
 }
 
-// The okf.md guide shows an index.md with title/version/entries frontmatter. The
-// spec forbids it, but a reader must still read such a bundle.
+// The okf.md guide shows an index.md with title/version/entries frontmatter. It is
+// the frontmatter index style, which a reader accepts next to the spec's body one.
 func TestReadsGuideStyleBundle(t *testing.T) {
 	b := load(t, map[string]string{
 		"index.md":            "---\ntitle: My Bundle\nversion: 0.1.0\nentries:\n  - what-is-okf.md\n---\n\n# My Bundle\n\n* [What is OKF](what-is-okf.md) - intro\n",
@@ -284,9 +284,103 @@ func TestReadsGuideStyleBundle(t *testing.T) {
 		"validation-rules.md": "---\ntype: howto\n---\nSteps\n",
 	})
 	require.Len(t, b.Concepts, 2)
-	require.Len(t, b.Indexes["index.md"].Entries, 1)
+	require.Len(t, b.Indexes["index.md"].Entries, 2, "one from the frontmatter, one from the body")
+	assert.Equal(t, StyleFrontmatter, b.IndexStyle())
 	got := codes(b.Validate())
-	assert.Contains(t, got, "AR9B6 index.md", "index frontmatter is reported")
+	assert.NotContains(t, got, "AR9B6 index.md", "the frontmatter scheme is accepted")
+	assert.Contains(t, got, "AR9B3 index.md", "and reported as info")
 	assert.Contains(t, got, "AR9B0 index.md", "validation-rules.md is not listed")
 	assert.NotContains(t, got, "AR9B1 what-is-okf.md")
+}
+
+func styleInputs() []IndexInput {
+	return []IndexInput{
+		{Path: "rules/b.md", Title: "B", Description: "second"},
+		{Path: "rules/a.md", Title: "A: colon", Description: "first"},
+		{Path: "skills/s/SKILL.md", Title: "S"},
+	}
+}
+
+func TestBuildIndexesFrontmatterGolden(t *testing.T) {
+	// Arrange
+	labels := DirLabel{"rules": "the rules"}
+	// Act
+	out := BuildIndexes(styleInputs(), labels, StyleFrontmatter)
+	// Assert
+	assert.Equal(t, `---
+okf_version: "0.2"
+title: Index
+version: 0.1.0
+entries:
+  - title: rules
+    path: rules/index.md
+    description: the rules
+  - title: skills
+    path: skills/index.md
+---
+`, string(out["index.md"]))
+	assert.Equal(t, `---
+title: Rules
+version: 0.1.0
+entries:
+  - title: 'A: colon'
+    path: a.md
+    description: first
+  - title: B
+    path: b.md
+    description: second
+---
+`, string(out["rules/index.md"]))
+}
+
+func TestBothIndexStylesAreValidAndDetected(t *testing.T) {
+	tests := []struct {
+		style, want string
+		info        bool
+	}{
+		{"", StyleBody, false},
+		{StyleBody, StyleBody, false},
+		{StyleFrontmatter, StyleFrontmatter, true},
+	}
+	for _, tt := range tests {
+		t.Run("style "+tt.style, func(t *testing.T) {
+			// Arrange
+			files := map[string]string{}
+			for p, d := range BuildIndexes(styleInputs(), nil, tt.style) {
+				files[p] = string(d)
+			}
+			for _, c := range styleInputs() {
+				files[c.Path] = "---\ntype: X\ntitle: '" + c.Title + "'\n---\n"
+			}
+			// Act
+			b := load(t, files)
+			findings := b.Validate()
+			// Assert
+			assert.Equal(t, tt.want, b.IndexStyle())
+			if tt.info {
+				assert.Equal(t, []string{"AR9B3 index.md"}, codes(findings))
+				assert.Equal(t, SeverityInfo, findings[0].Severity)
+			} else {
+				assert.Empty(t, findings)
+			}
+		})
+	}
+}
+
+func TestFrontmatterIndexReportsMissingEntryAndUnknownKey(t *testing.T) {
+	b := load(t, map[string]string{
+		"index.md": "---\ntitle: T\nversion: 0.1.0\nowner: x\nentries:\n  - title: A\n    path: a.md\n  - title: Ghost\n    path: ghost.md\n---\n",
+		"a.md":     "---\ntype: X\n---\n",
+		"b.md":     "---\ntype: X\n---\n",
+	})
+	got := b.Validate()
+	assert.Contains(t, codes(got), "AR9B6 index.md")
+	var ghost Finding
+	for _, f := range got {
+		if f.Code == CodeIndexMismatch && strings.Contains(f.Message, "Ghost") {
+			ghost = f
+		}
+	}
+	assert.Equal(t, 8, ghost.Line, "the line of the ghost entry within the file")
+	assert.Contains(t, codes(got), "AR9B0 index.md", "b.md is not listed")
 }
