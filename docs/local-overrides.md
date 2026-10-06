@@ -13,7 +13,7 @@ Local configuration has two layers. Both are gitignored unconditionally, even wh
 | Layer | Location | Holds |
 | ----- | -------- | ----- |
 | Content tree | `.ai-rulez/local/` | Rules, context, skills, agents, commands and domains |
-| Config overlay | `.ai-rulez/config.local.{toml,yaml,yml,json}` | Settings merged onto `config.toml`: presets, profiles, MCP servers, includes, installed skills, and so on |
+| Config overlay | `.ai-rulez/config.local.toml` | Settings merged onto `config.toml`: presets, profiles, MCP servers, includes, installed skills, and so on |
 
 Committed outputs never contain local content, so a teammate who checks out your branch sees only
 the shared configuration. Generated local files are written for your tools to load, and are kept out
@@ -175,9 +175,10 @@ with you or carrying overlay content in the local manifest.
 
 ## Config overlay
 
-`config.local.toml` (or `.yaml`, `.yml`, `.json`) sits next to `config.toml`. It is merged onto the
-shared config in memory at load time and is never written into the shared config. Only one overlay
-file may exist; more than one is an error. The overlay is skipped for plugin bundles
+`config.local.toml` sits next to `config.toml`. It is merged onto the
+shared config in memory at load time and is never written into the shared config. A V3
+`config.local.yaml`, `.yml` or `.json` is no longer read and fails the load (see
+[Migrating to v5](migration-v5.md#v2-and-v3-configs)). The overlay is skipped for plugin bundles
 (`generate --plugin`), which are distributable.
 
 Create one with `ai-rulez local init`, or let `local set`, `--local` and the MCP `local: true` flag
@@ -233,7 +234,7 @@ The `ai-rulez local` command edits the overlay:
 
 | Command | Action |
 | ------- | ------ |
-| `local init` | Create a `config.local.*` skeleton in the main config's format (commented for TOML and YAML, `{}` for JSON; gitignored) |
+| `local init` | Create a commented `config.local.toml` skeleton (gitignored) |
 | `local show` | Print every key the overlay sets and the shared value it replaces |
 | `local set <path> [value]` | Set a key |
 | `local unset <path>` | Remove a key |

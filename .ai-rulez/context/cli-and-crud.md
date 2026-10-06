@@ -1,6 +1,6 @@
 ---
 priority: high
-summary: Core commands (init, generate, validate, lock, verifiers, migrate, mcp), exit codes and CRUD helpers for managing configuration.
+summary: Core commands (init, generate, validate, lock, verifiers, mcp), exit codes and CRUD helpers for managing configuration.
 targets:
   - CLAUDE.md
   - GEMINI.md
@@ -24,7 +24,7 @@ Core commands:
 - `ai-rulez verifiers run|list|explain|test` runs the deterministic repo checks; `ai-rulez sbom`, `catalog` (`--html`), `tokens`, `cost`, `roles`, `search` and `eval run` inspect and score the configuration.
 - `ai-rulez convert` imports existing tool files (native, rulesync, skills-lock); `export okf`, `import okf` and `okf validate` handle Open Knowledge Format bundles.
 - `ai-rulez usage`, `telemetry`, `report` and `llm` are opt-in, identifier-only usage telemetry and read-only LLM diagnostics; `guard` is the hidden PreToolUse hook behind `[guard] generated = true`.
-- `ai-rulez migrate v4` converts a V3 `.ai-rulez/config.yaml` to V4 TOML config (a flat `ai-rulez.yaml` is not read; move it to `.ai-rulez/config.yaml` first). `-C` selects another project's config.
+- V2/V3 configs (`config.yaml`, `config.json`, flat `ai-rulez.yaml`) are not read: loading fails with an error naming the file and `npx ai-rulez@4 migrate v4`. There is no `migrate` command in v5.
 - `ai-rulez mcp` starts the MCP server (usually launched by the assistant); `--serve-skills` serves skills read-only.
 
 Exit codes: `0` ok, `1` could not run, `2` findings, drift or a failed gate, `3` (`lock` only) served skills left unpinned.
@@ -43,4 +43,4 @@ Global flags:
 - `--debug`, `--verbose`, and `--quiet` control logging and progress.
 - `--format text|json` replaces the deprecated `--json` on every command that prints JSON.
 
-Config discovery checks for `.ai-rulez/` first, then V2 filenames (`ai-rulez.yaml`, etc).
+Config discovery checks for `.ai-rulez/config.toml` first, then `.config/ai-rulez/config.toml`.

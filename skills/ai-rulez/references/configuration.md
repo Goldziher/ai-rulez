@@ -177,7 +177,7 @@ planned `--gitignore` patterns. Secret values are redacted before source-hash ca
 ## Config Directory and Generated Manifest
 
 - `.ai-rulez/` remains the default config root.
-- Config discovery also accepts the project-level `.config/` convention: `.config/ai-rulez/config.{toml,yaml,yml,json}`. `.ai-rulez/` wins when both exist at the same level.
+- Config discovery also accepts the project-level `.config/` convention: `.config/ai-rulez/config.toml`. `.ai-rulez/` wins when both exist at the same level. Only `config.toml` is read; a V2/V3 `config.yaml`, `config.json` or flat `ai-rulez.yaml` fails with an error that points at ai-rulez 4.x (`npx ai-rulez@4 migrate v4`).
 - `ai-rulez init --config-dir .config/ai-rulez` scaffolds the `.config/` layout; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/`.
 - `ai-rulez generate --config-dir <name>` and `validate --config-dir <name>` use another config directory (nested values such as `.config/ai-rulez` are supported).
 - `ai-rulez generate <path/to/config.toml>` and `--config <path/to/config.toml>` load that exact file.

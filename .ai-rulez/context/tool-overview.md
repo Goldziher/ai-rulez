@@ -41,4 +41,4 @@ Typical workflow:
 
 Migration:
 
-- V2 used a single `ai-rulez.yaml`; move it to `.ai-rulez/config.yaml`, then run `ai-rulez migrate v4` to convert to V4 directory-based configuration.
+- V2 (`ai-rulez.yaml`) and V3 (`.ai-rulez/config.yaml`) configs are not read in v5; migrate them with ai-rulez 4.x (`npx ai-rulez@4 migrate v4`) before upgrading.
