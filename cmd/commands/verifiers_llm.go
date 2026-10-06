@@ -17,6 +17,7 @@ var (
 	verifiersAllowLLM bool
 	verifiersMaxCost  float64
 	verifiersEstimate bool
+	verifiersGateLLM  bool
 )
 
 // verifierLLMOptions builds the model access of a run. Model use needs
@@ -37,7 +38,7 @@ func verifierLLMOptions(ctx context.Context, cfg *config.Config) (*verifiers.LLM
 	lc := resolved.Config
 	pricing := llm.NewPricing(lc)
 	opts := &verifiers.LLMOptions{
-		Model: lc.FullModel(), MaxCostUSD: verifiersMaxCost, Estimate: verifiersEstimate,
+		Model: lc.FullModel(), MaxCostUSD: verifiersMaxCost, Estimate: verifiersEstimate, Gate: verifiersGateLLM,
 		Prices: func(model string, u llm.Usage) (float64, bool) { return pricing.Cost(model, u) },
 	}
 	switch {

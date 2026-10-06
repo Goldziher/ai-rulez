@@ -22,7 +22,7 @@ func evaluateSpec(ctx context.Context, env *Env, sp *Spec) (res Result) {
 	defer func() {
 		res.Message = sanitize(res.Message)
 		if advisory {
-			capAdvisory(&res)
+			capAdvisory(env, sp, &res)
 		}
 	}()
 	if err := ctx.Err(); err != nil {
@@ -163,13 +163,34 @@ func missingExamples(env *Env, sp *Spec) (Result, bool) {
 // capAdvisory marks the result of a verifier that asks a model: its severity
 // never exceeds warning (a model's verdict is advisory), and a skipped one is
 // info (AR9H4).
-func capAdvisory(res *Result) {
+//
+// A failing verifier declared at error severity keeps it only under --gate-llm
+// and only while its calibration record is current and meets the bar
+// (CalibrationMinPrecision on labelled examples); see Calibrate.
+func capAdvisory(env *Env, sp *Spec, res *Result) {
 	res.Advisory = true
 	switch {
 	case res.Status == StatusSkipped:
 		res.Severity = "info"
 	case res.Severity == severityError:
+		if res.Status == StatusFail && env.opts.LLM != nil && env.opts.LLM.Gate {
+			rec, err := LoadCalibration(env.Cfg, sp.ID)
+			ok, why := false, ""
+			if err != nil {
+				why = "its calibration record cannot be read: " + err.Error()
+			} else {
+				ok, why = calibrationVerdict(rec, sp, effectiveModel(sp, env.opts.LLM.Model))
+			}
+			if ok {
+				res.Advisory = false
+				res.Notes = append(res.Notes, gateNote(rec))
+				return
+			}
+			res.Severity = severityWarning
+			res.Notes = append(res.Notes, "advisory: not gating, "+why)
+			return
+		}
 		res.Severity = severityWarning
-		res.Notes = append(res.Notes, "advisory: the severity of an llm verifier is capped at warning")
+		res.Notes = append(res.Notes, "advisory: the severity of an llm verifier is capped at warning (--gate-llm lets a calibrated verifier fail the run)")
 	}
 }
