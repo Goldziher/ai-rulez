@@ -207,6 +207,38 @@ func TestReviewFix_ARejectedFixChangesNothing(t *testing.T) {
 	assert.Equal(t, vagueSkill, string(data))
 }
 
+func TestReviewFix_RespectsTheRunsTokenLimit(t *testing.T) {
+	tests := []struct {
+		name        string
+		limit       int
+		wantChanged bool
+	}{
+		{"a generous limit keeps the fix", 10000, true},
+		{"no limit keeps the fix", 0, true},
+		{"a limit the fix exceeds refuses it and says why", 5, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			ws := workspaceWith(t, vagueSkill)
+			in := requestJSON(t, func(r *improve.OptimizerRequest) { r.Constraints.MaxSkillTokens = tt.limit })
+
+			// Act
+			resp, err := serve(t, ReviewFix, ws, in, reviewFixOptions(&scriptedModel{}))
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantChanged, len(resp.Changed) > 0, resp.Summary)
+			if !tt.wantChanged {
+				assert.Contains(t, resp.Summary, "no safe fix")
+				assert.Contains(t, resp.Summary, "tokens")
+				data, _ := os.ReadFile(filepath.Join(ws, "deploy", "SKILL.md"))
+				assert.Equal(t, vagueSkill, string(data))
+			}
+		})
+	}
+}
+
 func TestReviewFix_Refusals(t *testing.T) {
 	tests := []struct {
 		name   string
