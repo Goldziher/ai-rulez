@@ -111,6 +111,11 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 		delete(loc, "governance")
 		warnings = append(warnings, "ignored [governance] in the local config: the approval policy is shared and cannot be overridden per machine")
 	}
+	// [signing] names who may sign the lock; a local overlay cannot add a signer.
+	if _, ok := loc["signing"]; ok {
+		delete(loc, "signing")
+		warnings = append(warnings, "ignored [signing] in the local config: the signing policy is shared and cannot be overridden per machine")
+	}
 	for _, key := range sortedKeys(loc) {
 		w, err := mergeTopLevelKey(merged, loc[key], key)
 		if err != nil {

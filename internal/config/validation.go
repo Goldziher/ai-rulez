@@ -101,6 +101,9 @@ func (c *Config) validateSelectors() error {
 	if err := c.validateGovernance(); err != nil {
 		return err
 	}
+	if err := c.validateSigning(); err != nil {
+		return err
+	}
 	return c.validateDynamicSkills()
 }
 

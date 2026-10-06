@@ -983,6 +983,84 @@
       "additionalProperties": false
     },
     "okf": {
+    "signing": {
+      "type": "object",
+      "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see docs/signing.md). Nothing is enforced unless require names a subject.",
+      "properties": {
+        "require": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["lock"] },
+          "description": "Subjects that must carry a valid attestation. lock --check and generate --locked fail without one for lock."
+        },
+        "tlog": {
+          "type": "string",
+          "enum": ["required", "optional", "off"],
+          "description": "Transparency log policy. Default: required when a certificate identity is trusted, off when only keys are trusted. off needs key mode."
+        },
+        "max_age": {
+          "type": "string",
+          "pattern": "^([0-9]+d|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "description": "Oldest acceptable signature, such as 180d or 720h. Empty means no limit."
+        },
+        "trusted_root": {
+          "type": "string",
+          "description": "Sigstore trusted root file inside the project, for keyless verification. Default: the root `ai-rulez trust update` cached for the user."
+        },
+        "min_hash_version": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reject an attestation of an older lock hash scheme."
+        },
+        "attestation": {
+          "type": "string",
+          "description": "Lock bundle path relative to the config directory. Default ai-rulez.lock.sigstore.json."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Shorthand: the one trusted keyless signer (certificate identity, matched exactly). Needs issuer."
+        },
+        "issuer": { "type": "string", "description": "Shorthand: the OIDC issuer of identity, matched exactly." },
+        "key_file": { "type": "string", "description": "Shorthand: one trusted PEM public key inside the project." },
+        "trust": {
+          "type": "array",
+          "description": "Trusted signers, scoped by subject.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": {
+                "type": "string",
+                "enum": ["lock"],
+                "description": "What the signer may vouch for. Default lock."
+              },
+              "identity": { "type": "string", "description": "Certificate identity, matched exactly." },
+              "identity_regexp": {
+                "type": "string",
+                "pattern": "^\\^.*\\$$",
+                "description": "Identity pattern, matched against the whole identity; must start with ^ and end with $ (AR722)."
+              },
+              "issuer": {
+                "type": "string",
+                "description": "OIDC issuer, matched exactly. Required with identity or identity_regexp."
+              },
+              "key_file": {
+                "type": "string",
+                "description": "PEM public key inside the project, instead of an identity."
+              },
+              "valid_from": {
+                "type": "string",
+                "description": "Earliest signing time accepted: 2026-01-01 or an RFC 3339 time."
+              },
+              "valid_until": {
+                "type": "string",
+                "description": "Latest signing time accepted (inclusive); forces a reviewed renewal."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
       "type": "object",
       "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
       "properties": {
