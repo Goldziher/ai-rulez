@@ -46,8 +46,12 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
   `ai-rulez lock` again. Run it once, review the diff and commit the file. See [Lock file](lockfile.md).
 - **`[lock] enforce` defaults to `true` whenever `ai-rulez.lock` exists.** Set `enforce = false` to opt out. A remote
   include or installed skill the lock does not cover now makes `generate` fail (as `--locked` always did) and `AR010`
-  an error; `lock --check` keeps its exit code 2 contract. `generate --frozen` and `--locked` are unchanged: they
+  an error, and an include that cannot be resolved is an error too instead of a skipped warning; `lock --check`
+  keeps its exit code 2 contract. `generate --frozen` and `--locked` are unchanged: they
   require the lock whether or not enforcement is on.
+- **Local-path includes are pinned.** A lock written before this change reports each local include as a new
+  `local-include` item; run `ai-rulez lock` once and review. File modes digest by the owner execute bit only, as git
+  records it, and a symlinked content file or a symlink inside a pinned tree is refused instead of skipped.
 - **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
   (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
   the lock does not pin or whose digest differs. A corrupt lock, a lock of another `version` or a source that cannot be

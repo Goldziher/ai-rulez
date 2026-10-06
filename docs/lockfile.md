@@ -49,6 +49,7 @@ content itself. Signature or attestation verification is not implemented.
 | --- | --- | --- |
 | `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them) |
 | `skill` | the skill directory name | `SKILL.md` and every loaded resource (`references/`, `scripts/`, `assets/`) |
+| `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
 | `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
@@ -59,8 +60,11 @@ the output pins, so with `include_outputs = false` (or `scope = "skills"`) it is
 when you rely on the lock for these.
 
 Content from remote includes and built-in packs is not listed item by item: includes are pinned by their own
-digest, built-ins by the ai-rulez version. Content from a local-path include outside the configuration directory is
-not pinned.
+digest, built-ins by the ai-rulez version. A local-path include is pinned as one `local-include` item over its
+content directories, wherever it lives (inside the repository or outside it). A missing path, or any symlink inside
+the pinned tree, cannot be pinned: `lock` warns and `lock --check` fails until it is fixed. Symlinked content files
+are never read by the loader, in any include or in the project itself, because the target is not part of the pin;
+replace the link with the file. A `local_override` path is a development shortcut and is not pinned.
 
 Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
@@ -98,8 +102,10 @@ path = ".claude/skills/deploy/SKILL.md"
 digest = "sha256:…"
 ```
 
-The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order, on the
-operating system or on the machine.
+The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
+machine. Digests are the same on every operating system when the repository records the executable bit (see
+[File modes](#hashing-scheme)); a script that is executable on disk but not recorded in git digests differently
+on Windows.
 
 ## Served skills and skill sources
 
@@ -130,7 +136,9 @@ cannot collide with the digest of the authored skill of the same name. There is 
 and the per-file and whole-skill digests the server reports (`digest`) are the same scheme over the bytes as served.
 A fetched source tree, a remote include, an OKF include and an installed skill are digested with the same scheme
 (`contentlock.DigestDir`: the regular files below the directory as one tree, kinds `include`, `okf-include`,
-`installed-skill` and `skill-source`, with `.git` and the cache bookkeeping left out); all entries are covered by `tree`.
+`installed-skill` and `skill-source`, with `.git` and the root `.cache_meta.json` bookkeeping left out; files are
+streamed, not read whole); all entries are covered by `tree`. A symlink anywhere in such a tree is an error, not a
+skipped file: its target is not pinned.
 
 `lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
 change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
@@ -154,7 +162,8 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
 
 - `path` is relative to the item, `/`-separated, with no `.`, `..`, empty segment or backslash.
 - `mode` is the string `100755` if the file is executable, else `100644`. Nothing else about the file mode
-  matters. On Linux and macOS the file's own execute bits decide (any of them set means executable). Windows
+  matters. On Linux and macOS the owner execute bit decides (`0o100`), because git records only that bit
+  (`100755` versus `100644`); group and other execute bits are ignored. Windows
   filesystems have no execute bit, so there the mode is taken from the git index (`git ls-files -s`, the mode git
   checks out on Unix); if git is not available or the file is not tracked it is `100644`. A checkout whose
   repository records the executable bit therefore pins the same digest on every operating system. A script that is
