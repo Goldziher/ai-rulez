@@ -11,13 +11,14 @@ import (
 )
 
 func TestMergeDynamicLock_RecordsSourcesAndServedSkillsAndChecksThem(t *testing.T) {
-	vendor := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(vendor, "pdf"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(vendor, "pdf", "SKILL.md"), []byte("---\nname: pdf\ndescription: Work with PDFs\n---\n\n# pdf\n"), 0o644))
-
+	// A local source of a project config must live inside the project.
+	files := map[string]string{"../vendor-skills/pdf/SKILL.md": "---\nname: pdf\ndescription: Work with PDFs\n---\n\n# pdf\n"}
+	for rel, content := range servedSkillFiles {
+		files[rel] = content
+	}
 	cfg := deliveryProject(t, `["claude"]`,
-		"\n[[skill_sources]]\nname = \"vendor\"\nurl = \""+vendor+"\"\nname_prefix = \"v-\"\n",
-		servedSkillFiles)
+		"\n[[skill_sources]]\nname = \"vendor\"\nurl = \"vendor-skills\"\nname_prefix = \"v-\"\n",
+		files)
 
 	next := &lockfile.File{Version: lockfile.Version}
 	problems := mergeDynamicLock(cfg, nil, next, "", nil)

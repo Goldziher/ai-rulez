@@ -16,16 +16,16 @@ func TestResolve_LocalSymlinkedRootIsDigestedThroughTheLink(t *testing.T) {
 	link := filepath.Join(t.TempDir(), "skills-link")
 	require.NoError(t, os.Symlink(real, link))
 
-	viaLink, err := Resolve(context.Background(), Spec{Name: "local", URL: link}, Options{})
+	viaLink, err := Resolve(context.Background(), Spec{Name: "local", URL: link, AllowOutside: true}, Options{})
 	require.NoError(t, err)
-	direct, err := Resolve(context.Background(), Spec{Name: "local", URL: real}, Options{})
+	direct, err := Resolve(context.Background(), Spec{Name: "local", URL: real, AllowOutside: true}, Options{})
 	require.NoError(t, err)
 	assert.Equal(t, direct.Digest, viaLink.Digest)
 	assert.NotEqual(t, "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", viaLink.Digest, "the digest of empty input means nothing was hashed")
 	assert.Equal(t, []string{"pdf"}, names(viaLink))
 
 	write(t, real, "pdf/references/x.md", "changed\n")
-	changed, err := Resolve(context.Background(), Spec{Name: "local", URL: link}, Options{})
+	changed, err := Resolve(context.Background(), Spec{Name: "local", URL: link, AllowOutside: true}, Options{})
 	require.NoError(t, err)
 	assert.NotEqual(t, viaLink.Digest, changed.Digest)
 }

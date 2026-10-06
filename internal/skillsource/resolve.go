@@ -34,6 +34,13 @@ type Options struct {
 	Frozen bool
 	// Refresh ignores the lock's pin and resolves the ref again (`ai-rulez lock`).
 	Refresh bool
+	// ProjectRoot is the project a local source must stay inside unless the
+	// source allows outside paths (see Spec.AllowOutside). It is also the base of
+	// a relative local path of such a source.
+	ProjectRoot string
+	// MaxCloneBytes is the clone size limit of a git source that sets none; 0
+	// selects the AI_RULEZ_MAX_CLONE_BYTES environment variable, then the default.
+	MaxCloneBytes int64
 }
 
 // Resolved is a source fetched (or found in the cache) and ready to read.
@@ -79,7 +86,11 @@ func errLock(spec Spec, format string, args ...any) error {
 }
 
 func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
-	root := spec.URL
+	base := spec.URL
+	if !spec.AllowOutside && opts.ProjectRoot != "" && !filepath.IsAbs(base) {
+		base = filepath.Join(opts.ProjectRoot, base)
+	}
+	root := base
 	if spec.Path != "" {
 		root = filepath.Join(root, filepath.FromSlash(spec.Path))
 	}
@@ -91,6 +102,9 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 	// (and digest) the real directory. Links below the root are never followed.
 	if resolved, linkErr := filepath.EvalSymlinks(root); linkErr == nil {
 		root = resolved
+	}
+	if err := checkInsideProject(spec, opts, root); err != nil {
+		return nil, err
 	}
 	info, err := os.Stat(root)
 	if err != nil || !info.IsDir() {
@@ -111,6 +125,36 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 	res.Pinned = res.Locked
 	res.Skills, err = Discover(spec, root)
 	return res, err
+}
+
+// checkInsideProject refuses a local source that resolves outside the project.
+// A committed config can name any path (`/home/victim/.claude/skills`, `../..`),
+// and its files would then be served to the agent as trusted skills; only a path
+// the user types on the command line (--source) or writes in their own user
+// config may leave the project. Both paths are compared after symlinks are
+// resolved, so a link inside the project does not smuggle an outside directory in.
+func checkInsideProject(spec Spec, opts Options, root string) error {
+	if spec.AllowOutside {
+		return nil
+	}
+	project := opts.ProjectRoot
+	if project == "" {
+		return oops.Hint("Pass the directory with --source on the command line, or declare it in your user config").
+			Errorf("skill source %q: a local source declared in a project config needs a project root to be checked against", spec.Name)
+	}
+	if abs, err := filepath.Abs(project); err == nil {
+		project = abs
+	}
+	if resolved, err := filepath.EvalSymlinks(project); err == nil {
+		project = resolved
+	}
+	rel, err := filepath.Rel(project, root)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return oops.With("path", root).With("project", project).
+			Hint("Pass the directory with --source on the command line, or declare it in your user config").
+			Errorf("skill source %q: local path %s is outside the project %s; a local source declared in the project config must stay inside the project (pass the directory with --source, or declare it in your user config)", spec.Name, root, project)
+	}
+	return nil
 }
 
 func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error) {
@@ -140,7 +184,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 		return nil, err
 	}
 
-	res, err := materialize(ctx, spec, opts, treeRequest{url: url, repoDir: repoDir, commit: commit, kind: kind, entry: entry, covered: covered, offline: offline})
+	res, err := materialize(ctx, spec, treeRequest{url: url, repoDir: repoDir, commit: commit, kind: kind, entry: entry, covered: covered, offline: offline, maxClone: spec.maxCloneBytes(opts.MaxCloneBytes)})
 	if err != nil {
 		return nil, err
 	}
@@ -156,37 +200,84 @@ type treeRequest struct {
 	url, repoDir, commit, kind string
 	entry                      *lockfile.Entry
 	covered, offline           bool
+	maxClone                   int64
+}
+
+// materializer makes the tree of one commit available in the cache.
+type materializer struct {
+	spec    Spec
+	q       treeRequest
+	treeDir string
+	fetched bool
+}
+
+// ensure finds the cached tree or, unless offline, fetches it.
+func (m *materializer) ensure(ctx context.Context) error {
+	m.treeDir = treeDirFor(m.q.repoDir, m.q.commit, m.spec.Path)
+	if _, statErr := os.Stat(m.treeDir); statErr == nil {
+		return nil
+	}
+	if m.q.offline {
+		return oops.With("url", m.spec.Redacted()).With("commit", m.q.commit).
+			Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", m.spec.Name, m.q.commit)
+	}
+	m.fetched = false
+	return fetchInto(ctx, cloneRequest{url: m.q.url, ref: m.spec.Ref, kind: m.q.kind, commit: m.q.commit, path: m.spec.Path, maxBytes: m.q.maxClone, name: m.spec.Name}, m.treeDir, &m.fetched)
 }
 
 // materialize makes the tree of a commit available in the cache (fetching it
-// unless offline) and verifies it against the lock.
-func materialize(ctx context.Context, spec Spec, opts Options, q treeRequest) (*Resolved, error) {
-	treeDir := filepath.Join(q.repoDir, q.commit, "tree")
-	fetched := false
-	ensure := func() error {
-		if _, statErr := os.Stat(treeDir); statErr == nil {
-			return nil
-		}
-		if q.offline {
-			return oops.With("url", spec.Redacted()).With("commit", q.commit).
-				Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", spec.Name, q.commit)
-		}
-		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, treeDir, &fetched)
-	}
-	if err := ensure(); err != nil {
+// unless offline) and verifies it: against the lock when the lock covers the
+// source, against the digest sidecar when the ref is a bare commit SHA.
+func materialize(ctx context.Context, spec Spec, q treeRequest) (*Resolved, error) {
+	m := &materializer{spec: spec, q: q}
+	if err := m.ensure(ctx); err != nil {
 		return nil, err
 	}
-
-	res, err := finish(spec, treeDir, q.commit, q.kind, q.entry, q.covered)
-	if err != nil && errors.Is(err, errDigest) && !fetched && !q.offline {
+	res, err := finish(spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
+	if err != nil && errors.Is(err, errDigest) && !m.fetched && !q.offline {
 		// A damaged cache looks like tampering; fetch the pinned commit again before failing.
 		if rmErr := os.RemoveAll(filepath.Join(q.repoDir, q.commit)); rmErr == nil {
-			if err = ensure(); err == nil {
-				res, err = finish(spec, treeDir, q.commit, q.kind, q.entry, q.covered)
+			if err = m.ensure(ctx); err == nil {
+				res, err = finish(spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
 			}
 		}
 	}
-	return res, err
+	if err != nil || q.covered || !fullSHA.MatchString(spec.Ref) {
+		return res, err
+	}
+	return m.verifyUnlocked(ctx, res)
+}
+
+// verifyUnlocked checks the cached tree of an unlocked commit-SHA source against
+// the digest recorded when it was stored. The SHA proves which commit was asked
+// for, not that the files on disk are still that commit's. A tree that does not
+// match, or has no record, is fetched again (online) or refused (offline).
+func (m *materializer) verifyUnlocked(ctx context.Context, res *Resolved) (*Resolved, error) {
+	if m.fetched {
+		storeDigest(m.treeDir, m.q.commit, res.Digest)
+		return res, nil
+	}
+	checkErr := checkDigest(m.treeDir, m.q.commit, res.Digest)
+	if checkErr == nil {
+		return res, nil
+	}
+	if m.q.offline {
+		return nil, oops.With("url", m.spec.Redacted()).With("commit", m.q.commit).
+			Wrapf(errors.Join(config.ErrLockViolation, checkErr), "skill source %q: the cached tree cannot be trusted and the network is off (--frozen/--offline); serve once online to repair the cache, or pin the source with `ai-rulez lock`", m.spec.Name)
+	}
+	logger.Warn("The cached tree of a skill source is not verified; fetching it again", "source", m.spec.Name, "commit", m.q.commit, "reason", checkErr.Error())
+	if err := removeTree(m.treeDir); err != nil {
+		return nil, err
+	}
+	if err := m.ensure(ctx); err != nil {
+		return nil, err
+	}
+	fresh, err := finish(m.spec, m.treeDir, m.q.commit, m.q.kind, m.q.entry, m.q.covered)
+	if err != nil {
+		return nil, err
+	}
+	storeDigest(m.treeDir, m.q.commit, fresh.Digest)
+	return fresh, nil
 }
 
 // commitSearch is what pickCommit needs besides the spec and the options.
@@ -277,17 +368,19 @@ func rejectSymlinkedPath(root, rel string) error {
 	return nil
 }
 
-func fetchInto(ctx context.Context, url, ref, kind, commit, treeDir string, fetched *bool) error {
-	if err := os.MkdirAll(filepath.Dir(treeDir), 0o700); err != nil {
+func fetchInto(ctx context.Context, req cloneRequest, treeDir string, fetched *bool) error {
+	commitDir := filepath.Dir(treeDir)
+	if err := os.MkdirAll(commitDir, 0o700); err != nil {
 		return oops.Wrapf(err, "create skill source cache")
 	}
 	// A private name per fetch: two servers fetching the same commit do not share a checkout.
-	tmp, err := os.MkdirTemp(filepath.Dir(treeDir), "tree-*.partial")
+	tmp, err := os.MkdirTemp(commitDir, "tree-*.partial")
 	if err != nil {
 		return oops.Wrapf(err, "create a checkout directory in the skill source cache")
 	}
-	if err := fetchCommit(ctx, url, ref, kind, commit, tmp); err != nil {
-		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
+	if err := fetchCommit(ctx, req, tmp); err != nil {
+		_ = os.RemoveAll(tmp)    //nolint:errcheck // best-effort cleanup
+		_ = os.Remove(commitDir) //nolint:errcheck // best-effort: only removes the directory when nothing else is in it
 		return err
 	}
 	if err := os.Rename(tmp, treeDir); err != nil {
@@ -325,9 +418,10 @@ func cacheRoot(override string) (string, error) {
 	return config.CacheDir("skill-sources") //nolint:wrapcheck // already contextual
 }
 
-// cacheTree is the directory holding the tree of a commit of url below the cache root.
-func cacheTree(root, url, commit string) string {
-	return filepath.Join(root, urlKey(gitURL(url)), commit, "tree")
+// cacheTree is the directory holding the tree of a commit of url (for the
+// source path, "" for the whole repository) below the cache root.
+func cacheTree(root, url, commit, srcPath string) string {
+	return treeDirFor(filepath.Join(root, urlKey(gitURL(url))), commit, srcPath)
 }
 
 func urlKey(url string) string {
@@ -397,7 +491,7 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 			problems = append(problems, Problem{spec.Name, fmt.Sprintf("the lock's commit %q is not a full hexadecimal commit SHA", entry.Commit)})
 		case spec.IsGit():
 			root, _ := cacheRoot(cacheDir) //nolint:errcheck // never fails
-			tree := filepath.Join(root, urlKey(gitURL(spec.URL)), entry.Commit, "tree")
+			tree := cacheTree(root, spec.URL, entry.Commit, spec.Path)
 			if spec.Path != "" {
 				tree = filepath.Join(tree, filepath.FromSlash(spec.Path))
 			}

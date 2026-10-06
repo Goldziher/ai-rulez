@@ -28,11 +28,18 @@ type Spec struct {
 	// MaxSkills and MaxBytes bound what the source loads; 0 selects the defaults.
 	MaxSkills int
 	MaxBytes  int
+	// MaxCloneBytes bounds what a git source may download and check out; 0
+	// selects the global limit or the default (256 MiB).
+	MaxCloneBytes int64
+	// AllowOutside lets a local source resolve outside the project: set for
+	// `--source` arguments and for sources of the user's own config, never for a
+	// source declared in a committed project config.
+	AllowOutside bool
 }
 
 // FromConfig converts a [[skill_sources]] entry.
 func FromConfig(c *config.SkillSourceConfig) Spec {
-	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes}
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes}
 }
 
 // TrustLevel is the scan level, defaulting to the strict one.
@@ -74,6 +81,7 @@ func ParseArg(arg string) (Spec, error) {
 		}
 	}
 	spec.URL = url
+	spec.AllowOutside = !includes.IsGitURL(gitURL(url)) // a path typed on the command line is the user's own choice
 	if err := checkRemote(url, spec.Ref); err != nil {
 		return Spec{}, err
 	}

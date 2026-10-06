@@ -49,6 +49,9 @@ type ServeSetup struct {
 	Offline bool
 	// CacheDir overrides the skill-source cache (tests).
 	CacheDir string
+	// MaxCloneBytes is the clone size limit of git skill sources that set no
+	// max_clone_bytes (0 selects AI_RULEZ_MAX_CLONE_BYTES, then 256 MiB).
+	MaxCloneBytes int64
 	// BudgetBytes is the per-session cap of load_skill (0 default, -1 unlimited).
 	BudgetBytes int
 	// UsageLog and UsageSink receive one identifier-only line per load_skill.
@@ -209,6 +212,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	for _, spec := range specs {
 		res, err := skillsource.Resolve(ctx, spec, skillsource.Options{
 			CacheDir: st.CacheDir, Lock: lock, Offline: st.Offline, Frozen: st.Frozen, Refresh: bo.refresh,
+			ProjectRoot: cfg.BaseDir, MaxCloneBytes: st.MaxCloneBytes,
 		})
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already names the source
@@ -267,6 +271,8 @@ func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error
 	seen := map[string]bool{}
 	for i := range cfg.SkillSources {
 		spec := skillsource.FromConfig(&cfg.SkillSources[i])
+		// Only the user's own config may name a directory outside its project.
+		spec.AllowOutside = cfg.UserScope
 		specs = append(specs, spec)
 		seen[spec.Name] = true
 	}
@@ -410,7 +416,7 @@ func fingerprint(roots []string, logs ...string) (string, error) {
 				}
 				return nil
 			}
-			if isUsageLog(p, logs) || strings.HasPrefix(d.Name(), ".cache_meta") {
+			if isUsageLog(p, logs) || isCacheBookkeeping(root, p) {
 				return nil
 			}
 			info, err := d.Info()
@@ -428,6 +434,15 @@ func fingerprint(roots []string, logs ...string) (string, error) {
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// isCacheBookkeeping reports whether p is one of the two bookkeeping files of a
+// cached clone, at the root of a watched directory. The lock digest
+// (contentlock.DigestDir) leaves out exactly these names there, so anything else
+// that merely starts with the name is skill content and must trigger a reload.
+func isCacheBookkeeping(root, p string) bool {
+	rel, err := filepath.Rel(root, p)
+	return err == nil && (rel == ".cache_meta.json" || rel == ".cache_meta.json.tmp")
 }
 
 func isUsageLog(p string, logs []string) bool {

@@ -92,7 +92,7 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 	total := 0
 	for _, dir := range chosen {
 		base := filepath.Base(dir)
-		files, err := readSkill(dir)
+		files, err := readSkill(dir, root)
 		if err != nil {
 			logger.Warn("Skipping a skill in a skill source", "source", spec.Name, "skill", base, "reason", err.Error())
 			continue
@@ -134,7 +134,14 @@ func fileExists(p string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-func readSkill(dir string) ([]File, error) {
+// cacheMetaNames are the bookkeeping files the digest of a source (contentlock
+// DigestDir) leaves out at the root of the digested directory. A file the digest
+// does not cover must not be served, or it could change unnoticed by the lock.
+var cacheMetaNames = map[string]bool{".cache_meta.json": true, ".cache_meta.json.tmp": true}
+
+// readSkill reads the files of the skill in dir; sourceRoot is the directory the
+// source digest is taken over.
+func readSkill(dir, sourceRoot string) ([]File, error) {
 	var files []File
 	total := 0
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, walkErr error) error {
@@ -164,6 +171,9 @@ func readSkill(dir string) ([]File, error) {
 		rel, err := filepath.Rel(dir, p)
 		if err != nil {
 			return err //nolint:wrapcheck // wrapped below
+		}
+		if dir == sourceRoot && cacheMetaNames[rel] {
+			return nil
 		}
 		files = append(files, File{Path: filepath.ToSlash(rel), Content: data})
 		return nil
