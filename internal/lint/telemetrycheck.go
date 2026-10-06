@@ -7,8 +7,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 )
 
-// Codes of the telemetry checks (see docs/telemetry.md). AR9K is a block of its
-// own: AR9D, AR9E and AR9F are proposed by other open designs.
+// Codes of the telemetry checks (see docs/telemetry.md). AR9K is the telemetry
+// block of the allocation table in docs/strict-validation.md.
 const (
 	CodeTelemetryConfigInvalid = "AR9K0"
 	CodeTelemetryKeyIgnored    = "AR9K1"

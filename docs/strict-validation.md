@@ -110,7 +110,7 @@ stdout.
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
 | AR9L1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
-| AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)). AR9D, AR9E and AR9F are proposed by other open designs, so telemetry uses AR9K |
+| AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)) |
 | AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
 | AR9C1 | `cursor-rule-extension-ignored` | warning | A file in `.cursor/rules` that is not `.mdc` (Cursor ignores it; `README.md` and folder-style `RULE.md` are exempt); error when ai-rulez generated it. See [Harness traps](harness-traps.md) |
 | AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
@@ -121,9 +121,61 @@ stdout.
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
 | AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
+| AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#convert)) |
+| AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
+| AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
+| AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, hooks not imported (convert report only) |
+| AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
+| AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
 
-Code ranges: `AR0xx` security, `AR1xx`-`AR8xx` content, `AR9xx` budgets, metadata, plugins and evals, `AR9C1`-`AR9C9`
-harness traps, `AR9E0`-`AR9E4` external scanners, `AR9F0`-`AR9F5` the `convert` report (never emitted by `validate`), `AR9L0`-`AR9L1` LLM access, `AR9K0`-`AR9K1` telemetry. `AR9L0` and `AR9D*` are reserved for other designs.
+### Code ranges
+
+Codes are allocated in blocks, one block per feature. This table is the single allocation list: a registered code
+must fall in a block marked *allocated*, blocks never overlap, and a block marked *reserved* or *proposed* holds no
+registered code until its feature ships and the status changes (`TestCodeBlocksAreAllocated` checks the registry,
+and the codes written as literals in other packages, against it). Ranges are inclusive.
+
+| Range | Owner | Status |
+| --- | --- | --- |
+| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR034` used) | allocated |
+| `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
+| `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
+| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR305`) | allocated |
+| `AR400`-`AR499` | Paths, skill resources, commands (`AR401`-`AR403`) | allocated |
+| `AR500`-`AR599` | Hooks and permissions (`AR501`-`AR507`) | allocated |
+| `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
+| `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
+| `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213)) | proposed |
+| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214)) | proposed |
+| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215)) | proposed |
+| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216)) | proposed |
+| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217)) | proposed |
+| `AR800`-`AR899` | Descriptions and names (`AR801`-`AR805`) | allocated |
+| `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
+| `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
+| `AR960`-`AR969` | Plugins and evals presence (`AR961`-`AR964`) | allocated |
+| `AR970`-`AR979` | Roles (`AR971`-`AR973`) | allocated |
+| `AR980`-`AR988` | Lock drift (`AR981`, `AR982`) | allocated |
+| `AR989`-`AR995` | Served skills and delivery (`AR989`-`AR995`) | allocated |
+| `AR996`-`AR999` | Eval cases and results (`AR996`-`AR998`) | allocated |
+| `AR9A0`-`AR9A9` | Eval results file (`AR9A0`; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A1`-`AR9A5`) | allocated |
+| `AR9B0`-`AR9B9` | OKF bundles | allocated |
+| `AR9C0`-`AR9C9` | Harness traps (`AR9C1`-`AR9C4` used; `AR9C0` is free for another trap, see [Harness traps](harness-traps.md)) | allocated |
+| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222)) | reserved |
+| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E4` used) | allocated |
+| `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
+| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220)) | reserved |
+| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221)); `verifiers run` emits none yet | reserved |
+| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227)) | reserved |
+| `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
+| `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
+| `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225)) | reserved |
+| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224)) | reserved |
+| `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230)) | reserved |
+
+Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
+a UI for `AR9H`).
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -318,24 +370,34 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR011`, `AR506` |
-| `references` | `AR101`, `AR201`, `AR202`, `AR301`-`AR303`, `AR401`, `AR402` |
-| `hooks` | `AR501`-`AR505` |
-| `mcp` | `AR601` |
+| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E4`, `AR9K1`, `AR9L1` |
+| `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR305`, `AR401`-`AR403` |
+| `hooks` | `AR501`-`AR505`, `AR507` |
+| `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
-| `descriptions` | `AR801`-`AR804` |
+| `descriptions` | `AR801`-`AR805` |
 | `budgets` | `AR901`, `AR902` |
 | `metadata` | `AR951`-`AR954` |
-| `plugin` | `AR961`, `AR962` |
+| `plugin` | `AR961`-`AR964` |
+| `roles` | `AR971`-`AR973` |
+| `lock` | `AR981`, `AR982`, `AR995` |
+| `delivery` | `AR989`-`AR994` |
+| `evals` | `AR996`-`AR998`, `AR9A0` |
+| `okf` | `AR9B0`-`AR9B9` |
+| `traps` | `AR9C1`-`AR9C4` |
+| `config` | `AR9K0`, `AR9L0` (invalid `[telemetry]` and `[llm]` tables) |
+| `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
+
+Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
+not, so a new rule cannot silently land in another analyzer. Code ranges and their owners are in
+[Code ranges](#code-ranges).
 
 `--analyzer security,references` (or repeated) narrows the report to those analyzers, for example to run only the
 security family in one CI job and the rest in another. It filters the *report*: every check still runs, the baseline
 is applied to the full set first (so other analyzers' entries are not reported stale), and budgets and the exit code
-reflect only the analyzers you selected. A rule added later that is not in the table takes the analyzer of its
-family (`AR0xx` security, `AR1xx`-`AR4xx` references, `AR5xx` hooks, and so on) with scope `item`;
-`lint.SetAnalyzer(code, analyzer, scope)` overrides that from an `init` function. Running only the chosen analyzers
-(instead of filtering) and a `[lint] analyzers` setting are not implemented: the runner is one pass, and making the
-checks independently schedulable would be a rewrite.
+reflect only the analyzers you selected. Running only the chosen analyzers (instead of filtering) and a
+`[lint] analyzers` setting are not implemented: the runner is one pass, and making the checks independently
+schedulable would be a rewrite.
 
 ## Documenting risky commands: example regions
 
@@ -1408,7 +1470,7 @@ content exceeds a documented load limit of a configured harness (Claude skill li
 a role names a domain, skill, rule, agent or command that does not exist (or exists only in a domain the role does not select)
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `roles` (scope `item`)
 - Why: A role that names an item which does not exist (or lives in a domain it does not select) selects nothing, so the role silently behaves differently from what was written.
 - Bad: `skills = ["deploy"]` in a role when no such skill exists
 - Good: Name an existing item of a selected domain
@@ -1418,7 +1480,7 @@ a role names a domain, skill, rule, agent or command that does not exist (or exi
 a role extends an unknown role, takes part in an extends cycle, or extends a role that itself extends another (one level only)
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `roles` (scope `item`)
 - Why: A role that extends an unknown role, a cycle, or a role that itself extends another has no well-defined contents.
 - Bad: `extends = "missing"`
 - Good: Extend a role that exists and extends nothing further
@@ -1428,7 +1490,7 @@ a role extends an unknown role, takes part in an extends cycle, or extends a rol
 a kept item lists a skill in its skills: frontmatter that the role drops or hides from the model
 
 - Default severity: `warning`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `roles` (scope `item`)
 - Why: A kept item that lists a skill the role drops or hides depends on something the model cannot reach.
 - Bad: An agent with `skills: [review]` in a role that drops `review`
 - Good: Keep the skill in the role, or remove the dependency
@@ -1438,7 +1500,7 @@ a kept item lists a skill in its skills: frontmatter that the role drops or hide
 an authored item differs from the content pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `lock` (scope `bundle`)
 - Why: An authored item that differs from the content pinned in ai-rulez.lock was changed after it was reviewed and pinned.
 - Bad: An edited skill with an unchanged ai-rulez.lock
 - Good: Review the change, then run `ai-rulez lock`
@@ -1448,7 +1510,7 @@ an authored item differs from the content pinned in ai-rulez.lock (raised only w
 a generated output differs from the digest pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `lock` (scope `bundle`)
 - Why: A generated output that differs from the pinned digest was edited by hand or produced by a different version.
 - Bad: A hand-edited `.claude/skills/x/SKILL.md`
 - Good: Regenerate with `ai-rulez generate`, then `ai-rulez lock`
@@ -1458,7 +1520,7 @@ a generated output differs from the digest pinned in ai-rulez.lock (raised only 
 a served skill file is binary or larger than 512 KiB, so the security scan cannot read it; the server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one
 
 - Default severity: `warning`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: The security scan only reads text of bounded size, so a binary or oversized served file would reach the agent unscanned; the server refuses it from a remote source and refuses a skill whose SKILL.md is one.
 - Bad: A served skill that bundles a compiled binary or a 2 MiB text dump next to SKILL.md
 - Good: Keep served skill files small UTF-8 text; ship binaries outside the served skill
@@ -1468,7 +1530,7 @@ a served skill file is binary or larger than 512 KiB, so the security scan canno
 a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree
 
 - Default severity: `warning`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: A static item that names a served skill points at a file the harness never gets.
 - Bad: A rule saying "run the `deploy` skill" when `deploy` is served
 - Good: Tell the agent to call `find_skill`, or make the skill static
@@ -1478,7 +1540,7 @@ a static rule, context or skill names a skill whose delivery is served, which is
 skills are served but a harness that can call MCP has no dynamic-skills stub telling the agent to call find_skill
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: Without the dynamic-skills stub, the agent of an MCP-capable harness is never told that served skills exist.
 - Bad: Served skills and no stub
 - Good: Generate the stub (the default) for harnesses that can call MCP
@@ -1488,7 +1550,7 @@ skills are served but a harness that can call MCP has no dynamic-skills stub tel
 a harness without MCP support keeps served skills as static files (nothing is dropped)
 
 - Default severity: `warning`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: A harness without MCP support cannot fetch served skills, so they stay as static files.
 - Bad: A served skill for a harness without MCP support
 - Good: Accept the static fallback or drop that harness
@@ -1498,7 +1560,7 @@ a harness without MCP support keeps served skills as static files (nothing is dr
 skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`
 
 - Default severity: `warning`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: Served skills are delivered by `ai-rulez mcp --serve-skills`; without an MCP entry that runs it, nothing serves them.
 - Bad: Served skills and no `[[mcp_servers]]` entry for the server
 - Good: Add an MCP server whose command is `ai-rulez mcp --serve-skills`
@@ -1508,7 +1570,7 @@ skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills
 a skill's delivery frontmatter is not static, served or both
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `delivery` (scope `item`)
 - Why: A delivery value other than static, served or both is ignored.
 - Bad: `delivery: dynamic`
 - Good: `delivery: served`
@@ -1518,7 +1580,7 @@ a skill's delivery frontmatter is not static, served or both
 [lock] enforce is on and a served skill is not pinned in ai-rulez.lock with its current digest
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `lock` (scope `bundle`)
 - Why: With lock enforcement on, a served skill that is not pinned with its current digest can change without review.
 - Bad: A served skill edited since the last `ai-rulez lock`
 - Good: Review the change and re-run `ai-rulez lock`
@@ -1528,7 +1590,7 @@ a skill's delivery frontmatter is not static, served or both
 an eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unknown field, missing expect_trigger or prompt, bad assertion, unsafe path
 
 - Default severity: `error`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `evals` (scope `item`)
 - Why: A malformed eval case cannot be run, so the skill it guards is effectively untested.
 - Bad: An eval case with no `prompt` or `expect_trigger`
 - Good: Give every case a prompt and an expectation
@@ -1538,7 +1600,7 @@ an eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unk
 a skill changed after its last recorded passing eval run (enabled by lint.evals.require_fresh)
 
 - Default severity: `off`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `evals` (scope `item`)
 - Why: A skill edited after its last passing eval run has no evidence that it still works.
 - Bad: A SKILL.md changed since `eval-results.json` was written
 - Good: Run `ai-rulez eval run` and commit the results
@@ -1548,7 +1610,7 @@ a skill changed after its last recorded passing eval run (enabled by lint.evals.
 a skill's recorded eval pass rate is below lint.evals.min_pass_rate (enabled by setting it)
 
 - Default severity: `off`
-- Analyzer: `plugin` (scope `item`)
+- Analyzer: `evals` (scope `item`)
 - Why: A recorded pass rate below the configured minimum means the skill fails its own tests.
 - Bad: A skill at 40% with `min_pass_rate = 0.8`
 - Good: Fix the skill or the cases, then re-run the evals
@@ -1558,7 +1620,7 @@ a skill's recorded eval pass rate is below lint.evals.min_pass_rate (enabled by 
 .ai-rulez/eval-results.json cannot be read or has an unsupported schema_version
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `evals` (scope `item`)
 - Why: An unreadable results file hides every recorded score and freshness check.
 - Bad: `eval-results.json` with an unknown `schema_version`
 - Good: Regenerate it with `ai-rulez eval run`
@@ -1568,7 +1630,7 @@ a skill's recorded eval pass rate is below lint.evals.min_pass_rate (enabled by 
 an OKF index.md lists a file that does not exist, or omits a concept or subdirectory of its directory
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: An OKF index that lists missing files, or omits existing ones, misleads every reader that navigates by it.
 - Bad: An index.md entry for a deleted concept
 - Good: Regenerate with `ai-rulez export okf`
@@ -1578,7 +1640,7 @@ an OKF index.md lists a file that does not exist, or omits a concept or subdirec
 an OKF concept has unparseable frontmatter or a missing or empty type
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: An OKF concept without a parseable type cannot be classified.
 - Bad: A concept whose frontmatter has no `type`
 - Good: Give every concept a non-empty `type`
@@ -1588,7 +1650,7 @@ an OKF concept has unparseable frontmatter or a missing or empty type
 a markdown link in an OKF bundle does not resolve to a file in the bundle
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: A link that does not resolve inside the bundle leaves the reader at a dead end.
 - Bad: `[x](missing.md)`
 - Good: Link to a concept that exists in the bundle
@@ -1598,7 +1660,7 @@ a markdown link in an OKF bundle does not resolve to a file in the bundle
 the root index okf_version is not MAJOR.MINOR, or names a version other than the one ai-rulez implements
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: An okf_version that is not MAJOR.MINOR, or names another spec version, may not mean what the importer assumes.
 - Bad: `okf_version: latest`
 - Good: `okf_version: "0.2"`
@@ -1608,7 +1670,7 @@ the root index okf_version is not MAJOR.MINOR, or names a version other than the
 an OKF concept is reachable from no index entry and no link
 
 - Default severity: `info`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: A concept reachable from no index entry and no link is invisible to navigation.
 - Bad: A concept file nobody links to
 - Good: List it in its directory index or link to it
@@ -1618,7 +1680,7 @@ an OKF concept is reachable from no index entry and no link
 the OKF bundle on disk differs from what export okf would write now
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: A bundle on disk that differs from a fresh export was edited by hand or is out of date.
 - Bad: A hand-edited exported concept
 - Good: Re-run `ai-rulez export okf`
@@ -1628,7 +1690,7 @@ the OKF bundle on disk differs from what export okf would write now
 an OKF index.md has frontmatter it may not have, or a log.md heading is not an ISO date
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: index.md may not carry frontmatter and log.md headings must be ISO dates; other tools rely on that structure.
 - Bad: A `log.md` heading `## Monday`
 - Good: `## 2026-01-31`
@@ -1638,7 +1700,7 @@ an OKF index.md has frontmatter it may not have, or a log.md heading is not an I
 two OKF concepts in one directory share a title
 
 - Default severity: `info`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: Two concepts with one title in a directory cannot be told apart in an index.
 - Bad: Two concepts titled `Deploy`
 - Good: Give each concept a distinct title
@@ -1648,7 +1710,7 @@ two OKF concepts in one directory share a title
 an OKF bundle contains a symlink, a path escaping the bundle, or paths differing only in case
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: A symlink, an escaping path or case-only path differences make a bundle unsafe to extract or ambiguous on case-insensitive disks.
 - Bad: A symlink inside the bundle
 - Good: Use plain files with distinct names
@@ -1658,7 +1720,7 @@ an OKF bundle contains a symlink, a path escaping the bundle, or paths differing
 an OKF concept carries x-ai-rulez data that cannot be mapped and imports as plain context
 
 - Default severity: `info`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `okf` (scope `item`)
 - Why: x-ai-rulez data that cannot be mapped is dropped on import, so the round trip loses information.
 - Bad: A concept with an unknown `x-ai-rulez` key
 - Good: Keep only mappable `x-ai-rulez` keys
@@ -1668,7 +1730,7 @@ an OKF concept carries x-ai-rulez data that cannot be mapped and imports as plai
 a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `traps` (scope `file`)
 - Why: Cursor reads only .mdc files in .cursor/rules, so a rule in another extension is silently ignored.
 - Bad: `.cursor/rules/style.md`
 - Good: `.cursor/rules/style.mdc`
@@ -1678,7 +1740,7 @@ a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez g
 a hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `traps` (scope `file`)
 - Why: A .mdc rule with no description, globs or alwaysApply applies only when someone @-mentions it.
 - Bad: A `.mdc` rule whose frontmatter has none of `description`, `globs`, `alwaysApply`
 - Good: Add `alwaysApply: true`, `globs` or a `description`
@@ -1688,7 +1750,7 @@ a hand-written .mdc rule has no description, globs or alwaysApply, so it applies
 a Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `traps` (scope `file`)
 - Why: Copilot rejects an excludeAgent value it does not know, so the file is applied to the wrong agents.
 - Bad: `excludeAgent: reviewer`
 - Good: `excludeAgent: code-review` or `cloud-agent`
@@ -1698,7 +1760,7 @@ a Copilot instructions file sets excludeAgent to something other than code-revie
 a file in .github/instructions does not end in .instructions.md, so Copilot skips it (error when ai-rulez generated it)
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `traps` (scope `file`)
 - Why: Copilot reads only files named *.instructions.md in .github/instructions and skips the rest.
 - Bad: `.github/instructions/tests.md`
 - Good: `.github/instructions/tests.instructions.md`
@@ -1708,7 +1770,7 @@ a file in .github/instructions does not end in .instructions.md, so Copilot skip
 a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.
 - Bad: `egress = false` with `env_pass = ["HTTPS_PROXY"]`
 - Good: Remove the variable or declare `egress = true`
@@ -1718,7 +1780,7 @@ a [[lint.external]] entry has an invalid timeout or an env_pass name an egress =
 a [[lint.external]] entry does not declare egress, so it runs with the full environment
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: A scanner that does not declare egress runs with the full environment, including credentials.
 - Bad: A `[[lint.external]]` entry without `egress`
 - Good: Set `egress = false` (or `true` and allow it with `--allow-egress`)
@@ -1728,7 +1790,7 @@ a [[lint.external]] entry does not declare egress, so it runs with the full envi
 a [[lint.external]] scanner's binary was not found, so it did not run
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: The scanner binary is not on PATH, so its checks did not run.
 - Bad: A `[[lint.external]]` command that is not installed
 - Good: Install the scanner or remove the entry
@@ -1738,7 +1800,7 @@ a [[lint.external]] scanner's binary was not found, so it did not run
 a [[lint.external]] scanner timed out, exceeded the output cap, or printed unreadable, unsuccessful or oversized output
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: A scanner that times out, floods output or prints unreadable SARIF gives no result, which must not read as a clean scan.
 - Bad: A scanner that exceeds its timeout or prints invalid SARIF
 - Good: Fix the scanner, raise `timeout` within the limit, or narrow its scope
@@ -1748,17 +1810,77 @@ a [[lint.external]] scanner timed out, exceeded the output cap, or printed unrea
 a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: A scanner that can reach the network could send repository content away, so it runs only when the user allows it.
 - Bad: `egress = true` run without `--allow-egress`
 - Good: Run with `--allow-egress=<name>` after reviewing the scanner
+
+### AR9F0 convert-input-invalid
+
+an input file of `convert` cannot be parsed at all (reported by convert, never by validate)
+
+- Default severity: `error`
+- Analyzer: `convert` (scope `item`)
+- Why: A tool file that cannot be parsed cannot be translated, so the run stops instead of writing a partial tree. Only `ai-rulez convert` reports it.
+- Bad: `.cursor/rules/a.mdc` with a broken YAML header, or a `skills-lock.json` that is not JSON
+- Good: Fix or remove the input file and run `ai-rulez convert` again
+
+### AR9F1 convert-approximated
+
+a construct was converted with a different meaning or without part of its fields (convert report only)
+
+- Default severity: `warning`
+- Analyzer: `convert` (scope `item`)
+- Why: The target has no field with the same meaning, so the value was kept in the closest form (for example an unknown skill frontmatter key that only some presets render). Only the convert report carries it.
+- Bad: A Cursor rule with `alwaysApply: true` and `globs`: the globs are dropped as always-on makes them moot
+- Good: Review the converted file and adjust the frontmatter if the approximation is not what you want
+
+### AR9F2 convert-dropped
+
+a construct has no equivalent and was not converted (convert report only)
+
+- Default severity: `warning`
+- Analyzer: `convert` (scope `item`)
+- Why: Nothing in ai-rulez expresses the construct, so it is not in the converted tree. Only the convert report carries it.
+- Bad: An unknown rule frontmatter key in a Cursor rule
+- Good: Re-create the intent by hand if it matters, or accept the loss
+
+### AR9F3 convert-needs-action
+
+a construct needs a manual step after conversion, for example a literal secret replaced by ${VAR} (convert report only)
+
+- Default severity: `warning`
+- Analyzer: `convert` (scope `item`)
+- Why: The conversion is incomplete until a person acts: a literal credential in an MCP server was replaced by a `${VAR}` reference, a lock hash was not carried over, or hooks were not imported. Only the convert report carries it.
+- Bad: An MCP server with `--api-key sk-...` in its arguments
+- Good: Export the variable named in the reference and run `ai-rulez lock`, or re-add the hook by hand
+
+### AR9F4 convert-unsupported
+
+a source or construct convert does not support (convert report only)
+
+- Default severity: `warning`
+- Analyzer: `convert` (scope `item`)
+- Why: The source kind is out of scope (a `node_modules` or local skills-lock source, a transport helper URL). Only the convert report carries it.
+- Bad: A skills-lock entry whose source is `file:///tmp/skill`
+- Good: Install the skill from an https or ssh Git source and convert again
+
+### AR9F5 convert-blocked-by-scan
+
+the security scan of the planned tree blocked the write (convert report only)
+
+- Default severity: `error`
+- Analyzer: `convert` (scope `item`)
+- Why: The planned tree failed the security scan (the AR0xx family), so nothing was written. Only `ai-rulez convert` reports it.
+- Bad: A converted rule that contains `curl ... | sh`
+- Good: Remove or rewrite the flagged text in the source file and convert again
 
 ### AR9K0 telemetry-config-invalid
 
 a [telemetry] setting is invalid: bad enum or range, unsupported protocol, non-https endpoint, or a literal credential in headers_env
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `config` (scope `bundle`)
 - Why: An out-of-range sample, an unsupported protocol, a non-https or credential-bearing endpoint, or a literal credential in headers_env makes export fail or leaks the credential into the repository.
 - Bad: `otlp_endpoint = "http://user:pw@collector.example.com"`
 - Good: `otlp_endpoint = "https://collector.example.com"` with `headers_env = ["OTEL_HEADERS"]` naming an environment variable
@@ -1768,7 +1890,7 @@ a [telemetry] setting is invalid: bad enum or range, unsupported protocol, non-h
 a repository [telemetry] sets a key only user scope may set (allow_network, otlp_endpoint, headers_env, ...); it is ignored
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: Only the user config and AI_RULEZ_TELEMETRY_* variables may choose where data is sent, so a repository cannot opt its contributors into export; the key has no effect.
 - Bad: `allow_network = true` in the repository `[telemetry]`
 - Good: Set it in the user config, or remove it from the repository
@@ -1778,7 +1900,7 @@ a repository [telemetry] sets a key only user scope may set (allow_network, otlp
 the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit
 
 - Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `config` (scope `bundle`)
 - Why: An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.
 - Bad: `api_key_env = "sk-live-123"`
 - Good: `api_key_env = "ANTHROPIC_API_KEY"`
@@ -1788,7 +1910,7 @@ the [llm] table is invalid: unknown backend, a literal secret instead of an api_
 a repository [llm] table sets allow_network, base_url, api_key_env or a price override, which only the user config file and AI_RULEZ_LLM_* may set; the value is ignored
 
 - Default severity: `warning`
-- Analyzer: `budgets` (scope `item`)
+- Analyzer: `security` (scope `bundle`)
 - Why: A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.
 - Bad: `allow_network = true` in the repository ai-rulez.toml
 - Good: Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK
