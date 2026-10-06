@@ -1008,6 +1008,7 @@ ai-rulez generate [config-file] [flags]
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
+| `--emit-plan FILE`              | string  |               | Write the generation plan as JSON to FILE (`-` for stdout) and apply nothing ([details](#embedding-the-plan)) |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
 | `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
 | `--locked`                      | boolean | false         | Require `ai-rulez.lock` to cover every remote include and installed skill, fetch exactly the pinned commits, and fail (exit 2) when an authored source differs from the lock's content pins (CI mode, see [Lock Command](#lock-command)). Never writes the lock |
@@ -1127,6 +1128,27 @@ ai-rulez generate
 # Using CLI flag
 ai-rulez generate --token "ghp_your_github_token_here"
 ```
+
+### Embedding the plan
+
+`generate --emit-plan FILE` renders everything in memory and writes the result as JSON, without writing, deleting or git-ignoring anything. Go code can get the same value from `generator.PlanOutputs(ctx, cfg, generator.PlanOptions{Profile, Role})`; `config.WithHost` injects the environment, clock, process runner and logger of the load (the zero host is the real process).
+
+```bash
+ai-rulez generate --emit-plan plan.json --profile backend
+```
+
+The document follows [`schema/plan.schema.json`](schema.md):
+
+- `files`: every output sorted by path, with `action` (`write`, `merge` into a document the consumer owns, `mkdir`), `mode`, and the `size` and `sha256` of the rendered content before the header's `Generated:` stamp and hash lines.
+- `removals`: files an earlier run recorded and this one no longer renders (`stale`), and documents ai-rulez takes its earlier entries out of (`unmerge`, `delete`).
+
+The plan is deterministic and holds no secret: MCP placeholders such as `${TOKEN}` stay as written, and an output that may carry a secret (`sensitive`) has no digest. It is conservative about that flag, so a plan may call a document sensitive that a real run finds clean. It reads the project the way a run does (the previous manifest, merged documents) and honours `--profile`, `--role` and `--no-local`; it skips the command preflight. A run with `--yes` after `--emit-plan` is unaffected.
+
+Design decisions:
+
+- `generate` is not yet built on the plan. `PlanOutputs` and `generate` share the rendering code (`collectOutputs`, the stale and unmerge planning); the write path still interleaves side effects (gitignore, secret guards) with writes, and splitting it is a separate change guarded by `tests/golden`.
+- The plan carries digests, not content, so it stays small and cannot leak. Callers that need bytes render through `generate`.
+- `renderer` is the generator's render-schema version: a renderer change changes digests, and the plan says so.
 
 ### Profile Selection
 

@@ -421,6 +421,24 @@ args = ["serve"]
 			},
 		},
 		{
+			// --emit-plan applies nothing: the only new file is the plan, and the
+			// plan is the same before and after a real run except for what the run
+			// removed or wrote.
+			name:  "emit-plan",
+			files: richFiles(two, ""),
+			exec:  scriptExec(),
+			git:   true,
+			full:  true,
+			steps: []step{
+				runEnv(goldenEnv, "generate", "--emit-plan", "plan-before.json"),
+				runEnv(goldenEnv, "generate", "--emit-plan", "-"),
+				runEnv(goldenEnv, "generate", "--yes"),
+				runEnv(goldenEnv, "generate", "--emit-plan", "plan-after.json", "--profile", "default"),
+				{kind: stepWrite, path: ".ai-rulez/config.toml", data: richConfig([]string{"claude"}, "")},
+				runEnv(goldenEnv, "generate", "--emit-plan", "plan-stale.json"),
+			},
+		},
+		{
 			name:  "lock-content",
 			files: richFiles(two, ""),
 			exec:  scriptExec(),
