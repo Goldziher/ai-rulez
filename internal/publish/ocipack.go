@@ -230,10 +230,16 @@ func PullOCI(ctx context.Context, t oci.Target, dir string) (string, error) {
 	if err != nil {
 		return "", newError(CodeVerify, ExitFailed, "", "%s does not carry a publish manifest: %v", t.Ref, err)
 	}
-	files := map[string][]byte{m.Name + "-" + m.Version + ".manifest.json": pulled.Config}
+	manifestName := m.Name + "-" + m.Version + ".manifest.json"
+	files := map[string][]byte{manifestName: pulled.Config}
 	for _, l := range pulled.Layers {
 		if !ValidPath(l.Title) || strings.Contains(l.Title, "/") {
 			return "", newError(CodeVerify, ExitFailed, "", "%s has a layer with an unusable title %q", t.Ref, l.Title)
+		}
+		// A layer titled like the manifest or the checksums, or like an earlier layer, would silently replace
+		// that file: the sums are then computed over the replacement and verify agrees with itself.
+		if _, dup := files[l.Title]; dup || l.Title == SumsFile || l.Title == PlanFile {
+			return "", newError(CodeVerify, ExitFailed, "", "%s has a layer titled %q, which would replace another file of the release", t.Ref, l.Title)
 		}
 		files[l.Title] = l.Data
 	}
