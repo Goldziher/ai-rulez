@@ -139,6 +139,8 @@ type ActivationPrompt struct {
 	// Rate is the fraction of runs in which the skill fired; Runs is how many ran.
 	Rate float64 `json:"rate"`
 	Runs int     `json:"runs"`
+	// ErroredRuns is how many repetitions failed and are not in Runs (native only).
+	ErroredRuns int `json:"errored_runs,omitempty"`
 	// Rank is the 1-based rank of the skill among the competing skills; null when
 	// it did not rank at all (always null on the native surface).
 	Rank *int `json:"rank"`
@@ -410,8 +412,12 @@ func nativePromptLine(p *ActivationPrompt) string {
 		return fmt.Sprintf("- %#q: no result (%s)", p.Case, p.Error)
 	}
 	fired := int(math.Round(p.Rate * float64(p.Runs)))
-	return fmt.Sprintf("- %#q (%s): expected %s, fired in %d of %d runs (%.0f%%, interval %.0f-%.0f%%); most fired: %s",
-		p.Case, p.Status, firesWord(p.Expect), fired, p.Runs, p.Rate*100, p.Interval.Low*100, p.Interval.High*100, winnerText(p.Winner))
+	errored := ""
+	if p.ErroredRuns > 0 {
+		errored = fmt.Sprintf(", %d more errored", p.ErroredRuns)
+	}
+	return fmt.Sprintf("- %#q (%s): expected %s, fired in %d of %d runs (%.0f%%, interval %.0f-%.0f%%%s); most fired: %s",
+		p.Case, p.Status, firesWord(p.Expect), fired, p.Runs, p.Rate*100, p.Interval.Low*100, p.Interval.High*100, errored, winnerText(p.Winner))
 }
 
 func firesWord(expect bool) string {

@@ -379,6 +379,9 @@ func (n *nativeRun) scoreNative(run *ActivationSkill, plan *nativePlan, resp *Re
 			p.Status, p.Error = PromptError, "the runner skipped this prompt: "+res.Reason
 		case res.Error != "":
 			p.Status, p.Error = PromptError, res.Error
+		case res.ErroredRuns > res.Runs:
+			p.Status = PromptError
+			p.Error = fmt.Sprintf("%d of %d runs errored; too few completed to score", res.ErroredRuns, res.Runs+res.ErroredRuns)
 		}
 		if p.Status == PromptError {
 			errs++
@@ -386,7 +389,7 @@ func (n *nativeRun) scoreNative(run *ActivationSkill, plan *nativePlan, resp *Re
 			continue
 		}
 		k := res.FiredCounts[skill.ID]
-		p.Runs, p.FiredCounts = res.Runs, res.FiredCounts
+		p.Runs, p.ErroredRuns, p.FiredCounts = res.Runs, res.ErroredRuns, res.FiredCounts
 		p.Rate = round(float64(k) / float64(res.Runs))
 		iv := Wilson(k, res.Runs)
 		p.Interval = &iv
