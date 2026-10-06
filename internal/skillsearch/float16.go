@@ -18,7 +18,7 @@ func float32ToFloat16(f float32) uint16 {
 		return sign | 0x7c00
 	case exp > 142: // overflow
 		return sign | 0x7c00
-	case exp < 103: // underflow to zero
+	case exp < 102: // below 2^-25, half the smallest subnormal: rounds to zero
 		return sign
 	case exp < 113: // subnormal half
 		shift := uint32(126 - exp)
