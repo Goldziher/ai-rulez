@@ -25,6 +25,12 @@ func checkLocalOverride(cfg *config.Config, listKey, name string) error {
 // overlaySetsLocalOverride reports whether the machine-local overlay is what
 // sets local_override on the named entry.
 func overlaySetsLocalOverride(cfg *config.Config, listKey, name string) bool {
+	return overlaySetsField(cfg, listKey, name, "local_override")
+}
+
+// overlaySetsField reports whether the machine-local overlay sets field on the
+// named entry of listKey.
+func overlaySetsField(cfg *config.Config, listKey, name, field string) bool {
 	if cfg == nil || cfg.LocalOverlay == nil {
 		return false
 	}
@@ -37,7 +43,7 @@ func overlaySetsLocalOverride(cfg *config.Config, listKey, name string) bool {
 		if n, _ := entry["name"].(string); n != name {
 			continue
 		}
-		if v, _ := entry["local_override"].(string); v != "" {
+		if v, _ := entry[field].(string); v != "" {
 			return true
 		}
 	}

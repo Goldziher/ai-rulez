@@ -153,6 +153,9 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 				"local_override", includeConf.LocalOverride)
 			return nil, nil
 		}
+		if err := checkInsideProject(r.cfg, r.baseDir, "local_override", includeConf.Name, localPath); err != nil {
+			return nil, err
+		}
 		logger.Info("Using local override for include",
 			"name", includeConf.Name,
 			"path", localPath)
@@ -168,6 +171,9 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 
 	switch sourceType {
 	case SourceTypeLocal:
+		if err := checkInsideProject(r.cfg, r.baseDir, "source", includeConf.Name, includeConf.Source); err != nil {
+			return nil, err
+		}
 		return NewLocalSource(
 			includeConf.Name,
 			includeConf.Source,
