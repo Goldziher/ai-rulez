@@ -78,4 +78,7 @@ type SkillSourceConfig struct {
 	MaxSkills int `yaml:"max_skills,omitempty" json:"max_skills,omitempty" toml:"max_skills,omitempty"` //nolint:tagliatelle
 	// MaxBytes caps the total size of the files the source loads (0 selects the default of 64 MiB).
 	MaxBytes int `yaml:"max_bytes,omitempty" json:"max_bytes,omitempty" toml:"max_bytes,omitempty"` //nolint:tagliatelle
+	// MaxCloneBytes caps what a git source may download and check out (0 selects
+	// the global limit, AI_RULEZ_MAX_CLONE_BYTES, or the default of 256 MiB).
+	MaxCloneBytes int64 `yaml:"max_clone_bytes,omitempty" json:"max_clone_bytes,omitempty" toml:"max_clone_bytes,omitempty"` //nolint:tagliatelle
 }

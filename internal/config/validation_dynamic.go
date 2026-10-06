@@ -105,9 +105,9 @@ func (s *SkillSourceConfig) validateGitArgsAndLimits(field func(string) string) 
 		return oops.With("field", field("ref")).Hint("A url or ref that starts with '-' would be read by git as an option").
 			Errorf("skill source %q: %s", s.Name, err.Error())
 	}
-	if s.MaxSkills < 0 || s.MaxBytes < 0 {
+	if s.MaxSkills < 0 || s.MaxBytes < 0 || s.MaxCloneBytes < 0 {
 		return oops.With("field", field("max_skills")).Hint("Use a positive number, or omit it for the default").
-			Errorf("skill source %q has a negative max_skills or max_bytes", s.Name)
+			Errorf("skill source %q has a negative max_skills, max_bytes or max_clone_bytes", s.Name)
 	}
 	return nil
 }
