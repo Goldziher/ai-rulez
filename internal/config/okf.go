@@ -31,6 +31,24 @@ type OKFConfig struct {
 	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
 	// Spec pins the OKF spec version. Only "0.2" is implemented.
 	Spec string `yaml:"spec,omitempty" json:"spec,omitempty" toml:"spec,omitempty"`
+	// IndexStyle selects the index.md scheme: "body" (default, the OKF 0.2
+	// listing in the body) or "frontmatter" (title, version and entries in the
+	// frontmatter).
+	IndexStyle string `yaml:"index_style,omitempty" json:"index_style,omitempty" toml:"index_style,omitempty"`
+}
+
+// OKF index styles accepted in okf.index_style.
+const (
+	OKFIndexStyleBody        = "body"
+	OKFIndexStyleFrontmatter = "frontmatter"
+)
+
+// OKFIndexStyle returns the configured index.md style; the default is "body".
+func (c *Config) OKFIndexStyle() string {
+	if c != nil && c.OKF != nil && c.OKF.IndexStyle != "" {
+		return c.OKF.IndexStyle
+	}
+	return OKFIndexStyleBody
 }
 
 // OKFEnabled reports whether the okf preset is configured.
@@ -73,6 +91,14 @@ func (c *Config) validateOKF() error {
 			With("actual_value", c.OKF.Spec).
 			Hint("Only OKF spec "+OKFSpecVersion+" is implemented.").
 			Errorf("unsupported okf.spec %q", c.OKF.Spec)
+	}
+	if st := c.OKF.IndexStyle; st != "" && st != OKFIndexStyleBody && st != OKFIndexStyleFrontmatter {
+		return oops.
+			With("field", "okf.index_style").
+			With("actual_value", st).
+			With("valid_values", []string{OKFIndexStyleBody, OKFIndexStyleFrontmatter}).
+			Hint(`Use "body" (the OKF 0.2 listing) or "frontmatter".`).
+			Errorf("unknown okf.index_style %q", st)
 	}
 	if dir := strings.TrimSpace(c.OKF.Dir); dir != "" {
 		if err := ValidateScopePath(dir); err != nil {

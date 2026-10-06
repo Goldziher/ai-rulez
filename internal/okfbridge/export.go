@@ -15,6 +15,8 @@ import (
 type ExportOptions struct {
 	// Include limits the kinds exported; empty means all.
 	Include []Kind
+	// IndexStyle is okf.StyleBody (the default, also for "") or okf.StyleFrontmatter.
+	IndexStyle string
 }
 
 // ExportResult is the bundle and what went into it.
@@ -61,19 +63,23 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 		}
 	}
 
+	if !okf.ValidIndexStyle(opts.IndexStyle) {
+		return nil, fmt.Errorf("unknown index style %q (use %s or %s)", opts.IndexStyle, okf.StyleBody, okf.StyleFrontmatter)
+	}
 	var idx []okf.IndexInput
-	var files []okf.File
+	var pieces []piece
 	for i := range items {
 		it := items[i]
-		fs, in, err := renderItem(it, claim)
+		ps, in, err := renderItem(it, claim)
 		if err != nil {
 			return nil, err
 		}
-		files = append(files, fs...)
+		pieces = append(pieces, ps...)
 		idx = append(idx, in...)
 		res.Counts[it.kind]++
 	}
-	for p, data := range okf.BuildIndexes(idx, dirLabels(items)) {
+	files := rewriteExportLinks(pieces, res)
+	for p, data := range okf.BuildIndexes(idx, dirLabels(items), opts.IndexStyle) {
 		files = append(files, okf.File{Path: claimIndex(used, p), Data: data})
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
@@ -148,7 +154,35 @@ func hasResources(it sourceItem) bool {
 	return (it.kind == KindSkill || it.kind == KindCommand) && len(it.cf.Resources) > 0
 }
 
-func renderItem(it sourceItem, claim func(string) string) ([]okf.File, []okf.IndexInput, error) {
+// piece is a file of the bundle before its links are rewritten. head and body
+// are set for a markdown concept (Data is head plus the rewritten body); src is
+// the path of the source file relative to the configuration directory, "" when
+// unknown.
+type piece struct {
+	file okf.File
+	head []byte
+	body string
+	src  string
+}
+
+// sourceRel is the path of an item's source file relative to the configuration
+// directory, rebuilt from its kind, domain and id.
+func sourceRel(it sourceItem) string {
+	if it.cf.Path == "" {
+		return ""
+	}
+	base := string(it.kind)
+	if it.domain != "" {
+		base = path.Join(dirDomains, it.domain, base)
+	}
+	name := path.Base(strings.ReplaceAll(it.cf.Path, "\\", "/"))
+	if name == fileSkill || name == fileCommand {
+		return path.Join(base, itemID(it.kind, it.cf), name)
+	}
+	return path.Join(base, name)
+}
+
+func renderItem(it sourceItem, claim func(string) string) ([]piece, []okf.IndexInput, error) {
 	id := itemID(it.kind, it.cf)
 	seg := sanitizeID(id)
 	var conceptPath string
@@ -168,12 +202,12 @@ func renderItem(it sourceItem, claim func(string) string) ([]okf.File, []okf.Ind
 	if err != nil {
 		return nil, nil, err
 	}
-	data := append(append(head, '\n'), it.cf.Content...)
 	title := titleOf(fields)
-	files := []okf.File{{Path: conceptPath, Data: data}}
+	src := sourceRel(it)
+	files := []piece{{file: okf.File{Path: conceptPath}, head: append(head, '\n'), body: it.cf.Content, src: src}}
 	index := []okf.IndexInput{{Path: conceptPath, Title: title, Description: desc}}
 	if hasResources(it) {
-		resFiles, resIdx, err := renderResources(it, id, path.Dir(conceptPath), claim)
+		resFiles, resIdx, err := renderResources(it, id, path.Dir(conceptPath), path.Dir(src), claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -330,18 +364,22 @@ func nodeValue(n *yaml.Node) any {
 	return n
 }
 
-func renderResources(it sourceItem, id, dir string, claim func(string) string) ([]okf.File, []okf.IndexInput, error) {
+func renderResources(it sourceItem, id, dir, srcDir string, claim func(string) string) ([]piece, []okf.IndexInput, error) {
 	res := append([]config.SkillResource(nil), it.cf.Resources...)
 	sort.Slice(res, func(i, j int) bool { return res[i].RelPath < res[j].RelPath })
-	var files []okf.File
+	var files []piece
 	var idx []okf.IndexInput
 	for _, r := range res {
 		rel := path.Clean(strings.ReplaceAll(r.RelPath, "\\", "/"))
 		if err := okf.ValidatePath(rel); err != nil || !resourceK[strings.SplitN(rel, "/", 2)[0]] {
 			return nil, nil, fmt.Errorf("%s %q has an unsupported resource path %q", kindName(it.kind), id, r.RelPath)
 		}
+		src := ""
+		if srcDir != "" && srcDir != "." {
+			src = path.Join(srcDir, rel)
+		}
 		if !strings.HasSuffix(strings.ToLower(rel), ".md") {
-			files = append(files, okf.File{Path: claim(path.Join(dir, rel)), Data: r.Content, Mode: r.Mode})
+			files = append(files, piece{file: okf.File{Path: claim(path.Join(dir, rel)), Data: r.Content, Mode: r.Mode}, src: src})
 			continue
 		}
 		p := claim(path.Join(dir, resourcePath(rel)))
@@ -357,7 +395,7 @@ func renderResources(it sourceItem, id, dir string, claim func(string) string) (
 		if err != nil {
 			return nil, nil, err
 		}
-		files = append(files, okf.File{Path: p, Data: append(append(head, '\n'), r.Content...), Mode: r.Mode})
+		files = append(files, piece{file: okf.File{Path: p, Mode: r.Mode}, head: append(head, '\n'), body: string(r.Content), src: src})
 		idx = append(idx, okf.IndexInput{Path: p, Title: title, Description: r.Description})
 	}
 	return files, idx, nil

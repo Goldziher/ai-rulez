@@ -624,6 +624,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Codex           *CodexConfig           `toml:"codex"`
 		Hooks           []HookGroup            `toml:"hooks"`
 		Permissions     *Permissions           `toml:"permissions"`
+		OKF             *OKFConfig             `toml:"okf"`
 	}
 
 	var raw tomlConfig
@@ -699,6 +700,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Codex:           raw.Codex,
 		Hooks:           raw.Hooks,
 		Permissions:     raw.Permissions,
+		OKF:             raw.OKF,
 	}
 
 	return cfg, nil
