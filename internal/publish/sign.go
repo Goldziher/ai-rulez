@@ -50,6 +50,10 @@ type ReleasePredicate struct {
 	Lock     FileRef  `json:"lock"`
 	LockTree string   `json:"lock_tree,omitempty"` //nolint:tagliatelle // matches the manifest's lock.tree naming
 	SBOM     *FileRef `json:"sbom,omitempty"`
+	// Source and Approval bind where the release was built and the approval summary the manifest shows,
+	// so a manifest relabelled with another commit, repository or approval count does not verify.
+	Source   Source        `json:"source"`
+	Approval *ApprovalInfo `json:"approval"`
 }
 
 func hexOf(digest string) string { return strings.TrimPrefix(digest, "sha256:") }
@@ -62,6 +66,7 @@ func ReleaseStatement(m Manifest) (*signing.Statement, error) {
 	pred := ReleasePredicate{
 		Name: m.Name, Version: m.Version, Bundle: FileRef{File: m.Bundle.File, Digest: m.Bundle.Digest},
 		Lock: FileRef{File: LockFile, Digest: m.Lock.FileDigest}, LockTree: m.Lock.Tree,
+		Source: m.Source, Approval: m.Approval,
 	}
 	subjects := []signing.Subject{
 		{Name: m.Bundle.File, Digest: map[string]string{"sha256": hexOf(m.Bundle.Digest)}},
@@ -194,6 +199,13 @@ func VerifyReleaseAttestation(bundle []byte, m Manifest, files ReleaseFiles, o V
 	}
 	if pred.Name != m.Name || pred.Version != m.Version {
 		return nil, oops.Errorf("the attestation signs %s %s, the manifest names %s %s", pred.Name, pred.Version, m.Name, m.Version)
+	}
+	if pred.Source != m.Source {
+		return nil, oops.Errorf("the attestation signs source %s@%s (dirty: %t), the manifest names %s@%s (dirty: %t)",
+			pred.Source.Repo, pred.Source.Commit, pred.Source.Dirty, m.Source.Repo, m.Source.Commit, m.Source.Dirty)
+	}
+	if (pred.Approval == nil) != (m.Approval == nil) || (m.Approval != nil && *pred.Approval != *m.Approval) {
+		return nil, oops.Errorf("the attestation signs another approval summary than the manifest shows")
 	}
 	for _, c := range []struct{ what, file, got, signed string }{
 		{"archive", m.Bundle.File, Digest(files.Archive), pred.Bundle.Digest},
