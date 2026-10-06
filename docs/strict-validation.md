@@ -150,7 +150,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215)) | proposed |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216)) | proposed |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217)) | proposed |
-| `AR800`-`AR899` | Descriptions and names (`AR801`-`AR805`) | allocated |
+| `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
 | `AR960`-`AR969` | Plugins and evals presence (`AR961`-`AR964`) | allocated |
@@ -290,6 +290,9 @@ A finding may carry a mechanical fix. Only deterministic, local corrections exis
 | Rule | Fix | Tier |
 | --- | --- | --- |
 | `AR303` frontmatter-key-unknown | Rename the key to the known key it differs from only by case or separators (`allowed_tools` to `allowed-tools`), unless that key is already set | safe |
+| `AR304` frontmatter-value-invalid, string `"true"`/`"false"` | Write the value as a YAML boolean, without quotes, for the boolean keys of the content kind (`user-invocable`, `disable-model-invocation`, `background`, `omitClaudeMd`, `alwaysApply`; one table, `boolKeys` in `internal/lint/ar_frontmatter.go`) | safe |
+| `AR806` fence-unclosed | Add a closing fence (same character and length as the opening one) after the last line | safe |
+| `AR807` final-newline-missing | Add the final newline | safe |
 | `AR502`, `AR503`, `AR505` not executable | `chmod +x` the hook or script, and stage the bit in the git index (`git update-index --chmod=+x`), because the index mode is what the check reads | safe |
 | `AR804` skill-name-invalid | Rewrite `name:` to the normalized name (lowercase letters, digits, single hyphens, at most 64 characters) or to the skill's directory name | unsafe: the name is how the skill is invoked and referenced |
 
@@ -307,9 +310,7 @@ Guarantees:
   stdout stays the report) plus a `chmod` line per mode change, and writes nothing.
 
 After the fixes the run reports what is left, and the exit code reflects that. The summary ends with a reminder to run
-`ai-rulez generate` so the changes reach the generated files. Not implemented because no existing rule reports
-them: coercing string `"true"`/`"false"` to booleans for known boolean keys, and repairing an unclosed fence or a
-missing final newline.
+`ai-rulez generate` so the changes reach the generated files.
 
 ## Baseline and budgets
 
@@ -376,7 +377,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
-| `descriptions` | `AR801`-`AR805` |
+| `descriptions` | `AR801`-`AR807` |
 | `budgets` | `AR901`, `AR902` |
 | `metadata` | `AR951`-`AR954` |
 | `plugin` | `AR961`-`AR964` |
@@ -693,7 +694,7 @@ does not override it; a rule that reports mild and serious cases at different le
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
-| AR304 | `frontmatter-value-invalid` | warning | A frontmatter value the Claude Code skill or subagent reference does not accept: `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `context` (`fork`), `shell` (`bash`, `powershell`), `permissionMode`, `memory`, `isolation`, `color`, a quoted or `yes`-style value where a YAML boolean is required, a non-integer `maxTurns`, a `model` that is neither an alias (`sonnet`, `opus`, `haiku`, `inherit`), a full model ID nor a known vendor ID, and a `paths`/`globs` value that is not a glob string or a list of glob strings. The message suggests the nearest valid value |
+| AR304 | `frontmatter-value-invalid` | warning | A frontmatter value the Claude Code skill or subagent reference does not accept: `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `context` (`fork`), `shell` (`bash`, `powershell`), `permissionMode`, `memory`, `isolation`, `color`, a quoted or `yes`-style value where a YAML boolean is required (a quoted `"true"` or `"false"` is fixable), a non-integer `maxTurns`, a `model` that is neither an alias (`sonnet`, `opus`, `haiku`, `inherit`), a full model ID nor a known vendor ID, and a `paths`/`globs` value that is not a glob string or a list of glob strings. The message suggests the nearest valid value |
 | AR305 | `tool-name-unknown` | warning | An `allowed-tools`, `disallowed-tools`, `tools` or `disallowedTools` entry that names no Claude Code tool (with a did-you-mean), a malformed `mcp__server__tool` name, unbalanced parentheses in a `Bash(...)` pattern, or a tool listed as both allowed and denied. MCP tools, `Bash(...)`/`WebFetch(...)` patterns and `Agent(name)` are valid. Tools provided elsewhere go in `lint.known_names`. Not checked when `claude` is not among the presets |
 | AR403 | `command-missing` | warning | A backticked `npm run X` (also `pnpm`, `yarn`, `bun`), `make X`, `task X`, `just X` or `pytest -m X` that names a script, target, task, recipe or marker the repository does not define. The build files are read from the git index (`package.json` `scripts`, `Makefile` and `*.mk` targets, `Taskfile.y*ml` tasks, `justfile` recipes and aliases, pytest markers from `pyproject.toml`, `pytest.ini`, `setup.cfg`, `tox.ini`, `addinivalue_line` and `pytest.mark.X` uses). A command is skipped when no file of its kind exists, when it carries a placeholder (`<name>`, `$VAR`), when it is scoped elsewhere (`--prefix`, `--workspace`, `-C`, `-f`, `cd`), when the Makefile has dynamic targets or includes, and inside fenced blocks |
 | AR507 | `hook-schema-invalid` | warning | A hook declaration that loads but will not do what it says, in `config.toml` (`[[hooks]]`, `[[plugin.hooks]]`), the project `.claude/settings.json` and tracked plugin `hooks/hooks.json`: an event that is not a Claude Code event (with a did-you-mean), a `matcher` on an event without a matchable subject, an `if` on an event that never evaluates it, a handler with no or an unknown `type`, a `command`/`http`/`prompt` handler without its `command`/`url`/`prompt`, a `timeout` that is not a whole number of seconds, a group without a `hooks` list. The event tables are the ones the config loader uses. JSON files cannot carry an inline ignore; use `ignore_paths` |
@@ -725,6 +726,8 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR033 | `authority-claim` | info | An installed skill whose description says *official*, *verified*, *trusted*, *authorized*, *endorsed* or *certified* while its source owner is not in a built-in list of well-known organizations (`anthropics`, `openai`, `github`, `vercel`, ...). Local sources are skipped |
 | AR034 | `low-analyzability` | info | Less than 70% of the bytes in a skill directory could be scanned: binaries, archives, WebAssembly, images, files over 1 MiB and files with NUL bytes are opaque to the text rules. The message names the largest opaque files |
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
+| AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
+| AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
 <!-- lint-rules:end -->
 
 <!-- lint-rules-notes:begin -->
@@ -1386,6 +1389,26 @@ a skill, agent, command or rule has frontmatter but no body, so it instructs not
 - Why: An item with frontmatter but no body instructs nothing, so it costs context and does no work.
 - Bad: A skill holding only `---` frontmatter
 - Good: Write the instructions, or delete the item
+
+### AR806 fence-unclosed
+
+a fenced code block is opened and never closed, so every line after it is read as code
+
+- Default severity: `warning`
+- Analyzer: `descriptions` (scope `item`)
+- Why: Past an unclosed fence every line is code: links, names and headings stop being read as prose, and a harness may render or load the rest of the file differently. It is almost always a hand-edit slip. `validate --fix` closes the fence at the end of the file; check that is where the block should end.
+- Bad: A file whose last block starts with ```` ```bash ```` and has no closing ```` ``` ````
+- Good: Close the block with a fence of the same character and at least the same length
+
+### AR807 final-newline-missing
+
+a content file does not end with a newline
+
+- Default severity: `info`
+- Analyzer: `descriptions` (scope `item`)
+- Why: Tools disagree about a last line without a newline: diffs show `\ No newline at end of file`, concatenated or appended text lands on the same line, and formatters rewrite the file. `validate --fix` adds the newline (CRLF files get CRLF).
+- Bad: A rule file whose last byte is not a line feed
+- Good: End the file with exactly one newline
 
 ### AR901 size-lines
 
