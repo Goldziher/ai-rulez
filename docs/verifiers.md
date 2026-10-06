@@ -221,7 +221,7 @@ when_changed = ["package.json", "package-lock.json"]
 
 [verifiers.require.command]
 argv = ["npm", "ci", "--dry-run"]   # no shell: argv[0] is looked up on PATH or is a path inside the project
-pass_files = "stdin0"               # optional: "args" appends the scoped files, "stdin0" writes them NUL-separated to stdin
+pass_files = "stdin0"               # optional: "args" appends the scoped files (a name starting with "-" gets "./"), "stdin0" writes them NUL-separated to stdin
 timeout_s = 120                     # optional, capped by [verifiers_settings] max_timeout_s (default 300)
 expect_exit = 0                     # optional
 ```
@@ -297,7 +297,7 @@ lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unch
 | `AR9H1` `verifier-failed` | a predicate did not hold; severity is the verifier's own |
 | `AR9H2` `verifier-invalid` | bad regex, unknown or missing target, a missing `anchor` heading, two predicates, a bad template or example, an unknown key, a duplicate `id`, a symlinked or oversized file |
 | `AR9H3` `verifier-command-failed-to-run` | a `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start, or timed out; status `error` |
-| `AR9H4` `verifier-llm-skipped` | an `llm` verifier was not evaluated (LLM use off, over `--max-cost`, every hunk withheld, an unusable reply, `--estimate`); status `skipped`, severity `info`, never a pass |
+| `AR9H4` `verifier-llm-skipped` | an `llm` verifier was not evaluated (LLM use off, over `--max-cost`, every hunk withheld, every changed file unreadable, an unusable reply, `--estimate`); status `skipped`, severity `info`, never a pass |
 | `AR9H5` `verifier-dead-scope` | `when_changed` matches no file of the repository; with `--strict-applicability` or `[verifiers_settings] warn_dead` |
 | `AR9H6` `verifier-no-examples` | a spec verifier has no `[[verifiers.examples]]`; only with `[verifiers_settings] require_examples`; severity `warning` |
 
@@ -384,21 +384,27 @@ max_diff_bytes = 24000               # changed text per call (1024 to 200000); l
 ```
 
 `llm` is allowed only as the root predicate or directly under `all`; under `any` or `not` an advisory verdict would
-decide the result. Inside `all`, the deterministic members run first; if any fails, the model is not asked and the
-deterministic failure is the result.
+decide the result. Inside `all`, the deterministic members run first (a member that contains an `llm` predicate is
+deferred too); if any fails, the model is not asked and the deterministic failure is the result. A member that could
+not be evaluated, such as a refused `command`, does not hide a sibling's failure: the failure is the result (exit `2`)
+and the refusal is noted. With no failure, the refusal is the result (`error`, exit `1`).
 
 - **Opt-in and gated.** `--allow-llm` plus `allow_network = true` and a model in the **user** config (or
   `AI_RULEZ_LLM_*`); a repository config cannot turn the network on. Otherwise the verifier is `skipped` with `AR9H4`
-  and the reason, visibly, never as a pass. `ai-rulez doctor` and `ai-rulez llm doctor` show the setup.
+  and the reason, visibly, never as a pass. The user `[llm]` settings are read only when a selected verifier uses
+  `llm`, so a broken one cannot break a project that has none. `ai-rulez doctor` and `ai-rulez llm doctor` show the setup.
 - **What is sent.** The added lines of the scoped files plus three lines of context, as numbered lines
   (`L12+ text`, `L9: context`), fenced between marker lines that carry a per-request token derived from the content.
   A hunk with a credential-looking string or a hidden character (zero-width, bidi, control) is withheld, noted, and
-  never sent; if every hunk is withheld the verifier is skipped. Nothing else from the repository leaves the machine.
-  Lines are cut at 400 characters.
+  never sent; if every hunk is withheld, or every changed file is binary or larger than `max_file_bytes`, the verifier is
+  skipped, never passed. Nothing else from the repository leaves the machine. Lines are cut at 400 bytes (on a
+  character boundary).
 - **Structured, strictly decoded.** The reply schema uses no `additionalProperties` (Gemini rejects it); the reply is
   decoded strictly instead and anything extra, missing or out of range makes the reply unusable (skipped). Each
   checklist item gets `pass`, `fail` or `not_applicable`; a `fail` must name a file and quote the added line verbatim.
-  A `fail` whose quote is not found on an added line of that file is dropped and counted in the notes.
+  The quote must be the whole added line (with at least three letters or digits) or a fragment of at least 10
+  characters that starts and ends on a word boundary. A `fail` whose quote is not found that way on an added line of
+  that file is dropped and counted in the notes.
 - **Cache and cost.** Calls go through `internal/llm`: temperature 0, the response cache keyed by the request (changed
   text, checklist, prompt version, model), so a re-run on an unchanged diff costs nothing (shown as `from cache`).
   `--max-cost` (default $0.50, `0` removes it) refuses a call whose worst-case cost would exceed what is left, and the
