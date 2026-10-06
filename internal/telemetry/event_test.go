@@ -175,3 +175,26 @@ func TestToUsageEntry_CarriesEventIDAndNamesTheServedDigestScheme(t *testing.T) 
 	assert.Empty(t, hashedEntry.Digest)
 	assert.Empty(t, hashedEntry.DigestScheme)
 }
+
+func TestNormalize_DropsAnUnusableTimestamp(t *testing.T) {
+	tests := []struct {
+		name string
+		ts   string
+		want string
+	}{
+		{"valid", "2026-03-04T05:06:07Z", "2026-03-04T05:06:07Z"},
+		{"empty", "", ""},
+		{"not a time", "yesterday", ""},
+		{"beyond the nanosecond range", "9999-01-01T00:00:00Z", ""},
+		{"before the nanosecond range", "1000-01-01T00:00:00Z", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := Event{Kind: KindRule, ID: "r", Source: SourceHook, Outcome: OutcomeLoaded, Time: tt.ts}
+
+			require.NoError(t, e.Normalize())
+
+			assert.Equal(t, tt.want, e.Time)
+		})
+	}
+}
