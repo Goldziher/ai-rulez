@@ -240,3 +240,51 @@ func TestDecisionMessage(t *testing.T) {
 
 // esc escapes a path for a JSON string literal.
 func esc(p string) string { return strings.ReplaceAll(p, `\`, `\\`) }
+
+func TestCheck_ProjectFromTheTargetAndPatchShapes(t *testing.T) {
+	root := newProject(t)
+	abs := filepath.Join(root, "AGENTS.md")
+	other := filepath.Join(filepath.Dir(root), "sibling")
+	require.NoError(t, os.MkdirAll(other, 0o755))
+	patch := `*** Begin Patch\n*** Update File: AGENTS.md\n*** End Patch`
+	tests := []struct {
+		name      string
+		payload   string
+		cwd       string
+		wantBlock bool
+	}{
+		{"payload cwd outside the project, absolute target inside", `{"tool_name":"Edit","tool_input":{"file_path":"` + esc(abs) + `"},"cwd":"` + esc(other) + `"}`, "", true},
+		{"process cwd outside the project, absolute target inside", `{"tool_name":"Write","tool_input":{"file_path":"` + esc(abs) + `"}}`, other, true},
+		{"relative traversal into the project from an outside cwd", `{"tool_name":"Edit","tool_input":{"file_path":"` + esc(filepath.Join("..", filepath.Base(root), "AGENTS.md")) + `"},"cwd":"` + esc(other) + `"}`, "", true},
+		{"codex command array", `{"tool_name":"apply_patch","tool_input":{"command":["apply_patch","` + patch + `"]},"cwd":"` + esc(root) + `"}`, "", true},
+		{"indented patch marker", `{"tool_name":"apply_patch","tool_input":{"input":"  *** Begin Patch\n   *** Update File: AGENTS.md\n"},"cwd":"` + esc(root) + `"}`, "", true},
+		{"oversized read is allowed", `{"tool_name":"Read","tool_input":{"file_path":"AGENTS.md","pad":"` + strings.Repeat("a", maxPayload) + `"},"cwd":"` + esc(root) + `"}`, "", false},
+		{"oversized edit is blocked", `{"tool_name":"Edit","tool_input":{"file_path":"src/main.go","pad":"` + strings.Repeat("a", maxPayload) + `"}}`, "", true},
+		{"oversized payload naming no tool is blocked", `{"tool_input":{"pad":"` + strings.Repeat("a", maxPayload) + `"}}`, "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := Check(strings.NewReader(tt.payload), tt.cwd)
+
+			// Assert
+			assert.Equal(t, tt.wantBlock, got.Block)
+		})
+	}
+}
+
+func TestCheck_CaseInsensitiveFileSystemsFoldTheRoot(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		t.Skip("paths are case-sensitive here")
+	}
+	root := newProject(t)
+	altered := strings.ToUpper(root[:len(root)-1]) + root[len(root)-1:]
+	payload := `{"tool_name":"Edit","tool_input":{"file_path":"` + esc(filepath.Join(altered, "AGENTS.md")) + `"},"cwd":"` + esc(root) + `"}`
+
+	// Act
+	got := Check(strings.NewReader(payload), root)
+
+	// Assert
+	assert.True(t, got.Block)
+	assert.Equal(t, "AGENTS.md", got.Path)
+}
