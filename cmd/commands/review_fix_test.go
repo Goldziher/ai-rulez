@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	rv "github.com/Goldziher/ai-rulez/v5/internal/review"
 )
 
 const (
@@ -223,4 +224,68 @@ func TestReviewFixSkipsContentThatIsNotAuthored(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.NotContains(t, out.String(), "+description:")
+}
+
+// patchFor writes a patch that adds a line to the top of rel, with the digest of the file as it is.
+func patchFor(t *testing.T, rel, line string) string {
+	t.Helper()
+	data, err := os.ReadFile(rel)
+	require.NoError(t, err)
+	orig := string(data)
+	patched := line + "\n" + orig
+	p := &rv.FixProposal{Item: "x", Path: rel, Digest: rv.TextDigest(orig), Verified: true, Patch: rv.UnifiedDiff(rel, orig, patched)}
+	rubric, lerr := rv.Load(".ai-rulez", "")
+	require.NoError(t, lerr)
+	file := filepath.Join(t.TempDir(), "evil.patch")
+	require.NoError(t, os.WriteFile(file, []byte(rv.RenderPatch([]*rv.FixProposal{p}, rubric, "f", "j")), 0o600))
+	return file
+}
+
+func TestReviewFixPatchOnlyTouchesAuthoredItems(t *testing.T) {
+	tests := []struct {
+		name  string
+		path  string
+		setup func(t *testing.T)
+	}{
+		{"the config file", ".ai-rulez/config.toml", nil},
+		{"the lock file", ".ai-rulez/ai-rulez.lock", func(t *testing.T) {
+			require.NoError(t, os.WriteFile(".ai-rulez/ai-rulez.lock", []byte("# lock\n"), 0o600))
+		}},
+		{"a script", ".ai-rulez/hooks/run.sh", func(t *testing.T) {
+			require.NoError(t, os.MkdirAll(".ai-rulez/hooks", 0o755))
+			require.NoError(t, os.WriteFile(".ai-rulez/hooks/run.sh", []byte("echo hi\n"), 0o700))
+		}},
+		{"a calibration record", ".ai-rulez/calibration/skill-quality.builtin.json", func(t *testing.T) {
+			require.NoError(t, os.MkdirAll(".ai-rulez/calibration", 0o755))
+			require.NoError(t, os.WriteFile(".ai-rulez/calibration/skill-quality.builtin.json", []byte("{}\n"), 0o600))
+		}},
+		{"the machine-local overlay in another case", ".ai-rulez/Local/skills/mine/SKILL.md", func(t *testing.T) {
+			require.NoError(t, os.MkdirAll(".ai-rulez/Local/skills/mine", 0o755))
+			require.NoError(t, os.WriteFile(".ai-rulez/Local/skills/mine/SKILL.md", []byte(strings.Replace(fixSkillBody, "name: deploy", "name: mine", 1)), 0o600))
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fixProject(t)
+			if tt.setup != nil {
+				tt.setup(t)
+			}
+			reviewGit(t, "add", "-A")
+			reviewGit(t, "commit", "-q", "--allow-empty", "-m", "more")
+			before, err := os.ReadFile(tt.path)
+			require.NoError(t, err)
+			fixFlags.patch, fixFlags.apply = patchFor(t, tt.path, "# injected"), true
+
+			// Act
+			_, err = runFix(reviewFixCmd, nil, &bytes.Buffer{})
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "not an authored item")
+			after, rerr := os.ReadFile(tt.path)
+			require.NoError(t, rerr)
+			assert.Equal(t, string(before), string(after))
+		})
+	}
 }
