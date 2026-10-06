@@ -313,3 +313,31 @@ func TestRequireCleanInGitSeesAnUncommittedChangeThroughASymlinkedPath(t *testin
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "uncommitted changes")
 }
+
+func TestApplyFilesWritesAllOrNone(t *testing.T) {
+	// Arrange: two committed files, the second then edited by hand
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	a, b := filepath.Join(dir, "a.md"), filepath.Join(dir, "b.md")
+	require.NoError(t, os.WriteFile(a, []byte("a\n"), 0o600))
+	require.NoError(t, os.WriteFile(b, []byte("b\n"), 0o600))
+	t.Chdir(dir)
+	reviewGit(t, "init", "-q")
+	reviewGit(t, "add", "a.md", "b.md")
+	reviewGit(t, "commit", "-q", "-m", "one")
+	require.NoError(t, os.WriteFile(b, []byte("b edited\n"), 0o600))
+	writes := []fileWrite{
+		{abs: a, digest: rv.TextDigest("a\n"), text: "a fixed\n", label: "a.md"},
+		{abs: b, digest: rv.TextDigest("b edited\n"), text: "b fixed\n", label: "b.md"},
+	}
+
+	// Act
+	applied, err := applyFiles(writes)
+
+	// Assert
+	require.Error(t, err)
+	assert.Empty(t, applied)
+	got, rerr := os.ReadFile(a)
+	require.NoError(t, rerr)
+	assert.Equal(t, "a\n", string(got), "the clean file is not written when another file of the patch is refused")
+}
