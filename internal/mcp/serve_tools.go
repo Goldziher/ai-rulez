@@ -127,7 +127,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		content, truncated = truncateUTF8(content, limit), true
 	}
 
-	session, client := sessionInfo(req)
+	session, client := s.sessionInfo(req)
 	remaining, ok := s.serve.charge(session, len(content))
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("session budget exhausted: loading %d bytes would exceed the %d-byte cap (%d bytes left); pass a smaller budget_bytes or restart the session",
@@ -206,7 +206,7 @@ func (s *Server) addProvenance(out map[string]any, skill *CatalogSkill) {
 	out["provenance"] = prov
 }
 
-func sessionInfo(req *handlers.ToolRequest) (session, client string) {
+func (s *Server) sessionInfo(req *handlers.ToolRequest) (session, client string) {
 	raw := req.Raw()
 	if raw == nil || raw.Session == nil {
 		return "", ""
@@ -214,7 +214,7 @@ func sessionInfo(req *handlers.ToolRequest) (session, client string) {
 	if p := raw.Session.InitializeParams(); p != nil && p.ClientInfo != nil {
 		client = p.ClientInfo.Name
 	}
-	return raw.Session.ID(), client
+	return s.serve.sessionID(raw.Session), client
 }
 
 // truncateUTF8 cuts s to at most n bytes without splitting a rune.

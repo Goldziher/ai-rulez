@@ -80,10 +80,7 @@ func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest
 	if !ok {
 		return nil, sdkmcp.ResourceNotFoundError(req.Params.URI)
 	}
-	session := ""
-	if req.Session != nil {
-		session = req.Session.ID()
-	}
+	session := s.serve.sessionID(req.Session)
 	if err := s.chargeRead(session, len(file.Content)); err != nil {
 		return nil, err
 	}
@@ -152,7 +149,7 @@ func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill %q", key))
 	}
-	session, _ := sessionInfo(req)
+	session, _ := s.sessionInfo(req)
 	if err := s.chargeRead(session, len(skill.Files[0].Content)); err != nil {
 		return handlers.ToolError(err)
 	}
@@ -175,7 +172,7 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 	if !utf8.Valid(file.Content) {
 		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read", uri))
 	}
-	session, _ := sessionInfo(req)
+	session, _ := s.sessionInfo(req)
 	if err := s.chargeRead(session, len(file.Content)); err != nil {
 		return handlers.ToolError(err)
 	}
