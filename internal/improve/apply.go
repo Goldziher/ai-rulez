@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -32,45 +33,58 @@ type ApplyOptions struct {
 	Confirm func(question string) bool
 	Out     io.Writer
 	Counter tokens.Counter
+	// AllowScripts and AllowFrontmatter widen the diff policy re-checked on
+	// apply. The policy is never taken from the report, which a local edit
+	// could widen.
+	AllowScripts     bool
+	AllowFrontmatter bool
 }
 
 // ApplyResult says what Apply wrote.
 type ApplyResult struct {
-	Skill   string
-	Written []string
-	Removed []string
+	Skill   string   `json:"skill"`
+	Written []string `json:"written"`
+	Removed []string `json:"removed"`
 }
 
 // LoadReport reads and validates the report of a saved run.
 func LoadReport(configDir, runID string) (*Report, string, error) {
+	r, dir, _, err := loadReport(configDir, runID)
+	return r, dir, err
+}
+
+func loadReport(configDir, runID string) (*Report, string, []byte, error) {
 	if !ValidRunID(runID) {
-		return nil, "", refuse("", "%q is not a run id (expected imp-<8 hex digits>)", runID)
+		return nil, "", nil, refuse("", "%q is not a run id (expected imp-<8 hex digits>, optionally followed by -<n>, e.g. imp-bfc748ff or imp-bfc748ff-2)", runID)
 	}
 	dir := filepath.Join(configDir, LocalDir, runID)
 	data, err := safefs.ReadRegular(filepath.Join(dir, "report.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, "", refuse("", "no saved run %s under %s", runID, filepath.Join(configDir, LocalDir))
+			return nil, "", nil, refuse("", "no saved run %s under %s", runID, filepath.Join(configDir, LocalDir))
 		}
-		return nil, "", fmt.Errorf("read report: %w", err)
+		return nil, "", nil, fmt.Errorf("read report: %w", err)
 	}
 	var r Report
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, "", refuse("", "report.json of %s is not valid: %v", runID, err)
+		return nil, "", nil, refuse("", "report.json of %s is not valid: %v", runID, err)
 	}
 	if r.Schema != ReportSchema || r.RunID != runID {
-		return nil, "", refuse("", "report.json of %s has schema %q and run id %q: not a report of this run", runID, r.Schema, r.RunID)
+		return nil, "", nil, refuse("", "report.json of %s has schema %q and run id %q: not a report of this run", runID, r.Schema, r.RunID)
 	}
-	return &r, dir, nil
+	return &r, dir, data, nil
 }
 
 // Apply writes the accepted candidate of a saved run into the authored skill.
 // It refuses when the skill changed since the run (AR9J1), re-checks the diff
 // policy against the live skill, and never commits.
 func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
-	report, dir, err := LoadReport(opts.ConfigDir, opts.RunID)
+	report, dir, raw, err := loadReport(opts.ConfigDir, opts.RunID)
 	if err != nil {
 		return nil, err
+	}
+	if !verifyReport(dir, opts.RunID, raw) {
+		return nil, refuse("", "run %s is not signed by this machine's user key (missing, edited or foreign report): refusing to apply it; run `ai-rulez improve run` again", opts.RunID)
 	}
 	if !report.Accepted() {
 		return nil, refuse("", "run %s has no accepted candidate (%s): nothing to apply", opts.RunID, report.Reason)
@@ -105,9 +119,16 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if len(orig.Odd) > 0 {
 		return nil, refuse("", "%s contains symlinks, hard links or oversized files: improve apply will not write into it", live.Dir)
 	}
+	counter := opts.Counter
+	if counter == nil {
+		if counter, err = tokens.New(""); err != nil {
+			return nil, fmt.Errorf("token counter: %w", err)
+		}
+	}
+	skillMD := orig.Files[skillFile]
+	constraints := DefaultConstraints(counter.Count(string(skillMD.Data)), opts.AllowFrontmatter, opts.AllowScripts)
 	if vs, _ := CheckDiff(&PolicyInput{
-		Original: orig, Candidate: cand, Constraints: report.Constraints,
-		AllowScripts: slices.Contains(report.Constraints.Editable, "scripts/**"), Counter: opts.Counter,
+		Original: orig, Candidate: cand, Constraints: constraints, AllowScripts: opts.AllowScripts, Counter: counter,
 	}); len(vs) > 0 {
 		return nil, refuse(CodePolicyViolation, "the candidate of run %s breaks the diff policy now: %s", opts.RunID, vs[0])
 	}
@@ -129,25 +150,10 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 		return nil, refuse("", "not confirmed: nothing was written (use --yes to skip the prompt)")
 	}
 	res := &ApplyResult{Skill: report.Skill}
-	for _, rel := range cand.Paths() {
-		before, existed := orig.Files[rel]
-		now := cand.Files[rel]
-		if existed && bytes.Equal(before.Data, now.Data) && before.Exec == now.Exec {
-			continue
-		}
-		if err := writeEntry(filepath.Join(live.Dir, filepath.FromSlash(rel)), now); err != nil {
-			return res, err
-		}
-		res.Written = append(res.Written, rel)
-	}
-	for _, rel := range orig.Paths() {
-		if _, kept := cand.Files[rel]; kept {
-			continue
-		}
-		if err := os.Remove(filepath.Join(live.Dir, filepath.FromSlash(rel))); err != nil {
-			return res, fmt.Errorf("remove %s: %w", rel, err)
-		}
-		res.Removed = append(res.Removed, rel)
+	written, removed, err := writeTree(live.Dir, orig, cand)
+	res.Written, res.Removed = written, removed
+	if err != nil {
+		return res, err
 	}
 	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), report.Skill)
 	return res, nil
@@ -157,6 +163,70 @@ func acceptedRound(r *Report) *RoundReport {
 	for i := range r.Rounds {
 		if r.Rounds[i].Round == r.AcceptedRound {
 			return &r.Rounds[i]
+		}
+	}
+	return nil
+}
+
+// writeTree makes dir hold cand, which differs from orig (what dir holds now).
+// It is all or nothing: on the first failure every file already changed is put
+// back from orig, so a failed apply leaves the skill as it was.
+func writeTree(dir string, orig, cand *Tree) (written, removed []string, err error) {
+	var undo []func() error
+	rollback := func(cause error) error {
+		for i := len(undo) - 1; i >= 0; i-- {
+			if uerr := undo[i](); uerr != nil {
+				cause = fmt.Errorf("%w (rollback also failed: %v)", cause, uerr) //nolint:errorlint // the cause stays the wrapped error
+			}
+		}
+		return cause
+	}
+	for _, rel := range cand.Paths() {
+		before, existed := orig.Files[rel]
+		now := cand.Files[rel]
+		if existed && bytes.Equal(before.Data, now.Data) && before.Exec == now.Exec {
+			continue
+		}
+		path := filepath.Join(dir, filepath.FromSlash(rel))
+		if existed {
+			undo = append(undo, func() error { return writeEntry(path, before) })
+		} else {
+			undo = append(undo, func() error { return removeAndEmptyParents(dir, path) })
+		}
+		if err := writeEntry(path, now); err != nil {
+			return nil, nil, rollback(err)
+		}
+		written = append(written, rel)
+	}
+	for _, rel := range orig.Paths() {
+		if _, kept := cand.Files[rel]; kept {
+			continue
+		}
+		path := filepath.Join(dir, filepath.FromSlash(rel))
+		before := orig.Files[rel]
+		if err := os.Remove(path); err != nil {
+			return nil, nil, rollback(fmt.Errorf("remove %s: %w", rel, err))
+		}
+		undo = append(undo, func() error {
+			if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+				return fmt.Errorf("restore %s: %w", rel, err)
+			}
+			return writeEntry(path, before)
+		})
+		removed = append(removed, rel)
+	}
+	return written, removed, nil
+}
+
+// removeAndEmptyParents deletes a file the failed apply created and the
+// directories it created above it, never dir itself.
+func removeAndEmptyParents(dir, path string) error {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+	for p := filepath.Dir(path); p != dir && strings.HasPrefix(p, dir); p = filepath.Dir(p) {
+		if os.Remove(p) != nil { // not empty (or not ours): stop
+			break
 		}
 	}
 	return nil

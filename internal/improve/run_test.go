@@ -168,6 +168,16 @@ func TestExecute_RejectsWritesOutsideTheWorkspace(t *testing.T) {
 			live := filepath.Join(dir, "..", "..", "..", "..", "..", "skills", "deploy", "SKILL.md")
 			require.NoError(t, os.WriteFile(live, []byte("tampered"), 0o600))
 		}},
+		{"run directory file", func(t *testing.T, dir string) {
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "..", "..", "escape.txt"), []byte("x"), 0o600))
+		}},
+		{"run metadata", func(t *testing.T, dir string) {
+			f, err := os.OpenFile(filepath.Join(dir, "..", "..", "plan.json"), os.O_APPEND|os.O_WRONLY, 0o600)
+			require.NoError(t, err)
+			_, err = f.WriteString("garbage")
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -191,6 +201,10 @@ func TestExecute_RejectsWritesOutsideTheWorkspace(t *testing.T) {
 			require.Len(t, report.Rounds, 1)
 			require.NotEmpty(t, report.Rounds[0].Violations)
 			assert.Equal(t, "outside-workspace", report.Rounds[0].Violations[0].Rule)
+			assert.Equal(t, skillBody, readFileString(t, filepath.Join(configDir, "skills/deploy/SKILL.md")), "the authored skill is restored")
+			assert.NoFileExists(t, filepath.Join(plan.RunDir(), "escape.txt"))
+			var meta map[string]any
+			require.NoError(t, json.Unmarshal([]byte(readFileString(t, filepath.Join(plan.RunDir(), "plan.json"))), &meta), "plan.json is restored")
 		})
 	}
 }

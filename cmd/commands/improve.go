@@ -100,7 +100,10 @@ var improveApplyCmd = &cobra.Command{
 	Short: "(experimental) Write an accepted improve candidate into the skill (no commit)",
 	Long: `Show the diff of an accepted run and write it into the authored skill after confirmation (--yes
 skips the prompt). Refuses when the skill changed since the run (AR9J1), when the saved candidate
-no longer matches its digest, or when it now breaks the diff policy. Nothing is committed.`,
+no longer matches its digest, when the run was not recorded by this machine's user (the report
+is signed with the per-user key outside the repository), or when it now breaks the default diff
+policy: edits to scripts/ and assets/ need --allow-scripts, frontmatter changes need
+--allow-frontmatter. Nothing is committed.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, stop := signal.NotifyContext(commandContext(cmd), os.Interrupt)
@@ -114,10 +117,25 @@ no longer matches its digest, or when it now breaks the diff policy. Nothing is 
 		if err != nil {
 			return oops.Wrapf(err, "resolve config directory")
 		}
-		_, err = improve.Apply(ctx, &improve.ApplyOptions{
-			ConfigDir: configDirAbs, RunID: args[0], Yes: improveFlags.yes, Out: cmd.OutOrStdout(), Confirm: confirmProceed,
+		if err := checkFormatFlag(improveFlags.format); err != nil {
+			return err
+		}
+		asJSON := improveFlags.format == formatJSON
+		out := cmd.OutOrStdout()
+		if asJSON {
+			out = cmd.ErrOrStderr() // stdout carries the result document only
+		}
+		res, err := improve.Apply(ctx, &improve.ApplyOptions{
+			ConfigDir: configDirAbs, RunID: args[0], Yes: improveFlags.yes, Out: out, Confirm: confirmProceed,
+			AllowScripts: improveFlags.allowScripts, AllowFrontmatter: improveFlags.allowFrontmatter,
 		})
-		return oops.Wrap(err)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		if asJSON {
+			return writeImproveJSON(cmd.OutOrStdout(), res)
+		}
+		return nil
 	},
 }
 
@@ -155,6 +173,10 @@ func init() {
 	f.Float64Var(&improveFlags.priceOut, "price-out", 0, "USD per million output tokens for the estimate (default by model tier)")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	improveApplyCmd.Flags().BoolVarP(&improveFlags.yes, "yes", "y", false, "Write without the confirmation prompt")
+	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
+	improveApplyCmd.Flags().BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
+	addFormatFlag(improveApplyCmd.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(improveApplyCmd.Flags())
 	ImproveCmd.AddCommand(improveRunCmd, improveApplyCmd)
 }
 
