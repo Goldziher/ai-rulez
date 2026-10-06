@@ -160,6 +160,12 @@ func AppendLine(path string, line []byte) error {
 // directories above path get the symlink checks of EnsureParent (and are created
 // when missing), so the temp file is never created through a planted link.
 func WriteFileAtomic(path string, data []byte) error {
+	return WriteFileAtomicMode(path, data, 0o600)
+}
+
+// WriteFileAtomicMode is WriteFileAtomic with the permission bits of the result
+// chosen by the caller, for a project file that must keep its mode (config.toml).
+func WriteFileAtomicMode(path string, data []byte, mode os.FileMode) error {
 	if err := EnsureParent(path); err != nil {
 		return err
 	}
@@ -168,7 +174,7 @@ func WriteFileAtomic(path string, data []byte) error {
 		return oops.With("path", path).Wrapf(err, "create temp file")
 	}
 	name := tmp.Name()
-	if err := os.Chmod(name, 0o600); err != nil {
+	if err := os.Chmod(name, mode.Perm()); err != nil {
 		_ = tmp.Close()     //nolint:errcheck // the chmod error is the one to report
 		_ = os.Remove(name) //nolint:errcheck // best-effort cleanup
 		return oops.Wrapf(err, "chmod temp file")
@@ -189,32 +195,44 @@ func WriteFileAtomic(path string, data []byte) error {
 // ReadRegular reads a small regular file, refusing a symlink or anything else.
 // A loose mode is tightened to 0600 on the opened handle, never on a link target.
 func ReadRegular(path string) ([]byte, error) {
+	data, _, err := readRegular(path, true)
+	return data, err
+}
+
+// ReadRegularKeepMode is ReadRegular for a project file whose mode is not
+// ai-rulez's to change: it never tightens the mode and returns the permission
+// bits it found, so a rewrite can restore them (WriteFileAtomicMode).
+func ReadRegularKeepMode(path string) ([]byte, os.FileMode, error) {
+	return readRegular(path, false)
+}
+
+func readRegular(path string, tighten bool) ([]byte, os.FileMode, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // callers test os.ErrNotExist
+		return nil, 0, err //nolint:wrapcheck // callers test os.ErrNotExist
 	}
 	if !info.Mode().IsRegular() {
-		return nil, refuse(path, "it is a symlink or not a regular file")
+		return nil, 0, refuse(path, "it is a symlink or not a regular file")
 	}
 	file, err := os.OpenFile(path, os.O_RDONLY, 0) //nolint:gosec // Lstat-checked machine-local file
 	if err != nil {
-		return nil, err //nolint:wrapcheck // callers test os.ErrNotExist
+		return nil, 0, err //nolint:wrapcheck // callers test os.ErrNotExist
 	}
 	defer file.Close() //nolint:errcheck // read-only
 	if opened, statErr := file.Stat(); statErr != nil || !os.SameFile(info, opened) {
-		return nil, refuse(path, "it changed while it was opened")
+		return nil, 0, refuse(path, "it changed while it was opened")
 	}
-	if info.Mode().Perm()&0o077 != 0 {
+	if tighten && info.Mode().Perm()&0o077 != 0 {
 		_ = file.Chmod(0o600) //nolint:errcheck // best effort: the content is still usable
 	}
 	data, err := io.ReadAll(io.LimitReader(file, maxReadBytes+1))
 	if err != nil {
-		return nil, oops.With("path", path).Wrapf(err, "read file")
+		return nil, 0, oops.With("path", path).Wrapf(err, "read file")
 	}
 	if len(data) > maxReadBytes {
-		return nil, oops.With("path", path).Errorf("%s is larger than %d bytes; use OpenRegular to stream it", path, maxReadBytes)
+		return nil, 0, oops.With("path", path).Errorf("%s is larger than %d bytes; use OpenRegular to stream it", path, maxReadBytes)
 	}
-	return data, nil
+	return data, info.Mode().Perm(), nil
 }
 
 // OpenRegular opens a regular file for streaming, refusing a symlink or anything
