@@ -142,6 +142,12 @@ func judgeItem(in Input, it Item, ev []lint.Finding, exclude []string) ItemResul
 			return r
 		}
 	}
+	// The lint findings above can be removed by [lint] ignore, severity, ignore_paths or an
+	// inline ignore in the item itself; what may leave the machine must not depend on them.
+	if reason := directWithholdReason(it); reason != "" {
+		r.Status, r.Reason = StatusWithheld, reason
+		return r
+	}
 	r.Status = StatusScored
 	r.Dimensions = scoreDimensions(in.Rubric, ev)
 	r.Score = scoreOf(r.Dimensions)
@@ -314,4 +320,21 @@ func evidenceSummary(ev []Evidence) string {
 		parts = append(parts, e.Code+" "+e.Message)
 	}
 	return strings.Join(parts, "; ")
+}
+
+// directWithholdReason scans everything an item could send for a credential or a
+// hidden character, with no lint setting applied. It returns "" for clean content.
+func directWithholdReason(it Item) string {
+	texts := [...]string{it.Raw, it.Name, it.Description, it.Body}
+	for _, text := range texts {
+		if name, ok := lint.DetectSecret(text); ok {
+			return lint.CodeSecretDetected + " secret-detected: " + name + " in the item content: never sent to a judge"
+		}
+	}
+	for _, text := range texts {
+		if name, ok := lint.DetectHidden(text); ok {
+			return lint.CodeHiddenCharacters + " hidden-characters: " + name + ": never sent to a judge"
+		}
+	}
+	return ""
 }
