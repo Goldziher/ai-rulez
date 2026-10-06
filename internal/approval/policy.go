@@ -30,7 +30,14 @@ const (
 	// ClassServedLocal is a served skill authored in the project: it is already an
 	// item, so only `kind:served` selects it.
 	ClassServedLocal = "served-local"
+	// ClassRoleOutput is the pinned rendering of a role: selected only by
+	// `kind:role-output`, never by remote, local or all, so pinning a role does
+	// not silently widen an existing policy.
+	ClassRoleOutput = "role-output"
 )
+
+// KindRoleOutput is the subject kind of a role's pinned outputs ([roles] pin).
+const KindRoleOutput = "role-output"
 
 // Subject is one piece of pinned content that may need approval.
 type Subject struct {
@@ -71,6 +78,9 @@ func SubjectsOf(lock *lockfile.File, items []lockfile.Item) []Subject {
 				out = append(out, Subject{Kind: group.kind, ID: e.Name, Digest: e.Digest, Class: ClassRemote})
 			}
 		}
+		for _, o := range lock.RoleOutputs() {
+			out = append(out, Subject{Kind: KindRoleOutput, ID: o.Role, Digest: o.Digest, Class: ClassRoleOutput})
+		}
 		for _, e := range lock.Served {
 			out = append(out, Subject{Kind: KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: ServedClass(e.Source, e.Ref, e.Commit)})
 		}
@@ -107,25 +117,66 @@ type Policy struct {
 	Approvers    []string
 	MaxAge       time.Duration
 	Enforce      bool
+	// MinAssurance is the weakest assurance level that counts ("" is asserted).
+	MinAssurance string
+	// ForbidSelf rejects approvals by authors of the content (checked against git
+	// history by the commands, not by Evaluate).
+	ForbidSelf bool
+	// Teams expands @org/team entries of Approvers and CODEOWNERS.
+	Teams Teams
+	// Owners restricts who may approve an item to the owners of its path
+	// (approvers_from); nil when the policy sets no such restriction.
+	Owners *OwnerSet
+	// Deny maps a denied digest to its reason (the lock's [[deny]] entries).
+	Deny map[string]string
+	// Signed verifies signed approvals; nil means none can be verified.
+	Signed SignedVerifier
 }
 
-// PolicyOf reads the policy of cfg; a project without [governance] gets the zero
-// policy, which requires nothing.
+// PolicyOf reads the policy of cfg; a project without [governance] gets a
+// policy that requires nothing. It also loads what the policy needs from disk:
+// the lock's deny list, the CODEOWNERS file approvers_from names, and the
+// verifier of signed approvals (built on first use).
 func PolicyOf(cfg *config.Config) Policy {
-	if cfg == nil || cfg.Governance == nil {
+	if cfg == nil {
 		return Policy{}
 	}
-	g := cfg.Governance
-	p := Policy{
-		Selectors: g.RequireApproval, Exempt: g.Exempt, MinApprovers: g.MinApprovers,
-		Enforce: g.Enforce, Floor: g.PolicyFloor,
+	p := Policy{}
+	if g := cfg.Governance; g != nil {
+		p = Policy{
+			Selectors: g.RequireApproval, Exempt: g.Exempt, MinApprovers: g.MinApprovers,
+			Enforce: g.Enforce, Floor: g.PolicyFloor, MinAssurance: g.MinAssurance, ForbidSelf: g.ForbidSelfApproval,
+			Teams: NewTeams(g.Teams),
+		}
+		for _, a := range g.Approvers {
+			p.Approvers = append(p.Approvers, NormalizeReviewer(a))
+		}
+		if g.MaxAge != "" {
+			p.MaxAge, _ = config.ParseApprovalMaxAge(g.MaxAge) //nolint:errcheck // validated on load
+		}
+		if g.ApproversFrom != "" {
+			p.Owners = LoadOwnerSet(cfg.BaseDir, cfg.ConfigDir, g.ApproversFrom)
+		}
 	}
-	for _, a := range g.Approvers {
-		p.Approvers = append(p.Approvers, NormalizeReviewer(a))
+	if cfg.ConfigDir != "" {
+		if lock, err := lockfile.Load(cfg.ConfigDir); err == nil {
+			p.Deny = lock.DenySet()
+		}
+		p.Signed = newConfigVerifier(cfg)
 	}
-	if g.MaxAge != "" {
-		p.MaxAge, _ = config.ParseApprovalMaxAge(g.MaxAge) //nolint:errcheck // validated on load
-	}
+	return p
+}
+
+// WithLock returns the policy with the deny list of lock, for a caller that has
+// the lock in memory and has changed it.
+func (p Policy) WithLock(lock *lockfile.File) Policy {
+	p.Deny = lock.DenySet()
+	return p
+}
+
+// WithResolvedTeams returns the policy with team members read from the forge.
+func (p Policy) WithResolvedTeams(resolved map[string][]string) Policy {
+	p.Teams.Resolved = resolved
 	return p
 }
 
@@ -174,7 +225,7 @@ func selects(selectors []string, s Subject) bool {
 	for _, sel := range selectors {
 		switch sel {
 		case config.ApprovalSelectorAll:
-			if s.Class != ClassServedLocal {
+			if s.Class != ClassServedLocal && s.Class != ClassRoleOutput {
 				return true
 			}
 		case config.ApprovalSelectorRemote:
@@ -231,7 +282,8 @@ func globMatch(pattern, name string) bool {
 // reviewer string equal to it.
 const NobodyMayApprove = "\x00"
 
-// Authorized reports whether reviewer may approve: any reviewer when no allowlist is set.
+// Authorized reports whether reviewer is on the allowlist: any reviewer when no
+// allowlist is set. A team entry matches its members (Teams).
 func (p Policy) Authorized(reviewer string) bool {
 	if len(p.Approvers) == 0 {
 		return true
@@ -239,11 +291,43 @@ func (p Policy) Authorized(reviewer string) bool {
 	if len(p.Approvers) == 1 && p.Approvers[0] == NobodyMayApprove {
 		return false
 	}
-	reviewer = NormalizeReviewer(reviewer)
-	for _, a := range p.Approvers {
-		if NormalizeReviewer(a) == reviewer {
-			return true
+	return p.Teams.Matches(p.Approvers, reviewer)
+}
+
+// AuthorizedFor is Authorized and, when approvers_from is set, the requirement
+// that reviewer owns the path of s according to CODEOWNERS. A CODEOWNERS file
+// that cannot be read, a path no line covers and a team that cannot be expanded
+// authorize nobody.
+func (p Policy) AuthorizedFor(reviewer string, s Subject) bool {
+	if !p.Authorized(reviewer) {
+		return false
+	}
+	if p.Owners == nil {
+		return true
+	}
+	owners, covered := p.Owners.OwnersOf(s)
+	return covered && p.Teams.Matches(owners, reviewer)
+}
+
+// OwnersProblem says why approvers_from cannot authorize anyone ("" when it
+// can): the CODEOWNERS file is missing.
+func (p Policy) OwnersProblem() string {
+	if p.Owners == nil {
+		return ""
+	}
+	return p.Owners.Problem
+}
+
+// UnresolvedTeams lists the teams of the allowlist and of the subjects' owners
+// that cannot be expanded: add them to [governance.teams] or resolve them with
+// --resolve-teams.
+func (p Policy) UnresolvedTeams(subs []Subject) []string {
+	entries := append([]string(nil), p.Approvers...)
+	if p.Owners != nil {
+		for _, s := range subs {
+			o, _ := p.Owners.OwnersOf(s)
+			entries = append(entries, o...)
 		}
 	}
-	return false
+	return p.Teams.Unresolved(entries)
 }

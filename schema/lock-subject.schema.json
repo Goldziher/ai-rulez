@@ -31,7 +31,10 @@
       "pattern": "^sha256:[0-9a-f]{64}$",
       "description": "The top-level lock digest, recomputed from the entries."
     },
-    "approvals_digest": { "type": "string", "description": "Digest of the approval set; empty until approvals exist." },
+    "approvals_digest": {
+      "type": "string",
+      "description": "Digest of the [[approval]] and [[deny]] records of the lock; empty while the lock holds none."
+    },
     "hash_version": { "type": "integer", "minimum": 1 },
     "scope": { "type": "string", "description": "The [lock] scope the pins were written with (all or skills)." },
     "outputs_pinned": { "type": "boolean" }

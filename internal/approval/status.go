@@ -1,8 +1,10 @@
 package approval
 
 import (
+	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -19,6 +21,11 @@ const (
 	StatusUnauthorized = "unauthorized"
 	// StatusInsufficient: fewer distinct valid reviewers than min_approvers.
 	StatusInsufficient = "insufficient"
+	// StatusDenied: the content's digest is on the lock's deny list.
+	StatusDenied = "denied"
+	// StatusUnverified: every approval of the current digest claims an assurance
+	// that could not be verified (a signed approval whose attestation fails).
+	StatusUnverified = "unverified"
 )
 
 // Strict-validation codes of the statuses (internal/lint registers them).
@@ -29,6 +36,11 @@ const (
 	CodeUnauthorized = "AR713"
 	CodeInsufficient = "AR714"
 	CodeOrphan       = "AR715"
+	CodeDenied       = "AR717"
+	CodeUnverified   = "AR718"
+	// CodeUnresolved is AR719: approvers_from or a team cannot be resolved, so
+	// nobody can be authorized by it.
+	CodeUnresolved = "AR719"
 )
 
 // CodeOf returns the code of a failing status, "" for ok and not_required.
@@ -44,6 +56,10 @@ func CodeOf(status string) string {
 		return CodeUnauthorized
 	case StatusInsufficient:
 		return CodeInsufficient
+	case StatusDenied:
+		return CodeDenied
+	case StatusUnverified:
+		return CodeUnverified
 	}
 	return ""
 }
@@ -62,6 +78,10 @@ type Result struct {
 	Expires string
 	// ApprovedDigest is the digest the newest record approved, for a stale subject.
 	ApprovedDigest string
+	// Assurance is the weakest assurance among the applying approvals ("" for none).
+	Assurance string
+	// Detail adds to Message: the deny reason, or why an approval did not count.
+	Detail string
 }
 
 // Failing reports whether the subject needs approval and does not have it.
@@ -79,9 +99,23 @@ func (r Result) Message() string {
 	case StatusUnauthorized:
 		return fmt.Sprintf("%s is approved only by reviewers outside [governance] approvers", r.Ref())
 	case StatusInsufficient:
+		if len(r.Reviewers) == 0 && r.Detail != "" {
+			return fmt.Sprintf("%s has no approval of the required assurance: %s", r.Ref(), r.Detail)
+		}
 		return fmt.Sprintf("%s has %d of the required approvers; another reviewer must run `ai-rulez approve %s`", r.Ref(), len(r.Reviewers), r.Ref())
+	case StatusDenied:
+		return fmt.Sprintf("%s is on the deny list (%s)%s; it can be neither approved nor used", r.Ref(), short(r.Digest), reasonSuffix(r.Detail))
+	case StatusUnverified:
+		return fmt.Sprintf("%s has approvals whose assurance cannot be verified: %s", r.Ref(), r.Detail)
 	}
 	return r.Ref() + " is approved"
+}
+
+func reasonSuffix(reason string) string {
+	if reason == "" {
+		return ""
+	}
+	return ": " + reason
 }
 
 func short(digest string) string {
@@ -107,9 +141,23 @@ func ExpiredAt(expires string, now time.Time) bool {
 	return expires < Today(now)
 }
 
+// knownAssurance reports whether a record's assurance is one this version defines.
+func knownAssurance(level string) bool { return lockfile.AssuranceRank(level) > 0 }
+
+// counted is an approval that applies, with the reviewer it counts for.
+type counted struct {
+	reviewer  string
+	expires   string
+	assurance string
+}
+
 // Evaluate decides the status of s from the lock's approval records.
 func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Result {
 	res := Result{Subject: s, Required: p.Requires(s)}
+	if reason, denied := p.Deny[s.Digest]; denied && s.Digest != "" {
+		res.Required, res.Status, res.Detail = true, StatusDenied, reason
+		return res
+	}
 	if !res.Required {
 		res.Status = StatusNotRequired
 		res.Reviewers = p.currentReviewers(recs, s, now)
@@ -117,9 +165,8 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 	}
 	var forKey, current []lockfile.Approval
 	for _, a := range recs {
-		// Only "asserted" is defined; a record claiming a stronger assurance
-		// (signed, review-linked) that nothing here can verify must not count.
-		if a.ItemKey() != s.Key() || a.Assurance != lockfile.AssuranceAsserted {
+		// A record claiming an assurance this version does not define must not count.
+		if a.ItemKey() != s.Key() || !knownAssurance(a.Assurance) {
 			continue
 		}
 		forKey = append(forKey, a)
@@ -136,25 +183,42 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 		res.ApprovedDigest = newest(forKey).Digest
 		return res
 	}
-	res.Recorded, _ = reviewersOf(current)
-	var valid []lockfile.Approval
-	expired, unauthorized := false, false
+	res.Recorded, _ = reviewersOf(asCounted(current))
+	var valid []counted
+	var expired, unauthorized, low bool
+	var unverified []string
 	for _, a := range current {
+		who := a.Reviewer
+		if a.Assurance != lockfile.AssuranceAsserted {
+			var err error
+			if who, err = p.VerifyAssurance(a, s, now); err != nil {
+				unverified = append(unverified, fmt.Sprintf("%s by %s: %v", a.Assurance, safeDetail(a.Reviewer), err))
+				continue
+			}
+		}
 		switch {
 		case ExpiredAt(a.Expires, now):
 			expired = true
-		case !p.Authorized(a.Reviewer):
+		case !p.AuthorizedFor(who, s):
 			unauthorized = true
+		case lockfile.AssuranceRank(a.Assurance) < lockfile.AssuranceRank(p.MinAssurance):
+			low = true
+			res.Detail = fmt.Sprintf("%s approval, [governance] min_assurance is %s", a.Assurance, p.MinAssurance)
 		default:
-			valid = append(valid, a)
+			valid = append(valid, counted{reviewer: who, expires: a.Expires, assurance: a.Assurance})
 		}
 	}
 	res.Reviewers, res.Expires = reviewersOf(valid)
+	res.Assurance = weakest(valid)
 	switch {
 	case len(res.Reviewers) >= p.minApprovers():
 		res.Status = StatusOK
 	case len(valid) > 0:
 		res.Status = StatusInsufficient
+	case low:
+		res.Status = StatusInsufficient
+	case len(unverified) > 0 && !expired && !unauthorized:
+		res.Status, res.Detail = StatusUnverified, strings.Join(unverified, "; ")
 	case expired:
 		res.Status = StatusExpired
 	case unauthorized:
@@ -165,28 +229,84 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 	return res
 }
 
+// VerifyAssurance checks a record that claims more than "asserted" and returns
+// the reviewer it counts for. A signed record is verified against its
+// attestation and the signer's identity replaces the reviewer string; a
+// review-linked record must carry a ref (the forge is consulted only by
+// `verify --approvals --online`).
+func (p Policy) VerifyAssurance(a lockfile.Approval, s Subject, now time.Time) (string, error) {
+	switch a.Assurance {
+	case lockfile.AssuranceReviewLinked:
+		if strings.TrimSpace(a.Ref) == "" {
+			return "", errors.New("a review-linked approval needs a ref")
+		}
+		return a.Reviewer, nil
+	case lockfile.AssuranceSigned:
+		if p.Signed == nil {
+			return "", errors.New("no verifier is configured")
+		}
+		return p.Signed.Verify(a, s, now)
+	}
+	return "", fmt.Errorf("unknown assurance %q", a.Assurance)
+}
+
+func safeDetail(s string) string {
+	if len(s) > 80 {
+		return s[:80] + "..."
+	}
+	return s
+}
+
+func asCounted(recs []lockfile.Approval) []counted {
+	out := make([]counted, 0, len(recs))
+	for i := range recs {
+		out = append(out, counted{reviewer: recs[i].Reviewer, expires: recs[i].Expires, assurance: recs[i].Assurance})
+	}
+	return out
+}
+
+func weakest(valid []counted) string {
+	level := ""
+	for _, c := range valid {
+		if level == "" || lockfile.AssuranceRank(c.assurance) < lockfile.AssuranceRank(level) {
+			level = c.assurance
+		}
+	}
+	return level
+}
+
 // currentReviewers lists who approved the current digest, for a subject that needs no approval.
 func (p Policy) currentReviewers(recs []lockfile.Approval, s Subject, now time.Time) []string {
-	var valid []lockfile.Approval
-	for _, a := range recs {
-		if a.ItemKey() == s.Key() && a.Digest == s.Digest && a.Assurance == lockfile.AssuranceAsserted && !ExpiredAt(a.Expires, now) {
-			valid = append(valid, a)
+	var valid []counted
+	for i := range recs {
+		a := recs[i]
+		if a.ItemKey() != s.Key() || a.Digest != s.Digest || ExpiredAt(a.Expires, now) {
+			continue
 		}
+		who := a.Reviewer
+		if a.Assurance != lockfile.AssuranceAsserted {
+			var err error
+			if who, err = p.VerifyAssurance(a, s, now); err != nil {
+				continue
+			}
+		}
+		valid = append(valid, counted{reviewer: who, expires: a.Expires, assurance: a.Assurance})
 	}
 	reviewers, _ := reviewersOf(valid)
 	return reviewers
 }
 
-func reviewersOf(valid []lockfile.Approval) (reviewers []string, expires string) {
+func reviewersOf(valid []counted) (reviewers []string, expires string) {
 	seen := map[string]bool{}
-	for _, a := range valid {
-		who := NormalizeReviewer(a.Reviewer)
-		if !seen[who] {
-			seen[who] = true
+	for _, c := range valid {
+		who := NormalizeReviewer(c.reviewer)
+		key := Identity(c.reviewer)
+		if !seen[key] {
+			seen[key] = true
 			reviewers = append(reviewers, who)
 		}
-		if a.Expires != "" && (expires == "" || a.Expires < expires) {
-			expires = a.Expires
+		if c.expires != "" && (expires == "" || c.expires < expires) {
+			expires = c.expires
 		}
 	}
 	sort.Strings(reviewers)

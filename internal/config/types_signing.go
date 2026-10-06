@@ -25,6 +25,9 @@ const (
 	// skill must be pinned in a lock whose attestation verifies. It names no
 	// trust entries of its own; the lock's signers apply.
 	SigningSubjectServed = "served"
+	// SigningSubjectApproval is a signed approval (docs/approvals.md); only a
+	// [[signing.trust]] entry can name it.
+	SigningSubjectApproval = "approval"
 	// SigningTLogRequired, SigningTLogOptional and SigningTLogOff are the tlog modes.
 	SigningTLogRequired = "required"
 	SigningTLogOptional = "optional"
@@ -252,7 +255,7 @@ func (s *SigningConfig) validateTLogOff(fail func(field, format string, args ...
 var requirableSigningSubjects = []string{SigningSubjectLock, SigningSubjectServed, SigningSubjectSkill}
 
 // trustSigningSubjects are the subjects a trust entry may be scoped to.
-var trustSigningSubjects = []string{SigningSubjectLock, SigningSubjectBundle, SigningSubjectSkill, SigningSubjectSBOM}
+var trustSigningSubjects = []string{SigningSubjectLock, SigningSubjectBundle, SigningSubjectSkill, SigningSubjectSBOM, SigningSubjectApproval}
 
 // validateSigningPolicy checks the thresholds, builders and the trust entries a
 // required subject depends on.

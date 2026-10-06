@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,6 +26,18 @@ type GovernanceConfig struct {
 	MinApprovers int `yaml:"min_approvers,omitempty" json:"min_approvers,omitempty" toml:"min_approvers,omitempty"` //nolint:tagliatelle
 	// Approvers, when set, is the allowlist of reviewer strings (exact match).
 	Approvers []string `yaml:"approvers,omitempty" json:"approvers,omitempty" toml:"approvers,omitempty"`
+	// MinAssurance is the weakest assurance level an approval may have to count:
+	// "asserted" (default), "review-linked" or "signed".
+	MinAssurance string `yaml:"min_assurance,omitempty" json:"min_assurance,omitempty" toml:"min_assurance,omitempty"` //nolint:tagliatelle
+	// ApproversFrom names a CODEOWNERS file ("CODEOWNERS" looks in .github/, the
+	// repository root and docs/, or a path inside the project): only the owners of
+	// an item's source path may approve it.
+	ApproversFrom string `yaml:"approvers_from,omitempty" json:"approvers_from,omitempty" toml:"approvers_from,omitempty"` //nolint:tagliatelle
+	// ForbidSelfApproval rejects an approval by an author of the content it approves.
+	ForbidSelfApproval bool `yaml:"forbid_self_approval,omitempty" json:"forbid_self_approval,omitempty" toml:"forbid_self_approval,omitempty"` //nolint:tagliatelle
+	// Teams maps a team ("@org/team") to the reviewers it stands for, so a team
+	// in approvers or CODEOWNERS is resolved offline.
+	Teams map[string][]string `yaml:"teams,omitempty" json:"teams,omitempty" toml:"teams,omitempty"`
 	// MaxAge is the default lifetime of a new approval ("365d", "720h"); empty means no expiry.
 	MaxAge string `yaml:"max_age,omitempty" json:"max_age,omitempty" toml:"max_age,omitempty"` //nolint:tagliatelle
 	// Enforce makes `lock --check`, `generate --locked` and the skills server fail on
@@ -49,7 +63,7 @@ const (
 // declarations (the settings item "mcp-servers").
 var ApprovalKinds = []string{
 	"rule", "context", "skill", "agent", "command", "check", "hook", "role", "settings", "verifier", "local-include",
-	"include", "installed-skill", "source", "served", "mcp_server",
+	"include", "installed-skill", "source", "served", "mcp_server", "role-output",
 }
 
 // ParseApprovalSelector validates one require_approval entry and returns the
@@ -81,6 +95,21 @@ func ParseApprovalMaxAge(s string) (time.Duration, error) {
 	return d, nil
 }
 
+// Approval assurance levels, weakest first.
+const (
+	AssuranceAsserted     = "asserted"
+	AssuranceReviewLinked = "review-linked"
+	AssuranceSigned       = "signed"
+)
+
+// ApprovalAssurances lists the levels min_assurance accepts, weakest first.
+var ApprovalAssurances = []string{AssuranceAsserted, AssuranceReviewLinked, AssuranceSigned}
+
+// ApproversFromCodeowners is the approvers_from value that finds the CODEOWNERS file by itself.
+const ApproversFromCodeowners = "CODEOWNERS"
+
+var teamNamePattern = regexp.MustCompile(`^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+
 func (c *Config) validateGovernance() error {
 	g := c.Governance
 	if g == nil {
@@ -93,6 +122,22 @@ func (c *Config) validateGovernance() error {
 	}
 	if g.MinApprovers < 0 {
 		return oops.With("field", "governance.min_approvers").Errorf("min_approvers must not be negative")
+	}
+	if g.MinAssurance != "" && !slices.Contains(ApprovalAssurances, g.MinAssurance) {
+		return oops.With("field", "governance.min_assurance").Errorf("invalid min_assurance %q (use %s)", g.MinAssurance, strings.Join(ApprovalAssurances, ", "))
+	}
+	if from := g.ApproversFrom; from != "" && from != ApproversFromCodeowners {
+		if filepath.IsAbs(from) || strings.Contains(filepath.ToSlash(from), "..") || strings.ContainsAny(from, "\x00\n") {
+			return oops.With("field", "governance.approvers_from").Errorf("invalid approvers_from %q (use %q or a path inside the project)", from, ApproversFromCodeowners)
+		}
+	}
+	for team, members := range g.Teams {
+		if !teamNamePattern.MatchString(team) {
+			return oops.With("field", "governance.teams").Errorf("invalid team %q (use @org/team)", team)
+		}
+		if slices.Contains(members, "") {
+			return oops.With("field", "governance.teams").Errorf("team %q has an empty member", team)
+		}
 	}
 	if g.MaxAge != "" {
 		if _, err := ParseApprovalMaxAge(g.MaxAge); err != nil {

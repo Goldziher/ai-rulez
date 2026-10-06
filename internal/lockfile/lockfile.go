@@ -143,6 +143,8 @@ type File struct {
 	Output []OutputPin `toml:"output,omitempty"`
 	// Approval records reviewer approvals (approval.go); outside the tree digest.
 	Approval []Approval `toml:"approval,omitempty"`
+	// Deny lists digests that can be neither approved nor used (approval.go); outside the tree digest.
+	Deny []Deny `toml:"deny,omitempty"`
 	// Scan records external scanner results over the staged content (scan.go);
 	// outside the tree digest.
 	Scan []Scan `toml:"scan,omitempty"`
@@ -215,6 +217,7 @@ func Save(configDir string, f *File) error {
 	out.Source, out.Served = sorted(f.Source), sorted(f.Served)
 	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
 	out.Approval = sortedApprovals(f.Approval)
+	out.Deny = sortedDeny(f.Deny)
 	out.Scan = sortedScans(f.Scan)
 	var buf bytes.Buffer
 	buf.WriteString("# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.\n")

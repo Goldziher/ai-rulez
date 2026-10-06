@@ -21,6 +21,13 @@ func approvalNow() time.Time { return ambient.Clock(nil).Now() }
 // approve against, and that must not read as "approved".
 func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
 	policy := approval.PolicyOf(a.Config)
+	if a.Lock != nil {
+		policy = policy.WithLock(a.Lock)
+	}
+	if reason, denied := policy.Deny[s.LockDigest]; denied && s.LockDigest != "" {
+		// A denied digest is never served, whether or not [governance] selects the skill.
+		return &Refusal{Name: s.Name, Code: approval.CodeDenied, Reason: approval.Result{Subject: approval.Subject{Kind: approval.KindServed, ID: s.Name, Digest: s.LockDigest}, Status: approval.StatusDenied, Detail: reason}.Message()}
+	}
 	if !policy.Active() {
 		return nil
 	}
