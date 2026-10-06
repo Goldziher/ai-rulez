@@ -772,13 +772,17 @@ shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR
 ### Result cache and `--dry-run`
 
 The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
-the staged content, the scanner binary (path, size, modification time), its command line and its mapping keys
-(`format`, `inputs`, `env_pass`, `severity_map`, `max_severity`, `--show-suppressed`) are unchanged, so an
-unchanged tree costs no scanner run. Entries hold normalised findings only, never the raw report, and carry an
+the staged content, the scanner binary (path, size, modification time), its command line, its mapping keys
+(`format`, `inputs`, `env_pass`, `severity_map`, `max_severity`, `--show-suppressed`), a hash of each `env_pass`
+value, the isolation mode and backend, and the version of the report-mapping code are unchanged, so an unchanged
+tree costs no scanner run. A result produced under one isolation mode is never served under another, so an unconfined
+result is not reused when `isolation = "require"`. Entries hold normalised findings only, never the raw report, and carry an
 HMAC made with a per-user secret (`~/.config/ai-rulez/scan-cache.key`, mode 0600) like the LLM cache: an edited,
 truncated, planted or symlinked entry is a miss and is removed. A failed run is never cached; an `egress = true`
-scanner never is. A scanner that updates without changing its binary file (`uvx`, `npx`) is not noticed: pin the
-version in the command, or pass `--no-scan-cache`.
+scanner never is. The key cannot include the scanner's version (computing it would start the scanner, which `lock`
+must not do), so a launcher scanner (`npx`, `uvx`, `pipx`, `bunx`, `npm`, `pnpm`, `yarn`, `bun`, `uv`), whose tool
+changes without its launcher binary changing, is served from the cache for 24 hours at most. Pin the version in
+the command, or pass `--no-scan-cache`, to control it.
 
 `scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
 its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
