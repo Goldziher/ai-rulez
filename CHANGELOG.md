@@ -173,6 +173,11 @@ This becomes 5.0.0. Upgrade steps for every item under Breaking are in [Migratin
 
 ### Fixed
 
+- `clean` and `clean --dry-run` no longer need MCP secrets: unset `${VAR}` placeholders do not stop them.
+- `clean` restores merged YAML and TOML documents byte for byte when a leading comment is followed by a blank line.
+- `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
+- Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
+- A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
 - **`validate --strict` no longer fails open on a lock it cannot verify**: under `[lock] enforce = true` a corrupt lock, a newer `hash_version`, or a source that cannot be snapshotted is an `AR981` finding instead of a logged skip.
 - **A lock without content pins (a downgrade to version 1) no longer disables the content checks**: `lock --check` exits 2 on it whatever `enforce` says, `generate --locked` warns (and fails under `enforce`), and a lock with content pins must carry a `tree` digest. Version 1 locks still load.
 - **A hook `script` outside the project** no longer aborts `ai-rulez lock` with "invalid path in a digest tree"; it is reported as a `lock` change that keeps `lock --check` failing until the script is moved inside the project.
