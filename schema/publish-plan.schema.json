@@ -62,6 +62,7 @@
               "checksums",
               "emitted",
               "signature",
+              "attestation",
               "sbom",
               "marketplace",
               "npm-package",
