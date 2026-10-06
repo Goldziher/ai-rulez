@@ -77,7 +77,7 @@ func TestAgentsMD_PresetFileSets(t *testing.T) {
 			name:    "claude",
 			presets: []string{"claude"},
 			want: []string{
-				".claude/agents/helper.md", ".claude/rules/go-style.md", ".claude/settings.json",
+				".claude/agents/helper.md", ".claude/rules/go-style.md",
 				".claude/skills/alpha/SKILL.md", ".claude/skills/alpha/references/r.md", ".claude/skills/beta/SKILL.md",
 				".mcp.json", "AGENTS.md", "CLAUDE.md",
 			},
