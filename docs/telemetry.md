@@ -8,10 +8,15 @@ local log works with no network, and a repository can never turn on network expo
 ```console
 ai-rulez telemetry hook              # hooks that record loads (merge into .claude/settings.json)
 ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml; generate writes them
+ai-rulez telemetry enable --endpoint https://collector.example.org:4318   # consent, stored per user
+ai-rulez telemetry status            # on or off, consent, pending events, failed flushes
+ai-rulez telemetry disable           # withdraw consent
 ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
 ai-rulez telemetry flush             # ship the outbox now
 ai-rulez telemetry preview           # print exactly what an export would send; sends nothing
 ai-rulez usage export --to file out.ndjson   # the same payload as a local OTLP JSON file, no network
+ai-rulez usage export --to otlp      # push the usage log past the export cursor to the consented collector
+ai-rulez usage prune --keep-days 90  # trim the usage log behind the export cursor
 ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
 ```
 
@@ -26,7 +31,8 @@ One event per load. The model is closed: these are all the fields, versioned by 
 | `kind` | `skill`, `rule`, `agent`, `command` or `context` | `rule` |
 | `id` | the item's name: a rule's file name without `.md`, an agent type, a skill name, a context file's repo-relative path | `atomic-commits` |
 | `path` | repo-relative path, only when `include_paths = true`, never absolute | `.claude/rules/atomic-commits.md` |
-| `digest` | content digest when known (`blake3:...`); skills use the index hash, rules the hash of the generated file | `blake3:0699fc6b...` |
+| `digest` | content digest when known: `blake3:...` (skills: the index hash, rules: the hash of the generated file) or `sha256:...` (a skill's canonical lock digest, or the digest of a served skill) | `blake3:0699fc6b...` |
+| `digest_scheme` | how a `sha256:` digest was computed: `ai-rulez/skill/v1` (the canonical digest evals and the lock share) or `ai-rulez/served-skill/v1`. It travels with the digest so an export reader joins on the canonical one only | `ai-rulez/skill/v1` |
 | `source` | `hook`, `mcp` or `cli` | `hook` |
 | `harness`, `role` | as given to the recorder | `claude`, `backend` |
 | `served` | the load came through the MCP skills server | `false` |
@@ -35,6 +41,15 @@ One event per load. The model is closed: these are all the fields, versioned by 
 | `load_reason` | why it loaded (Claude Code: `session_start`, `nested_traversal`, `path_glob_match`, `include`, `compact`; agents: `subagent_start`, `subagent_stop`; MCP: `read`, `list`) | `path_glob_match` |
 | `memory_type` | Claude Code's `User`, `Project`, `Local` or `Managed` | `Project` |
 | `duration_ms` | subagent run time, from the paired Start and Stop events | `2500` |
+| `pass_rate`, `trigger_precision`, `trigger_recall`, `ablation_delta` | scores of an `eval_result` event only (0..1; the ablation delta -1..1); never on a load | `0.62` |
+
+Besides `item_event`, an export can carry **`eval_result`** events: one per verified eval result, built from
+`.ai-rulez/eval-results.json` at export time (`usage export --with-evals`, `telemetry preview --with-evals`), never
+recorded in the usage log. It has the skill id, the canonical digest the run covered (`digest` +
+`digest_scheme = ai-rulez/skill/v1`, absent for a result written before `lock_digest` existed), the harness the eval
+ran on, the run date as the time, and the four scores. It carries no case, prompt or output and none of the load
+fields (path, session, role, outcome). Its `event_id` is derived from what it says, so the same result is never sent
+twice. Unsigned or foreign-signed records and activation-only records are not results and are never exported.
 
 Skill events are written to the usage log in the existing v3 line format, so `usage` readers are unaffected. The
 other kinds are new `item_event` lines in the same file; `report usage` ignores them in its skill sections and never
@@ -90,7 +105,7 @@ Claude Code only; Codex and Cursor agents are recorded from the subagent events.
 # .ai-rulez/config.toml, the local overlay, or the user config (~/.config/ai-rulez/config.toml)
 [telemetry]
 enabled         = false                    # local recording of item events
-allow_network   = false                    # OTLP export needs this AND an endpoint; user scope only
+allow_network   = false                    # consent as a setting (the stored record of `telemetry enable` is the other way); user scope only
 otlp_endpoint   = "https://collector.example.org:4318"   # user scope only
 otlp_protocol   = "http/json"              # or "http/protobuf" or "grpc"; same attributes on all three
 headers_env     = ["OTLP_HEADERS"]         # env var NAMES holding "k=v,k2=v2"; user scope only
@@ -117,8 +132,9 @@ host the author picked. So:
 | `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file`, `resource` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
 
 The local overlay (`config.local.*`) counts as repository scope: it is machine-local by convention but lives in the
-checkout. Network export is active only when `enabled`, `allow_network` and a valid endpoint are all present after
-this filtering, so a repository can at most switch on the local log.
+checkout. Network export is active only when recording is on, consent is present (a stored consent record, or
+`allow_network` in user scope) and a valid endpoint is present after this filtering, so a repository can at most
+switch on the local log.
 
 See the [trust model](trust-model.md) for the same rule across every knob.
 
@@ -139,6 +155,45 @@ Validation (`AR9K0`): https is required except for a loopback host; no credentia
 endpoint; `headers_env` accepts an environment variable name only (`^[A-Z][A-Z0-9_]*$`, and a 20-character name
 without an underscore is refused as an access-key id), so a pasted token or `Authorization=Bearer ...` is rejected and
 never echoed back; `sample` is 0..1. Headers are read from the environment at flush time and never written anywhere.
+
+### The consent record
+
+`telemetry enable` stores your consent as a small file, `$XDG_CONFIG_HOME/ai-rulez/telemetry-consent.json` (else
+`~/.config/ai-rulez/`), mode 0600, written atomically:
+
+```json
+{
+  "version": 1,
+  "endpoint": "https://collector.example.org:4318",
+  "protocol": "http/json",
+  "scope": { "fields": ["event.name", "ai_rulez.item.kind", "..."], "fields_hash": "sha256 of the fields" },
+  "granted_at": "2026-10-06T09:00:00Z",
+  "ai_rulez_version": "5.0.0"
+}
+```
+
+```console
+ai-rulez telemetry enable --endpoint https://collector.example.org:4318
+ai-rulez telemetry enable --endpoint collector.internal:4317 --protocol grpc --include-session
+ai-rulez telemetry status
+ai-rulez telemetry disable
+```
+
+- **Only you can grant it.** The record is read from the user config directory only. A repository's config, overlay or
+  checkout cannot grant, edit or point to one; a record file planted in a repository is never read. A record that is
+  group- or world-writable, a symlink, malformed or has an unknown field is not honored and `telemetry status` says why.
+- **It covers what you agreed to, no more.** The record names the endpoint, the protocol and a hash of the exported
+  attribute names. A different endpoint or protocol (environment or user config), an opt-in gate you turned on later
+  (`include_session`, `include_paths`), or an allowlist that grew in a newer release makes it **stale**: nothing is sent
+  until you run `enable` again. `status` and `doctor` name the reason.
+- **It supplies, never overrides.** With a valid record, recording turns on for you and the endpoint, protocol and the
+  opt-in gates you consented to are used where your user config and environment set none. `allow_network` in the user
+  config or `AI_RULEZ_TELEMETRY_ALLOW_NETWORK=1` remain an equivalent grant; `AI_RULEZ_TELEMETRY_ALLOW_NETWORK=0` refuses
+  even with a record. The kill switches and an organization policy win over everything.
+- **It is not retroactive.** `enable` places the export cursor at the end of the current usage log, so only events
+  recorded from now on are sent; `--backfill` places it at the start to send the existing history. Re-enabling is a fresh
+  decision: opt-in gates from the previous record do not carry over.
+- `disable` deletes the record. Local recording, the usage log and the outbox are left alone.
 
 ## Wiring the hooks
 
@@ -192,9 +247,50 @@ Hooks are short-lived processes, so the recorder never touches the network:
    30 s) and giving up until the next flush, which leaves the events in the outbox. Every other status is
    permanent (400, 401, 403, 404, 413, a 3xx redirect, 500 and the rest): the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time, guarded by a lock file that holds the owner's token (release removes only its own lock; a lock left by a crash is taken over after 60 s, serialised so two processes cannot both take it). A flush is capped at 30 seconds whatever the caller asks, and `telemetry flush --timeout` above 30s is refused, so a running flush is never mistaken for a crashed one.
 4. Delivery is at-least-once; backends de-duplicate on `ai_rulez.event_id`.
+   A crash between the request and the bookkeeping, or two copies of one log, can deliver an event twice; the id is
+   the same each time.
 5. A long-lived `ai-rulez mcp` server flushes from a timer and once more on exit.
 
 Errors kept in `telemetry-state.json` contain a status code or a reason such as `timeout`, never the URL or a header.
+
+### The export cursor and catch-up
+
+The usage log is the source of truth; the outbox is only the delivery queue the hooks fill. The **cursor**
+(`.ai-rulez/local/telemetry-cursor.json`, mode 0600) records how far into the log events are accounted for: queued,
+delivered, or older than your consent. It holds the log's identity (a hash of its first line, so a rotated or
+truncated log is noticed and read from the start), a byte offset, the last event id and a ring of the last 4,096
+delivered or rejected event ids.
+
+Every flush begins with a **catch-up**: it reads the complete log lines past the cursor (a line a hook is still writing
+waits for its newline), queues the events the outbox does not already hold and the ring does not remember as
+delivered, and moves the cursor. That covers events that never reached the outbox (the spool was busy for 25 ms, or
+they were recorded while the outbox was off) without sending anything twice. Rules:
+
+- A cursor that was never set is placed at the **end** of the log by the first catch-up and nothing is queued: history is
+  exported only on request (`telemetry enable --backfill`, `usage export --to otlp --all`).
+- One catch-up queues at most 2,000 events; the rest is picked up by the next one.
+- Sampling (`sample`) applies to catch-up events as it does when recording.
+- `usage export --to otlp` is the same pass run by hand, with `--all`, `--dry-run` and `--with-evals`; it refuses without
+  consent and exits 1 when delivery fails so CI notices.
+
+**Opportunistic flush.** A hook never waits on the network: after recording it may start one detached
+`telemetry flush --background` (at most one a minute, only when the outbox is due), which is bounded by the 8 second
+deadline and exits 0 whatever happens. The long-lived `mcp` server flushes from a timer and once on exit within 3
+seconds. Failures are silent to the harness but not lost: each flush records its outcome, and `telemetry status` shows
+the last error, the number of failed flushes and how many failed in a row, next to delivered, dropped and rejected
+totals.
+
+### Pruning the usage log
+
+`usage prune --keep-days N` deletes usage-log lines older than N days, but only those **behind the cursor**: an event that
+is still waiting to be sent is kept however old, so pruning never costs an export. With no cursor (export was never on)
+age alone decides. A line with no readable `ts` is kept. The file is replaced atomically (mode 0600) and the cursor is
+moved to match, so the next flush neither re-reads the log from the start nor skips an event. If the cursor describes
+another log (the file was replaced since the last flush) the prune refuses; `telemetry flush` brings the cursor up to
+date, or `--ignore-cursor` prunes by age alone. `--dry-run` reports without rewriting; a log other than the project's
+(`--log`) has no cursor and is pruned by age. The usage log has no lock, so a prune re-reads a log that grows while it
+works and gives up with exit 1 if it keeps changing; a line a hook appends in the last microseconds before the
+rename can be lost, so run it from a quiet session.
 
 ## OTLP mapping
 
@@ -203,18 +299,21 @@ Resource attributes: `service.name` (default `ai-rulez`), `service.version`, `ai
 resource detector.
 
 **Logs**: one record per event, severity `INFO`, body `item <outcome>`, attribute `event.name` =
-`ai_rulez.item.<outcome>`, time = the event time.
+`ai_rulez.item.<outcome>`, time = the event time. An `eval_result` event is a record with body `eval result` and
+`event.name` = `ai_rulez.eval.result` (no `ai_rulez.served` attribute: a result is not a load).
 
 | Attribute | Event field | Gate |
 | --- | --- | --- |
 | `ai_rulez.item.kind`, `ai_rulez.item.id` | `kind`, `id` | |
 | `ai_rulez.item.digest` | `digest` | |
+| `ai_rulez.item.digest_scheme` | `digest_scheme` | |
 | `ai_rulez.item.path` | `path` | `include_paths` |
 | `ai_rulez.source`, `ai_rulez.harness`, `ai_rulez.role`, `ai_rulez.served` | same names | |
 | `ai_rulez.session` | `session` | `include_session` |
 | `ai_rulez.outcome`, `ai_rulez.load_reason`, `ai_rulez.memory_type` | same names | |
 | `ai_rulez.duration_ms` | `duration_ms` | |
 | `ai_rulez.event_id` | `event_id` | |
+| `ai_rulez.eval.pass_rate`, `.trigger_precision`, `.trigger_recall`, `.ablation_delta` | scores (doubles) | `eval_result` only |
 
 The table is `telemetry.Allowlist` in `internal/telemetry/allowlist.go`; a test fails when `Event` gains a field that
 is neither listed nor mapped to the record envelope, so a new field cannot leave the machine by accident.
@@ -226,8 +325,12 @@ is neither listed nor mapped to the record envelope, so a new field cannot leave
 | `ai_rulez.item.loads` | monotonic sum, `{load}` | `kind`, `id`, `harness`, `role`, `served`, `digest_short` (first 12 hex of the digest) |
 | `ai_rulez.item.outcomes` | monotonic sum, `{load}` (outcome `used` or `abandoned`) | the labels above plus `outcome` |
 | `ai_rulez.agent.duration` | histogram, `ms`, bounds 100, 500, 1000, 5000, 15000, 60000, 300000 | `kind`, `id`, `harness` |
+| `ai_rulez.skill.eval.pass_rate` | gauge, `1` | `id`, `harness` |
+| `ai_rulez.skill.eval.trigger_precision`, `.trigger_recall`, `.ablation_delta` | gauge, `1` | `id`, `harness` |
 
-Session and path are never metric labels.
+Session and path are never metric labels. The eval gauges report the latest result per skill and harness in the batch
+(point time = the run date); the digest a score is about is on the `ai_rulez.eval.result` log record, not a label, to
+keep the series count per skill constant. A gauge point exists only for a score the result has.
 
 ## Transports
 
@@ -277,6 +380,7 @@ Nothing was sent.
   metric timestamps: the preview uses the newest previewed event's time so the output is reproducible, while a flush
   stamps its own clock. `--limit` also trims the batch, so a flush of more events sends larger requests.
 - `--limit N` previews the first N events (default 5, `0` for all). Sampling applies to a log as it would on recording.
+  `--with-evals` adds the `eval_result` events and eval gauges `usage export --with-evals` would send.
 - The destination shows the scheme, host and path of the endpoint only: user info and query are dropped, headers
   (`headers_env`) are never shown; `telemetry doctor` prints a `headers_env` entry only when it is shaped like a variable name, and shows `(invalid, hidden)` for anything else. Without an endpoint it says `<no endpoint configured>`.
 - `fields withheld` lists the allowlist attributes whose opt-in (`include_paths`, `include_session`) is closed.
