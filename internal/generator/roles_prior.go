@@ -184,7 +184,7 @@ func (g *Generator) restoreSkillOverride(settingsPath string, doc map[string]jso
 // dropSkillClaim removes the claim of skillOverrides.<skill> from both manifests.
 func (g *Generator) dropSkillClaim(skill string) error {
 	for _, path := range []string{g.manifestPath(), g.localManifestPath()} {
-		m := readManifestFile(path)
+		m := g.readManifest(path)
 		claims, ok := m.Merged[settingsRel]
 		if !ok {
 			continue
