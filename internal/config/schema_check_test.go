@@ -43,6 +43,11 @@ func TestSchemaFindings(t *testing.T) {
 			want: []string{"config.toml: unknown key \"lock.enforc\" (did you mean \"enforce\"?)", "config.toml: unknown key \"mcp_servers.0.comand\" (did you mean \"command\"?)"},
 		},
 		{
+			name: "the removed compression option loads and is reported, not fatal",
+			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ncompression = \"moderate\"\n",
+			want: []string{"config.toml: unknown key \"compression\""},
+		},
+		{
 			name:  "local overlay is included",
 			main:  "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 			local: "[lock]\nenforc = true\n",
