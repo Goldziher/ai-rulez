@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 )
 
 func resetConvertFlags(t *testing.T, source string) {
@@ -147,4 +149,15 @@ func TestRunConvert_ForceKeepsExistingConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(cfg), "name = 'mine'")
 	assert.Contains(t, string(cfg), "'codex'")
+}
+
+func TestPrintConvertReport_ReportsAFailureToWriteTheFile(t *testing.T) {
+	resetConvertFlags(t, t.TempDir())
+	convertReport = t.TempDir() // a directory: the file cannot be written
+	var out bytes.Buffer
+
+	err := printConvertReport(&out, &importer.Report{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "write report file")
 }

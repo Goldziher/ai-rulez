@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -172,13 +173,14 @@ func printConvertReport(out io.Writer, report *importer.Report) error {
 		return nil
 	}
 	if convertReport != "" {
-		file, err := os.Create(convertReport)
-		if err != nil {
-			return fmt.Errorf("create report file: %w", err)
-		}
-		defer file.Close()
-		if err := render(file); err != nil {
+		var buf bytes.Buffer
+		if err := render(&buf); err != nil {
 			return err
+		}
+		// WriteFile reports the close error a deferred Close would drop: a full disk
+		// shows up there.
+		if err := os.WriteFile(convertReport, buf.Bytes(), 0o644); err != nil { //nolint:gosec // a report the user asked for
+			return fmt.Errorf("write report file: %w", err)
 		}
 	}
 	return render(out)
