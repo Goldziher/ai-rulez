@@ -104,7 +104,9 @@ The npm, PyPI and Homebrew distributions are unaffected.
   same scheme (there is no second, older per-file hash). Scripts (`.sh`, `.py`, `.js`, ...) are hashed byte for byte:
   a changed line ending in a script is a changed digest. `lock --check` exits 2 on a lock without content pins,
   whatever `[lock] enforce` says. A lock with another `version` is refused with the instruction to run
-  `ai-rulez lock` again. See [Lock file](lockfile.md).
+  `ai-rulez lock` again. A lock that pins role outputs (`[roles]` `pin = true`) is written as `version = 2`, which an
+  older v5 build refuses instead of misreading the role pins; a lock without role pins stays `version = 1`.
+  See [Lock file](lockfile.md).
 - **Run `ai-rulez lock` once after upgrading**, review the diff and commit the file. The lock reads as stale until
   you do, for these reasons:
   - The `tree` digest now also covers the `source`, `ref` and `path` of remote entries and the `view` of served

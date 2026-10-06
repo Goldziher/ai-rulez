@@ -10,8 +10,11 @@ is made of. It pins three things:
    in review even when nobody touched a source.
 
 One file, one `tree` digest over all of it, under **one hashing scheme** for every kind (authored items, outputs,
-remote includes, installed skills, skill sources, OKF includes and served skills). Lock `version = 1`; a lock with
-any other version is refused with an instruction to run `ai-rulez lock` again.
+remote includes, installed skills, skill sources, OKF includes and served skills). Lock `version = 1`, or `version = 2`
+when the lock holds role output pins (`[roles]` `pin = true`); `lock` writes 2 only then, so a lock without role pins stays
+readable by older builds. A lock with any other version is refused with an instruction to run `ai-rulez lock` again.
+A build that predates version 2 refuses a version 2 lock the same way, rather than reading a role pin as a default output
+with no path; do not run `ai-rulez lock` with that older build, it would write the lock without the role pins.
 
 ## Threat model
 
@@ -317,7 +320,8 @@ pins as they are. Use `update --kind skill` to move range pins.
 ## Hashing scheme
 
 All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is part of the lock format: any change
-to it bumps the lock `version`, and a lock of another version is refused.
+to it bumps the lock `version`, and a lock of another version is refused. (The version 1 to 2 step changes only what a
+lock may hold, not the scheme, so `hash_version` below stays 1.)
 
 Notation: `lp(x)` is the 8-byte big-endian length of `x` followed by `x`; `u64(n)` is `n` as 8 bytes big-endian.
 

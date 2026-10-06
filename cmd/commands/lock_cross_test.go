@@ -409,7 +409,7 @@ func TestLockCross_ScriptLineEndingsAreContent(t *testing.T) {
 
 // A lock of another format version is refused everywhere with the fix in the message.
 func TestLockCross_LockOfAnotherVersionIsRefusedWithTheFix(t *testing.T) {
-	for _, from := range []string{"version = 0", "version = 2"} {
+	for _, from := range []string{"version = 0", "version = 3"} {
 		fx := newCrossFixture(t)
 		text := strings.Replace(fx.read(t, ".ai-rulez/"+lockfile.FileName), "version = 1", from, 1)
 		require.NoError(t, os.WriteFile(fx.path(".ai-rulez/"+lockfile.FileName), []byte(text), 0o644))
