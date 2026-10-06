@@ -64,6 +64,8 @@ type UserPlan struct {
 func (g *Generator) SetUserScope() {
 	g.userMode = true
 	g.config.UserScope = true
+	// NewGenerator added the generated-file guard before the scope was known.
+	g.config.DropGuardHooks()
 }
 
 // IsUserScope reports whether the Generator runs in user scope.
