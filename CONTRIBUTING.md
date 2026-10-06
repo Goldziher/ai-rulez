@@ -59,7 +59,7 @@ When adding a new feature or fixing a bug, the logic should almost always be imp
 
 Here is the step-by-step process for adding CRUD operations for a new entity (e.g., `new_entity`):
 
-1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules-v2.schema.json`.
+1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules.schema.json`.
 2.  **Update the Config Struct:** Add the `NewEntity` struct to `internal/config/types.go` and the `[]NewEntity` slice to the main `Config` struct.
 3.  **Update the CRUD Logic:** Add a new case for `new_entity` in the main switch statement in `internal/crud/crud.go`.
 4.  **Create the CLI Command File:** Create a new file, `cmd/commands/crud/new_entity.go`, and define the `cobra` commands (`Add`, `Get`, `List`, `Update`, `Delete`). These commands should parse flags and call the `crud` helper functions.

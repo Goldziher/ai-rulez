@@ -28,7 +28,6 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez verifiers run/list/explain/test` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
-| `ai-rulez migrate`              | Migrate configuration versions (`migrate v4` is the only target) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez search`               | Rank skills against a query; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
@@ -737,16 +736,16 @@ ai-rulez profile list --format json
 ## Local Configuration
 
 Machine-local configuration has two layers: the `.ai-rulez/local/` content tree (managed with `--local`
-on `add`, `remove` and `list`) and the `config.local.{toml,yaml,yml,json}` overlay (managed with
+on `add`, `remove` and `list`) and the `config.local.toml` overlay (managed with
 `ai-rulez local` and `--local` on the config commands). The full guide is
 [Local Configuration](local-overrides.md); this section is the command reference.
 
 ### `ai-rulez local <subcommand>`
 
-Manage `config.local.{toml,yaml,yml,json}`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
+Manage `config.local.toml`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
 
 ```bash
-ai-rulez local init                     # skeleton in the main config's format (commented for TOML and YAML, {} for JSON)
+ai-rulez local init                     # commented config.local.toml skeleton
 ai-rulez local show [--format json] [--reveal] # keys the overlay sets, with the shared value each replaces
 ai-rulez local set <path> <value>       # value is a TOML literal, falling back to a plain string
 ai-rulez local set <path> --stdin       # read the value from standard input
@@ -858,7 +857,7 @@ ai-rulez convert --list                           # importers and what each dete
 | `rulesync` | `rulesync.jsonc` and the input root `.rulesync/` (or each entry of `inputRoots`): `rules/`, `commands/`, `subagents/`, `skills/<name>/`, `checks/`, `mcp.jsonc` (or `mcp.json`), `hooks.jsonc`, `permissions.jsonc`, `.aiignore`, `.rulesyncignore`, `rulesync.lock`. See [rulesync](#rulesync). | `rules/`, `context/`, `skills/` (with resources), `agents/`, `commands/`, `checks/`, `[[mcp_servers]]` and `presets` in `config.toml` |
 | `skills-lock` | `skills-lock.json` (lock file version 1 of the Vercel [skills CLI](https://github.com/vercel-labs/skills)) | `[[installed_skills]]` (`source` as a git URL, `ref`, `path` from `skillPath`) |
 
-`config.toml` is merged, never replaced, with or without `--force`: new `presets`, `[[mcp_servers]]` and `[[installed_skills]]` are appended (existing entries win; a differing imported entry of the same name is a `needs-action` finding), and the file is rewritten with the config writer, which does not keep comments. When nothing is new it is `unchanged` and untouched. A config in another format (`config.yaml`, `config.yml`, `config.json`) is left alone and reported as `manual`; a `config.toml` that cannot be parsed stops the run. When nothing identifies a preset and the config already has presets, none is added.
+`config.toml` is merged, never replaced, with or without `--force`: new `presets`, `[[mcp_servers]]` and `[[installed_skills]]` are appended (existing entries win; a differing imported entry of the same name is a `needs-action` finding), and the file is rewritten with the config writer, which does not keep comments. When nothing is new it is `unchanged` and untouched. A V3 config (`config.yaml`, `config.yml`, `config.json`), which ai-rulez no longer reads, is left alone and reported as `manual`; a `config.toml` that cannot be parsed stops the run. When nothing identifies a preset and the config already has presets, none is added.
 
 Rule frontmatter is translated, not copied: Cursor `alwaysApply`/`globs`/`description`, Copilot `applyTo`, Kiro `inclusion`/`fileMatchPattern`, Devin and Windsurf `trigger`, and `paths` become `activation`, `globs` and `description`; any other key is reported as `dropped`. A Cursor rule with `alwaysApply: true` and `globs` is always on, so its globs are dropped (`approximated`). Frontmatter that is not valid YAML as written (an unquoted `globs: **/*.ts`) is read leniently with block scalars and lists intact, and reported as `approximated`. Skills, agents and commands are copied with their frontmatter, and every key ai-rulez has no field for (Claude `color`, `permissionMode`; Copilot `handoffs`, `target`, `mode`, `agent`; ...) is reported as `approximated`, because only presets that copy unknown keys render it; a comma-separated Claude `tools` string becomes a list. The `name:` of a `SKILL.md` follows its directory when the directory is renamed to a valid name or suffixed after a collision. A name with no ASCII letters or digits (`日本語`) gets a stable derived name (`unnamed-<hash>`), reported as `approximated`. Presets are inferred only from files one tool owns (`.cursor/rules` implies `cursor`, `.windsurf` implies `devin`, `.roo` implies `zoocode`); shared files such as `AGENTS.md` and `.agents/skills` imply none, and with no other evidence `claude` is used and reported. Files ai-rulez generated are never read back as source: the `AI-RULEZ ::` header, the `GENERATED FILE` and `Generated by ai-rulez` banners (also in skill resource files), the `Content-Hash` and `Source-Hash` lines, and every path in `.ai-rulez/.generated-manifest.json` are skipped with a `dropped` finding, as are root files that only contain an `@path` pointer. A path that exists but cannot be read (permissions, a symlink, an invalid `.claude/settings.json`) is reported as `dropped` with the error, never silently ignored. Identical content found in several files (for example `CLAUDE.md` and `AGENTS.md`) is imported once; different content under one name gets a stable hash suffix.
 
@@ -922,7 +921,6 @@ ai-rulez init [project-name] [flags]
 
 | Flag                    | Type    | Default | Description                                                          |
 | ----------------------- | ------- | ------- | -------------------------------------------------------------------- |
-| `--format` / `-f`       | string  | `toml`  | Configuration format: `toml`, `yaml`, or `json`                      |
 | `--domains` / `-d`      | string  | (none)  | Comma-separated list of domain names to create                       |
 | `--skip-content` / `-s` | boolean | false   | Skip creating example content files                                  |
 | `--from` / `-F`         | string  | (none)  | Import from existing tool files, such as `auto` or `.claude,.cursor` |
@@ -954,12 +952,6 @@ Basic V4 initialization (TOML format):
 
 ```bash
 ai-rulez init "my-project"
-```
-
-V4 with YAML format:
-
-```bash
-ai-rulez init "my-project" --format yaml
 ```
 
 V4 with multiple domains:
@@ -2045,59 +2037,6 @@ ai-rulez llm estimate <file> [--max-output <tokens>] [--format text|json]
 
 `doctor` prints the resolved backend, model, endpoint host, whether the key variable is set (never its value), whether network use is allowed and the cache directory; `--ping` makes one 1-token call and refuses unless `allow_network = true`. `estimate` approximates the prompt tokens of a file and the worst-case cost offline. A failure exits `1`.
 
-## Migrate Command
-
-### `ai-rulez migrate v4`
-
-Migrate configuration from V3 (YAML) to V4 (TOML format). The input is a V3 **`.ai-rulez/config.yaml`** (or `config.json`) directory config. A legacy flat V2 file (`ai-rulez.yaml`, `.ai-rulez.yaml`, ...) is not read by this command: `migrate v4` stops with "No config directory found" when there is no `.ai-rulez/`, so move the file to `.ai-rulez/config.yaml` first.
-
-**Syntax:**
-
-```bash
-ai-rulez migrate v4
-```
-
-**Arguments:**
-
-- `v4`, `4`, or `4.0` (required): Target configuration version. Any other target exits `1` and names the supported ones.
-
-The migrate command has no command-local flags. The global `-C, --config PATH` is honoured: pass the config file (or the config directory) of a project elsewhere and its directory is migrated instead of `./.ai-rulez`.
-
-**Examples:**
-
-Migrate current directory:
-
-```bash
-ai-rulez migrate v4
-```
-
-Migrate another project:
-
-```bash
-ai-rulez -C ../service/.ai-rulez/config.yaml migrate v4
-```
-
-**What It Does:**
-
-1. Finds `.ai-rulez/` in the current directory (or the directory of `-C`)
-2. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only, `$schema` becomes `schema`), whether or not `config.toml` already exists. If more than one `config.local.*` file exists the overlay is left alone with a warning
-3. Returns without further changes if `.ai-rulez/config.toml` already exists
-4. Loads the existing shared configuration (without the overlay), including the servers of a legacy MCP file (the loader reads the first of `mcp.toml`, `mcp.yaml`, `mcp.json`)
-5. Writes `.ai-rulez/config.toml` with `version = "4.0"`: the inline `mcp_servers` in their written order, then the legacy-file servers sorted by name, without duplicates
-6. Removes old `.ai-rulez/config.yaml` and `.ai-rulez/config.json`, and each `mcp.toml`, `mcp.yaml` or `mcp.json` whose servers are all in the new `config.toml`; a legacy MCP file with a server that was not carried over is kept, with a warning
-
-**After Migration:**
-
-- `.ai-rulez/config.toml` — new V4 configuration (TOML)
-- `.ai-rulez/config.local.toml` — the converted overlay, if one existed
-- All other files remain unchanged
-
-Then regenerate outputs:
-
-```bash
-ai-rulez generate
-```
-
 ## Version Command
 
 ### `ai-rulez version`
@@ -2173,13 +2112,11 @@ ai-rulez init --help
 Commands that load a project directory use the following config order:
 
 1. **Explicit path**: Via `--config` flag or command argument
-2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, `.ai-rulez/config.yml`, or `.ai-rulez/config.json`
-3. **Project convention**: the same four filenames under `.config/ai-rulez/`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
-4. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, `ai_rulez.yaml`, `ai_rulez.yml`, `.ai_rulez.yaml`, or `.ai_rulez.yml` are discovered for migration
-5. **Error**: No configuration found
+2. **Directory config**: `.ai-rulez/config.toml`
+3. **Project convention**: `.config/ai-rulez/config.toml`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
+4. **Error**: No configuration found
 
-The search walks up from the current directory. Legacy flat V2 config files are discovered but `ai-rulez migrate v4` does not convert them (it needs `.ai-rulez/config.yaml`); move the file there first, then run `ai-rulez migrate v4` before V4
-generation workflows. `.ai-rulez/` and `.config/ai-rulez/` are checked before the legacy flat filenames.
+The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a V3 `.ai-rulez/config.yaml`, `.yml` or `.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; migrate it with ai-rulez 4.x first (`npx ai-rulez@4 migrate v4`; for a flat V2 file, move it to `.ai-rulez/config.yaml` first), then upgrade. `doctor` reports the same file.
 
 Example detection flow:
 
@@ -2203,7 +2140,7 @@ Every command follows one contract, so a script can tell a failed run from a fai
 | Code | Meaning |
 | ---- | ------- |
 | 0    | Success |
-| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand or `migrate` target, a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
+| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
 | 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` fails instead) |
 

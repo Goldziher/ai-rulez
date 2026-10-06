@@ -16,7 +16,6 @@ Initialize `.ai-rulez/` directory with configuration.
 
 Flags:
 
-- `--format, -f <toml|yaml|json>` — Config format (default `toml`)
 - `--domains, -d <names>` — Comma-separated initial domains
 - `--skip-content, -s` — Skip example content files
 - `--from, -F <source>` — Import from existing tool files, such as `auto`
@@ -96,10 +95,6 @@ Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
 ### `ai-rulez convert`
 
 Import another tool's files (`--from native`, `rulesync`, `skills-lock` or `auto`) into `.ai-rulez/` with a lossiness report (`mapped`, `approximated`, `dropped`, `needs-action`, `unsupported`). Writes nothing without `--write`; flags `--dry-run`, `--force`, `--domain`, `--format text|json`, `--report`, `--fail-on`, `--allow-findings`, `--list`.
-
-### `ai-rulez migrate v4`
-
-Convert V3 `.ai-rulez/` YAML configuration to V4 `.ai-rulez/` TOML configuration (`-C` selects another project; the config format `version` stays `"4.0"`). An unknown target exits 1.
 
 ### `ai-rulez mcp`
 

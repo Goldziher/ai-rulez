@@ -236,7 +236,7 @@ registered code without one.
 
 ## Configuration
 
-Everything is optional. Put it in `config.toml` (or the YAML/JSON equivalent); a `config.local.*` overlay may
+Everything is optional. Put it in `config.toml`; a `config.local.*` overlay may
 override individual `[lint]` keys.
 
 ```toml
