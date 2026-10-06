@@ -45,9 +45,9 @@ func RenderSkillResourcesIndex(skill *config.ContentFile) string {
 			b.WriteString("`](")
 			b.WriteString(r.RelPath)
 			b.WriteString(")")
-			if r.Description != "" {
+			if desc := config.SummarizeResourceDescription(r.Description); desc != "" {
 				b.WriteString(" — ")
-				b.WriteString(r.Description)
+				b.WriteString(desc)
 			}
 			b.WriteString("\n")
 		}

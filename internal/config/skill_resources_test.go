@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -317,13 +319,33 @@ func TestExtractResourceDescription(t *testing.T) {
 		{"first-line-fallback", "# Title\n\nBody.\n", "Title"},
 		{"strip-multiple-hashes", "### Sub\n\nBody.\n", "Sub"},
 		{"skip-empty-lines", "\n\n\n  body line\n", "body line"},
+		{"first-sentence-only", "# Title. More text follows here.\n", "Title."},
+		{"control-chars-stripped", "bad\x00\x1b[31m\tline\r\n", "bad [31m line"},
+		{"frontmatter-desc-capped", "---\ndescription: " + strings.Repeat("word ", 100) + "\n---\n", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.want, extractResourceDescription([]byte(tc.in)))
+			got := extractResourceDescription([]byte(tc.in))
+			if tc.name == "frontmatter-desc-capped" {
+				assert.LessOrEqual(t, utf8.RuneCountInString(got), MaxResourceDescriptionRunes)
+				assert.NotEmpty(t, got)
+				return
+			}
+			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestExtractResourceDescription_LongFirstLineIsCapped(t *testing.T) {
+	t.Parallel()
+	got := extractResourceDescription([]byte(strings.Repeat("word ", 130000)))
+	assert.LessOrEqual(t, utf8.RuneCountInString(got), MaxResourceDescriptionRunes)
+	assert.NotContains(t, got, "\n")
+	assert.True(t, utf8.ValidString(got))
+	got = extractResourceDescription([]byte(strings.Repeat("é", 1000)))
+	assert.LessOrEqual(t, utf8.RuneCountInString(got), MaxResourceDescriptionRunes)
+	assert.True(t, utf8.ValidString(got))
 }
 
 func TestUnrecognizedSubdirectoryWarnings_EvalsIsRecognized(t *testing.T) {
