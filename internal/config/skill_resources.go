@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
@@ -304,6 +306,45 @@ func walkSkillResourceDir(skillDir, kindDir, kind string, filter *bundleFilter) 
 //
 // Returns an empty string when neither source yields anything useful.
 func extractResourceDescription(data []byte) string {
+	return SummarizeResourceDescription(rawResourceDescription(data))
+}
+
+// MaxResourceDescriptionRunes bounds a derived resource description. A reference
+// whose first line is a whole document would otherwise be inlined into the
+// rendered SKILL.md index, inflating it past the serving size limit.
+const MaxResourceDescriptionRunes = 160
+
+// SummarizeResourceDescription reduces text to a single-line summary: control
+// characters become spaces, whitespace collapses, the first sentence is kept
+// and the result is cut at a rune boundary to MaxResourceDescriptionRunes.
+func SummarizeResourceDescription(text string) string {
+	// Bound the work on a pathological multi-megabyte line.
+	if len(text) > 4*MaxResourceDescriptionRunes*utf8.UTFMax {
+		text = text[:4*MaxResourceDescriptionRunes*utf8.UTFMax]
+		for !utf8.ValidString(text) {
+			text = text[:len(text)-1]
+		}
+	}
+	text = strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, text)), " ")
+	for i := 0; i+1 < len(text); i++ {
+		if (text[i] == '.' || text[i] == '!' || text[i] == '?') && text[i+1] == ' ' {
+			text = text[:i+1]
+			break
+		}
+	}
+	if utf8.RuneCountInString(text) <= MaxResourceDescriptionRunes {
+		return text
+	}
+	runes := []rune(text)[:MaxResourceDescriptionRunes-1]
+	return strings.TrimSpace(string(runes)) + "…"
+}
+
+func rawResourceDescription(data []byte) string {
 	metadata, body := ParseFrontmatterPublic(string(data))
 	if metadata != nil {
 		if desc, ok := metadata.Extra["description"]; ok {
