@@ -1,0 +1,14 @@
+schema_version: 1
+id: docs-and-site-real
+kind: skill
+item:
+  path: fixtures/cases/docs-and-site-real/docs-and-site/SKILL.md
+siblings:
+  - fixtures/shared/skills/release-and-distribution/SKILL.md
+  - fixtures/shared/skills/capability-delivery-checklist/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

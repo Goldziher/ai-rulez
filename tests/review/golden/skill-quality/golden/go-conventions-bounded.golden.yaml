@@ -1,0 +1,15 @@
+schema_version: 1
+id: go-conventions-bounded
+kind: skill
+item:
+  path: fixtures/cases/go-conventions-bounded/go-conventions/SKILL.md
+siblings:
+  - fixtures/shared/skills/rust-conventions/SKILL.md
+  - fixtures/shared/skills/python-conventions/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+probes: [pad, rename]

@@ -1,0 +1,14 @@
+schema_version: 1
+id: overlap-changelog
+kind: skill
+item:
+  path: fixtures/cases/overlap-changelog/release-notes/SKILL.md
+siblings:
+  - fixtures/shared/skills/changelog-writer/SKILL.md
+  - fixtures/shared/skills/commit-wording/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

@@ -1,0 +1,14 @@
+schema_version: 1
+id: config-schema-maintainer-real
+kind: skill
+item:
+  path: fixtures/cases/config-schema-maintainer-real/config-schema-maintainer/SKILL.md
+siblings:
+  - fixtures/shared/skills/docs-and-site/SKILL.md
+  - fixtures/shared/skills/mcp-integrations/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

@@ -1,0 +1,14 @@
+schema_version: 1
+id: code-reviewer-real
+kind: agent
+item:
+  path: fixtures/cases/code-reviewer-real/code-reviewer.md
+siblings:
+  - fixtures/shared/agents/security-auditor.md
+  - fixtures/shared/agents/docs-writer.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

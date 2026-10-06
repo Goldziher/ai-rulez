@@ -16,6 +16,8 @@ exclude = [
   "**/pnpm-lock.yaml",
   "**/testdata/*.golden.json",
   "internal/importer/testdata/convert/**",
+  "tests/review/golden/**/fixtures/**",
+  "tests/review/golden/**/golden/*.golden.yaml",
   "**/testdata/dialects/*.golden.*",
   "**/testdata/*.golden.js",
   "**/testdata/*.golden.ts",

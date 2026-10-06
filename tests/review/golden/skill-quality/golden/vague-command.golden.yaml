@@ -1,0 +1,14 @@
+schema_version: 1
+id: vague-command
+kind: command
+item:
+  path: fixtures/cases/vague-command/do-stuff.md
+siblings:
+  - fixtures/shared/commands/iterate.md
+  - fixtures/shared/commands/parallelize.md
+labelers:
+  - id: author
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: fail, overlap: fail, body-accuracy: warn, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: fail, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

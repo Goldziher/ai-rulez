@@ -1,0 +1,14 @@
+schema_version: 1
+id: body-mismatch-language
+kind: skill
+item:
+  path: fixtures/cases/body-mismatch-language/rust-conventions/SKILL.md
+siblings:
+  - fixtures/shared/skills/python-conventions/SKILL.md
+  - fixtures/shared/skills/go-conventions/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: fail, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: fail, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: pass, body-accuracy: fail, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
