@@ -755,7 +755,7 @@ func TestOpencodePresetGenerator_NonArrayInstructionsAreLeftAlone(t *testing.T) 
 	if err != nil {
 		t.Fatalf("renderMCPConfig: %v", err)
 	}
-	if !strings.Contains(result.Body, `"instructions": "CONTRIBUTING.md"`) {
+	if !strings.Contains(result.Body, `"instructions":"CONTRIBUTING.md"`) {
 		t.Errorf("the user's value was changed:\n%s", result.Body)
 	}
 	if !result.PartiallyOwned {

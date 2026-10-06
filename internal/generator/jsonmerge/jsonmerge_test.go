@@ -354,10 +354,10 @@ func TestApply_PreservesExistingIndent(t *testing.T) {
 			wantKey:  "\n\t\"model\": \"opus\",",
 			wantOwn:  "\n\t\"mcpServers\": {\n\t\t\"generated\"",
 		},
-		"single line falls back to two spaces": {
+		"single line stays on one line": {
 			existing: "{\"model\": \"opus\"}\n",
-			wantKey:  "\n  \"model\": \"opus\",",
-			wantOwn:  "\n  \"mcpServers\": {\n    \"generated\"",
+			wantKey:  "{\"model\": \"opus\",",
+			wantOwn:  "\"mcpServers\": {\"generated\":",
 		},
 		// Reading the line right after the opening brace measures a width of
 		// zero on these, which silently re-indents the whole top level.

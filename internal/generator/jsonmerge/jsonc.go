@@ -233,6 +233,17 @@ func (ed jsoncEditor) setPath(obj *hujson.Object, path []string, key OwnedKey, d
 	if len(rest) == 0 {
 		switch {
 		case key.Remove:
+			if key.RemoveIf != nil {
+				// A guarded removal takes only a value the guard accepts: one the
+				// user has since changed is theirs and stays.
+				for i := len(obj.Members) - 1; i >= 0; i-- {
+					if lit, ok := obj.Members[i].Name.Value.(hujson.Literal); ok && lit.String() == head &&
+						key.RemoveIf(standardRaw(obj.Members[i].Value)) {
+						ed.removeAt(obj, i)
+					}
+				}
+				return nil
+			}
 			for idx := jsoncFind(obj, head); idx >= 0; idx = jsoncFind(obj, head) {
 				ed.removeAt(obj, idx)
 			}
