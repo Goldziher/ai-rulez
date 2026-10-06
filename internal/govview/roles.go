@@ -43,3 +43,26 @@ func ResolveRole(cfg *config.Config, name string, counter tokens.Counter) (*Role
 	}
 	return &RoleResolution{Role: role, SchemaVersion: roles.SchemaVersion, SkillModes: outcomes, Tokenizer: counter.Name()}, nil
 }
+
+// ResolutionView is a RoleResolution with the item list capped at a limit. Under
+// the limit it serialises exactly as RoleResolution.
+type ResolutionView struct {
+	*RoleResolution
+	TotalItems int  `json:"total_items,omitempty"`
+	Truncated  bool `json:"truncated,omitempty"`
+}
+
+// ViewResolution keeps at most limit items of the role (see ClampLimit); the
+// totals still count every item.
+func ViewResolution(res *RoleResolution, limit int) *ResolutionView {
+	view := &ResolutionView{RoleResolution: res}
+	if limit = ClampLimit(limit); len(res.Role.Items) > limit {
+		role := *res.Role
+		view.TotalItems, view.Truncated = len(role.Items), true
+		role.Items = role.Items[:limit]
+		cut := *res
+		cut.Role = &role
+		view.RoleResolution = &cut
+	}
+	return view
+}

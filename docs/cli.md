@@ -19,6 +19,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez verifiers run/list`   | Run the deterministic repo checks declared as `[[verifiers]]` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
@@ -1198,6 +1199,18 @@ producer. Consumer-only plugin installation declarations are skipped. Missing
 authoring configuration is ignored only with `--if-configured`; stale, missing,
 or invalid generated outputs still fail verification.
 
+## Guard Command
+
+### `ai-rulez guard`
+
+Hidden command that harnesses run, not people. `generate` adds it as a `PreToolUse` hook when `[guard] generated = true` ([Settings](settings.md#guard)). It reads the hook payload (JSON) on stdin and checks the file the tool call edits against `.ai-rulez/.generated-manifest.json` and `.generated-manifest.local.json`.
+
+Exit codes: `2` the call edits a generated file (the reason, with the source to edit, is on stderr); `0` everything else, including files merged into a settings document, paths outside the project, read-only tools and a payload that cannot be parsed. The guard fails open.
+
+```bash
+echo '{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md"}}' | ai-rulez guard; echo $?
+```
+
 ## Doctor Command
 
 ### `ai-rulez doctor [config-file]`
@@ -1604,6 +1617,7 @@ ai-rulez lock --content-only      # re-pin authored content and outputs; offline
 ai-rulez lock --check             # verify everything, offline; exit 2 and name each difference
 ai-rulez lock --diff              # what `lock` would change, for a pull request
 ai-rulez lock --diff --format json
+ai-rulez lock --check --format json   # the same document, exit code still 2 on drift
 ```
 
 With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce
@@ -1617,7 +1631,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
 | `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
-| `--format text\|json` | Output format of `--diff` |
+| `--format text\|json` | Output format of `--check` and `--diff`; with `--check` the JSON goes to stdout and the exit code still gates |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
 | `--kind include\|skill\|source\|served` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |

@@ -3,6 +3,7 @@ package govview
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/samber/oops"
 
@@ -122,17 +123,36 @@ func LoadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config,
 	return cfg, len(includes.Lockable(cfg)) > 0, nil
 }
 
-// FilterChanges keeps the changes of one scope (source, output, remote, served or
-// lock). The diff's in_sync stays that of the whole comparison.
-func FilterChanges(diff *contentlock.Diff, scope string) {
-	if scope == "" {
-		return
+// Lock status kinds accepted by FilterChanges: the entry kinds of `lock --kind`
+// plus "content", the authored items and generated outputs.
+const KindContent = "content"
+
+// LockKinds lists the values FilterChanges accepts.
+var LockKinds = []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindServed, KindContent}
+
+// FilterChanges keeps the changes of one kind (see LockKinds); empty keeps all.
+// The diff's in_sync stays that of the whole comparison.
+func FilterChanges(diff *contentlock.Diff, kind string) error {
+	if kind == "" {
+		return nil
+	}
+	known := false
+	for _, k := range LockKinds {
+		known = known || k == kind
+	}
+	if !known {
+		return oops.Errorf("unknown kind %q (use %s)", kind, strings.Join(LockKinds, ", "))
 	}
 	kept := []contentlock.Change{}
 	for i := range diff.Changes {
-		if diff.Changes[i].Scope == scope {
-			kept = append(kept, diff.Changes[i])
+		c := &diff.Changes[i]
+		switch {
+		case kind == KindContent && (c.Scope == contentlock.ScopeSource || c.Scope == contentlock.ScopeOutput):
+			kept = append(kept, *c)
+		case kind != KindContent && c.Scope != contentlock.ScopeSource && c.Scope != contentlock.ScopeOutput && (c.Kind == kind || (kind == lockfile.KindServed && c.Scope == contentlock.ScopeServed)):
+			kept = append(kept, *c)
 		}
 	}
 	diff.Changes = kept
+	return nil
 }

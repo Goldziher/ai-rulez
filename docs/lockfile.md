@@ -257,6 +257,7 @@ ai-rulez lock shared          # re-pin one include or skill; content pins are ke
 ai-rulez lock --check         # verify everything, offline; exit 2 on any difference
 ai-rulez lock --diff          # show what `ai-rulez lock` would change; exit 0
 ai-rulez lock --diff --format json
+ai-rulez lock --check --format json   # the --diff document on stdout; exit 2 on any difference
 ai-rulez generate --locked    # also fail when an authored source differs from the lock
 ai-rulez generate --frozen    # --locked without the network
 ```
