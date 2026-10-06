@@ -27,9 +27,12 @@ import (
 
 // forbidden maps an import path to the selectors that grant ambient authority.
 var forbidden = map[string][]string{
-	"os":      {"Getwd", "Chdir", "Getenv", "LookupEnv", "UserHomeDir", "Environ"},
-	"time":    {"Now"},
-	"os/exec": {"Command", "CommandContext"},
+	"os": {
+		"Getwd", "Chdir", "Getenv", "LookupEnv", "UserHomeDir", "Environ", "ExpandEnv",
+		"UserConfigDir", "UserCacheDir", "Hostname", "Executable",
+	},
+	"time":    {"Now", "Since", "Until"},
+	"os/exec": {"Command", "CommandContext", "LookPath"},
 }
 
 // exempt are the packages that are allowed to use ambient authority by design:
@@ -82,6 +85,11 @@ func scan(t *testing.T, root string) map[string]int {
 			local := filepath.Base(p)
 			if imp.Name != nil {
 				local = imp.Name.Name
+			}
+			if local == "." {
+				// A dot-import hides every selector from the scan, so the import itself is the site.
+				found[rel+" ."+filepath.Base(p)]++
+				continue
 			}
 			names[local] = p
 		}
@@ -193,15 +201,31 @@ func TestScannerFlagsASeededViolation(t *testing.T) {
 	if err := os.MkdirAll(pkg, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	src := "package seeded\n\nimport (\n\t\"os\"\n\tstdtime \"time\"\n)\n\nfunc F() { _, _ = os.Getwd(); _ = stdtime.Now(); _ = os.Getenv(\"X\") }\n"
+	src := "package seeded\n\nimport (\n\t\"os\"\n\t\"os/exec\"\n\tstdtime \"time\"\n)\n\n" +
+		"func F() {\n\t_, _ = os.Getwd()\n\t_ = stdtime.Now()\n\t_ = os.Getenv(\"X\")\n\t_ = os.ExpandEnv(\"$X\")\n" +
+		"\t_, _ = os.UserConfigDir()\n\t_, _ = os.UserCacheDir()\n\t_, _ = os.Hostname()\n\t_, _ = os.Executable()\n" +
+		"\t_, _ = exec.LookPath(\"x\")\n\t_ = stdtime.Since(stdtime.Time{})\n\t_ = stdtime.Until(stdtime.Time{})\n}\n"
+	dot := "package seeded\n\nimport . \"os\"\n\nfunc G() string { return Getenv(\"X\") }\n"
+	if err := os.WriteFile(filepath.Join(pkg, "dot.go"), []byte(dot), 0o644); err != nil { //nolint:gosec // scratch file
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(pkg, "seeded.go"), []byte(src), 0o644); err != nil { //nolint:gosec // scratch file
 		t.Fatal(err)
 	}
 	got := scan(t, dir)
 	want := map[string]int{
-		"internal/seeded/seeded.go os.Getwd":    1,
-		"internal/seeded/seeded.go stdtime.Now": 1,
-		"internal/seeded/seeded.go os.Getenv":   1,
+		"internal/seeded/seeded.go os.Getwd":         1,
+		"internal/seeded/seeded.go stdtime.Now":      1,
+		"internal/seeded/seeded.go os.Getenv":        1,
+		"internal/seeded/seeded.go os.ExpandEnv":     1,
+		"internal/seeded/seeded.go os.UserConfigDir": 1,
+		"internal/seeded/seeded.go os.UserCacheDir":  1,
+		"internal/seeded/seeded.go os.Hostname":      1,
+		"internal/seeded/seeded.go os.Executable":    1,
+		"internal/seeded/seeded.go exec.LookPath":    1,
+		"internal/seeded/seeded.go stdtime.Since":    1,
+		"internal/seeded/seeded.go stdtime.Until":    1,
+		"internal/seeded/dot.go .os":                 1, // a dot-import hides every selector, so the import itself is the site
 	}
 	if len(got) != len(want) {
 		t.Fatalf("scan found %v, want %v", got, want)
