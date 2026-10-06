@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
 
 // Dynamic skill loading rules (AR990 to AR995). The numbers are reserved for
@@ -195,8 +196,8 @@ func (r *runner) checkUnpinnedSources() {
 		if !includes.IsGitURL(strings.TrimPrefix(src.URL, "git+")) {
 			continue
 		}
-		want := lockfile.Want{Kind: lockfile.KindSource, Name: src.Name, Source: includes.RedactURL(strings.TrimPrefix(src.URL, "git+")), Path: src.Path, Ref: src.Ref}
-		if lockfile.IsFullSHA(src.Ref) || lock.Find(lockfile.KindSource, src.Name).Covers(want) {
+		want := skillsource.FromConfig(src).Want()
+		if lockfile.IsFullSHA(want.Ref) || lock.Find(lockfile.KindSource, src.Name).Covers(want) {
 			continue
 		}
 		line := 1
@@ -211,7 +212,7 @@ func (r *runner) checkUnpinnedSources() {
 				r.docs[path] = doc{lines: strings.Split(string(data), "\n")}
 			}
 		}
-		ref := src.Ref
+		ref := src.RequestedRef()
 		if ref == "" {
 			ref = "the default branch (HEAD)"
 		}
