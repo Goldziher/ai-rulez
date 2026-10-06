@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -32,6 +34,10 @@ var (
 	feedbackNote   string
 	reportFeedback string
 	reportEvals    string
+
+	usageExportTo     string
+	usageExportFile   string
+	usageExportDryRun bool
 )
 
 // UsageCmd groups the usage-telemetry commands. Nothing here runs unless a user
@@ -44,6 +50,7 @@ var UsageCmd = &cobra.Command{
   ai-rulez usage hook      print a Claude Code hooks block that records skill invocations
   ai-rulez usage record    the command that block runs; appends one identifier-only JSON line
   ai-rulez usage feedback  record that a skill misled you, is stale, wrong or great (notes stay local)
+  ai-rulez usage export    write the log as an OTLP JSON file for an air-gapped collector or your own tooling
   ai-rulez report usage    join a log with the skills index, feedback and eval scores
 
 Set [usage] skills_index = true so generate writes .ai-rulez/skills-index.json, which gives
@@ -131,6 +138,96 @@ func runUsageRecord(in io.Reader) error {
 	})
 	emitUsageTelemetry(entry)
 	return err
+}
+
+var usageExportCmd = &cobra.Command{
+	Use:   "export [path]",
+	Short: "Write the usage log as an OTLP JSON file (--to file)",
+	Long: `Write the events of the usage log to a file, one OTLP logs request per line, the format the
+OpenTelemetry Collector's otlpjsonfile receiver reads. Nothing is sent over a network, and the
+file needs no consent: it is a local copy you move yourself.
+
+  ai-rulez usage export --to file usage.ndjson
+  ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl
+
+Only allowlisted, identifier-only fields are written (see "ai-rulez telemetry preview" for the
+list and for the exact bytes): unlisted keys in a log line are dropped, raw version 1 session
+ids are never exported, and the session and path fields stay out unless include_session and
+include_paths are on in your user configuration. Skill lines and rule, agent and context events
+are both exported, in log order, each once per event_id. The output is deterministic: the same
+log gives the same file, which is replaced atomically. --dry-run reads and encodes the log and
+reports what would be written without creating the file.
+
+Logs only: the receiver reads one signal per file, and counts can be derived from the log records.`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runUsageExport(cmd.OutOrStdout(), args)
+	},
+}
+
+func runUsageExport(out io.Writer, args []string) error {
+	switch usageExportTo {
+	case "file":
+	case "otlp":
+		return oops.Hint("Use `ai-rulez telemetry flush` to send the outbox to a collector.").Errorf("--to otlp is not available in `usage export`")
+	default:
+		return oops.Hint("Use --to file and a destination path.").Errorf("--to must be file, got %q", usageExportTo)
+	}
+	dest := usageExportFile
+	if len(args) == 1 {
+		if dest != "" && dest != args[0] {
+			return oops.Errorf("give the destination once: as an argument or --file, not both")
+		}
+		dest = args[0]
+	}
+	if dest == "" {
+		return oops.Hint("Pass the destination: `usage export --to file out.ndjson`.").Errorf("a destination path is required")
+	}
+	logPath := usageLog
+	if logPath == "" {
+		logPath = filepath.Join(defaultLocalDir(), "usage.jsonl")
+	}
+	if same, err := sameFile(logPath, dest); err != nil {
+		return err
+	} else if same {
+		return oops.Errorf("the destination %s is the usage log; choose another path", dest)
+	}
+	read, err := telemetry.ReadLogEvents(logPath)
+	if err != nil {
+		return err
+	}
+	settings := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil)
+	encoder := settings.Encoder(Version)
+	file, err := encoder.EncodeFile(read.Events)
+	if err != nil {
+		return err
+	}
+	w := reportWriter{out}
+	if usageExportDryRun {
+		w.printf("would write %d events in %d batches to %s (nothing written)\n", file.Events, file.Batches, dest)
+	} else {
+		if err := safefs.EnsureParent(dest); err != nil {
+			return oops.Wrapf(err, "prepare destination")
+		}
+		if err := safefs.WriteFileAtomic(dest, file.Data); err != nil {
+			return oops.Wrapf(err, "write %s", dest)
+		}
+		w.printf("wrote %d events in %d batches to %s\n", file.Events, file.Batches, dest)
+	}
+	if read.Rejected > 0 {
+		w.printf("left out %d lines that failed validation\n", read.Rejected)
+	}
+	return nil
+}
+
+// sameFile reports whether two paths name the same existing file.
+func sameFile(a, b string) (bool, error) {
+	infoA, errA := os.Stat(a)
+	infoB, errB := os.Stat(b)
+	if errA != nil || errB != nil {
+		return false, nil //nolint:nilerr // a missing file cannot be the same file
+	}
+	return os.SameFile(infoA, infoB), nil
 }
 
 var usageFeedbackCmd = &cobra.Command{
@@ -316,7 +413,15 @@ func usageExtras(row usage.SkillUsage) string {
 }
 
 func init() {
-	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd)
+	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd, usageExportCmd)
+	usageExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file (required)")
+	usageExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")
+	usageExportCmd.Flags().StringVar(&usageLog, "log", "", "Usage log to export (default <config dir>/local/usage.jsonl)")
+	usageExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file")
+	usageExportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	if err := usageExportCmd.MarkFlagRequired("to"); err != nil {
+		panic(err)
+	}
 	for _, c := range []*cobra.Command{usageHookCmd, usageRecordCmd} {
 		c.Flags().StringVar(&usageLog, "log", "", "Usage log file to append to (default .ai-rulez/local/usage.jsonl)")
 		c.Flags().StringVar(&usageSinkCommand, "sink-command", "", "Shell command that receives each log line on stdin")

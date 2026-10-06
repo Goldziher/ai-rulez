@@ -16,6 +16,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez cost`                 | Report the biggest context-cost offenders           |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
+| `ai-rulez update`               | Move pins of sources that use a `version` range to the newest allowed tag ([details](#update-command)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site ([Catalog](catalog.md)) |
 | `ai-rulez sbom`                 | CycloneDX 1.6 bill of materials of the AI configuration ([SBOM](sbom.md)) |
@@ -1511,6 +1512,7 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 | --- | --- |
 | `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
 | `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
+| `ai-rulez usage export --to file <path> [--file f] [--log f] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
 | `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
 | `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
 | `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
@@ -1687,6 +1689,8 @@ ai-rulez lock --diff              # what `lock` would change, for a pull request
 ai-rulez lock --diff --format json
 ai-rulez lock --check --format json   # the same document, exit code still 2 on drift
 ai-rulez lock --subject               # the digest to sign with cosign (see Lock file, "Signing the lock")
+ai-rulez lock --outdated              # sources whose version constraint allows a newer tag (network)
+ai-rulez lock --outdated --format json --fail-on-outdated
 ```
 
 With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce
@@ -1700,6 +1704,9 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
 | `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
 | `--subject` | Print the lock-subject digest (the value a signature over the lock commits to) and what it is computed from; reads the lock only, offline. `--format json` prints the statement (`schema/lock-subject.schema.json`), `--output <file>` writes it. Exit 2 when the stored `tree` does not match the entries. See [Signing the lock](lockfile.md#signing-the-lock) |
+| `--outdated` | List the remote includes, installed skills and skill sources that use a `version` constraint with the pinned, allowed and latest tag; reads tags only and writes nothing. `--format json` follows `schema/lock-outdated.schema.json`. Exit 2 for a moved tag (`AR732`) or an unsatisfiable constraint (`AR730`), and with `--fail-on-outdated` for any allowed update. Names and `--kind` limit it. See [Version constraints](lockfile.md#version-constraints) |
+| `--fail-on-outdated` | With `--outdated`: exit 2 when any source has an allowed update |
+| `--offline` | With `--outdated`: refuses to run (it needs the network); `--check` is the offline verification |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
 | `--format text\|json` | Output format of `--check` and `--diff`; with `--check` the JSON goes to stdout and the exit code still gates |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
@@ -1715,6 +1722,35 @@ refuses a remote source the lock does not cover, as `--locked` does. Pinning `re
 
 ai-rulez does not verify signatures itself: the lock proves the bytes did not change since you reviewed them, not
 who published them. To add that, sign `lock --subject` with `cosign` ([recipe](lockfile.md#signing-the-lock)).
+
+## Update Command
+
+### `ai-rulez update [name...]`
+
+Move the lock entries of includes, installed skills and skill sources that ask for a version range
+(`version = "^1.2"`) to the newest tag the range allows. Only the lock changes. See
+[Version constraints](lockfile.md#version-constraints) for resolution, the moved-tag and downgrade defenses and the
+design decisions.
+
+```bash
+ai-rulez lock --outdated          # what has newer tags
+ai-rulez update --dry-run         # what update would change; fetches the new trees into the cache, writes no lock
+ai-rulez update shared            # one source
+ai-rulez update --kind skill      # every installed skill with a range
+ai-rulez update --accept-moved-tag shared   # re-pin a tag that moved, after reviewing the new commit
+```
+
+| Flag | Description |
+| --- | --- |
+| `--dry-run` | Show what would change (tags, commits, tree digests, changed files); write nothing |
+| `--allow-downgrade` | Allow a tag with lower precedence than the pinned one |
+| `--accept-moved-tag` | Re-pin a tag that now points to another commit (`AR732`) |
+| `--kind include\|skill\|source` | Limit the update to one kind |
+| `--format text\|json` | Output format; JSON follows `schema/update.schema.json` |
+| `--offline` | Refuses to run: update reads the remote's tags |
+
+Exit codes: `0` done or nothing to do, `1` could not run, `2` a source was refused (`AR732`, `AR730`, `AR731`) and
+nothing was written. `ai-rulez skill update` re-resolves plain refs and keeps range pins; `update` moves them.
 
 ## Roles Command
 

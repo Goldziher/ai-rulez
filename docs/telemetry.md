@@ -11,6 +11,7 @@ ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml;
 ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
 ai-rulez telemetry flush             # ship the outbox now
 ai-rulez telemetry preview           # print exactly what an export would send; sends nothing
+ai-rulez usage export --to file out.ndjson   # the same payload as a local OTLP JSON file, no network
 ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
 ```
 
