@@ -29,6 +29,7 @@ nav = [
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Lock File" = "lockfile.md" },
+    { "SBOM" = "sbom.md" },
     { "Trust Model" = "trust-model.md" },
     { "Harness Traps" = "harness-traps.md" },
     { "Verifiers" = "verifiers.md" },

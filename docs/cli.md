@@ -18,6 +18,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
+| `ai-rulez sbom`                 | CycloneDX 1.6 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
@@ -1670,6 +1671,18 @@ Print every rule, context file, skill, agent and command with its id, domain, so
 sha256 digest `ai-rulez.lock` pins, the roles that keep it, a summary of every role and the lock status. Nothing is
 written. `--format json` is versioned (`schema/catalog.schema.json`) and is meant for a UI or an audit script; see
 [Integrating an identity tool or UI](roles.md#integrating-an-identity-tool-or-ui).
+
+## SBOM Command
+
+### `ai-rulez sbom`
+
+```bash
+ai-rulez sbom [--format cyclonedx] [-o file] [-n config-dir]
+```
+
+Print a CycloneDX 1.6 JSON bill of materials: authored items, remote sources, MCP servers. No timestamp, no secrets,
+byte-identical across runs, operating systems and line endings. The machine-local overlay is never included. Nothing is
+rendered; the only file written is `-o`. See [SBOM](sbom.md).
 
 ## Scan Command
 
