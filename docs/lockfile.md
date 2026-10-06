@@ -41,7 +41,8 @@ by review of the lock diff and by CI running `lock --check` against the sources,
 What it does **not** do: it does not say *who* published a change, it does not sandbox anything, and it cannot
 tell a malicious edit from a good one. It makes every change explicit and reviewable; a human still reviews it
 (see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate --strict` for the
-content itself. Signature or attestation verification is not implemented.
+content itself. ai-rulez does not sign or verify signatures itself; [Signing the lock](#signing-the-lock) shows
+how to do it with `cosign`.
 
 ## What is pinned
 
@@ -248,6 +249,92 @@ These were computed independently (Python's `hashlib`) and are checked by the te
 The remote-source `digest` of an include, OKF include, installed skill or skill source is the directory digest above:
 there is no second algorithm.
 
+## Signing the lock
+
+The lock proves that bytes did not change; it does not say who produced them. To add that, sign the lock and verify
+the signature in CI. `ai-rulez lock --subject` prints what to sign, so you can use `cosign` today with no
+signing code in ai-rulez.
+
+What is signed is the **lock subject**, not the bytes of `ai-rulez.lock`. The file is TOML that tools rewrite;
+what matters is its meaning, so the subject is a digest over the recomputed `tree` and the settings the pins were
+written with. Line endings and key order do not matter, and a pin edited by hand changes the subject.
+
+```text
+lock_subject = SHA256( lp("ai-rulez/lock-subject/v1") || lp(tree) || lp(approvals_digest)
+                       || u64(hash_version) || lp(scope) || u8(outputs_pinned) )
+```
+
+- `tree` is recomputed from the lock entries, never read from the file. `lock --subject` fails (exit 2) when the
+  stored `tree` disagrees, so a hand-edited lock is not signed.
+- `approvals_digest` is the empty string until approval state exists. The slot is already part of the formula, so
+  signatures made today stay valid when approvals are added (an empty string and `lp("")` are the same bytes).
+- `hash_version` is `1`, the lock `version`: the hashing scheme is part of the lock format.
+- `scope` is the recorded `[lock] scope` (`all` when the lock records none); `outputs_pinned` is `1` or `0`.
+- `lp(x)` and `u64(n)` are defined in [Hashing scheme](#hashing-scheme); `u8` is one byte.
+
+```console
+$ ai-rulez lock --subject
+sha256:60e6900f…  (lock-subject/v1; tree sha256:6cd1d810…, approvals none, hash_version 1, scope all, outputs_pinned true)
+
+$ ai-rulez lock --subject --output lock-subject.json
+```
+
+`--output` writes the statement `schema/lock-subject.schema.json` describes. It is deterministic (fixed field
+order, trailing newline), so the file a verifier recomputes is byte-identical to the one that was signed:
+
+```json
+{
+  "schema_version": 1,
+  "type": "ai-rulez/lock-subject/v1",
+  "subject": "sha256:60e6900f7b4f0dfa733cc2ac84f7c8de74f7a2a5724cf0951ce4af4b24e39cb9",
+  "tree": "sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e",
+  "approvals_digest": "",
+  "hash_version": 1,
+  "scope": "all",
+  "outputs_pinned": true
+}
+```
+
+### Sign in the release workflow
+
+Keyless, from GitHub Actions (the signer is the workflow identity):
+
+```yaml
+permissions: { id-token: write, contents: read }
+steps:
+  - run: ai-rulez lock --check
+  - run: ai-rulez lock --subject --output lock-subject.json
+  - run: cosign sign-blob --yes --bundle .ai-rulez/ai-rulez.lock.sigstore.json lock-subject.json
+```
+
+Commit `.ai-rulez/ai-rulez.lock.sigstore.json` next to the lock (or publish it with the release). With a key
+instead of an OIDC identity: `cosign sign-blob --key cosign.key --bundle ... lock-subject.json`.
+
+### Verify
+
+Recompute the statement from the committed lock, then verify the bundle against it. `cosign` must be told who may
+sign; "any valid signature" is not a check:
+
+```bash
+ai-rulez lock --check                         # the lock still matches the sources
+ai-rulez lock --subject --output lock-subject.json
+cosign verify-blob \
+  --bundle .ai-rulez/ai-rulez.lock.sigstore.json \
+  --certificate-identity "https://github.com/example-org/ai-config/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  lock-subject.json
+# with a key: cosign verify-blob --key cosign.pub --bundle ... lock-subject.json
+```
+
+Because the statement is recomputed from the lock in the checkout, verification fails when the lock changed after
+signing, when a pin was edited, or when the bundle belongs to another repository's lock. `lock --check` is still
+needed: it compares the lock with the sources; the signature only says who vouched for the lock.
+
+Limits, stated plainly: a valid signature means "produced by that identity", not "safe". A validly signed older
+lock is still valid; this recipe has no freshness or rollback check, so pin the signer and review lock changes.
+ai-rulez does not verify the signature itself and does not manage trust roots. Signing plugin bundles and served
+skills, an in-tool `sign` / `verify --attestation` and an identity policy are not implemented.
+
 ## Commands
 
 ```bash
@@ -258,6 +345,7 @@ ai-rulez lock --check         # verify everything, offline; exit 2 on any differ
 ai-rulez lock --diff          # show what `ai-rulez lock` would change; exit 0
 ai-rulez lock --diff --format json
 ai-rulez lock --check --format json   # the --diff document on stdout; exit 2 on any difference
+ai-rulez lock --subject               # the digest a signature over the lock commits to; offline, read-only
 ai-rulez generate --locked    # also fail when an authored source differs from the lock
 ai-rulez generate --frozen    # --locked without the network
 ```

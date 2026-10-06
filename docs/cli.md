@@ -1618,6 +1618,7 @@ ai-rulez lock --check             # verify everything, offline; exit 2 and name 
 ai-rulez lock --diff              # what `lock` would change, for a pull request
 ai-rulez lock --diff --format json
 ai-rulez lock --check --format json   # the same document, exit code still 2 on drift
+ai-rulez lock --subject               # the digest to sign with cosign (see Lock file, "Signing the lock")
 ```
 
 With a lock present, `generate` fetches the **locked commit** instead of the moving ref, so two runs produce
@@ -1630,6 +1631,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | --- | --- |
 | `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
 | `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
+| `--subject` | Print the lock-subject digest (the value a signature over the lock commits to) and what it is computed from; reads the lock only, offline. `--format json` prints the statement (`schema/lock-subject.schema.json`), `--output <file>` writes it. Exit 2 when the stored `tree` does not match the entries. See [Signing the lock](lockfile.md#signing-the-lock) |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
 | `--format text\|json` | Output format of `--check` and `--diff`; with `--check` the JSON goes to stdout and the exit code still gates |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
@@ -1643,8 +1645,8 @@ the network. `validate` logs a warning for each remote source that follows a mov
 whenever `ai-rulez.lock` exists (`[lock] enforce = false` opts out); it also reports content drift as `AR981` / `AR982`, and `generate`
 refuses a remote source the lock does not cover, as `--locked` does. Pinning `ref` to a full commit SHA also counts as pinned.
 
-Signature or attestation verification is not implemented: the lock proves the bytes did not change since you
-reviewed them, not who published them.
+ai-rulez does not verify signatures itself: the lock proves the bytes did not change since you reviewed them, not
+who published them. To add that, sign `lock --subject` with `cosign` ([recipe](lockfile.md#signing-the-lock)).
 
 ## Roles Command
 
