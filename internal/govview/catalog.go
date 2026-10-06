@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -57,6 +58,10 @@ type CatalogDoc struct {
 	Items         []CatalogItem `json:"items"`
 	Roles         []CatalogRole `json:"roles"`
 	Lock          CatalogLock   `json:"lock"`
+
+	// notes are things the build could not do (a role that does not resolve); the
+	// version 2 catalog lists them in its notes, BuildCatalog logs them.
+	notes []string
 }
 
 // addCatalogRoles appends every resolvable role to doc and returns, per item,
@@ -66,7 +71,9 @@ func addCatalogRoles(doc *CatalogDoc, cfg *config.Config, counter tokens.Counter
 	for _, name := range cfg.RoleNames() {
 		role, err := roles.BuildRole(cfg, name, counter)
 		if err != nil {
-			continue // broken inheritance is reported by `validate --strict` (AR972)
+			// Broken inheritance is also reported by `validate --strict` (AR972).
+			doc.notes = append(doc.notes, "role "+name+" is not in the catalog: "+err.Error())
+			continue
 		}
 		doc.Roles = append(doc.Roles, CatalogRole{Name: role.Name, Description: role.Description, Extends: role.Extends,
 			Match: role.Match, Domains: role.Domains, Delivery: role.Delivery, Totals: role.Totals})
@@ -87,6 +94,11 @@ func addCatalogRoles(doc *CatalogDoc, cfg *config.Config, counter tokens.Counter
 
 func BuildCatalog(cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, error) {
 	doc, _, err := buildCatalogCore(cfg, counter, toolVersion)
+	if err == nil {
+		for _, note := range doc.notes {
+			logger.Warn(note)
+		}
+	}
 	return doc, err
 }
 
