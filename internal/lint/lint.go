@@ -34,6 +34,7 @@ const (
 	kindSkill   = "skill"
 	kindAgent   = "agent"
 	kindCommand = "command"
+	kindCheck   = "check"
 )
 
 var defaultBudgets = map[string]config.LintBudget{
@@ -541,7 +542,7 @@ func (r *runner) collect() {
 		return
 	}
 	configDir, _ := filepath.Abs(r.cfg.ConfigDir) //nolint:errcheck // falls back to empty
-	r.addTree(configDir, "", c.Rules, c.Context, c.Skills, c.Agents, c.Commands)
+	r.addTree(configDir, "", c.Rules, c.Context, c.Skills, c.Agents, c.Commands, c.Checks)
 	names := make([]string, 0, len(c.Domains))
 	for n := range c.Domains {
 		names = append(names, n)
@@ -549,17 +550,18 @@ func (r *runner) collect() {
 	sort.Strings(names)
 	for _, n := range names {
 		if d := c.Domains[n]; d != nil {
-			r.addTree(configDir, n, d.Rules, d.Context, d.Skills, d.Agents, d.Commands)
+			r.addTree(configDir, n, d.Rules, d.Context, d.Skills, d.Agents, d.Commands, d.Checks)
 		}
 	}
 }
 
-func (r *runner) addTree(configDir, domain string, rules, context, skills, agents, commands []config.ContentFile) {
+func (r *runner) addTree(configDir, domain string, rules, context, skills, agents, commands, checks []config.ContentFile) {
 	r.addItems(configDir, kindRule, domain, rules)
 	r.addItems(configDir, kindContext, domain, context)
 	r.addItems(configDir, kindSkill, domain, skills)
 	r.addItems(configDir, kindAgent, domain, agents)
 	r.addItems(configDir, kindCommand, domain, commands)
+	r.addItems(configDir, kindCheck, domain, checks)
 }
 
 // contentNames lists the lower-case names an item answers to.
