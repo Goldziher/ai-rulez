@@ -81,7 +81,7 @@ func (x *approvalIndex) annotate(c *Component, kind, domain, id string) {
 	}
 	sort.Strings(names)
 	if len(names) > 0 {
-		props = append(props, prop("approvers", strings.Join(names, ",")), prop("approval-assurance", lockfile.AssuranceAsserted))
+		props = append(props, prop("approvers", strings.Join(names, ",")), prop("approval-assurance", res.Assurance))
 	}
 	if res.Expires != "" {
 		props = append(props, prop("approval-expires", res.Expires))
@@ -92,19 +92,19 @@ func (x *approvalIndex) annotate(c *Component, kind, domain, id string) {
 	}
 	applying := map[string]bool{}
 	for _, who := range res.Reviewers {
-		applying[who] = true
+		applying[approval.Identity(who)] = true
 	}
 	if c.info == nil {
 		c.info = &info{}
 	}
 	for _, rec := range x.records {
-		if rec.ItemKey() != s.Key() || rec.Digest != res.Digest || rec.Assurance != lockfile.AssuranceAsserted {
+		if rec.ItemKey() != s.Key() || rec.Digest != res.Digest {
 			continue
 		}
-		if !applying[approval.NormalizeReviewer(rec.Reviewer)] {
+		if !applying[approval.Identity(rec.Reviewer)] {
 			continue
 		}
-		c.info.reviews = append(c.info.reviews, review{reviewer: x.reviewerName(rec.Reviewer), at: rec.ApprovedAt, digest: rec.Digest})
+		c.info.reviews = append(c.info.reviews, review{reviewer: x.reviewerName(rec.Reviewer), at: rec.ApprovedAt, digest: rec.Digest, assurance: rec.Assurance})
 	}
 }
 
