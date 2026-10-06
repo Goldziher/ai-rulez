@@ -35,6 +35,8 @@ var (
 	approveExpires  string
 	approveAt       string
 	approveFormat   string
+	// approveVerifyBase is --verify-base: the git revision approvals are compared with.
+	approveVerifyBase string
 )
 
 // ApproveCmd records, lists and revokes reviewer approvals in ai-rulez.lock.
@@ -59,6 +61,7 @@ a bare id works when it is unambiguous. Remote content must be pinned first
   ai-rulez approve include:shared --accept AR005   accept a finding you read
   ai-rulez approve --revoke include:shared
   ai-rulez approve --prune                 drop stale and orphaned records
+  ai-rulez approve --verify-base origin/main   CI: approvals added with the content they approve
 
 approve prints the files and the security scan findings first. It refuses
 content with an error-level finding unless you name its code with --accept (the
@@ -67,7 +70,14 @@ refuses elsewhere, so a script cannot approve by accident. The reviewer
 defaults to $AI_RULEZ_REVIEWER, else the git user.email. An approval is a
 human assertion backed by review of the lock change, not a safety proof.
 
-Exit codes: 0 ok; 1 the command could not run or refused.`,
+An approval in the committed lock is an assertion, not authentication: anyone who
+can edit the lock can add one. --verify-base <rev> is the CI control for that: it
+compares the lock with the one at the merge base of <rev> and HEAD and reports
+(AR716) every approval added since for content that was added or changed in the
+same range. See docs/approvals.md.
+
+Exit codes: 0 ok; 1 the command could not run or refused; 2 --verify-base found
+an approval added together with its content.`,
 	Args: cobra.ArbitraryArgs,
 	Run:  runApprove,
 }
@@ -78,6 +88,7 @@ func init() {
 	f.BoolVar(&approveAll, "all", false, "With --list: also list pinned content that needs no approval")
 	f.BoolVar(&approveRevoke, "revoke", false, "Remove the approvals of the named items (with --reviewer: only that reviewer's)")
 	f.BoolVar(&approveDiff, "diff", false, "Show the files, scan findings and previous approval of the named items; writes nothing")
+	f.StringVar(&approveVerifyBase, "verify-base", "", "Report approvals added since this git revision for content that also changed since it (AR716); exit 2 when found; writes nothing")
 	f.BoolVar(&approvePrune, "prune", false, "Remove approvals of content that no longer exists or whose digest changed")
 	f.BoolVar(&approveYes, "yes", false, "Do not ask for confirmation (required without a terminal)")
 	f.StringSliceVar(&approveAccept, "accept", nil, "Accept this scan finding code (repeatable); stored with the approval")
@@ -110,21 +121,23 @@ func validateApproveFlags(args []string) error {
 		return err
 	}
 	modes := 0
-	for _, on := range []bool{approveList, approveRevoke, approveDiff, approvePrune} {
+	for _, on := range []bool{approveList, approveRevoke, approveDiff, approvePrune, approveVerifyBase != ""} {
 		if on {
 			modes++
 		}
 	}
 	switch {
 	case modes > 1:
-		return oops.Errorf("--list, --revoke, --diff and --prune are mutually exclusive")
+		return oops.Errorf("--list, --revoke, --diff, --prune and --verify-base are mutually exclusive")
 	case approveFormat != "" && !approveList:
 		return oops.Errorf("--format applies to --list only")
 	case approveAll && !approveList:
 		return oops.Errorf("--all applies to --list only")
-	case (approveList || approvePrune) && len(args) > 0:
-		return oops.Errorf("--list and --prune take no item names")
-	case !approveList && !approvePrune && len(args) == 0:
+	case (approveList || approvePrune || approveVerifyBase != "") && len(args) > 0:
+		return oops.Errorf("--list, --prune and --verify-base take no item names")
+	case approveVerifyBase != "" && strings.HasPrefix(strings.TrimSpace(approveVerifyBase), "-"):
+		return oops.Errorf("invalid --verify-base %q: a git revision", approveVerifyBase)
+	case !approveList && !approvePrune && approveVerifyBase == "" && len(args) == 0:
 		return oops.Hint("see `ai-rulez approve --list` for what needs approval").Errorf("name the item(s) to approve")
 	}
 	for _, code := range approveAccept {
@@ -179,6 +192,13 @@ func approveRun(out io.Writer, args []string) int {
 		return 1
 	}
 	switch {
+	case approveVerifyBase != "":
+		var code int
+		code, err = env.verifyBase(out, approveVerifyBase)
+		if err != nil {
+			fmtError(err)
+		}
+		return code
 	case approveList:
 		err = env.list(out)
 	case approvePrune:

@@ -39,6 +39,7 @@ func approveProject(t *testing.T, extra string) string {
 func resetApproveFlags() {
 	approveList, approveAll, approveRevoke, approveDiff, approvePrune, approveYes = false, false, false, false, false, false
 	approveAccept, approveReviewer, approveNote, approveExpires, approveAt, approveFormat = nil, "", "", "", "", ""
+	approveVerifyBase = ""
 }
 
 func runApproveCmd(t *testing.T, args ...string) (code int, stdout, stderr string) {
@@ -558,4 +559,93 @@ func TestApprove_ListShowsTheReviewerOfAnExpiredApproval(t *testing.T) {
 		}
 	}
 	t.Fatal("rule:style not listed")
+}
+
+func TestApprove_VerifyBaseFlagsApprovalsAddedWithTheirContent(t *testing.T) {
+	// Arrange: the base commit holds the lock; the change edits the rule and approves both items
+	root := approveProject(t, "")
+	crossGit(t, root, "init", "-q", "-b", "main")
+	crossGit(t, root, "add", "-A")
+	crossGit(t, root, "commit", "-qm", "base")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nUse spaces.\n")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	approveYes, approveReviewer = true, "alice@example.org"
+	require.Equal(t, 0, mustApprove(t, "rule:style", "skill:deploy"))
+	resetApproveFlags()
+	approveVerifyBase = "main"
+
+	// Act
+	code, stdout, stderr := runApproveCmd(t)
+
+	// Assert: the edited rule was approved in the same change; the untouched skill was only reviewed
+	assert.Equal(t, 2, code, stderr)
+	assert.Contains(t, stdout, "AR716")
+	assert.Contains(t, stdout, "rule:style")
+	assert.NotContains(t, stdout, "skill:deploy")
+
+	// Act: the content change lands first, the approval comes in a later change
+	crossGit(t, root, "add", "-A")
+	crossGit(t, root, "commit", "-qm", "edit and approve")
+	resetApproveFlags()
+	approveVerifyBase = "HEAD"
+	code, stdout, stderr = runApproveCmd(t)
+
+	// Assert
+	assert.Equal(t, 0, code, stderr)
+	assert.Contains(t, stdout, "no approval was added")
+}
+
+func TestApprove_VerifyBaseRefusesAnUnknownRevision(t *testing.T) {
+	root := approveProject(t, "")
+	crossGit(t, root, "init", "-q", "-b", "main")
+	crossGit(t, root, "add", "-A")
+	crossGit(t, root, "commit", "-qm", "base")
+	approveVerifyBase = "no-such-rev"
+
+	code, _, stderr := runApproveCmd(t)
+
+	assert.Equal(t, 1, code, "a base that cannot be read must never pass")
+	assert.Contains(t, stderr, "no-such-rev")
+}
+
+func TestApprove_ValidateStrictApprovalsBaseReportsAR716(t *testing.T) {
+	root := approveProject(t, "")
+	crossGit(t, root, "init", "-q", "-b", "main")
+	crossGit(t, root, "add", "-A")
+	crossGit(t, root, "commit", "-qm", "base")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nUse spaces.\n")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	approveYes, approveReviewer = true, "alice@example.org"
+	require.Equal(t, 0, mustApprove(t, "rule:style"))
+	validateApprovalsBase = "main"
+	t.Cleanup(func() { validateApprovalsBase = "" })
+
+	findings := approvalFindingsFor(mustLoadConfig(t))
+
+	assertHasCode(t, findings, "AR716", "rule:style")
+}
+
+func TestApprove_VerifyBaseFlagValidation(t *testing.T) {
+	tests := []struct {
+		name string
+		set  func()
+		args []string
+		want string
+	}{
+		{"takes no item names", func() { approveVerifyBase = "main" }, []string{"rule:x"}, "take no item names"},
+		{"excludes the other modes", func() { approveVerifyBase, approveList = "main", true }, nil, "mutually exclusive"},
+		{"an option is not a revision", func() { approveVerifyBase = "--output=x" }, nil, "invalid --verify-base"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetApproveFlags()
+			t.Cleanup(resetApproveFlags)
+			tt.set()
+
+			err := validateApproveFlags(tt.args)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
 }
