@@ -303,6 +303,16 @@ func gitOutput(ctx context.Context, dir string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// isWindowsDrivePath reports whether raw starts with a drive letter and a path
+// separator ("C:/x", `C:\x`), which would otherwise parse as host "C".
+func isWindowsDrivePath(raw string) bool {
+	if len(raw) < 3 || raw[1] != ':' || (raw[2] != '/' && raw[2] != '\\') {
+		return false
+	}
+	c := raw[0] | 0x20
+	return c >= 'a' && c <= 'z'
+}
+
 // normalizeRemote turns a git remote into an https URL without credentials or a
 // .git suffix, or "" when it has no recognizable host and path.
 func normalizeRemote(raw string) string {
@@ -311,6 +321,9 @@ func normalizeRemote(raw string) string {
 		return ""
 	}
 	if !strings.Contains(raw, "://") {
+		if isWindowsDrivePath(raw) {
+			return "" // a local path, not an scp-like remote
+		}
 		// scp-like: git@github.com:org/repo.git
 		at := strings.LastIndex(raw, "@")
 		host, path, ok := strings.Cut(raw[at+1:], ":")
