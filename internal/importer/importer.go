@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -13,7 +14,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 // ContentType represents the type of imported content
@@ -849,11 +849,16 @@ func writeCommonFrontmatter(output *strings.Builder, metadata *config.Metadata) 
 	}
 }
 
-// writeConfig writes the config.yaml file with detected presets
+// writeConfig writes config.toml with the detected presets.
 func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bool) error {
-	// Convert presets map to slice
-	var presets []config.Preset
+	// Convert presets map to a sorted slice
+	names := make([]string, 0, len(detectedPresets))
 	for preset := range detectedPresets {
+		names = append(names, preset)
+	}
+	sort.Strings(names)
+	presets := make([]config.Preset, 0, len(names))
+	for _, preset := range names {
 		presets = append(presets, config.Preset{BuiltIn: preset})
 	}
 
@@ -863,26 +868,18 @@ func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bo
 	}
 
 	cfg := &config.Config{
-		Version: config.ConfigVersionV3,
+		Version: config.ConfigVersionV4,
 		Name:    projectName,
 		Presets: presets,
 	}
 
-	// Marshal to YAML
-	data, err := yaml.Marshal(cfg)
+	data, err := config.MarshalTOML(cfg)
 	if err != nil {
 		return oops.Wrapf(err, "marshal config")
 	}
 
-	// Add header comment
-	var output strings.Builder
-	output.WriteString("# AI-Rulez Configuration\n")
-	output.WriteString("# Imported from existing tool files\n")
-	output.WriteString("# Documentation: https://github.com/Goldziher/ai-rulez\n\n")
-	output.WriteString(string(data))
-
-	configPath := filepath.Join(i.outputDir, "config.yaml")
-	if err := safefs.WriteFileAtomic(configPath, []byte(output.String())); err != nil {
+	configPath := filepath.Join(i.outputDir, "config.toml")
+	if err := safefs.WriteFileAtomic(configPath, data); err != nil {
 		return oops.
 			With("path", configPath).
 			Wrapf(err, "write config file")

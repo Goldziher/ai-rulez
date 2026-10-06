@@ -360,13 +360,13 @@ const (
 	presetsFindingPath = "(project)"
 )
 
-// otherConfigNames are the config formats the loader also reads.
+// otherConfigNames are the V3 config formats ai-rulez no longer reads.
 var otherConfigNames = []string{"config.yaml", "config.yml", "config.json"}
 
 // resolveConfig decides what happens to config.toml. An existing one is never
 // replaced, with or without --force: the new presets, [[mcp_servers]] and
 // [[installed_skills]] are merged into it (existing entries win), and a config
-// in another format or one that cannot be parsed stops the run. The returned
+// in a V3 format or one that cannot be parsed stops the run. The returned
 // action is the config.toml action, or "" when it is not written.
 func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Report, files map[string][]byte) (string, error) {
 	for _, name := range otherConfigNames {
@@ -378,7 +378,7 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 		}
 		delete(files, configTOML)
 		report.Findings = append(report.Findings, newFinding(StatusNeedsAction, name, "", "",
-			fmt.Sprintf("%s already exists in another format and was not changed; add by hand: %s", name, configSummary(plan))))
+			fmt.Sprintf("%s is a V3 config that ai-rulez no longer reads and was not changed; migrate it with ai-rulez 4.x (npx ai-rulez@4 migrate v4), or add by hand: %s", name, configSummary(plan))))
 		report.Files = append(report.Files, FileAction{Path: name, Action: ActionManual})
 		sortFindings(&Plan{Findings: report.Findings})
 		return "", nil

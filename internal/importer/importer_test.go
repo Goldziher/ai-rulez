@@ -533,18 +533,16 @@ func TestWriteConfig(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 
-		configPath := filepath.Join(outputDir, "config.yaml")
+		configPath := filepath.Join(outputDir, "config.toml")
 		assert.FileExists(t, configPath)
 
 		content, err := os.ReadFile(configPath)
 		require.NoError(t, err)
 
 		contentStr := string(content)
-		assert.Contains(t, contentStr, "version: \"3.0\"")
-		assert.Contains(t, contentStr, "name: test-project")
-		assert.Contains(t, contentStr, "presets:")
-		assert.Contains(t, contentStr, "- claude")
-		assert.Contains(t, contentStr, "- cursor")
+		assert.Contains(t, contentStr, "version = '4.0'")
+		assert.Contains(t, contentStr, "name = 'test-project'")
+		assert.Contains(t, contentStr, "presets = ['claude', 'cursor']")
 	})
 
 	t.Run("defaults to claude when no presets detected", func(t *testing.T) {
@@ -562,12 +560,12 @@ func TestWriteConfig(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 
-		configPath := filepath.Join(outputDir, "config.yaml")
+		configPath := filepath.Join(outputDir, "config.toml")
 		content, err := os.ReadFile(configPath)
 		require.NoError(t, err)
 
 		contentStr := string(content)
-		assert.Contains(t, contentStr, "- claude")
+		assert.Contains(t, contentStr, "presets = ['claude']")
 	})
 }
 
@@ -608,7 +606,7 @@ This is a modular project.
 		require.NoError(t, err)
 
 		// Check config exists
-		configPath := filepath.Join(outputDir, "config.yaml")
+		configPath := filepath.Join(outputDir, "config.toml")
 		assert.FileExists(t, configPath)
 
 		// Check rules directory
