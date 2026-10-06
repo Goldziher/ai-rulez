@@ -3,6 +3,7 @@ package approval
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -159,6 +160,8 @@ func TestVerifyReviewRecord(t *testing.T) {
 		{"approved, recorded as @login", []forge.Review{review(1, "alice", forge.ReviewApproved, headSHA, 1)}, "@alice", ref, ""},
 		{"dismissed since", []forge.Review{review(1, "alice", forge.ReviewDismissed, headSHA, 1)}, "github:alice", ref, "no longer has an approving review"},
 		{"another reviewer approved", []forge.Review{review(1, "bob", forge.ReviewApproved, headSHA, 1)}, "github:alice", ref, "no longer has an approving review"},
+		{"the same repository in another letter case", []forge.Review{review(1, "alice", forge.ReviewApproved, headSHA, 1)}, "github:alice",
+			ReviewURL(forge.Repo{Host: testRepo.Host, Owner: strings.ToUpper(testRepo.Owner), Name: strings.ToUpper(testRepo.Name)}, 7, 1), ""},
 		{"another repository", nil, "github:alice", "https://github.com/other/config/pull/7#pullrequestreview-1", "not this repository"},
 		{"not a link", nil, "github:alice", "see PR", "not an https review link"},
 	}

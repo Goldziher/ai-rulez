@@ -166,7 +166,7 @@ func VerifyReviewRecord(ctx context.Context, c forge.Client, reviewer, ref strin
 	if err != nil {
 		return err
 	}
-	if repo != q.Repo {
+	if !strings.EqualFold(repo.String(), q.Repo.String()) {
 		return fmt.Errorf("ref points at %s, not this repository (%s)", repo, q.Repo)
 	}
 	q.PR = pr
