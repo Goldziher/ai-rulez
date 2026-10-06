@@ -562,6 +562,9 @@ type SemanticOutcome struct {
 	Unjudged []string
 	// Incomplete is true when the spend cap or a fatal error ended the run early, or cut votes short.
 	Incomplete bool
+	// Truncated lists the items whose body was cut before the judge saw it: the part it did not
+	// see could hold anything, so such a run cannot gate.
+	Truncated []string
 	// StoppedBecause says why a run ended early: "budget", or the fatal error text.
 	StoppedBecause string
 }
@@ -636,6 +639,9 @@ func RunSemantic(ctx context.Context, in SemanticInput) (*SemanticOutcome, error
 			out.Unjudged = append(out.Unjudged, r.ID)
 		} else if r.Semantic != nil && r.Semantic.Incomplete {
 			out.Incomplete = true
+		}
+		if r.Semantic != nil && r.Semantic.Truncated {
+			out.Truncated = append(out.Truncated, r.ID)
 		}
 	}
 	switch {
