@@ -155,7 +155,7 @@ func TestExecute_SiblingGuardNeverCopiesTheTargetsEvalCases(t *testing.T) {
 	assert.Empty(t, left, "the scratch tree is removed")
 	scratch := t.TempDir()
 	all := mustSkills(t, configDir)
-	_, err = plan.siblingActivation(context.Background(), scratch, all, plan.orig, []string{"rollback"})
+	_, _, err = plan.siblingActivation(context.Background(), scratch, all, plan.orig, []string{"rollback"}, nil, 0)
 	require.NoError(t, err)
 	require.NoError(t, filepath.WalkDir(scratch, func(p string, d os.DirEntry, werr error) error {
 		if werr != nil || d.IsDir() {

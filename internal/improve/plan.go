@@ -114,11 +114,34 @@ type Options struct {
 	AllowFrontmatter   bool
 	AllowScripts       bool
 
+	// SiblingNative, when set, also runs the sibling trigger guard on the native surface: the harness's
+	// model, over repeated runs, decides which skill loads. It costs money and counts against MaxCostUSD,
+	// so it is off unless asked for.
+	SiblingNative *SiblingNative
+
 	// Git answers git questions for the clean-tree check; nil skips it.
 	Git evals.GitFunc
 	// Date and ToolVersion are recorded in the report.
 	Date        string
 	ToolVersion string
+}
+
+// DefaultSiblingRuns is how often the native sibling guard repeats each trigger prompt.
+const DefaultSiblingRuns = 3
+
+// SiblingNative configures the native sibling guard.
+type SiblingNative struct {
+	// Runner drives the harness; it must declare the activation capability and the native surface.
+	Runner evals.Runner
+	// Runs repeats each trigger prompt (0: DefaultSiblingRuns).
+	Runs int
+}
+
+func (n *SiblingNative) runs() int {
+	if n == nil || n.Runs <= 0 {
+		return DefaultSiblingRuns
+	}
+	return n.Runs
 }
 
 // Plan is a run that passed every precondition and has not started.
@@ -140,6 +163,8 @@ type Plan struct {
 	runDir      string
 	isolation   *IsolationReport
 	sandbox     *sandbox.Sandbox
+	// nativeBase is the original skill's native sibling measurement, taken once and reused by every round.
+	nativeBase map[string]evals.ActivationSkill
 }
 
 // ParseArgv splits an optimizer command: a JSON array of strings, or words
@@ -448,6 +473,9 @@ func (p *Plan) Summary() string {
 		fmt.Fprintf(&b, "  egress:      declared %s (informational: ai-rulez cannot block the optimizer's network access)\n", strings.Join(o.Egress, ", "))
 	} else {
 		b.WriteString("  egress:      none declared (ai-rulez cannot block the optimizer's network access; use a container or CI egress policy)\n")
+	}
+	if n := o.SiblingNative; n != nil {
+		fmt.Fprintf(&b, "  siblings:    native guard on: %d run(s) per trigger prompt of every sibling, a model call each, counted against --max-cost\n", n.runs())
 	}
 	b.WriteString(p.isolationLine())
 	fmt.Fprintf(&b, "  run:         .ai-rulez/%s/%s (nothing outside it changes until `improve apply`)\n", filepath.ToSlash(LocalDir), p.RunID)

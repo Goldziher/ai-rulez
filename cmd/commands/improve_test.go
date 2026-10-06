@@ -84,6 +84,7 @@ func resetImproveFlags(t *testing.T) {
 		improveFlags.date, improveFlags.priceIn, improveFlags.priceOut = "", 0, 0
 		improveFlags.adapter, improveFlags.trustRepoOptimizer, improveFlags.requireCIAboveZero, improveFlags.isolation = "", false, false, ""
 		improveFlags.adapterModel, improveFlags.adapterJudgeModel, improveFlags.allowSameModel = "", "", false
+		improveFlags.siblingNative, improveFlags.siblingRuns = false, improve.DefaultSiblingRuns
 		improveCleanFlags.all, improveCleanFlags.dryRun = false, false
 		improveSelf, improveAdapterClientFactory = prevSelf, nil
 		configDir = prevDir

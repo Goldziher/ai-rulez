@@ -241,6 +241,78 @@
     }
   },
   "$defs": {
+    "siblings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface"],
+      "description": "A sibling trigger guard measurement (AR9J4): the other skills' trigger cases re-run, with the original and with the candidate, on the offline ranker (retrieval) or the harness's model (native).",
+      "properties": {
+        "surface": {
+          "enum": ["retrieval", "native"]
+        },
+        "cost_usd": {
+          "type": "number",
+          "description": "What the guard spent: the native surface calls the harness's model (0 on the retrieval surface)."
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Repetitions of each trigger prompt on the native surface."
+        },
+        "skipped": {
+          "type": "string"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["skill", "positives", "baseline_recall", "candidate_recall", "regressed"],
+            "properties": {
+              "skill": {
+                "type": "string"
+              },
+              "positives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "baseline_recall": {
+                "type": ["number", "null"]
+              },
+              "candidate_recall": {
+                "type": ["number", "null"]
+              },
+              "stolen": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "regressed": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "unmeasured": {
+          "type": "array",
+          "description": "Skills the guard left out because they cannot be copied safely (a symlinked or oversized SKILL.md, too many eval files).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["skill", "reason"],
+            "properties": {
+              "skill": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -432,67 +504,12 @@
           "type": "number"
         },
         "siblings": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["surface"],
-          "description": "The sibling trigger guard (AR9J4): the other skills' trigger cases re-run with the offline ranker, with the original and with the candidate.",
-          "properties": {
-            "surface": {
-              "const": "retrieval"
-            },
-            "skipped": {
-              "type": "string"
-            },
-            "results": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["skill", "positives", "baseline_recall", "candidate_recall", "regressed"],
-                "properties": {
-                  "skill": {
-                    "type": "string"
-                  },
-                  "positives": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "baseline_recall": {
-                    "type": ["number", "null"]
-                  },
-                  "candidate_recall": {
-                    "type": ["number", "null"]
-                  },
-                  "stolen": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "regressed": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            },
-            "unmeasured": {
-              "type": "array",
-              "description": "Skills the guard left out because they cannot be copied safely (a symlinked or oversized SKILL.md, too many eval files).",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["skill", "reason"],
-                "properties": {
-                  "skill": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
+          "$ref": "#/$defs/siblings",
+          "description": "The free guard: the offline find_skill ranker."
+        },
+        "siblings_native": {
+          "$ref": "#/$defs/siblings",
+          "description": "The opt-in guard on the harness's model (improve run --sibling-native); it costs money and counts against --max-cost."
         },
         "description": {
           "type": "object",
