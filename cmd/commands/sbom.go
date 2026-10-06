@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -138,6 +139,32 @@ func documentTime(flag string, flagSet bool, env string, now time.Time) (time.Ti
 	return time.Time{}, nil
 }
 
+// sbomNow is the wall clock; tests replace it.
+var sbomNow = time.Now
+
+// committedTime reads the time a committed SBOM records (CycloneDX
+// metadata.timestamp or SPDX creationInfo.created); ok is false when the file
+// has none.
+func committedTime(path string) (time.Time, bool) {
+	data, err := os.ReadFile(path) //nolint:gosec // the path is the --output the user named
+	if err != nil {
+		return time.Time{}, false
+	}
+	var doc struct {
+		Metadata     struct{ Timestamp string } `json:"metadata"`
+		CreationInfo struct{ Created string }   `json:"creationInfo"`
+	}
+	if json.Unmarshal(data, &doc) != nil {
+		return time.Time{}, false
+	}
+	for _, raw := range []string{doc.Metadata.Timestamp, doc.CreationInfo.Created} {
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
+			return t.UTC(), true
+		}
+	}
+	return time.Time{}, false
+}
+
 // runSBOM builds the document and returns the exit code: 0 ok, 1 it could not
 // run, exitDrift when --require-lock, --strict-pins or --check fails.
 func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
@@ -146,7 +173,15 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 		return 1
 	}
 	format, _ := sbom.NormalizeFormat(f.format) //nolint:errcheck // validated above
-	stamp, err := documentTime(f.timestamp, timestampSet, os.Getenv(sourceDateEpochEnv), time.Now())
+	now := sbomNow()
+	if f.check {
+		// The approvals are judged at the time the committed document was made, so
+		// the check reports changed content, not an approval that expired since.
+		if at, ok := committedTime(f.output); ok {
+			now = at
+		}
+	}
+	stamp, err := documentTime(f.timestamp, timestampSet, os.Getenv(sourceDateEpochEnv), now)
 	if err != nil {
 		fmtError(err)
 		return 1
@@ -169,7 +204,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	opts := sbom.Options{
 		Files: f.files, IncludeOutputs: f.includeOutputs, Profile: f.profile, Role: f.role,
-		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, Timestamp: stamp, Now: time.Now(),
+		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, Timestamp: stamp, Now: now,
 	}
 	if f.verify {
 		if opts.Signature, err = lockSignature(cfg); err != nil {
