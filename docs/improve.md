@@ -206,7 +206,7 @@ Defaults of `improve run`; a flag always wins, the user config wins over the rep
 [improve]
 holdout_tag = "holdout"
 holdout_fraction = 0.3
-min_holdout_cases = 3        # never below 3
+min_holdout_cases = 3        # never below 3; the split and the baseline need this many scored held-out cases
 min_gain = 0.05
 max_regressions = 0
 runs = 3

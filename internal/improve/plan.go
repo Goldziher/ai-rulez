@@ -93,6 +93,9 @@ type Options struct {
 	MaxRegressions  int
 	MaxRounds       int
 	MaxHoldoutEvals int
+	// MinHoldoutCases is the fewest scored held-out cases a run needs ([improve] min_holdout_cases; 0 or
+	// less than MinHoldoutCases: MinHoldoutCases).
+	MinHoldoutCases int
 	// MaxCostUSD is required (> 0): measured eval cost plus reported optimizer cost.
 	MaxCostUSD        float64
 	StopAtFirstAccept bool
@@ -215,6 +218,7 @@ func applyDefaults(o *Options) {
 	if o.Timeout <= 0 {
 		o.Timeout = DefaultTimeout
 	}
+	o.MinHoldoutCases = max(o.MinHoldoutCases, MinHoldoutCases)
 	if o.Exec == nil {
 		o.Exec = runner.Exec{}
 	}
@@ -273,9 +277,9 @@ func (p *Plan) loadCases() error {
 	}
 	p.Split = SplitCases(authored, p.Opts.HoldoutTag, p.Opts.HoldoutFraction)
 	p.trainCases, p.heldCases = evals.Expand(p.Split.Train), evals.Expand(p.Split.Held)
-	if len(p.heldCases) < MinHoldoutCases || Negatives(p.heldCases) == 0 {
+	if len(p.heldCases) < p.Opts.MinHoldoutCases || Negatives(p.heldCases) == 0 {
 		return refuse(CodeNoHoldout, "%s has %d held-out case(s) (%d negative) after the %s split; improve needs at least %d including one negative (expect_trigger: false or a near miss): tag cases %q or add cases",
-			p.Skill.ID, len(p.heldCases), Negatives(p.heldCases), p.Split.Method, MinHoldoutCases, p.Opts.HoldoutTag)
+			p.Skill.ID, len(p.heldCases), Negatives(p.heldCases), p.Split.Method, p.Opts.MinHoldoutCases, p.Opts.HoldoutTag)
 	}
 	if len(p.trainCases) == 0 {
 		return refuse(CodeNoHoldout, "every case of %s is held out, so the optimizer would have nothing to learn from: keep some cases untagged", p.Skill.ID)
