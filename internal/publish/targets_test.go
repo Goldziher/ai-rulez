@@ -408,8 +408,8 @@ func TestBuild_NPMPlanAndPackage(t *testing.T) {
 	assert.Equal(t, "@acme/acme", d.Plan.NPM.Package)
 	assert.Equal(t, "npm/acme-acme-1.4.0.tgz", d.Plan.NPM.Tarball)
 	assert.Equal(t, []Command{
-		{Argv: []string{"npm", "pack", "--ignore-scripts", "--pack-destination", "npm", "npm/package"}, Cwd: "."},
-		{Argv: []string{"npm", "publish", "npm/acme-acme-1.4.0.tgz", "--access", "public", "--ignore-scripts", "--tag", "canary"}, Cwd: "."},
+		{Argv: []string{"npm", "pack", "--ignore-scripts", "--pack-destination", "npm", "./npm/package"}, Cwd: "."},
+		{Argv: []string{"npm", "publish", "./npm/acme-acme-1.4.0.tgz", "--access", "public", "--ignore-scripts", "--tag", "canary"}, Cwd: "."},
 	}, d.Plan.Commands)
 	var pkg map[string]any
 	require.NoError(t, json.Unmarshal(d.Files["npm/package/package.json"], &pkg))
