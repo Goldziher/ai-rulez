@@ -53,14 +53,37 @@ func scanDirectiveLabels(r *runner, t *scanText) {
 	}
 }
 
-var fakeTagRe = regexp.MustCompile(`(?i)</?\s*(?:system|override)(?:\s[^>]*)?/?>|<\|(?:im_start|im_end|system|endoftext)\|>|<<\s*/?SYS\s*>>|\[/?INST\]`)
+// fakeTagPattern builds the AR018 pattern around the tag names that imitate a
+// privileged message: the built-in ones and any configured directive_tags.
+func fakeTagPattern(extra []string) string {
+	names := []string{"system", "override"}
+	for _, tag := range extra {
+		if tag = strings.TrimSpace(tag); tag != "" {
+			names = append(names, regexp.QuoteMeta(tag))
+		}
+	}
+	return `(?i)</?\s*(?:` + strings.Join(names, "|") + `)(?:\s[^>]*)?/?>|<\|(?:im_start|im_end|system|endoftext)\|>|<<\s*/?SYS\s*>>|\[/?INST\]`
+}
+
+var fakeTagRe = regexp.MustCompile(fakeTagPattern(nil))
+
+// fakeTags is the AR018 matcher for this run's configuration.
+func (r *runner) fakeTags() *regexp.Regexp {
+	extra := r.security().DirectiveTags
+	if len(extra) == 0 {
+		return fakeTagRe
+	}
+	r.fakeTagOnce.Do(func() { r.fakeTagRe = regexp.MustCompile(fakeTagPattern(extra)) })
+	return r.fakeTagRe
+}
 
 func scanFakeTags(r *runner, t *scanText) {
+	re := r.fakeTags()
 	for _, l := range t.lines {
 		if !t.prose(l) {
 			continue
 		}
-		if m := fakeTagRe.FindString(l.Plain); m != "" {
+		if m := re.FindString(l.Plain); m != "" {
 			r.add(CodeFakeTag, t.abs, l.No, "%q imitates a system message or chat-template token", m)
 		}
 	}

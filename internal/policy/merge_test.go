@@ -5,12 +5,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
 	hostPool = []string{"github.com", "github.com/example-org", "github.com/example-org/rules", "github.com/other", "*.example.org", "git.example.org", "gitlab.com/*"}
 	secHosts = []string{"github.com", "*.example.org", "git.example.org", "example.org", "evil.test"}
 	codePool = []string{"AR001", "AR005", "AR008", "AR010", "AR701"}
+	tagPool  = []string{"assistant", "human", "tool"}
+	orgPool  = []string{"acme", "anthropics", "evil", "github"}
+	// budgetPool are load-budget ids the random policies bound.
+	budgetPool = []string{"claude-skill-listing", "cursor-rule-lines", "codex-agents-chain"}
 )
 
 func pick(rng *rand.Rand, pool []string) []string {
@@ -48,6 +53,19 @@ func randomPolicy(rng *rand.Rand) Policy {
 	}
 	p.Lint.Security.AllowedHosts = randomList(rng, secHosts)
 	p.Lint.Security.ScanImports = []string{"", "warn", "error"}[rng.Intn(3)]
+	p.Lint.Security.DirectiveTags = pick(rng, tagPool)
+	p.Lint.Security.TrustedOrgs = randomList(rng, orgPool)
+	if rng.Intn(2) == 0 {
+		p.Lint.Capability.MaxNetworkCommands = intPtr(rng.Intn(8))
+	}
+	for _, id := range budgetPool {
+		if rng.Intn(3) == 0 {
+			if p.Lint.LoadBudgets == nil {
+				p.Lint.LoadBudgets = map[string]int{}
+			}
+			p.Lint.LoadBudgets[id] = 100 * (1 + rng.Intn(10))
+		}
+	}
 	p.Lock = Lock{Enforce: rng.Intn(3) == 0, IncludeOutputs: rng.Intn(3) == 0}
 	p.Telemetry.Disabled = rng.Intn(3) == 0
 	p.LLM.Disabled = rng.Intn(3) == 0
@@ -161,6 +179,19 @@ func TestMergeOnlyTightens(t *testing.T) {
 				assert.GreaterOrEqual(t, severityRank[m.Lint.SeverityFloor[code]], severityRank[sev])
 			}
 			assert.GreaterOrEqual(t, policyScanRank[m.Lint.Security.ScanImports], policyScanRank[side.Lint.Security.ScanImports])
+			assert.Subset(t, m.Lint.Security.DirectiveTags, side.Lint.Security.DirectiveTags)
+			if side.Lint.Security.TrustedOrgs.Set {
+				assert.True(t, m.Lint.Security.TrustedOrgs.Set)
+				assert.Subset(t, side.Lint.Security.TrustedOrgs.Items, m.Lint.Security.TrustedOrgs.Items, "an org escaped the policy list")
+			}
+			if side.Lint.Capability.MaxNetworkCommands != nil {
+				require.NotNil(t, m.Lint.Capability.MaxNetworkCommands)
+				assert.LessOrEqual(t, *m.Lint.Capability.MaxNetworkCommands, *side.Lint.Capability.MaxNetworkCommands)
+			}
+			for id, limit := range side.Lint.LoadBudgets {
+				assert.LessOrEqual(t, m.Lint.LoadBudgets[id], limit, "budget %s", id)
+				assert.Positive(t, m.Lint.LoadBudgets[id])
+			}
 			assert.True(t, !side.Lock.Enforce || m.Lock.Enforce)
 			assert.True(t, !side.Telemetry.Disabled || m.Telemetry.Disabled)
 		}

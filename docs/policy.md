@@ -49,6 +49,14 @@ AR008 = "warning"
 [lint.security]
 allowed_hosts = ["github.com", "*.example.org"]                 # bounds the repository's own list
 scan_imports  = "error"
+directive_tags = ["assistant"]                                  # always checked by AR018; the repository may add more
+trusted_orgs   = ["anthropics", "github"]                       # the repository may name only these
+
+[lint.capability]
+max_network_commands = 3                                        # AR030 limit; the repository may set a lower one
+
+[lint.load_budgets]
+claude-skill-listing = 1200                                     # AR964 limit by id; the repository may set a lower one
 
 [lock]
 enforce         = true
@@ -108,6 +116,10 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.severity_floor` | the higher severity of the layers | a lower `[lint.severity]`, or `[lint] ignore` of a floored code | `AR740` |
 | `lint.security.allowed_hosts` | repository entries the list covers; the policy list when it sets none | an entry the list does not provably cover; the entry is dropped | `AR740` |
 | `lint.security.scan_imports` | the stricter level (`off` < `warn` < unset < `error`) | a weaker explicit level | `AR740` |
+| `lint.security.directive_tags` | union of layers, then the repository's own tags | (nothing to report: the repository's list only adds) | none |
+| `lint.security.trusted_orgs` | the repository's entries the list names; the policy list when it sets none or none is left. An empty policy list trusts no organization | an entry the list does not name; the entry is dropped | `AR740` |
+| `lint.capability.max_network_commands` | the lower value; an unset repository value is the lower of the policy bound and the built-in 5 | a higher explicit value | `AR740` |
+| `lint.load_budgets.<id>` | the lower value per id; an unset one is the lower of the policy bound and the built-in limit | a higher explicit value | `AR740` |
 | `telemetry.allow_network`, `llm.allow_network` | `false` | `allow_network = true` in the repository (already ignored by the trust rule, now also reported) | `AR740` |
 | `guard.generated` | `true` | a `[guard]` table without `generated = true` | `AR740` |
 | `governance.enforce` | `true` | a `[governance]` table without `enforce = true` | `AR740` |
@@ -128,7 +140,8 @@ organization forbids. A policy that cannot be loaded locks both.
 ### Merging layers
 
 `Merge` combines two policies into the tighter one, key by key: allowlists intersect, denylists and required sets
-union, severities and scan levels take the stricter value, and switches turn on. It is commutative, idempotent and
+union, severities and scan levels take the stricter value, upper bounds (`max_network_commands`, `load_budgets`) take the
+lower value, and switches turn on. It is commutative, idempotent and
 associative, and an empty policy is its identity, so the order of layers does not matter beyond naming the origin.
 The intersection of two allowlists keeps an entry of one list when an entry of the other covers it.
 

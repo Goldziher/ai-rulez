@@ -928,6 +928,18 @@
           "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.tolerate], not this table.",
           "type": "object"
         },
+        "capability": {
+          "additionalProperties": false,
+          "description": "Tunes the capability analysis (AR030).",
+          "properties": {
+            "max_network_commands": {
+              "description": "Network commands an item may run before AR030 reports it as network-heavy. Default 5.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
         "description": {
           "additionalProperties": false,
           "properties": {
@@ -961,6 +973,24 @@
               },
               "type": "array"
             },
+            "confusion_threshold": {
+              "description": "Enable skill-confusable (AR9A2): report a sibling that won at least this share of a skill's positive activation prompts.",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "min_activation_precision": {
+              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation precision is below this.",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "min_activation_recall": {
+              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation recall (`ai-rulez eval run --mode activation`) is below this.",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
             "min_pass_rate": {
               "description": "Enable eval-score-low (AR998): report a skill whose recorded eval pass rate (eval-results.json) is below this. Also the pass mark of `ai-rulez eval run`.",
               "maximum": 1,
@@ -975,24 +1005,6 @@
               "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval.",
               "enum": ["off", "warn", "error"],
               "type": "string"
-            },
-            "min_activation_recall": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1,
-              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation recall (`ai-rulez eval run --mode activation`) is below this."
-            },
-            "min_activation_precision": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1,
-              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation precision is below this."
-            },
-            "confusion_threshold": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1,
-              "description": "Enable skill-confusable (AR9A2): report a sibling that won at least this share of a skill's positive activation prompts."
             }
           },
           "type": "object"
@@ -1087,6 +1099,14 @@
           },
           "type": "array"
         },
+        "load_budgets": {
+          "additionalProperties": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "description": "Overrides the harness load limits AR964 checks, keyed by the limit id (for example `claude-skill-listing`, `codex-agents-chain`, `cursor-rule-lines`); the value is in the limit's own unit. Not to be confused with `budgets`, the size limits per content kind.",
+          "type": "object"
+        },
         "metadata": {
           "additionalProperties": {
             "additionalProperties": false,
@@ -1179,6 +1199,14 @@
               },
               "type": "array"
             },
+            "directive_tags": {
+              "description": "Element names added to <system> and <override> that AR018 treats as imitating a privileged message.",
+              "items": {
+                "pattern": "^\\s*[A-Za-z][A-Za-z0-9._:-]*\\s*$",
+                "type": "string"
+              },
+              "type": "array"
+            },
             "injection_phrases": {
               "description": "Extra case-insensitive phrases for the prompt-injection detector (AR004).",
               "items": {
@@ -1204,6 +1232,13 @@
                   }
                 },
                 "type": "object"
+              },
+              "type": "array"
+            },
+            "trusted_orgs": {
+              "description": "Organizations (repository owners, case-insensitive) a skill or include may call itself official, verified or trusted for (AR033). Replaces the built-in list; unset keeps it.",
+              "items": {
+                "type": "string"
               },
               "type": "array"
             }

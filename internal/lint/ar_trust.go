@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,8 +20,8 @@ const (
 
 func init() {
 	registerRules(
-		RuleInfo{CodePublisherMismatch, "publisher-mismatch", SeverityWarning, "an installed skill's name or description credits a publisher that is not the owner of the repository it was installed from"},
-		RuleInfo{CodeAuthorityClaim, "authority-claim", SeverityInfo, "an installed skill's description claims to be official, verified or trusted, but its source owner is not a known organization"},
+		RuleInfo{CodePublisherMismatch, "publisher-mismatch", SeverityWarning, "an installed skill's, or a git include's skill, agent or command, name or description credits a publisher that is not the owner of the repository it came from"},
+		RuleInfo{CodeAuthorityClaim, "authority-claim", SeverityInfo, "an installed skill's or git include's description claims to be official, verified or trusted, but its source owner is not a known or configured trusted organization"},
 		RuleInfo{CodeLowAnalyzability, "low-analyzability", SeverityInfo, "most of a skill directory is binary, archived or oversize, so the scan did not read it"},
 	)
 	registerRunCheck(checkInstalledTrust, AnalyzerSecurity)
@@ -86,7 +87,7 @@ func publisherMatches(claimed, owner string) bool {
 
 func checkInstalledTrust(r *runner) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	cfgPath := r.configFilePath()
-	if cfgPath == "" || len(r.cfg.InstalledSkills) == 0 {
+	if cfgPath == "" || len(r.cfg.InstalledSkills)+len(r.cfg.Includes) == 0 {
 		return
 	}
 	lines := r.fileLines(cfgPath)
@@ -110,8 +111,89 @@ func checkInstalledTrust(r *runner) { //nolint:gocyclo // linear checks over a d
 		if claimed := claimedPublisher(text); claimed != "" && !publisherMatches(claimed, owner) {
 			r.add(CodePublisherMismatch, cfgPath, at, "installed skill %q credits %q, but it is installed from %s/...; check that the skill is what it says it is", s.Name, claimed, owner)
 		}
-		if authorityRe.MatchString(text) && !inSet(trustedOrgs, strings.ToLower(owner)) {
+		if authorityRe.MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
 			r.add(CodeAuthorityClaim, cfgPath, at, "installed skill %q describes itself as %q, but its source owner %q is not a known organization", s.Name, strings.ToLower(authorityRe.FindString(text)), owner)
+		}
+	}
+	r.checkIncludedTrust(cfgPath, lines)
+}
+
+// trustedOrgList is the organizations an "official" claim is believable for:
+// [lint.security] trusted_orgs when set, else the built-in list.
+func (r *runner) trustedOrgList() []string {
+	configured := r.security().TrustedOrgs
+	if len(configured) == 0 {
+		return trustedOrgs
+	}
+	out := make([]string, 0, len(configured))
+	for _, o := range configured {
+		if o = strings.ToLower(strings.TrimSpace(o)); o != "" {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// includeCacheName mirrors how internal/includes names the cache directory of
+// an include: the include name made safe as one path segment, then a hash.
+func includeCacheName(name string) string {
+	var b strings.Builder
+	for _, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_', c == '.':
+			b.WriteRune(c)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	if out := strings.Trim(b.String(), "."); out != "" {
+		return out
+	}
+	return "include"
+}
+
+// includeOf names the git include whose cache directory holds abs, or -1.
+func (r *runner) includeOf(abs string) int {
+	segs := strings.Split(filepath.ToSlash(abs), "/")
+	for i := 0; i+1 < len(segs); i++ {
+		if segs[i] != "includes" {
+			continue
+		}
+		for j := range r.cfg.Includes {
+			if strings.HasPrefix(segs[i+1], includeCacheName(r.cfg.Includes[j].Name)+"-") {
+				return j
+			}
+		}
+	}
+	return -1
+}
+
+// checkIncludedTrust applies AR032 and AR033 to skills, agents and commands that
+// come from a git include: they are reported at the include's entry in the
+// config, like an installed skill.
+func (r *runner) checkIncludedTrust(cfgPath string, lines []string) {
+	for i := range r.items {
+		it := &r.items[i]
+		if it.owned || it.isDoc || (it.kind != kindSkill && it.kind != kindAgent && it.kind != kindCommand) {
+			continue
+		}
+		idx := r.includeOf(it.abs)
+		if idx < 0 {
+			continue
+		}
+		inc := r.cfg.Includes[idx]
+		owner := sourceOwner(inc.Source)
+		if owner == "" {
+			continue
+		}
+		text := itemID(it.kind, it.cf) + ". " + r.description(it)
+		at := lineContaining(lines, `"`+inc.Name+`"`)
+		what := fmt.Sprintf("include %q %s %q", inc.Name, it.kind, itemID(it.kind, it.cf))
+		if claimed := claimedPublisher(text); claimed != "" && !publisherMatches(claimed, owner) {
+			r.add(CodePublisherMismatch, cfgPath, at, "%s credits %q, but the include is %s/...; check that the content is what it says it is", what, claimed, owner)
+		}
+		if authorityRe.MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
+			r.add(CodeAuthorityClaim, cfgPath, at, "%s describes itself as %q, but its source owner %q is not a known organization", what, strings.ToLower(authorityRe.FindString(text)), owner)
 		}
 	}
 }

@@ -1511,9 +1511,36 @@
               "type": "array",
               "items": { "type": "string" },
               "description": "Extra case-insensitive phrases for the prompt-injection detector (AR004)."
+            },
+            "directive_tags": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^\\s*[A-Za-z][A-Za-z0-9._:-]*\\s*$" },
+              "description": "Element names added to <system> and <override> that AR018 treats as imitating a privileged message."
+            },
+            "trusted_orgs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Organizations (repository owners, case-insensitive) a skill or include may call itself official, verified or trusted for (AR033). Replaces the built-in list; unset keeps it."
             }
           },
           "additionalProperties": false
+        },
+        "capability": {
+          "type": "object",
+          "description": "Tunes the capability analysis (AR030).",
+          "properties": {
+            "max_network_commands": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Network commands an item may run before AR030 reports it as network-heavy. Default 5."
+            }
+          },
+          "additionalProperties": false
+        },
+        "load_budgets": {
+          "type": "object",
+          "description": "Overrides the harness load limits AR964 checks, keyed by the limit id (for example `claude-skill-listing`, `codex-agents-chain`, `cursor-rule-lines`); the value is in the limit's own unit. Not to be confused with `budgets`, the size limits per content kind.",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
         },
         "external": {
           "type": "array",
