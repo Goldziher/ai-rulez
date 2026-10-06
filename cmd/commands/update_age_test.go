@@ -174,7 +174,10 @@ func TestMinReleaseAge_NothingOldEnoughIsAR730(t *testing.T) {
 func TestMinReleaseAge_ForgeIsTheFirstSourceForGitHubRepositories(t *testing.T) {
 	// Arrange: a GitHub source gets its release time from the (fake) forge.
 	published := time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
-	fake := &forge.Fake{ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published}}}}
+	fake := &forge.Fake{
+		ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published}}},
+		Tags:       map[string]forge.TagInfo{"github.com/o/r@v1.2.3": {Name: "v1.2.3", Commit: strings.Repeat("a", 40)}},
+	}
 	prev := newForgeClient
 	newForgeClient = func(*config.Config, bool) forge.Client { return fake }
 	t.Cleanup(func() { newForgeClient = prev })

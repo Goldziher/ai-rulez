@@ -17,10 +17,17 @@ import (
 )
 
 // Limits on the observation file: it is local and unauthenticated, so it is
-// read with a size cap and kept bounded.
+// read with a size cap and kept bounded. maxSeenBytes is the cap safefs.ReadRegular
+// enforces on read; the writer stays under maxSeenWriteBytes so a file it wrote
+// is always one it can read back (a larger file used to break the load and,
+// with it, the age gate).
 const (
-	maxSeenBytes   = 4 << 20
-	maxSeenEntries = 20000
+	maxSeenBytes      = 1 << 20
+	maxSeenWriteBytes = maxSeenBytes - 64<<10
+	maxSeenEntries    = 5000
+	// maxObservePerSource bounds the tags one source can add: a repository with
+	// thousands of junk tags cannot push every other source out of the record.
+	maxObservePerSource = 1000
 	// FileName is the observation file in the user cache directory.
 	FileName = "observed-tags.toml"
 )
@@ -109,8 +116,18 @@ func (s *SeenStore) Observe(source string, tags []tagresolve.RawTag, now time.Ti
 		return err
 	}
 	changed := false
+	held := 0
+	for _, o := range s.by {
+		if o.Source == source {
+			held++
+		}
+	}
 	for _, t := range tags {
+		if held >= maxObservePerSource {
+			break
+		}
 		if _, ok := s.by[seenKey(source, t.Name, t.Commit)]; !ok {
+			held++
 			s.add(observation{Source: source, Tag: t.Name, Commit: t.Commit, Seen: now.UTC()})
 			changed = true
 		}
@@ -141,19 +158,33 @@ func (s *SeenStore) save() error {
 		}
 		all = all[:maxSeenEntries]
 	}
-	sort.Slice(all, func(i, j int) bool {
-		a, b := all[i], all[j]
-		if a.Source != b.Source {
-			return a.Source < b.Source
+	// all is newest first: drop the oldest tenth until the file fits what a reader accepts.
+	var data []byte
+	for {
+		sorted := append([]observation(nil), all...)
+		sort.Slice(sorted, func(i, j int) bool {
+			a, b := sorted[i], sorted[j]
+			if a.Source != b.Source {
+				return a.Source < b.Source
+			}
+			if a.Tag != b.Tag {
+				return a.Tag < b.Tag
+			}
+			return a.Commit < b.Commit
+		})
+		encoded, err := toml.Marshal(seenFile{Tag: sorted})
+		if err != nil {
+			return oops.Wrapf(err, "encode the first-seen record")
 		}
-		if a.Tag != b.Tag {
-			return a.Tag < b.Tag
+		if len(encoded) <= maxSeenWriteBytes || len(all) <= 1 {
+			data = encoded
+			break
 		}
-		return a.Commit < b.Commit
-	})
-	data, err := toml.Marshal(seenFile{Tag: all})
-	if err != nil {
-		return oops.Wrapf(err, "encode the first-seen record")
+		keep := len(all) - len(all)/10 - 1
+		for _, o := range all[keep:] {
+			delete(s.by, seenKey(o.Source, o.Tag, o.Commit))
+		}
+		all = all[:keep]
 	}
 	header := []byte("# Local record of when ai-rulez first saw each remote tag (min_release_age). Safe to delete.\n")
 	if err := safefs.WriteFileAtomic(s.path, append(header, data...)); err != nil {
