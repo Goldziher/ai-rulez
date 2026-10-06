@@ -41,6 +41,16 @@ type SiblingReport struct {
 	// ranker reads, or no sibling has trigger cases).
 	Skipped string          `json:"skipped,omitempty"`
 	Results []SiblingResult `json:"results,omitempty"`
+	// Unmeasured lists the skills the guard left out because they cannot be copied safely (a
+	// symlinked or oversized SKILL.md, too many eval files). The guard measures the others and
+	// says so, instead of failing every round of a project with one such skill.
+	Unmeasured []SiblingSkip `json:"unmeasured,omitempty"`
+}
+
+// SiblingSkip is one skill the sibling guard could not measure and why.
+type SiblingSkip struct {
+	Skill  string `json:"skill"`
+	Reason string `json:"reason"`
 }
 
 // Regressions lists the siblings whose trigger recall dropped.
@@ -109,7 +119,14 @@ func (p *Plan) checkSiblings(ctx context.Context, cand *Tree) (*SiblingReport, e
 	}
 	var siblings []string
 	for i := range all {
-		if all[i].ID != p.Skill.ID && len(all[i].EvalDirs) > 0 {
+		if all[i].ID == p.Skill.ID {
+			continue
+		}
+		if why := siblingProblem(&all[i]); why != "" {
+			rep.Unmeasured = append(rep.Unmeasured, SiblingSkip{Skill: all[i].ID, Reason: why})
+			continue
+		}
+		if len(all[i].EvalDirs) > 0 {
 			siblings = append(siblings, all[i].ID)
 		}
 	}
@@ -153,6 +170,9 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 				return nil, err
 			}
 			continue
+		}
+		if siblingProblem(s) != "" {
+			continue // reported by checkSiblings; the same skills are left out of both arms
 		}
 		if err := copyRegular(filepath.Join(s.Dir, skillFile), filepath.Join(dst, skillFile)); err != nil {
 			return nil, fmt.Errorf("copy %s: %w", s.ID, err)
@@ -226,6 +246,38 @@ func lostPrompts(base, cand *evals.ActivationSkill) []string {
 		}
 	}
 	return lost
+}
+
+// siblingProblem says why a skill cannot be copied into the guard's scratch tree: its SKILL.md is not a
+// regular file within the size bound, or its eval directories hold too many files or cannot be walked.
+func siblingProblem(s *evals.Skill) string {
+	info, err := os.Lstat(filepath.Join(s.Dir, skillFile))
+	switch {
+	case err != nil:
+		return "SKILL.md is unreadable: " + Sanitize(err.Error(), 120)
+	case !info.Mode().IsRegular():
+		return "SKILL.md is not a regular file (a symlink?)"
+	case info.Size() > siblingMaxFileBytes:
+		return fmt.Sprintf("SKILL.md is larger than %d bytes", siblingMaxFileBytes)
+	}
+	files := 0
+	for _, ev := range s.EvalDirs {
+		err := filepath.WalkDir(ev, func(path string, d fs.DirEntry, werr error) error {
+			if werr != nil {
+				return werr //nolint:wrapcheck // reported as the reason
+			}
+			if d.Type().IsRegular() {
+				if files++; files > siblingMaxFiles {
+					return fmt.Errorf("more than %d eval files", siblingMaxFiles)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return "its eval cases cannot be copied: " + Sanitize(err.Error(), 120)
+		}
+	}
+	return ""
 }
 
 func writeSiblingFile(path string, data []byte) error {
