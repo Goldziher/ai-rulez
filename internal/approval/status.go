@@ -174,9 +174,10 @@ func (p Policy) currentReviewers(recs []lockfile.Approval, s Subject, now time.T
 func reviewersOf(valid []lockfile.Approval) (reviewers []string, expires string) {
 	seen := map[string]bool{}
 	for _, a := range valid {
-		if !seen[a.Reviewer] {
-			seen[a.Reviewer] = true
-			reviewers = append(reviewers, a.Reviewer)
+		who := NormalizeReviewer(a.Reviewer)
+		if !seen[who] {
+			seen[who] = true
+			reviewers = append(reviewers, who)
 		}
 		if a.Expires != "" && (expires == "" || a.Expires < expires) {
 			expires = a.Expires

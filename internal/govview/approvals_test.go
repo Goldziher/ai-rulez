@@ -17,6 +17,7 @@ var approvalTestNow = time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
 
 func approvalLock() *lockfile.File {
 	return &lockfile.File{
+		Tree:    "sha256:tree",
 		Include: []lockfile.Entry{{Name: "shared", Digest: "sha256:new"}},
 		Approval: []lockfile.Approval{
 			{Kind: "include", ID: "shared", Digest: "sha256:old", Reviewer: "alice", Assurance: lockfile.AssuranceAsserted, ApprovedAt: "2026-10-01T00:00:00Z"},
@@ -93,4 +94,17 @@ func TestApprovalIndex_ForItem(t *testing.T) {
 
 	assert.Nil(t, idx.forItem("agent", "", "x", "sha256:x"), "not required and never approved: null")
 	assert.Nil(t, idx.forItem("rule", "", "style", ""), "no digest, no state")
+}
+
+func TestApprovalChanges_FailClosedWithoutALock(t *testing.T) {
+	// Arrange
+	cfg := &config.Config{Governance: &config.GovernanceConfig{RequireApproval: []string{"remote"}, Enforce: true}}
+
+	// Act
+	changes, _ := ApprovalChanges(cfg, nil, nil, approvalTestNow)
+
+	// Assert
+	require.Len(t, changes, 1)
+	assert.Contains(t, changes[0].Detail, "AR710")
+	assert.Equal(t, contentlock.ScopeApproval, changes[0].Scope)
 }

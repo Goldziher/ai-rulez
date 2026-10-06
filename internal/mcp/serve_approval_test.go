@@ -38,7 +38,8 @@ func TestAdmit_GovernanceRefusesServedSkillsWithoutAValidApproval(t *testing.T) 
 		{"stale approval is refused", "installer", cfg(true), lock, "AR711"},
 		{"no approval is refused", "preachy", cfg(true), lock, "AR710"},
 		{"not enforced: served, only annotated", "preachy", cfg(false), lock, ""},
-		{"no lock: nothing to approve against", "preachy", cfg(true), nil, ""},
+		{"no lock under enforce is refused", "preachy", cfg(true), nil, "AR710"},
+		{"no lock, not enforced: served", "preachy", cfg(false), nil, ""},
 		{"no governance: untouched", "preachy", &config.Config{}, lock, ""},
 	}
 	for _, tt := range tests {
@@ -71,10 +72,10 @@ func TestAdmit_GovernanceRefusesServedSkillsWithoutAValidApproval(t *testing.T) 
 	assert.Equal(t, []any{"alice"}, prov["approvers"])
 }
 
-func TestAdmit_RemoteSelectorOnlyCoversImportedSkills(t *testing.T) {
+func TestAdmit_RemoteSelectorCoversSkillsTheLockCallsRemote(t *testing.T) {
 	t.Parallel()
 	base := scanCatalog(t, func(s []generator.ServedSkill) {
-		s[2].Imported = true
+		s[2].Source = "https://github.com/example/skills.git"
 		s[1].Files = s[1].Files[:1]
 		s[2].Files = s[2].Files[:1]
 	})

@@ -1,6 +1,9 @@
 package lockfile
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Assurance levels of an approval. Only AssuranceAsserted is written today: a
 // free-form reviewer string backed by review of the lock change itself.
@@ -40,7 +43,7 @@ func (a Approval) ItemKey() string { return a.Kind + "\x00" + a.Domain + "\x00" 
 func (f *File) SetApproval(a Approval) {
 	for i := range f.Approval {
 		b := f.Approval[i]
-		if b.ItemKey() == a.ItemKey() && b.Digest == a.Digest && b.Reviewer == a.Reviewer {
+		if b.ItemKey() == a.ItemKey() && b.Digest == a.Digest && strings.EqualFold(strings.TrimSpace(b.Reviewer), strings.TrimSpace(a.Reviewer)) {
 			f.Approval[i] = a
 			return
 		}
