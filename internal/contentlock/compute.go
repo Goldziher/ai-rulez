@@ -26,6 +26,8 @@ const (
 	KindHook     = "hook"
 	KindRole     = "role"
 	KindSettings = "settings"
+	// KindLocalInclude pins the content tree of an include that is a local path.
+	KindLocalInclude = "local-include"
 )
 
 // Output is a generated file to pin. Data must be the rendering with the
@@ -152,6 +154,9 @@ func (c *collector) collect() error {
 	}
 	if c.scope != config.LockScopeAll {
 		return nil
+	}
+	if err := c.collectLocalIncludes(); err != nil {
+		return err
 	}
 	return c.collectDeclared()
 }

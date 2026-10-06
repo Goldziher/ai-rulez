@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/samber/oops"
 )
@@ -47,7 +48,10 @@ type treeFile struct {
 // one constant digest) and so is any symlink inside the tree: its target is not
 // pinned by the digest, so skipping it silently would let the target change, or
 // be read by a loader, outside the lock.
-func readTree(dir string) ([]treeFile, error) {
+//
+// keep, when not nil, limits the tree to the top-level entries it names; a
+// symlink outside them is not examined.
+func readTree(dir string, keep map[string]bool) ([]treeFile, error) {
 	if info, err := os.Lstat(dir); err != nil {
 		return nil, oops.With("dir", dir).Wrapf(err, "digest directory")
 	} else if !info.IsDir() {
@@ -63,6 +67,12 @@ func readTree(dir string) ([]treeFile, error) {
 			return err //nolint:wrapcheck // wrapped by the caller
 		}
 		rel = filepath.ToSlash(rel)
+		if keep != nil && rel != "." && !strings.Contains(rel, "/") && !keep[rel] {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.Type()&fs.ModeSymlink != 0 {
 			return oops.With("path", rel).Errorf("%s is a symlink; symlinks cannot be pinned, replace it with the file itself", rel)
 		}
@@ -97,7 +107,12 @@ func readTree(dir string) ([]treeFile, error) {
 // Files are streamed, never read whole into memory, so a large tree costs a
 // constant amount of memory.
 func DigestDir(kind, dir string) (string, error) {
-	files, err := readTree(dir)
+	return digestTree(kind, dir, nil)
+}
+
+// digestTree is DigestDir limited to the top-level entries in keep (nil: all).
+func digestTree(kind, dir string, keep map[string]bool) (string, error) {
+	files, err := readTree(dir, keep)
 	if err != nil {
 		return "", err
 	}
