@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -101,7 +102,7 @@ func TestNewGitSourceCreation(t *testing.T) {
 	if len(source.include) != 2 {
 		t.Errorf("expected 2 include items, got %d", len(source.include))
 	}
-	expectedCacheDir, _ := getIncludeCacheDir(name)
+	expectedCacheDir, _ := getIncludeCacheDir(name, url)
 	if source.cacheDir != expectedCacheDir {
 		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}
@@ -610,7 +611,7 @@ func TestCacheDirCreation(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedCacheDir, _ := getIncludeCacheDir(sourceName)
+	expectedCacheDir, _ := getIncludeCacheDir(sourceName, "https://github.com/owner/repo")
 	if source.cacheDir != expectedCacheDir {
 		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}
@@ -860,4 +861,63 @@ func TestGitSourceFetch_PinnedSHA_FailsClosed(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, tree)
 	assert.NotContains(t, err.Error(), "using cached content", "pinned SHA fetch must fail closed, not fall back to cache")
+}
+
+func TestGetIncludeCacheDir(t *testing.T) {
+	tests := []struct {
+		name       string
+		a, b       [2]string // name, url
+		wantSameAs bool
+	}{
+		{"same name and url", [2]string{"shared", "https://github.com/o/r"}, [2]string{"shared", "https://github.com/o/r"}, true},
+		{"trailing slash and ssh form normalize", [2]string{"shared", "https://github.com/o/r"}, [2]string{"shared", "git@github.com:o/r/"}, true},
+		{"same name, other repository", [2]string{"shared", "https://github.com/o/r"}, [2]string{"shared", "https://github.com/evil/r"}, false},
+		{"other name, same repository", [2]string{"a", "https://github.com/o/r"}, [2]string{"b", "https://github.com/o/r"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange / Act
+			a, errA := getIncludeCacheDir(tt.a[0], tt.a[1])
+			b, errB := getIncludeCacheDir(tt.b[0], tt.b[1])
+
+			// Assert
+			require.NoError(t, errA)
+			require.NoError(t, errB)
+			assert.Equal(t, tt.wantSameAs, a == b)
+		})
+	}
+}
+
+func TestGetIncludeCacheDir_NameCannotEscapeTheCacheRoot(t *testing.T) {
+	root, err := getIncludeCacheDir("x", "https://github.com/o/r")
+	require.NoError(t, err)
+	includesRoot := filepath.Dir(root)
+
+	for _, name := range []string{"../../etc", "a/b", `a\b`, "..", ""} {
+		dir, err := getIncludeCacheDir(name, "https://github.com/o/r")
+		require.NoError(t, err)
+		assert.Equal(t, includesRoot, filepath.Dir(dir), name)
+	}
+}
+
+func TestGitSourceFetch_CreatesPrivateCacheDirs(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX modes")
+	}
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "# Rule")
+	parent := filepath.Join(t.TempDir(), "includes")
+	source := &GitSource{
+		name: "private", repoURL: normalizeGitURL("file://" + repoDir), originalURL: "file://" + repoDir,
+		cacheDir: filepath.Join(parent, "private-abc"),
+	}
+
+	_, err := source.Fetch(context.Background())
+
+	require.NoError(t, err)
+	for _, dir := range []string{parent, source.cacheDir} {
+		info, err := os.Stat(dir)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o700), info.Mode().Perm(), dir)
+	}
 }
