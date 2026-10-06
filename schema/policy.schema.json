@@ -100,6 +100,32 @@
           "description": "true forces the generated-file guard hook on. false constrains nothing."
         }
       }
+    },
+    "governance": {
+      "type": "object",
+      "description": "Floor under the repository's [governance] table (approvals). The repository may raise it, never lower it.",
+      "additionalProperties": false,
+      "properties": {
+        "enforce": {
+          "type": "boolean",
+          "description": "true makes missing approvals fail lock --check, generate --locked and the skills server. false constrains nothing."
+        },
+        "require_approval": {
+          "type": "array",
+          "description": "Selectors (remote, local, all, kind:<kind>) that always need approval; the repository's exempt list cannot narrow them. Layers union.",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "min_approvers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Fewest distinct reviewers per digest. Layers take the largest."
+        },
+        "approvers": {
+          "type": "array",
+          "description": "The only reviewers that count (compared lower-cased and trimmed). An empty list means nobody may approve. Layers intersect.",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
     }
   },
   "definitions": {

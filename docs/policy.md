@@ -62,6 +62,12 @@ allow_network = false
 
 [guard]
 generated = true
+
+[governance]
+enforce          = true                                         # approvals are enforced, whatever the repository says
+require_approval = ["remote", "kind:hook"]                      # always required; the repository's exempt cannot narrow it
+min_approvers    = 2
+approvers        = ["alice@example.org", "bob@example.org"]     # only these reviewers count
 ```
 
 Rule codes may be written as codes (`AR001`) or names (`secret-detected`). A code this ai-rulez does not know is an
@@ -104,6 +110,15 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.security.scan_imports` | the stricter level (`off` < `warn` < unset < `error`) | a weaker explicit level | `AR740` |
 | `telemetry.allow_network`, `llm.allow_network` | `false` | `allow_network = true` in the repository (already ignored by the trust rule, now also reported) | `AR740` |
 | `guard.generated` | `true` | a `[guard]` table without `generated = true` | `AR740` |
+| `governance.enforce` | `true` | a `[governance]` table without `enforce = true` | `AR740` |
+| `governance.require_approval` | union with the repository's selectors; the policy's are not narrowed by `exempt` | (nothing to report: `exempt` is simply not applied to them) | none |
+| `governance.min_approvers` | the larger value | a lower explicit `min_approvers` | `AR740` |
+| `governance.approvers` | the repository's entries that the list names; the policy list when it sets none or none is left. An empty policy list means nobody may approve | an entry the list does not name; the entry is dropped | `AR740` |
+
+`[governance]` matters because approvals are records in the repository's own lock: without a floor the repository
+could set `approvers`, `min_approvers`, `exempt` or `enforce` to whatever lets its change through. Reviewers are
+compared lower-cased and trimmed. Even with the floor an `asserted` approval is not authentication; see
+[Approvals](approvals.md#approvals-are-assertions) for the CI check that makes the floor meaningful.
 
 A repository that does not touch a key is not reported: the policy value is just used. `AR740` and the other policy
 codes are always errors; `[lint.severity]` cannot soften them and `[lint] ignore` cannot hide them. The telemetry
@@ -164,7 +179,7 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 
 - **Phase 1 scope.** Policy from `--policy`, `AI_RULEZ_POLICY` and the managed path, over the keys that already exist
   in `config.toml`. URL policies with digests, `extends`, org-repo discovery, `--policy-digest`, `--policy-mode warn`,
-  and the governance, signing, MCP and hooks sections are later phases (`AR741` is reserved for a digest mismatch).
+  and the signing, MCP and hooks sections are later phases (`AR741` is reserved for a digest mismatch).
 - **Fail closed everywhere.** A demanded policy that cannot be read is `AR742`, and an unusable policy locks
   telemetry and LLM network use.
 - **An explicit empty allowlist means nothing is allowed.** `lint.security.allowed_hosts = []` in a policy is

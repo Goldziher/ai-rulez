@@ -158,7 +158,7 @@ refuses a served skill; without it the skill is left unpinned, the rest is pinne
 
 A served skill is a tree digest in the scheme below with the kind `served-skill` (`ai-rulez/served-skill/v1`), over
 the files the server returns, with the lines of the generated header that change without the skill changing left
-out (the project-wide `Source-Hash` and the `Generated:` stamp, comment lines in the first 40 lines only). It
+out (the project-wide `Source-Hash`, the per-file `Content-Hash`, which hashes raw bytes and so moves with a CRLF-only edit that the digest's text normalisation ignores, and the `Generated:` stamp; comment lines in the first 40 lines only). It
 cannot collide with the digest of the authored skill of the same name. There is one implementation
 (`contentlock.ServedDigest`); the skills server, `lock`, `lock --check`/`--diff` and `[lock] enforce` all use it,
 and the per-file and whole-skill digests the server reports (`digest`) are the same scheme over the bytes as served.
