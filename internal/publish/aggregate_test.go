@@ -156,3 +156,27 @@ func TestVerifyPluginList(t *testing.T) {
 		})
 	}
 }
+
+func TestPreviousTagMatching_LimitsTheTagsToOnePlugin(t *testing.T) {
+	tests := []struct {
+		name string
+		glob string
+		want []string
+	}{
+		{"plugin glob", "acme-v*", []string{"git", "-C", "/p", "describe", "--tags", "--abbrev=0", "--match", "acme-v*", "--exclude", "acme-v1.4.0", "HEAD"}},
+		{"option-looking glob is dropped", "--all*", []string{"git", "-C", "/p", "describe", "--tags", "--abbrev=0", "--exclude", "acme-v1.4.0", "HEAD"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &runner.Fake{Handle: func(runner.Spec) runner.Result {
+				return runner.Result{Status: runner.StatusOK, Stdout: []byte("acme-v1.3.0\n")}
+			}}
+
+			got := PreviousTagMatching(context.Background(), fake, "/p", "acme-v1.4.0", tt.glob)
+
+			assert.Equal(t, "acme-v1.3.0", got)
+			require.Len(t, fake.Calls(), 1)
+			assert.Equal(t, tt.want, fake.Calls()[0].Argv)
+		})
+	}
+}
