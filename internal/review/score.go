@@ -1,6 +1,7 @@
 package review
 
 import (
+	"fmt"
 	"math"
 	"path"
 	"sort"
@@ -23,9 +24,6 @@ const (
 	DimScored    = "scored"
 	DimNotScored = "not-scored"
 )
-
-// withholdCodes are the lint findings that keep an item from ever leaving the machine.
-var withholdCodes = map[string]bool{lint.CodeSecretDetected: true, lint.CodeHiddenCharacters: true}
 
 // Evidence is one lint finding behind a dimension's verdict.
 type Evidence struct {
@@ -57,9 +55,14 @@ type ItemResult struct {
 	Item
 	Status string `json:"status"`
 	Reason string `json:"reason,omitempty"`
+	// Redacted is true when the item holds a credential that [review] on_secret = "redact"
+	// masks before anything is sent; the masked text is all a judge ever sees.
+	Redacted bool `json:"redacted,omitempty"`
 	// Score is the offline score 0-100; nil when the item was not scored.
 	Score      *int        `json:"score"`
 	Dimensions []DimResult `json:"dimensions,omitempty"`
+	// Semantic is the judge's result; nil for an offline run or an item that was not judged.
+	Semantic *SemanticResult `json:"semantic,omitempty"`
 }
 
 // Input is everything Run needs; the caller supplies the lint findings so the
@@ -74,6 +77,17 @@ type Input struct {
 	IncludeImports bool
 	// Content overrides [review] content when set (descriptions or full).
 	Content string
+	// Only, when not nil, narrows the selection to these item ids (--since). Siblings
+	// are still drawn from every scored item.
+	Only map[string]bool
+}
+
+// OnSecretMode resolves [review] on_secret: withhold (the default) or redact.
+func (in Input) OnSecretMode() string {
+	if in.Config != nil && in.Config.OnSecret != "" {
+		return in.Config.OnSecret
+	}
+	return config.ReviewOnSecretWithhold
 }
 
 // ContentMode resolves the effective content mode.
@@ -92,6 +106,10 @@ type Results struct {
 	Items []ItemResult
 	// siblings are all items that could be named as a sibling, per kind.
 	pool []Item
+	// notes are run-level findings added after the run (AR9G0, AR9G9).
+	notes []Finding
+	// baselined holds the fingerprints of accepted findings (see SetBaseline).
+	baselined map[string]bool
 }
 
 // Run scores the selected items against the rubric from lint evidence alone.
@@ -108,10 +126,13 @@ func Run(in Input) *Results {
 	}
 	for _, it := range in.Items {
 		if r := status[it.ID]; r.Status == StatusScored {
-			res.pool = append(res.pool, it)
+			res.pool = append(res.pool, sendView(it, r.Redacted))
 		}
 	}
 	for _, it := range Selected(in.Items, in.Selector) {
+		if in.Only != nil && !in.Only[it.ID] {
+			continue
+		}
 		res.Items = append(res.Items, status[it.ID])
 	}
 	return res
@@ -135,18 +156,43 @@ func judgeItem(in Input, it Item, ev []lint.Finding, exclude []string) ItemResul
 		r.Status, r.Reason = StatusExcluded, "matches [review] exclude "+g
 		return r
 	}
+	secretFinding, elsewhere := false, false
 	for i := range ev {
-		if withholdCodes[ev[i].Code] {
+		switch ev[i].Code {
+		case lint.CodeHiddenCharacters:
 			r.Status = StatusWithheld
 			r.Reason = ev[i].Code + " " + ev[i].Name + ": never sent to a judge"
 			return r
+		case lint.CodeSecretDetected:
+			secretFinding = true
+			elsewhere = elsewhere || ev[i].RepoPath() != it.Path
+			if in.OnSecretMode() != config.ReviewOnSecretRedact || elsewhere {
+				r.Status = StatusWithheld
+				r.Reason = ev[i].Code + " " + ev[i].Name + ": never sent to a judge"
+				return r
+			}
 		}
 	}
 	// The lint findings above can be removed by [lint] ignore, severity, ignore_paths or an
 	// inline ignore in the item itself; what may leave the machine must not depend on them.
-	if reason := directWithholdReason(it); reason != "" {
+	if reason := directHiddenReason(it); reason != "" {
 		r.Status, r.Reason = StatusWithheld, reason
 		return r
+	}
+	if reason := directSecretReason(it); reason != "" {
+		if in.OnSecretMode() != config.ReviewOnSecretRedact {
+			r.Status, r.Reason = StatusWithheld, reason
+			return r
+		}
+		secretFinding = true
+	}
+	if secretFinding {
+		// on_secret = "redact": mask the credential, and send only if nothing credential-shaped is left.
+		if reason := directSecretReason(sendView(it, true)); reason != "" {
+			r.Status, r.Reason = StatusWithheld, reason+" (redaction left a credential-shaped value)"
+			return r
+		}
+		r.Redacted = true
 	}
 	r.Status = StatusScored
 	r.Dimensions = scoreDimensions(in.Rubric, ev)
@@ -244,19 +290,39 @@ func evidenceFor(byPath map[string][]lint.Finding, it Item) []lint.Finding {
 	return out
 }
 
-// Finding is a review finding: a dimension below pass on one item.
+// Finding is a review finding: a dimension below pass on one item, or a note about the run.
+//
+//nolint:tagliatelle // report keys are snake_case by project convention
 type Finding struct {
-	Code     string
-	Name     string
-	Severity string
-	ItemID   string
-	Path     string
-	Line     int
-	Message  string
-	Evidence []Evidence
-	// Fingerprint is stable across line moves: sha256 of code, item id, dimension and twin codes.
-	Fingerprint string
+	Code     string `json:"code"`
+	Name     string `json:"name"`
+	Severity string `json:"severity"`
+	ItemID   string `json:"item,omitempty"`
+	Path     string `json:"path"`
+	Line     int    `json:"line"`
+	Message  string `json:"message"`
+	// Origin is lint-twin (derived from deterministic lint evidence) or llm-judge.
+	Origin string `json:"origin"`
+	// Dimension, Verdict, Status and Agreement describe a dimension finding.
+	Dimension  string     `json:"dimension,omitempty"`
+	Verdict    string     `json:"verdict,omitempty"`
+	Status     string     `json:"status,omitempty"`
+	Agreement  float64    `json:"agreement,omitempty"`
+	Quote      string     `json:"quote,omitempty"`
+	Suggestion string     `json:"suggestion,omitempty"`
+	Evidence   []Evidence `json:"evidence,omitempty"`
+	// Fingerprint is stable across line moves: sha256 of code, item id, dimension and the first
+	// normalised quote (judge) or the twin codes (lint).
+	Fingerprint string `json:"fingerprint"`
+	// Baselined is true when the finding is in the baseline: it is listed but never gates or fails.
+	Baselined bool `json:"baselined,omitempty"`
 }
+
+// Pool returns the sendable views of every scored item: the items siblings are drawn from.
+func (r *Results) Pool() []Item { return r.pool }
+
+// AddNote records a run-level finding (AR9G0, AR9G9) that Findings and the SARIF output carry.
+func (r *Results) AddNote(f Finding) { r.notes = append(r.notes, f) }
 
 // Findings lists the dimensions below pass as findings, sorted by item then code.
 // A note is reported for every item that was withheld, excluded or skipped, so
@@ -269,7 +335,7 @@ func (r *Results) Findings(rb *Rubric) []Finding {
 			out = append(out, Finding{
 				Code: lint.CodeReviewRunNote, Name: "review-run-note", Severity: string(lint.SeverityInfo),
 				ItemID: it.ID, Path: it.Path, Line: 1, Message: it.ID + " " + it.Status + ": " + it.Reason,
-				Fingerprint: fingerprint(lint.CodeReviewRunNote, it.ID, it.Status, ""),
+				Origin: OriginLintTwin, Fingerprint: fingerprint(lint.CodeReviewRunNote, it.ID, it.Status, ""),
 			})
 			continue
 		}
@@ -292,11 +358,13 @@ func (r *Results) Findings(rb *Rubric) []Finding {
 			}
 			out = append(out, Finding{
 				Code: d.Code, Name: name, Severity: d.severity, ItemID: it.ID, Path: it.Path, Line: line,
-				Message:     it.ID + " " + d.ID + " " + d.Verdict + ": " + evidenceSummary(d.Evidence),
+				Message: it.ID + " " + d.ID + " " + d.Verdict + ": " + evidenceSummary(d.Evidence),
+				Origin:  OriginLintTwin, Dimension: d.ID, Verdict: d.Verdict, Status: d.Status,
 				Evidence:    d.Evidence,
 				Fingerprint: fingerprint(d.Code, it.ID, d.ID, strings.Join(codes, ",")),
 			})
 		}
+		out = append(out, semanticFindings(it)...)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].ItemID != out[j].ItemID {
@@ -304,6 +372,45 @@ func (r *Results) Findings(rb *Rubric) []Finding {
 		}
 		return out[i].Code < out[j].Code
 	})
+	for i := range out {
+		out[i].Baselined = r.baselined[out[i].Fingerprint] && !isNote(out[i].Code)
+	}
+	return append(out, r.notes...)
+}
+
+// semanticFindings lists the judge's findings of one item: verdicts below pass, at the
+// dimension's severity ceiling, or at info when the votes disagree or the item was truncated.
+func semanticFindings(it *ItemResult) []Finding {
+	if it.Semantic == nil {
+		return nil
+	}
+	var out []Finding
+	for _, d := range it.Semantic.Dimensions {
+		if (d.Status != SemJudged && d.Status != SemUnstable) || d.Verdict == VerdictPass || d.Code == "" {
+			continue
+		}
+		sev := d.severity
+		if sev == "" {
+			sev = string(lint.SeverityWarning)
+		}
+		if d.Status == SemUnstable || d.Capped {
+			sev = string(lint.SeverityInfo)
+		}
+		quote := ""
+		if len(d.Evidence) > 0 {
+			quote = d.Evidence[0].Quote
+		}
+		msg := fmt.Sprintf("%s %s %s: %s", it.ID, d.ID, d.Verdict, d.Rationale)
+		if d.Status == SemUnstable {
+			msg = fmt.Sprintf("%s %s unstable (%s on %.0f%% of %d votes): %s", it.ID, d.ID, d.Verdict, d.Agreement*100, len(d.Votes), d.Rationale)
+		}
+		out = append(out, Finding{
+			Code: d.Code, Name: d.ID, Severity: sev, ItemID: it.ID, Path: it.Path, Line: 1, Message: strings.TrimSpace(msg),
+			Origin: OriginLLMJudge, Dimension: d.ID, Verdict: d.Verdict, Status: d.Status, Agreement: d.Agreement,
+			Quote: quote, Suggestion: d.Suggestion,
+			Fingerprint: fingerprint(d.Code, it.ID, d.ID, normSpace(quote)),
+		})
+	}
 	return out
 }
 
@@ -322,19 +429,38 @@ func evidenceSummary(ev []Evidence) string {
 	return strings.Join(parts, "; ")
 }
 
-// directWithholdReason scans everything an item could send for a credential or a
-// hidden character, with no lint setting applied. It returns "" for clean content.
-func directWithholdReason(it Item) string {
-	texts := [...]string{it.Raw, it.Name, it.Description, it.Body}
-	for _, text := range texts {
+// directSecretReason scans everything an item could send for a credential, with no lint
+// setting applied. It returns "" for clean content.
+func directSecretReason(it Item) string {
+	for _, text := range [...]string{it.Raw, it.Name, it.Description, it.Body, it.Frontmatter} {
 		if name, ok := lint.DetectSecret(text); ok {
 			return lint.CodeSecretDetected + " secret-detected: " + name + " in the item content: never sent to a judge"
 		}
 	}
-	for _, text := range texts {
+	return ""
+}
+
+// directHiddenReason is directSecretReason for hidden characters.
+func directHiddenReason(it Item) string {
+	for _, text := range [...]string{it.Raw, it.Name, it.Description, it.Body, it.Frontmatter} {
 		if name, ok := lint.DetectHidden(text); ok {
 			return lint.CodeHiddenCharacters + " hidden-characters: " + name + ": never sent to a judge"
 		}
 	}
 	return ""
+}
+
+// sendView is the item as a judge sees it: unchanged, or with every credential masked
+// when the item is redacted. The raw file is dropped from a masked view so nothing
+// downstream can send it by mistake.
+func sendView(it Item, redacted bool) Item {
+	if !redacted {
+		return it
+	}
+	it.Raw = ""
+	it.Name = lint.RedactSecrets(it.Name)
+	it.Description = lint.RedactSecrets(it.Description)
+	it.Body = lint.RedactSecrets(it.Body)
+	it.Frontmatter = lint.RedactSecrets(it.Frontmatter)
+	return it
 }

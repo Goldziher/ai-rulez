@@ -111,6 +111,7 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 	}
 	r.Ref = filepath.Base(dir)
 	r.Dir = dir
+	r.Raw = data
 	files := []fileBytes{{RubricFile, data}}
 	var problems []Problem
 	for _, u := range unknown {
@@ -127,6 +128,7 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 		problems = append(problems, Problem{File: filepath.Join(dir, SystemFile), Line: 1, Message: "system.md is unreadable or a symlink"})
 	}
 
+	r.CoreDigest = digestOf(append([]fileBytes(nil), files...))
 	problems = append(problems, lintRubric(r, file, data)...)
 	gp, gfiles := lintGolden(dir, r)
 	problems = append(problems, gp...)
@@ -263,7 +265,7 @@ func lintVotes(v Votes, add func(string, string, ...any)) {
 
 func lintCalibrationThresholds(r *Rubric, add func(string, string, ...any)) {
 	c := r.Calibration
-	for name, t := range map[string]float64{"min_weighted_kappa": c.MinWeightedKappa, "min_consistency": c.MinConsistency, "min_human_kappa": c.MinHumanKappa} {
+	for name, t := range map[string]float64{"min_weighted_kappa": c.MinWeightedKappa, "min_consistency": c.MinConsistency, "min_human_kappa": c.MinHumanKappa, "min_precision": c.MinPrecision, "min_probe": c.MinProbe} {
 		if t < 0 || t > 1 {
 			add(name, "calibration.%s must be between 0 and 1", name)
 		}

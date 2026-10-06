@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/review-report.schema.json",
   "title": "ai-rulez review report",
-  "description": "Output of `ai-rulez review --format json`: the rubric with its published weights and formula, one entry per selected item, and with --estimate the egress manifest of a model-judged run. Phase 0 is offline: run.calls is always 0.",
+  "description": "Output of `ai-rulez review --format json`: the rubric with its published weights and formula, one entry per selected item, the findings, and with --semantic the judge's verdicts, the run's cost, the calibration status and the gate; with --estimate the egress manifest of a model-judged run. Offline runs have run.phase 0 and run.calls 0.",
   "type": "object",
-  "required": ["schema", "rubric", "run", "summary", "items"],
+  "required": ["schema", "rubric", "run", "summary", "items", "findings"],
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "review-report/1" },
@@ -31,7 +31,8 @@
               "group": { "enum": ["intrinsic", "contextual"] },
               "weight": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
               "severity": { "enum": ["info", "warning"] },
-              "twins": { "type": "array", "items": { "type": "string" } }
+              "twins": { "type": "array", "items": { "type": "string" } },
+              "needs_body": { "type": "boolean", "description": "Judged only with --content full." }
             }
           }
         }
@@ -42,11 +43,43 @@
       "required": ["phase", "offline", "calls", "tokens", "cost_usd"],
       "additionalProperties": false,
       "properties": {
-        "phase": { "const": 0 },
-        "offline": { "const": true },
-        "calls": { "const": 0 },
-        "tokens": { "const": 0 },
-        "cost_usd": { "const": 0 }
+        "phase": { "enum": [0, 1], "description": "0: offline score; 1: a judge ran." },
+        "offline": { "type": "boolean" },
+        "calls": { "type": "integer", "minimum": 0, "description": "Provider calls made (cache hits are not calls)." },
+        "cached": { "type": "integer", "minimum": 0, "description": "Answers served from the response cache." },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "cap_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The spend ceiling the run was held to; 0 is unlimited."
+        },
+        "cap_calls": { "type": "integer", "minimum": 0 },
+        "incomplete": {
+          "type": "boolean",
+          "description": "The spend cap or an error ended the run before every item was judged."
+        },
+        "stopped_because": { "type": "string" },
+        "unjudged": { "type": "array", "items": { "type": "string" } },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requested": { "type": "string" },
+            "resolved": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "The model ids the provider reported."
+            }
+          }
+        },
+        "votes": { "type": "integer", "minimum": 1 },
+        "content": { "enum": ["descriptions", "full"] },
+        "hallucinated_evidence": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Quotes the judge cited that are not in the item."
+        }
       }
     },
     "summary": {
@@ -59,7 +92,10 @@
         "withheld": { "type": "integer", "minimum": 0 },
         "excluded": { "type": "integer", "minimum": 0 },
         "skipped": { "type": "integer", "minimum": 0 },
-        "mean_score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+        "mean_score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "judged": { "type": "integer", "minimum": 0 },
+        "mean_semantic_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "baselined": { "type": "integer", "minimum": 0 }
       }
     },
     "items": {
@@ -78,6 +114,10 @@
           "owned": { "type": "boolean" },
           "status": { "enum": ["scored", "withheld", "excluded", "skipped"] },
           "reason": { "type": "string" },
+          "redacted": {
+            "type": "boolean",
+            "description": "[review] on_secret = redact masked a credential before anything was sent."
+          },
           "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
           "dimensions": {
             "type": "array",
@@ -110,8 +150,209 @@
                 }
               }
             }
+          },
+          "semantic": {
+            "type": "object",
+            "description": "The judge's result for the item (--semantic).",
+            "required": ["score", "dimensions", "calls", "cached"],
+            "additionalProperties": false,
+            "properties": {
+              "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "cached": { "type": "integer", "minimum": 0 },
+              "truncated": {
+                "type": "boolean",
+                "description": "The body was cut to head and tail; the verdicts are reported at info."
+              },
+              "incomplete": { "type": "boolean", "description": "The spend cap cut the votes of this item short." },
+              "dimensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "group", "weight", "status"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": { "type": "string" },
+                    "code": { "type": "string" },
+                    "group": { "enum": ["intrinsic", "contextual"] },
+                    "weight": { "type": "number" },
+                    "status": { "enum": ["judged", "unstable", "preempted", "skipped", "error"] },
+                    "verdict": { "enum": ["pass", "warn", "fail"] },
+                    "agreement": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "The share of votes equal to the verdict."
+                    },
+                    "votes": { "type": "array", "items": { "enum": ["pass", "warn", "fail"] } },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["quote"],
+                        "additionalProperties": false,
+                        "properties": { "quote": { "type": "string" }, "where": { "type": "string" } }
+                      }
+                    },
+                    "rationale": { "type": "string" },
+                    "suggestion": { "type": "string" },
+                    "dropped_votes": { "type": "integer", "minimum": 0 },
+                    "preempted_by": { "type": "array", "items": { "type": "string" } },
+                    "note": { "type": "string" },
+                    "capped": { "type": "boolean" }
+                  }
+                }
+              }
+            }
           }
         }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "name", "severity", "path", "line", "message", "origin", "fingerprint"],
+        "additionalProperties": false,
+        "properties": {
+          "code": { "type": "string", "pattern": "^AR9G[0-9]$" },
+          "name": { "type": "string" },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "item": { "type": "string" },
+          "path": { "type": "string" },
+          "line": { "type": "integer" },
+          "message": { "type": "string" },
+          "origin": { "enum": ["lint-twin", "llm-judge", "run"] },
+          "dimension": { "type": "string" },
+          "verdict": { "enum": ["pass", "warn", "fail"] },
+          "status": { "type": "string" },
+          "agreement": { "type": "number" },
+          "quote": { "type": "string" },
+          "suggestion": { "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["code", "severity", "message"],
+              "additionalProperties": false,
+              "properties": {
+                "code": { "type": "string" },
+                "name": { "type": "string" },
+                "severity": { "type": "string" },
+                "line": { "type": "integer" },
+                "message": { "type": "string" }
+              }
+            }
+          },
+          "fingerprint": { "type": "string" },
+          "baselined": { "type": "boolean" }
+        }
+      }
+    },
+    "egress": {
+      "type": "object",
+      "description": "What a judged run sent: sizes and a count, never content.",
+      "required": ["items", "bytes", "content_mode"],
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "content_mode": { "enum": ["descriptions", "full"] },
+        "host": { "type": "string" },
+        "withheld": { "type": "array", "items": { "type": "string" } },
+        "redacted": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "description": "Whether a calibration record matches the judge that ran (AR9G9 when not).",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["matched", "missing", "stale", "failed"] },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "record_digest": { "type": "string" },
+        "date": { "type": "string" },
+        "age_days": { "type": "integer" },
+        "model": { "type": "string" },
+        "calibrated_dimensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The dimensions whose calibration passed: the only ones that may gate."
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["requested", "level", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "requested": { "type": "boolean" },
+        "level": { "enum": ["info", "warning", "error"] },
+        "passed": { "type": "boolean" },
+        "refused": { "type": "string", "description": "Why the gate could not be evaluated (exit 1)." },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["item", "dimension", "code", "agreement"],
+            "additionalProperties": false,
+            "properties": {
+              "item": { "type": "string" },
+              "dimension": { "type": "string" },
+              "code": { "type": "string" },
+              "agreement": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "description": "--models: how the compared models agree, and the items they judge differently.",
+      "required": ["models", "pairwise"],
+      "additionalProperties": false,
+      "properties": {
+        "models": { "type": "array", "items": { "type": "string" } },
+        "pairwise": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["a", "b", "dimension", "n", "agreement", "kappa"],
+            "additionalProperties": false,
+            "properties": {
+              "a": { "type": "string" },
+              "b": { "type": "string" },
+              "dimension": { "type": "string" },
+              "n": { "type": "integer" },
+              "agreement": { "type": "number" },
+              "kappa": { "type": "number" }
+            }
+          }
+        },
+        "disagreements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["item", "dimension", "verdicts"],
+            "additionalProperties": false,
+            "properties": {
+              "item": { "type": "string" },
+              "dimension": { "type": "string" },
+              "verdicts": { "type": "object", "additionalProperties": { "enum": ["pass", "warn", "fail"] } }
+            }
+          }
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "required": ["baselined", "new"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "baselined": { "type": "integer", "minimum": 0 },
+        "new": { "type": "integer", "minimum": 0 }
       }
     },
     "estimate": {
