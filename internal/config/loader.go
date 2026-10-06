@@ -497,6 +497,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		LLM             *llm.Config            `toml:"llm"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
 		Review          *ReviewConfig          `toml:"review"`
+		Improve         *ImproveConfig         `toml:"improve"`
 		Search          *skillsearch.Config    `toml:"search"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
@@ -584,6 +585,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,
 		Review:          raw.Review,
+		Improve:         raw.Improve,
 		Search:          raw.Search,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
