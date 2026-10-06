@@ -49,6 +49,7 @@ func TestLockSubject(t *testing.T) {
 
 		assert.Equal(t, 0, code)
 		assert.Equal(t, first, second)
+		validateAgainst(t, "../../schema/lock-subject.schema.json", first)
 		var doc contentlock.SubjectStatement
 		require.NoError(t, json.Unmarshal(first, &doc))
 		assert.Equal(t, want, doc.Subject)

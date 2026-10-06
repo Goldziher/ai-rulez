@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://goldziher.github.io/ai-rulez/provider.schema.json",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/provider.schema.json",
   "title": "ai-rulez Provider Spec",
   "description": "Declarative provider definition consumed by the generic DSL renderer. Each builtin provider (claude, copilot, codex, ...) and any user-defined provider is expressed as one of these documents. The renderer dispatches purely on the closed-set enums declared here; new behaviors require extending the enums + adding a Go handler.",
   "type": "object",
@@ -411,7 +411,8 @@
             "reasonix",
             "hermes",
             "kiro",
-            "kimi"
+            "kimi",
+            "codewhale"
           ],
           "description": "Kind `checks`: augment (an `areas` map, one area per check) or gitlab-duo (an `instructions` list of groups). Kind `permissions`: the harness whose permission format is rendered (see docs/permissions.md). Kind `hooks`: the harness whose hook format renders the top-level [[hooks]] (required; see docs/settings.md for the harnesses), which fixes the key and the entry layout, so the sidecar takes no `key` or `elements`; it defaults to `has_hooks`. Kind `mcp` otherwise. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
         },
