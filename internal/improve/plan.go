@@ -418,7 +418,11 @@ func (p *Plan) Summary() string {
 	o := &p.Opts
 	var b strings.Builder
 	fmt.Fprintf(&b, "improve %s (experimental)\n", p.Skill.ID)
-	fmt.Fprintf(&b, "  optimizer:   %s (run without a shell, in a throwaway copy)\n", Sanitize(strings.Join(o.OptimizerArgv, " "), 300))
+	optimizer := Sanitize(strings.Join(o.OptimizerArgv, " "), 300)
+	if o.Adapter != "" {
+		optimizer = o.Adapter + " (bundled adapter, a child process of this binary)"
+	}
+	fmt.Fprintf(&b, "  optimizer:   %s (run without a shell, in a throwaway copy)\n", optimizer)
 	fmt.Fprintf(&b, "  split:       %d train case(s), %d held-out case(s) (%s)\n", len(p.trainCases), len(p.heldCases), p.Split.Method)
 	fmt.Fprintf(&b, "  gate:        gain >= %.0f points, <= %d regression(s), %d round(s), %d held-out evaluation(s)\n", o.MinGain*100, o.MaxRegressions, o.MaxRounds, o.MaxHoldoutEvals)
 	fmt.Fprintf(&b, "  estimate:    %d agent runs, about $%.2f of evals; --max-cost $%.2f\n", p.Estimate.AgentRuns, p.Estimate.CostUSD, o.MaxCostUSD)
