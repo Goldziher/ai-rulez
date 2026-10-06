@@ -169,6 +169,135 @@ source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --fro
 `lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
 remote pins.
 
+## Version constraints
+
+A remote include, installed skill or skill source can ask for a range of versions instead of a ref. ai-rulez
+resolves the range against the repository's semantic-version git tags, records the exact tag, its commit and the tree
+digest in the lock, and never moves the pin on its own.
+
+```toml
+[[includes]]
+name = "shared"
+source = "https://github.com/example-org/ai-rules"
+version = "^1.2"                 # npm-style constraint
+tag_prefix = "v"                 # optional; default accepts "1.2.3" and "v1.2.3"
+include_prerelease = false       # optional; default false
+
+[[installed_skills]]
+name = "deploy"
+source = "https://github.com/example-org/skills"
+version = "~2.1.0"
+tag_prefix = "deploy/v"          # monorepo tags such as deploy/v2.1.3
+
+[[skill_sources]]
+name = "acme"
+url = "https://github.com/example-org/skills"
+version = ">=1.4.0 <2.0.0"
+```
+
+- **Syntax.** `^1.2`, `~2.1.0`, `>=1.4.0 <2.0.0` (a space is AND), `1.x`, `1.2.*`, `1 - 2`, `1.x || 3`, `*`.
+  `^0.2.3` stays below `0.3.0` and `^0.0.3` below `0.0.4`, as in npm. The parser is part of ai-rulez
+  (`internal/semver`), with a conformance table in its tests.
+- **`ref` shorthand.** `ref = "^1.2"` means `version = "^1.2"` when the value contains `^`, `~`, `*` or a space,
+  because git forbids those characters in ref names. `ref = "1.2"` or `ref = ">=1"` stay plain refs (legal branch
+  names). Set `ref` or `version`, not both (`AR731`). A plain ref, a branch or a full commit SHA behaves exactly as
+  before.
+- **Which tags count.** A tag is a version tag when it is a plain version or one after a single `v`, or, with
+  `tag_prefix`, when it starts with the prefix and the rest is a plain version. Other tags are ignored. Annotated and
+  lightweight tags are both accepted; an annotated tag is peeled to its commit. The highest tag the constraint allows
+  wins; `1.2.3` and `v1.2.3` naming one version is reported and the tag that sorts first is used.
+- **Prereleases** follow npm: `1.3.0-rc.1` is skipped unless the constraint names a prerelease of the same
+  `major.minor.patch` (`^1.3.0-rc.1`) or `include_prerelease = true`. Build metadata is ignored.
+- **Nothing resolves a range implicitly.** `generate` fetches the pinned commit and never resolves a range;
+  `generate --locked`/`--frozen` fail on a range the lock does not cover. `ai-rulez lock` resolves a range for a source
+  the lock does not cover and **keeps** a pin that still satisfies its constraint (no silent upgrade).
+  `ai-rulez update` is the only command that moves a range pin.
+
+The lock records the constraint as the requested ref plus what it resolved to; a lock entry written by an older
+ai-rulez has no `tag` and is simply not covered:
+
+```toml
+[[include]]
+name = "shared"
+source = "https://github.com/example-org/ai-rules"
+ref = "^1.2"                     # the constraint, as written
+tag = "v1.2.4"                   # the resolved tag
+tag_object = "7a9c..."           # the annotated tag object id; absent for a lightweight tag
+commit = "0f3e..."               # the peeled commit
+digest = "sha256:..."            # tree digest, unchanged scheme
+```
+
+The pin covers the config while `source`, `path` and `ref` match **and** the recorded tag still satisfies the
+constraint and the `tag_prefix`, so editing the constraint invalidates the pin until `ai-rulez lock`. `tag` and
+`tag_object` are part of the `tree` digest; entries without a tag hash exactly as before.
+
+### `lock --outdated`
+
+```console
+$ ai-rulez lock --outdated
+SOURCE  KIND     CONSTRAINT  LOCKED  ALLOWED  LATEST  NOTE
+shared  include  ^1.2        v1.2.4  v1.3.1   v2.0.0  update available; newer major available
+deploy  skill    ~2.1.0      v2.1.3  v2.1.3   v2.2.0  up to date within the constraint
+2 source(s): 1 updatable, 1 with a newer major, 0 moved tag(s), 0 error(s)
+```
+
+It lists tags only (one `git ls-remote` per repository, no content is fetched) and writes nothing. `--format json`
+follows [`schema/lock-outdated.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-outdated.schema.json).
+Each source has a `status`: `up-to-date`, `updatable`, `not-locked`, `tag-moved` (`AR732`), `tag-missing` (`AR735`),
+`unsatisfiable` (`AR730`), `invalid` (`AR731`) or `downgrade-only`. Names and `--kind include|skill|source` limit
+the report. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
+update, and always `2` for a moved tag or an unsatisfiable constraint, `1` when it could not run. It needs the
+network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
+scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
+
+### `update`
+
+```console
+$ ai-rulez update --dry-run
+include shared: v1.2.4 -> v1.3.1 (b21c0f3e1a9d)
+  M  rules/security.md
+  A  skills/deploy/scripts/run.sh
+  tree sha256:... -> sha256:...
+  run `ai-rulez generate`, then `ai-rulez lock` to refresh the output pins
+would update 1 source(s)
+
+$ ai-rulez update shared          # rewrites the lock only
+$ ai-rulez update --kind skill    # only installed skills
+```
+
+`update [name...] [--kind include|skill|source] [--dry-run] [--allow-downgrade] [--accept-moved-tag]
+[--format json]` moves the named range sources (all of them without names) to the newest allowed tag and records
+the tag, commit and tree digest. It never edits `config.toml`. `--dry-run` fetches the new trees (into the cache) to
+digest and compare them, and writes no lock. `--format json` follows
+[`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json).
+The file list compares the old cached tree with the new one; it is omitted when the old tree is not cached. Output
+pins and content pins of other items are not recomputed (as with `lock <name>`): run `generate` and `lock` after.
+
+- **Moved tags (`AR732`).** A tag that now points to another commit than the pinned one is refused with exit `2`
+  and nothing is written; `lock` refuses it too. Review the new commit, then `update --accept-moved-tag` re-pins that
+  tag at its new commit. A tag that was deleted (`AR735`) only warns: the pinned commit is still used.
+- **Downgrades.** `update` never selects a tag with lower precedence than the pinned one (a truncated tag list, a
+  mirror, an attacker can roll a pin back) unless `--allow-downgrade`. Withheld newer tags are undetectable;
+  `--outdated` can only compare what the remote advertises.
+- **Unsatisfiable (`AR730`).** No tag satisfies the constraint, or the repository has no version tags: exit `2`.
+
+`ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
+pins as they are. Use `update --kind skill` to move range pins.
+
+### Design decisions
+
+- `version` is the constraint key; `ref` is accepted for it only with `^`, `~`, `*` or a space (the issue's
+  proposal). The constraint grammar is hand-written in `internal/semver` rather than a library, so prerelease
+  behavior is ours and tested. The lock `ref` holds the constraint text, so a binary from before this feature sees
+  a pin it cannot match and asks for `ai-rulez lock`.
+- The moved-tag check needs the remote, so it runs in `lock`, `update` and `lock --outdated`, not in `lock --check`
+  or `generate`, which stay offline.
+- `update` runs no security scan before it writes a pin and has no `--major` or `--write-config`; `min_release_age` and
+  release-time lookups (`released`, `released_from`) are not implemented.
+  `lock --outdated` consults no forge API.
+- Rule codes: `AR730` unsatisfiable, `AR731` invalid or both `ref` and `version`, `AR732` tag moved, `AR735` pinned
+  tag missing. `AR733` and `AR734` (held back, source outdated) are not emitted yet.
+
 ## Hashing scheme
 
 All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is part of the lock format: any change
@@ -342,6 +471,8 @@ ai-rulez lock                 # pin remotes (network) and content; writes ai-rul
 ai-rulez lock --content-only  # re-pin authored content and outputs only; offline, remote pins kept
 ai-rulez lock shared          # re-pin one include or skill; content pins are kept as they are
 ai-rulez lock --check         # verify everything, offline; exit 2 on any difference
+ai-rulez lock --outdated      # sources whose version constraint allows a newer tag (network)
+ai-rulez update --dry-run     # what moving the range pins would change
 ai-rulez lock --diff          # show what `ai-rulez lock` would change; exit 0
 ai-rulez lock --diff --format json
 ai-rulez lock --check --format json   # the --diff document on stdout; exit 2 on any difference

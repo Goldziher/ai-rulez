@@ -352,7 +352,7 @@ A source is a repository (or a directory) of skill directories, served and never
 [[skill_sources]]
 name = "acme"                                  # identifies the source in the lock
 url = "https://github.com/acme/skills.git"     # git URL (https, ssh or file; a leading git+ is accepted) or a local directory
-ref = "v1.2.0"                                 # a tag or a full commit SHA
+ref = "v1.2.0"                                 # a tag or a full commit SHA (or version = "^1.2", see below)
 path = "skills"                                # subdirectory whose children are skills
 include = ["pdf-*", "sql"]                     # directory-name globs; exclude wins
 exclude = ["*-wip"]
@@ -363,6 +363,11 @@ max_bytes = 67108864                           # optional: bytes of skill files 
 max_clone_bytes = 268435456                    # optional: size limit of the git clone (default 256 MiB)
 max_clone_files = 20000                        # optional: entries of the git clone (default 20000)
 ```
+
+A source can ask for a version range instead of a ref: `version = "^1.2"` (also `tag_prefix`,
+`include_prerelease`; `ref` and `version` are exclusive). The range is resolved against the repository's semver tags
+by `ai-rulez lock` and moved only by `ai-rulez update`; serving uses the pinned commit and never resolves a range.
+See [Version constraints](lockfile.md#version-constraints).
 
 `--source` takes the same thing on the command line: `[git+]<url>[@<tag|commit>][#<subdir>]` or a directory,
 for example `git+https://host/org/repo@v1.2.0#skills/`. The ref separator is the last `@` after the final `/`,
