@@ -144,6 +144,47 @@ func TestReadDirTreeRefusesWhatAnAgentCouldReadElsewhere(t *testing.T) {
 	assert.ErrorContains(t, err, "no files")
 }
 
+func TestReadDirTreeHandlesVersionControlMetadata(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(t *testing.T, dir string)
+		wantErr string
+	}{
+		{"a root .git directory is skipped", func(t *testing.T, dir string) {
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".git"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, ".git", "HEAD"), []byte("ref"), 0o644))
+		}, ""},
+		{"a nested .git directory is refused", func(t *testing.T, dir string) {
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub", ".git"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", ".git", "HEAD"), []byte("ref"), 0o644))
+		}, "nested version-control"},
+		{"a .git pointer file is refused", func(t *testing.T, dir string) {
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", ".git"), []byte("gitdir: ../x"), 0o644))
+		}, ".git file"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := writeTree(t, bundleFiles)
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", "f.txt"), []byte("x"), 0o644))
+			tt.mutate(t, dir)
+			// Act
+			tree, err := ReadDirTree(dir)
+			// Assert
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			for _, l := range tree.Leaves {
+				assert.NotContains(t, l.Path, ".git")
+			}
+		})
+	}
+}
+
 func TestIsSignatureFile(t *testing.T) {
 	tests := map[string]bool{
 		".ai-rulez.sigstore.json":            true,

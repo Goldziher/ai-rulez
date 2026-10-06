@@ -318,6 +318,10 @@ func TestSignatureGate_InstalledSkillsCarryTheirPublisherAttestation(t *testing.
 
 	pub.signSkill(t, dir)
 	assert.Nil(t, gate.Check(installed), "rendered installed skills are checked against the directory, not byte-compared")
+	extra := &CatalogSkill{Name: "deploy", Ref: "v1.2.0", Files: []CatalogFile{{RelPath: "SKILL.md"}, {RelPath: "scripts/unsigned.sh"}}}
+	r = gate.Check(extra)
+	require.NotNil(t, r, "a served file the publisher never signed is refused for an installed skill too")
+	assert.Equal(t, signing.CodeSubjectMismatch, r.Code)
 
 	remote := &CatalogSkill{Name: "stranger", Imported: true}
 	r = gate.Check(remote)
