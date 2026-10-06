@@ -42,11 +42,31 @@ WARN  Configuration problem: .ai-rulez/config.toml: unknown key "lock.enforc" (d
 `generate --strict`, or `AI_RULEZ_STRICT=1` in CI, fails with exit code 1 instead. `validate` and `generate` report
 the same unknown keys.
 
-`generate` also lists the commands it is about to write that your tools will run: `[[hooks]]` commands, command-based
-`[[mcp_servers]]`, and `[permissions] allow` rules. Only commands that are new or changed since the previous run on this
-machine are listed (every command on a first run in a fresh clone). It only warns, it is printed even with `--quiet`,
+`--strict` means something different on each command, and they do not imply one another:
+
+| Command | `--strict` adds |
+| --- | --- |
+| `generate --strict` | Schema check only: an unknown or invalid configuration key fails the run instead of warning. |
+| `validate --strict` | Deep content checks (dead links and references, globs that match nothing, size and duplicate checks, findings `AR###`). Unknown keys already fail `validate` without it. |
+
+Run both in CI: `ai-rulez validate --strict && ai-rulez generate --strict`.
+
+`generate` also lists the commands it is about to write that your tools will run: `[[hooks]]` commands (and the
+content digest of a hook `script` file, so a changed script behind the same path is listed again), `http` and `prompt`
+hooks, command-based `[[mcp_servers]]`, `[permissions] allow` rules for every harness that takes them,
+`[claude.settings.managed] env` entries (`NODE_OPTIONS`, `ANTHROPIC_BASE_URL`, ...), and plugin enablement and
+marketplace registration. Only commands that are new or changed since the previous run on this machine are listed
+(every command on a first run in a fresh clone), one item per line. It only warns, it is printed even with `--quiet`,
 and `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The previous run is remembered in `~/.cache/ai-rulez/commands/`,
 never in the repository.
+
+The text is repository-controlled, so it is made safe to print: control characters (ESC, CR, LF, other C0/C1 codes),
+bidirectional overrides and zero-width characters appear as visible escapes (`\x1b`, `\u202e`), and anything that
+looks like a credential is replaced by `<redacted>` (secret-named flags such as `--token=...`, `Bearer`/`Authorization`
+values, URL user information and query values, `NAME=value` with a secret-looking name, well-known token prefixes, long
+base64 or hex runs). An env value is shown unless its name or value looks like a credential. `generate --watch` prints
+the same list on every regeneration that changes a command, and the MCP `generate_outputs` tool returns it as
+`new_commands` (and writes it to stderr) because it has no terminal.
 
 ## Basic Structure
 
@@ -102,6 +122,14 @@ name = "acme-platform"
 Every project has one name; the value is used verbatim in generated headers.
 
 ## Content Layout
+
+### Symlinks in content
+
+A symlinked file or directory under your project's `.ai-rulez/` (including `domains/` and `local/`) is followed only
+when its fully resolved target is inside the project (the git top-level, else the directory holding `.ai-rulez/`). Any
+other symlink, including a dangling one, is refused: `generate` prints a warning naming it (even with `--quiet`) and
+`ai-rulez validate` reports it as an error. Content from includes, installed skills, skill sources and OKF bundles
+never follows symlinks; see [Includes](includes.md).
 
 ### Skills
 
@@ -1463,7 +1491,7 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | --- | ------- |
 | `[skills] delivery` | Global default delivery: `static` (default), `served` or `both`. |
 | `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
-| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB): skills served from a git repository or directory. A source over a limit is an error. |
+| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
 ## Local overlay
