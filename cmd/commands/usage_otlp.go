@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,18 +20,24 @@ var (
 	usageExportEvalsFile  string
 )
 
+// defaultEvalStorePath is the project's eval results file: under the project root
+// and configuration directory --root and --config-dir select, like the rest of the
+// telemetry commands, not the working directory.
+func defaultEvalStorePath() string {
+	return evals.DefaultStorePath(filepath.Join(telemetryRoot(""), telemetryConfigDirName()))
+}
+
 // loadEvalEvents turns the project's verified eval results into eval_result
 // events. A default results file that does not exist is no events; a named one
 // must exist. Unsigned or foreign-signed records and activation-only records are
 // not results and are never exported.
 func loadEvalEvents(path string) ([]telemetry.Event, error) {
-	explicit := path != ""
-	if !explicit {
-		abs, err := filepath.Abs(configDirName())
-		if err != nil {
-			return nil, oops.Wrapf(err, "resolve config directory")
+	if path != "" {
+		if _, err := os.Stat(path); err != nil {
+			return nil, oops.With("path", path).Hint("Pass the results file that eval run wrote, or omit --evals.").Wrapf(err, "read eval results")
 		}
-		path = evals.DefaultStorePath(abs)
+	} else {
+		path = defaultEvalStorePath()
 	}
 	store, err := evals.LoadStoreKeyed(path, evals.UserKey())
 	if err != nil {
