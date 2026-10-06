@@ -10,14 +10,16 @@ import (
 )
 
 // A serve view is one way of starting the skills server: the default view, a role
-// (--role), a profile (--profile), with --include-static, and with extra --source
-// arguments each select a different set of skills. ai-rulez.lock pins the served
+// (--role), a profile (--profile), a preset's rendering (--targets), with
+// --include-static, and with extra --source arguments each select a different
+// set of skills. ai-rulez.lock pins the served
 // skills of each view under the view's key, so `lock --role backend` and
 // `mcp --serve-skills --role backend --frozen` agree on what is pinned.
 
 const (
 	viewRole    = "role:"
 	viewProfile = "profile:"
+	viewTarget  = "targets:"
 	viewSource  = "source:"
 	viewStatic  = "static"
 	viewSep     = "+"
@@ -25,7 +27,7 @@ const (
 
 // ViewKey names the view the setup serves: "" for the default view, otherwise
 // the parts that select skills, in a fixed order, joined by "+":
-// "role:backend+static+source:cli-skills".
+// "role:backend+targets:cursor+static+source:cli-skills".
 func (st *ServeSetup) ViewKey() string {
 	var parts []string
 	switch {
@@ -33,6 +35,9 @@ func (st *ServeSetup) ViewKey() string {
 		parts = append(parts, viewRole+st.Role)
 	case st.Profile != "":
 		parts = append(parts, viewProfile+st.Profile)
+	}
+	if st.Preset != "" {
+		parts = append(parts, viewTarget+st.Preset)
 	}
 	if st.IncludeStatic {
 		parts = append(parts, viewStatic)
@@ -53,7 +58,7 @@ func (st *ServeSetup) ViewKey() string {
 // false for a key that cannot be rebuilt without the command line: one that names
 // a --source, whose location the lock does not record.
 func (st ServeSetup) withView(key string) (ServeSetup, bool) {
-	st.Role, st.Profile, st.IncludeStatic, st.Sources = "", "", false, nil
+	st.Role, st.Profile, st.Preset, st.IncludeStatic, st.Sources = "", "", "", false, nil
 	for _, part := range strings.Split(key, viewSep) {
 		switch {
 		case part == viewStatic:
@@ -62,6 +67,8 @@ func (st ServeSetup) withView(key string) (ServeSetup, bool) {
 			st.Role = strings.TrimPrefix(part, viewRole)
 		case strings.HasPrefix(part, viewProfile):
 			st.Profile = strings.TrimPrefix(part, viewProfile)
+		case strings.HasPrefix(part, viewTarget):
+			st.Preset = strings.TrimPrefix(part, viewTarget)
 		default:
 			return st, false
 		}

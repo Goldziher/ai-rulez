@@ -308,6 +308,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
+| `--max-clone-bytes` | Clone size limit in bytes for git skill sources that set no `max_clone_bytes`. Overrides `AI_RULEZ_MAX_CLONE_BYTES`; 0 (default) defers to it, then to 256 MiB. |
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
 | `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
@@ -401,7 +402,8 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
 - **Clone size.** A git source is fetched as a partial clone (`--filter`), and with a `path` only that
   subdirectory is checked out (a sparse checkout), so a large repository costs what the skills cost. The clone,
   git data and checkout together, is capped at `max_clone_bytes` (default 256 MiB; the `AI_RULEZ_MAX_CLONE_BYTES`
-  environment variable sets it for every source that does not set its own). The size is watched while git runs:
+  environment variable, or `mcp --serve-skills --max-clone-bytes <n>`, sets it for every source that does not set its
+  own; the flag wins over the environment variable, and a source's own `max_clone_bytes` wins over both). The size is watched while git runs:
   a clone that grows past the limit is stopped, fails with an error naming `max_clone_bytes` and the source
   (`skillsource.ErrCloneTooLarge`), and leaves nothing in the cache. Set `path`, or raise the limit.
 - **Cache integrity.** A source the lock covers is checked against the lock's digest. A source whose `ref` is a full
@@ -469,8 +471,8 @@ covers the rendered files but not the generated header lines that change without
 `Source-Hash: <algorithm>:<hex>` or `Content-Hash: <algorithm>:<hex>` line and the `Generated:` date stamp, in the first 40 lines of a rendered
 file), so editing one skill does not invalidate the others. Files of a skill source are digested exactly as
 they are: nothing in them is ignored. The digest is of
-the rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by
-design). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
+the rendering the view selects: the default preset's, or another preset's with `--targets` (a view of its own, see
+below). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
 role. `ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
 
 `[[served]]` entries are recorded per serve view: the way the server is started selects a set of skills, and
@@ -482,15 +484,16 @@ server runs with:
 ```bash
 ai-rulez lock --role backend                       # skills the backend role serves
 ai-rulez lock --profile team --include-static      # profile view that also serves static skills
+ai-rulez lock --targets cursor                     # skills as the cursor preset renders them
 ai-rulez lock --source git+https://host/org/skills@v1.2.0#skills   # a command-line source, pinned with its commit
 ai-rulez mcp --serve-skills --role backend --frozen
 ```
 
 `mcp --serve-skills` and `lock --check` read the pins of the view they run with, so a server started with
-`--role`, `--profile`, `--include-static` or `--source` finds its skills pinned once `lock` has pinned that view;
+`--role`, `--profile`, `--targets`, `--include-static` or `--source` finds its skills pinned once `lock` has pinned that view;
 otherwise every skill it adds is refused with `AR995`. A lock written before views existed (no `view` keys)
-still covers every view, as long as the digests match. `--targets` is not part of the view: it serves another
-rendering, which fails enforcement by design.
+still covers every view, as long as the digests match. `--targets` is part of the view (`targets:<preset>`): another
+preset's rendering has its own pins, and `lock --targets <preset>` pins it.
 
 A skill the security scan refuses is not pinned. By default `lock` reports it, pins every other skill, writes the
 lock and exits 3; `validate --strict` lists the refused skills of skill sources with their scan code (`AR0xx`). With
@@ -1273,7 +1276,7 @@ All four take the common parameters `config_file`, `config_dir`, `no_local` and 
 | --- | --- | --- |
 | `list_roles` | `roles list --format json` | common only |
 | `resolve_role` | `roles resolve <role> --format json` | `role` (required), `limit` |
-| `lock_status` | `lock --check --format json` | `kind`, `profile`, `role`, `include_static`, `sources` |
+| `lock_status` | `lock --check --format json` | `kind`, `profile`, `role`, `targets`, `include_static`, `sources` |
 | `catalog` | `catalog --format json` | `kind`, `role`, `limit` |
 
 **Output limits.** `resolve_role` and `catalog` list at most `limit` items (default 200, maximum 1000; a smaller
@@ -1301,6 +1304,7 @@ sync unless `[lock] enforce = true`.
 | `kind` | string | List only the changes of one kind: `include`, `skill`, `source`, `served`, or `content` (authored items and generated outputs). `in_sync` still covers the whole lock |
 | `profile` | string | Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view |
 | `role` | string | Compare only this role's outputs and check the skills it serves as a view of their own (`lock --role`) |
+| `targets` | string | Also check the view that serves this preset's rendering of the skills (`lock --targets`) |
 | `include_static` | boolean | Also check the view that serves static skills too (`lock --include-static`) |
 | `sources` | string[] | Also check the view with these extra skill sources (`lock --source`) |
 

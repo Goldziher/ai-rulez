@@ -566,7 +566,7 @@ func isUsageLog(p string, logs []string) bool {
 // sources are resolved once and shared by every view that adds no source of its own.
 func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []ServeSetup) ([]*built, error) {
 	base := *st
-	base.Role, base.Profile, base.IncludeStatic, base.Sources = "", "", false, nil
+	base.Role, base.Profile, base.Preset, base.IncludeStatic, base.Sources = "", "", "", false, nil
 	first, err := base.build(ctx, bo)
 	if err != nil {
 		return nil, err
@@ -615,7 +615,7 @@ func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []Se
 	}
 	for _, extra := range extras {
 		view := base
-		view.Role, view.Profile, view.IncludeStatic, view.Sources = extra.Role, extra.Profile, extra.IncludeStatic, extra.Sources
+		view.Role, view.Profile, view.Preset, view.IncludeStatic, view.Sources = extra.Role, extra.Profile, extra.Preset, extra.IncludeStatic, extra.Sources
 		if err := build(view, true); err != nil {
 			return nil, err
 		}

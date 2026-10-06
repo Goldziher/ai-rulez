@@ -14,7 +14,7 @@ import (
 func resetLockViewFlags(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
-		lockServeRole, lockServeIncludeStatic, lockServeSources, lockStrict, lockProfile = "", false, nil, false, ""
+		lockServeRole, lockServeIncludeStatic, lockServeSources, lockStrict, lockProfile, lockServeTargets = "", false, nil, false, "", ""
 		lockUnpinned = nil
 	})
 }
@@ -76,6 +76,24 @@ func TestLock_IncludeStaticViewIsPinnedCheckedAndRefreshed(t *testing.T) {
 	_, stderr = capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, 0, code, stderr)
 	assert.Contains(t, servedByView(t, root), "static", "the recorded view stays pinned")
+}
+
+func TestLock_TargetsViewIsPinnedAndChecked(t *testing.T) {
+	// Arrange
+	resetLockViewFlags(t)
+	root := rolesCmdProject(t)
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	assert.NotContains(t, servedByView(t, root), "targets:claude")
+	lockServeTargets = "claude"
+
+	// Act
+	require.Equal(t, 0, writeLockAt("", "", nil))
+
+	// Assert: the view is pinned under its own key and --check evaluates it.
+	assert.ElementsMatch(t, []string{"deploy", "migrate", "ui"}, servedByView(t, root)["targets:claude"])
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, stderr)
 }
 
 func TestLock_RemovedRoleViewIsDropped(t *testing.T) {
