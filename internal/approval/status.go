@@ -180,6 +180,10 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 		res.Required, res.Status, res.Detail = true, StatusDenied, reason
 		return res
 	}
+	if p.DenyProblem != "" && p.Active() && s.Digest != "" {
+		res.Required, res.Status, res.Detail = true, StatusDenied, p.DenyProblem
+		return res
+	}
 	if !res.Required {
 		res.Status = StatusNotRequired
 		res.Reviewers = p.currentReviewers(recs, s, now)
