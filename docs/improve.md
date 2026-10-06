@@ -66,12 +66,20 @@ It edits the files in `<skill>/` under the working directory.
                    "frontmatter_immutable": ["name", "allowed-tools", "disable-model-invocation", "model"],
                    "max_skill_tokens": 2400, "forbid": ["scripts/**", "assets/**"] },
   "budget": { "max_cost_usd": 2.0, "timeout_s": 1200 },
-  "history": ["rejected: below gain"] }
+  "history": ["rejected: below gain"],
+  "previous": { "round": 1, "decision": "rejected: policy", "reasons": ["AR9J3 outside-editable: ... (scripts/run.sh)"],
+                "summary": "Added a helper script.", "workspace_kept": false } }
 ```
 
 ```json
 { "version": 1, "summary": "Tightened the description.", "changed": ["SKILL.md"], "cost_usd": 0.42, "notes": "optional" }
 ```
+
+`previous` (absent in round 1) lets a stateless optimizer avoid repeating itself: how the last round ended, the
+optimizer's own summary of it, and whether the workspace still holds that attempt (a round the gate rejected) or was
+reset to the state before it (a round rejected earlier, by the diff policy, the sibling guard or a failure). `reasons`
+are given only for rounds decided before the held-out set was consulted; a held-out gate decision carries the one-word
+decision and nothing else.
 
 `changed` is informational: ai-rulez computes the real diff. `cost_usd` is self-reported and counts against
 `--max-cost`; a run whose optimizer never reports a cost is flagged. `summary` and `notes` are untrusted: control

@@ -60,6 +60,22 @@ type (
 		Budget      optimizerBudget `json:"budget"`
 		// History is the one-word decision on each earlier round, never per-case results.
 		History []string `json:"history,omitempty"`
+		// Previous is what the optimizer needs to avoid repeating its last attempt (nil in round 1).
+		Previous *PreviousRound `json:"previous,omitempty"`
+	}
+	// PreviousRound tells a stateless optimizer how its last round ended. Reasons are given for rounds
+	// decided before the held-out set was consumed (a policy violation, a no-change round, a sibling
+	// regression, a failure) and never for a round the held-out gate decided, so nothing about held-out
+	// cases leaks through them.
+	PreviousRound struct {
+		Round    int      `json:"round"`
+		Decision string   `json:"decision"`
+		Reasons  []string `json:"reasons,omitempty"`
+		// Summary is the optimizer's own summary of that attempt, sanitized.
+		Summary string `json:"summary,omitempty"`
+		// WorkspaceKept says whether the workspace still holds that attempt (a round the gate
+		// rejected) or was reset to the state before it (a round rejected earlier).
+		WorkspaceKept bool `json:"workspace_kept"`
 	}
 	// OptimizerResponse is what an optimizer prints on standard output.
 	OptimizerResponse struct {
@@ -580,7 +596,8 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 		Version: ProtocolVersion, RunID: p.RunID, Round: round,
 		Skill:      optimizerSkill{ID: p.Skill.ID, Dir: p.Skill.ID, Digest: digestOfTree(x.prev)},
 		TrainCases: p.trainCases, TrainScores: scores, Constraints: p.Constraints, History: history,
-		Budget: optimizerBudget{MaxCostUSD: roundUSD(x.left()), TimeoutS: int(runner.EffectiveTimeout(o.Timeout).Seconds())},
+		Previous: x.previousRound(),
+		Budget:   optimizerBudget{MaxCostUSD: roundUSD(x.left()), TimeoutS: int(runner.EffectiveTimeout(o.Timeout).Seconds())},
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -630,6 +647,25 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 	rep.CostUSD = roundUSD(rep.CostUSD + resp.CostUSD)
 	x.optCost += resp.CostUSD
 	return &resp, ""
+}
+
+// previousRound summarises the last finished round for the next optimizer call.
+func (x *execution) previousRound() *PreviousRound {
+	n := len(x.report.Rounds)
+	if n == 0 {
+		return nil
+	}
+	rd := &x.report.Rounds[n-1]
+	prev := &PreviousRound{Round: rd.Round, Decision: Sanitize(rd.Decision, 80), Summary: Sanitize(rd.Summary, 300), WorkspaceKept: rd.Digest != "" && rd.Decision != "rejected: over budget"}
+	if rd.Held == nil { // the held-out set was not consulted: the reasons carry nothing held-out
+		for _, v := range rd.Violations {
+			prev.Reasons = append(prev.Reasons, v.String())
+		}
+		for _, r := range rd.Reasons {
+			prev.Reasons = append(prev.Reasons, Sanitize(r, 400))
+		}
+	}
+	return prev
 }
 
 func digestOfTree(t *Tree) string {
