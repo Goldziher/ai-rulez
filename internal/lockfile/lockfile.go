@@ -27,6 +27,26 @@ const FileName = "ai-rulez.lock"
 // of the format, so a change to either is a new Version.
 const Version = 1
 
+// VersionRolePins is the format version of a lock that holds role output pins
+// ([[output]] entries with a role). A reader of version 1 would drop the role key
+// and take such a pin for a default output with no path, so the lock says it is
+// newer: that reader refuses it (Load is fail closed on every version it does not
+// know) instead of misreading it.
+const VersionRolePins = 2
+
+// FormatVersion is the lowest version that can express what f holds: Version, or
+// VersionRolePins when f has role output pins.
+func (f *File) FormatVersion() int {
+	if f != nil {
+		for _, o := range f.Output {
+			if o.Role != "" {
+				return VersionRolePins
+			}
+		}
+	}
+	return Version
+}
+
 // Entry kinds.
 const (
 	KindInclude = "include"
@@ -129,10 +149,10 @@ func Load(configDir string) (*File, error) {
 	if err != nil || f == nil {
 		return nil, err
 	}
-	if f.Version != Version {
+	if f.Version != Version && f.Version != VersionRolePins {
 		return nil, oops.With("path", Path(configDir)).
 			Hint("Run `ai-rulez lock` to regenerate it").
-			Errorf("unsupported lock version %d (this ai-rulez reads version %d): run `ai-rulez lock` to regenerate %s", f.Version, Version, FileName)
+			Errorf("unsupported lock version %d (this ai-rulez reads versions %d and %d): run `ai-rulez lock` to regenerate %s", f.Version, Version, VersionRolePins, FileName)
 	}
 	return f, nil
 }
@@ -173,11 +193,11 @@ func read(configDir string) (*File, error) {
 }
 
 // Save writes the lock deterministically: entries sorted by name, items by
-// kind, domain and id, outputs by path, no timestamps. It always writes the
-// current format version.
+// kind, domain and id, outputs by path, no timestamps. It writes the lowest
+// format version that can express the lock (FormatVersion).
 func Save(configDir string, f *File) error {
 	out := *f
-	out.Version = Version
+	out.Version = f.FormatVersion()
 	out.Include, out.Skill = sorted(f.Include), sorted(f.Skill)
 	out.Source, out.Served = sorted(f.Source), sorted(f.Served)
 	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
