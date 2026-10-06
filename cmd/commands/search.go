@@ -133,6 +133,9 @@ func checkSearchFlags(cmd *cobra.Command, args []string) error {
 	if err := checkFormatFlag(searchFlags.format); err != nil {
 		return err
 	}
+	if searchFlags.k < 0 {
+		return oops.Errorf("--k must not be negative")
+	}
 	if searchFlags.limit < 1 || searchFlags.limit > searchMaxLimit {
 		return oops.Errorf("--limit must be between 1 and %d", searchMaxLimit)
 	}
@@ -226,7 +229,9 @@ func runSearchEval(out, errOut io.Writer, cat *mcp.Catalog) int {
 		if err != nil {
 			return fail(err)
 		}
-		res.CompareBaseline(base)
+		if err := res.CompareBaseline(base); err != nil {
+			return fail(err)
+		}
 		maxFlips = searchFlags.maxFlips
 	}
 	res.GateFailures = res.Gate(mins, maxFlips)
