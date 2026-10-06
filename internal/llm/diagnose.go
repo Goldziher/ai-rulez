@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -44,12 +43,12 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 		Model:          cfg.FullModel(),
 		EmbeddingModel: cfg.EmbeddingModel,
 		AllowNetwork:   cfg.AllowNetwork,
-		CacheEnabled:   cfg.CacheEnabled() && !opts.NoCache && opts.ConfigDir != "",
+		CacheEnabled:   cfg.CacheEnabled() && !opts.NoCache && CacheDirFor(opts) != "",
 		Limits:         Limits{MaxCostUSD: cfg.MaxCostUSD, MaxTokens: cfg.MaxTokens, MaxCalls: cfg.MaxCalls}.Describe(),
 		Problems:       cfg.Validate(),
 	}
 	if d.CacheEnabled {
-		d.CacheDir = filepath.Join(opts.ConfigDir, filepath.FromSlash(CacheDirRel))
+		d.CacheDir = CacheDirFor(opts)
 	}
 	if u, err := url.Parse(cfg.BaseURL); err == nil {
 		d.BaseURLHost = u.Host

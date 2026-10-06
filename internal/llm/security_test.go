@@ -281,7 +281,7 @@ func TestJudgeRejectsIncompleteVerdictsAndDoesNotCacheThem(t *testing.T) {
 	if _, err := Judge(context.Background(), m, "r", "t"); err == nil {
 		t.Fatal("invalid verdict accepted")
 	}
-	if n := countFiles(t, filepath.Join(dir, "local", "llm-cache")); n != 0 {
+	if n := countFiles(t, CacheDirFor(Options{ConfigDir: dir})); n != 0 {
 		t.Fatalf("invalid reply cached (%d files)", n)
 	}
 	reply = `{"score":0.5,"rationale":"fine"}`
@@ -289,7 +289,7 @@ func TestJudgeRejectsIncompleteVerdictsAndDoesNotCacheThem(t *testing.T) {
 	if err != nil || v.Score != 0.5 {
 		t.Fatalf("the next run must reach the model and succeed: %+v %v", v, err)
 	}
-	if n := countFiles(t, filepath.Join(dir, "local", "llm-cache")); n != 1 {
+	if n := countFiles(t, CacheDirFor(Options{ConfigDir: dir})); n != 1 {
 		t.Fatalf("valid reply not cached (%d files)", n)
 	}
 	v2, err := Judge(context.Background(), m, "r", "t")
@@ -443,7 +443,7 @@ func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
 		t.Fatalf("key in logs:\n%s", logs.String())
 	}
 	n := 0
-	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error { //nolint:errcheck // test walk
+	_ = filepath.WalkDir(CacheDirFor(Options{ConfigDir: dir}), func(p string, d os.DirEntry, err error) error { //nolint:errcheck // test walk
 		if err != nil {
 			t.Error(err)
 			return nil
