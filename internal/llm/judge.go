@@ -34,14 +34,16 @@ const (
 	typeObject = "object"
 )
 
+// judgeSchema keeps to the subset every provider accepts: Gemini's native API
+// rejects additionalProperties, so extra fields are refused by parseVerdict's
+// strict decode instead of by the schema.
 var judgeSchema = map[string]any{
 	keyType: typeObject,
 	"properties": map[string]any{
 		"score":     map[string]any{keyType: "number", "minimum": 0, "maximum": 1},
 		"rationale": map[string]any{keyType: "string"},
 	},
-	"required":             []string{"score", "rationale"},
-	"additionalProperties": false,
+	"required": []string{"score", "rationale"},
 }
 
 // JudgeOptions tunes JudgeWith.
