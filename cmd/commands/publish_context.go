@@ -99,8 +99,12 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 			return nil, err
 		}
 	}
-	if pc.signer, err = publishSigner(ctx, ambient.Env(nil)); err != nil {
-		return nil, err
+	// A dry run signs nothing: keyless signing would reach Fulcio and write a
+	// public Rekor entry, and a key would be read for no output.
+	if !publishDryRun {
+		if pc.signer, err = publishSigner(ctx, ambient.Env(nil)); err != nil {
+			return nil, err
+		}
 	}
 	pc.prevLock, pc.prevLabel, err = pc.previousLock(top)
 	if err != nil {
@@ -312,7 +316,7 @@ func (pc *publishContext) newInput(spec *pluginSpec) (*publish.Input, error) {
 		Source: pc.src.Source, Mtime: pc.mtime, Target: publishTo, Channel: publishChannel,
 		Templates: pc.opts.templates, NPM: pc.opts.npm, SBOM: pc.sbom, Approval: pc.approval,
 		PreviousLock: pc.prevLock, PreviousLabel: pc.prevLabel, RequireSignature: pc.opts.requireSignature,
-		Sign: signFunc(pc.ctx, pc.signer), Repo: pc.repo, Tag: spec.tag,
+		Sign: pc.signCallback(), Repo: pc.repo, Tag: spec.tag,
 	}
 	if !pc.multi {
 		in.Emit = pc.emitRequestFor(spec.tag)

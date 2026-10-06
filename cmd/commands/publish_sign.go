@@ -87,6 +87,27 @@ func signFunc(ctx context.Context, s signing.Signer) func(publish.SignRequest) (
 	return func(req publish.SignRequest) (*publish.SignResult, error) { return publish.SignRelease(ctx, s, req) }
 }
 
+// dryRunSignature is the stand-in written for a signature in a dry run.
+const dryRunSignature = "not signed: --dry-run signs nothing\n"
+
+// signCallback is the signing step of one Build: the signer's, a placeholder in
+// a dry run (the plan then shows the signature files without signing anything),
+// or nil when not signing.
+func (pc *publishContext) signCallback() func(publish.SignRequest) (*publish.SignResult, error) {
+	if publishDryRun && publishSigning() {
+		kind := signing.KindKey
+		if publishSignKeyless {
+			kind = signing.KindKeyless
+		}
+		return func(publish.SignRequest) (*publish.SignResult, error) {
+			return &publish.SignResult{
+				Bundle: []byte(dryRunSignature), Attestation: []byte(dryRunSignature), Signer: publish.SignerInfo{Kind: kind},
+			}, nil
+		}
+	}
+	return signFunc(pc.ctx, pc.signer)
+}
+
 // approvalGate reads the approval state of the lock. It returns the summary the
 // manifest records when the [governance] policy selects content, and fails
 // (AR9N8) when require is set and anything selected lacks a valid approval.
