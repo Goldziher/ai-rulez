@@ -93,6 +93,7 @@ var analyzerGroups = []analyzerGroup{
 	// Review dimensions: reported by `ai-rulez review`, never by validate.
 	{AnalyzerDescriptions, ScopeItem, []string{"AR9G0", "AR9G1", "AR9G2", "AR9G3", "AR9G4", "AR9G5", "AR9G6", "AR9G7"}},
 	{AnalyzerConvert, ScopeItem, []string{"AR9F0", "AR9F1", "AR9F2", "AR9F3", "AR9F4", "AR9F5"}},
+	{AnalyzerEvals, ScopeItem, []string{"AR9J1", "AR9J2", "AR9J3"}}, // improve report codes
 }
 
 var analyzerOverrides = buildAnalyzerTable()

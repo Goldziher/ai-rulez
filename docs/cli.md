@@ -1618,6 +1618,30 @@ Rank the skills `mcp --serve-skills` would serve against a query, with the ranke
 | `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
 
 ### `ai-rulez search --eval <cases.yaml>`
+### `ai-rulez improve run <skill> --with CMD` (experimental)
+
+Runs an external optimizer on a throwaway copy of an authored skill and accepts its candidate only if a held-out eval set improves without regressions. The authored skill is untouched until `improve apply`, which never commits. Required: `--with` and `--max-cost`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--with CMD` | | optimizer command, run without a shell (words, or a JSON array) |
+| `--holdout-tag TAG` / `--holdout-fraction F` | `holdout` / `0.3` | held-out cases by tag, else a deterministic split |
+| `--min-gain G` / `--max-regressions N` | `0.05` / `0` | acceptance gate on the held-out set |
+| `--max-rounds N` / `--max-holdout-evals N` | `3` / `3` | optimizer invocations / held-out evaluations |
+| `--max-cost USD` | required | ceiling for evals plus optimizer-reported cost |
+| `--runs N` | `3` | eval runs per case, majority vote |
+| `--timeout D` | `20m` | per optimizer invocation |
+| `--env-pass A,B` / `--egress H,I` | | forwarded environment names / declared hosts (credential-like names need `--egress`) |
+| `--allow-frontmatter` / `--allow-scripts` | off | widen the diff policy |
+| `--runner-command`, `--harness`, `--model`, ... | | the eval runner, as for `eval run` |
+| `--yes`, `--dry-run`, `--format json`, `--stop-at-first-accept` | | skip the prompt, plan only, JSON report |
+
+Exit 0: candidate accepted. Exit 2: no acceptable candidate (report written). Exit 1: refused or could not run. See [Improve](improve.md).
+
+### `ai-rulez improve apply <run-id>` (experimental)
+
+Shows the diff of an accepted run and writes it into the skill after confirmation (`--yes` skips it). Refuses with `AR9J1` when the skill changed since the run.
+
 
 Measure the ranking against labelled queries: top-1, recall@k, hit@k and MRR.
 
