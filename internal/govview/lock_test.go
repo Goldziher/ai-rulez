@@ -2,6 +2,7 @@ package govview
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,4 +73,35 @@ func TestLoadWithCacheFallback_NamesTheRetryFailure(t *testing.T) {
 	assert.Equal(t, 2, calls)
 	assert.ErrorIs(t, err, includes.ErrNotCached, "the first error stays the cause")
 	assert.Contains(t, err.Error(), "bad syntax", "the retry failure is not hidden")
+}
+
+// With [lock] enforce off the resolver only warns about an uncached include, so
+// the first load succeeds; the fallback must still notice and skip remote
+// content instead of letting a later step re-resolve (and re-warn) it.
+func TestLoadWithCacheFallback_SkipsRemoteWhenAnIncludeIsNotCached(t *testing.T) {
+	// Arrange
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("AI_RULEZ_CACHE_DIR", t.TempDir())
+	dir := t.TempDir()
+	cfg := &config.Config{
+		BaseDir:   dir,
+		ConfigDir: filepath.Join(dir, ".ai-rulez"),
+		Includes:  []config.IncludeConfig{{Name: "shared", Source: "https://github.com/example/rules.git"}},
+	}
+	require.NotEmpty(t, includes.NotCached(cfg), "precondition: the include is not cached")
+	var calls [][]config.LoadOption
+	load := func(opts ...config.LoadOption) (*config.Config, error) {
+		calls = append(calls, opts)
+		return cfg, nil
+	}
+
+	// Act
+	got, skipped, err := LoadWithCacheFallback(load)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Same(t, cfg, got)
+	assert.True(t, skipped)
+	require.Len(t, calls, 2)
+	assert.Len(t, calls[1], 1, "the retry loads without remote includes")
 }
