@@ -170,22 +170,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	}
 	profile, preset := st.Profile, st.Preset
 	gen := generator.NewGenerator(cfg)
-	var roleKeeps func(name string) bool
-	if st.Role != "" {
-		if st.Profile != "" {
-			return nil, oops.Errorf("--role and --profile are mutually exclusive")
-		}
-		if cfg.Content == nil {
-			return nil, oops.Hint("A role selects project content; run in a project with [[roles]]").Errorf("role %q needs a project", st.Role)
-		}
-		if err = gen.SetRole(st.Role); err != nil {
-			return nil, oops.Wrapf(err, "resolve role %q", st.Role)
-		}
-		resolved, rerr := cfg.ResolveRole(st.Role)
-		if rerr != nil {
-			return nil, oops.Wrap(rerr)
-		}
-		roleKeeps = func(name string) bool { return resolved.Flat().Keeps(config.RoleKindSkill, "", name) }
+	roleKeeps, err := st.selectRole(cfg, gen)
+	if err != nil {
+		return nil, err
 	}
 	var served []generator.ServedSkill
 	if cfg.Content != nil {
@@ -263,6 +250,28 @@ func (st *ServeSetup) resolveSources(ctx context.Context, cfg *config.Config, lo
 		out = append(out, res)
 	}
 	return out, nil
+}
+
+// selectRole narrows the generator to the setup's role and returns the test a
+// source skill must pass to be kept by it; nil when the setup has no role.
+func (st *ServeSetup) selectRole(cfg *config.Config, gen *generator.Generator) (func(name string) bool, error) {
+	if st.Role == "" {
+		return nil, nil
+	}
+	if st.Profile != "" {
+		return nil, oops.Errorf("--role and --profile are mutually exclusive")
+	}
+	if cfg.Content == nil {
+		return nil, oops.Hint("A role selects project content; run in a project with [[roles]]").Errorf("role %q needs a project", st.Role)
+	}
+	if err := gen.SetRole(st.Role); err != nil {
+		return nil, oops.Wrapf(err, "resolve role %q", st.Role)
+	}
+	resolved, err := cfg.ResolveRole(st.Role)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	return func(name string) bool { return resolved.Flat().Keeps(config.RoleKindSkill, "", name) }, nil
 }
 
 func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {

@@ -74,14 +74,14 @@ func TestMergeDynamicLock_RefusedSkillIsLeftUnpinnedUnlessStrict(t *testing.T) {
 
 	t.Run("strict keeps today's any-refusal-fails behaviour", func(t *testing.T) {
 		next := &lockfile.File{Version: lockfile.Version}
-		problems, unpinned := mergeDynamicViews(cfg, current, next, "", nil, nil, true)
+		problems, unpinned := mergeDynamicViews(cfg, current, next, dynamicRun{strict: true})
 		require.Len(t, problems, 1)
 		assert.Contains(t, problems[0], "served evil: AR005")
 		assert.Empty(t, unpinned)
 	})
 	t.Run("default pins the others and reports the refusal", func(t *testing.T) {
 		next := &lockfile.File{Version: lockfile.Version}
-		problems, unpinned := mergeDynamicViews(cfg, current, next, "", nil, nil, false)
+		problems, unpinned := mergeDynamicViews(cfg, current, next, dynamicRun{})
 		assert.Empty(t, problems)
 		require.Len(t, unpinned, 1)
 		assert.Equal(t, "evil", unpinned[0].Name)
