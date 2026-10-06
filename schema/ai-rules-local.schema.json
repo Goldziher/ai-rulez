@@ -593,6 +593,10 @@
             },
             "type": "array"
           },
+          "include_prerelease": {
+            "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
           "install_to": {
             "description": "Import content into a specific domain (defaults to root)",
             "type": "string"
@@ -625,6 +629,14 @@
           "source": {
             "description": "Git repository URL (https://...) or local file path (absolute or relative)",
             "type": "string"
+          },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
+            "type": "string"
           }
         },
         "required": ["name"],
@@ -637,6 +649,10 @@
       "items": {
         "additionalProperties": false,
         "properties": {
+          "include_prerelease": {
+            "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
           "local_override": {
             "description": "Local path override for development (used instead of source when present)",
             "type": "string"
@@ -668,6 +684,14 @@
           "source": {
             "description": "Git repository URL (https://...) or local file path",
             "minLength": 1,
+            "type": "string"
+          },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
             "type": "string"
           }
         },
@@ -2328,6 +2352,10 @@
             },
             "type": "array"
           },
+          "include_prerelease": {
+            "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
           "max_bytes": {
             "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error.",
             "minimum": 0,
@@ -2366,6 +2394,10 @@
             "description": "A tag or full commit SHA. A branch or no ref follows a moving ref and is reported as unpinned.",
             "type": "string"
           },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
+            "type": "string"
+          },
           "trust": {
             "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
             "enum": ["error", "warn"],
@@ -2373,6 +2405,10 @@
           },
           "url": {
             "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory.",
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
             "type": "string"
           }
         },
