@@ -44,6 +44,10 @@ func tokenHosts(host ambient.Host) []string {
 	return hosts
 }
 
+// TokenHosts returns the hosts credentials may be sent to (TokenHostsEnv, else
+// github.com). The forge client (internal/forge) uses the same allowlist.
+func TokenHosts(host ambient.Host) []string { return append([]string(nil), tokenHosts(host)...) }
+
 // tokenAllowedFor reports whether token may be sent to the https repository at
 // rawURL, and the origin ("https://host[:port]") to scope the header to. Plain
 // http, ssh, file and scp-style remotes never receive it.
