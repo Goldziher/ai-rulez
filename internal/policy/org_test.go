@@ -17,6 +17,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const orgBody = "policy_version = 1\nname = \"example-org\"\n[lock]\nenforce = true\n"
@@ -315,8 +316,8 @@ func TestOriginURLReadsTheRealOriginRemote(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "git@github.com:example-org/repo.git"}} {
-		cmd := exec.Command("git", append([]string{"-C", dir, "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...)
-		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
+		cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...)
+		cmd.Env = append(cmd.Env, "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, string(out))
 	}
