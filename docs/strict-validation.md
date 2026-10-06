@@ -393,7 +393,7 @@ Guarantees:
 
 - **Authored sources, plus hand-written harness files for trap fixes.** Text edits apply only to files under the
   configuration directory, except the harness trap fixes (`AR9C7`, `AR9CA`), which may edit a hand-written harness
-  file elsewhere in the project. No fix touches a file recorded as generated in the generate manifest; such a fix is
+  file elsewhere in the project, never a symlink or a file whose path leaves the project. No fix touches a file recorded as generated in the generate manifest; such a fix is
   reported as skipped. Fix the source and run `generate`. The summary counts the edits made outside the configuration
   directory.
 - **Never security findings.** `AR0xx` findings have no automatic fix and would be refused if one existed.

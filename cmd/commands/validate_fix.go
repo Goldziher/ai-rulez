@@ -48,6 +48,12 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 				if top := gitutil.TopLevel(configDir); top != "" {
 					opts.DiffRoot = gitutil.Resolve(top)
 				}
+				// A fix outside .ai-rulez/ edits a hand-written harness file, which
+				// lives beside the config directory, not above the repository.
+				opts.ProjectRoot = opts.DiffRoot
+				if parent := filepath.Dir(opts.EditRoot); opts.DiffRoot == opts.EditRoot {
+					opts.ProjectRoot = parent
+				}
 			}
 			generated := map[string]bool{}
 			for _, p := range generator.NewGenerator(cfg).GeneratedPaths() {
