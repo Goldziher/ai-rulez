@@ -29,6 +29,11 @@ type GovernanceConfig struct {
 	// Enforce makes `lock --check`, `generate --locked` and the skills server fail on
 	// content whose approval is missing, stale, expired or insufficient.
 	Enforce bool `yaml:"enforce,omitempty" json:"enforce,omitempty" toml:"enforce,omitempty"`
+
+	// PolicyFloor holds the require_approval selectors an organization policy
+	// imposes (docs/policy.md). Runtime only: the policy sets it, never the file.
+	// Unlike RequireApproval it is not narrowed by Exempt.
+	PolicyFloor []string `yaml:"-" json:"-" toml:"-"`
 }
 
 // Approval selectors besides "kind:<kind>".
