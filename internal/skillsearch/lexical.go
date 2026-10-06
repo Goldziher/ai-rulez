@@ -63,14 +63,43 @@ func Tokenize(s string) []string {
 	return out
 }
 
+// stem strips an inflectional suffix and a trailing silent "e", so the forms of
+// one word meet: image/images, cache/cached/caching, release/releases/releasing.
 func stem(w string) string {
 	for _, suf := range []string{"ing", "ied", "ies", "ed", "es", "s"} {
-		if len(w) > len(suf)+3 && strings.HasSuffix(w, suf) {
-			if suf == "ies" || suf == "ied" {
-				return w[:len(w)-len(suf)] + "y"
-			}
-			return w[:len(w)-len(suf)]
+		if len(w) <= len(suf)+3 || !strings.HasSuffix(w, suf) {
+			continue
 		}
+		base := w[:len(w)-len(suf)]
+		switch suf {
+		case "ies", "ied":
+			return base + "y"
+		case "es":
+			// "es" is a plural ending only after a sibilant (matches, boxes, processes);
+			// elsewhere the "e" belongs to the word (images, services).
+			if !endsSibilant(base) {
+				base = w[:len(w)-1]
+			}
+		case "s":
+			if strings.HasSuffix(w, "ss") {
+				return w // class, access: not a plural
+			}
+		}
+		return dropSilentE(base)
+	}
+	return dropSilentE(w)
+}
+
+func endsSibilant(s string) bool {
+	return strings.HasSuffix(s, "s") || strings.HasSuffix(s, "x") || strings.HasSuffix(s, "z") ||
+		strings.HasSuffix(s, "ch") || strings.HasSuffix(s, "sh")
+}
+
+// dropSilentE removes a final "e" from a word of five letters or more, so "cache"
+// and the "cach" left by "cached" and "caching" agree.
+func dropSilentE(w string) string {
+	if len(w) > 4 && strings.HasSuffix(w, "e") {
+		return w[:len(w)-1]
 	}
 	return w
 }
