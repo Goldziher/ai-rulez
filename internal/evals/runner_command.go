@@ -17,6 +17,10 @@ import (
 // maxResponseBytes bounds a runner's answer.
 const maxResponseBytes = 64 << 20
 
+// probeTimeout bounds the handshake: it carries no work, so a runner that needs
+// longer than this to answer is not answering.
+const probeTimeout = time.Minute
+
 // CommandRunner pipes the request JSON to a user-supplied command and reads the
 // response JSON from its standard output. The command is run through the shell;
 // it is the integration point for other harnesses and in-house infrastructure,
@@ -57,19 +61,64 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	return r.runThrough(ctx, req, body, timeout)
+	stdout, err := r.invoke(ctx, req, body, timeout)
+	if err != nil {
+		return nil, err
+	}
+	var resp Response
+	if err := json.Unmarshal(stdout, &resp); err != nil {
+		return nil, fmt.Errorf("runner command printed invalid JSON: %w", err)
+	}
+	if err := resp.Validate(req); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
-// runThrough starts the command through r.Runner (the real process runner when nil):
-// one place owns process groups, output caps and the timeout kill.
-func (r *CommandRunner) runThrough(ctx context.Context, req *Request, body []byte, timeout time.Duration) (*Response, error) {
+// Handshake implements Handshaker: it sends the probe request (mode
+// "capabilities", no skill, no cases) to the command and reads what the command
+// declares. A command that does not know the probe answers with no capabilities
+// (or fails), so it is never sent an activation request.
+func (r *CommandRunner) Handshake(ctx context.Context) (Declaration, error) {
+	if strings.TrimSpace(r.Command) == "" {
+		return Declaration{}, fmt.Errorf("the command runner needs --runner-command")
+	}
+	req := &Request{Version: ProtocolVersion, Mode: ModeCapabilities}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return Declaration{}, fmt.Errorf("encode request: %w", err)
+	}
+	timeout := probeTimeout
+	if r.Timeout > 0 && r.Timeout < timeout {
+		timeout = r.Timeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	stdout, err := r.invoke(ctx, req, body, timeout)
+	if err != nil {
+		return Declaration{}, err
+	}
+	var resp Response
+	if err := json.Unmarshal(stdout, &resp); err != nil {
+		return Declaration{}, fmt.Errorf("runner command printed invalid JSON to the capabilities probe: %w", err)
+	}
+	if err := resp.ValidateProbe(); err != nil {
+		return Declaration{}, err
+	}
+	return Declaration{Capabilities: resp.Capabilities, Surfaces: resp.Surfaces}, nil
+}
+
+// invoke starts the command through r.Runner (the real process runner when nil):
+// one place owns process groups, output caps and the timeout kill. It returns the
+// command's standard output.
+func (r *CommandRunner) invoke(ctx context.Context, req *Request, body []byte, timeout time.Duration) ([]byte, error) {
 	argv := []string{"sh", "-c", r.Command}
 	if runtime.GOOS == "windows" {
 		argv = []string{"cmd", "/C", r.Command}
 	}
 	res := runner.Or(r.Runner).Run(ctx, runner.Spec{
 		Argv: argv, Stdin: body, Timeout: timeout, MaxOutput: maxResponseBytes,
-		Env: append(runner.HostEnv(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID),
+		Env: append(runner.HostEnv(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID, "AI_RULEZ_EVAL_MODE="+req.Mode),
 	})
 	if r.Stderr != nil {
 		_, _ = r.Stderr.Write(res.Stderr) //nolint:errcheck // best-effort forwarding
@@ -82,18 +131,15 @@ func (r *CommandRunner) runThrough(ctx context.Context, req *Request, body []byt
 	case res.StdoutTruncated:
 		return nil, fmt.Errorf("runner output exceeds %d bytes", maxResponseBytes)
 	}
-	var resp Response
-	if err := json.Unmarshal(res.Stdout, &resp); err != nil {
-		return nil, fmt.Errorf("runner command printed invalid JSON: %w", err)
-	}
-	if err := resp.Validate(req); err != nil {
-		return nil, err
-	}
-	return &resp, nil
+	return res.Stdout, nil
 }
 
 // Runner names.
 const (
 	RunnerClaudePluginEval = "claude-plugin-eval"
 	RunnerCommand          = "command"
+	// RunnerClaudeNative and RunnerCodexNative drive the harness's own CLI for the
+	// native activation surface.
+	RunnerClaudeNative = "claude-native"
+	RunnerCodexNative  = "codex-native"
 )
