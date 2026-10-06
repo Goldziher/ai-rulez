@@ -975,6 +975,24 @@
               "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval.",
               "enum": ["off", "warn", "error"],
               "type": "string"
+            },
+            "min_activation_recall": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation recall (`ai-rulez eval run --mode activation`) is below this."
+            },
+            "min_activation_precision": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Enable activation-low (AR9A1): report a skill whose recorded activation precision is below this."
+            },
+            "confusion_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Enable skill-confusable (AR9A2): report a sibling that won at least this share of a skill's positive activation prompts."
             }
           },
           "type": "object"
