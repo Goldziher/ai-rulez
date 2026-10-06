@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestUntrustedLocalFile(t *testing.T) {
 		{"symlink", func(t *testing.T, p string) {
 			target := filepath.Join(filepath.Dir(p), "target")
 			require.NoError(t, os.WriteFile(target, []byte("{}"), 0o600))
-			require.NoError(t, os.Symlink(target, p))
+			testutil.SymlinkOrSkip(t, target, p)
 		}, "it is not a regular file"},
 		{"tracked by git", func(t *testing.T, p string) {
 			require.NoError(t, os.WriteFile(p, []byte("{}"), 0o600))
