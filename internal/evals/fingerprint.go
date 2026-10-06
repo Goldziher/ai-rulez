@@ -18,20 +18,98 @@ const DefaultRunnerTimeout = 30 * time.Minute
 // maxStampBytes bounds how much of a runner program is hashed.
 const maxStampBytes = 128 << 20
 
-// commandProgramStamp names the program behind a shell command line by the
-// content hash of its first word when that word is a file: editing the script a
-// runner command points at must not reuse results the old script produced. A
-// first word that is not a file (a shell builtin, a program not found) stamps as "".
+// commandProgramStamp stamps every file a shell command line names: the program
+// and each argument that resolves to a regular file, by content hash. Editing
+// run.py in `python run.py` must not reuse results the old script produced, so
+// the first word alone is not enough. Words that are not files (flags, builtins,
+// programs not found) contribute nothing.
 func commandProgramStamp(command string) string {
-	fields := strings.Fields(command)
-	if len(fields) == 0 {
+	var stamps []string
+	for i, word := range shellFields(command) {
+		var path string
+		if i == 0 {
+			path = findProgram(word)
+		} else {
+			path = findFileArg(word)
+		}
+		if path == "" {
+			continue
+		}
+		if h := fileHash(path); h != "" {
+			stamps = append(stamps, filepath.Base(path)+"="+h)
+		}
+	}
+	return strings.Join(stamps, ",")
+}
+
+// findFileArg resolves an argument to a regular file when it names one; a
+// --flag=path argument is looked at after the "=".
+func findFileArg(arg string) string {
+	if _, value, ok := strings.Cut(arg, "="); ok && strings.HasPrefix(arg, "-") {
+		arg = value
+	}
+	if arg == "" || strings.HasPrefix(arg, "-") {
 		return ""
 	}
-	first := strings.Trim(fields[0], `"'`)
-	if path := findProgram(first); path != "" {
-		return fileHash(path)
+	abs, err := filepath.Abs(arg)
+	if err != nil {
+		return ""
+	}
+	if info, statErr := os.Stat(abs); statErr == nil && info.Mode().IsRegular() {
+		return abs
 	}
 	return ""
+}
+
+// shellFields splits a command line into words the way a POSIX shell would for
+// the common cases: whitespace separates, single and double quotes group, and a
+// backslash escapes the next character outside single quotes. It does not expand
+// anything.
+func shellFields(line string) []string {
+	var (
+		fields  []string
+		cur     strings.Builder
+		inWord  bool
+		quote   rune
+		escaped bool
+	)
+	flush := func() {
+		if inWord {
+			fields = append(fields, cur.String())
+			cur.Reset()
+			inWord = false
+		}
+	}
+	for _, r := range line {
+		switch {
+		case escaped:
+			cur.WriteRune(r)
+			escaped = false
+		case quote == '\'':
+			if r == '\'' {
+				quote = 0
+			} else {
+				cur.WriteRune(r)
+			}
+		case r == '\\':
+			escaped, inWord = true, true
+		case quote == '"':
+			if r == '"' {
+				quote = 0
+			} else {
+				cur.WriteRune(r)
+			}
+		case r == '\'' || r == '"':
+			quote, inWord = r, true
+		case r == ' ' || r == '\t' || r == '\n':
+			flush()
+		default:
+			cur.WriteRune(r)
+			inWord = true
+		}
+	}
+	flush()
+	return fields
 }
 
 // executableStamp identifies an executable by its resolved path, size and
