@@ -1003,6 +1003,7 @@ ai-rulez generate [config-file] [flags]
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
+| `--verify-tags`                 | boolean | false         | Before generating, ask the remotes whether a tag pinned in `ai-rulez.lock` moved (`AR732`, exit 2) or was deleted (`AR735`); needs the network. Also `[lock] verify_tags = true` |
 | `--emit-plan FILE`              | string  |               | Write the generation plan as JSON to FILE (`-` for stdout) and apply nothing ([details](#embedding-the-plan)) |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
 | `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
@@ -1835,6 +1836,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--subject` | Print the lock-subject digest (the value a signature over the lock commits to) and what it is computed from; reads the lock only, offline. `--format json` prints the statement (`schema/lock-subject.schema.json`), `--output <file>` writes it. Exit 2 when the stored `tree` does not match the entries. See [Signing the lock](lockfile.md#signing-the-lock) |
 | `--outdated` | List the remote includes, installed skills and skill sources that use a `version` constraint with the pinned, allowed and latest tag; reads tags only and writes nothing. `--format json` follows `schema/lock-outdated.schema.json`. Exit 2 for a moved tag (`AR732`) or an unsatisfiable constraint (`AR730`), and with `--fail-on-outdated` for any allowed update. Names and `--kind` limit it. See [Version constraints](lockfile.md#version-constraints) |
 | `--fail-on-outdated` | With `--outdated`: exit 2 when any source has an allowed update |
+| `--verify-tags` | With `--check`: ask the remotes whether a pinned tag moved (`AR732`, exit 2) or was deleted (`AR735`, warning); needs the network. Also `[lock] verify_tags = true`. See [Checking pinned tags online](lockfile.md#checking-pinned-tags-online) |
 | `--offline` | With `--outdated`: refuses to run (it needs the network); `--check` is the offline verification |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
 | `--format text\|json` | Output format of `--check`, `--diff`, `--outdated` and `--subject`; any other mode rejects it. With `--check` the JSON goes to stdout and the exit code still gates |
@@ -1953,15 +1955,18 @@ ai-rulez update --accept-moved-tag shared   # re-pin a tag that moved, after rev
 
 | Flag | Description |
 | --- | --- |
-| `--dry-run` | Show what would change (tags, commits, tree digests, changed files); write nothing |
+| `--dry-run` | Show what would change (tags, commits, tree digests, changed files, scan result); write nothing |
 | `--allow-downgrade` | Allow a tag with lower precedence than the pinned one |
+| `--accept-findings` | Write a pin although the security scan of the new tree has error findings (otherwise refused, exit 2) |
+| `--major` | Only sources with a newer major version than their constraint allows: print the constraint that takes it |
+| `--write-config` | With `--major`: rewrite only the `version` value of those sources in `config.toml` and move their pins; restored if anything is refused |
 | `--accept-moved-tag` | Re-pin a tag that now points to another commit (`AR732`) |
 | `--kind include\|skill\|source` | Limit the update to one kind |
 | `--format text\|json` | Output format; JSON follows `schema/update.schema.json` |
 | `--offline` | Refuses to run: update reads the remote's tags |
 
-Exit codes: `0` done or nothing to do, `1` could not run, `2` a source was refused (`AR732`, `AR730`, `AR731`) and
-nothing was written. `ai-rulez skill update` re-resolves plain refs and keeps range pins; `update` moves them.
+Exit codes: `0` done or nothing to do, `1` could not run, `2` a source was refused (`AR732`, `AR730`, `AR731`, or scan
+findings) and nothing was written. A source with `min_release_age` skips tags that are too young (`AR733`). `ai-rulez skill update` re-resolves plain refs and keeps range pins; `update` moves them.
 
 ## Roles Command
 

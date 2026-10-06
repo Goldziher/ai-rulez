@@ -216,6 +216,7 @@ source = "https://github.com/example-org/ai-rules"
 version = "^1.2"                 # npm-style constraint
 tag_prefix = "v"                 # optional; default accepts "1.2.3" and "v1.2.3"
 include_prerelease = false       # optional; default false
+min_release_age = "7d"           # optional; hold back tags younger than this (see below)
 
 [[installed_skills]]
 name = "deploy"
@@ -260,11 +261,56 @@ tag = "v1.2.4"                   # the resolved tag
 tag_object = "7a9c..."           # the annotated tag object id; absent for a lightweight tag
 commit = "0f3e..."               # the peeled commit
 digest = "sha256:..."            # tree digest, unchanged scheme
+released = "2026-09-28T10:00:00Z"  # only with min_release_age: when the tag was released
+released_from = "forge"          # where that time came from: forge, first-seen or commit
 ```
 
 The pin covers the config while `source`, `path` and `ref` match **and** the recorded tag still satisfies the
 constraint and the `tag_prefix`, so editing the constraint invalidates the pin until `ai-rulez lock`. `tag` and
-`tag_object` are part of the `tree` digest; entries without a tag hash exactly as before.
+`tag_object` are part of the `tree` digest; entries without a tag hash exactly as before. `released` and
+`released_from` are informational: they are not part of the digest and `lock --check` never compares them.
+
+### Minimum release age
+
+A tag published a moment ago may be a compromised release. `min_release_age` makes `lock` and `update` take the
+newest tag the constraint allows that has existed for at least that long:
+
+```toml
+[lock]
+min_release_age = "7d"             # default for every source with a version constraint
+min_release_age_source = "auto"    # auto | forge | first-seen | commit
+
+[[includes]]
+name = "shared"
+source = "https://github.com/example-org/ai-rules"
+version = "^1.2"
+min_release_age = "3d"             # per source; "0" turns the gate off for it
+```
+
+Ages are a whole number with `h`, `d` or `w` (`12h`, `7d`, `2w`), at most 3650 days. A tag the gate holds back is
+reported as `AR733` (info) by `lock`, `update` and `lock --outdated`, and the next older tag that passes is used.
+The pinned tag is exempt: a gate never rolls a pin back, and `lock` keeps a pin that still satisfies its constraint
+without looking up any time. If every allowed tag is too young and the source is not pinned yet, there is nothing to
+pin: `AR730`, with the date the newest tag becomes eligible. Age is measured at the time of the run; `lock --check`
+does not re-evaluate it (the decision is in the lock, with `released` and `released_from`).
+
+The release time comes from the first source that answers, in order of trust (`min_release_age_source = "auto"`):
+
+1. `forge`: the publish time of the GitHub release of the tag ([Forge client](forge.md)). A committer cannot forge
+   it. A tag without a release has none, so the next source applies. The token is read from `GITHUB_TOKEN`,
+   `GH_TOKEN` or `gh auth token` and sent only to allowlisted hosts.
+2. `first-seen`: when this machine first saw the tag at that commit, kept in `~/.cache/ai-rulez/observed-tags.toml`
+   (local, uncommitted, bounded). A tag never seen before is "seen now", so it is **held back, not waved through**
+   on a date anyone who can push could forge. `lock --outdated` on a daily CI job records every tag it sees, which
+   builds that history. A tag that moves to another commit counts as new.
+3. `commit`: the tagger date of an annotated tag or the committer date of the commit, read from a one-commit fetch.
+   In `auto` it is used only when the first-seen record cannot be kept (no cache directory, an unreadable file); set
+   `min_release_age_source = "commit"` to use it directly. It protects against accidental adoption only.
+
+`forge`, `first-seen` and `commit` select one source and fail closed: a tag whose time cannot be found is held back.
+Consequence worth knowing: on a first run with a non-GitHub source and `auto`, every tag is "seen now", so a new
+project cannot lock a range until the age passes; use `commit` for such a source if that is acceptable, or pin a
+commit SHA.
 
 ### `lock --outdated`
 
@@ -283,7 +329,11 @@ Each source has a `status`: `up-to-date`, `updatable`, `not-locked`, `tag-moved`
 version, e.g. a constraint was added to a source pinned by an arbitrary ref; `update` moves it only with
 `--allow-downgrade`). Names and `--kind include|skill|source` limit
 the report; a name that matches no source with a version constraint is an error (exit `1`), as with `update`. Tags that differ only
-in build metadata (`v1.2.3+a`, `v1.2.3+b`) have equal precedence: the first by name is used and a note says so. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
+in build metadata (`v1.2.3+a`, `v1.2.3+b`) have equal precedence: the first by name is used and a note says so.
+With a [minimum release age](#minimum-release-age) the `ALLOWED` column is the newest tag that is old enough, the held
+tags are listed as `AR733` in the note (`held_back` in JSON) and counted in the summary. `[lint.severity] AR734 =
+"warning"|"error"` reports every updatable source as an `AR734` finding (`code` and `severity` in JSON); `error` also
+exits `2`. Off by default. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
 update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
 network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
 scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
@@ -304,8 +354,9 @@ $ ai-rulez update --kind skill    # only installed skills
 ```
 
 `update [name...] [--kind include|skill|source] [--dry-run] [--allow-downgrade] [--accept-moved-tag]
-[--format json]` moves the named range sources (all of them without names) to the newest allowed tag and records
-the tag, commit and tree digest. It never edits `config.toml`. `--dry-run` fetches the new trees (into the cache) to
+[--accept-findings] [--major [--write-config]] [--format json]` moves the named range sources (all of them without
+names) to the newest allowed tag and records the tag, commit and tree digest. It edits `config.toml` only with
+`--major --write-config`. `--dry-run` fetches the new trees (into the cache) to
 digest and compare them, and writes no lock. `--format json` follows
 [`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json).
 The file list compares the old cached tree with the new one; it is omitted when the old tree is not cached. Output
@@ -319,6 +370,41 @@ pins and content pins of other items are not recomputed (as with `lock <name>`):
   mirror, an attacker can roll a pin back) unless `--allow-downgrade`. Withheld newer tags are undetectable;
   `--outdated` can only compare what the remote advertises.
 - **Unsatisfiable (`AR730`).** No tag satisfies the constraint, or the repository has no version tags: exit `2`.
+- **Held back (`AR733`).** With a [minimum release age](#minimum-release-age) the newest tag that is old enough is
+  chosen; the held tags are listed per update (`held_back` in JSON) and the release time is recorded in the lock.
+- **Scan before pinning.** The new tree gets the security scan (`AR001`-`AR009`, the one `approve` and served skills
+  use, no inline ignore comments) before the lock is written. Error findings refuse the pin (exit `2`, nothing is
+  written, `scan.refused` in JSON); review them, then `--accept-findings`. Warnings are listed. `--dry-run` runs the
+  scan too and exits the same way. A tree over the file or size limits, or not in the cache, says so in `scan.note`.
+
+#### Taking a new major version
+
+`update --major` looks at the sources that have a newer major version than their constraint allows, and prints the
+constraint that takes it (`version = "^2.0"` for `v2.3.1`):
+
+```console
+$ ai-rulez update --major
+include shared: newer major v2.0.0: version = "^2.0" (now "^1.2"); `update --major --write-config` applies it
+$ ai-rulez update --major --write-config shared
+```
+
+Without `--write-config` nothing is written. With it, ai-rulez rewrites **only the `version = "..."` value** of that
+entry in `config.toml` (or its `ref` shorthand; comments, key order and layout stay, and the patched file is checked
+to differ from the original in that one value), then moves the pin to the newest tag the new constraint allows,
+with the same refusals as a plain `update`. If anything is refused (a moved tag, scan findings) or fails, `config.toml`
+is restored byte for byte. The source must be a `[[includes]]`, `[[installed_skills]]` or `[[skill_sources]]` table of
+the project's own `config.toml` with a `name` key; any other form (an inline array, a duplicate name, a source that
+comes from an include or the local overlay) is refused with a hint to edit by hand. Other sources are untouched by
+`--major`; `--dry-run` never writes the config. `--write-config` without `--major` is an error.
+
+#### Checking pinned tags online
+
+`lock --check` and `generate` stay offline. When you want the remote's word that the pinned tags did not move,
+opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
+ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
+`AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
+used). An unreachable remote is exit `1`. The key is skipped quietly under `--no-fetch`, `--frozen` and `--offline`;
+the flag with them is an error. `generate --recursive` does not verify tags.
 
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
 pins as they are. Use `update --kind skill` to move range pins.
@@ -331,11 +417,13 @@ pins as they are. Use `update --kind skill` to move range pins.
   a pin it cannot match and asks for `ai-rulez lock`.
 - The moved-tag check needs the remote, so it runs in `lock`, `update` and `lock --outdated`, not in `lock --check`
   or `generate`, which stay offline.
-- `update` runs no security scan before it writes a pin and has no `--major` or `--write-config`; `min_release_age` and
-  release-time lookups (`released`, `released_from`) are not implemented.
-  `lock --outdated` consults no forge API.
-- Rule codes: `AR730` unsatisfiable, `AR731` invalid or both `ref` and `version`, `AR732` tag moved, `AR735` pinned
-  tag missing. `AR733` and `AR734` (held back, source outdated) are not emitted yet.
+- `lock --outdated` consults the forge only when a `min_release_age` is set (the question 4 of the design: lookups
+  only when the answer is used). `--major` suggests `^MAJOR.0`, the design's `^2.0`, not the exact latest.
+- The first-seen source treats an unseen tag as released now (held back), and `auto` reaches the commit date only when
+  the record cannot be kept: the most trusted answer wins and a forgeable one never loosens the gate.
+- Rule codes: `AR730` unsatisfiable, `AR731` invalid or both `ref` and `version`, `AR732` tag moved, `AR733` tag held
+  back by `min_release_age` (info), `AR734` source outdated (off; enable it in `[lint.severity]`, see below),
+  `AR735` pinned tag missing.
 
 ## Hashing scheme
 
@@ -596,6 +684,9 @@ pins, or written with different `[lock]` settings).
 enforce = true           # default whenever ai-rulez.lock exists; false opts out. Strict validation reports drift (and an unreadable lock), AR010 is an error, generate refuses an unlocked remote source, generate --locked requires content pins
 include_outputs = true   # false: pin sources only
 scope = "all"            # "skills": pin only skills, remote includes and installed skills
+min_release_age = "7d"   # default minimum age of a tag for sources with a version constraint
+min_release_age_source = "auto"  # auto | forge | first-seen | commit
+verify_tags = false      # true: generate and lock --check ask the remotes whether a pinned tag moved
 ```
 
 `scope = "skills"` is for projects that only care about the skill supply chain; it implies no output pins. The
@@ -625,6 +716,53 @@ They answer different questions. `generate --check` asks "was the output regener
 `lock --check` asks "was the change *approved*?": a source edit, a new skill or a moved include has to come with a
 lock update, which is a separate, small, reviewable diff. On a pull request, `ai-rulez lock --diff` gives a
 summary to paste into the description.
+
+### Scheduled outdated report
+
+A scheduled job tells you when pinned sources fall behind, and gives the `first-seen` record of a
+[minimum release age](#minimum-release-age) its history. It reads tags only and writes nothing:
+
+```yaml
+name: ai-rulez outdated
+on:
+  schedule:
+    - cron: "17 6 * * *"          # daily
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  outdated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g ai-rulez            # or: uvx ai-rulez
+      - name: Report outdated sources
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # release dates; sent only to github.com
+        run: |
+          ai-rulez lock --outdated --format json --fail-on-outdated | tee outdated.json
+      - name: Verify pinned tags did not move
+        run: ai-rulez lock --check --verify-tags
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: outdated
+          path: outdated.json
+```
+
+`--fail-on-outdated` exits `2` when any source has an allowed update, so the job turns red until someone runs
+`ai-rulez update` and merges the lock; a moved or deleted tag and an unsatisfiable constraint fail it too. To report
+without failing, drop the flag and read `summary.updatable` and `summary.held_back` from the JSON. To make "outdated"
+a finding instead, turn on `AR734` and let the exit code gate:
+
+```toml
+[lint.severity]
+AR734 = "warning"     # report updatable sources as findings; "error" also fails lock --outdated
+```
+
+A job that updates for you is a separate, reviewed pull request: run `ai-rulez update`, then `ai-rulez generate`
+and `ai-rulez lock`, and open the diff. `update` never runs unattended, and each pin moves only after the scan of the
+new tree.
 
 ## Reviewing lock diffs
 

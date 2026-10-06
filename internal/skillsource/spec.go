@@ -39,8 +39,6 @@ type Spec struct {
 	// MaxCloneFiles bounds the number of entries of a git clone; 0 selects
 	// AI_RULEZ_MAX_CLONE_FILES or the default (20000).
 	MaxCloneFiles int
-	// MinReleaseAge holds back tags younger than this ("7d"); "" defers to [lock].
-	MinReleaseAge string
 	// AllowOutside lets a local source resolve outside the project: set for
 	// `--source` arguments and for sources of the user's own config, never for a
 	// source declared in a committed project config.
@@ -49,7 +47,7 @@ type Spec struct {
 
 // FromConfig converts a [[skill_sources]] entry.
 func FromConfig(c *config.SkillSourceConfig) Spec {
-	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Version: c.Version, TagPrefix: c.TagPrefix, IncludePrerelease: c.IncludePrerelease, MinReleaseAge: c.MinReleaseAge, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Version: c.Version, TagPrefix: c.TagPrefix, IncludePrerelease: c.IncludePrerelease, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
 }
 
 // TrustLevel is the scan level, defaulting to the strict one.

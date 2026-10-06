@@ -192,6 +192,9 @@ func writeLockAt(path, kind string, names []string) int {
 	}
 	remoteRefresh := !lockContentOnly
 	unpinnedBefore := len(lockUnpinned)
+	if remoteRefresh {
+		defer installReleaseGate(path)() // min_release_age holds back young tags while ranges resolve
+	}
 	defer prepareLockRun(remoteRefresh, kind, wanted)()
 
 	cfg, err := loadForLock(path, config.WithoutLocal())
