@@ -71,6 +71,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
 - **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
 - **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
+- **`catalog`**: `[catalog]` defaults for `ai-rulez catalog` (`title`, `include_excerpt`, `exclude_owners`, `indexable`, `max_items_per_page`); see [Catalog](catalog.md)
 - **`governance`**: `[governance]` approval policy (`require_approval`, `exempt`, `min_approvers`, `approvers`, `max_age`, `enforce`); see [Approvals](approvals.md)
 - **`lock`**: `[lock]` content pinning (`enforce`, `include_outputs`, `scope`); see [Lock file](lockfile.md)
 - **`lint`**: `[lint]` strict-validation settings (severities, ignores, budgets, `tolerate`, `security`, `evals`, `traps`, `metadata`, `external` scanners); see [Strict validation](strict-validation.md)

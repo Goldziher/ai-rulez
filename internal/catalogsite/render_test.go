@@ -85,7 +85,7 @@ var (
 		"lang": true, "charset": true, "name": true, "content": true, "http-equiv": true, "rel": true, "href": true, "src": true,
 		"defer": true, "class": true, "id": true, "scope": true, "dir": true, "aria-label": true, "aria-current": true,
 		"aria-live": true, "role": true, "for": true, "type": true, "autocomplete": true, "placeholder": true, "value": true,
-		"data-kind": true, "data-status": true, "data-text": true,
+		"data-kind": true, "data-status": true, "data-text": true, "data-page": true,
 	}
 	schemeRE = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*:`)
 )
