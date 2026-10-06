@@ -220,13 +220,13 @@ func writeLockAt(path, kind string, names []string) int {
 		return 1
 	}
 	carryApprovals(current, next, len(wanted) == 0 && kind == "")
+	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
 		fmtError(err)
 		return 1
 	}
 	for _, e := range lockedEntries(next) {
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
-	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
 	}
 	if next.HasContentPins() {
 		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.DefaultOutputs()), next.Tree)
@@ -234,13 +234,13 @@ func writeLockAt(path, kind string, names []string) int {
 			fmt.Printf("pinned outputs of role %s %s\n", r.Role, r.Digest)
 		}
 	}
+	printScans(next)
 	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
 	if len(lockUnpinned) > unpinnedBefore {
 		return exitUnpinned
 	}
 	return 0
 }
-	printScans(next)
 
 // prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or
 // stay offline for --content-only) and returns the function that restores it.

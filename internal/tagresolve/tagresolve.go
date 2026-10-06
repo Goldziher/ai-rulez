@@ -140,9 +140,6 @@ type Spec struct {
 	TagPrefix string
 	// IncludePrerelease admits prerelease tags the constraint does not name.
 	IncludePrerelease bool
-	// Pinned is the tag the lock records. It is exempt from the age gate: its
-	// age was decided when it was pinned, so a gate never rolls a pin back.
-	Pinned string
 }
 
 // Candidate is a version tag.
@@ -160,10 +157,6 @@ type Selection struct {
 	Latest Candidate
 	// Notes report oddities: two tags naming one version, for example.
 	Notes []string
-	// Held lists the tags above Chosen that the age gate held back (AR733), highest first.
-	Held []Held
-	// Release is the release time of Chosen when the gate looked it up.
-	Release *ReleaseTime
 }
 
 // Candidates returns the version tags of tags, highest first; equal versions
@@ -190,49 +183,23 @@ func Candidates(tags []RawTag, prefix string) (cands []Candidate, nonSemver []st
 // Select picks the highest tag spec allows. It fails with AR731 for a constraint
 // that does not parse and AR730 when no tag satisfies it.
 func Select(tags []RawTag, spec Spec) (*Selection, error) {
-	return SelectGated(context.Background(), tags, spec, nil)
-}
-
-// SelectGated is Select with a minimum release age: a tag the constraint allows
-// but that is younger than the gate's Min is held back and the next lower tag
-// is considered, down to the pinned tag (which is exempt). When the gate holds
-// back every tag there is nothing to pin and the error is AR730.
-func SelectGated(ctx context.Context, tags []RawTag, spec Spec, gate *AgeGate) (*Selection, error) {
 	c, err := semver.ParseConstraint(spec.Constraint)
 	if err != nil {
 		return nil, errorf(CodeConstraintBad, "version constraint %q is invalid: %s", spec.Constraint, cause(err))
 	}
 	cands, nonSemver := Candidates(tags, spec.TagPrefix)
-	gate.observe(tags)
 	sel := &Selection{}
 	foundLatest, foundChosen := false, false
-	lookups := 0
 	for _, cand := range cands {
 		if !foundLatest && (spec.IncludePrerelease || !cand.Version.IsPrerelease()) {
 			sel.Latest, foundLatest = cand, true
 		}
-		if foundChosen || !c.Check(cand.Version, spec.IncludePrerelease) {
-			continue
+		if !foundChosen && c.Check(cand.Version, spec.IncludePrerelease) {
+			sel.Chosen, foundChosen = cand, true
 		}
-		if gate.Active() && cand.Tag.Name != spec.Pinned {
-			if lookups++; lookups > maxGateLookups {
-				sel.Held = append(sel.Held, Held{Tag: cand.Tag.Name, Reason: fmt.Sprintf("more than %d newer tags to check", maxGateLookups)})
-				break
-			}
-			rt, held := gate.check(ctx, cand)
-			if held != nil {
-				sel.Held = append(sel.Held, *held)
-				continue
-			}
-			sel.Release = &rt
-		}
-		sel.Chosen, foundChosen = cand, true
 	}
 	sel.Notes = duplicateNotes(cands)
 	if !foundChosen {
-		if len(sel.Held) > 0 {
-			return nil, errorf(CodeUnsatisfiable, "%s", heldMessage(spec, sel.Held, gate))
-		}
 		return nil, errorf(CodeUnsatisfiable, "%s", unsatisfiableMessage(spec, cands, nonSemver))
 	}
 	if !foundLatest {
@@ -240,16 +207,6 @@ func SelectGated(ctx context.Context, tags []RawTag, spec Spec, gate *AgeGate) (
 		sel.Latest = sel.Chosen
 	}
 	return sel, nil
-}
-
-func heldMessage(spec Spec, held []Held, gate *AgeGate) string {
-	first := held[0]
-	msg := fmt.Sprintf("every tag that satisfies %q is held back by min_release_age (%s): ", spec.Constraint, gate.Min)
-	msg += first.String()
-	if !first.EligibleAt.IsZero() {
-		msg += fmt.Sprintf("; the newest becomes eligible on %s", first.EligibleAt.UTC().Format("2006-01-02"))
-	}
-	return msg + "; wait, lower min_release_age, or pin a commit SHA"
 }
 
 func cause(err error) string { return err.Error() }
