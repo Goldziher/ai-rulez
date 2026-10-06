@@ -430,7 +430,13 @@ func (p *Plan) Summary() string {
 	}
 	fmt.Fprintf(&b, "  optimizer:   %s (run without a shell, in a throwaway copy)\n", optimizer)
 	fmt.Fprintf(&b, "  split:       %d train case(s), %d held-out case(s) (%s)\n", len(p.trainCases), len(p.heldCases), p.Split.Method)
-	fmt.Fprintf(&b, "  gate:        gain >= %.0f points, <= %d regression(s), %d round(s), %d held-out evaluation(s)\n", o.MinGain*100, o.MaxRegressions, o.MaxRounds, o.MaxHoldoutEvals)
+	fmt.Fprintf(&b, "  gate:        gain >= %.0f points and one stable win, <= %d regression(s), %d round(s), %d held-out evaluation(s)\n", o.MinGain*100, o.MaxRegressions, o.MaxRounds, o.MaxHoldoutEvals)
+	ci := "not required"
+	if o.RequireCIAboveZero {
+		ci = "required above zero"
+	}
+	fmt.Fprintf(&b, "               held-out >= %d case(s) (share %.0f%% when untagged), SKILL.md growth <= %.2fx, 95%% interval %s\n",
+		o.MinHoldoutCases, o.HoldoutFraction*100, EffectiveGrowth(o.MaxSkillGrowth), ci)
 	fmt.Fprintf(&b, "  estimate:    %d agent runs, about $%.2f of evals; --max-cost $%.2f\n", p.Estimate.AgentRuns, p.Estimate.CostUSD, o.MaxCostUSD)
 	fmt.Fprintf(&b, "  sends out:   the skill text and the %d train case(s) go to whatever the optimizer calls; held-out cases never leave ai-rulez\n", len(p.trainCases))
 	if len(o.EnvPass) > 0 {
