@@ -80,7 +80,14 @@ type Report struct {
 
 	// Summary lines for the text report; not part of the JSON.
 	plan string
+	// needsLock is set when the converted config names remote sources that
+	// ai-rulez.lock should pin.
+	needsLock bool
 }
+
+// NeedsLock reports whether the converted config holds remote sources that
+// `ai-rulez lock` should pin (convert never writes the lock itself; --lock runs it).
+func (r *Report) NeedsLock() bool { return r.needsLock }
 
 func (r *Report) count() {
 	r.Counts = Counts{}
