@@ -78,7 +78,7 @@ func SanitizeMultiline(s string) string {
 // FormatReport renders a report as the terminal summary of a run.
 func FormatReport(r *Report) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Run %s for %s: %s\n", r.RunID, r.Skill, r.Status)
+	fmt.Fprintf(&b, "Run %s for %s: %s\n", Sanitize(r.RunID, 40), Sanitize(r.Skill, 120), Sanitize(r.Status, 40))
 	if r.Adapter != "" {
 		fmt.Fprintf(&b, "Optimizer: %s\n", Sanitize(r.Adapter, 100))
 	}
@@ -96,7 +96,7 @@ func FormatReport(r *Report) string {
 		b.WriteString("warning: the optimizer reported no cost; its own spend is bounded only by its credentials\n")
 	}
 	if r.Isolation != nil && r.Isolation.Confined {
-		fmt.Fprintf(&b, "Isolation: %s (no_network=%t, writes confined=%t)\n", r.Isolation.Backend, r.Isolation.NoNetwork, r.Isolation.NoWrites)
+		fmt.Fprintf(&b, "Isolation: %s (no_network=%t, writes confined=%t)\n", Sanitize(r.Isolation.Backend, 40), r.Isolation.NoNetwork, r.Isolation.NoWrites)
 	}
 	fmt.Fprintf(&b, "Report: .ai-rulez/local/improve/%s/report.json\n", r.RunID)
 	if r.Accepted() {
@@ -106,7 +106,7 @@ func FormatReport(r *Report) string {
 }
 
 func formatRound(b *strings.Builder, rd *RoundReport) {
-	fmt.Fprintf(b, "Round %d: %s", rd.Round, rd.Decision)
+	fmt.Fprintf(b, "Round %d: %s", rd.Round, Sanitize(rd.Decision, 80))
 	if rd.Held != nil {
 		fmt.Fprintf(b, " (held-out %.0f%% -> %.0f%%, %+.1f points, %d win(s), %d loss(es)", rd.Held.Base.PassRate*100, rd.Held.Cand.PassRate*100, rd.Held.Gain*100, len(rd.Held.Wins), len(rd.Held.Losses))
 		if ci := rd.Held.CI; ci != nil {
@@ -125,9 +125,9 @@ func formatRound(b *strings.Builder, rd *RoundReport) {
 		fmt.Fprintf(b, "  warning: %s\n", Sanitize(warn, 400))
 	}
 	if s := rd.Siblings; s != nil && len(s.Results) > 0 {
-		fmt.Fprintf(b, "  siblings checked (%s): %d, regressed: %d\n", s.Surface, len(s.Results), len(s.Regressions()))
+		fmt.Fprintf(b, "  siblings checked (%s): %d, regressed: %d\n", Sanitize(s.Surface, 40), len(s.Results), len(s.Regressions()))
 	}
 	if rd.Description != nil {
-		fmt.Fprintf(b, "  description: %q -> %q\n", rd.Description.Before, rd.Description.After)
+		fmt.Fprintf(b, "  description: %q -> %q\n", Sanitize(rd.Description.Before, 600), Sanitize(rd.Description.After, 600))
 	}
 }
