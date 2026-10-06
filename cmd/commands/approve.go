@@ -628,6 +628,9 @@ func (e *approveEnv) expiry(at time.Time) (string, error) {
 		if approval.ExpiredAt(approveExpires, e.now) {
 			return "", oops.Errorf("--expires %s is in the past", t.Format(time.DateOnly))
 		}
+		if ceiling, ok := e.policy.Ceiling(at.UTC().Format(time.RFC3339)); ok && approveExpires > ceiling {
+			return "", oops.Errorf("--expires %s is later than %s, the end of [governance] max_age; a longer approval needs a longer max_age", approveExpires, ceiling)
+		}
 		return approveExpires, nil
 	case e.policy.MaxAge > 0:
 		return at.Add(e.policy.MaxAge).Format(time.DateOnly), nil

@@ -141,6 +141,28 @@ func ExpiredAt(expires string, now time.Time) bool {
 	return expires < Today(now)
 }
 
+// Ceiling is the last date an approval recorded at approvedAt holds when the
+// policy sets max_age: approved_at plus max_age. "" when there is no ceiling or
+// approvedAt is not an RFC 3339 time (callers treat that as past the ceiling).
+func (p Policy) Ceiling(approvedAt string) (date string, ok bool) {
+	if p.MaxAge <= 0 {
+		return "", false
+	}
+	t, err := time.Parse(time.RFC3339, approvedAt)
+	if err != nil {
+		return "", true
+	}
+	return t.UTC().Add(p.MaxAge).Format(time.DateOnly), true
+}
+
+// pastCeiling reports whether max_age ended the approval: [governance] max_age is
+// a ceiling, so an `expires` date later than approved_at + max_age (or none) never
+// extends it. An approved_at that does not parse fails closed.
+func (p Policy) pastCeiling(a lockfile.Approval, now time.Time) bool {
+	date, ok := p.Ceiling(a.ApprovedAt)
+	return ok && (date == "" || ExpiredAt(date, now))
+}
+
 // knownAssurance reports whether a record's assurance is one this version defines.
 func knownAssurance(level string) bool { return lockfile.AssuranceRank(level) > 0 }
 
@@ -197,7 +219,7 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 			}
 		}
 		switch {
-		case ExpiredAt(a.Expires, now):
+		case ExpiredAt(a.Expires, now) || p.pastCeiling(a, now):
 			expired = true
 		case !p.AuthorizedFor(who, s):
 			unauthorized = true
@@ -280,7 +302,7 @@ func (p Policy) currentReviewers(recs []lockfile.Approval, s Subject, now time.T
 	var valid []counted
 	for i := range recs {
 		a := recs[i]
-		if a.ItemKey() != s.Key() || a.Digest != s.Digest || ExpiredAt(a.Expires, now) {
+		if a.ItemKey() != s.Key() || a.Digest != s.Digest || ExpiredAt(a.Expires, now) || p.pastCeiling(a, now) {
 			continue
 		}
 		who := a.Reviewer
