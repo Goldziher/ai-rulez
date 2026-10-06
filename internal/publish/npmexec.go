@@ -38,68 +38,22 @@ type NPMExecuteOptions struct {
 // credential: npm authenticates itself from the user's own configuration and
 // the environment the caller passed.
 func ExecuteNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOptions) (string, error) {
-	if plan.Target != TargetNPM || plan.NPM == nil || len(plan.Commands) != 2 {
-		return "", newError(CodeTarget, ExitFailed, "", "the plan has no npm commands to run")
-	}
-	want := []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*plan.NPM), Cwd: "."}}
-	if !reflect.DeepEqual(plan.Commands, want) {
-		return "", newError(CodeTarget, ExitFailed, "rebuild the dist directory with `ai-rulez publish`", "the plan's npm commands differ from the ones publish builds")
-	}
-	abs, err := filepath.Abs(opts.Dir)
-	if err != nil {
-		return "", newError(CodeTarget, ExitFailed, "", "cannot resolve the dist directory: %v", err)
-	}
-	if err := requireVerifiedDist(abs); err != nil {
-		return "", err
-	}
-	tmp, err := os.MkdirTemp("", "ai-rulez-npm-*")
-	if err != nil {
-		return "", newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // best effort cleanup of our own directory
-	cfg, err := newNPMConfig(tmp, opts.Env)
+	sess, err := startNPM(ctx, r, plan, opts)
 	if err != nil {
 		return "", err
 	}
-	registry := NPMEffectiveRegistry(*plan.NPM, opts.Env)
-	if !strings.HasPrefix(registry, "https://") {
-		return "", newError(CodeTarget, ExitFailed, "set [publish.npm] registry to an https URL, or fix the registry in your npm configuration",
-			"the effective npm registry %q is not an https:// URL", registry)
+	defer sess.close()
+	if err := sess.checkFree(); err != nil {
+		return "", err
 	}
-	if opts.Notice != nil {
-		opts.Notice("npm registry: " + registry)
-	}
-	r = runner.Or(r)
-	run := func(argv []string) runner.Result {
-		return r.Run(ctx, runner.Spec{Argv: argv, Dir: tmp, Env: opts.Env, Timeout: uploadTimeout})
-	}
-	flags := cfg.flags(*plan.NPM)
-
-	view := run(append(NPMViewArgv(*plan.NPM, plan.Version), flags...))
-	switch view.Status {
-	case runner.StatusOK:
-		if strings.TrimSpace(string(view.Stdout)) != "" {
-			return "", newError(CodeTarget, ExitFailed, "bump [plugin] version; npm versions cannot be replaced",
-				"%s@%s already exists in the registry", plan.NPM.Package, plan.Version)
-		}
-	case runner.StatusUnavailable:
-		return "", npmMissing()
-	case runner.StatusExit:
-		if !npmNotFound(view) {
-			return "", npmFailure("npm view", view)
-		}
-	default:
-		return "", npmFailure("npm view", view)
-	}
-
-	packDir := filepath.Join(tmp, "pack")
+	packDir := filepath.Join(sess.tmp, "pack")
 	if err := os.Mkdir(packDir, 0o700); err != nil {
 		return "", newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
 	}
 	pack := []string{"npm", "pack", "--ignore-scripts"}
-	pack = append(pack, flags...)
-	pack = append(pack, "--pack-destination", packDir, filepath.Join(abs, filepath.FromSlash(NPMPackageDir)))
-	if res := run(pack); res.Status != runner.StatusOK {
+	pack = append(pack, sess.flags...)
+	pack = append(pack, "--pack-destination", packDir, filepath.Join(sess.abs, filepath.FromSlash(NPMPackageDir)))
+	if res := sess.run(pack); res.Status != runner.StatusOK {
 		return "", npmFailure("npm pack", res)
 	}
 	tarball := filepath.Join(packDir, path.Base(plan.NPM.Tarball))
@@ -111,15 +65,103 @@ func ExecuteNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecute
 
 	publishArgv := NPMPublishArgv(*plan.NPM)
 	publishArgv[2] = tarball
-	publishArgv = append(publishArgv, flags...)
+	publishArgv = append(publishArgv, sess.flags...)
 	again, err := readRegular(tarball)
 	if err != nil || Digest(again) != digest {
 		return "", newError(CodeTarget, ExitFailed, "rerun `ai-rulez publish --execute`", "the packed tarball changed between npm pack and npm publish")
 	}
-	if res := run(publishArgv); res.Status != runner.StatusOK {
+	if res := sess.run(publishArgv); res.Status != runner.StatusOK {
 		return "", npmFailure("npm publish", res)
 	}
 	return plan.NPM.Package + "@" + plan.Version + " (tarball " + digest + ")", nil
+}
+
+// CheckNPM runs the checks ExecuteNPM starts with, publishing nothing: the plan,
+// the dist directory, the effective registry and that the registry does not
+// already hold the version. A multi-plugin publish calls it for every plugin
+// before it uploads the first.
+func CheckNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOptions) error {
+	sess, err := startNPM(ctx, r, plan, opts)
+	if err != nil {
+		return err
+	}
+	defer sess.close()
+	return sess.checkFree()
+}
+
+// npmSession is one isolated npm invocation context.
+type npmSession struct {
+	plan  Plan
+	abs   string
+	tmp   string
+	flags []string
+	run   func(argv []string) runner.Result
+}
+
+func (s *npmSession) close() { os.RemoveAll(s.tmp) } //nolint:errcheck // best effort cleanup of our own directory
+
+// startNPM validates the plan and the dist directory and prepares the empty
+// working directory, the explicit config files and the registry check.
+func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOptions) (*npmSession, error) {
+	if plan.Target != TargetNPM || plan.NPM == nil || len(plan.Commands) != 2 {
+		return nil, newError(CodeTarget, ExitFailed, "", "the plan has no npm commands to run")
+	}
+	want := []Command{{Argv: NPMPackArgv(), Cwd: "."}, {Argv: NPMPublishArgv(*plan.NPM), Cwd: "."}}
+	if !reflect.DeepEqual(plan.Commands, want) {
+		return nil, newError(CodeTarget, ExitFailed, "rebuild the dist directory with `ai-rulez publish`", "the plan's npm commands differ from the ones publish builds")
+	}
+	abs, err := filepath.Abs(opts.Dir)
+	if err != nil {
+		return nil, newError(CodeTarget, ExitFailed, "", "cannot resolve the dist directory: %v", err)
+	}
+	if err := requireVerifiedDist(abs); err != nil {
+		return nil, err
+	}
+	registry := NPMEffectiveRegistry(*plan.NPM, opts.Env)
+	if !strings.HasPrefix(registry, "https://") {
+		return nil, newError(CodeTarget, ExitFailed, "set [publish.npm] registry to an https URL, or fix the registry in your npm configuration",
+			"the effective npm registry %q is not an https:// URL", registry)
+	}
+	tmp, err := os.MkdirTemp("", "ai-rulez-npm-*")
+	if err != nil {
+		return nil, newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
+	}
+	cfg, err := newNPMConfig(tmp, opts.Env)
+	if err != nil {
+		os.RemoveAll(tmp) //nolint:errcheck // best effort cleanup of our own directory
+		return nil, err
+	}
+	if opts.Notice != nil {
+		opts.Notice("npm registry: " + registry)
+	}
+	r = runner.Or(r)
+	return &npmSession{
+		plan: plan, abs: abs, tmp: tmp, flags: cfg.flags(*plan.NPM),
+		run: func(argv []string) runner.Result {
+			return r.Run(ctx, runner.Spec{Argv: argv, Dir: tmp, Env: opts.Env, Timeout: uploadTimeout})
+		},
+	}, nil
+}
+
+// checkFree refuses a version the registry already holds (npm versions are immutable).
+func (s *npmSession) checkFree() error {
+	view := s.run(append(NPMViewArgv(*s.plan.NPM, s.plan.Version), s.flags...))
+	switch view.Status {
+	case runner.StatusOK:
+		if strings.TrimSpace(string(view.Stdout)) != "" {
+			return newError(CodeTarget, ExitFailed, "bump [plugin] version; npm versions cannot be replaced",
+				"%s@%s already exists in the registry", s.plan.NPM.Package, s.plan.Version)
+		}
+	case runner.StatusUnavailable:
+		return npmMissing()
+	case runner.StatusExit:
+		if !npmNotFound(view) {
+			return npmFailure("npm view", view)
+		}
+	default:
+		return npmFailure("npm view", view)
+	}
+	return nil
 }
 
 // requireVerifiedDist fails unless the dist directory still verifies, so the
