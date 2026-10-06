@@ -121,7 +121,11 @@ before salting; nothing rewrites them, so delete or rotate an old log if it must
 lines and ignore the new fields.
 
 `--log FILE` chooses another file. `--sink-command CMD` runs `CMD` through the shell with the line on its standard
-input, for teams that ship lines to their own collector; that command, not ai-rulez, decides where a line goes.
+input, for teams that ship lines to their own collector; that command, not ai-rulez, decides where a line goes. The command gets 3 seconds: after that its whole process group is killed and the recorder reports a timeout; at most 64 KiB of its output is kept. A failing or timed-out sink does not drop the entry (the log file and any telemetry still get it); the error goes to standard error. The same limits apply to `mcp --usage-sink`.
+
+The recorder never writes through a symlink: if the log file, or the directory that holds it (`.ai-rulez/local`), is a symlink, the append is refused with an error. A repository cannot redirect the log to another file by committing a link. Point `--log` at a real directory.
+
+The generated hook command shell-quotes the executable (`--executable` is a path, not a command line: a value such as `npx -y ai-rulez` is quoted as one word) and every path argument; only `${CLAUDE_PROJECT_DIR}` is left for the shell to expand, and `$(...)`, backticks or other variables in a value stay literal.
 `--index FILE` points at a non-default index. `ai-rulez usage record` never fails a session: problems go to standard
 error and the exit status stays 0.
 
