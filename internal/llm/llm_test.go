@@ -757,6 +757,14 @@ func TestRedactSecretsShouldKeepEnvironmentLookupsAndMaskLiterals(t *testing.T) 
 		{"literal token", `token = "abcdef0123456789"`, true},
 		{"literal key", `api_key: hunter2hunter2`, true},
 		{"literal that starts like a lookup", `secret = osprey-secret-value-123`, true},
+		{"shell default literal key", `OPENAI_API_KEY=${OPENAI_API_KEY:-sk-abcdefghijklmnopqrstuv}`, true},
+		{"shell default literal aws key", `api_key: ${KEY:-AKIAABCDEFGHIJKLMNOP}`, true},
+		{"env call with literal inside", `api_key=env(sk-abcdefghijklmnopqrstuv)`, true},
+		{"variable followed by literal", `token = $HOME-hunter2hunter2`, true},
+		{"environ get with literal default", `token = os.environ.get("X", "hunter2hunter2")`, true},
+		{"prefix that is a variable", `token = $ghp_realtokenvalue1234567890`, false},
+		{"braced variable", `API_KEY=${SERVICE_TOKEN}`, false},
+		{"environ get lookup", `token = os.environ.get("SERVICE_TOKEN")`, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
