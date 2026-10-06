@@ -86,6 +86,10 @@ func normalizeKey(s string) string {
 
 func (p TrapPredicate) evalMisspelt(content []byte) []trapHit {
 	fm := parseFrontmatterDoc(parseDoc(string(content)))
+	present := map[string]bool{}
+	for _, k := range fm.keys {
+		present[k.Name] = true
+	}
 	var hits []trapHit
 	for _, k := range fm.keys {
 		if slices.Contains(p.Canonical, k.Name) {
@@ -93,7 +97,15 @@ func (p TrapPredicate) evalMisspelt(content []byte) []trapHit {
 		}
 		for _, c := range p.Canonical {
 			if normalizeKey(k.Name) == normalizeKey(c) {
-				hits = append(hits, trapHit{line: k.Line, detail: fmt.Sprintf("%q is not a key; the key is %q", sanitizeScannerText(k.Name), c), fix: keyRenameFix(content, k.Line, k.Name, c)})
+				hit := trapHit{line: k.Line, detail: fmt.Sprintf("%q is not a key; the key is %q", sanitizeScannerText(k.Name), c)}
+				// Renaming onto a key that is already there would write it twice,
+				// which strict YAML parsers reject: offer the fix for the first
+				// misspelling of an absent key only.
+				if !present[c] {
+					hit.fix = keyRenameFix(content, k.Line, k.Name, c)
+					present[c] = true
+				}
+				hits = append(hits, hit)
 				break
 			}
 		}

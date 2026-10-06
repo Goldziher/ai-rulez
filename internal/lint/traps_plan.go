@@ -249,8 +249,10 @@ func (t *Trap) validateProject() string {
 	case !slices.Contains(projectTrapKinds, t.Predicate.Kind):
 		return fmt.Sprintf("predicate kind %q is not one of %s", t.Predicate.Kind, strings.Join(projectTrapKinds, ", "))
 	}
-	dir := strings.Trim(t.Scope.Dir, "/")
-	if dir == "" && t.Scope.Suffix == "" {
+	if strings.Contains(t.Scope.Dir, `\`) {
+		return "scope.dir must use forward slashes"
+	}
+	if t.Scope.scopeDir() == "" && t.Scope.Suffix == "" {
 		return "scope needs a dir or a suffix"
 	}
 	if filepath.IsAbs(t.Scope.Dir) || slices.Contains(strings.Split(filepath.ToSlash(t.Scope.Dir), "/"), "..") {
@@ -271,6 +273,10 @@ func (t *Trap) validateProject() string {
 	case predFrontmatterEnum:
 		if t.Predicate.Key == "" || len(t.Predicate.Allowed) == 0 {
 			return "frontmatter-enum needs key and allowed"
+		}
+	case predExtNotIn:
+		if len(t.Predicate.Allowed) == 0 {
+			return "ext-not-in needs allowed"
 		}
 	case predKeyMisspelt:
 		if len(t.Predicate.Canonical) == 0 {
