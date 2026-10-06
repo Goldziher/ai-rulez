@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -24,8 +25,12 @@ type Signing struct {
 	// MinHashVersion is the lowest attestation hash scheme the repository may accept.
 	MinHashVersion int
 	// Trust, when set, is the only list of signers the repository may trust, as
-	// canonical entries (see trustKey). An empty list trusts nobody.
+	// canonical entries (see trustKey). An empty list trusts nobody. Only the
+	// subjects the list names are governed (all of them when it is empty).
 	Trust List
+	// Thresholds is the fewest distinct signers per subject the repository may
+	// require; the repository may raise it, never lower it.
+	Thresholds map[string]int
 }
 
 type fileSigning struct {
@@ -35,6 +40,7 @@ type fileSigning struct {
 	MaxAge              string         `toml:"max_age"`
 	MinHashVersion      *int           `toml:"min_hash_version"`
 	Trust               []fileTrustRow `toml:"trust"`
+	Thresholds          map[string]int `toml:"thresholds"`
 }
 
 type fileTrustRow struct {
@@ -42,6 +48,12 @@ type fileTrustRow struct {
 	Identity       string `toml:"identity"`
 	IdentityRegexp string `toml:"identity_regexp"`
 	Issuer         string `toml:"issuer"`
+}
+
+// trustSubjects are the subjects a policy trust row or threshold may name.
+var trustSubjects = []string{
+	config.SigningSubjectLock, config.SigningSubjectBundle, config.SigningSubjectSkill,
+	config.SigningSubjectSBOM, config.SigningSubjectApproval,
 }
 
 // tlogRank orders the modes a policy may hold; "off" is not a floor.
@@ -77,6 +89,17 @@ func (s *Signing) fromDoc(d *fileSigning) error {
 		}
 		s.MinHashVersion = *d.MinHashVersion
 	}
+	for subject, k := range d.Thresholds {
+		if !slices.Contains(trustSubjects, subject) {
+			return fmt.Errorf("signing.thresholds: %q is not a subject (use %s)", subject, strings.Join(trustSubjects, ", "))
+		}
+		if k < 1 {
+			return fmt.Errorf("signing.thresholds: the threshold for %q must be at least 1", subject)
+		}
+	}
+	if len(d.Thresholds) > 0 {
+		s.Thresholds = maps.Clone(d.Thresholds)
+	}
 	if d.AllowRepoIdentities != nil && *d.AllowRepoIdentities && len(d.Trust) > 0 {
 		return fmt.Errorf("signing.allow_repo_identities = true contradicts [[signing.trust]]: a listed trust set already bounds the repository's signers")
 	}
@@ -105,8 +128,8 @@ func trustRowKey(r fileTrustRow) (string, error) {
 	case t.Issuer == "":
 		return "", fmt.Errorf("an identity entry needs an issuer")
 	}
-	if t.Subject != "" && t.Subject != config.SigningSubjectLock {
-		return "", fmt.Errorf("invalid subject %q (only %q is supported)", t.Subject, config.SigningSubjectLock)
+	if t.Subject != "" && !slices.Contains(trustSubjects, t.Subject) {
+		return "", fmt.Errorf("invalid subject %q (use %s)", t.Subject, strings.Join(trustSubjects, ", "))
 	}
 	if t.IdentityRegexp != "" {
 		if err := config.ValidateIdentityRegexp(t.IdentityRegexp); err != nil {
@@ -164,7 +187,23 @@ func mergeSigning(a, b Signing) Signing {
 		MaxAge:          lowerDuration(a.MaxAge, b.MaxAge),
 		MinHashVersion:  max(a.MinHashVersion, b.MinHashVersion),
 		Trust:           intersectExact(a.Trust, b.Trust),
+		Thresholds:      maxCounts(a.Thresholds, b.Thresholds),
 	}
+}
+
+// maxCounts merges two per-key floors: every key, the larger value.
+func maxCounts(a, b map[string]int) map[string]int {
+	if len(a) == 0 && len(b) == 0 {
+		return nil
+	}
+	out := maps.Clone(a)
+	if out == nil {
+		out = map[string]int{}
+	}
+	for k, v := range b {
+		out[k] = max(out[k], v)
+	}
+	return out
 }
 
 func stricterTLog(a, b string) string {
@@ -212,6 +251,9 @@ func (s Signing) addTo(table func(path ...string) map[string]any) {
 	if s.Trust.Set {
 		table("signing")["trust"] = nonNil(s.Trust.Items)
 	}
+	if len(s.Thresholds) > 0 {
+		table("signing")["thresholds"] = maps.Clone(s.Thresholds)
+	}
 }
 
 // signing clamps [signing] to the policy: the policy's subjects are always
@@ -220,7 +262,7 @@ func (s Signing) addTo(table func(path ...string) map[string]any) {
 // states a weaker value is reported; one that leaves a key alone is not.
 func (a *applier) signing() {
 	pol := a.res.Policy.Signing
-	if len(pol.RequireVerified) == 0 && pol.TLog == "" && pol.MaxAge == 0 && pol.MinHashVersion == 0 && !pol.Trust.Set {
+	if len(pol.RequireVerified) == 0 && pol.TLog == "" && pol.MaxAge == 0 && pol.MinHashVersion == 0 && !pol.Trust.Set && len(pol.Thresholds) == 0 {
 		return
 	}
 	if a.cfg.Signing == nil {
@@ -243,6 +285,28 @@ func (a *applier) signing() {
 	}
 	if pol.Trust.Set {
 		a.signingTrust(s, pol.Trust)
+	}
+	a.signingThresholds(s, pol.Thresholds)
+}
+
+// signingThresholds raises each repository threshold to the policy's floor. A
+// subject the repository leaves alone takes the floor silently; an explicit lower
+// value is reported.
+func (a *applier) signingThresholds(s *config.SigningConfig, floor map[string]int) {
+	for _, subject := range slices.Sorted(maps.Keys(floor)) {
+		want := floor[subject]
+		have, set := s.Thresholds[subject]
+		if set && have >= want {
+			continue
+		}
+		if set {
+			a.violate(lint.CodePolicyLoosened, "signing.thresholds", subject,
+				"[signing.thresholds] %s = %d is below the policy floor %d (origin: %s); %d is enforced", subject, have, want, a.origin("signing.thresholds"), want)
+		}
+		if s.Thresholds == nil {
+			s.Thresholds = map[string]int{}
+		}
+		s.Thresholds[subject] = want
 	}
 }
 
@@ -275,13 +339,22 @@ func (a *applier) signingMaxAge(s *config.SigningConfig, pol Signing) {
 }
 
 // signingTrust keeps the repository's trusted signers that the policy list also
-// names; a repository with none left (or none) gets the policy list. An empty
-// policy list trusts nobody, so verification has no signer and fails closed.
+// names, for the subjects the list governs: the subjects it names, or every
+// subject when it is empty (an empty list trusts nobody, so verification has no
+// signer and fails closed). Entries for other subjects are the repository's own
+// business and are kept. A governed subject with none left gets the policy's.
 func (a *applier) signingTrust(s *config.SigningConfig, pol List) {
+	governed := governedSubjects(pol.Items)
 	var kept []config.SigningTrust
+	have := map[string]bool{}
 	for _, t := range s.SigningTrustEntries() {
+		if !governed[t.Subject] {
+			kept = append(kept, t)
+			continue
+		}
 		if slices.Contains(pol.Items, trustKey(t)) {
 			kept = append(kept, t)
+			have[t.Subject] = true
 			continue
 		}
 		needle := t.Identity
@@ -295,16 +368,26 @@ func (a *applier) signingTrust(s *config.SigningConfig, pol List) {
 			"[signing] trusts the signer %q, which is not in the policy list %s (origin: %s); it is dropped", trustKey(t), quoteList(pol.Items), a.origin("signing.trust"))
 	}
 	s.Identity, s.Issuer, s.KeyFile = "", "", ""
-	switch {
-	case len(kept) > 0:
-		if len(kept) < len(pol.Items) {
-			a.accept = append(a.accept, fmt.Sprintf("signing.trust (narrowed to %d of %d signers)", len(kept), len(pol.Items)))
-		}
-		s.Trust = kept
-	default:
-		s.Trust = nil
-		for _, key := range pol.Items {
-			s.Trust = append(s.Trust, trustFromKey(key))
+	for _, key := range pol.Items {
+		if t := trustFromKey(key); !have[t.Subject] {
+			kept = append(kept, t)
 		}
 	}
+	s.Trust = kept
+}
+
+// governedSubjects is the set of subjects a policy trust list speaks for: those
+// its entries name, or all of them for an empty list.
+func governedSubjects(items []string) map[string]bool {
+	out := map[string]bool{}
+	if len(items) == 0 {
+		for _, subject := range trustSubjects {
+			out[subject] = true
+		}
+		return out
+	}
+	for _, key := range items {
+		out[trustFromKey(key).Subject] = true
+	}
+	return out
 }
