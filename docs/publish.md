@@ -155,7 +155,7 @@ cause: `--force` replaces the assets of a release that is already out. Two plugi
 own configuration and cannot be filtered. `aggregate/plugins.json` is always written: it lists every plugin of the release
 with its directory and the digests of its manifest and archive. `publish verify dist` verifies every plugin and the aggregate
 checksums, and fails (`AR9N5`) when a listed plugin directory is missing or changed, when a directory is not listed, or when
-the aggregate does not name the plugins at all, so a release with a plugin deleted does not verify clean.
+the aggregate does not name the plugins at all, so a release with a plugin deleted does not verify clean. `plugins.json` is not signed: it catches an accident (a plugin deleted or left over), not an attacker who rewrites it along with `SHA256SUMS`. Trust comes from each plugin's own signed release, so verify each plugin with a named trusted signer.
 
 ## Pinned marketplace and channels
 
