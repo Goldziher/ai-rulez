@@ -1411,7 +1411,7 @@
         },
         "external": {
           "type": "array",
-          "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
+          "description": "External scanners run with `validate --strict --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "type": "object",
             "required": ["name", "command"],
@@ -1428,6 +1428,22 @@
                 "type": "array",
                 "items": { "type": "string" },
                 "description": "Extra environment variable names passed through the scrubbed environment. Proxy and credential-like names are rejected when egress is false (AR9E0)."
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "enum": ["rules", "context", "skills", "agents", "commands", "checks", "hooks", "mcp", "imports"]
+                },
+                "description": "Stage a read-only copy of exactly these kinds of content in a scratch directory and run the scanner there with HOME and TMPDIR inside it. The command's placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} are expanded as arguments, and no file path is appended."
+              },
+              "severity_map": {
+                "type": "object",
+                "additionalProperties": { "enum": ["critical", "high", "medium", "low", "info", "error", "warning"] },
+                "description": "Maps a scanner rule id (glob) to a severity. Applied before any other mapping."
+              },
+              "max_severity": {
+                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"],
+                "description": "Ceiling for this scanner's findings."
               }
             },
             "additionalProperties": false

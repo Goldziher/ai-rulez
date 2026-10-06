@@ -43,6 +43,10 @@ type BaselineEntry struct {
 	// Expires is a YYYY-MM-DD date after which the entry no longer accepts the
 	// finding (inclusive: it still applies on that day).
 	Expires string `json:"expires,omitempty"`
+	// Scanner and Rule name the external scanner and its rule id; only the
+	// scanner baseline sets them.
+	Scanner string `json:"scanner,omitempty"`
+	Rule    string `json:"rule,omitempty"`
 }
 
 // Baseline is the committed set of accepted findings.

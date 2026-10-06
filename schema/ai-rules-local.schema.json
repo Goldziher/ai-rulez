@@ -815,7 +815,7 @@
           "type": "array"
         },
         "external": {
-          "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
+          "description": "External scanners run with `validate --strict --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "additionalProperties": false,
             "properties": {
@@ -841,8 +841,26 @@
                 "enum": ["sarif", "json"],
                 "type": "string"
               },
+              "inputs": {
+                "description": "Stage a read-only copy of exactly these kinds of content in a scratch directory and run the scanner there with HOME and TMPDIR inside it. The command's placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} are expanded as arguments, and no file path is appended.",
+                "items": {
+                  "enum": ["rules", "context", "skills", "agents", "commands", "checks", "hooks", "mcp", "imports"]
+                },
+                "type": "array"
+              },
+              "max_severity": {
+                "description": "Ceiling for this scanner's findings.",
+                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
+              },
               "name": {
                 "type": "string"
+              },
+              "severity_map": {
+                "additionalProperties": {
+                  "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
+                },
+                "description": "Maps a scanner rule id (glob) to a severity. Applied before any other mapping.",
+                "type": "object"
               },
               "timeout": {
                 "description": "Go duration such as \"90s\". Default 2m, at most 15m.",
@@ -1020,6 +1038,11 @@
                 "type": "string"
               },
               "type": "array"
+            },
+            "max_table_age_days": {
+              "description": "Report (AR9C0) a trap or harness-limits row whose verified_on date is older than this many days. 0 (default) turns the check off; the maintainer task harness:verify uses 90.",
+              "minimum": 0,
+              "type": "integer"
             }
           },
           "type": "object"

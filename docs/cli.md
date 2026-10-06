@@ -25,6 +25,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez verifiers run/list/explain/test` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
+| `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
@@ -1808,6 +1809,24 @@ rendered; the only file written is `-o`. See [SBOM](sbom.md).
 ### `ai-rulez scan [config-path]`
 
 Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. Flags: `--recursive`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--external`, `--no-local`, `--config-dir`. Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
+
+With `--external`, the scanners of `[[lint.external]]` also run (see [External scanners](strict-validation.md#staged-input-severity-and-baseline)). Scanner flags, also on `validate --strict`:
+
+| Flag | Meaning |
+| --- | --- |
+| `--allow-egress <name>` | Allow a scanner declared `egress = true` to run (repeatable) |
+| `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
+| `--scanner-baseline <file>` | Use another scanner baseline file |
+| `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
+
+### `ai-rulez scanners list|doctor`
+
+```text
+ai-rulez scanners list [config-file]
+ai-rulez scanners doctor <name>... | --all
+```
+
+`list` shows each scanner with its egress declaration, staged inputs and whether its binary is on `PATH`; it starts nothing. `doctor` checks the scanners you name (or `--all`): binary path, version (the scanner is started once with `--version` in a scrubbed environment, 10 second timeout), egress, `env_pass`, inputs, timeout and configuration problems. Exit `0` healthy, `2` a checked scanner is missing, misconfigured or has a network flag on an `egress = false` entry, `1` the configuration does not load or a name is unknown.
 
 ## OKF Commands
 
