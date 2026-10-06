@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -54,12 +55,14 @@ func New(w io.Writer, level slog.Level) *slog.Logger {
 	handler := &prettyHandler{
 		w:     w,
 		level: level,
+		color: colorEnabled(w),
 	}
 	return slog.New(handler)
 }
 
 type prettyHandler struct {
 	w      io.Writer
+	color  bool
 	level  slog.Level
 	mu     sync.Mutex
 	attrs  []slog.Attr
@@ -117,13 +120,34 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 	output.WriteString("\n")
 
-	_, err := h.w.Write([]byte(output.String()))
+	line := output.String()
+	if !h.color {
+		line = ansiRe.ReplaceAllString(line, "")
+	}
+	_, err := h.w.Write([]byte(line))
 	return err
+}
+
+var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// colorEnabled reports whether log lines written to w may carry ANSI colors:
+// never with NO_COLOR set (https://no-color.org) or TERM=dumb, and never when w
+// is a file that is not a terminal. Other writers (buffers) keep the colors.
+func colorEnabled(w io.Writer) bool {
+	if os.Getenv("NO_COLOR") != "" || os.Getenv("TERM") == "dumb" {
+		return false
+	}
+	if f, ok := w.(*os.File); ok {
+		info, err := f.Stat()
+		return err == nil && info.Mode()&os.ModeCharDevice != 0
+	}
+	return true
 }
 
 func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &prettyHandler{
 		w:      h.w,
+		color:  h.color,
 		level:  h.level,
 		attrs:  append(h.attrs, attrs...),
 		groups: h.groups,
@@ -133,6 +157,7 @@ func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 func (h *prettyHandler) WithGroup(name string) slog.Handler {
 	return &prettyHandler{
 		w:      h.w,
+		color:  h.color,
 		level:  h.level,
 		attrs:  h.attrs,
 		groups: append(h.groups, name),
