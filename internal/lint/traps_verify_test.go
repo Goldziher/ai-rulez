@@ -52,7 +52,12 @@ var (
 	spaceRe = regexp.MustCompile(`\s+`)
 )
 
+// inlineTagRe matches elements that format a run of text without separating
+// words, so a page that wraps part of a word in one still contains the quote.
+var inlineTagRe = regexp.MustCompile(`(?is)</?(code|a|span|em|strong|b|i|u|kbd|mark|small|sub|sup)(\s[^>]*)?>`)
+
 func normaliseQuote(s string) string {
+	s = inlineTagRe.ReplaceAllString(s, "")
 	s = tagRe.ReplaceAllString(s, " ")
 	s = strings.NewReplacer("`", "", "*", "", "’", "'", "&#x27;", "'", "&quot;", `"`, "&amp;", "&", " ", " ").Replace(s)
 	return strings.ToLower(spaceRe.ReplaceAllString(s, " "))
@@ -96,8 +101,18 @@ func verifyQuotesOnline(t *testing.T) {
 }
 
 func TestNormaliseQuote(t *testing.T) {
-	got := normaliseQuote("<p>Use  <code>`A`</code>\nB</p>")
-	if got != " use a b " && strings.TrimSpace(got) != "use a b" {
-		t.Errorf("got %q", got)
+	tests := []struct{ name, in, want string }{
+		{"block tags and whitespace", "<p>Use  <code>`A`</code>\nB</p>", "use a b"},
+		// Cursor's docs wrap the @ in a code element mid-word: "@-mention".
+		{"inline markup does not split a word", `when you <code class="x">@</code>-mention the rule`, "when you @-mention the rule"},
+		{"emphasis inside a word", "re<em>load</em>ed and <a href=\"/x\">linked</a>", "reloaded and linked"},
+		{"block tags still separate words", "<td>one</td><td>two</td>", "one two"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := strings.TrimSpace(normaliseQuote(tt.in)); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
