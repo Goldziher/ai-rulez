@@ -2,8 +2,10 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 	"text/tabwriter"
@@ -27,6 +29,7 @@ var (
 	catalogExcerpt       bool
 	catalogIndexable     bool
 	catalogClean         bool
+	catalogCheck         bool
 	catalogTitle         string
 	catalogAllowFindings []string
 	// catalogWithEval and catalogWithUsage hold the file --with-eval and
@@ -63,14 +66,26 @@ It opens from file://, loads nothing from the network and gives the same bytes f
 the same input. The directory must be new, empty or one a previous run filled
 (marked by .ai-rulez-catalog); --clean also removes files an earlier run wrote
 that the site no longer has. --role keeps one role's items. Excerpts are on by
-default and off with --indexable; pass --include-excerpt=false to leave them out.`,
+default and off with --indexable; pass --include-excerpt=false to leave them out.
+--check writes nothing: it exits 2 when the directory differs from the site that
+would be generated (a changed, missing or unexpected file), 0 when it matches.
+
+--with-eval and --with-usage add each skill's recorded eval result and use count
+(aggregates only) from the project's eval-results.json and usage log, or from the
+file they name.`,
 	Example: `  ai-rulez catalog --format json --schema-version 2
   ai-rulez catalog --html site/
-  ai-rulez catalog --html site/ --role backend --clean`,
+  ai-rulez catalog --html site/ --role backend --clean
+  ai-rulez catalog --html site/ --check
+  ai-rulez catalog --html site/ --with-eval --with-usage`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		catalogExcerptSet = cmd.Flags().Changed("include-excerpt")
-		exitOn(runCatalog(cmd.OutOrStdout()))
+		err := runCatalog(cmd.OutOrStdout())
+		if errors.Is(err, errCatalogDrift) {
+			os.Exit(exitCatalogDrift)
+		}
+		exitOn(err)
 	},
 }
 
@@ -83,6 +98,7 @@ func init() {
 	CatalogCmd.Flags().BoolVar(&catalogExcerpt, "include-excerpt", true, "Include a body excerpt of each item (version 2 JSON and --html; off by default with --indexable)")
 	CatalogCmd.Flags().BoolVar(&catalogIndexable, "indexable", false, "With --html: let search engines index the site (no robots.txt, no noindex)")
 	CatalogCmd.Flags().BoolVar(&catalogClean, "clean", false, "With --html: remove files a previous run wrote that the site no longer has")
+	CatalogCmd.Flags().BoolVar(&catalogCheck, "check", false, "With --html: write nothing, exit 2 when the directory differs from the site that would be generated")
 	CatalogCmd.Flags().StringVar(&catalogTitle, "base-title", "", "With --html: site title (default: AI-Rulez catalog)")
 	CatalogCmd.Flags().StringSliceVar(&catalogAllowFindings, "allow-findings", nil, "With --html: publish despite findings of these codes (AR001: a secret in an item)")
 	CatalogCmd.Flags().StringVar(&catalogWithEval, "with-eval", "", "Add each skill's recorded eval result (default file: <config dir>/eval-results.json)")
@@ -110,6 +126,10 @@ func checkCatalogFlags() error {
 	switch {
 	case catalogHTMLDir != "" && catalogFormat != "":
 		return oops.Errorf("--html writes a website; drop --format")
+	case catalogCheck && catalogHTMLDir == "":
+		return oops.Errorf("--check applies to --html only")
+	case catalogCheck && catalogClean:
+		return oops.Errorf("--check writes nothing: drop --clean")
 	case catalogHTMLDir == "" && (catalogRole != "" || catalogClean || catalogIndexable || catalogTitle != "" || len(catalogAllowFindings) > 0):
 		return oops.Errorf("--role, --clean, --indexable, --base-title and --allow-findings apply to --html only")
 	case catalogHTMLDir == "" && catalogFormat != formatJSON && catalogSchemaFlag != govview.CatalogSchemaVersion:
@@ -204,6 +224,9 @@ func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter) e
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
+	if catalogCheck {
+		return checkCatalogSite(out, doc, site)
+	}
 	res, err := catalogsite.Write(catalogHTMLDir, site, catalogClean)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
@@ -219,6 +242,39 @@ func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter) e
 		w.printf("lint: unavailable   lock: %s\n", lockSummary(doc.Lock))
 	}
 	return nil
+}
+
+// exitCatalogDrift is the exit code of `catalog --html --check` when the
+// directory differs from the site that would be generated.
+const exitCatalogDrift = 2
+
+// errCatalogDrift says the checked directory differs from the generated site; the
+// differences were already printed.
+var errCatalogDrift = errors.New("catalog site is out of date")
+
+// checkCatalogSite compares the directory with the site that would be written and
+// prints what differs.
+func checkCatalogSite(out io.Writer, doc *govview.CatalogDocV2, site *catalogsite.Site) error {
+	res, err := catalogsite.Check(catalogHTMLDir, site)
+	if err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	w := reportWriter{out}
+	if !res.Drift() {
+		w.printf("%s is up to date (%d items, %d roles, %d MCP servers)   catalog digest %s\n", catalogHTMLDir, len(doc.Items), len(doc.Roles), len(doc.MCPServers), site.Digest)
+		return nil
+	}
+	w.printf("%s differs from the catalog site that would be generated:\n", catalogHTMLDir)
+	for _, group := range []struct {
+		label string
+		paths []string
+	}{{"missing", res.Missing}, {"changed", res.Changed}, {"unexpected", res.Extra}} {
+		for _, p := range group.paths {
+			w.printf("  %s  %s\n", group.label, p)
+		}
+	}
+	w.printf("run `ai-rulez catalog --html %s` to regenerate it\n", catalogHTMLDir)
+	return errCatalogDrift
 }
 
 // refuseSecrets stops a site that would publish an item the secret scanner
