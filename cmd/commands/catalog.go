@@ -36,8 +36,11 @@ var (
 	// --with-usage name, or catalogDefaultInput for the project's own.
 	catalogWithEval, catalogWithUsage string
 	// catalogExcerptSet records that --include-excerpt was given, so the
-	// default (on, except for --indexable) is not mistaken for a choice.
-	catalogExcerptSet bool
+	// default (on, except for --indexable) is not mistaken for a choice. The other
+	// *Set variables do the same for the flags [catalog] can also set.
+	catalogExcerptSet, catalogIndexableSet, catalogPageSizeSet bool
+	catalogNoOwners                                            bool
+	catalogPageSize                                            int
 )
 
 // catalogSchemaVersion versions the default JSON of `ai-rulez catalog --format json`.
@@ -81,6 +84,8 @@ file they name.`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		catalogExcerptSet = cmd.Flags().Changed("include-excerpt")
+		catalogIndexableSet = cmd.Flags().Changed("indexable")
+		catalogPageSizeSet = cmd.Flags().Changed("max-items-per-page")
 		err := runCatalog(cmd.OutOrStdout())
 		if errors.Is(err, errCatalogDrift) {
 			os.Exit(exitCatalogDrift)
@@ -97,6 +102,8 @@ func init() {
 	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")
 	CatalogCmd.Flags().BoolVar(&catalogExcerpt, "include-excerpt", true, "Include a body excerpt of each item (version 2 JSON and --html; off by default with --indexable)")
 	CatalogCmd.Flags().BoolVar(&catalogIndexable, "indexable", false, "With --html: let search engines index the site (no robots.txt, no noindex)")
+	CatalogCmd.Flags().IntVar(&catalogPageSize, "max-items-per-page", 0, "With --html: overview rows per page (default: [catalog] max_items_per_page, else 200)")
+	CatalogCmd.Flags().BoolVar(&catalogNoOwners, "no-owners", false, "Leave owner names out of the version 2 JSON and the site")
 	CatalogCmd.Flags().BoolVar(&catalogClean, "clean", false, "With --html: remove files a previous run wrote that the site no longer has")
 	CatalogCmd.Flags().BoolVar(&catalogCheck, "check", false, "With --html: write nothing, exit 2 when the directory differs from the site that would be generated")
 	CatalogCmd.Flags().StringVar(&catalogTitle, "base-title", "", "With --html: site title (default: AI-Rulez catalog)")
@@ -130,8 +137,12 @@ func checkCatalogFlags() error {
 		return oops.Errorf("--check applies to --html only")
 	case catalogCheck && catalogClean:
 		return oops.Errorf("--check writes nothing: drop --clean")
-	case catalogHTMLDir == "" && (catalogRole != "" || catalogClean || catalogIndexable || catalogTitle != "" || len(catalogAllowFindings) > 0):
-		return oops.Errorf("--role, --clean, --indexable, --base-title and --allow-findings apply to --html only")
+	case catalogHTMLDir == "" && (catalogRole != "" || catalogClean || catalogIndexable || catalogTitle != "" || len(catalogAllowFindings) > 0 || catalogPageSizeSet):
+		return oops.Errorf("--role, --clean, --indexable, --base-title, --max-items-per-page and --allow-findings apply to --html only")
+	case catalogPageSizeSet && catalogPageSize < 0:
+		return oops.Errorf("--max-items-per-page must not be negative")
+	case catalogNoOwners && catalogHTMLDir == "" && (catalogFormat != formatJSON || catalogSchemaFlag != govview.CatalogSchemaVersionV2):
+		return oops.Errorf("--no-owners applies to --html and to --format json --schema-version 2")
 	case catalogHTMLDir == "" && catalogFormat != formatJSON && catalogSchemaFlag != govview.CatalogSchemaVersion:
 		return oops.Errorf("--schema-version applies to --format json")
 	case (catalogWithEval != "" || catalogWithUsage != "") && catalogHTMLDir == "" &&
@@ -156,11 +167,12 @@ func runCatalog(out io.Writer) error {
 	if err != nil {
 		return oops.Wrap(err)
 	}
+	settings := resolveCatalogSettings(cfg)
 	if catalogHTMLDir != "" {
-		return runCatalogHTML(out, cfg, counter)
+		return runCatalogHTML(out, cfg, counter, settings)
 	}
 	if catalogFormat == formatJSON && catalogSchemaFlag == govview.CatalogSchemaVersionV2 {
-		doc, err := buildCatalogV2(cfg, counter, catalogExcerpt)
+		doc, err := buildCatalogV2(cfg, counter, settings)
 		if err != nil {
 			return err
 		}
@@ -187,11 +199,45 @@ func runCatalog(out io.Writer) error {
 	return nil
 }
 
+// catalogSettings are the effective catalog options: a flag that was given wins
+// over the [catalog] table, which wins over the default.
+type catalogSettings struct {
+	Title                        string
+	Excerpt, Indexable, NoOwners bool
+	PageSize                     int
+}
+
+func resolveCatalogSettings(cfg *config.Config) catalogSettings {
+	cat := cfg.Catalog
+	if cat == nil {
+		cat = &config.CatalogConfig{}
+	}
+	st := catalogSettings{Title: catalogTitle, Indexable: catalogIndexable, NoOwners: catalogNoOwners || cat.ExcludeOwners, PageSize: cat.MaxItemsPerPage}
+	if st.Title == "" {
+		st.Title = cat.Title
+	}
+	if !catalogIndexableSet && !catalogIndexable {
+		st.Indexable = cat.Indexable
+	}
+	switch {
+	case catalogExcerptSet || !catalogExcerpt: // a false value can only come from the flag
+		st.Excerpt = catalogExcerpt
+	case cat.IncludeExcerpt != nil:
+		st.Excerpt = *cat.IncludeExcerpt
+	default:
+		st.Excerpt = !st.Indexable
+	}
+	if catalogPageSizeSet {
+		st.PageSize = catalogPageSize
+	}
+	return st
+}
+
 // buildCatalogV2 builds the version 2 catalog, linting the project in process
 // (the same engine as `validate --strict`). A lint that cannot run leaves the
 // lint fields out and says so; it never fails the catalog.
-func buildCatalogV2(cfg *config.Config, counter tokens.Counter, excerpt bool) (*govview.CatalogDocV2, error) {
-	opts := govview.CatalogOptions{NoExcerpt: !excerpt}
+func buildCatalogV2(cfg *config.Config, counter tokens.Counter, st catalogSettings) (*govview.CatalogDocV2, error) {
+	opts := govview.CatalogOptions{NoExcerpt: !st.Excerpt}
 	report, err := strictLint(cfg)
 	if err != nil {
 		logger.Warn("Catalog lint did not run", "error", err)
@@ -202,15 +248,18 @@ func buildCatalogV2(cfg *config.Config, counter tokens.Counter, excerpt bool) (*
 	if err := addCatalogSignals(cfg, &opts); err != nil {
 		return nil, err
 	}
-	return govview.BuildCatalogV2(cfg, counter, Version, opts)
+	doc, err := govview.BuildCatalogV2(cfg, counter, Version, opts)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
+	if st.NoOwners {
+		doc = govview.OmitOwners(doc)
+	}
+	return doc, nil
 }
 
-func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter) error {
-	excerpt := catalogExcerpt
-	if !catalogExcerptSet {
-		excerpt = !catalogIndexable
-	}
-	doc, err := buildCatalogV2(cfg, counter, excerpt)
+func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter, st catalogSettings) error {
+	doc, err := buildCatalogV2(cfg, counter, st)
 	if err != nil {
 		return err
 	}
@@ -220,7 +269,7 @@ func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter) e
 	if doc, err = govview.ViewCatalogV2(doc, catalogRole); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	site, err := catalogsite.Render(doc, catalogsite.Options{Title: catalogTitle, Indexable: catalogIndexable})
+	site, err := catalogsite.Render(doc, catalogsite.Options{Title: st.Title, Indexable: st.Indexable, PageSize: st.PageSize})
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}

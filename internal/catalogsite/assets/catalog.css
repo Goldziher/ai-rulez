@@ -179,3 +179,9 @@ input, select, button {
     overflow-x: auto;
   }
 }
+
+.pager {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

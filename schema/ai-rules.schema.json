@@ -952,6 +952,34 @@
       },
       "additionalProperties": false
     },
+    "catalog": {
+      "type": "object",
+      "description": "Defaults for `ai-rulez catalog` and its static site (see docs/catalog.md). A command-line flag overrides each key.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Title of the static site. Default: AI-Rulez catalog."
+        },
+        "include_excerpt": {
+          "type": "boolean",
+          "description": "Include a body excerpt of each item. Default: true, except for an indexable site."
+        },
+        "exclude_owners": {
+          "type": "boolean",
+          "description": "Leave owner names out of the catalog JSON and the site. Default false."
+        },
+        "indexable": {
+          "type": "boolean",
+          "description": "Let search engines index the site (no robots.txt, no noindex). Default false."
+        },
+        "max_items_per_page": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Overview rows per page of the static site. 0 or unset: 200."
+        }
+      },
+      "additionalProperties": false
+    },
     "governance": {
       "type": "object",
       "description": "Which pinned content needs a recorded reviewer approval in ai-rulez.lock (see docs/approvals.md).",

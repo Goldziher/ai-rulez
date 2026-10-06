@@ -56,6 +56,8 @@ type Config struct {
 	Lock *LockConfig `yaml:"lock,omitempty" json:"lock,omitempty" toml:"lock,omitempty"`
 	// Governance is the [governance] table: which content needs a reviewer approval (types_governance.go).
 	Governance *GovernanceConfig `yaml:"governance,omitempty" json:"governance,omitempty" toml:"governance,omitempty"`
+	// Catalog is the [catalog] table: defaults for `ai-rulez catalog` (types_catalog.go).
+	Catalog *CatalogConfig `yaml:"catalog,omitempty" json:"catalog,omitempty" toml:"catalog,omitempty"`
 	// Signing is the [signing] table: who may sign the lock and how fresh the signature must be (types_signing.go).
 	Signing *SigningConfig `yaml:"signing,omitempty" json:"signing,omitempty" toml:"signing,omitempty"`
 

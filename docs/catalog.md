@@ -94,6 +94,24 @@ rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
 - **Secrets.** The run is refused when the secret scanner (`AR001`) flagged an item and the site would publish its
   excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged).
 
+### Configuration and pages
+
+```toml
+[catalog]
+title = "Acme catalog"       # site title (--base-title)
+include_excerpt = true       # body excerpts (--include-excerpt); default on, off when indexable
+exclude_owners = false       # leave owner names out of the JSON and the site (--no-owners)
+indexable = false            # let search engines in (--indexable)
+max_items_per_page = 200     # overview rows per page (--max-items-per-page); 0 means 200
+```
+
+Every key is optional and a flag that is given wins. `include_excerpt` and `exclude_owners` also apply to
+`--format json --schema-version 2`. The `[catalog]` table can be overridden in the machine-local config.
+
+The overview lists `max_items_per_page` rows per page. All rows are in the one `index.html` (one `<tbody>` per page),
+so browsing, find-in-page and the no-JavaScript view show everything; the script shows one page at a time with
+Previous/Next buttons and shows every page while a filter is active. The page size does not change `catalog.json`.
+
 ### Freshness check
 
 ```bash
@@ -127,7 +145,7 @@ configuration directory it describes.
   data is not needed; `catalog.json` is the machine contract.
 - **Approval.** The overview has an Approval column (the status, or `not required`); the item page shows the status with
   `(required)`, the reviewers and the expiry, escaped like every other value.
-- **No pagination.** All rows are in the page; the filter hides rows.
+- **Pagination is presentational.** All rows are in `index.html` in groups of `max_items_per_page`; the script pages them. Real per-page files would break filtering across pages and find-in-page.
 
 ## Not yet built
 
