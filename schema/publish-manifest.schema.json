@@ -31,7 +31,10 @@
       "properties": {
         "repo": { "type": "string", "description": "Repository URL without credentials; empty when unknown." },
         "commit": { "type": "string", "description": "HEAD commit; empty without git." },
-        "dirty": { "type": "boolean", "description": "True when the tree had uncommitted changes (only possible with --allow-dirty)." }
+        "dirty": {
+          "type": "boolean",
+          "description": "True when the tree had uncommitted changes (only possible with --allow-dirty)."
+        }
       }
     },
     "lock": {
@@ -40,11 +43,22 @@
       "additionalProperties": false,
       "properties": {
         "version": { "type": "integer", "minimum": 1 },
-        "tree": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64})?$", "description": "The lock's content tree digest." },
-        "file_digest": { "$ref": "#/definitions/digest", "description": "Digest of the ai-rulez.lock copy in the release." }
+        "tree": {
+          "type": "string",
+          "pattern": "^(sha256:[0-9a-f]{64})?$",
+          "description": "The lock's content tree digest."
+        },
+        "file_digest": {
+          "$ref": "#/definitions/digest",
+          "description": "Digest of the ai-rulez.lock copy in the release."
+        }
       }
     },
-    "runtimes": { "type": "array", "items": { "type": "string" }, "description": "Plugin runtimes in the bundle, sorted." },
+    "runtimes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Plugin runtimes in the bundle, sorted."
+    },
     "files": {
       "type": "array",
       "description": "Every file of the archive, sorted by path.",
