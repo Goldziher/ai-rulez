@@ -91,9 +91,10 @@ func (t *Timer) lookup(ctx context.Context, tag tagresolve.RawTag) (tagresolve.R
 		return t.fromCommit(ctx, tag)
 	}
 	// auto: the most trusted source that answers. A tag with no first-seen
-	// record is "seen now", not "old": it is held back, never waved through
-	// on a forgeable commit date. The commit date is used only when the
-	// first-seen record cannot be kept.
+	// record is "seen now", not "old": it is held back. The commit date is
+	// forgeable by anyone who can push, so auto never uses it: when the
+	// first-seen record cannot be kept the tag is held back with the reason.
+	// Choose age_source = "commit" to accept the commit date.
 	forgeRT, forgeErr := t.fromForge(ctx, tag)
 	if forgeErr == nil {
 		return forgeRT, nil
@@ -103,12 +104,9 @@ func (t *Timer) lookup(ctx context.Context, tag tagresolve.RawTag) (tagresolve.R
 	if seenErr == nil {
 		return seenRT, nil
 	}
-	logger.Debug("release time: first-seen unavailable, trying the commit date", "tag", tag.Name, "error", seenErr)
-	commitRT, commitErr := t.fromCommit(ctx, tag)
-	if commitErr != nil {
-		return tagresolve.ReleaseTime{}, fmt.Errorf("no release time for %s: %w", tag.Name, errors.Join(forgeErr, seenErr, commitErr))
-	}
-	return commitRT, nil
+	logger.Warn("release time: the first-seen record cannot be used, holding the tag back (age_source = \"commit\" would trust the forgeable commit date)",
+		"tag", tag.Name, "error", seenErr)
+	return tagresolve.ReleaseTime{}, fmt.Errorf("no release time for %s: %w", tag.Name, errors.Join(forgeErr, seenErr))
 }
 
 func (t *Timer) fromForge(ctx context.Context, tag tagresolve.RawTag) (tagresolve.ReleaseTime, error) {
@@ -121,6 +119,15 @@ func (t *Timer) fromForge(ctx context.Context, tag tagresolve.RawTag) (tagresolv
 	rel, err := t.opt.Forge.Release(ctx, t.repo, tag.Name)
 	if err != nil {
 		return tagresolve.ReleaseTime{}, fmt.Errorf("forge release time of %s: %w", tag.Name, err)
+	}
+	// A release keeps its publish time when its tag is later moved: the time
+	// belongs to the commit it was published at, so a moved tag is not that release.
+	info, err := t.opt.Forge.Tag(ctx, t.repo, tag.Name)
+	switch {
+	case err != nil:
+		return tagresolve.ReleaseTime{}, fmt.Errorf("forge tag %s (needed to check it did not move after its release): %w", tag.Name, err)
+	case info.Commit != tag.Commit:
+		return tagresolve.ReleaseTime{}, fmt.Errorf("tag %s moved: the forge released commit %s, the remote now has %s", tag.Name, short(info.Commit), short(tag.Commit))
 	}
 	return tagresolve.ReleaseTime{At: rel.Published, From: tagresolve.SourceForge}, nil
 }
@@ -155,4 +162,11 @@ func (t *Timer) Observe(tags []tagresolve.RawTag) {
 	if err := t.opt.Seen.Observe(t.opt.Source, tags, t.opt.Clock.Now()); err != nil {
 		logger.Debug("could not record the tags seen", "error", err)
 	}
+}
+
+func short(sha string) string {
+	if len(sha) > 12 {
+		return sha[:12]
+	}
+	return sha
 }

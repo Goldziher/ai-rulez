@@ -297,15 +297,18 @@ does not re-evaluate it (the decision is in the lock, with `released` and `relea
 The release time comes from the first source that answers, in order of trust (`min_release_age_source = "auto"`):
 
 1. `forge`: the publish time of the GitHub release of the tag ([Forge client](forge.md)). A committer cannot forge
-   it. A tag without a release has none, so the next source applies. The token is read from `GITHUB_TOKEN`,
+   it. The forge is also asked which commit the tag points at: a tag moved after its release is not that release, so
+   the release time is refused and the next source applies. A tag without a release has none, so the next source
+   applies. The token is read from `GITHUB_TOKEN`,
    `GH_TOKEN` or `gh auth token` and sent only to allowlisted hosts.
 2. `first-seen`: when this machine first saw the tag at that commit, kept in `~/.cache/ai-rulez/observed-tags.toml`
    (local, uncommitted, bounded). A tag never seen before is "seen now", so it is **held back, not waved through**
    on a date anyone who can push could forge. `lock --outdated` on a daily CI job records every tag it sees, which
-   builds that history. A tag that moves to another commit counts as new.
+   builds that history. A tag that moves to another commit counts as new. The record is capped (5000 tags, 1000 per
+   source, under 1 MiB), oldest dropped first. When it cannot be read or written, `auto` warns and holds the tag back.
 3. `commit`: the tagger date of an annotated tag or the committer date of the commit, read from a one-commit fetch.
-   In `auto` it is used only when the first-seen record cannot be kept (no cache directory, an unreadable file); set
-   `min_release_age_source = "commit"` to use it directly. It protects against accidental adoption only.
+   Anyone who can push can forge it, so `auto` never uses it; set `min_release_age_source = "commit"` to use it
+   directly. It protects against accidental adoption only.
 
 `forge`, `first-seen` and `commit` select one source and fail closed: a tag whose time cannot be found is held back.
 Consequence worth knowing: on a first run with a non-GitHub source and `auto`, every tag is "seen now", so a new
@@ -415,12 +418,12 @@ pins as they are. Use `update --kind skill` to move range pins.
   proposal). The constraint grammar is hand-written in `internal/semver` rather than a library, so prerelease
   behavior is ours and tested. The lock `ref` holds the constraint text, so a binary from before this feature sees
   a pin it cannot match and asks for `ai-rulez lock`.
-- The moved-tag check needs the remote, so it runs in `lock`, `update` and `lock --outdated`, not in `lock --check`
-  or `generate`, which stay offline.
+- The moved-tag check needs the remote, so it runs in `lock`, `update` and `lock --outdated`; `lock --check` and
+  `generate` stay offline by default and run it only with `--verify-tags` or `[lock] verify_tags = true`.
 - `lock --outdated` consults the forge only when a `min_release_age` is set (the question 4 of the design: lookups
   only when the answer is used). `--major` suggests `^MAJOR.0`, the design's `^2.0`, not the exact latest.
-- The first-seen source treats an unseen tag as released now (held back), and `auto` reaches the commit date only when
-  the record cannot be kept: the most trusted answer wins and a forgeable one never loosens the gate.
+- The first-seen source treats an unseen tag as released now (held back), and `auto` never falls back to the commit
+  date: when the record cannot be kept the tag is held back with a warning, so a forgeable answer never loosens the gate.
 - Rule codes: `AR730` unsatisfiable, `AR731` invalid or both `ref` and `version`, `AR732` tag moved, `AR733` tag held
   back by `min_release_age` (info), `AR734` source outdated (off; enable it in `[lint.severity]`, see below),
   `AR735` pinned tag missing.
