@@ -259,7 +259,9 @@ func applyIncludeOrigin(cfg *config.Config, lock *lockfile.File, p string, o *sk
 		o.imported = true
 		o.include = inc.Name
 		o.source = "include:" + inc.Name + "/" + includeRelPath(p)
-		if lock != nil {
+		// What this process fetched is the truth; the lock only knows it after
+		// `lock` has written it, which would leave the first run with no commit.
+		if o.commit = includes.ObservedCommit(cfg.BaseDir, lockfile.KindInclude, inc.Name); o.commit == "" && lock != nil {
 			if e := lock.Find(lockfile.KindInclude, inc.Name); e != nil {
 				o.commit = e.Commit
 			}

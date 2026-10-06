@@ -1,0 +1,55 @@
+package commands
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+)
+
+// TestLock_ConvergesInOneRunWithAGitInclude pins the include before the served
+// entries are computed: a fresh project's first `lock` used to write the served
+// skill of an include with an empty commit and a tree that the second run
+// changed.
+func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
+	// Arrange
+	t.Setenv("HOME", t.TempDir())
+	includes.Mode, includes.RefreshFilter, includes.SkipFetch = includes.LockAuto, nil, false
+	includes.ResetObserved()
+	t.Cleanup(func() { includes.Mode, includes.RefreshFilter, includes.SkipFetch = includes.LockAuto, nil, false })
+	remote := crossRepo(t, ".ai-rulez/skills/inc/SKILL.md",
+		"---\nname: inc\ndescription: Shared skill. Use when sharing.\n---\n\nINC\n")
+	root := lockProject(t, "\n[skills]\ndelivery = \"served\"\n\n[[includes]]\nname = \"gitinc\"\nsource = \"file://"+
+		filepath.ToSlash(remote)+"\"\nref = \"v1\"\ninclude = [\"skills\"]\n")
+	lockPath := lockfile.Path(filepath.Join(root, ".ai-rulez"))
+
+	// Act
+	require.Equal(t, 0, writeLockAt("", "", nil), "first lock")
+	first, err := os.ReadFile(lockPath)
+	require.NoError(t, err)
+	checkAfterFirst := checkLockAt("")
+	includes.ResetObserved()
+	require.Equal(t, 0, writeLockAt("", "", nil), "second lock")
+	second, err := os.ReadFile(lockPath)
+	require.NoError(t, err)
+
+	// Assert
+	assert.Equal(t, 0, checkAfterFirst, "lock --check right after the first lock")
+	assert.Equal(t, string(first), string(second), "a second lock must not change anything")
+	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
+	require.NoError(t, err)
+	var served *lockfile.Entry
+	for i := range lock.Served {
+		if lock.Served[i].Name == "inc" {
+			served = &lock.Served[i]
+		}
+	}
+	require.NotNil(t, served, "the include's skill is pinned as served")
+	assert.NotEmpty(t, served.Commit)
+	assert.Equal(t, lock.Find(lockfile.KindInclude, "gitinc").Commit, served.Commit)
+}
