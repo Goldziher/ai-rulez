@@ -386,15 +386,19 @@ func (x *execution) round(round int, scores *trainScores, history []string) roun
 		}
 		return roundResult{report: rep}
 	}
+	snap, serr := snapshotRunDir(x.dir)
+	if serr != nil {
+		return reject("rejected: optimizer failed", "cannot snapshot the run directory: "+serr.Error())
+	}
 	resp, optReason := x.runOptimizer(round, scores, history, rep)
+	if reason := x.outsideWrites(snap); reason != "" {
+		rep.Violations = append(rep.Violations, violation("outside-workspace", "", "%s", reason))
+		return reject("rejected: policy")
+	}
 	if optReason != "" {
 		return reject("rejected: optimizer failed", optReason)
 	}
 	rep.Summary, rep.Notes, rep.Changed = Sanitize(resp.Summary, 500), Sanitize(resp.Notes, 1000), sanitizeList(resp.Changed)
-	if reason := x.outsideWrites(); reason != "" {
-		rep.Violations = append(rep.Violations, violation("outside-workspace", "", "%s", reason))
-		return reject("rejected: policy")
-	}
 	cand, err := ReadTree(x.skillWork)
 	if err != nil {
 		return reject("rejected: optimizer failed", "cannot read the candidate: "+err.Error())
@@ -587,28 +591,59 @@ func digestOfTree(t *Tree) string {
 }
 
 // outsideWrites reports an optimizer that wrote outside its skill directory:
-// into the workspace root, the read-only original, the train cases or the live
-// skill.
-func (x *execution) outsideWrites() string {
-	entries, err := os.ReadDir(x.workspace)
-	if err != nil {
-		return "the workspace is unreadable: " + err.Error()
-	}
-	for _, e := range entries {
-		if e.Name() != x.p.Skill.ID {
-			return fmt.Sprintf("created %q in the workspace root; only %s/ may exist there", e.Name(), x.p.Skill.ID)
+// into the workspace root, anywhere else in the run directory (plan, original,
+// train cases, earlier rounds) or the live skill. It undoes the damage before
+// returning, so a refused round leaves everything as it was.
+func (x *execution) outsideWrites(snap *runSnapshot) string {
+	var reasons []string
+	if entries, err := os.ReadDir(x.workspace); err != nil {
+		reasons = append(reasons, "the workspace is unreadable: "+err.Error())
+	} else {
+		for _, e := range entries {
+			if e.Name() != x.p.Skill.ID {
+				reasons = append(reasons, fmt.Sprintf("created %q in the workspace root; only %s/ may exist there", e.Name(), x.p.Skill.ID))
+				break
+			}
 		}
 	}
-	if d, err := evals.SkillDigest(x.origDir); err != nil || d != x.p.OrigDigest {
-		return "the read-only original copy was modified"
+	changed, err := snap.diff()
+	if err != nil {
+		reasons = append(reasons, err.Error())
 	}
-	if data, err := os.ReadFile(x.trainFile); err != nil || fmt.Sprintf("%x", sha256.Sum256(data)) != x.trainHash { //nolint:gosec // our own file
-		return "the train cases were modified"
+	if len(changed) > 0 {
+		reasons = append(reasons, fmt.Sprintf("changed the run directory outside the workspace: %s", Sanitize(strings.Join(changed, ", "), 300)))
+		if err := snap.restore(); err != nil {
+			reasons = append(reasons, "could not restore it: "+err.Error())
+		}
 	}
 	if d, err := evals.SkillDigest(x.p.Skill.Dir); err != nil || d != x.p.OrigDigest {
-		return "the authored skill was modified"
+		reasons = append(reasons, "the authored skill was modified")
+		if err := x.restoreAuthored(); err != nil {
+			reasons = append(reasons, "could not restore it: "+err.Error())
+		}
 	}
-	return ""
+	return strings.Join(reasons, "; ")
+}
+
+// restoreAuthored puts the live skill back to the tree the run measured.
+func (x *execution) restoreAuthored() error {
+	dir := x.p.Skill.Dir
+	cur, err := ReadTree(dir)
+	if err != nil {
+		return err
+	}
+	for _, odd := range cur.Odd {
+		if err := os.RemoveAll(filepath.Join(dir, filepath.FromSlash(strings.Fields(odd)[0]))); err != nil {
+			return fmt.Errorf("remove %s: %w", odd, err)
+		}
+	}
+	if len(cur.Odd) > 0 {
+		if cur, err = ReadTree(dir); err != nil {
+			return err
+		}
+	}
+	_, _, err = writeTree(dir, cur, x.p.orig)
+	return err
 }
 
 // finish writes report.json and, for an accepted run, diff.patch.
@@ -636,6 +671,9 @@ func (x *execution) finish(best *bestRound) (*Report, error) {
 	}
 	if err := safefs.WriteFileAtomic(filepath.Join(x.dir, "report.json"), append(data, '\n')); err != nil {
 		return nil, err //nolint:wrapcheck // safefs errors name the path
+	}
+	if err := sealReport(x.dir, r.RunID, append(data, '\n')); err != nil {
+		return nil, err
 	}
 	return r, nil
 }
