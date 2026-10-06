@@ -97,10 +97,10 @@ stdout.
 | AR747 | `digest-denied` | error | `ai-rulez.lock` pins content whose digest is on the organization policy's `sources.deny_digests` list; a denied include, installed skill or skill source is not loaded (always an error) |
 | AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
 | AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
-| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `sbom --strict-pins` (see [SBOM](sbom.md)) |
-| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognised launcher, no `package`); reported by `sbom --strict-pins` |
-| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources |
-| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none |
+| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `validate --strict` and `sbom --strict-pins` (see [SBOM](sbom.md)) |
+| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognised launcher, no `package`); reported by `validate --strict` and `sbom --strict-pins` |
+| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources; `validate --strict` reports a lock that exists and no longer matches |
+| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate --strict` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
 | AR803 | `description-style` | off | Description does not say when to use the item; turned on by `require_use_when = true` |
@@ -245,7 +245,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
-| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom`, see [SBOM](sbom.md)) | allocated |
+| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate --strict`, see [SBOM](sbom.md)) | allocated |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
