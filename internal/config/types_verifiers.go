@@ -2,9 +2,9 @@ package config
 
 import "github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 
-// Verifier predicate types. Phase 2 adds a "command" type that runs a hardened
-// command; it is deliberately absent so a config that names it is rejected
-// until the runner exists.
+// Verifier predicate types of the flat form. The command and llm predicates
+// exist only in the spec form (`[verifiers.require.command]`, `.llm`), where
+// they are gated by `--allow-exec` and `--allow-llm`.
 const (
 	VerifierFileExists      = "file_exists"
 	VerifierFileAbsent      = "file_absent"
@@ -73,3 +73,25 @@ type VerifierConfig struct {
 
 // IsSpec reports whether the entry uses the spec form (no Type).
 func (v *VerifierConfig) IsSpec() bool { return v.Type == "" }
+
+// VerifiersSettings is the [verifiers_settings] table: limits and policy of
+// `ai-rulez verifiers run`. (The name differs from the [[verifiers]] array
+// because TOML cannot use one key as both a table and an array.)
+type VerifiersSettings struct {
+	// MaxTimeoutS caps the timeout_s of a command predicate (default 300).
+	MaxTimeoutS int `yaml:"max_timeout_s,omitempty" json:"max_timeout_s,omitempty" toml:"max_timeout_s,omitempty"`
+	// MaxFileBytes bounds how much of a file a content predicate reads
+	// (default 5 MiB); a larger file is skipped with a note, never half-read.
+	MaxFileBytes int `yaml:"max_file_bytes,omitempty" json:"max_file_bytes,omitempty" toml:"max_file_bytes,omitempty"`
+	// RequireExamples reports a spec verifier without self-test examples (AR9H6).
+	RequireExamples bool `yaml:"require_examples,omitempty" json:"require_examples,omitempty" toml:"require_examples,omitempty"`
+	// WarnDead reports a verifier whose when_changed matches no file (AR9H5)
+	// on every run, as --strict-applicability does.
+	WarnDead bool `yaml:"warn_dead,omitempty" json:"warn_dead,omitempty" toml:"warn_dead,omitempty"`
+	// TrustExecFrom names includes whose verifiers may use the command
+	// predicate. The include must also be pinned in ai-rulez.lock.
+	TrustExecFrom []string `yaml:"trust_exec_from,omitempty" json:"trust_exec_from,omitempty" toml:"trust_exec_from,omitempty"`
+	// CommandEnv lists extra environment variable NAMES passed to command
+	// predicates. Everything else is scrubbed; credential-looking names are refused.
+	CommandEnv []string `yaml:"command_env,omitempty" json:"command_env,omitempty" toml:"command_env,omitempty"`
+}
