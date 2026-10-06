@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -232,12 +233,52 @@ func runPublishMulti(out io.Writer, pc *publishContext, emitOnly string) error {
 	if !publishExecute {
 		return nil
 	}
+	return pc.executeMulti(specs, dists)
+}
+
+// executeMulti uploads every plugin. A release cannot be rolled back, so every
+// target is checked first (the release, npm version or OCI tag must not exist),
+// and a failure part-way names what was already published and what was not.
+func (pc *publishContext) executeMulti(specs []*pluginSpec, dists []*publish.Dist) error {
+	dir := func(i int) string { return filepath.Join(pc.distAbs, multiPluginsDir, specs[i].name) }
 	for i, d := range dists {
-		if err := executeDist(pc.ctx, d, filepath.Join(pc.distAbs, multiPluginsDir, specs[i].name)); err != nil {
-			return err
+		if err := checkDist(pc.ctx, d, dir(i)); err != nil {
+			return withProgress(err, "plugin "+specs[i].name, nil, specNames(specs))
 		}
 	}
+	var published []string
+	for i, d := range dists {
+		if err := executeDist(pc.ctx, d, dir(i)); err != nil {
+			return withProgress(err, "plugin "+specs[i].name, published, specNames(specs[i:]))
+		}
+		published = append(published, specs[i].name)
+	}
 	return nil
+}
+
+func specNames(specs []*pluginSpec) []string {
+	names := make([]string, len(specs))
+	for i, s := range specs {
+		names[i] = s.name
+	}
+	return names
+}
+
+// withProgress adds which plugins are out and which are not to a failure of a
+// multi-plugin upload, keeping the error's code and exit status.
+func withProgress(err error, what string, published, pending []string) error {
+	state := "nothing was published"
+	if len(published) > 0 {
+		state = "published: " + strings.Join(published, ", ")
+	}
+	note := fmt.Sprintf("%s failed; %s; not published: %s", what, state, strings.Join(pending, ", "))
+	var pe *publish.Error
+	if errors.As(err, &pe) {
+		cp := *pe
+		cp.Msg = pe.Msg + " (" + note + ")"
+		return &cp
+	}
+	return oops.Wrapf(err, "%s", note)
 }
 
 // buildAll builds the dist of every plugin and describes each to the emitters.

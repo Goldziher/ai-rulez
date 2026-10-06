@@ -447,6 +447,25 @@ func executeDist(ctx context.Context, d *publish.Dist, dir string) error {
 	return nil
 }
 
+// checkDist runs the checks execution starts with, without uploading anything:
+// whether the release, npm version or OCI tag already exists.
+func checkDist(ctx context.Context, d *publish.Dist, dir string) error {
+	var err error
+	switch d.Plan.Target {
+	case publish.TargetGitHubRelease:
+		err = publish.CheckGitHub(ctx, publishRunner, d.Plan, publish.ExecuteOptions{
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), ghEnvPass, nil), Force: publishForce,
+		})
+	case publish.TargetNPM:
+		err = publish.CheckNPM(ctx, publishRunner, d.Plan, publish.NPMExecuteOptions{
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil),
+		})
+	case publish.TargetOCI:
+		_, err = publish.CheckOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir, Force: publishForce})
+	}
+	return err //nolint:wrapcheck // a publish.Error carries the exit status
+}
+
 func warnAll(warnings []string) {
 	for _, w := range warnings {
 		logger.Warn(w)
