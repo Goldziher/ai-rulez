@@ -86,6 +86,15 @@ func randomPolicy(rng *rand.Rand) Policy {
 		p.Signing.MaxAge = time.Duration(1+rng.Intn(400)) * 24 * time.Hour
 	}
 	p.Signing.MinHashVersion = rng.Intn(4)
+	for _, c := range codePool {
+		if rng.Intn(3) == 0 {
+			if p.Lint.MaxFindings == nil {
+				p.Lint.MaxFindings = map[string]int{}
+			}
+			p.Lint.MaxFindings[c] = rng.Intn(5)
+		}
+	}
+	p.Lint.NoInlineIgnore = pick(rng, codePool)
 	if rng.Intn(2) == 0 {
 		p.Sources.MinReleaseAge = time.Duration(1+rng.Intn(60)) * 24 * time.Hour
 	}
@@ -235,6 +244,12 @@ func TestMergeOnlyTightens(t *testing.T) {
 					assert.LessOrEqual(t, m.Lint.SizeBudgets[kind].MaxTokens, sb.MaxTokens)
 				}
 			}
+			for code, limit := range side.Lint.MaxFindings {
+				got, ok := m.Lint.MaxFindings[code]
+				assert.True(t, ok, "ceiling of %s was dropped", code)
+				assert.LessOrEqual(t, got, limit)
+			}
+			assert.Subset(t, m.Lint.NoInlineIgnore, side.Lint.NoInlineIgnore)
 			assert.Subset(t, m.Signing.RequireVerified, side.Signing.RequireVerified)
 			assert.GreaterOrEqual(t, tlogRank[m.Signing.TLog], tlogRank[side.Signing.TLog])
 			if side.Signing.MaxAge > 0 {

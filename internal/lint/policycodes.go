@@ -20,12 +20,13 @@ const (
 	CodeSourceNotAllowed      = "AR745"
 	// AR746 to AR749 are in their own block so each lands with its feature.
 	CodeCapabilityNotAllowed = "AR748"
+	CodePolicyBudgetExceeded = "AR749"
 )
 
 var policyCodes = []string{
 	CodePolicyLoosened, CodePolicyDigestMismatch, CodePolicyUnavailable,
 	CodePolicyInvalid, CodePolicyRequiredMissing, CodeSourceNotAllowed,
-	CodeCapabilityNotAllowed,
+	CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
 }
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 		RuleInfo{CodePolicyInvalid, "policy-invalid", SeverityError, "a policy file is unusable: not TOML, an unknown key, a bad pattern, or newer than this ai-rulez"},
 		RuleInfo{CodePolicyRequiredMissing, "policy-required-missing", SeverityError, "the repository turns off or ignores a rule code the organization policy requires"},
 		RuleInfo{CodeSourceNotAllowed, "source-not-allowed", SeverityError, "an include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies"},
+		RuleInfo{CodePolicyBudgetExceeded, "policy-budget-exceeded", SeverityError, "a rule has more findings than the organization policy's lint.max_findings ceiling allows (0 allows none); always an error"},
 		RuleInfo{CodeCapabilityNotAllowed, "capability-not-allowed", SeverityError, "an MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
@@ -68,6 +70,11 @@ func init() {
 			Why:  "The policy lists the hosts remote content may come from, so a typosquatted or attacker-controlled include cannot be added by editing the repository. The source is dropped from the run and reported.",
 			Bad:  "An include from `github.com/other-org/rules` under `sources.allowed_hosts = [\"github.com/example-org\"]`",
 			Good: "Mirror the content into an allowed organization, or ask the policy owners to allow the host",
+		},
+		CodePolicyBudgetExceeded: {
+			Why:  "A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.",
+			Bad:  "Three AR703 findings under `[lint.max_findings] AR703 = 0`",
+			Good: "Fix the findings; the ceiling is lowered over time by the policy owners, not raised by the repository",
 		},
 		CodeCapabilityNotAllowed: {
 			Why:  "An MCP server runs a command or reaches a remote endpoint, and a hook runs a command on every tool event, so the organization bounds both. A server or hook outside the bound is dropped from the run and reported, so a pull request cannot add one that the policy bars.",
@@ -106,6 +113,10 @@ func (r *runner) applyPolicy() {
 	}
 	out := r.cfg.PolicyOutcome
 	r.protected = ProtectedCodes(out)
+	r.noInline = map[string]bool{}
+	for _, code := range out.NoInlineIgnore {
+		r.noInline[resolveOrKeep(code)] = true
+	}
 	for _, code := range policyCodes {
 		r.sev[code] = SeverityError
 		delete(r.ignore, code)
@@ -165,6 +176,9 @@ func ProtectedCodes(out *config.PolicyOutcome) map[string]bool {
 	for _, code := range out.RequiredCodes {
 		set[resolveOrKeep(code)] = true
 	}
+	for code := range out.MaxFindings {
+		set[resolveOrKeep(code)] = true
+	}
 	return set
 }
 
@@ -207,7 +221,7 @@ func (r *runner) pathSuppresses(code, abs string) bool {
 // refuseSuppression records an attempted suppression of a protected code and
 // reports true; it reports false for an unprotected one.
 func (r *runner) refuseSuppression(code, route string) bool {
-	if !r.protected[code] {
+	if !r.protected[code] && !(route == routeInline && r.noInline[code]) {
 		return false
 	}
 	if r.attempts == nil {
@@ -278,3 +292,40 @@ func SizeBudgetKinds() []string {
 // DefaultSizeBudget is the built-in size budget of a content kind; the zero
 // value for an unknown kind.
 func DefaultSizeBudget(kind string) config.LintBudget { return defaultBudgets[kind] }
+
+// checkMaxFindings reports AR749 for each code with more findings than the
+// policy's ceiling. It appends directly: AR749 is not suppressible, and the
+// count is of the findings the run produced, accepted or not.
+func (r *runner) checkMaxFindings() {
+	if r.cfg == nil || r.cfg.PolicyOutcome == nil || len(r.cfg.PolicyOutcome.MaxFindings) == 0 {
+		return
+	}
+	counts := map[string]int{}
+	for i := range r.findings {
+		counts[r.findings[i].Code]++
+	}
+	rule, _ := lookupRule(CodePolicyBudgetExceeded) //nolint:errcheck // registered
+	file := r.display(r.configFilePath())
+	codes := make([]string, 0, len(r.cfg.PolicyOutcome.MaxFindings))
+	for code := range r.cfg.PolicyOutcome.MaxFindings {
+		codes = append(codes, code)
+	}
+	sort.Strings(codes)
+	for _, code := range codes {
+		limit := r.cfg.PolicyOutcome.MaxFindings[code]
+		if code == CodePolicyBudgetExceeded || counts[code] <= limit {
+			continue
+		}
+		r.findings = append(r.findings, Finding{
+			Code: CodePolicyBudgetExceeded, Name: rule.Name, Severity: r.sev[CodePolicyBudgetExceeded], File: file, Line: 1, Root: r.display(r.rootAbs()),
+			Message: fmt.Sprintf("%s has %d finding%s, over the ceiling of %d set by the organization policy (lint.max_findings); fix them, the repository cannot raise the ceiling", code, counts[code], pluralS(counts[code]), limit),
+		})
+	}
+}
+
+func pluralS(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
+}
