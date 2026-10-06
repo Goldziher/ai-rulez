@@ -6,10 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func init() {
-	register(config.PluginRuntimeFactory, renderFactory)
-}
-
 // factoryManifest is the shape of .factory-plugin/plugin.json. Factory is purely
 // metadata-driven: no MCP servers, skills, or interface block.
 type factoryManifest struct {

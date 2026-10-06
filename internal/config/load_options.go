@@ -19,6 +19,8 @@ type loadOptions struct {
 	runner        runner.Runner
 	host          ambient.Host
 	ws            workspace.Workspace
+	resolvers     Resolvers
+	registry      *Registry
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -64,6 +66,13 @@ func WithHost(h ambient.Host) LoadOption {
 			o.runner = h.Runner
 		}
 	}
+}
+
+// WithResolvers supplies the functions that resolve includes and installed skills
+// (see Resolvers). A load without them fails when the configuration declares
+// includes or installed skills, unless WithoutRemote is given.
+func WithResolvers(r Resolvers) LoadOption {
+	return func(o *loadOptions) { o.resolvers = r }
 }
 
 // WithWorkspace loads the project from ws instead of from the real directory

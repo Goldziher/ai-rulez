@@ -160,13 +160,13 @@ func localVariantBase(rel string) string {
 func (g *Generator) outputMatcher(outputs []config.OutputFile) *outputMatcher {
 	m := &outputMatcher{exact: map[string]bool{}}
 	base := g.config.BaseDir
-	for _, gen := range config.PresetRegistry {
+	g.config.Registry.Each(func(_ string, gen config.PresetGenerator) {
 		for _, p := range gen.GetOutputPaths(base) {
 			if rel, err := filepath.Rel(base, p); err == nil {
 				m.add(rel, false)
 			}
 		}
-	}
+	})
 	for _, legacy := range legacyOutputPaths {
 		m.add(legacy, !hasExtension(legacy))
 	}

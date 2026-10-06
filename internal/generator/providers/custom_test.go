@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 )
 
 const demoSpec = `name = "demo"
@@ -29,31 +30,35 @@ func TestLoadProviderFile(t *testing.T) {
 }
 
 func TestProviderSpecFactory(t *testing.T) {
-	require.NotNil(t, config.ProviderSpecGeneratorFactory, "providers init must register the factory")
+	reg := config.NewRegistry()
+	providers.Register(reg)
+	require.NotNil(t, reg.Provider, "Register must set the provider factory")
 
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "demo.toml"), []byte(demoSpec), 0o644))
 
 	t.Run("resolves a matching provider", func(t *testing.T) {
-		gen, err := config.ProviderSpecGeneratorFactory(config.Preset{Name: "demo", Provider: "demo.toml"}, dir)
+		gen, err := reg.Provider(config.Preset{Name: "demo", Provider: "demo.toml"}, dir)
 		require.NoError(t, err)
 		assert.Equal(t, "demo", gen.GetName())
 	})
 
 	t.Run("rejects a name mismatch", func(t *testing.T) {
-		_, err := config.ProviderSpecGeneratorFactory(config.Preset{Name: "other", Provider: "demo.toml"}, dir)
+		_, err := reg.Provider(config.Preset{Name: "other", Provider: "demo.toml"}, dir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "does not match preset name")
 	})
 
 	t.Run("rejects path traversal", func(t *testing.T) {
-		_, err := config.ProviderSpecGeneratorFactory(config.Preset{Name: "demo", Provider: "../demo.toml"}, dir)
+		_, err := reg.Provider(config.Preset{Name: "demo", Provider: "../demo.toml"}, dir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "escapes the project root")
 	})
 }
 
 func TestGeneratePresets_ProviderBacked(t *testing.T) {
+	reg := config.NewRegistry()
+	providers.Register(reg)
 	baseDir := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(baseDir, ".ai-rulez", "providers"), 0o755))
 	require.NoError(t, os.WriteFile(
@@ -69,6 +74,7 @@ func TestGeneratePresets_ProviderBacked(t *testing.T) {
 		Presets: []config.Preset{{Name: "demo", Provider: ".ai-rulez/providers/demo.toml"}},
 	}
 
+	cfg.Registry = reg
 	results, err := config.GeneratePresets(cfg)
 	require.NoError(t, err)
 	outputs, ok := results["demo"]

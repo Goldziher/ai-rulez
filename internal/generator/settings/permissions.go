@@ -13,7 +13,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // PermAction is what a permission rule decides.
@@ -181,11 +180,11 @@ func (t *translation) drop(e permEntry, why string) {
 
 func (t *translation) dropRaw(action PermAction, raw, why string) {
 	if action == ActionDeny {
-		rulefiles.Warn(fmt.Sprintf("SECURITY: [permissions] deny rule %q is NOT enforced by %s: %s", raw, t.harness, why),
+		t.cfg.Diag.Warn(fmt.Sprintf("SECURITY: [permissions] deny rule %q is NOT enforced by %s: %s", raw, t.harness, why),
 			"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
 		return
 	}
-	rulefiles.Warn(fmt.Sprintf("[permissions] %s rule %q not generated for %s: %s", action, raw, t.harness, why))
+	t.cfg.Diag.Warn(fmt.Sprintf("[permissions] %s rule %q not generated for %s: %s", action, raw, t.harness, why))
 }
 
 // askUnsupported reports, once, that the harness has no ask list: anything not
@@ -194,7 +193,7 @@ func (t *translation) askUnsupported() {
 	if len(t.only(ActionAsk)) == 0 {
 		return
 	}
-	rulefiles.Warn(fmt.Sprintf("[permissions] ask rules are not generated for %s: it has no ask list and prompts for whatever is not allowed", t.harness))
+	t.cfg.Diag.Warn(fmt.Sprintf("[permissions] ask rules are not generated for %s: it has no ask list and prompts for whatever is not allowed", t.harness))
 }
 
 // noDenySurface reports that the harness has no way to deny anything, once per
@@ -288,7 +287,7 @@ func docMembersKey(t *translation, path []string, entries map[string]any) (jsonm
 	for name, entry := range entries {
 		had, ok := existing[name]
 		if ok && canonical(had) != canonical(entry) && !claimedPath(previous, append(slices.Clone(path), name)) {
-			rulefiles.Warn(fmt.Sprintf("[permissions] %s already sets %s.%s; the existing value is kept",
+			t.cfg.Diag.Warn(fmt.Sprintf("[permissions] %s already sets %s.%s; the existing value is kept",
 				t.harness, strings.Join(path, "."), name))
 			continue
 		}
@@ -307,7 +306,7 @@ func scalarKey(t *translation, path []string, value any) (jsonmerge.OwnedKey, bo
 	if v, ok := jsonmerge.LookupTree(docTree(t.docPath), path); ok &&
 		!claimedPath(t.cfg.Run.PreviousClaims(documentRel(t.cfg, t.docPath)), path) {
 		if canonical(v) != canonical(value) {
-			rulefiles.Warn(fmt.Sprintf("[permissions] %s already sets %s; the existing value is kept", t.harness, strings.Join(path, ".")))
+			t.cfg.Diag.Warn(fmt.Sprintf("[permissions] %s already sets %s; the existing value is kept", t.harness, strings.Join(path, ".")))
 		}
 		return jsonmerge.OwnedKey{}, false // an identical value is theirs too
 	}

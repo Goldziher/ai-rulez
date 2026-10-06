@@ -39,8 +39,8 @@ func (g *Generator) lockOutputs(profile string, withPartial bool) ([]contentlock
 	g.config = &cfg
 	defer func() { g.config = original }()
 
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	defer g.resetRunState()
 	// The pins must not depend on the environment or the checkout: leave ${VAR}

@@ -192,8 +192,8 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		return nil, oops.Errorf("token report requires a counter")
 	}
 
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	collector := config.NewAnalysisCollector()
 	g.config.Analysis = collector

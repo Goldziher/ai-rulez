@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -105,8 +105,7 @@ func filesUnder(t *testing.T, root string, skip ...string) []string {
 func quietWarnings(t *testing.T) *[]string {
 	t.Helper()
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
-	t.Cleanup(restore)
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) }))
 	return &warnings
 }
 

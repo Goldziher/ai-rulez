@@ -57,7 +57,7 @@ func TestUnionOwned(t *testing.T) {
 }
 
 func TestFlattenPresetOutputs_DifferentPlainFilesStayAConflict(t *testing.T) {
-	_, err := flattenPresetOutputs(map[string][]config.OutputFile{
+	_, err := flattenPresetOutputs(nil, map[string][]config.OutputFile{
 		"a": {{Path: "x.txt", Content: "one"}},
 		"b": {{Path: "x.txt", Content: "two"}},
 	})

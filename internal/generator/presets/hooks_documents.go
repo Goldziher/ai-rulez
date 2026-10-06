@@ -7,7 +7,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
@@ -139,7 +138,7 @@ func (g *ClinePresetGenerator) hooksOutputs(cfg *config.Config, baseDir string) 
 	for _, script := range settings.ClineHookScripts(cfg) {
 		path := filepath.Join(baseDir, filepath.FromSlash(settings.ClineHooksDir), script.Name)
 		if existing, err := os.ReadFile(path); err == nil && !settings.IsClineHookGenerated(existing) { //nolint:gosec // path is derived from the layout
-			rulefiles.Warn("[[hooks]] not generated for cline: "+filepath.ToSlash(settings.ClineHooksDir)+"/"+script.Name+
+			cfg.Diag.Warn("[[hooks]] not generated for cline: "+filepath.ToSlash(settings.ClineHooksDir)+"/"+script.Name+
 				" already exists and was not written by ai-rulez", "hint", "rename or remove it to let ai-rulez write the hook")
 			continue
 		}

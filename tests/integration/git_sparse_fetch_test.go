@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
-	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register callbacks
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register callbacks
 )
 
 func gitAvailable(t *testing.T) {
@@ -86,7 +86,7 @@ include = ["rules"]
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
-	cfg, err := config.LoadConfig(context.Background(), consumerDir)
+	cfg, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 
 	tree, err := cfg.GetContentForProfile("default")
@@ -124,7 +124,7 @@ path = "skills/mything"
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
-	cfg, err := config.LoadConfig(context.Background(), consumerDir)
+	cfg, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 
 	var found bool
@@ -160,7 +160,7 @@ include = ["rules"]
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	// First load — populates cache.
-	cfg1, err := config.LoadConfig(context.Background(), consumerDir)
+	cfg1, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 	tree1, err := cfg1.GetContentForProfile("default")
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ include = ["rules"]
 		"---\nname: rule1\npriority: high\n---\n# Rule One Version 2")
 
 	// Second load — SHA changed, cache invalidated.
-	cfg2, err := config.LoadConfig(context.Background(), consumerDir)
+	cfg2, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 	tree2, err := cfg2.GetContentForProfile("default")
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ include = ["rules"]
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	// First load — populates cache.
-	_, err := config.LoadConfig(context.Background(), consumerDir)
+	_, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 
 	// Enable SkipFetch, restore on test exit.
@@ -232,7 +232,7 @@ include = ["rules"]
 	t.Cleanup(func() { os.Rename(renamed, repoDir) }) //nolint:errcheck
 
 	// Second load — must succeed using cached content.
-	cfg2, err := config.LoadConfig(context.Background(), consumerDir)
+	cfg2, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 
 	tree, err := cfg2.GetContentForProfile("default")

@@ -6,10 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func init() {
-	register(config.PluginRuntimeClaude, renderClaude)
-}
-
 // claudeManifest is the shape of .claude-plugin/plugin.json. Claude auto-discovers
 // bundled skills/commands/agents by convention, so no "skills" key is emitted.
 type claudeManifest struct {

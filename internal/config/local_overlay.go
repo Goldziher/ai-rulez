@@ -12,7 +12,6 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -115,7 +114,7 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		return nil, oops.With("path", localPath).Wrapf(err, "apply local overlay %s", filepath.Base(localPath))
 	}
 	for _, w := range warnings {
-		logger.Warn(w, "path", localPath)
+		cfg.Warn(w, "path", localPath)
 	}
 
 	out, err := decodeMergedDoc(mainPath, localPath, merged)

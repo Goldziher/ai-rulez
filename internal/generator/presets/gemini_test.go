@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 func TestGeminiPresetGenerator_GetName(t *testing.T) {
@@ -402,13 +403,12 @@ func TestResolveGeminiModel_BareClaudeAliasesAreOmitted(t *testing.T) {
 
 func TestWarnGeminiAliasOnce(t *testing.T) {
 	// Arrange
-	geminiAliasWarned.Delete("dedupe-agent\x00sonnet")
+	cfg := &config.Config{Diag: diag.New(func(string, ...any) {})}
 
 	// Act
-	first := warnGeminiAliasOnce("dedupe-agent", "sonnet")
-	second := warnGeminiAliasOnce("dedupe-agent", "sonnet")
-	otherAgent := warnGeminiAliasOnce("dedupe-other", "sonnet")
-	geminiAliasWarned.Delete("dedupe-other\x00sonnet")
+	first := warnGeminiAliasOnce(cfg, "dedupe-agent", "sonnet")
+	second := warnGeminiAliasOnce(cfg, "dedupe-agent", "sonnet")
+	otherAgent := warnGeminiAliasOnce(cfg, "dedupe-other", "sonnet")
 
 	// Assert
 	if !first || second || !otherAgent {

@@ -20,11 +20,13 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"   // Register remaining legacy preset generators
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
@@ -93,6 +95,11 @@ type Generator struct {
 	// It replaces the profile selection (see roles.go).
 	role *config.RoleConfig
 
+	// mu serializes the operations of this Generator: a watcher asks
+	// GeneratedPaths while a run is writing. Generators of different projects
+	// share nothing, so they run concurrently.
+	mu sync.Mutex
+
 	// hostOverride replaces config.Host when hostSet (see SetHost).
 	hostOverride ambient.Host
 	hostSet      bool
@@ -146,15 +153,16 @@ func NewGenerator(cfg *config.Config) *Generator {
 		// every hook renderer treats it as any other group.
 		cfg.EnableGuardHooks(schema.Version)
 	}
+	if cfg != nil && cfg.Registry == nil {
+		cfg.Registry = registry.Default()
+	}
+	if cfg != nil && cfg.Registry == nil {
+		cfg.Registry = registry.Default()
+	}
 	return &Generator{
 		config: cfg,
 	}
 }
-
-// generateMu serializes generate runs. The downgrade collector in rulefiles is
-// process-global, so two concurrent runs (for example from the MCP server)
-// would reset and flush each other's entries.
-var generateMu sync.Mutex
 
 // Generate generates all outputs for the specified profile.
 func (g *Generator) Generate(profile string) error {
@@ -622,7 +630,10 @@ func (g *Generator) withCatalogSkill(tree *config.ContentTree) (*config.ContentT
 // entry.
 func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, plugin.MemberEntry, error) {
 	memberDir := filepath.Join(g.config.BaseDir, member)
-	memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal())
+	memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal(), config.WithResolvers(g.config.Resolve))
+	if err == nil {
+		memberCfg.Diag = g.config.Diag
+	}
 	if err != nil {
 		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
 	}
@@ -746,8 +757,8 @@ func (g *Generator) planDomainPlugins(profile string) ([]plugin.PlannedPlugin, e
 // drift that Generate would refuse to write (nil when it is allowed or absent).
 // DryRun itself still returns the full plan, including the blocked lines.
 func (g *Generator) DryRunBlocked() error {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	if g.plan == nil {
 		return nil
 	}
@@ -821,7 +832,7 @@ func (g *Generator) disambiguateRuleCollisions(outputs []config.OutputFile) {
 			continue
 		}
 		abs := g.absOutputPath(output.Path)
-		if !config.InRulesDir(filepath.ToSlash(g.convertToRelativePath(abs))) ||
+		if !g.config.InRulesDir(filepath.ToSlash(g.convertToRelativePath(abs))) ||
 			!g.isUnmanagedRuleFile(abs, g.finalContent(output)) {
 			continue
 		}
@@ -845,7 +856,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	activeProfile, contentTree, run := render.profile, render.content, render.run
 
 	// Flatten outputs for writing, detecting conflicts and deduplicating
-	flatOutputs, err := flattenPresetOutputs(render.byPreset)
+	flatOutputs, err := flattenPresetOutputs(g.config.Diag, render.byPreset)
 	if err != nil {
 		return nil, "", err
 	}
@@ -914,7 +925,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnUnreadConsumerFiles()
 	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
-		rulefiles.Warn(diagnostic)
+		g.config.Diag.Warn(diagnostic)
 	}
 
 	// Collect MCP servers based on the resolved content tree and active profile
@@ -961,7 +972,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	// DSL-driven (internal/generator/providers/builtin/mcp.toml); fetch it
 	// from the registry rather than instantiating a hand-written generator.
 	if len(mcpServers) > 0 || g.config.HasSelfServer() {
-		mcpGen, err := config.GetPresetGenerator("mcp")
+		mcpGen, err := g.config.Registry.Generator("mcp")
 		if err != nil {
 			g.log().Warn("Failed to resolve MCP preset generator", "error", err)
 		} else {
@@ -1018,7 +1029,7 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 			continue
 		}
 		done[name] = true
-		generator, err := config.GetPresetGenerator(preset.BuiltIn)
+		generator, err := g.config.Registry.Generator(preset.BuiltIn)
 		if err != nil {
 			g.log().Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
 			continue
@@ -1082,14 +1093,14 @@ func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFi
 	names := strings.Join(readers, ", ")
 	overridePath := filepath.Join(g.config.BaseDir, presets.AgentsOverrideFile)
 	if g.isHandWritten(overridePath) {
-		rulefiles.Warn(presets.AgentsOverrideFile+" exists and was not written by ai-rulez, so it is left alone and "+
+		g.config.Diag.Warn(presets.AgentsOverrideFile+" exists and was not written by ai-rulez, so it is left alone and "+
 			"the presets that read it ("+names+") do not load your machine-local content",
 			"hint", "move or delete the file to let ai-rulez write it", "path", presets.AgentsOverrideFile)
 		return
 	}
-	agentsMD, ok := rootAgentsMD(allOutputs, g.config.BaseDir)
+	agentsMD, ok := rootAgentsMD(g.config.Diag, allOutputs, g.config.BaseDir)
 	if !ok {
-		rulefiles.Warn("machine-local content exists for "+names+", but this run produces no AGENTS.md, so "+
+		g.config.Diag.Warn("machine-local content exists for "+names+", but this run produces no AGENTS.md, so "+
 			presets.AgentsOverrideFile+" is not written and the presets that read it do not load it",
 			"hint", "enable a preset that writes AGENTS.md, or set agents_md = true")
 		return
@@ -1124,11 +1135,11 @@ func (g *Generator) isHandWritten(path string) bool {
 // rootAgentsMD returns the content of the project's AGENTS.md as written this
 // run: the winner of flattenPresetOutputs, which is the shared one with agents_md
 // and otherwise the last preset in name order to render one.
-func rootAgentsMD(allOutputs map[string][]config.OutputFile, baseDir string) (string, bool) {
+func rootAgentsMD(d *diag.Collector, allOutputs map[string][]config.OutputFile, baseDir string) (string, bool) {
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
 	// A conflict is reported by collectOutputs; the files found so far still tell
 	// what AGENTS.md says.
-	flat, _ := flattenPresetOutputs(allOutputs)
+	flat, _ := flattenPresetOutputs(d, allOutputs)
 	for _, o := range flat {
 		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
 			return o.Content, true
@@ -1337,7 +1348,7 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 // every rule inlined, because dropping the inlined rules would silently take
 // them from the tools that have no folder. The choice does not depend on the
 // order of the preset names, and a warning names the presets.
-func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
+func flattenPresetOutputs(d *diag.Collector, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
 	var flatOutputs []config.OutputFile
 	type claim struct {
 		preset string
@@ -1404,7 +1415,7 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.O
 	for _, path := range omittingPaths {
 		// Through the shared sink, which says each message once per run: this
 		// function runs more than once (rootAgentsMD, scopes) and clean silences it.
-		rulefiles.Warn("Presets with a rules folder and presets without one write the same file ("+path+"); "+
+		d.Warn("Presets with a rules folder and presets without one write the same file ("+path+"); "+
 			"keeping the version that inlines every rule. Set agents_md = true or rules.mode = \"inline\" to share it",
 			"path", path, "kept_from", seenPaths[path].preset, "rules_in_folder", strings.Join(omitting[path], ", "))
 	}
@@ -1575,7 +1586,7 @@ func isNestedAgentsMD(rel string) bool {
 // mistake our own output for a hand-written file).
 func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	rel := filepath.ToSlash(g.convertToRelativePath(absPath))
-	if !config.InRulesDir(rel) && !isNestedAgentsMD(rel) {
+	if !g.config.InRulesDir(rel) && !isNestedAgentsMD(rel) {
 		return false
 	}
 	info, err := os.Stat(absPath)
@@ -1732,7 +1743,7 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 	case config.HeaderHashesContent:
 		sourceHash = ""
 	}
-	return normalizeTrailingNewline(injectHashes(output.Content, output.Path, contentHash, sourceHash))
+	return normalizeTrailingNewline(injectHashesIn(g.config.RulesDirs, output.Content, output.Path, contentHash, sourceHash))
 }
 
 // canSkipWrite reports whether the file on disk already matches what would be
@@ -1749,7 +1760,7 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 	if g.config.GetHeaderHashes() == config.HeaderHashesFull && finalCarriesHash(finalContent) {
 		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
 		existingContentHash, existingSourceHash, legacy := scanStoredHashes(absPath)
-		if legacy && config.InRulesDir(output.Path) {
+		if legacy && g.config.InRulesDir(output.Path) {
 			// Hashes in the frontmatter are the pre-banner layout: rewrite once.
 			return false
 		}
@@ -2048,6 +2059,12 @@ func injectContentHash(content, outputPath, hash string) string {
 // and inserts the hash lines before it. If sourceHash is empty, only
 // Content-Hash is injected (e.g., from older callers).
 func injectHashes(content, outputPath, contentHash, sourceHash string) string {
+	return injectHashesIn(nil, content, outputPath, contentHash, sourceHash)
+}
+
+// injectHashesIn is injectHashes for a project whose rules folders are rd (nil:
+// the built-in ones).
+func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, sourceHash string) string {
 	if contentHash == "" {
 		return content
 	}
@@ -2058,7 +2075,7 @@ func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 	// 0. Native rules folders: the tools' frontmatter parsers are not documented
 	// to tolerate YAML comments (a failed parse can turn a scoped rule global or
 	// drop it), so the hashes go into the HTML banner after the frontmatter.
-	if out, ok := injectIntoRulesDirBanner(content, outputPath, hashBlock("")); ok {
+	if out, ok := injectIntoRulesDirBanner(rd, content, outputPath, hashBlock("")); ok {
 		return out
 	}
 
@@ -2143,8 +2160,8 @@ func hashLines(linePrefix, contentHash, sourceHash string) string {
 // must not go into the frontmatter, and without them the file would be
 // rewritten on every run and could not be told apart from a hand-written one.
 // Other extensions report false and take the generic fallback.
-func injectIntoRulesDirBanner(content, outputPath, block string) (string, bool) {
-	if !config.InRulesDir(outputPath) {
+func injectIntoRulesDirBanner(rd *config.RulesDirSet, content, outputPath, block string) (string, bool) {
+	if !rd.In(outputPath) {
 		return content, false
 	}
 	if out, ok := injectIntoBanner(content, block); ok {
@@ -2438,6 +2455,7 @@ func (g *Generator) localManifestPath() string {
 func (g *Generator) beginRun() {
 	g.manifests = nil
 	g.localManifestPending = false
+	g.diagnostics() // the run's warnings share one collector from the start
 }
 
 // planLocalManifest records whether this run is going to write the machine-local
@@ -2783,7 +2801,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 		}
 		// A rules folder is shared with hand-written rules: delete only a file that
 		// still looks generated, even when a manifest lists it.
-		if config.InRulesDir(relPath) && !looksGenerated(absPath) {
+		if g.config.InRulesDir(relPath) && !looksGenerated(absPath) {
 			g.log().Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
 			continue
 		}
@@ -3094,7 +3112,7 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
-		pattern := gitignorePatternForOutput(relPath, output.IsDir)
+		pattern := gitignorePatternForOutput(g.config.RulesDirs, relPath, output.IsDir)
 		if pattern == "" {
 			continue
 		}
@@ -3179,7 +3197,7 @@ func coversCommitted(dirPattern string, committed []string) bool {
 // which such a run leaves alone; only outside a repository do they need the block.
 func (g *Generator) skippedLocalPattern(rel string) string {
 	if stableLocalName(rel) || g.git().InfoExcludePath(g.config.BaseDir) == "" {
-		return localGitignorePattern(rel)
+		return localGitignorePattern(g.config.RulesDirs, rel)
 	}
 	return ""
 }
@@ -3188,8 +3206,8 @@ func (g *Generator) skippedLocalPattern(rel string) string {
 // rule files share a rules folder with committed rules, so they get the stable
 // "<rulesdir>/*.local.*" pattern instead of one entry per file; that keeps the
 // block identical for teammates and covers rules added later.
-func localGitignorePattern(relPath string) string {
-	if config.InRulesDir(relPath) {
+func localGitignorePattern(rd *config.RulesDirSet, relPath string) string {
+	if rd.In(relPath) {
 		return relPath[:strings.LastIndex(relPath, "/")] + "/*.local.*"
 	}
 	return relPath
@@ -3199,14 +3217,14 @@ func localGitignorePattern(relPath string) string {
 // belongs in the managed .gitignore block, or "" when the path must not be ignored
 // at all. Each family of generated output gets its own resolver so none of them
 // has to be read through the others.
-func gitignorePatternForOutput(relPath string, isDir bool) string {
+func gitignorePatternForOutput(rd *config.RulesDirSet, relPath string, isDir bool) string {
 	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
 	if relPath == ".github" || strings.HasSuffix(relPath, "/.github") {
 		return ""
 	}
 	// Rules folders are shared with hand-written rules, so ignore generated
 	// files one by one rather than the folder.
-	if rest, ok := config.RulesDirRemainder(relPath); ok {
+	if rest, ok := rd.Remainder(relPath); ok {
 		if rest == "" {
 			return ""
 		}

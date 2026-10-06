@@ -6,10 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func init() {
-	register(config.PluginRuntimeKimi, renderKimi)
-}
-
 // sessionStartDoc is Kimi's session-start hook (run a skill on session init).
 type sessionStartDoc struct {
 	Skill string `json:"skill,omitempty"`

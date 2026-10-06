@@ -95,28 +95,21 @@ func relConfigDirName(baseDir, configDir string) string {
 	return filepath.ToSlash(rel)
 }
 
-// ResolveIncludesCallback is a callback function type that resolves includes
-// This avoids circular import issues between config and includes packages
+// ResolveIncludesCallback resolves the includes of a loaded configuration into the
+// content tree to use. The includes package supplies it (config cannot import it).
 type ResolveIncludesCallback func(ctx context.Context, cfg *Config) (*ContentTree, error)
 
-// resolveIncludesFunc is set by the includes package during init
-var resolveIncludesFunc ResolveIncludesCallback
-
-// SetResolveIncludesCallback sets the callback for resolving includes
-// This is called by the includes package to avoid circular imports
-func SetResolveIncludesCallback(fn ResolveIncludesCallback) {
-	resolveIncludesFunc = fn
-}
-
-// ResolveInstalledSkillsCallback is a callback function type that resolves installed skills
+// ResolveInstalledSkillsCallback resolves the installed skills of a loaded configuration.
 type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *Config) ([]ContentFile, error)
 
-// resolveInstalledSkillsFunc is set by the includes package during init
-var resolveInstalledSkillsFunc ResolveInstalledSkillsCallback
-
-// SetResolveInstalledSkillsCallback sets the callback for resolving installed skills
-func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
-	resolveInstalledSkillsFunc = fn
+// Resolvers fetch what a configuration pulls in from outside the project: includes
+// and installed skills. They are passed to the load (WithResolvers) rather than
+// registered process-wide, so a caller that fetches nothing (an embedding service,
+// a test) simply passes none, and one process can serve callers with different
+// credentials. A configuration without includes or installed skills never needs them.
+type Resolvers struct {
+	Includes ResolveIncludesCallback
+	Skills   ResolveInstalledSkillsCallback
 }
 
 // LoadConfig loads a configuration from the specified base directory.
@@ -264,6 +257,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
 	config.Host = lo.host
+	config.Resolve = lo.resolvers
+	config.Registry = lo.registry
+	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 
 	// The organization policy clamps the configuration before anything is fetched.
@@ -309,33 +305,33 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	}
 
 	ctx = ambient.WithContext(ctx, loadHost(lo))
-	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
+	if err := resolveIncludesIfNeeded(ctx, configDir, config, lo.resolvers.Includes); err != nil {
 		return nil, err
 	}
 
-	if err := resolveInstalledSkillsIfNeeded(ctx, config); err != nil {
+	if err := resolveInstalledSkillsIfNeeded(ctx, config, lo.resolvers.Skills); err != nil {
 		return nil, err
 	}
 
 	return config, nil
 }
 
-func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Config) error {
+func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Config, resolve ResolveIncludesCallback) error {
 	log := logger.FromContext(ctx)
 	if len(config.Includes) == 0 {
 		return nil
 	}
 
-	if resolveIncludesFunc == nil {
+	if resolve == nil {
 		return oops.
 			With("config_dir", configDir).
-			Hint("Includes are configured but the includes resolver is not registered.\nImport github.com/Goldziher/ai-rulez/v5/internal/includes (blank import) before loading configs, or ensure the CLI/mcp entrypoint is used.").
+			Hint("Includes are configured but the load was given no includes resolver; pass config.WithResolvers (the CLI and the MCP server do).").
 			Errorf("includes configured but includes resolver is unavailable")
 	}
 
 	log.Debug("Resolving includes", "count", len(config.Includes))
 
-	mergedContent, err := resolveIncludesFunc(ctx, config)
+	mergedContent, err := resolve(ctx, config)
 	if err != nil {
 		if errors.Is(err, ErrLockViolation) || errors.Is(err, ErrIncludeOutsideProject) {
 			return err
@@ -356,21 +352,21 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 	return nil
 }
 
-func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
+func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve ResolveInstalledSkillsCallback) error {
 	log := logger.FromContext(ctx)
 	if len(config.InstalledSkills) == 0 {
 		return nil
 	}
 
-	if resolveInstalledSkillsFunc == nil {
+	if resolve == nil {
 		return oops.
-			Hint("Installed skills are configured but the resolver is not registered.\nImport github.com/Goldziher/ai-rulez/v5/internal/includes (blank import) before loading configs.").
+			Hint("Installed skills are configured but the load was given no resolver; pass config.WithResolvers (the CLI and the MCP server do).").
 			Errorf("installed skills configured but resolver is unavailable")
 	}
 
 	log.Debug("Resolving installed skills", "count", len(config.InstalledSkills))
 
-	skills, err := resolveInstalledSkillsFunc(ctx, config)
+	skills, err := resolve(ctx, config)
 	if err != nil {
 		if errors.Is(err, ErrLockViolation) {
 			return err
@@ -1419,7 +1415,7 @@ func loadBuiltins(config *Config) {
 			resolved = builtins.ResolveBuiltins(config.Builtins.GetNames())
 		}
 		if len(resolved) > 0 {
-			logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
+			config.Log().Debug("Loading builtins", "count", len(resolved), "names", resolved)
 			loadBuiltinDomains(config, resolved, builtins.ExcludedRules(config.Builtins.GetNames()), false)
 		}
 	}
@@ -1440,13 +1436,13 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 	for _, name := range names {
 		// Skip if domain already exists (local content has higher priority)
 		if _, exists := config.Content.Domains[name]; exists {
-			logger.Debug("Skipping builtin (local domain exists)", "name", name)
+			config.Log().Debug("Skipping builtin (local domain exists)", "name", name)
 			continue
 		}
 
 		entries, err := builtins.LoadDomainContent(name)
 		if err != nil {
-			logger.Warn("Failed to load builtin", "name", name, "error", err)
+			config.Warn("Failed to load builtin", "name", name, "error", err)
 			continue
 		}
 		if len(entries) == 0 {
@@ -1462,7 +1458,7 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 		for _, entry := range entries {
 			// Skip individual builtin content files excluded via "!domain/name".
 			if ruleExclusions[name+"/"+entry.Name] {
-				logger.Debug("Excluding builtin content", "domain", name, "name", entry.Name)
+				config.Log().Debug("Excluding builtin content", "domain", name, "name", entry.Name)
 				continue
 			}
 
@@ -1491,7 +1487,7 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 		}
 
 		config.Content.Domains[name] = domain
-		logger.Debug("Loaded builtin domain",
+		config.Log().Debug("Loaded builtin domain",
 			"name", name,
 			"scoped", scoped,
 			"rules", len(domain.Rules),

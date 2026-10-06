@@ -27,10 +27,6 @@ var devinRulesTarget = rulefiles.Target{
 	Banner:   true,
 }
 
-func init() {
-	config.RegisterPreset(devinPresetName, &DevinPresetGenerator{alwaysFileLocalRules{target: &devinRulesTarget, routing: rulefiles.RoutingEverything}})
-}
-
 // DevinPresetGenerator generates Devin preset files
 type DevinPresetGenerator struct{ alwaysFileLocalRules }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/presets"   // register legacy preset generators
 	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // register DSL-backed preset generators (overrides legacy where they overlap)
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,6 +69,7 @@ func (s *V4GenerationSuite) SetupSuite() {
 	require.Contains(t, cfg.MCPServers, "http-mcp-server")
 
 	// Generate all presets
+	cfg.Registry = registry.Default()
 	results, err := config.GeneratePresets(cfg)
 	require.NoError(t, err, "Should generate all presets without error")
 	s.outputs = results
@@ -825,6 +827,7 @@ func TestV4Generation_ModelByPreset(t *testing.T) {
 	require.Equal(t, "haiku", cfg.Defaults.ModelByPreset["claude"])
 	require.Equal(t, "gpt-5", cfg.Defaults.ModelByPreset["copilot"])
 
+	cfg.Registry = registry.Default()
 	results, err := config.GeneratePresets(cfg)
 	require.NoError(t, err, "GeneratePresets should succeed")
 

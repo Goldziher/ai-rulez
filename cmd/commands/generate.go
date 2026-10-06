@@ -12,15 +12,17 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
-	"github.com/samber/oops"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -275,15 +277,15 @@ func loadConfigForCommand(ctx context.Context, args []string, opts ...config.Loa
 		opts = append(opts, config.WithoutLocal())
 	}
 	if len(args) > 0 {
-		return config.LoadConfigFromFile(ctx, args[0], opts...)
+		return project.LoadFile(ctx, args[0], opts...)
 	}
 	if cfgFile != "" {
-		return config.LoadConfigFromFile(ctx, cfgFile, opts...)
+		return project.LoadFile(ctx, cfgFile, opts...)
 	}
 	if configDir != "" {
-		return config.LoadConfigFromDir(ctx, ".", configDir, opts...)
+		return project.LoadDir(ctx, ".", configDir, opts...)
 	}
-	return config.LoadConfig(ctx, ".", opts...)
+	return project.Load(ctx, ".", opts...)
 }
 
 // pluginLoadOptions returns the load options for plugin bundle work. Plugin
@@ -589,7 +591,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
-	cfg, err := config.LoadConfigFromFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
+	cfg, err := project.LoadFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err

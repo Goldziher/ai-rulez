@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,17 +8,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 func TestPresetRegistry_NamesAndGeneratorsAgree(t *testing.T) {
 	// Arrange
 	valid := config.AllPresetNames()
-	registered := make([]string, 0, len(config.PresetRegistry))
-	for name := range config.PresetRegistry {
-		registered = append(registered, name)
-	}
-	sort.Strings(registered)
+	registered := registry.Default().Names()
 
 	// Act + Assert: every valid name has a generator and every generator a valid name.
 	assert.Equal(t, valid, registered,
@@ -39,7 +35,7 @@ func TestPresetRegistry_EveryEmbeddedSpecIsAValidPreset(t *testing.T) {
 
 			// Assert
 			assert.True(t, p.IsValid(), "embedded spec %q is not accepted as a built-in preset", name)
-			gen, err := config.GetPresetGenerator(name)
+			gen, err := registry.Default().Generator(name)
 			require.NoError(t, err)
 			assert.Equal(t, name, gen.GetName())
 		})

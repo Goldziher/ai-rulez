@@ -7,10 +7,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
-func init() {
-	register(config.PluginRuntimeCopilot, renderCopilot)
-}
-
 // copilotNamespaceDir is the vendor directory the Agent Plugins layout gives
 // Copilot-specific components.
 const copilotNamespaceDir = "com.github.copilot"

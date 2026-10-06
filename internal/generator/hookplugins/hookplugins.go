@@ -24,7 +24,7 @@ import (
 	"text/template"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/toolnames"
 )
 
@@ -300,8 +300,8 @@ func tidy(s string) string {
 }
 
 // warn reports a declaration the harness cannot express, once per run.
-func warn(harness, msg string, kv ...any) {
-	rulefiles.Warn(fmt.Sprintf("[[hooks]] not generated for %s: %s", harness, msg), kv...)
+func warn(d *diag.Collector, harness, msg string, kv ...any) {
+	d.Warn(fmt.Sprintf("[[hooks]] not generated for %s: %s", harness, msg), kv...)
 }
 
 // collect resolves the groups that apply to the harness into the entries of each
@@ -314,11 +314,11 @@ func collect(cfg *config.Config, harness string, flavor Flavor, spec *flavorSpec
 			continue
 		}
 		if _, ok := spec.events[g.Event]; !ok {
-			warn(harness, fmt.Sprintf("the event %s has no equivalent in the %s plugin API", g.Event, harness),
+			warn(cfg.Diag, harness, fmt.Sprintf("the event %s has no equivalent in the %s plugin API", g.Event, harness),
 				"hint", "restrict the group with targets, or remove it")
 			continue
 		}
-		matcher, ok := groupMatcher(g, harness, spec)
+		matcher, ok := groupMatcher(cfg.Diag, g, harness, spec)
 		if !ok {
 			continue
 		}
@@ -334,7 +334,7 @@ func collect(cfg *config.Config, harness string, flavor Flavor, spec *flavorSpec
 // groupMatcher resolves the matcher a group renders with: the harness override or
 // the group's own. A matcher on an event the plugin API reports no subject for would
 // run the group on every occurrence, so such a group is skipped.
-func groupMatcher(g *config.HookGroup, harness string, spec *flavorSpec) (string, bool) {
+func groupMatcher(d *diag.Collector, g *config.HookGroup, harness string, spec *flavorSpec) (string, bool) {
 	matcher := g.Matcher
 	if override, ok := g.Matchers[harness]; ok {
 		matcher = override
@@ -345,7 +345,7 @@ func groupMatcher(g *config.HookGroup, harness string, spec *flavorSpec) (string
 	switch {
 	case slices.Contains(spec.subjects, g.Event):
 		if problem := matcherProblem(matcher); problem != "" {
-			warn(harness, fmt.Sprintf("the matcher %q of the %s group is not a valid portable regular expression (%s), "+
+			warn(d, harness, fmt.Sprintf("the matcher %q of the %s group is not a valid portable regular expression (%s), "+
 				"so the group is skipped instead of running on every call or silently never", matcher, g.Event, problem),
 				"hint", "fix the matcher, or set targets to leave this harness out")
 			return "", false
@@ -354,7 +354,7 @@ func groupMatcher(g *config.HookGroup, harness string, spec *flavorSpec) (string
 	case slices.Contains(config.HookEventsWithoutMatcher, g.Event):
 		return "", true // Claude Code ignores it there too
 	}
-	warn(harness, fmt.Sprintf("the %s plugin API reports nothing to match the matcher %q of the %s group against, "+
+	warn(d, harness, fmt.Sprintf("the %s plugin API reports nothing to match the matcher %q of the %s group against, "+
 		"so the group would run on every occurrence", harness, matcher, g.Event),
 		"hint", "remove the matcher or set targets to leave this harness out")
 	return "", false
@@ -363,16 +363,16 @@ func groupMatcher(g *config.HookGroup, harness string, spec *flavorSpec) (string
 func entryFor(cfg *config.Config, harness string, g *config.HookGroup, action *config.HookAction, matcher string,
 ) (hookEntry, bool) {
 	if action.Type != "" && action.Type != config.HookTypeCommand {
-		warn(harness, fmt.Sprintf("a %s handler has the type %q; only command handlers run", g.Event, action.Type))
+		warn(cfg.Diag, harness, fmt.Sprintf("a %s handler has the type %q; only command handlers run", g.Event, action.Type))
 		return hookEntry{}, false
 	}
 	if action.If != "" {
-		warn(harness, fmt.Sprintf("a %s handler sets 'if', which the %s plugin API has no equivalent of; "+
+		warn(cfg.Diag, harness, fmt.Sprintf("a %s handler sets 'if', which the %s plugin API has no equivalent of; "+
 			"running it unconditionally would widen it", g.Event, harness))
 		return hookEntry{}, false
 	}
 	if action.Script != "" && !config.IsSafeHookScript(action.Script) {
-		warn(harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+		warn(cfg.Diag, harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
 			g.Event, action.Script))
 		return hookEntry{}, false
 	}

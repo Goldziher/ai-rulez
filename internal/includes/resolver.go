@@ -42,7 +42,7 @@ func NewResolver(baseDir string, accessToken string) *Resolver {
 
 // ResolveIncludes loads all includes and merges with local content
 func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
-	logger.Debug("Resolving includes", "count", len(cfg.Includes))
+	cfg.Log().Debug("Resolving includes", "count", len(cfg.Includes))
 	r.memo = memoFor(cfg)
 	r.cfg = cfg
 	lock, err := loadLockFor(cfg)
@@ -73,12 +73,12 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 				// instead of continuing with local content only.
 				failures = append(failures, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "include %q", cfg.Includes[i].Name))
 			}
-			logger.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
+			cfg.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
 			// Continue processing other includes despite errors
 			continue
 		}
 
-		logger.Debug("Successfully resolved include", "name", cfg.Includes[i].Name)
+		cfg.Log().Debug("Successfully resolved include", "name", cfg.Includes[i].Name)
 	}
 
 	if len(violations) > 0 {

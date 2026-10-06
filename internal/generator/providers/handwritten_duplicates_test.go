@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 func writeDoc(t *testing.T, name, body string) (dir, path string) {
@@ -66,7 +66,7 @@ func TestClaimableAugmentAreas_DropsAHandWrittenIdenticalArea(t *testing.T) {
 		"\n        severity: "+rule["severity"].(string)+"\n")
 	cfg := &config.Config{BaseDir: dir, Run: config.NewRunState()}
 	var warned []string
-	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
 
 	// Act
 	areas, err := claimableAugmentAreas(checks, cfg, path, "g.yaml")

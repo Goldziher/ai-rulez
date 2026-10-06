@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 // hookHarnessPresets are the presets whose [[hooks]] are rendered into a file of
@@ -76,8 +76,7 @@ command = "echo guard-marker"
 func captureHookWarnings(t *testing.T) *[]string {
 	t.Helper()
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
-	t.Cleanup(restore)
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) }))
 	return &warnings
 }
 

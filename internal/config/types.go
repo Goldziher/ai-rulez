@@ -12,6 +12,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers/builtin"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
@@ -167,6 +169,19 @@ type Config struct {
 	// loaded with (WithHost); the zero value is the real process. Generation,
 	// includes and lint read them from here instead of the process.
 	Host ambient.Host `yaml:"-" json:"-" toml:"-"`
+	// Diag collects the warnings of the generate run this config is rendered by
+	// (see internal/diag); nil outside a run, where warnings go straight to the
+	// logger.
+	Diag *diag.Collector `yaml:"-" json:"-" toml:"-"`
+	// Registry resolves preset names to generators (WithRegistry); the Generator
+	// supplies the default one when a config carries none.
+	Registry *Registry `yaml:"-" json:"-" toml:"-"`
+	// RulesDirs holds the rules folders custom provider specs added to this
+	// project's built-in set; nil is the built-in set. Copies of a Config share it.
+	RulesDirs *RulesDirSet `yaml:"-" json:"-" toml:"-"`
+	// Resolve are the resolvers this config was loaded with (WithResolvers); nested
+	// loads of the same project (a baseline render, a shared view) reuse them.
+	Resolve Resolvers `yaml:"-" json:"-" toml:"-"`
 	// Workspace is the project tree this config was loaded from (WithWorkspace,
 	// or the repository containing BaseDir); nil on a Config built by hand.
 	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`
@@ -606,51 +621,38 @@ func (p *Preset) IsValid() bool {
 	return p.Name != "" && p.Type != "" && p.Path != ""
 }
 
-// builtInPresets holds the names accepted as `presets = ["<name>"]`. It is seeded
-// with the Go-implemented presets (their PresetName constants) and extended at
-// init time by RegisterBuiltInPresetName, which internal/generator/providers
-// calls for every embedded provider spec, so a new builtin/*.toml needs no edit
-// here. Guarded by builtInPresetsMu because registration is a package-level
-// side effect that tests may also trigger.
+// goPresetNames are the presets implemented in Go (their PresetName constants);
+// every other built-in preset is a declarative spec embedded in
+// internal/generator/providers/builtin, whose names are read from there.
+var goPresetNames = []string{
+	string(PresetClaude), string(PresetCursor), string(PresetGemini), string(PresetCopilot), string(PresetDevin),
+	string(PresetCline), string(PresetCodex), string(PresetAmp), string(PresetJunie), string(PresetHermes),
+	string(PresetOpenCode), string(PresetAntigravity), string(PresetMCP), string(PresetXum), string(PresetPi),
+	string(PresetBaz), PresetOKF,
+}
+
 var (
-	builtInPresetsMu sync.RWMutex
-	builtInPresets   = map[string]bool{
-		string(PresetClaude):      true,
-		string(PresetCursor):      true,
-		string(PresetGemini):      true,
-		string(PresetCopilot):     true,
-		string(PresetDevin):       true,
-		string(PresetCline):       true,
-		string(PresetCodex):       true,
-		string(PresetAmp):         true,
-		string(PresetJunie):       true,
-		string(PresetHermes):      true,
-		string(PresetOpenCode):    true,
-		string(PresetAntigravity): true,
-		string(PresetMCP):         true,
-		string(PresetXum):         true,
-		string(PresetPi):          true,
-		string(PresetBaz):         true,
-	}
+	builtInPresetsOnce sync.Once
+	builtInPresets     map[string]bool
 )
 
-// RegisterBuiltInPresetName makes name a valid built-in preset. It is idempotent.
-// Config cannot import the providers package (providers imports config), so
-// providers pushes its embedded spec names in from its init().
-func RegisterBuiltInPresetName(name string) {
-	if name == "" {
-		return
-	}
-	builtInPresetsMu.Lock()
-	builtInPresets[name] = true
-	builtInPresetsMu.Unlock()
+// builtInPresetSet is every name accepted as `presets = ["<name>"]`: the Go
+// presets plus the embedded provider specs. It is derived from embedded data on
+// first use and never changes.
+func builtInPresetSet() map[string]bool {
+	builtInPresetsOnce.Do(func() {
+		builtInPresets = make(map[string]bool, len(goPresetNames)+len(builtin.Names()))
+		for _, name := range goPresetNames {
+			builtInPresets[name] = true
+		}
+		for _, name := range builtin.Names() {
+			builtInPresets[name] = true
+		}
+	})
+	return builtInPresets
 }
 
-func isValidBuiltInPreset(name string) bool {
-	builtInPresetsMu.RLock()
-	defer builtInPresetsMu.RUnlock()
-	return builtInPresets[name]
-}
+func isValidBuiltInPreset(name string) bool { return builtInPresetSet()[name] }
 
 // MCPServer represents an MCP (Model Context Protocol) server configuration
 // MCP transport protocol identifiers, used by preset renderers to decide the

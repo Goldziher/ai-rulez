@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 // An always-on item whose targets name the root file of a preset that agents_md
@@ -48,7 +49,7 @@ func TestAgentsMD_RootFileTargetsReachSharedAgentsMD(t *testing.T) {
 func captureWarnings(t *testing.T) *[]string {
 	t.Helper()
 	var warned []string
-	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
 	return &warned
 }
 

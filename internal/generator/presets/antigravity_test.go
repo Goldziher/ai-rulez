@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
@@ -517,7 +518,7 @@ func TestAntigravity_ScopedRulesGoToRootFolder(t *testing.T) {
 func TestAntigravity_MaxCharsWarns(t *testing.T) {
 	// Arrange
 	var msgs []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { msgs = append(msgs, msg) })
+	restore := diag.SetDefaultSink(func(msg string, _ ...any) { msgs = append(msgs, msg) })
 	t.Cleanup(restore)
 	big := strings.Repeat("x", antigravityRuleMaxChars+1)
 	content := &config.ContentTree{Rules: []config.ContentFile{{Name: "big", Content: big}}}

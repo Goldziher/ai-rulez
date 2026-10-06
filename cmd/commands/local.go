@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 var (
@@ -200,6 +201,7 @@ func editLocal(edit func(doc *config.LocalDoc) error) (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // already contextual
 	}
+	doc.WithResolvers(project.Resolvers())
 	defer doc.Close()
 	if err := edit(doc); err != nil {
 		return doc.Path, err

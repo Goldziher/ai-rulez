@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -29,3 +30,37 @@ func (c *Config) View() workspace.View {
 // real file system. Included content that lives in a cache outside the project is
 // read that way.
 func (c *Config) ViewFor(dir string) workspace.View { return c.View().For(dir) }
+
+// Log is the logger of this config's host (the CLI's when none was given). It is
+// safe on a nil Config.
+func (c *Config) Log() logger.Logger {
+	if c == nil {
+		return logger.Std()
+	}
+	return c.Host.Logger()
+}
+
+// Warn logs a warning through the host logger. The advice of a generate run goes
+// through Diag instead, which a command can silence or de-duplicate; this is for
+// what must always be shown. Safe on a nil Config.
+func (c *Config) Warn(msg string, args ...any) {
+	c.Log().Warn(msg, args...)
+}
+
+// OnceKey reports whether this is the first call for key in the life of this
+// config's collector, which a second render by the same command (a clean plan and
+// the clean) does not reset. Safe on a nil Config.
+func (c *Config) OnceKey(key string) bool {
+	if c == nil {
+		return true
+	}
+	return c.Diag.Sticky(key)
+}
+
+// WarnOnce logs msg once through the host logger, whatever sink the run's
+// advice is sent to. Safe on a nil Config.
+func (c *Config) WarnOnce(key, msg string, args ...any) {
+	if c.OnceKey(key) {
+		c.Log().Warn(msg, args...)
+	}
+}

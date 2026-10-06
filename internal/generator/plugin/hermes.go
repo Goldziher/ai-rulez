@@ -18,10 +18,6 @@ const hermesSourcePath = ".ai-rulez/hermes/index.py"
 var nonPythonIdentifier = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 var semverPrerelease = regexp.MustCompile(`-(alpha|beta|rc)\.(\d+)$`)
 
-func init() {
-	register(config.PluginRuntimeHermes, renderHermes)
-}
-
 func renderHermes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	pluginDir := filepath.Join(baseDir, ".hermes", "plugins", m.Name)
 	module, err := hermesModule(m, filepath.Join(pluginDir, "hermes.py"))

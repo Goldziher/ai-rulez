@@ -6,6 +6,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 
 	// Register every preset (Go and declarative) so their layouts can be read.
 	_ "github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -81,7 +82,7 @@ func nativeSources() []nativeSource {
 			if skippedPresets[name] {
 				continue
 			}
-			gen, err := config.GetPresetGenerator(name)
+			gen, err := registry.Default().Generator(name)
 			if err != nil {
 				continue
 			}

@@ -6,19 +6,16 @@ import (
 	"sort"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"gopkg.in/yaml.v3"
 )
 
 const xumPresetName = "xum"
-
-func init() {
-	config.RegisterPreset(xumPresetName, &XumPresetGenerator{})
-}
 
 // XumPresetGenerator renders the Xum coding agent's project files:
 // a shared AGENTS.md, project skills under .xum/skills, agent definitions under
@@ -119,9 +116,9 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 		builder.WriteString("\n\n")
 	}
 
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 

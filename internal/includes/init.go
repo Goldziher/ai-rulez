@@ -4,21 +4,18 @@ import (
 	"context"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/spf13/viper"
 )
 
-func init() {
-	// Register the ResolveIncludes callback with the config package
-	// This avoids circular imports between config and includes packages
-	config.SetResolveIncludesCallback(func(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
-		gitToken := viper.GetString("git_token")
-		resolver := NewResolver(cfg.BaseDir, gitToken)
-		return resolver.ResolveIncludes(ctx, cfg)
-	})
-
-	// Register the ResolveInstalledSkills callback
-	config.SetResolveInstalledSkillsCallback(func(ctx context.Context, cfg *config.Config) ([]config.ContentFile, error) {
-		gitToken := viper.GetString("git_token")
-		return ResolveInstalledSkills(ctx, cfg, gitToken)
-	})
+// Resolvers returns the include and installed-skill resolvers a load is given
+// (config.WithResolvers). gitToken authenticates the fetches that need one and
+// goes only to the hosts the fetch code allowlists.
+func Resolvers(gitToken string) config.Resolvers {
+	return config.Resolvers{
+		Includes: func(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
+			return NewResolver(cfg.BaseDir, gitToken).ResolveIncludes(ctx, cfg)
+		},
+		Skills: func(ctx context.Context, cfg *config.Config) ([]config.ContentFile, error) {
+			return ResolveInstalledSkills(ctx, cfg, gitToken)
+		},
+	}
 }

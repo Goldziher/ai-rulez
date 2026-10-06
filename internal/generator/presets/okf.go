@@ -16,11 +16,6 @@ import (
 // break the frontmatter that OKF requires at the start of each concept.
 // See docs/okf.md.
 
-func init() {
-	config.RegisterPreset(config.PresetOKF, &OKFPresetGenerator{})
-	config.RegisterBuiltInPresetName(config.PresetOKF)
-}
-
 // OKFPresetGenerator writes the OKF bundle.
 type OKFPresetGenerator struct{}
 

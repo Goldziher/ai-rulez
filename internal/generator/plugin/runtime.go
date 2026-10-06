@@ -13,12 +13,33 @@ import (
 // RuntimeRenderer renders a single runtime's plugin bundle rooted at baseDir.
 type RuntimeRenderer func(m *Manifest, baseDir string) ([]config.OutputFile, error)
 
-// registry maps a runtime name to its renderer. Populated by each runtime file's
-// init(); package-level rather than global mutable state accessed at runtime.
-var registry = map[string]RuntimeRenderer{}
-
-func register(name string, r RuntimeRenderer) {
-	registry[name] = r
+// rendererFor returns the renderer of a runtime. It is a switch rather than a
+// table filled from init() functions: the set of runtimes is fixed, and nothing
+// is registered at start-up.
+func rendererFor(runtime string) (RuntimeRenderer, bool) {
+	switch runtime {
+	case config.PluginRuntimeAgentPlugins:
+		return renderAgentPlugins, true
+	case config.PluginRuntimeClaude:
+		return renderClaude, true
+	case config.PluginRuntimeCodex:
+		return renderCodex, true
+	case config.PluginRuntimeCopilot:
+		return renderCopilot, true
+	case config.PluginRuntimeCursor:
+		return renderCursor, true
+	case config.PluginRuntimeFactory:
+		return renderFactory, true
+	case config.PluginRuntimeGemini:
+		return renderGemini, true
+	case config.PluginRuntimeHermes:
+		return renderHermes, true
+	case config.PluginRuntimeKimi:
+		return renderKimi, true
+	case config.PluginRuntimeOpenCode:
+		return renderOpenCode, true
+	}
+	return nil, false
 }
 
 // Generate renders every requested runtime plus the single-plugin marketplace
@@ -64,7 +85,7 @@ func GenerateMember(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 	for _, runtime := range m.Runtimes {
-		renderer, ok := registry[runtime]
+		renderer, ok := rendererFor(runtime)
 		if !ok {
 			logger.Warn("no plugin renderer for runtime; skipping", "runtime", runtime)
 			continue

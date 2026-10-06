@@ -27,6 +27,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 )
 
 // Kind classifies what a row carries.
@@ -98,7 +99,7 @@ func ResolveFor(cfg *config.Config, preset, home string, getenv func(string) str
 	if !filepath.IsAbs(home) {
 		return nil, fmt.Errorf("the home directory %q must be an absolute path", home)
 	}
-	gen, err := config.GetPresetGenerator(preset)
+	gen, err := registry.Default().Generator(preset)
 	if err != nil {
 		return nil, &UnsupportedError{preset, "it is not a built-in preset"}
 	}

@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
-	"github.com/samber/oops"
 )
 
 // User scope renders the person's own configuration (not a project's) into the
@@ -141,7 +141,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 		if reason == "" {
 			reason = "it is not a built-in preset"
 		}
-		rulefiles.Warn("preset "+name+" has no documented user-level location, so --user writes nothing for it ("+reason+")",
+		g.config.Diag.Warn("preset "+name+" has no documented user-level location, so --user writes nothing for it ("+reason+")",
 			"hint", "supported: "+strings.Join(userscope.Supported(layouts), ", "))
 	}
 	if g.config.GeneratedAt.IsZero() {
@@ -182,7 +182,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	if err != nil {
 		return nil, "", nil, err
 	}
-	outputs, err = flattenPresetOutputs(mapped)
+	outputs, err = flattenPresetOutputs(g.config.Diag, mapped)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -203,7 +203,7 @@ func userStageDir(stage, preset string) string { return filepath.Join(stage, pre
 func (g *Generator) renderUserPresets(cfg *config.Config, stage string, presets []config.Preset) (map[string][]config.OutputFile, error) {
 	rendered := make(map[string][]config.OutputFile, len(presets))
 	for _, preset := range presets {
-		gen, err := config.GetPresetGenerator(preset.BuiltIn)
+		gen, err := g.config.Registry.Generator(preset.BuiltIn)
 		if err != nil {
 			return nil, oops.With("preset", preset.GetName()).Wrapf(err, "resolve preset")
 		}
@@ -598,16 +598,17 @@ func (g *Generator) userStale(outputs []config.OutputFile) []string {
 
 // PlanUser computes what GenerateUser would do without touching the filesystem.
 func (g *Generator) PlanUser(profile string) (*UserPlan, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	plan, _, err := g.planUser(profile)
 	return plan, err
 }
 
 func (g *Generator) planUser(profile string) (*UserPlan, []config.OutputFile, error) {
 	g.beginRun()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
+	d := g.diagnostics()
+	d.Reset()
+	defer d.Flush()
 
 	outputs, active, dropped, err := g.collectUserOutputs(profile)
 	if err != nil {
@@ -648,11 +649,8 @@ func (g *Generator) planUser(profile string) (*UserPlan, []config.OutputFile, er
 // GenerateUser writes the user-level outputs and the manifest. It returns the plan
 // it carried out; the caller is expected to have shown PlanUser first.
 func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
-
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	plan, kept, err := g.planUser(profile)
 	if err != nil {
 		return nil, err

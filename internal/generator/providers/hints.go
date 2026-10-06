@@ -6,9 +6,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // This file derives registry facts from the embedded provider specs so that a new
@@ -39,18 +36,6 @@ func loadBuiltinSpecs() []*ProviderSpec {
 		}
 	})
 	return builtinSpecs
-}
-
-// init pushes each embedded spec into the registries that cannot import this
-// package (config and rulefiles would be an import cycle). It runs during package
-// initialisation, so it completes before any config is loaded or validated.
-func init() {
-	for _, spec := range loadBuiltinSpecs() {
-		config.RegisterBuiltInPresetName(spec.Name)
-		if spec.Root != nil && spec.Root.File != "" {
-			rulefiles.RegisterRootOwner(spec.Root.File, spec.Name)
-		}
-	}
 }
 
 // sharedDirs are directories users and other tools keep hand-authored files in.

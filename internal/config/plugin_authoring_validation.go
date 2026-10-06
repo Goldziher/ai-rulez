@@ -10,7 +10,6 @@ import (
 
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -388,7 +387,7 @@ func (c *Config) validateHookGroups(pluginName string, groups []HookGroup) error
 		}
 	}
 	for _, warning := range hookDeclarationWarnings(groups) {
-		logger.Warn(warning.Message, "plugin", pluginName, "event", warning.Event, "field", warning.Field)
+		c.Warn(warning.Message, "plugin", pluginName, "event", warning.Event, "field", warning.Field)
 	}
 	return nil
 }

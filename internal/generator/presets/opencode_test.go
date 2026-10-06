@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 )
 
@@ -742,7 +742,7 @@ func TestOpencodePresetGenerator_WritesConfigWithoutMCPServers(t *testing.T) {
 func TestOpencodePresetGenerator_NonArrayInstructionsAreLeftAlone(t *testing.T) {
 	// Arrange
 	var warned []string
-	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+	t.Cleanup(diag.SetDefaultSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
 	path := filepath.Join(t.TempDir(), "opencode.json")
 	if err := os.WriteFile(path, []byte(`{"instructions":"CONTRIBUTING.md"}`), 0o644); err != nil {
 		t.Fatal(err)

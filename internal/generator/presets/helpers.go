@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
-	"github.com/samber/oops"
 )
 
 const agentDelegationBuiltin = "agent-delegation"
@@ -812,7 +813,7 @@ func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir
 			return nil, oops.With("preset", t.Preset, "rule", it.File.Name).Wrapf(err, "render %s rule file", t.Preset)
 		}
 		outPath := rulefiles.RulesDirPath(cfg, baseDir, t, rulefiles.FileName(t, *it))
-		rulefiles.ReportNotes(outPath, notes)
+		rulefiles.ReportNotes(cfg.Diag, outPath, notes)
 		outputs = append(outputs, config.OutputFile{Path: outPath, Content: text})
 	}
 	return outputs, nil

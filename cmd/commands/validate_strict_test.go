@@ -5,13 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 func TestCheckStrictFlags(t *testing.T) {

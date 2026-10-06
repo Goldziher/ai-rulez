@@ -2,12 +2,13 @@ package includes
 
 import (
 	"context"
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +72,7 @@ source = "file://`+filepath.ToSlash(remote)+`"
 
 func (f *lockFixture) load(t *testing.T) (*config.Config, error) {
 	t.Helper()
-	return config.LoadConfig(context.Background(), f.project, config.WithoutLocal())
+	return loadWithResolvers(context.Background(), f.project, config.WithoutLocal())
 }
 
 // advance adds a commit to the remote.
@@ -214,7 +215,7 @@ func TestLock_TamperedCacheFailsDigestVerification(t *testing.T) {
 
 func TestCheckLock(t *testing.T) {
 	f := newLockFixture(t)
-	cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+	cfg, err := loadWithResolvers(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
 	require.NoError(t, err)
 
 	problems, _ := CheckLock(cfg, nil)
@@ -250,7 +251,7 @@ func TestCheckLock_ReportsUndigestableCache(t *testing.T) {
 	}
 	// Arrange
 	f := newLockFixture(t)
-	cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+	cfg, err := loadWithResolvers(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
 	require.NoError(t, err)
 	f.writeLock(t)
 	lock, err := lockfile.Load(cfg.ConfigDir)

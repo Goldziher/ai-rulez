@@ -6,14 +6,17 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers/builtin"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 )
 
-// rootPresets maps each root file to the presets that write it. A file shared
-// by several presets must render identically whichever writes it last, so a
-// target naming any of them selects an item for all. The local variants
-// (CLAUDE.local.md, ...) resolve through their base file.
-var rootPresets = map[string][]string{
+// goRootPresets maps each root file written by a Go preset to the presets that
+// write it. A file shared by several presets must render identically whichever
+// writes it last, so a target naming any of them selects an item for all. The
+// local variants (CLAUDE.local.md, ...) resolve through their base file. The
+// declarative provider presets join from the specs embedded in
+// providers/builtin (see rootPresets).
+var goRootPresets = map[string][]string{
 	"agents.md":                       {"codex", "opencode", "xum", "amp", "pi", "baz", "junie"},
 	"gemini.md":                       {"gemini", "antigravity"},
 	"claude.md":                       {"claude"},
@@ -21,24 +24,36 @@ var rootPresets = map[string][]string{
 	".github/copilot-instructions.md": {"copilot"},
 }
 
-var rootPresetsMu sync.RWMutex
+var (
+	rootPresetsOnce  sync.Once
+	rootPresetsTable map[string][]string
+)
 
-// RegisterRootOwner records that preset writes rootFile, so declarative provider
-// specs join the owners table without a hand edit. It is idempotent and keeps the
-// order owners were first added in. Call it from init() only.
-func RegisterRootOwner(rootFile, preset string) {
-	key := targetmatch.Normalize(rootFile)
-	rootPresetsMu.Lock()
-	defer rootPresetsMu.Unlock()
-	if !slices.Contains(rootPresets[key], preset) {
-		rootPresets[key] = append(rootPresets[key], preset)
-	}
+// rootPresets is the owners table: the Go presets' entries, then each embedded
+// provider spec's root file in name order, keeping the order owners were first
+// added in. It is derived once from embedded data and never changes.
+func rootPresets() map[string][]string {
+	rootPresetsOnce.Do(func() {
+		table := make(map[string][]string, len(goRootPresets))
+		for file, owners := range goRootPresets {
+			table[file] = slices.Clone(owners)
+		}
+		for _, spec := range builtin.Summaries() {
+			if spec.RootFile == "" {
+				continue
+			}
+			key := targetmatch.Normalize(spec.RootFile)
+			if !slices.Contains(table[key], spec.Name) {
+				table[key] = append(table[key], spec.Name)
+			}
+		}
+		rootPresetsTable = table
+	})
+	return rootPresetsTable
 }
 
 func rootOwnersFor(rootFile string) ([]string, bool) {
-	rootPresetsMu.RLock()
-	defer rootPresetsMu.RUnlock()
-	owners, ok := rootPresets[targetmatch.Normalize(rootFile)]
+	owners, ok := rootPresets()[targetmatch.Normalize(rootFile)]
 	return owners, ok
 }
 

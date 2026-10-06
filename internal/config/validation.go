@@ -8,10 +8,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
 )
 
 // Validate validates a configuration
@@ -523,13 +524,17 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 				Hint("A provider-backed preset gets its type/path from the spec; drop 'type' and 'path'").
 				Errorf("custom preset %q sets both 'provider' and 'type'/'path'", preset.Name)
 		}
-		if ProviderSpecValidator != nil {
-			if err := ProviderSpecValidator(*preset, c.BaseDir); err != nil {
+		if c.Registry != nil && c.Registry.Provider != nil {
+			gen, err := c.Registry.Provider(*preset, c.BaseDir)
+			if err != nil {
 				return oops.
 					With("field", fmt.Sprintf("presets[%d].provider", index)).
 					With("preset_name", preset.Name).
 					With("provider", preset.Provider).
 					Wrapf(err, "invalid provider spec for custom preset %q", preset.Name)
+			}
+			if owner, ok := gen.(RulesDirOwner); ok {
+				c.AddRulesDir(owner.SplitRulesDir())
 			}
 		}
 		return nil
@@ -700,10 +705,10 @@ func (c *Config) warnMissingDomainReferences() {
 	for domain := range referencedDomains {
 		if _, exists := c.Content.Domains[domain]; !exists && !c.hasLocalDomain(domain) {
 			if hasIncludes {
-				logger.Debug("profile references domain not found in merged content (may be missing from include source)",
+				c.Log().Debug("profile references domain not found in merged content (may be missing from include source)",
 					"domain", domain)
 			} else {
-				logger.Warn("profile references non-existent domain", "domain", domain)
+				c.Warn("profile references non-existent domain", "domain", domain)
 			}
 		}
 	}

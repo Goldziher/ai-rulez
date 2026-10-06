@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register includes resolver for tests
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register includes resolver for tests
 )
 
 func TestLoadConfigWithIncludes_LocalIncludes(t *testing.T) {
@@ -68,7 +68,7 @@ include = ["rules"]
 		))
 
 		// Load config
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-with-includes", cfg.Name)
@@ -153,7 +153,7 @@ include = ["context"]
 		))
 
 		// Load config
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-mixed-includes", cfg.Name)
@@ -210,7 +210,7 @@ merge_strategy = "local-override"
 		))
 
 		// Load config
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -274,7 +274,7 @@ merge_strategy = "include-override"
 		))
 
 		// Load config
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -333,7 +333,7 @@ install_to = "domains/backend"
 		))
 
 		// Load config
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -383,7 +383,7 @@ presets = ["claude"]
 		))
 
 		// Load config - should succeed without issues
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-no-includes", cfg.Name)
@@ -425,7 +425,7 @@ include = ["rules"]
 		))
 
 		// Load config - should not fail but log warning
-		cfg, err := config.LoadConfig(context.Background(), baseDir)
+		cfg, err := loadWithResolvers(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-nonexistent-include", cfg.Name)

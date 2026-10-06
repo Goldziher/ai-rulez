@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"unicode/utf8"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/samber/oops"
 )
 
 // checkItems supplies the items of an outputs.checks block: the deduplicated
@@ -58,7 +58,7 @@ func (g *Generator) renderAggregate(typ string, spec *OutputSpec, items []config
 	}
 	if limit, ok := checkSizeLimits[g.Spec.Name]; ok {
 		if size := utf8.RuneCount(out.RawContent); size > limit {
-			rulefiles.Warn(fmt.Sprintf("%s is %d characters, over the %d that %s truncates the file at, so trailing checks are not read",
+			cfg.Diag.Warn(fmt.Sprintf("%s is %d characters, over the %d that %s truncates the file at, so trailing checks are not read",
 				spec.File, size, limit, g.Spec.Name), "hint", "shorten or drop checks, or target some of them at other presets")
 		}
 	}

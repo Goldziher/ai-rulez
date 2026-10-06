@@ -6,17 +6,13 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"gopkg.in/yaml.v3"
 )
-
-func init() {
-	config.RegisterPreset("cursor", &CursorPresetGenerator{alwaysFileLocalRules{target: &cursorRulesTarget, routing: rulefiles.RoutingEverything}})
-}
 
 const presetNameCursor = "cursor"
 
@@ -364,7 +360,7 @@ func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.Content
 		}
 		flag, err := strconv.ParseBool(raw)
 		if err != nil {
-			logger.Warn("Cursor agent field "+field+" must be true or false; omitting it", "agent", agent.Name, "value", raw)
+			cfg.Warn("Cursor agent field "+field+" must be true or false; omitting it", "agent", agent.Name, "value", raw)
 			continue
 		}
 		frontmatter[field] = flag

@@ -1,17 +1,15 @@
 package providers
 
 import (
-	"embed"
 	"fmt"
-)
 
-//go:embed builtin/*.toml
-var builtinFS embed.FS
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers/builtin"
+)
 
 // BuiltinNames returns the list of provider names embedded in the binary.
 // One entry per *.toml file under builtin/.
 func BuiltinNames() ([]string, error) {
-	entries, err := builtinFS.ReadDir("builtin")
+	entries, err := builtin.FS.ReadDir(".")
 	if err != nil {
 		return nil, fmt.Errorf("read embedded builtin dir: %w", err)
 	}
@@ -34,7 +32,7 @@ func BuiltinNames() ([]string, error) {
 // name. Returns a ready-to-use Generator.
 func LoadBuiltin(name string) (*Generator, error) {
 	path := "builtin/" + name + ".toml"
-	raw, err := builtinFS.ReadFile(path)
+	raw, err := builtin.FS.ReadFile(name + ".toml")
 	if err != nil {
 		return nil, fmt.Errorf("read embedded provider %q: %w", name, err)
 	}

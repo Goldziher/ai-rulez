@@ -131,8 +131,8 @@ func (g *Generator) CheckDrift(profile string) ([]Drift, error) {
 // not sources that changed since the last generate (use CheckDrift for that).
 // checked is the number of files whose hash was compared.
 func (g *Generator) VerifyGenerated() (drift []Drift, checked int, err error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	defer g.resetRunState()
 

@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -170,11 +169,11 @@ func (c *Config) validateSettingsHooks() error {
 		}
 	}
 	for _, warning := range hookDeclarationWarnings(c.Hooks) {
-		logger.Warn(strings.TrimPrefix(warning.Message, "plugin "), "event", warning.Event,
+		c.Warn(strings.TrimPrefix(warning.Message, "plugin "), "event", warning.Event,
 			"field", strings.Replace(warning.Field, "plugin.hooks", "hooks", 1))
 	}
 	for _, warning := range emptyHookGroupWarnings(c.Hooks) {
-		logger.Warn(warning.Message, "event", warning.Event, "field", warning.Field)
+		c.Warn(warning.Message, "event", warning.Event, "field", warning.Field)
 	}
 	return nil
 }
@@ -231,7 +230,7 @@ func (c *Config) validatePermissions() error {
 		}
 	}
 	for _, rule := range c.Permissions.OverbroadAllowRules() {
-		logger.Warn(warnOverbroadPermission, "field", "permissions.allow", "rule", rule)
+		c.Warn(warnOverbroadPermission, "field", "permissions.allow", "rule", rule)
 	}
 	return nil
 }
