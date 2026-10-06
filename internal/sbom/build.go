@@ -44,10 +44,7 @@ func Build(cfg *config.Config, toolVersion string, opts Options) (*BOM, error) {
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
-	now := opts.Now
-	if now.IsZero() {
-		now = time.Now()
-	}
+	now := opts.Now // zero judges no approval expired; the caller supplies the clock
 	tree := treeOf(snap, lock)
 	b := &builder{
 		cfg: cfg, opts: opts, scope: sc, lock: lock, idx: newContentIndex(cfg),
@@ -158,7 +155,7 @@ func (b *builder) projectComponent(snap *contentlock.Snapshot, tree string) Comp
 	if name == "" {
 		name = filepath.Base(filepath.Dir(b.cfg.ConfigDir))
 	}
-	props := []Property{prop("tree", tree), prop("lock", "absent"), prop("files", b.opts.files())}
+	props := []Property{prop("tree", tree), prop("lock", "absent")}
 	if b.lock != nil {
 		props[1] = prop("lock", "present")
 		if b.lock.HasContentPins() {
@@ -168,6 +165,9 @@ func (b *builder) projectComponent(snap *contentlock.Snapshot, tree string) Comp
 	}
 	if scopeName := b.cfg.LockScope(); scopeName != config.LockScopeAll {
 		props = append(props, prop("lock-scope", scopeName))
+	}
+	if f := b.opts.files(); f != FilesNone {
+		props = append(props, prop("files", f))
 	}
 	if b.opts.Profile != "" {
 		props = append(props, prop("profile", b.opts.Profile))
