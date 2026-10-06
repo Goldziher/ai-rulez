@@ -226,6 +226,7 @@ func writeLockAt(path, kind string, names []string) int {
 	}
 	for _, e := range lockedEntries(next) {
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
+	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
 	}
 	if next.HasContentPins() {
 		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.DefaultOutputs()), next.Tree)
@@ -239,6 +240,7 @@ func writeLockAt(path, kind string, names []string) int {
 	}
 	return 0
 }
+	printScans(next)
 
 // prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or
 // stay offline for --content-only) and returns the function that restores it.

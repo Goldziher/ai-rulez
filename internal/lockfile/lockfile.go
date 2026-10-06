@@ -143,6 +143,9 @@ type File struct {
 func (f *File) HasContentPins() bool {
 	return f != nil && (f.Tree != "" || len(f.Item) > 0 || len(f.Output) > 0)
 }
+	// Scan records external scanner results over the staged content (scan.go);
+	// outside the tree digest.
+	Scan []Scan `toml:"scan,omitempty"`
 
 // Path returns the lock path for a configuration directory.
 func Path(configDir string) string { return filepath.Join(configDir, FileName) }
@@ -212,6 +215,7 @@ func Save(configDir string, f *File) error {
 	enc := toml.NewEncoder(&buf)
 	if err := enc.Encode(out); err != nil {
 		return oops.Wrapf(err, "encode lock file")
+	out.Scan = sortedScans(f.Scan)
 	}
 	// A committed lock symlink must not redirect the write: WriteFileAtomic
 	// replaces a link at the destination and refuses a linked parent directory.
