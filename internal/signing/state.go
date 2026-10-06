@@ -27,8 +27,8 @@ const (
 	stateHomeParts = ".local/state"
 )
 
-// State is the per-user rollback record: for each repository, the latest signing
-// time of any attestation verified on this machine. It lives outside the
+// State is the per-user rollback record: for each signer and project, the latest
+// signing time of any attestation verified on this machine (see stateKey). It lives outside the
 // repository (a checkout cannot plant or reset it) and is authenticated with an
 // HMAC under a per-user secret, as the LLM response cache is. It makes rollback
 // detectable per machine, not impossible: a fresh machine starts empty.
@@ -113,26 +113,26 @@ func (s *State) mac(payload []byte) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
-// Highwater returns the recorded time for repo and whether there is one.
-func (s *State) Highwater(repo string) (time.Time, bool) {
-	t, ok := s.highwater[repo]
+// Highwater returns the recorded time for key and whether there is one.
+func (s *State) Highwater(key string) (time.Time, bool) {
+	t, ok := s.highwater[key]
 	return t, ok
 }
 
-// Check reports AR727 when signedAt is older than the high-water mark of repo.
-func (s *State) Check(repo string, signedAt time.Time) error {
-	if hw, ok := s.highwater[repo]; ok && signedAt.Before(hw) {
-		return Errorf(CodeRollback, "signed %s, but this machine has already verified an attestation from %s", signedAt.UTC().Format(time.RFC3339), hw.UTC().Format(time.RFC3339))
+// Check reports AR727 when signedAt is older than the high-water mark of key.
+func (s *State) Check(key string, signedAt time.Time) error {
+	if hw, ok := s.highwater[key]; ok && signedAt.Before(hw) {
+		return Errorf(CodeRollback, "signed %s, but this machine has already verified an attestation from %s; if that newer one was wrong, delete %s (or pass --no-state)", signedAt.UTC().Format(time.RFC3339), hw.UTC().Format(time.RFC3339), s.path)
 	}
 	return nil
 }
 
-// Advance raises the high-water mark of repo to signedAt and writes the state.
-func (s *State) Advance(repo string, signedAt time.Time) error {
-	if hw, ok := s.highwater[repo]; ok && !signedAt.After(hw) {
+// Advance raises the high-water mark of key to signedAt and writes the state.
+func (s *State) Advance(key string, signedAt time.Time) error {
+	if hw, ok := s.highwater[key]; ok && !signedAt.After(hw) {
 		return nil
 	}
-	s.highwater[repo] = signedAt.UTC()
+	s.highwater[key] = signedAt.UTC()
 	payload, err := json.Marshal(statePayload{Highwater: s.highwater})
 	if err != nil {
 		return oops.Wrapf(err, "encode the signing state")

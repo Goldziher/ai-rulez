@@ -131,8 +131,25 @@ func CheckFresh(res *Result, claimedAt time.Time, maxAge time.Duration, now time
 	if at.IsZero() {
 		return Errorf(CodeStale, "the signature has no time and [signing] max_age is set")
 	}
+	if err := checkNotFuture(at, now); err != nil {
+		return err
+	}
 	if age := now.Sub(at); age > maxAge {
 		return Errorf(CodeStale, "signed %s ago (%s), older than max_age %s", age.Round(time.Hour), at.UTC().Format(time.RFC3339), maxAge)
+	}
+	return nil
+}
+
+// clockSkew is how far ahead of the local clock a signing time may be before it
+// is rejected.
+const clockSkew = 5 * time.Minute
+
+// checkNotFuture reports AR723 when at is later than now plus the allowed skew.
+// A signature from the future has a negative age, which would pass any max_age,
+// and a weak (claimed) time that far ahead would pin the rollback mark there.
+func checkNotFuture(at, now time.Time) error {
+	if !at.IsZero() && at.After(now.Add(clockSkew)) {
+		return Errorf(CodeStale, "the signing time %s is in the future (now %s); check the clock of the signing machine", at.UTC().Format(time.RFC3339), now.UTC().Format(time.RFC3339))
 	}
 	return nil
 }

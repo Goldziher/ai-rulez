@@ -135,7 +135,7 @@ stdout.
 | AR724 | `attestation-subject-mismatch` | error | The signed lock-subject digest or `hash_version` differs from the lock, or is below `min_hash_version` |
 | AR725 | `trusted-root-unavailable` | error | A certificate-signed attestation needs a trusted root and none is configured or cached |
 | AR726 | `tlog-proof-missing` | error | `[signing] tlog = "required"` and the bundle has no transparency log entry |
-| AR727 | `signature-rollback` | error | The attestation is older than one this machine already verified for the repository |
+| AR727 | `signature-rollback` | error | The attestation is older than one this machine already verified for the same signer and project |
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
@@ -1728,7 +1728,7 @@ a certificate-signed attestation needs a Sigstore trusted root and none is confi
 
 ### AR727 signature-rollback
 
-the lock attestation is older than one this machine already verified for the repository
+the lock attestation is older than one this machine already verified for the same signer and project
 
 - Default severity: `error`
 - Analyzer: `lock` (scope `bundle`)

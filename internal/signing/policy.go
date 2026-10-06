@@ -103,6 +103,7 @@ func PrepareLockCheck(cfg *config.Config, o VerifyOptions) (*LockCheck, error) {
 	}
 	check := &LockCheck{Lock: lock, BundlePath: bundlePathFor(cfg, o)}
 	check.Policy = LockPolicy{Trust: trust, Now: o.Now}
+	check.Policy.ScopeRel, check.Policy.ScopeAbs = stateScope(cfg.ConfigDir)
 	check.Policy.Verifier = Verifier{Keys: trust.Keys(SubjectLock), TLog: effectiveTLog(s, trust)}
 	if s != nil {
 		if s.MaxAge != "" {
