@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
@@ -24,7 +25,7 @@ func init() {
 type AntigravityPresetGenerator struct{}
 
 // antigravityRulesTarget is Antigravity's workspace rules folder. Antigravity
-// reads only the top level of the folder and documents a 24,576 byte limit per
+// reads only the top level of the folder and documents a 24,000 byte limit per
 // file; it is applied here as a soft limit on the rendered runes, which
 // under-counts for non-ASCII text.
 var antigravityRulesTarget = rulefiles.Target{
@@ -38,7 +39,7 @@ var antigravityRulesTarget = rulefiles.Target{
 	Banner:    true,
 }
 
-const antigravityRuleMaxChars = 24576
+var antigravityRuleMaxChars = harnesslimits.MustValue("antigravity.rule_file_bytes")
 
 // antigravityRouting decides which rules become files. GEMINI.md is written by
 // both the antigravity and gemini presets and the last writer wins, so when

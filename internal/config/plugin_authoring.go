@@ -3,6 +3,8 @@ package config
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 )
 
 // This file defines the *authoring* (producer) side of plugins: describing a
@@ -610,7 +612,7 @@ func (p *PluginAuthoring) ResolvedRuntimes() []string {
 
 // DefaultCodexProjectDocMaxBytes is Codex's default project_doc_max_bytes: the
 // most combined AGENTS.md content Codex reads (32 KiB).
-const DefaultCodexProjectDocMaxBytes = 32 * 1024
+var DefaultCodexProjectDocMaxBytes = harnesslimits.MustValue("codex.agents_md_chain_bytes")
 
 // CodexConfig is the [codex] block.
 type CodexConfig struct {
