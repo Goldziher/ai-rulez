@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -148,6 +149,42 @@ func TestFixesRefuseGeneratedAndForeignFiles(t *testing.T) {
 	res, err = ApplyFixes(lintReport(t, root).Findings, o)
 	require.NoError(t, err)
 	assert.Empty(t, res.Applied, "text edits outside the authored root are refused")
+}
+
+func TestOutsideFixesStayInsideTheProjectAndOnRegularFiles(t *testing.T) {
+	// Arrange: a project with a hand-written file, and a file elsewhere that
+	// the project reaches through a symlinked directory and a symlinked file.
+	root := t.TempDir()
+	elsewhere := t.TempDir()
+	writeFiles(t, root, map[string]string{".claude/skills/h/SKILL.md": "---\nallowed_tools: Read\n---\n"})
+	writeFiles(t, elsewhere, map[string]string{"SKILL.md": "---\nallowed_tools: Read\n---\n"})
+	testutil.SymlinkOrSkip(t, elsewhere, filepath.Join(root, "linked"))
+	testutil.SymlinkOrSkip(t, filepath.Join(elsewhere, "SKILL.md"), filepath.Join(root, "file-link.md"))
+	outsideFix := func(file string) Finding {
+		f := finding(CodeClaudeKeySpelling, file, 2, "x")
+		f.meta().Fix = &Fix{Description: "rename", Confidence: FixSafe, Outside: true,
+			Edits: []Edit{{File: file, Line: 2, Old: "allowed_tools: Read", New: "allowed-tools: Read"}}}
+		return f
+	}
+	tests := []struct {
+		name    string
+		file    string
+		applied bool
+	}{
+		{"a regular file inside the project", filepath.Join(root, ".claude/skills/h/SKILL.md"), true},
+		{"a file behind a symlinked directory", filepath.Join(root, "linked", "SKILL.md"), false},
+		{"a symlinked file", filepath.Join(root, "file-link.md"), false},
+		{"a file outside the project", filepath.Join(elsewhere, "SKILL.md"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			res, err := ApplyFixes([]Finding{outsideFix(tt.file)}, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), ProjectRoot: root, DryRun: true})
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.applied, len(res.Applied) == 1, "applied %+v skipped %+v", res.Applied, res.Skipped)
+		})
+	}
 }
 
 func TestFixesNeverApplyToSecurityFindings(t *testing.T) {

@@ -83,6 +83,10 @@ type FixOptions struct {
 	// EditRoot, when set, limits text edits to files below it (the authored
 	// source directory); a chmod is not limited.
 	EditRoot string
+	// ProjectRoot, when set, bounds the fixes that edit outside EditRoot
+	// (Fix.Outside): the file must be a regular file, not a symlink, with no
+	// symlink on its path, below this directory.
+	ProjectRoot string
 	// DiffRoot is the directory the paths in the unified diff are relative to
 	// (the repository root, so `git apply` works from it). When empty the
 	// absolute path is used without its leading slash.
@@ -256,6 +260,11 @@ func refuseFix(fix *Fix, o FixOptions) string {
 		if o.EditRoot != "" && !fix.Outside && !underDir(gitutil.Resolve(e.File), o.EditRoot) {
 			return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
 		}
+		if fix.Outside && o.ProjectRoot != "" {
+			if reason := outsideFixRefusal(e.File, o.ProjectRoot); reason != "" {
+				return reason
+			}
+		}
 		if o.Refuse != nil {
 			if r := o.Refuse(e.File); r != "" {
 				return r
@@ -268,6 +277,22 @@ func refuseFix(fix *Fix, o FixOptions) string {
 				return r
 			}
 		}
+	}
+	return ""
+}
+
+// outsideFixRefusal says why a fix outside the authored sources may not edit
+// file: it must be a regular file (not a symlink) whose resolved path, through
+// every directory on the way, lies inside root. A link out of the project would turn a
+// hand-written-file fix into a write anywhere the user can write.
+func outsideFixRefusal(file, root string) string {
+	info, err := os.Lstat(file)
+	if err != nil || !info.Mode().IsRegular() {
+		return "the file is not a regular file (a symlink is never edited)"
+	}
+	real, err := filepath.EvalSymlinks(file)
+	if err != nil || !underDir(real, gitutil.Resolve(root)) {
+		return "the file is not inside the project (a symlink on its path leaves it)"
 	}
 	return ""
 }
