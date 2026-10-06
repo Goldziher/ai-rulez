@@ -264,6 +264,8 @@ func pluginLoadOptions(plugin bool) []config.LoadOption {
 // runRecursiveGenerate processes every discovered config and returns the
 // process exit code: 1 when any config failed to load, validate, or generate
 // (the remaining configs are still processed and every error is printed), else 0.
+// Under --locked or --frozen, when every failure is the lock disagreeing with the
+// sources it is exitDrift, the code a single root exits with.
 func runRecursiveGenerate() int {
 	configFiles := findConfigFilesRecursively()
 	if pluginMode {
@@ -280,12 +282,15 @@ func runRecursiveGenerate() int {
 	}
 
 	progress.PrintIfNotQuiet("Found %d configuration file(s)\n", len(configFiles))
-	totalGenerated, failed := processConfigFiles(configFiles)
+	totalGenerated, failed, drifted := processConfigFilesCounting(configFiles)
 	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d config(s)\n", totalGenerated, len(configFiles))
 	if len(failed) > 0 {
 		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) failed:\n", len(failed), len(configFiles))
 		for _, path := range failed {
 			fmt.Fprintf(os.Stderr, "  - %s\n", path)
+		}
+		if drifted == len(failed) {
+			return exitDrift // every failure is the lock disagreeing with the sources, as for a single root
 		}
 		return 1
 	}
@@ -463,6 +468,13 @@ func findConfigInDir(dir string) string {
 // processConfigFiles generates from every config concurrently and returns the
 // number of files written plus the (sorted) paths of the configs that failed.
 func processConfigFiles(configFiles []string) (generated int, failed []string) {
+	generated, failed, _ = processConfigFilesCounting(configFiles)
+	return generated, failed
+}
+
+// processConfigFilesCounting is processConfigFiles that also returns how many of
+// the failures were lock drift (see lockDriftError).
+func processConfigFilesCounting(configFiles []string) (generated int, failed []string, drifted int) {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
 
 	// Each config has its own working directory and produces independent
@@ -492,6 +504,9 @@ func processConfigFiles(configFiles []string) (generated int, failed []string) {
 			if err != nil {
 				failedMu.Lock()
 				failed = append(failed, configPath)
+				if lockDriftError(err) {
+					drifted++
+				}
 				failedMu.Unlock()
 			}
 		}()
@@ -500,7 +515,17 @@ func processConfigFiles(configFiles []string) (generated int, failed []string) {
 
 	fileCounter.Finish()
 	sort.Strings(failed)
-	return int(totalGenerated), failed
+	return int(totalGenerated), failed, drifted
+}
+
+// lockDriftError reports whether a failed `generate --locked` or `--frozen` was
+// the lock disagreeing with the sources (content drift, or a remote the lock
+// does not cover), which exits with exitDrift rather than 1.
+func lockDriftError(err error) bool {
+	if !generateLocked && !generateFrozen {
+		return false
+	}
+	return errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation)
 }
 
 // processConfigFile generates from one config. A non-nil error means the config
@@ -665,13 +690,61 @@ func applyLockFlags() {
 
 // runGenerateCheck runs `generate --check` and exits with its code.
 func runGenerateCheck(args []string) {
-	if err := checkGenerateCheckFlags(); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	if code := runDriftCheck(args, recursive, driftRender); code != 0 {
+	if code := generateCheckCode(args); code != 0 {
 		os.Exit(code)
 	}
+}
+
+// generateCheckCode is `generate --check`: with --locked or --frozen it first
+// requires the sources to match ai-rulez.lock (the same gate `generate` applies
+// before writing), then compares the generated files.
+func generateCheckCode(args []string) int {
+	if err := checkGenerateCheckFlags(); err != nil {
+		fmtError(err)
+		return 1
+	}
+	if code := lockedCheckCode(args); code != 0 {
+		return code
+	}
+	return runDriftCheck(args, recursive, driftRender)
+}
+
+// lockedCheckCode runs the locked-content gate for `generate --check` on one
+// root (args) or every root (recursive). It returns 0 when the flags are off or
+// the sources match, exitDrift when the lock and the sources disagree, else 1.
+func lockedCheckCode(args []string) int {
+	if !generateLocked && !generateFrozen {
+		return 0
+	}
+	paths := []string{""}
+	if recursive {
+		paths = findConfigFilesRecursively()
+	}
+	code := 0
+	for _, path := range paths {
+		var cfg *config.Config
+		var err error
+		if path != "" {
+			cfg, err = config.LoadConfigFromFile(context.Background(), path)
+		} else {
+			cfg, err = loadConfigForCommand(context.Background(), args)
+		}
+		if err == nil {
+			err = enforceLockedContent(cfg)
+		}
+		if err == nil {
+			continue
+		}
+		fmtError(err)
+		c := 1
+		if errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation) {
+			c = exitDrift
+		}
+		if code == 0 || c < code { // a tool failure (1) outranks drift (2)
+			code = c
+		}
+	}
+	return code
 }
 
 // importGate scans imported content before anything is written, when
