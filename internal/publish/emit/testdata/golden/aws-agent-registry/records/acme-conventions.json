@@ -1,0 +1,16 @@
+{
+  "description": "Conventions",
+  "descriptors": {
+    "custom": {
+      "data": "{\"bundle\":\"acme-conventions-1.4.0.tar.gz\",\"bundle_digest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"description\":\"Conventions\",\"lock_tree\":\"sha256:6cd1000000000000000000000000000000000000000000000000000000000000\",\"name\":\"acme-conventions\",\"runtimes\":[\"claude\",\"cursor\"],\"version\":\"1.4.0\"}"
+    }
+  },
+  "displayName": "acme-conventions",
+  "name": "acme-conventions",
+  "recordType": "CUSTOM",
+  "recordVersion": "1.4.0",
+  "tags": {
+    "ai-rulez-plugin": "acme-conventions",
+    "commit": "0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e"
+  }
+}

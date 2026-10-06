@@ -1,0 +1,22 @@
+{
+  "description": "Deploy the service safely.",
+  "descriptors": {
+    "agentSkillsDefinition": {
+      "additionalData": {
+        "skillMd": {
+          "data": "---\nname: deploy\ndescription: Deploy the service safely.\n---\n\n# Deploy\n\nRun the checks first.\n"
+        }
+      },
+      "data": "{\"repository\":{\"url\":\"https://github.com/acme/skills\",\"source\":\"github\"}}",
+      "dataSchemaVersion": "0.1.0"
+    }
+  },
+  "displayName": "deploy",
+  "name": "acme-conventions/deploy",
+  "recordType": "SKILL",
+  "recordVersion": "1.4.0",
+  "tags": {
+    "ai-rulez-plugin": "acme-conventions",
+    "commit": "0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e"
+  }
+}
