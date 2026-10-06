@@ -514,7 +514,7 @@ func TestConvert_NothingToConvert(t *testing.T) {
 }
 
 func TestConvert_UnknownImporter(t *testing.T) {
-	_, err := Convert(context.Background(), ConvertOptions{Source: t.TempDir(), From: []string{"rulesync"}})
+	_, err := Convert(context.Background(), ConvertOptions{Source: t.TempDir(), From: []string{"nonesuch"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown importer")
 }

@@ -1,0 +1,19 @@
+{
+  // Shared servers
+  "mcpServers": {
+    "deepwiki": { "type": "http", "url": "https://mcp.deepwiki.com/mcp", "targets": ["claudecode"] },
+    "context7": {
+      "description": "Library docs",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": { "CONTEXT7_TOKEN": "${CONTEXT7_TOKEN}" },
+      "disabledTools": ["resolve-library-id"],
+    },
+  },
+  "claudecode": {
+    "mcpServers": {
+      "claude-only": { "type": "http", "url": "https://example.com/mcp" },
+    },
+  },
+}

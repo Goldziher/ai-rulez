@@ -109,10 +109,16 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
+	importers, autoSkippedNative := preferRulesync(importers, opts.From)
 
 	plan, err := runImporters(abs, importers, Options{SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort})
 	if err != nil {
 		return nil, err
+	}
+	if autoSkippedNative {
+		plan.add(newFinding(StatusDropped, "(native files)", "", "",
+			"CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from .rulesync/ and were not imported; use --from native,rulesync to import both"))
+		sortFindings(plan)
 	}
 	names := make([]string, 0, len(importers))
 	for _, imp := range importers {
@@ -196,6 +202,33 @@ func pickImporters(abs string, from []string) ([]Format, error) {
 		out = append(out, imp)
 	}
 	return out, nil
+}
+
+// preferRulesync drops the native importer from an automatic run that also
+// detects a rulesync project: the tool files next to .rulesync/ are its
+// generated output, so importing them as well would duplicate every rule.
+// An explicit --from keeps what was asked for.
+func preferRulesync(importers []Format, from []string) ([]Format, bool) {
+	for _, f := range from {
+		if n := strings.TrimSpace(f); n != "" && n != autoFrom {
+			return importers, false
+		}
+	}
+	hasRulesync, hasNative := false, false
+	for _, imp := range importers {
+		hasRulesync = hasRulesync || imp.Name() == rulesyncName
+		hasNative = hasNative || imp.Name() == nativeName
+	}
+	if !hasRulesync || !hasNative {
+		return importers, false
+	}
+	var out []Format
+	for _, imp := range importers {
+		if imp.Name() != nativeName {
+			out = append(out, imp)
+		}
+	}
+	return out, true
 }
 
 // autoImporters returns every importer that detects something. They all run;
@@ -285,7 +318,7 @@ func planSummary(p *Plan) string {
 	for _, k := range []struct {
 		kind  Kind
 		label string
-	}{{KindRule, "rules"}, {KindContext, "context"}, {KindSkill, "skills"}, {KindAgent, "agents"}, {KindCommand, "commands"}} {
+	}{{KindRule, "rules"}, {KindContext, "context"}, {KindSkill, "skills"}, {KindAgent, "agents"}, {KindCommand, "commands"}, {KindCheck, "checks"}} {
 		if n := counts[k.kind]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k.label))
 		}
