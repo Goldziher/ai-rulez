@@ -202,6 +202,18 @@ type claudeStreamLine struct {
 	} `json:"usage"`
 }
 
+// markSkillCalls adds the installed skills the line's Skill tool calls name.
+func (l *claudeStreamLine) markSkillCalls(ids map[string]bool, fired map[string]bool) {
+	for _, block := range l.Message.Content {
+		if block.Type != "tool_use" || block.Name != "Skill" {
+			continue
+		}
+		if id := skillIDOf(block.Input.Skill, ids); id != "" {
+			fired[id] = true
+		}
+	}
+}
+
 // maxStreamLine bounds one transcript line (a tool result can be large).
 const maxStreamLine = 16 << 20
 
@@ -220,13 +232,7 @@ func parseClaudeActivation(stdout, stderr []byte, runErr error, ids map[string]b
 		}
 		switch line.Type {
 		case "assistant":
-			for _, block := range line.Message.Content {
-				if block.Type == "tool_use" && block.Name == "Skill" {
-					if id := skillIDOf(block.Input.Skill, ids); id != "" {
-						out.fired[id] = true
-					}
-				}
-			}
+			line.markSkillCalls(ids, out.fired)
 		case "result":
 			sawResult = true
 			out.costUSD = line.TotalCostUSD
