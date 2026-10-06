@@ -53,6 +53,7 @@ type Policy struct {
 	Governance Governance
 	MCP        MCP
 	Hooks      Hooks
+	Signing    Signing
 }
 
 // Governance governs [governance] (docs/approvals.md): the approval floor the
@@ -164,6 +165,7 @@ type fileDoc struct {
 	Governance *fileGovernance `toml:"governance"`
 	MCP        *fileMCP        `toml:"mcp"`
 	Hooks      *fileHooks      `toml:"hooks"`
+	Signing    *fileSigning    `toml:"signing"`
 }
 
 type fileGovernance struct {
@@ -245,6 +247,7 @@ func Parse(path string, data []byte) (name string, p Policy, err error) {
 		func() error { return p.Governance.fromDoc(doc.Governance) },
 		func() error { return p.MCP.fromDoc(doc.MCP) },
 		func() error { return p.Hooks.fromDoc(doc.Hooks) },
+		func() error { return p.Signing.fromDoc(doc.Signing) },
 	} {
 		if err := step(); err != nil {
 			return fail("%v", err)

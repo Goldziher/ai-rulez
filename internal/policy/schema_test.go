@@ -60,6 +60,12 @@ func TestPolicySchemaRejectsWhatTheParserRejects(t *testing.T) {
 		{"path in a security host", "policy_version = 1\n[lint.security]\nallowed_hosts = [\"github.com/org\"]\n"},
 		{"off floor", "policy_version = 1\n[lint.severity_floor]\nAR001 = \"off\"\n"},
 		{"scan_imports off", "policy_version = 1\n[lint.security]\nscan_imports = \"off\"\n"},
+		{"tlog off", "policy_version = 1\n[signing]\ntlog = \"off\"\n"},
+		{"unknown signing subject", "policy_version = 1\n[signing]\nrequire_verified = [\"sbom\"]\n"},
+		{"trust key file", "policy_version = 1\n[[signing.trust]]\nkey_file = \"k.pem\"\n"},
+		{"trust without issuer", "policy_version = 1\n[[signing.trust]]\nidentity = \"a@b.c\"\n"},
+		{"trust with both identity forms", "policy_version = 1\n[[signing.trust]]\nidentity = \"a\"\nidentity_regexp = \"^a$\"\nissuer = \"i\"\n"},
+		{"unknown transport", "policy_version = 1\n[mcp]\ndeny_transports = [\"ws\"]\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

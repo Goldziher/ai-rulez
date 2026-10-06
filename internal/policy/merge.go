@@ -43,8 +43,9 @@ func Merge(a, b Policy) Policy {
 			MinApprovers:    max(a.Governance.MinApprovers, b.Governance.MinApprovers),
 			Approvers:       intersectExact(a.Governance.Approvers, b.Governance.Approvers),
 		},
-		MCP:   mergeMCP(a.MCP, b.MCP),
-		Hooks: Hooks{Forbidden: a.Hooks.Forbidden || b.Hooks.Forbidden},
+		MCP:     mergeMCP(a.MCP, b.MCP),
+		Signing: mergeSigning(a.Signing, b.Signing),
+		Hooks:   Hooks{Forbidden: a.Hooks.Forbidden || b.Hooks.Forbidden},
 	}
 }
 

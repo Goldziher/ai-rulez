@@ -71,6 +71,13 @@ func provenance(layers []Layer) map[string]string {
 		return p.Governance.MinApprovers > 0 && p.Governance.MinApprovers == eff.Governance.MinApprovers
 	})
 	all("governance.approvers", func(p Policy) bool { return p.Governance.Approvers.Set })
+	all("signing.require_verified", func(p Policy) bool { return len(p.Signing.RequireVerified) > 0 })
+	firstWith("signing.tlog", func(p Policy) bool { return p.Signing.TLog != "" && p.Signing.TLog == eff.Signing.TLog })
+	firstWith("signing.max_age", func(p Policy) bool { return p.Signing.MaxAge > 0 && p.Signing.MaxAge == eff.Signing.MaxAge })
+	firstWith("signing.min_hash_version", func(p Policy) bool {
+		return p.Signing.MinHashVersion > 0 && p.Signing.MinHashVersion == eff.Signing.MinHashVersion
+	})
+	all("signing.trust", func(p Policy) bool { return p.Signing.Trust.Set })
 	all("mcp.allowed_commands", func(p Policy) bool { return p.MCP.AllowedCommands.Set })
 	all("mcp.deny_transports", func(p Policy) bool { return len(p.MCP.DenyTransports) > 0 })
 	firstWith("hooks.allow", func(p Policy) bool { return p.Hooks.Forbidden })
