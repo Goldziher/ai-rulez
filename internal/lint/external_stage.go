@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
@@ -120,7 +121,11 @@ func (r *runner) buildStage(inputs []string) (*scannerStage, error) {
 	for _, in := range inputs {
 		want[in] = true
 	}
-	files := r.stageFiles(want)
+	return r.buildStageFrom(r.stageFiles(want, ""))
+}
+
+// buildStageFrom writes the stage for files already listed by stageFiles.
+func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	base, err := os.MkdirTemp("", "ai-rulez-scan-")
 	if err != nil {
 		return nil, fmt.Errorf("create the scratch directory: %w", err)
@@ -137,7 +142,7 @@ func (r *runner) buildStage(inputs []string) (*scannerStage, error) {
 }
 
 // stageFiles lists the files for the wanted inputs, sorted by stage path.
-func (r *runner) stageFiles(want map[string]bool) []stagedFile {
+func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 	var out []stagedFile
 	used := map[string]bool{}
 	claim := func(rel string) string {
@@ -156,7 +161,7 @@ func (r *runner) stageFiles(want map[string]bool) []stagedFile {
 		if it.isDoc || (it.owned && !want[itemInputs[it.kind]]) || (!it.owned && !want[inputImports]) {
 			continue
 		}
-		dir, rel := r.stagePath(it)
+		dir, rel := r.layoutPath(it, layout)
 		if rel == "" {
 			continue
 		}
@@ -443,4 +448,33 @@ func (st *scannerStage) env(pass, parent []string) []string {
 		extra = append(extra, "USERPROFILE="+home, "TMP="+tmp, "TEMP="+tmp)
 	}
 	return cmdrun.ScrubEnv(parent, pass, extra)
+}
+
+// layoutPath is stagePath for the stage layout a profile asks for.
+func (r *runner) layoutPath(it *item, layout string) (skillDir, rel string) {
+	skillDir, rel = r.stagePath(it)
+	if rel != "" && layout == scanners.LayoutPlugin {
+		return pluginLayout(it, skillDir, rel)
+	}
+	return skillDir, rel
+}
+
+// pluginLayout moves an item to the path a plugin validator reads:
+// skills/<name>/SKILL.md, agents/<name>.md, commands/<name>.md. Other kinds
+// are not part of a plugin and are left out (empty rel).
+func pluginLayout(it *item, dir, rel string) (string, string) {
+	name := sanitizeStageName(itemID(it.kind, it.cf))
+	switch it.kind {
+	case kindSkill:
+		skill := path.Join("skills", name)
+		if dir != "" {
+			dir = skill
+		}
+		return dir, path.Join(skill, "SKILL.md")
+	case kindAgent:
+		return "", path.Join("agents", name+".md")
+	case kindCommand:
+		return "", path.Join("commands", name+".md")
+	}
+	return "", ""
 }

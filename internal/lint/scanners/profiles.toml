@@ -1,0 +1,80 @@
+# Embedded scanner profiles and presets for [[lint.external]] and [lint.scanner_policy].
+# A profile is data: nothing here is downloaded or installed, and a scanner runs only
+# with `scan --external`. `tested_versions` stays empty until a contract test has
+# passed against a real binary; `verified_on` is the date `source` was last read.
+
+[[profile]]
+name = "agnix"
+description = "agnix: deterministic structural checks of agent configuration files"
+egress = false
+command = ["agnix", "--format", "sarif", "{stage}"]
+format = "sarif"
+inputs = ["rules", "context", "skills", "agents", "commands", "hooks", "mcp"]
+source = "https://github.com/agent-sh/agnix"
+verified_on = "2026-10-05"
+tested_versions = []
+
+[[profile]]
+name = "claude-plugin-validate"
+description = "claude plugin validate: the Claude Code validator for skills, agents and commands"
+egress = false
+command = ["claude", "plugin", "validate", "--json", "{stage}"]
+format = "adapter:claude-validate-json"
+# The validator looks for skills/, agents/ and commands/ at the directory root.
+layout = "plugin"
+when = "plugin"
+inputs = ["skills", "agents", "commands"]
+source = "claude plugin validate --help"
+verified_on = "2026-10-06"
+tested_versions = ["2.1.285"]
+
+[[profile]]
+name = "cisco-skill-scanner"
+description = "Cisco AI Defense skill-scanner in its deterministic mode"
+egress = false
+command = ["skill-scanner", "scan-all", "{skill_dirs}", "--recursive", "--format", "sarif", "--output", "{out}"]
+format = "sarif"
+inputs = ["skills"]
+egress_flags = [
+  "--use-llm",
+  "--use-virustotal",
+  "--vt-upload-files",
+  "--use-aidefense",
+  "--use-osv",
+  "--system-one-endpoint",
+  "--llm-provider",
+]
+source = "https://github.com/cisco-ai-defense/skill-scanner"
+verified_on = "2026-10-05"
+tested_versions = []
+
+[[profile]]
+name = "snyk-agent-scan"
+description = "Snyk agent scan: skill and MCP configuration analysis by a hosted service"
+egress = true
+command = ["snyk-agent-scan", "scan", "--json", "{stage}"]
+format = "adapter:snyk-json"
+inputs = ["skills", "mcp"]
+requires_env = ["SNYK_TOKEN"]
+egress_flags = ["--dangerously-run-mcp-servers"]
+data_sent = [
+  "skill content (secrets redacted by the vendor)",
+  "MCP server configuration and tool descriptions",
+  "agent application details",
+]
+source = "https://github.com/snyk/agent-scan"
+verified_on = "2026-10-05"
+tested_versions = []
+
+# A preset is a list of profiles that run without a [[lint.external]] entry. Only
+# egress = false profiles may be members (a unit test enforces it).
+[[preset]]
+name = "baseline"
+description = "deterministic structural checks only"
+profiles = ["agnix", "claude-plugin-validate"]
+
+[[preset]]
+name = "strict"
+description = "baseline plus the Cisco skill-scanner; scanner findings of warning severity fail the run"
+profiles = ["agnix", "claude-plugin-validate", "cisco-skill-scanner"]
+fail_on = "warning"

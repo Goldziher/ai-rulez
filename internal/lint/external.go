@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -15,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 )
 
 // knownEgressFlags are flags that make a scanner send scanned content, or call a
@@ -47,6 +46,11 @@ func externalProblems(ex config.LintExternal) []string {
 			problems = append(problems, fmt.Sprintf("env_pass %q is a proxy or credential variable, which an egress = false scanner must not receive", name))
 		}
 	}
+	if ex.Version != "" {
+		if _, err := semver.ParseConstraint(normalizeRange(ex.Version)); err != nil {
+			problems = append(problems, fmt.Sprintf("version %q is not a version range such as \">=1.0.0, <2\": %v", ex.Version, err))
+		}
+	}
 	problems = append(problems, inputProblems(ex)...)
 	return append(problems, severityMapProblems(ex.SeverityMap, ex.MaxSeverity)...)
 }
@@ -56,7 +60,11 @@ func externalProblems(ex config.LintExternal) []string {
 // a scanner declared egress = false, not a scanner that ignores its flags.
 // Single-dash spellings (-use-llm) count as the same flag, and an explicit
 // false value (--use-llm=false) switches a flag off.
-func egressFlagViolation(argv []string) string {
+func egressFlagViolation(argv []string) string { return egressFlagViolationWith(argv, nil) }
+
+// egressFlagViolationWith is egressFlagViolation that also rejects the flags in
+// extra (a profile's deny-list, spelled with their dashes).
+func egressFlagViolationWith(argv, extra []string) string {
 	for i, arg := range argv {
 		if !strings.HasPrefix(arg, "-") {
 			continue
@@ -68,7 +76,7 @@ func egressFlagViolation(argv []string) string {
 		if hasValue && falseValue(value) {
 			continue
 		}
-		if knownEgressFlags["--"+name] || strings.HasPrefix(name, "llm-") {
+		if knownEgressFlags["--"+name] || strings.HasPrefix(name, "llm-") || slices.Contains(extra, "--"+name) {
 			return arg
 		}
 		if !strings.Contains(name, "endpoint") && !strings.Contains(name, "url") {
@@ -113,135 +121,28 @@ func loopbackValue(v string) bool {
 // (AR9E0) and scanners that declare no egress (AR9E1). It runs with every
 // strict validation, not only with --external, because it reads configuration.
 func (r *runner) checkExternalConfig() {
-	for _, ex := range r.lc.External {
-		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 {
-			continue
+	for _, p := range validateScannerPolicy(&r.lc) {
+		r.addRun(CodeScannerConfigInvalid, "scanner_policy", p)
+	}
+	r.checkScannerBaselineLocation()
+	for _, sc := range r.scanners() {
+		for _, p := range sc.allProblems() {
+			r.addRun(CodeScannerConfigInvalid, sc.Name, p)
 		}
-		for _, p := range externalProblems(ex) {
-			r.addRun(CodeScannerConfigInvalid, ex.Name, p)
-		}
-		if ex.Egress == nil {
+		if sc.Egress == nil {
 			why := "so it runs with the full environment"
-			if len(ex.Inputs) > 0 {
+			if len(sc.Inputs) > 0 {
 				why = "so its network flags are not checked"
 			}
-			r.addRun(CodeScannerEgressUndeclared, ex.Name,
+			r.addRun(CodeScannerEgressUndeclared, sc.Name,
 				"declares no egress, "+why+"; set egress = false (scrubbed environment) or egress = true (needs --allow-egress)")
 		}
 	}
 }
 
-// scanScope says where a scanner's reported paths are resolved.
-type scanScope struct {
-	// root is the project root (legacy runs) or the stage root.
-	root string
-	// stage is set for a staged run; a path outside it is out of scope (AR9E6).
-	stage *scannerStage
-}
-
-// runExternal runs the scanners from lint.external and merges their findings.
-// A scanner that fails, times out, is missing, or prints nothing trustworthy is
-// reported, so a broken scanner never looks like a clean report. The findings
-// of all scanners then pass through the scanner baseline.
-func (r *runner) runExternal() {
-	root := r.rootAbs()
-	files := r.scannedFiles()
-	var all []scannerFinding
-	ran := map[string]bool{}
-	for _, ex := range r.lc.External {
-		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 || len(externalProblems(ex)) > 0 {
-			continue
-		}
-		if !r.egressAllowed(ex) {
-			continue
-		}
-		var got []scannerFinding
-		var ok bool
-		if len(ex.Inputs) > 0 {
-			got, ok = r.runStaged(ex, root)
-		} else {
-			got, ok = r.runInRoot(ex, root, files)
-		}
-		all = append(all, got...)
-		ran[ex.Name] = ok
-	}
-	r.finishExternal(all, ran)
-}
-
-// specFor builds the run spec shared by both modes.
-func specFor(ex config.LintExternal, dir string) cmdrun.Spec {
-	spec := cmdrun.Spec{Dir: dir, InheritEnv: ex.Egress == nil}
-	if ex.Egress != nil {
-		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), ex.EnvPass, nil)
-	}
-	if ex.Timeout != "" {
-		spec.Timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // validated by externalProblems
-	}
-	return spec
-}
-
-// runInRoot is the legacy mode: run in the project root with the paths of the
-// scanned files appended. A long file list is split across runs (each with the
-// full timeout) so the command line stays under the OS limit. A failing batch
-// stops the rest.
-func (r *runner) runInRoot(ex config.LintExternal, root string, files []string) (all []scannerFinding, ok bool) {
-	spec := specFor(ex, root)
-	for _, argv := range batchArgs(ex.Command, files, argvBudget) {
-		spec.Argv = argv
-		res := cmdrun.Run(context.Background(), spec)
-		got, good := r.ingestExternal(ex, scanScope{root: root}, res)
-		all = append(all, got...)
-		if !good {
-			return all, false
-		}
-	}
-	return all, true
-}
-
-// runStaged runs a scanner that declared inputs: in a scratch directory that
-// holds a read-only copy of exactly those inputs, with HOME and TMPDIR inside
-// the scratch directory and a scrubbed environment.
-func (r *runner) runStaged(ex config.LintExternal, root string) (all []scannerFinding, ok bool) {
-	st, err := r.buildStage(ex.Inputs)
-	if err != nil {
-		r.addRun(CodeScannerRunFailed, ex.Name, "could not stage its inputs: "+sanitizeScannerText(err.Error()))
-		return nil, false
-	}
-	defer st.cleanup()
-	usesSkillDirs := slices.Contains(ex.Command, phSkillDirs)
-	if len(st.files) == 0 || (usesSkillDirs && len(st.skillDirs) == 0) {
-		logger.Debug("Scanner has nothing staged to scan", "scanner", ex.Name, "inputs", ex.Inputs)
-		return nil, true
-	}
-	argv := st.expand(ex.Command)
-	if size := argvSize(argv); size > argvBudget {
-		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("{files} expands to %d bytes of arguments, over the %d byte limit; pass {stage} instead", size, argvBudget))
-		return nil, false
-	}
-	if strings.ContainsAny(argv[0], `/\`) && !filepath.IsAbs(argv[0]) {
-		argv[0] = filepath.Join(root, argv[0]) // a relative command is relative to the project, not the stage
-	}
-	usesOut := slices.ContainsFunc(ex.Command, func(a string) bool { return strings.Contains(a, phOut) })
-	if usesOut {
-		if err := os.WriteFile(st.outFile(), nil, 0o600); err != nil {
-			r.addRun(CodeScannerRunFailed, ex.Name, "could not create its output file: "+sanitizeScannerText(err.Error()))
-			return nil, false
-		}
-	}
-	spec := specFor(ex, st.root)
-	spec.Argv = argv
-	spec.InheritEnv = false
-	spec.Env = st.env(ex.EnvPass, cmdrun.HostEnv())
-	res := cmdrun.Run(context.Background(), spec)
-	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
-		data, rerr := st.readOut()
-		if rerr != nil {
-			r.addRun(CodeScannerRunFailed, ex.Name, "its output file is not readable: "+sanitizeScannerText(rerr.Error()))
-			return nil, false
-		}
-		res.Stdout, res.StdoutTruncated = data, false
-	}
-	return r.ingestExternal(ex, scanScope{root: st.root, stage: st}, res)
+// scanners resolves the configured scanners: preset members, then entries.
+func (r *runner) scanners() []resolvedScanner {
+	return resolveScanners(&r.lc, r.cfg.Plugin != nil || r.cfg.Marketplace != nil)
 }
 
 func argvSize(argv []string) int {
@@ -311,129 +212,12 @@ func batchArgs(base, files []string, budget int) [][]string {
 	return append(batches, cur)
 }
 
-// egressAllowed applies the egress declaration before a scanner runs.
-func (r *runner) egressAllowed(ex config.LintExternal) bool {
-	if ex.Egress == nil {
-		return true
-	}
-	if *ex.Egress {
-		if slices.Contains(r.opts.AllowEgress, ex.Name) {
-			return true
-		}
-		r.addRun(CodeScannerEgressBlocked, ex.Name, "declares egress = true and was not run; pass --allow-egress="+ex.Name+" to allow it for this invocation")
-		return false
-	}
-	if flag := egressFlagViolation(ex.Command); flag != "" {
-		r.addRun(CodeScannerEgressBlocked, ex.Name, fmt.Sprintf("declares egress = false but its command has %q, which can send content off the machine; remove it or declare egress = true", flag))
-		return false
-	}
-	return true
-}
-
 // scannerFinding is a finding of one scanner, kept with its scanner for deduplication and the baseline.
 type scannerFinding struct {
 	Finding
 	scanner string
 	rule    string
 	abs     string
-}
-
-// ingestExternal turns one run into findings.
-// It reports false when the scanner itself failed, so the caller stops running it.
-func (r *runner) ingestExternal(ex config.LintExternal, scope scanScope, res cmdrun.Result) ([]scannerFinding, bool) {
-	switch res.Status {
-	case cmdrun.StatusUnavailable:
-		r.addRun(CodeScannerUnavailable, ex.Name, fmt.Sprintf("%q was not found or is not executable, so it was not run (%s)", ex.Command[0], sanitizeScannerText(res.Err.Error())))
-		return nil, false
-	case cmdrun.StatusTimeout:
-		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("timed out after %s and was killed", res.Timeout))
-		return nil, false
-	case cmdrun.StatusError:
-		r.addRun(CodeScannerRunFailed, ex.Name, "could not run: "+sanitizeScannerText(res.Err.Error()))
-		return nil, false
-	case cmdrun.StatusOK, cmdrun.StatusExit:
-	}
-	if res.StdoutTruncated {
-		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("printed more than %d bytes; output was not ingested", cmdrun.DefaultMaxOutput))
-		return nil, false
-	}
-	found, err := parseExternalKeep(ex.Format, res.Stdout, res.ExitCode, r.opts.Scanner.ShowSuppressed)
-	if err != nil {
-		detail := strings.TrimSpace(string(res.Stderr))
-		if res.Err != nil {
-			detail = res.Err.Error() + " " + detail
-		}
-		r.addRun(CodeScannerRunFailed, ex.Name, "failed or printed unreadable output: "+sanitizeScannerText(detail)+" ("+sanitizeScannerText(err.Error())+")")
-		return nil, false
-	}
-	sort.SliceStable(found, func(i, j int) bool {
-		a, b := found[i], found[j]
-		if a.File != b.File {
-			return a.File < b.File
-		}
-		if a.Line != b.Line {
-			return a.Line < b.Line
-		}
-		if a.Rule != b.Rule {
-			return a.Rule < b.Rule
-		}
-		if a.Message != b.Message {
-			return a.Message < b.Message
-		}
-		return a.Fingerprint < b.Fingerprint
-	})
-	var out []scannerFinding
-	occurrence := map[string]int{}
-	outOfScope, firstOut := 0, ""
-	for _, f := range found {
-		abs, inside := "", true
-		f.Line = min(max(f.Line, 0), maxScannerLine)
-		if f.File == "" {
-			// A result with no location belongs to the configuration that ran the scanner.
-			abs, f.Line = r.configFilePath(), 1
-		} else {
-			if scope.stage != nil {
-				abs, inside = scope.stage.resolve(f.File)
-			} else {
-				abs, inside = resolveScannerPath(f.File, scope.root)
-			}
-		}
-		msg := sanitizeScannerText(f.Message)
-		if rule := sanitizeScannerText(f.Rule); rule != "" {
-			msg = rule + ": " + msg
-		}
-		if !inside {
-			if scope.stage != nil {
-				if outOfScope++; firstOut == "" {
-					firstOut = sanitizeScannerText(f.File)
-				}
-				continue
-			}
-			msg += " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
-			abs = r.configFilePath()
-		}
-		if u := evidenceURL(f.HelpURI); u != "" {
-			msg += " (" + u + ")"
-		}
-		band := scannerBand(ex.SeverityMap, f)
-		if limit, ok := parseBand(ex.MaxSeverity); ok && band > limit {
-			band = limit
-		}
-		sev := bandSeverity(band)
-		if f.Suppressed {
-			sev, msg = SeverityInfo, "(suppressed) "+msg
-		}
-		fnd, keep := r.externalFinding(ex.Name, abs, f.Line, sev, msg)
-		if !keep {
-			continue
-		}
-		fnd.meta().Fingerprint = r.scannerFingerprint(ex.Name, f, abs, fnd.Line, occurrence)
-		out = append(out, scannerFinding{Finding: fnd, scanner: ex.Name, rule: sanitizeScannerText(f.Rule), abs: abs})
-	}
-	if outOfScope > 0 {
-		r.addRun(CodeScannerOutOfScope, ex.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
-	}
-	return out, true
 }
 
 // evidenceURL returns a rule's helpUri when it is a plain https URL.
@@ -447,27 +231,37 @@ func evidenceURL(raw string) string {
 }
 
 // resolve maps a path a scanner printed to the source file of a staged file.
-// ok is false for anything that is not a staged file. A relative path that is
-// not under the stage root is tried against the staged skill directories, which
-// is where a scanner that was handed one prints its paths from; it must match
-// exactly one.
+// ok is false for anything that is not a staged file.
 func (st *scannerStage) resolve(raw string) (string, bool) {
-	if src, ok := st.lookup(raw, st.root); ok {
-		return src, true
+	rel, ok := st.resolveRel(raw)
+	if !ok {
+		return "", false
+	}
+	return st.source[rel], true
+}
+
+// resolveRel maps a path a scanner printed to the stage-relative slash path of
+// a staged file. A relative path that is not under the stage root is tried
+// against the staged skill directories, which is where a scanner that was
+// handed one prints its paths from; it must match exactly one.
+func (st *scannerStage) resolveRel(raw string) (string, bool) {
+	if rel, ok := st.lookup(raw, st.root); ok {
+		return rel, true
 	}
 	if filepath.IsAbs(filepath.FromSlash(strings.TrimPrefix(raw, "file://"))) || strings.Contains(raw, "://") {
 		return "", false
 	}
 	hit, n := "", 0
 	for _, dir := range st.skillDirs {
-		if src, ok := st.lookup(raw, dir); ok {
-			hit, n = src, n+1
+		if rel, ok := st.lookup(raw, dir); ok {
+			hit, n = rel, n+1
 		}
 	}
 	return hit, n == 1
 }
 
-// lookup resolves raw against base and maps the result through the stage.
+// lookup resolves raw against base and returns the stage-relative path of the
+// staged file it names.
 func (st *scannerStage) lookup(raw, base string) (string, bool) {
 	p, ok := resolveScannerPath(raw, base)
 	if !ok {
@@ -478,8 +272,9 @@ func (st *scannerStage) lookup(raw, base string) (string, bool) {
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			continue
 		}
-		src, found := st.source[filepath.ToSlash(rel)]
-		return src, found
+		rel = filepath.ToSlash(rel)
+		_, found := st.source[rel]
+		return rel, found
 	}
 	return "", false
 }
@@ -506,6 +301,9 @@ func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, ms
 // attributed to the config file.
 func (r *runner) addRun(code, scanner, msg string) {
 	sev := r.sev[code]
+	if code == CodeScannerUnavailable && r.opts.Scanner.required[scanner] {
+		sev = SeverityError // a required scanner that did not run is a failure, whatever the rule's severity
+	}
 	if sev == SeverityOff || r.ignore[code] {
 		return
 	}

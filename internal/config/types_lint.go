@@ -69,6 +69,10 @@ type LintConfig struct {
 	// External lists third-party scanners whose findings are merged into the
 	// report when `validate --strict --external` (or `scan --external`) runs.
 	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
+	// ScannerPolicy sets the policy for the external scanners as a whole: an
+	// embedded preset, required scanners, a failure threshold, isolation and
+	// which egress scanners may be allowed.
+	ScannerPolicy *LintScannerPolicy `yaml:"scanner_policy,omitempty" json:"scanner_policy,omitempty" toml:"scanner_policy,omitempty"` //nolint:tagliatelle
 	// Evals configures the evals-missing check (AR962).
 	Evals *LintEvals `yaml:"evals,omitempty" json:"evals,omitempty" toml:"evals,omitempty"`
 	// Traps configures the harness trap checks (AR9C1...).
@@ -171,6 +175,39 @@ type LintExternal struct {
 	SeverityMap map[string]string `yaml:"severity_map,omitempty" json:"severity_map,omitempty" toml:"severity_map,omitempty"` //nolint:tagliatelle
 	// MaxSeverity caps the severity of this scanner's findings (same values).
 	MaxSeverity string `yaml:"max_severity,omitempty" json:"max_severity,omitempty" toml:"max_severity,omitempty"` //nolint:tagliatelle
+	// Profile names an embedded scanner profile (command template, format,
+	// inputs, egress declaration, severity map, flag deny-list). Keys set on the
+	// entry override the profile's; egress cannot be declared weaker than the
+	// profile's.
+	Profile string `yaml:"profile,omitempty" json:"profile,omitempty" toml:"profile,omitempty"`
+	// Version is a semantic version range the scanner's --version output must
+	// satisfy (">=1.0.0, <2"); a scanner outside it is not run (AR9E2).
+	Version string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	// Required makes a missing, outdated or failing scanner an error instead of a notice.
+	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
+}
+
+// LintScannerPolicy is [lint.scanner_policy].
+type LintScannerPolicy struct {
+	// Preset adds a set of embedded scanner profiles to the entries of
+	// [[lint.external]]: "off" (default), "baseline" or "strict". A preset never
+	// contains a scanner that can send content off the machine.
+	Preset string `yaml:"preset,omitempty" json:"preset,omitempty" toml:"preset,omitempty"`
+	// Required lists scanner names whose absence or failure is an error.
+	Required []string `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
+	// FailOn is the lowest severity of a scanner finding that makes the run fail:
+	// "error", "warning" or "info". It applies to scanner findings only.
+	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// Baseline is the scanner baseline file, relative to the project root
+	// (default: scanner-baseline.json in the configuration directory).
+	Baseline string `yaml:"baseline,omitempty" json:"baseline,omitempty" toml:"baseline,omitempty"`
+	// Isolation is "auto" (default: confine an egress = false scanner when a
+	// backend works), "require" (refuse to run it unconfined) or "none".
+	Isolation string `yaml:"isolation,omitempty" json:"isolation,omitempty" toml:"isolation,omitempty"`
+	// AllowEgress lists the scanners --allow-egress may enable. Unset, the flag
+	// alone decides; set (even empty), a scanner outside the list never runs
+	// with egress. Presets never read it.
+	AllowEgress []string `yaml:"allow_egress,omitempty" json:"allow_egress,omitempty" toml:"allow_egress,omitempty"` //nolint:tagliatelle
 }
 
 // LintEvals configures the check for skills that have no eval cases. A skill
