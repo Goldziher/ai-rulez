@@ -529,3 +529,33 @@ func TestApprove_ExpiryIgnoresSourceDateEpoch(t *testing.T) {
 	// Assert
 	assertHasCode(t, findings, "AR712", "rule:style")
 }
+
+func TestApprove_ListShowsTheReviewerOfAnExpiredApproval(t *testing.T) {
+	// Arrange
+	approveProject(t, "")
+	approveYes, approveReviewer, approveAt = true, "alice@example.org", "2019-01-01"
+	require.Equal(t, 0, mustApprove(t, "rule:style"))
+	cfg := mustLoadConfig(t)
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	require.NoError(t, err)
+	lock.Approval[0].Expires = "2020-01-01"
+	require.NoError(t, lockfile.Save(cfg.ConfigDir, lock))
+	resetApproveFlags()
+	approveList, approveFormat = true, formatJSON
+
+	// Act
+	code, stdout, stderr := runApproveCmd(t)
+
+	// Assert
+	require.Equal(t, 0, code, stderr)
+	var doc approveListDoc
+	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
+	for _, it := range doc.Items {
+		if it.Ref == "rule:style" {
+			assert.Equal(t, "expired", it.Status)
+			assert.Equal(t, []string{"alice@example.org"}, it.Reviewers)
+			return
+		}
+	}
+	t.Fatal("rule:style not listed")
+}
