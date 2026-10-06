@@ -774,7 +774,6 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	baseDir := workingDir(request)
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
-	withAgents := request.GetBool("with_agents", false)
 	allProviders := request.GetBool("all_providers", false)
 	popularProviders := request.GetBool("popular_providers", false)
 
@@ -785,34 +784,34 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 
 	presets := getPresetsFromProviders(providers, allProviders, popularProviders)
 
-	var configContent string
-	if len(presets) > 0 {
-		configContent = templates.GenerateConfigWithPresets(projectName, presets)
-	} else {
-		configContent = templates.GenerateConfigWithPresets(projectName, []string{presetClaude})
-	}
-
-	// Create .ai-rulez/ directory structure
+	// The same V4 TOML layout `ai-rulez init` creates.
 	aiRulesDir := filepath.Join(baseDir, ".ai-rulez")
-	if err := os.MkdirAll(aiRulesDir, 0o755); err != nil {
-		return ToolError(fmt.Errorf("failed to create .ai-rulez directory: %w", err))
+	configPath := filepath.Join(aiRulesDir, "config.toml")
+	if existing := existingConfigFile(aiRulesDir); existing != "" {
+		return ToolError(fmt.Errorf("%s already exists; init_project does not overwrite a configuration", existing))
 	}
-
-	configPath := filepath.Join(aiRulesDir, "config.yaml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
-		return ToolError(fmt.Errorf("failed to write config file: %w", err))
-	}
-
-	// Create agents directory if requested
-	if withAgents {
-		agentsDir := filepath.Join(aiRulesDir, "agents")
-		if err := os.MkdirAll(agentsDir, 0o755); err != nil {
-			return ToolError(fmt.Errorf("failed to create agents directory: %w", err))
+	for _, sub := range templates.InitSubdirs {
+		if err := os.MkdirAll(filepath.Join(aiRulesDir, sub), 0o755); err != nil {
+			return ToolError(fmt.Errorf("failed to create %s directory: %w", sub, err))
 		}
+	}
+	if err := os.WriteFile(configPath, []byte(templates.InitConfigTOML(projectName, presets)), 0o644); err != nil {
+		return ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 
 	return ToolSuccess(map[string]interface{}{
 		keyMessage: "Project initialized successfully",
 		keyPath:    configPath,
 	})
+}
+
+// existingConfigFile returns the config file already in dir, or "".
+func existingConfigFile(dir string) string {
+	for _, name := range []string{"config.toml", "config.yaml", "config.yml", "config.json"} {
+		path := filepath.Join(dir, name)
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return ""
 }
