@@ -107,7 +107,7 @@ func claudeJSON(base []byte, command string) ([]byte, error) {
 }
 
 func recordCommand(executable, role string) string {
-	parts := []string{executable, "telemetry", "record"}
+	parts := []string{usage.ShellWord(executable), "telemetry", "record"}
 	if role != "" {
 		parts = append(parts, "--role", singleQuote(role))
 	}

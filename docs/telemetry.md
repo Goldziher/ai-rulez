@@ -73,7 +73,7 @@ allow_network   = false                    # OTLP export needs this AND an endpo
 otlp_endpoint   = "https://collector.example.org:4318"   # user scope only
 otlp_protocol   = "http/json"              # the only implemented value
 headers_env     = ["OTLP_HEADERS"]         # env var NAMES holding "k=v,k2=v2"; user scope only
-service_name    = "ai-rulez"
+service_name    = "ai-rulez"               # user scope only: it labels data on your collector
 sample          = 1.0                      # fraction of sessions exported, decided per session hash
 include_paths   = false                    # user scope only
 include_session = false                    # add the salted session hash to exported logs; user scope only
@@ -88,8 +88,8 @@ host the author picked. So:
 | Key | Repository config and local overlay | User config / `AI_RULEZ_TELEMETRY_*` |
 | --- | --- | --- |
 | `enabled` | honored (local recording only, into a gitignored file) | honored |
-| `service_name`, `sample` | honored | honored |
-| `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
+| `sample` | honored | honored |
+| `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
 
 The local overlay (`config.local.*`) counts as repository scope: it is machine-local by convention but lives in the
 checkout. Network export is active only when `enabled`, `allow_network` and a valid endpoint are all present after
@@ -156,7 +156,7 @@ Hooks are short-lived processes, so the recorder never touches the network:
 3. The flush sends batches of 200 events to `/v1/logs` and `/v1/metrics` as gzipped OTLP/HTTP JSON, retrying 429, 502,
    503, 504 and network errors with exponential backoff (1 s, 2 s, 4 s, plus jitter; `Retry-After` honored up to
    30 s) and giving up until the next flush, which leaves the events in the outbox. 400, 401, 403, 404 and 413 are
-   permanent: the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time.
+   permanent: the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time, guarded by a lock file that holds the owner's token (release removes only its own lock; a lock left by a crash is taken over after 60 s, serialised so two processes cannot both take it). A flush is capped at 30 seconds whatever the caller asks, and `telemetry flush --timeout` above 30s is refused, so a running flush is never mistaken for a crashed one.
 4. Delivery is at-least-once; backends de-duplicate on `ai_rulez.event_id`.
 5. A long-lived `ai-rulez mcp` server flushes from a timer and once more on exit.
 

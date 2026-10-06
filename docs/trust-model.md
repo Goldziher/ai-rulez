@@ -25,11 +25,11 @@ which `generate --user` uses too). The `[llm]` and `[telemetry]` resolvers both 
 
 | Knob | Repository config | User config / environment | Command line | Precedence (highest first) |
 | --- | --- | --- | --- | --- |
-| `[llm] allow_network`, `base_url`, `api_key_env`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `doctor` and `AR9L1` | honoured (`AI_RULEZ_LLM_*` too) | - | environment, user file, repository (ignored), defaults |
+| `[llm] allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `doctor` and `AR9L1` | honoured (`AI_RULEZ_LLM_*` too) | - | environment, user file, repository (ignored), defaults |
 | `[llm] max_cost_usd`, `max_tokens`, `max_calls` | honoured, can only tighten (the lower non-zero value wins) | honoured | - | the lower of repository and user; the environment overrides both |
-| `[llm] provider`, `model`, `backend`, `cache`, `timeout_seconds`, `max_retries` | honoured | honoured | - | environment, user file, repository, defaults |
-| `[telemetry] allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and `AR9K0` | honoured (`AI_RULEZ_TELEMETRY_*` too) | - | kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`), environment, user file, repository (ignored), defaults |
-| `[telemetry] enabled`, `service_name`, `sample` | honoured (a repository can at most switch on the local log) | honoured | - | as above |
+| `[llm] provider`, `model`, `backend`, `cache`, `timeout_seconds`, `max_retries` | honoured; with the `literllm` backend a repository `provider` or `provider/` model prefix cannot receive a user-scope API key (refused) | honoured | - | environment, user file, repository, defaults |
+| `[telemetry] allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and `AR9K0` | honoured (`AI_RULEZ_TELEMETRY_*` too) | - | kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`), environment, user file, repository (ignored), defaults |
+| `[telemetry] enabled`, `sample` | honoured (a repository can at most switch on the local log) | honoured | - | as above |
 | Git credentials for private includes, installed skills and skill sources | **no key exists**: a repository cannot name a token or a credential variable | `AI_RULEZ_GIT_TOKEN` | `--token` | flag, environment |
 | Scanner commands and egress (`[[lint.external]]`, `egress`, `env_pass`) | may **declare** a scanner and its `egress` (declaring `egress = false` scrubs the environment; a network flag on such a scanner is refused) | - | `validate --external` runs scanners; `--allow-egress=<name>` lets an `egress = true` scanner run | the command line decides; without `--external` nothing runs, without `--allow-egress` an egress scanner is blocked (`AR9E4`) |
 | Verifiers (`[[verifiers]]`) | declares read-only predicates: never a network call, never a process, never a write | - | `verifiers run` | a `command` predicate is rejected by the validator; if one is ever added it is user scope only, like `--runner-command` |
@@ -49,6 +49,18 @@ A token (`AI_RULEZ_GIT_TOKEN` or `--token`) is sent to the host of every HTTPS i
 repository names. Use a token with the least scope that can read what you include, and review the hosts a repository
 names before running `generate` with a token in the environment. Skill sources run git with no credential helper and
 no prompt, so they fetch public repositories or use an SSH agent.
+
+## What the checks cover
+
+The trust rule governs what ai-rulez itself reads and what it generates. The repository-declared environment check (a
+hook or MCP server `env` that sets `AI_RULEZ_TELEMETRY_*` or `AI_RULEZ_LLM_*` to redirect export or model traffic) covers
+only the configs ai-rulez generates. A hand-written `.claude/settings.json`, `.mcp.json` or any other harness file in
+the repository is outside its control: review those files like code, and set `AI_RULEZ_TELEMETRY=off` or
+`DO_NOT_TRACK=1` when you open a checkout you do not trust.
+
+The same limit applies to the response cache and the sink command: the `[llm]` cache lives under your user cache
+directory and is authenticated with a per-user secret, and `usage record --sink-command` always runs with a 3 second
+timeout and an output cap, but a sink command is code you chose to run.
 
 ## What `doctor` and the strict rules tell you
 

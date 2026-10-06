@@ -141,7 +141,7 @@ func (p *Pipeline) updateAgents(fn func(map[string]int64)) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return
 	}
-	release, err := lock(filepath.Join(dir, agentLockFile), appendLockWait)
+	release, err := lock(filepath.Join(dir, agentLockFile), appendLockWait, staleLock)
 	if err != nil {
 		return
 	}
