@@ -58,10 +58,11 @@ func (g *Generator) resolveMCPPlaceholders(withHeaders bool) error {
 
 	if len(unresolved) > 0 && !g.lenientMCP {
 		sort.Strings(unresolved)
+		// Names only (server, key, variable): a placeholder never holds a value.
 		return oops.
 			With("unresolved", unresolved).
 			Hint("Set missing values with --env KEY=VALUE, an environment variable, or .env").
-			Errorf("unresolved MCP env placeholders")
+			Errorf("unresolved MCP env placeholders: %s", strings.Join(unresolved, "; "))
 	}
 	return nil
 }
