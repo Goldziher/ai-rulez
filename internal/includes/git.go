@@ -437,7 +437,7 @@ func (s *GitSource) findAIRulezDir() string {
 		if s.path != "" && s.path != rootPath {
 			dir = filepath.Join(s.cacheDir, filepath.FromSlash(strings.Trim(s.path, "/")))
 		}
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+		if isRealDir(dir) {
 			return dir
 		}
 		return ""
@@ -446,7 +446,7 @@ func (s *GitSource) findAIRulezDir() string {
 	// It could be at the root level or under the specified path
 
 	aiRulezPath := filepath.Join(s.cacheDir, aiRulezDir)
-	if info, err := os.Stat(aiRulezPath); err == nil && info.IsDir() {
+	if isRealDir(aiRulezPath) {
 		return aiRulezPath
 	}
 
@@ -454,7 +454,7 @@ func (s *GitSource) findAIRulezDir() string {
 	if s.path != "" && s.path != rootPath {
 		cleanPath := strings.Trim(s.path, rootPath)
 		aiRulezPath := filepath.Join(s.cacheDir, cleanPath, aiRulezDir)
-		if info, err := os.Stat(aiRulezPath); err == nil && info.IsDir() {
+		if isRealDir(aiRulezPath) {
 			return aiRulezPath
 		}
 
@@ -583,7 +583,7 @@ func (s *GitSource) hasAIRulezStructure(dir string) bool {
 	checkDirs := []string{rulesSubdir, contextSubdir, "skills", "agents"}
 	for _, subdir := range checkDirs {
 		checkPath := filepath.Join(dir, subdir)
-		if info, err := os.Stat(checkPath); err == nil && info.IsDir() {
+		if isRealDir(checkPath) {
 			return true
 		}
 	}

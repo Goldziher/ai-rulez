@@ -56,51 +56,17 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	// Check if this is an .ai-rulez directory or contains one
 	aiRulezPath := s.findAIRulezDir(resolvedPath)
 
-	var baseDir string
-	var needsCleanup bool
-	var tempDir string
-
-	if aiRulezPath != "" {
-		// Found .ai-rulez directory - use its parent as base
-		baseDir = filepath.Dir(aiRulezPath)
-	} else {
-		// No .ai-rulez directory - assume bare structure (agents/, rules/, etc. directly in resolvedPath)
-		// This supports shared repositories and git includes that don't use .ai-rulez/ wrapping
-		// Create a temporary directory with .ai-rulez symlink to work with the scanner
+	// Without an .ai-rulez directory the path is a bare structure (rules/,
+	// agents/, ... directly in it) and is scanned in place.
+	scanDir := aiRulezPath
+	if scanDir == "" {
 		logger.Debug("No .ai-rulez directory found, using bare structure", "path", resolvedPath)
-
-		var err error
-		tempDir, err = os.MkdirTemp("", "ai-rulez-include-*")
-		if err != nil {
-			return nil, oops.Wrapf(err, "create temp directory for bare structure")
-		}
-		needsCleanup = true
-
-		// Create symlink .ai-rulez -> resolvedPath
-		symlinkPath := filepath.Join(tempDir, ".ai-rulez")
-		if err := os.Symlink(resolvedPath, symlinkPath); err != nil {
-			if cleanupErr := os.RemoveAll(tempDir); cleanupErr != nil {
-				logger.Warn("Failed to cleanup temp directory", "error", cleanupErr)
-			}
-			return nil, oops.Wrapf(err, "create symlink for bare structure")
-		}
-
-		baseDir = tempDir
-	}
-
-	// Cleanup temp directory if needed
-	if needsCleanup {
-		defer func() {
-			if err := os.RemoveAll(tempDir); err != nil {
-				logger.Warn("Failed to cleanup temp directory", "error", err)
-			}
-		}()
+		scanDir = resolvedPath
 	}
 
 	// Scan the directory structure using the config loader's scanner which keeps
 	// root content and domain content separate (avoids duplication in generated output)
-	aiRulezScanDir := filepath.Join(baseDir, ".ai-rulez")
-	contentTree, err := config.ScanContentTree(aiRulezScanDir)
+	contentTree, err := config.ScanContentTree(scanDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")
 	}
@@ -150,15 +116,13 @@ func (s *LocalSource) validatePath(path string) error {
 // Returns the path to the .ai-rulez directory, or empty string if not found
 func (s *LocalSource) findAIRulezDir(path string) string {
 	// Check if path itself is a .ai-rulez directory
-	if filepath.Base(path) == aiRulezDir {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
+	if filepath.Base(path) == aiRulezDir && isRealDir(path) {
+		return path
 	}
 
 	// Check if path contains a .ai-rulez subdirectory
 	aiRulezPath := filepath.Join(path, aiRulezDir)
-	if info, err := os.Stat(aiRulezPath); err == nil && info.IsDir() {
+	if isRealDir(aiRulezPath) {
 		return aiRulezPath
 	}
 
