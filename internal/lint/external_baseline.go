@@ -171,7 +171,7 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 	if r.opts.Scanner.WriteBaseline && path != "" {
 		r.writeScannerBaseline(path, all, findings, ran)
 	}
-	rep := &Report{Findings: findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), Root: r.display(r.rootAbs())}
+	rep := &Report{Findings: findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Root: r.display(r.rootAbs())}
 	var res BaselineResult
 	if path != "" {
 		b, err := LoadBaseline(path)
