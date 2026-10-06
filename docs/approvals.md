@@ -220,6 +220,8 @@ host allowlist ([forge client](forge.md#safety-properties)). A review counts whe
 - the reviewer passes `approvers` and, with `approvers_from`, owns the path, and with `forbid_self_approval` is not the
   pull request author. A reviewer who fails these is skipped with a note while another remains.
 
+Offline, a `review-linked` record counts only when its `ref` is a well-formed review link (`https://host/owner/repo/pull/N#pullrequestreview-ID`) of the repository the `origin` remote names (host, owner and name compared case-insensitively). With no readable `origin` only the form is checked; `verify --approvals --online` asks the forge.
+
 Listings that hit the forge page cap (`ErrTruncated`) are never counted. The record's `ref` is the review URL, which
 names the pull request and review. Approving at the same pull request that changes the content is still `AR716`:
 record the approval in a later change, from the merged pull request.

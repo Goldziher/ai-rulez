@@ -266,6 +266,15 @@ func (p Policy) VerifyAssurance(a lockfile.Approval, s Subject, now time.Time) (
 		if strings.TrimSpace(a.Ref) == "" {
 			return "", errors.New("a review-linked approval needs a ref")
 		}
+		repo, _, _, err := ParseReviewRef(a.Ref)
+		if err != nil {
+			return "", err
+		}
+		if p.Origin != nil {
+			if here, ok := p.Origin(); ok && !strings.EqualFold(here.String(), repo.String()) {
+				return "", fmt.Errorf("the review link points at %s, not this repository (%s)", repo, here)
+			}
+		}
 		return a.Reviewer, nil
 	case lockfile.AssuranceSigned:
 		if p.Signed == nil {
