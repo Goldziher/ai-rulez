@@ -22,8 +22,11 @@ const CodeTextWithheld = "AR9D3"
 const (
 	// DefaultBatchSize is how many texts one embed call carries.
 	DefaultBatchSize = 64
-	lockFile         = "index.lock"
-	staleLockAge     = 10 * time.Minute
+	// maxConsecutiveRejections stops a build whose provider rejects this many skills in a row: that is a
+	// broken provider or model, not bad skills.
+	maxConsecutiveRejections = 5
+	lockFile                 = "index.lock"
+	staleLockAge             = 10 * time.Minute
 )
 
 // SecretScanner reports whether text looks like it holds a credential, and
@@ -118,6 +121,12 @@ func (x *Index) byText(digest string) (int, bool) {
 	return 0, false
 }
 
+// Rejection is a skill the provider refused to embed on its own, after the batch it was in was split.
+type Rejection struct {
+	ID     string
+	Reason string
+}
+
 // BuildResult is the outcome of Build. Index holds every vector that exists:
 // reused, newly embedded, and, after a budget stop, the batches that finished.
 type BuildResult struct {
@@ -132,6 +141,8 @@ type BuildResult struct {
 	CostKnown bool
 	// Missing lists the items that have no vector (withheld, or not reached after an error).
 	Missing []string
+	// Rejected lists the skills the provider refused even alone; the build went on without them.
+	Rejected []Rejection
 	// Err is why the build stopped early (the budget, the provider); Index is still the partial result.
 	Err error
 }
@@ -149,6 +160,8 @@ type builder struct {
 	m     Manifest
 	rows  map[int]buildRow // by item index
 	res   *BuildResult
+	// streak counts the skills rejected in a row.
+	streak int
 }
 
 // Build embeds what changed and returns the new index. It never writes: the
@@ -212,8 +225,10 @@ func (b *builder) reuse(old *Index) {
 	b.res.Reused = len(b.rows)
 }
 
-// embed sends one batch. A provider error ends the build early and is kept in
-// Err with what finished; a malformed answer aborts the whole build.
+// embed sends one batch. A provider rejection splits the batch in halves until the
+// refused skill stands alone, then skips it and goes on; any other provider error
+// (budget, network, auth, a transient failure) ends the build early and is kept in
+// Err with what finished. A malformed answer aborts the whole build.
 func (b *builder) embed(ctx context.Context, chunk []int) error {
 	texts := make([]string, len(chunk))
 	for i, idx := range chunk {
@@ -221,9 +236,13 @@ func (b *builder) embed(ctx context.Context, chunk []int) error {
 	}
 	emb, err := b.o.Embedder.Embed(ctx, texts)
 	if err != nil {
-		b.res.Err = err
-		return nil
+		if !isRejection(ctx, err) {
+			b.res.Err = err
+			return nil
+		}
+		return b.reject(ctx, chunk, err)
 	}
+	b.streak = 0
 	b.res.Calls++
 	b.res.Tokens += emb.Tokens
 	b.res.CostUSD += emb.CostUSD
@@ -249,6 +268,51 @@ func (b *builder) embed(ctx context.Context, chunk []int) error {
 	return nil
 }
 
+// reject splits a rejected batch, or records the single skill the provider refuses.
+func (b *builder) reject(ctx context.Context, chunk []int, cause error) error {
+	if len(chunk) == 1 {
+		b.res.Rejected = append(b.res.Rejected, Rejection{ID: b.items[chunk[0]].ID, Reason: llm.RedactSecrets(cause.Error())})
+		if b.streak++; b.streak >= maxConsecutiveRejections {
+			b.res.Err = oops.Wrapf(cause, "the provider rejected %d skills in a row", b.streak)
+		}
+		return nil
+	}
+	mid := len(chunk) / 2
+	for _, half := range [][]int{chunk[:mid], chunk[mid:]} {
+		if b.res.Err != nil {
+			return nil
+		}
+		if err := ctx.Err(); err != nil {
+			b.res.Err = err
+			return nil
+		}
+		if err := b.embed(ctx, half); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// isRejection reports whether err is the provider refusing these inputs (a 4xx, an over-long input),
+// which a smaller batch may get past, rather than a condition no retry fixes (budget, network, key,
+// timeout, an outage).
+func isRejection(ctx context.Context, err error) bool {
+	if ctx.Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var le *llm.Error
+	if !errors.As(err, &le) {
+		return true // the command provider failed on this input
+	}
+	switch le.Kind {
+	case llm.KindContextLength:
+		return true
+	case llm.KindProvider:
+		return !le.Transient()
+	}
+	return false
+}
+
 // finish assembles the index from every vector there is.
 func (b *builder) finish() (*BuildResult, error) {
 	idxs := make([]int, 0, len(b.rows))
@@ -267,6 +331,9 @@ func (b *builder) finish() (*BuildResult, error) {
 		}
 	}
 	if len(mi) == 0 {
+		if b.res.Err == nil && len(b.res.Rejected) > 0 {
+			b.res.Err = oops.Errorf("the provider rejected every skill: %s", b.res.Rejected[0].Reason)
+		}
 		if b.res.Err != nil {
 			return b.res, nil
 		}
