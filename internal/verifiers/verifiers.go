@@ -127,6 +127,10 @@ func (r *Report) CannotRun() bool {
 type Outcome struct {
 	Pass    bool
 	Message string
+	// Findings are the places a failed predicate did not hold; the SARIF and
+	// JUnit reports locate a flat verifier through them. Their messages carry no
+	// line numbers or counts, so a fingerprint built from them is stable.
+	Findings []Finding
 }
 
 // Predicate evaluates one verifier. A returned error means it could not be
@@ -322,7 +326,7 @@ func evaluate(ctx context.Context, env *Env, v config.VerifierConfig) (res Resul
 	case out.Pass:
 		res.Status, res.Message = StatusPass, out.Message
 	default:
-		res.Status, res.Message = StatusFail, out.Message
+		res.Status, res.Message, res.Findings = StatusFail, out.Message, out.Findings
 	}
 	return res
 }
