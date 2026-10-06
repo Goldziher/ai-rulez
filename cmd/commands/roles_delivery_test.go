@@ -84,7 +84,7 @@ func TestCatalogReportsDeliveryPerRole(t *testing.T) {
 	catalogFormat = formatJSON
 	var out bytes.Buffer
 	require.NoError(t, runCatalog(&out))
-	validateAgainst(t, "../../schema/catalog.schema.json", out.Bytes())
+	validateAgainst(t, "../../schema/catalog.v1.schema.json", out.Bytes())
 
 	var doc catalogDoc
 	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))

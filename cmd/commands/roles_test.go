@@ -181,7 +181,7 @@ func TestCatalog(t *testing.T) {
 	catalogFormat = formatJSON
 	defer func() { catalogFormat = "" }()
 	require.NoError(t, runCatalog(&out))
-	validateAgainst(t, "../../schema/catalog.schema.json", out.Bytes())
+	validateAgainst(t, "../../schema/catalog.v1.schema.json", out.Bytes())
 }
 
 func mustCounter(t *testing.T) tokens.Counter {

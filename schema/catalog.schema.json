@@ -1,0 +1,409 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/catalog.schema.json",
+  "title": "ai-rulez catalog (version 2)",
+  "description": "Output of `ai-rulez catalog --format json --schema-version 2`, and the catalog.json of `ai-rulez catalog --html`: every item with its description, source, load cost, lint result and excerpt, a summary of every role, the lock status and the project lint overview. Version 1 is schema/catalog.v1.schema.json. A consumer must refuse an unknown schema_version.",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "project", "tokenizer", "items", "roles", "lock", "lint", "notes"],
+  "additionalProperties": false,
+  "definitions": {
+    "delivery": {
+      "enum": ["static", "served", "both"]
+    },
+    "lintCounts": {
+      "type": "object",
+      "required": ["error", "warning", "info"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["code", "severity", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": ["error", "warning", "info"]
+        },
+        "message": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "generated_by": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "lock_tree": {
+          "type": "string",
+          "description": "The tree digest the lock pins."
+        }
+      }
+    },
+    "tokenizer": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "kind", "id", "source", "bytes", "tokens", "load_cost", "approval", "roles"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Stable key kind/domain/id (domain - when none); a repeated key gets a #2 suffix."
+          },
+          "kind": {
+            "enum": ["rule", "context", "skill", "agent", "command", "check"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Source path relative to the configuration directory."
+          },
+          "description": {
+            "type": "string",
+            "description": "Taken verbatim from the item's frontmatter; a consumer escapes it."
+          },
+          "owner": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "delivery": {
+            "$ref": "#/definitions/delivery"
+          },
+          "source": {
+            "type": "object",
+            "required": ["type"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "enum": ["local", "include"]
+              }
+            }
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "The digest ai-rulez.lock pins for this item."
+          },
+          "load_cost": {
+            "type": "object",
+            "required": ["listing_tokens", "body_tokens", "resource_tokens", "resources"],
+            "additionalProperties": false,
+            "properties": {
+              "listing_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "What the harness lists always: name and description (skills only)."
+              },
+              "body_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "What loads when the item is used."
+              },
+              "resource_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Bundled text resources of a skill."
+              },
+              "resources": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "lint": {
+            "type": "object",
+            "description": "Absent when the lint engine could not run (see the top-level lint).",
+            "required": ["status", "counts", "findings"],
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": ["ok", "warn", "error"]
+              },
+              "counts": {
+                "$ref": "#/definitions/lintCounts"
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/finding"
+                }
+              }
+            }
+          },
+          "approval": {
+            "type": "null",
+            "description": "Reserved: approval state is not recorded yet."
+          },
+          "excerpt": {
+            "type": "object",
+            "description": "First 2 KiB of the body, plain text. Absent when excerpts were switched off.",
+            "required": ["text", "truncated"],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              }
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Roles that keep the item."
+          },
+          "role_delivery": {
+            "type": "object",
+            "description": "For a skill: the delivery each role that keeps it gives it, where it differs from the item's own delivery.",
+            "additionalProperties": {
+              "$ref": "#/definitions/delivery"
+            }
+          }
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "domains", "totals"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "extends": {
+            "type": "string"
+          },
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "groups": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "delivery": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/delivery"
+            }
+          },
+          "totals": {
+            "type": "object",
+            "required": ["items", "bytes", "tokens", "by_kind", "served_skills", "served_tokens"],
+            "properties": {
+              "items": {
+                "type": "integer"
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "tokens": {
+                "type": "integer"
+              },
+              "served_skills": {
+                "type": "integer"
+              },
+              "served_tokens": {
+                "type": "integer"
+              },
+              "by_kind": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "required": ["present", "has_content_pins", "enforce", "sources_in_sync", "sources_changed"],
+      "additionalProperties": false,
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "has_content_pins": {
+          "type": "boolean"
+        },
+        "enforce": {
+          "type": "boolean"
+        },
+        "tree": {
+          "type": "string"
+        },
+        "sources_in_sync": {
+          "type": ["boolean", "null"],
+          "description": "null when the lock has no content pins to compare with."
+        },
+        "sources_changed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "lint": {
+      "type": "object",
+      "required": ["available", "summary", "by_code", "unattributed"],
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why lint did not run, when available is false."
+        },
+        "summary": {
+          "type": "object",
+          "required": ["errors", "warnings", "infos"],
+          "additionalProperties": false,
+          "properties": {
+            "errors": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warnings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "infos": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "by_code": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "unattributed": {
+          "type": "array",
+          "description": "Findings that belong to no catalog item (configuration, hooks, ...).",
+          "items": {
+            "type": "object",
+            "required": ["code", "severity", "message"],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": ["error", "warning", "info"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "file": {
+                "type": "string",
+                "description": "Relative to the project root."
+              }
+            }
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Why a section is missing or narrowed."
+    }
+  }
+}
