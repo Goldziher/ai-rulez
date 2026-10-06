@@ -30,7 +30,7 @@
     if (bodies.length > 1) {
       var nav = document.createElement("p");
       nav.className = "pager";
-      var button = function (label, step) {
+      var pagerButton = function (label, step) {
         var b = document.createElement("button");
         b.type = "button";
         b.textContent = label;
@@ -41,8 +41,8 @@
         return b;
       };
       pager = nav;
-      pager.prev = button("Previous page", -1);
-      pager.next = button("Next page", 1);
+      pager.prev = pagerButton("Previous page", -1);
+      pager.next = pagerButton("Next page", 1);
       pager.status = document.createElement("span");
       pager.status.setAttribute("role", "status");
       nav.append(pager.prev, document.createTextNode(" "), pager.status, document.createTextNode(" "), pager.next);

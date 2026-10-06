@@ -25,6 +25,7 @@ include_excerpt = false
 exclude_owners = true
 indexable = true
 max_items_per_page = 50
+render_markdown = true
 `
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, configTOMLFilename), []byte(body), 0o644))
 
@@ -40,6 +41,7 @@ max_items_per_page = 50
 	assert.True(t, cfg.Catalog.ExcludeOwners)
 	assert.True(t, cfg.Catalog.Indexable)
 	assert.Equal(t, 50, cfg.Catalog.MaxItemsPerPage)
+	assert.True(t, cfg.Catalog.RenderMarkdown)
 }
 
 func TestValidateCatalog(t *testing.T) {

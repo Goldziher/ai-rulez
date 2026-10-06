@@ -60,7 +60,7 @@
 {{if .RoleDelivery}}<h2>Delivery by role</h2>
 <ul>{{range .RoleDelivery}}<li>{{s .Key}}: {{s .Value}}</li>{{end}}</ul>{{end}}
 {{if .HasExcerpt}}<h2>Excerpt</h2>
-<pre dir="auto">{{s .Excerpt}}</pre>
+{{if .Markdown}}<div class="md">{{template "mdnodes" .Rendered}}</div>{{else}}<pre dir="auto">{{s .Excerpt}}</pre>{{end}}
 {{if .ExcerptTruncated}}<p class="note">The excerpt is cut; the item continues in its source file.</p>{{end}}{{end}}
 {{end}}
 {{template "foot" .}}{{end}}

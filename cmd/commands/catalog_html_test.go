@@ -27,6 +27,7 @@ func resetCatalogFlags(t *testing.T) {
 		catalogTitle, catalogAllowFindings = "", nil
 		catalogWithEval, catalogWithUsage, catalogCheck = "", "", false
 		catalogIndexableSet, catalogPageSizeSet, catalogNoOwners, catalogPageSize = false, false, false, 0
+		catalogMarkdown, catalogMarkdownSet = false, false
 	})
 	catalogExcerpt = true
 }
