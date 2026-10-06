@@ -1327,9 +1327,15 @@
           },
           "additionalProperties": false
         },
+        "tolerate": {
+          "type": "object",
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down. Not the size limits: those are [lint.budgets.<kind>].",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
         "budget": {
           "type": "object",
-          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
+          "deprecated": true,
+          "description": "Deprecated spelling of [lint.tolerate]; it still works and warns.",
           "additionalProperties": { "type": "integer", "minimum": 0 }
         },
         "risk": {
@@ -1344,7 +1350,7 @@
         },
         "budgets": {
           "type": "object",
-          "description": "Size limits per content kind (rule, context, skill, agent, command). 0 keeps the default, negative removes the limit.",
+          "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.tolerate], not this table.",
           "additionalProperties": {
             "type": "object",
             "properties": {

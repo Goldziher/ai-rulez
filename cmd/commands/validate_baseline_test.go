@@ -102,13 +102,17 @@ func TestExplicitBaselineMustExist(t *testing.T) {
 	assert.Equal(t, 1, runStrict(t, root, cfg))
 }
 
-func TestBudgetToleratesAndRatchets(t *testing.T) {
-	resetStrictFlags(t)
-	root, cfg := strictProject(t, "\n[lint.budget]\nAR201 = 1\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
-	assert.Equal(t, 0, runStrict(t, root, cfg), "one AR201 is within a budget of 1")
+func TestToleratesAndRatchets(t *testing.T) {
+	for _, table := range []string{"tolerate", "budget"} { // budget is the deprecated alias
+		t.Run(table, func(t *testing.T) {
+			resetStrictFlags(t)
+			root, cfg := strictProject(t, "\n[lint."+table+"]\nAR201 = 1\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+			assert.Equal(t, 0, runStrict(t, root, cfg), "one AR201 is within a tolerated count of 1")
 
-	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md"))
-	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "two exceed it")
+			writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md"))
+			assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "two exceed it")
+		})
+	}
 }
 
 func TestUpdateBaselineRefusesUnexplainedSecurityFinding(t *testing.T) {

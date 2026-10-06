@@ -1189,8 +1189,9 @@ OKF requires frontmatter at the start of each concept.
 
 ### `lint`
 
-Tunes `ai-rulez validate --strict`: severities, ignores, allow-lists, description bounds, size budgets and
-required frontmatter keys.
+Tunes `ai-rulez validate --strict`: severities, ignores, allow-lists, description bounds, size budgets
+(`[lint.budgets.<kind>]`), tolerated findings per rule (`[lint.tolerate]`, formerly `[lint.budget]`) and required
+frontmatter keys.
 
 ```toml
 [lint]
@@ -1201,7 +1202,10 @@ ignore = ["AR803"]
 [lint.severity]
 AR401 = "error"
 
-[lint.budgets.skill]
+[lint.tolerate]                          # tolerated findings per rule: AR401 may have up to 12
+AR401 = 12
+
+[lint.budgets.skill]                     # size budget of a content kind
 max_lines = 400
 
 [lint.require_metadata]

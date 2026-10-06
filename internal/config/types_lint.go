@@ -33,13 +33,17 @@ type LintConfig struct {
 	KnownNames []string `yaml:"known_names,omitempty" json:"known_names,omitempty" toml:"known_names,omitempty"` //nolint:tagliatelle
 	// Description tunes the frontmatter description checks.
 	Description *LintDescription `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	// Budget tolerates up to N findings per rule code or name: a rule whose
-	// unaccepted findings number at most N does not count toward the exit code.
-	// Lower N over time to ratchet a rule down.
+	// Tolerate caps how many findings of a rule are tolerated, per rule code or
+	// name: a rule whose unaccepted findings number at most N does not count
+	// toward the exit code. Lower N over time to ratchet a rule down. Not to be
+	// confused with Budgets, which caps the size of a content item.
+	Tolerate map[string]int `yaml:"tolerate,omitempty" json:"tolerate,omitempty" toml:"tolerate,omitempty"`
+	// Budget is the deprecated spelling of Tolerate; it still works and warns.
 	Budget map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
 	// Risk sets the weights of the advisory risk score.
 	Risk *LintRisk `yaml:"risk,omitempty" json:"risk,omitempty" toml:"risk,omitempty"`
-	// Budgets maps a content kind (rule, context, skill, agent, command) to its size limits.
+	// Budgets maps a content kind (rule, context, skill, agent, command) to its size
+	// limits (max_lines, max_tokens). Not to be confused with Tolerate.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.
 	RequireMetadata map[string][]string `yaml:"require_metadata,omitempty" json:"require_metadata,omitempty" toml:"require_metadata,omitempty"` //nolint:tagliatelle
@@ -190,4 +194,21 @@ type LintRisk struct {
 	Error   *int `yaml:"error,omitempty" json:"error,omitempty" toml:"error,omitempty"`
 	Warning *int `yaml:"warning,omitempty" json:"warning,omitempty" toml:"warning,omitempty"`
 	Info    *int `yaml:"info,omitempty" json:"info,omitempty" toml:"info,omitempty"`
+}
+
+// Tolerated returns the per-rule tolerated finding counts: [lint.tolerate]
+// together with the deprecated [lint.budget], with [lint.tolerate] winning when a
+// rule is in both.
+func (l *LintConfig) Tolerated() map[string]int {
+	if l == nil || len(l.Tolerate)+len(l.Budget) == 0 {
+		return nil
+	}
+	out := make(map[string]int, len(l.Tolerate)+len(l.Budget))
+	for k, v := range l.Budget {
+		out[k] = v
+	}
+	for k, v := range l.Tolerate {
+		out[k] = v
+	}
+	return out
 }

@@ -865,7 +865,8 @@
             "minimum": 0,
             "type": "integer"
           },
-          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
+          "deprecated": true,
+          "description": "Deprecated spelling of [lint.tolerate]; it still works and warns.",
           "type": "object"
         },
         "budgets": {
@@ -881,7 +882,7 @@
             },
             "type": "object"
           },
-          "description": "Size limits per content kind (rule, context, skill, agent, command). 0 keeps the default, negative removes the limit.",
+          "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.tolerate], not this table.",
           "type": "object"
         },
         "description": {
@@ -1154,6 +1155,14 @@
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
+          "type": "object"
+        },
+        "tolerate": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down. Not the size limits: those are [lint.budgets.<kind>].",
           "type": "object"
         },
         "traps": {

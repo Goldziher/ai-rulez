@@ -1176,18 +1176,23 @@ func (r *runner) checkSettingsConfig() {
 	}
 }
 
-// validateBudgetAndRisk checks [lint.budget] and [lint.risk].
+// validateBudgetAndRisk checks [lint.tolerate] (and its deprecated alias [lint.budget]) and [lint.risk].
 func validateBudgetAndRisk(lc *config.LintConfig) []string {
 	var problems []string
 	if _, ok := LookupProfile(lc.Profile); !ok {
 		problems = append(problems, fmt.Sprintf("lint.profile: unknown profile %q (use %s)", lc.Profile, strings.Join(ProfileNames(), ", ")))
 	}
-	for key, limit := range lc.Budget {
-		if _, ok := lookupRule(key); !ok {
-			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))
-		}
-		if limit < 0 {
-			problems = append(problems, fmt.Sprintf("lint.budget.%s: %d is negative", key, limit))
+	for _, table := range []struct {
+		name   string
+		limits map[string]int
+	}{{"tolerate", lc.Tolerate}, {"budget", lc.Budget}} {
+		for key, limit := range table.limits {
+			if _, ok := lookupRule(key); !ok {
+				problems = append(problems, fmt.Sprintf("lint.%s: unknown rule %q", table.name, key))
+			}
+			if limit < 0 {
+				problems = append(problems, fmt.Sprintf("lint.%s.%s: %d is negative", table.name, key, limit))
+			}
 		}
 	}
 	if lc.Risk != nil {
