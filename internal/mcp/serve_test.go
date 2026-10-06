@@ -265,7 +265,7 @@ func TestLoadSkill_SessionBudgetCap(t *testing.T) {
 	_, isErr, text = callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing"})
 	require.True(t, isErr)
 	assert.Contains(t, text, "session budget exhausted")
-	assert.Equal(t, skillSize+1000, srv.Used(""), "a refused load is not charged")
+	assert.Equal(t, skillSize+1000, usedTotal(srv), "a refused load is not charged")
 
 	// budget_bytes caps one call and fits the remainder.
 	out, isErr, _ = callTool(t, p, "load_skill", map[string]any{"name": "git-workflow", "budget_bytes": 5})
@@ -291,7 +291,7 @@ func TestLoadSkill_UnlimitedBudgetAndTruncationKeepsRunes(t *testing.T) {
 		_, isErr, _ := callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": "references/FORMS.md"})
 		require.False(t, isErr)
 	}
-	assert.Equal(t, 3000, srv.Used(""))
+	assert.Equal(t, 3000, usedTotal(srv))
 }
 
 func TestLoadSkill_TelemetryRecordsEveryLoad(t *testing.T) {
