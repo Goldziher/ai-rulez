@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -14,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
@@ -192,7 +194,35 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return report, err
 	}
 	report.Written = true
+	if err := ignoreLocalTree(abs, intoAbs, files); err != nil {
+		return report, err
+	}
 	return report, nil
+}
+
+// ignoreLocalTree keeps the personal content convert wrote below local/ out of
+// git until `generate` takes over that job: it adds the tree to the project's
+// .gitignore. A config directory outside the project cannot be ignored from it.
+func ignoreLocalTree(abs, intoAbs string, files map[string][]byte) error {
+	wrote := false
+	for rel := range files {
+		if strings.HasPrefix(rel, localDir+"/") {
+			wrote = true
+			break
+		}
+	}
+	if !wrote {
+		return nil
+	}
+	rel, err := filepath.Rel(abs, intoAbs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return nil
+	}
+	pattern := path.Join(filepath.ToSlash(rel), localDir) + "/"
+	if err := gitignore.EnsureEntries(abs, []string{pattern}); err != nil {
+		return oops.Hint("Add "+pattern+" to .gitignore by hand: it holds personal content").Wrapf(err, "ignore the local tree")
+	}
+	return nil
 }
 
 func displayPath(p string) string {
@@ -360,13 +390,9 @@ func planSummary(p *Plan) string {
 // buildFiles renders every file, keyed by path relative to the config directory.
 func buildFiles(plan *Plan, cfg *config.Config, domain string) (map[string][]byte, error) {
 	files := map[string][]byte{}
-	prefix := ""
-	if domain != "" {
-		prefix = "domains/" + domain + "/"
-	}
 	for i := range plan.Items {
 		for _, f := range plan.Items[i].Files() {
-			files[prefix+f.Path] = f.Data
+			files[placed(domain, f.Path)] = f.Data
 		}
 	}
 	data, err := config.MarshalTOML(cfg)
@@ -793,9 +819,18 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+// writePerms returns the file and directory modes of a planned path. Machine-local
+// content is personal, so it is owner-only like the files the CLI creates there.
+func writePerms(rel string) (file, dir os.FileMode) {
+	if rel == localDir || strings.HasPrefix(rel, localDir+"/") {
+		return 0o600, 0o700
+	}
+	return 0o644, 0o755
+}
+
 // mkdirAllTracked creates dir and returns the directories it had to create,
 // outermost first, so a rollback can remove them again.
-func mkdirAllTracked(dir string) ([]string, error) {
+func mkdirAllTracked(dir string, perm os.FileMode) ([]string, error) {
 	var missing []string
 	for d := dir; ; {
 		if _, err := os.Lstat(d); err == nil {
@@ -811,7 +846,7 @@ func mkdirAllTracked(dir string) ([]string, error) {
 	for i, j := 0, len(missing)-1; i < j; i, j = i+1, j-1 {
 		missing[i], missing[j] = missing[j], missing[i]
 	}
-	return missing, os.MkdirAll(dir, 0o755)
+	return missing, os.MkdirAll(dir, perm)
 }
 
 // writeFiles writes the create, overwrite and merge entries. On failure it
@@ -822,6 +857,7 @@ func writeFiles(report *Report, files map[string][]byte, intoAbs string) error {
 		path string
 		old  []byte
 		had  bool
+		perm os.FileMode
 	}
 	var done []undo
 	var dirs []string
@@ -830,7 +866,7 @@ func writeFiles(report *Report, files map[string][]byte, intoAbs string) error {
 		for i := len(done) - 1; i >= 0; i-- {
 			u := done[i]
 			if u.had {
-				if err := writeFileAtomic(u.path, u.old, 0o644); err != nil {
+				if err := writeFileAtomic(u.path, u.old, u.perm); err != nil {
 					errs = append(errs, err)
 				}
 			} else if err := os.Remove(u.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -849,12 +885,13 @@ func writeFiles(report *Report, files map[string][]byte, intoAbs string) error {
 			continue
 		}
 		target := filepath.Join(intoAbs, filepath.FromSlash(f.Path))
-		created, err := mkdirAllTracked(filepath.Dir(target))
+		filePerm, dirPerm := writePerms(f.Path)
+		created, err := mkdirAllTracked(filepath.Dir(target), dirPerm)
 		dirs = append(dirs, created...)
 		if err == nil {
 			old, readErr := os.ReadFile(target)
-			if err = writeFileAtomic(target, files[f.Path], 0o644); err == nil {
-				done = append(done, undo{path: target, old: old, had: readErr == nil})
+			if err = writeFileAtomic(target, files[f.Path], filePerm); err == nil {
+				done = append(done, undo{path: target, old: old, had: readErr == nil, perm: filePerm})
 				continue
 			}
 		}

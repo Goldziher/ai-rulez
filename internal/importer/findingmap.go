@@ -16,10 +16,6 @@ const maxMapRead = 5 << 20
 // was built from, so a scan finding in the unwritten tree can be shown where the
 // user can act on it.
 func origins(plan *Plan, domain string) map[string][]string {
-	prefix := ""
-	if domain != "" {
-		prefix = "domains/" + domain + "/"
-	}
 	out := map[string][]string{}
 	for i := range plan.Items {
 		it := &plan.Items[i]
@@ -28,11 +24,11 @@ func origins(plan *Plan, domain string) map[string][]string {
 			for _, s := range it.Sources {
 				if it.Kind == KindSkill {
 					// A skill source is the skill directory; its files keep their names.
-					s = path.Join(filepath.ToSlash(s), strings.TrimPrefix(f.Path, "skills/"+it.Name+"/"))
+					s = path.Join(filepath.ToSlash(s), strings.TrimPrefix(f.Path, it.root()+"skills/"+it.Name+"/"))
 				}
 				srcs = append(srcs, filepath.ToSlash(s))
 			}
-			out[prefix+f.Path] = srcs
+			out[placed(domain, f.Path)] = srcs
 		}
 	}
 	return out

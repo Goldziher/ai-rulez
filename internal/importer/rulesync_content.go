@@ -188,11 +188,7 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 		p.add(newFinding(StatusDropped, file, "", "", "rule body is empty"))
 		return
 	}
-	if local, _ := meta["localRoot"].(bool); local {
-		p.add(newFinding(StatusNeedsAction, file, "localRoot", "",
-			"personal local rule is not imported into the committed tree; copy it to .ai-rulez/local/rules/ or .ai-rulez/local/context/ by hand"))
-		return
-	}
+	localRoot, _ := meta["localRoot"].(bool)
 	name, synth := b.nameOf(file, rel)
 	nameFinding(p, file, KindRule, name, synth)
 	taken := map[string]bool{"root": true, "localRoot": true, "targets": true, "description": true, "globs": true}
@@ -245,17 +241,24 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 	b.reportLeftovers(file, meta, taken)
 
 	kind := KindRule
-	if root, _ := meta["root"].(bool); root {
+	if root, _ := meta["root"].(bool); root && !localRoot {
 		kind = KindContext
 		p.add(newFinding(StatusApproximated, file, "root", "context/"+name+".md",
 			"root rules are written into every tool's root file; ai-rulez does that with context"))
+	}
+	if localRoot {
+		// A localRoot rule is rulesync's personal root file (CLAUDE.local.md): the
+		// machine-local context tree is its counterpart, and git ignores it.
+		kind = KindContext // root is implied: a root rule that is also local is the local one
+		p.add(newFinding(StatusApproximated, file, "localRoot", localDir+"/context/"+name+".md",
+			"personal rule imported into the machine-local tree .ai-rulez/local/, which git ignores; it never reaches a committed output"))
 	}
 	out, err := renderRule(rule, body)
 	if err != nil {
 		p.add(newFinding(StatusDropped, file, "", "", "frontmatter could not be written: "+err.Error()))
 		return
 	}
-	b.addItem(Item{Kind: kind, Name: name, Sources: []string{file}, Main: out})
+	b.addItem(Item{Kind: kind, Name: name, Sources: []string{file}, Main: out, Local: localRoot})
 }
 
 // activationHint reads the activation a rule states through a tool section when
