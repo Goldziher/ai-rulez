@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -167,4 +168,57 @@ func TestExecute_SiblingGuardNeverCopiesTheTargetsEvalCases(t *testing.T) {
 		}
 		return nil
 	}))
+}
+
+func TestExecute_SiblingGuardSkipsASiblingItCannotCopyAndSaysSo(t *testing.T) {
+	tests := []struct {
+		name   string
+		break_ func(t *testing.T, dir string)
+		why    string
+	}{
+		{"oversized SKILL.md", func(t *testing.T, dir string) {
+			big := rollbackSkill + strings.Repeat("padding line to push the file past the copy bound\n", 25000)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(big), 0o600))
+		}, "larger than"},
+		{"symlinked SKILL.md", func(t *testing.T, dir string) {
+			real := filepath.Join(t.TempDir(), "real.md")
+			require.NoError(t, os.WriteFile(real, []byte(rollbackSkill), 0o600))
+			require.NoError(t, os.Remove(filepath.Join(dir, "SKILL.md")))
+			testutil.SymlinkOrSkip(t, real, filepath.Join(dir, "SKILL.md"))
+		}, "not a regular file"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: deploy has one healthy sibling (rollback) and one that cannot be copied (broken).
+			root, configDir := project(t)
+			withSibling(t, configDir)
+			broken := filepath.Join(configDir, "skills", "broken")
+			require.NoError(t, os.MkdirAll(filepath.Join(broken, "evals"), 0o750))
+			require.NoError(t, os.WriteFile(filepath.Join(broken, "SKILL.md"), []byte(rollbackSkill), 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(broken, "evals", "t.eval.yaml"), []byte(strings.ReplaceAll(rollbackCases, "rb-", "bk-")), 0o600))
+			tt.break_(t, broken)
+			opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) {
+				setDescription(t, dir, "Deploy services to staging. Use when asked to deploy, ship or push a service to staging.")
+			})
+			o := baseOptions(root, configDir, goodEval(), opt)
+			o.MaxRounds, o.MaxSkillGrowth = 1, 2
+			plan := mustPrepare(t, &o)
+
+			// Act
+			report, err := plan.Execute(context.Background())
+
+			// Assert: the round is judged, not rejected as "guard failed".
+			require.NoError(t, err)
+			rd := report.Rounds[0]
+			assert.Equal(t, "accepted", rd.Decision, "%v", rd.Reasons)
+			require.NotNil(t, rd.Siblings)
+			require.Len(t, rd.Siblings.Unmeasured, 1)
+			assert.Equal(t, "broken", rd.Siblings.Unmeasured[0].Skill)
+			assert.Contains(t, rd.Siblings.Unmeasured[0].Reason, tt.why)
+			require.Len(t, rd.Siblings.Results, 1)
+			assert.Equal(t, "rollback", rd.Siblings.Results[0].Skill)
+			assert.Contains(t, strings.Join(rd.Warnings, ";"), "left out broken")
+			assertReportSchema(t, report)
+		})
+	}
 }
