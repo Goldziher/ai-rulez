@@ -15,7 +15,7 @@ import (
 // is not content and does not change the pin.
 var localIncludeDirs = map[string]bool{
 	"rules": true, "context": true, "skills": true, "agents": true,
-	"commands": true, "checks": true, "domains": true,
+	"commands": true, "checks": true, "domains": true, "verifiers": true,
 }
 
 const aiRulezDirName = ".ai-rulez"
