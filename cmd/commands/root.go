@@ -80,6 +80,7 @@ func init() {
 	RootCmd.AddCommand(RolesCmd)
 	RootCmd.AddCommand(CatalogCmd)
 	RootCmd.AddCommand(TokensCmd)
+	RootCmd.AddCommand(SBOMCmd)
 	RootCmd.AddCommand(CostCmd)
 	RootCmd.AddCommand(UsageCmd)
 	RootCmd.AddCommand(ReportCmd)
