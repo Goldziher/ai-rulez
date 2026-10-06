@@ -180,7 +180,21 @@ func unixNano(ts string, fallback time.Time) string {
 	if err != nil {
 		t = fallback
 	}
+	return nanos(t)
+}
+
+// nanos renders t as OTLP nanoseconds since the epoch. A zero time or one outside
+// the int64 nanosecond range (years 1678 to 2261) has no valid value: it becomes
+// "0", which OTLP reads as unknown, instead of an overflowed number.
+func nanos(t time.Time) string {
+	if !nanosecondsRepresentable(t) {
+		return "0"
+	}
 	return strconv.FormatInt(t.UnixNano(), 10)
+}
+
+func nanosecondsRepresentable(t time.Time) bool {
+	return !t.IsZero() && t.Year() > 1677 && t.Year() < 2262
 }
 
 // EncodeLogs renders one LogRecord per event. observed is the flush time.
@@ -200,7 +214,7 @@ func (en *Encoder) EncodeLogs(events []Event, observed time.Time) ([]byte, error
 		body := "item " + e.Outcome
 		records = append(records, otlpLogRecord{
 			TimeUnixNano:         unixNano(e.Time, observed),
-			ObservedTimeUnixNano: strconv.FormatInt(observed.UnixNano(), 10),
+			ObservedTimeUnixNano: nanos(observed),
 			SeverityNumber:       severityInfo, SeverityText: "INFO",
 			Body: otlpValue{String: &body}, Attributes: attrs,
 		})
@@ -405,7 +419,7 @@ func (en *Encoder) EncodeMetrics(events []Event, now time.Time) ([]byte, error) 
 		}
 		ag.add(&events[i])
 	}
-	startNano, nowNano := strconv.FormatInt(start.UnixNano(), 10), strconv.FormatInt(now.UnixNano(), 10)
+	startNano, nowNano := nanos(start), nanos(now)
 
 	var metrics []otlpMetric
 	if m, ok := sumMetric(MetricLoads, "Items (skills, rules, agents, context files) loaded by a harness", ag.loads, startNano, nowNano); ok {
