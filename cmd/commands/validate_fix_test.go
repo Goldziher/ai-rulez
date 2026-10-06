@@ -66,3 +66,30 @@ func TestFixFlagValidation(t *testing.T) {
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("fix-unsafe"))
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("dry-run"))
 }
+
+func TestFixRepairsBooleansFencesAndFinalNewline(t *testing.T) {
+	resetFixFlags(t)
+	broken := "---\nalwaysApply: \"true\"\ndescription: a rule\n---\n# Title\n```bash\nls"
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": broken})
+	rule := filepath.Join(root, ".ai-rulez", "rules", "a.md")
+	validateFailOn = "info"
+	require.Equal(t, exitStrictFindings, runStrict(t, root, cfg))
+
+	// A dry run shows the diff and writes nothing.
+	validateFix, validateDryRun = true, true
+	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)))
+	data, err := os.ReadFile(rule)
+	require.NoError(t, err)
+	assert.Equal(t, broken, string(data))
+
+	// --fix repairs all three and the run is clean; a second run changes nothing.
+	validateDryRun = false
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)))
+	data, err = os.ReadFile(rule)
+	require.NoError(t, err)
+	assert.Equal(t, "---\nalwaysApply: true\ndescription: a rule\n---\n# Title\n```bash\nls\n```\n", string(data))
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)))
+	again, err := os.ReadFile(rule)
+	require.NoError(t, err)
+	assert.Equal(t, string(data), string(again))
+}

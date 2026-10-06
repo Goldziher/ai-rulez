@@ -613,6 +613,7 @@ func (r *runner) checkItem(it *item) {
 	d := parseDoc(raw)
 	r.docs[it.abs] = d
 	r.unit(unitOf("security-scan", AnalyzerSecurity), func() { r.securityScan(it.abs, raw) })
+	r.unit(unitOf("markdown-shape", AnalyzerDescriptions), func() { r.checkMarkdownShape(it, d, raw) })
 	if !it.isDoc {
 		fm := parseFrontmatterDoc(d)
 		r.unit(unitOf("frontmatter-keys", AnalyzerReferences), func() { r.checkFrontmatterKeys(it, fm) })

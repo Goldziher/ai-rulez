@@ -49,7 +49,7 @@ var (
 	vendorModelRe = regexp.MustCompile(`^(?:gpt-|o\d|gemini-|llama|mistral|codestral|grok|deepseek|qwen|kimi|glm-|command-)[a-z0-9.:_/-]*$`)
 )
 
-func checkFrontmatterValues(r *runner, it *item, _ doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
+func checkFrontmatterValues(r *runner, it *item, d doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	bad := func(k fmKey, format string, args ...any) {
 		r.add(CodeFrontmatterValue, it.abs, k.Line, "%s", fmt.Sprintf("frontmatter %q: ", k.Name)+fmt.Sprintf(format, args...))
 	}
@@ -83,7 +83,12 @@ func checkFrontmatterValues(r *runner, it *item, _ doc, fm frontmatter) { //noli
 	for _, key := range boolKeys[it.kind] {
 		if k, ok := fm.top(key); ok {
 			if _, isBool := k.Value.(bool); !isBool {
-				bad(k, "must be a YAML boolean (true or false), got %s", describeValue(k.Value))
+				msg := fmt.Sprintf("frontmatter %q: must be a YAML boolean (true or false), got %s", k.Name, describeValue(k.Value))
+				if str, isStr := k.Value.(string); isStr && (strings.EqualFold(str, "true") || strings.EqualFold(str, "false")) {
+					r.addFix(boolCoercion(it, d, k), CodeFrontmatterValue, it.abs, k.Line, "%s", msg)
+				} else {
+					r.add(CodeFrontmatterValue, it.abs, k.Line, "%s", msg)
+				}
 			}
 		}
 	}
