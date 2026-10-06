@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -215,12 +216,16 @@ func schemaFailure(cfg *config.Config, err error) error {
 		return err
 	}
 	lines := make([]string, len(findings))
+	var files []string
 	for i, f := range findings {
 		lines[i] = f.String()
+		if !slices.Contains(files, f.File) {
+			files = append(files, f.File)
+		}
 	}
 	return oops.With("errors", lines).
 		Hint("Fix the keys above; a \"did you mean\" names the closest known key").
-		Errorf("configuration has %d unknown or invalid key(s)", len(lines))
+		Errorf("configuration has %d unknown or invalid key(s) in %s", len(lines), strings.Join(files, ", "))
 }
 
 // validateLocalOverlay checks the config.local.* overlay, when one was merged,
