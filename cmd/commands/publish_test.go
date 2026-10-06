@@ -547,6 +547,8 @@ func TestPublish_FlagValidation(t *testing.T) {
 		{"tag without target", func() { publishTag = "v1" }, "--tag needs"},
 		{"force with another target", func() { publishExecute, publishYes, publishTo, publishForce = true, true, "npm", true }, "--force only applies"},
 		{"bad channel", func() { publishChannel = "Bad Channel" }, "invalid --channel"},
+		{"since that looks like an option", func() { publishSince = "--output=/tmp/x" }, "invalid --since"},
+		{"since with a range", func() { publishSince = "v1..v2" }, "invalid --since"},
 		{"oci ref without oci", func() { publishOCIRef = "ghcr.io/a/b" }, "--oci-ref needs"},
 		{"npm scope without npm", func() { publishNPMScope = "@a" }, "need --to npm"},
 		{"both signing modes", func() { publishSignKey, publishSignKeyless = "k.pem", true }, "mutually exclusive"},

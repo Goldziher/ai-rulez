@@ -419,8 +419,13 @@ func (g Git) gitPath(dir, flag string) string {
 
 // ShowFile returns the content of repoRelPath at ref (for example "HEAD"), read
 // from the repository containing dir. ok is false when the path does not exist
-// at that ref, the ref is unknown, or git cannot run.
+// at that ref, the ref is unknown, or git cannot run. A ref that is empty or
+// starts with "-" is refused without running git: "<ref>:<path>" would be read
+// as an option.
 func (g Git) ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
+	if strings.TrimSpace(ref) == "" || strings.HasPrefix(ref, "-") {
+		return nil, false
+	}
 	out, _, err := g.run(dir, nil, "show", ref+":"+filepath.ToSlash(repoRelPath))
 	if err != nil {
 		return nil, false
