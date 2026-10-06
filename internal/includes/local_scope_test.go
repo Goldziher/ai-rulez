@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,9 +21,7 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 	victim := filepath.Join(root, "victim")
 	require.NoError(t, os.MkdirAll(filepath.Join(project, "shared"), 0o755))
 	require.NoError(t, os.MkdirAll(victim, 0o755))
-	if err := os.Symlink(victim, filepath.Join(project, "link")); err != nil {
-		t.Skip("symlinks unavailable")
-	}
+	testutil.SymlinkOrSkip(t, victim, filepath.Join(project, "link"))
 	overlay := &config.LocalOverlay{Doc: map[string]any{"includes": []any{map[string]any{"name": "x", "source": "../victim"}}}}
 
 	tests := []struct {
