@@ -66,7 +66,7 @@ func TestResolve_CloneOverTheLimitFailsWithADistinctErrorAndLeavesNoCacheEntry(t
 	assert.Contains(t, err.Error(), "max_clone_bytes")
 	assert.Contains(t, err.Error(), `"big"`)
 	for _, e := range cacheEntries(t, cache) {
-		assert.NotContains(t, e, "tree", "no tree or partial checkout is kept: %s", e)
+		assert.NotContains(t, e, string(filepath.Separator), "nothing below the per-repository directory (no commit directory, tree or partial checkout): %s", e)
 	}
 }
 
