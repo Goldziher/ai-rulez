@@ -204,3 +204,31 @@ func TestValidateOutputSubdirRejectsSourceTrees(t *testing.T) {
 		assert.Equal(t, ok, ValidateOutputSubdir("k", dir) == nil, dir)
 	}
 }
+
+func TestValidateOutputPathRejectsControlDirs(t *testing.T) {
+	t.Parallel()
+	for p, ok := range map[string]bool{
+		".git/config": false, ".GIT/config": false, "a/.git/hooks/x": false, ".git./x": false, "GIT~1/config": false,
+		".git": false, ".hg/hgrc": false, ".svn/x": false, ".ai-rulez/config.toml": false, ".AI-RULEZ/x": false,
+		"a\\.git\\config": false, "x\x00y": false, "../escaped.md": false, "a/../../b": false, "/abs": false,
+		"\\\\host\\share\\x": false, "C:\\x": false, "": false, ".": false,
+		"docs/AI_GUIDE.md": true, ".github/copilot-instructions.md": true, ".gitignore": true, ".github/x": true,
+		"a/.gitkeep": true, ".ai-rulezish/x": true,
+	} {
+		assert.Equal(t, ok, ValidateOutputPath("path", p) == nil, "%q", p)
+	}
+}
+
+func TestCustomPresetPathIsValidated(t *testing.T) {
+	t.Parallel()
+	for _, p := range []string{".git/config", "../escaped.md", "/etc/passwd", ".ai-rulez/config.toml"} {
+		cfg := &Config{
+			Version: "4.0",
+			Name:    "test",
+			Presets: []Preset{{Name: "x", Type: PresetTypeMarkdown, Path: p, Template: "x"}},
+		}
+		err := cfg.Validate()
+		require.Error(t, err, p)
+		assert.Contains(t, err.Error(), "unsafe 'path'", p)
+	}
+}
