@@ -408,6 +408,7 @@ func TestPrepare_Refusals(t *testing.T) {
 		{"too few held-out", func(t *testing.T, _, c string, _ *Options) {
 			require.NoError(t, os.WriteFile(filepath.Join(c, "skills/deploy/evals/held.eval.yaml"), []byte(strings.Replace(heldCases, "tags: [holdout]", "", 2)), 0o600))
 		}, CodeNoHoldout, "held-out"},
+		{"min_holdout_cases above the held-out count", func(_ *testing.T, _, _ string, o *Options) { o.MinHoldoutCases = 4 }, CodeNoHoldout, "at least 4"},
 		{"no negative held-out", func(t *testing.T, _, c string, _ *Options) {
 			held := strings.Replace(heldCases, "expect_trigger: false", "expect_trigger: true", 1)
 			require.NoError(t, os.WriteFile(filepath.Join(c, "skills/deploy/evals/held.eval.yaml"), []byte(held), 0o600))

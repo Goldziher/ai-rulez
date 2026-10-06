@@ -371,9 +371,9 @@ func (x *execution) checkBaseline(m *Measurement) error {
 			neg++
 		}
 	}
-	if len(m.Outcomes) < MinHoldoutCases || neg == 0 {
+	if need := x.p.Opts.MinHoldoutCases; len(m.Outcomes) < need || neg == 0 {
 		return refuse(CodeNoHoldout, "only %d held-out case(s) (%d negative) could be scored by the runner (%d skipped): improve needs %d including one negative",
-			len(m.Outcomes), neg, len(m.Skipped), MinHoldoutCases)
+			len(m.Outcomes), neg, len(m.Skipped), need)
 	}
 	return nil
 }

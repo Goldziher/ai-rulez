@@ -268,6 +268,7 @@ type improveSettings struct {
 	maxRegressions  int
 	maxRounds       int
 	maxHoldoutEvals int
+	minHoldoutCases int
 	runs            int
 	maxSkillGrowth  float64
 	requireCI       bool
@@ -298,7 +299,7 @@ func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Wr
 		optimizer: strings.TrimSpace(e.Optimizer), holdoutTag: improveFlags.holdoutTag,
 		holdoutFraction: improveFlags.holdoutFraction, minGain: improveFlags.minGain, maxRegressions: improveFlags.maxRegressions,
 		maxRounds: improveFlags.maxRounds, maxHoldoutEvals: improveFlags.maxHoldoutEvals, runs: improveFlags.runs,
-		maxSkillGrowth: e.MaxSkillGrowth, requireCI: improveFlags.requireCIAboveZero || e.RequireCIAboveZero,
+		minHoldoutCases: e.MinHoldoutCases, maxSkillGrowth: e.MaxSkillGrowth, requireCI: improveFlags.requireCIAboveZero || e.RequireCIAboveZero,
 		envPass: improveFlags.envPass, egress: improveFlags.egress, ignored: res.IgnoredRepoKeys,
 	}
 	if !changed("holdout-tag") && e.HoldoutTag != "" {
@@ -374,7 +375,7 @@ func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDi
 		Grade: evals.GradeOptions{AllowExec: improveFlags.allowExec}, Price: price,
 		HoldoutTag: st.holdoutTag, HoldoutFraction: st.holdoutFraction, MinGain: st.minGain,
 		MaxRegressions: st.maxRegressions, MaxRounds: st.maxRounds, MaxHoldoutEvals: st.maxHoldoutEvals,
-		MaxCostUSD: improveFlags.maxCost, StopAtFirstAccept: improveFlags.stopAtFirstAccept, RequireCIAboveZero: st.requireCI,
+		MinHoldoutCases: st.minHoldoutCases, MaxCostUSD: improveFlags.maxCost, StopAtFirstAccept: improveFlags.stopAtFirstAccept, RequireCIAboveZero: st.requireCI,
 		MaxSkillGrowth: st.maxSkillGrowth, Isolation: st.isolation, Adapter: st.adapter,
 		AllowFrontmatter: improveFlags.allowFrontmatter, AllowScripts: improveFlags.allowScripts,
 		Git: evals.ExecGit, Date: date, ToolVersion: Version,
