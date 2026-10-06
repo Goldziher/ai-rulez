@@ -547,6 +547,37 @@ func (c *HTTPClient) PullRequestsForCommit(ctx context.Context, repo Repo, sha s
 	return out, err
 }
 
+// PullRequest implements Client.
+func (c *HTTPClient) PullRequest(ctx context.Context, repo Repo, number int) (PullRequest, error) {
+	if number <= 0 {
+		return PullRequest{}, fmt.Errorf("%w: invalid pull request number", ErrUnsupportedSource)
+	}
+	req, err := c.repoPath(repo, "/pulls/"+strconv.Itoa(number))
+	if err != nil {
+		return PullRequest{}, err
+	}
+	it, err := getJSON[struct {
+		Number     int        `json:"number"`
+		State      string     `json:"state"`
+		MergedAt   *time.Time `json:"merged_at"`
+		User       ghUser     `json:"user"`
+		MergeSHA   string     `json:"merge_commit_sha"`
+		Base, Head struct {
+			Ref string `json:"ref"`
+			SHA string `json:"sha"`
+		}
+	}](ctx, c, req)
+	if err != nil {
+		return PullRequest{}, err
+	}
+	pr := PullRequest{Number: it.Number, State: it.State, Merged: it.MergedAt != nil, Author: it.User.Login,
+		BaseRef: it.Base.Ref, HeadSHA: it.Head.SHA}
+	if pr.Merged {
+		pr.MergeCommit = it.MergeSHA
+	}
+	return pr, nil
+}
+
 // Reviews implements Client.
 func (c *HTTPClient) Reviews(ctx context.Context, repo Repo, pr int) ([]Review, error) {
 	if pr <= 0 {

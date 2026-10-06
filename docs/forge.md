@@ -11,6 +11,7 @@
 | `Tag(repo, tag)` | `GET /git/ref/tags/{tag}`, `GET /git/tags/{sha}` | peeled commit, annotated tag object, tagger date |
 | `CommitDate(repo, sha)` | `GET /commits/{sha}` | committer date (forgeable) |
 | `PullRequestsForCommit(repo, sha)` | `GET /commits/{sha}/pulls` | the PR a merged commit came from |
+| `PullRequest(repo, n)` | `GET /pulls/{n}` | the pull request's author and current head commit |
 | `Reviews(repo, n)` | `GET /pulls/{n}/reviews` | who approved, and at which head commit |
 | `Codeowners(repo, ref)` | `GET /contents/{path}?ref=` | `.github/CODEOWNERS`, then `CODEOWNERS`, then `docs/CODEOWNERS` |
 | `TeamMembers(team)`, `IsTeamMember(team, login)` | `GET /orgs/{org}/teams/{slug}/members`, `.../memberships/{login}` | expanding `@org/team` owners |
@@ -34,7 +35,7 @@
 
 The interface is shaped for approval checks (`internal/approval`):
 
-- A review counts for content only when the commit it was made on (`Review.CommitID`) belongs to the pull request (`PullRequestsForCommit`) and the content was the same there: approvals compare the digest the lock pinned at that commit with the digest being approved ([review-linked approvals](approvals.md#review-linked-approvals)). Read `Reviews` first, then `PullRequestsForCommit` per reviewed commit.
+- A review counts for content only when the commit it was made on (`Review.CommitID`) is the pull request's final head (`PullRequest`) and the content there has the digest being approved ([review-linked approvals](approvals.md#review-linked-approvals)).
 - The latest review of each reviewer decides: a later `CHANGES_REQUESTED` or `DISMISSED` replaces an earlier `APPROVED`. `COMMENTED` and `PENDING` never approve.
 - `Reviews`, `PullRequestsForCommit` and `TeamMembers` can return `ErrTruncated` with a partial list. Count approvals only from a complete list; treat a truncated one as no approval.
 - `IsTeamMember` returns `false`, not an error, for a non-member. Team calls need a token with `read:org`; without it they fail with `ErrUnauthorized` or `ErrForbidden`, and an approval check must fail closed.

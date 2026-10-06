@@ -215,9 +215,10 @@ host allowlist ([forge client](forge.md#safety-properties)). A review counts whe
 
 - it is the reviewer's latest decisive review and it is `APPROVED` (a later `CHANGES_REQUESTED` or `DISMISSED`
   withdraws it, a comment neither approves nor withdraws it);
-- the forge lists the pull request among those containing the commit the reviewer saw;
-- **the lock at that commit pinned the digest being approved.** The review is of the content the lock pinned there, so a
-  review of an earlier head approves nothing about content that changed since. The commit must be in the local clone
+- **the commit the reviewer saw is the pull request's final head** (read with `GET /pulls/{n}`). A review of an earlier
+  head approves nothing, even when the content looks the same: push, then ask for a new review (or have the branch
+  protection dismiss stale reviews);
+- the content at that head has the digest being approved. The head must be in the local clone
   (`git fetch origin pull/42/head`);
 - the reviewer passes `approvers` and, with `approvers_from`, owns the path, and with `forbid_self_approval` is not the
   pull request author. A reviewer who fails these is skipped with a note while another remains.
