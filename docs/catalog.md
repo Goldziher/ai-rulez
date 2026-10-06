@@ -56,8 +56,11 @@ rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
   script-src 'self'; base-uri 'none'; form-action 'none'` in a meta tag, and no inline script or style. A host
   should send the same as response headers plus `frame-ancestors 'none'`, which a meta tag cannot set.
 - **Output directory.** It must be new, empty or contain the marker `.ai-rulez-catalog` (written by an earlier run,
-  listing the files it wrote). `--clean` removes only files listed in that marker; without the marker the run is
-  refused, so `--html .` cannot overwrite a project. Writes never follow a symlink out of the directory.
+  listing each file it wrote with its SHA-256). `--clean` removes only a listed file that has the shape of a
+  site file (`index.html`, `items/`, `roles/`, `assets/`, `catalog.json`, ...) and still holds the recorded bytes;
+  without the marker the run is refused, so `--html .` cannot overwrite a project, and a directory with a `.git` or
+  `.ai-rulez` folder is always refused. The marker is written before the files, so an interrupted run leaves the
+  directory marked. Writes never follow a symlink out of the directory.
 - **Secrets.** The run is refused when the secret scanner (`AR001`) flagged an item and the site would publish its
   excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged).
 

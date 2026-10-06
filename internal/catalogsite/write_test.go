@@ -1,6 +1,8 @@
 package catalogsite
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -93,7 +95,7 @@ func TestWrite_CleanRemovesOnlyWhatTheMarkerListed(t *testing.T) {
 func TestWrite_WithoutCleanKeepsStaleFilesListed(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	_, err := Write(dir, site(map[string]string{"a.html": "1", "b.html": "1"}), false)
+	_, err := Write(dir, site(map[string]string{"a.html": "1", "items/b.html": "1"}), false)
 	require.NoError(t, err)
 
 	// Act
@@ -103,7 +105,7 @@ func TestWrite_WithoutCleanKeepsStaleFilesListed(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	assert.Equal(t, []string{"b.html"}, res.Removed)
+	assert.Equal(t, []string{"items/b.html"}, res.Removed)
 }
 
 func TestWrite_HostileMarkerCannotRemoveOutsideTheDirectory(t *testing.T) {
@@ -208,4 +210,91 @@ func TestSegment(t *testing.T) {
 	}
 	assert.NotEqual(t, segment("Deploy"), segment("deploy-"), "different originals never share a name")
 	assert.LessOrEqual(t, len(segment(strings.Repeat("a", 1_000_000))), maxSlugLen+1+hashLen)
+}
+
+func sumOf(data string) string {
+	sum := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(sum[:])
+}
+
+func TestWrite_CleanNeverRemovesWhatItCannotProveItWrote(t *testing.T) {
+	tests := []struct {
+		name   string
+		file   string
+		body   string
+		marker func(file, body string) string
+	}{
+		{name: "path outside the site shape", file: "main.go", body: "package x",
+			marker: func(f, b string) string { return sumOf(b) + " " + f + "\n" }},
+		{name: "site-shaped path with no digest", file: "items/mine.html", body: "mine",
+			marker: func(f, _ string) string { return f + "\n" }},
+		{name: "site-shaped path whose bytes changed", file: "items/mine.html", body: "edited by the user",
+			marker: func(f, _ string) string { return sumOf("what ai-rulez wrote") + " " + f + "\n" }},
+		{name: "nested asset path", file: "assets/x/y.txt", body: "mine",
+			marker: func(f, b string) string { return sumOf(b) + " " + f + "\n" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			target := filepath.Join(dir, filepath.FromSlash(tt.file))
+			require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o755))
+			require.NoError(t, os.WriteFile(target, []byte(tt.body), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte(tt.marker(tt.file, tt.body)), 0o644))
+
+			// Act
+			res, err := Write(dir, site(map[string]string{"index.html": "x"}), true)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Empty(t, res.Removed)
+			assert.FileExists(t, target)
+		})
+	}
+}
+
+func TestWrite_RefusesAProjectRoot(t *testing.T) {
+	for _, name := range []string{".git", ".ai-rulez"} {
+		t.Run(name, func(t *testing.T) {
+			// Arrange: even a marker cannot make a project root a catalog directory.
+			dir := t.TempDir()
+			require.NoError(t, os.Mkdir(filepath.Join(dir, name), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte("index.html\n"), 0o644))
+
+			// Act
+			_, err := Write(dir, site(map[string]string{"index.html": "x"}), true)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "project root")
+			assert.NoFileExists(t, filepath.Join(dir, "index.html"))
+		})
+	}
+}
+
+func TestWrite_MarkerListsNewFilesBeforeTheyAreWritten(t *testing.T) {
+	// Arrange: a marked directory where the second file cannot be written (its
+	// parent is a regular file), so the run fails midway.
+	dir := t.TempDir()
+	_, err := Write(dir, site(map[string]string{"index.html": "0"}), false)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "z"), []byte("blocker"), 0o644))
+
+	// Act
+	_, err = Write(dir, site(map[string]string{"index.html": "1", "z/blocked.html": "2"}), false)
+
+	// Assert: the interim marker already listed both files, and the directory stays marked.
+	require.Error(t, err)
+	marker, readErr := os.ReadFile(filepath.Join(dir, MarkerFile))
+	require.NoError(t, readErr)
+	assert.Contains(t, string(marker), " z/blocked.html")
+	assert.Contains(t, string(marker), sumOf("1")+" index.html")
+}
+
+func TestParseMarker_DeduplicatesEntries(t *testing.T) {
+	// Act
+	got := parseMarker("index.html\n" + sumOf("x") + " index.html\nitems/a.html\n")
+
+	// Assert
+	assert.Equal(t, map[string]string{"index.html": sumOf("x"), "items/a.html": ""}, got)
 }
