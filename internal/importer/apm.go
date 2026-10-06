@@ -347,40 +347,62 @@ func checkSubpath(p string) string {
 	return ""
 }
 
-func parseAPMString(s string) (dep apmDep, reason string) {
-	s = strings.TrimSpace(s)
+// apmSpecial handles the entries that are not a repository reference: a path
+// inside the project, or a form convert refuses. handled is false for a repository.
+func apmSpecial(s string) (dep apmDep, reason string, handled bool) {
 	switch {
 	case s == "":
-		return dep, "entry is empty"
+		return dep, "entry is empty", true
 	case strings.HasPrefix(s, "./") || strings.HasPrefix(s, "../"):
 		clean := path.Clean(s)
 		if !fs.ValidPath(clean) || clean == "." {
-			return dep, "a local path must stay inside the project"
+			return dep, "a local path must stay inside the project", true
 		}
 		dep.local = clean
-		return dep, ""
+		return dep, "", true
 	case strings.HasPrefix(s, "/"):
-		return dep, "an absolute path dependency is outside the project"
+		return dep, "an absolute path dependency is outside the project", true
 	case strings.HasPrefix(s, "git@"), strings.HasPrefix(s, "ssh://"):
-		return dep, "SSH dependencies are not imported; use an https URL"
+		return dep, "SSH dependencies are not imported; use an https URL", true
 	case strings.Contains(s, "@marketplace"):
-		return dep, "marketplace dependencies are registry entries; convert does not resolve registries"
+		return dep, "marketplace dependencies are registry entries; convert does not resolve registries", true
+	}
+	return dep, "", false
+}
+
+// apmHostAndPath splits a repository reference (without its #ref) into the host
+// and the owner/repo/path segments. A bare owner/repo is on github.com; a first
+// segment with a dot is a host (gitlab.example.com/group/repo).
+func apmHostAndPath(spec string) (host string, segs []string, reason string) {
+	host = "github.com"
+	https := strings.HasPrefix(spec, "https://")
+	switch {
+	case https:
+		u, err := url.Parse(spec)
+		if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" {
+			return "", nil, "is not a plain https repository URL"
+		}
+		host, spec = strings.ToLower(u.Host), u.Path
+	case strings.Contains(spec, "://"):
+		return "", nil, "only https dependencies are imported"
+	}
+	segs = strings.Split(strings.Trim(spec, "/"), "/")
+	if !https && len(segs) >= 3 && strings.Contains(segs[0], ".") {
+		host, segs = strings.ToLower(segs[0]), segs[1:]
+	}
+	return host, segs, ""
+}
+
+func parseAPMString(s string) (dep apmDep, reason string) {
+	s = strings.TrimSpace(s)
+	if dep, reason, handled := apmSpecial(s); handled {
+		return dep, reason
 	}
 	spec, ref, _ := strings.Cut(s, "#")
 	dep.ref = ref
-	host := "github.com"
-	if strings.HasPrefix(spec, "https://") {
-		u, err := url.Parse(spec)
-		if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" {
-			return dep, "is not a plain https repository URL"
-		}
-		host, spec = strings.ToLower(u.Host), strings.Trim(u.Path, "/")
-	} else if strings.Contains(spec, "://") {
-		return dep, "only https dependencies are imported"
-	}
-	segs := strings.Split(strings.Trim(spec, "/"), "/")
-	if len(segs) > 0 && strings.Contains(segs[0], ".") && !strings.HasPrefix(spec, "https://") && host == "github.com" && len(segs) >= 3 {
-		host, segs = strings.ToLower(segs[0]), segs[1:] // host/owner/repo shorthand
+	host, segs, reason := apmHostAndPath(spec)
+	if reason != "" {
+		return dep, reason
 	}
 	if len(segs) < 2 || segs[0] == "" || segs[1] == "" {
 		return dep, `is not "owner/repo"`
