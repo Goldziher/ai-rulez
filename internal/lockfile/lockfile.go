@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
@@ -41,8 +42,15 @@ type Entry struct {
 	Source string `toml:"source"`
 	Path   string `toml:"path,omitempty"`
 	// Ref is the ref the config requested ("" when it set none, meaning HEAD).
+	// For a source that asks for a version range it is the constraint as
+	// written ("^1.2"), and Tag records what the range resolved to.
 	Ref string `toml:"ref,omitempty"`
-	// Commit is the full SHA Ref resolved to when the lock was written.
+	// Tag is the tag a version constraint resolved to ("" for a plain ref).
+	Tag string `toml:"tag,omitempty"`
+	// TagObject is the annotated tag object id of Tag; "" for a lightweight tag.
+	TagObject string `toml:"tag_object,omitempty"`
+	// Commit is the full SHA Ref resolved to when the lock was written (for a
+	// tag, the peeled commit).
 	Commit string `toml:"commit"`
 	// Digest is "sha256:<hex>" over the imported file tree (contentlock.DigestDir).
 	Digest string `toml:"digest"`
@@ -242,12 +250,37 @@ func (f *File) Set(kind string, e Entry) {
 // already redacted.
 type Want struct {
 	Kind, Name, Source, Path, Ref string
+	// Constraint is the version range of a source that asks for one; Ref then
+	// holds the same text (what the lock records as the requested ref).
+	Constraint string
+	// TagPrefix and IncludePrerelease refine Constraint.
+	TagPrefix         string
+	IncludePrerelease bool
 }
 
 // Covers reports whether e pins exactly the source the config asks for. A
-// changed source, path or ref makes the pin stale.
+// changed source, path or ref makes the pin stale; for a version constraint the
+// pinned tag must also still satisfy it, so editing the constraint, the tag
+// prefix or the prerelease switch invalidates the pin until `ai-rulez lock`.
 func (e *Entry) Covers(w Want) bool {
-	return e != nil && e.Source == w.Source && e.Path == w.Path && e.Ref == w.Ref
+	if e == nil || e.Source != w.Source || e.Path != w.Path || e.Ref != w.Ref {
+		return false
+	}
+	return w.Constraint == "" || e.TagSatisfies(w)
+}
+
+// TagSatisfies reports whether the entry's tag is a version tag of w's prefix
+// that w's constraint allows. An entry with no tag does not.
+func (e *Entry) TagSatisfies(w Want) bool {
+	if e == nil || e.Tag == "" {
+		return false
+	}
+	v, ok := semver.ParseTag(e.Tag, w.TagPrefix)
+	if !ok {
+		return false
+	}
+	c, err := semver.ParseConstraint(w.Constraint)
+	return err == nil && c.Check(v, w.IncludePrerelease)
 }
 
 // IsFullSHA reports whether ref is a full 40-hex commit SHA.

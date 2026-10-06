@@ -1241,6 +1241,13 @@ type IncludeConfig struct {
 	// Format names a non-default source layout. "okf" reads the source as an
 	// Open Knowledge Format bundle instead of an .ai-rulez directory.
 	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
+	// Version is a semver constraint resolved against the repository's tags
+	// (see VersionSpec); it excludes Ref.
+	Version string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	// TagPrefix scopes Version to tags that start with it.
+	TagPrefix string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"` //nolint:tagliatelle
+	// IncludePrerelease admits prerelease tags the constraint does not name.
+	IncludePrerelease bool `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
 }
 
 // IncludeFormatOKF reads an include as an OKF bundle (see docs/okf.md).
@@ -1254,6 +1261,10 @@ type InstalledSkillConfig struct {
 	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
 	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
 	Profiles      []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	// Version, TagPrefix and IncludePrerelease are as on IncludeConfig.
+	Version           string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	TagPrefix         string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"`                         //nolint:tagliatelle
+	IncludePrerelease bool   `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
 }
 
 // GetPath returns the path within the repo, defaulting to "skills/<name>"

@@ -128,7 +128,13 @@ func entryOf(kind string, e lockfile.Entry) Entry {
 	if e.View != "" {
 		key += "\x00" + e.View
 	}
-	return Entry{Kind: kind, Key: key, Digest: strings.Join([]string{e.Commit, e.Digest, e.Source, e.Ref, e.Path}, "\x00")}
+	parts := []string{e.Commit, e.Digest, e.Source, e.Ref, e.Path}
+	if e.Tag != "" {
+		// A resolved tag is part of what the entry pins; entries without one
+		// (every lock written before version constraints) hash as they always did.
+		parts = append(parts, e.Tag, e.TagObject)
+	}
+	return Entry{Kind: kind, Key: key, Digest: strings.Join(parts, "\x00")}
 }
 
 // Compare compares the lock with a fresh snapshot. A lock without content pins

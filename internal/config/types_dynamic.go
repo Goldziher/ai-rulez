@@ -64,6 +64,11 @@ type SkillSourceConfig struct {
 	// Ref is a tag or a full commit SHA. A branch (or none) follows a moving
 	// ref and is reported as unpinned (AR010).
 	Ref string `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
+	// Version is a semver constraint resolved against the repository's tags
+	// (see VersionSpec); it excludes Ref. TagPrefix and IncludePrerelease refine it.
+	Version           string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	TagPrefix         string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"`                         //nolint:tagliatelle
+	IncludePrerelease bool   `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
 	// Path is the subdirectory of the repository that holds skill directories.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
 	// Include keeps only skills whose directory name matches one of these globs.
