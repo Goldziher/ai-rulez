@@ -18,7 +18,7 @@ func checkLocalOverride(cfg *config.Config, listKey, name string) error {
 	}
 	return oops.
 		With("name", name).
-		Hint("Set local_override in config.local.toml (machine-local, not committed), or run without --locked/--frozen").
+		Hint("Set local_override in config.local.toml (machine-local, not committed), or remove it from the committed config; a lock is enforced whenever ai-rulez.lock exists (unless [lock] enforce = false) and under --locked or --frozen").
 		Wrapf(config.ErrLockViolation, "%s %q sets local_override in the committed config, which would bypass the lock", listKey, name)
 }
 
