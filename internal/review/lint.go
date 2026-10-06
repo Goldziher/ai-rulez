@@ -1,6 +1,7 @@
 package review
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
@@ -103,7 +105,7 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 	if rerr != nil {
 		return nil, []Problem{{File: file, Line: 1, Message: "rubric.toml is missing, unreadable or a symlink: " + rerr.Error()}}, nil
 	}
-	r, perr := ParseRubric(data)
+	r, unknown, perr := parseRubricLenient(data)
 	if perr != nil {
 		return nil, []Problem{{File: file, Line: tomlErrorLine(data), Message: perr.Error()}}, nil
 	}
@@ -111,6 +113,9 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 	r.Dir = dir
 	files := []fileBytes{{RubricFile, data}}
 	var problems []Problem
+	for _, u := range unknown {
+		problems = append(problems, Problem{File: file, Line: u.line, Message: "unknown key " + u.key})
+	}
 
 	if sys, serr := readRegular(filepath.Join(dir, SystemFile)); serr == nil {
 		files = append(files, fileBytes{SystemFile, sys})
@@ -132,6 +137,40 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 	r.Digest = digestOf(files)
 	sortProblems(problems)
 	return r, problems, nil
+}
+
+// unknownKey is a key of rubric.toml no field of a rubric takes.
+type unknownKey struct {
+	key  string
+	line int
+}
+
+// parseRubricLenient is ParseRubric for lint: an unknown key does not stop the
+// parse. The rubric decodes without it and every unknown key is returned, so one
+// run reports them together with the other problems. Any other decode error
+// (a syntax error, a wrong type) still returns no rubric.
+func parseRubricLenient(data []byte) (*Rubric, []unknownKey, error) {
+	var r Rubric
+	dec := toml.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	err := dec.Decode(&r)
+	if err == nil {
+		return &r, nil, nil
+	}
+	var strict *toml.StrictMissingError
+	if !errors.As(err, &strict) {
+		return nil, nil, oops.Wrapf(err, "parse rubric")
+	}
+	var unknown []unknownKey
+	for i := range strict.Errors {
+		row, _ := strict.Errors[i].Position()
+		unknown = append(unknown, unknownKey{key: strings.Join(strict.Errors[i].Key(), "."), line: max(row, 1)})
+	}
+	var lenient Rubric
+	if err := toml.Unmarshal(data, &lenient); err != nil {
+		return nil, nil, oops.Wrapf(err, "parse rubric")
+	}
+	return &lenient, unknown, nil
 }
 
 func sortProblems(p []Problem) {
@@ -279,11 +318,10 @@ func lintDimension(d Dimension, codes, seenID, seenCode map[string]bool, add fun
 		add(marker, "duplicate dimension id %q", d.ID)
 	}
 	seenID[d.ID] = true
-	switch {
-	case d.Code == "":
-	case !dimCodeRe.MatchString(d.Code) || !codes[d.Code]:
+	if d.Code != "" && (!dimCodeRe.MatchString(d.Code) || !codes[d.Code]) {
 		add(marker, "dimension %q code %q must be one of AR9G1-AR9G7 (the codes review registers)", d.ID, d.Code)
-	case seenCode[d.Code]:
+	}
+	if d.Code != "" && seenCode[d.Code] {
 		add(marker, "dimension %q reuses code %s", d.ID, d.Code)
 	}
 	if d.Code != "" {
