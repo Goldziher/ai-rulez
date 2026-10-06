@@ -30,11 +30,23 @@ type Constraints struct {
 // DefaultConstraints returns the policy for a skill whose SKILL.md has origTokens
 // tokens. The allow flags widen it.
 func DefaultConstraints(origTokens int, allowFrontmatter, allowScripts bool) Constraints {
+	return ConstraintsFor(origTokens, growthFactor, allowFrontmatter, allowScripts)
+}
+
+// MaxGrowthLimit is the largest max_skill_growth a configuration may ask for.
+const MaxGrowthLimit = 2.0
+
+// ConstraintsFor is DefaultConstraints with an explicit growth factor
+// ([improve] max_skill_growth); a factor outside [1, MaxGrowthLimit] falls back to the default.
+func ConstraintsFor(origTokens int, growth float64, allowFrontmatter, allowScripts bool) Constraints {
+	if growth < 1 || growth > MaxGrowthLimit || math.IsNaN(growth) {
+		growth = growthFactor
+	}
 	c := Constraints{
 		Editable:             []string{skillFile, "references/**"},
 		FrontmatterImmutable: []string{"name", "allowed-tools", "disable-model-invocation", "model"},
 		Forbid:               []string{"scripts/**", "assets/**"},
-		MaxSkillTokens:       int(math.Ceil(float64(origTokens) * growthFactor)),
+		MaxSkillTokens:       int(math.Ceil(float64(origTokens) * growth)),
 	}
 	if allowFrontmatter {
 		c.FrontmatterImmutable = []string{"name"}

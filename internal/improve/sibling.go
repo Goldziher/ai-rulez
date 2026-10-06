@@ -1,0 +1,287 @@
+package improve
+
+import (
+	"context"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+)
+
+// SiblingSurface is the activation surface the sibling guard uses: the offline
+// find_skill ranker. It calls no model, so the guard costs nothing and is the
+// same on every machine.
+const SiblingSurface = evals.SurfaceRetrieval
+
+// Bounds on what the guard copies into its scratch tree.
+const (
+	siblingMaxFiles     = 5000
+	siblingMaxFileBytes = 1 << 20
+)
+
+// SiblingResult is one sibling skill measured with the baseline and with the candidate.
+type SiblingResult struct {
+	Skill      string   `json:"skill"`
+	Positives  int      `json:"positives"`
+	BaseRecall *float64 `json:"baseline_recall"`
+	CandRecall *float64 `json:"candidate_recall"`
+	// Stolen lists the sibling's positive prompts the baseline routed to it and the candidate does not.
+	Stolen    []string `json:"stolen,omitempty"`
+	Regressed bool     `json:"regressed"`
+}
+
+// SiblingReport is the outcome of the sibling trigger guard for one round.
+type SiblingReport struct {
+	Surface string `json:"surface"`
+	// Skipped says why the guard measured nothing (the candidate did not change what the
+	// ranker reads, or no sibling has trigger cases).
+	Skipped string          `json:"skipped,omitempty"`
+	Results []SiblingResult `json:"results,omitempty"`
+}
+
+// Regressions lists the siblings whose trigger recall dropped.
+func (r *SiblingReport) Regressions() []SiblingResult {
+	var out []SiblingResult
+	if r == nil {
+		return nil
+	}
+	for _, s := range r.Results {
+		if s.Regressed {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// Reasons renders the regressions as gate reasons (AR9J4).
+func (r *SiblingReport) Reasons() []string {
+	var out []string
+	for _, s := range r.Regressions() {
+		out = append(out, fmt.Sprintf("regression: %s sibling %s lost trigger recall %.0f%% -> %.0f%% (stolen prompt(s): %s)",
+			CodeSiblingRegression, Sanitize(s.Skill, 80), pct(s.BaseRecall), pct(s.CandRecall), Sanitize(strings.Join(s.Stolen, ", "), 200)))
+	}
+	return out
+}
+
+func pct(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v * 100
+}
+
+// rankerFields are the frontmatter keys the find_skill ranker reads.
+var rankerFields = []string{"name", "description", "triggers", "keywords"}
+
+// rankerFieldsChanged reports whether the candidate's SKILL.md differs from the
+// original's in anything the ranker searches, so a body-only edit skips the guard.
+func rankerFieldsChanged(orig, cand *Tree) bool {
+	before, after := orig.Files[skillFile], cand.Files[skillFile]
+	oldFM, _, oldOK := splitFrontmatter(before.Data)
+	newFM, _, newOK := splitFrontmatter(after.Data)
+	if oldOK != newOK {
+		return true
+	}
+	for _, key := range rankerFields {
+		if !sameValue(oldFM[key], newFM[key]) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkSiblings re-runs the trigger cases of every other skill of the project with
+// the original and with the candidate in the target's place, and reports each
+// sibling whose trigger recall dropped.
+func (p *Plan) checkSiblings(ctx context.Context, cand *Tree) (*SiblingReport, error) {
+	rep := &SiblingReport{Surface: SiblingSurface}
+	if !rankerFieldsChanged(p.orig, cand) {
+		rep.Skipped = "the candidate changed nothing the ranker reads (name, description, triggers, keywords)"
+		return rep, nil
+	}
+	all, err := evals.FindSkills(p.Opts.ConfigDir)
+	if err != nil {
+		return nil, fmt.Errorf("list skills: %w", err)
+	}
+	var siblings []string
+	for i := range all {
+		if all[i].ID != p.Skill.ID && len(all[i].EvalDirs) > 0 {
+			siblings = append(siblings, all[i].ID)
+		}
+	}
+	if len(siblings) == 0 {
+		rep.Skipped = "no other skill has trigger cases"
+		return rep, nil
+	}
+	scratch, err := os.MkdirTemp("", "ai-rulez-improve-siblings-")
+	if err != nil {
+		return nil, fmt.Errorf("create the sibling scratch directory: %w", err)
+	}
+	defer os.RemoveAll(scratch) //nolint:errcheck // a temp directory
+	base, err := p.siblingActivation(ctx, filepath.Join(scratch, "base"), all, p.orig, siblings)
+	if err != nil {
+		return nil, err
+	}
+	with, err := p.siblingActivation(ctx, filepath.Join(scratch, "cand"), all, cand, siblings)
+	if err != nil {
+		return nil, err
+	}
+	rep.Results = compareSiblings(base, with)
+	if len(rep.Results) == 0 {
+		rep.Skipped = "no sibling has a positive trigger case"
+	}
+	return rep, nil
+}
+
+// siblingActivation builds a scratch config directory holding the siblings (SKILL.md and
+// eval cases) and the target skill (SKILL.md of tree only, never its eval cases), and
+// runs the retrieval activation on the siblings.
+func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Skill, tree *Tree, siblings []string) (map[string]evals.ActivationSkill, error) {
+	configDir := p.Opts.ConfigDir
+	for i := range all {
+		s := &all[i]
+		dst := filepath.Join(dir, "skills", s.ID)
+		if s.Domain != "" {
+			dst = filepath.Join(dir, "domains", s.Domain, "skills", s.ID)
+		}
+		if s.ID == p.Skill.ID {
+			if err := writeSiblingFile(filepath.Join(dst, skillFile), tree.Files[skillFile].Data); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if err := copyRegular(filepath.Join(s.Dir, skillFile), filepath.Join(dst, skillFile)); err != nil {
+			return nil, fmt.Errorf("copy %s: %w", s.ID, err)
+		}
+		for _, ev := range s.EvalDirs {
+			target := filepath.Join(dst, "evals")
+			if rel, err := filepath.Rel(s.Dir, ev); err == nil && !strings.HasPrefix(rel, "..") {
+				target = filepath.Join(dst, rel)
+			} else if rel, err := filepath.Rel(filepath.Join(configDir, evals.ProjectEvalsDir), ev); err == nil && !strings.HasPrefix(rel, "..") {
+				target = filepath.Join(dir, evals.ProjectEvalsDir, rel)
+			}
+			if err := copyRegularTree(ev, target); err != nil {
+				return nil, fmt.Errorf("copy the eval cases of %s: %w", s.ID, err)
+			}
+		}
+	}
+	report, err := evals.RunActivationRetrieval(ctx, &evals.ActivationOptions{ConfigDir: dir, Skills: siblings, Scope: evals.ScopeDomain})
+	if err != nil {
+		return nil, fmt.Errorf("sibling activation: %w", err)
+	}
+	out := map[string]evals.ActivationSkill{}
+	for i := range report.Skills {
+		if report.Skills[i].Status == evals.RunRan {
+			out[report.Skills[i].ID] = report.Skills[i]
+		}
+	}
+	return out, nil
+}
+
+// compareSiblings pairs the two measurements. A sibling that stopped being measurable
+// with the candidate counts as regressed.
+func compareSiblings(base, cand map[string]evals.ActivationSkill) []SiblingResult {
+	ids := make([]string, 0, len(base))
+	for id := range base {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	var out []SiblingResult
+	for _, id := range ids {
+		b := base[id]
+		if b.Recall == nil {
+			continue // no positive prompt: nothing to steal
+		}
+		res := SiblingResult{Skill: id, Positives: b.Recall.N, BaseRecall: &b.Recall.Value}
+		c, ok := cand[id]
+		if !ok || c.Recall == nil {
+			res.Regressed = true
+			out = append(out, res)
+			continue
+		}
+		res.CandRecall = &c.Recall.Value
+		res.Stolen = lostPrompts(&b, &c)
+		res.Regressed = c.Recall.Value+epsilon < b.Recall.Value
+		out = append(out, res)
+	}
+	return out
+}
+
+// lostPrompts lists the positive prompts the baseline won for the sibling and the candidate does not.
+func lostPrompts(base, cand *evals.ActivationSkill) []string {
+	won := map[string]bool{}
+	for _, p := range cand.Prompts {
+		if p.Expect && p.Winner == cand.ID {
+			won[p.Case] = true
+		}
+	}
+	var lost []string
+	for _, p := range base.Prompts {
+		if p.Expect && p.Winner == base.ID && !won[p.Case] {
+			lost = append(lost, p.Case)
+		}
+	}
+	return lost
+}
+
+func writeSiblingFile(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("create %s: %w", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
+}
+
+// copyRegular copies one regular file (never a symlink, bounded in size).
+func copyRegular(src, dst string) error {
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err //nolint:wrapcheck // the caller names the skill
+	}
+	if !info.Mode().IsRegular() || info.Size() > siblingMaxFileBytes {
+		return fmt.Errorf("%s is not a regular file of at most %d bytes", src, siblingMaxFileBytes)
+	}
+	data, err := os.ReadFile(src) //nolint:gosec // a file of the user's own project, size-checked above
+	if err != nil {
+		return err //nolint:wrapcheck // the caller names the skill
+	}
+	return writeSiblingFile(dst, data)
+}
+
+// copyRegularTree copies the regular files below src, skipping hidden entries, results
+// and node_modules (as case discovery does), symlinks, and anything past the bounds.
+func copyRegularTree(src, dst string) error {
+	files := 0
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err //nolint:wrapcheck // named by the caller
+		}
+		name := d.Name()
+		if path != src && (strings.HasPrefix(name, ".") || (d.IsDir() && (name == "results" || name == "node_modules"))) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if files++; files > siblingMaxFiles {
+			return fmt.Errorf("more than %d files below %s", siblingMaxFiles, src)
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err //nolint:wrapcheck // named by the caller
+		}
+		if info, ierr := d.Info(); ierr != nil || info.Size() > siblingMaxFileBytes {
+			return nil
+		}
+		return copyRegular(path, filepath.Join(dst, rel))
+	})
+}
