@@ -34,6 +34,8 @@ type Item struct {
 	Description string   `json:"-"`
 	Keys        []string `json:"-"`
 	Body        string   `json:"-"`
+	// Frontmatter is the raw YAML block between the --- lines ("" when there is none).
+	Frontmatter string `json:"-"`
 	// Raw is the whole item file, which the withholding checks read.
 	Raw       string `json:"-"`
 	ReadError string `json:"-"`
@@ -97,22 +99,30 @@ func newItem(kind, domain string, cf config.ContentFile, configDir string, rel f
 		// Third-party content is never read for review: it is not sent and not scored.
 		return it
 	}
-	data, rerr := safefs.ReadRegular(abs)
+	data, _, rerr := safefs.ReadRegularKeepMode(abs) // a review never changes a file's mode
 	if rerr != nil {
 		it.ReadError = rerr.Error()
 		return it
 	}
-	sum := sha256.Sum256(data)
-	it.Digest = "sha256:" + hex.EncodeToString(sum[:])
-	it.Raw = string(data)
-	fm, body := splitFrontmatter(it.Raw)
+	return it.WithText(string(data))
+}
+
+// WithText returns the item with its content read from text: the digest, the raw file, the
+// frontmatter (name, description, keys) and the body. The id, kind, path and ownership stay.
+func (it Item) WithText(text string) Item {
+	it.Digest = textDigest(text)
+	it.Raw = text
+	fm, body := splitFrontmatter(text)
 	it.Body = body
+	it.Frontmatter = frontmatterBlock(text)
 	if n, ok := fm["name"].(string); ok && strings.TrimSpace(n) != "" {
 		it.Name = strings.TrimSpace(n)
 	}
+	it.Description = ""
 	if d, ok := fm["description"].(string); ok {
 		it.Description = strings.TrimSpace(d)
 	}
+	it.Keys = nil
 	for k := range fm {
 		it.Keys = append(it.Keys, k)
 	}
@@ -143,6 +153,34 @@ func splitFrontmatter(raw string) (map[string]any, string) {
 		return map[string]any{}, text
 	}
 	return fm, body
+}
+
+// TextDigest is the digest an item carries for its file text ("sha256:<hex>").
+func TextDigest(text string) string { return textDigest(text) }
+
+// textDigest is the sha256 of text in the "sha256:<hex>" form items carry.
+func textDigest(text string) string {
+	sum := sha256.Sum256([]byte(text))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// frontmatterBlock returns the raw text of a leading ---/--- block, "" when the
+// file has no well-formed one (the same rule splitFrontmatter applies).
+func frontmatterBlock(raw string) string {
+	text := strings.ReplaceAll(strings.TrimPrefix(raw, "\xef\xbb\xbf"), "\r\n", "\n")
+	rest, ok := strings.CutPrefix(text, "---\n")
+	if !ok {
+		return ""
+	}
+	block, _, found := strings.Cut(rest, "\n---")
+	if !found {
+		return ""
+	}
+	fm := map[string]any{}
+	if err := yaml.Unmarshal([]byte(block), &fm); err != nil || fm == nil {
+		return ""
+	}
+	return block
 }
 
 // Selected filters items by the command-line selectors: an id, a name, or a
@@ -211,4 +249,33 @@ func jaccard(a, b map[string]struct{}) float64 {
 		}
 	}
 	return float64(inter) / float64(len(a)+len(b)-inter)
+}
+
+// ChangedItems returns the ids of the items whose files are among changed, the paths a
+// revision diff lists relative to the repository root. baseRel is the project directory relative
+// to that root ("" when they are the same). A skill or command directory counts as changed when
+// any file below it did, so an edited reference marks its skill.
+func ChangedItems(items []Item, changed []string, baseRel string) map[string]bool {
+	set := make(map[string]bool, len(changed))
+	for _, c := range changed {
+		set[filepath.ToSlash(c)] = true
+	}
+	out := map[string]bool{}
+	for _, it := range items {
+		file := path.Join(baseRel, it.Path)
+		if set[file] {
+			out[it.ID] = true
+			continue
+		}
+		if base := strings.ToUpper(path.Base(it.Path)); base == "SKILL.MD" || base == "COMMAND.MD" {
+			dir := path.Dir(file) + "/"
+			for c := range set {
+				if strings.HasPrefix(c, dir) {
+					out[it.ID] = true
+					break
+				}
+			}
+		}
+	}
+	return out
 }
