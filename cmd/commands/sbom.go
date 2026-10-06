@@ -169,7 +169,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	opts := sbom.Options{
 		Files: f.files, IncludeOutputs: f.includeOutputs, Profile: f.profile, Role: f.role,
-		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, Timestamp: stamp,
+		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, Timestamp: stamp, Now: time.Now(),
 	}
 	if f.verify {
 		if opts.Signature, err = lockSignature(cfg); err != nil {
