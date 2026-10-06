@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	rv "github.com/Goldziher/ai-rulez/v5/internal/review"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // ClientFactory builds the model client of the adapter; tests replace it with a fake backend.
@@ -99,7 +100,7 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	ir := &res.Items[0]
 	prop, err := rv.ProposeFix(ctx, rv.FixInput{
 		Rubric: rb, Item: *ir, Findings: findings, Pool: res.Pool(), Fixer: client, FixerModel: o.FixerModel,
-		Verifier: rv.NewJudge(rb, judge), MaxGrowthPercent: growth, LintCheck: scanDelta(ir),
+		Verifier: rv.NewJudge(rb, judge), MaxGrowthPercent: growth, LintCheck: withTokenLimit(scanDelta(ir), req.Constraints.MaxSkillTokens),
 	})
 	if prop != nil {
 		resp.CostUSD += prop.Usage.CostUSD
@@ -185,6 +186,25 @@ func stableFindings(res *rv.Results, rb *rv.Rubric) []rv.Finding {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Fingerprint < out[j].Fingerprint })
 	return out
+}
+
+// withTokenLimit adds the run's SKILL.md token limit (constraints.max_skill_tokens) to a fix's checks, so
+// a fix that the diff policy would reject is sent back to the fixer instead of being proposed.
+func withTokenLimit(next func(string) ([]string, error), limit int) func(string) ([]string, error) {
+	counter, err := tokens.New("")
+	if limit <= 0 || err != nil {
+		return next
+	}
+	return func(patched string) ([]string, error) {
+		added, nerr := next(patched)
+		if nerr != nil {
+			return nil, nerr
+		}
+		if n := counter.Count(patched); n > limit {
+			added = append(added, fmt.Sprintf("SKILL.md would be %d tokens, the limit is %d: make the edit shorter", n, limit))
+		}
+		return added, nil
+	}
 }
 
 // scanDelta is the security gate of a fix: the patched text must not add a finding of any
