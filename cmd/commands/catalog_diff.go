@@ -241,7 +241,7 @@ func writeCatalogDiffText(w reportWriter, d *govview.CatalogDiff) {
 		writeDiffNotes(w, d.Notes)
 		return
 	}
-	w.printf("items: %d -> %d   listing tokens %d -> %d   body tokens %d -> %d\n", d.From.Items, d.To.Items,
+	w.printf("totals: %d -> %d items   listing tokens %d -> %d   body tokens %d -> %d\n", d.From.Items, d.To.Items,
 		d.From.ListingTokens, d.To.ListingTokens, d.From.BodyTokens, d.To.BodyTokens)
 	writeDiffSection(w, "items", &d.Items)
 	writeDiffSection(w, "mcp servers", &d.MCPServers)
