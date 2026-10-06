@@ -17,9 +17,10 @@ import (
 // local skill source, so one lock file has to carry every kind of entry.
 func dynamicLockProject(t *testing.T) (root, vendor string) {
 	t.Helper()
-	vendor = t.TempDir()
+	// A local source of a project config must live inside the project.
+	root = lockProject(t, "\n[lock]\nenforce = true\n\n[[skill_sources]]\nname = \"vendor\"\nurl = \"vendor-skills\"\nname_prefix = \"v-\"\n")
+	vendor = filepath.Join(root, "vendor-skills")
 	writeFile(t, filepath.Join(vendor, "pdf", "SKILL.md"), "---\nname: pdf\ndescription: Work with PDFs\n---\n\n# pdf\n")
-	root = lockProject(t, "\n[lock]\nenforce = true\n\n[[skill_sources]]\nname = \"vendor\"\nurl = \""+vendor+"\"\nname_prefix = \"v-\"\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "heavy", "SKILL.md"),
 		"---\nname: heavy\ndescription: Heavy served skill. Use when it is heavy.\ndelivery: served\n---\nHEAVY\n")
 	return root, vendor

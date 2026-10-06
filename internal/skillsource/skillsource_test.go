@@ -96,7 +96,7 @@ func TestParseArg(t *testing.T) {
 		{"git@github.com:org/repo.git@v2", Spec{Name: "cli-repo", URL: "git@github.com:org/repo.git", Ref: "v2"}},
 		{"git@github.com:org/repo.git", Spec{Name: "cli-repo", URL: "git@github.com:org/repo.git"}},
 		{"https://user@host.example/org/My_Repo", Spec{Name: "cli-my_repo", URL: "https://user@host.example/org/My_Repo"}},
-		{"./vendor/skills#team", Spec{Name: "cli-skills", URL: "./vendor/skills", Path: "team"}},
+		{"./vendor/skills#team", Spec{Name: "cli-skills", URL: "./vendor/skills", Path: "team", AllowOutside: true}},
 	}
 	for _, tt := range tests {
 		got, err := ParseArg(tt.arg)
@@ -290,7 +290,7 @@ func TestDiscover_IncludeExcludePrefixAndSymlinks(t *testing.T) {
 func TestResolve_LocalDirectory(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "team/pdf/SKILL.md", skillMD("pdf", "PDF"))
-	spec := Spec{Name: "local", URL: root, Path: "team"}
+	spec := Spec{Name: "local", URL: root, Path: "team", AllowOutside: true}
 	res, err := Resolve(context.Background(), spec, Options{Frozen: true})
 	require.NoError(t, err, "a local directory needs no network and no pin")
 	assert.Equal(t, []string{"pdf"}, names(res))

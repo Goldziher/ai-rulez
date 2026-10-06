@@ -86,6 +86,7 @@ func TestResolve_ACompetingProcessStoringTheSameTreeIsTolerated(t *testing.T) {
 	require.NoError(t, err)
 	// Simulate the loser of a race: the tree exists although this process meant to store it.
 	var fetched bool
-	treeDir := cacheTree(cache, "git+"+f.url, first.Commit)
-	require.NoError(t, fetchInto(context.Background(), gitURL("git+"+f.url), "v1.0.0", kindTag, first.Commit, treeDir, &fetched))
+	treeDir := cacheTree(cache, "git+"+f.url, first.Commit, spec.Path)
+	req := cloneRequest{name: "t", url: gitURL("git+" + f.url), ref: "v1.0.0", kind: kindTag, commit: first.Commit, path: spec.Path, maxBytes: DefaultMaxCloneBytes}
+	require.NoError(t, fetchInto(context.Background(), req, treeDir, &fetched))
 }
