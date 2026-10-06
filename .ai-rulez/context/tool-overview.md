@@ -27,6 +27,10 @@ Key concepts:
 - `[[hooks]]` and `[permissions]` are written once and translated into each harness's native format (36 and 24 harnesses). A rule or hook a harness cannot express is skipped with a warning, never approximated.
 - `checks` are code-review guidelines rendered for the review tools that read a repository file.
 - `ai-rulez generate --user` renders a user config into per-user directories; settings files you edit by hand are merged key by key and keep their comments.
+- `ai-rulez.lock` pins remote includes, installed skills, skill sources, authored content and generated outputs; it is enforced whenever it exists. `includes`, installed skills and skill sources accept `version = "^1.2"` ranges that `ai-rulez update` moves.
+- `[[roles]]` select a slice of the content (`generate --role`); `delivery = "served"` skills are served on demand by `ai-rulez mcp --serve-skills` instead of written to the harness trees.
+- `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks; `sbom`, `catalog`, `tokens` and `cost` report what the configuration contains and costs.
+- v5 behaviour: the Go module is `github.com/Goldziher/ai-rulez/v5`; `http://` and `git://` remotes are rejected and the git token goes only to allowlisted hosts; a committed config cannot point outside the project; content symlinks must resolve inside the project; Claude MCP servers are written only to `.mcp.json`; exit codes are `0` ok, `1` could not run, `2` findings or drift, `3` unpinned served skills (`lock`).
 - Removed or renamed presets: `windsurf` is `devin`; `continue-dev` is gone.
 
 Typical workflow:
