@@ -93,6 +93,8 @@ type reviewAttester struct {
 	git    *approveGit
 	// only, when set, limits the result to this reviewer.
 	only string
+	// env supplies the policy that names reviewers who are not maintainers.
+	env *approveEnv
 }
 
 func (a reviewAttester) label() string {
@@ -100,7 +102,7 @@ func (a reviewAttester) label() string {
 }
 
 func (a reviewAttester) drafts(ctx context.Context, s approval.Subject, _ draftInput) ([]approvalDraft, error) {
-	reviews, err := approval.ApprovingReviews(ctx, a.client, approval.ReviewQuery{Repo: a.repo, PR: a.pr, Digest: s.Digest, PinnedAt: a.git.pinnedAt(s)})
+	reviews, err := approval.ApprovingReviews(ctx, a.client, approval.ReviewQuery{Repo: a.repo, PR: a.pr, Digest: s.Digest, PinnedAt: a.git.pinnedAt(s), Named: a.env.namedFor(s)})
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
@@ -168,7 +170,14 @@ func (e *approveEnv) reviewAttester(ctx context.Context) (attester, error) {
 	if err != nil {
 		return nil, err
 	}
-	return reviewAttester{client: approveForge(), repo: repo, pr: approveFromReview, git: g, only: approveReviewer}, nil
+	return reviewAttester{client: approveForge(), repo: repo, pr: approveFromReview, git: g, only: approveReviewer, env: e}, nil
+}
+
+// namedFor returns who the policy names for s ([governance] approvers or
+// CODEOWNERS): a reviewer who is not an owner, member or collaborator of the
+// repository counts only when named, since anyone can review a public repository.
+func (e *approveEnv) namedFor(s approval.Subject) func(login string) bool {
+	return func(login string) bool { return e.policy.Names("github:"+login, s) }
 }
 
 // refuseDenied stops the approval of a digest on the deny list.
