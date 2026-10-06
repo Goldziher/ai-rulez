@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -169,4 +170,50 @@ func (s *LocalSource) filterContent(tree *config.ContentTree) *config.ContentTre
 	filtered.Domains = tree.Domains
 
 	return filtered
+}
+
+// checkInsideProject refuses a local include path that resolves outside the
+// project. A committed config can name any path (`/home/victim/.config`,
+// `../victim`), and its files would be written into generated outputs; only the
+// machine-local overlay (config.local.*) or the user scope may leave the project.
+// Both paths are compared after symlinks are resolved, so a link inside the
+// project does not smuggle an outside directory in.
+func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) error {
+	if cfg != nil && (cfg.UserScope || overlaySetsField(cfg, "includes", name, field)) {
+		return nil
+	}
+	abs := path
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(baseDir, abs)
+	}
+	abs = realPath(abs)
+	project := realPath(baseDir)
+	rel, err := filepath.Rel(project, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return oops.With("name", name).With("path", abs).With("project", project).
+			Hint("Put the path in config.local.toml (machine-local, not committed), declare the include in your user config, or copy the content into the project").
+			Errorf("include %q: local path %s is outside the project %s; a local include in the project config must stay inside the project", name, abs, project)
+	}
+	return nil
+}
+
+// realPath returns p absolute with symlinks resolved; a path that does not
+// exist (yet) is returned cleaned, with its longest existing prefix resolved.
+func realPath(p string) string {
+	p = filepath.Clean(p)
+	if abs, err := filepath.Abs(p); err == nil {
+		p = abs
+	}
+	rest := ""
+	for cur := p; ; {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, rest)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return p
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
 }
