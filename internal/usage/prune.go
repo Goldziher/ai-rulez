@@ -33,6 +33,10 @@ type PruneOptions struct {
 	Protect     bool
 	// DryRun computes the result without rewriting the log.
 	DryRun bool
+	// TrackOffset asks PruneResult.RemovedBeforeTrack to count the removed bytes
+	// of lines that start before this offset, so a caller can map an offset into
+	// the old log onto the new one even when lines past it were removed too.
+	TrackOffset int64
 }
 
 // PruneResult says what a prune removed.
@@ -48,6 +52,10 @@ type PruneResult struct {
 	// removed line lies before ProtectFrom, so an offset into the old log maps to
 	// offset-RemovedBytes in the new one.
 	RemovedBytes int64 `json:"removed_bytes"`
+	// RemovedBeforeTrack is the size of the removed lines that start before
+	// PruneOptions.TrackOffset: an offset at a line boundary maps to
+	// offset-RemovedBeforeTrack in the new log.
+	RemovedBeforeTrack int64 `json:"-"`
 	// Rewritten is set when the log file was replaced.
 	Rewritten bool `json:"rewritten"`
 }
@@ -113,6 +121,9 @@ func pruneOnce(path string, o PruneOptions) (res PruneResult, kept []byte, stabl
 			case lineRemove:
 				res.Removed++
 				res.RemovedBytes += int64(len(line))
+				if start < o.TrackOffset {
+					res.RemovedBeforeTrack += int64(len(line))
+				}
 			case linePermanent:
 				res.Kept++
 				res.Unreadable++
