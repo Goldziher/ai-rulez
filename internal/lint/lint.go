@@ -163,6 +163,7 @@ type runner struct {
 	opts           Options
 	drift          []PluginDrift
 	delivery       []DeliveryFinding
+	verifiers      []VerifierFinding
 	lockDrift      []LockDrift
 	approvals      []ApprovalFinding
 	okfDir         string
@@ -298,6 +299,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("telemetry", AnalyzerConfig, AnalyzerSecurity), r.checkTelemetry)
 	r.unit(unitOf("external-config", AnalyzerSecurity), r.checkExternalConfig)
 	r.unit(unitOf("traps", AnalyzerTraps), r.checkTraps)
+	r.unit(unitOf("verifiers", AnalyzerVerifiers), r.checkVerifiers)
 	if so.External {
 		r.unit(unitOf("external", AnalyzerSecurity), r.runExternal)
 	}

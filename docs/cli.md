@@ -1728,6 +1728,7 @@ ai-rulez validate --recursive
 ```
 | `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
 | `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
+| `--verifiers`         | boolean | With `--strict`: also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
 
 Validate current configuration:
 
