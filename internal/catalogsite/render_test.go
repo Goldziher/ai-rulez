@@ -298,3 +298,36 @@ func TestEmbeddedScript_IsSmallAndSelfContained(t *testing.T) {
 	require.NoError(t, err)
 	assert.LessOrEqual(t, len(site.Files["assets/catalog.js"]), 8<<10)
 }
+
+func TestRender_ShowsApprovalStatusEscaped(t *testing.T) {
+	// Arrange: one item per approval state, one with hostile reviewer names
+	doc := hostileDoc()
+	doc.Items = doc.Items[:3]
+	doc.Items[0].Approval = &govview.ItemApproval{Required: true, Status: "ok", Reviewers: []string{"alice", hostile[0]}, Expires: "2027-01-01"}
+	doc.Items[1].Approval = &govview.ItemApproval{Required: true, Status: "missing", Reviewers: []string{}}
+	doc.Items[2].Approval = nil
+
+	// Act
+	site, err := Render(doc, Options{})
+
+	// Assert
+	require.NoError(t, err)
+	index := string(site.Files["index.html"])
+	assert.Contains(t, index, "<th scope=\"col\">Approval</th>")
+	assert.Contains(t, index, ">ok<")
+	assert.Contains(t, index, ">missing<")
+	var pages []string
+	for name, data := range site.Files {
+		if strings.HasPrefix(name, "items/") && strings.HasSuffix(name, ".html") {
+			pages = append(pages, string(data))
+			checkHTML(t, name, string(data))
+		}
+	}
+	all := strings.Join(pages, "\n")
+	assert.NotContains(t, all, "not recorded")
+	assert.Contains(t, all, "ok (required) by alice")
+	assert.Contains(t, all, "until 2027-01-01")
+	assert.Contains(t, all, "missing (required)")
+	assert.Contains(t, all, "not required")
+	assert.NotContains(t, all, hostile[0], "a reviewer name is escaped")
+}

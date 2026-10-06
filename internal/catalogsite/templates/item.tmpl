@@ -15,7 +15,7 @@
 {{if .Owner}}<tr><th scope="row">Owner</th><td dir="auto">{{s .Owner}}</td></tr>{{end}}
 {{if .Version}}<tr><th scope="row">Version</th><td dir="auto">{{s .Version}}</td></tr>{{end}}
 <tr><th scope="row">Digest</th><td><code class="digest">{{s .Digest}}</code></td></tr>
-<tr><th scope="row">Approval</th><td>not recorded</td></tr>
+<tr><th scope="row">Approval</th><td dir="auto">{{s .ApprovalFull}}</td></tr>
 </tbody>
 </table>
 <p>Verify the digest against the lock with <code>ai-rulez lock --check</code>.</p>
