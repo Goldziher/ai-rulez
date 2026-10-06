@@ -279,23 +279,8 @@ func Build(in Input) (*Dist, error) {
 		manifest.SBOM = &SBOMInfo{Format: SBOMCycloneDX, File: sbomName, Digest: Digest(in.SBOM)}
 		d.Files[sbomName], roles[sbomName] = in.SBOM, "sbom"
 	}
-	if in.Sign != nil {
-		st, err := ReleaseStatement(manifest)
-		if err != nil {
-			return nil, err
-		}
-		sig, err := in.Sign(SignRequest{Archive: archive, Statement: st})
-		if err != nil {
-			return nil, oops.Wrapf(err, "sign the release archive")
-		}
-		sigName := bundleName + ".sigstore.json"
-		manifest.Signature = &SignatureInfo{Type: SignatureSigstoreBundle, File: sigName, Signer: sig.Signer}
-		d.Files[sigName], roles[sigName] = sig.Bundle, "signature"
-		if len(sig.Attestation) > 0 {
-			attName := base + ".attestation.sigstore.json"
-			manifest.Signature.Attestation = attName
-			d.Files[attName], roles[attName] = sig.Attestation, "attestation"
-		}
+	if err := signRelease(d, roles, in, &manifest, archive); err != nil {
+		return nil, err
 	}
 	manifestBytes, err := manifest.Marshal()
 	if err != nil {
@@ -333,6 +318,32 @@ func Build(in Input) (*Dist, error) {
 	}
 	d.Files[PlanFile] = planBytes
 	return d, nil
+}
+
+// signRelease signs the archive and the release statement and records the
+// signature (and its attestation) in the manifest and the dist.
+func signRelease(d *Dist, roles map[string]string, in Input, manifest *Manifest, archive []byte) error {
+	if in.Sign == nil {
+		return nil
+	}
+	base := in.Name + "-" + in.Version
+	st, err := ReleaseStatement(*manifest)
+	if err != nil {
+		return err
+	}
+	sig, err := in.Sign(SignRequest{Archive: archive, Statement: st})
+	if err != nil {
+		return oops.Wrapf(err, "sign the release archive")
+	}
+	sigName := manifest.Bundle.File + ".sigstore.json"
+	manifest.Signature = &SignatureInfo{Type: SignatureSigstoreBundle, File: sigName, Signer: sig.Signer}
+	d.Files[sigName], roles[sigName] = sig.Bundle, "signature"
+	if len(sig.Attestation) > 0 {
+		attName := base + ".attestation.sigstore.json"
+		manifest.Signature.Attestation = attName
+		d.Files[attName], roles[attName] = sig.Attestation, "attestation"
+	}
+	return nil
 }
 
 // addExtras adds the templates, the pinned marketplace index and the emitters.
