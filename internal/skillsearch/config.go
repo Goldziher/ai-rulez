@@ -88,6 +88,10 @@ type Config struct {
 	Fusion  string  `yaml:"fusion,omitempty" json:"fusion,omitempty" toml:"fusion,omitempty"`
 	RRFK    int     `yaml:"rrf_k,omitempty" json:"rrf_k,omitempty" toml:"rrf_k,omitempty"`
 	Weights Weights `yaml:"weights,omitempty" json:"weights,omitempty" toml:"weights,omitempty"`
+	// VectorMinSim is the abstention threshold: a skill whose cosine to the query is below it is not a
+	// match, and a vector ranking with none above it returns nothing (0 is off: the nearest skills are
+	// always listed). Cosines differ per model: take the value `search --eval` calibrates.
+	VectorMinSim float64 `yaml:"vector_min_sim,omitempty" json:"vector_min_sim,omitempty" toml:"vector_min_sim,omitempty"`
 	// Candidates is the length of each list before fusion.
 	Candidates int `yaml:"candidates,omitempty" json:"candidates,omitempty" toml:"candidates,omitempty"`
 	// QueryTimeoutMS bounds the query embedding of one search; on timeout the ranking is lexical.
@@ -184,6 +188,9 @@ func (c *Config) Validate() []string {
 	}
 	if c.Weights.Lexical < 0 || c.Weights.Vector < 0 {
 		add("search.weights must not be negative")
+	}
+	if c.VectorMinSim < 0 || c.VectorMinSim > 1 {
+		add("search.vector_min_sim must be between 0 and 1")
 	}
 	if c.Candidates < 0 || c.Candidates > maxCandidates {
 		add("search.candidates must be between 0 and %d", maxCandidates)

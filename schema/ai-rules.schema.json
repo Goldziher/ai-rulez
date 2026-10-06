@@ -1457,6 +1457,12 @@
           "maximum": 2048,
           "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches."
         },
+        "vector_min_sim": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Abstention threshold: a skill whose cosine to the query is below it is not a match, and a vector ranking with none above it returns nothing. 0 (default) always lists the nearest skills. Take the value `search --eval` calibrates; cosines differ per model."
+        },
         "query_timeout_ms": {
           "type": "integer",
           "minimum": 0,

@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,6 +45,9 @@ type Metrics struct {
 	MRR      float64  `json:"mrr"`
 	NDCG     *float64 `json:"ndcg_at_k,omitempty"`
 	AvoidTop *float64 `json:"avoid_top1,omitempty"`
+	// AbstainRate is the share of negative cases a vector ranking answered with nothing (higher is
+	// better); present when the file has negative cases and the mode embeds.
+	AbstainRate *float64 `json:"abstain_rate,omitempty"`
 }
 
 // Interval is a 95% bootstrap interval; it is informational and never gated on.
@@ -74,6 +78,8 @@ type CaseResult struct {
 	Violated bool     `json:"avoid_violated,omitempty"`
 	Degraded string   `json:"degraded,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
+	// TopSim is the best cosine of the query to any skill (vector and hybrid rankings).
+	TopSim float64 `json:"top_sim,omitempty"`
 
 	top1, recall, ndcg float64
 	graded, hasAvoid   bool
@@ -89,6 +95,10 @@ type NegativeResult struct {
 	Violated bool     `json:"avoid_violated,omitempty"`
 	Degraded string   `json:"degraded,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
+	// TopSim is the best cosine of the query to any skill; Abstained is true when [search] vector_min_sim
+	// left no skill to answer with.
+	TopSim    float64 `json:"top_sim,omitempty"`
+	Abstained bool    `json:"abstained,omitempty"`
 
 	hasAvoid bool
 }
@@ -141,7 +151,21 @@ type Result struct {
 	Paired        map[string]map[string]Diff `json:"paired_vs_lexical,omitempty"`
 	Index         *IndexInfo                 `json:"index,omitempty"`
 	Flips         *Flips                     `json:"flips_vs_baseline,omitempty"`
+	Calibration   *Calibration               `json:"calibration,omitempty"`
 	GateFailures  []string                   `json:"gate_failures,omitempty"`
+}
+
+// Calibration is the abstention threshold (`[search] vector_min_sim`) that best separates the positive cases
+// from the negative ones in the evaluation: it keeps as many positives answered as it abstains on negatives.
+// It is advice from a small sample; the bootstrap intervals say how much to trust the metrics, not this.
+type Calibration struct {
+	// Mode is the ranking the cosines came from.
+	Mode               string  `json:"mode"`
+	MinSim             float64 `json:"min_sim"`
+	Positives          int     `json:"positives"`
+	PositivesKept      int     `json:"positives_kept"`
+	Negatives          int     `json:"negatives"`
+	NegativesAbstained int     `json:"negatives_abstained"`
 }
 
 // EvalEnv is what an evaluation ranks against.
@@ -190,7 +214,7 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 				ranked[j], scores[j] = ids[h.Index], h.Score
 			}
 			if len(c.Expect) == 0 {
-				neg := NegativeResult{ID: c.ID, Tags: c.Tags, Avoid: c.Avoid, Degraded: sr.Degraded, hasAvoid: len(c.Avoid) > 0}
+				neg := NegativeResult{ID: c.ID, Tags: c.Tags, Avoid: c.Avoid, Degraded: sr.Degraded, hasAvoid: len(c.Avoid) > 0, TopSim: sr.TopSim, Abstained: sr.Abstained}
 				if len(ranked) > 0 {
 					neg.Top, neg.TopScore = ranked[0], scores[0]
 					neg.Violated = len(ranked) > 0 && contains(c.Avoid, ranked[0])
@@ -200,9 +224,20 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 			}
 			cr := scoreCase(c, ranked, k)
 			cr.Degraded = sr.Degraded
+			cr.TopSim = sr.TopSim
 			mr.Cases = append(mr.Cases, cr)
 		}
 		mr.Metrics = aggregate(mr.Cases, mr.Negatives)
+		if mode != ModeLexical && len(mr.Negatives) > 0 {
+			abstained := 0
+			for i := range mr.Negatives {
+				if mr.Negatives[i].Top == "" && mr.Negatives[i].Degraded == "" {
+					abstained++
+				}
+			}
+			rate := round(float64(abstained) / float64(len(mr.Negatives)))
+			mr.Metrics.AbstainRate = &rate
+		}
 		mr.Tags = tagMetrics(mr.Cases)
 		mr.CI95 = bootstrap(mr.Cases)
 		for i := range mr.Cases {
@@ -217,6 +252,7 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 	res.N, res.NNegative = len(p.Cases), len(p.Negatives)
 	res.Tags, res.CI95, res.Cases, res.Misses, res.Negatives = p.Tags, p.CI95, p.Cases, p.Misses, p.Negatives
 	res.ByMode = byMode
+	res.Calibration = calibrateModes(byMode, modes)
 	if len(byMode) > 1 {
 		res.Paired = paired(byMode)
 	}
@@ -228,6 +264,72 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 		}
 	}
 	return res, nil
+}
+
+// calibrateModes calibrates the threshold from the vector ranking when it was evaluated, else the hybrid one.
+func calibrateModes(byMode map[string]*ModeResult, modes []string) *Calibration {
+	for _, mode := range []string{ModeVector, ModeHybrid} {
+		mr := byMode[mode]
+		if mr == nil || !slices.Contains(modes, mode) {
+			continue
+		}
+		var pos, neg []float64
+		for i := range mr.Cases {
+			if mr.Cases[i].Degraded == "" && mr.Cases[i].TopSim > 0 {
+				pos = append(pos, mr.Cases[i].TopSim)
+			}
+		}
+		for i := range mr.Negatives {
+			if mr.Negatives[i].Degraded == "" && mr.Negatives[i].TopSim > 0 {
+				neg = append(neg, mr.Negatives[i].TopSim)
+			}
+		}
+		if c := calibrate(pos, neg); c != nil {
+			c.Mode = mode
+			return c
+		}
+		return nil
+	}
+	return nil
+}
+
+// calibrate picks the threshold, between two observed cosines, that answers the most positives while
+// abstaining on the most negatives (the sum of both counts); a tie keeps more positives answered. It
+// returns nil when either list is empty or no threshold does better than abstaining on nothing.
+func calibrate(pos, neg []float64) *Calibration {
+	if len(pos) == 0 || len(neg) == 0 {
+		return nil
+	}
+	all := append(append([]float64{}, pos...), neg...)
+	sort.Float64s(all)
+	all = slices.Compact(all)
+	count := func(t float64) (kept, abstained int) {
+		for _, p := range pos {
+			if p >= t {
+				kept++
+			}
+		}
+		for _, n := range neg {
+			if n < t {
+				abstained++
+			}
+		}
+		return kept, abstained
+	}
+	baseline := len(pos)
+	best, bestKept, bestAbs := 0.0, 0, 0
+	for i := 0; i+1 < len(all); i++ {
+		t := math.Round((all[i]+all[i+1])/2*1000) / 1000
+		kept, abstained := count(t)
+		score := kept + abstained
+		if score > bestKept+bestAbs || score == bestKept+bestAbs && kept > bestKept {
+			best, bestKept, bestAbs = t, kept, abstained
+		}
+	}
+	if bestKept+bestAbs <= baseline || best <= 0 {
+		return nil
+	}
+	return &Calibration{MinSim: best, Positives: len(pos), PositivesKept: bestKept, Negatives: len(neg), NegativesAbstained: bestAbs}
 }
 
 // resolveScopes resolves the role of every case once.

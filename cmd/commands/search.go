@@ -337,6 +337,7 @@ type searchDoc struct {
 	Query         string             `json:"query"`
 	Ranking       string             `json:"ranking"`
 	Degraded      *string            `json:"degraded"`
+	Abstained     bool               `json:"abstained,omitempty"`
 	Count         int                `json:"count"`
 	Results       []searchResultJSON `json:"results"`
 }
@@ -355,6 +356,7 @@ func runSearchQuery(ctx context.Context, out, errOut io.Writer, env *searchEnv, 
 		hits = hits[:searchFlags.limit]
 	}
 	doc := searchDoc{SchemaVersion: skillsearch.ResultSchemaVersion, Query: query, Ranking: res.Ranking, Count: len(hits), Results: []searchResultJSON{}}
+	doc.Abstained = res.Abstained
 	if res.Degraded != "" {
 		doc.Degraded = &res.Degraded
 		reportWriter{errOut}.printf("%s\n", skillsearch.DegradedMessage(res.Degraded))
@@ -379,6 +381,10 @@ func runSearchQuery(ctx context.Context, out, errOut io.Writer, env *searchEnv, 
 		return emit(writeJSON(out, doc))
 	}
 	if len(doc.Results) == 0 {
+		if res.Abstained {
+			reportWriter{out}.printf("no served skill is a confident match (best cosine %.3f is below vector_min_sim %.3f)\n", res.TopSim, env.resolved.Search.VectorMinSim)
+			return 0
+		}
 		reportWriter{out}.printf("%s\n", "no served skill matches")
 		return 0
 	}

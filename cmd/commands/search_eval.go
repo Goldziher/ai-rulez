@@ -219,6 +219,10 @@ func printEvalText(out io.Writer, r *skillsearch.Result) {
 	if len(r.Negatives) > 0 {
 		printNegatives(p, r, modes)
 	}
+	if c := r.Calibration; c != nil {
+		p.printf("\ncalibration (%s): vector_min_sim = %.3f answers %d of %d positive cases and abstains on %d of %d negative cases\n",
+			c.Mode, c.MinSim, c.PositivesKept, c.Positives, c.NegativesAbstained, c.Negatives)
+	}
 	if len(r.Misses) > 0 {
 		p.printf("%s\n", "\nmisses:")
 		for i := range r.Misses {
@@ -282,6 +286,9 @@ func printPrimaryMetrics(p reportWriter, r *skillsearch.Result) {
 	if m.AvoidTop != nil {
 		row("avoid@1", *m.AvoidTop, nil)
 	}
+	if m.AbstainRate != nil {
+		row("abstain", *m.AbstainRate, nil)
+	}
 }
 
 // printModeTable prints each metric per mode with its interval, then the paired
@@ -313,14 +320,29 @@ func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
 			}
 			return *m.AvoidTop, true
 		}},
+		{"abstain", "", func(m skillsearch.Metrics) (float64, bool) {
+			if m.AbstainRate == nil {
+				return 0, false
+			}
+			return *m.AbstainRate, true
+		}},
 	}
 	for _, mt := range metrics {
-		if _, ok := mt.get(r.Modes[modes[0]]); !ok {
+		shown := false
+		for _, mode := range modes {
+			_, ok := mt.get(r.Modes[mode])
+			shown = shown || ok
+		}
+		if !shown {
 			continue
 		}
 		p.printf("%-14s", mt.label)
 		for _, mode := range modes {
-			v, _ := mt.get(r.Modes[mode])
+			v, ok := mt.get(r.Modes[mode])
+			if !ok {
+				p.printf("%-24s", "-")
+				continue
+			}
 			cell := fmt.Sprintf("%.4f", v)
 			if ci, ok := r.ByMode[mode].CI95[mt.key]; ok && mt.key != "" {
 				cell += fmt.Sprintf(" (%.2f-%.2f)", ci.Low, ci.High)

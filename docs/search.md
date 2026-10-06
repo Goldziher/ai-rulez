@@ -74,6 +74,7 @@ body_chars  = 1200
 fusion      = "auto"        # auto | rrf | weighted
 rrf_k       = 60
 weights     = { lexical = 1.0, vector = 1.0 }
+vector_min_sim = 0.0        # abstain below this cosine (0 = off); see Abstaining
 candidates  = 50            # per list, before fusion
 query_timeout_ms = 800      # the query embedding; on timeout the ranking is lexical
 batch_size  = 64            # texts per embedding call of `search index` (Gemini through literllm is sent one by one automatically)
@@ -131,13 +132,27 @@ that skill first. An id that is one ordinary word (`test`, `build`, `fix`) pins 
 skill ("use the build skill"): without that rule, "write the failing test first" pinned `test` over `tdd-workflow`
 in an evaluation. Only exact ids pin, so a keyword-stuffed description gains nothing from it. `vector` mode ranks by
 cosine alone (no id pin); a skill with no usable vector (new, or changed since indexing) follows the vector hits in
-lexical order, and when no skill in scope has one the search is `degraded: no_index`. A hybrid result always lists the nearest skills even when none is a good match: RRF scores have no
-absolute meaning, so there is no abstention; use negative cases in an evaluation to see how a model behaves.
+lexical order, and when no skill in scope has one the search is `degraded: no_index`. Unless you set `vector_min_sim`, a vector or hybrid result lists the nearest skills even when none is a good match,
+because RRF scores have no absolute meaning (see [Abstaining](#abstaining)).
 
 `find_skill` calls the same ranker. The MCP server never builds the index and never embeds a skill: it loads the
 files `search index` wrote, reloads them when they change, and embeds only the query (bounded by
 `query_timeout_ms`, with an in-memory cache of 256 queries on top of the `[llm]` cache). Its result gains `ranking`
 and, when it fell back, `degraded`; see [the MCP server](mcp-server.md#dynamic-skill-loading).
+
+### Abstaining
+
+A query nothing resembles ("what is the weather in Berlin") still has nearest skills. With `vector_min_sim` set, a
+skill whose cosine to the query is below it is not a match: a vector ranking (including the `auto` default on a fresh
+index) with none above it returns nothing, `search --format json` says `"abstained": true` and `find_skill` returns
+no skill; `rrf` and `weighted` drop only the weak vector candidates, so a skill that matches by word still ranks.
+Cosines differ per model, so no default ships: `search --eval` calibrates one from your cases. When the file has
+positive and negative cases and a vector or hybrid mode ran, it prints the threshold that answers the most positives
+while abstaining on the most negatives (`calibration` in the JSON) and each case's best cosine (`top_sim`). On this
+repository's cases, `vector_min_sim = 0.596` answered 36 of 36 positives and abstained on 5 of 6 negatives; the
+near-miss "deploy the application to a kubernetes cluster" (0.619) still matched a skill. `abstain_rate` is the share
+of negative cases answered with nothing. The advice comes from a small sample: re-run the evaluation with the value
+set before committing it.
 
 ## Building the index
 
@@ -344,8 +359,8 @@ default is taken.
   are reported by `search status` only.
 - Loopback endpoints get no exemption from `allow_network`, and network settings are honoured from the user
   config only (see the trust rule in [LLM access](llm.md)).
-- `dtype = "float16"` and `[search] log_queries` are additions to the design's config; there is no `--calibrate`
-  or LLM-suggested paraphrase step.
+- `dtype = "float16"` and `[search] log_queries` are additions to the design's config; calibration is part of
+  `search --eval` rather than a `search status --calibrate` flag, and there is no LLM-suggested paraphrase step.
 - The cases file is YAML (as proposed in the issue) and read strictly: unknown fields are errors, so a file never
   means less than it says. Flip comparison uses `hit_at_k`, the issue's "hit to miss".
 - `AR9D2` and `AR9D4` are emitted by `search --eval`, `AR9D3` by `search index`, `AR9D0` and `AR9D1` by `validate`.

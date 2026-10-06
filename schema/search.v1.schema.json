@@ -13,6 +13,10 @@
     "query": {
       "type": "string"
     },
+    "abstained": {
+      "type": "boolean",
+      "description": "True when [search] vector_min_sim left no skill: nothing is a confident match for the query. Absent otherwise."
+    },
     "count": {
       "type": "integer",
       "minimum": 0

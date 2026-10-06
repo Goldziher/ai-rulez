@@ -81,6 +81,14 @@
           "top_score": {
             "type": "number"
           },
+          "top_sim": {
+            "type": "number",
+            "description": "Best cosine of the query to any skill."
+          },
+          "abstained": {
+            "type": "boolean",
+            "description": "[search] vector_min_sim left no skill to answer with."
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -128,6 +136,38 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "description": "The [search] vector_min_sim that best separates the positive cases from the negative ones (advice from a small sample). Present when both kinds of case were evaluated in a vector or hybrid mode and some threshold beats abstaining on nothing.",
+      "required": ["mode", "min_sim", "positives", "positives_kept", "negatives", "negatives_abstained"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": ["vector", "hybrid"]
+        },
+        "min_sim": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "positives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positives_kept": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "negatives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "negatives_abstained": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "mode": {
@@ -220,6 +260,12 @@
           "minimum": 0,
           "maximum": 1,
           "description": "Share of cases with an avoid list where an avoided skill ranked first; lower is better."
+        },
+        "abstain_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of negative cases a vector or hybrid ranking answered with nothing (see vector_min_sim); higher is better."
         }
       }
     },
@@ -252,6 +298,10 @@
         },
         "hit": {
           "type": "boolean"
+        },
+        "top_sim": {
+          "type": "number",
+          "description": "Best cosine of the query to any skill (vector and hybrid rankings)."
         },
         "tags": {
           "type": "array",
@@ -346,6 +396,14 @@
               },
               "top_score": {
                 "type": "number"
+              },
+              "top_sim": {
+                "type": "number",
+                "description": "Best cosine of the query to any skill."
+              },
+              "abstained": {
+                "type": "boolean",
+                "description": "[search] vector_min_sim left no skill to answer with."
               },
               "tags": {
                 "type": "array",
