@@ -21,11 +21,19 @@ const (
 	MetricLoads     = "ai_rulez.item.loads"
 	MetricOutcomes  = "ai_rulez.item.outcomes"
 	MetricAgentTime = "ai_rulez.agent.duration"
-	scopeName       = "ai-rulez.telemetry"
+	// Eval gauges: the latest recorded score of a skill, labelled with the skill id
+	// and the harness it was evaluated on. The digest the score is about travels on
+	// the eval_result log record, not as a label (cardinality).
+	MetricEvalPassRate  = "ai_rulez.skill.eval.pass_rate"
+	MetricEvalPrecision = "ai_rulez.skill.eval.trigger_precision"
+	MetricEvalRecall    = "ai_rulez.skill.eval.trigger_recall"
+	MetricEvalAblation  = "ai_rulez.skill.eval.ablation_delta"
+	scopeName           = "ai-rulez.telemetry"
 
 	severityInfo        = 9
 	temporalityDelta    = 1
 	logEventNamePrefix  = "ai_rulez.item."
+	logEventNameEval    = "ai_rulez.eval.result"
 	resourceSchemaKey   = "ai_rulez.schema_version"
 	resourceServiceName = "service.name"
 	resourceServiceVer  = "service.version"
@@ -35,9 +43,10 @@ const (
 var agentBuckets = []float64{100, 500, 1000, 5000, 15000, 60000, 300000}
 
 type otlpValue struct {
-	String *string `json:"stringValue,omitempty"`
-	Bool   *bool   `json:"boolValue,omitempty"`
-	Int    *string `json:"intValue,omitempty"`
+	String *string  `json:"stringValue,omitempty"`
+	Bool   *bool    `json:"boolValue,omitempty"`
+	Int    *string  `json:"intValue,omitempty"`
+	Double *float64 `json:"doubleValue,omitempty"`
 }
 
 type otlpAttr struct {
@@ -48,6 +57,9 @@ type otlpAttr struct {
 func strAttr(key, value string) otlpAttr { return otlpAttr{Key: key, Value: otlpValue{String: &value}} }
 func boolAttr(key string, value bool) otlpAttr {
 	return otlpAttr{Key: key, Value: otlpValue{Bool: &value}}
+}
+func doubleAttr(key string, value float64) otlpAttr {
+	return otlpAttr{Key: key, Value: otlpValue{Double: &value}}
 }
 func intAttr(key string, value int64) otlpAttr {
 	text := strconv.FormatInt(value, 10)
@@ -108,7 +120,18 @@ func (en *Encoder) open(gate string) bool {
 func fieldValue(a Attr, e *Event) (otlpAttr, bool) {
 	switch a.Field {
 	case fieldServed:
+		if e.Name == EventEvalResult {
+			return otlpAttr{}, false // a result is not a load
+		}
 		return boolAttr(a.Name, e.Served), true
+	case fieldPassRate:
+		return doubleField(a.Name, e.PassRate)
+	case fieldPrecision:
+		return doubleField(a.Name, e.TriggerPrecision)
+	case fieldRecall:
+		return doubleField(a.Name, e.TriggerRecall)
+	case fieldAblation:
+		return doubleField(a.Name, e.AblationDelta)
 	case fieldDuration:
 		if e.DurationMS > 0 {
 			return intAttr(a.Name, e.DurationMS), true
@@ -121,6 +144,13 @@ func fieldValue(a Attr, e *Event) (otlpAttr, bool) {
 	return otlpAttr{}, false
 }
 
+func doubleField(name string, v *float64) (otlpAttr, bool) {
+	if v == nil {
+		return otlpAttr{}, false
+	}
+	return doubleAttr(name, *v), true
+}
+
 // textField returns the string form of a text field of the event.
 func textField(field string, e *Event) string {
 	switch field {
@@ -130,6 +160,8 @@ func textField(field string, e *Event) string {
 		return e.ID
 	case fieldDigest:
 		return e.Digest
+	case fieldDigestScheme:
+		return e.DigestScheme
 	case fieldPath:
 		return e.Path
 	case fieldSource:
@@ -202,7 +234,11 @@ func (en *Encoder) EncodeLogs(events []Event, observed time.Time) ([]byte, error
 	records := make([]otlpLogRecord, 0, len(events))
 	for i := range events {
 		e := &events[i]
-		attrs := []otlpAttr{strAttr("event.name", logEventNamePrefix+e.Outcome)}
+		name, body := logEventNamePrefix+e.Outcome, "item "+e.Outcome
+		if e.Name == EventEvalResult {
+			name, body = logEventNameEval, "eval result"
+		}
+		attrs := []otlpAttr{strAttr("event.name", name)}
 		for _, a := range Allowlist {
 			if !en.open(a.Gate) {
 				continue
@@ -211,7 +247,6 @@ func (en *Encoder) EncodeLogs(events []Event, observed time.Time) ([]byte, error
 				attrs = append(attrs, attr)
 			}
 		}
-		body := "item " + e.Outcome
 		records = append(records, otlpLogRecord{
 			TimeUnixNano:         unixNano(e.Time, observed),
 			ObservedTimeUnixNano: nanos(observed),
@@ -254,6 +289,16 @@ type otlpSum struct {
 	DataPoints             []numberPoint `json:"dataPoints"`
 }
 
+type gaugePoint struct {
+	Attributes   []otlpAttr `json:"attributes"`
+	TimeUnixNano string     `json:"timeUnixNano"`
+	AsDouble     float64    `json:"asDouble"`
+}
+
+type otlpGauge struct {
+	DataPoints []gaugePoint `json:"dataPoints"`
+}
+
 type otlpHistogram struct {
 	AggregationTemporality int              `json:"aggregationTemporality"`
 	DataPoints             []histogramPoint `json:"dataPoints"`
@@ -265,6 +310,7 @@ type otlpMetric struct {
 	Unit        string         `json:"unit"`
 	Sum         *otlpSum       `json:"sum,omitempty"`
 	Histogram   *otlpHistogram `json:"histogram,omitempty"`
+	Gauge       *otlpGauge     `json:"gauge,omitempty"`
 }
 
 type scopeMetrics struct {
@@ -317,6 +363,8 @@ func labelText(v otlpValue) string {
 		return strconv.FormatBool(*v.Bool)
 	case v.Int != nil:
 		return *v.Int
+	case v.Double != nil:
+		return strconv.FormatFloat(*v.Double, 'g', -1, 64)
 	}
 	return ""
 }
@@ -338,13 +386,19 @@ type hist struct {
 type aggregator struct {
 	loads, outcomes map[string]*bucket
 	durations       map[string]*hist
+	// evals keeps the newest eval result per skill and harness.
+	evals map[string]*Event
 }
 
 func newAggregator() *aggregator {
-	return &aggregator{loads: map[string]*bucket{}, outcomes: map[string]*bucket{}, durations: map[string]*hist{}}
+	return &aggregator{loads: map[string]*bucket{}, outcomes: map[string]*bucket{}, durations: map[string]*hist{}, evals: map[string]*Event{}}
 }
 
 func (ag *aggregator) add(e *Event) {
+	if e.Name == EventEvalResult {
+		ag.addEval(e)
+		return
+	}
 	target, withOutcome := ag.outcomes, true
 	if e.Outcome == OutcomeLoaded {
 		target, withOutcome = ag.loads, false
@@ -357,6 +411,65 @@ func (ag *aggregator) add(e *Event) {
 	if e.Kind == KindAgent && e.DurationMS > 0 {
 		ag.addDuration(e)
 	}
+}
+
+// addEval keeps the newest result of a skill on a harness: a gauge reports the
+// latest value, so an older result in the same batch must not win. Events with no
+// parseable time lose to any timed one and keep batch order among themselves.
+func (ag *aggregator) addEval(e *Event) {
+	key := e.ID + "\x00" + e.Harness
+	if old := ag.evals[key]; old != nil && evalTime(old).After(evalTime(e)) {
+		return
+	}
+	ag.evals[key] = e
+}
+
+func evalTime(e *Event) time.Time {
+	t, _ := time.Parse(time.RFC3339, e.Time) //nolint:errcheck // an unparseable time is the zero time
+	return t
+}
+
+// evalGauges renders the four score gauges, each with one point per skill and
+// harness, ordered by label so the output is deterministic.
+func (ag *aggregator) evalGauges(fallbackNano string) []otlpMetric {
+	if len(ag.evals) == 0 {
+		return nil
+	}
+	type score struct {
+		name, desc string
+		value      func(*Event) *float64
+	}
+	scores := []score{
+		{MetricEvalPassRate, "Share of a skill's eval cases that passed", func(e *Event) *float64 { return e.PassRate }},
+		{MetricEvalPrecision, "How often the skill activated when it should (precision)", func(e *Event) *float64 { return e.TriggerPrecision }},
+		{MetricEvalRecall, "How often the skill activated when it was needed (recall)", func(e *Event) *float64 { return e.TriggerRecall }},
+		{MetricEvalAblation, "Pass-rate gain with the skill against without it", func(e *Event) *float64 { return e.AblationDelta }},
+	}
+	keys := sortedKeys(ag.evals)
+	var out []otlpMetric
+	for _, sc := range scores {
+		var points []gaugePoint
+		for _, key := range keys {
+			e := ag.evals[key]
+			value := sc.value(e)
+			if value == nil {
+				continue
+			}
+			attrs := []otlpAttr{strAttr(fieldID, e.ID)}
+			if e.Harness != "" {
+				attrs = append(attrs, strAttr(fieldHarness, e.Harness))
+			}
+			nano := fallbackNano
+			if t := evalTime(e); !t.IsZero() {
+				nano = nanos(t)
+			}
+			points = append(points, gaugePoint{Attributes: attrs, TimeUnixNano: nano, AsDouble: *value})
+		}
+		if len(points) > 0 {
+			out = append(out, otlpMetric{Name: sc.name, Description: sc.desc, Unit: "1", Gauge: &otlpGauge{DataPoints: points}})
+		}
+	}
+	return out
 }
 
 func (ag *aggregator) addDuration(e *Event) {
@@ -431,6 +544,7 @@ func (en *Encoder) EncodeMetrics(events []Event, now time.Time) ([]byte, error) 
 	if m, ok := ag.histogramMetric(startNano, nowNano); ok {
 		metrics = append(metrics, m)
 	}
+	metrics = append(metrics, ag.evalGauges(nowNano)...)
 	if len(metrics) == 0 {
 		return nil, nil
 	}

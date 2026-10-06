@@ -133,24 +133,43 @@ func TestLiveCollectorAcceptsEveryTransport(t *testing.T) {
 	for _, a := range Allowlist {
 		allowed[a.Name] = true
 	}
-	perTransport := map[string][]string{}
+	var perTransport map[string][]string
 	require.Eventually(t, func() bool {
-		perTransport = map[string][]string{}
-		for _, rec := range readExported(t, filepath.Join(outDir, "logs.json")) {
-			for _, rl := range rec.ResourceLogs {
-				assert.Equal(t, "platform", attrMap(rl.Resource.Attributes)["team"])
-				for _, sl := range rl.ScopeLogs {
-					for _, lr := range sl.LogRecords {
-						attrs := attrMap(lr.Attributes)
-						for key := range attrs {
-							assert.True(t, allowed[key], "attribute %q is not on the allowlist", key)
-						}
-						id := attrs["ai_rulez.event_id"]
-						perTransport[id[:1]] = append(perTransport[id[:1]], id)
-					}
+		perTransport = eventIDsByTransport(t, filepath.Join(outDir, "logs.json"), allowed)
+		return len(perTransport["a"]) == 4 && len(perTransport["b"]) == 4 && len(perTransport["c"]) == 4
+	}, 20*time.Second, 300*time.Millisecond, "events seen per transport: %v", perTransport)
+}
+
+// exportedLogAttrs flattens the log records the collector wrote into their
+// attribute maps, checking the team resource label on the way.
+func exportedLogAttrs(t *testing.T, path string) []map[string]string {
+	t.Helper()
+	var out []map[string]string
+	for _, rec := range readExported(t, path) {
+		for _, rl := range rec.ResourceLogs {
+			assert.Equal(t, "platform", attrMap(rl.Resource.Attributes)["team"])
+			for _, sl := range rl.ScopeLogs {
+				for _, lr := range sl.LogRecords {
+					out = append(out, attrMap(lr.Attributes))
 				}
 			}
 		}
-		return len(perTransport["a"]) == 4 && len(perTransport["b"]) == 4 && len(perTransport["c"]) == 4
-	}, 20*time.Second, 300*time.Millisecond, "events seen per transport: %v", perTransport)
+	}
+	return out
+}
+
+// eventIDsByTransport groups the event ids the collector wrote by the first
+// character of the id, which each run of the test sets per transport, and checks
+// every attribute against the allowlist.
+func eventIDsByTransport(t *testing.T, path string, allowed map[string]bool) map[string][]string {
+	t.Helper()
+	out := map[string][]string{}
+	for _, attrs := range exportedLogAttrs(t, path) {
+		for key := range attrs {
+			assert.True(t, allowed[key], "attribute %q is not on the allowlist", key)
+		}
+		id := attrs["ai_rulez.event_id"]
+		out[id[:1]] = append(out[id[:1]], id)
+	}
+	return out
 }

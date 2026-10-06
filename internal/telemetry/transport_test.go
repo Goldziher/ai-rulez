@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	collogs "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	colmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	logspb "go.opentelemetry.io/proto/otlp/logs/v1"
+	metricspb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -150,17 +152,23 @@ func flushThrough(t *testing.T, protocol, endpoint string, events []Event) (Flus
 	return x.Flush(context.Background())
 }
 
-func attributeKeys(logs []*collogs.ExportLogsServiceRequest) []string {
-	set := map[string]bool{}
-	for _, req := range logs {
+func logRecordsOf(reqs []*collogs.ExportLogsServiceRequest) []*logspb.LogRecord {
+	var out []*logspb.LogRecord
+	for _, req := range reqs {
 		for _, rl := range req.GetResourceLogs() {
 			for _, sl := range rl.GetScopeLogs() {
-				for _, rec := range sl.GetLogRecords() {
-					for _, kv := range rec.GetAttributes() {
-						set[kv.GetKey()] = true
-					}
-				}
+				out = append(out, sl.GetLogRecords()...)
 			}
+		}
+	}
+	return out
+}
+
+func attributeKeys(logs []*collogs.ExportLogsServiceRequest) []string {
+	set := map[string]bool{}
+	for _, rec := range logRecordsOf(logs) {
+		for _, kv := range rec.GetAttributes() {
+			set[kv.GetKey()] = true
 		}
 	}
 	keys := make([]string, 0, len(set))
@@ -175,7 +183,8 @@ func attributeKeys(logs []*collogs.ExportLogsServiceRequest) []string {
 // same OTLP messages, and the exported attribute set must stay inside the
 // allowlist: the closed-allowlist guarantee does not depend on the transport.
 func TestTransports_ExportTheSameAllowlistedAttributes(t *testing.T) {
-	events := sampleEvents()
+	evalEvents, _ := EvalEvents(sampleEvalResults())
+	events := append(sampleEvents(), evalEvents...)
 
 	jsonC, protoC, grpcC := &fakeCollector{}, &fakeCollector{}, &fakeCollector{}
 	jsonSrv := httptest.NewServer(jsonC.httpHandler())
@@ -207,6 +216,8 @@ func TestTransports_ExportTheSameAllowlistedAttributes(t *testing.T) {
 	}
 	for name, c := range map[string]*fakeCollector{"json": jsonC, "protobuf": protoC, "grpc": grpcC} {
 		keys := attributeKeys(c.logs)
+		assert.Contains(t, keys, "ai_rulez.eval.pass_rate", name+": eval scores travel as doubles on every transport")
+		assert.Equal(t, 4, gaugeCount(c.metrics), name+": one gauge per score")
 		assert.Equal(t, attributeKeys(jsonC.logs), keys, name)
 		for _, key := range keys {
 			assert.True(t, allowed[key], "%s exports %q, which is not on the allowlist", name, key)
@@ -319,4 +330,26 @@ func TestGRPC_DeadEndpointKeepsEventsAndHidesTheAddress(t *testing.T) {
 	assert.NotContains(t, err.Error(), addr)
 	pending, _, _ := spool.Pending()
 	assert.Len(t, pending, 2)
+}
+
+func gaugeCount(reqs []*colmetrics.ExportMetricsServiceRequest) int {
+	n := 0
+	for _, req := range reqs {
+		for _, rm := range req.GetResourceMetrics() {
+			n += gaugesIn(rm)
+		}
+	}
+	return n
+}
+
+func gaugesIn(rm *metricspb.ResourceMetrics) int {
+	n := 0
+	for _, sm := range rm.GetScopeMetrics() {
+		for _, m := range sm.GetMetrics() {
+			if m.GetGauge() != nil {
+				n++
+			}
+		}
+	}
+	return n
 }
