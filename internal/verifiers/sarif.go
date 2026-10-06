@@ -125,7 +125,11 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 			notes = append(notes, sarifNotification{Level: "error", Message: sarifText{Text: res.Name + ": " + res.Message}})
 			continue
 		}
-		if res.Status != StatusFail && res.Code != CodeVerifierInvalid {
+		if res.Status == StatusSkipped {
+			notes = append(notes, sarifNotification{Level: "note", Message: sarifText{Text: res.Code + " " + res.Name + ": " + res.Message}})
+			continue
+		}
+		if res.Status != StatusFail && res.Status != StatusError {
 			continue
 		}
 		ruleID := res.Name
@@ -145,7 +149,7 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 	}
 	doc := sarifDoc{Schema: sarifSchema, Version: sarifVersion, Runs: []sarifRun{{
 		Tool:        sarifTool{Driver: sarifDriver{Name: "ai-rulez verifiers", Version: version, InformationURI: sarifout.InformURI, Rules: rules}},
-		Invocations: []sarifInvocation{{ExecutionSuccessful: len(notes) == 0 && r.Err == nil, Notifications: notes}},
+		Invocations: []sarifInvocation{{ExecutionSuccessful: !hasErrorNote(notes) && r.Err == nil, Notifications: notes}},
 		Results:     results,
 	}}}
 	enc := json.NewEncoder(w)
@@ -248,4 +252,15 @@ func fingerprint(verifier string, f Finding) string {
 	}
 	sum := sha256.Sum256([]byte(verifier + "\x00" + f.File + "\x00" + strings.Join(strings.Fields(text), " ")))
 	return hex.EncodeToString(sum[:])
+}
+
+// hasErrorNote reports whether a notification is an error; a skipped verifier's
+// "note" does not make the invocation unsuccessful.
+func hasErrorNote(notes []sarifNotification) bool {
+	for _, n := range notes {
+		if n.Level == "error" {
+			return true
+		}
+	}
+	return false
 }

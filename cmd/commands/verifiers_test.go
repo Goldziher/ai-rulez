@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,7 +20,8 @@ func resetVerifiersFlags(t *testing.T) {
 	reset := func() {
 		verifiersStrict, verifiersJSON, verifiersNames, verifiersProfile, noLocal, configDir = false, false, nil, "", false, ""
 		verifiersSince, verifiersStaged, verifiersAll, verifiersRule, verifiersFormat = "", false, false, "", ""
-		verifiersFailOn, verifiersOut, verifiersDead, verifiersListJSON = "", "", false, false
+		verifiersFailOn, verifiersOut, verifiersDead, verifiersListJSON, verifiersExec, verifiersRole = "", "", false, false, false, ""
+		verifiersAllowLLM, verifiersMaxCost, verifiersEstimate = false, defaultVerifiersMaxCost, false
 	}
 	reset()
 	t.Cleanup(reset)
@@ -347,6 +349,53 @@ func TestVerifierRunOptionsJSONFlagConflict(t *testing.T) {
 			}
 			if format != tt.wantFormat {
 				t.Fatalf("format = %q, want %q", format, tt.wantFormat)
+			}
+		})
+	}
+}
+
+const verifiersCommandSpec = verifiersBase + "[[verifiers]]\nname = \"cmd\"\nrule = \"r\"\nseverity = \"error\"\nwhen_changed = [\"*.txt\"]\n" +
+	"[verifiers.require.command]\nargv = [\"sh\", \"-c\", \"exit 0\"]\n"
+
+func commandProject(t *testing.T) {
+	t.Helper()
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), verifiersCommandSpec)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "r.md"), "# R\n")
+	writeFile(t, filepath.Join(root, "a.txt"), "x\n")
+	chdir(t, root)
+}
+
+func TestRunVerifiers_CommandNeedsAllowExec(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs sh")
+	}
+	tests := []struct {
+		name string
+		flag bool
+		env  string
+		want int
+	}{
+		{"refused by default", false, "", exitVerifiersCannotRun},
+		{"flag runs it", true, "", 0},
+		{"env 1 runs it", false, "1", 0},
+		{"env 0 does not", false, "0", exitVerifiersCannotRun},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetVerifiersFlags(t)
+			commandProject(t)
+			t.Setenv(verifiersAllowExecEnv, tt.env)
+			verifiersExec = tt.flag
+			var out bytes.Buffer
+
+			got := runVerifiers(context.Background(), nil, &out)
+
+			if got != tt.want {
+				t.Errorf("exit code = %d, want %d\n%s", got, tt.want, out.String())
+			}
+			if tt.want == exitVerifiersCannotRun && !strings.Contains(out.String(), "AR9H3") && !strings.Contains(out.String(), "--allow-exec") {
+				t.Errorf("a refusal must name --allow-exec:\n%s", out.String())
 			}
 		})
 	}

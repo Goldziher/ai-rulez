@@ -4,8 +4,9 @@
 Use them for facts about the repo that your instructions depend on: a file is present, no `TODO(` is left in
 shipped code, `package.json` pins the Node version the rules mention, generated files are in sync.
 
-A verifier never uses the network, never starts a process and never writes. The same input gives the same
-result.
+A verifier never writes. It uses the network or starts a process only through two predicates of a rule-linked
+verifier that you opt into per run: `command` (`--allow-exec`) and `llm` (`--allow-llm`). Without those flags the same
+input gives the same result.
 
 Two forms exist. The flat `[[verifiers]]` entries of `config.toml` (with a `type`) check the whole repository. The
 rule-linked specs ([next section](#rule-linked-verifiers)) attach a check to the rule or skill it enforces, run
@@ -49,9 +50,15 @@ ai-rulez verifiers run --since origin/main   # only what changed since the merge
 ai-rulez verifiers run --staged         # only what is staged (pre-commit)
 ai-rulez verifiers run --rule database  # only verifiers that enforce this rule or skill
 ai-rulez verifiers run --format sarif --out verifiers.sarif   # also junit, json, text
+ai-rulez verifiers run --allow-exec     # also run `command` predicates (trusted refs only)
+ai-rulez verifiers run --allow-llm --max-cost 0.25   # also evaluate `llm` checklists (sends the changed lines to the model)
+ai-rulez verifiers run --estimate       # what the llm verifiers would send and cost; calls nothing
+ai-rulez verifiers run --profile web    # which rules count as active (--role does the same for a role)
 ai-rulez verifiers list [--format json]        # what is declared, without evaluating
 ai-rulez verifiers explain <name>       # what it checks, the rule it enforces, how to fix it
-ai-rulez verifiers test [name...]       # run the self-test examples offline
+ai-rulez verifiers test [name...]       # run the self-test examples offline (--allow-exec for command predicates)
+ai-rulez verifiers suggest database     # ask the model to propose verifiers for the rule (dry run; --write saves them)
+ai-rulez validate --strict --verifiers  # one run and one report for lint and verifiers (never a command or a model)
 ```
 
 | Code | Meaning |
@@ -175,6 +182,7 @@ regex = "TODO"
 | `file_exists` | `path`, `exists` (default true) | the path exists (or, with `exists = false`, does not); `path` may use a template |
 | `paired` | `for_each`, `requires_changed` or `requires_exists` | for every scoped file matching `for_each`, the derived path was changed too, or exists |
 | `glob_count` | `files`, `exclude`, `min`, `max` | the number of repository files matching `files` is within bounds |
+| `command` | `argv`, `pass_files`, `timeout_s`, `expect_exit` | the program exits with `expect_exit` (default 0); needs `--allow-exec`, see [Command predicate](#command-predicate) |
 | `all` / `any` / `not` | arrays of predicate tables (`not`: one table) | boolean composition, at most 4 levels deep |
 
 Combinators repeat the table: `[[verifiers.require.all]]` followed by `[verifiers.require.all.regex]`, or
@@ -199,6 +207,44 @@ Combinators repeat the table: `[[verifiers.require.all]]` followed by `[verifier
   are matched with line endings normalised to LF. Binary files and files over 5 MiB are skipped and listed in
   the result's `notes`. A finding quotes at most 120 characters of the matched text with credential-looking
   text masked, and at most 50 findings are kept per verifier.
+
+### Command predicate
+
+`command` is the escape hatch for what a linter already expresses: call the linter instead of re-implementing it.
+
+```toml
+[[verifiers]]
+id = "lockfile-in-sync"
+skill = "dependency-updates"
+severity = "warning"
+when_changed = ["package.json", "package-lock.json"]
+
+[verifiers.require.command]
+argv = ["npm", "ci", "--dry-run"]   # no shell: argv[0] is looked up on PATH or is a path inside the project
+pass_files = "stdin0"               # optional: "args" appends the scoped files, "stdin0" writes them NUL-separated to stdin
+timeout_s = 120                     # optional, capped by [verifiers_settings] max_timeout_s (default 300)
+expect_exit = 0                     # optional
+```
+
+- **Opt-in.** Nothing runs unless you pass `--allow-exec` (`verifiers run`, `verifiers test`) or set
+  `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1` (CI). No other flag implies it, and `generate`, `validate`, hooks and the MCP
+  `run_verifiers` tool never run a verifier command. In CI, pass it only for trusted refs: a fork's pull request can
+  carry its own `[[verifiers]]`.
+- **Refused or not run is an error, never a pass.** Without `--allow-exec`, a program that is not installed, cannot be
+  started or times out, the verifier ends with status `error` and `AR9H3`, so the run exits `1` when nothing failed.
+  This holds under `not` too: a refusal is not inverted into a pass.
+- **Execution.** The program runs through the same hardened runner as the lint scanners: no shell, the project root as
+  working directory, stdin closed (or the NUL-separated files), at most 64 KiB captured per stream, the whole process
+  group killed at the timeout. On a non-zero exit the finding shows the first line of stderr (else stdout), cut at 120
+  characters with credential-looking text masked.
+- **Environment allowlist.** The child gets only `PATH`, `HOME`, `USER`, `TMPDIR`, `TZ`, the locale (`LANG`, `LC_*`),
+  `CI`, `NO_COLOR` and `TERM=dumb`, plus the names listed in `[verifiers_settings] command_env`. A verifier cannot read
+  CI secrets; `command_env` refuses credential-looking and proxy names (`*_TOKEN`, `*_SECRET`, `*_API_KEY`, `HTTPS_PROXY`...).
+- **No network sandbox.** ai-rulez cannot sandbox network use portably. Enforce it with an OS sandbox or the CI egress
+  policy.
+- **Imported verifiers** (from an include) cannot use `command` unless the include is allowlisted, see
+  [Imported verifiers](#imported-verifiers).
+- The flat form has no `command` type; a `type = "command"` entry is rejected with a pointer to the spec form.
 
 ### Changed-only runs
 
@@ -250,9 +296,14 @@ lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unch
 | --- | --- |
 | `AR9H1` `verifier-failed` | a predicate did not hold; severity is the verifier's own |
 | `AR9H2` `verifier-invalid` | bad regex, unknown or missing target, a missing `anchor` heading, two predicates, a bad template or example, an unknown key, a duplicate `id`, a symlinked or oversized file |
-| `AR9H5` `verifier-dead-scope` | `when_changed` matches no file of the repository; only with `--strict-applicability` |
+| `AR9H3` `verifier-command-failed-to-run` | a `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start, or timed out; status `error` |
+| `AR9H4` `verifier-llm-skipped` | an `llm` verifier was not evaluated (LLM use off, over `--max-cost`, every hunk withheld, an unusable reply, `--estimate`); status `skipped`, severity `info`, never a pass |
+| `AR9H5` `verifier-dead-scope` | `when_changed` matches no file of the repository; with `--strict-applicability` or `[verifiers_settings] warn_dead` |
+| `AR9H6` `verifier-no-examples` | a spec verifier has no `[[verifiers.examples]]`; only with `[verifiers_settings] require_examples`; severity `warning` |
 
-They are reported by the `verifiers` commands, not by `validate`; `ai-rulez validate --explain AR9H1` describes them.
+They are reported by the `verifiers` commands, and by `validate --strict --verifiers`; `ai-rulez validate --explain AR9H1`
+describes them. Two more statuses never fail a run: `skipped` (an `llm` verifier that was not evaluated) and `inactive`
+(see [Active profile and role](#active-profile-and-role)).
 
 ### Self-tests
 
@@ -272,21 +323,133 @@ without examples are listed.
 - Predicates are tables (`[verifiers.require.regex]`), not keys on `require`, so `regex` is one name for the
   predicate and its pattern field.
 - A missing `anchor` heading is `AR9H2`, so the finding-to-rule mapping cannot rot.
-- The verifier verb is `verifiers run`; `validate --strict --verifiers` is not provided.
+- The verifier verb is `verifiers run`; `validate --strict --verifiers` runs the same verifiers inside the lint report
+  (all files, no command, no model).
 - `linguist-generated` files are not excluded by default; use `exclude`.
 - `diff-added` ships in this slice; it needs a base, and with `--all` every line is added.
 - SARIF `ruleId` is `AR9H1/<verifier id>`, as proposed.
-- Verifiers are not marked `inactive` when their rule is outside the active profile; a target that exists
-  anywhere in the content tree counts.
+- A verifier whose rule or skill is outside the active profile or role is `inactive` (reported, never failed), as the
+  design proposes. A target that does not exist anywhere is still `AR9H2`.
+- The `command` and `llm` predicates exist only in the spec form. A flat `type = "command"` is rejected.
+- Imports follow the design: an include's verifiers cannot run a command unless the include is in `trust_exec_from`
+  and pinned in `ai-rulez.lock`. An include's verifiers are loaded only from `<include>/verifiers/*.toml`; an include
+  with an `include = [...]` filter brings none, and installed skills do not ship verifiers.
+- An `llm` verdict is advisory. Gating on a model verdict (the design's calibration record) is not implemented, so the
+  severity of an `llm` verifier is capped at `warning` and there is no flag that lifts the cap.
+- `verifiers suggest` evaluates candidates on the current tree. The design's false-positive rate on the last N merged
+  diffs is not implemented; the count of findings today is the signal.
 
 ## Local overlay
 
 `config.local.toml` may declare `[[verifiers]]`; entries are merged by `name`, and a local entry replaces the
 shared one with the same name.
 
-## Not yet
+## Active profile and role
 
-Not available: the `command` predicate that runs a program and checks its exit status (it will reuse the
-hardened command runner, behind `--allow-exec`), LLM checklist verifiers, `verifiers suggest`, lock pinning of
-verifiers (kind `verifier`) and import restrictions for verifiers that arrive through includes, `AR9H3` and
-`AR9H4`, the `AR9H6` missing-examples rule and the `[verifiers_settings]` table.
+A spec verifier names the rule, skill, agent or command it enforces. When that item is not part of the active
+selection, the verifier is `inactive`: shown in the report, never failed, never run. The selection follows `generate`:
+`--role`, else `--profile`, else the configured `default`, else the built-in `default` profile (all content when no
+profiles are defined; root content plus builtin and include domains when profiles exist but `default` is not among
+them). `--profile` also still names the profile of `generated_in_sync` verifiers that name none. An unknown profile or
+role exits `1`.
+
+## Imported verifiers
+
+An include may carry `<include>/verifiers/*.toml`. Those declarations load like your own (same validation, same
+`AR9H2` for a bad one, source shown as `include:<name>/verifiers/<file>`) with one restriction: a verifier from an
+include may not use the `command` predicate, anywhere in its tree, unless
+
+1. the include is named in `[verifiers_settings] trust_exec_from`, **and**
+2. the include is pinned in `ai-rulez.lock` (a commit and digest for a remote include, a tree digest for a local path).
+
+Otherwise the declaration is `AR9H2` and nothing runs, whatever `--allow-exec` says. `--allow-exec` is still required for
+a trusted import. Imported `llm` verifiers are allowed; they are advisory and still need `--allow-llm`.
+
+## LLM checklist verifiers
+
+```toml
+[[verifiers]]
+id = "errors-are-actionable"
+rule = "error-handling"
+severity = "warning"                 # the ceiling: an llm verifier never reports above warning
+when_changed = ["src/**/*.go"]       # required
+
+[verifiers.require.llm]
+checklist = [
+  "New error messages say what the caller can do about the failure.",
+  "No error swallows the original cause without wrapping it.",
+]
+model = ""                           # default: the [llm] model
+max_diff_bytes = 24000               # changed text per call (1024 to 200000); larger changes are split by file and line
+```
+
+`llm` is allowed only as the root predicate or directly under `all`; under `any` or `not` an advisory verdict would
+decide the result. Inside `all`, the deterministic members run first; if any fails, the model is not asked and the
+deterministic failure is the result.
+
+- **Opt-in and gated.** `--allow-llm` plus `allow_network = true` and a model in the **user** config (or
+  `AI_RULEZ_LLM_*`); a repository config cannot turn the network on. Otherwise the verifier is `skipped` with `AR9H4`
+  and the reason, visibly, never as a pass. `ai-rulez doctor` and `ai-rulez llm doctor` show the setup.
+- **What is sent.** The added lines of the scoped files plus three lines of context, as numbered lines
+  (`L12+ text`, `L9: context`), fenced between marker lines that carry a per-request token derived from the content.
+  A hunk with a credential-looking string or a hidden character (zero-width, bidi, control) is withheld, noted, and
+  never sent; if every hunk is withheld the verifier is skipped. Nothing else from the repository leaves the machine.
+  Lines are cut at 400 characters.
+- **Structured, strictly decoded.** The reply schema uses no `additionalProperties` (Gemini rejects it); the reply is
+  decoded strictly instead and anything extra, missing or out of range makes the reply unusable (skipped). Each
+  checklist item gets `pass`, `fail` or `not_applicable`; a `fail` must name a file and quote the added line verbatim.
+  A `fail` whose quote is not found on an added line of that file is dropped and counted in the notes.
+- **Cache and cost.** Calls go through `internal/llm`: temperature 0, the response cache keyed by the request (changed
+  text, checklist, prompt version, model), so a re-run on an unchanged diff costs nothing (shown as `from cache`).
+  `--max-cost` (default $0.50, `0` removes it) refuses a call whose worst-case cost would exceed what is left, and the
+  `[llm]` budget (`max_cost_usd`, `max_tokens`, `max_calls`) applies on top. An unknown price with a cap set refuses.
+  `--estimate` prints, per call, the files and byte counts (never content) and the cost bound, and calls nothing.
+- **Advisory.** Results carry `advisory: true`; `severity = "error"` is reported as `warning`. `verifiers test` does not
+  run the examples of an `llm` verifier (it cannot know what a model answers).
+- Provider errors, timeouts and budget refusals skip the verifier (`AR9H4`) rather than fail the run, and are visible.
+
+## Suggesting verifiers
+
+`ai-rulez verifiers suggest <id>` (`--kind rule|skill|agent|command`) asks the model for up to `--max-proposals` (5)
+candidates for a prose rule and prints the ones that survive deterministic checks. It is a dry run: **nothing is
+written** unless you pass `--write`, which saves the usable candidates to a new
+`.ai-rulez/verifiers/suggested-<id>.toml` and refuses to overwrite one.
+
+What is sent: the item text and a repository summary (up to 60 directory names, the 12 commonest file extensions).
+No file content. The same gates apply as for `llm` verifiers (`--allow-llm`, user-scope `allow_network`,
+`--max-cost`, `--estimate`). Candidates are limited to `forbid`, `regex`, `file_exists`, `paired` and `glob_count`; a
+suggestion never contains a `command` or `llm` predicate, and `error` is lowered to `warning`.
+
+Each candidate is checked without the model: it must pass the same validation as a hand-written spec (RE2 compiles,
+globs, templates, scope), the pass and fail example the model supplied must behave as claimed when run offline
+(otherwise it is rejected), and it is run against the repository to count its findings today. A candidate that fails
+widely is a ratchet candidate (`in = "diff-added"`) or too broad; a rule that cannot be checked mechanically gets
+`No verifier proposed` with the model's reason. Exit `0` even with no proposal, `1` when it could not run.
+
+## Settings
+
+```toml
+[verifiers_settings]          # not [verifiers]: TOML cannot use one key as both a table and an array
+max_timeout_s = 300           # cap on a command predicate's timeout_s (1 to 900)
+max_file_bytes = 5242880      # largest file a content predicate reads; a larger one is skipped with a note (default 5 MiB)
+require_examples = false      # report a spec verifier without examples (AR9H6)
+warn_dead = false             # report a when_changed that matches no file on every run (AR9H5)
+trust_exec_from = []          # includes whose verifiers may use `command` (they must also be pinned in the lock)
+command_env = ["MY_FLAG"]     # extra environment variable names passed to commands
+```
+
+`command_env` refuses credential-looking and proxy names, `trust_exec_from` must name a declared include, and the
+table is pinned in the lock (item `settings` / `verifiers-settings`), so widening trust shows in review.
+
+## Lock
+
+Every verifier declaration is pinned in `ai-rulez.lock` as kind `verifier` (see [Lockfile](lockfile.md)): flat and
+inline entries of `config.toml`, and each `[[verifiers]]` table of `.ai-rulez/verifiers/*.toml`. Lowering a severity,
+widening an `exclude` or deleting a verifier changes the pin, so `lock --check` and `[lock] enforce` make "someone
+weakened the check" visible in review. A local include's `verifiers/` directory is part of that include's pin; a remote
+include's tree is already pinned by commit and digest.
+
+## Not done
+
+`verifiers suggest` does not replay candidates over the last merged diffs to estimate a false-positive rate; it
+counts findings on the current tree.

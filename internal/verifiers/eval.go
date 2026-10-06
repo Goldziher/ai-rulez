@@ -69,6 +69,10 @@ func (c *evalCtx) eval(ctx context.Context, r *Require) (evalOut, error) {
 		return c.evalPaired(ctx, r.Paired)
 	case r.GlobCount != nil:
 		return c.evalGlobCount(r.GlobCount)
+	case r.Command != nil:
+		return c.evalCommand(ctx, r.Command)
+	case r.LLM != nil:
+		return c.evalLLM(ctx, r.LLM)
 	case len(r.All) > 0:
 		return c.evalAll(ctx, r.All)
 	case len(r.Any) > 0:
@@ -86,9 +90,31 @@ func (c *evalCtx) eval(ctx context.Context, r *Require) (evalOut, error) {
 	return evalOut{}, oops.Errorf("empty predicate")
 }
 
+// evalAll holds when every member does. The llm member is evaluated last and
+// only when the deterministic members hold, so a deterministic failure always
+// wins and no model is asked about a change that already fails.
 func (c *evalCtx) evalAll(ctx context.Context, kids []Require) (evalOut, error) {
 	out := evalOut{pass: true}
+	var model []int
 	for i := range kids {
+		if kids[i].LLM != nil {
+			model = append(model, i)
+			continue
+		}
+		res, err := c.eval(ctx, &kids[i])
+		if err != nil {
+			return evalOut{}, err
+		}
+		if !res.pass {
+			out.pass = false
+			out.findings = append(out.findings, res.findings...)
+		}
+	}
+	if len(model) > 0 && !out.pass {
+		c.note("the llm checklist was not evaluated: a deterministic predicate already failed")
+		return out, nil
+	}
+	for _, i := range model {
 		res, err := c.eval(ctx, &kids[i])
 		if err != nil {
 			return evalOut{}, err
@@ -128,7 +154,7 @@ func (c *evalCtx) content(ctx context.Context, rel string) (data []byte, ok bool
 		c.note("skipped %s: binary file", rel)
 		return nil, false, nil
 	case truncated:
-		c.note("skipped %s: larger than %d MiB", rel, maxFileBytes>>20)
+		c.note("skipped %s: larger than %s", rel, sizeText(c.env.fileLimit()))
 		return nil, false, nil
 	}
 	return bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")), true, nil

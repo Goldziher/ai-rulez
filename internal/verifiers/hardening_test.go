@@ -48,7 +48,7 @@ func TestForbid_LineNumbersAcrossMatches(t *testing.T) {
 }
 
 func TestContentPredicates_UncheckableFilesAreNotAPass(t *testing.T) {
-	big := strings.Repeat("a", maxFileBytes) + "\nTODO\n" // the hit sits past the 5 MiB read limit
+	big := strings.Repeat("a", defaultMaxFileBytes) + "\nTODO\n" // the hit sits past the 5 MiB read limit
 	root := writeFiles(t, map[string]string{
 		"big.txt":  big,
 		"bin.dat":  "abc\x00TODO",

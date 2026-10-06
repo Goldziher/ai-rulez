@@ -1208,6 +1208,98 @@
           "minimum": 0,
           "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
         }
+    "search": {
+      "type": "object",
+      "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["lexical", "hybrid", "vector"],
+          "description": "lexical (default) never calls a network; hybrid fuses BM25F with cosine similarity over an embedding index; vector ranks by cosine alone. Overridden by AI_RULEZ_SEARCH_MODE and `search --mode`."
+        },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["name", "triggers", "keywords", "description"] },
+          "description": "Skill fields sent to the embedder (default: all four)."
+        },
+        "index_body": {
+          "type": "boolean",
+          "description": "Also embed the first body_chars characters of SKILL.md."
+        },
+        "body_chars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20000,
+          "description": "Characters of the body embedded with index_body (default 1200)."
+        },
+        "fusion": {
+          "type": "string",
+          "enum": ["rrf", "weighted"],
+          "description": "rrf (default, reciprocal rank fusion) or weighted (min-max normalised convex mix)."
+        },
+        "rrf_k": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The k of reciprocal rank fusion (default 60)."
+        },
+        "weights": {
+          "type": "object",
+          "description": "List weights of rrf, or the convex mix of weighted fusion (default 1 and 1).",
+          "properties": {
+            "lexical": { "type": "number", "minimum": 0 },
+            "vector": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "candidates": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Length of each candidate list before fusion (default 50)."
+        },
+        "query_timeout_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000,
+          "description": "Bound on the query embedding of one search; on timeout the ranking is lexical and says so (default 800)."
+        },
+        "index_dir": {
+          "type": "string",
+          "description": "Index directory under the config directory. Default local/search (machine-local); any directory outside local/ is meant to be committed and is checked by validate (AR9D1). Must stay inside the config directory."
+        },
+        "dtype": {
+          "type": "string",
+          "enum": ["float32", "float16"],
+          "description": "Stored vector type (default float32; float16 halves the file)."
+        },
+        "log_queries": {
+          "type": "boolean",
+          "description": "Record find_skill and search query text, and the skill loaded after each, in <config dir>/local/search-queries.jsonl for `search mine`. Off by default: queries can hold user data."
+        },
+        "embeddings": {
+          "type": "object",
+          "description": "A per-feature embedding model and the command provider. The command runs a program, so it is honoured only from the user config file or with --allow-exec.",
+          "properties": {
+            "command": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "argv of the command provider (no shell). It reads {\"input\": [...]} on stdin and prints {\"vectors\": [[...]]}."
+            },
+            "model": {
+              "type": "string",
+              "description": "Embedding model for search only; overrides [llm] embedding_model."
+            },
+            "pass_env": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Environment variables handed to the command (PATH and HOME are always passed)."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
       },
       "additionalProperties": false
     },
@@ -2615,6 +2707,42 @@
         "regex": {
           "type": "string",
           "description": "An RE2 expression."
+        },
+        "command": {
+          "type": "object",
+          "required": ["argv"],
+          "additionalProperties": false,
+          "description": "Runs a program (no shell) in the project root with a scrubbed environment; only with --allow-exec.",
+          "properties": {
+            "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "pass_files": {
+              "enum": ["args", "stdin0"],
+              "description": "Hand the scoped files to the program as arguments or NUL-separated on stdin."
+            },
+            "timeout_s": { "type": "integer", "minimum": 1, "maximum": 900 },
+            "expect_exit": { "type": "integer", "minimum": 0, "maximum": 255, "default": 0 }
+          }
+        },
+        "llm": {
+          "type": "object",
+          "required": ["checklist"],
+          "additionalProperties": false,
+          "description": "Asks a model whether the changed lines satisfy a checklist. Advisory (never above warning), only with --allow-llm; allowed only as the root predicate or directly under `all`.",
+          "properties": {
+            "checklist": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": { "type": "string", "maxLength": 500 }
+            },
+            "model": { "type": "string", "description": "Overrides the configured [llm] model." },
+            "max_diff_bytes": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 200000,
+              "description": "Changed text per call; default 24000."
+            }
+          }
         },
         "in": {
           "enum": ["same-file", "diff-added", "any-file"],
