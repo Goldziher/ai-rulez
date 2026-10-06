@@ -125,15 +125,20 @@ func (g Git) StagedChanges(dir string) ([]Change, error) {
 // diffChanges runs the name-status and the zero-context patch diff against
 // target (a revision or --cached) and joins them on the new path.
 func (g Git) diffChanges(dir, target string) ([]Change, error) {
+	targetArgs := []string{target, "--"}
+	if target == "--cached" {
+		targetArgs = []string{"--cached", "HEAD", "--"}
+	}
+	return g.diffChangesArgs(dir, targetArgs)
+}
+
+// diffChangesArgs is diffChanges with the revision arguments spelled out.
+func (g Git) diffChangesArgs(dir string, targetArgs []string) ([]Change, error) {
 	// Explicit prefixes and config overrides keep the +++ header parseable
 	// whatever diff.noprefix, diff.mnemonicPrefix or diff.src/dstPrefix say.
 	common := []string{
 		"-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false", "-c", "color.diff=false",
 		"diff", "--relative", "-M", "--no-ext-diff", "--no-textconv", "--no-color", "--src-prefix=a/", "--dst-prefix=b/",
-	}
-	targetArgs := []string{target, "--"}
-	if target == "--cached" {
-		targetArgs = []string{"--cached", "HEAD", "--"}
 	}
 	nameArgs := append(append(append([]string{}, common...), "--name-status", "-z"), targetArgs...)
 	names, _, err := g.run(dir, nil, nameArgs...)
