@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -106,10 +105,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	}
 	run := r.Exec
 	if run == nil {
-		run = execCommand
-		if r.Runner != nil {
-			run = execThrough(r.Runner)
-		}
+		run = execThrough(runner.Or(r.Runner))
 	}
 	timeout := r.Timeout
 	if timeout <= 0 {
@@ -171,18 +167,6 @@ func (r *ClaudePluginEval) args(dir, resultFile string, req *Request) []string {
 // forwarded of its standard error: the result is read from a file, so anything
 // beyond this is noise that must not exhaust memory.
 const maxToolOutputBytes = 8 << 20
-
-// execCommand runs the tool in its own process group and kills the whole group
-// when ctx ends, so a hung or forking claude cannot outlive the timeout.
-func execCommand(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
-	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // the user chose the runner binary
-	killTreeOnCancel(cmd)
-	cmd.Stdout = stdout
-	if stderr != nil {
-		cmd.Stderr = &cappedWriter{w: stderr, n: maxToolOutputBytes}
-	}
-	return runTree(cmd)
-}
 
 // execThrough runs the tool through r. Output is captured by the runner (capped
 // at maxToolOutputBytes per stream) and written to the sinks when the tool ends.
