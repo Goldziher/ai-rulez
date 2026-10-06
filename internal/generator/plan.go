@@ -6,14 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
-	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
 // PlanSchema is the version of the Plan document (schema/plan.schema.json). A new
@@ -102,8 +99,8 @@ type PlanRemoval struct {
 //
 // MCP placeholders stay as written (${VAR}), so the plan depends on neither the
 // environment nor the checkout and never holds a resolved secret. generate itself
-// is not yet built on the plan: both share the rendering code (collectOutputs)
-// and differ only in what follows it, which a later step (S4) unifies.
+// is built on the same plan (Generator.Plan): DescribeApplier reports it, DiskApplier
+// writes it.
 func PlanOutputs(ctx context.Context, cfg *config.Config, opts PlanOptions) (*Plan, error) {
 	if cfg == nil {
 		return nil, oops.Errorf("plan: no configuration")
@@ -122,49 +119,12 @@ func PlanOutputs(ctx context.Context, cfg *config.Config, opts PlanOptions) (*Pl
 		}
 	}
 
-	generateMu.Lock()
-	defer generateMu.Unlock()
-	g.beginRun()
-	defer g.resetRunState()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
 	g.lockRender = true // leave ${VAR} and ${PROJECT_ROOT} as written
-
-	outputs, active, err := g.collectOutputs(opts.Profile)
+	res, err := g.run(opts.Profile, DescribeApplier)
 	if err != nil {
 		return nil, err
 	}
-	g.markSensitiveOutputs(outputs)
-	g.markPlannedSecretDocuments(outputs)
-
-	plan := &Plan{Schema: PlanSchema, Renderer: templates.GeneratorSchemaVersion, Files: []PlanFile{}, Removals: []PlanRemoval{}}
-	if role := g.Role(); role != "" {
-		plan.Role = role
-	} else {
-		plan.Profile = active
-	}
-	for i := range outputs {
-		plan.Files = append(plan.Files, g.planFile(&outputs[i]))
-	}
-	sort.Slice(plan.Files, func(i, j int) bool { return plan.Files[i].Path < plan.Files[j].Path })
-
-	for _, stale := range g.staleManifestFiles(outputs) {
-		plan.Removals = append(plan.Removals, PlanRemoval{Path: g.relSlash(stale), Reason: RemoveStale})
-	}
-	for _, edit := range g.planUnmerge(outputs, false) {
-		reason := RemoveUnmerge
-		if edit.delete {
-			reason = RemoveDelete
-		}
-		plan.Removals = append(plan.Removals, PlanRemoval{Path: edit.rel, Reason: reason})
-	}
-	sort.Slice(plan.Removals, func(i, j int) bool {
-		if plan.Removals[i].Path != plan.Removals[j].Path {
-			return plan.Removals[i].Path < plan.Removals[j].Path
-		}
-		return plan.Removals[i].Reason < plan.Removals[j].Reason
-	})
-	return plan, nil
+	return res.Document, nil
 }
 
 // markPlannedSecretDocuments flags every MCP config document as sensitive when a

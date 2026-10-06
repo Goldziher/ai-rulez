@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
@@ -31,7 +33,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/schema"
-	"github.com/samber/oops"
 )
 
 const defaultProfileName = "default"
@@ -165,87 +166,11 @@ func (g *Generator) Generate(profile string) error {
 // number of files it wrote, directories excluded, so a caller reporting a total
 // to the user can report a counted one.
 func (g *Generator) GenerateFiles(profile string) (int, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
-	g.beginRun()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
-
-	flatOutputs, activeProfile, err := g.collectOutputs(profile)
+	res, err := g.run(profile, DiskApplier)
 	if err != nil {
 		return 0, err
 	}
-
-	// The machine-local inputs (overlay, local/ tree) are ignored before any check
-	// can refuse the run, so a refused first run never leaves them unignored.
-	if err := g.ignoreLocalInputs(); err != nil {
-		return 0, err
-	}
-
-	if err := g.guardLocal(profile, flatOutputs); err != nil {
-		return 0, err
-	}
-
-	if role := g.Role(); role != "" {
-		// A role renders its own slice of the content, not a profile.
-		g.log().Info("Generating with configuration", "role", role)
-	} else {
-		g.log().Info("Generating with configuration", "profile", activeProfile)
-	}
-	if g.config.HasGuard() {
-		g.log().Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
-			"harnesses", config.GuardHarnesses)
-	}
-
-	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
-		return 0, err
-	}
-	g.markSensitiveOutputs(flatOutputs)
-	g.planLocalManifest(flatOutputs)
-
-	ignoredEarly, err := g.ignoreBeforeWriting(flatOutputs)
-	if err != nil {
-		return 0, err
-	}
-
-	staleFiles := g.staleManifestFiles(flatOutputs)
-	g.removeStaleManifestFiles(staleFiles)
-
-	// Write all output files
-	if err := g.writeOutputs(flatOutputs); err != nil {
-		return 0, err
-	}
-
-	// Merged documents lose what an earlier run merged in and this one does not
-	// (a preset or server that was removed). Planned after the write so that
-	// what this run claimed counts.
-	unmerged := g.planUnmerge(flatOutputs, false)
-	g.applyUnmerge(unmerged)
-
-	// Writing happens first: a directory the stale pass emptied may be one this
-	// run re-creates, and pruning before the write would only have it made again.
-	g.pruneDirsEmptiedBy(append(staleFiles, deletedPaths(unmerged)...))
-
-	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
-		if g.hasLocalOutputs(flatOutputs) {
-			// Without the local manifest a later run cannot clean these files up.
-			return 0, oops.Wrapf(err, "write the generated manifests")
-		}
-		g.log().Warn("Failed to write generated manifest", "error", err)
-	}
-
-	g.finishGitignore(flatOutputs, ignoredEarly)
-
-	written := 0
-	for _, output := range flatOutputs {
-		if !output.IsDir {
-			written++
-		}
-	}
-
-	g.log().Info("Generation complete", "files", written)
-
-	return written, nil
+	return res.Written, nil
 }
 
 // ignoreBeforeWriting makes sure machine-local files and MCP configs holding
@@ -831,38 +756,11 @@ func (g *Generator) DryRunBlocked() error {
 
 // DryRun returns an inspectable generation plan without writing or deleting files.
 func (g *Generator) DryRun(profile string) ([]string, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
-	g.beginRun()
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
-
-	flatOutputs, activeProfile, err := g.collectOutputs(profile)
+	res, err := g.run(profile, DryRunApplier)
 	if err != nil {
 		return nil, err
 	}
-
-	plan, err := g.planLocal(profile, flatOutputs)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := []string{fmt.Sprintf("profile: %s", activeProfile)}
-	if plan != nil {
-		lines = append(lines, plan.dryRunLines()...)
-	}
-	lines = append(lines, g.planLines(flatOutputs)...)
-	for _, stale := range g.staleManifestFiles(flatOutputs) {
-		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
-	}
-	for _, edit := range g.planUnmerge(flatOutputs, false) {
-		if edit.delete {
-			lines = append(lines, "delete-stale: "+edit.rel)
-		} else {
-			lines = append(lines, "unmerge: "+edit.rel)
-		}
-	}
-	return lines, nil
+	return res.Lines, nil
 }
 
 // planLines lists the directories and files a run would create. A file whose
