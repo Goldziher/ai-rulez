@@ -14,16 +14,13 @@ func TestEffectiveMCPServers(t *testing.T) {
 	tests := []struct {
 		name   string
 		config string
-		legacy string
 		want   []string
 	}{
 		{
-			name:   "raw keeps authored order, legacy follows sorted without duplicates",
+			name:   "raw keeps authored order and drops the resolved values",
 			config: "\n[[mcp_servers]]\nname = \"zeta\"\ncommand = \"z\"\n\n[[mcp_servers]]\nname = \"alpha\"\ncommand = \"a\"\n",
-			legacy: "mcp_servers:\n  - name: legacy-b\n    command: b\n  - name: alpha\n    command: shadowed\n  - name: legacy-a\n    command: a\n",
-			want:   []string{"zeta", "alpha", "legacy-a", "legacy-b"},
+			want:   []string{"zeta", "alpha"},
 		},
-		{name: "legacy only", legacy: "mcp_servers:\n  - name: only\n    command: o\n", want: []string{"only"}},
 		{name: "none", want: []string{}},
 	}
 	for _, tt := range tests {
@@ -33,9 +30,6 @@ func TestEffectiveMCPServers(t *testing.T) {
 			dir := filepath.Join(root, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(dir, 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"+tt.config), 0o644))
-			if tt.legacy != "" {
-				require.NoError(t, os.WriteFile(filepath.Join(dir, "mcp.yaml"), []byte(tt.legacy), 0o644))
-			}
 			cfg, err := LoadConfig(context.Background(), root)
 			require.NoError(t, err)
 			// A render resolves placeholders in the working copy.
@@ -53,6 +47,28 @@ func TestEffectiveMCPServers(t *testing.T) {
 				assert.NotContains(t, s.Env, "K", "the as-written server must not carry a resolved value")
 			}
 			assert.Equal(t, tt.want, names)
+		})
+	}
+}
+
+func TestLoadConfig_IgnoresSeparateMCPFiles(t *testing.T) {
+	for _, name := range []string{"mcp.toml", "mcp.yaml", "mcp.json"} {
+		t.Run(name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			dir := filepath.Join(root, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"),
+				[]byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(`{"mcp_servers":[{"name":"legacy","command":"x"}]}`), 0o644))
+
+			// Act
+			cfg, err := LoadConfig(context.Background(), root)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Empty(t, cfg.MCPServers, "a separate MCP file is no longer read")
+			assert.Empty(t, cfg.EffectiveMCPServers())
 		})
 	}
 }

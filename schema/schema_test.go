@@ -39,12 +39,6 @@ func TestSchemaURL(t *testing.T) {
 			file:     schema.ConfigSchemaFile,
 			expected: "https://raw.githubusercontent.com/Goldziher/ai-rulez/v3.14.2/schema/ai-rules.schema.json",
 		},
-		{
-			name:     "mcp schema file",
-			version:  "dev",
-			file:     schema.MCPSchemaFile,
-			expected: "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json",
-		},
 	}
 
 	for _, tt := range tests {
@@ -61,7 +55,7 @@ func TestSchemaURL(t *testing.T) {
 func TestValidateWithSchema(t *testing.T) {
 	t.Run("valid minimal config", func(t *testing.T) {
 		cfg := `
-version: "3.0"
+version: "4.0"
 name: "test-project"
 presets:
   - claude
@@ -72,7 +66,7 @@ presets:
 
 	t.Run("missing name fails", func(t *testing.T) {
 		cfg := `
-version: "3.0"
+version: "4.0"
 presets:
   - claude
 `

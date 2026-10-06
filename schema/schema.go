@@ -25,7 +25,6 @@ var Version = "dev"
 const (
 	schemaBaseURL    = "https://raw.githubusercontent.com/Goldziher/ai-rulez"
 	ConfigSchemaFile = "ai-rules.schema.json"
-	MCPSchemaFile    = "ai-rules-mcp.schema.json"
 )
 
 // SchemaURL returns the full URL for a schema file, versioned to match the CLI.

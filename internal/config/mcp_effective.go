@@ -4,12 +4,11 @@ import "sort"
 
 // EffectiveMCPServers returns the MCP servers generation uses, as written
 // (${VAR} placeholders unresolved): the [[mcp_servers]] of the configuration in
-// the order they were authored, then the servers of a legacy mcp.toml, mcp.yaml
-// or mcp.json that the loader merges in, sorted by name, without duplicates.
+// the order they were authored, then any server set only on Config.MCPServers
+// (programmatically), sorted by name, without duplicates.
 //
 // Config.MCPServers is the working copy: a render resolves placeholders in place
-// there, so a check that must see what the author wrote reads this instead. The
-// legacy file is read again from disk for the same reason.
+// there, so a check that must see what the author wrote reads this instead.
 func (c *Config) EffectiveMCPServers() []MCPServer {
 	servers := make([]MCPServer, 0, len(c.MCPServersRaw))
 	seen := map[string]bool{}
@@ -26,11 +25,6 @@ func (c *Config) EffectiveMCPServers() []MCPServer {
 		clone := s.Clone()
 		clone.Name = name
 		extra = append(extra, clone)
-	}
-	if c.ConfigDir != "" {
-		for name, s := range loadLegacyMCPFile(c.ConfigDir) {
-			add(name, s)
-		}
 	}
 	// Servers set programmatically (no file behind them) keep their current value.
 	for name, s := range c.MCPServers {
