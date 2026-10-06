@@ -269,6 +269,13 @@ reported as AR9B3 info, unless the project configured that style. `import okf` i
 the same `.ai-rulez/` tree. The default stays `body` until one scheme is clearly adopted; a change would be announced in
 the changelog.
 
+### Importing through `convert`
+
+`ai-rulez convert --from okf` runs the same mapping as `import okf` and writes the same files, but through convert's
+plan: the lossiness report (the bundle's findings become report findings), the security scan before anything is written
+(a finding names the bundle file), `--domain`, `--merge` and an atomic write. A bundle is found at the source root or
+in `docs/okf`. See [convert](cli.md#ai-rulez-convert).
+
 ### Links
 
 Links inside concept bodies follow the files they point at.

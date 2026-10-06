@@ -173,7 +173,7 @@ stdout.
 | AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
 | AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
 | AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
-| AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, hooks not imported (convert report only) |
+| AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, a hook or allow rule written disabled, a remote source not fetched (convert report only) |
 | AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
 | AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
 | AR9N0 | `publish-preflight-failed` | error | A preflight gate of `ai-rulez publish` failed: `validate --strict`, `lock --check` or `verify --plugin` (publish only, see [Publish](publish.md)) |
@@ -2697,9 +2697,9 @@ a construct needs a manual step after conversion, for example a literal secret r
 
 - Default severity: `warning`
 - Analyzer: `convert` (scope `item`)
-- Why: The conversion is incomplete until a person acts: a literal credential in an MCP server was replaced by a `${VAR}` reference, a lock hash was not carried over, or hooks were not imported. Only the convert report carries it.
+- Why: The conversion is incomplete until a person acts: a literal credential in an MCP server was replaced by a `${VAR}` reference, a lock hash was not carried over, a hook or an allow rule was written disabled, or a remote source was not fetched. Only the convert report carries it.
 - Bad: An MCP server with `--api-key sk-...` in its arguments
-- Good: Export the variable named in the reference and run `ai-rulez lock`, or re-add the hook by hand
+- Good: Export the variable named in the reference and run `ai-rulez lock`, review a disabled hook and uncomment it (or rerun with `--enable-hooks`), or rerun with `--fetch`
 
 ### AR9F4 convert-unsupported
 
@@ -2707,7 +2707,7 @@ a source or construct convert does not support (convert report only)
 
 - Default severity: `warning`
 - Analyzer: `convert` (scope `item`)
-- Why: The source kind is out of scope (a `node_modules` or local skills-lock source, a transport helper URL). Only the convert report carries it.
+- Why: The source kind is out of scope (a `node_modules` or local skills-lock source, a transport helper URL, an SSH or marketplace APM dependency, an MCP registry reference, an npm rulesync source). Only the convert report carries it.
 - Bad: A skills-lock entry whose source is `file:///tmp/skill`
 - Good: Install the skill from an https or ssh Git source and convert again
 

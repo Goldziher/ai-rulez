@@ -73,7 +73,7 @@ Need the same knowledge outside coding agents? `ai-rulez export okf` writes rule
 | **Lock and updates** | `ai-rulez lock` pins remote includes, installed skills, skill sources, authored content and outputs by commit and sha256; `generate --locked` is the CI mode, `version = "^1.2"` ranges are moved by `ai-rulez update` | [lock file](docs/lockfile.md) |
 | **Dynamic skills and roles** | `delivery = "served"` skills are loaded on demand through `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`) instead of written to every harness; `[[roles]]` render a slice of the content per job | [MCP server](docs/mcp-server.md#dynamic-skill-loading), [roles](docs/roles.md) |
 | **Validation and verifiers** | `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
-| **Inventory** | `ai-rulez sbom` (CycloneDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
+| **Inventory** | `ai-rulez sbom` (CycloneDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files, rulesync, APM, Tessl and OKF projects | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
 
 ## Generate Plugins, Not Just Config
 
