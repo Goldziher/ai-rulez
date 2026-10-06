@@ -26,25 +26,13 @@ Add a `.vscode/settings.json` to reference the schema:
 }
 ```
 
-## V3 Schema (Backward Compatible)
-
-The same schema accepts `version = "3.0"`, so V3 YAML configs get editor support too:
-
-```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json
-version: "3.0"
-name: "My Project"
-```
-
-V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
-
 ---
 
 ## V4 Validation Rules
 
 ### Required Fields
 
-- **`version`**: Must be `"4.0"` or `"3.0"` (for backward compatibility)
+- **`version`**: Must be `"4.0"`
 - **`name`**: Project name (required, non-empty string)
 
 ### Optional Fields
@@ -53,7 +41,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`presets`**: List of tool presets (e.g., `claude`, `cursor`, `gemini`)
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
-- **`schema`** (`$schema` in YAML/JSON): URL of the JSON Schema, for editor support. TOML configs use the key `schema`
+- **`schema`**: URL of the JSON Schema, for editor support
 - **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
@@ -96,7 +84,7 @@ Which of these a repository may set, and which only the user config file or the 
 
 ### Field Constraints
 
-- **`version`**: Must be `"4.0"` or `"3.0"`
+- **`version`**: Must be `"4.0"`
 - **`name`**: Non-empty string
 - **`priority`** (in markdown frontmatter): One of `critical`, `high`, `medium`, `low`, `minimal`
 - **`targets`** (in markdown frontmatter): Selects output files, as preset names (`claude`), root files (`CLAUDE.md`), paths or base names, directory prefixes (`.cursor/rules/`), globs (`.cursor/rules/*`), or `*`. See [Targets](rules.md#targets)
@@ -152,9 +140,8 @@ The schema files are available in the repository:
 
 | File                              | Format      | Version | Notes                                               |
 | --------------------------------- | ----------- | ------- | --------------------------------------------------- |
-| `schema/ai-rules.schema.json`     | JSON Schema | V4/V3   | Config schema; accepts `version` `"4.0"` and `"3.0"` |
-| `schema/ai-rules-mcp.schema.json` | JSON Schema | V4      | Standalone schema for MCP server configurations      |
-| `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.*` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
+| `schema/ai-rules.schema.json`     | JSON Schema | V4      | Config schema; `version` must be `"4.0"`             |
+| `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.toml` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
 | `schema/provider.schema.json`     | JSON Schema | V4      | Declarative provider spec referenced by `[[presets]] provider = "..."`; see [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity) |
 | `schema/roles-manifest.schema.json` | JSON Schema | v1    | `roles.json` and `roles list --format json`; see [Roles](roles.md#the-roles-manifest) |
 | `schema/catalog.schema.json`      | JSON Schema | v2      | `ai-rulez catalog --format json --schema-version 2` and the `catalog.json` of `catalog --html`; see [Catalog](catalog.md) |
@@ -182,7 +169,6 @@ The schema files are available in the repository:
 Access them at (versioned to the release; `main` is the tip):
 
 - Main schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json`
-- MCP schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json`
 - Local overlay schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json`
 - Provider schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/provider.schema.json`
 - Roles manifest schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/roles-manifest.schema.json`
@@ -201,7 +187,7 @@ Use the `ai-rulez validate` command to check your configuration against the sche
 # Validate current directory
 ai-rulez validate
 
-# Validate specific config (TOML or YAML)
+# Validate a specific config.toml
 ai-rulez validate .ai-rulez/config.toml
 
 # Verbose output
