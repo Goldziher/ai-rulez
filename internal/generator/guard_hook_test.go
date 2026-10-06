@@ -29,7 +29,8 @@ func TestGenerate_GuardHookPerHarness(t *testing.T) {
 		{name: "codex", file: ".codex/hooks.json", matcher: `"matcher": "apply_patch|Edit|Write"`},
 		{name: "gemini", file: ".gemini/settings.json", matcher: `"matcher": "^replace$|^write_file$"`},
 		{name: "cursor", file: ".cursor/hooks.json", matcher: `"matcher": "^Write$"`},
-		{name: "factory", file: ".factory/hooks.json", matcher: `"matcher": "Edit|Create"`},
+		{name: "factory", file: ".factory/hooks.json", matcher: `"matcher": "Edit|Create|ApplyPatch"`},
+		{name: "copilot", file: ".github/hooks/ai-rulez.json", matcher: `"matcher": "edit|create"`},
 	}
 	root := writeProject(t, guardHookConfig, nil)
 	generateProject(t, root)
@@ -37,13 +38,16 @@ func TestGenerate_GuardHookPerHarness(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := readProjectFile(t, root, tt.file)
 
-			assert.Contains(t, got, `"command": "ai-rulez guard"`)
+			if tt.name == "copilot" {
+				assert.Contains(t, got, `"bash": "ai-rulez guard"`)
+			} else {
+				assert.Contains(t, got, `"command": "ai-rulez guard"`)
+			}
 			assert.Contains(t, got, tt.matcher)
 		})
 	}
 
 	t.Run("harnesses without a blocking PreToolUse hook are skipped", func(t *testing.T) {
-		assert.NoFileExists(t, filepath.Join(root, ".github", "hooks", "ai-rulez.json"))
 		assert.NoFileExists(t, filepath.Join(root, ".opencode", "plugins", "ai-rulez-hooks.js"))
 	})
 }

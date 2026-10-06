@@ -19,10 +19,11 @@ var GuardCmd = &cobra.Command{
 edits a file ai-rulez generated.
 
 A blocked call exits with code 2 and the reason on stderr, which is how Claude
-Code, Codex, Gemini CLI, Cursor and Factory block a tool call. Every other case
+Code, Codex, Gemini CLI, Cursor, Factory and Copilot block a tool call. Every other case
 exits 0: a path that is not a wholly owned output (settings files ai-rulez only
 merges into are allowed), a path outside the project, a read-only tool and a
-payload that cannot be parsed. The guard fails open.
+payload that cannot be parsed. The guard fails open on its own errors; a payload
+over 8 MiB or a call naming over 1000 files is blocked.
 
 Add the hook with [guard] generated = true in .ai-rulez/config.toml.`,
 	Args:         cobra.NoArgs,

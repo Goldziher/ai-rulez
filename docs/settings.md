@@ -404,10 +404,25 @@ hook is synthesized at generation time and written like any other `[[hooks]]` gr
 | `codex` | `PreToolUse` | `apply_patch\|Edit\|Write` |
 | `gemini` | `BeforeTool` | `^replace$\|^write_file$` |
 | `cursor` | `preToolUse` | `^Write$` |
-| `factory` | `PreToolUse` | `Edit\|Create` |
+| `factory` | `PreToolUse` | `Edit\|Create\|ApplyPatch` |
+| `copilot` | `preToolUse` | `edit\|create` |
 
 Only harnesses whose documented `PreToolUse` hook blocks a call on exit code 2 get it; the others are skipped
-and `generate` logs which at info level. The hook command resolves the executable the way
+and `generate` logs which at info level. The exit-2 contract of each, as documented (read 2026-10-06):
+
+- Claude Code ([hooks](https://code.claude.com/docs/en/hooks)): "Exit 2 means a blocking error"; `PreToolUse`
+  "blocks the tool call" and stderr is the message.
+- Codex ([hooks](https://learn.chatgpt.com/docs/hooks)): "You can also use exit code `2` and write the blocking
+  reason to `stderr`"; file edits arrive as `apply_patch`, selectable with `apply_patch`, `Edit` or `Write`.
+- Gemini CLI ([hooks](https://geminicli.com/docs/hooks/)): exit 2 is a "Critical Block. The target action (tool,
+  turn, or stop) is aborted"; stderr is the rejection reason.
+- Cursor ([hooks](https://cursor.com/docs/hooks)): "Exit code `2` - Block the action (equivalent to returning
+  `permission: "deny"`)".
+- Factory ([hooks guide](https://docs.factory.com/cli/configuration/hooks-guide)): "Exit code 2: Blocking or
+  corrective feedback. PreToolUse blocks the tool call"; the editing tools are `Create`, `Edit` and `ApplyPatch`.
+- GitHub Copilot ([hooks configuration](https://docs.github.com/en/copilot/reference/hooks-configuration)):
+  `preToolUse` denies on exit code 2 (any other non-zero exit also denies; timeouts fail open). The same page
+  documents a JSON `permissionDecision: "deny"` on stdout, which the guard does not need. The hook command resolves the executable the way
 [`[mcp] self_server`](configuration.md) does, so it works through `npx` without a global install.
 
 How `ai-rulez guard` decides:
