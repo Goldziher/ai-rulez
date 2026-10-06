@@ -145,3 +145,23 @@ func TestServedSkills_IncludeServedItemsAndCarryDelivery(t *testing.T) {
 	assert.Equal(t, config.DeliveryStatic, byID["core"].Delivery)
 	assert.Equal(t, []string{"big migration", "schema change"}, byID["heavy"].Triggers)
 }
+
+func TestServedSkills_AnUnsetMCPVariableDoesNotBlockServing(t *testing.T) {
+	// Arrange
+	root := deliveryProject(t)
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+	t.Setenv("AI_RULEZ_TEST_UNSET_TOKEN", "")
+	require.NoError(t, os.Unsetenv("AI_RULEZ_TEST_UNSET_TOKEN"))
+	cfg.MCPServers = map[string]*config.MCPServer{"api": {
+		Transport: "http", URL: "https://mcp.example.com/mcp",
+		Headers: map[string]string{"Authorization": "Bearer ${AI_RULEZ_TEST_UNSET_TOKEN}"},
+	}}
+
+	// Act
+	_, served, err := NewGenerator(cfg).ServedSkills("", "claude")
+
+	// Assert
+	require.NoError(t, err)
+	assert.NotEmpty(t, served)
+}
