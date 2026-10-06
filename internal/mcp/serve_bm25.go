@@ -19,20 +19,37 @@ type FindHit struct {
 // omitted. An empty query (or one that is only stopwords) returns nothing: use
 // list_skill_resources or skills/list to enumerate.
 func bm25Rank(skills []*CatalogSkill, query string) []FindHit {
-	docs := make([]skillsearch.Doc, len(skills))
-	for i, s := range skills {
-		docs[i] = skillsearch.Doc{Name: s.Name, Description: s.Description, Triggers: s.Triggers, Keywords: s.Keywords}
-	}
+	docs, _ := searchDocs(skills)
 	ranked := skillsearch.Rank(docs, query)
+	if len(ranked) == 0 {
+		return nil
+	}
 	hits := make([]FindHit, len(ranked))
 	for i, h := range ranked {
 		hits[i] = FindHit{Skill: skills[h.Index], Score: h.Score}
 	}
-	if len(hits) == 0 {
-		return nil
-	}
 	return hits
 }
+
+// searchDocs is the searchable text of the skills and their stable ids (the
+// catalog name), in catalog order.
+func searchDocs(skills []*CatalogSkill) (docs []skillsearch.Doc, ids []string) {
+	docs = make([]skillsearch.Doc, len(skills))
+	ids = make([]string, len(skills))
+	for i, s := range skills {
+		docs[i] = skillsearch.Doc{Name: s.Name, Description: s.Description, Triggers: s.Triggers, Keywords: s.Keywords}
+		ids[i] = s.Name
+	}
+	return docs, ids
+}
+
+// Rank ranks the served skills against a query exactly as find_skill does, for
+// `ai-rulez search`.
+func (c *Catalog) Rank(query string) []FindHit { return bm25Rank(c.skills, query) }
+
+// SearchDocs returns the catalog's skills as search documents with their ids,
+// for `ai-rulez search --eval`.
+func (c *Catalog) SearchDocs() (docs []skillsearch.Doc, ids []string) { return searchDocs(c.skills) }
 
 // listField reads a frontmatter value that is a list of strings or one
 // comma-separated string.
