@@ -199,11 +199,53 @@ func checkPreserved(before, after map[string]any, specs []pathSpec) error {
 	b := deepCopy(before).(map[string]any)
 	a := deepCopy(after).(map[string]any)
 	for _, spec := range specs {
+		if err := spec.checkElementCounts(before, after); err != nil {
+			return err
+		}
 		spec.strip(b)
 		spec.strip(a)
 	}
 	if diff, differs := firstDiff(b, a, nil); differs {
 		return fmt.Errorf("the edit changed %s, which ai-rulez does not own", describePath(diff))
+	}
+	return nil
+}
+
+// checkElementCounts verifies that an edit took no more copies of a claimed
+// element than the claim lists: strip drops every copy of a claimed value from
+// both sides, so without this a hand-written duplicate could be removed unseen.
+func (s pathSpec) checkElementCounts(before, after map[string]any) error {
+	if s.elements == nil {
+		return nil
+	}
+	was, ok := LookupTree(before, s.path)
+	if !ok {
+		return nil
+	}
+	wasList, isList := was.([]any)
+	if !isList {
+		return nil
+	}
+	nowList := []any{}
+	if now, present := LookupTree(after, s.path); present {
+		nowList, _ = now.([]any)
+	}
+	budget := map[string]int{}
+	for _, sum := range s.elements.ElementDigests() {
+		budget[sum]++
+	}
+	delta := map[string]int{}
+	for _, element := range wasList {
+		delta[Digest(element)]++
+	}
+	for _, element := range nowList {
+		delta[Digest(element)]--
+	}
+	for sum, removed := range delta {
+		if _, claimed := budget[sum]; claimed && removed > budget[sum] {
+			return fmt.Errorf("the edit removed more copies of an element of %s than ai-rulez added",
+				describePath(s.path))
+		}
 	}
 	return nil
 }

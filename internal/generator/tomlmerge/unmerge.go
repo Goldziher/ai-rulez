@@ -126,8 +126,9 @@ func (e *editor) unmergeClaim(claim Claim) (changed, mismatch bool, err error) {
 		return false, false, nil
 	}
 	remaining := make([]any, 0, len(array))
+	matcher := claim.NewElementMatcher()
 	for _, element := range array {
-		if !claim.OwnsElement(element) {
+		if !matcher.Take(element) {
 			remaining = append(remaining, element)
 		}
 	}

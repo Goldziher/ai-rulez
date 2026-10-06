@@ -54,23 +54,6 @@ func readNativeArray(docPath string, path []string) []any {
 	return list
 }
 
-// sameValue compares two document values structurally, whatever their types
-// (int64 from TOML, int from YAML, float64 from JSON).
-func sameValue(a, b any) bool {
-	x, errX := json.Marshal(a)
-	y, errY := json.Marshal(b)
-	return errX == nil && errY == nil && equalJSON(x, y)
-}
-
-func hasValue(list []any, value any) bool {
-	for _, item := range list {
-		if sameValue(item, value) {
-			return true
-		}
-	}
-	return false
-}
-
 // nativeArrayKey is arrayKey for a TOML or YAML document: the same ownership
 // rules, with elements as plain values instead of raw JSON, because those
 // engines write what they are given.
@@ -82,30 +65,12 @@ func nativeArrayKey(cfg *config.Config, docPath string, path []string, ours []js
 			wanted = append(wanted, value)
 		}
 	}
-	existing := readNativeArray(docPath, path)
-	var previous []any
-	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-		if equalPath(claim.Path, path) {
-			previous = append(previous, claim.ElementsIn(existing)...)
-		}
+	value, claimed := planElements(previousElementClaims(cfg, docPath, path), readNativeArray(docPath, path), wanted)
+	if value == nil {
+		value = []any{}
 	}
-
-	value := make([]any, 0, len(existing)+len(wanted))
-	for _, element := range existing {
-		if hasValue(previous, element) && !hasValue(wanted, element) {
-			continue
-		}
-		value = append(value, element)
-	}
-	claimed := make([]any, 0, len(wanted))
-	for _, element := range wanted {
-		switch {
-		case !hasValue(value, element):
-			value = append(value, element)
-		case !hasValue(previous, element):
-			continue // identical to an element the consumer wrote: theirs
-		}
-		claimed = append(claimed, element)
+	if claimed == nil {
+		claimed = []any{}
 	}
 	return jsonmerge.OwnedKey{Path: path, Value: value, Elements: claimed}
 }

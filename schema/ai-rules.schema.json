@@ -1052,6 +1052,20 @@
         "salt_file": {
           "type": "string",
           "description": "File holding the session-hash salt. Ignored in a repository config."
+        },
+        "resource": {
+          "type": "object",
+          "description": "Extra OTLP resource attributes (for example a team label). User scope and AI_RULEZ_TELEMETRY_RESOURCE only: ignored in a repository config. At most 8 entries; service.*, host.*, user.*, process.*, os.* and ai_rulez.* keys are reserved.",
+          "maxProperties": 8,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$",
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       },
       "additionalProperties": false

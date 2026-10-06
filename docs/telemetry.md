@@ -97,6 +97,10 @@ sample          = 1.0                      # fraction of sessions exported, deci
 include_paths   = false                    # user scope only
 include_session = false                    # add the salted session hash to exported logs; user scope only
 salt_file       = ""                       # user scope only
+
+[telemetry.resource]                       # extra OTLP resource attributes; user scope only
+team = "platform"
+"deployment.environment" = "prod"
 ```
 
 ### The trust rule
@@ -108,7 +112,7 @@ host the author picked. So:
 | --- | --- | --- |
 | `enabled` | honored (local recording only, into a gitignored file) | honored |
 | `sample` | honored | honored |
-| `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
+| `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file`, `resource` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
 
 The local overlay (`config.local.*`) counts as repository scope: it is machine-local by convention but lives in the
 checkout. Network export is active only when `enabled`, `allow_network` and a valid endpoint are all present after
@@ -119,7 +123,15 @@ See the [trust model](trust-model.md) for the same rule across every knob.
 Precedence, highest first: kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`: nothing is recorded or
 exported) > environment (`AI_RULEZ_TELEMETRY`, `AI_RULEZ_TELEMETRY_ENDPOINT`, `_PROTOCOL`, `_ALLOW_NETWORK`,
 `_HEADERS_ENV` as a comma list of names, `_SERVICE_NAME`, `_SAMPLE`, `_INCLUDE_PATHS`, `_INCLUDE_SESSION`,
-`_SALT_FILE`) > user config > repository config > defaults.
+`_SALT_FILE`, `_RESOURCE` as `key=value,key2=value2`) > user config > repository config > defaults.
+
+`[telemetry.resource]` labels the data at the source. Keys are lower-case dotted names (`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`,
+at most 64 characters), there are at most 8 entries, and a value is a non-empty string of at most 128 characters with no
+control characters. The `service.*`, `host.*`, `user.*`, `process.*`, `os.*`, `cloud.*`, `k8s.*`, `container.*`,
+`telemetry.*` and `ai_rulez.*` namespaces are reserved, so host or user data cannot be added. Environment entries
+override user-config entries per key. A repository `[telemetry.resource]` is ignored (reported by `telemetry doctor`
+and `AR9K1`); an invalid table is `AR9K0` and keeps export off. `telemetry doctor` lists the effective labels and their
+source.
 
 Validation (`AR9K0`): https is required except for a loopback host; no credentials, query or fragment in the
 endpoint; `headers_env` accepts an environment variable name only (`^[A-Z][A-Z0-9_]*$`, and a 20-character name
@@ -183,8 +195,9 @@ Errors kept in `telemetry-state.json` contain a status code or a reason such as 
 
 ## OTLP mapping
 
-Resource attributes: `service.name` (default `ai-rulez`), `service.version`, `ai_rulez.schema_version`. No host,
-process, OS or user attributes are added: there is no SDK resource detector.
+Resource attributes: `service.name` (default `ai-rulez`), `service.version`, `ai_rulez.schema_version`, then the
+`[telemetry.resource]` labels sorted by key. No host, process, OS or user attributes are added: there is no SDK
+resource detector.
 
 **Logs**: one record per event, severity `INFO`, body `item <outcome>`, attribute `event.name` =
 `ai_rulez.item.<outcome>`, time = the event time.
@@ -267,7 +280,7 @@ Claude Code exports its own metrics and events (`claude_code.token.usage`, `clau
 `OTEL_RESOURCE_ATTRIBUTES` variables are set (variable names verified in the binary; the metric list is what the
 binary names). ai-rulez does not duplicate any of that: it adds only what the harness cannot know, which ai-rulez
 item a load corresponds to. Point both at the same collector and give both the same team label (set
-`OTEL_RESOURCE_ATTRIBUTES` for Claude Code; ai-rulez adds no custom resource attributes, so use the collector's
+`OTEL_RESOURCE_ATTRIBUTES` for Claude Code; set the same labels in `[telemetry.resource]`, or use the collector's
 resource processor) to join them.
 
 ## MCP server integration
