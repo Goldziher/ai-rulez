@@ -409,7 +409,7 @@ func TestCheckStaged_ValidatesInstalledSkills(t *testing.T) {
 	files := map[string][]byte{"config.toml": []byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")}
 
 	// Act
-	err := checkStaged(context.Background(), report, files, cfg)
+	err := checkStaged(context.Background(), report, files, cfg, scanContext{})
 
 	// Assert
 	require.NoError(t, err)
@@ -838,4 +838,57 @@ func TestNativePlan_LenientFrontmatterIsReported(t *testing.T) {
 	assert.Contains(t, got, "multi")
 	assert.NotNil(t, findingFor(p, StatusApproximated, ".cursor/rules/a.mdc", "frontmatter"), "%v", p.Findings)
 	assert.True(t, strings.Contains(got, "**/*.ts"))
+}
+
+func TestConvert_ScanFindingsPointAtTheSource(t *testing.T) {
+	// Arrange: the key sits on line 5 of CLAUDE.md, whatever line it has in the planned tree.
+	dir := t.TempDir()
+	writeTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nSome text.\n\nkey " + awsKey + "\n"})
+
+	// Act
+	report, err := Convert(context.Background(), ConvertOptions{Source: dir})
+
+	// Assert
+	require.NoError(t, err)
+	require.True(t, report.Security.Blocked)
+	found := false
+	for _, f := range report.Security.Findings {
+		if f.Code == "AR001" {
+			found = true
+			assert.Equal(t, "CLAUDE.md", f.File)
+			assert.Equal(t, 5, f.Line)
+			assert.Contains(t, f.Planned, ".ai-rulez/")
+		}
+	}
+	assert.True(t, found, "%+v", report.Security.Findings)
+}
+
+func TestConvert_AllowFindingsLetsACodeThrough(t *testing.T) {
+	tests := []struct {
+		name        string
+		allow       []string
+		wantBlocked bool
+		wantWritten bool
+	}{
+		{name: "blocked without the flag", wantBlocked: true},
+		{name: "allowed code writes", allow: []string{"AR001"}, wantWritten: true},
+		{name: "lower case code is accepted", allow: []string{"ar001"}, wantWritten: true},
+		{name: "another code does not help", allow: []string{"AR002"}, wantBlocked: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			writeTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nkey " + awsKey + "\n"})
+
+			// Act
+			report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, AllowFindings: tt.allow})
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBlocked, report.Security.Blocked)
+			assert.Equal(t, tt.wantWritten, report.Written)
+			assert.NotEmpty(t, report.Security.Findings, "an allowed finding stays in the report")
+		})
+	}
 }

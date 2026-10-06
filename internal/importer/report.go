@@ -51,6 +51,11 @@ type SecurityFinding struct {
 	File     string `json:"file"`
 	Line     int    `json:"line,omitempty"`
 	Message  string `json:"message"`
+	// Planned is the path and line in the planned .ai-rulez tree when File and
+	// Line point at the source file the text came from.
+	Planned string `json:"planned,omitempty"`
+	// Allowed is set when --allow-findings lets the finding through.
+	Allowed bool `json:"allowed,omitempty"`
 }
 
 // ValidationResult is the outcome of loading the planned tree.
@@ -173,13 +178,27 @@ func (r *Report) WriteText(w io.Writer) {
 	} else {
 		fmt.Fprintf(w, "Security scan: %d finding(s)%s.\n", len(r.Security.Findings), blockedSuffix(r.Security.Blocked))
 		for _, f := range r.Security.Findings {
-			fmt.Fprintf(w, "  %s %s %s:%d %s\n", f.Severity, f.Code, f.File, f.Line, f.Message)
+			fmt.Fprintf(w, "  %s %s %s:%d %s%s\n", f.Severity, f.Code, f.File, f.Line, f.Message, findingSuffix(f))
 		}
 	}
 	fmt.Fprintf(w, "Validation of the planned tree: %d error(s), %d warning(s).\n", r.Validation.Errors, r.Validation.Warnings)
 	for _, m := range r.Validation.Messages {
 		fmt.Fprintf(w, "  %s\n", m)
 	}
+}
+
+func findingSuffix(f SecurityFinding) string {
+	var parts []string
+	if f.Planned != "" {
+		parts = append(parts, "planned "+f.Planned)
+	}
+	if f.Allowed {
+		parts = append(parts, "allowed by --allow-findings")
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return " (" + strings.Join(parts, "; ") + ")"
 }
 
 func blockedSuffix(b bool) string {
