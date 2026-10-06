@@ -21,6 +21,8 @@ func (c Config) PrivilegedKeys() []string {
 	add(c.AllowNetwork, "allow_network")
 	add(c.BaseURL != "", "base_url")
 	add(c.APIKeyEnv != "", "api_key_env")
+	add(c.AllowPlainHTTP, "allow_plain_http")
+	add(len(c.PlainHTTPHosts) > 0, "plain_http_hosts")
 	add(c.PriceInputPerMTok != 0, "price_input_per_mtok")
 	add(c.PriceOutputPerMTok != 0, "price_output_per_mtok")
 	return out
@@ -31,6 +33,8 @@ func (c Config) stripPrivileged() Config {
 	c.AllowNetwork = false
 	c.BaseURL = ""
 	c.APIKeyEnv = ""
+	c.AllowPlainHTTP = false
+	c.PlainHTTPHosts = nil
 	c.PriceInputPerMTok = 0
 	c.PriceOutputPerMTok = 0
 	return c
@@ -70,10 +74,37 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 	if merged.MaxRetries == 0 {
 		merged.MaxRetries = cfg.MaxRetries
 	}
+	// Provider routing decides which service receives the user's key. When the
+	// repository supplies it (the provider field, or a provider/ prefix in model)
+	// and the user did not, remember that so the literllm backend can refuse to
+	// send the user's key along it.
+	merged.repoProvider = u.Provider == "" && cfg.Provider != ""
+	merged.repoModelRoute = u.Model == "" && strings.Contains(cfg.Model, "/") &&
+		(u.Provider == "" || modelPrefix(cfg.Model) != u.Provider)
 	merged.MaxCostUSD = tighterFloat(u.MaxCostUSD, cfg.MaxCostUSD)
 	merged.MaxTokens = tighterInt(u.MaxTokens, cfg.MaxTokens)
 	merged.MaxCalls = tighterInt(u.MaxCalls, cfg.MaxCalls)
 	return merged, ignored
+}
+
+func modelPrefix(model string) string {
+	prefix, _, _ := strings.Cut(model, "/")
+	return prefix
+}
+
+// RoutingFromRepo names the provider-routing keys ("provider", "model") whose
+// value came from a repository config. They choose the service a literllm call
+// goes to, so the literllm backend refuses to send a user-scope key along them
+// (see newLiterLLM); set them in user scope, or via AI_RULEZ_LLM_*.
+func (c Config) RoutingFromRepo() []string {
+	var out []string
+	if c.repoProvider {
+		out = append(out, "provider")
+	}
+	if c.repoModelRoute {
+		out = append(out, "model")
+	}
+	return out
 }
 
 func tighterInt(a, b int) int {

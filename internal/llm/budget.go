@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync"
 )
 
@@ -132,11 +133,18 @@ func unbilled(err error) bool {
 	if !errors.As(err, &e) {
 		return false
 	}
-	if e.Status >= 400 {
+	// Only a documented client-error rejection is known to be free. A 5xx, 429
+	// or gateway timeout may have run (and been billed) upstream, so those are
+	// charged at the worst case like any other unknown outcome.
+	switch e.Status {
+	case 0:
+	case http.StatusBadRequest, http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity:
 		return true
+	default:
+		return false
 	}
 	switch e.Kind {
-	case KindAuth, KindConfig, KindContextLength, KindBudget, KindNetworkDisabled, KindRateLimit, KindDryRun:
+	case KindAuth, KindConfig, KindContextLength, KindBudget, KindNetworkDisabled, KindDryRun:
 		return true
 	default:
 		return false

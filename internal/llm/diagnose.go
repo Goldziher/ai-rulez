@@ -24,6 +24,8 @@ type Diagnosis struct {
 	CacheDir       string   `json:"cache_dir,omitempty"`
 	Limits         string   `json:"limits"`
 	Problems       []string `json:"problems,omitempty"`
+	// Warnings are non-fatal findings the setup deserves a reviewer's attention for.
+	Warnings []string `json:"warnings,omitempty"`
 	// IgnoredRepoKeys names user-scope-only keys a repository config set; they have no effect (filled by the caller).
 	IgnoredRepoKeys []string `json:"ignored_repo_keys,omitempty"`
 }
@@ -58,6 +60,12 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 		d.APIKeyEnv = cfg.APIKeyEnv
 		d.APIKeySet = strings.TrimSpace(getenv(cfg.APIKeyEnv)) != ""
 	}
+	if cfg.UsesPlainHTTPOptIn() {
+		d.Warnings = append(d.Warnings, "plain-http opt-in in use: the API key is sent unencrypted to "+d.BaseURLHost+" (allow_plain_http; prefer https or a loopback tunnel)")
+	}
+	if routed := cfg.RoutingFromRepo(); len(routed) > 0 && d.Backend == BackendLiterLLM && cfg.APIKeyEnv != "" {
+		d.Problems = append(d.Problems, "the repository config chooses the provider ("+strings.Join(routed, ", ")+") but the key comes from user scope; the literllm backend refuses this, set them in user scope")
+	}
 	if d.Backend == BackendLiterLLM && !d.NativeCompiled {
 		d.Problems = append(d.Problems, "backend literllm is selected but not compiled in (build with -tags literllm)")
 	}
@@ -91,6 +99,9 @@ func (d Diagnosis) WriteText(w io.Writer) {
 	printf(w, "limits:          %s\n", d.Limits)
 	if len(d.IgnoredRepoKeys) > 0 {
 		printf(w, "warning:         %s\n", IgnoredKeysMessage(d.IgnoredRepoKeys))
+	}
+	for _, m := range d.Warnings {
+		printf(w, "warning:         %s\n", m)
 	}
 	for _, p := range d.Problems {
 		printf(w, "problem:         %s %s\n", CodeConfigInvalid, p)
