@@ -298,8 +298,9 @@ func (g Gate) Decide(cmp Comparison) Verdict {
 	case len(cmp.Skipped) > 0:
 		reasons = append(reasons, fmt.Sprintf("regression: the candidate skipped %d held-out case(s) the baseline scored", len(cmp.Skipped)))
 	}
-	if cmp.Gain+epsilon < g.MinGain {
-		reasons = append(reasons, fmt.Sprintf("below gain: %+.1f points, need %+.1f", cmp.Gain*100, g.MinGain*100))
+	// --min-gain 0 must not accept a candidate that gained nothing: some stable win is always required.
+	if cmp.Gain+epsilon < g.MinGain || cmp.Gain <= epsilon || len(cmp.Wins) == 0 {
+		reasons = append(reasons, fmt.Sprintf("below gain: %+.1f points and %d stable win(s), need %+.1f points and at least one win", cmp.Gain*100, len(cmp.Wins), g.MinGain*100))
 	}
 	if g.RequireCIAboveZero && (cmp.CI == nil || cmp.CI.Low <= epsilon) {
 		reasons = append(reasons, "below confidence: the 95% bootstrap interval of the gain includes zero")
