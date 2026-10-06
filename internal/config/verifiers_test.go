@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -230,4 +231,69 @@ regex = "TODO"
 			}
 		})
 	}
+}
+
+func TestValidateVerifiersSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings VerifiersSettings
+		includes []IncludeConfig
+		wantErr  string
+	}{
+		{"empty", VerifiersSettings{}, nil, ""},
+		{"valid", VerifiersSettings{MaxTimeoutS: 60, CommandEnv: []string{"MY_FLAG"}, TrustExecFrom: []string{"shared"}}, []IncludeConfig{{Name: "shared"}}, ""},
+		{"timeout too long", VerifiersSettings{MaxTimeoutS: 100000}, nil, "max_timeout_s"},
+		{"negative timeout", VerifiersSettings{MaxTimeoutS: -1}, nil, "max_timeout_s"},
+		{"file bytes too large", VerifiersSettings{MaxFileBytes: 1 << 40}, nil, "max_file_bytes"},
+		{"env name not a name", VerifiersSettings{CommandEnv: []string{"A=B"}}, nil, "not an environment variable name"},
+		{"credential env refused", VerifiersSettings{CommandEnv: []string{"GITHUB_TOKEN"}}, nil, "credential"},
+		{"proxy env refused", VerifiersSettings{CommandEnv: []string{"HTTPS_PROXY"}}, nil, "credential or proxy"},
+		{"trust unknown include", VerifiersSettings{TrustExecFrom: []string{"ghost"}}, nil, "not a declared include"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := &Config{VerifiersSettings: &tt.settings, Includes: tt.includes}
+
+			// Act
+			err := cfg.validateVerifiers()
+
+			// Assert
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestVerifiersSettings_LoadAndSurviveARewrite(t *testing.T) {
+	src := verifiersHead + "\n[verifiers_settings]\nmax_timeout_s = 120\nrequire_examples = true\ncommand_env = [\"MY_FLAG\"]\n"
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
+	path := filepath.Join(dir, ".ai-rulez", "config.toml")
+	require.NoError(t, os.WriteFile(path, []byte(src), 0o644))
+
+	cfg, err := LoadConfigFromFile(context.Background(), path)
+	require.NoError(t, err)
+	out, err := MarshalTOML(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, out, 0o644))
+	again, err := LoadConfigFromFile(context.Background(), path)
+	require.NoError(t, err)
+
+	require.NotNil(t, again.VerifiersSettings)
+	assert.Equal(t, VerifiersSettings{MaxTimeoutS: 120, RequireExamples: true, CommandEnv: []string{"MY_FLAG"}}, *again.VerifiersSettings)
+}
+
+func TestValidateVerifiers_CommandTypeHintsAtTheSpecForm(t *testing.T) {
+	cfg := &Config{Verifiers: []VerifierConfig{{Name: "a", Type: "command"}}}
+
+	err := cfg.validateVerifiers()
+
+	var oe oops.OopsError
+	require.ErrorAs(t, err, &oe)
+	assert.Contains(t, oe.Hint(), "spec-form")
 }
