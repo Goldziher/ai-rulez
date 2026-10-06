@@ -82,13 +82,15 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 	for p, data := range okf.BuildIndexes(idx, dirLabels(items), opts.IndexStyle) {
 		files = append(files, okf.File{Path: claimIndex(used, p), Data: data})
 	}
-	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	sort.SliceStable(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	res.Files = files
 	return res, nil
 }
 
 // claimIndex registers an index path. Generated indexes always win their path:
-// concept files never use reserved names (see resourcePath).
+// concept files never use reserved names (see resourcePath), so a rule named
+// index or log lands in index_.md or log_.md and the import restores its name
+// from x-ai-rulez.id.
 func claimIndex(used map[string]string, p string) string {
 	used[strings.ToLower(p)] = p
 	return p
@@ -192,7 +194,7 @@ func renderItem(it sourceItem, claim func(string) string) ([]piece, []okf.IndexI
 	case hasResources(it):
 		conceptPath = claim(path.Join(baseDir(it), seg, fileCommand))
 	default:
-		conceptPath = claim(path.Join(baseDir(it), seg+".md"))
+		conceptPath = claim(resourcePath(path.Join(baseDir(it), seg+".md")))
 	}
 	fields, desc, err := conceptFields(it, id)
 	if err != nil {
@@ -403,7 +405,7 @@ func renderResources(it sourceItem, id, dir, srcDir string, claim func(string) s
 
 // resourcePath renames markdown resources whose name is reserved in OKF.
 func resourcePath(rel string) string {
-	switch path.Base(rel) {
+	switch strings.ToLower(path.Base(rel)) {
 	case okf.IndexFile, okf.LogFile:
 		return strings.TrimSuffix(rel, ".md") + "_.md"
 	}

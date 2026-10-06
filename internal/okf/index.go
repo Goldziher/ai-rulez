@@ -226,15 +226,20 @@ func frontmatterIndex(dir string, own []IndexInput, subs []string, labels DirLab
 
 func writeEntry(b *strings.Builder, title, target, desc string) {
 	b.WriteString("* [" + escapeTitle(title) + "](" + target + ")")
-	if desc = oneLine(desc); desc != "" {
+	if desc = escapeText(oneLine(desc)); desc != "" {
 		b.WriteString(" - " + desc)
 	}
 	b.WriteString("\n")
 }
 
 func escapeTitle(t string) string {
-	t = oneLine(t)
-	return strings.NewReplacer("[", "\\[", "]", "\\]").Replace(t)
+	return escapeText(oneLine(t))
+}
+
+// escapeText backslash-escapes the characters that would make a title or a
+// description render as a link or as HTML in the index listing.
+func escapeText(t string) string {
+	return strings.NewReplacer("[", "\\[", "]", "\\]", "<", "\\<", ">", "\\>").Replace(t)
 }
 
 func sortedKeys(m map[string]bool) []string {
