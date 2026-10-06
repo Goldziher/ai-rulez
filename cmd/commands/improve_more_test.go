@@ -115,7 +115,7 @@ func TestImproveClean_AllNeedsConfirmationOrYes(t *testing.T) {
 }
 
 func TestImproveSettings_ConfigFlagsAndTrust(t *testing.T) {
-	const table = "[improve]\nmin_gain = 0.4\nmax_rounds = 2\nholdout_tag = \"hold\"\nisolation = \"auto\"\noptimizer = \"repo-optimizer --x\"\nenv_pass = [\"REPO_VAR\"]\n"
+	const table = "[improve]\nmin_gain = 0.4\nmax_rounds = 2\nholdout_tag = \"hold\"\nmin_holdout_cases = 5\nisolation = \"auto\"\noptimizer = \"repo-optimizer --x\"\nenv_pass = [\"REPO_VAR\"]\n"
 	tests := []struct {
 		name       string
 		trust      bool
@@ -158,6 +158,7 @@ func TestImproveSettings_ConfigFlagsAndTrust(t *testing.T) {
 			assert.Equal(t, tt.wantRounds, st.maxRounds)
 			assert.Equal(t, tt.wantMode, string(st.isolation))
 			assert.Equal(t, "hold", st.holdoutTag)
+			assert.Equal(t, 5, st.minHoldoutCases)
 			assert.Equal(t, tt.wantWarn, strings.Contains(warn.String(), improve.CodeRepoOptimizerIgnored), warn.String())
 		})
 	}
