@@ -48,8 +48,8 @@ how to do it with `cosign`.
 
 | `kind` | id | Pinned files |
 | --- | --- | --- |
-| `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them) |
-| `skill` | the skill directory name | `SKILL.md` and every loaded resource (`references/`, `scripts/`, `assets/`) |
+| `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
+| `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
@@ -527,7 +527,7 @@ A lock without content pins (one written by `lock <name>` before any content was
 lock whose pins were stripped looks the same. `--check` therefore fails on it (exit `2`) and asks for `ai-rulez lock`,
 whatever `enforce` says: a check that passes on such a lock would let a downgrade switch the content checks off.
 `generate` keeps using the include and skill pins of such a lock. `generate --locked` on it warns, and fails under `enforce`. A lock with content pins must also carry a `tree` digest.
-A hook `script` outside the project cannot be pinned; it is reported as a `lock` change (not an abort) until it
+A hook `script` (or a frontmatter hook script) outside the project cannot be pinned; it is reported as a `lock` change (not an abort) until it
 moves inside the project.
 
 If remote includes are configured but not in the local cache, outputs cannot be rendered as `generate` would; the
