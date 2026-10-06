@@ -37,10 +37,23 @@ bundle, a published skill or an SBOM file the same way (they imply --attestation
 --public-key or --identity with --issuer can stand in for a project's [signing]
 table). See docs/signing.md.
 
+With --approvals, verify instead re-checks the signed approvals recorded in the lock
+against their attestations and the [[signing.trust]] entries for approvals, offline;
+--online also asks the forge whether each review-linked approval still holds. See
+docs/approvals.md.
+
 Exit codes: 0 verified, 1 the check could not run, 2 generated files differ (with
---attestation: the attestation failed verification).`,
+--attestation: the attestation failed verification; with --approvals: an approval
+no longer holds).`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := rejectApprovalFlags(cmd); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		if verifyApprovals {
+			os.Exit(runVerifyApprovals(args, cmd.OutOrStdout()))
+		}
 		if verifyArtifactMode() {
 			verifyAttestation = true // --bundle, --skill and --sbom imply --attestation
 		}
@@ -103,6 +116,8 @@ func init() {
 	f.StringArrayVar(&verifyPublicKeys, "public-key", nil, "With --attestation: also trust this PEM public key for the lock (repeatable)")
 	f.StringVar(&verifyIdentity, "identity", "", "With --attestation: also trust this certificate identity (needs --issuer)")
 	f.StringVar(&verifyIssuer, "issuer", "", "With --attestation: the OIDC issuer of --identity")
+	f.BoolVar(&verifyApprovals, "approvals", false, "Re-check the signed and review-linked approvals that apply to the current content")
+	f.BoolVar(&verifyOnline, "online", false, "With --approvals: also check review-linked approvals against the forge (needs the network and a token)")
 	f.BoolVar(&verifyNoState, "no-state", false, "With --attestation: do not read or update the per-user rollback state")
 	f.StringVar(&verifyBundleDir, "bundle", "", "Verify the attestation of this plugin bundle directory (implies --attestation)")
 	f.StringVar(&verifySkillDir, "skill", "", "Verify the publisher attestation of this skill directory (implies --attestation)")

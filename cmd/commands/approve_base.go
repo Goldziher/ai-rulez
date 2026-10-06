@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -51,7 +52,54 @@ func selfApprovalsAgainst(cfg *config.Config, lock *lockfile.File, rev string) (
 	if err != nil {
 		return nil, err
 	}
-	return approval.SelfApprovals(base, lock), nil
+	found := approval.SelfApprovals(base, lock)
+	authored, err := authorSelfApprovals(cfg, lock, rev)
+	if err != nil {
+		return nil, err
+	}
+	return append(found, authored...), nil
+}
+
+// authorSelfApprovals is forbid_self_approval: the approvals of the current
+// content whose reviewer authored a commit that touched the item since the
+// merge base of rev and HEAD. It is best effort and heuristic: it matches
+// commit author emails (and GitHub noreply addresses) against the reviewer
+// string, so a reviewer recorded under another name is not caught.
+func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
+	if lock == nil || len(lock.Approval) == 0 || !approval.PolicyOf(cfg).ForbidSelf {
+		return nil, nil
+	}
+	g, err := newApproveGit(context.Background(), cfg)
+	if err != nil {
+		return nil, err
+	}
+	subjects := map[string]approval.Subject{}
+	for _, s := range approval.SubjectsOf(lock, lock.Item) {
+		subjects[s.Key()] = s
+	}
+	cache := map[string][]string{}
+	var out []approval.SelfApproval
+	for i := range lock.Approval {
+		a := lock.Approval[i]
+		s, ok := subjects[a.ItemKey()]
+		if !ok || s.Digest != a.Digest {
+			continue
+		}
+		emails, seen := cache[s.Key()]
+		if !seen {
+			if emails, err = g.authors(rev, g.subjectPaths(s)); err != nil {
+				return nil, err
+			}
+			cache[s.Key()] = emails
+		}
+		for _, email := range emails {
+			if approval.AuthorIs(a.Reviewer, email) {
+				out = append(out, approval.SelfApproval{Approval: a, Ref: s.Ref(), Author: email})
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
 // verifyBase is `approve --verify-base <rev>`: it prints each approval added
