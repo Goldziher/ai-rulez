@@ -49,7 +49,7 @@ var (
 func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
-		baselineFlagsSet() || changedRev() != ""
+		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet()
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.
@@ -194,9 +194,13 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
 		}
 	}
+	scanner, err := scannerOptions()
+	if err != nil {
+		return nil, err
+	}
 	return lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
-		Analyzers: validateAnalyzers, NeedDeps: changedRev() != "",
+		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "",
 	}, opts...)
 }
 

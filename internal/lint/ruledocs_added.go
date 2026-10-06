@@ -335,6 +335,16 @@ func init() {
 			Bad:  "`egress = true` run without `--allow-egress`",
 			Good: "Run with `--allow-egress=<name>` after reviewing the scanner",
 		},
+		CodeScannerBaselineExpired: {
+			Why:  "A baseline entry that accepts a scanner finding forever hides it after the code or the scanner changes; an expiry date forces a review.",
+			Bad:  "An entry of `scanner-baseline.json` with `expires` in the past",
+			Good: "Fix the finding and remove the entry, or renew it with `scan --external --write-baseline --reason`",
+		},
+		CodeScannerOutOfScope: {
+			Why:  "A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped.",
+			Bad:  "A scanner that reports `/etc/passwd` or a path that is not under the stage",
+			Good: "Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy",
+		},
 		CodeLLMConfigInvalid: {
 			Why:  "An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.",
 			Bad:  "`api_key_env = \"sk-live-123\"`",

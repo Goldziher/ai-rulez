@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -21,6 +23,19 @@ type externalFinding struct {
 	Severity string `json:"severity"`
 	Rule     string `json:"rule"`
 	Message  string `json:"message"`
+	// Fingerprint is the scanner's own stable identity for the result (SARIF
+	// partialFingerprints or fingerprints); empty when it gave none.
+	Fingerprint string `json:"fingerprint,omitempty"`
+	// The fields below come from SARIF only.
+	// Score is properties.security-severity (result, else rule), valid when HasScore.
+	Score    float64 `json:"-"`
+	HasScore bool    `json:"-"`
+	// DefaultLevel is the rule's defaultConfiguration.level.
+	DefaultLevel string `json:"-"`
+	// HelpURI is the rule's helpUri, an evidence link.
+	HelpURI string `json:"-"`
+	// Suppressed marks a result the tool suppressed in source or externally.
+	Suppressed bool `json:"-"`
 }
 
 const (
@@ -53,6 +68,21 @@ type sarifRun struct {
 	// OriginalURIBaseIDs maps a uriBaseId to the base it stands for.
 	OriginalURIBaseIDs map[string]sarifBase `json:"originalUriBaseIds"`
 	Results            []sarifResult        `json:"results"`
+	Tool               struct {
+		Driver struct {
+			Rules []ingestRule `json:"rules"`
+		} `json:"driver"`
+	} `json:"tool"`
+}
+
+// ingestRule is the part of tool.driver.rules[] the ingest uses.
+type ingestRule struct {
+	ID                   string `json:"id"`
+	HelpURI              string `json:"helpUri"`
+	DefaultConfiguration struct {
+		Level string `json:"level"`
+	} `json:"defaultConfiguration"`
+	Properties map[string]any `json:"properties"`
 }
 
 // sarifBase is one originalUriBaseIds entry; it may itself be relative to another base.
@@ -62,10 +92,17 @@ type sarifBase struct {
 }
 
 type sarifResult struct {
-	RuleID       string    `json:"ruleId"`
-	Level        string    `json:"level"`
-	Message      sarifText `json:"message"`
-	Suppressions []struct {
+	RuleID    string `json:"ruleId"`
+	RuleIndex *int   `json:"ruleIndex"`
+	Rule      struct {
+		ID string `json:"id"`
+	} `json:"rule"`
+	Level               string         `json:"level"`
+	Message             sarifText      `json:"message"`
+	Properties          map[string]any `json:"properties"`
+	Fingerprints        map[string]any `json:"fingerprints"`
+	PartialFingerprints map[string]any `json:"partialFingerprints"`
+	Suppressions        []struct {
 		Kind string `json:"kind"`
 	} `json:"suppressions"`
 	Locations []struct {
@@ -86,6 +123,12 @@ type sarifResult struct {
 // results than the cap) is an error: it is never ingested in part, and an
 // empty document is never mistaken for a clean scan.
 func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, error) {
+	return parseExternalKeep(format, out, exitCode, false)
+}
+
+// parseExternalKeep is parseExternal that keeps suppressed results, flagged
+// Suppressed, when keepSuppressed is set (--show-suppressed).
+func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed bool) ([]externalFinding, error) {
 	if len(bytes.TrimSpace(out)) == 0 {
 		return nil, fmt.Errorf("no output")
 	}
@@ -118,7 +161,8 @@ func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, 
 			return nil, err
 		}
 		for _, res := range run.Results {
-			if sarifSuppressed(res) {
+			suppressed := sarifSuppressed(res)
+			if suppressed && !keepSuppressed {
 				continue
 			}
 			if len(found) >= maxScannerResults {
@@ -128,7 +172,23 @@ func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, 
 			if strings.TrimSpace(msg) == "" {
 				msg = res.Message.Markdown
 			}
-			f := externalFinding{Rule: res.RuleID, Severity: res.Level, Message: msg}
+			f := externalFinding{Severity: res.Level, Message: msg, Suppressed: suppressed,
+				Fingerprint: ingestFingerprint(res)}
+			rule := ingestRuleOf(run, res)
+			f.Rule = res.RuleID
+			if f.Rule == "" {
+				f.Rule = res.Rule.ID
+			}
+			if f.Rule == "" && rule != nil {
+				f.Rule = rule.ID
+			}
+			if rule != nil {
+				f.DefaultLevel, f.HelpURI = rule.DefaultConfiguration.Level, rule.HelpURI
+			}
+			f.Score, f.HasScore = ingestScore(res.Properties)
+			if !f.HasScore && rule != nil {
+				f.Score, f.HasScore = ingestScore(rule.Properties)
+			}
 			if len(res.Locations) > 0 {
 				loc := res.Locations[0].PhysicalLocation
 				f.File = sarifLocationPath(loc.ArtifactLocation.URI, loc.ArtifactLocation.URIBaseID, run.OriginalURIBaseIDs, 0)
@@ -138,6 +198,69 @@ func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, 
 		}
 	}
 	return found, nil
+}
+
+// ingestRuleOf finds the tool.driver.rules[] entry of a result: by ruleIndex, else by id.
+func ingestRuleOf(run sarifRun, res sarifResult) *ingestRule {
+	rules := run.Tool.Driver.Rules
+	if i := res.RuleIndex; i != nil && *i >= 0 && *i < len(rules) {
+		return &rules[*i]
+	}
+	id := res.RuleID
+	if id == "" {
+		id = res.Rule.ID
+	}
+	if id == "" {
+		return nil
+	}
+	for i := range rules {
+		if rules[i].ID == id {
+			return &rules[i]
+		}
+	}
+	return nil
+}
+
+// ingestScore reads properties["security-severity"], which is a number or a numeric string.
+func ingestScore(props map[string]any) (float64, bool) {
+	switch v := props["security-severity"].(type) {
+	case float64:
+		return v, true
+	case string:
+		if f, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+			return f, true
+		}
+	}
+	return 0, false
+}
+
+// maxScannerFingerprint bounds a scanner-provided fingerprint that is kept.
+const maxScannerFingerprint = 512
+
+// ingestFingerprint picks the scanner's own identity for a result: the
+// primaryLocationLineHash partial fingerprint, else the first partial
+// fingerprint by key, else the first fingerprint by key. Empty when none.
+func ingestFingerprint(res sarifResult) string {
+	pick := func(m map[string]any, preferred string) string {
+		if v, ok := m[preferred].(string); ok && v != "" && len(v) <= maxScannerFingerprint {
+			return v
+		}
+		keys := make([]string, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if v, ok := m[k].(string); ok && v != "" && len(v) <= maxScannerFingerprint {
+				return k + "=" + v
+			}
+		}
+		return ""
+	}
+	if fp := pick(res.PartialFingerprints, "primaryLocationLineHash"); fp != "" {
+		return fp
+	}
+	return pick(res.Fingerprints, "")
 }
 
 // maxSARIFBaseDepth bounds uriBaseId chains, so a cyclic declaration ends.

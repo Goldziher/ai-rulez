@@ -576,6 +576,49 @@ ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base th
 `file://` URI naming a host other than `localhost` (a UNC or remote share), or a base that points outside the
 project is attributed to `config.toml` with a note.
 
+### Staged input, severity and baseline
+
+An entry that sets `inputs` runs on a **staged copy** instead of the project. The copy holds exactly the listed kinds
+of content (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports`) in a scratch
+directory outside the project: skills with their `scripts/` and `references/`, files byte for byte as on disk,
+`hooks` and `mcp` as JSON with environment and header values left out, `imports` only when listed. Directories are
+mode 0500 and files 0400; no symlink is ever copied. The scanner runs with the stage as its working directory, a
+scrubbed environment (plus `env_pass`), `HOME` and `TMPDIR` set to scratch directories, and no path appended. The
+scratch directory is removed afterwards. Nothing is run when nothing is staged.
+
+Placeholders in `command` are expanded as arguments, never through a shell: `{stage}` and `{root}` the stage root,
+`{files}` one argument per staged file, `{skill_dirs}` one per staged skill directory (each on its own, not inside a
+longer argument), `{out}` a private file the scanner may write its report to (read instead of stdout), `{tmp}` the
+scratch temp directory. Placeholders need `inputs`; an unknown one is `AR9E0`.
+
+A result is attributed to the project file a staged file came from. A path that is not a staged file (absolute,
+`..`, another project file) is dropped and reported once per scanner as `AR9E6`. A relative path that matches no
+staged file at the root is tried against the staged skill directories (scanners handed `{skill_dirs}` print paths
+relative to them) and must match exactly one.
+
+Severity is the first of: `severity_map` (rule id or glob to `critical`, `high`, `medium`, `low`, `info`, or
+`error`, `warning`; exact id first, then the longest glob), SARIF `properties.security-severity` of the result or
+its rule (9.0 and up critical, 7.0 high, 4.0 medium, above 0 low), the result `level` (`error` high, `warning`
+medium, `note` low, `none` info), the rule's `defaultConfiguration.level`, else medium. `max_severity` then caps it.
+Critical and high report as error, medium as warning, low and info as info. A rule's `helpUri` (https only) is
+appended to the message as evidence. `--show-suppressed` keeps suppressed results as `info`.
+
+Every scanner finding has a fingerprint (`sc1:...`) that survives line moves and re-formatting: the scanner's own SARIF
+`partialFingerprints` (`primaryLocationLineHash`, else the first key) or `fingerprints` when present, combined with
+the rule and path; otherwise a hash of scanner, rule, repository path, normalized text of the flagged line and an
+occurrence index. Identical (scanner, fingerprint) pairs are reported once.
+
+`.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-budgets) with
+each entry also naming its `scanner` and `rule`. `scan --external --write-baseline --reason "..."` records every
+current scanner finding (keeping the entries of scanners that did not run, dropping stale ones). Accepted findings
+are not reported (their count is logged); editing the flagged line makes the finding new. An entry past its
+`expires` date (the day itself still counts) reports the finding again plus `AR9E5`.
+
+Design decisions: the baseline reuses the lint baseline format (`version`, `entries`) rather than a second schema;
+the stage map is kept in memory, not written into the stage, so the scanner cannot read source paths; staging is
+opt-in per entry through `inputs`, so existing entries are unchanged; `scanners list` never starts a program (the
+command is repository-controlled) and `doctor` starts only scanners you name.
+
 `egress` declares whether content derived from the scanned files can leave the machine (a hosted model, an
 upload, a credential used for a network call):
 

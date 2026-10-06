@@ -66,7 +66,9 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 			text = ls[f.Line-1]
 		}
 		key := f.Code + "\x00" + path + "\x00" + normalizeText(text)
-		f.meta().Fingerprint = fingerprintOf(f.Code, path, text, seen[key])
+		if f.meta().Fingerprint == "" { // an external scanner's finding arrives with its own
+			f.meta().Fingerprint = fingerprintOf(f.Code, path, text, seen[key])
+		}
 		seen[key]++
 	}
 }

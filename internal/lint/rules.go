@@ -69,6 +69,8 @@ const (
 	CodeScannerUnavailable      = "AR9E2"
 	CodeScannerRunFailed        = "AR9E3"
 	CodeScannerEgressBlocked    = "AR9E4"
+	CodeScannerBaselineExpired  = "AR9E5"
+	CodeScannerOutOfScope       = "AR9E6"
 	CodeCursorRuleExtension     = "AR9C1"
 	CodeCursorRuleNotApplied    = "AR9C2"
 	CodeCopilotExcludeAgent     = "AR9C3"
@@ -137,6 +139,8 @@ var registry = []RuleInfo{
 	{CodeScannerUnavailable, "scanner-unavailable", SeverityWarning, "a [[lint.external]] scanner's binary was not found, so it did not run"},
 	{CodeScannerRunFailed, "scanner-run-failed", SeverityError, "a [[lint.external]] scanner timed out, exceeded the output cap, or printed unreadable, unsuccessful or oversized output"},
 	{CodeScannerEgressBlocked, "scanner-egress-blocked", SeverityError, "a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner"},
+	{CodeScannerBaselineExpired, "scanner-baseline-expired", SeverityWarning, "an entry of scanner-baseline.json passed its expires date, so the finding it accepted is reported again"},
+	{CodeScannerOutOfScope, "scanner-out-of-scope-result", SeverityWarning, "a staged [[lint.external]] scanner reported a result for a file that was not staged for it; the result was dropped"},
 	{CodeCursorRuleExtension, "cursor-rule-extension-ignored", SeverityWarning, "a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)"},
 	{CodeCursorRuleNotApplied, "cursor-rule-not-applied", SeverityWarning, "a hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned"},
 	{CodeCopilotExcludeAgent, "copilot-exclude-agent-invalid", SeverityWarning, "a Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent"},

@@ -3,8 +3,10 @@ package lint
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -44,7 +47,8 @@ func externalProblems(ex config.LintExternal) []string {
 			problems = append(problems, fmt.Sprintf("env_pass %q is a proxy or credential variable, which an egress = false scanner must not receive", name))
 		}
 	}
-	return problems
+	problems = append(problems, inputProblems(ex)...)
+	return append(problems, severityMapProblems(ex.SeverityMap, ex.MaxSeverity)...)
 }
 
 // egressFlagViolation returns the first argument that turns on network egress,
@@ -117,18 +121,33 @@ func (r *runner) checkExternalConfig() {
 			r.addRun(CodeScannerConfigInvalid, ex.Name, p)
 		}
 		if ex.Egress == nil {
+			why := "so it runs with the full environment"
+			if len(ex.Inputs) > 0 {
+				why = "so its network flags are not checked"
+			}
 			r.addRun(CodeScannerEgressUndeclared, ex.Name,
-				"declares no egress, so it runs with the full environment; set egress = false (scrubbed environment) or egress = true (needs --allow-egress)")
+				"declares no egress, "+why+"; set egress = false (scrubbed environment) or egress = true (needs --allow-egress)")
 		}
 	}
 }
 
+// scanScope says where a scanner's reported paths are resolved.
+type scanScope struct {
+	// root is the project root (legacy runs) or the stage root.
+	root string
+	// stage is set for a staged run; a path outside it is out of scope (AR9E6).
+	stage *scannerStage
+}
+
 // runExternal runs the scanners from lint.external and merges their findings.
 // A scanner that fails, times out, is missing, or prints nothing trustworthy is
-// reported, so a broken scanner never looks like a clean report.
+// reported, so a broken scanner never looks like a clean report. The findings
+// of all scanners then pass through the scanner baseline.
 func (r *runner) runExternal() {
 	root := r.rootAbs()
 	files := r.scannedFiles()
+	var all []scannerFinding
+	ran := map[string]bool{}
 	for _, ex := range r.lc.External {
 		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 || len(externalProblems(ex)) > 0 {
 			continue
@@ -136,23 +155,124 @@ func (r *runner) runExternal() {
 		if !r.egressAllowed(ex) {
 			continue
 		}
-		spec := cmdrun.Spec{Dir: root, InheritEnv: ex.Egress == nil}
-		if ex.Egress != nil {
-			spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), ex.EnvPass, nil)
+		var got []scannerFinding
+		var ok bool
+		if len(ex.Inputs) > 0 {
+			got, ok = r.runStaged(ex, root)
+		} else {
+			got, ok = r.runInRoot(ex, root, files)
 		}
-		if ex.Timeout != "" {
-			spec.Timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // validated by externalProblems
-		}
-		// A long file list is split across runs (each with the full timeout) so
-		// the command line stays under the OS limit. A failing batch stops the rest.
-		for _, argv := range batchArgs(ex.Command, files, argvBudget) {
-			spec.Argv = argv
-			res := cmdrun.Run(context.Background(), spec)
-			if !r.ingestExternal(ex, root, res) {
-				break
-			}
+		all = append(all, got...)
+		ran[ex.Name] = ok
+	}
+	r.finishExternal(all, ran)
+}
+
+// specFor builds the run spec shared by both modes.
+func specFor(ex config.LintExternal, dir string) cmdrun.Spec {
+	spec := cmdrun.Spec{Dir: dir, InheritEnv: ex.Egress == nil}
+	if ex.Egress != nil {
+		spec.Env = cmdrun.ScrubEnv(cmdrun.HostEnv(), ex.EnvPass, nil)
+	}
+	if ex.Timeout != "" {
+		spec.Timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // validated by externalProblems
+	}
+	return spec
+}
+
+// runInRoot is the legacy mode: run in the project root with the paths of the
+// scanned files appended. A long file list is split across runs (each with the
+// full timeout) so the command line stays under the OS limit. A failing batch
+// stops the rest.
+func (r *runner) runInRoot(ex config.LintExternal, root string, files []string) (all []scannerFinding, ok bool) {
+	spec := specFor(ex, root)
+	for _, argv := range batchArgs(ex.Command, files, argvBudget) {
+		spec.Argv = argv
+		res := cmdrun.Run(context.Background(), spec)
+		got, good := r.ingestExternal(ex, scanScope{root: root}, res)
+		all = append(all, got...)
+		if !good {
+			return all, false
 		}
 	}
+	return all, true
+}
+
+// runStaged runs a scanner that declared inputs: in a scratch directory that
+// holds a read-only copy of exactly those inputs, with HOME and TMPDIR inside
+// the scratch directory and a scrubbed environment.
+func (r *runner) runStaged(ex config.LintExternal, root string) (all []scannerFinding, ok bool) {
+	st, err := r.buildStage(ex.Inputs)
+	if err != nil {
+		r.addRun(CodeScannerRunFailed, ex.Name, "could not stage its inputs: "+sanitizeScannerText(err.Error()))
+		return nil, false
+	}
+	defer st.cleanup()
+	usesSkillDirs := slices.Contains(ex.Command, phSkillDirs)
+	if len(st.files) == 0 || (usesSkillDirs && len(st.skillDirs) == 0) {
+		logger.Debug("Scanner has nothing staged to scan", "scanner", ex.Name, "inputs", ex.Inputs)
+		return nil, true
+	}
+	argv := st.expand(ex.Command)
+	if size := argvSize(argv); size > argvBudget {
+		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("{files} expands to %d bytes of arguments, over the %d byte limit; pass {stage} instead", size, argvBudget))
+		return nil, false
+	}
+	if strings.ContainsAny(argv[0], `/\`) && !filepath.IsAbs(argv[0]) {
+		argv[0] = filepath.Join(root, argv[0]) // a relative command is relative to the project, not the stage
+	}
+	usesOut := slices.ContainsFunc(ex.Command, func(a string) bool { return strings.Contains(a, phOut) })
+	if usesOut {
+		if err := os.WriteFile(st.outFile(), nil, 0o600); err != nil {
+			r.addRun(CodeScannerRunFailed, ex.Name, "could not create its output file: "+sanitizeScannerText(err.Error()))
+			return nil, false
+		}
+	}
+	spec := specFor(ex, st.root)
+	spec.Argv = argv
+	spec.InheritEnv = false
+	spec.Env = st.env(ex.EnvPass, cmdrun.HostEnv())
+	res := cmdrun.Run(context.Background(), spec)
+	if usesOut && (res.Status == cmdrun.StatusOK || res.Status == cmdrun.StatusExit) {
+		data, rerr := st.readOut()
+		if rerr != nil {
+			r.addRun(CodeScannerRunFailed, ex.Name, "its output file is not readable: "+sanitizeScannerText(rerr.Error()))
+			return nil, false
+		}
+		res.Stdout, res.StdoutTruncated = data, false
+	}
+	return r.ingestExternal(ex, scanScope{root: st.root, stage: st}, res)
+}
+
+func argvSize(argv []string) int {
+	n := 0
+	for _, a := range argv {
+		n += len(a) + 1
+	}
+	return n
+}
+
+// readOut reads the {out} file the scanner wrote, through the scratch root so a
+// link the scanner planted cannot point it at another file.
+func (st *scannerStage) readOut() ([]byte, error) {
+	root, err := os.OpenRoot(st.scratch)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // the message names the path
+	}
+	defer root.Close() //nolint:errcheck // read only
+	f, err := root.Open("out.sarif")
+	if err != nil {
+		return nil, err //nolint:wrapcheck // the message names the path
+	}
+	defer f.Close() //nolint:errcheck // read only
+	data, err := io.ReadAll(io.LimitReader(f, cmdrun.DefaultMaxOutput+1))
+	if err != nil {
+		return nil, fmt.Errorf("read: %w", err)
+	}
+	if int64(len(data)) > cmdrun.DefaultMaxOutput {
+		return nil, fmt.Errorf("more than %d bytes", cmdrun.DefaultMaxOutput)
+	}
+	return data, nil
 }
 
 // argvBudget is how many bytes of file arguments one scanner run may carry. It
@@ -210,72 +330,169 @@ func (r *runner) egressAllowed(ex config.LintExternal) bool {
 	return true
 }
 
+// scannerFinding is a finding of one scanner, kept with its scanner for deduplication and the baseline.
+type scannerFinding struct {
+	Finding
+	scanner string
+	rule    string
+	abs     string
+}
+
 // ingestExternal turns one run into findings.
 // It reports false when the scanner itself failed, so the caller stops running it.
-func (r *runner) ingestExternal(ex config.LintExternal, root string, res cmdrun.Result) bool {
+func (r *runner) ingestExternal(ex config.LintExternal, scope scanScope, res cmdrun.Result) ([]scannerFinding, bool) {
 	switch res.Status {
 	case cmdrun.StatusUnavailable:
 		r.addRun(CodeScannerUnavailable, ex.Name, fmt.Sprintf("%q was not found or is not executable, so it was not run (%s)", ex.Command[0], sanitizeScannerText(res.Err.Error())))
-		return false
+		return nil, false
 	case cmdrun.StatusTimeout:
 		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("timed out after %s and was killed", res.Timeout))
-		return false
+		return nil, false
 	case cmdrun.StatusError:
 		r.addRun(CodeScannerRunFailed, ex.Name, "could not run: "+sanitizeScannerText(res.Err.Error()))
-		return false
+		return nil, false
 	case cmdrun.StatusOK, cmdrun.StatusExit:
 	}
 	if res.StdoutTruncated {
 		r.addRun(CodeScannerRunFailed, ex.Name, fmt.Sprintf("printed more than %d bytes; output was not ingested", cmdrun.DefaultMaxOutput))
-		return false
+		return nil, false
 	}
-	found, err := parseExternal(ex.Format, res.Stdout, res.ExitCode)
+	found, err := parseExternalKeep(ex.Format, res.Stdout, res.ExitCode, r.opts.Scanner.ShowSuppressed)
 	if err != nil {
 		detail := strings.TrimSpace(string(res.Stderr))
 		if res.Err != nil {
 			detail = res.Err.Error() + " " + detail
 		}
 		r.addRun(CodeScannerRunFailed, ex.Name, "failed or printed unreadable output: "+sanitizeScannerText(detail)+" ("+sanitizeScannerText(err.Error())+")")
-		return false
+		return nil, false
 	}
+	sort.SliceStable(found, func(i, j int) bool {
+		a, b := found[i], found[j]
+		if a.File != b.File {
+			return a.File < b.File
+		}
+		if a.Line != b.Line {
+			return a.Line < b.Line
+		}
+		if a.Rule != b.Rule {
+			return a.Rule < b.Rule
+		}
+		return a.Message < b.Message
+	})
+	var out []scannerFinding
+	occurrence := map[string]int{}
+	outOfScope, firstOut := 0, ""
 	for _, f := range found {
+		abs, inside := "", true
+		if f.File != "" {
+			if scope.stage != nil {
+				abs, inside = scope.stage.resolve(f.File)
+			} else {
+				abs, inside = resolveScannerPath(f.File, scope.root)
+			}
+		}
 		msg := sanitizeScannerText(f.Message)
 		if rule := sanitizeScannerText(f.Rule); rule != "" {
 			msg = rule + ": " + msg
 		}
-		abs, inside := resolveScannerPath(f.File, root)
 		if !inside {
+			if scope.stage != nil {
+				if outOfScope++; firstOut == "" {
+					firstOut = sanitizeScannerText(f.File)
+				}
+				continue
+			}
 			msg += " (the scanner reported a path outside the project: " + sanitizeScannerText(f.File) + ")"
 			abs = r.configFilePath()
 		}
-		r.addExternal(ex.Name, abs, f.Line, externalSeverity(f.Severity), msg)
+		if u := evidenceURL(f.HelpURI); u != "" {
+			msg += " (" + u + ")"
+		}
+		band := scannerBand(ex.SeverityMap, f)
+		if limit, ok := parseBand(ex.MaxSeverity); ok && band > limit {
+			band = limit
+		}
+		sev := bandSeverity(band)
+		if f.Suppressed {
+			sev, msg = SeverityInfo, "(suppressed) "+msg
+		}
+		fnd, keep := r.externalFinding(ex.Name, abs, f.Line, sev, msg)
+		if !keep {
+			continue
+		}
+		fnd.meta().Fingerprint = r.scannerFingerprint(ex.Name, f, abs, fnd.Line, occurrence)
+		out = append(out, scannerFinding{Finding: fnd, scanner: ex.Name, rule: sanitizeScannerText(f.Rule), abs: abs})
 	}
-	return true
+	if outOfScope > 0 {
+		r.addRun(CodeScannerOutOfScope, ex.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
+	}
+	return out, true
 }
 
-func externalSeverity(level string) Severity {
-	switch strings.ToLower(level) {
-	case string(SeverityError), "high", "critical":
-		return SeverityError
-	case "note", "none", "info", "low":
-		return SeverityInfo
+// evidenceURL returns a rule's helpUri when it is a plain https URL.
+func evidenceURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if !strings.HasPrefix(raw, "https://") || len(raw) > 200 || strings.ContainsAny(raw, " \"<>") ||
+		strings.IndexFunc(raw, func(r rune) bool { return r < 0x21 || r == 0x7f }) >= 0 {
+		return ""
 	}
-	return SeverityWarning
+	return sanitizeScannerText(raw)
 }
 
-func (r *runner) addExternal(scanner, abs string, line int, sev Severity, msg string) {
+// resolve maps a path a scanner printed to the source file of a staged file.
+// ok is false for anything that is not a staged file. A relative path that is
+// not under the stage root is tried against the staged skill directories, which
+// is where a scanner that was handed one prints its paths from; it must match
+// exactly one.
+func (st *scannerStage) resolve(raw string) (string, bool) {
+	if src, ok := st.lookup(raw, st.root); ok {
+		return src, true
+	}
+	if filepath.IsAbs(filepath.FromSlash(strings.TrimPrefix(raw, "file://"))) || strings.Contains(raw, "://") {
+		return "", false
+	}
+	hit, n := "", 0
+	for _, dir := range st.skillDirs {
+		if src, ok := st.lookup(raw, dir); ok {
+			hit, n = src, n+1
+		}
+	}
+	return hit, n == 1
+}
+
+// lookup resolves raw against base and maps the result through the stage.
+func (st *scannerStage) lookup(raw, base string) (string, bool) {
+	p, ok := resolveScannerPath(raw, base)
+	if !ok {
+		return "", false
+	}
+	for _, root := range scannerRoots(st.root) {
+		rel, err := filepath.Rel(root, p)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		src, found := st.source[filepath.ToSlash(rel)]
+		return src, found
+	}
+	return "", false
+}
+
+// externalFinding builds one AR011 finding; keep is false when the rule is off,
+// ignored, or the file is ignored by configuration.
+func (r *runner) externalFinding(scanner, abs string, line int, sev Severity, msg string) (Finding, bool) {
 	if r.sev[CodeExternalFinding] == SeverityOff || r.ignore[CodeExternalFinding] || (abs != "" && r.pathIgnored(abs)) {
-		return
+		return Finding{}, false
 	}
 	rule, _ := lookupRule(CodeExternalFinding) //nolint:errcheck // registered
 	file := ""
 	if abs != "" {
 		file = r.display(abs)
 	}
-	r.findings = append(r.findings, Finding{
+	f := Finding{
 		Code: CodeExternalFinding, Name: rule.Name, Severity: sev, File: file, Line: max(line, 1),
 		Message: "[" + scanner + "] " + msg, Root: r.display(r.rootAbs()),
-	})
+	}
+	return f, true
 }
 
 // addRun records a finding about a scanner itself (not one of its results),

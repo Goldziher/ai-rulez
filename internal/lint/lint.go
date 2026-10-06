@@ -175,6 +175,8 @@ type Options struct {
 	// AllowEgress names the [[lint.external]] scanners with egress = true that
 	// may run in this invocation (--allow-egress).
 	AllowEgress []string
+	// Scanner holds the scanner baseline and suppression settings of --external.
+	Scanner ScannerOptions
 	// Analyzers runs only these analyzers (--analyzer). Empty uses the
 	// [lint] analyzers setting, and then every analyzer.
 	Analyzers []string
