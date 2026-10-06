@@ -25,6 +25,15 @@ const ImproveMaxSkillGrowth = 2.0
 // ImproveMinHoldoutCases is the fewest held-out cases `improve` ever accepts; min_holdout_cases may raise it.
 const ImproveMinHoldoutCases = 3
 
+// Defaults of the acceptance gate. A repository [improve] table may only tighten them (ResolveImprove);
+// internal/improve keeps its own copies, which a test holds equal to these.
+const (
+	ImproveDefaultMinGain         = 0.05
+	ImproveDefaultMaxRegressions  = 0
+	ImproveDefaultHoldoutFraction = 0.3
+	ImproveDefaultMaxSkillGrowth  = 1.25
+)
+
 // ImproveConfig is the [improve] table: defaults of `ai-rulez improve run` (docs/improve.md). A flag always
 // wins. optimizer and env_pass choose a command and the environment it receives, so a repository config
 // is honoured for them only with --trust-repo-optimizer; the thresholds apply from any config.
@@ -113,6 +122,10 @@ type ImproveResolution struct {
 	Effective ImproveConfig
 	// IgnoredRepoKeys names the repository keys that were not used because the run did not trust the repository.
 	IgnoredRepoKeys []string
+	// LoosenedRepoKeys names the repository gate keys that were not used because they are looser than the
+	// default (a lower min_gain, more max_regressions, a smaller holdout_fraction, a larger max_skill_growth)
+	// and the run did not trust the repository.
+	LoosenedRepoKeys []string
 	// UserFile is the user config file that was read ("" when none exists).
 	UserFile string
 }
@@ -140,7 +153,8 @@ func loadUserImprove(path string) (*ImproveConfig, error) {
 
 // ResolveImprove merges [improve] from the repository and the user config file. The user file wins key by key;
 // a repository optimizer and env_pass are used only when trustRepo is set (a hostile repository must not choose
-// a command that runs on your machine or the variables it receives). getenv may be nil (os.Getenv).
+// a command that runs on your machine or the variables it receives), and a repository gate key looser than the
+// default is dropped unless trustRepo is set (LoosenedRepoKeys). getenv may be nil (os.Getenv).
 func (c *Config) ResolveImprove(trustRepo bool, getenv func(string) string) (ImproveResolution, error) {
 	if getenv == nil {
 		getenv = func(name string) string { return ambient.Getenv(nil, name) }
@@ -157,6 +171,9 @@ func (c *Config) ResolveImprove(trustRepo bool, getenv func(string) string) (Imp
 			}
 			out.Effective.Optimizer, out.Effective.EnvPass = "", nil
 		}
+		if !trustRepo {
+			out.LoosenedRepoKeys = out.Effective.dropLooseGateKeys()
+		}
 	}
 	path := UserConfigFile(getenv)
 	user, err := loadUserImprove(path)
@@ -172,6 +189,31 @@ func (c *Config) ResolveImprove(trustRepo bool, getenv func(string) string) (Imp
 	}
 	mergeImprove(&out.Effective, user)
 	return out, nil
+}
+
+// dropLooseGateKeys unsets the gate keys of c that are looser than the defaults and returns their names. A
+// repository config may tighten the acceptance gate but must not weaken it: a hostile or careless table could
+// otherwise accept a candidate that gained nothing (min_gain 0), tolerate regressions, shrink the held-out
+// share or allow a much larger skill. require_ci_above_zero and min_holdout_cases only ever tighten.
+func (c *ImproveConfig) dropLooseGateKeys() []string {
+	var dropped []string
+	if g := c.MinGain; g != nil && *g+1e-9 < ImproveDefaultMinGain {
+		c.MinGain = nil
+		dropped = append(dropped, "min_gain")
+	}
+	if r := c.MaxRegressions; r != nil && *r > ImproveDefaultMaxRegressions {
+		c.MaxRegressions = nil
+		dropped = append(dropped, "max_regressions")
+	}
+	if f := c.HoldoutFraction; f != nil && *f+1e-9 < ImproveDefaultHoldoutFraction {
+		c.HoldoutFraction = nil
+		dropped = append(dropped, "holdout_fraction")
+	}
+	if g := c.MaxSkillGrowth; g > ImproveDefaultMaxSkillGrowth+1e-9 {
+		c.MaxSkillGrowth = 0
+		dropped = append(dropped, "max_skill_growth")
+	}
+	return dropped
 }
 
 // mergeImprove copies the keys user sets over dst.

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
@@ -541,4 +542,31 @@ func TestExecute_AnEvalErrorMidRunStillWritesTheSignedReport(t *testing.T) {
 	res, serr := Show(configDir, plan.RunID)
 	require.NoError(t, serr)
 	assert.True(t, res.Signed)
+}
+
+func TestGateDefaultsMatchTheConfigFloor(t *testing.T) {
+	// The repository [improve] table may only tighten these defaults, so both packages must agree on them.
+	assert.InDelta(t, DefaultMinGain, config.ImproveDefaultMinGain, 1e-12)
+	assert.InDelta(t, DefaultHoldoutFraction, config.ImproveDefaultHoldoutFraction, 1e-12)
+	assert.InDelta(t, growthFactor, config.ImproveDefaultMaxSkillGrowth, 1e-12)
+	assert.Equal(t, MinHoldoutCases, config.ImproveMinHoldoutCases)
+	assert.Equal(t, 0, config.ImproveDefaultMaxRegressions)
+}
+
+func TestSummary_ShowsTheEffectiveGate(t *testing.T) {
+	// Arrange
+	root, configDir := project(t)
+	o := baseOptions(root, configDir, goodEval(), &runner.Fake{})
+	o.MaxSkillGrowth, o.RequireCIAboveZero, o.HoldoutFraction = 1.5, true, 0.4
+	plan := mustPrepare(t, &o)
+
+	// Act
+	text := plan.Summary()
+
+	// Assert
+	assert.Contains(t, text, "one stable win")
+	assert.Contains(t, text, "growth <= 1.50x")
+	assert.Contains(t, text, "required above zero")
+	assert.Contains(t, text, "share 40%")
+	assert.Contains(t, text, "held-out >= 3 case(s)")
 }

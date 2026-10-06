@@ -132,3 +132,58 @@ func TestLoadImproveTableRoundTripsThroughTheWriter(t *testing.T) {
 	assert.Contains(t, string(out), "holdout_tag = 'hold'")
 	assert.Contains(t, string(out), "min_gain = 0.0")
 }
+
+func TestResolveImprove_ARepositoryTableMayOnlyTightenTheGate(t *testing.T) {
+	tests := []struct {
+		name        string
+		repo, user  string
+		trust       bool
+		wantDropped []string
+		check       func(t *testing.T, e *ImproveConfig)
+	}{
+		{"looser values are dropped", "[improve]\nmin_gain = 0\nmax_regressions = 2\nholdout_fraction = 0.1\nmax_skill_growth = 2\n", "", false,
+			[]string{"min_gain", "max_regressions", "holdout_fraction", "max_skill_growth"}, func(t *testing.T, e *ImproveConfig) {
+				assert.Nil(t, e.MinGain)
+				assert.Nil(t, e.MaxRegressions)
+				assert.Nil(t, e.HoldoutFraction)
+				assert.Zero(t, e.MaxSkillGrowth)
+			}},
+		{"stricter values are kept", "[improve]\nmin_gain = 0.3\nmax_regressions = 0\nholdout_fraction = 0.5\nmax_skill_growth = 1.1\nrequire_ci_above_zero = true\nmin_holdout_cases = 6\n", "", false,
+			nil, func(t *testing.T, e *ImproveConfig) {
+				require.NotNil(t, e.MinGain)
+				assert.InDelta(t, 0.3, *e.MinGain, 1e-9)
+				assert.InDelta(t, 1.1, e.MaxSkillGrowth, 1e-9)
+				assert.True(t, e.RequireCIAboveZero)
+				assert.Equal(t, 6, e.MinHoldoutCases)
+			}},
+		{"the defaults themselves are allowed", "[improve]\nmin_gain = 0.05\nmax_regressions = 0\nholdout_fraction = 0.3\nmax_skill_growth = 1.25\n", "", false,
+			nil, func(t *testing.T, e *ImproveConfig) { require.NotNil(t, e.MinGain) }},
+		{"trust-repo-optimizer lets looser values through", "[improve]\nmin_gain = 0\nmax_regressions = 2\n", "", true,
+			nil, func(t *testing.T, e *ImproveConfig) {
+				require.NotNil(t, e.MinGain)
+				assert.Zero(t, *e.MinGain)
+				require.NotNil(t, e.MaxRegressions)
+				assert.Equal(t, 2, *e.MaxRegressions)
+			}},
+		{"the user config may loosen without trust", "[improve]\nmin_gain = 0.3\n", "[improve]\nmin_gain = 0\nmax_regressions = 1\n", false,
+			nil, func(t *testing.T, e *ImproveConfig) {
+				require.NotNil(t, e.MinGain)
+				assert.Zero(t, *e.MinGain)
+				assert.Equal(t, 1, *e.MaxRegressions)
+			}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := loadImprove(t, tt.repo, tt.user)
+
+			// Act
+			res, err := cfg.ResolveImprove(tt.trust, nil)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantDropped, res.LoosenedRepoKeys)
+			tt.check(t, &res.Effective)
+		})
+	}
+}

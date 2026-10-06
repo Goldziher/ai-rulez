@@ -164,6 +164,46 @@ func TestImproveSettings_ConfigFlagsAndTrust(t *testing.T) {
 	}
 }
 
+func TestImproveSettings_ARepositoryCannotLoosenTheGate(t *testing.T) {
+	const table = "[improve]\nmin_gain = 0\nmax_regressions = 3\nmax_skill_growth = 2\n"
+	tests := []struct {
+		name     string
+		trust    bool
+		wantGain float64
+		wantRegr int
+		wantWarn bool
+	}{
+		{"ignored without trust", false, improve.DefaultMinGain, 0, true},
+		{"used with --trust-repo-optimizer", true, 0, 3, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			resetImproveFlags(t)
+			root := improveProject(t)
+			writeImproveConfig(t, root, table)
+			improveFlags.trustRepoOptimizer = tt.trust
+			cfg, err := loadConfigForCommand(t.Context(), nil)
+			require.NoError(t, err)
+			var warn bytes.Buffer
+
+			// Act
+			st, err := resolveImproveSettings(improveRunCmd, cfg, &warn)
+
+			// Assert
+			require.NoError(t, err)
+			assert.InDelta(t, tt.wantGain, st.minGain, 1e-9)
+			assert.Equal(t, tt.wantRegr, st.maxRegressions)
+			assert.Equal(t, tt.wantWarn, strings.Contains(warn.String(), "looser than the defaults"), warn.String())
+			if tt.wantWarn {
+				assert.Zero(t, st.maxSkillGrowth)
+				assert.Contains(t, warn.String(), "min_gain, max_regressions, max_skill_growth")
+			}
+		})
+	}
+}
+
 func TestImproveSettings_Refusals(t *testing.T) {
 	tests := []struct {
 		name   string
