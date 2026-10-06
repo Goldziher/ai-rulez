@@ -402,7 +402,7 @@ func ScanImports(cfg *config.Config) ([]Finding, error) {
 func securityOnly(in []Finding) []Finding {
 	out := in[:0:0]
 	for _, f := range in {
-		if strings.HasPrefix(f.Code, "AR0") {
+		if strings.HasPrefix(f.Code, "AR0") || AnalyzerFor(f.Code).Name == AnalyzerSecurity {
 			out = append(out, f)
 		}
 	}
