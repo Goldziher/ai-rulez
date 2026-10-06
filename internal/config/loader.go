@@ -15,6 +15,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -261,6 +262,13 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.Registry = lo.registry
 	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
+	// Each loaded project owns its warning state: a nil collector stands for the
+	// process-wide one, which two projects in one process would share.
+	var sink diag.Sink
+	if log := lo.host.Log; log != nil {
+		sink = func(msg string, args ...any) { log.Warn(msg, args...) }
+	}
+	config.Diag = diag.New(sink)
 
 	// The organization policy clamps the configuration before anything is fetched.
 	if err := applyPolicy(ctx, config); err != nil {

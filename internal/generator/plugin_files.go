@@ -21,6 +21,7 @@ type PluginFile struct {
 // shown that they equal what is on disk. A file that would land outside the
 // project root is an error.
 func (g *Generator) PluginFiles(profile string) ([]PluginFile, error) {
+	g.diagnostics()
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
