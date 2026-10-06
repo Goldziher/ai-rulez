@@ -40,6 +40,12 @@ func envTrue(name string) bool {
 // (not --dry-run) also records the commands it announced and restores skill
 // overrides a role released.
 func generatePreflight(cfg *config.Config, gen *generator.Generator) error {
+	return generatePreflightMode(cfg, gen, dryRun)
+}
+
+// generatePreflightMode is generatePreflight with the read-only choice explicit:
+// readOnly records and restores nothing, as in a dry run.
+func generatePreflightMode(cfg *config.Config, gen *generator.Generator, readOnly bool) error {
 	if err := checkConfigSchema(cfg, generateStrict || envTrue(envStrict)); err != nil {
 		return err
 	}
@@ -49,8 +55,8 @@ func generatePreflight(cfg *config.Config, gen *generator.Generator) error {
 	if pluginMode {
 		return nil // bundles carry the [plugin] hooks, not the project's
 	}
-	warnNewCommands(cfg, os.Stderr, !dryRun)
-	if dryRun {
+	warnNewCommands(cfg, os.Stderr, !readOnly)
+	if readOnly {
 		return nil
 	}
 	return gen.ReconcileRoleSkillOverrides() //nolint:wrapcheck // already contextual

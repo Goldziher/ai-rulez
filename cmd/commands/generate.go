@@ -122,6 +122,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	applyLockFlags()
 
 	exitOn(checkRoleFlags())
+	exitOn(checkEmitPlanFlags())
 
 	if generateWatch {
 		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
@@ -222,6 +223,14 @@ func runGenerate(cmd *cobra.Command, args []string) {
 // emitPlan renders the generation plan without writing any output and writes it
 // as JSON to dest ("-" is standard output). Nothing is applied.
 func emitPlan(ctx context.Context, cfg *config.Config, dest string) error {
+	// Select the role and run the checks a real run starts with, without their writes.
+	gen := generator.NewGenerator(cfg)
+	if err := applyRole(gen); err != nil {
+		return err
+	}
+	if err := generatePreflightMode(cfg, gen, true); err != nil {
+		return err
+	}
 	plan, err := generator.PlanOutputs(ctx, cfg, generator.PlanOptions{Profile: profile, Role: generateRole})
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
@@ -774,6 +783,25 @@ func checkRoleFlags() error {
 	}
 	if generateRole != "" && pluginMode {
 		return oops.Errorf("--role cannot be combined with --plugin: plugin bundles are built from the full content")
+	}
+	return nil
+}
+
+// checkEmitPlanFlags rejects --emit-plan with the modes that never reach it or
+// plan something else: --watch, --check, --user and --recursive return before
+// the plan is made, and --plugin renders bundles, not the in-repo outputs.
+func checkEmitPlanFlags() error {
+	if generateEmitPlan == "" {
+		return nil
+	}
+	for _, f := range []struct {
+		name string
+		set  bool
+	}{{"--watch", generateWatch}, {"--check", generateCheck}, {"--user", userScope}, {"--recursive", recursive}, {"--plugin", pluginMode}} {
+		if f.set {
+			return oops.Hint("Run --emit-plan on its own, from the project root").
+				Errorf("--emit-plan cannot be combined with %s", f.name)
+		}
 	}
 	return nil
 }
