@@ -20,10 +20,10 @@ import (
 // (AR9C5, AR9C6), project-defined trap rows (AR9CA) and the safe fix of a
 // misspelt key.
 //
-// The traps read the files on disk, generated or hand-written, the same way as
-// every other trap: generator.PlanOutputs holds only sizes and digests, and the
-// generator imports this package, so a trap cannot call it. `generate` first,
-// then `validate --strict`, sees a generated file as the harness will.
+// The traps read the files on disk, except for a file a run would write, which they
+// read from the plan (PlannedFiles): the generator imports this package, so a trap
+// cannot call it, and the command line hands the generator's plan in as an interface.
+// A generated file is judged as the harness will see it whether or not `generate` ran.
 
 // Codes of the Kiro traps and of project rows.
 const (

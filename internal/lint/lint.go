@@ -141,6 +141,7 @@ type runner struct {
 	baseRel      string
 	cwd          string
 	host         ambient.Host
+	planned      PlannedFiles // what a run would write, for the traps (WithPlanned)
 	sev          map[string]Severity
 	ignore       map[string]bool
 	ignorePaths  []globMatcher

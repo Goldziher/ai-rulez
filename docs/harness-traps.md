@@ -22,7 +22,8 @@ $ ai-rulez validate --strict
   `[lint.traps] extra_harnesses` (for hand-written files with no preset, such as a team that keeps `.cursor/rules`
   by hand).
 - Over the files git tracks (or the directory tree outside git) below the lint root, at the root or in a nested
-  package. It reads files on disk, so a generated file is seen as last written; run `ai-rulez generate` first.
+  package. A file `generate` would write is read from the plan, so a generated file is judged as the harness will see it
+  whether or not `generate` has run; a hand-written file is read from disk.
   Traps that apply to generated files (`AR9C1`, `AR9C3` to `AR9C9`) also scan the gitignored output directories of
   their scope (`.claude/skills`, `.claude/agents`, `.kiro/agents`, `.kiro/steering`, `.devin/rules`, ...) at the lint root and keep the files that carry the ai-rulez banner, because
   Claude Code outputs are gitignored and git does not list them. A gitignored hand-written file is not checked.
@@ -61,8 +62,9 @@ the agent lists them. ai-rulez writes Markdown agents, so this fires on hand-wri
 documents that it must come first. Neither is marked inert: the vendor page states the rule, not what Kiro does with
 a file that breaks it.
 
-Traps read the files on disk, generated or hand-written. `generator.PlanOutputs` holds only sizes and digests, and
-the generator imports the lint package, so a trap cannot call it; run `ai-rulez generate`, then `validate --strict`.
+Traps judge the final bytes `generate` would write (including its headers) for files ai-rulez owns, and the files on
+disk for everything else. A file that exists, is not generated and that a run would leave alone keeps its on-disk
+content. The generator implements `lint.PlannedFiles`, which breaks the import cycle between the two packages.
 
 ## Project traps
 
