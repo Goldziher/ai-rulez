@@ -2759,6 +2759,12 @@
       "additionalProperties": false,
       "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
       "properties": {
+        "batch_size": {
+          "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches.",
+          "maximum": 2048,
+          "minimum": 0,
+          "type": "integer"
+        },
         "body_chars": {
           "description": "Characters of the body embedded with index_body (default 1200).",
           "maximum": 20000,
