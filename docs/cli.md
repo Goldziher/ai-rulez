@@ -819,13 +819,18 @@ Show the full rules, context, skills, agents, and commands for a built-in domain
 
 ### `ai-rulez convert`
 
-Read another tool's configuration and produce an equivalent `.ai-rulez/` tree, with a report that lists every input construct as `mapped`, `approximated`, `dropped`, `needs-action` or `unsupported`. It never modifies the source files, never runs or fetches anything, and writes nothing unless `--write` is given.
+Read another tool's configuration and produce an equivalent `.ai-rulez/` tree, with a report that lists every input construct as `mapped`, `approximated`, `dropped`, `needs-action` or `unsupported`. It never modifies the source files, never runs anything, uses the network only with `--fetch`, and writes nothing unless `--write` is given.
 
 ```bash
 ai-rulez convert --dry-run                        # what would carry over, and what would be lost
 ai-rulez convert --write                          # write .ai-rulez/
 ai-rulez convert --from native,skills-lock --write
 ai-rulez convert --from rulesync --dry-run        # import a rulesync project
+ai-rulez convert --from apm --write --fetch --lock  # import an APM project with its remote packages, then pin
+ai-rulez convert --from tessl --write             # vendored Tessl plugins and their eval scenarios
+ai-rulez convert --from okf --write --domain kb   # an OKF bundle, into a domain
+ai-rulez convert --write --merge                  # add beside an existing tree, keeping every file of it
+ai-rulez convert --write --enable-hooks           # imported hooks live (they are commented out by default)
 ai-rulez convert --dry-run --format json --report convert.json
 ai-rulez convert --write --domain imported        # import beside an existing tree
 ai-rulez convert --list                           # importers and what each detects here
@@ -835,12 +840,19 @@ ai-rulez convert --list                           # importers and what each dete
 
 | Flag | Description |
 | ---- | ----------- |
-| `--from` | Importers, comma separated: `native`, `rulesync`, `skills-lock` or `auto` (default). `auto` runs every importer that detects something, `skills-lock` first, so the skills it tracks are not also copied. When a rulesync project is detected, `auto` leaves `native` out, because the tool files next to `.rulesync/` are rulesync's generated output; use `--from native,rulesync` to read both. |
+| `--from` | Importers, comma separated: `native`, `rulesync`, `apm`, `tessl`, `okf`, `skills-lock` or `auto` (default). `auto` runs every importer that detects something, `skills-lock` first, so the skills it tracks are not also copied. When a rulesync, APM or Tessl project is detected, `auto` leaves `native` out, because the tool files next to their inputs (`.rulesync/`, `.apm/`, `.tessl/`) are their generated output; use `--from native,rulesync` to read both. |
 | `--source DIR` | Directory to read (default `.`). Reads are rooted there; symlinks are never followed, files over 2 MiB and inputs over 64 MiB are skipped with a finding. |
 | `--into DIR` | Config directory (default `.ai-rulez`). A relative path is resolved against `--source`, an absolute path is used as is. Nothing is ever written through a symlink at or below it: a symlinked config directory, content directory or target file stops the run (exit 1) with nothing written. |
 | `--domain NAME` | Put the imported rules, context, skills, agents and commands under `domains/NAME/`. |
 | `--dry-run` / `--write` | Preview or write. With neither flag a terminal gets a dry run and a script is refused, so CI never converts by surprise. |
 | `--force` | Overwrite existing content files (rules, context, skills, ...) whose content differs. Without it, an existing differing file stops the write (exit 1, nothing written). `--force` never replaces `config.toml` (see below). Files with identical content are `unchanged`, so a second run is a no-op. |
+| `--merge` | Add beside an existing tree without touching any file of it: an item whose file exists with other content is imported as `NAME-imported` (then `NAME-imported-2`, ...; a skill's `name:` follows), an identical one is `unchanged`, so a second run adds nothing. Excludes `--force`. See [Merging](#merging-names-and-delivery). |
+| `--keep-names` | Never rename to settle a collision: between imported items (normally a stable hash suffix) or with an existing file under `--merge` (normally `-imported`). The collision is an error and nothing is written. |
+| `--delivery static\|served\|both` | Sets how the imported skills reach the agent: `[skills] delivery`, or `[domains.NAME] delivery` with `--domain`. An existing value wins and the difference is a `needs-action` finding. With no skill to apply to, a finding says so and nothing is written. |
+| `--fetch` | Read the remote git sources the input names (rulesync `sources`, APM dependencies that are not installed) over the network. See [Fetching](#fetching-remote-sources). Without it nothing is fetched and each source is a `needs-action` finding. |
+| `--lock` | After a successful `--write`, run `ai-rulez lock` on the converted config, which pins remote sources, authored content and outputs. Needs `--write`; convert never imports a foreign hash as a pin. Without it, a conversion that produced `[[installed_skills]]` ends with `Next: run ai-rulez lock`. |
+| `--enable-hooks` | Write imported hooks as live `[[hooks]]`. By default they are a commented block of `config.toml`. See [Hooks and permissions](#hooks-and-permissions). |
+| `--enable-permissions` | Write imported `allow` rules as live `[permissions]`. By default they are commented; `ask` and `deny` rules are always live. |
 | `--allow-findings CODES` | Write despite scan findings of these codes (for example `AR001`). Discouraged; see "Blocked scan" below. |
 | `--format text\|json` | Report format. JSON follows [`schema/convert-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/convert-report.schema.json) (`schema_version: 1`). |
 | `--report FILE` | Also write the report to a file. |
@@ -853,8 +865,11 @@ ai-rulez convert --list                           # importers and what each dete
 
 | Importer | Reads | Writes |
 | -------- | ----- | ------ |
-| `native` | Root files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `QWEN.md`, `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.cursorrules`, ...), rule folders (`.cursor/rules`, `.github/instructions`, `.kiro/steering`, `.windsurf/rules`, `.roo/rules`, `.clinerules`, `.claude/rules`, `.devin/rules`, `.qwen/rules`, ...), skills (`.claude/skills`, `.agents/skills`, `.kiro/skills`, ...), agents, commands and prompts of every built-in preset, plus MCP files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.kiro/settings/mcp.json`, `.roo/mcp.json`, `.gemini/settings.json`, `.qwen/settings.json`). Locations come from the preset layouts, so they follow `generate`. | `rules/`, `context/`, `skills/` (with their resource files), `agents/`, `commands/`, `[[mcp_servers]]` and `presets` in `config.toml` |
+| `native` | Root files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `QWEN.md`, `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.cursorrules`, ...), rule folders (`.cursor/rules`, `.github/instructions`, `.kiro/steering`, `.windsurf/rules`, `.roo/rules`, `.clinerules`, `.claude/rules`, `.devin/rules`, `.qwen/rules`, ...), skills (`.claude/skills`, `.agents/skills`, `.kiro/skills`, ...), agents, commands and prompts of every built-in preset, plus MCP files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.kiro/settings/mcp.json`, `.roo/mcp.json`, `.gemini/settings.json`, `.qwen/settings.json`), and the hooks and permissions of `.claude/settings.json`, `.codex/hooks.json`, `.gemini/settings.json`, `.cursor/hooks.json`, `.cursor/cli.json` and `.github/hooks/*.json`. Locations come from the preset layouts, so they follow `generate`. | `rules/`, `context/`, `skills/` (with their resource files), `agents/`, `commands/`, `[[mcp_servers]]`, `[[hooks]]`, `[permissions]` and `presets` in `config.toml` |
 | `rulesync` | `rulesync.jsonc` and the input root `.rulesync/` (or each entry of `inputRoots`): `rules/`, `commands/`, `subagents/`, `skills/<name>/`, `checks/`, `mcp.jsonc` (or `mcp.json`), `hooks.jsonc`, `permissions.jsonc`, `.aiignore`, `.rulesyncignore`, `rulesync.lock`. See [rulesync](#rulesync). | `rules/`, `context/`, `skills/` (with resources), `agents/`, `commands/`, `checks/`, `[[mcp_servers]]` and `presets` in `config.toml` |
+| `apm` | `apm.yml`, `.apm/` primitives, installed `apm_modules/`, local path dependencies, `apm.lock.yaml`. See [APM](#apm). | `rules/`, `context/`, `skills/`, `agents/`, `commands/`, `[[mcp_servers]]`, `[[hooks]]`, `presets` |
+| `tessl` | `tessl.json` and the vendored `.tessl/plugins/<workspace>/<plugin>/`. See [Tessl](#tessl). | `skills/` (with `evals/*.eval.yaml`), `rules/` |
+| `okf` | An OKF bundle: an `index.md` naming `okf_version` at the source root or in `docs/okf`. See [OKF](#okf). | whatever `import okf` writes |
 | `skills-lock` | `skills-lock.json` (lock file version 1 of the Vercel [skills CLI](https://github.com/vercel-labs/skills)) | `[[installed_skills]]` (`source` as a git URL, `ref`, `path` from `skillPath`) |
 
 `config.toml` is merged, never replaced, with or without `--force`: new `presets`, `[[mcp_servers]]` and `[[installed_skills]]` are appended (existing entries win; a differing imported entry of the same name is a `needs-action` finding), and the file is rewritten with the config writer, which does not keep comments. When nothing is new it is `unchanged` and untouched. A V3 config (`config.yaml`, `config.yml`, `config.json`), which ai-rulez no longer reads, is left alone and reported as `manual`; a `config.toml` that cannot be parsed stops the run. When nothing identifies a preset and the config already has presets, none is added.
@@ -863,7 +878,86 @@ Rule frontmatter is translated, not copied: Cursor `alwaysApply`/`globs`/`descri
 
 When `native` and `skills-lock` run together, skills named in `skills-lock.json` are imported only as `[[installed_skills]]`, not copied from `.agents/skills`. The lock's `computedHash` is never carried (its scheme differs from the `ai-rulez.lock` tree digest) and is reported as `needs-action`; run `ai-rulez lock` after converting. `node_modules` and `local` skill sources are `unsupported`; global skill locks are out of scope. A lock source must be an `https://`, `ssh://` or `git@host:path` URL: a leading `-`, a transport helper such as `ext::`, `file://`, `git://`, plain `http://` and URLs with embedded credentials are `unsupported`, as are a `ref` starting with `-` and a `skillPath` that is absolute or contains `..`. The planned `installed_skills` go through the same field validation as at config load, without any network access.
 
-MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every string is checked with the security scan's secret detectors: a literal under a credential-looking name (`*_KEY`, `*_TOKEN`, `Authorization`, ...), a recognised token or key in any value whatever its name, a connection string with a password, `--api-key x` and `--token=x` style arguments (and `KEY=value` arguments), URL userinfo and credential query parameters are replaced by a `${VAR}` reference and reported as `needs-action`; the value is never printed or written. Only an exact `$VAR` or `${VAR}` (upper case) counts as an existing reference. The scan of the planned tree also reads `config.toml`, so a secret that gets through (for example in a `description`) blocks the write. `hooks` and `permissions` in `.claude/settings.json` are reported as `needs-action` and not imported; imported hooks are never enabled automatically.
+MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every string is checked with the security scan's secret detectors: a literal under a credential-looking name (`*_KEY`, `*_TOKEN`, `Authorization`, ...), a recognised token or key in any value whatever its name, a connection string with a password, `--api-key x` and `--token=x` style arguments (and `KEY=value` arguments), URL userinfo and credential query parameters are replaced by a `${VAR}` reference and reported as `needs-action`; the value is never printed or written. Only an exact `$VAR` or `${VAR}` (upper case) counts as an existing reference. The scan of the planned tree also reads `config.toml`, so a secret that gets through (for example in a `description`) blocks the write.
+
+#### Hooks and permissions
+
+Hooks and permission rules of the tool files above (and of rulesync's `hooks.jsonc` and `permissions.jsonc`) become `[[hooks]]` and `[permissions]`. **Imported hooks are never enabled by the importer**: a hook runs a command on your machine, and an allow rule widens what every harness may do (the rule was written for one tool, `[permissions]` renders into all of them).
+
+| What | Default | With |
+| ---- | ------- | ---- |
+| `[[hooks]]` | written as a commented block at the end of `config.toml` (`# [[hooks]]`, ...), plus a `needs-action` finding | `--enable-hooks` writes them as live TOML |
+| `allow` rules | commented, `needs-action` | `--enable-permissions` |
+| `ask` and `deny` rules | live: they only narrow what a harness may do | |
+
+A comment is inert to every ai-rulez command, so nothing runs until you remove the leading `# `. The scan and validation cover the commented text too: a hook with a secret or a `curl | sh` blocks the write, and an invalid hook is a validation error, enabled or not. A second run does not repeat a block `config.toml` already holds; into an existing config, live hooks and rules are added when not already declared.
+
+Each hook group keeps the harness it came from in `targets`, so a hook that ran in one tool does not start running in the others; a matcher written in a tool's own vocabulary (Gemini `run_shell_command`, Cursor `Shell`) is kept as `matchers.<harness>`. The same hook found in several tools' files is declared once for all of them. Event names are translated to Claude Code's (Gemini `BeforeTool` is `PreToolUse`, Cursor `beforeSubmitPrompt` is `UserPromptSubmit`, rulesync `sessionStart` is `SessionStart`); millisecond timeouts become seconds (rounded up); `command`, `args`, `timeout`, `async`, `if` and `statusMessage` are carried. Anything else is reported, never guessed:
+
+- an event with no ai-rulez hook event (Cursor `afterFileEdit`, rulesync `beforeShellExecution`) is `unsupported`, listed;
+- a handler that is not a command (`prompt`, `http`, `agent`, `mcp_tool`) is `unsupported`; handler keys with no equivalent (`shell`, `env`, `failClosed`, ...) are `dropped`, listed;
+- the guard hook ai-rulez writes itself (`ai-rulez guard`) and `.github/hooks/ai-rulez.json` are not read back as source;
+- a command that runs a script of the rulesync tree (`.rulesync/hooks/...`) or of a package (`${CLAUDE_PLUGIN_ROOT}`) is `needs-action`: copy the script into the project and use a `script` path;
+- hooks declared inline in `.codex/config.toml` are `needs-action` (move them to `.codex/hooks.json`);
+- rulesync per-tool blocks for tools without a hook harness are `unsupported`.
+
+Permission rules are Claude Code rules: `.claude/settings.json` `permissions.allow|ask|deny` verbatim (`defaultMode`, `additionalDirectories` and other keys are `dropped`); rulesync `permission.<category>.<pattern> = action` becomes `Tool(pattern)` (`bash` is `Bash`, `write` and `notebookedit` path rules `Edit`, a bare `*` pattern the bare tool; a category `*` is `unsupported`; tool-scoped blocks such as `claudecode.permission` are `dropped`); Cursor `.cursor/cli.json` rules are rewritten (`Shell` to `Bash`, `Write` to `Edit`, `Mcp(server:tool)` to `mcp__server__tool`, `approximated`). Gemini's `tools.allowed`/`exclude` and Codex's `.codex/rules` are `unsupported` rather than inverted. Other keys of `.claude/settings.json` (`model`, `env`, `statusLine`, ...) are `dropped`, one finding each.
+
+#### Merging, names and delivery
+
+`--merge` is for adding to a project that already has content: every existing file is left byte for byte, and an item whose path is taken by other content is written as `NAME-imported` (a skill's `name:` follows; the report's finding names both). The suffix is reused when the file it chose last time is still there, so a second run changes nothing. `config.toml` is merged as always. With `--keep-names` nothing is renamed: under `--merge` the collision stays a conflict (exit 1), and between imported items it is an error naming both sources. `--force` and `--merge` exclude each other.
+
+`--delivery` writes the default for the imported skills. `[skills] delivery` is the default of every skill, including ones already in the project, so prefer `--domain NAME` (writes `[domains.NAME] delivery`) next to an existing tree.
+
+#### Fetching remote sources
+
+`--fetch` reads the git sources an input names but does not hold: rulesync `sources` (`github` and `git` transports; the `npm` transport is `unsupported`) and APM dependencies that are not installed. It uses the skill-source fetcher (`[[skill_sources]]`: the same clone size and file limits, cache and credential rules), only for `https://` URLs; `http://`, `git://`, `file://`, `ssh`, URLs with credentials, and paths that leave the repository are `unsupported` before any request is made. A lock file of the input (`rulesync.lock`, `apm.lock.yaml`) decides which commit is read.
+
+| Input | Result |
+| ----- | ------ |
+| rulesync source with `skills` | `[[installed_skills]]`, one per selected skill (`"*"` or no selection: every skill found), pinned: a tag or commit the input named is kept as `ref`, a branch or the default branch is replaced by the commit that was read. A selected skill that does not exist is `needs-action`; when two sources provide a name the first wins (`approximated`) |
+| rulesync source with `rules` | the selected `.md` files of `rulesPath` (default `rules`) copied into `rules/`, like rulesync's own `.curated` rules (no link kept) |
+| APM dependency that is a single skill (`owner/repo/skills/name`) | one `[[installed_skills]]` entry |
+| other APM dependency | the package's `.apm/` primitives (or `SKILL.md`, `skills/`, `agents/`, `commands/`) copied into the tree; its own dependencies are not followed (`needs-action`) |
+
+Everything fetched is planned like any other input: copied text is scanned in the planned tree, and the text of the skills that are referenced rather than copied is scanned as well, under the name `host/owner/repo@<commit>:path`. A blocking finding exits 2 and writes nothing. A failed fetch, or a resolved commit that is not a full hash, stops the run with nothing written. `--dry-run --fetch` fetches (the cache is filled) and writes nothing. Pass `--lock` to pin the installed skills in `ai-rulez.lock` right after the write.
+
+#### APM
+
+`--from apm` reads a [Microsoft APM](https://github.com/microsoft/apm) project. The layout is read from the public documentation and from rulesync's APM-compatible reader, not verified against a release of `apm`.
+
+| APM | ai-rulez | Notes |
+| --- | -------- | ----- |
+| `.apm/instructions/*.instructions.md` | `rules/` | `applyTo` becomes `globs` (`**` is always on), `description` carries over |
+| `.apm/agents/*.agent.md`, `.apm/chatmodes/*.chatmode.md` | `agents/` | other keys are kept and reported like any agent |
+| `.apm/prompts/*.prompt.md` | `commands/` | |
+| `.apm/skills/<name>/` | `skills/<name>/` | resources copied |
+| `.apm/context/*.context.md` | `context/` | |
+| `.apm/hooks/*.json` | `[[hooks]]` | disabled by default, see above; scripts are not copied |
+| `apm.yml` `target` | `presets` | `vscode` and `copilot` are `copilot`, `windsurf` is `devin`; `all` is `needs-action` |
+| `apm.yml` `dependencies.apm` | the package content | installed in `apm_modules/<owner>/<repo>` or a local path inside the project: imported as local files, the dependency link is not kept (`approximated`). Not installed: a remote source, `needs-action` without `--fetch`. SSH, marketplace, absolute and escaping paths are `unsupported` |
+| `apm.yml` `dependencies.mcp` | `[[mcp_servers]]` | self-defined servers (name, transport, command, args, env, url, headers) with the usual secret replacement; a bare registry name is `unsupported`: convert never queries a registry |
+| `apm_modules/` packages `apm.yml` does not name | the package content | transitive dependencies |
+| `apm.lock.yaml` | none | the resolved commits decide what `--fetch` reads; `content_hash` is not carried (`needs-action`, run `ai-rulez lock`) |
+| `apm.yml` name, version, description, author, `scripts`, `devDependencies`, `apm-policy.yml` | none | `dropped` / `unsupported` with the reason; scripts run commands of the apm runtime |
+
+#### Tessl
+
+`--from tessl` reads `tessl.json` and the vendored plugins under `.tessl/plugins/<workspace>/<plugin>/` (a version directory below it is found by the version `tessl.json` names, or when it is the only one). The layout follows the Tessl documentation and is not verified against a release. Nothing is fetched from the registry: a dependency that is not on disk (`mode` `managed`, or not vendored) is `needs-action`; run `tessl install` and convert again, or point `--source` at a populated directory. A project that is itself a plugin (`.tessl-plugin/` at its root) is read the same way.
+
+| Tessl | ai-rulez | Notes |
+| ----- | -------- | ----- |
+| `skills/<name>/` | `skills/<name>/` | the provenance (`workspace/plugin@version`) is in the report; the registry link is not kept |
+| `rules/*.md` | `rules/` | |
+| `evals/<scenario>/task.md` + `criteria.json` | `skills/<skill>/evals/<scenario>.eval.yaml` | one [eval case](evals.md#case-format) per scenario: `prompt` is the task, `expect_trigger: true`, the criteria's `context` and checklist become the `rubric` (weights dropped, `approximated`). No `criteria.json` is a trigger-only case. A plugin's evals go to its only skill, else the skill named like the plugin, else the first one (reported) |
+| `docs/` | none | `dropped`: documentation is reference material Tessl serves; copy what the agent needs into `context/` |
+| `.tessl-plugin/plugin.json` | none | `dropped`: it describes the dependency, not this project (the provenance finding records it) |
+| `verify` | none | `unsupported` |
+| `.tessl/RULES.md` and the managed `AGENTS.md` block | none | generated by Tessl, skipped; `auto` leaves `native` out next to Tessl |
+
+#### OKF
+
+`--from okf` is `import okf` through convert: the same bundle mapping (see [OKF](okf.md)), with the lossiness report, the scan before write and `--domain`. A bundle is found at the source root or in `docs/okf`. Findings of the bundle (lossy links, skipped files) become report findings. Shell scripts lose their executable bit, like every file convert writes.
 
 #### rulesync
 
@@ -873,7 +967,7 @@ MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every
 | -------- | -------- | ----- |
 | `rules/*.md` | `rules/` | `description` and `globs` carry over; `**/*` means always on. `targets` map 1:1 to preset names (`claudecode` is `claude`, `codexcli` is `codex`, `agentsmd` is the root file `AGENTS.md`); `*` means everywhere. A name with no preset is `approximated`; if none is left the original names are kept in `targets`, so the rule reaches no output until reviewed (`needs-action`). |
 | `rules/*.md` with `root: true` | `context/` | Root rules go into every tool's root file, which is what context does (`approximated`). |
-| `rules/*.md` with `localRoot: true` | none | Personal local rules are not written into the committed tree (`needs-action`); copy them to `.ai-rulez/local/` by hand. |
+| `rules/*.md` with `localRoot: true` | `local/context/` | Rulesync's personal root file (`CLAUDE.local.md`) goes to the machine-local tree `.ai-rulez/local/` (see [Local Configuration](local-overrides.md)), never to a committed output (`approximated`). The files are written owner-only (`0600`, directories `0700`), `--domain` puts them in `local/domains/NAME/`, and the project `.gitignore` gets a `.ai-rulez/local/` entry so the text cannot be committed before `generate` takes over that job. The scan covers them like any planned file. |
 | `cursor`, `devin`, `antigravity`, `kiro`, `claudecode.paths` sections of a rule | `activation`, `globs`, `description` | Only used when the rule's own `globs` say nothing: Cursor `alwaysApply: true`, Devin and Antigravity `trigger`, Kiro `inclusion` and `fileMatchPattern`, Claude `paths`, Cursor `globs` and `description`. Reported `approximated`, because the result applies to every tool. Every other key of every tool section (Copilot `name` and `excludeAgent`, Trae `scene`, ...) is `dropped`, one finding per section naming its keys. |
 | `commands/**/*.md` | `commands/` | `description` and `targets`; nested directories become part of the name (`git/commit.md` is `git-commit`, `approximated`). Tool sections are `dropped`. |
 | `subagents/**/*.md` | `agents/` | `name`, `description`, `targets`; `claudecode.model` (not `inherit`), `tools`, `skills` and `effort` are lifted to the top level (`approximated`, they apply to every preset). The rest of the `claudecode` section (`permissionMode`, `maxTurns`, `color`, ...) and every other tool section are `dropped`. |
@@ -881,15 +975,15 @@ MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every
 | `checks/*.md` | `checks/` | `description`, `severity` (low, medium, high, critical), `tools`, `targets`. |
 | `mcp.jsonc` / `mcp.json` | `[[mcp_servers]]` | Same field handling and secret replacement as the native importer; `local` is `stdio`, `streamable-http` is `http`. Per-server `targets` (`approximated`), `enabledTools` and `disabledTools` (`dropped`), tool-scoped `{tool}.mcpServers` blocks (`dropped`, listed) are not carried. `mcp.jsonc` wins over `mcp.json`. |
 | `rulesync.jsonc` `targets` | `presets` | Object and array forms; per-tool feature selection is `approximated`; `*` is `needs-action`; tools without a preset (`agentsskills`, plugin targets, `continue`, `tabnine`) are `unsupported`. |
-| `rulesync.jsonc` `sources`, `rulesync.lock` | none | Remote sources are never fetched (`needs-action`): add them as `[[includes]]` or `[[installed_skills]]`, then run `ai-rulez lock`. Content already installed under `rules/.curated/` and `skills/.curated/` is imported as local files. |
-| `hooks.jsonc`, `permissions.jsonc` | none | Reported as `needs-action` with the event or category names; mapping them onto `[[hooks]]` and `[permissions]` is a later phase. |
+| `rulesync.jsonc` `sources`, `rulesync.lock` | `[[installed_skills]]`, `rules/` with `--fetch` | Without `--fetch` a source is a `needs-action` finding and nothing is read. With it, selected skills become pinned `[[installed_skills]]` and selected rules are copied, see [Fetching](#fetching-remote-sources); `rulesync.lock`'s `resolvedRef` decides the commit, its integrity hashes are not carried. Content already installed under `rules/.curated/` and `skills/.curated/` is imported as local files. |
+| `hooks.jsonc`, `permissions.jsonc` | `[[hooks]]`, `[permissions]` | The shared `hooks` block applies to every harness; `claudecode`, `codexcli`, `cursor`, `copilot` and `copilotcli` blocks are restricted to that harness. Disabled by default, see [Hooks and permissions](#hooks-and-permissions). |
 | `.aiignore`, `.rulesyncignore` | none | `dropped`: ignore is deprecated upstream and ai-rulez has no ignore feature; deny reads with `[permissions]`. |
 | `rulesync.local.jsonc` | none | `needs-action`: personal overrides belong in `.ai-rulez/config.local.toml`. |
 | other `rulesync.jsonc` keys (`outputRoots`, `delete`, `language`, `simulate*`, ...) | none | `dropped` with the reason; generation settings of rulesync have no ai-rulez counterpart. |
 
 A later entry of `inputRoots` overrides a same-named item of an earlier one (`approximated`); roots that are absolute or leave the source directory are `unsupported`. Anything under `.rulesync/` that is not a rulesync input is `dropped`.
 
-**Design decisions.** Root rules become context, not `priority: critical` rules, because context is what ai-rulez writes into every root file. `localRoot` rules are not imported, since they are personal and `convert` writes a committed tree. A tool section is never merged into the item, so a per-tool override cannot silently widen to every tool; the few lifted keys are reported. `native` is skipped by `auto` next to rulesync so generated files are not imported twice. Hooks and permissions stay `needs-action` until their mapping lands.
+**Design decisions.** Root rules become context, not `priority: critical` rules, because context is what ai-rulez writes into every root file. `localRoot` rules go to the machine-local tree, since they are personal and the rest of the output is committed. A tool section is never merged into the item, so a per-tool override cannot silently widen to every tool; the few lifted keys are reported. `native` is skipped by `auto` next to rulesync so generated files are not imported twice. Hooks and allow rules are written disabled (open question 5 of the design, decided as proposed: never enabled automatically).
 
 **Blocked scan.** When the scan finds an error-level problem (a secret, a risky command), `convert` prints each finding at the **source** file and line it came from (`.rulesync/rules/x.md:33`), with the planned `.ai-rulez/` path in parentheses, exits 2 and writes nothing. Remove the text from the source and run again. To write anyway, pass `--allow-findings AR001` (repeatable, comma separated): the finding stays in the report, marked `allowed`, and only that code is let through. Findings in the generated `config.toml` keep their planned path. In `--format json` the source location is `file`/`line` and the planned one is `planned`.
 
@@ -899,7 +993,9 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Exit codes:** 0 done (the report may contain losses), 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
 
-`ai-rulez init --from` keeps working unchanged. APM and Tessl projects are not supported; Open Knowledge Format bundles are imported with [`import okf`](#ai-rulez-import-okf).
+#### `init --from`
+
+`ai-rulez init --from` runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`), which limit the native importer to those paths. The sources are checked in a scratch directory first, so a source that cannot be imported, or a blocked scan, leaves an existing `.ai-rulez/` alone. Compared with the engine it replaced: a root file such as `CLAUDE.md` is one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported, with the report printed. [`import okf`](#ai-rulez-import-okf) stays as the direct entry point to the OKF mapping; `convert --from okf` is the same mapping with convert's report.
 
 ## Initialization Command
 
