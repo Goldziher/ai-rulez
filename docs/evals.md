@@ -476,7 +476,8 @@ response has one `with` result per case and no `without` arm:
 ```
 
 `runs` (at least 1) and `fired_counts` (ids from `skills`, plus `none`; each count at most `runs`) are validated; a
-result with `error` or `skipped` needs neither. `input_tokens`, `output_tokens` and `cost_usd` feed the estimate record.
+result with `error` or `skipped` needs neither. `errored_runs` counts repetitions that failed and are not in `runs`; when more runs errored than completed, the
+prompt has no result and the skill is not scored. `input_tokens`, `output_tokens` and `cost_usd` feed the estimate record.
 
 - **`claude-native`** (harness `claude`, the default for `--surface native`): writes every skill of the set into one
   throwaway plugin and runs, for each prompt and repetition, `claude -p --output-format stream-json --verbose

@@ -99,6 +99,9 @@ type Result struct {
 	Fired       []string       `json:"fired,omitempty"`
 	FiredCounts map[string]int `json:"fired_counts,omitempty"`
 	Runs        int            `json:"runs,omitempty"`
+	// ErroredRuns is how many repetitions failed and are not in Runs; ai-rulez
+	// treats a prompt whose runs mostly errored as having no result.
+	ErroredRuns int `json:"errored_runs,omitempty"`
 	// Skipped marks a case the runner cannot run (for example an assertion type it
 	// does not support); Reason says why. Skipped cases are not scored.
 	Skipped bool   `json:"skipped,omitempty"`
@@ -169,6 +172,9 @@ func (r *Result) validateActivation(index int, req *Request) error {
 	}
 	if r.Runs < 1 {
 		return fmt.Errorf("results[%d]: runs must be >= 1 in an activation response", index)
+	}
+	if r.ErroredRuns < 0 {
+		return fmt.Errorf("results[%d]: errored_runs must be >= 0, got %d", index, r.ErroredRuns)
 	}
 	installed := map[string]bool{}
 	for i := range req.Skills {
