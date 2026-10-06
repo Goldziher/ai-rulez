@@ -16,9 +16,9 @@ func approvalNow() time.Time { return ambient.Clock(nil).Now() }
 // admitApproval applies [governance] to one served skill. A skill the policy
 // requires approval for gets Approved and Approvers set from the lock's records;
 // under [governance] enforce a skill without a valid approval of its served digest
-// is refused with the AR71x code of the reason. Under enforce a missing lock (or
-// --ignore-lock) refuses every skill the policy selects: with no lock there is
-// no record to approve against, and that must not read as "approved".
+// is refused with the AR71x code of the reason. Under enforce a missing lock
+// refuses every skill the policy selects: with no lock there is no record to
+// approve against, and that must not read as "approved".
 func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
 	policy := approval.PolicyOf(a.Config)
 	if !policy.Active() {
