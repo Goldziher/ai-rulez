@@ -7,9 +7,11 @@ package fromevals
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 )
 
@@ -32,6 +34,7 @@ func Derive(configDir string) (*Derived, error) {
 	}
 	out := &Derived{}
 	for i := range skills {
+		name := catalogName(&skills[i])
 		cases, problems := evals.LoadCases(&skills[i])
 		for _, p := range problems {
 			out.Problems = append(out.Problems, p.String())
@@ -47,14 +50,24 @@ func Derive(configDir string) (*Derived, error) {
 			}
 			sc := skillsearch.Case{ID: skills[i].ID + "/" + id, Query: prompt, Tags: derivedTags(c.Tags)}
 			if c.Expects() {
-				sc.Expect = []skillsearch.Relevant{{ID: skills[i].ID, Grade: 1}}
+				sc.Expect = []skillsearch.Relevant{{ID: name, Grade: 1}}
 			} else {
-				sc.Avoid = []string{skills[i].ID}
+				sc.Avoid = []string{name}
 			}
 			out.Cases = append(out.Cases, sc)
 		}
 	}
 	return out, nil
+}
+
+// catalogName is the name the served catalog (and so the search index) knows the skill by: the
+// SKILL.md frontmatter name, else the directory name.
+func catalogName(s *evals.Skill) string {
+	content, err := safefs.ReadRegular(filepath.Join(s.Dir, "SKILL.md"))
+	if err != nil {
+		return s.ID
+	}
+	return skillsearch.ItemFromSkill(s.ID, s.Domain, content).ID
 }
 
 func derivedTags(tags []string) []string {
