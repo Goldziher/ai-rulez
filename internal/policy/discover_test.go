@@ -54,7 +54,8 @@ func TestDiscover(t *testing.T) {
 		{"present but invalid managed file fails closed", DiscoverOptions{Env: envWith(""), ManagedPaths: []string{bad}}, nil, "AR743", &ParseError{}},
 		{"unknown key is invalid", DiscoverOptions{Flag: bad, Env: envWith("")}, nil, "required_code", &ParseError{}},
 		{"a newer policy is invalid", DiscoverOptions{Flag: newer, Env: envWith("")}, nil, "upgrade ai-rulez", &ParseError{}},
-		{"a URL is refused", DiscoverOptions{Flag: "https://policy.example.org/p.toml", Env: envWith("")}, nil, "URLs are not supported", &ParseError{}},
+		{"an unpinned URL is refused", DiscoverOptions{Flag: "https://policy.example.org/p.toml", Env: envWith("")}, nil, "AR741", nil},
+		{"an http URL is refused", DiscoverOptions{Flag: "http://policy.example.org/p.toml", Env: envWith("")}, nil, "must be https", &ParseError{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
