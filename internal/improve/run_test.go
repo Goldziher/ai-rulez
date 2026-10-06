@@ -570,3 +570,41 @@ func TestSummary_ShowsTheEffectiveGate(t *testing.T) {
 	assert.Contains(t, text, "share 40%")
 	assert.Contains(t, text, "held-out >= 3 case(s)")
 }
+
+func TestExecute_APreviousRoundIsDescribedWithoutHeldOutDetail(t *testing.T) {
+	// Arrange: round 1 breaks the diff policy (a script), round 2 only adds text the gate rejects.
+	root, configDir := project(t)
+	ev := &fakeEval{pass: func(id, skill string) bool { return id == "held-neg" || id == "train-two" }}
+	var seen []*PreviousRound
+	opt := optimizer(t, func(dir string, req *OptimizerRequest, _ runner.Spec) {
+		seen = append(seen, req.Previous)
+		switch req.Round {
+		case 1:
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, "scripts"), 0o750))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "scripts", "run.sh"), []byte("echo hi\n"), 0o600))
+		default:
+			appendSkill(t, dir, "\nmore text\n")
+		}
+	})
+	o := baseOptions(root, configDir, ev, opt)
+	o.MaxRounds, o.MaxHoldoutEvals = 3, 3
+	plan := mustPrepare(t, &o)
+
+	// Act
+	_, err := plan.Execute(context.Background())
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, seen, 3)
+	assert.Nil(t, seen[0], "round 1 has no previous round")
+	require.NotNil(t, seen[1])
+	assert.Equal(t, 1, seen[1].Round)
+	assert.Equal(t, "rejected: policy", seen[1].Decision)
+	assert.Contains(t, strings.Join(seen[1].Reasons, " "), "scripts/run.sh", "a policy violation names what the optimizer did wrong")
+	assert.False(t, seen[1].WorkspaceKept, "the workspace was reset after a policy rejection")
+	require.NotNil(t, seen[2])
+	assert.Equal(t, "rejected: below gain", seen[2].Decision)
+	assert.Empty(t, seen[2].Reasons, "a gate decision carries no numbers about the held-out set")
+	assert.True(t, seen[2].WorkspaceKept, "the rejected attempt is still in the workspace")
+	assert.Equal(t, "edited", seen[2].Summary)
+}
