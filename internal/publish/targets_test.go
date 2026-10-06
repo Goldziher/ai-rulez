@@ -564,6 +564,23 @@ func TestExecuteOCI_PushesTheReviewedArtifactToALocalRegistry(t *testing.T) {
 	assert.Equal(t, d.Files["acme-1.4.0.tar.gz"], got.Layers[0].Data)
 }
 
+func TestOCIRefIsMutable(t *testing.T) {
+	tests := []struct {
+		ref  string
+		want bool
+	}{
+		{"ghcr.io/acme/skills/x:1.4.0", true},
+		{"ghcr.io/acme/skills/x", true},
+		{"ghcr.io/acme/skills/x@sha256:" + strings.Repeat("a", 64), false},
+		{"ghcr.io/acme/skills/x:1.4.0@sha256:" + strings.Repeat("a", 64), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			assert.Equal(t, tt.want, OCIRefIsMutable(tt.ref))
+		})
+	}
+}
+
 func TestExecuteOCI_DoesNotOverwriteAnExistingTag(t *testing.T) {
 	// Arrange: the tag already points at another artifact.
 	host := newRegistry(t)
@@ -647,7 +664,9 @@ func TestVerify_ChecksTheOCIPlanAndPulledArtifact(t *testing.T) {
 	require.NoError(t, err)
 
 	pulled := t.TempDir()
-	require.NoError(t, PullOCI(context.Background(), oci.Target{Ref: host + "/acme/skills/acme:1.4.0"}, pulled))
+	digest, err := PullOCI(context.Background(), oci.Target{Ref: host + "/acme/skills/acme:1.4.0"}, pulled)
+	require.NoError(t, err)
+	assert.Equal(t, d.Plan.OCIDigest, digest, "the pull reports the digest the tag resolved to")
 	got, err := Verify(pulled)
 
 	require.NoError(t, err)

@@ -218,20 +218,22 @@ func readDistFiles(dir string, plan Plan) (map[string][]byte, Manifest, []byte, 
 // PullOCI fetches a published artifact into dir as a dist directory
 // `publish verify` accepts: the manifest, the layers by their titles and a
 // SHA256SUMS computed from what arrived (the registry's content addressing
-// already guarantees each blob matches its digest).
-func PullOCI(ctx context.Context, t oci.Target, dir string) error {
+// already guarantees each blob matches its digest, but a tag can point at
+// anything: the SHA256SUMS prove nothing about authenticity). It returns the
+// manifest digest the reference resolved to.
+func PullOCI(ctx context.Context, t oci.Target, dir string) (string, error) {
 	pulled, err := oci.Pull(ctx, t)
 	if err != nil {
-		return newError(CodeVerify, ExitFailed, "", "cannot pull %s: %s", t.Ref, Redact(err.Error()))
+		return "", newError(CodeVerify, ExitFailed, "", "cannot pull %s: %s", t.Ref, Redact(err.Error()))
 	}
 	m, err := decodeManifest(pulled.Config)
 	if err != nil {
-		return newError(CodeVerify, ExitFailed, "", "%s does not carry a publish manifest: %v", t.Ref, err)
+		return "", newError(CodeVerify, ExitFailed, "", "%s does not carry a publish manifest: %v", t.Ref, err)
 	}
 	files := map[string][]byte{m.Name + "-" + m.Version + ".manifest.json": pulled.Config}
 	for _, l := range pulled.Layers {
 		if !ValidPath(l.Title) || strings.Contains(l.Title, "/") {
-			return newError(CodeVerify, ExitFailed, "", "%s has a layer with an unusable title %q", t.Ref, l.Title)
+			return "", newError(CodeVerify, ExitFailed, "", "%s has a layer with an unusable title %q", t.Ref, l.Title)
 		}
 		files[l.Title] = l.Data
 	}
@@ -242,8 +244,15 @@ func PullOCI(ctx context.Context, t oci.Target, dir string) error {
 	files[SumsFile] = FormatSums(sums)
 	for name, data := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil {
-			return oops.With("path", name).Wrapf(err, "write pulled file")
+			return "", oops.With("path", name).Wrapf(err, "write pulled file")
 		}
 	}
-	return nil
+	return pulled.Digest, nil
+}
+
+// OCIRefIsMutable reports whether ref names its artifact by a tag, which the
+// registry's owner can move, rather than by digest.
+func OCIRefIsMutable(ref string) bool {
+	parsed, err := oci.ParseRepository(ref)
+	return err != nil || !strings.HasPrefix(parsed.Reference, "sha256:")
 }

@@ -225,6 +225,9 @@ the statement is a mismatch (`AR9N7`). Independently of signing, verify compares
 own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabelled as another
 plugin or version is flagged.
 
+`publish verify <oci-ref>` prints the digest the reference resolved to and warns when it is a tag (its owner can move it, and
+the `SHA256SUMS` it checks are computed from what arrived): pin by `@sha256:` and name a trusted signer.
+
 `publish verify` reports a signed bundle as `unverified` until you name who to trust: `--key PUBLIC.pem` (repeatable), or
 `--identity` and `--issuer` for a keyless signature, with `--trusted-root` or the root `ai-rulez trust update` cached. A valid
 signature alone only says who signed. `--require-signature` fails an unsigned or unverified bundle; naming a trusted signer
