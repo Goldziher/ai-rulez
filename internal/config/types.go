@@ -666,6 +666,11 @@ type MCPServer struct {
 	// Profiles restricts this server to the named profiles. Empty means every
 	// profile, preserving the pre-existing behavior.
 	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	// Package is the package URL (purl) of the package a command-based server
+	// runs, for example "pkg:npm/%40scope/server@1.4.2". `ai-rulez sbom` uses it
+	// instead of guessing the package from command and args. It is never written
+	// to a harness file.
+	Package string `yaml:"package,omitempty" json:"package,omitempty" toml:"package,omitempty"`
 
 	// SecretEnvKeys records env keys whose generated values should be treated as
 	// sensitive. It is populated during generation and never serialized.
