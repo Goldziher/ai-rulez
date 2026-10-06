@@ -168,7 +168,10 @@ When the filters remove every skill, the start-up warning names each filter and 
   skill is `{uri, frontmatter, resources: [{uri, digest, size}]}` with `sha256:<hex>` digests, so a
   client can verify what it loads. An unknown URI returns `-32602`. The server declares
   `capabilities.extensions["io.modelcontextprotocol/skills"]` and the `resources` capability.
-  `resources/directory/read` is not implemented and `directoryRead` is not declared.
+  The server also implements the extension's optional `resources/directory/read` and declares
+  `directoryRead: true`: given `skill://<name>` or one of its subdirectories (no trailing slash), it returns the
+  direct children as resources (files with their `mimeType` and size, subdirectories as `inode/directory`), and
+  `-32602` for anything that is not such a directory. It is read-only and lists only files `resources/read` serves.
 - **Tools** for clients that only speak tools, all annotated read-only: `search_skills(query, limit, domain)`
   ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
   deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
