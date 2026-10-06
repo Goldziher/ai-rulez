@@ -170,15 +170,7 @@ func merge(repo, user *skillsearch.Config) skillsearch.Config {
 	if user.RRFK > 0 {
 		out.RRFK = user.RRFK
 	}
-	if user.Weights.Lexical > 0 {
-		out.Weights.Lexical = user.Weights.Lexical
-	}
-	if user.Weights.Vector > 0 {
-		out.Weights.Vector = user.Weights.Vector
-	}
-	if user.VectorMinSim > 0 {
-		out.VectorMinSim = user.VectorMinSim
-	}
+	out.Weights, out.VectorMinSim = mergeScoring(out.Weights, out.VectorMinSim, user)
 	if user.Candidates > 0 {
 		out.Candidates = user.Candidates
 	}
@@ -228,6 +220,20 @@ func (r *Resolved) QueryLog(scan skillsearch.SecretScanner) *skillsearch.QueryLo
 		r.queryLog = &skillsearch.QueryLog{Path: skillsearch.LogPath(r.ConfigDir), Scanner: scan}
 	})
 	return r.queryLog
+}
+
+// mergeScoring applies the user's list weights and abstention threshold over the repository's.
+func mergeScoring(weights skillsearch.Weights, minSim float64, user *skillsearch.Config) (skillsearch.Weights, float64) {
+	if user.Weights.Lexical > 0 {
+		weights.Lexical = user.Weights.Lexical
+	}
+	if user.Weights.Vector > 0 {
+		weights.Vector = user.Weights.Vector
+	}
+	if user.VectorMinSim > 0 {
+		minSim = user.VectorMinSim
+	}
+	return weights, minSim
 }
 
 // Provider describes where embeddings come from, for `search status` and --dry-run.
