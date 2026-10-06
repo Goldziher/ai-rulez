@@ -496,8 +496,9 @@ machine-local or secret output (`*.local.*`, `config.local.*`, `.ai-rulez/local/
 secrets) is also left out of the block, with a warning; generation still refuses to write a secret-bearing MCP config
 that ends up unignored. Outside a git repository, or when git is unavailable, every entry is added.
 
-Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`: the
-local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
+Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
+when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
+no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,
 `<rulesdir>/*.local.*` including `ai-rulez.local.*`), the `.ai-rulez/local/` source tree, the
 `config.local.*` overlay with its `.config.local.*` lock and temp files, and
 `.ai-rulez/.generated-manifest.local.json`. Overlay-derived outputs whose names differ per machine are
