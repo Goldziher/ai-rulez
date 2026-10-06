@@ -152,6 +152,8 @@ type Layer struct {
 	Path string
 	// Name is the policy's own name, if it has one.
 	Name string
+	// Signer is who signed the policy ("" when it was not checked or is unsigned).
+	Signer string
 	// Note says how the layer was obtained when that is not plain: a cached copy
 	// standing in for an unreachable URL.
 	Note string

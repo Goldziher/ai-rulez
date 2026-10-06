@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"sort"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 const (
@@ -42,6 +44,7 @@ type cacheEntry struct {
 	Digest    string `json:"digest"`
 	FetchedAt string `json:"fetched_at"`
 	BodySHA   string `json:"body_sha256"`
+	BundleSHA string `json:"bundle_sha256,omitempty"`
 	MAC       string `json:"mac"`
 }
 
@@ -76,13 +79,20 @@ func (c *cache) name(rawURL, digest string) string {
 }
 
 func (c *cache) entryMAC(e cacheEntry) string {
-	return c.mac(cacheMACLabel, e.URL, e.Digest, e.FetchedAt, e.BodySHA)
+	return c.mac(cacheMACLabel, e.URL, e.Digest, e.FetchedAt, e.BodySHA, e.BundleSHA)
 }
 
-// put stores body for the URL and digest, fetched at the given time.
-func (c *cache) put(rawURL, digest string, body []byte, at time.Time) error {
+// put stores body, and the signature bundle published next to it (nil for none),
+// for the URL and digest, fetched at the given time. An empty digest is the entry
+// of a signed policy that is not pinned: its signature, checked on every load,
+// is what vouches for the body.
+func (c *cache) put(rawURL, digest string, body, bundle []byte, at time.Time) error {
 	sum := sha256.Sum256(body)
 	e := cacheEntry{V: cacheVersion, URL: rawURL, Digest: digest, FetchedAt: at.UTC().Format(time.RFC3339), BodySHA: hex.EncodeToString(sum[:])}
+	if len(bundle) > 0 {
+		bsum := sha256.Sum256(bundle)
+		e.BundleSHA = hex.EncodeToString(bsum[:])
+	}
 	e.MAC = c.entryMAC(e)
 	meta, err := json.Marshal(e)
 	if err != nil {
@@ -92,35 +102,53 @@ func (c *cache) put(rawURL, digest string, body []byte, at time.Time) error {
 	if err := safefs.WriteFileAtomic(stem+".toml", body); err != nil {
 		return err //nolint:wrapcheck // best-effort store
 	}
+	if len(bundle) > 0 {
+		if err := safefs.WriteFileAtomic(stem+SidecarSuffix, bundle); err != nil {
+			return err //nolint:wrapcheck // best-effort store
+		}
+	} else {
+		_ = os.Remove(stem + SidecarSuffix) //nolint:errcheck // a stale bundle must not outlive the body it signed
+	}
 	return safefs.WriteFileAtomic(stem+".json", meta) //nolint:wrapcheck // best-effort store
 }
 
 // get returns the cached body for the URL and digest, and when it was fetched. A
 // missing, unreadable or unauthentic entry is a miss: its MAC, the body's hash
 // and the pinned digest must all agree.
-func (c *cache) get(rawURL, digest string) (body []byte, fetchedAt time.Time, ok bool) {
+func (c *cache) get(rawURL, digest string) (body, bundle []byte, fetchedAt time.Time, ok bool) {
+	miss := func() ([]byte, []byte, time.Time, bool) { return nil, nil, time.Time{}, false }
 	stem := filepath.Join(c.dir, c.name(rawURL, digest))
 	meta, err := safefs.ReadRegular(stem + ".json")
 	if err != nil || len(meta) > maxCacheMeta {
-		return nil, time.Time{}, false
+		return miss()
 	}
 	var e cacheEntry
 	if json.Unmarshal(meta, &e) != nil || e.V != cacheVersion || e.URL != rawURL || e.Digest != digest || !hmac.Equal([]byte(e.MAC), []byte(c.entryMAC(e))) {
-		return nil, time.Time{}, false
+		return miss()
 	}
 	body, err = safefs.ReadRegular(stem + ".toml")
 	if err != nil || len(body) > maxPolicyBytes {
-		return nil, time.Time{}, false
+		return miss()
 	}
 	sum := sha256.Sum256(body)
-	if hex.EncodeToString(sum[:]) != e.BodySHA || policyDigest(body) != digest {
-		return nil, time.Time{}, false
+	if hex.EncodeToString(sum[:]) != e.BodySHA || (digest != "" && policyDigest(body) != digest) {
+		return miss()
+	}
+	if e.BundleSHA != "" {
+		bundle, err = safefs.ReadRegular(stem + SidecarSuffix)
+		if err != nil || len(bundle) > signing.MaxBundleBytes {
+			return miss()
+		}
+		bsum := sha256.Sum256(bundle)
+		if hex.EncodeToString(bsum[:]) != e.BundleSHA {
+			return miss()
+		}
 	}
 	at, err := time.Parse(time.RFC3339, e.FetchedAt)
 	if err != nil {
-		return nil, time.Time{}, false
+		return miss()
 	}
-	return body, at, true
+	return body, bundle, at, true
 }
 
 // tofuDoc is the record of digests accepted on first use.

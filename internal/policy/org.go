@@ -46,12 +46,27 @@ type UserSettings struct {
 	// Digests maps a lower-cased owner to the digest its organization policy is
 	// pinned to.
 	Digests map[string]string
+	// RequireSignature makes an unsigned policy an error.
+	RequireSignature bool
+	// TrustedRoot is a Sigstore trusted root file; TLog the transparency-log mode.
+	TrustedRoot, TLog string
+	// Signers are the signers trusted to sign a policy.
+	Signers []UserSigner
 }
 
 type userPolicyDoc struct {
 	Policy *struct {
-		Discover string            `toml:"discover"`
-		Digests  map[string]string `toml:"digests"`
+		Discover         string            `toml:"discover"`
+		Digests          map[string]string `toml:"digests"`
+		RequireSignature bool              `toml:"require_signature"`
+		TrustedRoot      string            `toml:"trusted_root"`
+		TLog             string            `toml:"tlog"`
+		Signers          []struct {
+			Identity       string `toml:"identity"`
+			IdentityRegexp string `toml:"identity_regexp"`
+			Issuer         string `toml:"issuer"`
+			KeyFile        string `toml:"key_file"`
+		} `toml:"signers"`
 	} `toml:"policy"`
 }
 
@@ -85,6 +100,14 @@ func LoadUserSettings(env ambient.Env) (UserSettings, error) {
 	}
 	if us.Discover = strings.ToLower(strings.TrimSpace(doc.Policy.Discover)); us.Discover != "" && us.Discover != "org" {
 		return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[policy] discover = %q is not supported (use \"org\")", doc.Policy.Discover)}
+	}
+	us.RequireSignature, us.TrustedRoot, us.TLog = doc.Policy.RequireSignature, strings.TrimSpace(doc.Policy.TrustedRoot), strings.TrimSpace(doc.Policy.TLog)
+	for i, s := range doc.Policy.Signers {
+		signer := UserSigner{Identity: strings.TrimSpace(s.Identity), IdentityRegexp: strings.TrimSpace(s.IdentityRegexp), Issuer: strings.TrimSpace(s.Issuer), KeyFile: strings.TrimSpace(s.KeyFile)}
+		if err := checkUserSigner(signer); err != nil {
+			return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[[policy.signers]] entry %d: %v", i+1, err)}
+		}
+		us.Signers = append(us.Signers, signer)
 	}
 	for owner, d := range doc.Policy.Digests {
 		d = strings.ToLower(strings.TrimSpace(d))
@@ -217,4 +240,28 @@ func LoadOrg(opts DiscoverOptions, ref Ref) ([]Layer, error) {
 	}
 	chain, _, err := l.expand(layer, ref, nil)
 	return chain, err
+}
+
+// checkUserSigner validates one [[policy.signers]] entry: a certificate identity
+// (exact or an anchored regexp) with its issuer, or a public key file.
+func checkUserSigner(s UserSigner) error {
+	byIdentity := s.Identity != "" || s.IdentityRegexp != ""
+	switch {
+	case byIdentity && s.KeyFile != "":
+		return errors.New("trust an identity or a key_file, not both")
+	case !byIdentity && s.KeyFile == "":
+		return errors.New("needs identity, identity_regexp or key_file")
+	case s.Identity != "" && s.IdentityRegexp != "":
+		return errors.New("use identity or identity_regexp, not both")
+	case byIdentity && s.Issuer == "":
+		return errors.New("an identity entry needs an issuer")
+	case s.KeyFile != "" && s.Issuer != "":
+		return errors.New("a key_file entry has no issuer")
+	}
+	if s.IdentityRegexp != "" {
+		if err := config.ValidateIdentityRegexp(s.IdentityRegexp); err != nil {
+			return fmt.Errorf("AR722: %w", err)
+		}
+	}
+	return nil
 }

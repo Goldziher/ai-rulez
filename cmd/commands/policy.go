@@ -28,6 +28,13 @@ var (
 	policyMaxStaleFlag string
 	policyTOFUFlag     bool
 	discoverOrgFlag    bool
+
+	// Signature flags: who may sign a policy and whether a signature is required.
+	policyRequireSignedFlag bool
+	policySignerKeyFlag     []string
+	policySignerIDFlag      string
+	policySignerIssuerFlag  string
+	policyTrustedRootFlag   string
 )
 
 // validateShowPolicy is validate --show-policy.
@@ -40,6 +47,10 @@ var policyEnforcer = policy.NewEnforcer(func() policy.DiscoverOptions {
 		Flag: policyFlag, FlagDigest: policyDigestFlag, Mode: policyModeFlag,
 		Offline: policyOfflineFlag, MaxStale: policyMaxStaleFlag,
 		TrustOnFirstUse: policyTOFUFlag, Interactive: stdinIsTerminal(), DiscoverOrg: discoverOrgFlag,
+		Signature: policy.SignatureOptions{
+			Require: policyRequireSignedFlag, Identity: policySignerIDFlag, Issuer: policySignerIssuerFlag,
+			KeyFiles: policySignerKeyFlag, TrustedRoot: policyTrustedRootFlag,
+		},
 	}
 })
 
@@ -57,6 +68,16 @@ func init() {
 		"How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE)")
 	RootCmd.PersistentFlags().BoolVar(&discoverOrgFlag, "discover-org", false,
 		"Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md")
+	RootCmd.PersistentFlags().BoolVar(&policyRequireSignedFlag, "policy-require-signed", false,
+		"Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1)")
+	RootCmd.PersistentFlags().StringSliceVar(&policySignerKeyFlag, "policy-signer-key", nil,
+		"PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config)")
+	RootCmd.PersistentFlags().StringVar(&policySignerIDFlag, "policy-signer-identity", "",
+		"Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing)")
+	RootCmd.PersistentFlags().StringVar(&policySignerIssuerFlag, "policy-signer-issuer", "",
+		"OIDC issuer of --policy-signer-identity")
+	RootCmd.PersistentFlags().StringVar(&policyTrustedRootFlag, "policy-trusted-root", "",
+		"Sigstore trusted root file for keyless policy signatures (default: the root `ai-rulez trust update` cached)")
 	RootCmd.PersistentFlags().BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
 		"Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards")
 	RootCmd.PersistentFlags().StringVar(&policyModeFlag, "policy-mode", "",

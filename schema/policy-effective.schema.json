@@ -28,6 +28,10 @@
             "items": { "type": "string" },
             "description": "The policies this layer extends; they follow it as layers of origin extends."
           },
+          "signer": {
+            "type": "string",
+            "description": "Who signed the policy, when its signature was verified (an identity, or key:<fingerprint>)."
+          },
           "note": {
             "type": "string",
             "description": "How the layer was obtained when that is not plain, for example a cached copy standing in for an unreachable URL."
