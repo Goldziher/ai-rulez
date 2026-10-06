@@ -294,7 +294,8 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	}
 
 	// Scan content directories
-	contentTree, err := ScanContentTreeWith(configDir, config.BundleExclude)
+	scanner := newProjectScanner(baseDir)
+	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
 	}
@@ -304,12 +305,13 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	// enters config.Content, so it cannot leak into committed output; it is
 	// emitted only to the per-preset ".local" root variants.
 	if !lo.withoutLocal {
-		localTree, err := ScanLocalContentTreeWith(configDir, config.BundleExclude)
+		localTree, err := scanLocalContentTree(scanner, configDir, config.BundleExclude)
 		if err != nil {
 			return nil, err
 		}
 		config.LocalContent = localTree
 	}
+	config.ContentProblems = scanner.problems
 
 	// Load builtins (lowest priority — loaded first so includes and local override them).
 	// The root `builtins` field is global; `builtin:<name>` references in profiles
@@ -742,6 +744,14 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 // ScanContentTreeWith is ScanContentTree with extra bundle_exclude patterns
 // applied to the resources of every skill and command.
 func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
+	return scanContentTree(&contentScanner{}, configDir, bundleExclude)
+}
+
+// scanContentTree scans configDir under the symlink policy held by s.
+func scanContentTree(s *contentScanner, configDir string, bundleExclude []string) (*ContentTree, error) {
+	if !s.admitTreeRoot(configDir) {
+		return &ContentTree{Domains: make(map[string]*Domain)}, nil
+	}
 	tree := &ContentTree{
 		Domains: make(map[string]*Domain),
 	}
@@ -750,7 +760,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	rulesPath := filepath.Join(configDir, rulesDir)
 	var rules []ContentFile
 	var err error
-	if rules, err = scanMarkdownFiles(rulesPath); err != nil {
+	if rules, err = s.markdownFiles(rulesPath); err != nil {
 		return nil, oops.
 			With("path", rulesPath).
 			Wrapf(err, "scan rules directory")
@@ -760,7 +770,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan root context/
 	contextPath := filepath.Join(configDir, contextDir)
 	var contextFiles []ContentFile
-	if contextFiles, err = scanMarkdownFiles(contextPath); err != nil {
+	if contextFiles, err = s.markdownFiles(contextPath); err != nil {
 		return nil, oops.
 			With("path", contextPath).
 			Wrapf(err, "scan context directory")
@@ -770,7 +780,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan root skills/
 	skillsPath := filepath.Join(configDir, skillsDir)
 	var skills []ContentFile
-	if skills, err = scanSkills(skillsPath, bundleExclude); err != nil {
+	if skills, err = s.skills(skillsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", skillsPath).
 			Wrapf(err, "scan skills directory")
@@ -780,7 +790,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan root agents/
 	agentsPath := filepath.Join(configDir, agentsDir)
 	var agents []ContentFile
-	if agents, err = scanAgents(agentsPath); err != nil {
+	if agents, err = s.agents(agentsPath); err != nil {
 		return nil, oops.
 			With("path", agentsPath).
 			Wrapf(err, "scan agents directory")
@@ -791,7 +801,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan root commands/
 	commandsPath := filepath.Join(configDir, commandsDir)
 	var commands []ContentFile
-	if commands, err = scanCommandsWith(commandsPath, bundleExclude); err != nil {
+	if commands, err = s.commands(commandsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", commandsPath).
 			Wrapf(err, "scan commands directory")
@@ -802,7 +812,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan root checks/
 	checksPath := filepath.Join(configDir, checksDir)
 	var checks []ContentFile
-	if checks, err = scanMarkdownFiles(checksPath); err != nil {
+	if checks, err = s.markdownFiles(checksPath); err != nil {
 		return nil, oops.
 			With("path", checksPath).
 			Wrapf(err, "scan checks directory")
@@ -812,7 +822,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
 	var domains map[string]*Domain
-	if domains, err = scanDomains(domainsPath, bundleExclude); err != nil {
+	if domains, err = s.domains(domainsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", domainsPath).
 			Wrapf(err, "scan domains directory")
@@ -832,8 +842,12 @@ func ScanLocalContentTree(configDir string) (*ContentTree, error) {
 
 // ScanLocalContentTreeWith is ScanLocalContentTree with extra bundle_exclude patterns.
 func ScanLocalContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
+	return scanLocalContentTree(&contentScanner{}, configDir, bundleExclude)
+}
+
+func scanLocalContentTree(s *contentScanner, configDir string, bundleExclude []string) (*ContentTree, error) {
 	localBase := filepath.Join(configDir, localDir)
-	tree, err := ScanContentTreeWith(localBase, bundleExclude)
+	tree, err := scanContentTree(s, localBase, bundleExclude)
 	if err != nil {
 		return nil, oops.With("path", localBase).Wrapf(err, "scan local content")
 	}
@@ -841,33 +855,27 @@ func ScanLocalContentTreeWith(configDir string, bundleExclude []string) (*Conten
 }
 
 // scanMarkdownFiles scans a directory for .md files and returns ContentFile entries
-func scanMarkdownFiles(dir string) ([]ContentFile, error) {
-	// Check if directory exists
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		// Directory doesn't exist, return empty slice (not an error)
+func (s *contentScanner) markdownFiles(dir string) ([]ContentFile, error) {
+	entries, ok, err := s.dirEntries(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return []ContentFile{}, nil
 	}
 
 	var files []ContentFile
 
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, oops.
-			With("path", dir).
-			Wrapf(err, "read directory")
-	}
-
 	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
 		if !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
 
 		filePath := filepath.Join(dir, entry.Name())
-		contentFile, err := loadContentFile(filePath)
+		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir {
+			continue
+		}
+		contentFile, err := s.loadFile(filePath)
 		if err != nil {
 			// Log warning but continue (non-fatal)
 			continue
@@ -880,35 +888,30 @@ func scanMarkdownFiles(dir string) ([]ContentFile, error) {
 }
 
 // scanSkills scans the skills/ directory for SKILL.md files in subdirectories
-func scanSkills(skillsDir string, bundleExclude []string) ([]ContentFile, error) {
-	// Check if directory exists
-	if _, err := os.Stat(skillsDir); os.IsNotExist(err) {
-		// Directory doesn't exist, return empty slice (not an error)
+func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]ContentFile, error) {
+	entries, ok, err := s.dirEntries(skillsDir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return []ContentFile{}, nil
 	}
 
 	var skills []ContentFile
 
-	entries, err := os.ReadDir(skillsDir)
-	if err != nil {
-		return nil, oops.
-			With("path", skillsDir).
-			Wrapf(err, "read skills directory")
-	}
-
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		skillRoot := filepath.Join(skillsDir, entry.Name())
+		if isDir, ok := s.entryInfo(skillRoot, entry); !ok || !isDir {
 			continue
 		}
 
-		skillRoot := filepath.Join(skillsDir, entry.Name())
 		skillPath := filepath.Join(skillRoot, skillMarkerFile)
-		if _, err := os.Stat(skillPath); os.IsNotExist(err) {
+		if _, err := os.Lstat(skillPath); os.IsNotExist(err) {
 			// No SKILL.md file, skip this directory
 			continue
 		}
 
-		contentFile, err := loadContentFile(skillPath)
+		contentFile, err := s.loadFile(skillPath)
 		if err != nil {
 			// Log warning but continue (non-fatal)
 			continue
@@ -936,36 +939,36 @@ func scanSkills(skillsDir string, bundleExclude []string) ([]ContentFile, error)
 // COMMAND.md files in subdirectories (directory form with optional resources/).
 // Mirrors the structure of scanSkills to support bundled reference material.
 func scanCommands(commandsDir string) ([]ContentFile, error) {
-	return scanCommandsWith(commandsDir, nil)
+	return (&contentScanner{}).commands(commandsDir, nil)
 }
 
-func scanCommandsWith(commandsDir string, bundleExclude []string) ([]ContentFile, error) {
-	// Check if directory exists
-	if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
-		// Directory doesn't exist, return empty slice (not an error)
+func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([]ContentFile, error) {
+	entries, ok, err := s.dirEntries(commandsDir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return []ContentFile{}, nil
 	}
 
 	var commands []ContentFile
 
-	entries, err := os.ReadDir(commandsDir)
-	if err != nil {
-		return nil, oops.
-			With("path", commandsDir).
-			Wrapf(err, "read commands directory")
-	}
-
 	for _, entry := range entries {
-		if entry.IsDir() {
+		entryPath := filepath.Join(commandsDir, entry.Name())
+		isDir, ok := s.entryInfo(entryPath, entry)
+		if !ok {
+			continue
+		}
+		if isDir {
 			// Directory structure: commands/name/COMMAND.md
-			commandRoot := filepath.Join(commandsDir, entry.Name())
+			commandRoot := entryPath
 			commandPath := filepath.Join(commandRoot, commandMarkerFile)
-			if _, err := os.Stat(commandPath); os.IsNotExist(err) {
+			if _, err := os.Lstat(commandPath); os.IsNotExist(err) {
 				// No COMMAND.md file, skip this directory
 				continue
 			}
 
-			contentFile, err := loadContentFile(commandPath)
+			contentFile, err := s.loadFile(commandPath)
 			if err != nil {
 				// Non-fatal: one unreadable command must not fail the whole
 				// load, but dropping it without a diagnostic makes an
@@ -995,8 +998,8 @@ func scanCommandsWith(commandsDir string, bundleExclude []string) ([]ContentFile
 			continue
 		}
 
-		filePath := filepath.Join(commandsDir, entry.Name())
-		contentFile, err := loadContentFile(filePath)
+		filePath := entryPath
+		contentFile, err := s.loadFile(filePath)
 		if err != nil {
 			logger.Warn("failed to load command file", "path", filePath, "error", err)
 			continue
@@ -1009,33 +1012,27 @@ func scanCommandsWith(commandsDir string, bundleExclude []string) ([]ContentFile
 }
 
 // scanAgents scans the agents/ directory for .md files
-func scanAgents(agentsPath string) ([]ContentFile, error) {
-	// Check if directory exists
-	if _, err := os.Stat(agentsPath); os.IsNotExist(err) {
-		// Directory doesn't exist, return empty slice (not an error)
+func (s *contentScanner) agents(agentsPath string) ([]ContentFile, error) {
+	entries, ok, err := s.dirEntries(agentsPath)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return []ContentFile{}, nil
 	}
 
 	var agents []ContentFile
 
-	entries, err := os.ReadDir(agentsPath)
-	if err != nil {
-		return nil, oops.
-			With("path", agentsPath).
-			Wrapf(err, "read agents directory")
-	}
-
 	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
 		if !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
 
 		filePath := filepath.Join(agentsPath, entry.Name())
-		contentFile, err := loadContentFile(filePath)
+		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir {
+			continue
+		}
+		contentFile, err := s.loadFile(filePath)
 		if err != nil {
 			// Log warning but continue (non-fatal)
 			continue
@@ -1048,29 +1045,23 @@ func scanAgents(agentsPath string) ([]ContentFile, error) {
 }
 
 // scanDomains scans the domains/ directory and returns a map of domain name to Domain
-func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain, error) {
-	// Check if directory exists
-	if _, err := os.Stat(domainsDir); os.IsNotExist(err) {
-		// Directory doesn't exist, return empty map (not an error)
+func (s *contentScanner) domains(domainsDir string, bundleExclude []string) (map[string]*Domain, error) {
+	entries, ok, err := s.dirEntries(domainsDir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return make(map[string]*Domain), nil
 	}
 
 	domains := make(map[string]*Domain)
 
-	entries, err := os.ReadDir(domainsDir)
-	if err != nil {
-		return nil, oops.
-			With("path", domainsDir).
-			Wrapf(err, "read domains directory")
-	}
-
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
 		domainName := entry.Name()
 		domainPath := filepath.Join(domainsDir, domainName)
+		if isDir, ok := s.entryInfo(domainPath, entry); !ok || !isDir {
+			continue
+		}
 
 		domain := &Domain{
 			Name: domainName,
@@ -1080,7 +1071,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		rulesPath := filepath.Join(domainPath, rulesDir)
 		var rules []ContentFile
 		var err error
-		if rules, err = scanMarkdownFiles(rulesPath); err != nil {
+		if rules, err = s.markdownFiles(rulesPath); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", rulesPath).
@@ -1091,7 +1082,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		// Scan domain/context/
 		contextPath := filepath.Join(domainPath, contextDir)
 		var contextFiles []ContentFile
-		if contextFiles, err = scanMarkdownFiles(contextPath); err != nil {
+		if contextFiles, err = s.markdownFiles(contextPath); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", contextPath).
@@ -1102,7 +1093,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		// Scan domain/skills/
 		skillsPath := filepath.Join(domainPath, skillsDir)
 		var skills []ContentFile
-		if skills, err = scanSkills(skillsPath, bundleExclude); err != nil {
+		if skills, err = s.skills(skillsPath, bundleExclude); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", skillsPath).
@@ -1113,7 +1104,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		// Scan domain/agents/
 		agentsPath := filepath.Join(domainPath, agentsDir)
 		var agentsContent []ContentFile
-		if agentsContent, err = scanAgents(agentsPath); err != nil {
+		if agentsContent, err = s.agents(agentsPath); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", agentsPath).
@@ -1124,7 +1115,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		// Scan domain/commands/
 		domainCommandsPath := filepath.Join(domainPath, commandsDir)
 		var domainCommands []ContentFile
-		if domainCommands, err = scanCommandsWith(domainCommandsPath, bundleExclude); err != nil {
+		if domainCommands, err = s.commands(domainCommandsPath, bundleExclude); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", domainCommandsPath).
@@ -1136,7 +1127,7 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		// Scan domain/checks/
 		domainChecksPath := filepath.Join(domainPath, checksDir)
 		var domainChecks []ContentFile
-		if domainChecks, err = scanMarkdownFiles(domainChecksPath); err != nil {
+		if domainChecks, err = s.markdownFiles(domainChecksPath); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", domainChecksPath).
@@ -1148,6 +1139,11 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 	}
 
 	return domains, nil
+}
+
+// scanAgents scans one agents directory without following symlinks.
+func scanAgents(agentsPath string) ([]ContentFile, error) {
+	return (&contentScanner{}).agents(agentsPath)
 }
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
@@ -1327,6 +1323,12 @@ func loadContentFile(path string) (ContentFile, error) {
 			With("path", path).
 			Errorf("content file %s is a symlink; symlinks are not followed", path)
 	}
+	return readContentFile(path)
+}
+
+// readContentFile reads and parses a content file the caller has already
+// cleared under the symlink policy.
+func readContentFile(path string) (ContentFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ContentFile{}, oops.
