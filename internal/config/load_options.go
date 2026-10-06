@@ -1,10 +1,17 @@
 package config
 
+import (
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+)
+
 // loadOptions are the resolved LoadOption settings.
 type loadOptions struct {
 	withoutLocal  bool
 	includeMemo   any
 	withoutRemote bool
+	runner        runner.Runner
+	host          ambient.Host
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -29,6 +36,27 @@ func WithoutRemote() LoadOption {
 // by an earlier load (Config.IncludeMemo), so sources are fetched once per run.
 func WithIncludeMemo(memo any) LoadOption {
 	return func(o *loadOptions) { o.includeMemo = memo }
+}
+
+// WithRunner makes every external command the load starts (git, for the
+// .gitignore-aware skill bundling and for include fetches) go through r instead
+// of running a real process. A nil r keeps the default (runner.Exec).
+func WithRunner(r runner.Runner) LoadOption {
+	return func(o *loadOptions) { o.runner = r }
+}
+
+// WithHost loads the configuration with the given environment, clock, process
+// runner and logger instead of the real process's. The host is kept on the
+// loaded Config (Config.Host), so generation and includes use it too. Fields left
+// nil keep the real facility; a runner given by WithRunner is overridden by a
+// non-nil host.Runner.
+func WithHost(h ambient.Host) LoadOption {
+	return func(o *loadOptions) {
+		o.host = h
+		if h.Runner != nil {
+			o.runner = h.Runner
+		}
+	}
 }
 
 func applyLoadOptions(opts []LoadOption) loadOptions {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 
 func TestBundleFilterExcluded(t *testing.T) {
 	t.Parallel()
-	f := newBundleFilter(t.TempDir(), "SKILL.md", []string{"*.log", "scripts/build/", "assets/raw/*.psd"})
+	f := newBundleFilter(gitutil.Git{}, t.TempDir(), "SKILL.md", []string{"*.log", "scripts/build/", "assets/raw/*.psd"})
 
 	tests := []struct {
 		rel  string
@@ -189,7 +190,7 @@ func TestValidateOutputSubdir(t *testing.T) {
 
 func TestBundleFilterNegationReincludes(t *testing.T) {
 	t.Parallel()
-	f := newBundleFilter(t.TempDir(), "SKILL.md", []string{"!references/venv", "!**/node_modules-fixtures"})
+	f := newBundleFilter(gitutil.Git{}, t.TempDir(), "SKILL.md", []string{"!references/venv", "!**/node_modules-fixtures"})
 	assert.False(t, f.excluded("references/venv/notes.md"))
 	assert.True(t, f.excluded("scripts/venv/pyvenv.cfg"), "other venv dirs stay excluded")
 	assert.True(t, f.excluded("scripts/node_modules/x.js"))

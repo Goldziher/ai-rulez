@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 	"github.com/zeebo/blake3"
 )
@@ -42,16 +42,22 @@ var (
 // requireGit checks that git is in PATH and version >= 2.25.
 // Result is cached for the process lifetime.
 func requireGit(ctx context.Context) error {
-	gitCheckOnce.Do(func() {
-		cmd := gitCmd(ctx, "", "version")
-		out, err := cmd.Output()
-		if err != nil {
-			gitCheckErr = oops.Wrapf(err, "git not found in PATH")
-			return
-		}
-		gitCheckErr = checkVersion225(strings.TrimSpace(string(out)))
-	})
+	if _, real := runner.FromContext(ctx).(runner.Exec); !real {
+		// The result is cached per process only for real git: an injected
+		// runner answers for itself every time.
+		return probeGit(ctx)
+	}
+	gitCheckOnce.Do(func() { gitCheckErr = probeGit(ctx) })
 	return gitCheckErr
+}
+
+// probeGit runs `git version` and checks the version.
+func probeGit(ctx context.Context) error {
+	res := gitRun(ctx, "", nil, "version")
+	if err := gitutil.ResultErr(res); err != nil {
+		return oops.Wrapf(err, "git not found in PATH")
+	}
+	return checkVersion225(strings.TrimSpace(string(res.Stdout)))
 }
 
 var gitVersionRe = regexp.MustCompile(`git version (\d+)\.(\d+)`)
@@ -105,13 +111,11 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 		refspecs = []string{"refs/heads/" + ref, "refs/tags/" + ref}
 	}
 
-	env := withAuth(gitEnvFor(ctx), repoURL, token)
+	env := withAuth(ctx, gitEnvFor(ctx), repoURL, token)
 
 	for i, refspec := range refspecs {
-		// nolint: gosec
-		cmd := gitCmd(ctx, "", "ls-remote", "--", repoURL, refspec)
-		cmd.Env = env
-		out, err := cmd.Output()
+		res := gitRun(ctx, "", env, "ls-remote", "--", repoURL, refspec)
+		out, err := res.Stdout, gitutil.ResultErr(res)
 		if err != nil {
 			return "", oops.
 				With("url", RedactURL(repoURL)).
@@ -156,7 +160,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	if err := checkRemoteArgs(repoURL, ref); err != nil {
 		return err
 	}
-	env := withAuth(gitEnvFor(ctx), repoURL, token)
+	env := withAuth(ctx, gitEnvFor(ctx), repoURL, token)
 
 	cloneArgs := []string{"clone", "--depth", "1", "--filter=blob:none"}
 	if pathSpec != "" {
@@ -167,10 +171,8 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	}
 	cloneArgs = append(cloneArgs, "--", repoURL, destDir)
 
-	// nolint: gosec
-	cloneCmd := gitCmd(ctx, "", cloneArgs...)
-	cloneCmd.Env = env
-	if out, err := cloneCmd.CombinedOutput(); err != nil {
+	res := gitRun(ctx, "", env, cloneArgs...)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -183,10 +185,8 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 		return nil
 	}
 
-	// nolint: gosec
-	checkoutCmd := gitCmd(ctx, destDir, "sparse-checkout", "set", "--", pathSpec)
-	checkoutCmd.Env = env
-	if out, err := checkoutCmd.CombinedOutput(); err != nil {
+	res = gitRun(ctx, destDir, env, "sparse-checkout", "set", "--", pathSpec)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -226,16 +226,15 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if err := checkRemoteArgs(repoURL, commitSHA); err != nil {
 		return err
 	}
-	env := withAuth(gitEnvFor(ctx), repoURL, token)
+	env := withAuth(ctx, gitEnvFor(ctx), repoURL, token)
 
 	// nolint: gosec
 	cloneArgs := []string{"clone", "--depth", "1", "--no-checkout", "--filter=blob:none"}
 	if pathSpec != "" {
 		cloneArgs = append(cloneArgs, "--sparse")
 	}
-	cloneCmd := gitCmd(ctx, "", append(cloneArgs, "--", repoURL, destDir)...)
-	cloneCmd.Env = env
-	if out, err := cloneCmd.CombinedOutput(); err != nil {
+	res := gitRun(ctx, "", env, append(cloneArgs, "--", repoURL, destDir)...)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -244,10 +243,8 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 			Wrapf(err, "git sparse clone failed")
 	}
 
-	// nolint: gosec
-	fetchCmd := gitCmd(ctx, destDir, "fetch", "--depth", "1", "--", "origin", commitSHA)
-	fetchCmd.Env = env
-	if out, err := fetchCmd.CombinedOutput(); err != nil {
+	res = gitRun(ctx, destDir, env, "fetch", "--depth", "1", "--", "origin", commitSHA)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on fetch failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -256,10 +253,8 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 			Wrapf(err, "git fetch of pinned commit failed")
 	}
 
-	// nolint: gosec
-	checkoutCmd := gitCmd(ctx, destDir, "checkout", "--detach", commitSHA)
-	checkoutCmd.Env = env
-	if out, err := checkoutCmd.CombinedOutput(); err != nil {
+	res = gitRun(ctx, destDir, env, "checkout", "--detach", commitSHA)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on checkout failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -272,10 +267,8 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 		return nil
 	}
 
-	// nolint: gosec
-	sparseCmd := gitCmd(ctx, destDir, "sparse-checkout", "set", "--", pathSpec)
-	sparseCmd.Env = env
-	if out, err := sparseCmd.CombinedOutput(); err != nil {
+	res = gitRun(ctx, destDir, env, "sparse-checkout", "set", "--", pathSpec)
+	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
 		return oops.
 			With("url", RedactURL(repoURL)).
@@ -407,14 +400,21 @@ func hardenedGit(ctx context.Context) bool {
 	return v
 }
 
-// gitCmd builds a git command for an include fetch: the environment carries no
-// repository selection and, for a hardened ctx, the hardened options.
-func gitCmd(ctx context.Context, dir string, args ...string) *exec.Cmd {
+// gitRun runs git for an include fetch through the runner ctx carries (real git
+// when it carries none): the environment is env, or the process environment
+// without repository selection when nil, and for a hardened ctx the hardened
+// options apply.
+func gitRun(ctx context.Context, dir string, env []string, args ...string) runner.Result {
 	cfg := gitutil.BaselineConfig()
 	if hardenedGit(ctx) {
 		cfg = gitutil.HardenedConfig()
 	}
-	return gitutil.Command(ctx, dir, append(cfg, args...)...)
+	return gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, env, append(cfg, args...)...)
+}
+
+// combined is the stdout and stderr of a run, in that order, for error messages.
+func combined(res runner.Result) []byte {
+	return append(append([]byte(nil), res.Stdout...), res.Stderr...)
 }
 
 func gitEnvFor(ctx context.Context) []string {

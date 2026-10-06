@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // okfLockFixture is a git repository holding an OKF bundle (tag v1 on its first
@@ -224,14 +226,17 @@ func TestOKFInclude_SecurityFindingRefusesTheBundle(t *testing.T) {
 }
 
 func TestOKFInclude_GitRunsHardenedAndScrubbed(t *testing.T) {
-	cmd := gitCmd(withHardenedGit(context.Background()), "/tmp/x", "fetch")
-	joined := strings.Join(cmd.Args, " ")
+	fake := &runner.Fake{}
+	ctx := runner.WithContext(context.Background(), fake)
+	gitRun(withHardenedGit(ctx), "/tmp/x", nil, "fetch")
+	gitRun(ctx, "", nil, "fetch")
+	calls := fake.Calls()
+	require.Len(t, calls, 2)
+	joined := strings.Join(calls[0].Argv, " ")
 	assert.Contains(t, joined, "core.hooksPath=/dev/null")
 	assert.Contains(t, joined, "protocol.allow=never")
 	assert.Contains(t, joined, "-C /tmp/x")
-
-	plain := strings.Join(gitCmd(context.Background(), "", "fetch").Args, " ")
-	assert.NotContains(t, plain, "core.hooksPath")
+	assert.NotContains(t, strings.Join(calls[1].Argv, " "), "core.hooksPath")
 
 	t.Setenv("GIT_DIR", "/elsewhere")
 	for _, kv := range gitEnvFor(withHardenedGit(context.Background())) {
@@ -242,7 +247,7 @@ func TestOKFInclude_GitRunsHardenedAndScrubbed(t *testing.T) {
 // okfCachedFile is the cached copy of the fixture's shared document.
 func okfCachedFile(t *testing.T, f *okfLockFixture) string {
 	t.Helper()
-	dir, err := getIncludeCacheDir("kb", "file://"+filepath.ToSlash(f.remote))
+	dir, err := getIncludeCacheDir(ambient.Host{}, "kb", "file://"+filepath.ToSlash(f.remote))
 	require.NoError(t, err)
 	return filepath.Join(dir, "kb", "decisions", "shared.md")
 }

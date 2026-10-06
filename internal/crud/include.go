@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
@@ -53,7 +54,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	}
 
 	// Validate the source is accessible
-	sourceType, err := validateIncludeSource(req.Source)
+	sourceType, err := validateIncludeSource(op.env, req.Source)
 	if err != nil {
 		return err
 	}
@@ -242,13 +243,13 @@ func validateAddIncludeRequest(req *AddIncludeRequest) error {
 
 // validateIncludeSource validates that the include source is accessible
 // Returns the source type ("git" or "local") and any errors
-func validateIncludeSource(source string) (string, error) {
+func validateIncludeSource(env ambient.Env, source string) (string, error) {
 	if isGitURL(source) {
 		return sourceTypeGit, validateGitURL(source)
 	}
 
 	// It's a local path
-	return sourceTypeLocal, validateLocalPath(source)
+	return sourceTypeLocal, validateLocalPath(env, source)
 }
 
 // isGitURL checks if a source is a git URL
@@ -291,11 +292,11 @@ func validateGitURL(gitURL string) error {
 }
 
 // validateLocalPath validates a local filesystem path
-func validateLocalPath(path string) error {
+func validateLocalPath(env ambient.Env, path string) error {
 	// Expand ~ and environment variables
-	expandedPath := os.ExpandEnv(path)
+	expandedPath := ambient.Expand(env, path)
 	if strings.HasPrefix(expandedPath, "~") {
-		home, err := os.UserHomeDir()
+		home, err := ambient.OrOS(env).UserHomeDir()
 		if err != nil {
 			return oops.Wrapf(err, "get home directory")
 		}

@@ -532,16 +532,16 @@ func (g *Generator) applyUnmerge(edits []mergedEdit) {
 		}
 		target, _, guardErr := g.guardWrite(edit.abs)
 		if guardErr != nil {
-			logger.Warn("Skipped a merged document behind a symlink that leaves the project",
+			g.log().Warn("Skipped a merged document behind a symlink that leaves the project",
 				"path", edit.rel, "error", guardErr)
 			continue
 		}
 		if err := writeFileAtomic(target, []byte(edit.body)); err != nil {
-			logger.Warn("Failed to remove ai-rulez content from merged document",
+			g.log().Warn("Failed to remove ai-rulez content from merged document",
 				"path", edit.rel, "error", oops.Wrapf(err, "write merged document"))
 			continue
 		}
-		logger.Debug("Removed ai-rulez content from merged document", "path", edit.rel)
+		g.log().Debug("Removed ai-rulez content from merged document", "path", edit.rel)
 	}
 }
 

@@ -187,7 +187,7 @@ func (r *runner) checkTableAge() {
 		return
 	}
 	for _, row := range TableRows() {
-		days, ok := rowAgeDays(row.VerifiedOn, trapNow())
+		days, ok := rowAgeDays(row.VerifiedOn, r.trapClock())
 		if ok && days <= r.lc.Traps.MaxTableAgeDays {
 			continue
 		}
@@ -199,8 +199,16 @@ func (r *runner) checkTableAge() {
 	}
 }
 
-// trapNow is the clock of the age checks; tests replace it.
+// trapNow is the package clock of the age checks; tests replace it. An injected
+// host clock (WithHost) takes precedence.
 var trapNow = time.Now
+
+func (r *runner) trapClock() time.Time {
+	if r.host.Clock != nil {
+		return r.host.Clock.Now()
+	}
+	return trapNow()
+}
 
 func rowAgeDays(verifiedOn string, now time.Time) (int, bool) {
 	t, err := time.Parse("2006-01-02", verifiedOn)

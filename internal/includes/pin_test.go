@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -191,7 +192,7 @@ func TestLock_RequireFailsWhenUncovered(t *testing.T) {
 func TestLock_TamperedCacheFailsDigestVerification(t *testing.T) {
 	f := newLockFixture(t)
 	f.writeLock(t)
-	cacheDir, err := getIncludeCacheDir("shared", "file://"+filepath.ToSlash(f.remote))
+	cacheDir, err := getIncludeCacheDir(ambient.Host{}, "shared", "file://"+filepath.ToSlash(f.remote))
 	require.NoError(t, err)
 	cached := filepath.Join(cacheDir, ".ai-rulez", "rules", "shared.md")
 	require.FileExists(t, cached)

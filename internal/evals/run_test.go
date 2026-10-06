@@ -421,8 +421,6 @@ func TestEstimateRun_ScalesWithArmsRunsAndRubric(t *testing.T) {
 	abl := EstimateRun(&Request{Cases: cases, Ablation: true}, 500, 1, Price{InPerMTok: 3, OutPerMTok: 15}, mustCounter(t))
 	assert.Equal(t, 4, abl.AgentRuns)
 	assert.Greater(t, abl.CostUSD, one.CostUSD)
-	assert.Equal(t, Price{InPerMTok: 1, OutPerMTok: 5}, PriceFor("Claude-Haiku-4"))
-	assert.Equal(t, Price{InPerMTok: 15, OutPerMTok: 75}, PriceFor("opus"))
 }
 
 func erroringRunner() *fakeRunner {

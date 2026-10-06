@@ -1,7 +1,7 @@
 package config
 
 import (
-	"os"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"path/filepath"
 
 	"github.com/samber/oops"
@@ -29,13 +29,13 @@ func UserConfigFile(getenv func(string) string) string {
 // and user scope share this one resolution.
 func UserConfigDir(getenv func(string) string, home string) string {
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = func(name string) string { return ambient.Getenv(nil, name) }
 	}
 	if xdg := getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
 		return filepath.Join(xdg, "ai-rulez")
 	}
 	if home == "" {
-		h, err := os.UserHomeDir()
+		h, err := ambient.OS().UserHomeDir()
 		if err != nil {
 			return ""
 		}
@@ -49,8 +49,12 @@ func UserConfigDir(getenv func(string) string, home string) string {
 // sources and remote documents are cached. There is no fallback to the shared
 // temp directory: a cache other users can write to could hold a tree they planted,
 // and an unlocked source trusts its cache. Without a home directory it errors.
-func CacheDir(parts ...string) (string, error) {
-	home, err := os.UserHomeDir()
+func CacheDir(parts ...string) (string, error) { return CacheDirIn(nil, parts...) }
+
+// CacheDirIn is CacheDir with the home directory taken from env (nil: the real
+// one).
+func CacheDirIn(env ambient.Env, parts ...string) (string, error) {
+	home, err := ambient.OrOS(env).UserHomeDir()
 	if err != nil || home == "" {
 		return "", oops.Hint("Set HOME, or run from an account with a home directory").
 			Errorf("cannot place the ai-rulez cache: no home directory")

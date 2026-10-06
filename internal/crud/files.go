@@ -383,21 +383,6 @@ func FormatContent(content string) string {
 	return content
 }
 
-// PathRelativeToWorkdir returns a path relative to the working directory
-func PathRelativeToWorkdir(path string) (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return path, err
-	}
-
-	rel, err := filepath.Rel(wd, path)
-	if err != nil {
-		return path, err
-	}
-
-	return rel, nil
-}
-
 // EnsureTrailingNewline ensures the content ends with a single newline
 func EnsureTrailingNewline(content string) string {
 	content = strings.TrimRight(content, "\r\n")

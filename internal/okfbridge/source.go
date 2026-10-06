@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 const quiet = "--quiet"
@@ -140,11 +141,10 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 }
 
 func git(ctx context.Context, dir string, args ...string) error {
-	cmd := gitutil.Command(ctx, "", append(gitutil.HardenedConfig(), args...)...)
-	cmd.Dir = dir
-	cmd.Env = gitutil.HardenedEnv(nil)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(out)))
+	// -C dir (rather than a process working directory) keeps the call free of ambient state.
+	res := gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, gitutil.HardenedEnv(nil), append(gitutil.HardenedConfig(), args...)...)
+	if err := gitutil.ResultErr(res); err != nil {
+		return fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(res.Stdout)+string(res.Stderr)))
 	}
 	return nil
 }
