@@ -57,6 +57,10 @@ type ServedSkill struct {
 	Imported bool
 	// Include names the [[includes]] entry that supplied the skill, when known.
 	Include string
+	// MalformedFrontmatter marks a skill whose SKILL.md carries a frontmatter
+	// block that is not valid YAML. Its keys were dropped on load, so the
+	// served bytes do not say what the author wrote; a server must not serve it.
+	MalformedFrontmatter bool
 	// Files lists SKILL.md first, then the supporting files in path order.
 	Files []ServedSkillFile
 }
@@ -139,6 +143,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Keywords, skill.Category = owner.keywords, owner.category
 			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
 			skill.Imported, skill.Include, skill.Commit = owner.imported, owner.include, owner.commit
+			skill.MalformedFrontmatter = owner.malformed
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -177,6 +182,8 @@ type skillOwner struct {
 	imported bool
 	include  string
 	commit   string
+	// malformed mirrors ContentFile.MalformedFrontmatter.
+	malformed bool
 }
 
 // skillOwners maps a skill ID to the domain and origin that supplied it. Root
@@ -199,7 +206,7 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 			if _, dup := owners[id]; dup {
 				continue
 			}
-			o := skillOwner{domain: domain, source: relSource(cfg.BaseDir, f.Path), delivery: cfg.EffectiveDelivery(f, domain, nil)}
+			o := skillOwner{domain: domain, source: relSource(cfg.BaseDir, f.Path), delivery: cfg.EffectiveDelivery(f, domain, nil), malformed: f.MalformedFrontmatter}
 			if f.Metadata != nil {
 				o.keywords, o.category = f.Metadata.Keywords, f.Metadata.Category
 				o.triggers = f.Metadata.ExtraList("triggers")

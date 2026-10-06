@@ -354,3 +354,27 @@ func startAuthoringPeer(t *testing.T, srv *Server) string {
 	require.NoError(t, err)
 	return string(raw)
 }
+
+func TestBuildCatalog_RefusesSkillWithMalformedFrontmatter(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	bad := servedSkill("broken", "", "Use when x: y: z", nil)
+	bad.MalformedFrontmatter = true
+	served := []generator.ServedSkill{bad, servedSkill("fine", "", "A fine skill", nil)}
+
+	// Act
+	cat, err := BuildCatalog("p", "claude", served, SkillFilter{})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, []string{"fine"}, catalogNames(cat), "a malformed skill must not be served")
+	_, found := cat.Lookup("broken")
+	assert.False(t, found)
+	refusal, refused := cat.Refusal("broken")
+	require.True(t, refused, "load_skill and get_skill need a reason")
+	assert.Equal(t, CodeMalformedFrontmatter, refusal.Code)
+	assert.Contains(t, refusal.Reason, "frontmatter")
+	admitted := cat.Admit(Admission{})
+	_, stillRefused := admitted.Refusal("broken")
+	assert.True(t, stillRefused, "admission keeps the refusal")
+}

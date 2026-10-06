@@ -117,6 +117,12 @@ func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter
 		if !filter.allows(src) {
 			continue
 		}
+		if src.MalformedFrontmatter {
+			// validate fails on this; the server must not serve a skill whose
+			// frontmatter keys were dropped on load.
+			cat.refuseMalformed(src)
+			continue
+		}
 		skill, err := newCatalogSkill(src)
 		if err != nil {
 			// One malformed skill must not take the whole server down; the
@@ -137,6 +143,20 @@ func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter
 	}
 	sort.Slice(cat.skills, func(i, j int) bool { return cat.skills[i].Name < cat.skills[j].Name })
 	return cat, nil
+}
+
+// CodeMalformedFrontmatter is the refusal code of a skill whose SKILL.md
+// frontmatter is not valid YAML. It has no AR rule: `validate` rejects the
+// project before any rule runs.
+const CodeMalformedFrontmatter = "malformed-frontmatter"
+
+func (c *Catalog) refuseMalformed(src *generator.ServedSkill) {
+	if c.refused == nil {
+		c.refused = map[string]Refusal{}
+	}
+	reason := "the SKILL.md frontmatter is not valid YAML (check for unquoted values containing ': '); fix it and run `ai-rulez validate`"
+	c.refused[src.ID] = Refusal{Name: src.ID, Code: CodeMalformedFrontmatter, Reason: reason}
+	logger.Warn("Not serving a skill with malformed frontmatter", "skill", src.ID, "source", src.Source)
 }
 
 func (f SkillFilter) allows(s *generator.ServedSkill) bool {
