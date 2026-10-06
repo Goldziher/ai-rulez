@@ -70,6 +70,28 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
 - **`marketplace`**: Producer-side marketplace index authoring block
+- **`placement`**: Whether skills and commands are `core` (written to the harness trees) or `plugin`-only; see [Plugins](plugins.md)
+- **`claude`**: Claude Code options: `[claude.settings]` (`manage`, `managed` entries of `.claude/settings.json`) and `[claude.skills]` (`hide_from_menu`)
+- **`codex`**: Codex options, such as `project_doc_max_bytes` for the `AGENTS.md` size warning
+- **`codex_skills_dir`**: Directory the `codex` preset writes skills to (default `.agents/skills`)
+- **`bundle_exclude`**: Extra patterns left out when skill and command resources are copied or listed
+- **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
+- **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)
+- **`guard`**: `[guard] generated = true` adds a PreToolUse hook that blocks agent edits to generated files (`version`, `command` tune how it launches); see [Settings](settings.md#guard)
+- **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
+- **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
+- **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
+- **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
+- **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
+- **`lock`**: `[lock]` content pinning (`enforce`, `include_outputs`, `scope`); see [Lock file](lockfile.md)
+- **`lint`**: `[lint]` strict-validation settings (severities, ignores, budgets, `tolerate`, `security`, `evals`, `traps`, `metadata`, `external` scanners); see [Strict validation](strict-validation.md)
+- **`verifiers`**: `[[verifiers]]` deterministic repository checks run by `ai-rulez verifiers run`; see [Verifiers](verifiers.md)
+- **`okf`**: `[okf]` bundle options (`dir`, `include`, `index_style`, `spec`); see [OKF](okf.md)
+- **`usage`**: `[usage] skills_index` writes `skills-index.json` for usage reports; see [Usage telemetry](usage-telemetry.md)
+- **`llm`**: `[llm]` model access (`backend`, `model`, `base_url`, `api_key_env`, budgets, `allow_network`, ...); network and credential keys are honoured only from user scope; see [LLM access](llm.md)
+- **`telemetry`**: `[telemetry]` item-load telemetry and OTLP export; egress keys, `service_name` and `resource` are honoured only from user scope; see [Telemetry](telemetry.md)
+
+Which of these a repository may set, and which only the user config file or the environment may enable, is in the [trust model](trust-model.md).
 
 ### Field Constraints
 
