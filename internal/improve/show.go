@@ -127,6 +127,9 @@ func formatRound(b *strings.Builder, rd *RoundReport) {
 	if s := rd.Siblings; s != nil && len(s.Results) > 0 {
 		fmt.Fprintf(b, "  siblings checked (%s): %d, regressed: %d\n", Sanitize(s.Surface, 40), len(s.Results), len(s.Regressions()))
 	}
+	if s := rd.SiblingsNative; s != nil && len(s.Results) > 0 {
+		fmt.Fprintf(b, "  siblings checked (%s, %d run(s) per prompt): %d, regressed: %d, cost $%.2f\n", Sanitize(s.Surface, 40), s.Runs, len(s.Results), len(s.Regressions()), s.CostUSD)
+	}
 	if rd.Description != nil {
 		fmt.Fprintf(b, "  description: %q -> %q\n", Sanitize(rd.Description.Before, 600), Sanitize(rd.Description.After, 600))
 	}

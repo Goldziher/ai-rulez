@@ -147,6 +147,17 @@ A sibling that cannot be copied safely (a symlinked or oversized `SKILL.md`, too
 arms and listed under `unmeasured` in the report, with a warning on the round; the guard measures the others instead
 of failing every round.
 
+**Native surface (`--sibling-native`).** The offline ranker is not the model that picks skills in a harness, so a
+description that the ranker leaves alone can still pull a sibling's prompts away from the real model. `--sibling-native`
+adds a second guard after the free one passes: the siblings' trigger prompts run through the harness's model
+(`claude-native`, or a `--runner-command` that declares the activation capability and the native surface), each prompt
+`--sibling-runs` times (default 3), once for the original, measured on the first round and reused, and once per
+candidate. A sibling whose trigger recall drops rejects the round (`AR9J4`) exactly like the free guard, and the
+result is `siblings_native` in the report. It costs money: every call is a model call, the spend (`cost_usd` of the
+guard) counts against `--max-cost`, the run stops when no budget is left, and a guard that cannot run rejects the
+round rather than clearing it. A body-only edit skips it. Model runs are noisy: raise `--sibling-runs` for a
+large suite, and read a single regression with that in mind. The consent summary prints the guard when it is on.
+
 ## Acceptance gate
 
 Baseline and candidate are both measured in the run on the held-out set, `--runs` times each, with the majority
@@ -350,8 +361,9 @@ They appear in `improve` output and the report only; `validate` never emits them
   model-written held-out set with the scepticism the design notes call for.
 - **The sandbox is opt-in** (`--isolation`): turning it on by default would break optimizers that write caches elsewhere
   or reach a local model server without declaring egress.
-- **Not done:** a native-surface sibling guard (it needs a runner with the activation capability and costs money), and
-  scheduled "model upgrade repair" workflow templates.
+- **The native sibling guard is opt-in** (`--sibling-native`): it needs a runner with the activation capability and
+  costs money, so the free offline guard stays the default.
+- **Not done:** the native guard for harnesses other than `claude` without a `--runner-command`.
 
 The accepted candidate is the best of the rounds that were scored on the held-out set, so with more than one such round
 the gain is optimistic. `improve apply` and the pull request body say "selected among N held-out evaluations" then;

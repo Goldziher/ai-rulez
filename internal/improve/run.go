@@ -106,6 +106,8 @@ type RoundReport struct {
 	Description *DescChange `json:"description,omitempty"`
 	// Siblings is the sibling trigger guard's measurement (AR9J4 when it regressed).
 	Siblings *SiblingReport `json:"siblings,omitempty"`
+	// SiblingsNative is the same guard on the harness's model, present with --sibling-native.
+	SiblingsNative *SiblingReport `json:"siblings_native,omitempty"`
 }
 
 // DescChange shows the description lines the optimizer rewrote.
@@ -302,6 +304,33 @@ func (x *execution) setup() error {
 	return nil
 }
 
+// nativeSiblingGuard runs the opt-in guard on the harness's model after the free one passed and before
+// any held-out spend. It charges what it spent and reports whether the round was rejected.
+func (x *execution) nativeSiblingGuard(rr roundResult, rep *RoundReport) (rejected bool) {
+	p := x.p
+	if p.Opts.SiblingNative == nil {
+		return false
+	}
+	nat, err := p.checkSiblingsNative(x.ctx, rr.cand, x.left())
+	if nat != nil {
+		x.charge(nat.CostUSD, 0)
+		rep.CostUSD = roundUSD(rep.CostUSD + nat.CostUSD)
+		rep.SiblingsNative = nat
+	}
+	switch {
+	case err != nil:
+		rep.Decision = "rejected: sibling guard failed"
+		rep.Reasons = append(rep.Reasons, "the native sibling trigger guard could not run, so the candidate cannot be cleared: "+Sanitize(err.Error(), 300))
+	case len(nat.Regressions()) > 0:
+		rep.Decision = "rejected: regression"
+		rep.Reasons = append(rep.Reasons, nat.Reasons()...)
+	default:
+		return false
+	}
+	x.prev = rr.cand
+	return true
+}
+
 func (x *execution) left() float64 { return math.Max(0, x.p.Opts.MaxCostUSD-x.spent) }
 
 func (x *execution) overBudget() bool { return x.left() <= 0 }
@@ -496,6 +525,9 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	rep.Siblings = sib
 	for _, u := range sib.Unmeasured {
 		rep.Warnings = append(rep.Warnings, fmt.Sprintf("the sibling guard left out %s: %s", Sanitize(u.Skill, 80), Sanitize(u.Reason, 200)))
+	}
+	if rejected := x.nativeSiblingGuard(rr, rep); rejected {
+		return out, nil
 	}
 	if !x.overBudget() {
 		train, err := x.eval.Eval(x.ctx, p.Skill.ID, rr.dir, digest, p.trainCases, x.left())
