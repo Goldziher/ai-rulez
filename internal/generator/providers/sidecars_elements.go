@@ -66,31 +66,41 @@ func elementsOwnedKey(sc *SidecarSpec, cfg *config.Config, outputPath string) (k
 		// A document that does not parse is reported by the merge itself.
 	}
 
-	var previous []any
+	ours := make([]any, len(e.Values))
+	for i, v := range e.Values {
+		ours[i] = v
+	}
+	owns := func(any) bool { return false }
 	if cfg != nil && cfg.Run != nil {
 		rel := projectRelativePath(cfg, outputPath)
-		if cfg.Run.WasGenerated(rel) {
-			for _, v := range e.Values {
-				previous = append(previous, v)
-			}
-		}
+		var previous []jsonmerge.Claim
 		for _, claim := range cfg.Run.PreviousClaims(rel) {
 			if slices.Equal(claim.Path, e.Key) {
-				previous = append(previous, claim.ElementsIn(existing)...)
+				previous = append(previous, claim)
+			}
+		}
+		owns = jsonmerge.ClaimsOwner[any](previous)
+		if cfg.Run.WasGenerated(rel) {
+			// A document ai-rulez wrote whole holds only its own values.
+			left := map[string]int{}
+			for _, v := range ours {
+				left[jsonmerge.Digest(v)]++
+			}
+			claimsOwn := owns
+			owns = func(element any) bool {
+				if sum := jsonmerge.Digest(element); left[sum] > 0 {
+					left[sum]--
+					return true
+				}
+				return claimsOwn(element)
 			}
 		}
 	}
-
-	entries := slices.Clone(existing)
-	claimed := []any{}
-	for _, v := range e.Values {
-		switch {
-		case !slices.Contains(entries, any(v)):
-			entries = append(entries, v)
-			claimed = append(claimed, v)
-		case slices.Contains(previous, any(v)):
-			claimed = append(claimed, v)
-		}
+	// Decided with the shared planner so a value identical to one the consumer
+	// wrote is never claimed (clean would otherwise delete their entry).
+	entries, claimed := jsonmerge.PlanElements(owns, existing, ours)
+	if claimed == nil {
+		claimed = []any{}
 	}
 	return jsonmerge.OwnedKey{Path: e.Key, Value: entries, Elements: claimed}, true, nil
 }

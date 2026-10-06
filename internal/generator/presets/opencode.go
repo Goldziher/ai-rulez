@@ -240,7 +240,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 	}
 	userEntries := false
 	if !rulefiles.InScope(cfg) {
-		entries, claimed, user, err := opencodeInstructions(mcpPath, g.LocalRootFile(), previousClaimedInstructions(cfg, mcpPath))
+		entries, claimed, user, err := opencodeInstructions(mcpPath, g.LocalRootFile(), claimedInstructionsOwner(cfg, mcpPath))
 		if err != nil {
 			return jsonmerge.Result{}, err
 		}
@@ -356,21 +356,29 @@ func opencodeLocalEntries() []any {
 	return []any{local, "./" + local}
 }
 
-// previousClaimedInstructions lists the instructions entries the previous run
-// recorded as its own. A document the previous run wrote whole is all ai-rulez's,
-// so every spelling of the entry in it is.
-func previousClaimedInstructions(cfg *config.Config, path string) []any {
+// claimedInstructionsOwner reports which instructions entries the previous run
+// recorded as its own, one recorded copy per call. A document the previous run
+// wrote whole is all ai-rulez's, so one entry in either spelling is.
+func claimedInstructionsOwner(cfg *config.Config, path string) func(any) bool {
 	rel := projectRelative(cfg, path)
-	if cfg.Run.WasGenerated(rel) {
-		return opencodeLocalEntries()
-	}
-	var entries []any
+	var recorded []jsonmerge.Claim
 	for _, claim := range cfg.Run.PreviousClaims(rel) {
 		if slices.Equal(claim.Path, []string{opencodeInstructionsKey}) {
-			entries = append(entries, claim.ElementsIn(opencodeLocalEntries())...)
+			recorded = append(recorded, claim)
 		}
 	}
-	return entries
+	owns := jsonmerge.ClaimsOwner[any](recorded)
+	if !cfg.Run.WasGenerated(rel) {
+		return owns
+	}
+	wholeLeft := 1
+	return func(element any) bool {
+		if wholeLeft > 0 && slices.Contains(opencodeLocalEntries(), element) {
+			wholeLeft--
+			return true
+		}
+		return owns(element)
+	}
 }
 
 // opencodeInstructions returns the instructions array of the document at path
@@ -378,10 +386,11 @@ func previousClaimedInstructions(cfg *config.Config, path string) []any {
 // recorded by the previous run), and whether the document lists anything else (a
 // user entry). Either spelling of the entry ("AGENTS.local.md" or
 // "./AGENTS.local.md") counts as present. The other entries are kept verbatim and
-// in order. A nil result means the existing value is not an array, which is the
-// user's to fix: it is warned about and left alone.
-func opencodeInstructions(path, entry string, previous []any) (entries, claimed []any, userEntries bool, err error) {
-	entries, isArray, err := readOpencodeInstructions(path)
+// in order, and an entry identical to a hand-written one is never claimed (see
+// jsonmerge.PlanElements). A nil result means the existing value is not an array,
+// which is the user's to fix: it is warned about and left alone.
+func opencodeInstructions(path, entry string, owns func(any) bool) (entries, claimed []any, userEntries bool, err error) {
+	existing, isArray, err := readOpencodeInstructions(path)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -390,19 +399,16 @@ func opencodeInstructions(path, entry string, previous []any) (entries, claimed 
 			"; the value is yours and is left alone", "path", path)
 		return nil, nil, true, nil
 	}
-	claimed = []any{}
-	present := false
+	ours := entry
 	for _, spelled := range opencodeLocalEntries() {
-		if slices.Contains(entries, spelled) {
-			present = true
-			if slices.Contains(previous, spelled) {
-				claimed = append(claimed, spelled)
-			}
+		if slices.Contains(existing, any(spelled)) {
+			ours = spelled.(string)
+			break
 		}
 	}
-	if !present {
-		entries = append(entries, entry)
-		claimed = append(claimed, entry)
+	entries, claimed = jsonmerge.PlanElements(owns, existing, []any{ours})
+	if claimed == nil {
+		claimed = []any{}
 	}
 	return entries, claimed, len(entries) > len(claimed), nil
 }

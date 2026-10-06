@@ -258,24 +258,23 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 	}
 
 	// Names an earlier run added that this configuration no longer wants (the
-	// agents_md toggle) leave with it.
-	previous := previousClaimedNames(cfg, settingsPath)
-	wanted := wantedNames(cfg)
-	kept := make([]string, 0, len(names)+len(ours))
-	for _, name := range names {
-		if slices.Contains(previous, name) && !slices.Contains(wanted, name) {
-			continue
-		}
-		kept = append(kept, name)
+	// agents_md toggle) leave with it; a name identical to one the user wrote is
+	// theirs and is never claimed (see jsonmerge.PlanElements).
+	recorded := map[string]int{}
+	for _, name := range previousClaimedNames(cfg, settingsPath) {
+		recorded[name]++
 	}
-	claimed := []any{}
-	for _, name := range wanted {
-		if !slices.Contains(kept, name) {
-			kept = append(kept, name)
-			claimed = append(claimed, name)
-		} else if slices.Contains(previous, name) {
-			claimed = append(claimed, name)
+	owns := func(name string) bool {
+		if recorded[name] == 0 {
+			return false
 		}
+		recorded[name]--
+		return true
+	}
+	kept, claimedNames := jsonmerge.PlanElements(owns, names, wantedNames(cfg))
+	claimed := make([]any, len(claimedNames))
+	for i, name := range claimedNames {
+		claimed[i] = name
 	}
 	if !cfg.AgentsMD {
 		g.warnUnreachableGeminiMD(settingsPath, kept, isList)
