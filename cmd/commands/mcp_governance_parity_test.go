@@ -114,7 +114,7 @@ func TestMCPLockStatusViewArgsMatchCLIJSON(t *testing.T) {
 	lockStatus := handlers.LockStatusHandler(Version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
 		extras := make([]mcp.ServeSetup, 0, len(views))
 		for _, v := range views {
-			extras = append(extras, mcp.ServeSetup{Role: v.Role, Profile: v.Profile, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+			extras = append(extras, mcp.ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
 		}
 		return mcp.DynamicLockChanges(ctx, cfg, lock, Version, extras...)
 	})
@@ -127,12 +127,13 @@ func TestMCPLockStatusViewArgsMatchCLIJSON(t *testing.T) {
 		{"role", map[string]any{"role": "dev"}, func() { lockServeRole = "dev" }},
 		{"include_static", map[string]any{"include_static": true}, func() { lockServeIncludeStatic = true }},
 		{"profile", map[string]any{"profile": "default"}, func() { lockProfile = "default" }},
+		{"targets", map[string]any{"targets": "claude"}, func() { lockServeTargets = "claude" }},
 		{"all views", map[string]any{"role": "dev", "include_static": true}, func() { lockServeRole, lockServeIncludeStatic = "dev", true }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			lockServeRole, lockServeIncludeStatic, lockServeSources, lockProfile = "", false, nil, ""
+			lockServeRole, lockServeIncludeStatic, lockServeSources, lockProfile, lockServeTargets = "", false, nil, "", ""
 			lockCheck, lockFormat = true, formatJSON
 			tt.set()
 			want := compactJSON(t, captureStdout(t, func() { checkLockAt("") }))
