@@ -5,7 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // Options tune New and Wrap. The zero value is correct for production.
@@ -19,8 +20,11 @@ type Options struct {
 	// SecretPath overrides the per-user cache secret file (default
 	// $XDG_CONFIG_HOME/ai-rulez/llm-cache.key or ~/.config/ai-rulez/llm-cache.key).
 	SecretPath string
-	// Getenv resolves api_key_env; nil means os.Getenv.
+	// Getenv resolves api_key_env; nil means the environment of Env.
 	Getenv func(string) string
+	// Env is the environment and home directory the cache and secret locations
+	// and the default Getenv read; nil is the real process.
+	Env ambient.Env
 	// HTTPClient is used by the openaicompat backend; nil means a default client.
 	HTTPClient *http.Client
 	// Logger receives content-free debug summaries; nil disables logging.
@@ -81,7 +85,7 @@ func New(cfg Config, opts Options) (*Managed, error) {
 	}
 	getenv := opts.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(opts.Env)
 	}
 	backend := ResolveBackend(cfg.Backend)
 	if opts.DryRun != nil {

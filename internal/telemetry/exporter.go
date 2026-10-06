@@ -11,11 +11,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/samber/oops"
 )
 
@@ -343,7 +343,7 @@ func gzipBytes(data []byte) ([]byte, error) {
 func (x *Exporter) headers() (http.Header, error) {
 	getenv := x.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(nil)
 	}
 	header := http.Header{}
 	for _, name := range x.HeadersEnv {
@@ -381,7 +381,7 @@ func validHeaderKey(key string) bool {
 func (x *Exporter) HeaderNamesSet() (set, unset []string) {
 	getenv := x.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(nil)
 	}
 	for _, name := range x.HeadersEnv {
 		if !plausibleHeaderEnvName(name) {

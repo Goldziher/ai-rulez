@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // printf writes to w and ignores write errors: the writers are terminals and buffers.
@@ -75,7 +77,7 @@ type loggingClient struct {
 }
 
 func (l *loggingClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
-	start := time.Now()
+	start := ambient.Clock(nil).Now()
 	resp, err := l.next.Chat(ctx, req)
 	l.log.DebugContext(ctx, "llm chat", "request", req.Summary(), "elapsed", time.Since(start).Round(time.Millisecond),
 		"prompt_tokens", resp.Usage.PromptTokens, "completion_tokens", resp.Usage.CompletionTokens,
@@ -84,7 +86,7 @@ func (l *loggingClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse
 }
 
 func (l *loggingClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
-	start := time.Now()
+	start := ambient.Clock(nil).Now()
 	resp, err := l.next.Embed(ctx, req)
 	l.log.DebugContext(ctx, "llm embed", "request", req.Summary(), "elapsed", time.Since(start).Round(time.Millisecond),
 		"prompt_tokens", resp.Usage.PromptTokens, "cached", resp.Cached, "error", errSummary(err))
