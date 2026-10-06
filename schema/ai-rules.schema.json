@@ -863,6 +863,10 @@
             },
             "additionalProperties": false
           },
+          "pin": {
+            "type": "boolean",
+            "description": "Record the digest of this role's rendered outputs in ai-rulez.lock, checked by `lock --check` and `generate --check --locked --role`. Not inherited through extends."
+          },
           "skill_mode": {
             "type": "object",
             "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",

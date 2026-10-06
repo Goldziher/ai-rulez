@@ -48,6 +48,9 @@ type Change struct {
 	New  string `json:"new,omitempty"`
 	// Detail is a short explanation, for example "moved from a to b".
 	Detail string `json:"detail,omitempty"`
+	// Files holds the per-file output digests of a changed role pin, only in
+	// `lock --diff` (the lock itself stores the aggregate).
+	Files map[string]string `json:"files,omitempty"`
 }
 
 // Diff is the result of comparing a lock with the working tree.
@@ -101,6 +104,10 @@ func TreeOf(f *lockfile.File) string {
 		entries = append(entries, Entry{Kind: "item/" + i.Kind, Key: i.Domain + "\x00" + i.ID, Digest: i.Digest})
 	}
 	for _, o := range f.Output {
+		if o.Role != "" {
+			entries = append(entries, Entry{Kind: "output-role", Key: o.Role, Digest: o.Digest})
+			continue
+		}
 		entries = append(entries, Entry{Kind: "output", Key: o.Path, Digest: o.Digest})
 	}
 	for _, e := range f.Include {
@@ -152,7 +159,8 @@ func Compare(lock *lockfile.File, snap *Snapshot) *Diff {
 	d.compareHeader(lock, snap)
 	d.compareItems(lock.Item, snap.Items)
 	if !snap.Options.SourcesOnly {
-		d.compareOutputs(lock.Output, snap.Outputs)
+		d.compareOutputs(lock.DefaultOutputs(), defaultPins(snap.Outputs))
+		d.compareRoleOutputs(lock, snap)
 	}
 	SortChanges(d.Changes)
 	if lock.AIRulezVersion != "" && snap.Options.ToolVersion != "" && lock.AIRulezVersion != snap.Options.ToolVersion {
@@ -291,6 +299,9 @@ func (c Change) Line() string {
 	what := "output " + c.Path
 	if c.Scope == ScopeSource {
 		what = describe(c.Kind, c.Domain, c.ID)
+	if c.Scope == ScopeOutput && c.Kind == KindRoleOutput {
+		what = "outputs of role " + c.ID
+	}
 		if c.Path != "" {
 			what += " (" + c.Path + ")"
 		}
@@ -322,4 +333,15 @@ func (d *Diff) WriteJSON(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(d) //nolint:wrapcheck // writer error
+}
+
+// defaultPins returns the output pins of the default rendering.
+func defaultPins(pins []lockfile.OutputPin) []lockfile.OutputPin {
+	var out []lockfile.OutputPin
+	for _, p := range pins {
+		if p.Role == "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

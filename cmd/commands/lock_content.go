@@ -22,9 +22,15 @@ func lockSnapshot(cfg *config.Config, profileName string, sourcesOnly bool) (*co
 	return govview.Snapshot(cfg, profileName, sourcesOnly, Version)
 }
 
-// lockDiff compares the lock with the working tree (see govview.LockDiff).
+// lockRoleSnapshot is lockSnapshot plus the pins of the selected roles' outputs.
+func lockRoleSnapshot(cfg *config.Config, profileName string, sourcesOnly bool, sel govview.RoleSelection) (*contentlock.Snapshot, error) {
+	return govview.SnapshotRoles(cfg, profileName, sourcesOnly, Version, sel)
+}
+
+// lockDiff compares the lock with the working tree (see govview.LockDiffRoles).
+// --diff adds the per-file digests of a changed role.
 func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool) (*contentlock.Diff, error) {
-	return govview.LockDiff(cfg, lock, profileName, remoteSkipped, Version, dynamicLockChanges)
+	return govview.LockDiffRoles(cfg, lock, profileName, remoteSkipped, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames(), Files: true})
 }
 
 // loadForLockCheck loads a configuration for an offline comparison. Includes are
@@ -72,7 +78,11 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	for i := range diff.Changes {
 		lines = append(lines, diff.Changes[i].Line())
 	}
-	return lines, nil
+	roleLines, err := verifyLockedRoleOutputs(shared, lock, generateRole)
+	if err != nil {
+		return nil, err
+	}
+	return append(lines, roleLines...), nil
 }
 
 // sharedConfig returns cfg without the machine-local overlay: the lock pins the
@@ -120,7 +130,7 @@ func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 	if err != nil {
 		return unverifiable(err)
 	}
-	snap, err := lockSnapshot(shared, lock.Profile, false)
+	snap, err := lockRoleSnapshot(shared, lock.Profile, false, govview.RoleSelection{Enabled: true, Lock: lock})
 	if err != nil {
 		return unverifiable(err)
 	}
@@ -130,7 +140,11 @@ func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 		c := &changes[i]
 		switch c.Scope {
 		case contentlock.ScopeOutput:
-			out = append(out, lint.LockDrift{Output: true, Path: c.Path, Message: "generated " + c.Line() + " since " + lockfile.FileName + " was written"})
+			path := c.Path
+			if path == "" {
+				path = lockRel // a role's outputs are pinned as one digest in the lock
+			}
+			out = append(out, lint.LockDrift{Output: true, Path: path, Message: "generated " + c.Line() + " since " + lockfile.FileName + " was written"})
 		case contentlock.ScopeSource:
 			p := lockRel
 			if c.Path != "" {

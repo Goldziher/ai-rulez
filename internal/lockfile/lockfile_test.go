@@ -276,3 +276,28 @@ func TestLoad_RefusesASymlinkedLockFile(t *testing.T) {
 		})
 	}
 }
+
+func TestRoleOutputPinsRoundTrip(t *testing.T) {
+	// Arrange
+	dir := t.TempDir()
+	in := &File{Version: Version, Output: []OutputPin{
+		{Role: "dev", Digest: "sha256:aa"},
+		{Path: "CLAUDE.md", Digest: "sha256:bb"},
+	}}
+
+	// Act
+	require.NoError(t, Save(dir, in))
+	out, err := Load(dir)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, []OutputPin{{Path: "CLAUDE.md", Digest: "sha256:bb"}}, out.DefaultOutputs())
+	digest, ok := out.RoleOutput("dev")
+	assert.True(t, ok)
+	assert.Equal(t, "sha256:aa", digest)
+	_, ok = out.RoleOutput("ops")
+	assert.False(t, ok)
+	out.SetRoleOutputs([]OutputPin{{Role: "ops", Digest: "sha256:cc"}})
+	assert.Len(t, out.DefaultOutputs(), 1)
+	assert.Equal(t, "ops", out.RoleOutputs()[0].Role)
+}

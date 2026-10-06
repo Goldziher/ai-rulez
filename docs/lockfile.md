@@ -363,7 +363,7 @@ tree = SHA256( lp("ai-rulez/tree/v1") || u64(n) || { lp(kind) || lp(key) || lp(d
 ```
 
 over every pin, sorted by `(kind, key)`, where `kind`/`key` are `item/<kind>` with `<domain> NUL <id>`, `output`
-with the path, `include`, `installed-skill`, `skill-source` and `served-skill` with the name and `<commit> <digest>`, and `digest` is the
+with the path (role pins: kind `output-role`, key the role name), `include`, `installed-skill`, `skill-source` and `served-skill` with the name and `<commit> <digest>`, and `digest` is the
 `sha256:<hex>` text of the pin.
 
 Two items with the same kind, domain and id get a `#2` suffix on the second (in path order), so every key is unique.
@@ -618,7 +618,33 @@ A reviewer who sees a lock change with no matching source change should ask why.
 ## Composing with roles
 
 [Roles](roles.md) are pinned as items (`kind = "role"`), so a new role or a changed `include` / `exclude` list is a
-lock change. Per-role outputs are not pinned: the lock pins the default rendering (one profile), because a role
-renders a different tree per person. `generate --locked --role <name>` still verifies that every *source* matches
-the lock before it generates the role's slice, so a person's role output comes only from reviewed sources. The
-`catalog` command reports, per item, its digest and whether the sources are in sync with the lock.
+lock change. The lock pins the default rendering (one profile) as one `[[output]]` per file. A role renders a
+different tree, so a role's outputs are pinned only on request, as **one aggregate digest per role**:
+
+```toml
+[[output]]
+role = "backend"
+digest = "sha256:…"
+```
+
+A role is pinned when it declares `pin = true`; `ai-rulez lock --roles` pins every role, and `lock --role <name>`
+pins that role as well. The digest covers the files `generate --role <name>` would write (the same rendering the
+default pins use, plus the ai-rulez-rendered part of `.claude/settings.json`, so `skillOverrides` from
+`skill_mode` count). The role is rendered in memory; nothing is written. A plain `lock` re-pins exactly the roles
+that declare `pin = true`, so a role pinned only with `--roles` drops out on the next plain `lock`.
+
+- `lock --check` compares every pinned role and reports `output changed  outputs of role backend` (or `added` for a
+  role with `pin = true` that the lock does not pin yet, `removed` for a pin whose role is gone). It also catches a
+  change that leaves the sources alone, such as a new generator release or a `delivery` entry. `--role <name>`
+  limits the role comparison to one role; naming a role that is not pinned is an error.
+- `lock --diff` adds, for a changed role, the per-file digests of its current rendering (`files` in the JSON), so
+  a reviewer can see which files make up the new digest. The lock itself stores only the aggregate.
+- `generate --locked --role <name>` (and `generate --check --locked --role <name>`) verify every source *and*, when
+  the role is pinned, its rendered outputs. A role without a pin behaves as before.
+- Roles without `pin = true` add nothing to the lock; its format is unchanged for a project that pins none. The
+  aggregate is `lp("ai-rulez/role-output/v1")` over the role's files, and the top-level `tree` covers it under the
+  kind `output-role`. An ai-rulez release that predates role pins reads such an entry as an output without a path.
+
+`generate --locked --role <name>` therefore ties a person's role output to reviewed sources and, for a pinned
+role, to a reviewed rendering. The `catalog` command reports, per item, its digest and whether the sources are in
+sync with the lock.
