@@ -187,6 +187,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	if err != nil {
 		return nil, "", nil, err
 	}
+	g.carryClaimAnnotations(outputs)
 	g.reclaimStaleMembers(outputs)
 	sort.Strings(dropped)
 	return outputs, activeProfile, dropped, nil
