@@ -213,6 +213,10 @@ func validateInput(in Input) (targetPlan, error) {
 	case TargetGitHubRelease:
 		return targetPlan{}, ValidateTarget(in.Tag, in.Repo)
 	case TargetNPM:
+		if in.RequireSignature {
+			return targetPlan{}, newError(CodeUnsigned, ExitGate, "publish the signed archive with --to github-release or --to oci, or drop require_signature",
+				"require_signature is set, but the npm tarball that --to npm publishes is packed by npm and carries no signature")
+		}
 		plan, err := ValidateNPM(in.NPM, in.Name, in.Version)
 		if err != nil {
 			return targetPlan{}, err
@@ -292,6 +296,9 @@ func Build(in Input) (*Dist, error) {
 	}
 	if err := addTargetFiles(d, roles, in, manifestBytes, tp); err != nil {
 		return nil, err
+	}
+	if in.Target == TargetNPM && in.Sign != nil {
+		d.Warnings = append(d.Warnings, "the signature covers the release archive, not the npm tarball that --to npm publishes")
 	}
 	notes, err := releaseNotes(in, manifest)
 	if err != nil {
