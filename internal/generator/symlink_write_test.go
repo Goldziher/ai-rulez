@@ -188,3 +188,38 @@ func TestUser_RefusesOutputLinkedOutsideHome(t *testing.T) {
 		assert.Contains(t, err.Error(), "outside")
 	}
 }
+
+func TestWrite_FailsClosedOutsideScopeAndInsideGitDir(t *testing.T) {
+	quietWarnings(t)
+	tests := []struct {
+		name string
+		path func(dir, outside string) string
+	}{
+		{"parent traversal", func(dir, outside string) string { return "../" + filepath.Base(outside) + "/escaped.md" }},
+		{"git config", func(string, string) string { return ".git/config" }},
+		{"nested git hook", func(string, string) string { return "sub/.GIT/hooks/post-checkout" }},
+		{"git dir spelled with a trailing dot", func(string, string) string { return ".git./config" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			outside := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".git"), 0o755))
+			gitConfig := filepath.Join(dir, ".git", "config")
+			require.NoError(t, os.WriteFile(gitConfig, []byte("[core]\n"), 0o600))
+
+			// Act
+			err := rawGenerator(t, dir).writeOutput(config.OutputFile{Path: tt.path(dir, outside), Content: "[core]\n\tfsmonitor = echo PWNED\n"})
+
+			// Assert
+			require.Error(t, err)
+			got, readErr := os.ReadFile(gitConfig)
+			require.NoError(t, readErr)
+			assert.Equal(t, "[core]\n", string(got))
+			entries, dirErr := os.ReadDir(outside)
+			require.NoError(t, dirErr)
+			assert.Empty(t, entries)
+		})
+	}
+}
