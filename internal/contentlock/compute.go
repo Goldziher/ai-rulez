@@ -77,7 +77,7 @@ func (o Options) scope() string {
 // Compute digests the authored content of cfg (and Options.Outputs).
 func Compute(cfg *config.Config, opts Options) (*Snapshot, error) {
 	snap := &Snapshot{Options: opts}
-	c := &collector{cfg: cfg, scope: opts.scope()}
+	c := &collector{cfg: cfg, scope: opts.scope(), modes: newModeResolver()}
 	if err := c.collect(); err != nil {
 		return nil, err
 	}
@@ -131,6 +131,7 @@ type collector struct {
 	items []lockfile.Item
 	// problems are unpinnable declarations, see Snapshot.Problems.
 	problems []string
+	modes    *modeResolver
 }
 
 func (c *collector) wants(kind string) bool {
@@ -197,6 +198,14 @@ func (c *collector) local(cf *config.ContentFile) bool {
 	return ok
 }
 
+// configRoot is the directory whose git index covers the content files.
+func (c *collector) configRoot() string {
+	if c.cfg.ConfigDir != "" {
+		return c.cfg.ConfigDir
+	}
+	return c.cfg.BaseDir
+}
+
 func (c *collector) relToConfig(p string) (string, bool) {
 	if c.cfg.ConfigDir == "" {
 		return filepath.ToSlash(p), true
@@ -226,7 +235,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	}
 	mode := ModeRegular
 	if info, statErr := os.Stat(cf.Path); statErr == nil {
-		mode = fileMode(cf.Path, info)
+		mode = c.modes.mode(c.configRoot(), cf.Path, info)
 	}
 	leaves := []Leaf{{Path: filepath.Base(cf.Path), Mode: mode, Data: primary}}
 	dir := filepath.Dir(cf.Path)
@@ -236,7 +245,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 		if disk, readErr := os.ReadFile(abs); readErr == nil {
 			data = disk
 			if info, statErr := os.Stat(abs); statErr == nil {
-				resMode = fileMode(abs, info)
+				resMode = c.modes.mode(c.configRoot(), abs, info)
 			}
 		}
 		leaves = append(leaves, Leaf{Path: res.RelPath, Mode: resMode, Data: data})
@@ -322,7 +331,7 @@ func (c *collector) collectHook(g *config.HookGroup, ordinal map[string]int) err
 		if disk, readErr := os.ReadFile(abs); readErr == nil {
 			leaf.Data = disk
 			if info, statErr := os.Stat(abs); statErr == nil {
-				leaf.Mode = fileMode(abs, info)
+				leaf.Mode = c.modes.mode(c.cfg.BaseDir, abs, info)
 			}
 		} else {
 			leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
