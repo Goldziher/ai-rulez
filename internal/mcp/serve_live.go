@@ -89,6 +89,7 @@ func (s *Server) Watch(ctx context.Context) {
 	var (
 		failures int
 		retryAt  time.Time
+		failedAt string // the fingerprint whose rebuild failed
 	)
 	for {
 		select {
@@ -97,7 +98,8 @@ func (s *Server) Watch(ctx context.Context) {
 		case <-ticker.C:
 		}
 		cur, err := o.Fingerprint()
-		if err != nil || cur == last || time.Now().Before(retryAt) {
+		// A new edit since the failed rebuild ends the pause: the user fixed it.
+		if err != nil || cur == last || (time.Now().Before(retryAt) && cur == failedAt) {
 			continue
 		}
 		next, err := o.Rebuild()
@@ -105,6 +107,7 @@ func (s *Server) Watch(ctx context.Context) {
 			// Keep `last`: the change is still unapplied, so the rebuild is tried
 			// again (with a growing pause) instead of waiting for another edit.
 			failures++
+			failedAt = cur
 			retryAt = time.Now().Add(min(interval<<min(failures, 6), maxRetryPause))
 			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
 			continue

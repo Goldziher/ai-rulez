@@ -125,3 +125,39 @@ func TestIsCommitSHA(t *testing.T) {
 		assert.Equal(t, want, isCommitSHA(ref), ref)
 	}
 }
+
+func TestApplyIncludeOrigin(t *testing.T) {
+	base := filepath.Join(string(filepath.Separator), "work", "proj")
+	cache := filepath.Join(string(filepath.Separator), "home", "u", ".cache", "ai-rulez", "includes", "team-0123456789ab", "repo")
+	cfg := &config.Config{BaseDir: base, Includes: []config.IncludeConfig{
+		{Name: "team", Source: "https://github.com/acme/rules.git"},
+		{Name: "local", Source: "../shared"},
+	}}
+	tests := []struct {
+		name         string
+		path         string
+		wantImported bool
+		wantSource   string
+	}{
+		{"authored skill", filepath.Join(base, ".ai-rulez", "skills", "a", "SKILL.md"), false, ""},
+		{"git include root skill", filepath.Join(cache, ".ai-rulez", "skills", "a", "SKILL.md"), true, "include:team/skills/a/SKILL.md"},
+		{"git include domain skill", filepath.Join(cache, ".ai-rulez", "domains", "d", "skills", "a", "SKILL.md"), true, "include:team/domains/d/skills/a/SKILL.md"},
+		{"local include outside the project", filepath.Join(filepath.Dir(base), "shared", ".ai-rulez", "skills", "b", "SKILL.md"), true, "include:local/skills/b/SKILL.md"},
+		{"unknown file outside the project", filepath.Join(string(filepath.Separator), "elsewhere", "skills", "c", "SKILL.md"), true, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			o := skillOwner{source: tt.path}
+
+			// Act
+			applyIncludeOrigin(cfg, nil, tt.path, &o)
+
+			// Assert
+			assert.Equal(t, tt.wantImported, o.imported)
+			if tt.wantSource != "" {
+				assert.Equal(t, tt.wantSource, o.source)
+			}
+		})
+	}
+}
