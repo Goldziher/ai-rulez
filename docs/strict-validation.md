@@ -581,7 +581,12 @@ project is attributed to `config.toml` with a note.
 An entry that sets `inputs` runs on a **staged copy** instead of the project. The copy holds exactly the listed kinds
 of content (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `hooks`, `mcp`, `imports`) in a scratch
 directory outside the project: skills with their `scripts/` and `references/`, files byte for byte as on disk,
-`hooks` and `mcp` as JSON with environment and header values left out, `imports` only when listed. Directories are
+`imports` only when listed. Content keeps its repository path (`.ai-rulez/rules/x.md`, `.ai-rulez/skills/<name>/SKILL.md`
+with its resource files); imported items go under `<config dir>/imports/<kind>/<name>`. `hooks` is written as
+`<config dir>/hooks.json` (the `[[hooks]]` entries as configured) and `mcp` as `<config dir>/mcp-servers.json`, one
+entry per server with `name`, `transport`, `command`, `args`, `url`, `env_names` and `header_names`: environment and
+header **values** are never staged, credential-looking arguments (the value after `--api-key`, `--token=...`, a
+`Bearer ...` string) are replaced by `[REDACTED]`, and a `url` loses its userinfo, query and fragment. Directories are
 mode 0500 and files 0400; no symlink is ever copied. The scanner runs with the stage as its working directory, a
 scrubbed environment (plus `env_pass`), `HOME` and `TMPDIR` set to scratch directories, and no path appended. The
 scratch directory is removed afterwards. Nothing is run when nothing is staged.
@@ -625,7 +630,7 @@ upload, a credential used for a network call):
 | `egress` | Environment | Network flags | Runs |
 | --- | --- | --- | --- |
 | unset (legacy) | the full inherited environment | not checked | always; `AR9E1` warns |
-| `false` | scrubbed: `PATH`, `HOME`, `USER`, `LANG`/`LC_*`, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
+| `false` | scrubbed: `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `TZ`, `LANG`, `LANGUAGE`, every `LC_*` variable, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
 | `true` | scrubbed as above | not checked | only with `--allow-egress=<name>` on the command line (repeatable); otherwise `AR9E4` |
 
 `egress = false` is a declaration with two enforced layers, not a sandbox: the scrubbed environment (proxy and
@@ -739,7 +744,8 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
 - Name references are matched by pattern, so prose such as ``the skill `argument-hint` `` reports AR301; use
   `known_names` or an inline ignore for intentional cases.
 - Hook checks read `.claude/settings.json` only, and only commands that start with `$CLAUDE_PROJECT_DIR` or
-  `${CLAUDE_PROJECT_DIR}`.
+  `${CLAUDE_PROJECT_DIR}`. A script run through a launcher (`bash ./x.sh`, `node hook.js`) or by a bare relative path
+  is not resolved, so a missing or non-executable one is not reported there.
 - Anchors use GitHub-style heading slugs.
 - The MCP command check depends on the `PATH` of the machine running the command.
 
