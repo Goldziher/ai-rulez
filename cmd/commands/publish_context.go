@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -75,6 +76,9 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, publish.Errorf(publish.CodeSource, publish.ExitGate, "commit the changes (including the generated bundle), or pass --allow-dirty for a throwaway build",
 			"the source tree is dirty or has no commit")
 	}
+	if err := pc.checkBundleTracked(top); err != nil {
+		return nil, err
+	}
 	pluginRepo := ""
 	if cfg.Plugin != nil {
 		pluginRepo = cfg.Plugin.Repository
@@ -112,6 +116,42 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, err
 	}
 	return pc, nil
+}
+
+// checkBundleTracked fails when git does not track a bundle file: a gitignored
+// bundle passes the clean-tree check, but the commit a pinned index names would
+// not hold it. --allow-dirty turns the failure into a warning.
+func (pc *publishContext) checkBundleTracked(top string) error {
+	g := gitutil.New(publishRunner)
+	if top == "" || !g.IsRepo(pc.cfg.BaseDir) {
+		return nil // no repository: the dirty gate already decided
+	}
+	paths := make([]string, len(pc.pre.files))
+	for i, f := range pc.pre.files {
+		paths[i] = f.Path
+	}
+	tracked, err := g.TrackedAmong(pc.cfg.BaseDir, paths)
+	if err != nil {
+		return nil //nolint:nilerr // a failing query is reported by the source and tree checks
+	}
+	var missing []string
+	for _, p := range paths {
+		if !tracked[p] {
+			missing = append(missing, p)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	if len(missing) > maxPublishListed {
+		missing = append(missing[:maxPublishListed:maxPublishListed], fmt.Sprintf("and %d more", len(missing)-maxPublishListed))
+	}
+	if pc.opts.allowDirty {
+		logger.Warn("bundle files are not tracked by git", "files", strings.Join(missing, ", "))
+		return nil
+	}
+	return publish.Errorf(publish.CodeSource, publish.ExitGate, "commit the generated bundle (is it gitignored?), or pass --allow-dirty for a throwaway build",
+		"git does not track these bundle files, so the published commit would lack them: %s", strings.Join(missing, ", "))
 }
 
 // resolveRepo is OWNER/REPO: --repo, else the github-release table, else the
