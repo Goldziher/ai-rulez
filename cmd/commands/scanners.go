@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -17,7 +18,10 @@ import (
 // exitScannersUnhealthy is the exit status of `scanners doctor` when a scanner has a problem.
 const exitScannersUnhealthy = 2
 
-var scannersAll bool
+var (
+	scannersAll    bool
+	scannersFormat string
+)
 
 // ScannersCmd groups the commands that inspect the [[lint.external]] scanners.
 var ScannersCmd = &cobra.Command{
@@ -35,12 +39,20 @@ var ScannersListCmd = &cobra.Command{
 	Long: `List every [[lint.external]] entry: its egress declaration, whether its binary is on
 PATH, and what it needs to run. Nothing is executed: the commands come from the
 repository, so they run only with "scan --external".`,
-	Args: cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(1),
+	PreRunE: checkScannersFormat,
 	Run: func(cmd *cobra.Command, args []string) {
 		infos, err := loadScanners(cmd.Context(), args)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
+		}
+		if scannersFormat == formatJSON {
+			if err := writeScannersJSON(os.Stdout, infos, false, nil); err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
+			return
 		}
 		writeScannerList(os.Stdout, infos)
 	},
@@ -60,7 +72,8 @@ Because doctor starts a program named in the repository's configuration, it runs
 only the scanners you name. Exit 0 when every checked scanner is healthy, 2 when
 one is not installed, is misconfigured, or has a network flag on an egress = false
 entry, 1 when the configuration cannot be loaded or a name is unknown.`,
-	Args: cobra.ArbitraryArgs,
+	Args:    cobra.ArbitraryArgs,
+	PreRunE: checkScannersFormat,
 	Run: func(cmd *cobra.Command, args []string) {
 		if code := runScannersDoctor(cmd.Context(), args, os.Stdout); code != 0 {
 			os.Exit(code)
@@ -72,6 +85,7 @@ func init() {
 	ScannersCmd.AddCommand(ScannersListCmd, ScannersDoctorCmd)
 	ScannersDoctorCmd.Flags().BoolVar(&scannersAll, "all", false, "Check every configured scanner (starts each one to ask its version)")
 	for _, c := range []*cobra.Command{ScannersListCmd, ScannersDoctorCmd} {
+		c.Flags().StringVar(&scannersFormat, "format", formatText, "Output format: text or json")
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
@@ -138,6 +152,24 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 	if len(unknown) > 0 {
 		fmtError(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
 		return 1
+	}
+	if scannersFormat == formatJSON {
+		versions := map[string]string{}
+		for _, s := range selected {
+			if s.Found() {
+				versions[s.Name] = lint.ProbeScannerVersion(ctx, s)
+			}
+		}
+		if err := writeScannersJSON(out, selected, true, versions); err != nil {
+			fmtError(err)
+			return 1
+		}
+		for _, s := range selected {
+			if !s.Healthy() {
+				return exitScannersUnhealthy
+			}
+		}
+		return 0
 	}
 	code := 0
 	for i, s := range selected {
@@ -228,4 +260,59 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo) bool {
 	}
 	row("result", verdict)
 	return s.Healthy()
+}
+
+func checkScannersFormat(_ *cobra.Command, _ []string) error {
+	if scannersFormat != formatText && scannersFormat != formatJSON {
+		return oops.Hint("Use text or json").Errorf("unknown --format %q", scannersFormat)
+	}
+	return nil
+}
+
+// scannerJSON is one scanner in the --format json output of scanners list|doctor.
+type scannerJSON struct {
+	Name       string   `json:"name"`
+	Command    string   `json:"command"`
+	Path       string   `json:"path,omitempty"`
+	Found      bool     `json:"found"`
+	Egress     string   `json:"egress"`
+	Format     string   `json:"format,omitempty"`
+	Inputs     []string `json:"inputs"`
+	EnvPass    []string `json:"env_pass"`
+	TimeoutSec float64  `json:"timeout_seconds"`
+	Problems   []string `json:"problems"`
+	EgressFlag string   `json:"egress_flag,omitempty"`
+	Status     string   `json:"status"`
+	Healthy    bool     `json:"healthy"`
+	// Version is set by doctor for an installed scanner ("" when it printed nothing usable).
+	Version string `json:"version,omitempty"`
+}
+
+// writeScannersJSON prints {"scanners":[...]}. doctor adds the probed versions.
+func writeScannersJSON(out io.Writer, infos []lint.ScannerInfo, doctor bool, versions map[string]string) error {
+	rows := make([]scannerJSON, 0, len(infos))
+	for _, s := range infos {
+		row := scannerJSON{
+			Name: s.Name, Command: s.Command, Path: s.Path, Found: s.Found(), Egress: s.Egress, Format: s.Format,
+			Inputs: nonNil(s.Inputs), EnvPass: nonNil(s.EnvPass), TimeoutSec: s.Timeout.Seconds(), Problems: nonNil(s.Problems),
+			EgressFlag: s.EgressFlag, Status: scannerStatus(s), Healthy: s.Healthy(),
+		}
+		if doctor {
+			row.Version = versions[s.Name]
+		}
+		rows = append(rows, row)
+	}
+	data, err := json.MarshalIndent(map[string]any{"scanners": rows}, "", "  ")
+	if err != nil {
+		return oops.Wrapf(err, "encode scanners")
+	}
+	_, err = fmt.Fprintln(out, string(data))
+	return err //nolint:wrapcheck // a closed stdout has no better handling
+}
+
+func nonNil(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+	return in
 }
