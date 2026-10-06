@@ -276,3 +276,37 @@ func TestBootstrap_PinnedIntervals(t *testing.T) {
 }
 
 func ptr(n int) *int { return &n }
+
+func TestCompareBaselineRefusesADifferentMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		base, cur  string
+		wantRefuse bool
+	}{
+		{"same mode", ModeHybrid, ModeHybrid, false},
+		{"hybrid baseline, lexical run", ModeHybrid, ModeLexical, true},
+		{"lexical baseline, vector run", ModeLexical, ModeVector, true},
+		{"a baseline without a mode is lexical", "", ModeLexical, false},
+		{"a baseline without a mode against hybrid", "", ModeHybrid, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base := &Result{SchemaVersion: ResultSchemaVersion, K: 3, Mode: tt.base, Cases: []CaseResult{{ID: "a", Hit: true}}}
+			cur := &Result{SchemaVersion: ResultSchemaVersion, K: 3, Mode: tt.cur, Cases: []CaseResult{{ID: "a", Hit: false}}}
+
+			// Act
+			err := cur.CompareBaseline(base)
+
+			// Assert
+			if tt.wantRefuse {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "mode")
+				assert.Nil(t, cur.Flips)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
