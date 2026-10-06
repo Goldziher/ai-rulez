@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/sarifout"
 )
 
 const (
-	sarifSchema  = "https://json.schemastore.org/sarif-2.1.0.json"
-	sarifVersion = "2.1.0"
-	srcRoot      = "%SRCROOT%"
+	sarifSchema  = sarifout.Schema
+	sarifVersion = sarifout.Version
 	// fingerprintKey names the partial fingerprint; bump the suffix when the
 	// recipe changes.
 	fingerprintKey = "aiRulezVerifier/v1"
@@ -101,7 +102,7 @@ type sarifPhysical struct {
 
 type sarifArtifact struct {
 	URI       string `json:"uri"`
-	URIBaseID string `json:"uriBaseId"`
+	URIBaseID string `json:"uriBaseId,omitempty"`
 }
 
 type sarifRegion struct {
@@ -135,8 +136,11 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 		}
 		results = append(results, sarifResultsFor(res, ruleID, idx)...)
 	}
+	if r.Err != nil {
+		notes = append(notes, sarifNotification{Level: "error", Message: sarifText{Text: "run failed: " + sanitize(r.Err.Error())}})
+	}
 	doc := sarifDoc{Schema: sarifSchema, Version: sarifVersion, Runs: []sarifRun{{
-		Tool:        sarifTool{Driver: sarifDriver{Name: "ai-rulez verifiers", Version: version, InformationURI: "https://github.com/Goldziher/ai-rulez", Rules: rules}},
+		Tool:        sarifTool{Driver: sarifDriver{Name: "ai-rulez verifiers", Version: version, InformationURI: sarifout.InformURI, Rules: rules}},
 		Invocations: []sarifInvocation{{ExecutionSuccessful: len(notes) == 0 && r.Err == nil, Notifications: notes}},
 		Results:     results,
 	}}}
@@ -167,12 +171,9 @@ func sarifRuleFor(ruleID string, res Result) sarifRule {
 }
 
 func sarifResultsFor(res Result, ruleID string, idx int) []sarifResult {
-	level := map[string]string{severityError: "error", severityWarning: "warning"}[res.Severity]
-	if level == "" {
-		level = "note"
-	}
+	level := sarifout.Level(res.Severity)
 	if res.Status == StatusError {
-		level = "error"
+		level = sarifout.LevelError
 	}
 	findings := res.Findings
 	if len(findings) == 0 {
@@ -210,7 +211,8 @@ func sarifResultsFor(res Result, ruleID string, idx int) []sarifResult {
 }
 
 func physical(p string, line int) sarifPhysical {
-	ph := sarifPhysical{ArtifactLocation: sarifArtifact{URI: sanitize(p), URIBaseID: srcRoot}}
+	uri, base := sarifout.ArtifactURI(sanitize(p))
+	ph := sarifPhysical{ArtifactLocation: sarifArtifact{URI: uri, URIBaseID: base}}
 	if line > 0 {
 		ph.Region = &sarifRegion{StartLine: line}
 	}
