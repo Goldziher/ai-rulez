@@ -221,11 +221,13 @@ func applyConsent(s *Settings, layers Layers) {
 		s.Protocol = c.Protocol
 		s.Sources["otlp_protocol"] = ScopeConsent
 	}
-	if c.Scope.IncludePaths && !s.IncludePaths {
+	// An opt-in gate the user set explicitly (environment or user config) is never
+	// overridden: an environment opt-out of paths or sessions beats the record.
+	if c.Scope.IncludePaths && !s.IncludePaths && s.Sources["include_paths"] == "" {
 		s.IncludePaths = true
 		s.Sources["include_paths"] = ScopeConsent
 	}
-	if c.Scope.IncludeSession && !s.IncludeSession {
+	if c.Scope.IncludeSession && !s.IncludeSession && s.Sources["include_session"] == "" {
 		s.IncludeSession = true
 		s.Sources["include_session"] = ScopeConsent
 	}
