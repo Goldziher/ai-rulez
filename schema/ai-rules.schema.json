@@ -2027,6 +2027,16 @@
                   "type": "number",
                   "minimum": 0,
                   "description": "Scales the tool-loop re-read in the high figure. Built-in 1."
+                },
+                "price_in_per_mtok": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "USD per million input tokens the runs are really billed at (prompt caching bills most input at a fraction of the list price). --price-in wins; 0 or unset keeps the built-in price table."
+                },
+                "price_out_per_mtok": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "USD per million output tokens the runs are really billed at. --price-out wins; 0 or unset keeps the built-in price table."
                 }
               },
               "additionalProperties": false

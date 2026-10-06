@@ -261,7 +261,9 @@ delete the `mac`.
   priced as sonnet, and the report says so (`priced_as`, and a line in the markdown). A model the table does not list is priced as sonnet for the estimate (the report says so), and with
   `--max-cost` it is refused unless `--price-in` and `--price-out` are given.
 - The assumptions above are defaults. `[lint.evals.estimate]` overrides them (`overhead_tokens`,
-  `assumed_output_tokens`, `activation_output_tokens`, `tool_loop_factor`; zero keeps the built-in value), and
+  `assumed_output_tokens`, `activation_output_tokens`, `tool_loop_factor`, and `price_in_per_mtok` and
+  `price_out_per_mtok` for what the runs are really billed at; zero keeps the built-in value, and `--price-in` and
+  `--price-out` win), and
   [`eval calibrate-estimate`](#calibrating-the-estimate) proposes measured values. The harness overhead matters most:
   Claude Code's own system prompt, tools and skill listing make a one-turn activation run cost about 25,000 input
   tokens, not 2,000.
@@ -303,6 +305,10 @@ activation, harness claude, model haiku: 6 run(s)
   activation_output_tokens   150 -> 48
   token error (median)     +862% -> -2%; recorded cost error median 351%, p90 402%
 ```
+
+The cost can be far below the token count priced at list: Claude Code caches its prompt, so most input tokens are
+billed at a fraction of the list price. When the billed cost implies an input price more than 10% off the list price
+the proposal adds `price_in_per_mtok` (the median over the runs, with output at the list price).
 
 Only records signed with your key count; a run whose runner reported no token split is left out, and a group with
 fewer than 3 runs (`--min-samples`) is marked low-confidence. The store keeps one record per skill and kind, so the
