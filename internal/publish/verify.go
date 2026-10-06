@@ -157,6 +157,9 @@ func checkSignature(dir string, m Manifest, checks VerifyChecks, res *VerifyResu
 		}
 		return
 	}
+	if !expectedAttachmentNames(m) {
+		return // checkAttachments reported the name; a file the manifest chose is never opened
+	}
 	bundle, err := readRegular(filepath.Join(dir, filepath.FromSlash(m.Signature.File)))
 	if err != nil {
 		res.add(m.Signature.File, "%s unreadable: %v", CodeUnsigned, err)
@@ -180,6 +183,20 @@ func checkSignature(dir string, m Manifest, checks VerifyChecks, res *VerifyResu
 	} else {
 		res.Signer = out.Signer.Identity + " (issuer " + out.Signer.Issuer + ")"
 	}
+}
+
+// expectedAttachmentNames reports whether every file name the manifest gives for the archive, its signature,
+// the attestation and the SBOM is exactly the name Build derives from the plugin name and version. The manifest
+// is untrusted input, so a verifier reads only files under those names, never a path it chose.
+func expectedAttachmentNames(m Manifest) bool {
+	base := m.Name + "-" + m.Version
+	s := m.Signature
+	ok := s != nil && ValidPath(m.Bundle.File) && m.Bundle.File == base+".tar.gz" && s.File == m.Bundle.File+".sigstore.json" &&
+		(s.Attestation == "" || s.Attestation == base+".attestation.sigstore.json")
+	if m.SBOM != nil {
+		ok = ok && m.SBOM.File == base+".sbom.cdx.json"
+	}
+	return ok && ValidPath(s.File)
 }
 
 // verifyAttestation checks the signed release statement, which binds the name,
