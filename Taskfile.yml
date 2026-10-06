@@ -173,6 +173,11 @@ tasks:
     cmds:
       - go run ./cmd/ai-rulez validate
 
+  harness:verify:
+    desc: "List harness trap and limit rows with source and verified_on; fail when older than max_table_age_days (default 90). HARNESS_MAX_AGE_DAYS overrides; HARNESS_VERIFY_FETCH=1 also re-fetches each quote (network)"
+    cmds:
+      - HARNESS_VERIFY=1 go test ./internal/lint -run TestHarnessVerify -count=1 -v
+
   clean:
     desc: "Clean build artifacts"
     cmds:

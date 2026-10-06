@@ -67,7 +67,7 @@ var analyzerGroups = []analyzerGroup{
 	// Project-level security: supply chain, permissions, scanner egress and
 	// the trust rule of the user-only [llm] and [telemetry] keys.
 	{AnalyzerSecurity, ScopeBundle, []string{
-		"AR010", "AR506", "AR9E0", "AR9E1", "AR9E2", "AR9E3", "AR9E4", "AR9K1", "AR9L1",
+		"AR010", "AR506", "AR9E0", "AR9E1", "AR9E2", "AR9E3", "AR9E4", "AR9E5", "AR9E6", "AR9K1", "AR9L1",
 	}},
 	{AnalyzerReferences, ScopeFile, []string{"AR201", "AR202", "AR301", "AR401", "AR402"}},
 	{AnalyzerReferences, ScopeItem, []string{"AR101", "AR210", "AR302", "AR303", "AR304", "AR305", "AR403"}},
@@ -87,7 +87,7 @@ var analyzerGroups = []analyzerGroup{
 	{AnalyzerDelivery, ScopeItem, []string{"AR989", "AR990", "AR991", "AR992", "AR993", "AR994"}},
 	{AnalyzerEvals, ScopeItem, []string{"AR996", "AR997", "AR998", "AR9A0"}},
 	{AnalyzerOKF, ScopeItem, []string{"AR9B0", "AR9B1", "AR9B2", "AR9B3", "AR9B4", "AR9B5", "AR9B6", "AR9B7", "AR9B8", "AR9B9"}},
-	{AnalyzerTraps, ScopeFile, []string{"AR9C1", "AR9C2", "AR9C3", "AR9C4"}},
+	{AnalyzerTraps, ScopeFile, []string{"AR9C0", "AR9C1", "AR9C2", "AR9C3", "AR9C4", "AR9C7", "AR9C8", "AR9C9"}},
 	// Invalid [telemetry] and [llm] tables.
 	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0"}},
 	{AnalyzerConvert, ScopeItem, []string{"AR9F0", "AR9F1", "AR9F2", "AR9F3", "AR9F4", "AR9F5"}},
