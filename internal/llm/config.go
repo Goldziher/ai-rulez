@@ -52,9 +52,20 @@ type Config struct {
 	TimeoutSeconds int `yaml:"timeout_seconds,omitempty" json:"timeout_seconds,omitempty" toml:"timeout_seconds,omitempty"`
 	// MaxRetries is the number of retries after the first attempt (default 3; -1 disables).
 	MaxRetries int `yaml:"max_retries,omitempty" json:"max_retries,omitempty" toml:"max_retries,omitempty"`
+	// AllowPlainHTTP, with PlainHTTPHosts, lets a key travel over plain http to the listed
+	// non-loopback gateways (for example a service mesh that terminates TLS in a sidecar).
+	// User scope only: a repository config cannot set it.
+	AllowPlainHTTP bool `yaml:"allow_plain_http,omitempty" json:"allow_plain_http,omitempty" toml:"allow_plain_http,omitempty"`
+	// PlainHTTPHosts is the allow-list for AllowPlainHTTP: host or host:port, matched against base_url's host.
+	PlainHTTPHosts []string `yaml:"plain_http_hosts,omitempty" json:"plain_http_hosts,omitempty" toml:"plain_http_hosts,omitempty"`
 	// PriceInputPerMTok and PriceOutputPerMTok override the built-in price table (USD per million tokens).
 	PriceInputPerMTok  float64 `yaml:"price_input_per_mtok,omitempty" json:"price_input_per_mtok,omitempty" toml:"price_input_per_mtok,omitempty"`
 	PriceOutputPerMTok float64 `yaml:"price_output_per_mtok,omitempty" json:"price_output_per_mtok,omitempty" toml:"price_output_per_mtok,omitempty"`
+
+	// repoProvider and repoModelRoute record that provider routing (the provider
+	// field, or a provider/ prefix in model) came from a repository config rather
+	// than from user scope. Set only by Resolve; see RoutingFromRepo.
+	repoProvider, repoModelRoute bool
 }
 
 // MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
@@ -111,6 +122,12 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	}
 	str("PROVIDER", &c.Provider)
 	str("MODEL", &c.Model)
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_PROVIDER")) != "" {
+		c.repoProvider = false
+	}
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")) != "" {
+		c.repoModelRoute = false
+	}
 	str("BACKEND", &c.Backend)
 	str("BASE_URL", &c.BaseURL)
 	str("API_KEY_ENV", &c.APIKeyEnv)
@@ -158,6 +175,17 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	if b, ok := boolean("ALLOW_NETWORK"); ok {
 		c.AllowNetwork = b
 	}
+	if b, ok := boolean("ALLOW_PLAIN_HTTP"); ok {
+		c.AllowPlainHTTP = b
+	}
+	if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_PLAIN_HTTP_HOSTS")); v != "" {
+		c.PlainHTTPHosts = nil
+		for _, h := range strings.Split(v, ",") {
+			if h = strings.TrimSpace(h); h != "" {
+				c.PlainHTTPHosts = append(c.PlainHTTPHosts, h)
+			}
+		}
+	}
 	if len(errs) > 0 {
 		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(errs, "; "))
 	}
@@ -203,6 +231,7 @@ func (c Config) Validate() []string {
 	}
 	out = append(out, c.validateAPIKeyEnv()...)
 	out = append(out, c.validateBaseURL()...)
+	out = append(out, c.validatePlainHTTP()...)
 	out = append(out, c.validateNumbers()...)
 	if c.Model != "" && strings.ContainsAny(c.Model, " \t\n") {
 		out = append(out, "model must not contain whitespace")
@@ -235,10 +264,44 @@ func (c Config) validateBaseURL() []string {
 		return []string{"base_url must not embed credentials; put the key in the variable named by api_key_env"}
 	case u.RawQuery != "":
 		return []string{"base_url must not carry a query string (it may hold a key); configure headers at the gateway instead"}
-	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()):
-		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost)"}
+	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && !c.plainHTTPAllowed(u.Host):
+		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost, or a host listed in plain_http_hosts together with allow_plain_http = true in user scope)"}
 	}
 	return nil
+}
+
+// plainHTTPAllowed reports whether the explicit opt-in covers host (host or host:port).
+func (c Config) plainHTTPAllowed(host string) bool {
+	if !c.AllowPlainHTTP {
+		return false
+	}
+	for _, h := range c.PlainHTTPHosts {
+		if strings.EqualFold(h, host) {
+			return true
+		}
+	}
+	return false
+}
+
+// UsesPlainHTTPOptIn reports whether the plain-http opt-in is what lets a key go
+// to base_url, so doctor can surface it.
+func (c Config) UsesPlainHTTPOptIn() bool {
+	u, err := url.Parse(c.BaseURL)
+	return err == nil && u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && c.plainHTTPAllowed(u.Host)
+}
+
+func (c Config) validatePlainHTTP() []string {
+	var out []string
+	if c.AllowPlainHTTP && len(c.PlainHTTPHosts) == 0 {
+		out = append(out, "allow_plain_http requires plain_http_hosts (the gateways allowed over plain http)")
+	}
+	for _, h := range c.PlainHTTPHosts {
+		if h == "" || strings.ContainsAny(h, "/@?# \t") || strings.Contains(h, "://") {
+			out = append(out, "plain_http_hosts entries must be host or host:port, without scheme or path")
+			break
+		}
+	}
+	return out
 }
 
 // isLoopbackHost reports whether host is localhost or a loopback IP literal.

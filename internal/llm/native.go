@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -66,6 +67,9 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	}
 	key := ""
 	if cfg.APIKeyEnv != "" {
+		if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
+			return nil, newError(KindConfig, "%s llm-config-invalid: refusing to send the key from %s to a provider chosen by the repository config (%s); set provider and model in the user config file or AI_RULEZ_LLM_PROVIDER / AI_RULEZ_LLM_MODEL", CodeConfigInvalid, cfg.APIKeyEnv, strings.Join(routed, ", "))
+		}
 		if key = getenv(cfg.APIKeyEnv); key == "" {
 			return nil, newError(KindAuth, "environment variable %s (api_key_env) is empty or unset", cfg.APIKeyEnv)
 		}
@@ -105,24 +109,42 @@ func run(ctx context.Context, call func() ([]byte, error)) ([]byte, error) {
 }
 
 // classifyNative maps the binding's flat "[code] message" errors onto typed errors.
+// This is the one place the message text is interpreted (upstream liter-llm #244:
+// the binding flattens its typed errors, so sentinels never match). A message it
+// does not recognise maps to a permanent provider error: never retried, and an
+// error is never cached. The corpus in native_classify_test.go pins the strings
+// this relies on, so a reworded upstream message fails CI instead of silently
+// changing retry, budget or gate behaviour.
 func classifyNative(err error) error {
 	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
 	msg := RedactSecrets(err.Error())
-	e := &Error{Kind: KindProvider, Message: msg}
+	e := &Error{Kind: KindProvider, Message: msg, permanent: true}
 	switch l := strings.ToLower(msg); {
 	case strings.Contains(l, "authentication") || strings.Contains(l, "unauthorized") || nativeStatusRe(l, "401", "403"):
-		e.Kind = KindAuth
+		e.Kind, e.permanent = KindAuth, false
 	case strings.Contains(l, "rate limit") || strings.Contains(l, "ratelimit") || nativeStatusRe(l, "429"):
-		e.Kind = KindRateLimit
+		e.Kind, e.permanent = KindRateLimit, false
 	case strings.Contains(l, "context window") || strings.Contains(l, "context length") || strings.Contains(l, "context_length"):
-		e.Kind = KindContextLength
+		e.Kind, e.permanent = KindContextLength, false
 	case strings.Contains(l, "budget"):
-		e.Kind = KindBudget
+		e.Kind, e.permanent = KindBudget, false
+	default:
+		// A server-side failure the binding reports by HTTP status is worth a retry.
+		for _, code := range []int{500, 502, 503, 504} {
+			if nativeStatusRe(l, strconv.Itoa(code)) {
+				e.Status, e.permanent = code, false
+				break
+			}
+		}
 	}
 	return e
 }
+
+// errEmptyNative is returned when the binding reports neither a result nor an error
+// (upstream liter-llm #246: a serialisation failure surfaces as (nil, nil)).
+var errEmptyNative = permanentError("liter-llm returned an empty reply without an error")
 
 func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	model := firstNonEmpty(req.Model, l.model)
@@ -136,6 +158,9 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	out, err := run(ctx, func() ([]byte, error) { return l.native.ChatJSON(body) })
 	if err != nil {
 		return ChatResponse{}, classifyNative(err)
+	}
+	if len(out) == 0 {
+		return ChatResponse{}, errEmptyNative
 	}
 	return decodeChat(out, l.pricing, model)
 }
@@ -155,6 +180,9 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	out, err := run(ctx, func() ([]byte, error) { return l.native.EmbedJSON(body) })
 	if err != nil {
 		return EmbedResponse{}, classifyNative(err)
+	}
+	if len(out) == 0 {
+		return EmbedResponse{}, errEmptyNative
 	}
 	return decodeEmbed(out, l.pricing, model, len(req.Input))
 }

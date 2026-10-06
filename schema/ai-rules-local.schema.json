@@ -1030,6 +1030,15 @@
           "minimum": 0,
           "type": "number"
         },
+        "allow_plain_http": {
+          "type": "boolean",
+          "description": "User scope only. Together with plain_http_hosts, lets an API key be sent over plain http to a listed non-loopback gateway."
+        },
+        "plain_http_hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User scope only. Allow-list (host or host:port) for allow_plain_http."
+        },
         "price_output_per_mtok": {
           "description": "USD per million completion tokens; overrides the built-in price table.",
           "minimum": 0,
