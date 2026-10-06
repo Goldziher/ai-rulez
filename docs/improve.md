@@ -116,6 +116,10 @@ whether it is kept. It never sees held-out cases (it uses none).
   the provider host (`base_url` host, else `provider-default`) is declared as egress unless you pass `--egress`.
 - Spend: the adapter's own model cost is reported as the optimizer cost, bounded by the run's remaining budget.
 - A model that must be told apart from the judge cannot be the same alias: pin model ids.
+- The adapter is a new process every round, so the request's `previous` field is its only memory. It hands the fixer, from
+  the first attempt, how the last round ended (the decision, the reasons of a round decided before the held-out set was
+  consulted, the adapter's own summary, and whether the file still holds that attempt), so a round after a rejection
+  does not repeat it. This is the `FixInput.Feedback` hook of the [review fix](review.md#review-fix) API.
 
 ## Diff policy
 
