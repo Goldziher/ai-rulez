@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/forge"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
@@ -171,10 +173,31 @@ func (e *approveEnv) reviewAttester(ctx context.Context) (attester, error) {
 
 // refuseDenied stops the approval of a digest on the deny list.
 func (e *approveEnv) refuseDenied(subs []approval.Subject) error {
+	if err := e.refuseOrgDenied(subs); err != nil {
+		return err
+	}
 	for _, s := range subs {
 		if reason, denied := e.policy.Deny[s.Digest]; denied {
 			return oops.Hint("remove or replace the content").Errorf("%s %s is on the deny list%s and cannot be approved",
 				approval.CodeDenied, safeText(s.Ref()), reasonSuffix(safeText(reason)))
+		}
+	}
+	return nil
+}
+
+// refuseOrgDenied refuses a digest the organization policy denies
+// (sources.deny_digests, AR747): generation refuses that content, so an approval
+// of it would change nothing. A policy that cannot be loaded is not a reason to
+// refuse here; the commands that load the policy report it.
+func (e *approveEnv) refuseOrgDenied(subs []approval.Subject) error {
+	resolved, err := policyEnforcer.LoadFor(e.cfg.BaseDir)
+	if err != nil || resolved == nil || len(resolved.Policy.Sources.DenyDigests) == 0 {
+		return nil //nolint:nilerr // see above
+	}
+	for _, s := range subs {
+		if slices.Contains(resolved.Policy.Sources.DenyDigests, s.Digest) {
+			return oops.Hint("remove or replace the content").Errorf("%s %s is denied by the organization policy (sources.deny_digests) and cannot be approved",
+				lint.CodeDigestDenied, safeText(s.Ref()))
 		}
 	}
 	return nil
