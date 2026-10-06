@@ -316,6 +316,11 @@ Four more rules join `AR962` in [strict validation](strict-validation.md):
 | `AR998` | `eval-score-low` | off | The recorded pass rate is below `[lint.evals] min_pass_rate` (0-1); setting it turns the rule on at error |
 | `AR9A0` | `eval-results-invalid` | error | `eval-results.json` cannot be parsed or has an unsupported `schema_version` |
 
+Only records signed with your own key (`eval-results.key` in the user config directory, written by `eval run`) count
+as evidence. A record without a valid signature (committed from another machine, edited by hand or forged) is
+unverified: when `AR997` or `AR998` is enabled it is reported with an "unverified" message instead of being treated as
+a passing run. Lint never creates the key, so on a machine that has never run `eval run` every record is unverified.
+
 ```toml
 [lint.evals]
 require = true            # AR962: skills need cases
