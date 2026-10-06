@@ -306,6 +306,9 @@ the reviewer string, with `.mailmap` applied by git. A reviewer recorded under a
 author's addresses is not caught. It limits honest mistakes, not collusion; a second reviewer and code owners on the
 lock are the control.
 
+A signed approval is matched by its verified signer, not by the record's reviewer string. A key signature (`key:<id>`) names
+no author, so with `forbid_self_approval` it is reported as `AR716`: sign with a keyless identity instead.
+
 ## Verifying approvals
 
 ```console
