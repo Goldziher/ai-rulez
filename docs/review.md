@@ -282,7 +282,10 @@ ai-rulez review fix [id|name|path...] [--finding FINGERPRINT] [--model FIXER] [-
 
 For each authored item with a stable judged finding, the fixer proposes **exact-text edits** (`old` must occur once in
 the file; the unified diff is built from them, not asked of the model). A proposal is kept only when all of this holds,
-with up to two attempts (the second sees why the first was rejected), else the item reports "no safe fix":
+with up to two attempts (the second sees why the first was rejected), else the item reports "no safe fix". A caller
+that has learned something about earlier attempts at the file, as the [`builtin:review-fix`](improve.md#bundled-adapters)
+adapter does from the previous round of an `improve` run, passes it as `FixInput.Feedback`: the fixer sees it from the
+first attempt, as untrusted data in a fence of its own, without control characters and capped at 1500 characters:
 
 1. the edits apply exactly and change the file;
 2. the frontmatter still parses and **only `description` changed** in it: the `name` and the tool list are untouched, and
