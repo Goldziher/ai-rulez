@@ -2,5 +2,5 @@
 
 package guard
 
-// raceEnabled scales timing assertions: the race detector slows the guard about tenfold.
+// raceEnabled turns timing assertions off: the race detector slows the guard 20-80x.
 const raceEnabled = true
