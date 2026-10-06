@@ -33,7 +33,7 @@ certainly_inert = false
 hint = "Set alwaysApply: true, add globs, or add a description so the agent can request it. Ignore this finding if manual-only is intended."
 source = "https://cursor.com/docs/rules"
 quote = "Included only when you @-mention the rule in chat."
-verified_on = "2026-10-05"
+verified_on = "2026-10-06"
 harness_version = "docs as of verified_on"
 [trap.scope]
 dir = ".cursor/rules"
