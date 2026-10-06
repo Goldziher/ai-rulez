@@ -239,3 +239,46 @@ func TestApply_ElementsOnlyOwnedIsNotPartial(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, res.PartiallyOwned)
 }
+
+// TestFlowMember_CommentsAboveOwnedKeyAreNotDuplicated pins that re-rendering an
+// owned flow mapping ({}) does not copy the comments around its key a second time,
+// and that apply repeated and a clean give the original bytes back.
+func TestFlowMember_CommentsAboveOwnedKeyAreNotDuplicated(t *testing.T) {
+	tests := []struct {
+		name string
+		doc  string
+	}{
+		{"head comment", "# poolside\nmcp_servers: {}\n"},
+		{"several head comment lines", "# one\n# two\nmcp_servers: {}\nother: 1\n"},
+		{"line comment on the key", "mcp_servers: {} # servers\nother: 1\n"},
+		{"comment between keys", "a: 1\n\n# servers\nmcp_servers: {}\n\n# tail\nb: 2\n"},
+		{"comment after the key", "mcp_servers: {}\n# after\nb: 2\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			owned := []yamlmerge.OwnedKey{{Name: "mcp_servers", Value: map[string]any{"gen": map[string]any{"command": "x"}}, Members: true}}
+
+			// Act
+			doc := tt.doc
+			for range 3 {
+				res, err := yamlmerge.ApplyDocument("c.yaml", doc, owned)
+				require.NoError(t, err)
+				doc = res.Body
+			}
+			first, err := yamlmerge.ApplyDocument("c.yaml", tt.doc, owned)
+			require.NoError(t, err)
+			un, err := yamlmerge.UnmergeDocument("c.yaml", first.Body, first.Claims)
+			require.NoError(t, err)
+
+			// Assert
+			assert.Equal(t, first.Body, doc, "repeated applies are stable")
+			for _, line := range strings.Split(strings.TrimSpace(tt.doc), "\n") {
+				if strings.HasPrefix(line, "#") {
+					assert.Equal(t, 1, strings.Count(doc, line+"\n"), "comment %q appears once", line)
+				}
+			}
+			assert.Equal(t, tt.doc, un.Body, "unmerge restores the original bytes")
+		})
+	}
+}
