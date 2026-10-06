@@ -826,6 +826,7 @@ ai-rulez convert --list                           # importers and what each dete
 | `--domain NAME` | Put the imported rules, context, skills, agents and commands under `domains/NAME/`. |
 | `--dry-run` / `--write` | Preview or write. With neither flag a terminal gets a dry run and a script is refused, so CI never converts by surprise. |
 | `--force` | Overwrite existing content files (rules, context, skills, ...) whose content differs. Without it, an existing differing file stops the write (exit 1, nothing written). `--force` never replaces `config.toml` (see below). Files with identical content are `unchanged`, so a second run is a no-op. |
+| `--allow-findings CODES` | Write despite scan findings of these codes (for example `AR001`). Discouraged; see "Blocked scan" below. |
 | `--format text\|json` | Report format. JSON follows [`schema/convert-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/convert-report.schema.json) (`schema_version: 1`). |
 | `--report FILE` | Also write the report to a file. |
 | `--fail-on` | Exit 2 when a finding has one of these statuses (`approximated`, `dropped`, `needs-action`, `unsupported`). |
@@ -874,6 +875,8 @@ MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every
 A later entry of `inputRoots` overrides a same-named item of an earlier one (`approximated`); roots that are absolute or leave the source directory are `unsupported`. Anything under `.rulesync/` that is not a rulesync input is `dropped`.
 
 **Design decisions.** Root rules become context, not `priority: critical` rules, because context is what ai-rulez writes into every root file. `localRoot` rules are not imported, since they are personal and `convert` writes a committed tree. A tool section is never merged into the item, so a per-tool override cannot silently widen to every tool; the few lifted keys are reported. `native` is skipped by `auto` next to rulesync so generated files are not imported twice. Hooks and permissions stay `needs-action` until their mapping lands.
+
+**Blocked scan.** When the scan finds an error-level problem (a secret, a risky command), `convert` prints each finding at the **source** file and line it came from (`.rulesync/rules/x.md:33`), with the planned `.ai-rulez/` path in parentheses, exits 2 and writes nothing. Remove the text from the source and run again. To write anyway, pass `--allow-findings AR001` (repeatable, comma separated): the finding stays in the report, marked `allowed`, and only that code is let through. Findings in the generated `config.toml` keep their planned path. In `--format json` the source location is `file`/`line` and the planned one is `planned`.
 
 **Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate --strict`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
@@ -35,6 +36,7 @@ var (
 	convertBestEffort    bool
 	convertSplitHeadings bool
 	convertList          bool
+	convertAllowFindings []string
 )
 
 // ConvertCmd converts another tool's configuration into an .ai-rulez/ tree.
@@ -66,7 +68,9 @@ An existing config.toml is never replaced, not even with --force: new presets,
 win). --into is relative to --source unless absolute, and nothing is written
 through a symlink at or below it. Source files are never modified, and nothing
 is fetched or executed. The converted tree is validated and security-scanned in
-a scratch directory first, and a blocked scan writes nothing.
+a scratch directory first, and a blocked scan writes nothing. Scan findings name
+the source file and line they came from (the planned .ai-rulez path is added in
+parentheses); --allow-findings CODE lets a code through.
 
 Exit codes: 0 done, 1 could not run or would overwrite, 2 blocked by the scan or
 validation, or --fail-on matched.`,
@@ -92,6 +96,7 @@ func init() {
 	f.StringSliceVar(&convertFailOn, "fail-on", nil, "Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported")
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
+	f.StringSliceVar(&convertAllowFindings, "allow-findings", nil, "Write despite security findings of these codes (for example AR001, a secret in the source); they stay in the report. Discouraged")
 	f.BoolVar(&convertList, "list", false, "List the importers and what each detects in --source")
 }
 
@@ -99,6 +104,8 @@ func stdoutIsTerminal() bool {
 	info, err := os.Stdout.Stat()
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
+
+var allowCodeRe = regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`)
 
 // runConvert runs the command and returns the process exit code.
 func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
@@ -121,6 +128,12 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 		fmtError(fmt.Errorf("pass --write to convert or --dry-run to preview; a script never converts by surprise"))
 		return exitConvertCannotRun
 	}
+	for _, c := range convertAllowFindings {
+		if !allowCodeRe.MatchString(strings.TrimSpace(c)) {
+			fmtError(fmt.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c))
+			return exitConvertCannotRun
+		}
+	}
 	for _, s := range convertFailOn {
 		switch strings.ReplaceAll(s, "_", "-") {
 		case "approximated", "dropped", "needs-action", "unsupported":
@@ -133,6 +146,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	report, err := importer.Convert(ctx, importer.ConvertOptions{
 		Source: convertSource, Into: convertInto, From: convertFrom, Domain: convertDomain,
 		Write: write, Force: convertForce, SplitHeadings: convertSplitHeadings, BestEffort: convertBestEffort,
+		AllowFindings: convertAllowFindings,
 	})
 	if report != nil {
 		if werr := printConvertReport(out, report); werr != nil {
