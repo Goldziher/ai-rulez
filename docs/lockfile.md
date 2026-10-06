@@ -407,7 +407,7 @@ opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verif
 ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
 `AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
 used). An unreachable remote is exit `1`. The key is skipped quietly under `--no-fetch`, `--frozen` and `--offline`;
-the flag with them is an error. `generate --recursive` does not verify tags.
+the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
 pins as they are. Use `update --kind skill` to move range pins.

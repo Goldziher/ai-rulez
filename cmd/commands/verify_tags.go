@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -131,28 +132,41 @@ func verifyTagsAt(path string) int {
 	return 0
 }
 
-// exitOnMovedTags is the `generate --verify-tags` gate: it runs before anything
-// is written and ends the process with exitDrift when a pinned tag moved.
-func exitOnMovedTags(cfg *config.Config) {
+// errMovedTag marks a run stopped by a pinned tag that moved (drift, exit 2).
+var errMovedTag = errors.New("a pinned tag moved")
+
+// movedTagsErr is the `generate --verify-tags` gate for one root: nil when
+// nothing was asked or no pinned tag moved, errMovedTag (findings already
+// printed) when one did, any other error when the check could not run.
+func movedTagsErr(cfg *config.Config) error {
 	want, err := verifyTagsWanted(cfg, generateVerifyTags)
-	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	if !want {
-		return
+	if err != nil || !want {
+		return err
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return err //nolint:wrapcheck // already contextual
 	}
 	findings, err := verifyPinnedTags(context.Background(), cfg, lock)
 	if err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return err
 	}
 	if reportTagFindings(findings) {
+		return errMovedTag
+	}
+	return nil
+}
+
+// exitOnMovedTags runs before anything is written and ends the process with
+// exitDrift when a pinned tag moved.
+func exitOnMovedTags(cfg *config.Config) {
+	err := movedTagsErr(cfg)
+	switch {
+	case err == nil:
+	case errors.Is(err, errMovedTag):
 		os.Exit(exitDrift)
+	default:
+		fmtError(err)
+		os.Exit(1)
 	}
 }

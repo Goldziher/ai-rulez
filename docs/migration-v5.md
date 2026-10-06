@@ -58,8 +58,8 @@ Then upgrade to v5, run `ai-rulez generate` and commit `config.toml` with the ou
 `config.toml`, so its `--format` flag is gone, and `init --from` writes TOML too. `convert` leaves a `config.yaml` it finds
 alone and reports it as `manual`.
 
-A V3 file nested in a subdirectory is skipped by `generate --recursive` rather than reported: that walk lists only
-`config.toml` files.
+A V3 file nested in a subdirectory is reported by `generate --recursive` with the same error as a root one (it is not
+read), and the run exits `1`.
 
 ## Go module path and install
 
