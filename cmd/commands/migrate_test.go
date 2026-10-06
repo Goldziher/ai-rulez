@@ -18,3 +18,10 @@ func TestMigrateCommand_RequiresVersionArg(t *testing.T) {
 	cmd := commands.MigrateCmd
 	assert.NotNil(t, cmd.Args)
 }
+
+func TestMigrateCommand_UnknownTargetIsAnError(t *testing.T) {
+	err := commands.MigrateCmd.RunE(commands.MigrateCmd, []string{"v9"})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `unsupported migration target "v9"`)
+}
