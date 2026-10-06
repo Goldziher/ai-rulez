@@ -32,7 +32,9 @@ type CommandRunner struct {
 func (*CommandRunner) Name() string { return RunnerCommand }
 
 // Fingerprint implements Fingerprinter: a different command is a different runner.
-func (r *CommandRunner) Fingerprint() string { return "command=" + r.Command }
+func (r *CommandRunner) Fingerprint() string {
+	return "command=" + r.Command + " program=" + commandProgramStamp(r.Command)
+}
 
 // Run implements Runner.
 func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error) {
@@ -45,7 +47,7 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	}
 	timeout := r.Timeout
 	if timeout <= 0 {
-		timeout = 30 * time.Minute
+		timeout = DefaultRunnerTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
