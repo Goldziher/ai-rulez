@@ -79,10 +79,10 @@ func TagSpec(w lockfile.Want) tagresolve.Spec {
 	return tagresolve.Spec{Constraint: w.Constraint, TagPrefix: w.TagPrefix, IncludePrerelease: w.IncludePrerelease}
 }
 
-// gitRunner runs git for tag listing the way an include fetch does.
-func gitRunner(ctx context.Context, args ...string) (string, error) {
+// runGit runs git for tag listing the way an include fetch does, with env.
+func runGit(ctx context.Context, env []string, args ...string) (string, error) {
 	cmd := gitCmd(ctx, "", args...)
-	cmd.Env = gitEnvFor(ctx)
+	cmd.Env = env
 	var out, errOut bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errOut
 	if err := cmd.Run(); err != nil {
@@ -91,7 +91,7 @@ func gitRunner(ctx context.Context, args ...string) (string, error) {
 	return out.String(), nil
 }
 
-// ListRemoteTags lists the tags of a git source (token injected for https).
+// ListRemoteTags lists the tags of a git source (the token goes in a scoped header, never the URL).
 func ListRemoteTags(ctx context.Context, repoURL, token string) ([]tagresolve.RawTag, error) {
 	if err := checkRemoteArgs(repoURL, ""); err != nil {
 		return nil, err
@@ -99,7 +99,10 @@ func ListRemoteTags(ctx context.Context, repoURL, token string) ([]tagresolve.Ra
 	if err := requireGit(ctx); err != nil {
 		return nil, err
 	}
-	tags, err := tagresolve.ListTags(ctx, gitRunner, injectToken(repoURL, token))
+	runner := func(ctx context.Context, args ...string) (string, error) {
+		return runGit(ctx, withAuth(gitEnvFor(ctx), repoURL, token), args...)
+	}
+	tags, err := tagresolve.ListTags(ctx, runner, repoURL)
 	if err != nil {
 		return nil, oops.With("url", RedactURL(repoURL)).Wrap(err)
 	}

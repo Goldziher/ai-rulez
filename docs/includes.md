@@ -256,6 +256,19 @@ ai-rulez generate
 
 This is the recommended approach for CI/CD environments and automation scripts.
 
+#### Which hosts receive the token
+
+The token is sent only to `github.com` by default. To use it with another host, list the hosts in the environment
+(a project file cannot widen this):
+
+```bash
+export AI_RULEZ_GIT_TOKEN_HOSTS="github.com,gitlab.example.com"
+```
+
+The list replaces the default. An include that names any other HTTPS host is fetched without the token and logs a
+warning. The token is passed to git as a header scoped to the host, not embedded in the URL, so it does not appear in
+process arguments or in the cached clone's `.git/config`. Plain `http://` and `git://` remotes are rejected.
+
 #### Using CLI Flag
 
 Pass the token directly via the `--token` flag:
@@ -352,7 +365,7 @@ check file, `rules/`, `skills/` and so on, domains, or the include's `.ai-rulez/
 naming it, so an include cannot point at an arbitrary local file. Replace the link with the real file or directory.
 An installed skill whose `SKILL.md` is a symlink fails to resolve, with an error naming the link, and a symlinked path inside its clone is skipped with a warning naming it. (Your own project's
 `.ai-rulez/` may use symlinks that stay inside the project; see [Configuration](configuration.md#symlinks-in-content).)
-Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path`;
+Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path` (`http://` and `git://` are then rejected);
 anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash of the
 URL>` with mode `0700`.
 

@@ -19,3 +19,11 @@ func TestCheckRemoteURL_RejectsPlainHTTPWithAMigrationNote(t *testing.T) {
 	}
 	assert.Error(t, CheckRemoteURL("include url", "--upload-pack=x"), "still refuses what CheckArg refuses")
 }
+
+func TestCheckRemoteURL_RejectsPlainGitProtocol(t *testing.T) {
+	for _, u := range []string{"git://github.com/o/r", "GIT://example.com/o/r.git", "git+git://example.com/o/r"} {
+		err := CheckRemoteURL("include url", u)
+		require.Error(t, err, u)
+		assert.Contains(t, err.Error(), "plain git://")
+	}
+}
