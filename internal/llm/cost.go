@@ -2,14 +2,33 @@ package llm
 
 import (
 	"fmt"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/pricing"
+	"strings"
 )
 
-// PriceTableVersion identifies the built-in price table (internal/pricing, shared
-// with the eval estimate). It is part of the cache identity, so a cost recorded
-// under old prices is never replayed under new ones.
-const PriceTableVersion = pricing.Version
+// price is USD per million tokens.
+type price struct{ in, out float64 }
+
+// builtinPrices is a small, approximate table for common models. It is a
+// convenience for budget estimates, not a billing source: prices change, and
+// unknown models have no entry. Override with price_input_per_mtok /
+// price_output_per_mtok. Keys are matched against the model name with any
+// provider prefix removed, longest prefix first.
+var builtinPrices = map[string]price{
+	"gpt-4o-mini":            {0.15, 0.60},
+	"gpt-4o":                 {2.50, 10.00},
+	"gpt-4.1-mini":           {0.40, 1.60},
+	"gpt-4.1":                {2.00, 8.00},
+	"text-embedding-3-small": {0.02, 0},
+	"text-embedding-3-large": {0.13, 0},
+	"claude-haiku":           {1.00, 5.00},
+	"claude-sonnet":          {3.00, 15.00},
+	"claude-opus":            {15.00, 75.00},
+}
+
+// PriceTableVersion identifies the built-in price table. Bump it whenever a price
+// changes: it is part of the cache identity, so a cost recorded under old prices
+// is never replayed under new ones.
+const PriceTableVersion = "2026-07"
 
 // Pricing resolves prices for a model.
 type Pricing struct {
@@ -33,11 +52,21 @@ func (p Pricing) identity() string {
 	return "builtin:" + PriceTableVersion
 }
 
-func (p Pricing) lookup(model string) (pricing.Price, bool) {
+func (p Pricing) lookup(model string) (price, bool) {
 	if p.override {
-		return pricing.Price{InPerMTok: p.input, OutPerMTok: p.output}, true
+		return price{p.input, p.output}, true
 	}
-	return pricing.Lookup(model)
+	name := strings.ToLower(model)
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	best, bestLen, found := price{}, 0, false
+	for prefix, pr := range builtinPrices {
+		if strings.HasPrefix(name, prefix) && len(prefix) > bestLen {
+			best, bestLen, found = pr, len(prefix), true
+		}
+	}
+	return best, found
 }
 
 // Cost estimates the cost of usage on model. known is false when no price exists.
@@ -46,7 +75,7 @@ func (p Pricing) Cost(model string, u Usage) (usd float64, known bool) {
 	if !ok {
 		return 0, false
 	}
-	return (float64(u.PromptTokens)*pr.InPerMTok + float64(u.CompletionTokens)*pr.OutPerMTok) / 1e6, true
+	return (float64(u.PromptTokens)*pr.in + float64(u.CompletionTokens)*pr.out) / 1e6, true
 }
 
 // BytesPerTokenEstimate is the divisor behind EstimateTokens. English prose runs

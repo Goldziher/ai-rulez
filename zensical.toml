@@ -43,6 +43,7 @@ nav = [
     { "Skill Search" = "search.md" },
     { "Usage Telemetry" = "usage-telemetry.md" },
     { "LLM Access" = "llm.md" },
+    { "Review" = "review.md" },
     { "Item-Load Telemetry (OTLP)" = "telemetry.md" },
     { "Poly Hooks" = "poly-hooks.md" },
     { "Monorepo" = "monorepo.md" },
