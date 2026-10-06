@@ -1,0 +1,1 @@
+rulesync-real is a trimmed copy of the dyoshikawa/rulesync repository's own rulesync.jsonc and .rulesync/ tree (MIT license), kept as a real-world sample. One sentence of a rule was reworded so the security scan does not block the import.

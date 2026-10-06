@@ -1,0 +1,24 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude', 'codex', 'copilot', 'opencode', 'takt']
+
+[[mcp_servers]]
+name = 'deepwiki'
+transport = 'http'
+url = 'https://mcp.deepwiki.com/mcp'
+
+[[mcp_servers]]
+name = 'rulesync'
+command = 'pnpm'
+args = ['dev', 'mcp']
+
+# Imported by `ai-rulez convert` and DISABLED: review, then uncomment or rerun convert with --enable-hooks / --enable-permissions.
+# Each hook runs a command on your machine; read every command first.
+# [[hooks]]
+# event = 'SessionStart'
+#
+# [[hooks.hooks]]
+# command = 'git pull && pnpm i'

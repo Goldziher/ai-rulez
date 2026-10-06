@@ -1,0 +1,28 @@
+needs-action | (hooks) | hooks | config.toml | 1 hook group(s) were written as a commented block, not enabled: each runs a command on your machine. Review them, then uncomment or rerun with --enable-hooks
+mapped | .rulesync/hooks.json | hooks.SessionStart | hooks.SessionStart | 
+mapped | .rulesync/mcp.json | mcpServers.deepwiki | mcp_servers.deepwiki | 
+mapped | .rulesync/mcp.json | mcpServers.rulesync | mcp_servers.rulesync | 
+dropped | .rulesync/permissions.jsonc | codexcli |  | tool-scoped permission settings are not carried; [permissions] applies to every harness
+mapped | .rulesync/rules/coding-guidelines.md | rule | rules/coding-guidelines.md | 
+dropped | .rulesync/rules/github-actions-security.md | agentsmd |  | tool-specific section is not carried (keys: subprojectPath); ai-rulez has no per-tool overrides
+mapped | .rulesync/rules/github-actions-security.md | rule | rules/github-actions-security.md | 
+mapped | .rulesync/skills/clean-branches | skill | skills/clean-branches/SKILL.md | 
+mapped | .rulesync/subagents/code-reviewer.md | agent | agents/code-reviewer.md | 
+dropped | rulesync.jsonc | delete |  | rulesync output cleanup; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | gitignoreTargetsOnly |  | rulesync gitignore generation; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | outputRoots |  | rulesync output directories; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | silent |  | rulesync logging; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | simulateCommands |  | rulesync simulation of commands for tools without them; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | simulateSkills |  | rulesync simulation of skills for tools without them; ai-rulez has no equivalent setting
+dropped | rulesync.jsonc | simulateSubagents |  | rulesync simulation of subagents for tools without them; ai-rulez has no equivalent setting
+approximated | rulesync.jsonc | targets.claudecode |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.claudecode | presets.claude | 
+approximated | rulesync.jsonc | targets.codexcli |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.codexcli | presets.codex | 
+approximated | rulesync.jsonc | targets.copilot |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.copilot | presets.copilot | 
+approximated | rulesync.jsonc | targets.opencode |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.opencode | presets.opencode | 
+approximated | rulesync.jsonc | targets.takt |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
+mapped | rulesync.jsonc | targets.takt | presets.takt | 
+dropped | rulesync.jsonc | verbose |  | rulesync logging; ai-rulez has no equivalent setting
