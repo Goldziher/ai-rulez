@@ -14,7 +14,7 @@ import (
 // removed from the header, and the Content-Hash and Source-Hash lines are not
 // there yet (they are injected at write time), so a digest is the same under
 // every [header] hashes mode and on every run. Outputs that are partly the
-// consumer's (a merged settings.json), that carry resolved secrets, or that
+// consumer's (a merged settings.json), that carry secrets, or that
 // are machine-local are left out; the merged settings document is pinned through
 // its hook, permission and role sources instead.
 func (g *Generator) LockOutputs(profile string) ([]contentlock.Output, error) {
@@ -36,11 +36,18 @@ func (g *Generator) LockOutputs(profile string) ([]contentlock.Output, error) {
 	defer generateMu.Unlock()
 	g.beginRun()
 	defer g.resetRunState()
+	// The pins must not depend on the environment or the checkout: leave ${VAR}
+	// and ${PROJECT_ROOT} as written instead of resolving them.
+	g.lockRender = true
+	defer func() { g.lockRender = false }()
 
 	outputs, _, err := g.collectOutputs(profile)
 	if err != nil {
 		return nil, err
 	}
+	// Whatever still carries a secret (a literal one in args or a URL) is left
+	// out of the pins, wherever the outputs were collected.
+	g.markSensitiveOutputs(outputs)
 	var pins []contentlock.Output
 	for _, output := range outputs {
 		if output.IsDir || output.PartiallyOwned || output.Sensitive || output.LocalOnly {

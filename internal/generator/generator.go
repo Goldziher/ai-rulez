@@ -61,7 +61,12 @@ type Generator struct {
 	allowLocalDrift bool            // write merged output even when it drifts from the shared baseline
 	lenientMCP      bool            // tolerate unresolved MCP placeholders (baseline renders)
 	plan            *localPlan      // baseline comparison for this run; nil without local inputs
-	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
+	// lockRender renders for ai-rulez.lock: MCP placeholders stay as written, so a
+	// pinned output carries no secret and no checkout path.
+	lockRender bool
+	// localManifestPending is set once the run knows it will write the local manifest.
+	localManifestPending bool
+	localSkipped         bool // local files exist on disk but were not loaded (--no-local)
 
 	manifests map[string]generatedManifest // manifests read this run, by path
 
