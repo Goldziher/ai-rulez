@@ -139,12 +139,15 @@ stdout.
 | AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
 | AR9C7 | `claude-frontmatter-key-spelling` | warning | A `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` frontmatter key spelled as a variant of a documented key (`disable_model_invocation`, `max_turns`); Claude Code ignores it silently. Error when ai-rulez generated it |
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
-| AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes) |
+| AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
+| AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
 | AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
+| AR9C5 | `kiro-agent-steering-not-loaded` | warning | A `.kiro/agents/*.json` custom agent without `resources` while `.kiro/steering/*.md` exists |
+| AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A `.kiro/steering/*.md` file whose `inclusion` frontmatter follows a blank line or text, so Kiro does not read it |
 | AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
 | AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped |
 | AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
@@ -209,7 +212,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR996`-`AR999` | Eval cases and results (`AR996`-`AR998`) | allocated |
 | `AR9A0`-`AR9A9` | Eval results file and activation (`AR9A0`-`AR9A2` used; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A3`-`AR9A5` for later phases) | allocated |
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
-| `AR9C0`-`AR9C9` | Harness traps (`AR9C0`-`AR9C4` and `AR9C7`-`AR9C9` used; `AR9C5`-`AR9C6` are free for the Kiro traps, see [Harness traps](harness-traps.md)) | allocated |
+| `AR9C0`-`AR9CA` | Harness traps (`AR9C0`-`AR9CA` used; see [Harness traps](harness-traps.md)) | allocated |
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E6` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
@@ -448,7 +451,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `delivery` | `AR989`-`AR994` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A2` |
 | `okf` | `AR9B0`-`AR9B9` |
-| `traps` | `AR9C0`-`AR9C4`, `AR9C7`-`AR9C9` |
+| `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR745`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
@@ -2155,11 +2158,11 @@ a generated Claude Code skill has description plus when_to_use past the skill li
 
 ### AR9C9 harness-limit-exceeded
 
-a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files), so the rest is not loaded
+a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files, Kilo REVIEW.md), so the rest is not loaded
 
 - Default severity: `warning`
 - Analyzer: `traps` (scope `file`)
-- Why: Codex stops reading AGENTS.md files past project_doc_max_bytes, and Devin and Antigravity truncate a rule file past their per-file limit, so the content past it is never loaded.
+- Why: Codex stops reading AGENTS.md files past project_doc_max_bytes, Devin and Antigravity truncate a rule file past their per-file limit, and Kilo truncates REVIEW.md past 10,000 characters, so the content past it is never loaded.
 - Bad: A generated `.devin/rules/style.md` of 15,000 characters
 - Good: Split the rule, shorten it, or move detail into a skill
 
@@ -2224,6 +2227,26 @@ a [[lint.external]] scanner timed out, exceeded the output cap, or printed unrea
 - Good: Fix the scanner, raise `timeout` within the limit, or narrow its scope
 
 ### AR9E4 scanner-egress-blocked
+### AR9C5 kiro-agent-steering-not-loaded
+
+a Kiro custom agent file has no resources while .kiro/steering holds steering files, so the agent never loads them
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Kiro does not include steering files in a custom agent on its own; the agent must list them in its resources, so the steering context is missing without an error.
+- Bad: `.kiro/agents/review.json` without `resources`, next to `.kiro/steering/style.md`
+- Good: `"resources": ["file://.kiro/steering/**/*.md"]` in the agent
+
+### AR9C6 kiro-steering-frontmatter-not-first
+
+a Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Kiro reads the inclusion setting only when it is the first content of the steering file, so a blank line or text before the opening `---` leaves the file on its default inclusion.
+- Bad: A steering file that starts with an empty line, then `---` and `inclusion: manual`
+- Good: Start the file with `---` on the first byte
+
 
 a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner
 
@@ -2254,6 +2277,16 @@ a staged [[lint.external]] scanner reported a result for a file that was not sta
 - Good: Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy
 
 ### AR9F0 convert-input-invalid
+### AR9CA project-trap
+
+a trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: A project can record its own traps as rows in `.ai-rulez/traps/*.toml`, with the same closed predicate vocabulary as the built-in table; this code reports a row's match or a row that cannot be used.
+- Bad: A row whose predicate kind is not in the vocabulary, or a file that matches the row
+- Good: Fix the file the row names, or correct the row
+
 
 an input file of `convert` cannot be parsed at all (reported by convert, never by validate)
 

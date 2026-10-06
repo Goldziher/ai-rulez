@@ -83,6 +83,48 @@ kind = "name-suffix-required"
 suffix = ".instructions.md"
 ignore_names = ["README.md"]
 
+# AR9C5, AR9C6: Kiro. The vendor page is the steering page; the table verifies
+# the rule, not what Kiro does with a file that breaks it (not inert).
+[[trap]]
+code = "AR9C5"
+name = "kiro-agent-steering-not-loaded"
+harness = "kiro"
+message = "this Kiro custom agent has no resources, so it does not load the steering files in .kiro/steering"
+certainly_inert = false
+hint = "Add the steering files to the agent's resources, for example \"resources\": [\"file://.kiro/steering/**/*.md\"]."
+source = "https://kiro.dev/docs/steering/"
+quote = "steering files are not automatically included. You must explicitly add them to the agent's resources configuration to load steering context."
+verified_on = "2026-10-06"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".kiro/agents"
+suffix = ".json"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "json-key-required-if"
+key = "resources"
+when_dir = ".kiro/steering"
+when_suffix = ".md"
+
+[[trap]]
+code = "AR9C6"
+name = "kiro-steering-frontmatter-not-first"
+harness = "kiro"
+message = "this Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it"
+certainly_inert = false
+hint = "Make the opening --- the first bytes of the file."
+source = "https://kiro.dev/docs/steering/"
+quote = "The inclusion configuration must be the first content in the file - no blank lines or content before it."
+verified_on = "2026-10-06"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".kiro/steering"
+suffix = ".md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "frontmatter-first"
+key = "inclusion"
+
 # AR9C7: Claude Code ignores a frontmatter field it does not recognise, so a
 # variant spelling silently does nothing. The canonical lists are the field
 # tables of the skills and sub-agents pages on verified_on.
@@ -233,3 +275,20 @@ kinds = ["generated", "handwritten"]
 kind = "size-over"
 limit_id = "antigravity.rule_file_bytes"
 measure = "file-bytes"
+
+[[trap]]
+code = "AR9C9"
+name = "harness-limit-exceeded"
+harness = "kilo"
+message = "this REVIEW.md is past the Kilo Code Reviews limit, so it is truncated"
+certainly_inert = false
+hint = "Shorten REVIEW.md; Kilo reads only the root file, from the base branch."
+harness_version = "docs as of verified_on"
+[trap.scope]
+suffix = "REVIEW.md"
+root_only = true
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "size-over"
+limit_id = "kilo.review_md_chars"
+measure = "file-chars"

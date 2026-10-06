@@ -98,7 +98,7 @@ func TestTrapTableIsWellFormed(t *testing.T) {
 	if len(traps) == 0 {
 		t.Fatal("empty trap table")
 	}
-	vocab := map[string]bool{predExtNotIn: true, predNameSuffixRequired: true, predFrontmatterEnum: true, predFrontmatterMissing: true, predKeyMisspelt: true, predSizeOver: true}
+	vocab := map[string]bool{predExtNotIn: true, predNameSuffixRequired: true, predFrontmatterEnum: true, predFrontmatterMissing: true, predKeyMisspelt: true, predSizeOver: true, predFrontmatterFirst: true, predJSONKeyRequiredIf: true}
 	seen := map[string]bool{}
 	for _, tr := range traps {
 		rowKey := tr.Code + "/" + tr.Harness + "/" + tr.Scope.Dir
@@ -114,7 +114,7 @@ func TestTrapTableIsWellFormed(t *testing.T) {
 			t.Errorf("%s: table name %q differs from registry name %q", tr.Code, tr.Name, rule.Name)
 		}
 		if !strings.HasPrefix(tr.Code, "AR9C") {
-			t.Errorf("%s is outside the traps range AR9C1-AR9C9", tr.Code)
+			t.Errorf("%s is outside the traps range AR9C0-AR9CA", tr.Code)
 		}
 		if !vocab[tr.Predicate.Kind] {
 			t.Errorf("%s: unknown predicate kind %q", tr.Code, tr.Predicate.Kind)

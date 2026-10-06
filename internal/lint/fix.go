@@ -55,6 +55,10 @@ type Fix struct {
 	Confidence  FixConfidence
 	Edits       []Edit
 	Chmods      []Chmod
+	// Outside lets the edits reach a hand-written harness file outside the
+	// authored source root (harness trap fixes). A generated output is still
+	// refused.
+	Outside bool
 }
 
 // addFix records a finding like add and attaches fix to it when it was recorded
@@ -249,7 +253,7 @@ func planFixes(findings []Finding, o FixOptions, res *FixResult) fixPlan {
 
 func refuseFix(fix *Fix, o FixOptions) string {
 	for _, e := range fix.Edits {
-		if o.EditRoot != "" && !underDir(gitutil.Resolve(e.File), o.EditRoot) {
+		if o.EditRoot != "" && !fix.Outside && !underDir(gitutil.Resolve(e.File), o.EditRoot) {
 			return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
 		}
 		if o.Refuse != nil {
