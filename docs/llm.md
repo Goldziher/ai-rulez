@@ -67,10 +67,10 @@ A gateway on a private network that terminates TLS in a sidecar or service mesh 
 base_url         = "http://gateway.internal:8080/v1"
 api_key_env      = "GATEWAY_KEY"
 allow_plain_http = true
-plain_http_hosts = ["gateway.internal:8080"]   # required; host or host:port, matched against base_url
+plain_http_hosts = ["gateway.internal:8080"]   # required; matched exactly against base_url's host as written
 ```
 
-or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway.internal:8080`. A key is sent only to a host on the list, and redirects to another host stay refused. `llm doctor` prints a warning while the opt-in is in use (the same warning is in `ai-rulez doctor`). The trade-off: the key and every prompt cross that network segment unencrypted, so anyone on the path can read or replay them. Prefer `https`, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then `base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
+or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway.internal:8080`. A key is sent only to a host on the list. The match is exact and case-insensitive on `host` or `host:port` as it appears in `base_url`: an entry `gateway.internal` does not cover `http://gateway.internal:8080`, and `gateway.internal:8080` does not cover another port. Redirects to another host stay refused. `llm doctor` prints a warning while the opt-in is in use (the same warning is in `ai-rulez doctor`). The trade-off: the key and every prompt cross that network segment unencrypted, so anyone on the path can read or replay them. Prefer `https`, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then `base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
 
 ## Commands
 
