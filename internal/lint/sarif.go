@@ -192,13 +192,16 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 			if len(res.Locations) > 0 {
 				loc := res.Locations[0].PhysicalLocation
 				f.File = sarifLocationPath(loc.ArtifactLocation.URI, loc.ArtifactLocation.URIBaseID, run.OriginalURIBaseIDs, 0)
-				f.Line = loc.Region.StartLine
+				f.Line = min(max(loc.Region.StartLine, 0), maxScannerLine)
 			}
 			found = append(found, f)
 		}
 	}
 	return found, nil
 }
+
+// maxScannerLine bounds the line a scanner reports; a hostile value is clamped.
+const maxScannerLine = 10_000_000
 
 // ingestRuleOf finds the tool.driver.rules[] entry of a result: by ruleIndex, else by id.
 func ingestRuleOf(run sarifRun, res sarifResult) *ingestRule {
