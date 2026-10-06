@@ -5,6 +5,7 @@ import (
 	"io"
 	"maps"
 	"net/url"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -74,7 +75,11 @@ func settingValue(s *Settings, host, key string) string {
 		if len(s.HeadersEnv) == 0 {
 			return "(none)"
 		}
-		return strings.Join(s.HeadersEnv, ",")
+		names := make([]string, len(s.HeadersEnv))
+		for i, name := range s.HeadersEnv {
+			names[i] = displayHeaderName(name)
+		}
+		return strings.Join(names, ",")
 	case "service_name":
 		return s.ServiceName
 	case "resource":
@@ -195,8 +200,12 @@ func (r *DoctorReport) Render(out io.Writer) {
 		w.printf("  - export off: %s\n", blocker)
 	}
 	w.printf("\nsettings (value, source)\n")
+	width := 28
 	for _, s := range r.Settings {
-		w.printf("  %-16s %-28s %s\n", s.Key, s.Value, s.Source)
+		width = max(width, len(s.Value))
+	}
+	for _, s := range r.Settings {
+		w.printf("  %-16s %-*s %s\n", s.Key, width, s.Value, s.Source)
 	}
 	if len(r.IgnoredRepoKeys) > 0 {
 		sort.Strings(r.IgnoredRepoKeys)
@@ -224,4 +233,19 @@ func (r *DoctorReport) Render(out io.Writer) {
 		w.printf("last error: %s\n", b.LastError)
 	}
 	w.printf("totals: sent %d, dropped %d, rejected %d\n", b.Sent, b.Dropped, b.Rejected)
+}
+
+// hiddenHeaderName stands in for a headers_env entry that is not a variable name:
+// it may be a credential pasted by mistake, so it is never printed.
+const hiddenHeaderName = "(invalid, hidden)"
+
+var headerEnvName = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+// displayHeaderName returns name when it is a plausible environment variable
+// name and the placeholder otherwise.
+func displayHeaderName(name string) string {
+	if headerEnvName.MatchString(name) {
+		return name
+	}
+	return hiddenHeaderName
 }
