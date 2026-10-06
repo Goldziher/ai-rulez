@@ -88,31 +88,54 @@ func readRulesyncConfig(r *reader) (*rulesyncConfig, error) {
 }
 
 // rulesyncRoots returns the input roots, in order: `inputRoots`, else the
-// parent-style `inputRoot`, else .rulesync. A root that is absolute or leaves
-// the project is refused (and reported when p is set).
+// parent-style `inputRoot`, else .rulesync. A root that is absolute, leaves the
+// project or is the project itself, and a value of the wrong type, is refused
+// (and reported when p is set). A root named twice is read once.
 func rulesyncRoots(cfg *rulesyncConfig, p *Plan) []string {
-	var roots []string
-	if cfg != nil {
-		var list []string
-		if raw, ok := cfg.raw["inputRoots"]; ok {
-			_ = json.Unmarshal(raw, &list)
+	report := func(field, reason string) {
+		if p != nil {
+			p.add(newFinding(StatusUnsupported, rulesyncConfigFile, field, "", reason))
 		}
-		if len(list) == 0 {
-			var one string
-			if raw, ok := cfg.raw["inputRoot"]; ok && json.Unmarshal(raw, &one) == nil && one != "" {
-				list = []string{path.Join(one, rulesyncDir)}
+	}
+	var roots []string
+	seen := map[string]bool{}
+	add := func(field, entry string) {
+		clean := path.Clean(strings.ReplaceAll(entry, "\\", "/"))
+		switch {
+		case !fs.ValidPath(clean) || strings.HasPrefix(entry, "/"):
+			report(field, fmt.Sprintf("input root %q is outside the source directory and was not read", entry))
+		case clean == ".":
+			report(field, fmt.Sprintf("input root %q is the project itself and was not read", entry))
+		case !seen[clean]:
+			seen[clean] = true
+			roots = append(roots, clean)
+		}
+	}
+	if cfg != nil {
+		var list []json.RawMessage
+		if raw, ok := cfg.raw["inputRoots"]; ok {
+			if err := json.Unmarshal(raw, &list); err != nil {
+				report("inputRoots", "inputRoots must be a list of strings and was ignored")
 			}
 		}
-		for _, entry := range list {
-			clean := path.Clean(strings.ReplaceAll(entry, "\\", "/"))
-			if !fs.ValidPath(clean) || strings.HasPrefix(entry, "/") {
-				if p != nil {
-					p.add(newFinding(StatusUnsupported, rulesyncConfigFile, "inputRoots", "",
-						fmt.Sprintf("input root %q is outside the source directory and was not read", entry)))
-				}
+		for _, raw := range list {
+			var entry string
+			if json.Unmarshal(raw, &entry) != nil {
+				report("inputRoots", "an input root that is not a string was ignored")
 				continue
 			}
-			roots = append(roots, clean)
+			add("inputRoots", entry)
+		}
+		if len(list) == 0 {
+			if raw, ok := cfg.raw["inputRoot"]; ok {
+				var one string
+				switch {
+				case json.Unmarshal(raw, &one) != nil:
+					report("inputRoot", "inputRoot must be a string and was ignored")
+				case one != "":
+					add("inputRoot", path.Join(one, rulesyncDir))
+				}
+			}
 		}
 	}
 	if len(roots) == 0 {
