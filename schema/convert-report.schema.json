@@ -79,9 +79,11 @@
             "properties": {
               "code": { "type": "string" },
               "severity": { "type": "string" },
-              "file": { "type": "string" },
-              "line": { "type": "integer" },
-              "message": { "type": "string" }
+              "file": { "type": "string", "description": "Source file the text came from; a generated file (config.toml) keeps its planned path." },
+              "line": { "type": "integer", "description": "Line in the source file." },
+              "message": { "type": "string" },
+              "planned": { "type": "string", "description": "Path:line in the planned, unwritten .ai-rulez tree." },
+              "allowed": { "type": "boolean", "description": "The finding was let through by --allow-findings." }
             }
           }
         }
