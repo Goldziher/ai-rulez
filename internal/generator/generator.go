@@ -156,9 +156,6 @@ func NewGenerator(cfg *config.Config) *Generator {
 	if cfg != nil && cfg.Registry == nil {
 		cfg.Registry = registry.Default()
 	}
-	if cfg != nil && cfg.Registry == nil {
-		cfg.Registry = registry.Default()
-	}
 	return &Generator{
 		config: cfg,
 	}
