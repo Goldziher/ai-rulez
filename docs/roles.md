@@ -269,7 +269,8 @@ network, and an integration never needs to parse config files.
    (project level). Exit code 0 means the files were written.
 5. **Show the whole catalog.** `ai-rulez catalog --format json` lists every item with its owner, version, size,
    sha256 digest, the roles that keep it, a summary of each role and the lock status. Its schema is
-   [`schema/catalog.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.schema.json).
+   [`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json)
+   (`--schema-version 2` adds load cost, lint and excerpts; see [Catalog](catalog.md)).
 6. **Audit.** [`ai-rulez lock --diff --format json`](lockfile.md) reports what changed between the committed lock
    and the working tree ([`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json)).
 
