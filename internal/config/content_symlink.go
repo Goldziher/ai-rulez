@@ -1,16 +1,17 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // ContentProblem is a project content path the loader refused to read.
@@ -31,6 +32,9 @@ var contentWarnWriter io.Writer = os.Stderr
 // symlink is followed only when its fully resolved target is inside root;
 // every refusal is recorded in problems and warned about.
 type contentScanner struct {
+	// v reads the tree being scanned.
+	v workspace.View
+	// root is non-empty for the project's own content: the root of v's workspace.
 	root     string
 	problems []ContentProblem
 	// git answers which files a work tree ignores (bundle filtering); the zero
@@ -38,43 +42,18 @@ type contentScanner struct {
 	git gitutil.Git
 }
 
-// newProjectScanner returns a scanner for the project's own content. root is
-// the git top-level containing baseDir, or baseDir itself when there is none.
-func newProjectScanner(baseDir string) *contentScanner {
-	root := baseDir
-	if top := gitTopLevel(baseDir); top != "" {
-		root = top
-	}
-	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		root = resolved
-	}
-	return &contentScanner{root: root}
+// newProjectScanner returns a scanner for the project's own content, read
+// through v. A symlink may point anywhere inside v's workspace, which is rooted at
+// the repository top-level containing the project (see workspace.Around), or at
+// the project itself when there is no repository.
+func newProjectScanner(v workspace.View) *contentScanner {
+	return &contentScanner{v: v, root: v.Root()}
 }
 
-// gitTopLevel walks up from dir looking for a .git entry.
-func gitTopLevel(dir string) string {
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return ""
-	}
-	for cur := abs; ; {
-		if _, err := os.Lstat(filepath.Join(cur, gitDirName)); err == nil {
-			return cur
-		}
-		parent := filepath.Dir(cur)
-		if parent == cur {
-			return ""
-		}
-		cur = parent
-	}
-}
-
-func within(root, target string) bool {
-	rel, err := filepath.Rel(root, target)
-	if err != nil {
-		return false
-	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel))
+// newIncludeScanner returns a scanner for included, installed or bundled
+// content, which never follows a symlink.
+func newIncludeScanner(v workspace.View) *contentScanner {
+	return &contentScanner{v: v}
 }
 
 func (s *contentScanner) refuse(path, reason string) {
@@ -89,7 +68,7 @@ func (s *contentScanner) refuse(path, reason string) {
 // admit reports the FileInfo of path (the target's, for an admitted symlink).
 // A missing path is not admitted and not reported.
 func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
-	info, err := os.Lstat(path)
+	info, err := s.v.Lstat(path)
 	if err != nil {
 		return nil, false
 	}
@@ -100,16 +79,17 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 		s.refuse(path, "symlinks are not followed")
 		return nil, false
 	}
-	target, err := filepath.EvalSymlinks(path)
+	target, err := s.v.EvalSymlinks(path)
+	var outside *workspace.OutsideError
+	if errors.As(err, &outside) {
+		s.refuse(path, fmt.Sprintf("target %s is outside the project root %s", outside.Target, s.root))
+		return nil, false
+	}
 	if err != nil {
 		s.refuse(path, "symlink cannot be resolved")
 		return nil, false
 	}
-	if !within(s.root, target) {
-		s.refuse(path, fmt.Sprintf("target %s is outside the project root %s", target, s.root))
-		return nil, false
-	}
-	tinfo, err := os.Stat(target)
+	tinfo, err := s.v.Stat(target)
 	if err != nil {
 		s.refuse(path, "symlink target cannot be read")
 		return nil, false
@@ -120,7 +100,7 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 // admitTreeRoot clears a content tree root (.ai-rulez/ itself or its local/
 // directory). A missing root is admitted: scanning it yields nothing.
 func (s *contentScanner) admitTreeRoot(dir string) bool {
-	if _, err := os.Lstat(dir); err != nil {
+	if _, err := s.v.Lstat(dir); err != nil {
 		return true
 	}
 	_, ok := s.admit(dir)
@@ -147,7 +127,7 @@ func (s *contentScanner) dirEntries(dir string) (entries []os.DirEntry, ok bool,
 	if !admitted || !info.IsDir() {
 		return nil, false, nil
 	}
-	entries, err = os.ReadDir(dir)
+	entries, err = s.v.ReadDir(dir)
 	if err != nil {
 		return nil, false, oops.With("path", dir).Wrapf(err, "read directory")
 	}
@@ -163,7 +143,7 @@ func (s *contentScanner) loadFile(path string) (ContentFile, error) {
 	if !info.Mode().IsRegular() {
 		return ContentFile{}, oops.With("path", path).Errorf("content file %s is not a regular file", path)
 	}
-	return readContentFile(path)
+	return readContentFile(s.v, path)
 }
 
 // validateContentProblems turns symlink refusals into a validation error.

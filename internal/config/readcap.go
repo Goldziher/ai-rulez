@@ -2,9 +2,10 @@ package config
 
 import (
 	"io"
-	"os"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // maxContentFileBytes caps one file read from repository content (a config
@@ -14,8 +15,8 @@ import (
 const maxContentFileBytes = 8 << 20
 
 // readCapped reads path in full, failing when it is larger than maxContentFileBytes.
-func readCapped(path string) ([]byte, error) {
-	f, err := os.Open(path) //nolint:gosec // callers pass content paths already checked by the symlink policy
+func readCapped(v workspace.View, path string) ([]byte, error) {
+	f, err := v.Open(path) //nolint:gosec // callers pass content paths already checked by the symlink policy
 	if err != nil {
 		return nil, err //nolint:wrapcheck // callers test os.ErrNotExist and add context
 	}

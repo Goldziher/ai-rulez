@@ -241,7 +241,7 @@ func TestLoadSkillResources(t *testing.T) {
 
 		// The dropped directories must be named, or the data loss is silent —
 		// which is the whole of issue #183.
-		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+		warnings, err := newIncludeScanner(osView(dir)).unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
 		require.NoError(t, err)
 		require.Len(t, warnings, 2)
 		assert.Equal(t, "hooks", warnings[0].Subdirectory)
@@ -260,7 +260,7 @@ func TestLoadSkillResources(t *testing.T) {
 		}
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("skill"), 0o644))
 
-		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+		warnings, err := newIncludeScanner(osView(dir)).unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
 		require.NoError(t, err)
 		assert.Empty(t, warnings)
 	})
@@ -278,7 +278,7 @@ func TestLoadResourcesCommandKind(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "procedures"), 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "COMMAND.md"), []byte("command"), 0o644))
 
-		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindCommand)
+		warnings, err := newIncludeScanner(osView(dir)).unrecognizedSubdirectoryWarnings(dir, ItemKindCommand)
 		require.NoError(t, err)
 		require.Len(t, warnings, 1)
 		assert.Equal(t,
@@ -353,7 +353,7 @@ func TestUnrecognizedSubdirectoryWarnings_EvalsIsRecognized(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "evals"), 0o750))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "other"), 0o750))
 
-	warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+	warnings, err := newIncludeScanner(osView(dir)).unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
 	require.NoError(t, err)
 	require.Len(t, warnings, 1)
 	assert.Equal(t, "other", warnings[0].Subdirectory, "evals/ is a known directory and must not warn")

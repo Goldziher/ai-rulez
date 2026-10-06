@@ -2,13 +2,16 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // LocalSource represents a local file system source
@@ -17,6 +20,9 @@ type LocalSource struct {
 	path    string   // Absolute or relative path
 	baseDir string   // Base directory for resolving relative paths
 	include []string // Content types to include
+	// v reads the project the include belongs to; the zero View reads the real
+	// directory the include names.
+	v workspace.View
 }
 
 // NewLocalSource creates a new local source
@@ -27,6 +33,13 @@ func NewLocalSource(name, path, baseDir string, include []string) *LocalSource {
 		baseDir: baseDir,
 		include: include,
 	}
+}
+
+// In reads the include through v (normally the loaded project's workspace)
+// instead of the real file system.
+func (s *LocalSource) In(v workspace.View) *LocalSource {
+	s.v = v
+	return s
 }
 
 // GetType returns the source type
@@ -49,13 +62,15 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 
 	logger.Debug("Loading local source", "name", s.name, "path", resolvedPath)
 
+	v := s.v.For(resolvedPath)
+
 	// Validate path exists and is readable
-	if err := s.validatePath(resolvedPath); err != nil {
+	if err := s.validatePath(v, resolvedPath); err != nil {
 		return nil, oops.Wrapf(err, "invalid path")
 	}
 
 	// Check if this is an .ai-rulez directory or contains one
-	aiRulezPath := s.findAIRulezDir(resolvedPath)
+	aiRulezPath := s.findAIRulezDir(v, resolvedPath)
 
 	// Without an .ai-rulez directory the path is a bare structure (rules/,
 	// agents/, ... directly in it) and is scanned in place.
@@ -67,11 +82,11 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 
 	// Scan the directory structure using the config loader's scanner which keeps
 	// root content and domain content separate (avoids duplication in generated output)
-	contentTree, err := config.ScanContentTreeContext(ctx, scanDir)
+	contentTree, err := config.ScanContentTreeIn(ctx, v, scanDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")
 	}
-	if contentTree.ImportedVerifiers, err = config.ScanVerifierFiles(scanDir); err != nil {
+	if contentTree.ImportedVerifiers, err = config.ScanVerifierFilesIn(v, scanDir); err != nil {
 		return nil, oops.Wrapf(err, "failed to scan verifiers")
 	}
 
@@ -98,9 +113,9 @@ func (s *LocalSource) resolvePath() (string, error) {
 }
 
 // validatePath checks if the path exists and is accessible
-func (s *LocalSource) validatePath(path string) error {
+func (s *LocalSource) validatePath(v workspace.View, path string) error {
 	// Check if path exists
-	info, err := os.Stat(path)
+	info, err := v.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return oops.Errorf("path does not exist: %s", path)
@@ -118,15 +133,15 @@ func (s *LocalSource) validatePath(path string) error {
 
 // findAIRulezDir finds the .ai-rulez directory in the given path
 // Returns the path to the .ai-rulez directory, or empty string if not found
-func (s *LocalSource) findAIRulezDir(path string) string {
+func (s *LocalSource) findAIRulezDir(v workspace.View, path string) string {
 	// Check if path itself is a .ai-rulez directory
-	if filepath.Base(path) == aiRulezDir && isRealDir(path) {
+	if filepath.Base(path) == aiRulezDir && isRealDirIn(v, path) {
 		return path
 	}
 
 	// Check if path contains a .ai-rulez subdirectory
 	aiRulezPath := filepath.Join(path, aiRulezDir)
-	if isRealDir(aiRulezPath) {
+	if isRealDirIn(v, aiRulezPath) {
 		return aiRulezPath
 	}
 
@@ -189,8 +204,9 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(baseDir, abs)
 	}
-	abs = realPath(abs)
-	project := realPath(baseDir)
+	v := viewFor(cfg, baseDir)
+	abs = realPath(v, abs)
+	project := realPath(v, baseDir)
 	rel, err := filepath.Rel(project, abs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
 		return oops.With("name", name).With("path", abs).With("project", project).
@@ -200,17 +216,32 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	return nil
 }
 
-// realPath returns p absolute with symlinks resolved; a path that does not
-// exist (yet) is returned cleaned, with its longest existing prefix resolved.
-func realPath(p string) string {
-	p = filepath.Clean(p)
-	if abs, err := filepath.Abs(p); err == nil {
-		p = abs
+// viewFor is the view the project of cfg is read through; without a config it is
+// the real directory dir.
+func viewFor(cfg *config.Config, dir string) workspace.View {
+	if cfg != nil {
+		if v := cfg.View(); v.W != nil {
+			return v
+		}
 	}
+	return workspace.OSView(dir)
+}
+
+// realPath returns p with the symlinks that can be resolved inside v's workspace
+// resolved: a path that does not exist (yet) keeps its longest existing prefix
+// resolved. A link that leaves the workspace comes back as its (outside) target,
+// so the caller's containment check refuses it.
+func realPath(v workspace.View, p string) string {
+	p = filepath.Clean(p)
 	rest := ""
 	for cur := p; ; {
-		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+		resolved, err := v.EvalSymlinks(cur)
+		if err == nil {
 			return filepath.Join(resolved, rest)
+		}
+		var outside *workspace.OutsideError
+		if errors.As(err, &outside) {
+			return filepath.Join(outside.Target, rest)
 		}
 		parent := filepath.Dir(cur)
 		if parent == cur {

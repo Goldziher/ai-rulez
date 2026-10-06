@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -87,8 +86,7 @@ func (c *Config) LockEnforced() bool {
 	if c.ConfigDir == "" {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(c.ConfigDir, lockfile.FileName))
-	return err == nil
+	return c.View().Exists(filepath.Join(c.ConfigDir, lockfile.FileName))
 }
 
 // LockEnforceOptedOut reports an explicit `enforce = false`. `lock` records the

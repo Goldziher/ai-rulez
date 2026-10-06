@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // Config represents the configuration format
@@ -166,6 +167,9 @@ type Config struct {
 	// loaded with (WithHost); the zero value is the real process. Generation,
 	// includes and lint read them from here instead of the process.
 	Host ambient.Host `yaml:"-" json:"-" toml:"-"`
+	// Workspace is the project tree this config was loaded from (WithWorkspace,
+	// or the repository containing BaseDir); nil on a Config built by hand.
+	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`
 
 	// UserScope is set while rendering for `generate --user`: outputs are mapped
 	// into the person's home config directories, so renderers leave out keys that

@@ -139,8 +139,9 @@ func TestLoadConfig_NoOverlayIsUntouched(t *testing.T) {
 }
 
 func TestFindLocalConfigFile_None(t *testing.T) {
+	td := t.TempDir()
 	// Act
-	path, err := findLocalConfigFile(t.TempDir())
+	path, err := findLocalConfigFile(osView(td), td)
 
 	// Assert
 	require.NoError(t, err)

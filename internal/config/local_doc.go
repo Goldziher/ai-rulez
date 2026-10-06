@@ -228,12 +228,12 @@ func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error
 }
 
 func (d *LocalDoc) load() error {
-	existing, err := findLocalConfigFile(d.configDir)
+	existing, err := findLocalConfigFile(osView(d.configDir), d.configDir)
 	if err != nil {
 		return err
 	}
 	if existing != "" {
-		doc, err := readConfigDoc(existing)
+		doc, err := readConfigDoc(osView(d.configDir), existing)
 		if err != nil {
 			return err
 		}
@@ -413,7 +413,7 @@ func (d *LocalDoc) sharedHasPathOnlyEntry(list, key string) bool {
 	if d.mainFile == "" {
 		return false
 	}
-	doc, err := readConfigDoc(filepath.Join(d.configDir, d.mainFile))
+	doc, err := readConfigDoc(osView(d.configDir), filepath.Join(d.configDir, d.mainFile))
 	if err != nil {
 		return false
 	}
@@ -630,7 +630,7 @@ func (d *LocalDoc) validateMerged(ctx context.Context) (*Config, error) {
 // checkNewServersComplete rejects an MCP server that exists only in the overlay
 // and has neither a command (stdio) nor a url (http/sse).
 func (d *LocalDoc) checkNewServersComplete(cfg *Config) error {
-	shared, err := readConfigDoc(filepath.Join(d.configDir, d.mainFile))
+	shared, err := readConfigDoc(osView(d.configDir), filepath.Join(d.configDir, d.mainFile))
 	if err != nil {
 		return err
 	}
@@ -782,7 +782,7 @@ func describeLocalOverlay(d *LocalDoc) (*LocalOverlay, []OverlayChange, error) {
 	}
 	shared := map[string]any{}
 	if d.mainFile != "" {
-		doc, err := readConfigDoc(filepath.Join(d.configDir, d.mainFile))
+		doc, err := readConfigDoc(osView(d.configDir), filepath.Join(d.configDir, d.mainFile))
 		if err != nil {
 			return nil, nil, err
 		}

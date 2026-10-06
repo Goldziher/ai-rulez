@@ -894,7 +894,7 @@ source = "https://github.com/example/old"
 		tomlPath := filepath.Join(aiRulezDir, "config.toml")
 		require.NoError(t, os.WriteFile(tomlPath, []byte(original), 0o644))
 
-		cfg, err := loadConfigTOML(tomlPath)
+		cfg, err := loadConfigTOML(osView(filepath.Dir(tomlPath)), tomlPath)
 		require.NoError(t, err)
 
 		// Remove installed skills

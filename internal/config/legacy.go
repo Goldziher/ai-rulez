@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // ErrLegacyConfig reports a V2 or V3 configuration file. ai-rulez v5 reads only
@@ -32,10 +33,10 @@ var legacyFlatConfigNames = []string{
 	"ai_rulez.yaml", "ai_rulez.yml", ".ai_rulez.yaml", ".ai_rulez.yml",
 }
 
-func firstExistingFile(dir string, names []string) string {
+func firstExistingFile(v workspace.View, dir string, names []string) string {
 	for _, name := range names {
 		path := filepath.Join(dir, name)
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		if v.IsRegularFile(path) {
 			return path
 		}
 	}
@@ -44,20 +45,21 @@ func firstExistingFile(dir string, names []string) string {
 
 // legacyConfigIn returns the V3 directory config (or overlay) inside a config
 // directory, or "".
-func legacyConfigIn(configDir string) string {
-	if path := firstExistingFile(configDir, legacyDirConfigNames); path != "" {
+func legacyConfigIn(v workspace.View, configDir string) string {
+	if path := firstExistingFile(v, configDir, legacyDirConfigNames); path != "" {
 		return path
 	}
-	return firstExistingFile(configDir, legacyLocalNames)
+	return firstExistingFile(v, configDir, legacyLocalNames)
 }
 
 // LegacyConfigIn returns the V2/V3 config file inside configDir (a config
 // directory such as .ai-rulez/) when the directory has no config.toml, else "".
 func LegacyConfigIn(configDir string) string {
-	if hasConfigFile(configDir) {
+	v := osView(configDir)
+	if hasConfigFile(v, configDir) {
 		return ""
 	}
-	return legacyConfigIn(configDir)
+	return legacyConfigIn(v, configDir)
 }
 
 // FindLegacyConfig returns the V2/V3 config file that baseDir holds, or "": a
@@ -69,16 +71,21 @@ func FindLegacyConfig(baseDir string) string {
 	if err != nil {
 		return ""
 	}
+	return findLegacyConfig(osView(absDir), absDir)
+}
+
+// findLegacyConfig is FindLegacyConfig reading through v; baseDir is absolute.
+func findLegacyConfig(v workspace.View, absDir string) string {
 	for _, dirName := range configDirCandidates {
 		configDir := filepath.Join(absDir, filepath.FromSlash(dirName))
-		if hasConfigFile(configDir) {
+		if hasConfigFile(v, configDir) {
 			return ""
 		}
-		if path := firstExistingFile(configDir, legacyDirConfigNames); path != "" {
+		if path := firstExistingFile(v, configDir, legacyDirConfigNames); path != "" {
 			return path
 		}
 	}
-	return firstExistingFile(absDir, legacyFlatConfigNames)
+	return firstExistingFile(v, absDir, legacyFlatConfigNames)
 }
 
 // isLegacyConfigName reports whether base is the name of a V3 config or overlay.
