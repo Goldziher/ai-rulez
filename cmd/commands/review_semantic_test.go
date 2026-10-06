@@ -399,6 +399,22 @@ func TestReviewGateIsEarnedByACalibrationRecord(t *testing.T) {
 		assert.True(t, rep.Gate.Passed)
 	})
 
+	t.Run("an item cut before the judge saw it refuses the gate", func(t *testing.T) {
+		judgedProject(t, "")
+		writeCalibrationFor(t, "model", "pass", map[string]string{"trigger-quality": "pass"})
+		body := "---\nname: release\ndescription: Use when asked to cut a release of the service; not for deployments.\n---\n" + strings.Repeat("Run the release script.\n", 3000)
+		require.NoError(t, os.WriteFile(filepath.Join(".ai-rulez", "skills", "release", "SKILL.md"), []byte(body), 0o600))
+		reviewFlags.gate = true
+		useFakeModel(t, &fakeModel{})
+
+		rep, exit, err := runJudged(t)
+
+		require.NoError(t, err)
+		assert.Equal(t, exitReviewRefused, exit)
+		require.NotNil(t, rep.Gate)
+		assert.Contains(t, rep.Gate.Refused, "skill:release")
+	})
+
 	t.Run("a record for another model is stale", func(t *testing.T) {
 		judgedProject(t, "")
 		writeCalibrationFor(t, "another-model", "pass", map[string]string{"trigger-quality": "pass"})
