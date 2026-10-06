@@ -306,3 +306,71 @@ func TestInterruptContext_SecondSignalKills(t *testing.T) {
 		t.Fatal("the second interrupt did not stop the process")
 	}
 }
+
+func TestGenerateOnce_AnnouncesNewCommandsOnlyWhenTheyChange(t *testing.T) {
+	// Arrange: watch mode regenerates through generateOnce.
+	resetWatchFlags(t)
+	assumeYes = false
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(envAckCommands, "")
+	root := t.TempDir()
+	body := validRootConfig + "\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"./scripts/guard.sh\"\n"
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), body)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "r.md"), "# R\n\nbody\n")
+	chdir(t, root)
+
+	// Act
+	first := captureStderr(t, func() {
+		_, err := generateOnce(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	second := captureStderr(t, func() {
+		_, err := generateOnce(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), strings.Replace(body, "guard.sh", "other.sh", 1))
+	third := captureStderr(t, func() {
+		_, err := generateOnce(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	// Assert
+	if !strings.Contains(first, "./scripts/guard.sh") {
+		t.Errorf("the first run must list the hook, got %q", first)
+	}
+	if strings.Contains(second, "guard.sh") {
+		t.Errorf("an unchanged run must stay silent, got %q", second)
+	}
+	if !strings.Contains(third, "./scripts/other.sh") || strings.Contains(third, "guard.sh") {
+		t.Errorf("only the changed hook may be listed, got %q", third)
+	}
+}
+
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+	fn()
+	_ = w.Close()
+	var sb strings.Builder
+	buf := make([]byte, 4096)
+	for {
+		n, err := r.Read(buf)
+		sb.Write(buf[:n])
+		if err != nil {
+			break
+		}
+	}
+	return sb.String()
+}

@@ -150,6 +150,12 @@ func generateOnce(ctx context.Context, args []string) (*config.Config, error) {
 	if err := applyRole(gen); err != nil {
 		return cfg, err
 	}
+	// Every regeneration runs the same preflight as a one-shot generate: a pulled
+	// config change that adds a hook or MCP command is announced, an unchanged one
+	// stays silent, and a role's skillOverrides are reconciled before the write.
+	if err := generatePreflight(cfg, gen); err != nil {
+		return cfg, err
+	}
 	return cfg, gen.Generate(profile) //nolint:wrapcheck // already contextual
 }
 

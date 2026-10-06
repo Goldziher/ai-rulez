@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/preflight"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 	"github.com/Goldziher/ai-rulez/v5/schema"
@@ -543,46 +544,64 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 
 func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, dryRun bool) map[string]interface{} {
 	entry := map[string]interface{}{"directory": dir}
-	result, genErr := generateForDirectory(ctx, request, dir, dryRun)
-	switch {
-	case genErr != nil:
-		entry["error"] = genErr.Error()
-	case result != nil && result.IsError:
-		entry["error"] = result.Content[0]
-	default:
-		entry[keySuccess] = true
+	payload, err := generateDirectory(ctx, request, dir, dryRun)
+	if err != nil {
+		entry["error"] = err.Error()
+		return entry
+	}
+	entry[keySuccess] = true
+	if commands, ok := payload["new_commands"]; ok {
+		entry["new_commands"] = commands
 	}
 	return entry
 }
 
 func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
-	cfg, err := loadProjectConfig(ctx, request, baseDir)
+	payload, err := generateDirectory(ctx, request, baseDir, dryRun)
 	if err != nil {
 		return ToolError(err)
 	}
+	return ToolSuccess(payload)
+}
+
+func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (map[string]interface{}, error) {
+	cfg, err := loadProjectConfig(ctx, request, baseDir)
+	if err != nil {
+		return nil, err
+	}
 	if err := cfg.Validate(); err != nil {
-		return ToolError(err)
+		return nil, err //nolint:wrapcheck // already contextual
 	}
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(ctx)
 	if dryRun {
 		plan, err := gen.DryRun("") //nolint:contextcheck // the context reaches the baseline load through SetContext
 		if err != nil {
-			return ToolError(err)
+			return nil, err //nolint:wrapcheck // already contextual
 		}
-		return ToolSuccess(map[string]interface{}{
+		return map[string]interface{}{
 			keyMessage: "Dry run complete",
 			keyConfig:  cfg.ConfigDir,
 			"plan":     plan,
-		})
+		}, nil
 	}
+	// There is no terminal to warn over MCP: the commands this run makes the
+	// harnesses run go into the tool result and to stderr (stdout is the protocol).
+	newCommands := preflight.NewCommands(cfg, false)
 	if err := gen.Generate(""); err != nil { //nolint:contextcheck // the context reaches the baseline load through SetContext
-		return ToolError(err)
+		return nil, err //nolint:wrapcheck // already contextual
 	}
-	return ToolSuccess(map[string]interface{}{
+	preflight.Remember(cfg)
+	result := map[string]interface{}{
 		keyMessage: "Outputs generated successfully",
 		keyConfig:  cfg.ConfigDir,
-	})
+	}
+	if len(newCommands) > 0 && !preflight.AckedByEnv() {
+		summary := preflight.Summary(cfg, newCommands)
+		fmt.Fprint(os.Stderr, summary)
+		result["new_commands"] = newCommands
+	}
+	return result, nil
 }
 
 // CleanOutputsHandler removes the files produced by generate for the project in
