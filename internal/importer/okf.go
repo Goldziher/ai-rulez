@@ -122,7 +122,11 @@ func planFromBridge(bundleDir, scratch string, res *okfbridge.ImportResult) (*Pl
 		if src == "" {
 			src = bundleDir
 		}
-		p.Raw = append(p.Raw, RawFile{Path: rel, Data: data, Sources: []string{src}})
+		exec := false
+		if info, serr := os.Stat(filepath.Join(scratch, filepath.FromSlash(rel))); serr == nil {
+			exec = info.Mode().Perm()&0o111 != 0
+		}
+		p.Raw = append(p.Raw, RawFile{Path: rel, Data: data, Sources: []string{src}, Exec: exec})
 		p.add(newFinding(StatusMapped, src, "concept", rel, ""))
 	}
 	for _, f := range res.Findings {

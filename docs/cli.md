@@ -959,7 +959,7 @@ Everything fetched is planned like any other input: copied text is scanned in th
 
 #### OKF
 
-`--from okf` is `import okf` through convert: the same bundle mapping (see [OKF](okf.md)), with the lossiness report, the scan before write and `--domain`. A bundle is found at the source root or in `docs/okf`. Findings of the bundle (lossy links, skipped files) become report findings. Shell scripts lose their executable bit, like every file convert writes.
+`--from okf` is `import okf` through convert: the same bundle mapping (see [OKF](okf.md)), with the lossiness report, the scan before write and `--domain`. A bundle is found at the source root or in `docs/okf`. Findings of the bundle (lossy links, skipped files) become report findings. A skill's script keeps its executable bit, here and in the native, rulesync and APM importers.
 
 #### rulesync
 

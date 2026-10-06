@@ -138,7 +138,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return report, oops.Hint("Rerun with --force to replace the existing files, or --domain NAME to import beside them").
 			Wrap(ErrConflicts)
 	}
-	if err := writeFiles(report, p.files, c.intoAbs); err != nil {
+	if err := writeFiles(report, p.files, p.execs, c.intoAbs); err != nil {
 		return report, err
 	}
 	report.Written = true
@@ -211,6 +211,8 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 // prepared is the planned tree: every file, keyed by path below the config directory.
 type prepared struct {
 	files map[string][]byte
+	// execs are the paths of files written with the execute bits.
+	execs map[string]bool
 }
 
 // prepare renders the config and the files, classifies them against the disk and
@@ -266,7 +268,7 @@ func (c *conversion) prepare(ctx context.Context, opts ConvertOptions) (*prepare
 	if err := checkStaged(ctx, report, files, &stage, sc); err != nil {
 		return nil, nil, err
 	}
-	return &prepared{files: files}, report, nil
+	return &prepared{files: files, execs: execFiles(plan, opts.Domain)}, report, nil
 }
 
 // ignoreLocalTree keeps the personal content convert wrote below local/ out of
@@ -498,6 +500,24 @@ func buildFiles(plan *Plan, cfg *config.Config, domain string) (map[string][]byt
 	}
 	files["config.toml"] = data
 	return files, nil
+}
+
+// execFiles lists the planned files that keep an execute bit, keyed like buildFiles.
+func execFiles(plan *Plan, domain string) map[string]bool {
+	out := map[string]bool{}
+	for i := range plan.Items {
+		for _, f := range plan.Items[i].Files() {
+			if f.Exec {
+				out[placed(domain, f.Path)] = true
+			}
+		}
+	}
+	for _, f := range plan.Raw {
+		if f.Exec {
+			out[f.Path] = true
+		}
+	}
+	return out
 }
 
 const (
@@ -800,7 +820,7 @@ func mkdirAllTracked(dir string, perm os.FileMode) ([]string, error) {
 // writeFiles writes the create, overwrite and merge entries. On failure it
 // restores what it changed and removes the directories it created, so a failed
 // run leaves the project as it was; anything it could not undo is reported.
-func writeFiles(report *Report, files map[string][]byte, intoAbs string) error {
+func writeFiles(report *Report, files map[string][]byte, execs map[string]bool, intoAbs string) error {
 	type undo struct {
 		path string
 		old  []byte
@@ -834,6 +854,9 @@ func writeFiles(report *Report, files map[string][]byte, intoAbs string) error {
 		}
 		target := filepath.Join(intoAbs, filepath.FromSlash(f.Path))
 		filePerm, dirPerm := writePerms(f.Path)
+		if execs[f.Path] {
+			filePerm |= (filePerm & 0o444) >> 2 // x wherever r is set: 0644 -> 0755, 0600 -> 0700
+		}
 		created, err := mkdirAllTracked(filepath.Dir(target), dirPerm)
 		dirs = append(dirs, created...)
 		if err == nil {
