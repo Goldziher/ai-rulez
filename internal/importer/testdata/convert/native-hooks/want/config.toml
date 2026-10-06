@@ -7,7 +7,7 @@ presets = ['claude']
 
 [permissions]
 ask = ['Bash(git push:*)']
-deny = ['Bash(curl)', 'Bash(rm -rf:*)', 'Read(./.env)', 'Read(.env)']
+deny = ['Bash(curl:*)', 'Bash(rm -rf:*)', 'Read(./.env)', 'Read(.env)']
 
 # Imported by `ai-rulez convert` and DISABLED: review, then uncomment or rerun convert with --enable-hooks / --enable-permissions.
 # Each hook runs a command on your machine; read every command first.
