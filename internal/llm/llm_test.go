@@ -699,3 +699,48 @@ func TestErrorKinds(t *testing.T) {
 		t.Fatal("transient classification")
 	}
 }
+
+// Gemini's native route behind liter-llm answers a batch embed with one vector
+// whatever the batch size; the backend must still return one vector per input.
+func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testing.T) {
+	// Arrange
+	calls := 0
+	stub := &stubNative{embed: func(b []byte) ([]byte, error) {
+		calls++
+		var in struct {
+			Input []string `json:"input"`
+		}
+		if err := json.Unmarshal(b, &in); err != nil {
+			return nil, err
+		}
+		// Collapses to the first input, like the native Gemini route.
+		return []byte(fmt.Sprintf(`{"data":[{"index":0,"embedding":[%d,0]}],"usage":{"prompt_tokens":2}}`, len(in.Input[0]))), nil
+	}}
+	nativeMu.Lock()
+	prev := nativeFactory
+	nativeFactory = func(NativeConfig) (NativeClient, error) { return stub, nil }
+	nativeMu.Unlock()
+	t.Cleanup(func() { nativeMu.Lock(); nativeFactory = prev; nativeMu.Unlock() })
+	cfg := Config{Backend: BackendLiterLLM, Provider: "gemini", Model: "m", EmbeddingModel: "e", APIKeyEnv: "K", AllowNetwork: true, Cache: ptr(false)}
+	c, err := newLiterLLM(cfg, func(string) string { return "k" })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Act
+	resp, err := c.Embed(context.Background(), EmbedRequest{Input: []string{"a", "bb", "ccc"}})
+
+	// Assert
+	if err != nil {
+		t.Fatalf("embed: %v", err)
+	}
+	if len(resp.Vectors) != 3 || resp.Vectors[0][0] != 1 || resp.Vectors[1][0] != 2 || resp.Vectors[2][0] != 3 {
+		t.Errorf("vectors = %v, want one per input in order", resp.Vectors)
+	}
+	if resp.Usage.PromptTokens != 6 {
+		t.Errorf("usage = %+v, want the per-input usage summed (6)", resp.Usage)
+	}
+	if calls != 4 {
+		t.Errorf("native calls = %d, want 1 batch + 3 singles", calls)
+	}
+}

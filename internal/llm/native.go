@@ -175,7 +175,43 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	if len(out) == 0 {
 		return EmbedResponse{}, errEmptyNative
 	}
-	return decodeEmbed(out, l.pricing, model, len(req.Input))
+	resp, err := decodeEmbed(out, l.pricing, model, len(req.Input))
+	if errors.Is(err, errEmbedCount) && len(req.Input) > 1 {
+		return l.embedEach(ctx, model, req)
+	}
+	return resp, err
+}
+
+// embedEach embeds the inputs one call at a time. Gemini's native route behind
+// liter-llm answers a batch with a single vector, so the batch is retried as
+// singles rather than failing or returning too few vectors.
+func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest) (EmbedResponse, error) {
+	out := EmbedResponse{Model: model, CostKnown: true}
+	for _, in := range req.Input {
+		one := req
+		one.Input = []string{in}
+		body, err := encodeEmbed(model, one)
+		if err != nil {
+			return EmbedResponse{}, newError(KindConfig, "cannot encode request: %v", err)
+		}
+		raw, err := l.native.EmbedJSON(ctx, body)
+		if err != nil {
+			return EmbedResponse{}, classifyNative(err)
+		}
+		if len(raw) == 0 {
+			return EmbedResponse{}, errEmptyNative
+		}
+		r, err := decodeEmbed(raw, l.pricing, model, 1)
+		if err != nil {
+			return EmbedResponse{}, err
+		}
+		out.Vectors = append(out.Vectors, r.Vectors[0])
+		out.Usage.PromptTokens += r.Usage.PromptTokens
+		out.CostUSD += r.CostUSD
+		out.CostKnown = out.CostKnown && r.CostKnown
+		out.Model = r.Model
+	}
+	return out, nil
 }
 
 func (l *literLLM) Close() error {
