@@ -855,6 +855,7 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 		return err
 	}
 	if len(lines) == 0 {
+	lines = append(lines, signingRequiredLines(cfg)...)
 		return nil
 	}
 	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it").

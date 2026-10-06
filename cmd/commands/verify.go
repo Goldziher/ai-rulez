@@ -29,9 +29,22 @@ offline. Use "generate --check" to also catch sources that changed since the las
 generate. With --plugin, generated plugin bundles are checked against their
 provenance hashes.
 
-Exit codes: 0 verified, 1 the check could not run, 2 generated files differ.`,
+With --attestation, verify instead checks the Sigstore bundle that "ai-rulez sign
+--lock" wrote against the lock and the [signing] policy, offline: the signature,
+who signed (identity and issuer, or key), the log proof, freshness and rollback.
+See docs/signing.md.
+
+Exit codes: 0 verified, 1 the check could not run, 2 generated files differ (with
+--attestation: the attestation failed verification).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := rejectAttestationFlags(cmd); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		if verifyAttestation {
+			os.Exit(runVerifyAttestation(args, nil, cmd.OutOrStdout()))
+		}
 		if !verifyPlugin {
 			if verifyIfConfigured || verifyIfGenerated {
 				fmtError(oops.Errorf("--if-configured and --if-generated only apply to --plugin"))
@@ -76,6 +89,17 @@ func init() {
 	VerifyCmd.Flags().BoolVar(&verifyIfConfigured, "if-configured", false, "Skip plugin verification when no plugin authoring configuration is present")
 	VerifyCmd.Flags().BoolVar(&verifyIfGenerated, "if-generated", false, "Skip plugin verification when the plugin bundle has not been generated yet")
 	VerifyCmd.Flags().BoolVarP(&verifyRecursive, "recursive", "r", false, "Verify plugin outputs for configurations recursively")
+	f := VerifyCmd.Flags()
+	f.BoolVar(&verifyAttestation, "attestation", false, "Verify the signed lock (ai-rulez.lock.sigstore.json) offline against the [signing] policy")
+	f.BoolVar(&verifyAttLock, "lock", false, "With --attestation: verify the lock attestation (the default and only subject)")
+	f.StringVar(&verifyAttFile, "attestation-file", "", "With --attestation: the bundle to verify (default: next to the lock)")
+	f.StringVar(&verifyTrustedRoot, "trusted-root", "", "With --attestation: Sigstore trusted root file (default: [signing] trusted_root, else the cache of 'ai-rulez trust update')")
+	f.StringArrayVar(&verifyPublicKeys, "public-key", nil, "With --attestation: also trust this PEM public key for the lock (repeatable)")
+	f.StringVar(&verifyIdentity, "identity", "", "With --attestation: also trust this certificate identity (needs --issuer)")
+	f.StringVar(&verifyIssuer, "issuer", "", "With --attestation: the OIDC issuer of --identity")
+	f.BoolVar(&verifyNoState, "no-state", false, "With --attestation: do not read or update the per-user rollback state")
+	addFormatFlag(f, &verifyFormat, "", formatText, formatText, formatJSON)
+	addJSONFlagAlias(f)
 	VerifyCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	VerifyCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
