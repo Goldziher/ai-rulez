@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -73,7 +74,10 @@ type CatalogSkill struct {
 	ScanFindings int
 	// Unscanned lists files that are not served because the security scan cannot
 	// read them (binary or over 512 KiB) and the skill's trust level is error.
-	Unscanned   []string
+	Unscanned []string
+	// scanLevel and unscannable record the admission scan (see ScanReport).
+	scanLevel   string
+	unscannable []lint.Finding
 	Frontmatter map[string]any
 	Files       []CatalogFile
 	// Digest identifies the skill as a whole: sha256 over its sorted file URIs
@@ -90,6 +94,7 @@ type Catalog struct {
 	byURI   map[string]*CatalogSkill
 	byFile  map[string]*CatalogFile
 	refused map[string]Refusal
+	reports []ScanReport
 }
 
 // BuildCatalog converts rendered skills into a catalog, applying the filter.

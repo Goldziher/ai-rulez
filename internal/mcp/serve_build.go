@@ -703,3 +703,26 @@ func (st *ServeSetup) ServedRefusals(ctx context.Context, extras ...ServeSetup) 
 	}
 	return out, nil
 }
+
+// ServedScanReports lists, offline, the served files the security scan cannot
+// read (AR989) in the views of the setup: for authored and source skills alike,
+// refused or not. It is what `validate --strict` reports.
+func (st *ServeSetup) ServedScanReports(ctx context.Context, extras ...ServeSetup) ([]ScanReport, error) {
+	off := *st
+	off.Offline = true
+	views, err := off.buildAll(config.WithOfflineIncludes(ctx), buildOptions{admit: true, ignoreLock: true}, extras)
+	if err != nil {
+		return nil, err
+	}
+	var out []ScanReport
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, r := range v.catalog.ScanReports() {
+			if key := r.Skill + "\x00" + r.Level + "\x00" + fmt.Sprint(r.Findings); !seen[key] {
+				seen[key] = true
+				out = append(out, r)
+			}
+		}
+	}
+	return out, nil
+}
