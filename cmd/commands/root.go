@@ -78,7 +78,6 @@ func init() {
 	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(ConvertCmd)
 	RootCmd.AddCommand(MCPCmd)
-	RootCmd.AddCommand(MigrateCmd)
 	RootCmd.AddCommand(DomainCmd)
 	RootCmd.AddCommand(AddCmd)
 	RootCmd.AddCommand(RemoveCmd)
