@@ -172,6 +172,7 @@ type runner struct {
 	verifiers      []VerifierFinding
 	lockDrift      []LockDrift
 	approvals      []ApprovalFinding
+	sbom           []SBOMFinding
 	okfDir         string
 	okfFindings    []okf.Finding
 	// deps records which file refers to which (both absolute): links, name
