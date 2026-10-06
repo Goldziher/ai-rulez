@@ -72,3 +72,23 @@ base_url = "http://127.0.0.1:18765/v1"
 		t.Fatalf("repo-set network must be ignored with a warning (warned=%v offline=%v)", warned, offline)
 	}
 }
+
+func TestCheckLLMReportsThePlainHTTPOptInAsAWarning(t *testing.T) {
+	isolateLLM(t)
+	t.Setenv("DOCTOR_LLM_KEY", "k")
+	t.Setenv("AI_RULEZ_LLM_ALLOW_NETWORK", "true")
+	t.Setenv("AI_RULEZ_LLM_BASE_URL", "http://gateway.internal/v1")
+	t.Setenv("AI_RULEZ_LLM_API_KEY_ENV", "DOCTOR_LLM_KEY")
+	t.Setenv("AI_RULEZ_LLM_ALLOW_PLAIN_HTTP", "1")
+	t.Setenv("AI_RULEZ_LLM_PLAIN_HTTP_HOSTS", "gateway.internal")
+	dir := project(t, map[string]string{".ai-rulez/config.toml": baseConfig + "\n[llm]\nmodel = \"m\"\n"})
+
+	got := byCheck(run(t, dir), CheckLLM)
+
+	for _, f := range got {
+		if f.Severity == SeverityWarning && strings.Contains(f.Message, "plain-http opt-in") {
+			return
+		}
+	}
+	t.Fatalf("want a plain-http opt-in warning, got %+v", got)
+}
