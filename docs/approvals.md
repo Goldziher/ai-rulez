@@ -52,7 +52,7 @@ accepted_findings = ["AR005"]
   has no identity notion. Use a handle if you do not want an email in a committed file. It is stored and compared
   lower-cased and trimmed, so `Alice@Example.org` and `alice@example.org` are one reviewer (for `min_approvers`,
   `approvers` and `--revoke --reviewer`).
-- **Expiry.** `--expires YYYY-MM-DD` (not already past), else today plus `[governance] max_age`, else none. An
+- **Expiry.** `--expires YYYY-MM-DD` (not already past, and not later than `approved_at` plus `max_age`), else today plus `[governance] max_age`, else none. An
   approval holds through its expiry date. Expiry is judged by the wall clock: `SOURCE_DATE_EPOCH` never revives an
   expired approval.
 - **Re-approving** replaces that reviewer's earlier record of the item; other reviewers' records stay until they approve
@@ -122,7 +122,7 @@ enforce          = true
 | `[governance.teams]` | Maps `"@org/team"` to the reviewers it stands for. Used by `approvers` and CODEOWNERS entries |
 | `min_assurance` | The weakest [assurance level](#assurance-levels) that counts. Default `asserted` |
 | `forbid_self_approval` | An approval by an author of the content it approves does not count; see [Self-approval](#self-approval) |
-| `max_age` | Default lifetime of a new approval: `365d` or a Go duration such as `720h` |
+| `max_age` | Default and maximum lifetime of an approval: `365d` or a Go duration such as `720h`. An approval stops counting (`AR712`) once `approved_at` plus `max_age` has passed, whatever its `expires` says |
 | `enforce` | Make `lock --check`, `generate --locked` and `mcp --serve-skills` fail. `validate --strict` reports regardless |
 
 `[governance]` is shared policy: a machine-local config overlay cannot set or relax it (the key is ignored with a

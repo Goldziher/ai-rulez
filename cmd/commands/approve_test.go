@@ -261,12 +261,17 @@ func TestApprove_ExpiryComesFromMaxAgeOrTheFlag(t *testing.T) {
 	mustApprove(t, "rule:style")
 	assert.Contains(t, lockText(t, root), `expires = "2026-11-04"`)
 
-	approveExpires = "2099-10-06"
+	approveExpires = "2026-11-01"
 	mustApprove(t, "skill:deploy")
-	assert.Contains(t, lockText(t, root), `expires = "2099-10-06"`)
+	assert.Contains(t, lockText(t, root), `expires = "2026-11-01"`)
+
+	approveExpires = "2099-10-06"
+	code, _, stderr := runApproveCmd(t, "skill:deploy")
+	assert.Equal(t, 1, code)
+	assert.Contains(t, stderr, "max_age")
 
 	approveExpires = "2026-10-01"
-	code, _, stderr := runApproveCmd(t, "rule:style")
+	code, _, stderr = runApproveCmd(t, "rule:style")
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "past")
 }
