@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
 )
@@ -58,7 +59,7 @@ func (f *fixture) writeExec(rel, content string) {
 
 func (f *fixture) config() *config.Config {
 	f.t.Helper()
-	cfg, err := config.LoadConfig(config.WithOfflineIncludes(context.Background()), f.dir, config.WithoutLocal())
+	cfg, err := config.LoadConfig(config.WithOfflineIncludes(context.Background()), f.dir, config.WithoutLocal(), config.WithResolvers(includes.Resolvers("")))
 	require.NoError(f.t, err)
 	return cfg
 }
