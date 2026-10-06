@@ -304,6 +304,22 @@ func TestPRBody_UntrustedTextCannotBreakOutOfItsFence(t *testing.T) {
 	assert.Contains(t, body, "**Not approved**")
 }
 
+func TestPRBody_NamesHowManyHeldOutEvaluationsTheSelectionRanOver(t *testing.T) {
+	// Arrange: round 2 was accepted after round 1 was also scored on the held-out set.
+	held := &Comparison{Table: []PairRow{}, Wins: []string{}, Losses: []string{}}
+	report := &Report{
+		Skill: "deploy", AcceptedRound: 2, Gate: GateReport{MaxRounds: 3}, Runs: 1,
+		Rounds: []RoundReport{{Round: 1, Decision: "rejected", Held: held}, {Round: 2, Decision: "accepted", Held: held}},
+	}
+
+	// Act
+	body := prBody(report, "imp-12345678")
+
+	// Assert
+	assert.Contains(t, body, "selected among 2 held-out evaluations")
+	assert.NotContains(t, prBody(&Report{Skill: "deploy", AcceptedRound: 1, Rounds: []RoundReport{{Round: 1, Decision: "accepted", Held: held}}}, "imp-1"), "selected among")
+}
+
 func TestParseRepoURL(t *testing.T) {
 	tests := []struct{ url, want string }{
 		{"https://github.com/example/repo.git", "example/repo"},
