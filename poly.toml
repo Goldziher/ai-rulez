@@ -24,6 +24,7 @@ exclude = [
   "**/uv.lock",
   "dist/**",
   "internal/lint/testdata/**",
+  "internal/publish/emit/testdata/**",
   "internal/okf/testdata/**",
   "internal/okfbridge/testdata/**",
   "internal/sbom/testdata/**",
