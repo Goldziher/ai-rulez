@@ -95,8 +95,8 @@ optimizer; nothing in the gate trusts it.
 **`builtin:review-fix`** drives the review pipeline of [`review fix`](review.md) on `SKILL.md`: the judge
 (rubric `builtin:skill-quality`, content `full`) rates the skill; for stable findings the fixer proposes exact-text
 edits that must pass the review checks (only the description and body change, growth at most `[review.fix]
-max_growth_percent`, no new link or credential, no new security finding, and a judge of another model rates the
-targeted dimensions better and no other worse). A verified fix is written to the workspace; the gate then decides
+max_growth_percent` and within the run's `max_skill_tokens`, no new link or credential, no new security finding, and a
+judge of another model rates the targeted dimensions better and no other worse). A verified fix is written to the workspace; the gate then decides
 whether it is kept. It never sees held-out cases (it uses none).
 
 - Needs `[llm] model` and `allow_network = true` in the **user** config, the same opt-in as `review --semantic`, and
