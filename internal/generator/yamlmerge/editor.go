@@ -225,12 +225,29 @@ func (e *editor) removeIn(cur *yaml.Node, path, done []string, claim Claim) erro
 		})
 	case child.Kind != yaml.MappingNode:
 		return nil
+	case len(path) == 2 && claim.IsEmptyMap(here) && wouldEmpty(child, path[1:]):
+		// The user wrote `key: {}`; taking the last member out puts that back.
+		return e.restoreEmptyMap(cur, idx)
 	case wouldEmpty(child, path[1:]) && e.droppable(cur, idx, path, done, claim):
 		e.removeMember(cur, idx)
 		return nil
 	default:
 		return e.removeIn(child, path[1:], here, claim)
 	}
+}
+
+// restoreEmptyMap rewrites the member at cur.Content[2*idx] as an empty flow map.
+func (e *editor) restoreEmptyMap(cur *yaml.Node, idx int) error {
+	key := cur.Content[2*idx]
+	empty := &yaml.Node{Kind: yaml.MappingNode, Style: yaml.FlowStyle}
+	pair := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{key, empty}}
+	rendered, err := marshal(pair, e.unit)
+	if err != nil {
+		return oops.Wrapf(err, "render YAML member")
+	}
+	start, end := e.memberSpan(cur, idx)
+	e.src = e.src[:start] + e.indentText(rendered, memberIndent(cur)) + e.src[end:]
+	return nil
 }
 
 // droppable reports whether every mapping on the way from the member at

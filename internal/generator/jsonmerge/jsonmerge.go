@@ -215,6 +215,11 @@ func ApplyDocument(path, existing string, owned []OwnedKey) (Result, error) {
 		return result, err
 	}
 
+	if result, ok := alreadyApplied(existing, members, owned); ok {
+		result.Body = bom + result.Body
+		return result, nil
+	}
+
 	indent := detectTopLevelIndent(existing)
 	newline := detectLineEnding(existing)
 	merged := members
@@ -244,11 +249,55 @@ func ApplyDocument(path, existing string, owned []OwnedKey) (Result, error) {
 	if tree, err := DecodeTree(body); err == nil && HasUserElements(tree, owned) {
 		partial = true
 	}
+	before, _ := DecodeTree(existing) //nolint:errcheck // members decoded the same text above
 	return Result{
 		Body:           bom + body,
 		PartiallyOwned: partial,
-		Claims:         NoteFinalNewline(claimsFor(owned), existing),
+		Claims:         AnnotateClaims(claimsFor(owned), before, existing),
 	}, nil
+}
+
+// alreadyApplied handles a document that already holds every owned value: it is
+// returned as it is, so a second merge never reflows a layout the first one (or
+// the user) chose, and the claims describe the document as it stands.
+func alreadyApplied(existing string, members []jsonMember, owned []OwnedKey) (Result, bool) {
+	tree, err := DecodeTree(existing)
+	if err != nil || !holdsOwned(tree, owned) {
+		return Result{}, false
+	}
+	body := existing
+	if !strings.HasSuffix(body, "\n") {
+		body += detectLineEnding(existing)
+	}
+	partial := hasUnownedMembers(members, owned) || HasUserElements(tree, owned)
+	return Result{Body: body, PartiallyOwned: partial, Claims: AnnotateClaims(claimsFor(owned), tree, existing)}, true
+}
+
+// holdsOwned reports whether the decoded document already has every owned key as
+// Apply would leave it: a value equal, the elements of a shared array present, a
+// removed key absent.
+func holdsOwned(tree map[string]any, owned []OwnedKey) bool {
+	for _, key := range owned {
+		segs := key.segments()
+		if len(segs) == 0 {
+			continue
+		}
+		if key.Elements != nil {
+			value, present := LookupTree(tree, segs)
+			array, isArray := value.([]any)
+			if !present || !isArray {
+				return false
+			}
+			if len(key.Elements) > 0 && len(Claim{Elements: key.Elements}.ElementsIn(array)) != len(key.Elements) {
+				return false
+			}
+			continue
+		}
+		if VerifyOwned(tree, []OwnedKey{key}) != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // checkPreservedDocuments decodes both strict JSON documents and runs check on

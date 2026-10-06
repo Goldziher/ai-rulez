@@ -148,3 +148,10 @@ func detectLineEnding(doc string) string {
 	}
 	return "\n"
 }
+
+// DecodeTree decodes a TOML document into generic Go values, for reading what a
+// document already holds.
+func DecodeTree(doc string) (map[string]any, error) {
+	_, rest := jsonmerge.SplitBOM(doc)
+	return parseTree(rest)
+}

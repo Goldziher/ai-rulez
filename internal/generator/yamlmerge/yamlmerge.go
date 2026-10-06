@@ -285,3 +285,14 @@ func marshal(value any, indent int) (string, error) {
 	}
 	return b.String(), nil
 }
+
+// DecodeTree decodes a YAML document into generic Go values, for reading what a
+// document already holds.
+func DecodeTree(doc string) (map[string]any, error) {
+	_, rest := jsonmerge.SplitBOM(doc)
+	p, err := parse(rest)
+	if err != nil {
+		return nil, err
+	}
+	return p.tree, nil
+}

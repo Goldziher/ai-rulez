@@ -406,6 +406,7 @@ hook is synthesized at generation time and written like any other `[[hooks]]` gr
 | `cursor` | `preToolUse` | `^Write$` |
 | `factory` | `PreToolUse` | `Edit\|Create\|ApplyPatch` |
 | `copilot` | `preToolUse` | `edit\|create` |
+| `copilot-cli` | `preToolUse` | `edit\|create` |
 
 Only harnesses whose documented `PreToolUse` hook blocks a call on exit code 2 get it; the others are skipped
 and `generate` logs which at info level. The exit-2 contract of each, as documented (read 2026-10-06):
@@ -422,13 +423,22 @@ and `generate` logs which at info level. The exit-2 contract of each, as documen
   corrective feedback. PreToolUse blocks the tool call"; the editing tools are `Create`, `Edit` and `ApplyPatch`.
 - GitHub Copilot ([hooks configuration](https://docs.github.com/en/copilot/reference/hooks-configuration)):
   `preToolUse` denies on exit code 2 (any other non-zero exit also denies; timeouts fail open). The same page
-  documents a JSON `permissionDecision: "deny"` on stdout, which the guard does not need. The hook command resolves the executable the way
-[`[mcp] self_server`](configuration.md) does, so it works through `npx` without a global install.
+  documents a JSON `permissionDecision: "deny"` on stdout, which the guard does not need. The `copilot` and
+  `copilot-cli` presets share `.github/hooks/ai-rulez.json`, so enabling both writes the one file once.
+
+The hook command resolves the executable the way [`[mcp] self_server`](configuration.md) does, so it works
+through `npx` without a global install. The first `npx` run downloads the package and can exceed the 10 second
+hook timeout; the hook then fails open and the edit goes through. Set `[guard] command = ["ai-rulez"]` with a
+local install to avoid that.
+
+`generate --user` never adds the guard: it protects a project's generated files, not the home directory.
 
 How `ai-rulez guard` decides:
 
 - It reads the hook JSON on stdin (`tool_name`, `tool_input.file_path`, `path`, `target_file`, or the
-  `*** Update File:` lines of a Codex `apply_patch`) and resolves the path against the payload's `cwd`.
+  `*** Update File:` lines of a Codex `apply_patch`, including `command` arrays and indented markers) and
+  resolves the path against the payload's `cwd`. It locates the project from that `cwd` and from the target
+  file's own directory.
   `..` segments and symlinks are resolved first, so neither reaches a generated file by another name.
 - A path is blocked only when it is a wholly owned output listed in `.ai-rulez/.generated-manifest.json` or
   `.generated-manifest.local.json`. Documents ai-rulez only merges keys into (`.claude/settings.json`,
@@ -437,8 +447,8 @@ How `ai-rulez guard` decides:
 - It fails open on its own errors: a payload that does not parse, a project without a manifest and a path
   outside the project all exit 0. A blocked call exits 2 with the reason on stderr. A guard that errors must
   not wedge the agent, and [`ai-rulez verify`](cli.md#verify-command) still catches a hand edit afterwards.
-- It does not fail open on input it will not analyse: a payload over 8 MiB, or a call naming more than 1000
-  distinct files, exits 2 with a message asking for smaller edits. Padding a patch is not a bypass. Repeated
+- It does not fail open on input it will not analyse: a payload over 8 MiB for an edit tool, or a call naming
+  more than 1000 distinct files, exits 2 with a message asking for smaller edits; an oversized read is allowed. Padding a patch is not a bypass. Repeated
   paths are collapsed, and the project and manifests are looked up once per call, so a large patch stays well
   inside a hook timeout.
 
@@ -503,8 +513,41 @@ A [role](roles.md)'s `skill_mode` is rendered through the same ownership: `gener
 | `.github/hooks/ai-rulez.json` | `[[hooks]]` apply to `copilot` or `copilot-cli` | deleted (ai-rulez owns the whole file; Copilot loads every `*.json` in that directory, so hand-written hook files go beside it) |
 
 Claims are recorded in the machine-local manifest, so `generate` also removes an entry you deleted from
-`config.toml`. A document that uses comments or trailing commas (JSONC) is not rewritten; generation
-fails with a hint naming the path, because the hooks were explicitly requested.
+`config.toml`. A document that uses comments or trailing commas (JSONC) is edited in place and keeps its
+comments; only a document that does not parse fails, with a hint naming the path.
+
+### What ai-rulez may change
+
+The committed manifest (`.ai-rulez/.generated-manifest.json`) is a file anyone with commit access can edit, so
+it proves nothing. ai-rulez takes something back or deletes it only on proof of authorship:
+
+1. an in-file `Content-Hash` that matches the body of the file, or
+2. a claim or digest in the gitignored machine-local manifest (`.ai-rulez/.generated-manifest.local.json`),
+   written by this machine, or
+3. the current config rendering the same value.
+
+Consequences:
+
+- The committed manifest lists generated paths for teammates and the guard. It never supplies a claim, a
+  digest or a licence to remove a `permissions` deny or ask rule.
+- A claim removes a value only while it still equals the digest recorded when ai-rulez wrote it; an edited
+  value is yours and stays.
+- A merged document that existed before ai-rulez first wrote to it (no local record, not listed as generated)
+  is yours: `clean` never deletes it, even when its content equals what ai-rulez renders, and a value or array
+  element you already had is not claimed. A document ai-rulez created is deleted by `clean` only while it
+  still has the bytes this machine recorded.
+- The original layout is restored: `generate` run any number of times followed by `clean` gives back the
+  original bytes (one-line JSON, a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`).
+- On a fresh clone there is no local manifest. `generate` renders the same outputs, and a stale generated file
+  is removed only on its `Content-Hash`; a stale file with no header is reported and left.
+- `generate` and `clean` never remove a file whose parent directory resolves, through a symlink, outside the
+  project.
+- A settings document ai-rulez creates is gitignored with the other generated files (`gitignore = true`), so hooks
+  and permissions it writes reach teammates only when the file already existed and is tracked, or when
+  `gitignore = false`; each teammate otherwise runs `generate`. Hook script commands are quoted for POSIX
+  shells only; on Windows the Copilot `powershell` field is not written.
+- `generate` rewrites a generated file whose body no longer matches its `Content-Hash`, so a hand edit is lost
+  and `generate --check` stops reporting it. `clean` keeps such a file and warns; `--force` removes it.
 
 Project-wide settings are not written for `[[scopes]]` subdirectories.
 
