@@ -200,6 +200,12 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 
 	skillDir := s.findSkillDir()
 	if skillDir == "" {
+		if link := symlinkedMarker(filepath.Join(s.cacheDir, s.path)); link != "" {
+			return config.ContentFile{}, oops.
+				With("repo", RedactURL(s.repoURL)).
+				With("path", link).
+				Errorf("skill %q: %s is a symlink, and symlinks are not followed", s.name, link)
+		}
 		return config.ContentFile{}, oops.
 			With("repo", RedactURL(s.repoURL)).
 			With("path", s.path).
@@ -259,6 +265,17 @@ func (s *SkillGitSource) findSkillDir() string {
 func hasSkillMarker(dir string) bool {
 	info, err := os.Lstat(filepath.Join(dir, skillMarkerFile))
 	return err == nil && info.Mode().IsRegular()
+}
+
+// symlinkedMarker returns the path of dir's SKILL.md when it is a symlink, which
+// is never followed, so the error can name it instead of claiming no SKILL.md
+// exists. It is "" when SKILL.md is absent or a regular file.
+func symlinkedMarker(dir string) string {
+	p := filepath.Join(dir, skillMarkerFile)
+	if info, err := os.Lstat(p); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return p
+	}
+	return ""
 }
 
 // hasSkillMarkerUnder is hasSkillMarker for a directory below root, additionally

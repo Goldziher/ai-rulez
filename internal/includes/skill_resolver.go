@@ -97,6 +97,11 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		// Append the skill path within the local source
 		skillDir := filepath.Join(localPath, skillPath)
 		if !hasSkillMarker(skillDir) {
+			if link := symlinkedMarker(skillDir); link != "" {
+				return config.ContentFile{}, oops.
+					With("path", link).
+					Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
+			}
 			return config.ContentFile{}, oops.
 				With("path", skillDir).
 				Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)

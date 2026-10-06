@@ -1,12 +1,15 @@
 package includes
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func TestScanInstalledSkillDir_RefusesSymlinkedSkillMd(t *testing.T) {
@@ -75,4 +78,42 @@ func TestSwapDir_ReplacesWithoutLeavingOldTree(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(final, "old"))
 	entries, _ := os.ReadDir(root)
 	assert.Len(t, entries, 1)
+}
+
+func TestSkillSources_NameASymlinkedSkillMdInTheError(t *testing.T) {
+	// Arrange: SKILL.md is a symlink to a file that exists.
+	root := t.TempDir()
+	dir := filepath.Join(root, "skill")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	target := filepath.Join(root, "real.md")
+	require.NoError(t, os.WriteFile(target, []byte("x"), 0o644))
+	require.NoError(t, os.Symlink(target, filepath.Join(dir, "SKILL.md")))
+
+	// Act
+	link := symlinkedMarker(dir)
+
+	// Assert
+	assert.Equal(t, filepath.Join(dir, "SKILL.md"), link)
+	assert.Empty(t, symlinkedMarker(root), "a missing SKILL.md is not a symlink")
+}
+
+func TestResolveInstalledSkill_LocalSymlinkedSkillMdErrorNamesTheLink(t *testing.T) {
+	// Arrange
+	base := t.TempDir()
+	dir := filepath.Join(base, "skills", "s")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	target := filepath.Join(base, "real.md")
+	require.NoError(t, os.WriteFile(target, []byte("x"), 0o644))
+	require.NoError(t, os.Symlink(target, filepath.Join(dir, "SKILL.md")))
+	cfg := &config.Config{BaseDir: base}
+	conf := &config.InstalledSkillConfig{Name: "s", Source: ".", Path: "skills/s"}
+
+	// Act
+	_, err := resolveInstalledSkill(context.Background(), cfg, nil, conf, "")
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), filepath.Join(dir, "SKILL.md"))
+	assert.Contains(t, err.Error(), "symlink")
+	assert.NotContains(t, err.Error(), "no SKILL.md found")
 }
