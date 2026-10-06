@@ -3,6 +3,7 @@ package mcp
 import (
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,9 @@ func TestSessionBudget_CoversEveryReadPath(t *testing.T) {
 	assert.Equal(t, 2000, usedTotal(srv))
 
 	resp := p.call("resources/read", map[string]any{"uri": forms})
-	assert.NotNil(t, resp["error"], "the third 1000 bytes exceed the cap; resources/read is charged like the tools")
+	require.NotNil(t, resp["error"], "the third 1000 bytes exceed the cap; resources/read is charged like the tools")
+	rpcErr, _ := resp["error"].(map[string]any)
+	assert.EqualValues(t, jsonrpc.CodeInvalidRequest, rpcErr["code"], "a budget refusal is a JSON-RPC error with a real code, not 0")
 	assert.Equal(t, 2000, usedTotal(srv))
 }
 
