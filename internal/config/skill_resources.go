@@ -81,6 +81,14 @@ func LoadResources(root, itemKind string) ([]SkillResource, error) {
 // itemKind is one of the ItemKind constants and selects the entry file name
 // (SKILL.md, COMMAND.md) and the diagnostics wording.
 func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillResource, error) {
+	return (&contentScanner{}).loadResources(root, itemKind, extraExcludes)
+}
+
+// loadResources is LoadResourcesWith under the scanner's symlink policy: with no
+// project root (included and installed content) a symlink is never followed;
+// for the project's own content a link is followed when its target stays inside
+// the project, and refused, warned about and recorded otherwise.
+func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []string) ([]SkillResource, error) {
 	marker := skillMarkerFile
 	if itemKind == ItemKindCommand {
 		marker = commandMarkerFile
@@ -90,11 +98,9 @@ func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillRe
 
 	for _, kind := range skillResourceKinds {
 		kindDir := filepath.Join(root, kind)
-		// Lstat (not Stat) so a symlinked kind directory — e.g. an
-		// installed skill with `references -> /etc` — is reported as a
-		// symlink and refused. Stat would follow the link and let
-		// WalkDir into an attacker-controlled tree, bypassing the
-		// per-entry symlink guard below.
+		// A symlinked kind directory is admitted only under the scanner's
+		// policy: an installed skill with `references -> /etc` must not let
+		// the walk into an attacker-controlled tree.
 		info, err := os.Lstat(kindDir)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -103,14 +109,15 @@ func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillRe
 			return nil, oops.With("path", kindDir).Wrapf(err, "stat %s resource dir", itemKind)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			logger.Warn("Skipping symlinked resource directory", "owner", itemKind, "kind", kind, "path", kindDir)
-			continue
+			if _, ok := s.admit(kindDir); !ok {
+				continue
+			}
 		}
-		if !info.IsDir() {
+		if info, err = os.Stat(kindDir); err != nil || !info.IsDir() {
 			continue
 		}
 
-		kindResources, err := walkSkillResourceDir(root, kindDir, kind, filter)
+		kindResources, err := s.walkSkillResourceDir(root, kindDir, kind, filter)
 		if err != nil {
 			return nil, err
 		}
@@ -215,78 +222,78 @@ func unrecognizedSubdirectoryWarnings(root, itemKind string) ([]resourceWarning,
 // walkSkillResourceDir walks one of the kind subdirectories recursively.
 // Nested directories under references/, scripts/, or assets/ are preserved in
 // the resource RelPath so generators can mirror the layout in their output.
-func walkSkillResourceDir(skillDir, kindDir, kind string, filter *bundleFilter) ([]SkillResource, error) {
+// Symlinks are admitted entry by entry under the scanner's policy, so a link
+// can neither read nor list anything outside what the policy allows.
+func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, filter *bundleFilter) ([]SkillResource, error) {
 	var resources []SkillResource
+	visited := map[string]bool{}
 
-	err := filepath.WalkDir(kindDir, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return oops.With("path", path).Wrapf(walkErr, "walk skill resource dir")
-		}
-		if d.IsDir() {
-			if path != kindDir && filter.excluded(filter.rel(skillDir, path)) {
-				return filepath.SkipDir
+	var visit func(dir string) error
+	visit = func(dir string) error {
+		if real, err := filepath.EvalSymlinks(dir); err == nil {
+			if visited[real] {
+				return nil // a link cycle inside the project
 			}
-			return nil
+			visited[real] = true
+			defer delete(visited, real)
 		}
-
-		// Skip symlinks. WalkDir surfaces symlinks via d.Type() but reads
-		// the target's bytes when we call os.ReadFile, which would let an
-		// installed skill exfiltrate arbitrary files (e.g. references/key
-		// → /etc/passwd) through the rendered SKILL.md output. Skill
-		// resources must be regular files inside the skill directory.
-		if d.Type()&os.ModeSymlink != 0 {
-			logger.Warn("Skipping symlink in skill resources", "path", path)
-			return nil
-		}
-
-		// Path relative to the skill root, e.g. "references/api.md".
-		relToSkill, err := filepath.Rel(skillDir, path)
+		entries, err := os.ReadDir(dir)
 		if err != nil {
-			return oops.With("path", path).Wrapf(err, "compute relative path")
+			return oops.With("path", dir).Wrapf(err, "walk skill resource dir")
 		}
-		// Always use forward slashes in stored paths so output is portable across
-		// platforms — generators feed this straight into filepath.Join, which
-		// accepts forward slashes on Windows.
-		relToSkill = filepath.ToSlash(relToSkill)
-		if !filter.keepFile(relToSkill) {
-			return nil
-		}
+		for _, d := range entries {
+			path := filepath.Join(dir, d.Name())
+			isDir, ok := s.entryInfo(path, d)
+			if !ok {
+				continue
+			}
+			if isDir {
+				if filter.excluded(filter.rel(skillDir, path)) {
+					continue
+				}
+				if err := visit(path); err != nil {
+					return err
+				}
+				continue
+			}
+			if info, ok := s.admit(path); !ok || !info.Mode().IsRegular() {
+				continue
+			}
 
-		// nolint:gosec // G122: WalkDir callback uses path; the symlink
-		// check above prevents following arbitrary links into /etc/passwd.
-		// A residual TOCTOU window exists between Lstat and ReadFile, but
-		// the threat model — single-user CLI run with the user's own
-		// privileges over user-controlled skill content — does not include
-		// concurrent attacker swaps. Switching to os.Root would close the
-		// window but at the cost of cross-platform portability of file
-		// mode handling.
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return oops.With("path", path).Wrapf(err, "read skill resource")
-		}
+			// Path relative to the skill root, e.g. "references/api.md".
+			relToSkill, err := filepath.Rel(skillDir, path)
+			if err != nil {
+				return oops.With("path", path).Wrapf(err, "compute relative path")
+			}
+			// Always use forward slashes in stored paths so output is portable across
+			// platforms — generators feed this straight into filepath.Join, which
+			// accepts forward slashes on Windows.
+			relToSkill = filepath.ToSlash(relToSkill)
+			if !filter.keepFile(relToSkill) {
+				continue
+			}
 
-		// Capture file mode so the executable bit on bundled scripts survives
-		// the round-trip through generation.
-		info, err := d.Info()
-		if err != nil {
-			return oops.With("path", path).Wrapf(err, "stat skill resource")
-		}
+			data, err := readCapped(path)
+			if err != nil {
+				return oops.With("path", path).Wrapf(err, "read skill resource")
+			}
 
-		resource := SkillResource{
-			Kind:    kind,
-			RelPath: relToSkill,
-			Content: data,
-			Mode:    info.Mode().Perm(),
-		}
+			// Capture file mode (of the target, for a followed link) so the
+			// executable bit on bundled scripts survives generation.
+			info, err := os.Stat(path)
+			if err != nil {
+				return oops.With("path", path).Wrapf(err, "stat skill resource")
+			}
 
-		if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
-			resource.Description = extractResourceDescription(data)
+			resource := SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: info.Mode().Perm()}
+			if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
+				resource.Description = extractResourceDescription(data)
+			}
+			resources = append(resources, resource)
 		}
-
-		resources = append(resources, resource)
 		return nil
-	})
-	if err != nil {
+	}
+	if err := visit(kindDir); err != nil {
 		return nil, err
 	}
 

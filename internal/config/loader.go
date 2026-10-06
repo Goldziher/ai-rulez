@@ -517,7 +517,7 @@ func loadConfigFilePathMain(path string) (*Config, error) {
 
 // loadConfigYAML loads a config from YAML
 func loadConfigYAML(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := readCapped(path)
 	if err != nil {
 		return nil, oops.
 			With("path", path).
@@ -542,7 +542,7 @@ func decodeConfigYAML(data []byte, path string) (*Config, error) {
 
 // loadConfigJSON loads a config from JSON
 func loadConfigJSON(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := readCapped(path)
 	if err != nil {
 		return nil, oops.
 			With("path", path).
@@ -567,7 +567,7 @@ func decodeConfigJSON(data []byte, path string) (*Config, error) {
 
 // loadConfigTOML loads a config from TOML
 func loadConfigTOML(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := readCapped(path)
 	if err != nil {
 		return nil, oops.
 			With("path", path).
@@ -927,7 +927,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 		// Load skill supporting files (references/, scripts/, assets/) so
 		// presets can preserve the canonical Agent Skills layout instead of
 		// concatenating everything into SKILL.md.
-		resources, resErr := LoadResourcesWith(skillRoot, ItemKindSkill, bundleExclude)
+		resources, resErr := s.loadResources(skillRoot, ItemKindSkill, bundleExclude)
 		if resErr != nil {
 			logger.Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
 		}
@@ -987,7 +987,7 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 			// Load command supporting files (references/, scripts/, assets/) so
 			// presets can preserve the canonical layout instead of concatenating
 			// everything into COMMAND.md.
-			resources, resErr := LoadResourcesWith(commandRoot, ItemKindCommand, bundleExclude)
+			resources, resErr := s.loadResources(commandRoot, ItemKindCommand, bundleExclude)
 			if resErr != nil {
 				logger.Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
 			}
@@ -1333,7 +1333,7 @@ func loadContentFile(path string) (ContentFile, error) {
 // readContentFile reads and parses a content file the caller has already
 // cleared under the symlink policy.
 func readContentFile(path string) (ContentFile, error) {
-	data, err := os.ReadFile(path)
+	data, err := readCapped(path)
 	if err != nil {
 		return ContentFile{}, oops.
 			With("path", path).
@@ -1393,7 +1393,7 @@ func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
 // DecodeLegacyMCPFile reads the servers of one deprecated mcp.toml, mcp.yaml or
 // mcp.json file, as written.
 func DecodeLegacyMCPFile(path string) ([]MCPServer, error) {
-	data, err := os.ReadFile(path)
+	data, err := readCapped(path)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "read legacy MCP file")
 	}
