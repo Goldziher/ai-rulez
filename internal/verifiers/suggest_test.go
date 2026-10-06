@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // proposal is a complete model proposal; fields not given are "" (and -1 for min/max).
@@ -265,6 +266,26 @@ func TestSuggest_NeverWritesAndWriteSuggestionsCreatesANewFileOnly(t *testing.T)
 	assert.Empty(t, problems)
 	require.Len(t, specs, 1, "the written file loads as a normal declaration")
 	assert.Equal(t, "no-todo", specs[0].ID)
+}
+
+func TestWriteSuggestions_RefusesASymlinkedVerifiersDirectory(t *testing.T) {
+	// Arrange
+	cfg := suggestProject(t)
+	dir := filepath.Join(cfg.ConfigDir, VerifiersDirName)
+	require.NoError(t, os.RemoveAll(dir))
+	outside := t.TempDir()
+	testutil.SymlinkOrSkip(t, outside, dir)
+	res, err := Suggest(context.Background(), cfg, SuggestOptions{ID: "database", LLM: LLMOptions{Client: suggestFake(suggestion("", proposal(nil)))}})
+	require.NoError(t, err)
+
+	// Act
+	_, err = WriteSuggestions(cfg, res)
+
+	// Assert
+	require.Error(t, err)
+	entries, readErr := os.ReadDir(outside)
+	require.NoError(t, readErr)
+	assert.Empty(t, entries, "nothing may be written through the planted link")
 }
 
 func TestWriteSuggestions_NothingUsableWritesNothing(t *testing.T) {
