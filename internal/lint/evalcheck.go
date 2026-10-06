@@ -7,7 +7,30 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
+
+// evalResultsKeyFile is the per-user key that signs eval results; it must match
+// the name `ai-rulez eval run` writes (cmd/commands/eval.go).
+const evalResultsKeyFile = "eval-results.key"
+
+// userEvalKey returns the user's eval-results key, or nil when it does not exist
+// or cannot be trusted. Unlike `eval run`, lint never creates the key: a missing
+// key means every recorded result is unverified.
+func userEvalKey() []byte {
+	path := llm.UserSecretPath(evalResultsKeyFile)
+	if path == "" {
+		return nil
+	}
+	if _, err := os.Lstat(path); err != nil {
+		return nil
+	}
+	key, err := llm.LoadSecretFile(path)
+	if err != nil {
+		return nil
+	}
+	return key
+}
 
 // Codes of the eval runner checks (see docs/evals.md).
 const (
@@ -74,7 +97,7 @@ func (r *runner) checkEvalRunner() {
 	if r.cfg.ConfigDir == "" {
 		return
 	}
-	store, storeErr := evals.LoadStore(evals.DefaultStorePath(r.cfg.ConfigDir))
+	store, storeErr := evals.LoadStoreKeyed(evals.DefaultStorePath(r.cfg.ConfigDir), userEvalKey())
 	if storeErr != nil {
 		store = nil
 		r.add(CodeEvalResultsInvalid, evals.DefaultStorePath(r.cfg.ConfigDir), 1, "%v", storeErr)
@@ -111,6 +134,18 @@ func (r *runner) checkEvalCases(skill *evals.Skill) {
 func (r *runner) checkEvalRecord(it *item, store *evals.Store, id string) {
 	record, ok := store.Get(id)
 	if !ok {
+		return
+	}
+	if !record.Verified() {
+		// A record not signed with this user's key (committed from another
+		// machine, hand edited, or forged) is no evidence of a passing run.
+		const why = "its recorded eval result is unverified (not signed with your own key, so it may be forged or from another machine) and does not count as passing; re-run `ai-rulez eval run %s`"
+		if r.sev[CodeEvalStale] != SeverityOff {
+			r.add(CodeEvalStale, it.abs, 1, "skill %q: "+why, id, id)
+		}
+		if r.minPassRate() > 0 {
+			r.add(CodeEvalScoreLow, it.abs, 1, "skill %q: "+why, id, id)
+		}
 		return
 	}
 	if r.sev[CodeEvalStale] != SeverityOff {
