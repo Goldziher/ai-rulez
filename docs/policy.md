@@ -228,6 +228,9 @@ max_age          = "180d"                                       # the oldest sig
 min_hash_version = 1
 allow_repo_identities = false                                   # the repository may trust only the signers below
 
+[signing.thresholds]
+lock = 2                                                        # at least two distinct signers must have signed the lock
+
 [[signing.trust]]
 subject  = "lock"
 identity = "https://github.com/example-org/ai-config/.github/workflows/release.yml@refs/heads/main"
@@ -302,7 +305,8 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `signing.tlog` | the stricter mode (`off` < `optional` < `required`) | a weaker explicit `[signing] tlog` | `AR740` |
 | `signing.max_age` | the shorter age; an unset one takes the policy's | a longer explicit `[signing] max_age` | `AR740` |
 | `signing.min_hash_version` | the larger value | a lower explicit `[signing] min_hash_version` | `AR740` |
-| `signing.trust`, `signing.allow_repo_identities` | the repository's signers the list names (compared on subject, identity or `identity_regexp`, and issuer); the policy list when none is left. An empty list (or `allow_repo_identities = false` alone) trusts nobody, so verification fails closed. A `key_file` is never in the list | a signer the list does not name, including any `key_file` or shorthand `identity`; the entry is dropped | `AR740` |
+| `signing.trust`, `signing.allow_repo_identities` | per subject (`lock`, `bundle`, `skill`, `sbom`, `approval`), for the subjects the list names: the repository's signers the list names (compared on subject, identity or `identity_regexp`, and issuer); the policy's entries for the subject when none is left. Entries for subjects the list does not name are not touched. An empty list (or `allow_repo_identities = false` alone) governs every subject and trusts nobody, so verification fails closed. A `key_file` is never in the list | a signer the list does not name for a governed subject, including any `key_file` or shorthand `identity`; the entry is dropped | `AR740` |
+| `signing.thresholds` | per subject, the larger value; a subject the repository leaves unset takes the floor | a lower explicit `[signing.thresholds]` value | `AR740` |
 | `mcp.allowed_commands` | the repository's stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded | `AR748` |
 | `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded | `AR748` |
 | `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded | `AR748` |

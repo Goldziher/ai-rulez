@@ -55,7 +55,7 @@ func TestParseSigningRejects(t *testing.T) {
 		{"empty entry", "policy_version = 1\n[[signing.trust]]\nissuer = \"i\"\n", "needs identity"},
 		{"whitespace in identity", "policy_version = 1\n[[signing.trust]]\nidentity = \"a b\"\nissuer = \"i\"\n", "whitespace"},
 		{"allowing repo identities contradicts a listed set", "policy_version = 1\n[signing]\nallow_repo_identities = true\n[[signing.trust]]\nidentity = \"a\"\nissuer = \"i\"\n", "contradicts"},
-		{"unknown subject on trust", "policy_version = 1\n[[signing.trust]]\nsubject = \"sbom\"\nidentity = \"a\"\nissuer = \"i\"\n", "only"},
+		{"unknown subject on trust", "policy_version = 1\n[[signing.trust]]\nsubject = \"policy\"\nidentity = \"a\"\nissuer = \"i\"\n", "invalid subject"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -201,4 +201,71 @@ func TestFormatAgeRoundTrips(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, d, got)
 	}
+}
+
+func TestApplySigningTrustOnlyClampsTheSubjectsTheListNames(t *testing.T) {
+	// Arrange: the policy lists a lock signer only; the repository also trusts a
+	// skill publisher and an approval signer, which the policy does not govern.
+	cfg := testConfig(t, "name = \"x\"\n")
+	skill := config.SigningTrust{Subject: "skill", Identity: "pub@example.org", Issuer: "https://i"}
+	appr := config.SigningTrust{Subject: "approval", Identity: "rev@example.org", Issuer: "https://i"}
+	cfg.Signing = &config.SigningConfig{Trust: []config.SigningTrust{
+		{Subject: "lock", Identity: "evil@x.org", Issuer: "https://i"}, skill, appr,
+	}}
+	res := Resolve([]Layer{layer("managed", Policy{Signing: Signing{Trust: List{Set: true, Items: []string{ciKey}}}})})
+	// Act
+	out := res.Apply(cfg).Outcome
+	// Assert
+	assert.ElementsMatch(t, []config.SigningTrust{{Subject: "lock", Identity: ciIdentity, Issuer: ciIssuer}, skill, appr}, cfg.Signing.Trust)
+	assert.Equal(t, []string{"AR740 signing.trust"}, codes(out))
+}
+
+func TestApplySigningTrustPerSubject(t *testing.T) {
+	// Arrange: the policy names a skill signer, so skill trust is governed too.
+	skillKey := "subject=skill identity=pub@example.org issuer=https://i"
+	cfg := testConfig(t, "name = \"x\"\n")
+	cfg.Signing = &config.SigningConfig{Trust: []config.SigningTrust{{Subject: "skill", Identity: "evil@x.org", Issuer: "https://i"}}}
+	res := Resolve([]Layer{layer("managed", Policy{Signing: Signing{Trust: List{Set: true, Items: []string{ciKey, skillKey}}}})})
+	// Act
+	out := res.Apply(cfg).Outcome
+	// Assert
+	assert.ElementsMatch(t, []config.SigningTrust{
+		{Subject: "lock", Identity: ciIdentity, Issuer: ciIssuer},
+		{Subject: "skill", Identity: "pub@example.org", Issuer: "https://i"},
+	}, cfg.Signing.Trust)
+	assert.Equal(t, []string{"AR740 signing.trust"}, codes(out))
+}
+
+func TestParseSigningThresholdsAndSubjects(t *testing.T) {
+	_, p, err := Parse("p.toml", []byte("policy_version = 1\n[signing.thresholds]\nlock = 2\nskill = 3\n[[signing.trust]]\nsubject = \"skill\"\nidentity = \"a\"\nissuer = \"i\"\n"))
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"lock": 2, "skill": 3}, p.Signing.Thresholds)
+	assert.Equal(t, List{Set: true, Items: []string{"subject=skill identity=a issuer=i"}}, p.Signing.Trust)
+	for _, body := range []string{
+		"policy_version = 1\n[signing.thresholds]\nlock = 0\n",
+		"policy_version = 1\n[signing.thresholds]\nbogus = 2\n",
+	} {
+		_, _, err := Parse("p.toml", []byte(body))
+		require.Error(t, err, body)
+	}
+}
+
+func TestMergeSigningThresholdsTakeTheLargest(t *testing.T) {
+	a := Policy{Signing: Signing{Thresholds: map[string]int{"lock": 2, "skill": 1}}}
+	b := Policy{Signing: Signing{Thresholds: map[string]int{"lock": 1, "sbom": 3}}}
+	want := map[string]int{"lock": 2, "skill": 1, "sbom": 3}
+	assert.Equal(t, want, Merge(a, b).Signing.Thresholds)
+	assert.Equal(t, want, Merge(b, a).Signing.Thresholds)
+}
+
+func TestApplySigningThresholdFloor(t *testing.T) {
+	// Arrange
+	cfg := testConfig(t, "name = \"x\"\n")
+	cfg.Signing = &config.SigningConfig{Thresholds: map[string]int{"lock": 1, "skill": 4}}
+	res := Resolve([]Layer{layer("managed", Policy{Signing: Signing{Thresholds: map[string]int{"lock": 2, "skill": 3, "sbom": 2}}})})
+	// Act
+	out := res.Apply(cfg).Outcome
+	// Assert
+	assert.Equal(t, map[string]int{"lock": 2, "skill": 4, "sbom": 2}, cfg.Signing.Thresholds)
+	assert.Equal(t, []string{"AR740 signing.thresholds"}, codes(out), "only the explicit lower value is reported")
 }
