@@ -90,3 +90,17 @@ func TestAdmit_RemoteSelectorCoversSkillsTheLockCallsRemote(t *testing.T) {
 	require.True(t, refused)
 	assert.Equal(t, "AR710", r.Code)
 }
+
+func TestAdmit_NoLockWhilePinningIsNotRefused(t *testing.T) {
+	t.Parallel()
+	// Arrange: `ai-rulez lock` builds the catalog before any lock exists
+	base := scanCatalog(t, func(s []generator.ServedSkill) { s[1].Files = s[1].Files[:1]; s[2].Files = s[2].Files[:1] })
+	cfg := &config.Config{Governance: &config.GovernanceConfig{RequireApproval: []string{"kind:served"}, Enforce: true}}
+
+	// Act
+	cat := base.Admit(Admission{Config: cfg, Pinning: true})
+
+	// Assert
+	_, refused := cat.Refusal("clean")
+	assert.False(t, refused, "the lock command must be able to pin what it will then ask to have approved")
+}
