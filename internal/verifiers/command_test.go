@@ -3,6 +3,7 @@ package verifiers
 import (
 	"context"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -209,4 +210,51 @@ func TestLoadSpecs_PassFilesNeedsScope(t *testing.T) {
 
 	require.Len(t, problems, 1)
 	assert.Contains(t, problems[0].Message, "needs when_changed")
+}
+
+func TestCommandPredicate_RefusedCommandDoesNotMaskADeterministicFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want Status
+	}{
+		{"forbid then command", "[[verifiers.require.all]]\n[verifiers.require.all.forbid]\nregex = \"x\"\n[[verifiers.require.all]]\n[verifiers.require.all.command]\nargv = [\"x\"]\n", StatusFail},
+		{"command then forbid", "[[verifiers.require.all]]\n[verifiers.require.all.command]\nargv = [\"x\"]\n[[verifiers.require.all]]\n[verifiers.require.all.forbid]\nregex = \"x\"\n", StatusFail},
+		{"passing forbid leaves the refusal", "[[verifiers.require.all]]\n[verifiers.require.all.forbid]\nregex = \"nomatch\"\n[[verifiers.require.all]]\n[verifiers.require.all.command]\nargv = [\"x\"]\n", StatusError},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fake := &runner.Fake{}
+
+			// Act
+			res := runCommandSpec(t, commandHead+"when_changed = [\"*.sql\"]\n"+tt.body, Options{Runner: fake}, nil)
+
+			// Assert
+			assert.Equal(t, tt.want, res.Status, res.Message)
+			assert.Empty(t, fake.Calls())
+			if tt.want == StatusFail {
+				assert.Equal(t, CodeVerifierFailed, res.Code)
+				assert.NotEmpty(t, res.Findings)
+				assert.Contains(t, strings.Join(res.Notes, " "), "--allow-exec")
+			} else {
+				assert.Equal(t, CodeVerifierCommand, res.Code)
+			}
+		})
+	}
+}
+
+func TestCommandPredicate_PassFilesArgsCannotInjectAnOption(t *testing.T) {
+	// Arrange
+	fake := &runner.Fake{}
+	cfg := specProject(t, map[string]string{"--version.sql": "x", "-rf.sql": "y", "ok.sql": "z"},
+		commandSpec("argv = [\"lint\"]\npass_files = \"args\"\n"))
+
+	// Act
+	rep := Run(context.Background(), cfg, Options{Runner: fake, AllowExec: true})
+
+	// Assert
+	require.Len(t, rep.Results, 1)
+	require.Equal(t, StatusPass, rep.Results[0].Status, rep.Results[0].Message)
+	assert.Equal(t, []string{"lint", "./--version.sql", "./-rf.sql", "ok.sql"}, fake.Calls()[0].Argv)
 }

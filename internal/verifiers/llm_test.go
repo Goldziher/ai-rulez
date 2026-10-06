@@ -533,3 +533,17 @@ func TestReport_LLMUsageIsInTheJSONAndTextSummaries(t *testing.T) {
 	assert.Contains(t, text.String(), "llm: 1 call(s), 0 from cache")
 	assert.Contains(t, text.String(), fmt.Sprintf("of $%.2f", 1.0))
 }
+
+func TestLLMVerifier_NestedAllDefersTheModelBehindDeterministicSiblings(t *testing.T) {
+	// Arrange
+	spec := llmHead + "[[verifiers.require.all]]\n[verifiers.require.all.forbid]\nregex = \"errors.New\"\n" +
+		"[[verifiers.require.all]]\n[[verifiers.require.all.all]]\n[verifiers.require.all.all.llm]\nchecklist = [\"x\"]\n"
+	fake := fakeReplying(passOne())
+
+	// Act
+	_, res := runLLM(t, map[string]string{"a.go": goSource}, spec, &LLMOptions{Client: fake})
+
+	// Assert
+	assert.Equal(t, StatusFail, res.Status, res.Message)
+	assert.Empty(t, fake.ChatCalls(), "the model is not asked about a change that already fails")
+}
