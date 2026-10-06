@@ -176,6 +176,9 @@ func merge(repo, user *skillsearch.Config) skillsearch.Config {
 	if user.Weights.Vector > 0 {
 		out.Weights.Vector = user.Weights.Vector
 	}
+	if user.VectorMinSim > 0 {
+		out.VectorMinSim = user.VectorMinSim
+	}
 	if user.Candidates > 0 {
 		out.Candidates = user.Candidates
 	}
