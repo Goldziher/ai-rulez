@@ -500,7 +500,11 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	if sc.Egress != nil {
 		egress = fmt.Sprintf("%t", *sc.Egress)
 	}
-	fmt.Fprintf(w, "scanner %s (egress = %s, format = %s)\n", sc.Name, egress, sc.Format)
+	format := sc.Format
+	if format == "" {
+		format = "sarif"
+	}
+	fmt.Fprintf(w, "scanner %s (egress = %s, format = %s)\n", sc.Name, egress, format)
 	binary := p.binary
 	if binary == "" {
 		binary = "not found (it would be reported as AR9E2)"
