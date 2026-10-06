@@ -3,6 +3,7 @@ mapped:   task -> prompt_file
 mapped:   6 criteria -> rubric (weights kept as text)
 assumed:  no pass threshold; the eval default 0.70 applies
 assumed:  expect_trigger: true (the scenario targets a skill)
+assumed:  lifted contains and not_contains assertions match case-sensitively; the criteria they came from do not say so
 lifted:   criterion "file exists" -> file_exists "CHANGELOG.md"
 lifted:   criterion "mentions version" -> contains "2.0.0"
 lifted:   criterion "no draft marker" -> not_contains "DRAFT"
