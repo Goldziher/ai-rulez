@@ -24,7 +24,8 @@ ai-rulez publish verify dist
 5. With `--execute --yes`, upload.
 
 The tree must be clean (`--allow-dirty` waives it; the manifest then records `dirty = true`). Changes under the dist
-directory are ignored.
+directory are ignored. Every bundle file must also be tracked: a gitignored bundle passes the clean-tree check but would be
+missing from the commit a pinned marketplace names, so publish fails (`AR9N3`) unless `--allow-dirty`.
 
 ## Dist directory
 

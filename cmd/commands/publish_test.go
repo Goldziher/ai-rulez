@@ -426,6 +426,28 @@ func TestPublish_Gates(t *testing.T) {
 	}
 }
 
+func TestPublish_RefusesABundleGitDoesNotTrack(t *testing.T) {
+	// Arrange: the bundle exists on disk but is gitignored, so the clean tree
+	// check passes and a marketplace pinned to the commit would lack the files.
+	root := publishProject(t)
+	publishGit(t, root, "rm", "-r", "-q", "--cached", ".claude-plugin")
+	writeFile(t, filepath.Join(root, ".gitignore"), ".claude-plugin/\n")
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "ignore the bundle")
+
+	// Act
+	_, err := runPublishCapture(t)
+
+	// Assert
+	requirePublishError(t, err, publish.CodeSource, publish.ExitGate)
+	assert.Contains(t, err.Error(), ".claude-plugin/plugin.json")
+	assert.NoDirExists(t, filepath.Join(root, "dist"))
+
+	publishAllowDirty = true
+	_, err = runPublishCapture(t)
+	require.NoError(t, err, "--allow-dirty waives it")
+}
+
 func TestPublish_AllowDirtyWaivesOnlyTheTree(t *testing.T) {
 	// Arrange
 	root := publishProject(t)
