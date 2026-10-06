@@ -39,6 +39,8 @@ func init() {
 type DeliveryFinding struct {
 	Code    string
 	Message string
+	// Severity overrides the rule's configured severity when set.
+	Severity Severity
 }
 
 // WithDelivery supplies the delivery findings computed by the caller.
@@ -58,7 +60,7 @@ func (r *runner) checkDelivery() {
 		path = filepath.Join(r.rootAbs(), ".ai-rulez", "config.toml")
 	}
 	for _, f := range r.delivery {
-		r.add(f.Code, path, 1, "%s", f.Message)
+		r.addWithSeverity(f.Code, f.Severity, path, 1, "%s", f.Message)
 	}
 }
 
