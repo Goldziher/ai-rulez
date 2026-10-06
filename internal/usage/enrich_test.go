@@ -111,6 +111,13 @@ func TestRecord_CodexAndCursorSkillReads(t *testing.T) {
 		{"edit tool is not a load", HarnessCursor, `{"hook_event_name":"preToolUse","tool_name":"StrReplace","tool_input":{"path":"/p/.cursor/skills/beta/SKILL.md"}}`, ""},
 		{"cd then cat is a load", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cd /p && cat skills/gamma/SKILL.md | head -5"}}`, "gamma"},
 		{"env prefix then cat", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"LC_ALL=C cat skills/delta/SKILL.md"}}`, "delta"},
+		{"redirect into the skill is a write", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat /tmp/new.md > skills/deploy/SKILL.md"}}`, ""},
+		{"append into the skill is a write", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat /tmp/more.md >>.agents/skills/deploy/SKILL.md"}}`, ""},
+		{"heredoc into the skill is a write", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat <<EOF > skills/deploy/SKILL.md"}}`, ""},
+		{"redirecting the output elsewhere is still a read", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat skills/eps/SKILL.md > /tmp/copy.md"}}`, "eps"},
+		{"tee is a write", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo x | tee skills/deploy/SKILL.md"}}`, ""},
+		{"apply_patch text is not a command", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Update File: skills/deploy/SKILL.md\n+cat skills/deploy/SKILL.md"}}`, ""},
+		{"linter is not a load", HarnessCodex, `{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"markdownlint skills/deploy/SKILL.md"}}`, ""},
 		{"codex other event", HarnessCodex, `{"hook_event_name":"Stop","tool_input":{"command":"cat skills/alpha/SKILL.md"}}`, ""},
 		{"claude payload under codex", HarnessCodex, claudeSkillEvent, ""},
 	}
