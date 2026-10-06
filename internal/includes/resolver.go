@@ -132,6 +132,12 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 		return oops.Wrapf(err, "failed to merge include '%s'", includeConf.Name)
 	}
 
+	// Verifier declaration files travel with the tree, tagged with their include.
+	merged.ImportedVerifiers = append([]config.ImportedVerifierFile(nil), (*mergedContent).ImportedVerifiers...)
+	for _, f := range includedContent.ImportedVerifiers {
+		f.Include = includeConf.Name
+		merged.ImportedVerifiers = append(merged.ImportedVerifiers, f)
+	}
 	*mergedContent = merged
 	return nil
 }
