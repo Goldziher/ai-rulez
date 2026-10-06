@@ -342,7 +342,15 @@ include are always carried over; `include` filters content kinds, not domains.
 
 An include that cannot be created, fetched or merged is logged as a warning and skipped; the other
 includes and your own content are still generated. Run `ai-rulez validate --verbose` to see the
-warning.
+warning. Under `generate --locked`, `generate --frozen` or an enforced lock (`[lock] enforce`, on whenever
+`ai-rulez.lock` exists), it is an error instead: generating without the include would produce output the lock never
+saw.
+
+Symlinked content files are never read: a rule, skill, agent, command, context or check file that is a symlink is
+skipped with a warning naming it, so an include cannot point at an arbitrary local file. Replace the link with the
+file. Include URLs are classified as git for `http(s)://`, `file://`, `ssh://`, `git://` and `user@host:path`;
+anything else is a local path. Remote includes are cached under `~/.cache/ai-rulez/includes/<name>-<hash of the
+URL>` with mode `0700`.
 
 ### Machine-local includes and offline runs
 
@@ -617,8 +625,8 @@ Includes are not recursive, so cycles cannot occur. Give each include a unique n
 not rejected and are processed independently.
 
 If an include's content is missing from the output, run `ai-rulez validate --verbose`: a failed
-include is logged as `Failed to process include` and skipped, and a `local_override` path that does not
-exist skips the include silently.
+include is logged as `Failed to process include` and skipped (an error under `--locked`, `--frozen` or an enforced
+lock), and a `local_override` path that does not exist skips the include silently.
 
 ### Conflicting Rules
 
