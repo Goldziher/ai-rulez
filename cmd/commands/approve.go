@@ -3,8 +3,10 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"regexp"
 	"slices"
@@ -439,6 +441,10 @@ func (e *approveEnv) save() error {
 }
 
 func (e *approveEnv) revoke(out io.Writer, refs []string) error {
+	if err := e.checkText("--reason", approveReason); err != nil {
+		return err
+	}
+	var dropped []lockfile.Approval
 	// Orphaned records can be revoked by name too: they name content that is gone.
 	known := append([]approval.Subject(nil), e.subjects...)
 	for _, a := range approval.Orphans(e.lock.Approval, e.subjects) {
@@ -453,8 +459,9 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 		kept := e.lock.Approval[:0:0]
 		n := 0
 		for _, a := range e.lock.Approval {
-			if a.ItemKey() == s.Key() && (approveReviewer == "" || approval.NormalizeReviewer(a.Reviewer) == approval.NormalizeReviewer(approveReviewer)) {
+			if a.ItemKey() == s.Key() && (approveReviewer == "" || approval.SameReviewer(a.Reviewer, approveReviewer)) {
 				n++
+				dropped = append(dropped, a)
 				continue
 			}
 			kept = append(kept, a)
@@ -477,7 +484,35 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 	if removed == 0 {
 		return nil
 	}
-	return e.save()
+	if err := e.save(); err != nil {
+		return err
+	}
+	e.removeUnusedBundles(dropped)
+	return nil
+}
+
+// removeUnusedBundles deletes the attestation bundles of removed approvals that
+// no remaining record names, so a revoked or pruned approval leaves no signature
+// of it behind. Only files under the attestations directory are touched, and a
+// failure to delete is a warning: the lock is already written.
+func (e *approveEnv) removeUnusedBundles(dropped []lockfile.Approval) {
+	inUse := map[string]bool{}
+	for _, a := range e.lock.Approval {
+		inUse[a.Attestation] = true
+	}
+	for _, a := range dropped {
+		if a.Attestation == "" || inUse[a.Attestation] {
+			continue
+		}
+		inUse[a.Attestation] = true
+		path, err := approval.AttestationFile(e.cfg.ConfigDir, a.Attestation)
+		if err != nil {
+			continue
+		}
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			logger.Warn("Could not remove the attestation bundle of a removed approval", "path", path, "error", err)
+		}
+	}
 }
 
 func (e *approveEnv) prune(out io.Writer) error {
@@ -486,9 +521,12 @@ func (e *approveEnv) prune(out io.Writer) error {
 		current[s.Key()] = s.Digest
 	}
 	kept := e.lock.Approval[:0:0]
+	var dropped []lockfile.Approval
 	for _, a := range e.lock.Approval {
 		if d, ok := current[a.ItemKey()]; ok && d == a.Digest {
 			kept = append(kept, a)
+		} else {
+			dropped = append(dropped, a)
 		}
 	}
 	n := len(e.lock.Approval) - len(kept)
@@ -500,6 +538,7 @@ func (e *approveEnv) prune(out io.Writer) error {
 	if err := e.save(); err != nil {
 		return err
 	}
+	e.removeUnusedBundles(dropped)
 	_, err := fmt.Fprintf(out, "pruned %d stale or orphaned approval(s)\n", n)
 	return err
 }
@@ -809,13 +848,16 @@ func (e *approveEnv) supersede(rec *lockfile.Approval) {
 }
 
 // checkNote refuses a note that carries a secret: the note is committed.
-func (e *approveEnv) checkNote() error {
-	if approveNote == "" {
+func (e *approveEnv) checkNote() error { return e.checkText("--note", approveNote) }
+
+// checkText refuses free text that carries a secret: it is committed to the lock.
+func (e *approveEnv) checkText(flag, text string) error {
+	if text == "" {
 		return nil
 	}
-	for _, f := range lint.ScanServed(e.cfg, "note", []lint.ServedFile{{Path: "note.txt", Content: []byte(approveNote)}}, "") {
+	for _, f := range lint.ScanServed(e.cfg, "note", []lint.ServedFile{{Path: "note.txt", Content: []byte(text)}}, "") {
 		if f.Code == lint.CodeSecretDetected {
-			return oops.Errorf("--note looks like it contains a secret (%s); it would be committed to %s", f.Code, lockfile.FileName)
+			return oops.Errorf("%s looks like it contains a secret (%s); it would be committed to %s", flag, f.Code, lockfile.FileName)
 		}
 	}
 	return nil
