@@ -17,7 +17,7 @@ func TestTokenize(t *testing.T) {
 		{"refunding customers", []string{"refund", "customer"}},
 		{"policies and queries", []string{"policy", "query"}},
 		{"the of and", []string{}},
-		{"CamelCase-and_snake 42", []string{"camelcase", "snake", "42"}},
+		{"CamelCase-and_snake 42", []string{"camelcas", "snak", "42"}},
 		{"", []string{}},
 	}
 	for _, tt := range tests {
@@ -67,4 +67,34 @@ func TestRank_Deterministic(t *testing.T) {
 	for range 20 {
 		assert.Equal(t, first, Rank(docs, "deploy"))
 	}
+}
+
+func TestStemConflatesInflectionsOfOneWord(t *testing.T) {
+	t.Parallel()
+	groups := [][]string{
+		{"image", "images"},
+		{"template", "templates"},
+		{"service", "services"},
+		{"database", "databases"},
+		{"release", "releases", "releasing", "released"},
+		{"cache", "caches", "cached", "caching"},
+		{"migration", "migrations"},
+		{"match", "matches"},
+		{"process", "processes", "processing"},
+		{"policy", "policies"},
+	}
+	for _, group := range groups {
+		want := stem(group[0])
+		for _, w := range group[1:] {
+			assert.Equal(t, want, stem(w), "%s should stem like %s", w, group[0])
+		}
+	}
+}
+
+func TestStemKeepsDistinctWordsApart(t *testing.T) {
+	t.Parallel()
+	assert.NotEqual(t, stem("class"), stem("clas"))
+	assert.Equal(t, "class", stem("class"), "a double s is not a plural")
+	assert.NotEqual(t, stem("image"), stem("migration"))
+	assert.Equal(t, "use", stem("use"), "short words are left alone")
 }
