@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -266,6 +267,39 @@ func TestSuggest_NeverWritesAndWriteSuggestionsCreatesANewFileOnly(t *testing.T)
 	assert.Empty(t, problems)
 	require.Len(t, specs, 1, "the written file loads as a normal declaration")
 	assert.Equal(t, "no-todo", specs[0].ID)
+}
+
+func TestSuggest_UnknownResponseCostFallsBackToTheEstimate(t *testing.T) {
+	// Arrange: the fake reports no cost, the price table knows the model.
+	cfg := suggestProject(t)
+	prices := func(string, llm.Usage) (float64, bool) { return 0.02, true }
+	opts := SuggestOptions{ID: "database", LLM: LLMOptions{Client: suggestFake(suggestion("", proposal(nil))), Prices: prices}}
+
+	// Act
+	res, err := Suggest(context.Background(), cfg, opts)
+
+	// Assert
+	require.NoError(t, err)
+	require.NotNil(t, res.LLM)
+	assert.InDelta(t, 0.02, res.LLM.CostUSD, 1e-9, "an unknown price is not recorded as $0")
+}
+
+func TestSuggest_LongRuleIsCutOnARuneBoundary(t *testing.T) {
+	// Arrange
+	cfg := suggestProject(t)
+	cfg.Content.Rules[0].Content = "a" + strings.Repeat("世", maxRuleBytes) // 3 bytes per rune; the leading byte shifts the cut into one
+	fake := suggestFake(suggestion("", proposal(nil)))
+
+	// Act
+	_, err := Suggest(context.Background(), cfg, SuggestOptions{ID: "database", LLM: LLMOptions{Client: fake}})
+
+	// Assert
+	require.NoError(t, err)
+	calls := fake.ChatCalls()
+	require.Len(t, calls, 1)
+	for _, m := range calls[0].Messages {
+		assert.True(t, utf8.ValidString(m.Content))
+	}
 }
 
 func TestWriteSuggestions_RefusesASymlinkedVerifiersDirectory(t *testing.T) {

@@ -201,9 +201,7 @@ func Suggest(ctx context.Context, cfg *config.Config, opts SuggestOptions) (*Sug
 		return nil, oops.Hint("Run `ai-rulez list "+kind+"s` to see the ids.").Errorf("the %s %q does not exist", kind, opts.ID)
 	}
 	text := strings.TrimSpace(cf.Content)
-	if len(text) > maxRuleBytes {
-		text = text[:maxRuleBytes]
-	}
+	text = truncateUTF8(text, maxRuleBytes)
 	if llm.RedactSecrets(text) != text {
 		return nil, oops.Hint("Remove the credential from the rule first.").Errorf("the %s contains credential-looking text, so it is not sent to a model", kind)
 	}
@@ -238,6 +236,9 @@ func Suggest(ctx context.Context, cfg *config.Config, opts SuggestOptions) (*Sug
 		usage.Cached = 1
 	} else {
 		usage.CostUSD = resp.CostUSD
+		if !resp.CostKnown {
+			usage.CostUSD, _, _ = run.estimateCall(req, run.opts.Model) // as callChunk: an unknown price is not $0
+		}
 	}
 	res.LLM = &usage
 	raw, err := parseSuggestion(resp.Text)
