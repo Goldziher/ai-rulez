@@ -149,6 +149,15 @@ func (f *CaseFile) CheckSkills(known []string) error {
 	return oops.Code(CodeCasesInvalid).Errorf("%s: invalid cases file: %s", CodeCasesInvalid, strings.Join(problems, "; "))
 }
 
+// CheckK rejects a --k override outside 0..100 (0 means "use the file's k"), so
+// an oversized value is an error rather than silently clamped.
+func CheckK(override int) error {
+	if override < 0 || override > maxK {
+		return oops.Errorf("--k must be between 1 and %d (or 0 for the file's k), got %d", maxK, override)
+	}
+	return nil
+}
+
 // EffectiveK is the cut-off recall and hit are measured at: the override when
 // positive, then the file's k, then 5.
 func (f *CaseFile) EffectiveK(override int) int {

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -210,6 +212,9 @@ func runSearchEval(out, errOut io.Writer, cat *mcp.Catalog) int {
 		fmtError(err)
 		return 1
 	}
+	if err := skillsearch.CheckK(searchFlags.k); err != nil {
+		return fail(err)
+	}
 	mins, err := skillsearch.ParseMinimums(searchFlags.min)
 	if err != nil {
 		return fail(err)
@@ -272,10 +277,43 @@ func printEvalText(out io.Writer, r *skillsearch.Result) {
 	p := reportWriter{out}
 	m := r.Modes[skillsearch.ModeLexical]
 	p.printf("cases: %d (+%d negative), k=%d\n", r.N, r.NNegative, r.K)
-	p.printf("top1      %.4f  (95%% CI %.4f-%.4f)\n", m.Top1, r.CI95["top1"].Low, r.CI95["top1"].High)
-	p.printf("recall@%d  %.4f  (95%% CI %.4f-%.4f)\n", r.K, m.RecallAt, r.CI95["recall_at_k"].Low, r.CI95["recall_at_k"].High)
-	p.printf("hit@%d     %.4f\n", r.K, m.HitAt)
-	p.printf("mrr       %.4f  (95%% CI %.4f-%.4f)\n", m.MRR, r.CI95["mrr"].Low, r.CI95["mrr"].High)
+	width := len(fmt.Sprintf("recall@%d", r.K)) + 2
+	row := func(label string, v float64, ci *skillsearch.Interval) {
+		p.printf("%-*s%.4f", width, label, v)
+		if ci != nil {
+			p.printf("  (95%% CI %.4f-%.4f)", ci.Low, ci.High)
+		}
+		p.printf("\n")
+	}
+	ci := func(key string) *skillsearch.Interval {
+		v, ok := r.CI95[key]
+		if !ok {
+			return nil
+		}
+		return &v
+	}
+	row("top1", m.Top1, ci("top1"))
+	row(fmt.Sprintf("recall@%d", r.K), m.RecallAt, ci("recall_at_k"))
+	row(fmt.Sprintf("hit@%d", r.K), m.HitAt, nil)
+	row("mrr", m.MRR, ci("mrr"))
+	if len(r.Tags) > 0 {
+		reportWriter{out}.printf("%s\n", "\nby tag:")
+		for _, tag := range slices.Sorted(maps.Keys(r.Tags)) {
+			tm := r.Tags[tag]
+			p.printf("  %s (%d): top1 %.4f  recall@%d %.4f  hit@%d %.4f  mrr %.4f\n", tag, tm.N, tm.Top1, r.K, tm.RecallAt, r.K, tm.HitAt, tm.MRR)
+		}
+	}
+	if len(r.Negatives) > 0 {
+		reportWriter{out}.printf("%s\n", "\nnegatives (nothing should match; shown is what ranked first):")
+		for i := range r.Negatives {
+			n := &r.Negatives[i]
+			top := "nothing"
+			if n.Top != "" {
+				top = fmt.Sprintf("%s (score %.4f)", n.Top, n.TopScore)
+			}
+			p.printf("  %s: %s\n", n.ID, top)
+		}
+	}
 	if len(r.Misses) > 0 {
 		reportWriter{out}.printf("%s\n", "\nmisses:")
 		for i := range r.Misses {
