@@ -65,8 +65,10 @@ func TestRedactEndpoint(t *testing.T) {
 		in, want string
 		ok       bool
 	}{
-		{"https://u:p@example.com/mcp?key=v#f", "https://example.com/mcp", true},
-		{"http://localhost:8080/sse", "http://localhost:8080/sse", true},
+		{"https://u:p@example.com/mcp?key=v#f", "https://example.com", true},
+		{"http://localhost:8080/sse", "http://localhost:8080", true},
+		{"https://example.com/mcp/s3cr3t-token/sse", "https://example.com", true},
+		{"https://example.com:8443/t/abc", "https://example.com:8443", true},
 		{"${SECRET_URL}", "", false},
 		{"https://${HOST}/mcp", "", false},
 	}

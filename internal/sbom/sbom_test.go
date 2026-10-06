@@ -145,7 +145,7 @@ func TestNoSecretIsEmitted(t *testing.T) {
 	for _, secret := range []string{"env-secret-value", "url-secret", "query-secret", "header-secret", "user:", "frag"} {
 		assert.NotContains(t, doc, secret)
 	}
-	assert.Contains(t, doc, `"https://example.com/mcp"`)
+	assert.Contains(t, doc, `"https://example.com"`)
 	assert.Contains(t, doc, "API_KEY", "key names are listed, values are not")
 }
 
@@ -228,6 +228,8 @@ func TestMCPServerPURLs(t *testing.T) {
 		{"pipx run", "pipx", `["run", "tool"]`, "pkg:pypi/tool"},
 		{"docker tag", "docker", `["run", "-i", "--rm", "-e", "K=V", "ghcr.io/org/img:1.0"]`, "pkg:oci/img?repository_url=ghcr.io/org/img&tag=1.0"},
 		{"docker digest", "docker", `["run", "mcp/fetch@sha256:abc"]`, "pkg:oci/fetch@sha256:abc?repository_url=docker.io/mcp/fetch"},
+		{"docker userinfo is not a digest", "docker", `["run", "user:pass@registry.example/img"]`, ""},
+		{"docker user@host is not a digest", "docker", `["run", "tok3n@registry.example"]`, ""},
 		{"docker library image", "docker", `["run", "redis"]`, "pkg:oci/redis?repository_url=docker.io/library/redis"},
 		{"docker build is not run", "docker", `["build", "."]`, ""},
 		{"go run versioned", "go", `["run", "github.com/org/tool/cmd/srv@v1.2.3"]`, "pkg:golang/github.com/org/tool/cmd/srv@v1.2.3"},
@@ -272,7 +274,7 @@ func TestRemoteMCPServerIsAService(t *testing.T) {
 	svc := bom.Services[0]
 	assert.Equal(t, "remote", svc.Name)
 	assert.True(t, svc.Authenticated)
-	assert.Equal(t, []string{"https://example.com/mcp"}, svc.Endpoints)
+	assert.Equal(t, []string{"https://example.com"}, svc.Endpoints)
 	for _, c := range bom.Components {
 		assert.NotEqual(t, "ai-rulez:mcp:remote", c.BOMRef)
 	}

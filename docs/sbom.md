@@ -20,7 +20,7 @@ the document is the same on every checkout.
 | `components[]`, type `data` | Every rule, context file, skill, agent, command, check, hook and role (and the permission and managed-settings pins), with `ai-rulez:kind`, `ai-rulez:domain`, `ai-rulez:path`, `ai-rulez:digest`; `version` and `ai-rulez:owner` from the item's frontmatter |
 | `components[]`, type `data` | Each remote include, installed skill and `[[skill_sources]]` entry: `purl`, `vcs` external reference, `ai-rulez:ref`, and the commit and digest pinned in `ai-rulez.lock` |
 | `components[]`, type `application` | Each local MCP server (command based): name, command executable, enabled, profiles, env key names, and a heuristic `purl` |
-| `services[]` | Each remote MCP server (`url`): redacted endpoint, `authenticated` when headers are set, `x-trust-boundary` |
+| `services[]` | Each remote MCP server (`url`): endpoint reduced to scheme and host, `authenticated` when headers are set, `x-trust-boundary` |
 | `metadata.component` | The project, with `ai-rulez:tree`, `ai-rulez:lock` (`present`/`absent`) and `ai-rulez:lock-in-sync` |
 | `dependencies[]` | The project depends on every component and service |
 
