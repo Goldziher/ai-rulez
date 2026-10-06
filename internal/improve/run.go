@@ -478,6 +478,9 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 		return out, nil
 	}
 	rep.Siblings = sib
+	for _, u := range sib.Unmeasured {
+		rep.Warnings = append(rep.Warnings, fmt.Sprintf("the sibling guard left out %s: %s", Sanitize(u.Skill, 80), Sanitize(u.Reason, 200)))
+	}
 	if !x.overBudget() {
 		train, err := x.eval.Eval(x.ctx, p.Skill.ID, rr.dir, digest, p.trainCases, x.left())
 		if train != nil {
