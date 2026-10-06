@@ -87,6 +87,8 @@ type Config struct {
 	// settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json,
 	// .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin.
 	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Guard configures the built-in hook that blocks edits to generated files.
+	Guard *GuardConfig `yaml:"guard,omitempty" json:"guard,omitempty" toml:"guard,omitempty"`
 	// Permissions declares allow/ask/deny rules for .claude/settings.json and, translated,
 	// for every harness with a native permission surface (docs/permissions.md).
 	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`

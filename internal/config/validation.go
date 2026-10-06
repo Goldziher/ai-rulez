@@ -68,6 +68,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateGuard(); err != nil {
+		return err
+	}
+
 	if err := c.validateAgentEffort(); err != nil {
 		return err
 	}

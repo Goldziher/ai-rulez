@@ -234,6 +234,9 @@ type HookGroup struct {
 	// differently from Claude Code (gemini matches `write_file|replace` where
 	// Claude matches `Write|Edit`).
 	Matchers map[string]string `yaml:"matchers,omitempty" json:"matchers,omitempty" toml:"matchers,omitempty"`
+	// Builtin names the feature that synthesized this group (HookBuiltinGuard). It
+	// is never read from or written to config.toml.
+	Builtin string `yaml:"-" json:"-" toml:"-"`
 }
 
 // HookAction is one action within a HookGroup. Exactly one of Command or Script

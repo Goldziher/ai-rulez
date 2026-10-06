@@ -68,6 +68,7 @@ type tomlOutput struct {
 	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
 	Codex           *CodexConfig           `toml:"codex,omitempty"`
 	Hooks           []HookGroup            `toml:"hooks,omitempty"`
+	Guard           *GuardConfig           `toml:"guard,omitempty"`
 	Permissions     *Permissions           `toml:"permissions,omitempty"`
 }
 
@@ -165,7 +166,8 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Placement:       cfg.Placement,
 		Claude:          cfg.Claude,
 		Codex:           cfg.Codex,
-		Hooks:           cfg.Hooks,
+		Hooks:           cfg.UserHooks(),
+		Guard:           cfg.Guard,
 		Permissions:     cfg.Permissions,
 	}
 }
