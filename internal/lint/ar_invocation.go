@@ -12,7 +12,7 @@ const CodeAutoInvocation = "AR013"
 
 func init() {
 	registerRules(RuleInfo{CodeAutoInvocation, "auto-invocation-danger", SeverityWarning, "a skill the model can invoke by itself has unrestricted Bash and ships scripts, or a subagent runs with permissionMode bypassPermissions"})
-	registerItemCheck(checkAutoInvocation)
+	registerItemCheck(checkAutoInvocation, AnalyzerSecurity)
 }
 
 func checkAutoInvocation(r *runner, it *item, _ doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules

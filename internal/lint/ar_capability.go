@@ -20,7 +20,7 @@ func init() {
 		RuleInfo{CodeCapabilityRisk, "capability-profile-risk", SeverityWarning, "the commands an item runs combine capabilities that are risky together: destructive with network, many network commands, interpreter with network"},
 		RuleInfo{CodeCrossItemChain, "cross-item-exfil-chain", SeverityWarning, "items of one bundle split a dangerous capability between them: one reads credentials, another has network; stealth beside a high-risk item"},
 	)
-	registerRunCheck(checkCapabilities)
+	registerRunCheck(checkCapabilities, AnalyzerSecurity)
 }
 
 // Command tiers.

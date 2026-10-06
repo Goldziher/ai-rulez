@@ -35,7 +35,7 @@ var (
 	// validateLintProfile overrides [lint] profile. It is not --profile: that
 	// name selects a generation profile everywhere else.
 	validateLintProfile string
-	// validateAnalyzers restricts the report to these analyzers.
+	// validateAnalyzers runs only these analyzers (replacing [lint] analyzers).
 	validateAnalyzers []string
 	// validateAllowEgress names the egress = true scanners allowed to run (--allow-egress).
 	validateAllowEgress []string
@@ -152,26 +152,52 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
+	sel := analyzerSelection(cfg)
 	var opts []lint.Option
-	if cfg.Plugin != nil || cfg.Marketplace != nil {
+	if (cfg.Plugin != nil || cfg.Marketplace != nil) && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
 		if driftErr != nil {
 			logger.Warn("Skipped the plugin version drift check", "error", driftErr)
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
-	if findings := deliveryFindings(cfg); !strictSecurityOnly && len(findings) > 0 {
-		opts = append(opts, lint.WithDelivery(findings))
+	if lint.AnalyzerSelected(sel, lint.AnalyzerDelivery, lint.AnalyzerLock) {
+		if findings := deliveryFindings(cfg); !strictSecurityOnly && len(findings) > 0 {
+			opts = append(opts, lint.WithDelivery(findings))
+		}
 	}
-	if drift := lockDriftFor(cfg); len(drift) > 0 {
-		opts = append(opts, lint.WithLockDrift(drift))
+	if lint.AnalyzerSelected(sel, lint.AnalyzerLock) {
+		if drift := lockDriftFor(cfg); len(drift) > 0 {
+			opts = append(opts, lint.WithLockDrift(drift))
+		}
 	}
-	if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
-		logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
-	} else if okfRes != nil {
-		opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
+	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
+		if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
+			logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
+		} else if okfRes != nil {
+			opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
+		}
 	}
-	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress}, opts...)
+	return lint.RunWith(cfg, tree, lint.Options{
+		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
+		Analyzers: validateAnalyzers, NeedDeps: changedRev() != "",
+	}, opts...)
+}
+
+// analyzerSelection is the analyzer allow-list of a run: --analyzer, else
+// [lint] analyzers, else (the scan command) the security analyzer; nil runs
+// every analyzer.
+func analyzerSelection(cfg *config.Config) []string {
+	if len(validateAnalyzers) > 0 {
+		return validateAnalyzers
+	}
+	if cfg.Lint != nil && len(cfg.Lint.Analyzers) > 0 {
+		return cfg.Lint.Analyzers
+	}
+	if strictSecurityOnly {
+		return []string{lint.AnalyzerSecurity}
+	}
+	return nil
 }
 
 // failOnFor resolves one root's threshold: the flag, else its [lint] fail_on,
@@ -222,9 +248,10 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 
 // prepareReports runs the steps between linting and printing, in the order that
 // keeps each one honest: fixes first (so fixed findings leave the report), then
-// the baseline against every finding (so stale entries are judged on the full
-// set), budgets on the full set, and only then the views that narrow the report
-// (analyzer filter, changed-only) and the risk score of what is shown. done is
+// the baseline against every finding of the analyzers that ran (so stale
+// entries are judged on the full set; entries of an analyzer that did not run
+// are left alone), budgets on the full set, and only then the view that narrows
+// the report (changed-only) and the risk score of what is shown. done is
 // true when the run ends here with code (--update-baseline, or an error).
 func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.BudgetExcess, code int, done bool) {
 	fail := func(err error) ([][]lint.BudgetExcess, int, bool) {
@@ -248,7 +275,6 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 	excess = make([][]lint.BudgetExcess, len(reports))
 	for i, report := range reports {
 		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
-		lint.FilterAnalyzers(report, validateAnalyzers)
 	}
 	if err := narrowToChanged(reports, cfgs); err != nil {
 		return fail(err)

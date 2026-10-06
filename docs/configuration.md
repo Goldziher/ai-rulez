@@ -1150,6 +1150,7 @@ Every key, the finding codes and the exit codes are in [Strict validation](stric
 Deterministic, read-only repo checks, run by `ai-rulez verifiers run`. One `[[verifiers]]` table per check; the guide with
 semantics and examples is [Verifiers](verifiers.md).
 
+analyzers = ["security", "references"]   # run only these analyzers
 ```toml
 [[verifiers]]
 name = "node-version"
