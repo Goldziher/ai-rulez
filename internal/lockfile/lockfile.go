@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -263,10 +264,33 @@ type Want struct {
 // pinned tag must also still satisfy it, so editing the constraint, the tag
 // prefix or the prerelease switch invalidates the pin until `ai-rulez lock`.
 func (e *Entry) Covers(w Want) bool {
-	if e == nil || e.Source != w.Source || e.Path != w.Path || e.Ref != w.Ref {
+	if e == nil || !sameSource(e.Source, w.Source) || e.Path != w.Path || e.Ref != w.Ref {
 		return false
 	}
 	return w.Constraint == "" || e.TagSatisfies(w)
+}
+
+// sameSource compares a recorded source with the configured one. Locks written
+// by earlier versions recorded a file:// source as an absolute or project-relative
+// path (file://../x); such an entry still covers the same directory, matched by
+// its last path element, until the next `lock` rewrites it as written. The tree
+// digest is verified separately, so this never accepts different content.
+func sameSource(recorded, configured string) bool {
+	if recorded == configured {
+		return true
+	}
+	legacy := func(s string) (string, bool) {
+		s = strings.TrimPrefix(s, "git+")
+		rest, ok := strings.CutPrefix(s, "file://")
+		if !ok {
+			return "", false
+		}
+		rest = strings.TrimRight(rest, "/")
+		return rest[strings.LastIndex(rest, "/")+1:], true
+	}
+	a, okA := legacy(recorded)
+	b, okB := legacy(configured)
+	return okA && okB && a != "" && a == b && strings.HasPrefix(recorded, "git+") == strings.HasPrefix(configured, "git+")
 }
 
 // TagSatisfies reports whether the entry's tag is a version tag of w's prefix

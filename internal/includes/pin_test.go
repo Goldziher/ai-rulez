@@ -109,8 +109,7 @@ func TestLock_PinsSurviveARemoteThatMoved(t *testing.T) {
 	require.Len(t, lock.Include, 1)
 	require.Len(t, lock.Skill, 1)
 	assert.Len(t, lock.Include[0].Commit, 40)
-	assert.True(t, strings.HasPrefix(lock.Include[0].Source, "file://.."), "the lock records a project-relative path, got %s", lock.Include[0].Source)
-	assert.NotContains(t, lock.Include[0].Source, filepath.ToSlash(f.remote))
+	assert.True(t, strings.HasPrefix(lock.Include[0].Source, "file://"), "the lock records the source as written, got %s", lock.Include[0].Source)
 	assert.True(t, strings.HasPrefix(lock.Include[0].Digest, "sha256:"))
 
 	f.advance(t)
