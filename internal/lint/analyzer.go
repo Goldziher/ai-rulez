@@ -89,7 +89,9 @@ var analyzerGroups = []analyzerGroup{
 	{AnalyzerOKF, ScopeItem, []string{"AR9B0", "AR9B1", "AR9B2", "AR9B3", "AR9B4", "AR9B5", "AR9B6", "AR9B7", "AR9B8", "AR9B9"}},
 	{AnalyzerTraps, ScopeFile, []string{"AR9C0", "AR9C1", "AR9C2", "AR9C3", "AR9C4", "AR9C7", "AR9C8", "AR9C9"}},
 	// Invalid [telemetry] and [llm] tables.
-	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0"}},
+	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0", "AR9G8"}},
+	// Review dimensions: reported by `ai-rulez review`, never by validate.
+	{AnalyzerDescriptions, ScopeItem, []string{"AR9G0", "AR9G1", "AR9G2", "AR9G3", "AR9G4", "AR9G5", "AR9G6", "AR9G7"}},
 	{AnalyzerConvert, ScopeItem, []string{"AR9F0", "AR9F1", "AR9F2", "AR9F3", "AR9F4", "AR9F5"}},
 }
 
