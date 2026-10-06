@@ -89,12 +89,34 @@ func SetPolicyEnforcer(e PolicyEnforcer) {
 }
 
 // PolicyLocks reports whether the installed policy forbids network use of the
-// named feature ("telemetry" or "llm"). It is false without a policy.
+// named feature ("telemetry" or "llm"). It is false without a policy. It knows
+// no repository, so the organization policy of --discover-org is not part of it:
+// use PolicyLocksIn where a project directory is known.
 func PolicyLocks(feature string) bool {
 	if b := policyEnforcer.Load(); b != nil {
 		return b.e.Locks(feature)
 	}
 	return false
+}
+
+// DirLocker is a PolicyEnforcer that can answer Locks for one project, whose
+// organization policy it discovers from the repository's owner.
+type DirLocker interface {
+	LocksIn(feature, dir string) bool
+}
+
+// PolicyLocksIn is PolicyLocks for the project at dir: when organization
+// discovery is on, the owner's policy can forbid telemetry export or model calls
+// too. An enforcer that cannot discover answers as PolicyLocks does.
+func PolicyLocksIn(feature, dir string) bool {
+	b := policyEnforcer.Load()
+	if b == nil {
+		return false
+	}
+	if dl, ok := b.e.(DirLocker); ok {
+		return dl.LocksIn(feature, dir)
+	}
+	return b.e.Locks(feature)
 }
 
 // applyPolicy runs the installed enforcer on a loaded configuration and

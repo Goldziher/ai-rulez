@@ -66,11 +66,19 @@ func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 		out.UserFile = path
 	}
 	out.Config, err = merged.WithEnv(getenv)
-	if PolicyLocks("llm") {
+	if PolicyLocksIn("llm", baseDirOf(c)) {
 		// An organization policy switches network use off whatever the user scope says.
 		out.Config.AllowNetwork = false
 	}
 	return out, err
+}
+
+// baseDirOf is the project directory of c, "" for none.
+func baseDirOf(c *Config) string {
+	if c == nil {
+		return ""
+	}
+	return c.BaseDir
 }
 
 // ResolvedLLM returns the effective [llm] table (zero value when absent) with the

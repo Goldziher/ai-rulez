@@ -444,6 +444,5 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   inside a local include's directory) is imported. A violation unloads the key and is `AR748`, reported against the
   imported file. Builtin packs are not bounded (they ship with the binary).
 - **Known gaps.** A policy value is not checked against the secret scanner yet. `deny_digests`
-  bounds what the repository's own `ai-rulez.lock` says. The `telemetry` and `llm` locks ignore
-  organization discovery, which needs a repository.
+  bounds what the repository's own `ai-rulez.lock` says.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).
