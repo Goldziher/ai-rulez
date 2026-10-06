@@ -219,6 +219,9 @@ func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, pro
 	pins := &includePins{cfg: cfg}
 	for _, f := range cfg.Content.ImportedVerifiers {
 		src := "include:" + f.Include + "/" + VerifiersDirName + "/" + f.Name
+		if f.Skill {
+			src = "skill:" + f.Include + "/" + VerifiersDirName + "/" + f.Name
+		}
 		parsed, err := parseSpecs([]byte(f.Data))
 		if err != nil {
 			problems = append(problems, Problem{File: src, Message: err.Error()})
@@ -231,7 +234,12 @@ func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, pro
 				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
 				continue
 			}
-			if msg := importRefusal(pins, settings, &sp); msg != "" {
+			if f.Skill && usesCommand(sp.Require) {
+				problems = append(problems, Problem{ID: sp.ID, File: src, Message: "uses the command predicate, which a verifier shipped by installed skill " +
+					quote(f.Include) + " may never use (trust_exec_from covers includes only)"})
+				continue
+			}
+			if msg := importRefusal(pins, settings, &sp); !f.Skill && msg != "" {
 				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
 				continue
 			}

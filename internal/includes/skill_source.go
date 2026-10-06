@@ -338,11 +338,22 @@ func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, erro
 		logger.Warn("Failed to read skill resources", "skill", skillName, "error", err)
 	}
 
+	// A skill may ship verifier declarations in verifiers/. They are read like an
+	// include's, as data, and can never be trusted to run commands.
+	shipped, err := config.ScanVerifierFiles(skillDir)
+	if err != nil {
+		logger.Warn("Failed to read skill verifiers", "skill", skillName, "error", err)
+	}
+	for i := range shipped {
+		shipped[i].Include, shipped[i].Skill = skillName, true
+	}
+
 	return config.ContentFile{
 		Name:      skillName,
 		Path:      skillPath,
 		Content:   body,
 		Metadata:  metadata,
 		Resources: resources,
+		Verifiers: shipped,
 	}, nil
 }
