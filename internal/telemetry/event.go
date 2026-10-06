@@ -100,6 +100,7 @@ var (
 	idPattern      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._/@+:-]{0,159}$`)
 	harnessPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,31}$`)
 	rolePattern    = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,31}$`)
+	eventIDPattern = regexp.MustCompile(`^[0-9a-f]{16}$`)
 	sessionPattern = regexp.MustCompile(`^[0-9a-f]{16}$`)
 	digestPattern  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_:.-]{0,135}$`)
 	reasonPattern  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
@@ -231,27 +232,34 @@ func FromUsageEntry(entry *usage.Entry) Event {
 	if outcome == "" {
 		outcome = OutcomeLoaded
 	}
+	eventID := entry.EventID
+	if !matches(eventIDPattern, eventID) {
+		eventID = "" // the recorder assigns one
+	}
 	return Event{
-		Time: entry.Time, Kind: KindSkill, ID: entry.ID, Digest: digest,
+		Time: entry.Time, EventID: eventID, Kind: KindSkill, ID: entry.ID, Digest: digest,
 		Source: SourceHook, Harness: entry.Harness, Role: entry.Role, Served: entry.Served,
 		Session: entry.Session, Outcome: outcome, LoadReason: entry.Invocation,
 	}
 }
 
-// ToUsageEntry renders a skill event as the v2 usage log line, keeping the log
-// readable by every release that reads `usage record` output.
+// ToUsageEntry renders a skill event as the usage log line (the current entry
+// version), keeping the log readable by every release that reads `usage record`
+// output.
 func ToUsageEntry(e *Event) usage.Entry {
 	invocation := "tool"
 	if e.Source == SourceMCP {
 		invocation = "mcp"
 	}
 	entry := usage.Entry{
-		Version: usage.EntrySchemaVersion, Time: e.Time, Event: usage.EventSkillInvoked,
+		Version: usage.EntrySchemaVersion, Time: e.Time, EventID: e.EventID, Event: usage.EventSkillInvoked,
 		Skill: e.ID, ID: e.ID, Session: e.Session, Invocation: invocation,
 		Harness: e.Harness, Outcome: e.Outcome, Served: e.Served, Role: e.Role,
 	}
 	if strings.HasPrefix(e.Digest, "sha256:") {
-		entry.Digest = e.Digest // the lock's canonical digest
+		// A load through the skills server reports the served-skill digest; the
+		// canonical digest reaches the log through `usage record` and the index.
+		entry.Digest, entry.DigestScheme = e.Digest, usage.DigestSchemeServed
 	} else {
 		entry.Hash = e.Digest // the index's blake3 hash
 	}

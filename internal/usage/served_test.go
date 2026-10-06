@@ -32,7 +32,8 @@ func TestRecordServed_WritesAnIdentifierOnlyServedEntry(t *testing.T) {
 	assert.Equal(t, EventSkillInvoked, entries[0].Event)
 	assert.Equal(t, "pdf-processing", entries[0].ID)
 	assert.True(t, entries[0].Served)
-	assert.Equal(t, "sha256:abc", entries[0].Digest)
+	assert.Equal(t, "sha256:abc", entries[0].Digest, "without an index digest the served digest is logged")
+	assert.Equal(t, DigestSchemeServed, entries[0].DigestScheme)
 	assert.Equal(t, "2026-10-04T12:00:00Z", entries[0].Time)
 
 	raw, err := os.ReadFile(log)
@@ -131,4 +132,17 @@ func TestReadLog_ReadsVersion1AndVersion2LinesTogether(t *testing.T) {
 	assert.Equal(t, 2, entries[1].Version)
 	assert.True(t, entries[1].Served)
 	assert.Equal(t, "r", entries[1].Role)
+}
+
+func TestRecordServed_PrefersTheIndexDigestForTheJoin(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	index := writeIndex(t, dir, SkillRecord{ID: "pdf-processing", Source: "s", Hash: "h", Digest: alphaDigest})
+
+	entry, err := RecordServed(ServedLoad{Skill: "pdf-processing", Digest: "sha256:served"}, RecordOptions{IndexPath: index, Now: fixedClock})
+
+	require.NoError(t, err)
+	assert.Equal(t, alphaDigest, entry.Digest)
+	assert.Equal(t, DigestSchemeSkill, entry.DigestScheme)
+	assert.Len(t, entry.EventID, 16)
 }

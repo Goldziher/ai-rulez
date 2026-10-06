@@ -31,6 +31,7 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
       "domain": "ops",
       "source": ".ai-rulez/domains/ops/skills/deploy-staging/SKILL.md",
       "hash": "blake3:0699fc6b...",
+      "digest": "sha256:262d7213...",
       "owner": "team-a",
       "version": "1.2.0",
       "outputs": {
@@ -48,6 +49,12 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
   into `.claude/skills`); such a command is listed and invoked like a skill, so its usage is logged the same way.
 - `hash` is a blake3 digest of the authored skill: `SKILL.md` as written, then each bundled resource in path order.
   It changes when, and only when, the authored skill changes.
+- `digest` is the skill's **canonical digest**: the item digest [`lock`](lockfile.md) pins for the skill (scheme
+  `ai-rulez/skill/v1`, sha256 over `SKILL.md` and the loaded `references/`, `scripts/` and `assets/` files, with
+  modes and line endings normalised). A top-level `evals/` directory is not part of it, so editing an eval case never
+  makes the skill look edited. Usage lines, eval results and the lock all use this one digest, which is what lets
+  `report evals` tell whether a score describes the version that was used. An index written before this field has
+  none; run `generate` again.
 - `owner` and `version` are read from the `owner` and `version` frontmatter keys when set. Add
   `require_metadata` to [`[lint]`](strict-validation.md) to make them mandatory.
 - `outputs` lists, per preset, the `SKILL.md` files that preset writes. A path shared by several presets
@@ -100,13 +107,15 @@ Each invocation appends one line to the log (default `.ai-rulez/local/usage.json
 is not committed by accident):
 
 ```json
-{"v":2,"ts":"2026-10-04T17:20:08Z","event":"skill_invoked","skill":"deploy-staging","id":"deploy-staging","hash":"blake3:0699fc6b...","session":"5b1c0e9a7d3f2a64","invocation":"tool","harness":"claude","outcome":"loaded"}
+{"v":3,"ts":"2026-10-04T17:20:08Z","event":"skill_invoked","skill":"deploy-staging","id":"deploy-staging","hash":"blake3:0699fc6b...","digest":"sha256:262d7213...","digest_scheme":"ai-rulez/skill/v1","event_id":"5b1c0e9a7d3f2a64","session":"5b1c0e9a7d3f2a64","invocation":"tool","harness":"claude","outcome":"loaded"}
 ```
 
 | Field | Meaning |
 | --- | --- |
-| `v` | Log format version, `2`. Lines without it are version 1. |
+| `v` | Log format version, `3`. Lines without it are version 1. |
 | `ts`, `event`, `skill`, `id`, `hash`, `invocation`, `harness` | As before: when, the name the harness reported, the index id (a `plugin:` prefix is dropped), the index hash at that moment, `tool`, `slash` or `read`, and the harness. |
+| `digest`, `digest_scheme` | The skill's canonical digest from the index at that moment and the scheme that names it (`ai-rulez/skill/v1`). A load through the skills server without an index digest logs the served-skill digest under `ai-rulez/served-skill/v1`. Omitted when the skill is not in the index or the index has no digest. Only the `ai-rulez/skill/v1` scheme joins with eval results. `hash` stays for readers of older logs. |
+| `event_id` | 16 hex digits of a salted hash of the machine salt, timestamp, id, invocation, session and a random nonce. It identifies the line, so a replayed or merged line is counted once; it is derived from the machine salt, so it links nothing across machines. The telemetry outbox reuses it. |
 | `session` | A **salted hash** of the harness session id: 16 hex digits of `sha256(salt, id)`. The salt is 16 random bytes in `usage.salt` beside the log (mode 0600, machine-local; an empty file is regenerated and a looser mode is tightened) or `$AI_RULEZ_USAGE_SALT`. The raw id is never written; when no salt can be obtained the field is omitted. |
 | `outcome` | `loaded` (the hook saw the skill load), `used` or `abandoned`. The recorder itself only knows `loaded`; a hook you wire to a later event can pass `--outcome used`. Omitted for an unknown value. |
 | `served` | `true` for loads that came through the MCP server rather than from disk (set by the MCP skill server; `--served` on the command). Omitted when false. |
@@ -119,8 +128,9 @@ the `SKILL.md` path the id was read from), transcripts, raw session ids or file 
 those fields, so nothing else can reach the log.
 
 Compatibility: new fields are additive. `report usage` reads version 1 lines (which may hold a raw session id written
-before salting; nothing rewrites them, so delete or rotate an old log if it must not keep raw ids) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read version 2
-lines and ignore the new fields.
+before salting; nothing rewrites them, so delete or rotate an old log if it must not keep raw ids), version 2 lines
+(no digest or event id) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read
+version 3 lines and ignore the new fields.
 
 `--log FILE` chooses another file. `--sink-command CMD` runs `CMD` through the shell with the line on its standard
 input, for teams that ship lines to their own collector; that command, not ai-rulez, decides where a line goes. The command gets 3 seconds: after that its whole process group is killed and the recorder reports a timeout; at most 64 KiB of its output is kept. A failing or timed-out sink does not drop the entry (the log file and any telemetry still get it); the error goes to standard error. The same limits apply to `mcp --usage-sink`.

@@ -2,12 +2,16 @@ package usage
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,8 +30,18 @@ const EventItem = "item_event"
 
 // EntrySchemaVersion is the version written to the "v" field of new log lines.
 // Lines without it predate the field (version 1: raw session id, no outcome,
-// served or role) and stay readable; readers ignore fields they do not know.
-const EntrySchemaVersion = 2
+// served or role) and stay readable, as do version 2 lines (no digest scheme or
+// event id); readers ignore fields they do not know. Version 3 adds digest,
+// digest_scheme and event_id.
+const EntrySchemaVersion = 3
+
+// Digest schemes a log line can name in digest_scheme. Only DigestSchemeSkill is
+// the canonical skill digest the lock and the eval store share; a digest in any
+// other scheme (or none) joins by skill id only.
+const (
+	DigestSchemeSkill  = "ai-rulez/skill/v1"
+	DigestSchemeServed = "ai-rulez/served-skill/v1"
+)
 
 // Outcomes of a skill load. The recorder knows OutcomeLoaded at the moment of
 // the hook; the others are for hooks a team wires to later events (a Stop hook
@@ -84,8 +98,16 @@ type Entry struct {
 	Served bool `json:"served,omitempty"`
 	// Role is the role active when the skill loaded, when the caller says.
 	Role string `json:"role,omitempty"`
-	// Digest is the served skill's provenance digest.
+	// Digest is the skill's content digest at the time of use, named by
+	// DigestScheme: the lock's canonical skill digest when the skills index has
+	// one, the served skill's provenance digest for a served load without it.
 	Digest string `json:"digest,omitempty"`
+	// DigestScheme names how Digest was computed (DigestSchemeSkill or
+	// DigestSchemeServed); empty on lines written before version 3.
+	DigestScheme string `json:"digest_scheme,omitempty"`
+	// EventID de-duplicates replays and merged logs: 16 hex digits of a salted
+	// hash, so it does not link events across machines. Empty before version 3.
+	EventID string `json:"event_id,omitempty"`
 	// Resource marks the load of a supporting file, not the skill's SKILL.md;
 	// reports do not count it as a further use of the skill.
 	Resource bool `json:"resource,omitempty"`
@@ -136,6 +158,8 @@ type RecordOptions struct {
 	SaltPath string
 	// Now overrides the clock (tests).
 	Now func() time.Time
+	// Nonce overrides the random part of the event id (tests).
+	Nonce func() string
 }
 
 // Record reads one hook event from in and, when it is a skill invocation,
@@ -172,7 +196,11 @@ func Record(in io.Reader, options RecordOptions) (*Entry, error) {
 	}
 	entry.Time = now().UTC().Format(time.RFC3339)
 	entry.ID = skillID(entry.Skill)
-	entry.Hash = lookupHash(options.IndexPath, event.CWD, entry.ID)
+	entry.Hash, entry.Digest = lookupIdentity(options.IndexPath, event.CWD, entry.ID)
+	if entry.Digest != "" {
+		entry.DigestScheme = DigestSchemeSkill
+	}
+	entry.EventID = newEventID(loadSalt(saltPathFor(options, event.CWD)), entry, options)
 	return emit(entry, options)
 }
 
@@ -317,22 +345,46 @@ func skillID(name string) string {
 	return name
 }
 
-func lookupHash(indexPath, cwd, id string) string {
+// lookupIdentity returns the index's blake3 hash and canonical skill digest of
+// a skill, empty when the skill is not in the index or its id is ambiguous. An
+// index written before digests existed has the hash only.
+func lookupIdentity(indexPath, cwd, id string) (hash, digest string) {
 	path := indexPath
 	if path == "" {
 		if cwd == "" {
-			return ""
+			return "", ""
 		}
 		path = DefaultIndexPath(cwd, ".ai-rulez")
 	}
 	index, err := LoadIndex(path)
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	if matches := index.byID(id); len(matches) == 1 {
-		return matches[0].Hash
+		return matches[0].Hash, matches[0].Digest
 	}
-	return ""
+	return "", ""
+}
+
+// randomNonce separates two loads of one skill in the same second.
+func randomNonce() string {
+	raw := make([]byte, 8)
+	if _, err := rand.Read(raw); err != nil {
+		return strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
+	return hex.EncodeToString(raw)
+}
+
+// newEventID derives the event id: the first 16 hex digits of
+// sha256(salt, ts, id, invocation, session, nonce). The salt is the machine's,
+// so the id is stable for a replayed line and links nothing across machines.
+func newEventID(salt string, entry *Entry, options RecordOptions) string {
+	nonce := randomNonce
+	if options.Nonce != nil {
+		nonce = options.Nonce
+	}
+	sum := sha256.Sum256([]byte(strings.Join([]string{salt, entry.Time, entry.ID, entry.Invocation, entry.Session, nonce()}, "\x00")))
+	return hex.EncodeToString(sum[:8])
 }
 
 // appendLine appends one line to the log. It refuses to write through a symlink

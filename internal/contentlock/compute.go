@@ -237,19 +237,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	if info, statErr := os.Stat(cf.Path); statErr == nil {
 		mode = c.modes.mode(c.configRoot(), cf.Path, info)
 	}
-	leaves := []Leaf{{Path: filepath.Base(cf.Path), Mode: mode, Data: primary}}
-	dir := filepath.Dir(cf.Path)
-	for _, res := range cf.Resources {
-		data, resMode := res.Content, ModeFor(uint32(res.Mode.Perm()))
-		abs := filepath.Join(dir, filepath.FromSlash(res.RelPath))
-		if disk, readErr := os.ReadFile(abs); readErr == nil {
-			data = disk
-			if info, statErr := os.Stat(abs); statErr == nil {
-				resMode = c.modes.mode(c.configRoot(), abs, info)
-			}
-		}
-		leaves = append(leaves, Leaf{Path: res.RelPath, Mode: resMode, Data: data})
-	}
+	leaves := contentLeaves(c.modes, c.configRoot(), cf, primary, mode)
 	digest, err := TreeDigest(kind, leaves)
 	if err != nil {
 		return oops.With("path", cf.Path).Wrap(err)
@@ -265,6 +253,25 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	}
 	c.items = append(c.items, item)
 	return nil
+}
+
+// contentLeaves lists the files of an item: its primary file and every loaded
+// resource, resources re-read from disk so the pin covers the bytes on disk.
+func contentLeaves(modes *modeResolver, root string, cf *config.ContentFile, primary []byte, primaryMode string) []Leaf {
+	leaves := []Leaf{{Path: filepath.Base(cf.Path), Mode: primaryMode, Data: primary}}
+	dir := filepath.Dir(cf.Path)
+	for _, res := range cf.Resources {
+		data, resMode := res.Content, ModeFor(uint32(res.Mode.Perm()))
+		abs := filepath.Join(dir, filepath.FromSlash(res.RelPath))
+		if disk, readErr := os.ReadFile(abs); readErr == nil {
+			data = disk
+			if info, statErr := os.Stat(abs); statErr == nil {
+				resMode = modes.mode(root, abs, info)
+			}
+		}
+		leaves = append(leaves, Leaf{Path: res.RelPath, Mode: resMode, Data: data})
+	}
+	return leaves
 }
 
 // dirOf returns the directory of a slash path: a skill is pinned by its directory.
