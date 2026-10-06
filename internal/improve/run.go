@@ -144,6 +144,10 @@ type Report struct {
 	Egress          []string      `json:"egress,omitempty"`
 	EnvPass         []string      `json:"env_pass,omitempty"`
 	Warnings        []string      `json:"warnings,omitempty"`
+	// Adapter names the bundled adapter the optimizer was (builtin:<name>); empty for --with.
+	Adapter string `json:"adapter,omitempty"`
+	// Isolation records how the optimizer was confined.
+	Isolation *IsolationReport `json:"isolation,omitempty"`
 }
 
 // GateReport records the thresholds the run used.
@@ -214,7 +218,7 @@ func (p *Plan) Execute(ctx context.Context) (*Report, error) {
 		Runs: o.Runs, Constraints: p.Constraints, Egress: o.Egress, EnvPass: o.EnvPass, Warnings: append([]string(nil), p.Warnings...),
 		Gate:  GateReport{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, MaxRounds: o.MaxRounds, MaxHoldoutEvals: o.MaxHoldoutEvals, RequireCIAboveZero: o.RequireCIAboveZero},
 		Split: SplitReport{Method: p.Split.Method, Tag: p.Split.Tag, Fraction: p.Split.Fraction, Train: IDs(p.Split.Train), HeldOut: IDs(p.Split.Held)},
-		Costs: Costs{MaxUSD: o.MaxCostUSD},
+		Costs: Costs{MaxUSD: o.MaxCostUSD}, Adapter: o.Adapter, Isolation: p.isolation,
 	}
 	p.runDir = x.dir
 	if err := x.setup(); err != nil {
@@ -569,8 +573,12 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 		"HOME=" + filepath.Join(x.dir, "home"), "USERPROFILE=" + filepath.Join(x.dir, "home"),
 		"TMPDIR=" + filepath.Join(x.dir, "tmp"), "TMP=" + filepath.Join(x.dir, "tmp"), "TEMP=" + filepath.Join(x.dir, "tmp"),
 	}
+	argv, err := x.confineArgv(o.OptimizerArgv)
+	if err != nil {
+		return nil, "the optimizer cannot be confined, so it was not started: " + Sanitize(err.Error(), 300)
+	}
 	res := o.Exec.Run(x.ctx, runner.Spec{
-		Argv: o.OptimizerArgv, Dir: x.workspace, Stdin: body, Timeout: o.Timeout, MaxOutput: maxResponseBytes,
+		Argv: argv, Dir: x.workspace, Stdin: body, Timeout: o.Timeout, MaxOutput: maxResponseBytes,
 		Env: runner.ScrubEnv(o.HostEnv, o.EnvPass, extra),
 	})
 	if o.Stderr != nil && len(res.Stderr) > 0 {
