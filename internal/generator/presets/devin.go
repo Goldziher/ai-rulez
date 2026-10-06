@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 )
 
@@ -22,7 +23,7 @@ var devinRulesTarget = rulefiles.Target{
 	Dir:      ".devin/rules",
 	Ext:      extMarkdown,
 	Dialect:  rulefiles.DialectTrigger,
-	MaxChars: 12000,
+	MaxChars: harnesslimits.MustValue("devin.rule_file_chars"),
 	Banner:   true,
 }
 
