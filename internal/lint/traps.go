@@ -3,6 +3,7 @@ package lint
 import (
 	_ "embed" // the trap table
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -265,6 +266,7 @@ func (r *runner) checkTraps() {
 		return
 	}
 	paths := r.tree.Paths()
+	paths = append(paths, r.ignoredGeneratedPaths(relevant, paths)...)
 	sort.Strings(paths)
 	chains := map[string][]chainFile{}
 	for _, f := range paths {
@@ -300,6 +302,56 @@ func (r *runner) checkTraps() {
 		}
 	}
 	r.checkChains(relevant, chains)
+}
+
+// maxIgnoredWalk bounds the files visited when looking for generated outputs
+// that git does not list.
+const maxIgnoredWalk = 20000
+
+// ignoredGeneratedPaths finds files below the scope directories of the
+// generated-kind traps that the tree does not list. A harness such as claude
+// gitignores its generated skills and agents, so the tracked-file index never
+// sees them; only files carrying the ai-rulez banner are returned, so a
+// handwritten ignored file stays out of scope. Paths are relative to the tree top.
+func (r *runner) ignoredGeneratedPaths(relevant []Trap, known []string) []string {
+	have := make(map[string]bool, len(known))
+	for _, k := range known {
+		have[k] = true
+	}
+	dirs := map[string]bool{}
+	for _, t := range relevant {
+		if d := strings.Trim(t.Scope.Dir, "/"); d != "" && slices.Contains(t.Scope.Kinds, kindGenerated) {
+			dirs[d] = true
+		}
+	}
+	var out []string
+	visited := 0
+	for d := range dirs {
+		start := filepath.Join(r.tree.Top, filepath.FromSlash(path.Join(r.baseRel, d)))
+		_ = filepath.WalkDir(start, func(p string, e fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
+			if err != nil || visited > maxIgnoredWalk {
+				return nil //nolint:nilerr // best effort
+			}
+			if e.IsDir() || !e.Type().IsRegular() {
+				return nil
+			}
+			visited++
+			rel, rerr := filepath.Rel(r.tree.Top, p)
+			if rerr != nil {
+				return nil //nolint:nilerr // best effort
+			}
+			rel = filepath.ToSlash(rel)
+			if have[rel] {
+				return nil
+			}
+			if _, generated := readTrapFile(p); generated {
+				have[rel] = true
+				out = append(out, rel)
+			}
+			return nil
+		})
+	}
+	return out
 }
 
 // underRoot returns f relative to the lint root, or false when f is outside it.
