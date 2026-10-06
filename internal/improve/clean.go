@@ -6,12 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
-
-// prWorktreeDir is where `improve pr` makes its linked worktree, inside the run directory.
-const prWorktreeDir = "pr-worktree"
 
 // CleanOptions configure Clean.
 type CleanOptions struct {
@@ -21,10 +16,6 @@ type CleanOptions struct {
 	All   bool
 	// DryRun lists what would be removed and removes nothing.
 	DryRun bool
-	// RepoDir and Git let Clean unregister the linked worktree `improve pr` made, so git is left
-	// with no stale worktree entry. A zero Git runs real git.
-	RepoDir string
-	Git     gitutil.Git
 }
 
 // CleanResult lists the runs Clean removed (or would remove).
@@ -73,7 +64,7 @@ func Clean(ctx context.Context, opts *CleanOptions) (*CleanResult, error) {
 			continue
 		}
 		if !opts.DryRun {
-			if err := removeRun(ctx, opts, dir); err != nil {
+			if err := removeRun(dir); err != nil {
 				return res, err
 			}
 		}
@@ -99,24 +90,15 @@ func requireRealDirs(configDir, base string) error {
 	return nil
 }
 
-func removeRun(ctx context.Context, opts *CleanOptions, dir string) error {
+func removeRun(dir string) error {
 	if info, err := os.Lstat(dir); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		if err := os.Remove(dir); err != nil {
 			return fmt.Errorf("remove link %s: %w", dir, err)
 		}
 		return nil
 	}
-	if wt := filepath.Join(dir, prWorktreeDir); opts.RepoDir != "" {
-		if _, err := os.Lstat(wt); err == nil {
-			// Best effort: RemoveAll below deletes the directory and prune drops a stale entry.
-			_ = opts.Git.WorktreeRemove(ctx, opts.RepoDir, wt) //nolint:errcheck // see above
-		}
-	}
 	if err := os.RemoveAll(dir); err != nil {
 		return fmt.Errorf("remove %s: %w", dir, err)
-	}
-	if opts.RepoDir != "" {
-		_ = opts.Git.WorktreePrune(ctx, opts.RepoDir) //nolint:errcheck // best effort: a stale worktree entry is harmless
 	}
 	return nil
 }
