@@ -976,6 +976,10 @@
           "type": "integer",
           "minimum": 0,
           "description": "Overview rows per page of the static site. 0 or unset: 200."
+        },
+        "render_markdown": {
+          "type": "boolean",
+          "description": "Render item excerpts as sanitized Markdown (no raw HTML, links shown as text) instead of plain text. Default false."
         }
       },
       "additionalProperties": false

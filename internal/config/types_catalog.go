@@ -21,6 +21,9 @@ type CatalogConfig struct {
 	// MaxItemsPerPage is how many overview rows one page of the site shows
 	// before the rest moves to the next page. 0 means DefaultCatalogPageSize.
 	MaxItemsPerPage int `yaml:"max_items_per_page,omitempty" json:"max_items_per_page,omitempty" toml:"max_items_per_page,omitempty"` //nolint:tagliatelle
+	// RenderMarkdown renders item excerpts as sanitized Markdown instead of plain
+	// text.
+	RenderMarkdown bool `yaml:"render_markdown,omitempty" json:"render_markdown,omitempty" toml:"render_markdown,omitempty"` //nolint:tagliatelle
 }
 
 func (c *Config) validateCatalog() error {
