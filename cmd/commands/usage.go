@@ -185,7 +185,7 @@ func runUsageExport(out io.Writer, args []string) error {
 	}
 	logPath := usageLog
 	if logPath == "" {
-		logPath = filepath.Join(defaultLocalDir(), "usage.jsonl")
+		logPath = defaultUsageLogPath()
 	}
 	if same, err := sameFile(logPath, dest); err != nil {
 		return err
@@ -256,6 +256,12 @@ not in the log line, the skills index, the eval results or any hash.
 		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Recorded %s feedback for %s in %s\n", entry.Kind, entry.ID, logPath)
 		return oops.Wrapf(err, "write confirmation")
 	},
+}
+
+// defaultUsageLogPath is the usage log `usage export` and `telemetry preview` read
+// by default: the same project root and config directory resolution for both.
+func defaultUsageLogPath() string {
+	return filepath.Join(telemetry.LocalDir(telemetryRoot(""), telemetryConfigDirName()), "usage.jsonl")
 }
 
 // defaultLocalDir is the machine-local directory for logs: the Claude project

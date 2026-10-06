@@ -145,3 +145,20 @@ func TestUsageExport(t *testing.T) {
 		}
 	})
 }
+
+func TestUsageExport_DefaultLogIsTheOnePreviewReads(t *testing.T) {
+	resetExportFlags(t)
+	env := setupTelemetry(t, "", "")
+	recordSkillLoads(t, env, "deploy")
+	sub := filepath.Join(env.root, "pkg", "deep")
+	require.NoError(t, os.MkdirAll(sub, 0o750))
+	t.Setenv("CLAUDE_PROJECT_DIR", "") // as outside a Claude session: the project is found from the working directory
+	chdir(t, sub)
+	dest := filepath.Join(t.TempDir(), "usage.ndjson")
+	usageExportTo = "file"
+	var out bytes.Buffer
+
+	require.NoError(t, runUsageExport(&out, []string{dest}))
+
+	assert.Contains(t, out.String(), "wrote 1 events", "the project's log is found from a subdirectory, as `telemetry preview` finds it")
+}
