@@ -1,11 +1,14 @@
 package guard
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,10 +131,75 @@ func TestCheck_SymlinkAndOversizedPayload(t *testing.T) {
 		})
 	}
 
-	t.Run("an oversized payload fails open", func(t *testing.T) {
-		big := `{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md","x":"` + strings.Repeat("a", maxPayload) + `"},"cwd":"` + esc(root) + `"}`
-		assert.False(t, Check(strings.NewReader(big), root).Block)
+	t.Run("an oversized payload is blocked", func(t *testing.T) {
+		big := `{"tool_name":"apply_patch","tool_input":{"command":"*** Update File: AGENTS.md\n` + strings.Repeat("a", maxPayload) + `"},"cwd":"` + esc(root) + `"}`
+		got := Check(strings.NewReader(big), root)
+		assert.True(t, got.Block)
+		assert.Contains(t, got.Message(), "larger than")
 	})
+}
+
+func patchPayload(root string, lines []string) string {
+	body := "*** Begin Patch\n" + strings.Join(lines, "\n") + "\n*** End Patch"
+	b, _ := json.Marshal(map[string]any{"tool_name": "apply_patch", "tool_input": map[string]any{"command": body}, "cwd": root})
+	return string(b)
+}
+
+func TestCheck_LargePatches(t *testing.T) {
+	root := newProject(t)
+	many := func(n int, distinct bool) []string {
+		lines := make([]string, 0, n+1)
+		for i := 0; i < n; i++ {
+			name := "src/same.go"
+			if distinct {
+				name = fmt.Sprintf("src/f%d.go", i)
+			}
+			lines = append(lines, "*** Add File: "+name)
+		}
+		return append(lines, "*** Update File: AGENTS.md")
+	}
+	tests := []struct {
+		name      string
+		lines     []string
+		wantBlock bool
+		wantPath  string
+		wantMsg   string
+	}{
+		{name: "duplicates are collapsed before the generated file is found", lines: many(280000, false), wantBlock: true, wantPath: "AGENTS.md"},
+		{name: "a patch within the cap still finds the generated file", lines: many(maxTargets-2, true), wantBlock: true, wantPath: "AGENTS.md"},
+		{name: "more distinct files than the cap is blocked", lines: many(maxTargets+5, true), wantBlock: true, wantMsg: "more than"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			payload := patchPayload(root, tt.lines)
+
+			// Act
+			start := time.Now()
+			got := Check(strings.NewReader(payload), root)
+
+			// Assert
+			assert.Less(t, time.Since(start), time.Second, "a large patch must not outlast the harness timeout")
+			assert.Equal(t, tt.wantBlock, got.Block)
+			assert.Equal(t, tt.wantPath, got.Path)
+			assert.Contains(t, got.Message(), tt.wantMsg)
+		})
+	}
+}
+
+func BenchmarkCheck_LargePatch(b *testing.B) {
+	root := b.TempDir()
+	_ = os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, ".ai-rulez", manifestName), []byte(manifestBody), 0o644)
+	lines := make([]string, 0, 500)
+	for i := 0; i < 500; i++ {
+		lines = append(lines, fmt.Sprintf("*** Add File: src/f%d.go", i))
+	}
+	payload := patchPayload(root, lines)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Check(strings.NewReader(payload), root)
+	}
 }
 
 func TestCheck_CorruptManifestFailsOpen(t *testing.T) {
