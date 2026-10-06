@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
 func evalRunnerFixture(extraConfig string) map[string]string {
@@ -56,7 +57,18 @@ func TestEvalCaseInvalid(t *testing.T) {
 	}
 }
 
-func recordEval(t *testing.T, root, id string, passing bool, passRate float64, digestOverride string) {
+// isolateEvalKey points the per-user key directory at a temp dir and returns the key.
+func isolateEvalKey(t *testing.T) []byte {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	key, err := llm.LoadSecretFile(llm.UserSecretPath("eval-results.key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func recordEval(t *testing.T, evalKey []byte, root, id string, passing bool, passRate float64, digestOverride string) {
 	t.Helper()
 	cfgDir := filepath.Join(root, ".ai-rulez")
 	digest := digestOverride
@@ -68,6 +80,7 @@ func recordEval(t *testing.T, root, id string, passing bool, passRate float64, d
 		}
 	}
 	store := evals.NewStore()
+	store.SetKey(evalKey)
 	store.Put(evals.SkillRecord{ID: id, Digest: digest, Passing: passing, Date: "2026-10-01",
 		Score: evals.SkillScore{Scored: 4, PassRate: passRate}})
 	if err := store.Save(evals.DefaultStorePath(cfgDir)); err != nil {
@@ -99,8 +112,9 @@ func TestEvalStaleAndScoreLow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
+			key := isolateEvalKey(t)
 			writeFiles(t, root, evalRunnerFixture(tt.config))
-			recordEval(t, root, "good", tt.passing, tt.passRate, "")
+			recordEval(t, key, root, "good", tt.passing, tt.passRate, "")
 			if tt.edit {
 				writeFiles(t, root, map[string]string{".ai-rulez/skills/good/SKILL.md": "---\nname: good\ndescription: Deploy the billing service to staging. Use when releasing billing changes to the staging cluster.\n---\nedited body\n"})
 			}
@@ -123,10 +137,49 @@ func TestEvalStaleAndScoreLow(t *testing.T) {
 	}
 }
 
+func TestEvalUnverifiedRecordsNeverCountAsPassing(t *testing.T) {
+	tests := []struct {
+		name     string
+		forge    bool // write the record with no signature at all
+		wrongKey bool // sign with a key that is not this user's
+		wantBoth bool
+	}{
+		{name: "signed with the user's key is trusted"},
+		{name: "unsigned forged record", forge: true, wantBoth: true},
+		{name: "signed with another key", wrongKey: true, wantBoth: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			key := isolateEvalKey(t)
+			switch {
+			case tt.forge:
+				key = nil
+			case tt.wrongKey:
+				key = []byte("ffffffffffffffffffffffffffffffff")
+			}
+			writeFiles(t, root, evalRunnerFixture("[lint.evals]\nrequire_fresh = \"error\"\nmin_pass_rate = 0.8\n"))
+			recordEval(t, key, root, "good", true, 1, "")
+			gitAdd(t, root)
+
+			// Act
+			findings := lintDir(t, root)
+
+			// Assert
+			stale := has(findings, CodeEvalStale, "skills/good/SKILL.md", 0)
+			low := has(findings, CodeEvalScoreLow, "skills/good/SKILL.md", 0)
+			if stale != tt.wantBoth || low != tt.wantBoth {
+				t.Fatalf("AR997 = %v, AR998 = %v, want both %v: %v", stale, low, tt.wantBoth, findings)
+			}
+		})
+	}
+}
+
 func TestEvalStaleIgnoresEditedCases(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, evalRunnerFixture("[lint.evals]\nrequire_fresh = \"error\"\n"))
-	recordEval(t, root, "good", true, 1, "")
+	recordEval(t, isolateEvalKey(t), root, "good", true, 1, "")
 	writeFiles(t, root, map[string]string{".ai-rulez/skills/good/evals/a.eval.yaml": "prompt: changed\nexpect_trigger: true\nid: a\n"})
 	gitAdd(t, root)
 	if findings := lintDir(t, root); countCode(findings, CodeEvalStale) != 0 {
