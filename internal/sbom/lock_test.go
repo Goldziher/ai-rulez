@@ -36,7 +36,7 @@ func TestSerialNumberIsDerivedFromTheLockTree(t *testing.T) {
 	load := func() *sbom.BOM {
 		cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
 		require.NoError(t, err)
-		bom, err := sbom.Build(cfg, "9.9.9")
+		bom, err := sbom.Build(cfg, "9.9.9", sbom.Options{})
 		require.NoError(t, err)
 		return bom
 	}
