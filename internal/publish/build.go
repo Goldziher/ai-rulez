@@ -25,7 +25,7 @@ var (
 	namePattern    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 	versionPattern = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z._+-]*$`)
 	tagPattern     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
-	repoPattern    = regexp.MustCompile(`^([A-Za-z0-9][A-Za-z0-9.-]*/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+	repoPattern    = regexp.MustCompile(`^([A-Za-z0-9][A-Za-z0-9.-]*/)?[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*$`)
 )
 
 // Template is an operator-supplied text/template rendered into dist/emit.

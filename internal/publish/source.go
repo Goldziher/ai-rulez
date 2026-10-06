@@ -5,10 +5,15 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
+
+// gitQueryTimeout bounds each of the cheap local git queries ReadSource makes;
+// a hung git must not stall publish for the runner's 15 minute maximum.
+const gitQueryTimeout = 30 * time.Second
 
 // SourceInfo is what git says about the project being published.
 type SourceInfo struct {
@@ -24,9 +29,16 @@ type SourceInfo struct {
 // to a commit cannot be called clean. excludeRel is a slash path (the dist
 // directory) whose changes are ignored when it lies inside the repository.
 func ReadSource(ctx context.Context, r runner.Runner, dir, excludeRel string) SourceInfo {
-	git := gitutil.New(r)
 	out := func(args ...string) (string, bool) {
-		res := git.Exec(ctx, dir, nil, args...)
+		argv := append([]string{"git"}, args...)
+		if dir != "" {
+			argv = append([]string{"git", "-C", dir}, args...)
+		}
+		res := runner.Or(r).Run(ctx, runner.Spec{
+			Argv:    argv,
+			Env:     gitutil.Env(nil),
+			Timeout: gitQueryTimeout,
+		})
 		return strings.TrimSpace(string(res.Stdout)), res.Status == runner.StatusOK
 	}
 	info := SourceInfo{Source: Source{Dirty: true}}
@@ -40,7 +52,7 @@ func ReadSource(ctx context.Context, r runner.Runner, dir, excludeRel string) So
 			info.Mtime = n
 		}
 	}
-	args := []string{"status", "--porcelain", "--", "."}
+	args := []string{"status", "--porcelain", "--untracked-files=all", "--", "."}
 	if excludeRel != "" && excludeRel != "." {
 		args = append(args, ":(exclude,top)"+excludeRel)
 	}

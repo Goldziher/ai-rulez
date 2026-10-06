@@ -8,13 +8,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
+
+// maxVerifyBytes caps what verify reads: each dist file and the total
+// uncompressed size of the archive. A var so tests can lower it.
+var maxVerifyBytes int64 = 512 << 20
 
 // Problem is one mismatch `publish verify` found.
 type Problem struct {
@@ -55,6 +62,10 @@ func Verify(dir string) (VerifyResult, error) {
 	}
 	recorded := map[string]string{}
 	for _, s := range sums {
+		if _, dup := recorded[s.Path]; dup {
+			res.add(s.Path, "listed more than once in %s", SumsFile)
+			continue
+		}
 		recorded[s.Path] = s.Digest
 		data, rerr := readRegular(filepath.Join(dir, filepath.FromSlash(s.Path)))
 		if rerr != nil {
@@ -66,15 +77,66 @@ func Verify(dir string) (VerifyResult, error) {
 			res.add(s.Path, "digest is %s, %s records %s", got, SumsFile, s.Digest)
 		}
 	}
+	checkUnlisted(dir, recorded, &res)
 	manifest, ok := loadManifest(dir, &res)
 	if !ok {
+		sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
 		return res, nil
 	}
 	res.Name, res.Version = manifest.Name, manifest.Version
 	checkManifest(dir, manifest, recorded, &res)
-	checkPlan(dir, recorded, &res)
+	checkPlan(dir, manifest, recorded, &res)
+	checkLockCopy(dir, manifest, &res)
 	sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
 	return res, nil
+}
+
+// checkUnlisted flags every file below dir that SHA256SUMS does not list. The
+// sums file and the plan are the only files that cannot be listed.
+func checkUnlisted(dir string, recorded map[string]string, res *VerifyResult) {
+	err := filepath.WalkDir(dir, func(path string, e fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if e.IsDir() {
+			return nil
+		}
+		rel, rerr := filepath.Rel(dir, path)
+		if rerr != nil {
+			return rerr
+		}
+		rel = filepath.ToSlash(rel)
+		if _, ok := recorded[rel]; !ok && rel != SumsFile && rel != PlanFile {
+			res.add(rel, "present but not listed in %s", SumsFile)
+		}
+		return nil
+	})
+	if err != nil {
+		res.add(".", "cannot list the directory: %v", err)
+	}
+}
+
+// checkLockCopy compares the lock tree and version the manifest records with
+// the shipped lock copy's own.
+func checkLockCopy(dir string, m Manifest, res *VerifyResult) {
+	raw, err := readRegular(filepath.Join(dir, LockFile))
+	if err != nil {
+		return // reported by the SHA256SUMS pass
+	}
+	var lock struct {
+		Version int    `toml:"version"`
+		Tree    string `toml:"tree"`
+	}
+	if err := toml.Unmarshal(raw, &lock); err != nil {
+		res.add(LockFile, "not valid TOML: %v", err)
+		return
+	}
+	if lock.Tree != m.Lock.Tree {
+		res.add(LockFile, "lock tree %q differs from the manifest's lock.tree %q", lock.Tree, m.Lock.Tree)
+	}
+	if lock.Version != m.Lock.Version {
+		res.add(LockFile, "lock version %d differs from the manifest's lock.version %d", lock.Version, m.Lock.Version)
+	}
 }
 
 func loadManifest(dir string, res *VerifyResult) (Manifest, bool) {
@@ -159,23 +221,80 @@ func checkManifest(dir string, m Manifest, recorded map[string]string, res *Veri
 	}
 }
 
-func checkPlan(dir string, recorded map[string]string, res *VerifyResult) {
+// checkPlan verifies publish-plan.json when present: its artifacts (path, size,
+// digest) against the files on disk and SHA256SUMS, and its commands against
+// what `publish --execute` would build for the manifest. A plan that names a
+// different command than the one the manifest implies is a mismatch, because
+// --execute runs the plan's argv.
+func checkPlan(dir string, m Manifest, recorded map[string]string, res *VerifyResult) {
 	raw, err := readRegular(filepath.Join(dir, PlanFile))
 	if err != nil {
 		return // the plan is optional for verification
 	}
 	var plan Plan
-	if err := json.Unmarshal(raw, &plan); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&plan); err != nil {
 		res.add(PlanFile, "invalid plan: %v", err)
 		return
 	}
+	if plan.Name != m.Name || plan.Version != m.Version {
+		res.add(PlanFile, "plan is for %s %s, the manifest for %s %s", plan.Name, plan.Version, m.Name, m.Version)
+	}
 	for _, a := range plan.Artifacts {
-		if a.Path == SumsFile {
-			continue // SHA256SUMS cannot list itself
+		if !ValidPath(a.Path) {
+			res.add(PlanFile, "plan lists an unsafe path %q", a.Path)
+			continue
 		}
-		if d, ok := recorded[a.Path]; !ok || d != a.Digest {
+		if d, ok := recorded[a.Path]; ok && d != a.Digest {
 			res.add(a.Path, "plan digest %s differs from %s (%s)", a.Digest, SumsFile, d)
 		}
+		data, rerr := readRegular(filepath.Join(dir, filepath.FromSlash(a.Path)))
+		if rerr != nil {
+			res.add(a.Path, "listed in the plan but unreadable: %v", rerr)
+			continue
+		}
+		if len(data) != a.Size {
+			res.add(a.Path, "plan records %d bytes, the file has %d", a.Size, len(data))
+		}
+		if got := Digest(data); got != a.Digest {
+			res.add(a.Path, "plan digest %s differs from the file's %s", a.Digest, got)
+		}
+	}
+	for p := range recorded {
+		listed := false
+		for _, a := range plan.Artifacts {
+			listed = listed || a.Path == p
+		}
+		if !listed {
+			res.add(p, "listed in %s but not in the plan", SumsFile)
+		}
+	}
+	checkPlanCommands(plan, m, res)
+}
+
+func checkPlanCommands(plan Plan, m Manifest, res *VerifyResult) {
+	if plan.Target == "" {
+		if len(plan.Commands) != 0 || len(plan.Upload) != 0 {
+			res.add(PlanFile, "plan has no target but lists commands or uploads")
+		}
+		return
+	}
+	if plan.Target != TargetGitHubRelease {
+		res.add(PlanFile, "unknown plan target %q", plan.Target)
+		return
+	}
+	if err := ValidateTarget(plan.Tag, plan.Repo); err != nil {
+		res.add(PlanFile, "%v", err)
+		return
+	}
+	upload := []string{m.Bundle.File, m.Name + "-" + m.Version + ".manifest.json", LockFile, SumsFile}
+	want := Command{Argv: ReleaseCreateArgv(m.Name, m.Version, plan.Tag, plan.Repo, upload), Cwd: "."}
+	if !reflect.DeepEqual(plan.Upload, upload) {
+		res.add(PlanFile, "plan uploads %v, expected %v", plan.Upload, upload)
+	}
+	if len(plan.Commands) != 1 || !reflect.DeepEqual(plan.Commands[0], want) {
+		res.add(PlanFile, "plan commands differ from the one `publish --execute` builds: %s", strings.Join(want.Argv, " "))
 	}
 }
 
@@ -192,6 +311,7 @@ func readArchive(data []byte) ([]FileEntry, error) {
 	var out []FileEntry
 	var mtime int64 = -1
 	prev := ""
+	var total int64
 	for {
 		hdr, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -204,6 +324,10 @@ func readArchive(data []byte) ([]FileEntry, error) {
 			return nil, err
 		}
 		mtime, prev = hdr.ModTime.Unix(), hdr.Name
+		if hdr.Size < 0 || hdr.Size > maxVerifyBytes-total {
+			return nil, oops.Errorf("archive exceeds the %d byte verification limit", maxVerifyBytes)
+		}
+		total += hdr.Size
 		body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
 		if err != nil || int64(len(body)) != hdr.Size {
 			return nil, oops.Errorf("archive entry %q is truncated", hdr.Name)
@@ -220,6 +344,9 @@ func readRegular(path string) ([]byte, error) {
 	}
 	if !info.Mode().IsRegular() {
 		return nil, oops.Errorf("%s is not a regular file", filepath.Base(path))
+	}
+	if info.Size() > maxVerifyBytes {
+		return nil, oops.Errorf("%s exceeds the %d byte verification limit", filepath.Base(path), maxVerifyBytes)
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // an explicit dist directory chosen by the caller
 	return data, oops.Wrap(err)
