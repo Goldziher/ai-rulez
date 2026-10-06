@@ -57,10 +57,12 @@ func Combine(reports []*Report) Combined {
 		c.Findings = append(c.Findings, r.Findings...)
 		if r.Scope != nil {
 			if c.ChangedOnly == nil {
-				c.ChangedOnly = &ChangedScope{Since: r.Scope.Since}
+				c.ChangedOnly = &ChangedScope{Since: r.Scope.Since, Depth: r.Scope.Depth}
 			}
 			c.ChangedOnly.Changed += r.Scope.Changed
 			c.ChangedOnly.Dependents += r.Scope.Dependents
+			c.ChangedOnly.Transitive += r.Scope.Transitive
+			c.ChangedOnly.Truncated += r.Scope.Truncated
 			c.ChangedOnly.Dropped += r.Scope.Dropped
 		}
 		for _, a := range r.Analyzers {
@@ -162,7 +164,14 @@ func writeBaselineText(sb *strings.Builder, c Combined) {
 		fmt.Fprintf(sb, "analyzers run: %s (the others did not run)\n", strings.Join(c.Analyzers, ", "))
 	}
 	if s := c.ChangedOnly; s != nil {
-		fmt.Fprintf(sb, "changed-only since %s: %d changed file(s), %d file(s) referring to them; %d finding(s) in other files not shown\n", s.Since, s.Changed, s.Dependents, s.Dropped)
+		fmt.Fprintf(sb, "changed-only since %s (depth %s): %d changed file(s), %d file(s) referring to them", s.Since, s.DepthLabel(), s.Changed, s.Dependents)
+		if s.Transitive > 0 {
+			fmt.Fprintf(sb, ", %d further away", s.Transitive)
+		}
+		if s.Truncated > 0 {
+			fmt.Fprintf(sb, ", %d more left out by the file cap", s.Truncated)
+		}
+		fmt.Fprintf(sb, "; %d finding(s) in other files not shown\n", s.Dropped)
 	}
 	for _, e := range c.Budgets {
 		fmt.Fprintf(sb, "budget: %s has %d finding(s), over its budget of %d\n", e.Code, e.Count, e.Max)
