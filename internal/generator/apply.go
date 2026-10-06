@@ -60,6 +60,10 @@ type runLifecycle struct {
 	// downgrades collects the rule-file downgrade warnings of the run and issues
 	// them when it ends.
 	downgrades bool
+	// quiet resets the diagnostics when the run starts and ends without issuing
+	// the downgrade summary: a run that only compares (--check) stays silent and
+	// leaves no Once keys behind for the next run on the same Generator.
+	quiet bool
 	// forgetState drops the state a run leaves on the Generator once it ends.
 	forgetState bool
 }
@@ -104,6 +108,11 @@ func (g *Generator) Apply(p *RunPlan, a Applier) (*ApplyResult, error) {
 		d.Reset()
 		defer d.Flush()
 	}
+	if lc.quiet {
+		d := g.diagnostics()
+		d.Reset()
+		defer d.Reset()
+	}
 	if lc.forgetState {
 		defer g.resetRunState()
 	}
@@ -121,6 +130,11 @@ func (g *Generator) run(profile string, a Applier) (*ApplyResult, error) {
 		d := g.diagnostics()
 		d.Reset()
 		defer d.Flush()
+	}
+	if lc.quiet {
+		d := g.diagnostics()
+		d.Reset()
+		defer d.Reset()
 	}
 	if lc.forgetState {
 		defer g.resetRunState()
@@ -254,17 +268,23 @@ func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 
 type checkApplier struct{}
 
-func (checkApplier) lifecycle() runLifecycle { return runLifecycle{forgetState: true} }
+func (checkApplier) lifecycle() runLifecycle { return runLifecycle{quiet: true, forgetState: true} }
 
 func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	outputs := p.Outputs
 	g.previousFiles = nil
-	// A run that skips the machine-local inputs (--no-local) keeps the files an
-	// earlier run wrote for them, as generate does: they are not orphans. The full
-	// classification (planLocal) is not run here, since check reports the shared
-	// outputs as they are rendered, which the golden scenarios pin.
-	if !g.config.HasLocalInputs() {
-		g.localSkipped = g.localInputsOnDisk()
+	// Classify the machine-local inputs like generate does: the outputs get the
+	// Source-Hash and local flags generate would write, so files that are in sync
+	// are not reported, and what generate would refuse to write is reported as blocked.
+	local, err := g.planLocal(p.Requested, outputs)
+	if err != nil {
+		return nil, err
+	}
+	blocked := map[string]bool{}
+	if local != nil && !g.allowLocalDrift {
+		for _, v := range local.violations {
+			blocked[v.path] = true
+		}
 	}
 	var drift []Drift
 	for _, output := range outputs {
@@ -272,7 +292,14 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		if !ok || kind == "" {
 			continue
 		}
-		drift = append(drift, Drift{Path: g.relSlash(g.absOutputPath(output.Path)), Kind: kind})
+		rel := g.relSlash(g.absOutputPath(output.Path))
+		if blocked[rel] {
+			continue
+		}
+		drift = append(drift, Drift{Path: rel, Kind: kind})
+	}
+	for rel := range blocked {
+		drift = append(drift, Drift{Path: rel, Kind: DriftBlocked})
 	}
 	for _, stale := range g.staleManifestFiles(outputs) {
 		drift = append(drift, Drift{Path: g.relSlash(stale), Kind: DriftOrphan})
