@@ -121,7 +121,7 @@ Unknown fields are errors, so a typo cannot silently disable an assertion. Probl
 ```bash
 ai-rulez eval run                                   # every skill with cases, claude-plugin-eval runner
 ai-rulez eval run deploy-staging --ablation         # one skill, also run it without the skill
-ai-rulez eval run --dry-run                         # what would run and roughly what it costs
+ai-rulez eval run --dry-run                         # what would run and roughly what it costs (--estimate is an alias)
 ai-rulez eval run --runner command --runner-command ./my-runner.sh --harness codex
 ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xml
 ```
@@ -136,7 +136,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--timeout` | Time limit for one skill with either runner (default 30m). When it ends the runner's whole process tree is killed (a process group on Unix); the output the runner may produce is capped (8 MiB for `claude`, 64 MiB for a `command` runner's answer). |
 | `--model` | Model for the cases. |
 | `--ablation` | Also run every case without the skill and report the delta. |
-| `--dry-run` | List what would run with an estimated cost. Calls no runner, writes nothing. |
+| `--dry-run`, `--estimate` | List what would run with an estimated cost range (low, expected, high). Calls no runner, writes nothing. `--estimate` is an alias. |
 | `--format`, `--out dir` | `json`, `markdown` (default) or `junit`; with `--out` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
 | `--max-cost USD` | Cost control, see [below](#cost-controls). |
 | `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
@@ -145,7 +145,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--threshold R` | Pass rate (0 to 1) a skill needs (default `[lint.evals] min_pass_rate`, else 1). `0` records scores without gating on them; a value outside 0-1 is rejected. |
 | `--allow-exec` | Run `command_exit` assertions. |
 | `--no-write`, `--results FILE` | Do not update, or use another, results file. |
-| `--price-in`, `--price-out` | USD per million tokens for the estimate (default by model tier). |
+| `--price-in`, `--price-out` | USD per million tokens for the estimate (default: the built-in price table). |
 
 Every flag is validated before any runner is started: an unknown `--format`, a `--max-cost`, `--price-in` or
 `--price-out` that is NaN, infinite or negative, or a `--threshold` outside 0-1 is an error that costs nothing. Each
@@ -244,12 +244,21 @@ delete the `mac`.
 
 ### Cost controls
 
-- `--dry-run` prints the number of agent runs, estimated tokens and USD. The estimate is deterministic and offline:
+- `--dry-run` (alias `--estimate`) prints the number of agent runs, estimated tokens and USD as a **range**. The estimate is deterministic and offline:
   the harness's own overhead (2,000 tokens), the prompt, fixtures, the skill's `SKILL.md` (counted with the embedded
   `cl100k_base` tokenizer, an approximation), 600 output tokens per run, an extra grader call per rubric, times the
-  runs per case (3 for `claude-plugin-eval` unless `--runs`; the same number is passed to claude with `--runs`, so the estimate and the run agree), times two arms with `--ablation`. Prices come from a
-  model tier (haiku, sonnet, opus; sonnet for anything else) and go stale: override with `--price-in` and `--price-out`.
-  Treat it as an order of magnitude.
+  runs per case (3 for `claude-plugin-eval` unless `--runs`; the same number is passed to claude with `--runs`, so the estimate and the run agree), times two arms with `--ablation`. That is the *expected* figure. The *low* figure assumes
+  0.8 times the input tokens and 0.5 times the output tokens. The *high* figure assumes 1.3 times the input tokens plus
+  one more pass over everything beyond the harness overhead (a tool loop that re-reads the skill and fixtures) and 3 times the
+  output tokens. The multipliers are fixed defaults, pinned by tests; treat the whole range as an order of magnitude.
+  Prices come from one built-in table shared with the model layer (`[llm]` price overrides do not apply to evals; use
+  `--price-in` and `--price-out`). Haiku, sonnet and opus are listed under their short names too; no `--model` is
+  priced as sonnet. A model the table does not list is priced as sonnet for the estimate (the report says so), and with
+  `--max-cost` it is refused unless `--price-in` and `--price-out` are given.
+- Every run records the estimate next to what the runner reported, in the report (`estimate_vs_actual`) and in the
+  skill's record in `eval-results.json` (`estimate`: `low_usd`, `expected_usd`, `high_usd`, `actual_usd`, `error` =
+  actual/expected - 1 and `in_range`). A runner that reports no cost leaves the actual out. The history shows how far
+  off the estimate tends to be; it never leaves the machine.
 - `--max-cost USD` is an advisory budget for the whole run (all skills together), not a per-skill cap and not a hard limit. It refuses to start when the estimate exceeds it, hands each runner the remaining budget
   (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
   reported spend reaches it (status `skipped-over-budget`, exit 2). It is checked between skills; inside one skill only the runner can enforce it, and `--timeout` bounds the time. When a runner reports more than the budget it was given, the report carries a warning. A runner that reports no cost and no tokens at all is assumed to have spent the whole remaining budget (with a warning), so the run stops instead of continuing on an unknown spend. Spend is counted conservatively: the larger of
