@@ -419,12 +419,16 @@ How `ai-rulez guard` decides:
   `.generated-manifest.local.json`. Documents ai-rulez only merges keys into (`.claude/settings.json`,
   `.vscode/settings.json`, `.mcp.json`, ...) are never blocked. Read-only tools are never blocked.
 - It reads the two manifests and nothing else: no config load, no network, a few milliseconds.
-- It fails open: a payload that does not parse, a project without a manifest and a path outside the project
-  all exit 0. A blocked call exits 2 with the reason on stderr. A guard that errors must not wedge the
-  agent, and [`ai-rulez verify`](cli.md#verify-command) still catches a hand edit afterwards.
+- It fails open on its own errors: a payload that does not parse, a project without a manifest and a path
+  outside the project all exit 0. A blocked call exits 2 with the reason on stderr. A guard that errors must
+  not wedge the agent, and [`ai-rulez verify`](cli.md#verify-command) still catches a hand edit afterwards.
+- It does not fail open on input it will not analyse: a payload over 8 MiB, or a call naming more than 1000
+  distinct files, exits 2 with a message asking for smaller edits. Padding a patch is not a bypass. Repeated
+  paths are collapsed, and the project and manifests are looked up once per call, so a large patch stays well
+  inside a hook timeout.
 
-The guard stops an agent's file-editing tools, not a `sed -i` in a shell call; a deny that must hold belongs
-in `[permissions]` or a sandbox as well.
+The guard stops an agent's file-editing tools. Shell-based writes (`sed -i`, `tee`, a `>` redirect or a script
+run through a Bash tool) are not blocked; a deny that must hold belongs in `[permissions]` or a sandbox as well.
 
 ## `[permissions]`
 
