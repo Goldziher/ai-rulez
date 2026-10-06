@@ -1,0 +1,14 @@
+schema_version: 1
+id: bloat-body
+kind: skill
+item:
+  path: fixtures/cases/bloat-body/layout-explainer/SKILL.md
+siblings:
+  - fixtures/shared/skills/incremental-approach/SKILL.md
+  - fixtures/shared/skills/task-runner/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: fail}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: fail}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: fail}
