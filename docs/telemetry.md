@@ -290,9 +290,13 @@ another log (the file was replaced since the last flush) the prune refuses; `tel
 date, or `--ignore-cursor` prunes by age alone. `--dry-run` reports without rewriting; a log other than the project's
 (`--log`) has no cursor and is pruned by age. With `--ignore-cursor` the cursor still moves back by the bytes removed
 before it, so events already read are not exported again. The prune holds the spool lock (the one flushes and
-catch-ups take) from reading the cursor to writing it back, so it cannot race a background flush. The usage log itself
-has no lock, so a prune re-reads a log that grows while it works and gives up with exit 1 if it keeps changing; a line a
-hook appends in the last microseconds before the rename can be lost, so run it from a quiet session.
+catch-ups take) from reading the cursor to writing it back, so it cannot race a background flush. The usage log is locked too: a
+prune holds an exclusive lock on `<log>.lock` (`flock`, `LockFileEx` on Windows) from reading the log to renaming the
+rewrite over it, and every recorder holds the same lock shared while it appends, so no line is written in between. A
+prune waits up to five seconds for running recorders and exits 1 (`usage log is locked`) when they do not finish. A
+recorder that cannot get the lock within two seconds appends anyway, because a hook must not stall its harness; the
+prune therefore still re-reads a log that grows while it works and exits 1 if it keeps changing, and a line appended
+without the lock in the last microseconds before the rename can still be lost. `--dry-run` takes no lock.
 
 ## OTLP mapping
 
