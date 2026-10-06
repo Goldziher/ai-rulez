@@ -33,6 +33,11 @@
           "type": "boolean",
           "description": "true makes the lock enforced, so an unpinned remote source is an error (AR010)."
         },
+        "deny_digests": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+          "description": "Digests of known-bad content. A denied include, installed skill or skill source that ai-rulez.lock pins is not loaded and is reported (AR747); a denied authored item is reported. Layers union."
+        },
         "min_release_age": {
           "type": "string",
           "pattern": "^[0-9]+[hdw]$",

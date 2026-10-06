@@ -154,6 +154,7 @@ allowed_hosts  = ["github.com/example-org", "*.example.org"]   # includes, insta
 deny_hosts     = ["github.com/example-org/archived"]
 require_pinned = true                                           # the lock is enforced; an unpinned remote is an error
 min_release_age = "7d"                                          # the youngest tag any source may adopt
+deny_digests    = ["sha256:0000000000000000000000000000000000000000000000000000000000000000"]  # known-bad content, blocked everywhere
 
 [lint]
 required_codes = ["AR001", "AR005", "AR008"]                    # may be neither turned off nor ignored
@@ -260,6 +261,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | --- | --- | --- | --- |
 | `sources.allowed_hosts` | sources the list covers | a source from a host the list does not cover; the source is not loaded | `AR745` |
 | `sources.deny_hosts` | union of layers | a source from a denied host; the source is not loaded | `AR745` |
+| `sources.deny_digests` | union of layers | a include, installed skill or skill source whose pinned digest is listed is not loaded; a listed authored item is reported (`ai-rulez.lock` names the digests, so keep the lock enforced) | `AR747` |
 | `sources.require_pinned`, `lock.enforce` | the lock is enforced | `[lock] enforce = false` | `AR740` |
 | `lock.include_outputs` | output digests are pinned | `[lock] include_outputs = false` | `AR740` |
 | `lint.required_codes` | union of layers | `[lint.severity] CODE = "off"` or `[lint] ignore` | `AR744` |
@@ -371,6 +373,9 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 - **Discovery reads the owner from `origin`.** A repository can change its own remote, so the org layer is additive
   only. The design asked whether discovering from the git remote is acceptable at all (it is an implicit fetch):
   it is opt-in per user or per invocation, pinned by digest, and fails closed once demanded.
+- **`deny_digests` reports `AR747`.** The design shared one code (`AR717`) with an approvals deny list. That list is
+  not implemented (see [Approvals](approvals.md)), so the policy owns its code for now; the lock is the source of the
+  digests, which is why a repository without a lock has nothing to check.
 - **`extends` is checked, not just folded.** Merging already makes the chain at least as strict as each parent, so a
   looser child value would be silently dropped. Reporting it (`AR743`) is the safer choice: a team lead who writes a
   weaker value learns it does nothing.

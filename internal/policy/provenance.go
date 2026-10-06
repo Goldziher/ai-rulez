@@ -33,6 +33,7 @@ func provenance(layers []Layer) map[string]string {
 	all("sources.allowed_hosts", func(p Policy) bool { return p.Sources.Allowed.Set })
 	all("sources.deny_hosts", func(p Policy) bool { return len(p.Sources.Deny) > 0 })
 	firstWith("sources.require_pinned", func(p Policy) bool { return p.Sources.RequirePinned })
+	all("sources.deny_digests", func(p Policy) bool { return len(p.Sources.DenyDigests) > 0 })
 	firstWith("sources.min_release_age", func(p Policy) bool {
 		return p.Sources.MinReleaseAge > 0 && p.Sources.MinReleaseAge == eff.Sources.MinReleaseAge
 	})

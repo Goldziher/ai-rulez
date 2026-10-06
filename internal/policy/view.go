@@ -99,6 +99,9 @@ func (p Policy) Tree() map[string]any {
 	if p.Sources.RequirePinned {
 		table("sources")["require_pinned"] = true
 	}
+	if len(p.Sources.DenyDigests) > 0 {
+		table("sources")["deny_digests"] = p.Sources.DenyDigests
+	}
 	if p.Sources.MinReleaseAge > 0 {
 		table("sources")["min_release_age"] = formatAge(p.Sources.MinReleaseAge)
 	}

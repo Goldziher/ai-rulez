@@ -2,6 +2,7 @@ package policy
 
 import (
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -95,6 +96,7 @@ func randomPolicy(rng *rand.Rand) Policy {
 		}
 	}
 	p.Lint.NoInlineIgnore = pick(rng, codePool)
+	p.Sources.DenyDigests = pick(rng, []string{"sha256:" + strings.Repeat("a", 64), "sha256:" + strings.Repeat("b", 64), "sha256:" + strings.Repeat("c", 64)})
 	if rng.Intn(2) == 0 {
 		p.Sources.MinReleaseAge = time.Duration(1+rng.Intn(60)) * 24 * time.Hour
 	}
@@ -250,6 +252,7 @@ func TestMergeOnlyTightens(t *testing.T) {
 				assert.LessOrEqual(t, got, limit)
 			}
 			assert.Subset(t, m.Lint.NoInlineIgnore, side.Lint.NoInlineIgnore)
+			assert.Subset(t, m.Sources.DenyDigests, side.Sources.DenyDigests)
 			assert.Subset(t, m.Signing.RequireVerified, side.Signing.RequireVerified)
 			assert.GreaterOrEqual(t, tlogRank[m.Signing.TLog], tlogRank[side.Signing.TLog])
 			if side.Signing.MaxAge > 0 {

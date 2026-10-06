@@ -17,6 +17,7 @@ func Merge(a, b Policy) Policy {
 			Deny:          union(a.Sources.Deny, b.Sources.Deny),
 			RequirePinned: a.Sources.RequirePinned || b.Sources.RequirePinned,
 			MinReleaseAge: max(a.Sources.MinReleaseAge, b.Sources.MinReleaseAge),
+			DenyDigests:   union(a.Sources.DenyDigests, b.Sources.DenyDigests),
 		},
 		Lint: Lint{
 			RequiredCodes: union(a.Lint.RequiredCodes, b.Lint.RequiredCodes),
