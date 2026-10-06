@@ -309,6 +309,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	}
 
 	if lo.withoutRemote {
+		applyContentPolicy(ctx, config)
 		return config, nil
 	}
 
@@ -320,6 +321,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	if err := resolveInstalledSkillsIfNeeded(ctx, config, lo.resolvers.Skills); err != nil {
 		return nil, err
 	}
+
+	// What includes and installed skills delivered is bounded now that it is loaded.
+	applyContentPolicy(ctx, config)
 
 	return config, nil
 }
