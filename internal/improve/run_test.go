@@ -3,6 +3,7 @@ package improve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -501,4 +502,43 @@ func TestSanitize(t *testing.T) {
 	assert.Equal(t, "a b c", Sanitize("a b\nc", 50))
 	assert.NotContains(t, Sanitize("red\x1b[31m text\x00", 50), "\x1b")
 	assert.Equal(t, "abc...", Sanitize("abcdef", 3))
+}
+
+// failingEval answers like goodEval until a candidate (a skill that mentions GOOD) is measured, then fails.
+type failingEval struct{ fakeEval }
+
+func (f *failingEval) Run(ctx context.Context, req *evals.Request) (*evals.Response, error) {
+	data, err := os.ReadFile(filepath.Join(req.Skill.Dir, "SKILL.md"))
+	if err == nil && strings.Contains(string(data), "GOOD") {
+		return nil, errors.New("runner crashed")
+	}
+	return f.fakeEval.Run(ctx, req)
+}
+
+func TestExecute_AnEvalErrorMidRunStillWritesTheSignedReport(t *testing.T) {
+	// Arrange
+	root, configDir := project(t)
+	opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) { appendSkill(t, dir, "\nGOOD advice.\n") })
+	ev := &failingEval{fakeEval: *goodEval()}
+	o := baseOptions(root, configDir, ev, opt)
+	o.MaxRounds = 1
+	plan := mustPrepare(t, &o)
+
+	// Act
+	report, err := plan.Execute(context.Background())
+
+	// Assert
+	require.Error(t, err)
+	require.NotNil(t, report, "the spent money and the rounds so far are reported")
+	assert.Equal(t, StatusNoCandidate, report.Status)
+	assert.Contains(t, report.Reason, "stopped:")
+	assert.Contains(t, report.Reason, "runner crashed")
+	require.Len(t, report.Rounds, 1)
+	assert.Greater(t, report.Costs.TotalUSD, 0.0)
+	saved, _, err := LoadReport(configDir, plan.RunID)
+	require.NoError(t, err)
+	assert.Equal(t, report.Reason, saved.Reason)
+	res, serr := Show(configDir, plan.RunID)
+	require.NoError(t, serr)
+	assert.True(t, res.Signed)
 }
