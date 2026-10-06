@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -62,6 +63,13 @@ type PROptions struct {
 	// AllowScripts and AllowFrontmatter widen the diff policy re-checked at the base, as for apply.
 	AllowScripts     bool
 	AllowFrontmatter bool
+	// Isolation confines the ai-rulez commands run in the worktree (generate, lock, eval run) with the process
+	// sandbox: writes only inside the worktree, the cache and the temp directory. none (the default) never
+	// confines, auto confines when a backend works, require refuses (AR9J7) when none does. The candidate is
+	// the optimizer's text, and eval run lets an agent act on it, so this is the same opt-in as for the optimizer.
+	Isolation sandbox.Mode
+	// Sandbox is the confinement backend; nil uses the system's.
+	Sandbox *sandbox.Sandbox
 }
 
 // PRResult says what PR did.
@@ -76,6 +84,8 @@ type PRResult struct {
 	// Commands are the commands to run by hand when the push or the pull request was not made.
 	Commands []string `json:"commands,omitempty"`
 	BodyFile string   `json:"body_file"`
+	// Isolation records how the worktree commands were confined; absent when --isolation was none.
+	Isolation *IsolationReport `json:"isolation,omitempty"`
 }
 
 var (
@@ -111,6 +121,11 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	if err != nil {
 		return nil, err
 	}
+	confinement, err := resolvePRIsolation(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	p.confinement = confinement
 	// The body needs only the report. Writing it before the worktree and the commit means a failure here
 	// leaves no branch behind.
 	bodyFile := filepath.Join(p.dir, "pr-body.md")
@@ -169,6 +184,10 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		return nil, err
 	}
 	res = &PRResult{Branch: branch, Base: base, BodyFile: bodyFile}
+	if confinement != nil {
+		res.Isolation = &confinement.report
+		fmt.Fprintln(opts.Out, confinement.line())
+	}
 	if err := p.refresh(ctx, opts, projDir, relProject, res); err != nil {
 		return nil, err
 	}
@@ -191,6 +210,8 @@ type prRun struct {
 	generated []string
 	// configRel is the config directory relative to the project root (".ai-rulez", ".config/ai-rulez").
 	configRel string
+	// confinement is how the worktree commands are confined, nil when they run as before.
+	confinement *prConfinement
 }
 
 func loadPRRun(opts *PROptions) (*prRun, error) {
@@ -298,6 +319,10 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProjec
 	run := runner.Or(opts.Exec)
 	for _, args := range steps {
 		argv := append(append([]string(nil), opts.Self...), args...)
+		argv, err := p.confinement.wrap(argv, projDir, opts.Env)
+		if err != nil {
+			return refuse(CodeIsolationUnavailable, "cannot confine `ai-rulez %s`: %s", strings.Join(args, " "), Sanitize(err.Error(), 300))
+		}
 		r := run.Run(ctx, runner.Spec{Argv: argv, Dir: projDir, Env: opts.Env, Timeout: refreshTimeout})
 		if r.Status != runner.StatusOK {
 			why := fmt.Sprintf("`ai-rulez %s` failed in the worktree (%s, exit %d): %s", strings.Join(args, " "), r.Status, r.ExitCode, Sanitize(string(r.Stderr)+string(r.Stdout), 600))
@@ -561,4 +586,98 @@ func safeWriteBody(path, body string) error {
 		return fmt.Errorf("write the pull request body: %w", err)
 	}
 	return nil
+}
+
+// prConfinement is the sandbox the worktree commands run under.
+type prConfinement struct {
+	sb     *sandbox.Sandbox
+	report IsolationReport
+}
+
+// resolvePRIsolation decides, before anything is created, whether the worktree commands are confined. require
+// refuses when no backend works (AR9J7); auto runs them unconfined and says so; none returns nil.
+func resolvePRIsolation(ctx context.Context, opts *PROptions) (*prConfinement, error) {
+	mode := opts.Isolation
+	if mode == "" || mode == sandbox.ModeNone {
+		return nil, nil //nolint:nilnil // no confinement requested
+	}
+	sb := opts.Sandbox
+	if sb == nil {
+		sb = sandbox.Default()
+	}
+	confine, err := sb.Resolve(ctx, mode)
+	if err != nil {
+		return nil, refuse(CodeIsolationUnavailable, "--isolation %s, but the commands run in the worktree cannot be confined: %s; run improve pr in a container or CI job, or use --isolation auto", mode, Sanitize(err.Error(), 300))
+	}
+	c := &prConfinement{report: IsolationReport{Mode: string(mode)}}
+	if !confine {
+		fmt.Fprintf(opts.Out, "warning: %s isolation: no sandbox backend works on this system, so the commands run in the worktree run unconfined (--isolation require refuses instead)\n", CodeIsolationUnavailable)
+		return c, nil
+	}
+	// Ask the backend what it really enforces now, so the statement printed before anything runs is true.
+	w, werr := sb.Wrap(sandbox.Spec{WriteDirs: []string{os.TempDir()}, AllowNetwork: true}, []string{"true"})
+	if werr != nil {
+		return nil, refuse(CodeIsolationUnavailable, "%s", Sanitize(werr.Error(), 300))
+	}
+	c.sb = sb
+	c.report.Backend, c.report.Confined = string(sb.Backend()), true
+	c.report.NoNetwork, c.report.NoWrites = w.NoNetwork, w.NoWrites
+	return c, nil
+}
+
+// line is the one-line statement of what the confinement enforces.
+func (c *prConfinement) line() string {
+	if c.sb == nil {
+		return "isolation: none (no backend)"
+	}
+	writes := "writes are NOT confined by this backend"
+	if c.report.NoWrites {
+		writes = "writes only inside the worktree, the cache and the temp directory"
+	}
+	return fmt.Sprintf("isolation: %s sandbox: %s, network allowed (generate and lock fetch remote includes); reads are not restricted", c.report.Backend, writes)
+}
+
+// wrap puts argv under the sandbox: writable below the worktree's project directory, the user cache, ai-rulez's
+// own state directory and the temp directory (where they exist), with the network on because generate and lock
+// fetch remote includes and eval run calls a model. A harness that keeps state elsewhere under eval run needs
+// --isolation none. A nil or unconfined c returns argv unchanged.
+func (c *prConfinement) wrap(argv []string, projDir string, env []string) ([]string, error) {
+	if c == nil || c.sb == nil {
+		return argv, nil
+	}
+	cmd := append([]string(nil), argv...)
+	if bin, err := runner.LookPath(cmd[0]); err == nil && filepath.IsAbs(bin) {
+		cmd[0] = bin
+	}
+	w, err := c.sb.Wrap(sandbox.Spec{WriteDirs: prWriteDirs(projDir, env), AllowNetwork: true}, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("apply isolation: %w", err)
+	}
+	c.report.NoNetwork, c.report.NoWrites = w.NoNetwork, w.NoWrites
+	return w.Argv, nil
+}
+
+// prWriteDirs are the directories a worktree command may write, among those that exist.
+func prWriteDirs(projDir string, env []string) []string {
+	get := func(name string) string {
+		for _, kv := range env {
+			if v, ok := strings.CutPrefix(kv, name+"="); ok {
+				return v
+			}
+		}
+		return ""
+	}
+	home := get("HOME")
+	cache := orElse(get("XDG_CACHE_HOME"), filepath.Join(home, ".cache"))
+	candidates := []string{projDir, cache, get("XDG_DATA_HOME"), get("AI_RULEZ_HOME"), os.TempDir()}
+	var out []string
+	for _, d := range candidates {
+		if d == "" || d == ".cache" {
+			continue
+		}
+		if info, err := os.Stat(d); err == nil && info.IsDir() {
+			out = append(out, d)
+		}
+	}
+	return out
 }
