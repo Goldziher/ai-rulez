@@ -94,8 +94,20 @@ rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
 - **Secrets.** The run is refused when the secret scanner (`AR001`) flagged an item and the site would publish its
   excerpt or description; remove the secret, or pass `--allow-findings AR001` (discouraged).
 
+### Freshness check
+
+```bash
+ai-rulez catalog --html site/ --check
+```
+
+Renders the site in memory and compares it with the directory without writing anything. Exit `0` when every file
+matches and nothing else is there, `2` when a file is changed, missing or unexpected (the differences are listed),
+`1` when the check could not run. A directory that does not exist is drift. Because the output is reproducible, the
+same gate detects a tampered hosted copy. Use it in CI to keep a committed site current; `--check` and `--clean` do
+not combine. Files are read through the directory only: a symlink in it is reported, never followed.
+
 Flags: `--role R` (items role `R` keeps), `--include-excerpt` (default on), `--indexable` (no `robots.txt`, no
-`noindex`; excerpts default off), `--clean`, `--base-title T`, `--allow-findings`.
+`noindex`; excerpts default off), `--clean`, `--base-title T`, `--allow-findings`, `--check`, `--with-eval[=FILE]`, `--with-usage[=FILE]`.
 
 A published catalog exposes names, descriptions, owners, token costs and lint findings: treat it like the
 configuration directory it describes.
@@ -119,6 +131,6 @@ configuration directory it describes.
 
 ## Not yet built
 
-`--check` freshness gate, `--no-lint-messages`, `--no-owners`,
+`--no-lint-messages`, `--no-owners`,
 `--link-sources`, `--single-file` and Markdown rendering of bodies are later phases of the
 design.
