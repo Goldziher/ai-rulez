@@ -81,4 +81,6 @@ func TestNativeReportMarkdown(t *testing.T) {
 	assert.Contains(t, text, "(borderline)")
 	assert.Contains(t, text, "most fired: `release-notes`")
 	assert.Contains(t, text, "### Confusion")
+	assert.Contains(t, text, "| Run recall | Cost |", "a native table has no rank columns")
+	assert.NotContains(t, text, "recall@1")
 }
