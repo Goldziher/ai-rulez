@@ -19,7 +19,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -91,18 +90,11 @@ func permissionItems(cfg *config.Config, presets []string) []Item {
 	if cfg.Permissions == nil || len(cfg.Permissions.Allow) == 0 {
 		return nil
 	}
-	var where []string
-	for _, p := range presets {
-		if p == config.HarnessClaude || settings.IsPermissionDialect(p) {
-			where = append(where, p)
-		}
-	}
-	if len(where) == 0 {
-		return nil
-	}
-	items := make([]Item, 0, len(cfg.Permissions.Allow))
+	var items []Item
 	for _, rule := range cfg.Permissions.Allow {
-		items = append(items, Item{Kind: "allow", Command: rule, Where: where})
+		if where := allowLands(cfg, presets, rule); len(where) > 0 {
+			items = append(items, Item{Kind: "allow", Command: rule, Where: where})
+		}
 	}
 	return items
 }
@@ -153,20 +145,15 @@ func hookItems(cfg *config.Config, presets []string) []Item {
 	var items []Item
 	for i := range cfg.Hooks {
 		group := &cfg.Hooks[i]
-		var where []string
-		for _, p := range presets {
-			if settings.HasHookDialect(p) && group.HookTargetsHarness(p) {
-				where = append(where, p)
-			}
-		}
-		if len(where) == 0 {
-			continue
-		}
 		label := group.Event
 		if group.Matcher != "" {
 			label += "(" + group.Matcher + ")"
 		}
 		for j := range group.Hooks {
+			where := hookLands(cfg, presets, i, j)
+			if len(where) == 0 {
+				continue
+			}
 			if item, ok := hookActionItem(cfg, label, &group.Hooks[j], where); ok {
 				items = append(items, item)
 			}
