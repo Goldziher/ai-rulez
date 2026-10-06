@@ -131,15 +131,40 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 		return res
 	}
 	res.Ranking = cfg.Mode
-	switch cfg.Mode {
-	case ModeVector:
+	switch {
+	case cfg.Mode == ModeVector:
 		res.Hits = r.withoutVectors(r.fuse(nil, vec, cfg, query, true), lex)
+	case cfg.Fusion == FusionAuto && len(vec) == len(pool):
+		// every skill in scope has a current vector: rank by cosine, keeping the exact-id pin
+		res.Ranking = ModeVector
+		res.Hits = r.pinFirst(r.fuse(nil, vec, cfg, query, true), query)
 	default:
 		res.Hits = r.fuse(lex, vec, cfg, query, false)
 	}
 	r.markStale(res.Hits)
 	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
+}
+
+// pinFirst moves the skill whose id the query names to the front.
+func (r *Ranker) pinFirst(hits []SearchHit, query string) []SearchHit {
+	in := make(map[int]*SearchHit, len(hits))
+	for i := range hits {
+		in[hits[i].Index] = &hits[i]
+	}
+	pin := r.exactPin(query, in)
+	if pin < 0 {
+		return hits
+	}
+	for i := range hits {
+		if hits[i].Index == pin {
+			pinned := hits[i]
+			copy(hits[1:i+1], hits[:i])
+			hits[0] = pinned
+			break
+		}
+	}
+	return hits
 }
 
 // withoutVectors appends, in lexical order, the skills of a vector ranking that have no usable vector
