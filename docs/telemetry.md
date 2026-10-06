@@ -264,6 +264,23 @@ needs the session, which is pseudonymous and off by default: with `include_sessi
 roughly `sum by (ai_rulez_session) (count_over_time({service_name="ai-rulez"} | ai_rulez_item_kind="rule" [1d]))`,
 but `report usage` computes the median and distribution exactly from the local log.
 
+## Verifying against a real collector
+
+The OTLP/HTTP JSON encoder is hand-written, so one opt-in test checks it against a real OpenTelemetry Collector
+(`otel/opentelemetry-collector-contrib`, pinned by tag and digest in `internal/telemetry/otelcol_e2e_test.go`):
+
+```console
+task test:otelcol    # needs docker; sets AI_RULEZ_E2E_OTELCOL=1
+```
+
+The test starts the container with a file exporter, flushes a spool batch through the real exporter (gzip, logs and
+metrics), and asserts that the collector accepted it, that every decoded log attribute is on the allowlist, that
+`[telemetry.resource]` labels appear on both resources, and that the event ids and metric names round trip. It also
+checks that the collector answers a valid body with 200 and a malformed one with 400 (the permanent-rejection class).
+It is skipped unless docker is reachable and `AI_RULEZ_E2E_OTELCOL=1` is set, so `go test ./...` never pulls an image.
+Last run: passed against collector 0.130.0 on 2026-10-06. `Retry-After` and partial-success handling stay covered by the
+fake-server tests only, because a real collector does not emit them on demand.
+
 ## Data egress and residency
 
 Only the allowlisted attributes above leave the machine, to the one endpoint the user configured, over https (http only
