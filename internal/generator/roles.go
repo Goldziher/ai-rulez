@@ -106,19 +106,50 @@ func (g *Generator) warnRoleSkillModeHarnesses(name string, flat *config.RoleCon
 // enabled is set. The manifest always describes every role over the whole content
 // tree, so it is the same whichever role or profile is being generated, and it
 // carries no timestamp. User scope writes none.
+//
+// roles.json is committed, so it is built from the shared sources only: roles
+// declared in config.local.* and items under local/ never appear in it, exactly
+// as the okf export leaves local content out. Local roles stay usable with
+// generate --role and roles list.
 func (g *Generator) rolesManifestOutput() (config.OutputFile, bool, error) {
 	if g.userMode || !g.config.RoleManifestEnabled() {
+		return config.OutputFile{}, false, nil
+	}
+	source, err := g.sharedConfig()
+	if err != nil {
+		return config.OutputFile{}, false, err
+	}
+	if !source.RoleManifestEnabled() {
 		return config.OutputFile{}, false, nil
 	}
 	counter, err := tokens.New("")
 	if err != nil {
 		return config.OutputFile{}, false, oops.Wrapf(err, "token counter for the roles manifest")
 	}
-	data, err := roles.Build(g.config, counter).Marshal()
+	data, err := roles.Build(source, counter).Marshal()
 	if err != nil {
 		return config.OutputFile{}, false, err //nolint:wrapcheck // already contextual
 	}
 	return config.OutputFile{Path: filepath.Join(g.config.ConfigDir, roles.FileName), RawContent: data}, true, nil
+}
+
+// sharedConfig returns the configuration without the machine-local overlay and
+// local/ content: the loaded one when it has no local input, else a fresh load of
+// the same file with local inputs skipped (the view a teammate sees).
+func (g *Generator) sharedConfig() (*config.Config, error) {
+	if !g.config.HasLocalInputs() {
+		return g.config, nil
+	}
+	if g.config.ConfigDir == "" || g.config.ConfigFile == "" {
+		return nil, oops.Errorf("the config file location is unknown, so roles.json cannot be built from the shared sources")
+	}
+	path := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	shared, err := config.LoadConfigFromFile(g.context(), path,
+		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo))
+	if err != nil {
+		return nil, oops.Wrapf(err, "load the shared configuration for roles.json")
+	}
+	return shared, nil
 }
 
 // Preset names the role warning treats specially.
