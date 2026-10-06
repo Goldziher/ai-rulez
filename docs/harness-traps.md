@@ -48,9 +48,9 @@ extra_harnesses = ["cursor", "copilot"]
 
 ## Code ranges
 
-`AR9C1` to `AR9C9` belong to harness traps. `AR9C0` is reserved for the model-judged review design, and `AR9D*` is
-reserved for other proposals; `AR9E0` to `AR9E4` are the external scanner codes (see
-[Strict validation](strict-validation.md)). Codes are stable and never reused once released.
+`AR9C0` to `AR9C9` belong to harness traps (`AR9C0` is unused and free for the next trap). The review design has its
+own block, `AR9G`. The full allocation table is in [Strict validation](strict-validation.md#code-ranges). Codes are
+stable and never reused once released.
 
 ## Not covered yet
 
