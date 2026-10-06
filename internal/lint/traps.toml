@@ -82,3 +82,154 @@ kinds = ["generated", "handwritten"]
 kind = "name-suffix-required"
 suffix = ".instructions.md"
 ignore_names = ["README.md"]
+
+# AR9C7: Claude Code ignores a frontmatter field it does not recognise, so a
+# variant spelling silently does nothing. The canonical lists are the field
+# tables of the skills and sub-agents pages on verified_on.
+[[trap]]
+code = "AR9C7"
+name = "claude-frontmatter-key-spelling"
+harness = "claude"
+message = "Claude Code ignores this skill frontmatter key because it is not spelled exactly as documented"
+certainly_inert = true
+hint = "Skill field names are lowercase words separated by hyphens (disable-model-invocation, user-invocable, allowed-tools), except when_to_use."
+source = "https://code.claude.com/docs/en/skills"
+quote = "A field name must match the table exactly, hyphens included: Claude Code ignores a field it doesn't recognize without reporting an error."
+verified_on = "2026-10-06"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".claude/skills"
+suffix = "/SKILL.md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "key-misspelt"
+canonical = [
+  "name",
+  "description",
+  "when_to_use",
+  "argument-hint",
+  "arguments",
+  "disable-model-invocation",
+  "user-invocable",
+  "allowed-tools",
+  "disallowed-tools",
+  "model",
+  "effort",
+  "context",
+  "agent",
+  "background",
+  "hooks",
+  "paths",
+  "shell",
+  "metadata",
+  "license",
+  "compatibility",
+]
+
+[[trap]]
+code = "AR9C7"
+name = "claude-frontmatter-key-spelling"
+harness = "claude"
+message = "Claude Code ignores this subagent frontmatter key because it is not spelled exactly as documented"
+certainly_inert = true
+hint = "Multi-word subagent field names are camelCase (maxTurns, disallowedTools, permissionMode, mcpServers)."
+source = "https://code.claude.com/docs/en/sub-agents"
+quote = "Claude Code ignores a field it doesn't recognize without reporting an error."
+verified_on = "2026-10-06"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".claude/agents"
+suffix = ".md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "key-misspelt"
+canonical = [
+  "name",
+  "description",
+  "tools",
+  "disallowedTools",
+  "model",
+  "permissionMode",
+  "maxTurns",
+  "skills",
+  "mcpServers",
+  "hooks",
+  "memory",
+  "background",
+  "omitClaudeMd",
+  "effort",
+  "isolation",
+  "color",
+  "initialPrompt",
+  "experimental",
+]
+
+# AR9C8, AR9C9: size-over rows. The vendor page, quote and date come from the
+# limits row named by limit_id (internal/harnesslimits/limits.toml).
+[[trap]]
+code = "AR9C8"
+name = "claude-listing-truncated"
+harness = "claude"
+message = "description plus when_to_use is past the Claude Code skill listing cap, so the rest is cut off"
+certainly_inert = false
+hint = "Put the key use case first and keep description and when_to_use together under the cap; move detail into the skill body."
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".claude/skills"
+suffix = "/SKILL.md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "size-over"
+limit_id = "claude.skill_listing_chars"
+measure = "frontmatter-chars"
+keys = ["description", "when_to_use"]
+
+[[trap]]
+code = "AR9C9"
+name = "harness-limit-exceeded"
+harness = "codex"
+message = "the AGENTS.md files Codex reads for this directory add up to more than project_doc_max_bytes, so the rest is not loaded"
+certainly_inert = false
+hint = "Shorten the rules, split them into skills, or raise project_doc_max_bytes in Codex and in [codex] of the ai-rulez config."
+harness_version = "docs as of verified_on"
+[trap.scope]
+suffix = "AGENTS.md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "size-over"
+limit_id = "codex.agents_md_chain_bytes"
+measure = "chain-bytes"
+
+[[trap]]
+code = "AR9C9"
+name = "harness-limit-exceeded"
+harness = "devin"
+message = "this Devin rule file is past the per-file limit, so it is truncated"
+certainly_inert = false
+hint = "Split the rule into several files or move detail into a skill."
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".devin/rules"
+suffix = ".md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "size-over"
+limit_id = "devin.rule_file_chars"
+measure = "file-chars"
+
+[[trap]]
+code = "AR9C9"
+name = "harness-limit-exceeded"
+harness = "antigravity"
+message = "this Antigravity rule file is past the per-file limit, so it is truncated"
+certainly_inert = false
+hint = "Split the rule into several files or shorten it. The harness counts bytes after expanding includes, so a file under the limit on disk can still be cut."
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".agents/rules"
+suffix = ".md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "size-over"
+limit_id = "antigravity.rule_file_bytes"
+measure = "file-bytes"

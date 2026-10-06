@@ -69,6 +69,9 @@ type LintTraps struct {
 	// ExtraHarnesses names harnesses whose traps run although no preset for them
 	// is configured, for hand-written files such as .cursor/rules.
 	ExtraHarnesses []string `yaml:"extra_harnesses,omitempty" json:"extra_harnesses,omitempty" toml:"extra_harnesses,omitempty"` //nolint:tagliatelle
+	// MaxTableAgeDays reports (AR9C0) a trap or limits row whose verified_on is
+	// older than this many days. 0, the default, turns the check off.
+	MaxTableAgeDays int `yaml:"max_table_age_days,omitempty" json:"max_table_age_days,omitempty" toml:"max_table_age_days,omitempty"` //nolint:tagliatelle
 }
 
 // LintMetadataRule types one frontmatter key.
@@ -131,6 +134,17 @@ type LintExternal struct {
 	// EnvPass lists extra environment variable names passed through the scrubbed
 	// environment. Proxy and credential-like names are rejected when egress is false.
 	EnvPass []string `yaml:"env_pass,omitempty" json:"env_pass,omitempty" toml:"env_pass,omitempty"` //nolint:tagliatelle
+	// Inputs turns staging on: the scanner runs in a scratch directory that holds
+	// a read-only copy of exactly these kinds of content (rules, context, skills,
+	// agents, commands, checks, hooks, mcp, imports) and nothing else. The
+	// placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} in
+	// command are expanded as argv elements; no file path is appended.
+	Inputs []string `yaml:"inputs,omitempty" json:"inputs,omitempty" toml:"inputs,omitempty"`
+	// SeverityMap maps a scanner rule id (glob) to a severity: critical, high,
+	// medium, low, info (or error, warning). It is applied before any other mapping.
+	SeverityMap map[string]string `yaml:"severity_map,omitempty" json:"severity_map,omitempty" toml:"severity_map,omitempty"` //nolint:tagliatelle
+	// MaxSeverity caps the severity of this scanner's findings (same values).
+	MaxSeverity string `yaml:"max_severity,omitempty" json:"max_severity,omitempty" toml:"max_severity,omitempty"` //nolint:tagliatelle
 }
 
 // LintEvals configures the check for skills that have no eval cases. A skill
