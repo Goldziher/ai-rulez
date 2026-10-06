@@ -81,4 +81,7 @@ type SkillSourceConfig struct {
 	// MaxCloneBytes caps what a git source may download and check out (0 selects
 	// the global limit, AI_RULEZ_MAX_CLONE_BYTES, or the default of 256 MiB).
 	MaxCloneBytes int64 `yaml:"max_clone_bytes,omitempty" json:"max_clone_bytes,omitempty" toml:"max_clone_bytes,omitempty"` //nolint:tagliatelle
+	// MaxCloneFiles caps the number of entries of a git clone (0 selects
+	// AI_RULEZ_MAX_CLONE_FILES or the default of 20000).
+	MaxCloneFiles int `yaml:"max_clone_files,omitempty" json:"max_clone_files,omitempty" toml:"max_clone_files,omitempty"` //nolint:tagliatelle
 }
