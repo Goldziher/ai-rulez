@@ -1,0 +1,19 @@
+lockfile_version: '1'
+generated_at: '2026-10-01T10:00:00+00:00'
+apm_version: 0.8.0
+dependencies:
+  - repo_url: https://github.com/acme/shared-standards
+    resolved_commit: 0123456789abcdef0123456789abcdef01234567
+    resolved_ref: v1.2.0
+    depth: 1
+    package_type: apm_package
+    content_hash: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    deployed_files:
+      - .github/instructions/security.instructions.md
+  - repo_url: https://github.com/acme/not-installed
+    resolved_commit: fedcba9876543210fedcba9876543210fedcba98
+    resolved_ref: main
+    depth: 1
+    package_type: apm_package
+    content_hash: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    deployed_files: []

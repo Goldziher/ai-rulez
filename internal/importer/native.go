@@ -270,7 +270,7 @@ func ensureNewline(s string) []byte {
 	return []byte(s)
 }
 
-var itemSuffixes = []string{".instructions.md", ".prompt.md", ".agent.md", ".chatmode.md", ".mdc", ".md", ".markdown"}
+var itemSuffixes = []string{".instructions.md", ".prompt.md", ".agent.md", ".chatmode.md", ".context.md", ".memory.md", ".mdc", ".md", ".markdown"}
 
 func isMarkdown(name string) bool {
 	for _, s := range []string{".md", ".mdc", ".markdown"} {
