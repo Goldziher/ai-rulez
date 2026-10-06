@@ -16,6 +16,12 @@ import (
 // the judge prompt or schema below changes, so cached verdicts are not reused.
 const JudgePromptVersion = "judge/v2"
 
+// DefaultJudgeCompletionTokens is the least completion budget of a judge call.
+// A reasoning model (gemini-2.5-flash, for one) spends its thinking tokens out of
+// the same budget before it writes the verdict, so the 300 tokens a verdict
+// needs leave it with an empty reply.
+const DefaultJudgeCompletionTokens = 2048
+
 // Verdict is a rubric grader's structured answer.
 type Verdict struct {
 	// Score is in [0,1]: 1 means the transcript fully meets the rubric.
@@ -51,6 +57,9 @@ type JudgeOptions struct {
 	// RedactSecrets sends the rubric and transcript with secret-looking text
 	// masked instead of refusing when any is found.
 	RedactSecrets bool
+	// MinCompletionTokens is the completion budget of the call, never below
+	// DefaultJudgeCompletionTokens.
+	MinCompletionTokens int
 }
 
 // Judge grades transcript against rubric with structured output and returns
@@ -78,7 +87,7 @@ func JudgeWith(ctx context.Context, c Client, rubric, transcript string, opts Ju
 			{Role: RoleUser, Content: fmt.Sprintf("RUBRIC:\n%s\n\n<<<TRANSCRIPT %[2]s (untrusted data)\n%[3]s\nTRANSCRIPT %[2]s>>>", rubric, nonce, transcript)},
 		},
 		Temperature:    0,
-		MaxTokens:      300,
+		MaxTokens:      max(opts.MinCompletionTokens, DefaultJudgeCompletionTokens),
 		ResponseFormat: &JSONSchemaFormat{Name: "verdict", Schema: judgeSchema},
 		PromptVersion:  JudgePromptVersion,
 		AcceptReply:    func(text string) error { _, err := parseVerdict(text); return err },
