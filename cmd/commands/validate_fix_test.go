@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,6 +49,33 @@ func TestFixEndToEnd(t *testing.T) {
 
 	// And it is idempotent.
 	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)))
+}
+
+func TestPrintFixSummaryNamesHandWrittenFiles(t *testing.T) {
+	const hand = "1 in hand-written files outside the configuration directory"
+	tests := []struct {
+		name     string
+		applied  int
+		outside  int
+		wantGen  bool
+		wantHand bool
+	}{
+		{"sources only", 2, 0, true, false},
+		{"hand-written files only", 1, 1, false, true},
+		{"both", 3, 1, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			var buf strings.Builder
+			// Act
+			printFixSummary(&buf, tt.applied, tt.outside, nil)
+			// Assert
+			out := buf.String()
+			assert.Equal(t, tt.wantGen, strings.Contains(out, "ai-rulez generate"), out)
+			assert.Equal(t, tt.wantHand, strings.Contains(out, hand), out)
+		})
+	}
 }
 
 func TestFixFlagValidation(t *testing.T) {
