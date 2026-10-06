@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -76,7 +77,7 @@ func buildActivationRunner(cmd *cobra.Command) (evals.Runner, string, error) {
 	}
 	switch name {
 	case evals.RunnerClaudeNative:
-		return &evals.ClaudeNative{Bin: evalFlags.claudeBin, ExtraArgs: evalFlags.runnerArgs, Stderr: cmd.ErrOrStderr()}, harness, nil
+		return &evals.ClaudeNative{Bin: evalFlags.claudeBin, ExtraArgs: evalFlags.runnerArgs, Stderr: cmd.ErrOrStderr(), SkillGate: skillSecurityGate}, harness, nil
 	case evals.RunnerCodexNative:
 		return &evals.CodexNative{Bin: evalFlags.codexBin, ExtraArgs: evalFlags.runnerArgs, Stderr: cmd.ErrOrStderr()}, harness, nil
 	case evals.RunnerClaudePluginEval:
@@ -223,4 +224,16 @@ func writeActivationReport(cmd *cobra.Command, report *evals.ActivationReport) e
 	}
 	_, err = fmt.Fprintf(cmd.OutOrStdout(), "Wrote %s (%d skills)\n", path, len(report.Skills))
 	return oops.Wrapf(err, "write summary")
+}
+
+// skillSecurityGate refuses a skill whose SKILL.md has an error-level security
+// finding before a native activation run copies it into a harness plugin and
+// sends it to a model.
+func skillSecurityGate(id, text string) error {
+	for _, f := range lint.ScanText(id+"/SKILL.md", text) {
+		if f.Severity == lint.SeverityError {
+			return oops.Errorf("%s: %s (line %d)", f.Code, f.Message, f.Line)
+		}
+	}
+	return nil
 }
