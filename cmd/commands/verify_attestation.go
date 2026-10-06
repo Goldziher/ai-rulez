@@ -233,25 +233,35 @@ func ageText(seconds *int64) string {
 }
 
 // signingRequiredLines is what `generate --locked` adds: the attestation
-// problems when [signing] require names the lock, one line each.
-func signingRequiredLines(cfg *config.Config) []string {
+// problems when [signing] require names the lock, one line each. The error is a
+// policy that cannot be built, which is a failure to run, not drift.
+func signingRequiredLines(cfg *config.Config) ([]string, error) {
+	findings, err := signing.RequiredLockCheck(cfg, nil, time.Now())
+	if err != nil {
+		return nil, oops.Wrapf(err, "cannot verify the lock attestation [signing] require asks for")
+	}
 	var lines []string
-	for _, e := range signing.RequiredLockFindings(cfg, nil, time.Now()) {
+	for _, e := range findings {
 		lines = append(lines, e.Code+" "+signing.Names[e.Code]+": "+e.Reason)
 	}
-	return lines
+	return lines, nil
 }
 
 // checkLockSignatureAt is the attestation half of `lock --check`: 0 when nothing
 // is required or the attestation verifies, exitDrift when it does not (AR720 to
-// AR727). A configuration that cannot be loaded is not this check's finding:
-// checkLockContentAt has already reported it with its own exit code.
+// AR727), 1 when the policy cannot be built. A configuration that cannot be
+// loaded is not this check's finding: checkLockContentAt has already reported it
+// with its own exit code.
 func checkLockSignatureAt(path string) int {
 	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
 		return 0
 	}
-	lines := signingRequiredLines(cfg)
+	lines, err := signingRequiredLines(cfg)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
 	if len(lines) == 0 {
 		return 0
 	}
