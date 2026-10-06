@@ -2244,6 +2244,39 @@
                 "type": "array"
               }
             },
+    "review": {
+      "additionalProperties": false,
+      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
+      "properties": {
+        "content": {
+          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body.",
+          "enum": ["descriptions", "full"],
+          "type": "string"
+        },
+        "exclude": {
+          "description": "Name globs of items the review skips.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_calls": {
+          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_cost_usd": {
+          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset.",
+          "minimum": 0,
+          "type": "number"
+        },
+        "rubric": {
+          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
             "type": "object"
           },
           "commands": {
