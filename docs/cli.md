@@ -1558,15 +1558,20 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 | --- | --- |
 | `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
 | `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
-| `ai-rulez usage export --to file <path> [--file f] [--log f] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
+| `ai-rulez usage export --to file <path> [--file f] [--log f] [--with-evals] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
+| `ai-rulez usage export --to otlp [--all] [--with-evals] [--max-batches n] [--dry-run]` | Push the usage log past the export cursor (and eval results) to the consented collector; exits 1 when delivery fails |
+| `ai-rulez usage prune --keep-days n [--dry-run] [--ignore-cursor] [--log f]` | Delete usage-log lines older than n days that are behind the export cursor |
+| `ai-rulez telemetry enable [--endpoint url] [--protocol http/json\|http/protobuf\|grpc] [--include-session] [--include-paths] [--backfill]` | Store your consent for one collector (per user, mode 0600; a repository cannot grant it) |
+| `ai-rulez telemetry status [--format json]` | Recording and export on or off, consent state, pending events, cursor, failed flushes |
+| `ai-rulez telemetry disable` | Withdraw consent |
 | `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
 | `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
 | `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
 | `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
 | `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
-| `ai-rulez telemetry preview [--log f] [--limit n] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
+| `ai-rulez telemetry preview [--log f] [--limit n] [--with-evals] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
 | `ai-rulez telemetry doctor [--format json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
-| `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
+| `ai-rulez report evals [--usage f]... [--from-otlp] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 
 ## Eval Commands
 
