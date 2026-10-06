@@ -42,6 +42,7 @@ nav = [
     { "Authoring Plugins" = "plugins.md" },
     { "Evals" = "evals.md" },
     { "Skill Search" = "search.md" },
+    { "Improve (experimental)" = "improve.md" },
     { "Usage Telemetry" = "usage-telemetry.md" },
     { "LLM Access" = "llm.md" },
     { "Review" = "review.md" },
