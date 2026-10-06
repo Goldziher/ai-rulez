@@ -89,15 +89,15 @@ var listChecksCmd = &cobra.Command{
 func init() {
 	ListCmd.Flags().BoolVar(&listPlacement, "placement", false, "Report where each skill and command is placed: core or plugin-only, and which plugins bundle it")
 	ListCmd.Flags().StringVarP(&listProfile, "profile", "p", "", "Profile for --placement (default: from config or 'default')")
-	ListCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(ListCmd.Flags(), &listJSON, "j")
 	ListCmd.AddCommand(listAgentsCmd)
 	ListCmd.AddCommand(listCommandsCmd)
 	ListCmd.AddCommand(listChecksCmd)
 	listChecksCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
-	listChecksCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(listChecksCmd.Flags(), &listJSON, "j")
 	for _, c := range []*cobra.Command{listRulesCmd, listContextCmd, listSkillsCmd, listAgentsCmd, listCommandsCmd} {
 		c.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
-		c.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
+		addJSONFormat(c.Flags(), &listJSON, "j")
 		c.Flags().BoolVar(&listLocal, "local", false, "List the machine-local tree (.ai-rulez/local/)")
 	}
 	ListCmd.AddCommand(listRulesCmd)

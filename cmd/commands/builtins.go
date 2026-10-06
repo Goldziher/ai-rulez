@@ -47,8 +47,8 @@ var builtinsShowCmd = &cobra.Command{
 func init() {
 	BuiltinsCmd.AddCommand(builtinsListCmd)
 	BuiltinsCmd.AddCommand(builtinsShowCmd)
-	builtinsListCmd.Flags().BoolVarP(&builtinsJSON, "json", "j", false, "Output as JSON")
-	builtinsShowCmd.Flags().BoolVarP(&builtinsShowJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(builtinsListCmd.Flags(), &builtinsJSON, "j")
+	addJSONFormat(builtinsShowCmd.Flags(), &builtinsShowJSON, "j")
 }
 
 func runBuiltinsList(cmd *cobra.Command, args []string) {

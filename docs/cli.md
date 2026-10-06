@@ -142,7 +142,7 @@ ai-rulez domain list [flags]
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 **Examples:**
 
@@ -155,7 +155,7 @@ ai-rulez domain list
 List as JSON:
 
 ```bash
-ai-rulez domain list --json
+ai-rulez domain list --format json
 ```
 
 ### Content Management
@@ -387,7 +387,7 @@ ai-rulez list rules [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List rules in specific domain only
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -417,7 +417,7 @@ ai-rulez list context [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List context in specific domain only
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -440,7 +440,7 @@ ai-rulez list skills [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List skills in specific domain only
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -503,13 +503,13 @@ List all installed skills.
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 **Examples:**
 
 ```bash
 ai-rulez skill list
-ai-rulez skill list --json
+ai-rulez skill list --format json
 ```
 
 ### Include Management
@@ -598,13 +598,13 @@ ai-rulez include list [flags]
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 **Examples:**
 
 ```bash
 ai-rulez include list
-ai-rulez include list --json
+ai-rulez include list --format json
 ```
 
 ### Profile Management
@@ -707,13 +707,13 @@ ai-rulez profile list [flags]
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 **Examples:**
 
 ```bash
 ai-rulez profile list
-ai-rulez profile list --json
+ai-rulez profile list --format json
 ```
 
 ---
@@ -731,7 +731,7 @@ Manage `config.local.{toml,yaml,yml,json}`, the machine-local overlay merged ont
 
 ```bash
 ai-rulez local init                     # skeleton in the main config's format (commented for TOML and YAML, {} for JSON)
-ai-rulez local show [--json] [--reveal] # keys the overlay sets, with the shared value each replaces
+ai-rulez local show [--format json] [--reveal] # keys the overlay sets, with the shared value each replaces
 ai-rulez local set <path> <value>       # value is a TOML literal, falling back to a plain string
 ai-rulez local set <path> --stdin       # read the value from standard input
 ai-rulez local unset <path>
@@ -784,7 +784,7 @@ List all built-in domains embedded in the `ai-rulez` binary.
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 ### `ai-rulez builtins show <name> [flags]`
 
@@ -796,7 +796,7 @@ Show the full rules, context, skills, agents, and commands for a built-in domain
 
 **Flags:**
 
-- `--json` / `-j` (optional): Output as JSON
+- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
 
 ---
 
@@ -1252,7 +1252,7 @@ echo '{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md"}}' | ai-rulez gu
 Read-only diagnostics. It never writes, and reports each problem as an `error`, a `warning` or `info`.
 
 ```bash
-ai-rulez doctor [config-file] [--strict] [--json] [--profile <name>] [--no-local] [--config-dir <name>]
+ai-rulez doctor [config-file] [--strict] [--format json] [--profile <name>] [--no-local] [--config-dir <name>]
 ```
 
 | Check | Reports | Severity |
@@ -1274,7 +1274,7 @@ When outputs cannot be rendered at all (for example because an MCP placeholder i
 | Flag | Description |
 | --- | --- |
 | `--strict` | Also exit non-zero on warnings |
-| `--json` | Print `{"root", "summary": {"error", "warning", "info"}, "findings": [{"check", "severity", "message", "path", "hint"}]}` instead of the table |
+| `--format text\|json` | `json` prints `{"root", "summary": {"error", "warning", "info"}, "findings": [{"check", "severity", "message", "path", "hint"}]}` instead of the table |
 | `--profile` / `-p` | Profile rendered for the `drift` and `gitignore` checks |
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
@@ -1325,7 +1325,7 @@ Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `con
 
 ```bash
 ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--no-local] [--config-dir <name>]
-ai-rulez verifiers list [config-file] [--json] [--no-local] [--config-dir <name>]
+ai-rulez verifiers list [config-file] [--format json] [--no-local] [--config-dir <name>]
 ai-rulez verifiers explain <name> [config-file]
 ai-rulez verifiers test [name...]
 ```
@@ -1337,7 +1337,7 @@ ai-rulez verifiers test [name...]
 | `--all` | Evaluate every file (the default); exclusive with `--since` and `--staged` |
 | `--rule <id>` | Run only the verifiers that enforce this rule, skill, agent or command |
 | `--format` | `text` (default), `json` ([`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json)), `sarif` or `junit` |
-| `--json` | Same as `--format json` |
+| `--json` | Deprecated alias for `--format json` (conflicts with another `--format`) |
 | `--out <file>` | Write the report to a file instead of stdout |
 | `--fail-on` | Lowest failing severity: `error` (default), `warning`, `info` or `none` |
 | `--strict` | Same as `--fail-on warning` |
@@ -1372,7 +1372,7 @@ ai-rulez tokens [config-file] [flags]
 
 | Flag                  | Type    | Default            | Description                                                      |
 | --------------------- | ------- | ------------------ | ---------------------------------------------------------------- |
-| `--json` / `-j`       | boolean | false              | Emit the report as JSON                                          |
+| `--format`            | string  | `text`             | `text` or `json` (`--json` / `-j` is a deprecated alias for `--format json`) |
 | `--budget` / `-b`     | int     | 0                  | Exit 2 when the headline always-loaded count exceeds this ceiling |
 | `--compare-profiles`  | strings | none               | One profile per column of a comparison table; repeat the flag per column |
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
@@ -1384,7 +1384,7 @@ ai-rulez tokens [config-file] [flags]
 
 ```bash
 ai-rulez tokens
-ai-rulez tokens --json
+ai-rulez tokens --format json
 ai-rulez tokens --compare-profiles base --compare-profiles backend --compare-profiles full
 ai-rulez tokens --compare-profiles base --compare-profiles base,backend
 ai-rulez tokens --budget 6000
@@ -1518,13 +1518,13 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 | `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
 | `ai-rulez usage export --to file <path> [--file f] [--log f] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
 | `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
-| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
+| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
 | `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
 | `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
 | `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
 | `ai-rulez telemetry preview [--log f] [--limit n] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
-| `ai-rulez telemetry doctor [--json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
-| `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
+| `ai-rulez telemetry doctor [--format json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
+| `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 
 ## Eval Commands
 
@@ -1963,8 +1963,8 @@ These flags work with all commands:
 | `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 
-Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
-`--json -j`, `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
+Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` still works on the commands that had it, is hidden from help and warns that it is deprecated. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
+`--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
 
 **Examples:**

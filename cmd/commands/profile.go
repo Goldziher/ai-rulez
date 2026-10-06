@@ -83,7 +83,7 @@ func init() {
 	profileRemoveCmd.Flags().BoolVarP(&profileForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Add flags for profile list
-	profileListCmd.Flags().BoolVarP(&profileJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(profileListCmd.Flags(), &profileJSON, "j")
 }
 
 func runProfileAdd(cmd *cobra.Command, args []string) {

@@ -403,5 +403,5 @@ func init() {
 	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
 	telemetryPreviewCmd.Flags().StringVar(&telLog, "log", "", "Usage log to preview instead of the outbox (default <config dir>/local/usage.jsonl)")
 	telemetryPreviewCmd.Flags().IntVar(&telLimit, "limit", 5, "Preview the first N events (0 for all)")
-	telemetryDoctorCmd.Flags().BoolVarP(&telJSON, "json", "j", false, "Emit the report as JSON")
+	addJSONFormat(telemetryDoctorCmd.Flags(), &telJSON, "j")
 }

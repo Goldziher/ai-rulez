@@ -81,7 +81,7 @@ flags, invalid cases file AR9D2, no catalog), 2 a gate failed (AR9D4).`,
 func init() {
 	f := SearchCmd.Flags()
 	f.IntVar(&searchFlags.limit, "limit", searchDefaultLimit, fmt.Sprintf("Maximum results (max %d)", searchMaxLimit))
-	f.StringVar(&searchFlags.format, "format", formatText, "Output format: text or json")
+	addFormatFlag(f, &searchFlags.format, formatText, formatText, formatText, formatJSON)
 	f.StringVar(&searchFlags.profile, "profile", "", "Profile whose skills to search (default: the configured default profile)")
 	f.StringVar(&searchFlags.targets, "targets", "", "Preset whose rendering of the skills to search")
 	f.StringSliceVar(&searchFlags.domains, flagServeDomain, nil, "Only search skills of these domains; 'root' selects skills in no domain")

@@ -61,7 +61,7 @@ ai-rulez cannot see, so no figure here predicts a session total.`,
 
 func init() {
 	TokensCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
-	TokensCmd.Flags().BoolVarP(&tokensJSON, "json", "j", false, "Emit the report as JSON")
+	addJSONFormat(TokensCmd.Flags(), &tokensJSON, "j")
 	TokensCmd.Flags().IntVarP(&tokensBudget, "budget", "b", 0,
 		"Fail when the headline always-loaded count exceeds this ceiling")
 	// StringArray, not StringSlice: a comma composes several profiles into one

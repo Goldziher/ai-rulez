@@ -345,7 +345,7 @@ A skill with no recorded passing run is not reported stale (that is what `AR962`
 Rows are ordered by action, then by number of reasons, then by pass rate (worst first), then by `SKILL.md` size.
 Records that are not signed with your key are marked `unverified` (`"unverified": true` in JSON), their scores are left out and the skill counts as having no eval results; `report usage` likewise skips them. Run `eval run` to record a signed result.
 
-Without a usage log nothing is concluded about use. `--json` prints the same data. `report usage` shows feedback
+Without a usage log nothing is concluded about use. `--format json` prints the same data. `report usage` shows feedback
 counts and the eval pass rate next to each skill.
 
 With a usage log each row also carries a `join` class (and `join_uses`, the uses behind it by class) saying how far

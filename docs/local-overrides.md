@@ -242,7 +242,7 @@ ai-rulez local set presets '["codex", "!cursor"]'
 ai-rulez local set mcp_servers.github.command npx
 printf %s "$TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin
 ai-rulez local set 'mcp_servers["foo.bar"].command' npx
-ai-rulez local show --json
+ai-rulez local show --format json
 ```
 
 - **Value parsing.** The value is parsed as a TOML literal and falls back to a plain string. Env and

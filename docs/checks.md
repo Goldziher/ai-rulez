@@ -39,7 +39,7 @@ Checks follow profiles like other content: root checks are always included, doma
 ```bash
 ai-rulez add check security -s "Security issues"
 ai-rulez add check perf --domain backend
-ai-rulez list checks [--domain backend] [--json]
+ai-rulez list checks [--domain backend] [--format json]
 ai-rulez remove check security [--domain backend] [--force]
 ```
 

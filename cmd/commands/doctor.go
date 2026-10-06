@@ -55,7 +55,7 @@ declares them (run generate --check for that).`,
 
 func init() {
 	DoctorCmd.Flags().BoolVar(&doctorStrict, "strict", false, "Also exit non-zero on warnings")
-	DoctorCmd.Flags().BoolVar(&doctorJSON, "json", false, "Print the report as JSON")
+	addJSONFormat(DoctorCmd.Flags(), &doctorJSON, "")
 	DoctorCmd.Flags().StringVarP(&doctorProfile, "profile", "p", "", "Profile to render for the drift and gitignore checks (default: from config or 'default')")
 	DoctorCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	DoctorCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")

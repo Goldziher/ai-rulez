@@ -61,7 +61,7 @@ func init() {
 	f.StringVar(&reportEvalsFlags.results, "results", "", "Eval results (default <config dir>/eval-results.json)")
 	f.Float64Var(&reportEvalsFlags.minPass, "min-pass-rate", evals.DefaultMinPassRate, "Pass rate below which a skill is a rewrite candidate")
 	f.Float64Var(&reportEvalsFlags.minTrigger, "min-trigger", evals.DefaultMinTrigger, "Trigger precision and recall below which a skill is a rewrite candidate")
-	f.BoolVarP(&reportEvalsFlags.json, "json", "j", false, "Emit the report as JSON")
+	addJSONFormat(f, &reportEvalsFlags.json, "j")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ReportCmd.AddCommand(reportEvalsCmd)
 }

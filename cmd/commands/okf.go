@@ -134,7 +134,7 @@ differ, 1 the bundle could not be read.`,
 }
 
 func init() {
-	okfValidateCmd.Flags().StringVar(&okfFormat, "format", formatText, "Output format: text or json")
+	addFormatFlag(okfValidateCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
 	okfValidateCmd.Flags().StringVar(&okfFailOn, "fail-on", "error", "Lowest severity that fails the run: error, warning, info or none")
 	OKFCmd.AddCommand(okfValidateCmd)
 
@@ -151,7 +151,7 @@ func init() {
 	importOKFCmd.Flags().StringVar(&okfDomain, "domain", "", "Place the imported content in this domain")
 	importOKFCmd.Flags().BoolVar(&okfDryRun, "dry-run", false, "Report what would happen without writing")
 	importOKFCmd.Flags().BoolVar(&okfForce, "force", false, "Overwrite files that exist and differ")
-	importOKFCmd.Flags().StringVar(&okfFormat, "format", formatText, "Output format: text or json")
+	addFormatFlag(importOKFCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
 	importOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImportCmd.AddCommand(importOKFCmd)
 	includes.OKFScan = okfScanner(nil)

@@ -68,8 +68,8 @@ func checkStrictFlags() error {
 
 // checkFlagValues rejects unknown names and values.
 func checkFlagValues() error {
-	if !lint.IsFormat(validateFormat) {
-		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
+	if err := checkFormat(validateFormat, lint.Formats()); err != nil {
+		return err
 	}
 	switch validateFailOn {
 	case "", "error", "warning", "info", "none":
