@@ -367,7 +367,7 @@ func previousClaimedInstructions(cfg *config.Config, path string) []any {
 	var entries []any
 	for _, claim := range cfg.Run.PreviousClaims(rel) {
 		if slices.Equal(claim.Path, []string{opencodeInstructionsKey}) {
-			entries = append(entries, claim.Elements...)
+			entries = append(entries, claim.ElementsIn(opencodeLocalEntries())...)
 		}
 	}
 	return entries

@@ -126,7 +126,15 @@ func SplitBOM(doc string) (bom, rest string) {
 // elements, only those elements of the array there.
 type pathSpec struct {
 	path     []string
-	elements []any
+	elements *Claim
+}
+
+// elementsOf is the claim when it covers only some array elements, else nil.
+func elementsOf(claim Claim) *Claim {
+	if !claim.HasElements() {
+		return nil
+	}
+	return &claim
 }
 
 // ownedSpecs lists what Apply of owned is allowed to change in before.
@@ -167,7 +175,7 @@ func claimSpecs(claims []Claim) []pathSpec {
 	specs := make([]pathSpec, 0, len(claims))
 	for _, claim := range claims {
 		if len(claim.Path) > 0 {
-			specs = append(specs, pathSpec{path: claim.Path, elements: claim.Elements})
+			specs = append(specs, pathSpec{path: claim.Path, elements: elementsOf(claim)})
 		}
 	}
 	return specs
@@ -226,7 +234,7 @@ func (s pathSpec) strip(tree map[string]any) {
 			}
 			remaining := make([]any, 0, len(array))
 			for _, element := range array {
-				if !ElementsContain(element, s.elements) {
+				if !s.elements.OwnsElement(element) {
 					remaining = append(remaining, element)
 				}
 			}

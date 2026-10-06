@@ -212,7 +212,7 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 	var previous []any
 	for _, claim := range previousChecksClaims(cfg, outputPath) {
 		if len(claim.Path) == 1 && claim.Path[0] == path[0] {
-			previous = append(previous, claim.Elements...)
+			previous = append(previous, claim.ElementsIn(existing)...)
 		}
 	}
 

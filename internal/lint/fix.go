@@ -288,6 +288,10 @@ var errStale = errors.New("the file changed since the lint run; nothing was rewr
 type diffRow struct {
 	old, new       string
 	hasOld, hasNew bool
+	// noNL marks the last line of a file that had no final newline and gets
+	// one; eolRow is the empty element after the last newline, written but
+	// not shown in the diff.
+	noNL, eolRow bool
 }
 
 // applyEdits rewrites the lines of one file. It returns the unified diff of the
@@ -311,7 +315,7 @@ func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 	}
 	newLines := make([]string, 0, len(rows))
 	for _, row := range rows {
-		if row.hasNew {
+		if row.hasNew || row.eolRow {
 			newLines = append(newLines, row.new)
 		}
 	}
@@ -346,18 +350,25 @@ func editRows(text string, edits []Edit) (rows []diffRow, applied int, err error
 	if strings.Contains(text, "\r\n") {
 		eol = "\r"
 	}
+	lastOriginal := 0
 	for i, old := range oldLines {
+		lastOriginal = len(rows)
 		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
 		for _, l := range after[i] {
 			rows = append(rows, diffRow{new: l + eol, hasNew: true})
 		}
 	}
-	if last := rows[len(rows)-1]; wantEOL && last.new != "" {
-		if !strings.HasSuffix(last.new, "\r") {
-			rows[len(rows)-1].new += eol
-		}
-		rows = append(rows, diffRow{hasNew: true})
+	if wantEOL && rows[len(rows)-1].new != "" {
+		rows[lastOriginal].noNL = true // the file ends without a newline and gets one
+		rows = append(rows, diffRow{eolRow: true})
 		applied++
+	}
+	if eol != "" {
+		for i := range rows[:len(rows)-1] {
+			if rows[i].hasNew && !strings.HasSuffix(rows[i].new, "\r") {
+				rows[i].new += eol
+			}
+		}
 	}
 	return rows, applied, nil
 }
@@ -450,7 +461,7 @@ func unifiedRowDiff(name string, rows []diffRow) string {
 	const context = 3
 	var changed []int
 	for i, r := range rows {
-		if !r.hasOld || !r.hasNew || r.old != r.new {
+		if !r.hasOld || !r.hasNew || r.old != r.new || r.noNL {
 			changed = append(changed, i)
 		}
 	}
@@ -480,22 +491,30 @@ func unifiedRowDiff(name string, rows []diffRow) string {
 		}
 		fmt.Fprintf(&sb, "@@ -%d,%d +%d,%d @@\n", oldBefore[start]+1, oldBefore[end+1]-oldBefore[start], newBefore[start]+1, newBefore[end+1]-newBefore[start])
 		for l := start; l <= end; l++ {
-			r := rows[l]
-			switch {
-			case r.hasOld && r.hasNew && r.old == r.new:
-				fmt.Fprintf(&sb, " %s\n", r.old)
-			default:
-				if r.hasOld {
-					fmt.Fprintf(&sb, "-%s\n", r.old)
-				}
-				if r.hasNew {
-					fmt.Fprintf(&sb, "+%s\n", r.new)
-				}
-			}
+			writeDiffRow(&sb, rows[l])
 		}
 		i = j
 	}
 	return sb.String()
+}
+
+// writeDiffRow renders one row: context, or a removed and an added line.
+func writeDiffRow(sb *strings.Builder, r diffRow) {
+	switch {
+	case r.eolRow:
+	case r.hasOld && r.hasNew && r.old == r.new && !r.noNL:
+		fmt.Fprintf(sb, " %s\n", r.old)
+	default:
+		if r.hasOld {
+			fmt.Fprintf(sb, "-%s\n", r.old)
+			if r.noNL {
+				sb.WriteString("\\ No newline at end of file\n")
+			}
+		}
+		if r.hasNew {
+			fmt.Fprintf(sb, "+%s\n", r.new)
+		}
+	}
 }
 
 // FixedFingerprints returns the fingerprints of the applied fixes.

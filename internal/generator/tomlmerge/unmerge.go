@@ -115,7 +115,7 @@ func (e *editor) unmergeClaim(claim Claim) (changed, mismatch bool, err error) {
 	if !claim.MatchesValue(value) {
 		return false, true, nil
 	}
-	if claim.Elements == nil {
+	if !claim.HasElements() {
 		before := e.src
 		err := e.remove(claim.Path, claim)
 		return e.src != before, false, err
@@ -127,7 +127,7 @@ func (e *editor) unmergeClaim(claim Claim) (changed, mismatch bool, err error) {
 	}
 	remaining := make([]any, 0, len(array))
 	for _, element := range array {
-		if !jsonmerge.ElementsContain(element, claim.Elements) {
+		if !claim.OwnsElement(element) {
 			remaining = append(remaining, element)
 		}
 	}
