@@ -59,6 +59,10 @@ type LLMOptions struct {
 	Prices func(model string, u llm.Usage) (usd float64, known bool)
 	// Estimate prints the egress manifest and the estimated cost, and calls nothing.
 	Estimate bool
+	// Gate lets a failing llm verifier keep its error severity when its
+	// calibration record is current and meets the bar (--gate-llm); otherwise
+	// every llm verdict stays advisory, capped at warning.
+	Gate bool
 }
 
 // LLMUsage totals the model use of a run.
@@ -81,6 +85,9 @@ type llmRun struct {
 }
 
 func (e *Env) llmRun() *llmRun {
+	if e.llm == nil && e.opts.sharedLLM != nil {
+		e.llm = e.opts.sharedLLM
+	}
 	if e.llm == nil {
 		o := LLMOptions{}
 		if e.opts.LLM != nil {
