@@ -57,11 +57,30 @@ Checked against the hook input schemas embedded in Claude Code 2.1.289 (read-onl
 | `PreToolUse` (Skill tool), `UserPromptExpansion` (`command_name`) | as [documented](usage-telemetry.md) | verified earlier |
 | command hook `async: true`, `timeout` | handler fields | verified (`async` runs the hook in the background without blocking) |
 
+Codex and Cursor, checked against their published hook documentation on 2026-10-06 (<https://developers.openai.com/codex/hooks>,
+<https://cursor.com/docs/hooks>; documentation only, the binaries were not inspected):
+
+| Harness | Event | Fields used | Status |
+| --- | --- | --- | --- |
+| Codex | `SubagentStart` | `session_id`, `cwd`, `agent_id`, `agent_type` | documented 2026-10-06 |
+| Codex | `SubagentStop` | `session_id`, `cwd`, `agent_id`, `agent_type` (`last_assistant_message`, `agent_transcript_path`, `stop_hook_active`: ignored) | documented 2026-10-06 |
+| Codex | `PreToolUse` (matcher `Bash`) | `tool_name`, `tool_input.command` (skill reads, see [usage telemetry](usage-telemetry.md)) | documented 2026-10-06 |
+| Cursor | `subagentStart` | `conversation_id` (the session), `subagent_id`, `subagent_type` (`task`, `git_branch`, ...: ignored) | documented 2026-10-06 |
+| Cursor | `subagentStop` | `conversation_id`, `subagent_type`, `duration_ms` (`summary`, `task`, `modified_files`, `agent_transcript_path`, ...: ignored) | documented 2026-10-06 |
+| Cursor | `preToolUse` (matcher `Shell`, `Read`, ...) | `tool_name`, `tool_input` | documented 2026-10-06 |
+| Codex, Cursor | rule, agent or context **load** event | none | not documented: Codex states no event reports loaded skills or instructions, and Cursor lists none; nothing is recorded |
+
+`telemetry hook --harness codex|cursor` therefore prints the skill-read template of `usage hook` plus the subagent events
+above, each running `telemetry record --harness <name>`. Cursor's `subagentStop` has no `subagent_id`, so the duration
+comes from the payload's `duration_ms`; Codex has no duration, so it is computed from the paired `SubagentStart` as
+for Claude Code.
+
 Inferred, not verified: the mapping from a rule's generated file (`.claude/rules/<name>.md`) to the source rule id is
-by file name, which is how ai-rulez names generated rules; `SubagentStop` carries no duration, so it is computed from
-the paired `SubagentStart` and is absent when the Start was missed. Codex and Cursor have no verified equivalent of
-`InstructionsLoaded` or the subagent events in this repository, so `telemetry hook --harness codex|cursor` prints the
-skill-load template of `usage hook` unchanged.
+by file name, which is how ai-rulez names generated rules; `SubagentStop` carries no duration in Claude Code, so it is
+computed from the paired `SubagentStart` and is absent when the Start was missed. For Codex and Cursor, the shape of
+`tool_input` of a file-read tool (`file_path` or `path`) is inferred; the handler fields `async` and `timeout` are
+written only for Cursor (documented there) and Claude Code. Rule, agent and context loads are still recorded for
+Claude Code only; Codex and Cursor agents are recorded from the subagent events.
 
 ## Consent and configuration
 

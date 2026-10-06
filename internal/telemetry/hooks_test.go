@@ -171,3 +171,53 @@ func TestPipeline_SamplingAppliesToExportNotToTheLocalLog(t *testing.T) {
 }
 
 func ptrFloat(f float64) *float64 { return &f }
+
+func TestHandleHook_CodexSubagentEvents(t *testing.T) {
+	p, now, _ := pipelineFor(t, enabled())
+	start, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"SubagentStart","turn_id":"t1","agent_id":"a1","agent_type":"explorer","permission_mode":"default"`), HookOptions{Harness: "codex"})
+	require.NoError(t, err)
+	require.NotNil(t, start)
+	assert.Equal(t, "codex", start.Harness)
+	assert.Equal(t, KindAgent, start.Kind)
+	assert.Equal(t, "explorer", start.ID)
+
+	*now = now.Add(time.Second)
+	stop, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"SubagentStop","agent_id":"a1","agent_type":"explorer","last_assistant_message":"PRIVATE","stop_hook_active":false`), HookOptions{Harness: "codex"})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1000, stop.DurationMS)
+	log, _ := os.ReadFile(p.LogPath)
+	assert.NotContains(t, string(log), "PRIVATE")
+}
+
+func TestHandleHook_CursorSubagentEvents(t *testing.T) {
+	p, _, _ := pipelineFor(t, enabled())
+	cursor := func(fields string) *bytes.Reader {
+		return bytes.NewReader([]byte(`{"conversation_id":"conv-9","cwd":"/x",` + fields + `}`))
+	}
+	start, err := p.HandleHook(context.Background(), cursor(`"hook_event_name":"subagentStart","subagent_id":"s1","subagent_type":"explore","task":"PRIVATE TASK","git_branch":"main"`), HookOptions{Harness: "cursor"})
+	require.NoError(t, err)
+	require.NotNil(t, start)
+	assert.Equal(t, "cursor", start.Harness)
+	assert.Equal(t, "explore", start.ID)
+	assert.Equal(t, KindAgent, start.Kind)
+	assert.Equal(t, p.Session("conv-9"), start.Session, "the conversation id identifies the session")
+
+	stop, err := p.HandleHook(context.Background(), cursor(`"hook_event_name":"subagentStop","subagent_type":"explore","status":"completed","summary":"PRIVATE SUMMARY","duration_ms":4200,"modified_files":["/x/secret.go"]`), HookOptions{Harness: "cursor"})
+	require.NoError(t, err)
+	assert.Equal(t, OutcomeUsed, stop.Outcome)
+	assert.EqualValues(t, 4200, stop.DurationMS, "Cursor reports the duration itself")
+
+	log, _ := os.ReadFile(p.LogPath)
+	for _, leak := range []string{"PRIVATE", "secret.go", "conv-9"} {
+		assert.NotContains(t, string(log), leak)
+	}
+}
+
+func TestHandleHook_InstructionsLoadedIsClaudeOnly(t *testing.T) {
+	p, _, _ := pipelineFor(t, enabled())
+	for _, harness := range []string{"codex", "cursor"} {
+		event, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"/x/CLAUDE.md"`), HookOptions{Harness: harness})
+		require.NoError(t, err)
+		assert.Nil(t, event, harness)
+	}
+}

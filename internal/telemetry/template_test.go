@@ -68,8 +68,30 @@ func TestHookTemplate_TOMLParsesIntoHookGroups(t *testing.T) {
 func TestHookTemplate_OtherHarnessesAndErrors(t *testing.T) {
 	codex, err := HookTemplate(TemplateOptions{Harness: "codex"})
 	require.NoError(t, err)
-	assert.NotContains(t, string(codex), "InstructionsLoaded", "no verified equivalent for codex")
+	assert.NotContains(t, string(codex), "InstructionsLoaded", "Codex documents no instruction-load event")
 	assert.Contains(t, string(codex), "usage record")
+	assert.Contains(t, string(codex), "ai-rulez telemetry record --harness codex")
+	assert.Contains(t, string(codex), `"SubagentStart"`)
+	assert.Contains(t, string(codex), `"SubagentStop"`)
+
+	cursor, err := HookTemplate(TemplateOptions{Harness: "cursor"})
+	require.NoError(t, err)
+	var doc struct {
+		Version int `json:"version"`
+		Hooks   map[string][]struct {
+			Command string `json:"command"`
+			Timeout int    `json:"timeout"`
+		} `json:"hooks"`
+	}
+	require.NoError(t, json.Unmarshal(cursor, &doc))
+	assert.Equal(t, 1, doc.Version)
+	for _, event := range []string{"subagentStart", "subagentStop"} {
+		require.Len(t, doc.Hooks[event], 1, event)
+		assert.Equal(t, "ai-rulez telemetry record --harness cursor", doc.Hooks[event][0].Command)
+		assert.Positive(t, doc.Hooks[event][0].Timeout)
+	}
+	assert.Contains(t, doc.Hooks, "preToolUse", "the skill-read hook is kept")
+	assert.NotContains(t, string(cursor), "InstructionsLoaded")
 
 	_, err = HookTemplate(TemplateOptions{Harness: "codex", Format: FormatTOML})
 	assert.Error(t, err)
@@ -88,7 +110,7 @@ func TestRecordCommand_QuotesTheExecutable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, recordCommand(tt.exe, ""))
+			assert.Equal(t, tt.want, recordCommand(tt.exe, "", "claude"))
 		})
 	}
 }
