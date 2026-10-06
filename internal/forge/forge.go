@@ -241,6 +241,9 @@ type Client interface {
 	CommitDate(ctx context.Context, repo Repo, sha string) (time.Time, error)
 	// PullRequestsForCommit lists the pull requests that contain a commit.
 	PullRequestsForCommit(ctx context.Context, repo Repo, sha string) ([]PullRequest, error)
+	// PullRequest returns one pull request by number, with the tip of its head
+	// branch as it is now: the commit a review must have seen to count.
+	PullRequest(ctx context.Context, repo Repo, number int) (PullRequest, error)
 	// Reviews lists the reviews of a pull request, oldest first.
 	Reviews(ctx context.Context, repo Repo, pr int) ([]Review, error)
 	// Codeowners fetches the CODEOWNERS file at ref ("" is the default branch),

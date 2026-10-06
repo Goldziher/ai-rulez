@@ -202,6 +202,14 @@ func TestPullRequestsAndReviews(t *testing.T) {
 	require.Len(t, prs, 1)
 	assert.Equal(t, forge.PullRequest{Number: 7, State: "closed", Merged: true, Author: "alice", BaseRef: "main", HeadSHA: sha2, MergeCommit: sha1}, prs[0])
 
+	pr, err := c.PullRequest(context.Background(), repo, 7)
+	require.NoError(t, err)
+	assert.Equal(t, forge.PullRequest{Number: 7, State: "closed", Merged: true, Author: "alice", BaseRef: "main", HeadSHA: sha2, MergeCommit: sha1}, pr)
+	_, err = c.PullRequest(context.Background(), repo, 8)
+	require.ErrorIs(t, err, forge.ErrNotFound)
+	_, err = c.PullRequest(context.Background(), repo, 0)
+	require.ErrorIs(t, err, forge.ErrUnsupportedSource)
+
 	reviews, err := c.Reviews(context.Background(), repo, 7)
 	require.NoError(t, err)
 	require.Len(t, reviews, 2)
@@ -484,6 +492,7 @@ func TestOfflineMakesNoRequest(t *testing.T) {
 	_, calls["Tag"] = c.Tag(ctx, repo, "v1")
 	_, calls["CommitDate"] = c.CommitDate(ctx, repo, sha1)
 	_, calls["PullRequestsForCommit"] = c.PullRequestsForCommit(ctx, repo, sha1)
+	_, calls["PullRequest"] = c.PullRequest(ctx, repo, 1)
 	_, calls["Reviews"] = c.Reviews(ctx, repo, 1)
 	_, calls["Codeowners"] = c.Codeowners(ctx, repo, "")
 	_, calls["TeamMembers"] = c.TeamMembers(ctx, team)
