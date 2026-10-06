@@ -78,6 +78,9 @@ func TestUser_StaleHandWrittenFileWithoutBannerSurvivesWhateverTheHeaderMode(t *
 
 func TestUser_SymlinkEscapeIsNeverFollowedByDeletion(t *testing.T) {
 	quietWarnings(t)
+	// Arrange: a skills folder entry that is a symlink out of the home directory,
+	// holding a file the manifest lists. Inside a content folder a listed file is
+	// removable without a banner, so only the symlink guards keep it.
 	home, gen := newUserHome(t, claudeOnlyConfig, userFixture())
 	outside := t.TempDir()
 	victim := filepath.Join(outside, "res.json")
@@ -85,25 +88,62 @@ func TestUser_SymlinkEscapeIsNeverFollowedByDeletion(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "skills"), 0o755))
 	testutil.SymlinkOrSkip(t, outside, filepath.Join(home, ".claude", "skills", "old"))
 	writeUserManifest(t, home, ".claude/skills/old/res.json")
+	viaLink := filepath.Join(home, ".claude", "skills", "old", "res.json")
 
-	_, err := gen.GenerateUser("")
+	t.Run("the plan does not list it as stale", func(t *testing.T) {
+		plan, err := gen.PlanUser("")
 
-	require.NoError(t, err)
-	assert.FileExists(t, victim, "a manifest entry behind a symlink out of the home directory is not removed")
+		require.NoError(t, err)
+		assert.NotContains(t, plan.Stale, viaLink)
+		assert.FileExists(t, victim)
+	})
+	t.Run("removing it is refused even when it is asked for", func(t *testing.T) {
+		gen.removeStaleFile(viaLink)
+
+		assert.FileExists(t, victim, "removeStaleFile must not carry a removal out through a symlinked folder")
+	})
+	t.Run("generate leaves it", func(t *testing.T) {
+		_, err := gen.GenerateUser("")
+
+		require.NoError(t, err)
+		assert.FileExists(t, victim, "a manifest entry behind a symlink out of the home directory is not removed")
+	})
 }
 
 func TestUser_EmptyDirPruneDoesNotFollowSymlinksOut(t *testing.T) {
 	quietWarnings(t)
+	// Arrange: an empty directory outside the home directory, reached through a
+	// symlinked folder inside it. The path itself is a real, empty directory, so
+	// only the guard stops its removal.
 	home, gen := newUserHome(t, claudeOnlyConfig, userFixture())
 	outside := t.TempDir()
 	emptied := filepath.Join(outside, "empty")
 	require.NoError(t, os.MkdirAll(emptied, 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "skills"), 0o755))
-	testutil.SymlinkOrSkip(t, emptied, filepath.Join(home, ".claude", "skills", "link"))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(home, ".claude", "skills", "link"))
 
-	gen.removeEmptyDir(filepath.Join(home, ".claude", "skills", "link"))
+	// Act
+	gen.removeEmptyDir(filepath.Join(home, ".claude", "skills", "link", "empty"))
 
+	// Assert
 	assert.DirExists(t, emptied)
+}
+
+func TestUser_EmptyDirBehindAnInHomeDirectoryIsRemoved(t *testing.T) {
+	quietWarnings(t)
+	// Arrange: the control for the test above, so the guard is shown to refuse
+	// the symlink and not every removal.
+	home, gen := newUserHome(t, claudeOnlyConfig, userFixture())
+	empty := filepath.Join(home, ".claude", "skills", "stale", "empty")
+	require.NoError(t, os.MkdirAll(empty, 0o755))
+	gen.userDirs = map[string]bool{empty: true}
+	gen.userDirsRecorded = true
+
+	// Act
+	gen.removeEmptyDir(empty)
+
+	// Assert
+	assert.NoDirExists(t, empty)
 }
 
 func TestConvertToRelativePath_NeverFallsBackToTheBaseName(t *testing.T) {
