@@ -3012,6 +3012,12 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	for _, p := range g.localInputPatterns() {
 		paths[p] = true
 	}
+	// With managed ignores on, the directory is covered even before it exists:
+	// `usage record` and `telemetry record` create files in it between two
+	// generates, and they must not show up as untracked.
+	if includeCommitted && !g.userMode {
+		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
+	}
 
 	// A run that skipped the local inputs on purpose (--no-local) writes no
 	// local outputs, but the ones an earlier run left are still there and must

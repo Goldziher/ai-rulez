@@ -182,7 +182,7 @@ func TestUpdateGitignore_RemovesBlockWhenNothingIsNeeded(t *testing.T) {
 	require.Contains(t, readGitignore(t, dir), gitignore.BeginMarker)
 
 	// The user now covers everything themselves, below our block.
-	content := readGitignore(t, dir) + "\n*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n"
+	content := readGitignore(t, dir) + "\n*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n.ai-rulez/local/\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(content), 0o644))
 	require.NoError(t, gen.updateGitignore(outputs))
 
@@ -194,12 +194,12 @@ func TestUpdateGitignore_RemovesBlockWhenNothingIsNeeded(t *testing.T) {
 
 func TestUpdateGitignore_NoBlockWhenEverythingIgnored(t *testing.T) {
 	dir := gitRepo(t, "")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n.ai-rulez/local/\n"), 0o644))
 	gen := NewGenerator(&config.Config{BaseDir: dir})
 
 	require.NoError(t, gen.updateGitignore(gitignoreOutputs(dir)))
 
-	assert.Equal(t, "*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n", readGitignore(t, dir))
+	assert.Equal(t, "*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n.ai-rulez/local/\n", readGitignore(t, dir))
 }
 
 func TestUpdateGitignore_OutsideRepositoryAddsEverything(t *testing.T) {
@@ -375,7 +375,7 @@ func TestNeededGitignorePatterns_SubdirectoryBaseDirWithBlock(t *testing.T) {
 
 	needed, _ := gen.neededGitignorePatterns(outputs)
 
-	assert.Equal(t, []string{"AGENTS.md"}, filterManifest(needed))
+	assert.Equal(t, []string{".ai-rulez/local/", "AGENTS.md"}, filterManifest(needed))
 }
 
 func filterManifest(in []string) []string {
