@@ -254,11 +254,24 @@ func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 
 type checkApplier struct{}
 
-func (checkApplier) lifecycle() runLifecycle { return runLifecycle{forgetState: true} }
+func (checkApplier) lifecycle() runLifecycle { return runLifecycle{downgrades: true, forgetState: true} }
 
 func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	outputs := p.Outputs
 	g.previousFiles = nil
+	// Machine-local inputs are classified as generate does (a skipped overlay keeps
+	// its files, outputs are marked local and stamped), and a run generate would
+	// refuse for local drift is refused. Nothing is written: the exclude file that
+	// guardLocal keeps in step is left to generate.
+	local, err := g.planLocal(p.Requested, outputs)
+	if err != nil {
+		return nil, err
+	}
+	if local != nil {
+		if err := local.check(g.allowLocalDrift); err != nil {
+			return nil, err
+		}
+	}
 	var drift []Drift
 	for _, output := range outputs {
 		kind, _, ok := g.outputState(output)
