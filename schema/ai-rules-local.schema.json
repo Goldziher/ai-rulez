@@ -1828,6 +1828,11 @@
             "minLength": 1,
             "type": "string"
           },
+          "package": {
+            "description": "Package URL (purl) of the package a command-based server runs, e.g. pkg:npm/%40scope/server@1.4.2. `ai-rulez sbom` uses it for the component's purl instead of guessing from command and args; it is not written to harness files.",
+            "pattern": "^pkg:[a-z][a-z0-9.+-]*/[^\\s]+$",
+            "type": "string"
+          },
           "profiles": {
             "description": "Restrict this server to the named profiles. Omit to include it in every profile.",
             "items": {
