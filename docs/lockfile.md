@@ -273,7 +273,7 @@ include shared: v1.2.4 -> v1.3.1 (b21c0f3e1a9d)
   M  rules/security.md
   A  skills/deploy/scripts/run.sh
   tree sha256:... -> sha256:...
-  run `ai-rulez generate`, then `ai-rulez lock` to refresh the output pins
+  run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)
 would update 1 source(s)
 
 $ ai-rulez update shared          # rewrites the lock only
