@@ -14,7 +14,7 @@ import (
 func builtRanker(t *testing.T, mode string, emb *conceptEmbedder) *Ranker {
 	t.Helper()
 	items := refundCatalog()
-	cfg := Config{Mode: mode}
+	cfg := Config{Mode: mode, Fusion: FusionRRF}
 	res, err := Build(t.Context(), items, &BuildOptions{Config: cfg, Embedder: emb})
 	require.NoError(t, err)
 	require.NoError(t, res.Err)
