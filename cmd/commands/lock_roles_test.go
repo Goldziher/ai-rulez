@@ -266,3 +266,48 @@ func TestLockRoles_PlainLockDropsAPinnedRoleRemovedFromConfig(t *testing.T) {
 	// Assert
 	assert.Equal(t, []string{"dev"}, pinnedRoles(t, root))
 }
+
+func TestLockRoles_UnpinningARoleInTheConfigIsDriftAndLockDropsThePin(t *testing.T) {
+	// Arrange: dev is pinned by its own pin = true
+	root := roleLockProject(t, "off")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	require.Equal(t, []string{"dev"}, pinnedRoles(t, root))
+	path := filepath.Join(root, ".ai-rulez", "config.toml")
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "pin = true")
+	require.NoError(t, os.WriteFile(path, []byte(strings.Replace(string(data), "pin = true", "pin = false", 1)), 0o644))
+
+	// Act
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+
+	// Assert: the check names the pin that is no longer wanted, not only the changed role source
+	assert.Equal(t, exitDrift, code)
+	assert.Contains(t, stderr, "outputs of role dev")
+	assert.Contains(t, stderr, "no longer pinned")
+
+	// Act: lock drops it
+	require.Equal(t, 0, writeLockAt("", "", nil))
+
+	// Assert
+	assert.Empty(t, pinnedRoles(t, root))
+	_, stderr = capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, stderr)
+}
+
+func TestLockRoles_RolePinnedWithRolesFlagIsNotReportedRemovedByAPlainCheck(t *testing.T) {
+	// Arrange: ops is pinned only through --roles
+	root := roleLockProject(t, "off")
+	lockRoles = true
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockRoles = false
+	require.Equal(t, []string{"dev", "ops"}, pinnedRoles(t, root))
+
+	// Act
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+
+	// Assert
+	assert.Equal(t, 0, code, stderr)
+}

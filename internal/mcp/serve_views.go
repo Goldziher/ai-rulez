@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -66,6 +67,13 @@ func (st ServeSetup) withView(key string) (ServeSetup, bool) {
 		}
 	}
 	return st, key != ""
+}
+
+// namesRemovedRole reports whether view selects a role that is not in roles: a
+// role deleted from the config, whose recorded pins `lock` drops rather than
+// rebuilds, so a lock holding them is no reason to warn.
+func namesRemovedRole(roles []string, view ServeSetup) bool {
+	return view.Role != "" && !slices.Contains(roles, view.Role)
 }
 
 // recordedViews lists the non-default views the lock holds served pins for, in

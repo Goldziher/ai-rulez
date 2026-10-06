@@ -607,7 +607,7 @@ func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []Se
 		}
 	}
 	for _, key := range recordedViews(first.lock) {
-		if view, ok := base.withView(key); ok {
+		if view, ok := base.withView(key); ok && !namesRemovedRole(first.cfg.RoleNames(), view) {
 			if err := build(view, false); err != nil {
 				return nil, err
 			}

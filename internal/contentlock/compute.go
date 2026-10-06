@@ -56,6 +56,9 @@ type Options struct {
 	SourcesOnly bool
 	// RoleOutputs are the rendered outputs of the roles to pin, by role name.
 	RoleOutputs map[string][]Output
+	// RequestedRoles are the roles of RoleOutputs pinned by a command-line request
+	// rather than by the role's own pin = true (see lockfile.OutputPin.Requested).
+	RequestedRoles map[string]bool
 	// CheckRoles makes Compare check the role pins; OnlyRoles limits that to the
 	// named roles; RoleFiles adds the per-file digests to a role's change (for
 	// `lock --diff`). A snapshot built without CheckRoles never reports a role pin.
@@ -106,7 +109,7 @@ func Compute(cfg *config.Config, opts Options) (*Snapshot, error) {
 		sort.Slice(snap.Outputs, func(i, j int) bool { return snap.Outputs[i].Path < snap.Outputs[j].Path })
 	}
 	if !opts.SourcesOnly {
-		if err := computeRoleOutputs(snap, opts.RoleOutputs); err != nil {
+		if err := computeRoleOutputs(snap, opts.RoleOutputs, opts.RequestedRoles); err != nil {
 			return nil, err
 		}
 	}
