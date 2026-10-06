@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
-// ApprovalNow is the clock approvals are evaluated against: SOURCE_DATE_EPOCH,
-// else the wall clock.
-func ApprovalNow() time.Time { return config.ResolveGenerationTime() }
+// ApprovalNow is the clock approval expiry is judged by: the wall clock, never
+// SOURCE_DATE_EPOCH (which only stamps generated files and must not revive an
+// expired approval).
+func ApprovalNow() time.Time { return ambient.Clock(nil).Now() }
 
 // ApprovalState is the approval status of every pinned subject of a project.
 type ApprovalState struct {
@@ -43,6 +45,9 @@ func EvaluateApprovals(cfg *config.Config, lock *lockfile.File, items []lockfile
 // enforce is set: a policy without enforcement is reported by `validate --strict`
 // and `approve --list`, and mentioned in the diff notes.
 func ApprovalChanges(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) (changes []contentlock.Change, notes []string) {
+	if msg := approval.PolicyOf(cfg).LockProblem(lock); msg != "" {
+		return []contentlock.Change{{Scope: contentlock.ScopeApproval, Change: contentlock.Added, Detail: msg}}, nil
+	}
 	st := EvaluateApprovals(cfg, lock, items, now)
 	failing := approval.Failures(st.Results)
 	if len(failing) > 0 && !st.Policy.Enforce {

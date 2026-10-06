@@ -72,15 +72,21 @@ func SubjectsOf(lock *lockfile.File, items []lockfile.Item) []Subject {
 			}
 		}
 		for _, e := range lock.Served {
-			class := ClassServedLocal
-			if RemoteServed(e.Source, e.Ref, e.Commit) {
-				class = ClassRemote
-			}
-			out = append(out, Subject{Kind: KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: class})
+			out = append(out, Subject{Kind: KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: ServedClass(e.Source, e.Ref, e.Commit)})
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Ref() < out[j].Ref() })
 	return out
+}
+
+// ServedClass is the class of a served skill, the one rule the lock listing
+// (SubjectsOf) and the skills server share: remote when RemoteServed, else
+// ClassServedLocal.
+func ServedClass(source, ref, commit string) string {
+	if RemoteServed(source, ref, commit) {
+		return ClassRemote
+	}
+	return ClassServedLocal
 }
 
 // RemoteServed reports whether a served skill comes from outside the project: it
@@ -109,7 +115,10 @@ func PolicyOf(cfg *config.Config) Policy {
 	g := cfg.Governance
 	p := Policy{
 		Selectors: g.RequireApproval, Exempt: g.Exempt, MinApprovers: g.MinApprovers,
-		Approvers: g.Approvers, Enforce: g.Enforce,
+		Enforce: g.Enforce,
+	}
+	for _, a := range g.Approvers {
+		p.Approvers = append(p.Approvers, NormalizeReviewer(a))
 	}
 	if g.MaxAge != "" {
 		p.MaxAge, _ = config.ParseApprovalMaxAge(g.MaxAge) //nolint:errcheck // validated on load
@@ -119,6 +128,28 @@ func PolicyOf(cfg *config.Config) Policy {
 
 // Active reports whether the policy requires approval of anything.
 func (p Policy) Active() bool { return len(p.Selectors) > 0 }
+
+// LockProblem is the AR710 message for a policy that is active and enforced but
+// has no lock, or a lock that pins no content, to approve against; "" when there
+// is nothing to refuse. Enforcement never fails open: a deleted or stripped lock
+// must not switch the approvals off.
+func (p Policy) LockProblem(lock *lockfile.File) string {
+	if !p.Active() || !p.Enforce {
+		return ""
+	}
+	switch {
+	case lock == nil:
+		return CodeMissing + " approval-missing: [governance] enforce is on and there is no " + lockfile.FileName + " to hold approvals; run `ai-rulez lock`, then `ai-rulez approve`"
+	case !lock.HasContentPins():
+		return CodeMissing + " approval-missing: [governance] enforce is on and " + lockfile.FileName + " pins no content, so no approval can apply; run `ai-rulez lock`"
+	}
+	return ""
+}
+
+// NormalizeReviewer is the identity a reviewer is compared by: trimmed and
+// lower-cased, so "Alice@Example.org" and "alice@example.org" are one person. It
+// is applied when a record is written and when records and allowlists are compared.
+func NormalizeReviewer(r string) string { return strings.ToLower(strings.TrimSpace(r)) }
 
 func (p Policy) minApprovers() int { return max(p.MinApprovers, 1) }
 
@@ -189,8 +220,9 @@ func (p Policy) Authorized(reviewer string) bool {
 	if len(p.Approvers) == 0 {
 		return true
 	}
+	reviewer = NormalizeReviewer(reviewer)
 	for _, a := range p.Approvers {
-		if a == reviewer {
+		if NormalizeReviewer(a) == reviewer {
 			return true
 		}
 	}
