@@ -133,7 +133,8 @@ const (
 // batchMax (DefaultBatchMax when not positive): per batch one logs request and,
 // with metrics set, the metrics request when the batch yields one. Nothing is
 // sent. The observation time is the newest event time, so the same events always
-// encode to the same bytes.
+// encode to the same bytes; the exporter stamps its own clock instead, so a preview
+// matches a flush in everything but the observation and metric timestamps.
 func (en *Encoder) Plan(events []Event, batchMax int, metrics bool) ([]Request, error) {
 	if batchMax <= 0 {
 		batchMax = DefaultBatchMax

@@ -46,6 +46,7 @@ func TestTelemetryPreview_ShowsWhatWouldBeSentWithoutExportOn(t *testing.T) {
 	assert.Contains(t, text, `"stringValue":"release-notes"`)
 	assert.Contains(t, text, "fields exported: event.name, ai_rulez.item.kind")
 	assert.Contains(t, text, "fields withheld: ai_rulez.item.path, ai_rulez.session")
+	assert.Contains(t, text, "timestamps: the observation and metric times")
 	assert.Contains(t, text, "Nothing was sent.")
 	assert.NotContains(t, text, "5b1c", "a session hash is withheld by default")
 }

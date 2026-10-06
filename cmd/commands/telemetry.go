@@ -247,6 +247,7 @@ func runTelemetryPreview(out io.Writer) error {
 		w.printf("\nNothing to send.\n")
 		return nil
 	}
+	w.printf("timestamps: the observation and metric times below are the newest previewed event's; a flush stamps its own clock\n")
 	for i := range plan {
 		request := &plan[i]
 		target := telemetry.DisplayURL(settings.Endpoint, request.Path)
