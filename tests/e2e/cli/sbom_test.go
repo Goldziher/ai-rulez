@@ -50,7 +50,13 @@ func (s *SBOMCLITestSuite) TestOutputIsIdenticalAcrossRunsAndWritesFiles() {
 }
 
 func (s *SBOMCLITestSuite) TestRejectsUnknownFormat() {
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "sbom", "--format", "spdx")
+	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "sbom", "--format", "xml")
 
 	result.AssertOutputContains(s.T(), "unknown --format")
+}
+
+func (s *SBOMCLITestSuite) TestSPDXFormat() {
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "sbom", "--format", "spdx-json")
+
+	s.Contains(result.Stdout, `"spdxVersion": "SPDX-2.3"`)
 }
