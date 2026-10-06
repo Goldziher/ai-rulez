@@ -144,6 +144,18 @@ func runRecursiveValidate() int {
 	var failed []string
 	var reports []*lint.Report
 	var cfgs []*config.Config
+	if len(validateAllowEgress) > 0 {
+		var all []*config.Config
+		for _, configPath := range configFiles {
+			if cfg, err := validateConfigFile(configPath); err == nil {
+				all = append(all, cfg)
+			}
+		}
+		if err := checkAllowEgress(all...); err != nil {
+			fmtError(err)
+			return 1
+		}
+	}
 	for _, configPath := range configFiles {
 		cfg, err := validateConfigFile(configPath)
 		if err != nil {

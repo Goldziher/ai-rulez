@@ -337,7 +337,31 @@ func writeReport(combined lint.Combined, failOn string) error {
 	return nil
 }
 
+// checkAllowEgress rejects --allow-egress names that no [[lint.external]]
+// entry of cfgs declares: a typo would otherwise silently allow nothing.
+func checkAllowEgress(cfgs ...*config.Config) error {
+	declared := map[string]bool{}
+	for _, cfg := range cfgs {
+		if cfg == nil || cfg.Lint == nil {
+			continue
+		}
+		for _, ex := range cfg.Lint.External {
+			declared[ex.Name] = true
+		}
+	}
+	for _, name := range validateAllowEgress {
+		if !declared[name] {
+			return oops.Hint("Check the name against [[lint.external]] in config.toml.").Errorf("--allow-egress=%s names no [[lint.external]] scanner", name)
+		}
+	}
+	return nil
+}
+
 func runStrictSingle(cfg *config.Config) int {
+	if err := checkAllowEgress(cfg); err != nil {
+		fmtError(err)
+		return 1
+	}
 	report, err := strictLint(cfg)
 	if err != nil {
 		fmtError(err)
