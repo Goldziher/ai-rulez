@@ -89,6 +89,8 @@ func TestUnknownFrontmatterKey(t *testing.T) {
 		{name: "allow-listed custom key", config: "\n[lint]\nallowed_keys = [\"team\"]\n", front: "team: core\n", kind: "skill"},
 		{name: "custom key without allow-list", front: "team: core\n", kind: "skill", want: true, line: 4},
 		{name: "subagent camelCase key passes", front: "disallowedTools: Bash\n", kind: "agent"},
+		{name: "context summary passes", front: "summary: One line.\n", kind: "context"},
+		{name: "summary on a skill is flagged", front: "summary: One line.\n", kind: "skill", want: true, line: 4},
 		{name: "skill key on a subagent is flagged", front: "user-invocable: false\n", kind: "agent", want: true, line: 4},
 	}
 	for _, tt := range tests {
@@ -96,6 +98,9 @@ func TestUnknownFrontmatterKey(t *testing.T) {
 			path := ".ai-rulez/skills/s/SKILL.md"
 			if tt.kind == "agent" {
 				path = ".ai-rulez/agents/s.md"
+			}
+			if tt.kind == "context" {
+				path = ".ai-rulez/context/s.md"
 			}
 			md := "---\nname: s\ndescription: Use when testing frontmatter keys here.\n" + tt.front + "---\nbody\n"
 			if tt.kind == "agent" {
