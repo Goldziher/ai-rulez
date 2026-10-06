@@ -2601,6 +2601,14 @@
                 "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"],
                 "type": "string"
               },
+              "options": {
+                "additionalProperties": {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                "description": "Emitter settings, such as blueprint for the port emitter.",
+                "type": "object"
+              },
               "output": {
                 "description": "Output file name under <dist>/emit/ (template emitter).",
                 "type": "string"

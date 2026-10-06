@@ -81,3 +81,44 @@ func BuildExtras(x Extras) (files map[string][]byte, warnings []string, err erro
 	}
 	return files, warnings, nil
 }
+
+// BuildAggregate builds the dist directory of what belongs to every plugin of a
+// multi-plugin publish: the pinned marketplace index and the emitter output. It
+// has checksums and a plan but no bundle manifest, so `publish verify` checks
+// its checksums only. name is the marketplace name.
+func BuildAggregate(name string, x Extras) (*Dist, error) {
+	files, warnings, err := BuildExtras(x)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, newError(CodeConfig, ExitFailed, "pass --marketplace or --emit NAME", "a multi-plugin publish has no marketplace index or emitter to aggregate")
+	}
+	d := &Dist{Files: files, Warnings: warnings}
+	roles := map[string]string{}
+	for p := range files {
+		roles[p] = "emitted"
+		if strings.HasPrefix(p, MarketplaceDir+"/") {
+			roles[p] = "marketplace"
+		}
+	}
+	sums := make([]SumEntry, 0, len(d.Files))
+	for p, data := range d.Files {
+		sums = append(sums, SumEntry{Path: p, Digest: Digest(data)})
+	}
+	d.Files[SumsFile], roles[SumsFile] = FormatSums(sums), "checksums"
+	d.Plan = Plan{
+		SchemaVersion: SchemaVersion, Name: name,
+		Preflight: []Step{{"validate-strict", "ok"}, {"lock-check", "ok"}, {"verify-plugin", "ok"}, {"secret-scan", "ok"}},
+		Commands:  []Command{},
+	}
+	for _, p := range d.Paths() {
+		d.Plan.Artifacts = append(d.Plan.Artifacts, Artifact{Path: p, Role: roles[p], Digest: Digest(d.Files[p]), Size: len(d.Files[p])})
+	}
+	planBytes, err := marshalJSON(d.Plan)
+	if err != nil {
+		return nil, err
+	}
+	d.Files[PlanFile] = planBytes
+	return d, nil
+}

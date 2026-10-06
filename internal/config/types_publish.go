@@ -27,7 +27,11 @@ var (
 	publishRefPattern     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
 	publishOCIPattern     = regexp.MustCompile(`^([A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?)/[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*$`)
 	publishOutputPattern  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	publishOptionKey      = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 )
+
+// publishOptionMax bounds an emitter option value.
+const publishOptionMax = 256
 
 // PublishConfig is the [publish] table (docs/publish.md). It holds no
 // credential: registries and forges authenticate through their own CLIs and
@@ -88,6 +92,8 @@ type PublishEmitter struct {
 	Template string `yaml:"template,omitempty" json:"template,omitempty" toml:"template,omitempty"`
 	// Output renames the template's output file under <dist>/emit/.
 	Output string `yaml:"output,omitempty" json:"output,omitempty" toml:"output,omitempty"`
+	// Options are the emitter's own settings, such as blueprint for "port".
+	Options map[string]string `yaml:"options,omitempty" json:"options,omitempty" toml:"options,omitempty"`
 }
 
 // PublishEmitterNames lists every emitter a [[publish.emitters]] entry may name.
@@ -149,6 +155,11 @@ func (c *Config) validatePublish() error {
 func validatePublishEmitter(e PublishEmitter) error {
 	if !slices.Contains(PublishEmitterNames, e.Name) {
 		return oops.Errorf("unknown emitter %q (known: %s)", e.Name, strings.Join(PublishEmitterNames, ", "))
+	}
+	for k, v := range e.Options {
+		if !publishOptionKey.MatchString(k) || len(v) > publishOptionMax {
+			return oops.Errorf("invalid option %q: keys are lower-case words, values at most %d characters", k, publishOptionMax)
+		}
 	}
 	if e.Name != PublishEmitterTemplate {
 		if e.Template != "" || e.Output != "" {

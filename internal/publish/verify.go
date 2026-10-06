@@ -70,16 +70,38 @@ func Verify(dir string) (VerifyResult, error) { return VerifyWith(dir, VerifyChe
 // VerifyWith is Verify plus the signature checks.
 func VerifyWith(dir string, checks VerifyChecks) (VerifyResult, error) {
 	res := VerifyResult{Problems: []Problem{}}
+	recorded, ok, err := verifySums(dir, &res)
+	if err != nil || !ok {
+		return res, err
+	}
+	manifest, ok := loadManifest(dir, &res)
+	if !ok {
+		sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
+		return res, nil
+	}
+	res.Name, res.Version = manifest.Name, manifest.Version
+	checkManifest(dir, manifest, recorded, &res)
+	checkPlan(dir, manifest, recorded, &res)
+	checkLockCopy(dir, manifest, &res)
+	checkSignature(dir, manifest, checks, &res)
+	sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
+	return res, nil
+}
+
+// verifySums checks SHA256SUMS against the files of dir and flags files it does
+// not list. ok is false when the sums file itself is unusable (a problem is
+// recorded); an unreadable sums file is an error.
+func verifySums(dir string, res *VerifyResult) (recorded map[string]string, ok bool, err error) {
 	sumsRaw, err := readRegular(filepath.Join(dir, SumsFile))
 	if err != nil {
-		return res, newError(CodeVerify, ExitFailed, "run `ai-rulez publish` first", "cannot read %s: %v", SumsFile, err)
+		return nil, false, newError(CodeVerify, ExitFailed, "run `ai-rulez publish` first", "cannot read %s: %v", SumsFile, err)
 	}
 	sums, err := ParseSums(sumsRaw)
 	if err != nil {
 		res.add(SumsFile, "%v", err)
-		return res, nil
+		return nil, false, nil
 	}
-	recorded := map[string]string{}
+	recorded = map[string]string{}
 	for _, s := range sums {
 		if _, dup := recorded[s.Path]; dup {
 			res.add(s.Path, "listed more than once in %s", SumsFile)
@@ -96,17 +118,17 @@ func VerifyWith(dir string, checks VerifyChecks) (VerifyResult, error) {
 			res.add(s.Path, "digest is %s, %s records %s", got, SumsFile, s.Digest)
 		}
 	}
-	checkUnlisted(dir, recorded, &res)
-	manifest, ok := loadManifest(dir, &res)
-	if !ok {
-		sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
-		return res, nil
+	checkUnlisted(dir, recorded, res)
+	return recorded, true, nil
+}
+
+// VerifySums verifies a directory that has checksums but no bundle manifest,
+// such as the aggregate directory of a multi-plugin publish.
+func VerifySums(dir string) (VerifyResult, error) {
+	res := VerifyResult{Problems: []Problem{}}
+	if _, _, err := verifySums(dir, &res); err != nil {
+		return res, err
 	}
-	res.Name, res.Version = manifest.Name, manifest.Version
-	checkManifest(dir, manifest, recorded, &res)
-	checkPlan(dir, manifest, recorded, &res)
-	checkLockCopy(dir, manifest, &res)
-	checkSignature(dir, manifest, checks, &res)
 	sort.SliceStable(res.Problems, func(i, j int) bool { return res.Problems[i].Path < res.Problems[j].Path })
 	return res, nil
 }

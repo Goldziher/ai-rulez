@@ -80,6 +80,27 @@ func StripCredentials(remote string) string {
 	return u.String()
 }
 
+// PreviousTag returns the closest tag reachable from HEAD other than exclude,
+// the usual "previous release" for the release notes; "" when there is none or
+// git cannot say. The tag text is validated before it can reach an argv.
+func PreviousTag(ctx context.Context, r runner.Runner, dir, exclude string) string {
+	argv := []string{"git"}
+	if dir != "" {
+		argv = append(argv, "-C", dir)
+	}
+	argv = append(argv, "describe", "--tags", "--abbrev=0")
+	if exclude != "" && tagPattern.MatchString(exclude) {
+		argv = append(argv, "--exclude", exclude)
+	}
+	argv = append(argv, "HEAD")
+	res := runner.Or(r).Run(ctx, runner.Spec{Argv: argv, Env: gitutil.Env(nil), Timeout: gitQueryTimeout})
+	tag := strings.TrimSpace(string(res.Stdout))
+	if res.Status != runner.StatusOK || !tagPattern.MatchString(tag) || strings.Contains(tag, "..") {
+		return ""
+	}
+	return tag
+}
+
 // RepoFromURL turns a GitHub-style remote into OWNER/REPO (or HOST/OWNER/REPO
 // for a host other than github.com). It returns "" when remote has no such shape.
 func RepoFromURL(remote string) string {

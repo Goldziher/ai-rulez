@@ -1237,7 +1237,12 @@
                 "type": "string",
                 "description": "Project-relative text/template file (template emitter)."
               },
-              "output": { "type": "string", "description": "Output file name under <dist>/emit/ (template emitter)." }
+              "output": { "type": "string", "description": "Output file name under <dist>/emit/ (template emitter)." },
+              "options": {
+                "type": "object",
+                "description": "Emitter settings, such as blueprint for the port emitter.",
+                "additionalProperties": { "type": "string", "maxLength": 256 }
+              }
             },
             "required": ["name"],
             "additionalProperties": false
