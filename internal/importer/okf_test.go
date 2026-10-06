@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
@@ -109,4 +110,55 @@ func TestConvert_OKFSecurityScanBlocksTheWrite(t *testing.T) {
 	require.NotEmpty(t, report.Security.Findings)
 	assert.Equal(t, "docs/okf/notes/deploy.md", report.Security.Findings[0].File, "the finding names the bundle file it came from")
 	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
+}
+
+func TestConvert_ScriptsKeepTheirExecBit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on windows")
+	}
+	tests := []struct {
+		name   string
+		from   string
+		setup  func(t *testing.T, dir string)
+		script string
+	}{
+		{
+			name: "an OKF bundle",
+			from: "okf",
+			setup: func(t *testing.T, dir string) {
+				copyDir(t, okfBundleDir, filepath.Join(dir, "docs", "okf"))
+				require.NoError(t, os.Chmod(filepath.Join(dir, "docs", "okf", "skills", "release", "scripts", "tag.sh"), 0o755))
+			},
+			script: "skills/release/scripts/tag.sh",
+		},
+		{
+			name: "a native skill",
+			from: "native",
+			setup: func(t *testing.T, dir string) {
+				writeTree(t, dir, map[string]string{
+					".claude/skills/deploy/SKILL.md":       "---\nname: deploy\ndescription: Use when deploying the service to production.\n---\n\nDeploy it.\n",
+					".claude/skills/deploy/scripts/run.sh": "#!/bin/sh\necho deploy\n",
+				})
+				require.NoError(t, os.Chmod(filepath.Join(dir, ".claude", "skills", "deploy", "scripts", "run.sh"), 0o755))
+			},
+			script: "skills/deploy/scripts/run.sh",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			tt.setup(t, dir)
+
+			// Act
+			report, err := Convert(context.Background(), ConvertOptions{Source: dir, From: []string{tt.from}, Write: true})
+
+			// Assert
+			require.NoError(t, err)
+			require.True(t, report.Written, "%+v", report.Security)
+			info, err := os.Stat(filepath.Join(dir, ".ai-rulez", filepath.FromSlash(tt.script)))
+			require.NoError(t, err)
+			assert.NotZero(t, info.Mode().Perm()&0o100, "mode %v", info.Mode())
+		})
+	}
 }

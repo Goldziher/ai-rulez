@@ -632,7 +632,7 @@ func (b *apmPlanner) importRootSkill(root, label string) {
 			b.p.add(newFinding(StatusDropped, file, "", "", skipReasonOr(err)))
 			continue
 		}
-		it.Resources = append(it.Resources, File{Path: rel, Data: res})
+		it.Resources = append(it.Resources, File{Path: rel, Data: res, Exec: b.r.executable(file)})
 	}
 	b.p.Items = append(b.p.Items, it)
 	b.p.add(newFinding(StatusApproximated, label, "", "skills/"+name, "package with a SKILL.md at its root imported as one skill"))
