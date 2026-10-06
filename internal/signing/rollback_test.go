@@ -150,3 +150,19 @@ func TestRollbackMessageSaysHowToReset(t *testing.T) {
 	assert.Contains(t, err.Error(), statePath)
 	assert.Contains(t, err.Error(), "--no-state")
 }
+
+func TestDigestRollbackRetiresReplacedBodies(t *testing.T) {
+	// Arrange
+	f := newRollbackFixture(t)
+	require.NoError(t, f.state.AdvanceDigest("k", "sha256:a"))
+	require.NoError(t, f.state.AdvanceDigest("k", "sha256:b"))
+	statePath, secretPath := StatePaths(nil)
+	reopened, err := OpenState(statePath, secretPath)
+	require.NoError(t, err)
+	// Act and Assert
+	require.Error(t, reopened.CheckDigest("k", "sha256:a"), "a replaced body is a rollback, also after a restart")
+	assert.ErrorContains(t, reopened.CheckDigest("k", "sha256:a"), "AR727")
+	assert.NoError(t, reopened.CheckDigest("k", "sha256:b"), "the current body is fine")
+	assert.NoError(t, reopened.CheckDigest("k", "sha256:c"), "a body never seen is new")
+	assert.NoError(t, reopened.CheckDigest("other", "sha256:a"), "keys are independent")
+}
