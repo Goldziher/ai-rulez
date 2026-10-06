@@ -279,8 +279,11 @@ func dirOf(p string) string {
 // settings sources that end up in the merged settings document.
 func (c *collector) collectDeclared() error {
 	ordinal := map[string]int{}
-	for i := range c.cfg.Hooks {
-		if err := c.collectHook(&c.cfg.Hooks[i], ordinal); err != nil {
+	// Generation-synthesized groups (the [guard] hook) carry the binary version
+	// and are not authored content, so the lock never pins them.
+	hooks := c.cfg.UserHooks()
+	for i := range hooks {
+		if err := c.collectHook(&hooks[i], ordinal); err != nil {
 			return err
 		}
 	}

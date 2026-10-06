@@ -407,3 +407,20 @@ func TestTreeOfDetectsRelabelledRemoteEntries(t *testing.T) {
 	other := lockfile.Entry{Name: "pdf", View: "role:b", Commit: "c", Digest: "sha256:1"}
 	assert.NotEqual(t, TreeOf(&lockfile.File{Served: []lockfile.Entry{a, b}}), TreeOf(&lockfile.File{Served: []lockfile.Entry{swapped, other}}))
 }
+
+func TestComputeIgnoresTheSynthesizedGuardHook(t *testing.T) {
+	// Arrange
+	f := newFixture(t)
+	f.cfg.Hooks = []config.HookGroup{{Event: "PreToolUse", Matcher: "Bash", Hooks: []config.HookAction{{Command: "echo"}}}}
+	before := f.items()
+
+	// Act: a generation adds its built-in group, which embeds the binary version.
+	f.cfg.Hooks = append(f.cfg.Hooks, config.HookGroup{
+		Event: "PreToolUse", Matcher: "Write", Builtin: config.HookBuiltinGuard,
+		Hooks: []config.HookAction{{Command: "ai-rulez guard v9.9.9"}},
+	})
+	after := f.items()
+
+	// Assert
+	assert.Equal(t, before, after)
+}
