@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 	"github.com/samber/oops"
 )
 
@@ -26,8 +27,8 @@ func Register(r *config.Registry) {
 		}
 		r.Register(name, gen)
 	}
-	r.Provider = func(preset config.Preset, baseDir string) (config.PresetGenerator, error) {
-		gen, err := loadCustomProvider(preset, baseDir)
+	r.Provider = func(preset config.Preset, baseDir string, view workspace.View) (config.PresetGenerator, error) {
+		gen, err := loadCustomProvider(preset, baseDir, view)
 		if err != nil {
 			return nil, err
 		}
@@ -48,12 +49,12 @@ func (g *Generator) SplitRulesDir() string {
 // loadCustomProvider resolves, reads, and validates a preset's provider spec,
 // enforcing that the spec's declared name matches the preset name so target
 // filtering and output attribution agree.
-func loadCustomProvider(preset config.Preset, baseDir string) (*Generator, error) {
+func loadCustomProvider(preset config.Preset, baseDir string, view workspace.View) (*Generator, error) {
 	resolved, err := resolveProviderPath(preset.Provider, baseDir)
 	if err != nil {
 		return nil, oops.With("preset_name", preset.Name).Wrapf(err, "resolve provider spec")
 	}
-	gen, err := LoadProviderFile(resolved)
+	gen, err := loadProviderFrom(view, resolved)
 	if err != nil {
 		return nil, oops.With("preset_name", preset.Name).Wrapf(err, "load provider spec")
 	}
@@ -71,7 +72,19 @@ func loadCustomProvider(preset config.Preset, baseDir string) (*Generator, error
 // LoadProviderFile reads and validates a provider spec from disk, detecting the
 // format (TOML/YAML/JSON) from the file extension.
 func LoadProviderFile(filePath string) (*Generator, error) {
-	raw, err := os.ReadFile(filePath)
+	return loadProviderFrom(workspace.OSView(filepath.Dir(filePath)), filePath)
+}
+
+// loadProviderFrom reads the spec at the absolute path filePath through view. A
+// spec symlinked to a target outside the view's root is refused, like content.
+func loadProviderFrom(view workspace.View, filePath string) (*Generator, error) {
+	if info, err := view.Lstat(filePath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		if _, err := view.EvalSymlinks(filePath); err != nil {
+			return nil, oops.With("path", filePath).Hint("Link to a spec inside the repository, or copy it").
+				Wrapf(err, "refusing symlinked provider spec: its target is outside the repository root")
+		}
+	}
+	raw, err := view.ReadFile(filePath)
 	if err != nil {
 		return nil, oops.With("path", filePath).Wrapf(err, "read provider spec")
 	}
