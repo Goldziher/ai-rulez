@@ -61,11 +61,8 @@ func runClean(_ *cobra.Command, args []string) {
 	}
 
 	gen := generator.NewGenerator(cfg)
-	opts := generator.CleanOptions{
-		DryRun:        true, // compute the plan first; delete only after confirmation
-		KeepGitignore: cleanKeepGitignore,
-		KeepManifest:  cleanKeepManifest,
-	}
+	// Compute the plan first; delete only after confirmation.
+	opts := cleanOptions(cleanKeepGitignore)
 
 	plan, err := gen.Clean(profile, opts)
 	if err != nil {
@@ -102,6 +99,18 @@ func runClean(_ *cobra.Command, args []string) {
 	}
 
 	logger.Success("Removed generated files", "files", len(plan.Files), "directories", len(plan.Dirs))
+}
+
+// cleanOptions builds the options of a clean run from the flags. --force also
+// removes generated files whose body was edited by hand; without it they are kept
+// with a warning, because the edit cannot be recreated.
+func cleanOptions(keepGitignore bool) generator.CleanOptions {
+	return generator.CleanOptions{
+		DryRun:        true,
+		KeepGitignore: keepGitignore,
+		KeepManifest:  cleanKeepManifest,
+		RemoveEdited:  cleanForce,
+	}
 }
 
 func printCleanPlan(baseDir string, plan *generator.CleanPlan) {
