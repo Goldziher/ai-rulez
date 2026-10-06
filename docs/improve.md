@@ -99,6 +99,7 @@ optimizer; nothing in the gate trusts it.
 | `builtin:review-fix` | runnable | judges `SKILL.md` with the review rubric and applies a verified fix |
 | `shell` | template | a shell script that calls any tool on the workspace copy |
 | `research` | recipe | how to wire a research optimizer; its interface is unverified, so it is not shipped as supported |
+| `repair-workflow` | template | a scheduled GitHub Actions workflow for [model-upgrade repair](#scheduled-repair-workflow) |
 
 **`builtin:review-fix`** drives the review pipeline of [`review fix`](review.md) on `SKILL.md`: the judge
 (rubric `builtin:skill-quality`, content `full`) rates the skill; for stable findings the fixer proposes exact-text
@@ -323,6 +324,27 @@ The body states what changed, the held-out table with the interval and the wins 
 egress, the environment names forwarded, the description before and after, the optimizer's own words (untrusted: inside
 code fences or code spans longer than anything they contain), a reviewer checklist, and that the change is **not
 approved**. Nothing here sets approval. Refusals carry `AR9J8`.
+
+## Scheduled repair workflow
+
+A model upgrade can make a skill that passed its evals fail. `ai-rulez improve adapters repair-workflow` prints a
+GitHub Actions workflow (save it as `.github/workflows/ai-rulez-repair.yml`) that does the loop on a schedule:
+
+1. `eval run --model $EVAL_MODEL --max-cost $EVAL_BUDGET --format json --no-write` finds the skills that now fail
+   (`jq` over `skills[]` with `passing: false`); exit status 1 (could not run) fails the job.
+2. For each one, `improve run <skill> --adapter review-fix --sibling-native --max-cost $REPAIR_BUDGET --yes` repairs it
+   under the usual gate: held-out set, sibling guards, diff policy, cost ceiling.
+3. A run that exits 0 gets `improve pr <run-id> --draft --yes`: a draft pull request from an isolated worktree. A run
+   with no acceptable candidate (exit 2) opens nothing.
+
+Nothing is merged, approved or applied for you, and the pull request body says the change is not approved. The template
+has no `pull_request` trigger, so a fork's pull request never reaches its secrets; its permissions are `contents: write`
+and `pull-requests: write` for the branch and the pull request. It spends money in three places (the eval pass, each
+repair, the optimizer's model), each with its own ceiling in the `env` block; the `builtin:review-fix` step also needs
+the `[llm]` user config the template writes (delete that step and use `--with` for an optimizer of your own). The run
+state lives in `.ai-rulez/local/` of the runner, and `improve pr` needs the report MAC of the machine that made the
+run, so both commands must run in the same job, as they do here. A test keeps every flag the template passes in sync
+with the CLI.
 
 ## Codes
 

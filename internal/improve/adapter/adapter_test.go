@@ -310,7 +310,7 @@ func TestListAndTemplates(t *testing.T) {
 	_, is2 := Name("python x.py")
 
 	// Assert
-	assert.Equal(t, map[string]bool{NoOp: true, ReviewFix: true, Shell: false, Research: false}, names)
+	assert.Equal(t, map[string]bool{NoOp: true, ReviewFix: true, Shell: false, Research: false, RepairWorkflow: false}, names)
 	assert.True(t, okShell)
 	assert.Contains(t, shell, "protocol v1")
 	assert.True(t, okResearch)
