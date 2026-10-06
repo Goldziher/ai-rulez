@@ -51,6 +51,9 @@ type SkillRecord struct {
 	// Estimate is what the run was projected to cost next to what it cost; nil on a
 	// record that predates it.
 	Estimate *EstimateRecord `json:"estimate,omitempty"`
+	// Activation is the latest activation measurement (`eval run --mode activation`):
+	// rates and ids only. It survives a later full run of the same skill.
+	Activation *ActivationRecord `json:"activation,omitempty"`
 	// LastPass is the most recent passing run, kept when a later run fails.
 	LastPass *PassMark `json:"last_pass,omitempty"`
 	// MAC authenticates the record with the user's own key (hmac-sha256 over the
@@ -66,6 +69,12 @@ type SkillRecord struct {
 // Verified says the record was produced here or carries a valid MAC of this
 // user's key.
 func (r *SkillRecord) Verified() bool { return r.verified }
+
+// HasRun says the record holds the result of an eval case run. A record created
+// by an activation run alone (see Store.PutActivation) holds none.
+func (r *SkillRecord) HasRun() bool {
+	return r.Activation == nil || r.Runner != "" || r.CacheKey != "" || r.Score.Cases > 0
+}
 
 // macOf computes the MAC of a record under key.
 func macOf(key []byte, r SkillRecord) string {
@@ -146,6 +155,9 @@ func (s *Store) Get(id string) (*SkillRecord, bool) {
 func (s *Store) Put(record SkillRecord) {
 	record.verified = true
 	if old, ok := s.Get(record.ID); ok {
+		if record.Activation == nil {
+			record.Activation = old.Activation
+		}
 		if record.Passing {
 			record.LastPass = &PassMark{Digest: record.Digest, Date: record.Date}
 		} else if record.LastPass == nil {
@@ -158,6 +170,18 @@ func (s *Store) Put(record SkillRecord) {
 		record.LastPass = &PassMark{Digest: record.Digest, Date: record.Date}
 	}
 	s.Skills = append(s.Skills, record)
+}
+
+// PutActivation records the activation measurement of a skill. It leaves the
+// skill's case-run result alone; a skill never run before gets a record holding
+// only the activation block. A record that was not produced here stays unverified
+// (this does not vouch for it), so a forged file cannot be laundered by a run.
+func (s *Store) PutActivation(id, digest string, rec *ActivationRecord) {
+	if old, ok := s.Get(id); ok {
+		old.Activation = rec
+		return
+	}
+	s.Skills = append(s.Skills, SkillRecord{ID: id, Digest: digest, Activation: rec, verified: true})
 }
 
 // Stale reports whether the skill changed after its last passing run. A skill

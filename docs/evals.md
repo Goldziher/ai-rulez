@@ -122,6 +122,7 @@ Unknown fields are errors, so a typo cannot silently disable an assertion. Probl
 ai-rulez eval run                                   # every skill with cases, claude-plugin-eval runner
 ai-rulez eval run deploy-staging --ablation         # one skill, also run it without the skill
 ai-rulez eval run --dry-run                         # what would run and roughly what it costs (--estimate is an alias)
+ai-rulez eval run --mode activation --surface retrieval   # does the right skill rank first? offline, free
 ai-rulez eval run --runner command --runner-command ./my-runner.sh --harness codex
 ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xml
 ```
@@ -137,6 +138,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--model` | Model for the cases. |
 | `--ablation` | Also run every case without the skill and report the delta. |
 | `--dry-run`, `--estimate` | List what would run with an estimated cost range (low, expected, high). Calls no runner, writes nothing. `--estimate` is an alias. |
+| `--mode`, `--surface`, `--scope` | `--mode activation` measures only whether the right skill is chosen; see [Activation mode](#activation-mode). |
 | `--format`, `--out dir` | `json`, `markdown` (default) or `junit`; with `--out` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
 | `--max-cost USD` | Cost control, see [below](#cost-controls). |
 | `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
@@ -268,6 +270,73 @@ delete the `mac`.
   non-finite costs and token counts in a response are rejected.
 - `--changed-only`, the cache and `--runs` keep the number of runs down; `tags` and skill names narrow it by hand.
 
+## Activation mode
+
+A full case run answers "does the skill do the job". Activation mode answers a cheaper question first: "for these
+prompts, is the right skill the one that gets chosen, and the wrong one not?"
+
+```bash
+ai-rulez eval run --mode activation --surface retrieval
+ai-rulez eval run deploy-staging --mode activation --surface retrieval --scope all --format json
+```
+
+The `retrieval` surface ranks every prompt of a skill's cases (including the expanded `near_miss` prompts) against
+the competing skills with the same offline ranker the served-skills `find_skill` tool uses (BM25F over name, triggers,
+keywords and description; see [`ai-rulez search`](cli.md#search-command)). It calls no model and no network, costs nothing and
+is deterministic. A skill *fires* for a prompt when it ranks first, so a positive prompt passes when it fires and a
+negative one (`expect_trigger: false`, near misses) when it does not. Only the prompt and `expect_trigger` are used:
+fixtures, assertions and rubrics are ignored (counted as `ignored`).
+
+It measures the finder, not a model's own choice; the report says so. Per skill it reports:
+
+- **Recall**, **precision** and the **false activation** rate, each with a 95% Wilson interval (small samples are the
+  norm, and a bare percentage over four prompts says little).
+- **recall@1**, **recall@3** and **MRR** over the positive prompts, and the rank of the skill for every prompt.
+- **Stolen by**: the siblings that ranked first on its positive prompts, with counts and shares, and a top-level
+  **confusion matrix** (`confusion[expected][won]`, `none` when nothing ranked).
+
+`--scope domain` (default) makes the skill compete with its own domain's skills plus the root skills; `--scope all`
+with every skill. A skill alone in its scope gets a warning, since a stolen trigger cannot be measured. The report
+also records a digest of the competing set: a sibling's edited description changes the competition and so the digest.
+A skill passes when the share of passing prompts reaches `--threshold` (default 1). Exit status is as for a case
+run: `2` when a skill fails, has invalid cases, or errors.
+
+```json
+{
+  "schema_version": 1, "mode": "activation", "surface": "retrieval", "scope": "domain",
+  "skills": [{
+    "id": "deploy-staging", "status": "ran", "passing": false,
+    "recall": { "value": 0.5, "n": 2, "interval": { "low": 0.09, "high": 0.91 } },
+    "stolen_by": [{ "skill": "release-notes", "prompts": 1, "share": 0.5 }]
+  }],
+  "confusion": { "deploy-staging": { "deploy-staging": 1, "release-notes": 1 } }
+}
+```
+
+The JSON follows [`schema/eval-activation.v1.schema.json`](schema.md); markdown is the default format, `junit` is
+refused. Each measured skill's rates and ids (never prompts) are recorded in `eval-results.json` under `activation`,
+signed like the rest of the record, and judged by `AR9A1` and `AR9A2` (off until you set a threshold). A later
+`eval run` keeps the block; an activation run does not touch the case-run result. `--dry-run`/`--estimate` ranks and
+prints but writes nothing.
+
+The `native` surface (the model decides, with all competing skills installed in the harness) needs a runner that
+declares the `activation` capability. `--surface native` therefore checks the runner first and refuses one that does
+not, with "runner does not support activation mode", instead of running full cases and reporting those as
+activation. No built-in runner declares it in this release, so `native` is refused everywhere; it is planned.
+
+### Design decisions
+
+- `--surface` has no default: the planned default (`native`) does not exist yet, and silently choosing the offline
+  ranker would look like measuring a model.
+- Retrieval is one deterministic run per prompt, so a rate is 0 or 1. The thresholds that make repeated native runs
+  meaningful (a positive passes at an activation rate of 0.8 or more, a negative at 0.2 or less) are in the code
+  and the `borderline` prompt status is reserved for them.
+- The confusion matrix is reported once at the top level; each skill carries its own `stolen_by` list.
+- A record measured on an older skill digest, or one that is not signed with your key, is not judged by `AR9A1` and
+  `AR9A2` (an unsigned one is reported as unverified, like `AR997`).
+- Not in this release: the `native` surface and its protocol, `--max-cost-mode`, `eval calibrate-estimate`,
+  `--description-from`, and the lint rules `AR9A3`-`AR9A5`.
+
 ## Scores and the results file
 
 Per skill, over the run's cases (near misses included, skipped cases excluded):
@@ -324,6 +393,8 @@ Four more rules join `AR962` in [strict validation](strict-validation.md):
 | `AR997` | `eval-stale` | off | The skill changed after its last recorded **passing** run. `[lint.evals] require_fresh = "warn"` or `"error"` turns it on |
 | `AR998` | `eval-score-low` | off | The recorded pass rate is below `[lint.evals] min_pass_rate` (0-1); setting it turns the rule on at error |
 | `AR9A0` | `eval-results-invalid` | error | `eval-results.json` cannot be parsed or has an unsupported `schema_version` |
+| `AR9A1` | `activation-low` | off | The recorded [activation](#activation-mode) recall or precision is below `[lint.evals] min_activation_recall` or `min_activation_precision` (0-1); setting either turns the rule on at error |
+| `AR9A2` | `skill-confusable` | off | A sibling won at least `[lint.evals] confusion_threshold` (0-1) of the skill's positive activation prompts; setting it turns the rule on at warning |
 
 Only records signed with your own key (`eval-results.key` in the user config directory, written by `eval run`) count
 as evidence. A record without a valid signature (committed from another machine, edited by hand or forged) is
@@ -342,6 +413,9 @@ overlay) and enforce evals with the job that runs them.
 require = true            # AR962: skills need cases
 require_fresh = "error"   # AR997: edited after the last passing eval
 min_pass_rate = 0.8       # AR998, and the default pass mark of eval run
+min_activation_recall = 0.8     # AR9A1
+min_activation_precision = 0.9  # AR9A1
+confusion_threshold = 0.25      # AR9A2
 ```
 
 A skill with no recorded passing run is not reported stale (that is what `AR962` and the score are for).

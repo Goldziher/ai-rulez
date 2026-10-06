@@ -228,6 +228,9 @@ func loadEvalSummaries(path string) (map[string]usage.EvalSummary, error) {
 	out := make(map[string]usage.EvalSummary, len(store.Skills))
 	for i := range store.Skills {
 		r := &store.Skills[i]
+		if !r.HasRun() {
+			continue // an activation measurement alone is no eval result
+		}
 		if !r.Verified() {
 			continue // unsigned or foreign-signed records are never reported as results
 		}

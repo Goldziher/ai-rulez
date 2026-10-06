@@ -175,6 +175,7 @@ The schema files are available in the repository:
 | `schema/eval-activation.v1.schema.json` | JSON Schema | v1 | `ai-rulez eval run --mode activation --format json`: activation rates, intervals and the confusion matrix; see [Activation mode](evals.md#activation-mode) |
 | `schema/improve-report.schema.json` | JSON Schema | v1    | `report.json` of an experimental `ai-rulez improve` run (`improve-report/1`) |
 | `schema/eval-case.schema.json`    | JSON Schema | v1      | `*.eval.yaml` / `.yml` / `.json` skill eval cases under `skills/<name>/` |
+| `schema/eval-activation.v1.schema.json` | JSON Schema | v1 | `ai-rulez eval run --mode activation --format json`: activation rates, intervals and the confusion matrix; see [Activation mode](evals.md#activation-mode) |
 | `schema/verifiers-report.schema.json` | JSON Schema | v1  | `ai-rulez verifiers run --format json` and the MCP `run_verifiers` result; see [Verifiers](verifiers.md) |
 | `schema/policy.schema.json` | JSON Schema | v1 | An organization policy file (`--policy`, `AI_RULEZ_POLICY`, managed path); see [Organization policy](policy.md) |
 | `schema/policy-effective.schema.json` | JSON Schema | v1 | `ai-rulez validate --show-policy --format json`: the policy layers, the effective policy with the origin of every value, and what the repository tried to loosen |

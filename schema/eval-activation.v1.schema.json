@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/eval-activation.v1.schema.json",
+  "title": "ai-rulez eval run --mode activation result",
+  "description": "Output of `ai-rulez eval run --mode activation --surface retrieval --format json`: per-prompt activation of each skill, rates with Wilson 95% intervals, rank metrics and the confusion between sibling skills.",
+  "type": "object",
+  "required": ["schema_version", "mode", "surface", "scope", "note", "cost", "skills", "confusion", "failed"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "mode": { "const": "activation" },
+    "surface": { "enum": ["retrieval", "native"] },
+    "scope": {
+      "enum": ["domain", "all"],
+      "description": "Which skills compete for a prompt: the skill's domain plus the root skills, or every skill."
+    },
+    "note": { "type": "string", "description": "What the surface measures and what it does not." },
+    "date": { "type": "string" },
+    "cost": {
+      "type": "object",
+      "required": ["estimate_usd", "actual_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "estimate_usd": { "type": "number", "minimum": 0 },
+        "actual_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "skills": { "type": "array", "items": { "$ref": "#/definitions/skill" } },
+    "confusion": {
+      "type": "object",
+      "description": "confusion[expected][won]: positive prompts of skill `expected` that skill `won` ranked first on; `none` when nothing ranked.",
+      "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+    },
+    "failed": { "type": "boolean" }
+  },
+  "definitions": {
+    "interval": {
+      "type": "object",
+      "required": ["low", "high"],
+      "additionalProperties": false,
+      "properties": {
+        "low": { "type": "number", "minimum": 0, "maximum": 1 },
+        "high": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "rate": {
+      "type": ["object", "null"],
+      "description": "A proportion with its Wilson 95% interval; null when the denominator is zero.",
+      "required": ["value", "n", "interval"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number", "minimum": 0, "maximum": 1 },
+        "n": { "type": "integer", "minimum": 1 },
+        "interval": { "$ref": "#/definitions/interval" }
+      }
+    },
+    "fraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "problem": {
+      "type": "object",
+      "required": ["file", "line", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer" },
+        "message": { "type": "string" }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["case", "expect", "rate", "runs", "rank", "winner", "top_score", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "case": { "type": "string" },
+        "expect": { "type": "boolean", "description": "Whether the skill should fire for the prompt." },
+        "near_miss": { "type": "boolean" },
+        "rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of runs in which the skill fired."
+        },
+        "runs": { "type": "integer", "minimum": 1 },
+        "rank": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "1-based rank of the skill among the competing skills; null when it did not rank."
+        },
+        "winner": { "type": "string", "description": "The skill that ranked first, or `none`." },
+        "top_score": { "type": "number", "minimum": 0 },
+        "status": { "enum": ["passed", "failed", "borderline"] }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "required": [
+        "id",
+        "status",
+        "passing",
+        "precision",
+        "recall",
+        "false_activation",
+        "recall_at_1",
+        "recall_at_3",
+        "mrr"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "enum": ["ran", "no-cases", "invalid", "error", "skipped-unchanged"] },
+        "competing": { "type": "array", "items": { "type": "string" } },
+        "digest": { "type": "string" },
+        "set_digest": {
+          "type": "string",
+          "description": "Digest of the competing set: a sibling's changed description changes it."
+        },
+        "passing": { "type": "boolean" },
+        "precision": { "$ref": "#/definitions/rate" },
+        "recall": { "$ref": "#/definitions/rate" },
+        "false_activation": { "$ref": "#/definitions/rate" },
+        "recall_at_1": { "$ref": "#/definitions/fraction" },
+        "recall_at_3": { "$ref": "#/definitions/fraction" },
+        "mrr": { "$ref": "#/definitions/fraction" },
+        "ignored": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Cases whose fixtures, assertions or rubric were not used."
+        },
+        "prompts": { "type": "array", "items": { "$ref": "#/definitions/prompt" } },
+        "stolen_by": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["skill", "prompts", "share"],
+            "additionalProperties": false,
+            "properties": {
+              "skill": { "type": "string" },
+              "prompts": { "type": "integer", "minimum": 1 },
+              "share": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "problems": { "type": "array", "items": { "$ref": "#/definitions/problem" } },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}
