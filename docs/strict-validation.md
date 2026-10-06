@@ -56,7 +56,7 @@ stdout.
 | AR002 | `hidden-characters` | error | Zero-width, bidirectional-control or Unicode tag characters (a joiner between two non-ASCII characters, as in emoji, and a leading byte order mark are fine) |
 | AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
 | AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |
-| AR005 | `risky-shell-exec` | error | `curl ... \| sh` (or an interpreter), `bash <(curl ...)`, `eval` of dynamic text, a base64 payload decoded into a shell. `eval "$(ssh-agent -s)"` and similar environment initializers are exempt |
+| AR005 | `risky-shell-exec` | error | `curl ... \| sh` (or an interpreter), `bash <(curl ...)`, `eval` of dynamic text, a base64 payload decoded into a shell. `eval "$(ssh-agent -s)"` and similar environment initializers are exempt. Markdown prose that warns against the pattern (a line, or a section heading above it, with a word such as never, avoid or unsafe) is not flagged; fenced code, frontmatter and scripts always are |
 | AR006 | `risky-shell-access` | warning | Reads of `~/.ssh`, `~/.aws`, `.netrc` and other credential locations, writes to `~/`, `/etc`, `/usr`..., `chmod 777` |
 | AR007 | `tool-breadth` | warning | A skill or command `allowed-tools` entry that is unrestricted: `Bash`, `Bash(*)`, `*` (listed exceptions in `allowed_tools` pass) |
 | AR008 | `outbound-host` | warning | A URL whose host is not in `[lint.security] allowed_hosts`; checked only when that list is set (`localhost` and `127.0.0.1` always pass) |

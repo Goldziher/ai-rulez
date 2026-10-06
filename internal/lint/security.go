@@ -95,12 +95,16 @@ func (r *runner) securityScan(abs, raw string) {
 	}
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	lines := strings.Split(raw, "\n")
+	var st *scanText
+	if isMarkdownPath(abs) {
+		st = newScanText(r, abs, raw)
+	}
 	for i, line := range lines {
 		no := i + 1
 		r.scanHidden(abs, no, line, i == 0)
 		r.scanSecrets(abs, no, line)
 		r.scanInjection(abs, no, line)
-		r.scanShell(abs, no, line)
+		r.scanShell(abs, no, line, describesRisk(st, i))
 		r.scanHosts(abs, no, line)
 		if blobRe.MatchString(line) {
 			r.add(CodeEncodedBlob, abs, no, "line holds a base64-like blob of 200 or more characters that a reviewer cannot read")
@@ -263,8 +267,22 @@ func (r *runner) scanComments(abs, raw string) {
 	}
 }
 
-func (r *runner) scanShell(abs string, no int, line string) {
+// describesRisk reports whether line i of a markdown text is prose that talks
+// about a risky command ("never run `curl | bash`") rather than instructing it.
+// Fenced code, frontmatter and every non-markdown file are code and never
+// qualify, so the exec rule keeps reading them as written.
+func describesRisk(st *scanText, i int) bool {
+	if st == nil || i >= len(st.lines) {
+		return false
+	}
+	l := st.lines[i]
+	return st.prose(l) && l.Neg
+}
+
+func (r *runner) scanShell(abs string, no int, line string, describes bool) {
 	switch {
+	case describes:
+		// a guardrail or a bad-example note: not an instruction to run anything
 	case pipeToShellRe.MatchString(line), pipeToInterpRe.MatchString(line), procSubstRe.MatchString(line):
 		r.add(CodeShellExec, abs, no, "downloads and runs code in one step (curl | sh)")
 	case base64ExecRe.MatchString(line):
