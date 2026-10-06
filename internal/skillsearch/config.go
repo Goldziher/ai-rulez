@@ -16,6 +16,9 @@ const (
 
 // Fusion strategies of [search] fusion.
 const (
+	// FusionAuto is the default: hybrid ranks by cosine alone while every skill in scope has a current
+	// vector (it beat every fusion on this repository's evaluation) and fuses with RRF otherwise.
+	FusionAuto     = "auto"
 	FusionRRF      = "rrf"
 	FusionWeighted = "weighted"
 )
@@ -81,7 +84,7 @@ type Config struct {
 	// IndexBody adds the first BodyChars characters of SKILL.md to the embedded text.
 	IndexBody bool `yaml:"index_body,omitempty" json:"index_body,omitempty" toml:"index_body,omitempty"`
 	BodyChars int  `yaml:"body_chars,omitempty" json:"body_chars,omitempty" toml:"body_chars,omitempty"`
-	// Fusion is rrf (default) or weighted.
+	// Fusion is auto (default), rrf or weighted.
 	Fusion  string  `yaml:"fusion,omitempty" json:"fusion,omitempty" toml:"fusion,omitempty"`
 	RRFK    int     `yaml:"rrf_k,omitempty" json:"rrf_k,omitempty" toml:"rrf_k,omitempty"`
 	Weights Weights `yaml:"weights,omitempty" json:"weights,omitempty" toml:"weights,omitempty"`
@@ -117,7 +120,7 @@ func (c Config) Resolved() Config {
 		out.BodyChars = DefaultBodyChars
 	}
 	if out.Fusion == "" {
-		out.Fusion = FusionRRF
+		out.Fusion = FusionAuto
 	}
 	if out.RRFK <= 0 {
 		out.RRFK = DefaultRRFK
@@ -159,9 +162,9 @@ func (c *Config) Validate() []string {
 		add("search.mode %q must be lexical, hybrid or vector", c.Mode)
 	}
 	switch c.Fusion {
-	case "", FusionRRF, FusionWeighted:
+	case "", FusionAuto, FusionRRF, FusionWeighted:
 	default:
-		add("search.fusion %q must be rrf or weighted", c.Fusion)
+		add("search.fusion %q must be auto, rrf or weighted", c.Fusion)
 	}
 	switch c.DType {
 	case "", DTypeFloat32, DTypeFloat16:

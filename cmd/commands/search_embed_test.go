@@ -252,7 +252,7 @@ func TestSearchQuery_HybridFindsAParaphraseAndDegradesWhenTheProviderIsDown(t *t
 	require.Equal(t, 0, code)
 	var doc searchDoc
 	require.NoError(t, json.Unmarshal([]byte(out), &doc))
-	assert.Equal(t, "hybrid", doc.Ranking)
+	assert.Equal(t, "vector", doc.Ranking, "default fusion ranks by cosine while the index is fresh")
 	assert.Nil(t, doc.Degraded)
 	require.NotEmpty(t, doc.Results)
 	assert.Equal(t, "refund-policy", doc.Results[0].Name)
@@ -317,7 +317,7 @@ func TestSearchQuery_ExplainShowsListRanks(t *testing.T) {
 	require.Equal(t, 0, code)
 	assert.Contains(t, out, "LEX#")
 	assert.Contains(t, out, "VEC#")
-	assert.Contains(t, out, "ranking: hybrid")
+	assert.Contains(t, out, "ranking: vector")
 }
 
 func TestSearchEval_LexicalVersusHybridWithPairedIntervals(t *testing.T) {

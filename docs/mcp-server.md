@@ -334,7 +334,8 @@ working as described above. All tools are annotated read-only.
   description 1, after lowercasing, dropping stopwords and a light stemmer (`migrations` matches `migration`).
   By default it is lexical and deterministic: score descending, then name. With `[search] mode = "hybrid"` (or
   `vector`) and an index built by [`ai-rulez search index`](search.md), the same ranker used by
-  `ai-rulez search` fuses that list with cosine similarity over the index by reciprocal rank fusion. The
+  `ai-rulez search` ranks by cosine similarity over the index while it is fresh, and fuses it with that list by reciprocal rank fusion
+  otherwise (`[search] fusion`). The
   server never builds the index and never embeds a skill: it loads the index files (and reloads them when they
   change) and embeds only the query, bounded by `query_timeout_ms` and an in-memory cache of 256 queries,
   through the `[llm]` network gate, budget and cache. Any failure (no index, an index of another model, the

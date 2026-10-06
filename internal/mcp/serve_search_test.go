@@ -111,7 +111,7 @@ func TestFindSkill_HybridFindsAParaphrase(t *testing.T) {
 	// Assert
 	require.False(t, isErr)
 	assert.Equal(t, "issue-refund", firstResult(out))
-	assert.Equal(t, "hybrid", out["ranking"])
+	assert.Equal(t, "vector", out["ranking"], "hybrid with the default fusion ranks by cosine while every skill has a current vector")
 	assert.NotContains(t, out, "degraded")
 	first := out["results"].([]any)[0].(map[string]any)
 	assert.EqualValues(t, 1, first["vector_rank"])

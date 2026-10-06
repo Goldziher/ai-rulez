@@ -1428,8 +1428,8 @@
         },
         "fusion": {
           "type": "string",
-          "enum": ["rrf", "weighted"],
-          "description": "rrf (default, reciprocal rank fusion) or weighted (min-max normalised convex mix)."
+          "enum": ["auto", "rrf", "weighted"],
+          "description": "auto (default: cosine alone while every skill has a current vector, else rrf), rrf (reciprocal rank fusion) or weighted (min-max normalised convex mix)."
         },
         "rrf_k": {
           "type": "integer",
