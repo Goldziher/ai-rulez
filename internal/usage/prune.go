@@ -62,12 +62,25 @@ type PruneResult struct {
 
 // PruneLog removes the lines of a usage log older than the cutoff, except those at
 // or after ProtectFrom, and replaces the file atomically (mode 0600). A line with
-// no readable timestamp is kept. The log has no lock, so the prune compares the
-// file before and after reading and retries; if it keeps changing it gives up with
-// ErrLogBusy. One narrow window remains between that check and the rename: a line
-// a hook appends in those microseconds is lost, which is why the window is kept
-// that short and why the log is a telemetry buffer, not a record of truth.
+// no readable timestamp is kept.
+//
+// A real prune holds the exclusive log lock (flock; LockFileEx on Windows, on
+// <log>.lock) that every recorder holds shared while it appends, so no line is
+// written between the read and the rename. It waits a few seconds for running
+// appenders and fails with ErrLogLocked otherwise. A recorder that could not get
+// the lock in time appends anyway, so the prune also compares the file before and
+// after reading and retries, and gives up with ErrLogBusy if it keeps changing.
+// Only that last-resort path leaves a window (microseconds between the check and
+// the rename) in which an unlocked append is lost; the log is a telemetry buffer,
+// not a record of truth.
 func PruneLog(path string, o PruneOptions) (PruneResult, error) {
+	if !o.DryRun {
+		release, err := lockLog(path, true, pruneLockWait)
+		if err != nil {
+			return PruneResult{}, err
+		}
+		defer release()
+	}
 	for attempt := 0; attempt < pruneRetries; attempt++ {
 		res, kept, stable, err := pruneOnce(path, o)
 		if err != nil {
