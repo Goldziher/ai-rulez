@@ -11,13 +11,12 @@ import (
 )
 
 // fakeScanner reads the staged skill directory ($1), writes SARIF to the out file ($2)
-// and reports the line of BADTOKEN in SKILL.md.
+// and reports the line of BADTOKEN in SKILL.md. It uses printf, not a here-document: macOS's
+// /bin/sh writes here-documents to /tmp, which the scanner sandbox (isolation = "auto") denies.
 const fakeScanner = `#!/bin/sh
 [ "$1" = "--version" ] && echo "fake-scan 1.2.3" && exit 0
 n=$(grep -n BADTOKEN "$1/SKILL.md" | head -1 | cut -d: -f1)
-cat > "$2" <<JSON
-{"version":"2.1.0","runs":[{"results":[{"ruleId":"FAKE-1","level":"error","message":{"text":"bad token"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"SKILL.md"},"region":{"startLine":$n}}}]}]}]}
-JSON
+printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"FAKE-1","level":"error","message":{"text":"bad token"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"SKILL.md"},"region":{"startLine":%s}}}]}]}]}' "$n" > "$2"
 `
 
 func scannerProject(t *testing.T) string {
