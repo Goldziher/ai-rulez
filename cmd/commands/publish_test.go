@@ -45,7 +45,7 @@ func resetPublishFlags(t *testing.T) {
 		publishTo, publishDist, publishTag, publishRepo, publishFormat = "", "dist", "", "", ""
 		publishDryRun, publishExecute, publishYes, publishForce, publishAllowDirty = false, false, false, false, false
 		publishTemplates, publishRunner, profile = nil, nil, ""
-		publishChannel, publishSince, publishOCIRef, publishNPMScope, publishEmitOut = "", "", "", "", ""
+		publishChannel, publishSince, publishOCIRef, publishNPMScope, publishEmitOut, publishConfirmReg = "", "", "", "", "", ""
 		publishMarketplace, publishExperimental, publishWithSBOM, publishPublic = false, false, false, false
 		publishRuntimes, publishOnly, publishEmit, publishVerifyKeys = nil, nil, nil, nil
 		publishSignKey, publishSignKeyPassEnv, publishSignTokenEnv, publishFulcioURL, publishRekorURL = "", "", "", "", ""
