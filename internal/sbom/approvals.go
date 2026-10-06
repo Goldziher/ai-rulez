@@ -1,0 +1,111 @@
+package sbom
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/approval"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+)
+
+// approvalIndex answers the approval status of the pinned subjects.
+type approvalIndex struct {
+	results map[string]approval.Result
+	records []lockfile.Approval
+	salt    string
+	redact  bool
+}
+
+// newApprovalIndex evaluates the lock's approval records against the current
+// digests. It returns nil when there is nothing to say: no lock, or neither a
+// [governance] policy nor an approval record. now fixes the clock the expiry of
+// an approval is judged by.
+func newApprovalIndex(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, tree string, redact bool, now time.Time) *approvalIndex {
+	if lock == nil || (cfg.Governance == nil && len(lock.Approval) == 0) {
+		return nil
+	}
+	policy := approval.PolicyOf(cfg)
+	subjects := approval.SubjectsOf(lock, items)
+	idx := &approvalIndex{results: map[string]approval.Result{}, records: lock.Approval, salt: tree, redact: redact}
+	for _, r := range policy.EvaluateAll(lock.Approval, subjects, now) {
+		idx.results[r.Key()] = r
+	}
+	return idx
+}
+
+// status maps an approval.Result status to the value of ai-rulez:approval.
+func statusOf(r approval.Result) string {
+	switch r.Status {
+	case approval.StatusOK:
+		return "approved"
+	case approval.StatusNotRequired:
+		if len(r.Reviewers) > 0 {
+			return "approved"
+		}
+		return "not-required"
+	}
+	return r.Status
+}
+
+// reviewerName is the reviewer as written into the document: the identity, or a
+// salted hash of it. The salt is the lock tree, so the same reviewer is the same
+// token within one document and across rebuilds of it, but not across projects.
+func (x *approvalIndex) reviewerName(reviewer string) string {
+	if !x.redact {
+		return reviewer
+	}
+	sum := sha256.Sum256([]byte(x.salt + "\x00" + approval.NormalizeReviewer(reviewer)))
+	return "reviewer-" + hex.EncodeToString(sum[:4])
+}
+
+// annotate adds the approval properties and review records of the subject.
+// It does nothing for a subject the lock does not pin.
+func (x *approvalIndex) annotate(c *Component, kind, domain, id string) {
+	if x == nil {
+		return
+	}
+	s := approval.Subject{Kind: kind, Domain: domain, ID: id}
+	res, ok := x.results[s.Key()]
+	if !ok {
+		return
+	}
+	props := []Property{prop("approval", statusOf(res))}
+	var names []string
+	for _, who := range res.Reviewers {
+		names = append(names, x.reviewerName(who))
+	}
+	sort.Strings(names)
+	if len(names) > 0 {
+		props = append(props, prop("approvers", strings.Join(names, ",")), prop("approval-assurance", lockfile.AssuranceAsserted))
+	}
+	if res.Expires != "" {
+		props = append(props, prop("approval-expires", res.Expires))
+	}
+	c.Properties = sortProps(append(c.Properties, props...))
+	if len(res.Reviewers) == 0 {
+		return
+	}
+	applying := map[string]bool{}
+	for _, who := range res.Reviewers {
+		applying[who] = true
+	}
+	if c.info == nil {
+		c.info = &info{}
+	}
+	for _, rec := range x.records {
+		if rec.ItemKey() != s.Key() || rec.Digest != res.Digest || rec.Assurance != lockfile.AssuranceAsserted {
+			continue
+		}
+		if !applying[approval.NormalizeReviewer(rec.Reviewer)] {
+			continue
+		}
+		c.info.reviews = append(c.info.reviews, review{reviewer: x.reviewerName(rec.Reviewer), at: rec.ApprovedAt, digest: rec.Digest})
+	}
+}
+
+func itoa(n int64) string { return strconv.FormatInt(n, 10) }
