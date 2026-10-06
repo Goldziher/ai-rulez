@@ -150,3 +150,68 @@ func TestShowPolicyListsGovernance(t *testing.T) {
 	assert.Equal(t, []string{"remote"}, gov["require_approval"])
 	assert.Equal(t, []string{"a"}, gov["approvers"])
 }
+
+func TestParseGovernanceAssuranceFloors(t *testing.T) {
+	// Arrange
+	body := "policy_version = 1\n[governance]\nmin_assurance = \"Review-Linked\"\nforbid_self_approval = true\napprovers_from = \"CODEOWNERS\"\n"
+	// Act
+	_, p, err := Parse("p.toml", []byte(body))
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, "review-linked", p.Governance.MinAssurance)
+	assert.True(t, p.Governance.ForbidSelfApproval)
+	assert.Equal(t, "CODEOWNERS", p.Governance.ApproversFrom)
+	for _, bad := range []string{
+		"min_assurance = \"strong\"",
+		"approvers_from = \"docs/OWNERS\"",
+	} {
+		_, _, err := Parse("p.toml", []byte("policy_version = 1\n[governance]\n"+bad+"\n"))
+		require.Error(t, err, bad)
+	}
+}
+
+func TestMergeGovernanceAssuranceFloors(t *testing.T) {
+	a := Policy{Governance: Governance{MinAssurance: "review-linked", ApproversFrom: "CODEOWNERS"}}
+	b := Policy{Governance: Governance{MinAssurance: "signed", ForbidSelfApproval: true}}
+	got := Merge(a, b).Governance
+	assert.Equal(t, "signed", got.MinAssurance, "the stronger level")
+	assert.True(t, got.ForbidSelfApproval)
+	assert.Equal(t, "CODEOWNERS", got.ApproversFrom)
+	assert.Equal(t, got, Merge(b, a).Governance)
+}
+
+func TestApplyGovernanceAssuranceFloors(t *testing.T) {
+	pol := Governance{MinAssurance: "review-linked", ForbidSelfApproval: true, ApproversFrom: "CODEOWNERS"}
+	tests := []struct {
+		name     string
+		repo     *config.GovernanceConfig
+		want     config.GovernanceConfig
+		wantViol []string
+	}{
+		{"a repository without [governance] gets the floor silently", nil,
+			config.GovernanceConfig{MinAssurance: "review-linked", ForbidSelfApproval: true, ApproversFrom: "CODEOWNERS"}, nil},
+		{"weaker explicit values are raised and reported",
+			&config.GovernanceConfig{Enforce: true, MinAssurance: "asserted"},
+			config.GovernanceConfig{Enforce: true, MinAssurance: "review-linked", ForbidSelfApproval: true, ApproversFrom: "CODEOWNERS"},
+			[]string{"AR740 governance.approvers_from", "AR740 governance.forbid_self_approval", "AR740 governance.min_assurance"}},
+		{"stricter values and another CODEOWNERS path are accepted",
+			&config.GovernanceConfig{Enforce: true, MinAssurance: "signed", ForbidSelfApproval: true, ApproversFrom: ".github/OWNERS"},
+			config.GovernanceConfig{Enforce: true, MinAssurance: "signed", ForbidSelfApproval: true, ApproversFrom: ".github/OWNERS"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := testConfig(t, "name = \"x\"\n")
+			cfg.Governance = tt.repo
+			res := Resolve([]Layer{layer("managed", Policy{Governance: pol})})
+			// Act
+			out := res.Apply(cfg).Outcome
+			// Assert
+			require.NotNil(t, cfg.Governance)
+			got := *cfg.Governance
+			got.PolicyFloor = nil
+			assert.Equal(t, tt.want, got)
+			assert.ElementsMatch(t, tt.wantViol, codes(out))
+		})
+	}
+}
