@@ -53,7 +53,7 @@ func TestMCPGovernanceToolsMatchCLIJSON(t *testing.T) {
 		require.NoError(t, err)
 		return toolText(t, res)
 	}
-	lockStatus := handlers.LockStatusHandler(Version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File) []contentlock.Change {
+	lockStatus := handlers.LockStatusHandler(Version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, _ []handlers.LockView) []contentlock.Change {
 		return mcp.DynamicLockChanges(ctx, cfg, lock, Version)
 	})
 	// Change a source after pinning so lock_status has a drift to report.
@@ -99,6 +99,54 @@ func TestMCPGovernanceToolsMatchCLIJSON(t *testing.T) {
 			if tt.name == "lock_status" {
 				assert.Contains(t, got, `"in_sync":false`, "the edited rule is drift")
 			}
+		})
+	}
+}
+
+// lock_status takes the same view selectors as `lock --check`, so both report the
+// same document for the same inputs.
+func TestMCPLockStatusViewArgsMatchCLIJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	resetLockViewFlags(t)
+	root := rolesCmdProject(t)
+	lockServeRole = "dev" // pins the role's outputs so --role has something to compare
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockStatus := handlers.LockStatusHandler(Version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
+		extras := make([]mcp.ServeSetup, 0, len(views))
+		for _, v := range views {
+			extras = append(extras, mcp.ServeSetup{Role: v.Role, Profile: v.Profile, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+		}
+		return mcp.DynamicLockChanges(ctx, cfg, lock, Version, extras...)
+	})
+
+	tests := []struct {
+		name string
+		args map[string]any
+		set  func()
+	}{
+		{"role", map[string]any{"role": "dev"}, func() { lockServeRole = "dev" }},
+		{"include_static", map[string]any{"include_static": true}, func() { lockServeIncludeStatic = true }},
+		{"profile", map[string]any{"profile": "default"}, func() { lockProfile = "default" }},
+		{"all views", map[string]any{"role": "dev", "include_static": true}, func() { lockServeRole, lockServeIncludeStatic = "dev", true }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			lockServeRole, lockServeIncludeStatic, lockServeSources, lockProfile = "", false, nil, ""
+			lockCheck, lockFormat = true, formatJSON
+			tt.set()
+			want := compactJSON(t, captureStdout(t, func() { checkLockAt("") }))
+			in := map[string]any{"working_directory": root}
+			for k, v := range tt.args {
+				in[k] = v
+			}
+
+			// Act
+			res, err := lockStatus(t.Context(), handlers.NewToolRequest(nil, in))
+			require.NoError(t, err)
+
+			// Assert
+			assert.Equal(t, want, toolText(t, res))
 		})
 	}
 }
