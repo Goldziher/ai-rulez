@@ -125,7 +125,12 @@ func StagedChanges(dir string) ([]Change, error) {
 // diffChanges runs the name-status and the zero-context patch diff against
 // target (a revision or --cached) and joins them on the new path.
 func diffChanges(dir, target string) ([]Change, error) {
-	common := []string{"diff", "--relative", "-M", "--no-ext-diff", "--no-color"}
+	// Explicit prefixes and config overrides keep the +++ header parseable
+	// whatever diff.noprefix, diff.mnemonicPrefix or diff.src/dstPrefix say.
+	common := []string{
+		"-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false", "-c", "color.diff=false",
+		"diff", "--relative", "-M", "--no-ext-diff", "--no-textconv", "--no-color", "--src-prefix=a/", "--dst-prefix=b/",
+	}
 	targetArgs := []string{target, "--"}
 	if target == "--cached" {
 		targetArgs = []string{"--cached", "HEAD", "--"}
