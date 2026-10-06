@@ -513,7 +513,7 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	verdict := Gate{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, RequireCIAboveZero: o.RequireCIAboveZero}.Decide(cmp)
 	rep.Decision = verdict.Decision()
 	rep.Reasons = append(rep.Reasons, verdict.Reasons...)
-	if cmp.Underpowered {
+	if cmp.Underpowered && verdict.Accept { // a rejected round needs no caveat on its evidence
 		rep.Warnings = append(rep.Warnings, underpoweredWarning(&cmp))
 	}
 	if held.NoCost {
