@@ -228,7 +228,7 @@ func LoadOrg(opts DiscoverOptions, ref Ref) ([]Layer, error) {
 	layer, err := l.loadOne(OriginOrg, ref)
 	if err != nil {
 		var se *statusError
-		if errors.As(err, &se) && se.code == 404 {
+		if errors.As(err, &se) && se.code == 404 && !l.orgPinned(ref) {
 			logger.Info("No organization policy published", "policy", ref.Display())
 			return nil, nil
 		}
@@ -240,6 +240,23 @@ func LoadOrg(opts DiscoverOptions, ref Ref) ([]Layer, error) {
 	}
 	chain, _, err := l.expand(layer, ref, nil)
 	return chain, err
+}
+
+// orgPinned reports whether the organization policy at ref is anchored: a pinned
+// digest, a digest recorded by trust-on-first-use, or a required signature. A 404
+// for an anchored policy is a withdrawn or hidden policy, not "no policy": it must
+// fail closed (AR742), or whoever controls the answer could switch the org layer off.
+func (l *loader) orgPinned(ref Ref) bool {
+	if ref.Digest != "" {
+		return true
+	}
+	if c := l.openCache(); c != nil {
+		if _, ok := c.tofuGet(ref.Location); ok {
+			return true
+		}
+	}
+	pv, err := l.verifier()
+	return err != nil || (pv != nil && pv.require)
 }
 
 // checkUserSigner validates one [[policy.signers]] entry: a certificate identity

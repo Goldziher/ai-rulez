@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -213,10 +214,36 @@ func TestLoadOrg(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "AR741")
 	})
-	t.Run("an owner with no policy file has no org policy", func(t *testing.T) {
+	t.Run("a pinned org policy that answers 404 fails closed", func(t *testing.T) {
 		f.code.Store(http.StatusNotFound)
 		t.Cleanup(func() { f.code.Store(http.StatusOK) })
 		layers, err := load(t, orgConfig(""), nil)
+		require.Error(t, err, "a pin means a policy must exist")
+		assert.Contains(t, err.Error(), "AR742")
+		assert.Empty(t, layers)
+	})
+	t.Run("a 404 stays AR742 when the cached copy is expired", func(t *testing.T) {
+		o := f.opts(t, orgConfig(""))
+		ref, _, err := OrgRef(o)
+		require.NoError(t, err)
+		_, err = LoadOrg(o, ref) // fills the cache
+		require.NoError(t, err)
+		f.code.Store(http.StatusNotFound)
+		t.Cleanup(func() { f.code.Store(http.StatusOK) })
+		o.MaxStale = "1h"
+		o.Clock = ambient.Fixed(epoch.Add(48 * time.Hour))
+		_, err = LoadOrg(o, ref)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "AR742")
+	})
+	t.Run("an unpinned owner with no policy file has no org policy", func(t *testing.T) {
+		f.code.Store(http.StatusNotFound)
+		t.Cleanup(func() { f.code.Store(http.StatusOK) })
+		o := f.opts(t, "[policy]\ndiscover = \"org\"\n")
+		o.TrustOnFirstUse, o.Interactive = true, true
+		ref, _, err := OrgRef(o)
+		require.NoError(t, err)
+		layers, err := LoadOrg(o, ref)
 		require.NoError(t, err)
 		assert.Empty(t, layers)
 	})
