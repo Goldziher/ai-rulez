@@ -123,7 +123,7 @@ func writeStore(t *testing.T, root string) {
 func signStore(t *testing.T, store *evals.Store) {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	key := evalResultsKey()
+	key := evals.UserKey()
 	require.NotEmpty(t, key)
 	store.SetKey(key)
 }

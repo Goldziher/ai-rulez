@@ -7,30 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
-	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
-
-// evalResultsKeyFile is the per-user key that signs eval results; it must match
-// the name `ai-rulez eval run` writes (cmd/commands/eval.go).
-const evalResultsKeyFile = "eval-results.key"
-
-// userEvalKey returns the user's eval-results key, or nil when it does not exist
-// or cannot be trusted. Unlike `eval run`, lint never creates the key: a missing
-// key means every recorded result is unverified.
-func userEvalKey() []byte {
-	path := llm.UserSecretPath(evalResultsKeyFile)
-	if path == "" {
-		return nil
-	}
-	if _, err := os.Lstat(path); err != nil {
-		return nil
-	}
-	key, err := llm.LoadSecretFile(path)
-	if err != nil {
-		return nil
-	}
-	return key
-}
 
 // Codes of the eval runner checks (see docs/evals.md).
 const (
@@ -97,7 +74,7 @@ func (r *runner) checkEvalRunner() {
 	if r.cfg.ConfigDir == "" {
 		return
 	}
-	store, storeErr := evals.LoadStoreKeyed(evals.DefaultStorePath(r.cfg.ConfigDir), userEvalKey())
+	store, storeErr := evals.LoadStoreKeyed(evals.DefaultStorePath(r.cfg.ConfigDir), evals.ExistingUserKey())
 	if storeErr != nil {
 		store = nil
 		r.add(CodeEvalResultsInvalid, evals.DefaultStorePath(r.cfg.ConfigDir), 1, "%v", storeErr)
