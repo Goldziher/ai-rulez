@@ -137,7 +137,7 @@ func TestWorkspaceSymlinkPolicy(t *testing.T) {
 			assert.Equal(t, tt.wantRules, rules)
 			if tt.wantRefus {
 				require.Len(t, cfg.ContentProblems, 1)
-				assert.Contains(t, cfg.ContentProblems[0].Reason, "outside the project root")
+				assert.Contains(t, cfg.ContentProblems[0].Reason, "outside the repository root")
 				assert.Contains(t, warned.String(), "refusing symlinked content")
 			} else {
 				assert.Empty(t, cfg.ContentProblems)

@@ -82,7 +82,7 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 	target, err := s.v.EvalSymlinks(path)
 	var outside *workspace.OutsideError
 	if errors.As(err, &outside) {
-		s.refuse(path, fmt.Sprintf("target %s is outside the project root %s", outside.Target, s.root))
+		s.refuse(path, fmt.Sprintf("target %s is outside the repository root %s", outside.Target, s.root))
 		return nil, false
 	}
 	if err != nil {
