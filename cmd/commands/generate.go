@@ -574,6 +574,9 @@ func processConfigFilesCounting(configFiles []string) (generated int, failed []s
 // the lock disagreeing with the sources (content drift, or a remote the lock
 // does not cover), which exits with exitDrift rather than 1.
 func lockDriftError(err error) bool {
+	if errors.Is(err, errMovedTag) {
+		return true // --verify-tags: the remote disagrees with the lock, drift whatever the flags
+	}
 	if !generateLocked && !generateFrozen {
 		return false
 	}
@@ -605,6 +608,10 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	}
 
 	if err := enforceLockedContent(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+	if err := movedTagsErr(cfg); err != nil { // --verify-tags or [lock] verify_tags, per root
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
