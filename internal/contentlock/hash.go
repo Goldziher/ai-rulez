@@ -156,7 +156,7 @@ func combineLeaves(kind string, entries []leafSum) (string, error) {
 		if err := validLeafPath(l.path); err != nil {
 			return "", err
 		}
-		if l.mode != ModeRegular && l.mode != ModeExecutable {
+		if l.mode != ModeRegular && l.mode != ModeExecutable && l.mode != modeSymlink && l.mode != modeIrregular {
 			return "", oops.With("path", l.path).Errorf("invalid file mode %q", l.mode)
 		}
 		if i > 0 && sorted[i-1].path == l.path {

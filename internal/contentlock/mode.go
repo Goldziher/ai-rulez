@@ -1,10 +1,12 @@
 package contentlock
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
@@ -30,9 +32,30 @@ func fileModeFor(goos, abs string, info os.FileInfo, index func(abs string) (str
 	return ModeFor(uint32(info.Mode().Perm()))
 }
 
+// treeModes returns the mode resolver of one tree. Off Windows it reads the
+// file's own execute bit. On Windows the git index is read once for the whole
+// tree (one bounded `git ls-files` call through tracked), never once per file.
+func treeModes(goos, dir string, tracked func(dir string) (map[string]uint32, bool, error)) func(f treeFile) string {
+	if goos != "windows" {
+		return func(f treeFile) string { return fileModeFor(goos, f.abs, f.info, nil) }
+	}
+	files, ok, err := tracked(dir)
+	return func(f treeFile) string {
+		if ok && err == nil && files[f.rel] == 0o100755 {
+			return ModeExecutable
+		}
+		return ModeRegular
+	}
+}
+
+// indexLookupTimeout bounds the one-file git index lookup.
+const indexLookupTimeout = 30 * time.Second
+
 // gitIndexMode reads the mode git has recorded for abs.
 func gitIndexMode(abs string) (string, bool) {
-	cmd := gitutil.CommandNoContext(filepath.Dir(abs), "ls-files", "-s", "--", filepath.Base(abs))
+	ctx, cancel := context.WithTimeout(context.Background(), indexLookupTimeout)
+	defer cancel()
+	cmd := gitutil.Command(ctx, filepath.Dir(abs), "ls-files", "-s", "--", filepath.Base(abs))
 	out, err := cmd.Output()
 	if err != nil {
 		return "", false

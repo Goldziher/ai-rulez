@@ -93,7 +93,28 @@ func TestDigestDir_RefusesASymlinkedRoot(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDigestDir_ErrorsOnSymlinks(t *testing.T) {
+func TestDigestDir_SymlinkLeafVectors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	// The expected digests come from an independent Python implementation of the
+	// scheme in docs/lockfile.md.
+	dir := t.TempDir()
+	writeTreeFile(t, dir, "rules/a.md", "# A\n", 0o644)
+	require.NoError(t, os.Symlink("rules/a.md", filepath.Join(dir, "README.md")))
+
+	got, err := DigestDir(KindInclude, dir)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:1b842d9b161a3808fb191ac281ba28c2ed27604486a5292d3e2da5d7a70345eb", got)
+
+	require.NoError(t, os.Remove(filepath.Join(dir, "README.md")))
+	require.NoError(t, os.Symlink("other.md", filepath.Join(dir, "README.md")))
+	got, err = DigestDir(KindInclude, dir)
+	require.NoError(t, err)
+	assert.Equal(t, "sha256:550880810dde3cc343d893888958939a4263f3d2cc9636193ddeffb337bc989b", got, "retargeting a link changes the digest")
+}
+
+func TestDigestDir_RecordsSymlinksWithoutFollowingThem(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlinks need privileges on Windows")
 	}
@@ -114,17 +135,60 @@ func TestDigestDir_ErrorsOnSymlinks(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
 			writeTreeFile(t, dir, "rules/a.md", "# A\n", 0o644)
+			plain, err := DigestDir(KindInclude, dir)
+			require.NoError(t, err)
 			require.NoError(t, os.Symlink(tt.target, filepath.Join(dir, tt.link)))
 
 			// Act
-			_, err := DigestDir(KindInclude, dir)
+			withLink, err := DigestDir(KindInclude, dir)
+			require.NoError(t, err)
+			require.NoError(t, os.Remove(filepath.Join(dir, tt.link)))
+			require.NoError(t, os.Symlink(tt.target+"-moved", filepath.Join(dir, tt.link)))
+			moved, err := DigestDir(KindInclude, dir)
+			require.NoError(t, err)
 
 			// Assert
-			require.Error(t, err, "a symlink must not be silently left out of the pin")
-			assert.Contains(t, err.Error(), filepath.ToSlash(tt.link))
-			assert.Contains(t, err.Error(), "symlink")
+			assert.NotEqual(t, plain, withLink, "the link is a leaf of its own")
+			assert.NotEqual(t, withLink, moved, "a changed link target changes the digest")
 		})
 	}
+}
+
+func TestDigestDir_TargetContentBehindALinkIsNotPinned(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	target := filepath.Join(t.TempDir(), "t.md")
+	require.NoError(t, os.WriteFile(target, []byte("one"), 0o644))
+	dir := t.TempDir()
+	require.NoError(t, os.Symlink(target, filepath.Join(dir, "link.md")))
+	before, err := DigestDir(KindInclude, dir)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(target, []byte("two"), 0o644))
+	after, err := DigestDir(KindInclude, dir)
+	require.NoError(t, err)
+	assert.Equal(t, before, after, "a link is never followed, only its target string is pinned")
+}
+
+func TestTreeModes_ReadsTheGitIndexOncePerTree(t *testing.T) {
+	// Arrange
+	calls := 0
+	tracked := func(string) (map[string]uint32, bool, error) {
+		calls++
+		return map[string]uint32{"a.sh": 0o100755, "b.md": 0o100644}, true, nil
+	}
+	modeOf := treeModes("windows", "/tree", tracked)
+
+	// Act
+	a := modeOf(treeFile{rel: "a.sh"})
+	b := modeOf(treeFile{rel: "b.md"})
+	c := modeOf(treeFile{rel: "untracked.md"})
+
+	// Assert
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, ModeExecutable, a)
+	assert.Equal(t, ModeRegular, b)
+	assert.Equal(t, ModeRegular, c)
 }
 
 func TestDigestDir_CacheMetaIsExcludedOnlyAtTheRoot(t *testing.T) {
