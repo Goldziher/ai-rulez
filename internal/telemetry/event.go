@@ -153,6 +153,11 @@ func (e *Event) Normalize() error {
 	if !memoryTypes[e.MemoryType] {
 		e.MemoryType = ""
 	}
+	if e.Time != "" {
+		if t, err := time.Parse(time.RFC3339, e.Time); err != nil || !nanosecondsRepresentable(t) {
+			e.Time = "" // optional: the Recorder stamps a new event, an export falls back to its own time
+		}
+	}
 	if e.DurationMS < 0 {
 		e.DurationMS = 0
 	}

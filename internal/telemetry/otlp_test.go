@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -122,4 +123,27 @@ func TestEncoder_ResourceAttributesAreSortedAndAfterTheFixedOnes(t *testing.T) {
 		keys = append(keys, a.Key)
 	}
 	assert.Equal(t, []string{"service.name", "service.version", "ai_rulez.schema_version", "deployment.environment", "team"}, keys)
+}
+
+func TestEncodeLogs_NeverWritesAnOverflowedTimestamp(t *testing.T) {
+	// An event without a time and no observation time (a log of old events, no clock).
+	events := []Event{{Kind: KindRule, ID: "r", Source: SourceHook, Outcome: OutcomeLoaded}}
+
+	body, err := (&Encoder{}).EncodeLogs(events, time.Time{})
+
+	require.NoError(t, err)
+	var doc struct {
+		ResourceLogs []struct {
+			ScopeLogs []struct {
+				LogRecords []struct {
+					Time     string `json:"timeUnixNano"`
+					Observed string `json:"observedTimeUnixNano"`
+				} `json:"logRecords"`
+			} `json:"scopeLogs"`
+		} `json:"resourceLogs"`
+	}
+	require.NoError(t, json.Unmarshal(body, &doc))
+	record := doc.ResourceLogs[0].ScopeLogs[0].LogRecords[0]
+	assert.Equal(t, "0", record.Time, "0 is OTLP's unknown time")
+	assert.Equal(t, "0", record.Observed)
 }
