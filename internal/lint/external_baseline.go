@@ -40,11 +40,15 @@ type ScannerOptions struct {
 }
 
 func (o ScannerOptions) today() string {
-	if o.Today != "" {
-		return o.Today
-	}
-	if env := os.Getenv(TodayEnv); env != "" {
-		return env
+	for _, candidate := range []struct{ source, value string }{{"--today", o.Today}, {TodayEnv, os.Getenv(TodayEnv)}} {
+		if candidate.value == "" {
+			continue
+		}
+		if _, err := time.Parse(dateLayout, candidate.value); err != nil {
+			logger.Warn("Ignoring a malformed baseline date; expecting YYYY-MM-DD", "source", candidate.source, "value", candidate.value)
+			continue
+		}
+		return candidate.value
 	}
 	return time.Now().UTC().Format(dateLayout)
 }
@@ -60,8 +64,8 @@ func (r *runner) scannerBaselinePath() string {
 }
 
 // scannerFingerprint is the identity of one scanner result. It is the scanner's
-// own SARIF fingerprint when it gave one (made unique across rules and files by
-// adding both), else a hash of the scanner, rule, repository path, normalized
+// own SARIF fingerprint when it gave one (made unique across rules, files and
+// repeated occurrences by adding them), else a hash of the scanner, rule, repository path, normalized
 // text of the flagged line and an occurrence index. The line number is never part
 // of it, so moving or reformatting code around a finding keeps its baseline entry.
 func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs string, line int, occurrence map[string]int) string {
@@ -79,7 +83,15 @@ func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs strin
 		}
 	}
 	if f.Fingerprint != "" {
+		// Two results may carry one scanner fingerprint (the same line text in two
+		// places), so the occurrence index keeps them apart, as in the fallback below.
+		key := scanner + "\x00own\x00" + f.Rule + "\x00" + rel + "\x00" + f.Fingerprint
 		put(scannerFingerprintVersion, scanner, "own", f.Rule, rel, f.Fingerprint)
+		// The first occurrence hashes as before, so existing baselines keep matching.
+		if n := occurrence[key]; n > 0 {
+			h.Write([]byte(fmt.Sprint(n)))
+		}
+		occurrence[key]++
 		return scannerFingerprintVersion + ":" + hex.EncodeToString(h.Sum(nil))[:24]
 	}
 	text := f.Message // no readable line: the message is the identity
@@ -126,13 +138,11 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 		r.addAt(CodeScannerBaselineExpired, path, fmt.Sprintf("[%s] the baseline entry for %s in %s expired on %s; the finding is reported again (remove the entry or renew it with --write-baseline)",
 			e.Scanner, e.Rule, e.File, e.Expires))
 	}
-	kept := 0
 	for i := range findings {
 		if findings[i].IsAccepted() {
 			continue
 		}
 		r.findings = append(r.findings, findings[i])
-		kept++
 	}
 	if res.Accepted > 0 {
 		logger.Info(fmt.Sprintf("%d scanner finding(s) accepted by %s", res.Accepted, path))

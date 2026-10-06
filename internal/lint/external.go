@@ -377,7 +377,10 @@ func (r *runner) ingestExternal(ex config.LintExternal, scope scanScope, res cmd
 		if a.Rule != b.Rule {
 			return a.Rule < b.Rule
 		}
-		return a.Message < b.Message
+		if a.Message != b.Message {
+			return a.Message < b.Message
+		}
+		return a.Fingerprint < b.Fingerprint
 	})
 	var out []scannerFinding
 	occurrence := map[string]int{}
