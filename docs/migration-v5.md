@@ -34,6 +34,7 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | `generate` warns about unknown config keys and new commands | Fix the keys; set `--yes` or `AI_RULEZ_ACK_COMMANDS=1` in CI |
 | `[lint.budget]` is renamed `[lint.tolerate]` | Rename; the old name still works and warns |
 | `--json` is deprecated for `--format json` | Switch scripts to `--format json` |
+| Staged scanners are confined under `isolation = "auto"` (the default) wherever a backend works | A scanner that writes outside its scratch directory now fails (`AR9E3`): point it at `TMPDIR`/`HOME`, or set `isolation = "none"`; see [Isolation](strict-validation.md#isolation) |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
 

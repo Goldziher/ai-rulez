@@ -169,7 +169,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 		versions := map[string]string{}
 		for _, s := range selected {
 			if s.Found() && scannersProbe {
-				versions[s.Name] = lint.ProbeScannerVersion(ctx, s)
+				versions[s.Name], _ = lint.ProbeScannerVersion(ctx, s) //nolint:errcheck // a refused probe leaves the version empty
 			}
 		}
 		if err := writeScannersJSON(out, selected, true, versions); err != nil {
@@ -233,8 +233,14 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 	if s.Found() {
 		version := "not probed (pass --external)"
 		if probe {
-			if version = lint.ProbeScannerVersion(ctx, s); version == "" {
+			v, err := lint.ProbeScannerVersion(ctx, s)
+			switch {
+			case err != nil:
+				version = "not probed (" + err.Error() + ")"
+			case v == "":
 				version = "unknown (--version printed nothing usable)"
+			default:
+				version = v
 			}
 		}
 		row("binary", s.Path)

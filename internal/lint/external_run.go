@@ -191,7 +191,8 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 		return nil, false
 	}
 	if key != "" {
-		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: r.probeVersion(binary), Stored: r.clock().Unix()})
+		version, _ := r.probeVersion(binary) //nolint:errcheck // a refused probe only leaves the recorded version empty
+		cache.put(key, cachedScan{Findings: toCached(norm), OutOfScope: outOfScope, FirstOut: firstOut, Version: version, Stored: r.clock().Unix()})
 	}
 	return r.convertFindings(sc, stagedScope(files), norm, outOfScope, firstOut), true
 }
@@ -298,12 +299,14 @@ func hasSkillDir(files []stagedFile) bool {
 	return false
 }
 
-// probeVersion asks a scanner for its version through the hardened runner.
-func (r *runner) probeVersion(binary string) string {
+// probeVersion asks a scanner for its version through the hardened runner,
+// confined as the policy's isolation mode asks. The error is set when the
+// probe was refused (isolation = "require" with no working backend).
+func (r *runner) probeVersion(binary string) (string, error) {
 	if binary == "" {
-		return ""
+		return "", nil
 	}
-	return ProbeScannerVersion(context.Background(), ScannerInfo{Path: binary})
+	return ProbeScannerVersion(context.Background(), ScannerInfo{Path: binary, Isolation: string(policyOf(&r.lc).isolation)})
 }
 
 // versionSatisfied checks the entry's version range against `<binary> --version`.
@@ -322,7 +325,11 @@ func (r *runner) versionSatisfied(sc resolvedScanner, root string) bool {
 		r.addRun(CodeScannerConfigInvalid, sc.Name, fmt.Sprintf("version %q is not a version range: %v", sc.Version, err))
 		return false
 	}
-	line := r.probeVersion(binary)
+	line, err := r.probeVersion(binary)
+	if err != nil {
+		r.addRun(CodeScannerRunFailed, sc.Name, "was not run: its version could not be checked: "+sanitizeScannerText(err.Error()))
+		return false
+	}
 	v, ok := firstVersion(line)
 	if !ok {
 		r.addRun(CodeScannerUnavailable, sc.Name, fmt.Sprintf("was not run: its --version output %q has no version to check against %q", line, sc.Version))

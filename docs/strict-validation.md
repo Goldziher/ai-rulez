@@ -765,6 +765,15 @@ disabled, already inside a sandbox), no backend is available:
 | `require` | confined | the scanner does not run (`AR9E3`) |
 | `none` | runs unconfined, silently | runs unconfined, silently |
 
+The `--version` probe (a `version` range, the version stored with a cached result, `scanners doctor --external`) starts
+the scanner too, so it is confined the same way: with `require` and no backend it is refused (`AR9E3`; `doctor`
+prints "not probed"), and with `auto` and no backend it runs unconfined.
+
+Confinement is best effort, not a security boundary. The macOS profile allows everything except the network, file
+writes outside the scratch directory and the Mach services that start or script applications (LaunchServices and
+Apple Events), so `open -b <bundle id>` from a scanner fails; the rest of the user session stays visible. `bwrap` adds
+a new session and a PID namespace. `unshare` confines the network only.
+
 A scanner without `inputs` runs in the project root and cannot be confined: `require` refuses it (`AR9E3`), `auto`
 leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
 shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR`/`HOME`, or set `isolation = "none"`.

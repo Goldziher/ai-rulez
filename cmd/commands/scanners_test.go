@@ -86,7 +86,7 @@ func TestWriteDoctor_StartsTheScannerOnlyWithExternal(t *testing.T) {
 			marker := filepath.Join(dir, "ran")
 			script := filepath.Join(dir, "scanner")
 			require.NoError(t, os.WriteFile(script, []byte("#!/bin/sh\ntouch '"+marker+"'\necho 9.9.9\n"), 0o755)) //nolint:gosec // test script
-			info := lint.ScannerInfo{Name: "s", Command: "scanner", Path: script, Egress: "false", Format: "sarif", Timeout: time.Second}
+			info := lint.ScannerInfo{Name: "s", Command: "scanner", Path: script, Egress: "false", Format: "sarif", Timeout: time.Second, Isolation: "none"}
 			var buf bytes.Buffer
 
 			// Act
