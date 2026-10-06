@@ -1,7 +1,8 @@
 // Package signing signs and verifies ai-rulez attestations with Sigstore
 // (docs/signing.md). An attestation is a Sigstore bundle holding a DSSE envelope
 // over an in-toto statement; the first user is `ai-rulez sign --lock`, which
-// signs the lock subject printed by `lock --subject`.
+// signs the lock subject printed by `lock --subject`; `sign --bundle`, `--skill`
+// and `--sbom` sign the other subjects.
 //
 // # Reusable DSSE helper API
 //
@@ -43,6 +44,14 @@
 // Rollback detection is a per-user high-water mark kept outside the repository
 // and authenticated with an HMAC (OpenState, State.Check, State.Advance).
 //
+// # Other subjects
+//
+// Plugin bundles, published skills and SBOM files use the same calls through
+// TreeStatement and SBOMStatement (what to sign), VerifyArtifact (how a set of
+// attestation files is judged, with k-of-n thresholds) and PrepareArtifactCheck
+// (the [signing] policy for one subject). ProvenanceStatement writes SLSA v1
+// provenance for a bundle, and LoadKMSSigner signs with a KMS key URI.
+//
 // Errors returned by Verify, Check and the lock helpers are *Error values whose
-// Code is one of AR720 to AR727.
+// Code is one of AR720 to AR729.
 package signing
