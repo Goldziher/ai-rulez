@@ -378,3 +378,19 @@ func TestValidateLockFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestLockDiffUncachedIncludeIsNamedAndOutputsAreNotReportedRemoved(t *testing.T) {
+	// Arrange: a lock that pins outputs, and an include that is not cached.
+	lockProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \"https://example.invalid/shared.git\"\nref = \"main\"\n[lock]\ninclude_outputs = true\n")
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+	lock := &lockfile.File{Version: lockfile.Version, OutputsPinned: true, Output: []lockfile.OutputPin{{Path: "CLAUDE.md", Digest: "sha256:abc"}}}
+
+	// Act
+	diff, err := lockDiff(cfg, lock, "", true)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, diff.Outputs(), "outputs were not compared, so none is reported removed")
+	assert.Contains(t, diff.Notes, "include shared not cached; run ai-rulez lock or generate")
+}
