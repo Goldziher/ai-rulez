@@ -1,0 +1,14 @@
+schema_version: 1
+id: code-quality-real
+kind: skill
+item:
+  path: fixtures/cases/code-quality-real/code-quality-standards/SKILL.md
+siblings:
+  - fixtures/shared/skills/go-conventions/SKILL.md
+  - fixtures/shared/skills/error-handling/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: warn, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: warn, body-structure: pass}

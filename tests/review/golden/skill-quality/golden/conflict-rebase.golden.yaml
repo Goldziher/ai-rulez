@@ -1,0 +1,14 @@
+schema_version: 1
+id: conflict-rebase
+kind: skill
+item:
+  path: fixtures/cases/conflict-rebase/rebase-policy/SKILL.md
+siblings:
+  - fixtures/shared/skills/merge-policy/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}
+probes: [pad, reorder, rename]

@@ -1,0 +1,14 @@
+schema_version: 1
+id: error-handling-real
+kind: skill
+item:
+  path: fixtures/cases/error-handling-real/error-handling/SKILL.md
+siblings:
+  - fixtures/shared/skills/go-conventions/SKILL.md
+  - fixtures/shared/skills/python-conventions/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

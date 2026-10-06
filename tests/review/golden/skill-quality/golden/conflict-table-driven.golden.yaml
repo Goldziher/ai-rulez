@@ -1,0 +1,14 @@
+schema_version: 1
+id: conflict-table-driven
+kind: skill
+item:
+  path: fixtures/cases/conflict-table-driven/test-structure/SKILL.md
+siblings:
+  - fixtures/shared/skills/test-style-simple/SKILL.md
+  - fixtures/shared/skills/testing-conventions/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: fail, body-structure: pass}

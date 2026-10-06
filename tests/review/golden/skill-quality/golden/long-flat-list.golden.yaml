@@ -1,0 +1,14 @@
+schema_version: 1
+id: long-flat-list
+kind: skill
+item:
+  path: fixtures/cases/long-flat-list/module-rules/SKILL.md
+siblings:
+  - fixtures/shared/skills/incremental-approach/SKILL.md
+  - fixtures/shared/skills/task-runner/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: warn}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: fail}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: warn}

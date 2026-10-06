@@ -1,0 +1,14 @@
+schema_version: 1
+id: conflict-partial
+kind: skill
+item:
+  path: fixtures/cases/conflict-partial/commit-size/SKILL.md
+siblings:
+  - fixtures/shared/skills/squash-policy/SKILL.md
+  - fixtures/shared/skills/commit-wording/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: warn, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: warn, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: warn, body-structure: pass}

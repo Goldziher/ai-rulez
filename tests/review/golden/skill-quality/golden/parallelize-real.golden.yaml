@@ -1,0 +1,13 @@
+schema_version: 1
+id: parallelize-real
+kind: command
+item:
+  path: fixtures/cases/parallelize-real/parallelize.md
+siblings:
+  - fixtures/shared/commands/iterate.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

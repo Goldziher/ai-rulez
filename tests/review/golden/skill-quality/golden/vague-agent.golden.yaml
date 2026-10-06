@@ -1,0 +1,14 @@
+schema_version: 1
+id: vague-agent
+kind: agent
+item:
+  path: fixtures/cases/vague-agent/helper.md
+siblings:
+  - fixtures/shared/agents/security-auditor.md
+  - fixtures/shared/agents/test-writer.md
+labelers:
+  - id: author
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: fail, overlap: fail, body-accuracy: warn, injection-intent: pass, scope-creep: warn, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: fail, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

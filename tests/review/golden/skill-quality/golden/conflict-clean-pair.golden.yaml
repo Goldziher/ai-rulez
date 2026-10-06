@@ -1,0 +1,14 @@
+schema_version: 1
+id: conflict-clean-pair
+kind: skill
+item:
+  path: fixtures/cases/conflict-clean-pair/branch-naming/SKILL.md
+siblings:
+  - fixtures/shared/skills/commit-wording/SKILL.md
+  - fixtures/shared/skills/squash-policy/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: pass, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

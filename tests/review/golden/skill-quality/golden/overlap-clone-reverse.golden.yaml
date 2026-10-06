@@ -1,0 +1,14 @@
+schema_version: 1
+id: overlap-clone-reverse
+kind: skill
+item:
+  path: fixtures/cases/overlap-clone-reverse/go-conventions/SKILL.md
+siblings:
+  - fixtures/shared/skills/golang-style-guide/SKILL.md
+  - fixtures/shared/skills/rust-conventions/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: fail, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}

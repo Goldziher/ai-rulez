@@ -1,0 +1,15 @@
+schema_version: 1
+id: core-workflows-real
+kind: skill
+item:
+  path: fixtures/cases/core-workflows-real/core-workflows/SKILL.md
+siblings:
+  - fixtures/shared/skills/config-schema-maintainer/SKILL.md
+  - fixtures/shared/skills/docs-and-site/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: fail, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: fail, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: fail, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+probes: [pad, reorder, rename]
