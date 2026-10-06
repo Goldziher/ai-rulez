@@ -72,7 +72,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
 - **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
 - **`catalog`**: `[catalog]` defaults for `ai-rulez catalog` (`title`, `include_excerpt`, `exclude_owners`, `indexable`, `max_items_per_page`, `render_markdown`); see [Catalog](catalog.md)
-- **`governance`**: `[governance]` approval policy (`require_approval`, `exempt`, `min_approvers`, `approvers`, `max_age`, `enforce`); see [Approvals](approvals.md)
+- **`governance`**: `[governance]` approval policy (`require_approval`, `exempt`, `min_approvers`, `approvers`, `approvers_from`, `teams`, `min_assurance`, `forbid_self_approval`, `max_age`, `enforce`); see [Approvals](approvals.md)
 - **`lock`**: `[lock]` content pinning (`enforce`, `include_outputs`, `scope`); see [Lock file](lockfile.md)
 - **`lint`**: `[lint]` strict-validation settings (severities, ignores, budgets, `tolerate`, `security`, `evals`, `traps`, `metadata`, `external` scanners); see [Strict validation](strict-validation.md)
 - **`verifiers`**: `[[verifiers]]` deterministic repository checks run by `ai-rulez verifiers run`; see [Verifiers](verifiers.md)
@@ -155,6 +155,7 @@ The schema files are available in the repository:
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
 | `schema/verify-attestation.schema.json` | JSON Schema | v1 | `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock |
 | `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
+| `schema/verify-approvals.schema.json` | JSON Schema | v1 | `ai-rulez verify --approvals --format json`: the re-check of signed and review-linked approvals; see [Approvals](approvals.md#verifying-approvals) |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes |
