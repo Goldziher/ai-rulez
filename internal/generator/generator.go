@@ -3420,12 +3420,17 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 	// into it and cannot gitignore it on their behalf, so --gitignore is not the
 	// remedy and the hint must not suggest it.
 	shared := false
-	for _, output := range outputs {
+	// A file needs ignoring because of what it holds, not because of its name: a
+	// merged document that is not an MCP config (a check file) or one that only
+	// references the secret by name passes.
+	secrets := g.newSecretMatcher()
+	for i := range outputs {
+		output := &outputs[i]
 		if output.IsDir {
 			continue
 		}
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
-		if !isMCPConfigOutput(relPath) {
+		if !isMCPConfigOutput(relPath) || !secrets.holdsSecret(output, relPath) {
 			continue
 		}
 		candidates = append(candidates, relPath)
@@ -3524,10 +3529,8 @@ func (g *Generator) secretMCPValues() []string {
 // MCP secret value, whichever preset produced it, so the writer keeps it
 // owner-only.
 func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
-	values := g.secretMCPValues()
-	names := g.secretMCPNames()
-	refValues := g.referencedMCPValues()
-	if len(values) == 0 && len(names) == 0 && len(refValues) == 0 {
+	secrets := g.newSecretMatcher()
+	if secrets.empty() {
 		return
 	}
 	for i := range outputs {
@@ -3535,17 +3538,42 @@ func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 		if o.IsDir {
 			continue
 		}
-		if outputContainsAny(o, values) {
-			o.Sensitive = true
-			continue
-		}
-		// An MCP config file naming a secret key is sensitive whatever the value's
-		// length, so a short secret cannot loosen it.
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
-		if isMCPConfigOutputIn(rel, g.scopeDirs()) && (outputContainsAny(o, names) || outputContainsAny(o, refValues)) {
+		if secrets.holdsSecret(o, rel) {
 			o.Sensitive = true
 		}
 	}
+}
+
+// secretMatcher decides from rendered content whether an output holds a resolved
+// MCP secret.
+type secretMatcher struct {
+	values, names, refValues []string
+	scopeDirs                []string
+}
+
+func (g *Generator) newSecretMatcher() secretMatcher {
+	return secretMatcher{
+		values: g.secretMCPValues(), names: g.secretMCPNames(), refValues: g.referencedMCPValues(),
+		scopeDirs: g.scopeDirs(),
+	}
+}
+
+func (m secretMatcher) empty() bool {
+	return len(m.values) == 0 && len(m.names) == 0 && len(m.refValues) == 0
+}
+
+// holdsSecret reports whether o, the output at project-relative path rel, writes a
+// resolved secret value. An MCP config file naming a secret key is sensitive
+// whatever the value's length, so a short secret cannot loosen it.
+func (m secretMatcher) holdsSecret(o *config.OutputFile, rel string) bool {
+	if m.empty() {
+		return false
+	}
+	if outputContainsAny(o, m.values) {
+		return true
+	}
+	return isMCPConfigOutputIn(rel, m.scopeDirs) && (outputContainsAny(o, m.names) || outputContainsAny(o, m.refValues))
 }
 
 // outputContainsAny reports whether the output's content holds any of the strings.

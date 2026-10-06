@@ -277,7 +277,9 @@ func TestEnsureSecretOutputsIgnored_RefusesWhenUserUnignoredSecretOutput(t *test
 		},
 	})
 
-	err := gen.ensureSecretOutputsIgnored([]config.OutputFile{{Path: filepath.Join(dir, ".mcp.json")}})
+	err := gen.ensureSecretOutputsIgnored([]config.OutputFile{{
+		Path: filepath.Join(dir, ".mcp.json"), Content: `{"env":{"TOKEN":"supersecretvalue"}}`,
+	}})
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not gitignored")
