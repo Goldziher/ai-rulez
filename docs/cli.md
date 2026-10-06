@@ -1269,6 +1269,18 @@ ai-rulez verify --attestation
 ai-rulez verify --attestation --public-key release.pub --format json
 ```
 
+Re-check the approvals recorded in the lock above the `asserted` level (`--approvals`): every signed approval against its
+attestation and the `[[signing.trust]]` entries for approvals, offline, and with `--online` every review-linked approval
+against the forge (the review still exists, still approves, and was made on content whose lock pin is the approved
+digest). Exit `0` every checked approval holds, `1` the check could not run (including a forge that cannot be reached),
+`2` an approval no longer holds (`AR718`). `--format json` follows `schema/verify-approvals.schema.json`. See
+[Approvals](approvals.md#verifying-approvals).
+
+```bash
+ai-rulez verify --approvals
+ai-rulez verify --approvals --online --format json
+```
+
 Verify one producer:
 
 ```bash
@@ -1948,6 +1960,9 @@ ai-rulez approve include:shared --accept AR005  # accept a finding you read (sto
 ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
 ai-rulez approve --prune                        # drop records of removed or changed content
 ai-rulez approve --verify-base origin/main      # CI: approvals added together with the content they approve (AR716)
+ai-rulez approve include:shared --from-github-review 42 --yes   # link the approving reviews of pull request 42
+ai-rulez approve include:shared --sign --key approver.key --yes # signed approval (DSSE); --keyless uses Fulcio and Rekor
+ai-rulez approve --revoke include:shared --deny --reason "exfiltrates ~/.ssh"   # revoke, and deny the digest (AR717)
 ```
 
 | Flag | Description |
@@ -1956,7 +1971,12 @@ ai-rulez approve --verify-base origin/main      # CI: approvals added together w
 | `--diff` | Show files, scan findings and earlier approvals of the named items |
 | `--revoke`, `--prune` | Remove records |
 | `--verify-base <rev>` | Compare the lock with the one at the merge base of `<rev>` and `HEAD` and report every approval added since for content that was added or changed since (`AR716`); exit `2` when there is one; writes nothing |
-| `--reviewer` | Reviewer to record (default `$AI_RULEZ_REVIEWER`, else git `user.email`) |
+| `--from-github-review <pr>` | Record one `review-linked` approval per approving review of the pull request (reviewer `github:<login>`, `ref` the review URL), after checking through the forge API; needs the network and a token |
+| `--sign` | Sign the approval as an in-toto statement (DSSE) with `--key` or `--keyless`; the signer's identity is the reviewer. Takes the signing flags of [`sign`](#ai-rulez-sign-config-file): `--key`, `--key-password-env`, `--keyless`, `--identity-token-env`, `--interactive`, `--fulcio-url`, `--rekor-url`, `--tlog` |
+| `--resolve-teams` | Expand `@org/team` entries of `approvers` and CODEOWNERS from the forge (needs `read:org`), for `--list` and approving |
+| `--deny`, `--reason` | With `--revoke`: add the item's digest to the `[[deny]]` list, with a reason |
+| `--base <rev>` | With `forbid_self_approval`: count commit authors since this revision (default: the branch's upstream) |
+| `--reviewer` | Reviewer to record (default `$AI_RULEZ_REVIEWER`, else git `user.email`); with `--from-github-review` it picks one of the approving reviewers |
 | `--note` | Free-text note, scanned for secrets |
 | `--accept <code>` | Accept an error-level scan finding by code (repeatable) |
 | `--expires`, `--at` | Expiry date (default today + `[governance] max_age`); approval time for reproducible runs (not in the future) |

@@ -39,8 +39,9 @@ signature survives line-ending changes and TOML re-ordering, and a pin edited by
 `repository` and `ref` come from the GitHub Actions variables or the git origin (credentials removed) and only
 identify the project for the rollback state; they are claims, not proof. `--embed-items` adds the pinned item ids and
 digests (`items`) so a reviewer can see what changed between two signed states; it is off by default because ids can be
-sensitive in a private repository. `approvals_digest` is empty until the approval set is part of the subject (see
-[Lock file](lockfile.md#signing-the-lock)).
+sensitive in a private repository. `approvals_digest` is the digest of the `[[approval]]` and `[[deny]]` records, and
+empty when the lock has none (see [Lock file](lockfile.md#signing-the-lock)); the subject covers them, so re-sign after
+the last `approve`.
 
 The bundle is written next to the lock: `.ai-rulez/ai-rulez.lock.sigstore.json` (`[signing] attestation` or
 `sign --output` change it). Commit it.
@@ -113,9 +114,10 @@ key_file = "keys/release.pub"
   is rejected at load time (`AR722`). An identity entry always needs an `issuer`.
 - A key entry trusts a PEM public key (`key_file`), matched by its SHA-256 fingerprint.
 - `subject` scopes an entry to what the signer may vouch for: the `lock` (the default), a plugin `bundle`, a published
-  `skill` or an `sbom`. A release key trusted for the lock does not vouch for a skill. `source` (skill entries only)
+  `skill`, an `sbom` or an `approval` (who may sign an [approval](approvals.md#signed-approvals)). A release key trusted
+  for the lock does not vouch for a skill or an approval. `source` (skill entries only)
   narrows a publisher to one `[[skill_sources]]` or `[[installed_skills]]` name, so a signer trusted for one source
-  cannot vouch for another.
+  cannot vouch for another. The `identity`/`key_file` shorthands and `require` are about the lock only.
 - `valid_from` and `valid_until` bound the **signing time** (the log time) the entry accepts, so an expiry is a reviewed
   event. A date bound is inclusive and UTC.
 - `tlog` defaults to `required` when a certificate identity is trusted and to `off` when only keys are. `off` works with
