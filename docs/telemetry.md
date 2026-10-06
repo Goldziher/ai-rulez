@@ -110,7 +110,7 @@ host the author picked. So:
 
 | Key | Repository config and local overlay | User config / `AI_RULEZ_TELEMETRY_*` |
 | --- | --- | --- |
-| `enabled` | honored (local recording only, into a gitignored file) | honored |
+| `enabled` | honored (local recording only, into `.ai-rulez/local/usage.jsonl`, which the managed `.gitignore` block covers while `gitignore = true`) | honored |
 | `sample` | honored | honored |
 | `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file`, `resource` | **ignored**, reported by `telemetry doctor` and strict finding `AR9K1` | honored |
 
