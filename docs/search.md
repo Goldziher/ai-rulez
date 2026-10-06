@@ -77,7 +77,7 @@ query_timeout_ms = 800      # the query embedding; on timeout the ranking is lex
 batch_size  = 64            # texts per embedding call of `search index`; use 1 for Gemini through literllm
 index_dir   = "local/search"  # under the config dir; any directory outside local/ is meant to be committed
 dtype       = "float32"     # float32 | float16 (half the size)
-log_queries = false         # see Query mining
+log_queries = false         # user scope only (user config file or AI_RULEZ_SEARCH_LOG_QUERIES=1); see Query mining
 ```
 
 ```toml
@@ -282,7 +282,8 @@ early). Failed gates are printed to stderr as `AR9D4`.
 ## Query mining
 
 Real queries are the best test cases, but the [usage log](usage-telemetry.md) holds identifiers only. Mining is a
-separate, opt-in step: with `[search] log_queries = true`, `find_skill` appends each query's text (secret-looking
+separate, opt-in step: with `[search] log_queries = true` in the user config file (or `AI_RULEZ_SEARCH_LOG_QUERIES=1`; a
+repository config cannot turn it on; `search` and the MCP server warn when it tries), `find_skill` appends each query's text (secret-looking
 queries are skipped, text is capped at 512 bytes) and, when the session then calls `load_skill`, the skill it
 loaded, to `<config dir>/local/search-queries.jsonl` (mode 0600, gitignored, never sent anywhere, capped at 8 MiB,
 session ids hashed). `search mine` turns it into cases:

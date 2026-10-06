@@ -343,7 +343,7 @@ working as described above. All tools are annotated read-only.
   "network_disabled"`. A hybrid result also carries `ranking`, and each match `lexical_rank` and
   `vector_rank` (0: not in that list); a skill edited since it was indexed ranks lexically only and has
   `stale_vector: true`. A server with the default lexical mode returns exactly the fields listed above.
-  `search_skills` stays lexical: it is the listing and filter tool. With `[search] log_queries = true` the
+  `search_skills` stays lexical: it is the listing and filter tool. With `[search] log_queries = true` in the user config (or `AI_RULEZ_SEARCH_LOG_QUERIES=1`) the
   server also records each `find_skill` query and the skill the session loads next (see
   [Skill search](search.md#query-mining)).
 - **Roles.** `role` is resolved against the project's `[[roles]]` (`mcp.RolesFromConfig`): a skill is in scope

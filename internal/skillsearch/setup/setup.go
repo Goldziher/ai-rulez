@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -21,6 +22,10 @@ import (
 
 // ModeEnv overrides [search] mode.
 const ModeEnv = "AI_RULEZ_SEARCH_MODE"
+
+// LogQueriesEnv turns the query log on (1 or true) or off for this process. With the user config
+// file's [search] log_queries it is the only way to enable the log: a repository cannot.
+const LogQueriesEnv = "AI_RULEZ_SEARCH_LOG_QUERIES"
 
 // Options tune Resolve.
 type Options struct {
@@ -49,6 +54,9 @@ type Resolved struct {
 	// Notes are things the user should know: ignored keys.
 	Notes  []string
 	getenv func(string) string
+
+	logOnce  sync.Once
+	queryLog *skillsearch.QueryLog
 }
 
 // Resolve layers the repository [search] table, the user config file and the
@@ -70,6 +78,14 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 		return nil, err
 	}
 	merged := merge(repo, user)
+	// The query log records what users ask, so only user scope may start it.
+	if repo != nil && repo.LogQueries && !(user != nil && user.LogQueries) {
+		r.Notes = append(r.Notes, "search.log_queries in the repository config is ignored: a repository cannot start recording queries; set it in the user config file or "+LogQueriesEnv+"=1")
+	}
+	merged.LogQueries = user != nil && user.LogQueries
+	if v := strings.ToLower(strings.TrimSpace(getenv(LogQueriesEnv))); v != "" {
+		merged.LogQueries = v == "1" || v == "true"
+	}
 	if problems := merged.Validate(); len(problems) > 0 {
 		return nil, oops.Code(skillsearch.CodeConfigInvalid).Hint("Fix the [search] table; 'ai-rulez validate' lists every problem").
 			Errorf("%s: %s", skillsearch.CodeConfigInvalid, strings.Join(problems, "; "))
@@ -175,7 +191,6 @@ func merge(repo, user *skillsearch.Config) skillsearch.Config {
 	if user.DType != "" {
 		out.DType = user.DType
 	}
-	out.LogQueries = out.LogQueries || user.LogQueries
 	if user.Embeddings != nil {
 		e := skillsearch.EmbeddingsConfig{}
 		if out.Embeddings != nil {
@@ -200,12 +215,16 @@ func (r *Resolved) IndexPath() (string, error) {
 	return r.Search.IndexPath(r.ConfigDir)
 }
 
-// QueryLog returns the query log when [search] log_queries is on, else nil.
+// QueryLog returns the query log when log_queries is on in user scope, else nil. The same
+// log is returned on every call, so its full-log warning is given once.
 func (r *Resolved) QueryLog(scan skillsearch.SecretScanner) *skillsearch.QueryLog {
 	if !r.Search.LogQueries || r.ConfigDir == "" {
 		return nil
 	}
-	return &skillsearch.QueryLog{Path: skillsearch.LogPath(r.ConfigDir), Scanner: scan}
+	r.logOnce.Do(func() {
+		r.queryLog = &skillsearch.QueryLog{Path: skillsearch.LogPath(r.ConfigDir), Scanner: scan}
+	})
+	return r.queryLog
 }
 
 // Provider describes where embeddings come from, for `search status` and --dry-run.
