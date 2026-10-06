@@ -1,0 +1,6 @@
+---
+description: Go style
+globs: **/*.go
+alwaysApply: false
+---
+Wrap errors with %w.

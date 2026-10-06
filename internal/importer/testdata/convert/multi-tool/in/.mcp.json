@@ -1,0 +1,1 @@
+{"mcpServers": {"docs": {"type": "http", "url": "https://docs.example.com/mcp", "headers": {"Authorization": "Bearer literal-secret"}}}}
