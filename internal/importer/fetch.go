@@ -124,6 +124,12 @@ func (p *Plan) resolveRemotes(ctx context.Context, opt Options) error {
 		f = gitFetcher{}
 	}
 	for _, rm := range p.Remotes {
+		if !strings.HasPrefix(strings.ToLower(rm.URL), "https://") {
+			source, field := splitOrigin(rm.Origin)
+			p.add(newFinding(StatusNeedsAction, source, field, "",
+				rm.describe()+" is not fetched: convert fetches https sources only; add the source by hand"))
+			continue
+		}
 		fetched, err := f.Fetch(ctx, rm)
 		if err != nil {
 			return oops.With("source", rm.describe()).Hint("Fix the source in the input, or rerun without --fetch to import what is on disk").
