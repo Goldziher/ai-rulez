@@ -242,3 +242,20 @@ input, select, button {
 .graph-svg .arrow.edge-cycle {
   fill: var(--error);
 }
+
+.md pre, .md code {
+  background: var(--code-bg);
+}
+.md pre {
+  padding: 0.5rem;
+  overflow-x: auto;
+}
+.md blockquote {
+  margin-left: 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+.md .md-url {
+  overflow-wrap: anywhere;
+}

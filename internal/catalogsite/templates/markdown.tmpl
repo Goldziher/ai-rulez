@@ -1,0 +1,13 @@
+{{define "mdnodes"}}{{range .}}{{template "mdnode" .}}{{end}}{{end}}
+{{define "mdnode"}}{{if eq .Kind "p"}}<p dir="auto">{{template "mdnodes" .Children}}</p>
+{{else if eq .Kind "h"}}{{if eq .Level 3}}<h3 dir="auto">{{template "mdnodes" .Children}}</h3>
+{{else if eq .Level 4}}<h4 dir="auto">{{template "mdnodes" .Children}}</h4>
+{{else if eq .Level 5}}<h5 dir="auto">{{template "mdnodes" .Children}}</h5>
+{{else}}<h6 dir="auto">{{template "mdnodes" .Children}}</h6>
+{{end}}{{else if eq .Kind "quote"}}<blockquote dir="auto">{{template "mdnodes" .Children}}</blockquote>
+{{else if eq .Kind "list"}}{{if .Ordered}}<ol start="{{.Start}}">{{template "mdnodes" .Children}}</ol>
+{{else}}<ul>{{template "mdnodes" .Children}}</ul>
+{{end}}{{else if eq .Kind "item"}}<li dir="auto">{{template "mdnodes" .Children}}</li>
+{{else if eq .Kind "pre"}}<pre dir="auto">{{s .Text}}</pre>
+{{else if eq .Kind "hr"}}<hr>
+{{else if eq .Kind "em"}}<em>{{template "mdnodes" .Children}}</em>{{else if eq .Kind "strong"}}<strong>{{template "mdnodes" .Children}}</strong>{{else if eq .Kind "code"}}<code>{{s .Text}}</code>{{else if eq .Kind "br"}}<br>{{else if eq .Kind "target"}}<code class="md-url">{{s .Text}}</code>{{else}}{{s .Text}}{{end}}{{end}}

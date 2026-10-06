@@ -48,6 +48,9 @@ type Options struct {
 	// PageSize is how many overview rows one page shows before the rest moves to
 	// the next page; DefaultPageSize when not positive.
 	PageSize int
+	// Markdown renders item excerpts as sanitized Markdown (see renderMarkdown)
+	// instead of plain text.
+	Markdown bool
 }
 
 // DefaultPageSize is the overview page size when Options.PageSize is not set.
@@ -106,6 +109,9 @@ type itemPage struct {
 	Excerpt                                                string
 	Eval                                                   []kv
 	Usage                                                  []kv
+	// Rendered is the sanitized Markdown tree of the excerpt when Options.Markdown is set.
+	Rendered []*mdNode
+	Markdown bool
 }
 
 type rolePage struct {
@@ -385,6 +391,9 @@ func (b *builder) renderItems() error {
 		ip.RoleDelivery = sortedKV(it.RoleDelivery)
 		if it.Excerpt != nil {
 			ip.HasExcerpt, ip.ExcerptTruncated, ip.Excerpt = true, it.Excerpt.Truncated, it.Excerpt.Text
+			if b.opts.Markdown {
+				ip.Markdown, ip.Rendered = true, renderMarkdown(it.Excerpt.Text)
+			}
 		}
 		ip.Eval, ip.Usage = evalRows(it.Eval), usageRows(it.Usage)
 		p := b.base(it.ID, root, "items")
