@@ -128,7 +128,16 @@ func (pc *publishContext) multiSpecs(files []generator.PluginFile) ([]*pluginSpe
 		return nil, err
 	}
 	var specs []*pluginSpec
+	seen := map[string]bool{}
 	for _, ip := range plugins {
+		// Each plugin becomes a directory and a release of its own, so two with one
+		// name (case-insensitively, for case-insensitive file systems) would overwrite each other.
+		key := strings.ToLower(ip.Name)
+		if seen[key] {
+			return nil, publish.Errorf(publish.CodeConfig, publish.ExitGate, "give every plugin of the marketplace a distinct name",
+				"two marketplace plugins are named %q; their release files would overwrite each other", ip.Name)
+		}
+		seen[key] = true
 		rel := path.Clean(strings.TrimPrefix(ip.Source, "./"))
 		dir := path.Join(indexRoot, rel)
 		spec := &pluginSpec{name: ip.Name, description: ip.Description, version: ip.Version, category: ip.Category, keywords: ip.Keywords}
