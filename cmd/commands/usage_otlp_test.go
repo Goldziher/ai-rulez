@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -135,6 +136,27 @@ func TestUsageExportOTLP_DryRunSendsAndMovesNothing(t *testing.T) {
 	assert.Empty(t, collector.received())
 }
 
+func TestUsageExportOTLP_WithEvalsSendsResultsOnceAsEvalEvents(t *testing.T) {
+	collector := &fakeCollector{}
+	env, endpoint := consentedProject(t, collector)
+	writeStore(t, env.root) // signs with its own user key and moves XDG_CONFIG_HOME: consent comes after
+	telEnableEndpoint = endpoint
+	require.NoError(t, runTelemetryEnable(&bytes.Buffer{}))
+	usageExportTo, usageExportWithEvals = "otlp", true
+	var out bytes.Buffer
+
+	require.NoError(t, runUsageExportOTLP(&out))
+
+	assert.Equal(t, []string{"alpha", "idle"}, collector.received())
+	assert.Equal(t, 2, collector.evals)
+	assert.Contains(t, out.String(), "2 eval results")
+
+	out.Reset()
+	require.NoError(t, runUsageExportOTLP(&out))
+	assert.Equal(t, 2, collector.evals, "the same results are not exported twice")
+	assert.Contains(t, out.String(), "0 eval results")
+}
+
 func TestUsageExportOTLP_ARejectedBatchIsAnErrorAndCounted(t *testing.T) {
 	collector := &fakeCollector{status: http.StatusBadRequest}
 	env, endpoint := consentedProject(t, collector)
@@ -153,6 +175,24 @@ func TestUsageExportOTLP_ARejectedBatchIsAnErrorAndCounted(t *testing.T) {
 	require.NoError(t, telemetryStatusCmd.RunE(telemetryStatusCmd, nil))
 	assert.Contains(t, out.String(), "rejected 1")
 	assert.Contains(t, out.String(), "failed flushes 1")
+}
+
+func TestUsageExportFile_WithEvalsAddsEvalResultRecords(t *testing.T) {
+	resetExportFlags(t)
+	env := setupTelemetry(t, "", "")
+	t.Chdir(env.root)
+	recordSkillLoads(t, env, "deploy")
+	writeStore(t, env.root)
+	dest := t.TempDir() + "/usage.ndjson"
+	usageExportTo, usageExportWithEvals = "file", true
+	var out bytes.Buffer
+
+	require.NoError(t, runUsageExport(&out, []string{dest}))
+
+	assert.Contains(t, out.String(), "wrote 3 events")
+	data := readFileString(t, dest)
+	assert.Equal(t, 2, strings.Count(data, "ai_rulez.eval.result"))
+	assert.Contains(t, data, `"doubleValue":0.75`)
 }
 
 func readFileString(t *testing.T, path string) string {

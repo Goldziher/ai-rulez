@@ -21,6 +21,11 @@ const SchemaVersion = 1
 // EventItem is the event name of every item event in the shared log.
 const EventItem = usage.EventItem
 
+// EventEvalResult is the event name of an eval result: the recorded scores of one
+// skill at one digest. It is built from the eval store at export time and never
+// written to the usage log.
+const EventEvalResult = "eval_result"
+
 // Item kinds.
 const (
 	KindSkill   = "skill"
@@ -82,19 +87,31 @@ type Event struct {
 	// Digest is the content digest when known: the lock's canonical "sha256:..."
 	// digest for a skill that has one, else "blake3:..." (the usage index hash or a
 	// hash of the instruction file a hook saw).
-	Digest  string `json:"digest,omitempty"`
-	Source  string `json:"source"`
-	Harness string `json:"harness,omitempty"`
-	Role    string `json:"role,omitempty"`
-	Served  bool   `json:"served,omitempty"`
+	Digest string `json:"digest,omitempty"`
+	// DigestScheme names how a sha256 Digest was computed (usage.DigestSchemeSkill,
+	// the canonical lock digest an eval joins on, or usage.DigestSchemeServed), so a
+	// reader of an OTLP export can tell the two apart. Empty for a blake3 digest,
+	// which names itself.
+	DigestScheme string `json:"digest_scheme,omitempty"`
+	Source       string `json:"source"`
+	Harness      string `json:"harness,omitempty"`
+	Role         string `json:"role,omitempty"`
+	Served       bool   `json:"served,omitempty"`
 	// Session is a salted hash of the harness session id, never the raw id.
 	Session    string `json:"session,omitempty"`
-	Outcome    string `json:"outcome"`
+	Outcome    string `json:"outcome,omitempty"`
 	LoadReason string `json:"load_reason,omitempty"`
 	// MemoryType is Claude Code's memory_type: User, Project, Local or Managed.
 	MemoryType string `json:"memory_type,omitempty"`
 	// DurationMS is set on agent completion.
 	DurationMS int64 `json:"duration_ms,omitempty"`
+
+	// The scores of an eval_result event (0..1; the ablation delta -1..1). They are
+	// numbers the eval runner recorded, never prompts or outputs.
+	PassRate         *float64 `json:"pass_rate,omitempty"`
+	TriggerPrecision *float64 `json:"trigger_precision,omitempty"`
+	TriggerRecall    *float64 `json:"trigger_recall,omitempty"`
+	AblationDelta    *float64 `json:"ablation_delta,omitempty"`
 }
 
 var (
@@ -114,7 +131,11 @@ var memoryTypes = map[string]bool{"User": true, "Project": true, "Local": true, 
 // dropped, never exported half-sanitized. It does not set the time or event id:
 // the Recorder does, in one place.
 func (e *Event) Normalize() error {
+	if e.Name == EventEvalResult {
+		return e.normalizeEval()
+	}
 	e.Version, e.Name = SchemaVersion, EventItem
+	e.PassRate, e.TriggerPrecision, e.TriggerRecall, e.AblationDelta = nil, nil, nil, nil // scores belong to eval_result only
 	if !isKind(e.Kind) {
 		return oops.With("kind", e.Kind).Errorf("telemetry: unknown item kind")
 	}
@@ -138,6 +159,9 @@ func (e *Event) Normalize() error {
 	}
 	if !matches(digestPattern, e.Digest) {
 		e.Digest = ""
+	}
+	if !validDigestScheme(e.Digest, e.DigestScheme) {
+		e.DigestScheme = ""
 	}
 	if !matches(harnessPattern, e.Harness) {
 		e.Harness = ""
@@ -164,6 +188,58 @@ func (e *Event) Normalize() error {
 	}
 	return nil
 }
+
+// validDigestScheme accepts a scheme only beside a sha256 digest, and only the two
+// the usage log defines.
+func validDigestScheme(digest, scheme string) bool {
+	if !strings.HasPrefix(digest, "sha256:") {
+		return false
+	}
+	return scheme == usage.DigestSchemeSkill || scheme == usage.DigestSchemeServed
+}
+
+var skillDigestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+
+// normalizeEval validates an eval_result event. Its identity is a skill id and a
+// score; everything an item event would carry about a load (path, session, role,
+// outcome, reason) is cleared, so a result cannot smuggle one out.
+func (e *Event) normalizeEval() error {
+	e.Version = SchemaVersion
+	if e.Kind != KindSkill {
+		return oops.With("kind", e.Kind).Errorf("telemetry: an eval result is about a skill")
+	}
+	if !idPattern.MatchString(e.ID) || hasDotDot(e.ID) {
+		return oops.Errorf("telemetry: invalid item id")
+	}
+	if e.PassRate == nil || !inRange(*e.PassRate, 0, 1) {
+		return oops.Errorf("telemetry: an eval result needs a pass rate between 0 and 1")
+	}
+	for _, score := range []**float64{&e.TriggerPrecision, &e.TriggerRecall} {
+		if *score != nil && !inRange(**score, 0, 1) {
+			*score = nil
+		}
+	}
+	if e.AblationDelta != nil && !inRange(*e.AblationDelta, -1, 1) {
+		e.AblationDelta = nil
+	}
+	e.Source = SourceCLI
+	e.Outcome, e.Path, e.Session, e.Role, e.LoadReason, e.MemoryType = "", "", "", "", "", ""
+	e.Served, e.DurationMS = false, 0
+	if !skillDigestPattern.MatchString(e.Digest) || e.DigestScheme != usage.DigestSchemeSkill {
+		e.Digest, e.DigestScheme = "", ""
+	}
+	if !matches(harnessPattern, e.Harness) {
+		e.Harness = ""
+	}
+	if e.Time != "" {
+		if t, err := time.Parse(time.RFC3339, e.Time); err != nil || !nanosecondsRepresentable(t) {
+			e.Time = ""
+		}
+	}
+	return nil
+}
+
+func inRange(v, lo, hi float64) bool { return v >= lo && v <= hi } // false for NaN
 
 func isKind(kind string) bool {
 	for _, k := range Kinds {
@@ -230,9 +306,9 @@ func newEventID(salt string, e *Event) string {
 // exporter handles skills. The digest is the lock's canonical sha256 digest when
 // the entry carries one (served loads), else the usage index's blake3 hash.
 func FromUsageEntry(entry *usage.Entry) Event {
-	digest := entry.Hash
+	digest, scheme := entry.Hash, ""
 	if entry.Digest != "" {
-		digest = entry.Digest
+		digest, scheme = entry.Digest, entry.DigestScheme
 	}
 	outcome := entry.Outcome
 	if outcome == "" {
@@ -243,7 +319,7 @@ func FromUsageEntry(entry *usage.Entry) Event {
 		eventID = "" // the recorder assigns one
 	}
 	return Event{
-		Time: entry.Time, EventID: eventID, Kind: KindSkill, ID: entry.ID, Digest: digest,
+		Time: entry.Time, EventID: eventID, Kind: KindSkill, ID: entry.ID, Digest: digest, DigestScheme: scheme,
 		Source: SourceHook, Harness: entry.Harness, Role: entry.Role, Served: entry.Served,
 		Session: entry.Session, Outcome: outcome, LoadReason: entry.Invocation,
 	}
@@ -266,6 +342,9 @@ func ToUsageEntry(e *Event) usage.Entry {
 		// A load through the skills server reports the served-skill digest; the
 		// canonical digest reaches the log through `usage record` and the index.
 		entry.Digest, entry.DigestScheme = e.Digest, usage.DigestSchemeServed
+		if e.DigestScheme != "" {
+			entry.DigestScheme = e.DigestScheme
+		}
 	} else {
 		entry.Hash = e.Digest // the index's blake3 hash
 	}

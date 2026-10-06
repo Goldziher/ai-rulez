@@ -34,6 +34,8 @@ var (
 	telTimeout    time.Duration
 	telLog        string
 	telLimit      int
+	// telWithEvals adds the recorded eval results to a preview.
+	telWithEvals bool
 )
 
 // roleEnv names the environment variable that supplies the role when --role is
@@ -199,7 +201,8 @@ and which are withheld. Nothing is sent and nothing is written; no network conne
 and this works whether or not export is enabled or consented to.
 
 The events come from the outbox when export is active, otherwise from the usage log (--log FILE
-picks another log). Sampling applies to a log, as it would when recording. A request shows only the
+picks another log). Sampling applies to a log, as it would when recording. --with-evals adds the
+eval_result events and gauges that "usage export --with-evals" would send. A request shows only the
 scheme, host and path of the endpoint, never a header or credential. --limit N previews the first N
 events (default 5, 0 for all).`,
 	Args: cobra.NoArgs,
@@ -225,6 +228,13 @@ func runTelemetryPreview(out io.Writer) error {
 	source, err := previewEvents(&settings, root, name)
 	if err != nil {
 		return err
+	}
+	if telWithEvals {
+		evalEvents, evalErr := loadEvalEvents("")
+		if evalErr != nil {
+			return evalErr
+		}
+		source.events = append(source.events[:len(source.events):len(source.events)], evalEvents...)
 	}
 	w := reportWriter{out}
 	total := len(source.events)
@@ -408,5 +418,6 @@ func init() {
 	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
 	telemetryPreviewCmd.Flags().StringVar(&telLog, "log", "", "Usage log to preview instead of the outbox (default <config dir>/local/usage.jsonl)")
 	telemetryPreviewCmd.Flags().IntVar(&telLimit, "limit", 5, "Preview the first N events (0 for all)")
+	telemetryPreviewCmd.Flags().BoolVar(&telWithEvals, "with-evals", false, "Also preview the eval results that usage export --with-evals would send")
 	addJSONFormat(telemetryDoctorCmd.Flags(), &telJSON, "j")
 }

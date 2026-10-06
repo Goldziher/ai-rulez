@@ -3,19 +3,56 @@ package commands
 import (
 	"context"
 	"io"
+	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
 var (
+	usageExportWithEvals  bool
 	usageExportAll        bool
 	usageExportMaxBatches int
+	usageExportEvalsFile  string
 )
 
-// runUsageExportOTLP pushes the usage log past the export cursor to the consented collector. It never
+// loadEvalEvents turns the project's verified eval results into eval_result
+// events. A default results file that does not exist is no events; a named one
+// must exist. Unsigned or foreign-signed records and activation-only records are
+// not results and are never exported.
+func loadEvalEvents(path string) ([]telemetry.Event, error) {
+	explicit := path != ""
+	if !explicit {
+		abs, err := filepath.Abs(configDirName())
+		if err != nil {
+			return nil, oops.Wrapf(err, "resolve config directory")
+		}
+		path = evals.DefaultStorePath(abs)
+	}
+	store, err := evals.LoadStoreKeyed(path, evals.UserKey())
+	if err != nil {
+		return nil, err
+	}
+	results := make([]telemetry.EvalResult, 0, len(store.Skills))
+	for i := range store.Skills {
+		r := &store.Skills[i]
+		if !r.HasRun() || !r.Verified() {
+			continue
+		}
+		results = append(results, telemetry.EvalResult{
+			SkillID: r.ID, LockDigest: r.LockDigest, Harness: r.Harness, Date: r.Date, PassRate: r.Score.PassRate,
+			TriggerPrecision: r.Score.TriggerPrecision, TriggerRecall: r.Score.TriggerRecall, AblationDelta: r.Score.AblationDelta,
+		})
+	}
+	events, _ := telemetry.EvalEvents(results)
+	return events, nil
+}
+
+// runUsageExportOTLP pushes the usage log past the export cursor (and with
+// --with-evals the recorded eval results) to the consented collector. It never
 // runs without consent: the same gates as the background flush apply. A delivery
 // failure is an error here (exit 1) so CI notices; the background flush stays silent.
 func runUsageExportOTLP(out io.Writer) error {
@@ -35,6 +72,16 @@ func runUsageExportOTLP(out io.Writer) error {
 	p := telemetry.Build(settings, telemetry.BuildOptions{Root: root, ConfigDirName: name, Version: Version, LogPath: logPath, Spawn: telemetrySpawn})
 	w := reportWriter{out}
 
+	var evalEvents []telemetry.Event
+	if usageExportWithEvals {
+		var err error
+		if evalEvents, err = loadEvalEvents(usageExportEvalsFile); err != nil {
+			return err
+		}
+		if evalEvents, err = p.Spool.Unsent(evalEvents); err != nil {
+			return err
+		}
+	}
 	if usageExportDryRun {
 		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: settings.Sample, All: usageExportAll, DryRun: true})
 		if err != nil {
@@ -44,12 +91,15 @@ func runUsageExportOTLP(out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		w.printf("would queue %d events from the usage log (%d already queued or delivered)%s; %d events already wait in the outbox (nothing sent)\n",
-			res.Queued, res.Skipped, cursorNote(res), len(pending))
+		w.printf("would queue %d events from the usage log (%d already queued or delivered)%s, %d eval results; %d events already wait in the outbox (nothing sent)\n",
+			res.Queued, res.Skipped, cursorNote(res), len(evalEvents), len(pending))
 		return nil
 	}
 
 	var queued, skipped, batches, sent int
+	if err := p.Spool.AppendMany(evalEvents); err != nil {
+		return err
+	}
 	for round := 0; round < usageExportMaxBatches; round++ {
 		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: settings.Sample, All: usageExportAll && round == 0})
 		if err != nil {
@@ -76,8 +126,8 @@ func runUsageExportOTLP(out io.Writer) error {
 			break
 		}
 	}
-	w.printf("queued %d events from the usage log (%d already queued or delivered); delivered %d in %d batches\n",
-		queued, skipped, sent, batches)
+	w.printf("queued %d events from the usage log and %d eval results (%d already queued or delivered); delivered %d in %d batches\n",
+		queued, len(evalEvents), skipped, sent, batches)
 	return nil
 }
 
@@ -94,6 +144,8 @@ func cursorNote(res telemetry.CatchUpResult) string {
 }
 
 func addUsageExportOTLPFlags(c *cobra.Command) {
+	c.Flags().BoolVar(&usageExportWithEvals, "with-evals", false, "Also export the recorded eval results (eval_result events and gauges); needs verified results")
+	c.Flags().StringVar(&usageExportEvalsFile, "evals", "", "Eval results file for --with-evals (default <config dir>/eval-results.json)")
 	c.Flags().BoolVar(&usageExportAll, "all", false, "With --to otlp, start from the beginning of the usage log instead of the export cursor")
 	c.Flags().IntVar(&usageExportMaxBatches, "max-batches", 10, "With --to otlp, stop after this many catch-up rounds of up to 2000 events")
 }

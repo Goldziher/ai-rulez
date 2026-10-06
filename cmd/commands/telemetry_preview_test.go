@@ -17,8 +17,8 @@ import (
 
 func resetPreviewFlags(t *testing.T) {
 	t.Helper()
-	telLog, telLimit = "", 5
-	t.Cleanup(func() { telLog, telLimit = "", 5 })
+	telLog, telLimit, telWithEvals = "", 5, false
+	t.Cleanup(func() { telLog, telLimit, telWithEvals = "", 5, false })
 }
 
 func recordSkillLoads(t *testing.T, env telemetryEnv, skills ...string) {
@@ -121,4 +121,22 @@ func TestUsageRecord_LogLineAndOutboxShareTheEventID(t *testing.T) {
 	require.Len(t, pending, 1)
 	assert.Contains(t, string(data), `"event_id":"`+pending[0].EventID+`"`)
 	assert.Equal(t, pending[0].EventID, read.Events[0].EventID)
+}
+
+func TestTelemetryPreview_WithEvalsShowsResultsAndGauges(t *testing.T) {
+	resetPreviewFlags(t)
+	env := setupTelemetry(t, "", "")
+	t.Chdir(env.root)
+	recordSkillLoads(t, env, "deploy")
+	writeStore(t, env.root)
+	telWithEvals, telLimit = true, 0
+	var out bytes.Buffer
+
+	require.NoError(t, runTelemetryPreview(&out))
+
+	text := out.String()
+	assert.Contains(t, text, "ai_rulez.eval.result")
+	assert.Contains(t, text, "ai_rulez.skill.eval.pass_rate")
+	assert.Contains(t, text, "ai_rulez.eval.pass_rate")
+	assert.Contains(t, text, "Nothing was sent.")
 }
