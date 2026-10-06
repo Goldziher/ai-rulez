@@ -104,7 +104,9 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 		if len(c.scoped) > maxArgFiles || total > maxArgBytes {
 			return evalOut{}, execErrorf("%d changed files are too many to pass as arguments: use pass_files = \"stdin0\"", len(c.scoped))
 		}
-		argv = append(argv, c.scoped...)
+		for _, f := range c.scoped {
+			argv = append(argv, argPath(f))
+		}
 	case passFilesStdin0:
 		stdin = []byte(strings.Join(c.scoped, "\x00"))
 		if len(c.scoped) > 0 {
@@ -149,6 +151,16 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 	}
 	f := Finding{Message: fmt.Sprintf("`%s` exited %d, expected %d", argv[0], res.ExitCode, want), Match: outputExcerpt(res)}
 	return evalOut{findings: []Finding{f}}, nil
+}
+
+// argPath makes a repo-relative path safe as a command-line argument: a name that
+// starts with "-" would otherwise be read as an option by the program (a file
+// named --require=... in a pull request), so it gets a "./" prefix.
+func argPath(f string) string {
+	if strings.HasPrefix(f, "-") {
+		return "./" + f
+	}
+	return f
 }
 
 func errText(err error) string {

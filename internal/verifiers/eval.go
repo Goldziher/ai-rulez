@@ -90,29 +90,47 @@ func (c *evalCtx) eval(ctx context.Context, r *Require) (evalOut, error) {
 	return evalOut{}, oops.Errorf("empty predicate")
 }
 
-// evalAll holds when every member does. The llm member is evaluated last and
-// only when the deterministic members hold, so a deterministic failure always
-// wins and no model is asked about a change that already fails.
+// evalAll holds when every member does. A member that contains an llm
+// predicate is evaluated last and only when the deterministic members hold, so
+// a deterministic failure always wins and no model is asked about a change that
+// already fails. A member that could not be evaluated (a refused command) does
+// not discard the findings of its siblings: they are returned as the failure
+// and the refusal is noted; only when nothing failed is the refusal reported.
 func (c *evalCtx) evalAll(ctx context.Context, kids []Require) (evalOut, error) {
 	out := evalOut{pass: true}
 	var model []int
+	var unevaluated error
 	for i := range kids {
-		if kids[i].LLM != nil {
+		if usesLLM(&kids[i]) {
 			model = append(model, i)
 			continue
 		}
 		res, err := c.eval(ctx, &kids[i])
 		if err != nil {
-			return evalOut{}, err
+			if ctx.Err() != nil {
+				return evalOut{}, err
+			}
+			if unevaluated == nil {
+				unevaluated = err
+			}
+			continue
 		}
 		if !res.pass {
 			out.pass = false
 			out.findings = append(out.findings, res.findings...)
 		}
 	}
-	if len(model) > 0 && !out.pass {
-		c.note("the llm checklist was not evaluated: a deterministic predicate already failed")
+	if !out.pass {
+		if unevaluated != nil {
+			c.note("a member could not be evaluated: %s", unevaluated.Error())
+		}
+		if len(model) > 0 {
+			c.note("the llm checklist was not evaluated: a deterministic predicate already failed")
+		}
 		return out, nil
+	}
+	if unevaluated != nil {
+		return evalOut{}, unevaluated
 	}
 	for _, i := range model {
 		res, err := c.eval(ctx, &kids[i])
