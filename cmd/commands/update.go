@@ -396,15 +396,20 @@ const maxScanFindingsListed = 20
 // approvals use) over the tree a pin is about to point to. Error findings refuse
 // the pin unless --accept-findings.
 func scanNewTree(cfg *config.Config, m *moveTo, commit string) *scanSummary {
+	return scanTreeDir(cfg, m.row.Name, m.src.treeDir(commit), updateAcceptFindings)
+}
+
+// scanTreeDir scans the cached tree in dir ("" = not cached, not scanned).
+// Error findings refuse the pin unless accept is set.
+func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary {
 	sum := &scanSummary{}
-	dir := m.src.treeDir(commit)
 	if dir == "" {
 		sum.Note = "the new tree is not in the local cache: it was not scanned"
 		return sum
 	}
 	files, note := walkFiles(dir)
 	sum.Note = note
-	for _, f := range scanApproved(cfg, m.row.Name, files) {
+	for _, f := range scanApproved(cfg, name, files) {
 		switch f.Severity {
 		case lint.SeverityError:
 			sum.Errors++
@@ -416,7 +421,7 @@ func scanNewTree(cfg *config.Config, m *moveTo, commit string) *scanSummary {
 		}
 	}
 	if sum.Errors > 0 {
-		sum.Refused, sum.Accepted = !updateAcceptFindings, updateAcceptFindings
+		sum.Refused, sum.Accepted = !accept, accept
 	}
 	return sum
 }

@@ -2001,6 +2001,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--fail-on-outdated` | With `--outdated`: exit 2 when any source has an allowed update |
 | `--verify-tags` | With `--check`: ask the remotes whether a pinned tag moved (`AR732`, exit 2) or was deleted (`AR735`, warning); needs the network. Also `[lock] verify_tags = true`. See [Checking pinned tags online](lockfile.md#checking-pinned-tags-online) |
 | `--offline` | With `--outdated`: refuses to run (it needs the network); `--check` is the offline verification |
+| `--accept-findings` | Pin a source although the security scan (AR001-AR009) of its new tree has error findings (otherwise refused, exit 2, nothing written) |
 | `--content-only` | Re-pin authored content and outputs only: no network, remote pins kept (served digests of local skills are recomputed when that works offline) |
 | `--format text\|json` | Output format of `--check`, `--diff`, `--outdated` and `--subject`; any other mode rejects it. With `--check` the JSON goes to stdout and the exit code still gates |
 | `--output <file>` | With `--subject`: write the JSON statement to this file (not with `--recursive`) |
