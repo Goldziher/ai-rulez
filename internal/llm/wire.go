@@ -2,6 +2,7 @@ package llm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -99,13 +100,18 @@ func encodeEmbed(model string, req EmbedRequest) ([]byte, error) {
 	return json.Marshal(wireEmbedRequest{Model: model, Input: req.Input})
 }
 
+// errEmbedCount marks a reply with the wrong number of vectors.
+var errEmbedCount = errors.New("embedding count mismatch")
+
 func decodeEmbed(body []byte, pricing Pricing, fallbackModel string, want int) (EmbedResponse, error) {
 	var w wireEmbedResponse
 	if err := json.Unmarshal(body, &w); err != nil {
 		return EmbedResponse{}, &Error{Kind: KindProvider, Message: "response is not valid embeddings JSON", Cause: err, permanent: true}
 	}
 	if len(w.Data) != want {
-		return EmbedResponse{}, permanentError("got %d embeddings for %d inputs", len(w.Data), want)
+		e := permanentError("got %d embeddings for %d inputs", len(w.Data), want)
+		e.Cause = errEmbedCount
+		return EmbedResponse{}, e
 	}
 	vecs := make([][]float32, want)
 	for _, d := range w.Data {
