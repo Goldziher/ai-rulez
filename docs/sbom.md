@@ -9,8 +9,11 @@ ai-rulez sbom --format cyclonedx > ai-bom.cdx.json
 ai-rulez sbom -o ai-bom.cdx.json
 ```
 
-Flags: `--format cyclonedx` (the only format), `-o`/`--output file`, `-n`/`--config-dir name`. Nothing is rendered and
-nothing is written except `--output`. The machine-local overlay (`config.local.*`, `local/`) is never included, so
+Flags: `--format cyclonedx` (the only format), `-o`/`--output file`, `-n`/`--config-dir name`, `--online`. Nothing is
+rendered and nothing is written except `--output`. `sbom` **does not use the network by default**: remote includes and
+skill sources are read from `ai-rulez.lock` and the local cache (run `ai-rulez generate` or `ai-rulez lock` once to fill
+it), and one that is neither pinned nor cached is warned about and listed without content. `--online` lets it contact
+the remotes (`git ls-remote`) the way `generate` does, which is only needed to resolve a moving ref. The machine-local overlay (`config.local.*`, `local/`) is never included, so
 the document is the same on every checkout.
 
 ## What it lists
@@ -31,8 +34,9 @@ matches the sources.
 ### Package URLs
 
 Remote sources: `pkg:github/<owner>/<repo>@<commit or ref>#<path>` (also `gitlab`, `bitbucket`); any other host is
-`pkg:generic/<name>@<version>?vcs_url=git+https://host/path`. A local path or `file://` source gets no purl and its
-path is not emitted.
+`pkg:generic/<name>@<version>?vcs_url=git+https://host/path`. A local path or `file://` source gets no purl and no
+location (`ai-rulez:source-location` is `local`). The in-repository `path` of a source is emitted as `ai-rulez:path`
+unless it is absolute or contains `..`, in which case it is left out.
 
 MCP servers are guessed from the launcher, and marked `ai-rulez:purl-source = heuristic`:
 
