@@ -238,8 +238,14 @@ func LoadBaseline(path string) (*Result, error) {
 }
 
 // CompareBaseline records which cases went from hit to miss and back. Cases
-// present in only one of the two runs are ignored: they are not comparable.
-func (r *Result) CompareBaseline(base *Result) {
+// present in only one of the two runs are ignored: they are not comparable. It
+// fails when the two runs used different cut-offs: a hit at k=10 is not a hit at
+// k=3, so every flip would be an artifact of the flag.
+func (r *Result) CompareBaseline(base *Result) error {
+	if base.K != r.K {
+		return oops.Hint("rerun with --k "+strconv.Itoa(base.K)+", or save a new baseline with --out").
+			Errorf("the baseline was evaluated at k=%d but this run uses k=%d", base.K, r.K)
+	}
 	was := map[string]bool{}
 	for i := range base.Cases {
 		was[base.Cases[i].ID] = base.Cases[i].Hit
@@ -259,6 +265,7 @@ func (r *Result) CompareBaseline(base *Result) {
 	sort.Strings(flips.Regressed)
 	sort.Strings(flips.Fixed)
 	r.Flips = flips
+	return nil
 }
 
 // Minimums are absolute floors, keyed by metric name.
