@@ -272,7 +272,20 @@ func (r *Resolved) Embedder() (skillsearch.Embedder, func(), error) {
 	if err != nil {
 		return nil, func() {}, oops.Wrapf(err, "set up the embedding client")
 	}
-	return &skillsearch.LLMEmbedder{Client: managed, ModelName: r.Model, RequestModel: r.requestModel(), Provider: p.Fingerprint}, func() { _ = managed.Close() }, nil //nolint:errcheck // nothing to do on close
+	return &skillsearch.LLMEmbedder{Client: managed, ModelName: r.Model, RequestModel: r.requestModel(), Provider: p.Fingerprint, Batch: r.maxBatch()}, func() { _ = managed.Close() }, nil //nolint:errcheck // nothing to do on close
+}
+
+// maxBatch is how many texts one embedding call may carry, 0 for no limit. liter-llm routing to
+// Gemini answers a batch with a single vector, so there each text goes alone (what batch_size = 1
+// did by hand) instead of paying for a collapsed batch first.
+func (r *Resolved) maxBatch() int {
+	if llm.ResolveBackend(r.LLM.Backend) != llm.BackendLiterLLM {
+		return 0
+	}
+	if r.LLM.Provider == "gemini" || strings.HasPrefix(r.Model, "gemini/") || strings.HasPrefix(r.LLM.EmbeddingModel, "gemini/") {
+		return 1
+	}
+	return 0
 }
 
 // requestModel is the model to put on the request: only a [search.embeddings] model
