@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -383,12 +385,8 @@ func TestCheckTree_RejectsSymlinks(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "real"), 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "real", "f"), []byte("x"), 0o600))
-	if err := os.Symlink(filepath.Join(root, "real"), filepath.Join(root, "link")); err != nil {
-		t.Skip("symlinks unavailable")
-	}
-	if err := os.Symlink(filepath.Join(root, "real", "f"), filepath.Join(root, "flink")); err != nil {
-		t.Skip("symlinks unavailable")
-	}
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real"), filepath.Join(root, "link"))
+	testutil.SymlinkOrSkip(t, filepath.Join(root, "real", "f"), filepath.Join(root, "flink"))
 
 	tests := []struct {
 		name    string
