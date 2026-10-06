@@ -130,6 +130,11 @@ func TestFailedIgnoresAcceptedFindings(t *testing.T) {
 	assert.False(t, Failed([]Finding{f}, "error"))
 }
 
+func TestValidateSettingsTolerate(t *testing.T) {
+	problems := ValidateSettings(&config.LintConfig{Tolerate: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
+	assert.Equal(t, []string{"lint.tolerate.AR201: -1 is negative", `lint.tolerate: unknown rule "AR999"`}, problems)
+}
+
 func TestValidateSettingsBudget(t *testing.T) {
 	problems := ValidateSettings(&config.LintConfig{Budget: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
 	assert.Equal(t, []string{"lint.budget.AR201: -1 is negative", `lint.budget: unknown rule "AR999"`}, problems)

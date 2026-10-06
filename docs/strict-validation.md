@@ -230,11 +230,11 @@ max_length = 1024
 require_use_when = true            # enables AR803 at warning
 near_duplicate_threshold = 0.9
 
-[lint.budget]                      # tolerated findings per rule (see Baseline and budgets)
+[lint.tolerate]                    # tolerated findings per rule (see Baseline and tolerated findings)
 AR401 = 12
 link-unresolved = 0
 
-[lint.budgets.skill]               # kinds: rule, context, skill, agent, command
+[lint.budgets.skill]               # size budgets per content kind; kinds: rule, context, skill, agent, command
 max_lines = 400
 max_tokens = 4000                  # 0 keeps the default, a negative value removes the limit
 
@@ -328,11 +328,11 @@ Guarantees:
 After the fixes the run reports what is left, and the exit code reflects that. The summary ends with a reminder to run
 `ai-rulez generate` so the changes reach the generated files.
 
-## Baseline and budgets
+## Baseline and tolerated findings
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
-records the findings you accept today, so only *new* findings fail the build, and a **budget** caps how many
-findings of one rule are tolerated.
+records the findings you accept today, so only *new* findings fail the build, and `[lint.tolerate]` caps how many
+findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
 
 ```bash
 ai-rulez validate --strict --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
@@ -374,10 +374,12 @@ one entry per accepted finding:
 - **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
   and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
   `AI_RULEZ_TODAY` for reproducible runs.
-- **Budgets.** `[lint.budget]` maps a code or name to a number: up to that many unaccepted findings of the rule are
-  tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the text
-  report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
-  per root, after the baseline.
+- **Tolerated findings.** `[lint.tolerate]` maps a code or name to a number: up to that many unaccepted findings of the
+  rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
+  text report says `tolerate: AR401 has 13 finding(s), over its tolerated count of 12`; the JSON key is still
+  `budgets_exceeded`). Lower the number over time. Tolerated counts apply per root, after the baseline. `[lint.budget]` is
+  the deprecated spelling of the same table: it still works and warns. Putting the size-budget shape in it
+  (`[lint.tolerate.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
 
 ## Analyzers and scopes
 
@@ -465,7 +467,7 @@ threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` se
 | `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
 
 Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
-`[lint.budget]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
+`[lint.tolerate]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
 `config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
 report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
 `"profile"`. The preset tables live in `internal/lint/profile.go`.
@@ -522,7 +524,7 @@ the text report says how many were left out. Each finding carries a `hop` in `--
 The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
 `changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
-finding, and a `[lint.budget]` is judged against the full set too; exit status reflects only the findings shown.
+finding, and a `[lint.tolerate]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
@@ -613,7 +615,7 @@ Every scanner finding has a fingerprint (`sc1:...`) that survives line moves and
 the rule and path; otherwise a hash of scanner, rule, repository path, normalized text of the flagged line and an
 occurrence index. Identical (scanner, fingerprint) pairs are reported once.
 
-`.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-budgets) with
+`.ai-rulez/scanner-baseline.json` accepts findings, in the format of the [lint baseline](#baseline-and-tolerated-findings) with
 each entry also naming its `scanner` and `rule`. `scan --external --write-baseline --reason "..."` records every
 current scanner finding (keeping the entries of scanners that did not run, dropping stale ones). Accepted findings
 are not reported (their count is logged); editing the flagged line makes the finding new. An entry past its
