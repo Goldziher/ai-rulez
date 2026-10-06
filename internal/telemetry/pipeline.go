@@ -85,7 +85,7 @@ func Build(s Settings, o BuildOptions) *Pipeline {
 	if s.ExportActive() {
 		p.Spool = &Spool{Dir: LocalDir(o.Root, o.ConfigDirName)}
 		p.Exporter = &Exporter{
-			Spool: p.Spool, Endpoint: s.Endpoint, HeadersEnv: s.HeadersEnv, Getenv: o.Getenv,
+			Spool: p.Spool, Endpoint: s.Endpoint, Protocol: s.Protocol, HeadersEnv: s.HeadersEnv, Getenv: o.Getenv,
 			Encoder: s.Encoder(o.Version),
 			Now:     clock,
 		}

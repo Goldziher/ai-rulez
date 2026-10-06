@@ -33,16 +33,20 @@ const (
 // fix (400, 401, 403, 404, 413). The batch is dropped and counted.
 var ErrRejected = errors.New("collector rejected the batch")
 
-// Exporter ships the spool to an OTLP/HTTP JSON collector: batched, gzipped,
+// Exporter ships the spool to an OTLP collector over OTLP/HTTP (JSON or protobuf)
+// or gRPC: batched, gzipped,
 // retried with exponential backoff, at-least-once (event ids de-duplicate).
 type Exporter struct {
 	Spool    *Spool
 	Encoder  Encoder
 	Endpoint string
+	// Protocol is http/json (the default), http/protobuf or grpc.
+	Protocol string
 	// HeadersEnv names environment variables holding "k=v,k2=v2" header lists.
 	HeadersEnv []string
 	Getenv     func(string) string
 	Client     *http.Client
+	grpc       grpcState
 
 	BatchMax int
 	Retries  int
@@ -104,6 +108,7 @@ func (x *Exporter) Flush(ctx context.Context) (FlushResult, error) {
 		return result, nil
 	}
 	defer release()
+	defer x.closeTransport()
 	// Whatever the caller asked for, the flush ends before its lock can look stale.
 	ctx, cancel := context.WithTimeout(ctx, MaxFlushTimeout)
 	defer cancel()
@@ -192,9 +197,10 @@ func (x *Exporter) sendBatch(ctx context.Context, batch []Event, headers http.He
 	return x.post(ctx, "/v1/metrics", metrics, headers)
 }
 
-// post sends one body, retrying 429, 502, 503, 504 and network errors.
+// post sends one JSON-encoded request over the configured transport, retrying
+// 429, 502, 503, 504 (gRPC: the equivalent codes) and network errors.
 func (x *Exporter) post(ctx context.Context, path string, body []byte, headers http.Header) error {
-	compressed, err := gzipBytes(body)
+	prepared, err := x.prepare(path, body)
 	if err != nil {
 		return err
 	}
@@ -213,7 +219,7 @@ func (x *Exporter) post(ctx context.Context, path string, body []byte, headers h
 				return errors.Join(last, err)
 			}
 		}
-		last = x.postOnce(ctx, path, compressed, headers)
+		last = x.send(ctx, path, prepared, headers)
 		var transient *transientError
 		if !errors.As(last, &transient) {
 			return last
@@ -256,16 +262,8 @@ func (x *Exporter) sleep(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func (x *Exporter) postOnce(ctx context.Context, path string, body []byte, headers http.Header) error {
-	reqCtx, cancel := context.WithTimeout(ctx, x.timeout())
-	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, strings.TrimRight(x.Endpoint, "/")+path, bytes.NewReader(body))
-	if err != nil {
-		return oops.Errorf("build request: invalid endpoint")
-	}
-	req.Header = headers.Clone()
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
+// finishHTTP performs the request and classifies the response.
+func (x *Exporter) finishHTTP(req *http.Request) error {
 	resp, err := x.client().Do(req)
 	if err != nil {
 		return &transientError{msg: "network error: " + networkReason(err)}

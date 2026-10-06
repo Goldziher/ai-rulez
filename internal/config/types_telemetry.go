@@ -11,14 +11,22 @@ import (
 	"unicode/utf8"
 )
 
-// Protocols accepted by [telemetry] otlp_protocol. Only OTLP/HTTP with a JSON
-// body is implemented; the others are reserved names that validation rejects
-// with a clear message rather than silently falling back.
+// Protocols accepted by [telemetry] otlp_protocol: OTLP/HTTP with a JSON or a
+// protobuf body, and OTLP/gRPC. All three carry the same allowlisted attributes.
 const (
 	TelemetryProtocolHTTPJSON     = "http/json"
 	TelemetryProtocolHTTPProtobuf = "http/protobuf"
 	TelemetryProtocolGRPC         = "grpc"
 )
+
+// ValidTelemetryProtocol reports whether p is one of the implemented protocols.
+func ValidTelemetryProtocol(p string) bool {
+	switch p {
+	case TelemetryProtocolHTTPJSON, TelemetryProtocolHTTPProtobuf, TelemetryProtocolGRPC:
+		return true
+	}
+	return false
+}
 
 // TelemetryConfig configures item-load telemetry: identifier-only events about
 // which skills, rules, agents and context files a harness loaded. Everything is
@@ -29,10 +37,11 @@ type TelemetryConfig struct {
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 	// AllowNetwork is the explicit consent for OTLP export. User scope only.
 	AllowNetwork bool `yaml:"allow_network,omitempty" json:"allow_network,omitempty" toml:"allow_network,omitempty"` //nolint:tagliatelle
-	// OTLPEndpoint is the collector base URL ("https://collector:4318"); /v1/logs
-	// and /v1/metrics are appended. User scope only.
+	// OTLPEndpoint is the collector base URL ("https://collector:4318"); for the
+	// HTTP protocols /v1/logs and /v1/metrics are appended, for grpc it names
+	// host[:port] (default port 4317) and carries no path. User scope only.
 	OTLPEndpoint string `yaml:"otlp_endpoint,omitempty" json:"otlp_endpoint,omitempty" toml:"otlp_endpoint,omitempty"` //nolint:tagliatelle
-	// OTLPProtocol is "http/json" (the default and only implemented value).
+	// OTLPProtocol is "http/json" (the default), "http/protobuf" or "grpc".
 	OTLPProtocol string `yaml:"otlp_protocol,omitempty" json:"otlp_protocol,omitempty" toml:"otlp_protocol,omitempty"` //nolint:tagliatelle
 	// HeadersEnv names environment variables whose values are "k=v,k2=v2" header
 	// lists. Names only: a literal credential is rejected. User scope only.
@@ -128,16 +137,17 @@ func (t *TelemetryConfig) Validate() []string {
 	var problems []string
 	add := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
 
-	switch t.OTLPProtocol {
-	case "", TelemetryProtocolHTTPJSON:
-	case TelemetryProtocolHTTPProtobuf, TelemetryProtocolGRPC:
-		add("telemetry.otlp_protocol: %q is not implemented (only %q)", t.OTLPProtocol, TelemetryProtocolHTTPJSON)
-	default:
-		add("telemetry.otlp_protocol: unknown value %q (use %q)", t.OTLPProtocol, TelemetryProtocolHTTPJSON)
+	if t.OTLPProtocol != "" && !ValidTelemetryProtocol(t.OTLPProtocol) {
+		add("telemetry.otlp_protocol: unknown value %q (use %q, %q or %q)", t.OTLPProtocol,
+			TelemetryProtocolHTTPJSON, TelemetryProtocolHTTPProtobuf, TelemetryProtocolGRPC)
 	}
 	if t.OTLPEndpoint != "" {
 		if problem := ValidateTelemetryEndpoint(t.OTLPEndpoint); problem != "" {
 			add("telemetry.otlp_endpoint: %s", problem)
+		} else if t.OTLPProtocol == TelemetryProtocolGRPC {
+			if parsed, err := url.Parse(t.OTLPEndpoint); err == nil && strings.Trim(parsed.Path, "/") != "" {
+				add("telemetry.otlp_endpoint: a grpc endpoint names host[:port] only, without a path")
+			}
 		}
 	}
 	for _, name := range t.HeadersEnv {
