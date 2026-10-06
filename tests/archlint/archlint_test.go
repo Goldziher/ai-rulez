@@ -43,6 +43,13 @@ var exempt = []string{
 	"internal/agents/",
 	"internal/watch/",
 	"internal/testutil/",
+	// The CLI log adapter reads NO_COLOR and TERM to decide whether to color; it
+	// is the bottom layer every other package logs through, so it cannot take an Env.
+	"internal/logger/",
+	// Opt-in usage telemetry is a runtime feature: it re-executes this binary as a
+	// detached sender and ages a spool by file time, so a Runner or a fixed Clock
+	// would change what it does. It is not part of the embeddable engine.
+	"internal/telemetry/",
 }
 
 func repoRoot(t *testing.T) string {
@@ -158,7 +165,7 @@ func writeAllowlist(t *testing.T, path string, found map[string]int) {
 	sort.Strings(keys)
 	var b strings.Builder
 	b.WriteString("# Ambient-authority sites in library packages (see archlint_test.go).\n")
-	b.WriteString("# <file> <symbol> <count>. Only ever remove lines or lower counts; a new line needs a review comment.\n")
+	b.WriteString("# <file> <symbol> <count>. The list is empty and stays empty: inject a runner.Runner, an\n# ambient Env or Clock instead of adding a line.\n")
 	for _, k := range keys {
 		fmt.Fprintf(&b, "%s %d\n", k, found[k])
 	}

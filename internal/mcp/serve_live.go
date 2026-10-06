@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 const (
@@ -99,7 +101,7 @@ func (s *Server) Watch(ctx context.Context) {
 		}
 		cur, err := o.Fingerprint()
 		// A new edit since the failed rebuild ends the pause: the user fixed it.
-		if err != nil || cur == last || (time.Now().Before(retryAt) && cur == failedAt) {
+		if err != nil || cur == last || (ambient.Clock(nil).Now().Before(retryAt) && cur == failedAt) {
 			continue
 		}
 		next, err := o.Rebuild()
@@ -108,7 +110,7 @@ func (s *Server) Watch(ctx context.Context) {
 			// again (with a growing pause) instead of waiting for another edit.
 			failures++
 			failedAt = cur
-			retryAt = time.Now().Add(min(interval<<min(failures, 6), maxRetryPause))
+			retryAt = ambient.Clock(nil).Now().Add(min(interval<<min(failures, 6), maxRetryPause))
 			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
 			continue
 		}

@@ -127,7 +127,7 @@ type loggingClient struct {
 func (l *loggingClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	start := ambient.Clock(nil).Now()
 	resp, err := l.next.Chat(ctx, req)
-	l.log.DebugContext(ctx, "llm chat", "request", req.Summary(), "elapsed", time.Since(start).Round(time.Millisecond),
+	l.log.DebugContext(ctx, "llm chat", "request", req.Summary(), "elapsed", ambient.Clock(nil).Now().Sub(start).Round(time.Millisecond),
 		"prompt_tokens", resp.Usage.PromptTokens, "completion_tokens", resp.Usage.CompletionTokens,
 		"cost_usd", resp.CostUSD, "cached", resp.Cached, "error", errSummary(err))
 	return resp, err
@@ -136,7 +136,7 @@ func (l *loggingClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse
 func (l *loggingClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
 	start := ambient.Clock(nil).Now()
 	resp, err := l.next.Embed(ctx, req)
-	l.log.DebugContext(ctx, "llm embed", "request", req.Summary(), "elapsed", time.Since(start).Round(time.Millisecond),
+	l.log.DebugContext(ctx, "llm embed", "request", req.Summary(), "elapsed", ambient.Clock(nil).Now().Sub(start).Round(time.Millisecond),
 		"prompt_tokens", resp.Usage.PromptTokens, "cached", resp.Cached, "error", errSummary(err))
 	return resp, err
 }

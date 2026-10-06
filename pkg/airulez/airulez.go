@@ -204,7 +204,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 		// root that names no directory, so existing outputs are never read from there.
 		ws = workspace.WithRoot(ws, virtualRoot())
 	}
-	var log logger.Logger = logger.Discard()
+	log := logger.Logger(logger.Discard())
 	if o.Logger != nil {
 		log = o.Logger
 	}
@@ -300,7 +300,7 @@ func (p *Project) Validate(_ context.Context, o ValidateOptions) (*Report, error
 	if !p.disk {
 		return nil, &Error{Code: CodeDiskRequired, Err: oops.Wrapf(ErrDiskRequired, "strict validation reads the repository tree")}
 	}
-	tree, err := lint.LoadTree(p.cfg.BaseDir)
+	tree, err := lint.LoadTree(p.cfg.BaseDir) //nolint:contextcheck // git runs through the Host runner, with no context to pass
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
@@ -456,7 +456,7 @@ func (p *Project) Generate(ctx context.Context, o GenerateOptions) (*GenerateRes
 	defer p.mu.Unlock()
 	g := generator.NewGenerator(p.cfg)
 	g.SetContext(ctx)
-	plan, err := g.Plan(o.Profile)
+	plan, err := g.Plan(o.Profile) //nolint:contextcheck // the context reaches the run through SetContext
 	if err != nil {
 		return nil, &Error{Code: CodePlan, Err: err}
 	}

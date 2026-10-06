@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -1031,7 +1032,7 @@ func (r *runner) commandResolves(cmd string) bool {
 		info, err := os.Stat(abs)
 		return err == nil && !info.IsDir()
 	}
-	_, err := exec.LookPath(cmd)
+	_, err := procrunner.LookPath(cmd)
 	return err == nil
 }
 
