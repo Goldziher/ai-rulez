@@ -17,14 +17,19 @@ import (
 
 // Spec describes one skill source.
 type Spec struct {
-	Name       string
-	URL        string
-	Ref        string
-	Path       string
-	Include    []string
-	Exclude    []string
-	NamePrefix string
-	Trust      string
+	Name string
+	URL  string
+	Ref  string
+	// Version is a semver constraint resolved against the repository's tags; it
+	// excludes Ref. TagPrefix and IncludePrerelease refine it.
+	Version           string
+	TagPrefix         string
+	IncludePrerelease bool
+	Path              string
+	Include           []string
+	Exclude           []string
+	NamePrefix        string
+	Trust             string
 	// MaxSkills and MaxBytes bound what the source loads; 0 selects the defaults.
 	MaxSkills int
 	MaxBytes  int
@@ -42,7 +47,7 @@ type Spec struct {
 
 // FromConfig converts a [[skill_sources]] entry.
 func FromConfig(c *config.SkillSourceConfig) Spec {
-	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Version: c.Version, TagPrefix: c.TagPrefix, IncludePrerelease: c.IncludePrerelease, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
 }
 
 // TrustLevel is the scan level, defaulting to the strict one.
