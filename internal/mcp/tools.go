@@ -272,7 +272,7 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
-		newAnnotatedTool("run_verifiers", "Evaluate the deterministic repo checks declared as [[verifiers]] (file exists/absent, glob counts, regex present/absent, JSON/YAML/TOML key values, generated output in sync) and the rule-linked specs under .ai-rulez/verifiers/ (paired files, all/any/not). Read-only; returns one pass/fail/error/not_applicable result per verifier with its findings and the rule it enforces.",
+		newAnnotatedTool("run_verifiers", "Evaluate the deterministic repo checks declared as [[verifiers]] (file exists/absent, glob counts, regex present/absent, JSON/YAML/TOML key values, generated output in sync) and the rule-linked specs under .ai-rulez/verifiers/ (paired files, all/any/not). Read-only: nothing is executed or sent to a model, so a command predicate reports error (AR9H3, refused) and an llm verifier reports skipped (AR9H4), never pass. Returns one pass/fail/error/skipped/inactive/not_applicable result per verifier (inactive: outside the active profile or role) with its findings and the rule it enforces.",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file (optional)", false).
 				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
