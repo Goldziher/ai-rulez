@@ -154,7 +154,7 @@ The schema files are available in the repository:
 | `schema/verify-attestation.schema.json` | JSON Schema | v1 | `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock |
 | `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
-| `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query |
+| `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |
 | `schema/publish-manifest.schema.json` | JSON Schema | v1    | `<name>-<version>.manifest.json` written by `ai-rulez publish`: the bundle's files, source, lock and digests |

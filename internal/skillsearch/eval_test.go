@@ -1,6 +1,7 @@
 package skillsearch
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,34 +10,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func evalCatalog() ([]Doc, []string) {
+func rel(ids ...string) []Relevant {
+	out := make([]Relevant, len(ids))
+	for i, id := range ids {
+		out[i] = Relevant{ID: id, Grade: 1}
+	}
+	return out
+}
+
+func evalEnv() *EvalEnv {
 	docs := []Doc{
 		{Name: "deploy-staging", Description: "Deploy a service to the staging cluster", Triggers: []string{"deploy to staging"}},
 		{Name: "deploy-prod", Description: "Deploy a service to production with approvals"},
 		{Name: "refund-policy", Description: "Process customer refund requests", Triggers: []string{"customer wants money back"}},
 		{Name: "git-workflow", Description: "Branching and pull request conventions"},
 	}
-	ids := make([]string, len(docs))
+	items := make([]Item, len(docs))
 	for i := range docs {
-		ids[i] = docs[i].Name
+		items[i] = Item{ID: docs[i].Name, Doc: docs[i]}
 	}
-	return docs, ids
+	return &EvalEnv{Items: items}
+}
+
+func mustEval(t *testing.T, env *EvalEnv, f *CaseFile, k int, modes ...string) *Result {
+	t.Helper()
+	res, err := Eval(context.Background(), env, f, k, modes)
+	require.NoError(t, err)
+	return res
 }
 
 func TestEval_Metrics(t *testing.T) {
 	t.Parallel()
 	// Arrange
-	docs, ids := evalCatalog()
+	env := evalEnv()
 	f := &CaseFile{Version: 1, Cases: []Case{
-		{ID: "refund", Query: "customer wants money back", Expect: []string{"refund-policy"}, Tags: []string{"paraphrase"}},
-		{ID: "staging", Query: "deploy to staging", Expect: []string{"deploy-staging"}},
-		{ID: "second", Query: "deploy", Expect: []string{"deploy-prod"}},
-		{ID: "miss", Query: "zebra", Expect: []string{"git-workflow"}},
+		{ID: "refund", Query: "customer wants money back", Expect: rel("refund-policy"), Tags: []string{"paraphrase"}},
+		{ID: "staging", Query: "deploy to staging", Expect: rel("deploy-staging")},
+		{ID: "second", Query: "deploy", Expect: rel("deploy-prod")},
+		{ID: "miss", Query: "zebra", Expect: rel("git-workflow")},
 		{ID: "neg", Query: "weather tomorrow", Expect: nil, Tags: []string{"negative"}},
 	}}
 
 	// Act
-	res := Eval(docs, ids, f, 2)
+	res := mustEval(t, env, f, 2)
 
 	// Assert
 	assert.Equal(t, 4, res.N)
@@ -66,20 +82,20 @@ func TestEval_Metrics(t *testing.T) {
 
 func TestEval_MultiRelevantRecall(t *testing.T) {
 	t.Parallel()
-	docs, ids := evalCatalog()
+	env := evalEnv()
 	f := &CaseFile{Version: 1, Cases: []Case{
-		{ID: "both", Query: "deploy service", Expect: []string{"deploy-staging", "deploy-prod"}},
+		{ID: "both", Query: "deploy service", Expect: rel("deploy-staging", "deploy-prod")},
 	}}
-	res := Eval(docs, ids, f, 1)
+	res := mustEval(t, env, f, 1)
 	assert.InDelta(t, 0.5, res.Modes[ModeLexical].RecallAt, 1e-9, "one of two relevant skills is in the top 1")
 	assert.InDelta(t, 1.0, res.Modes[ModeLexical].HitAt, 1e-9)
 }
 
 func TestEval_Deterministic(t *testing.T) {
 	t.Parallel()
-	docs, ids := evalCatalog()
-	f := &CaseFile{Version: 1, Cases: []Case{{ID: "a", Query: "deploy", Expect: []string{"deploy-prod"}}, {ID: "b", Query: "refund", Expect: []string{"refund-policy"}}}}
-	assert.Equal(t, Eval(docs, ids, f, 3), Eval(docs, ids, f, 3))
+	env := evalEnv()
+	f := &CaseFile{Version: 1, Cases: []Case{{ID: "a", Query: "deploy", Expect: rel("deploy-prod")}, {ID: "b", Query: "refund", Expect: rel("refund-policy")}}}
+	assert.Equal(t, mustEval(t, env, f, 3), mustEval(t, env, f, 3))
 }
 
 func TestCompareBaselineAndGate(t *testing.T) {
@@ -157,8 +173,10 @@ func TestParseCases(t *testing.T) {
 	}{
 		{"valid", "version: 1\nk: 3\ncases:\n  - {id: a, query: deploy, expect: [x], tags: [t]}\n  - {id: n, query: weather, expect: []}\n", ""},
 		{"missing version", "cases:\n  - {id: a, query: q, expect: [x]}\n", "version must be 1"},
-		{"unknown field", "version: 1\ncases:\n  - {id: a, query: q, expect: [x], role: r}\n", "field role not found"},
-		{"graded expect", "version: 1\ncases:\n  - {id: a, query: q, expect: [{id: x, grade: 2}]}\n", "AR9D2"},
+		{"unknown field", "version: 1\ncases:\n  - {id: a, query: q, expect: [x], nope: r}\n", "field nope not found"},
+		{"bad grade", "version: 1\ncases:\n  - {id: a, query: q, expect: [{id: x, grade: 0}]}\n", "grade of"},
+		{"unknown expect key", "version: 1\ncases:\n  - {id: a, query: q, expect: [{id: x, weight: 2}]}\n", "weight"},
+		{"expected and avoided", "version: 1\ncases:\n  - {id: a, query: q, expect: [x], avoid: [x]}\n", "both expected and avoided"},
 		{"duplicate id", "version: 1\ncases:\n  - {id: a, query: q, expect: [x]}\n  - {id: a, query: r, expect: [x]}\n", "duplicate id"},
 		{"missing query", "version: 1\ncases:\n  - {id: a, expect: [x]}\n", "query is required"},
 		{"missing id", "version: 1\ncases:\n  - {query: q, expect: [x]}\n", "id is required"},
@@ -186,7 +204,7 @@ func TestParseCases(t *testing.T) {
 
 func TestCaseFile_CheckSkillsAndK(t *testing.T) {
 	t.Parallel()
-	f := &CaseFile{Version: 1, Cases: []Case{{ID: "a", Query: "q", Expect: []string{"ok", "ghost"}}}}
+	f := &CaseFile{Version: 1, Cases: []Case{{ID: "a", Query: "q", Expect: rel("ok", "ghost")}}}
 	err := f.CheckSkills([]string{"ok"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `unknown skill "ghost"`)

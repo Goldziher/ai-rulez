@@ -1257,6 +1257,12 @@
           "type": "boolean",
           "description": "Also embed the first body_chars characters of SKILL.md."
         },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches."
+        },
         "body_chars": {
           "type": "integer",
           "minimum": 0,

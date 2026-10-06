@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 )
 
 // Config represents the configuration format
@@ -77,6 +78,8 @@ type Config struct {
 	Telemetry *TelemetryConfig `yaml:"telemetry,omitempty" json:"telemetry,omitempty" toml:"telemetry,omitempty"`
 	// Review configures `ai-rulez review` (rubric, content mode, exclusions, spend ceilings).
 	Review *ReviewConfig `yaml:"review,omitempty" json:"review,omitempty" toml:"review,omitempty"`
+	// Search configures `ai-rulez search` and find_skill ranking: lexical by default, optionally hybrid with embeddings (docs/search.md).
+	Search *skillsearch.Config `yaml:"search,omitempty" json:"search,omitempty" toml:"search,omitempty"`
 	// Verifiers declares deterministic repo checks run by `ai-rulez verifiers run`.
 	Verifiers []VerifierConfig `yaml:"verifiers,omitempty" json:"verifiers,omitempty" toml:"verifiers,omitempty"`
 	// VerifiersSettings holds the limits and policy of `verifiers run` ([verifiers_settings]).

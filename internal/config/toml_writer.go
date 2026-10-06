@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
@@ -62,6 +63,7 @@ type tomlOutput struct {
 	Signing         *SigningConfig         `toml:"signing,omitempty"`
 	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
 	Review          *ReviewConfig          `toml:"review,omitempty"`
+	Search          *skillsearch.Config    `toml:"search,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -159,6 +161,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Telemetry:       cfg.Telemetry,
 		Signing:         cfg.Signing,
 		Review:          cfg.Review,
+		Search:          cfg.Search,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,

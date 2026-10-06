@@ -97,6 +97,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		BudgetBytes:  st.BudgetBytes,
 		Telemetry:    record,
 		PollInterval: st.PollInterval,
+		Search:       NewSearchRuntime(holder.get),
 	}
 	if !st.NoWatch {
 		roots := st.watchRoots(first)
@@ -119,6 +120,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	}
 	srv := NewSkillServerWith(st.Version, first.catalog, opts)
 	srv.closers = append(srv.closers, func() { closeSink(usageSinkFlushWait) })
+	srv.closers = append(srv.closers, opts.Search.Close)
 	return srv, nil
 }
 
