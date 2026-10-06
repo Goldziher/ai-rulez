@@ -33,21 +33,56 @@ var secretRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za
 // RedactSecrets masks key-looking substrings. Provider error bodies can echo
 // credentials, so every error message built from a response passes through it.
 //
-// An assignment whose value is an environment lookup (os.environ[...],
-// os.Getenv(...), process.env.X, $VAR) names a secret without containing it and
-// is left alone, so a transcript about reading a key from the environment is not
-// refused as if it held one.
+// An assignment whose value is, in its entirety, an environment lookup
+// (os.environ["X"], os.Getenv("X"), process.env.X, $X, ${X}) names a secret
+// without containing it and is left alone, so a transcript about reading a key
+// from the environment is not refused as if it held one. A lookup that carries
+// a literal (a ${X:-default} fallback, a two-argument get) is still redacted.
 func RedactSecrets(s string) string {
-	return secretRe.ReplaceAllStringFunc(s, func(m string) string {
-		if envRefRe.MatchString(m) {
-			return m
+	var b strings.Builder
+	last := 0
+	for _, loc := range secretRe.FindAllStringIndex(s, -1) {
+		if isEnvAssignment(s, loc[0], loc[1]) {
+			continue
 		}
-		return "[REDACTED]"
-	})
+		b.WriteString(s[last:loc[0]])
+		b.WriteString("[REDACTED]")
+		last = loc[1]
+	}
+	b.WriteString(s[last:])
+	return b.String()
 }
 
-// envRefRe matches a secretRe assignment match whose value is an environment lookup.
-var envRefRe = regexp.MustCompile(`(?i)^(?:api[_-]?key|token|secret|authorization)["']?\s*[:=]\s*["']?(?:os\.environ|os\.getenv|process\.env|\$\{?[A-Za-z_]|getenv\(|env\()`)
+// assignStartRe matches the key-and-separator prefix of an assignment match.
+var assignStartRe = regexp.MustCompile(`(?i)^(?:api[_-]?key|token|secret|authorization)["']?\s*[:=]\s*["']?`)
+
+// envValueRe matches an environment lookup at the start of the text, with the
+// variable name as the only argument.
+var envValueRe = regexp.MustCompile(`^(?:os\.environ(?:\.get)?\s*[\[(]\s*["'][A-Za-z_]\w*["']\s*[\])]|(?:os\.Getenv|os\.getenv|getenv|env)\(\s*["'][A-Za-z_]\w*["']\s*\)|process\.env\.[A-Za-z_]\w*|process\.env\[\s*["'][A-Za-z_]\w*["']\s*\]|\$[A-Za-z_]\w*|\$\{[A-Za-z_]\w*\})`)
+
+// isEnvAssignment reports whether the match s[start:end] is an assignment whose
+// whole value is an environment lookup. Nothing may follow the lookup but the
+// end of the value: whitespace, a closing quote or bracket, or the end of text.
+func isEnvAssignment(s string, start, end int) bool {
+	prefix := assignStartRe.FindString(s[start:end])
+	if prefix == "" {
+		return false
+	}
+	value := s[start+len(prefix):]
+	ref := envValueRe.FindString(value)
+	if ref == "" {
+		return false
+	}
+	rest := value[len(ref):]
+	if rest == "" {
+		return true
+	}
+	switch rest[0] {
+	case ' ', '\t', '\n', '\r', '"', '\'', ',', ';', ')', '}', ']', '`':
+		return true
+	}
+	return false
+}
 
 // Summary describes a chat request without its content: counts, sizes and a
 // short content hash that lets two log lines be correlated.
