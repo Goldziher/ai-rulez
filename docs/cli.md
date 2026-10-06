@@ -1164,7 +1164,7 @@ ai-rulez clean [config-path] [flags]
 | Flag                  | Type    | Default            | Description                                             |
 | --------------------- | ------- | ------------------ | ------------------------------------------------------- |
 | `--dry-run` / `-d`    | boolean | false              | Show what would be removed without deleting anything    |
-| `--force` / `-y`      | boolean | false              | Skip the confirmation prompt                            |
+| `--force` / `-y`      | boolean | false              | Skip the confirmation prompt and also remove generated files edited by hand (otherwise kept with a warning) |
 | `--profile` / `-p`    | string  | configured default | Profile whose outputs to remove                         |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
 | `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
