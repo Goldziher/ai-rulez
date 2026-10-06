@@ -379,6 +379,8 @@ pins and content pins of other items are not recomputed (as with `lock <name>`):
   use, no inline ignore comments) before the lock is written. Error findings refuse the pin (exit `2`, nothing is
   written, `scan.refused` in JSON); review them, then `--accept-findings`. Warnings are listed. `--dry-run` runs the
   scan too and exits the same way. A tree over the file or size limits, or not in the cache, says so in `scan.note`.
+  Only `update` scans before pinning: `ai-rulez lock` pins whatever a plain `ref` (a branch) points to now, without
+  this scan, so move range pins with `update` and review a `lock` diff before committing it.
 
 #### Taking a new major version
 
