@@ -72,6 +72,7 @@ type row struct {
 	Status, StatusLabel              string
 	Roles                            int
 	DigestShort                      string
+	Approval, ApprovalFull           string
 	Href                             string
 	Search                           string
 	Hidden                           bool
@@ -269,10 +270,31 @@ func statusOf(l *govview.ItemLint) (class, label string) {
 	return "ok", "ok"
 }
 
+// approvalLabels renders the catalog approval of an item as plain text: the
+// status alone for the overview, and the status with the reviewers and expiry
+// for the item page. The caller escapes it.
+func approvalLabels(a *govview.ItemApproval) (short, full string) {
+	if a == nil {
+		return "not required", "not required"
+	}
+	full = a.Status
+	if a.Required {
+		full += " (required)"
+	}
+	if len(a.Reviewers) > 0 {
+		full += " by " + strings.Join(a.Reviewers, ", ")
+	}
+	if a.Expires != "" {
+		full += "; until " + a.Expires
+	}
+	return a.Status, full
+}
+
 func (b *builder) rowOf(i int, prefix string) row {
 	it := &b.doc.Items[i]
 	class, label := statusOf(it.Lint)
-	r := row{Kind: it.Kind, ID: it.ID, Domain: it.Domain, Owner: it.Owner, Version: it.Version,
+	short, full := approvalLabels(it.Approval)
+	r := row{Approval: short, ApprovalFull: full, Kind: it.Kind, ID: it.ID, Domain: it.Domain, Owner: it.Owner, Version: it.Version,
 		Listing: it.LoadCost.ListingTokens, Status: class, StatusLabel: label, Roles: len(it.Roles),
 		DigestShort: shortDigest(it.Digest), Href: prefix + b.itemHref[i],
 		Search: strings.ToLower(display(strings.Join([]string{it.Kind, it.Domain, it.ID, it.Owner, it.Description}, " ")))}

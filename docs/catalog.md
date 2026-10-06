@@ -83,10 +83,12 @@ configuration directory it describes.
   settings, not the strict level.
 - **No `catalog-data.js`.** The pages are server-rendered and the filter reads the table rows, so a second copy of the
   data is not needed; `catalog.json` is the machine contract.
+- **Approval.** The overview has an Approval column (the status, or `not required`); the item page shows the status with
+  `(required)`, the reviewers and the expiry, escaped like every other value.
 - **No pagination.** All rows are in the page; the filter hides rows.
 
 ## Not yet built
 
 MCP servers page, eval and usage sections, `--check` freshness gate, `--no-lint-messages`, `--no-owners`,
-`--link-sources`, `--single-file`, approval display and Markdown rendering of bodies are later phases of the
+`--link-sources`, `--single-file` and Markdown rendering of bodies are later phases of the
 design.
