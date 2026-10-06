@@ -16,6 +16,7 @@ func TestPlainHTTPOptIn(t *testing.T) {
 		{"accepted with opt-in and host", Config{BaseURL: "http://gateway.internal:8080/v1", APIKeyEnv: "K", AllowPlainHTTP: true, PlainHTTPHosts: []string{"gateway.internal:8080"}}, false},
 		{"host match is case-insensitive", Config{BaseURL: "http://Gateway.Internal:8080/v1", APIKeyEnv: "K", AllowPlainHTTP: true, PlainHTTPHosts: []string{"gateway.internal:8080"}}, false},
 		{"other port refused", Config{BaseURL: "http://gateway.internal:9090/v1", APIKeyEnv: "K", AllowPlainHTTP: true, PlainHTTPHosts: []string{"gateway.internal:8080"}}, true},
+		{"a bare host entry does not cover a base_url with a port", Config{BaseURL: "http://gateway.internal:8080/v1", APIKeyEnv: "K", AllowPlainHTTP: true, PlainHTTPHosts: []string{"gateway.internal"}}, true},
 		{"other host refused", Config{BaseURL: "http://evil.example/v1", APIKeyEnv: "K", AllowPlainHTTP: true, PlainHTTPHosts: []string{"gateway.internal:8080"}}, true},
 		{"flag without list refused", Config{BaseURL: "http://gateway.internal/v1", APIKeyEnv: "K", AllowPlainHTTP: true}, true},
 		{"list without flag refused", Config{BaseURL: "http://gateway.internal/v1", APIKeyEnv: "K", PlainHTTPHosts: []string{"gateway.internal"}}, true},
