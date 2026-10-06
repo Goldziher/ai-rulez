@@ -46,6 +46,9 @@ type PolicyOutcome struct {
 	// Accepted lists repository overrides the policy allowed, such as an
 	// allowlist the repository narrowed.
 	Accepted []string
+	// Warn is --policy-mode warn: the values are still clamped, but the
+	// violations are reported as warnings and do not fail the run.
+	Warn bool
 }
 
 // PolicyEnforcer applies an organization policy to a freshly loaded
@@ -100,17 +103,33 @@ func applyPolicy(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
+func policyLines(out *PolicyOutcome) []string {
+	lines := make([]string, 0, len(out.Violations))
+	for _, v := range out.Violations {
+		lines = append(lines, fmt.Sprintf("%s %s:%d  %s", v.Code, v.File, max(v.Line, 1), v.Message))
+	}
+	return lines
+}
+
+// PolicyWarnings lists the violations a --policy-mode warn run reports without
+// failing; it is nil in the default mode, where CheckPolicy fails instead.
+func PolicyWarnings(cfg *Config) []string {
+	if cfg == nil || cfg.PolicyOutcome == nil || !cfg.PolicyOutcome.Warn {
+		return nil
+	}
+	return policyLines(cfg.PolicyOutcome)
+}
+
 // CheckPolicy fails when the installed policy had to clamp cfg: generation,
 // validation and the MCP servers refuse a configuration that tried to loosen
 // the policy. It is nil without a policy or a violation.
+//
+// In --policy-mode warn it is nil: the violations are PolicyWarnings instead.
 func CheckPolicy(cfg *Config) error {
-	if cfg == nil || cfg.PolicyOutcome == nil || len(cfg.PolicyOutcome.Violations) == 0 {
+	if cfg == nil || cfg.PolicyOutcome == nil || cfg.PolicyOutcome.Warn || len(cfg.PolicyOutcome.Violations) == 0 {
 		return nil
 	}
-	lines := make([]string, 0, len(cfg.PolicyOutcome.Violations))
-	for _, v := range cfg.PolicyOutcome.Violations {
-		lines = append(lines, fmt.Sprintf("%s %s:%d  %s", v.Code, v.File, max(v.Line, 1), v.Message))
-	}
+	lines := policyLines(cfg.PolicyOutcome)
 	return oops.With("violations", lines).
 		Hint("The organization policy only lets a repository add restrictions; remove the entries above or ask the policy owners to change the policy").
 		Errorf("the configuration loosens the organization policy:\n  %s", strings.Join(lines, "\n  "))

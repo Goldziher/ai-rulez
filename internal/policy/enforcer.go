@@ -2,9 +2,11 @@ package policy
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Enforcer implements config.PolicyEnforcer. It discovers the policy lazily on
@@ -26,16 +28,25 @@ func NewEnforcer(opts func() DiscoverOptions) *Enforcer { return &Enforcer{opts:
 // Load returns the policy in force, nil when none applies.
 func (e *Enforcer) Load() (*Resolved, error) {
 	o := e.opts()
-	key := o.Flag + "\x00" + o.envPolicy() + "\x00" + o.GOOS
+	key := o.Flag + "\x00" + o.envPolicy() + "\x00" + o.GOOS + "\x00" + o.Mode
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.have && e.key == key {
 		return e.resolved, e.err
 	}
+	if !ValidMode(o.Mode) {
+		e.have, e.key, e.resolved = true, key, nil
+		e.err = &ParseError{Path: "--policy-mode", Msg: fmt.Sprintf("%q is not a policy mode (use enforce or warn)", o.Mode)}
+		return nil, e.err
+	}
 	layers, err := Discover(o)
 	e.have, e.key, e.err, e.resolved = true, key, err, nil
 	if err == nil {
 		e.resolved = Resolve(layers)
+		if e.resolved != nil && o.Mode == ModeWarn {
+			e.resolved.Warn = true
+			logger.Warn("policy mode warn: violations of the organization policy are reported but do not fail this run; the policy values are still enforced")
+		}
 	}
 	return e.resolved, e.err
 }

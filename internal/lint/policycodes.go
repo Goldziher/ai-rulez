@@ -118,7 +118,7 @@ func (r *runner) applyPolicy() {
 		r.noInline[resolveOrKeep(code)] = true
 	}
 	for _, code := range policyCodes {
-		r.sev[code] = SeverityError
+		r.sev[code] = r.policySeverity()
 		delete(r.ignore, code)
 	}
 	for code, name := range out.SeverityFloor {
@@ -141,6 +141,20 @@ func (r *runner) applyPolicy() {
 		}
 		delete(r.ignore, code)
 	}
+}
+
+// policyWarn reports --policy-mode warn.
+func (r *runner) policyWarn() bool {
+	return r.cfg != nil && r.cfg.PolicyOutcome != nil && r.cfg.PolicyOutcome.Warn
+}
+
+// policySeverity is the severity of the policy's own findings: an error, or a
+// warning in --policy-mode warn.
+func (r *runner) policySeverity() Severity {
+	if r.policyWarn() {
+		return SeverityWarning
+	}
+	return SeverityError
 }
 
 // checkPolicy reports what the policy clamped.
@@ -249,14 +263,14 @@ func (r *runner) reportSuppressionAttempts() {
 			codes = append(codes, code)
 		}
 		sort.Strings(codes)
-		r.findings = append(r.findings, suppressionAttempt(r.display(file), route, codes, r.display(r.rootAbs())))
+		r.findings = append(r.findings, suppressionAttempt(r.display(file), route, codes, r.display(r.rootAbs()), r.policySeverity()))
 	}
 }
 
-func suppressionAttempt(file, route string, codes []string, root string) Finding {
+func suppressionAttempt(file, route string, codes []string, root string, sev Severity) Finding {
 	rule, _ := lookupRule(CodePolicyLoosened) //nolint:errcheck // registered
 	return Finding{
-		Code: CodePolicyLoosened, Name: rule.Name, Severity: SeverityError, File: file, Line: 1, Root: root,
+		Code: CodePolicyLoosened, Name: rule.Name, Severity: sev, File: file, Line: 1, Root: root,
 		Message: fmt.Sprintf("%s tries to hide %s; the organization policy protects these codes, so the findings are reported anyway",
 			route, strings.Join(codes, ", ")),
 	}
@@ -269,7 +283,11 @@ func (r *Report) refuse(route string, codes []string) {
 		return
 	}
 	sort.Strings(codes)
-	f := suppressionAttempt(r.ConfigFile, route, codes, r.Root)
+	sev := SeverityError
+	if r.PolicyWarn {
+		sev = SeverityWarning
+	}
+	f := suppressionAttempt(r.ConfigFile, route, codes, r.Root, sev)
 	f.meta().Path = r.ConfigFile
 	annotateAnalyzer(&f)
 	r.Findings = append(r.Findings, f)

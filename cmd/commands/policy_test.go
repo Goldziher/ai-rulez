@@ -23,6 +23,9 @@ func TestPolicyGate(t *testing.T) {
 		{"a loosening attempt", &config.Config{PolicyOutcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{
 			{Code: "AR740", File: ".ai-rulez/config.toml", Line: 4, Message: "below the floor"},
 		}}}, true},
+		{"a loosening attempt in warn mode is not fatal", &config.Config{PolicyOutcome: &config.PolicyOutcome{Warn: true, Violations: []config.PolicyViolation{
+			{Code: "AR740", File: ".ai-rulez/config.toml", Line: 4, Message: "below the floor"},
+		}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -42,6 +45,7 @@ func TestPolicyGate(t *testing.T) {
 
 func TestPolicyFlagIsGlobalAndShowPolicyIsOnValidate(t *testing.T) {
 	assert.NotNil(t, RootCmd.PersistentFlags().Lookup("policy"))
+	assert.NotNil(t, RootCmd.PersistentFlags().Lookup("policy-mode"))
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("show-policy"))
 }
 
