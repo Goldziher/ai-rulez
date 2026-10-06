@@ -51,7 +51,7 @@ type ImproveConfig struct {
 	MaxSkillGrowth float64 `yaml:"max_skill_growth,omitempty" json:"max_skill_growth,omitempty" toml:"max_skill_growth,omitempty"`
 	// RequireCIAboveZero makes the bootstrap interval of the gain a gate condition (default false).
 	RequireCIAboveZero bool `yaml:"require_ci_above_zero,omitempty" json:"require_ci_above_zero,omitempty" toml:"require_ci_above_zero,omitempty"`
-	// Isolation is auto (default: confine when a backend works), none or require.
+	// Isolation is none (default: the optimizer runs as you), auto (confine when a backend works) or require (refuse without one).
 	Isolation string `yaml:"isolation,omitempty" json:"isolation,omitempty" toml:"isolation,omitempty"`
 	// EnvPass names environment variables forwarded to the optimizer. Used from a repository config only with --trust-repo-optimizer.
 	EnvPass []string `yaml:"env_pass,omitempty" json:"env_pass,omitempty" toml:"env_pass,omitempty"`
