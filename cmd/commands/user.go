@@ -162,7 +162,7 @@ func runUserClean() error {
 	if err != nil {
 		return err
 	}
-	opts := generator.CleanOptions{DryRun: true, KeepGitignore: true, KeepManifest: cleanKeepManifest}
+	opts := cleanOptions(true)
 	plan, err := gen.Clean(profile, opts)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
