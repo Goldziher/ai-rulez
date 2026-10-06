@@ -137,6 +137,17 @@ func Load(configDir string) (*File, error) {
 	return f, nil
 }
 
+// Parse decodes the bytes of a lock file, for a copy that is not on disk (the
+// lock at another git revision). Unlike Load it accepts any version: a reader
+// comparing pins only needs the fields it knows.
+func Parse(data []byte) (*File, error) {
+	var f File
+	if err := toml.Unmarshal(data, &f); err != nil {
+		return nil, oops.Wrapf(err, "parse lock file")
+	}
+	return &f, nil
+}
+
 func read(configDir string) (*File, error) {
 	// A symlinked lock is refused rather than followed, as the write side replaces
 	// it: reading through a link would let the lock be pointed at another file.

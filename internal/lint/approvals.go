@@ -14,6 +14,7 @@ const (
 	CodeApproverUnauthorized = "AR713"
 	CodeApprovalInsufficient = "AR714"
 	CodeApprovalOrphan       = "AR715"
+	CodeApprovalSelf         = "AR716"
 )
 
 // ApprovalFinding is one approval problem: Code is one of the codes above and
@@ -24,7 +25,7 @@ type ApprovalFinding struct {
 	Message string
 }
 
-// WithApprovals supplies the approval findings to report (AR710 to AR715).
+// WithApprovals supplies the approval findings to report (AR710 to AR716).
 func WithApprovals(findings []ApprovalFinding) Option {
 	return func(r *runner) { r.approvals = findings }
 }
@@ -36,6 +37,7 @@ func init() {
 		RuleInfo{CodeApprovalExpired, "approval-expired", SeverityError, "every approval of the current digest is past its expiry date"},
 		RuleInfo{CodeApproverUnauthorized, "approver-not-authorized", SeverityError, "the current digest is approved only by reviewers outside [governance] approvers"},
 		RuleInfo{CodeApprovalInsufficient, "approval-insufficient", SeverityError, "fewer distinct reviewers approved the current digest than [governance] min_approvers asks for"},
+		RuleInfo{CodeApprovalSelf, "approval-with-change", SeverityError, "an approval was added in the same change as the content it approves (found only with --approvals-base or `approve --verify-base`)"},
 		RuleInfo{CodeApprovalOrphan, "approval-orphan", SeverityWarning, "an approval in ai-rulez.lock names content that no longer exists; remove it with `ai-rulez approve --prune`"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
@@ -64,13 +66,18 @@ func init() {
 			Bad:  "`min_approvers = 2` with a single reviewer on record",
 			Good: "Another reviewer runs `ai-rulez approve` for the same digest",
 		},
+		CodeApprovalSelf: {
+			Why:  "An approval in the committed lock is an assertion, not authentication: whoever edits the lock can add one. When an approval arrives in the same change as the content it approves, nobody but the author vouched for it, so CI should demand a second reviewer.",
+			Bad:  "A pull request that edits a skill's script and adds `[[approval]]` for the new digest",
+			Good: "Land the content change first, then approve it in a separate, separately reviewed change",
+		},
 		CodeApprovalOrphan: {
 			Why:  "The item an approval names was removed or renamed, so the record can never apply; a renamed item must be approved again under its new name.",
 			Bad:  "An `[[approval]]` for a hook that no longer exists",
 			Good: "Run `ai-rulez approve --prune` (or `ai-rulez lock`, which drops orphans) and commit the lock",
 		},
 	})
-	for _, code := range []string{CodeApprovalMissing, CodeApprovalStale, CodeApprovalExpired, CodeApproverUnauthorized, CodeApprovalInsufficient, CodeApprovalOrphan} {
+	for _, code := range []string{CodeApprovalMissing, CodeApprovalStale, CodeApprovalExpired, CodeApproverUnauthorized, CodeApprovalInsufficient, CodeApprovalOrphan, CodeApprovalSelf} {
 		SetAnalyzer(code, AnalyzerLock, ScopeBundle)
 	}
 	registerRunCheck((*runner).checkApprovals, AnalyzerLock)

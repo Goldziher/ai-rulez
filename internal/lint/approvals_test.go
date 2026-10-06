@@ -17,4 +17,5 @@ func TestApprovalCodesMatchThePackage(t *testing.T) {
 	assert.Equal(t, approval.CodeUnauthorized, CodeApproverUnauthorized)
 	assert.Equal(t, approval.CodeInsufficient, CodeApprovalInsufficient)
 	assert.Equal(t, approval.CodeOrphan, CodeApprovalOrphan)
+	assert.Equal(t, approval.CodeSelf, CodeApprovalSelf)
 }
