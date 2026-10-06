@@ -133,13 +133,28 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	res.Ranking = cfg.Mode
 	switch cfg.Mode {
 	case ModeVector:
-		res.Hits = r.fuse(nil, vec, cfg, query, true)
+		res.Hits = r.withoutVectors(r.fuse(nil, vec, cfg, query, true), lex)
 	default:
 		res.Hits = r.fuse(lex, vec, cfg, query, false)
 	}
 	r.markStale(res.Hits)
 	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
+}
+
+// withoutVectors appends, in lexical order, the skills of a vector ranking that have no usable vector
+// (new or changed since the index was built), so a vector search does not silently drop them.
+func (r *Ranker) withoutVectors(hits []SearchHit, lex []lexHit) []SearchHit {
+	have := make(map[int]bool, len(hits))
+	for _, h := range hits {
+		have[h.Index] = true
+	}
+	for i, h := range lex {
+		if !have[h.item] && r.rows[h.item] < 0 {
+			hits = append(hits, SearchHit{Index: h.item, LexRank: i + 1})
+		}
+	}
+	return hits
 }
 
 func (r *Ranker) markStale(hits []SearchHit) {
@@ -194,14 +209,6 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 	if r.Embedder == nil {
 		return nil, DegradedProvider, use
 	}
-	q, used, err := r.queryVector(ctx, query)
-	use = used
-	if err != nil {
-		return nil, DegradedReason(err), use
-	}
-	if len(q) != r.Index.Manifest.Dims {
-		return nil, DegradedProvider, use
-	}
 	inPool := make(map[int]bool, len(pool))
 	for _, it := range pool {
 		inPool[it] = true
@@ -211,6 +218,18 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 		if r.rows[it] >= 0 && inPool[it] {
 			rowItem[r.rows[it]] = it
 		}
+	}
+	if len(rowItem) == 0 && len(pool) > 0 {
+		// Every skill in scope is new or changed since the index was built: nothing to rank by vector.
+		return nil, DegradedNoIndex, use
+	}
+	q, used, err := r.queryVector(ctx, query)
+	use = used
+	if err != nil {
+		return nil, DegradedReason(err), use
+	}
+	if len(q) != r.Index.Manifest.Dims {
+		return nil, DegradedProvider, use
 	}
 	top := r.Index.TopK(q, len(rowItem), func(row int) bool { _, ok := rowItem[row]; return ok })
 	out := make([]vecHit, len(top))
@@ -326,7 +345,10 @@ func (r *Ranker) fuse(lex []lexHit, vec []vecHit, cfg Config, query string, vect
 			}
 		}
 	}
-	pin := r.exactPin(query, hits)
+	pin := -1
+	if !vectorOnly { // vector mode ranks by cosine alone
+		pin = r.exactPin(query, hits)
+	}
 	out := make([]SearchHit, 0, len(hits))
 	for item, h := range hits {
 		h.Score = math.Round(score[item]*1e9) / 1e9

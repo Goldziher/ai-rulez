@@ -306,3 +306,61 @@ func TestRanker_ConcurrentSearch(t *testing.T) {
 		<-done
 	}
 }
+
+func TestRanker_VectorModeRanksByCosineAloneWithoutAnExactIDPin(t *testing.T) {
+	t.Parallel()
+	// Arrange: the query names deploy-staging but is about a chargeback dispute
+	emb := refundEmbedder()
+	query := "use the deploy-staging skill to handle a chargeback dispute from a bank"
+	vec := builtRanker(t, ModeVector, emb)
+	hyb := builtRanker(t, ModeHybrid, emb)
+
+	// Act
+	gotVec := vec.Search(t.Context(), query)
+	gotHyb := hyb.Search(t.Context(), query)
+
+	// Assert
+	assert.Equal(t, "dispute-charge", names(vec, gotVec.Hits)[0], "vector mode ranks by cosine alone")
+	assert.Equal(t, "deploy-staging", names(hyb, gotHyb.Hits)[0], "hybrid still pins the exact id")
+}
+
+func TestRanker_VectorModeRanksStaleSkillsLexicallyAfterTheVectorHits(t *testing.T) {
+	t.Parallel()
+	// Arrange: the refund skill's text changed after indexing, so it has no usable vector
+	emb := refundEmbedder()
+	r := builtRanker(t, ModeVector, emb)
+	r.Items[0].Doc.Description = "Reimburse a customer for a returned purchase, now also with credit notes"
+	r.once, r.rows = onceReset(), nil
+
+	// Act
+	got := r.Search(t.Context(), "reimburse customer")
+
+	// Assert
+	require.Equal(t, ModeVector, got.Ranking)
+	require.NotEmpty(t, got.Hits)
+	last := got.Hits[len(got.Hits)-1]
+	assert.Equal(t, "issue-refund", r.Items[last.Index].ID, "a skill without a vector is not dropped: it follows the vector hits")
+	assert.True(t, last.StaleVec)
+	assert.Zero(t, last.VecRank)
+	assert.Equal(t, 1, last.LexRank)
+}
+
+func TestRanker_VectorModeWithNoUsableVectorsIsDegraded(t *testing.T) {
+	t.Parallel()
+	// Arrange: every skill changed since the index was built
+	emb := refundEmbedder()
+	r := builtRanker(t, ModeVector, emb)
+	for i := range r.Items {
+		r.Items[i].Doc.Description += " revised"
+	}
+	r.once, r.rows = onceReset(), nil
+	emb.calls = 0
+
+	// Act
+	got := r.Search(t.Context(), "reimburse customer")
+
+	// Assert
+	assert.Equal(t, DegradedNoIndex, got.Degraded)
+	assert.Equal(t, ModeLexical, got.Ranking)
+	assert.Zero(t, emb.calls, "no query embedding is spent when no vector can be used")
+}

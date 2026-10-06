@@ -107,7 +107,8 @@ Ties order by name. A query that contains a skill's exact id as whole words ("us
 that skill first. An id that is one ordinary word (`test`, `build`, `fix`) pins only when the query calls it a
 skill ("use the build skill"): without that rule, "write the failing test first" pinned `test` over `tdd-workflow`
 in an evaluation. Only exact ids pin, so a keyword-stuffed description gains nothing from it. `vector` mode ranks by
-cosine alone. A hybrid result always lists the nearest skills even when none is a good match: RRF scores have no
+cosine alone (no id pin); a skill with no usable vector (new, or changed since indexing) follows the vector hits in
+lexical order, and when no skill in scope has one the search is `degraded: no_index`. A hybrid result always lists the nearest skills even when none is a good match: RRF scores have no
 absolute meaning, so there is no abstention; use negative cases in an evaluation to see how a model behaves.
 
 `find_skill` calls the same ranker. The MCP server never builds the index and never embeds a skill: it loads the
@@ -121,7 +122,7 @@ and, when it fell back, `degraded`; see [the MCP server](mcp-server.md#dynamic-s
 ai-rulez search index --dry-run   # the host, the number of texts and bytes, an estimate: nothing is sent
 ai-rulez search index             # embed what changed, write the index
 ai-rulez search index --rebuild   # re-embed everything
-ai-rulez search index --items refund-policy,deploy-staging
+ai-rulez search index --items refund-policy,deploy-staging   # force these, besides what changed
 ai-rulez search status            # state of the index against the served skills
 ```
 
@@ -136,8 +137,8 @@ egress     25 texts, 4.7 KiB -> default
 
 The embedded text of a skill is a fixed template over the configured fields (`name:`, `description:`, `triggers:`,
 `keywords:` lines, then `body:` when `index_body` is set). A vector is reused when the provider, the model, the
-fields and the SHA-256 of the exact text match, so editing a skill's body (with `index_body = false`) or renaming it
-costs nothing, one edited description costs one text, and a changed model or field set re-embeds everything:
+fields and the SHA-256 of the exact text match, so editing a skill's body (with `index_body = false`) costs nothing, one edited description costs one
+text (so does a rename, since the name is part of the text unless `fields` leaves it out), and a changed model or field set re-embeds everything:
 vectors of different models are never mixed. The build stops on a budget or provider error after writing the
 vectors that finished (atomically: `vectors.bin`, then `manifest.json`), prints the skills still missing and exits
 2; those rank lexically. A second concurrent run is refused by `index.lock`.

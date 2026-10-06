@@ -1644,7 +1644,7 @@ A hybrid or vector search that cannot embed the query ranks lexically and report
 
 ### `ai-rulez search index` and `ai-rulez search status`
 
-`index` embeds the served skills and writes the index `find_skill` and `search --mode hybrid` read; only skills whose embedded text changed are sent. `--dry-run` shows the host, the number of texts and bytes and an estimate first; `--rebuild` re-embeds everything; `--items a,b` re-embeds only those skills. A skill whose text looks like it holds a secret is withheld (`AR9D3`). Exit 2 when a budget or provider stop left skills without a vector (the finished ones are written). `status` reports the index against the served skills (`none`, `unreadable`, `incompatible`, `stale`, `fresh`) without any network call. See [Skill Search](search.md#building-the-index).
+`index` embeds the served skills and writes the index `find_skill` and `search --mode hybrid` read; only skills whose embedded text changed are sent. `--dry-run` shows the host, the number of texts and bytes and an estimate first; `--rebuild` re-embeds everything; `--items a,b` also re-embeds those skills although their text did not change (every changed or unindexed skill is embedded and sent regardless). A skill whose text looks like it holds a secret is withheld (`AR9D3`). Exit 2 when a budget or provider stop left skills without a vector (the finished ones are written). `status` reports the index against the served skills (`none`, `unreadable`, `incompatible`, `stale`, `fresh`) without any network call. See [Skill Search](search.md#building-the-index).
 
 ### `ai-rulez search mine`
 
