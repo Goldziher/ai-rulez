@@ -289,6 +289,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 		return s.scanCachedContent()
 	}
 
+	scrubLegacyCredentials(ctx, s.cacheDir, s.originalURL)
 	ref := s.resolvedRef()
 
 	// A full commit SHA cannot be advertised by ls-remote — it IS the commit.

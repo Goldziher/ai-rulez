@@ -13,7 +13,7 @@ func BaselineConfig() []string { return []string{"-c", "protocol.ext.allow=never
 // BaselineProtocols is the GIT_ALLOW_PROTOCOL value of a fetch that is not fully
 // hardened (an include): everything a repository URL can reasonably use except
 // ext:: and other program-running transports.
-const BaselineProtocols = "file:git:http:https:ssh"
+const BaselineProtocols = "file:http:https:ssh"
 
 // HardenedConfig returns the `-c key=value` arguments for a git invocation that
 // fetches content from a source the user does not control (an OKF bundle): no

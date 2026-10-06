@@ -45,9 +45,12 @@ endpoint, or make a scanner or an eval run a program.
 
 ## Git credentials
 
-A token (`AI_RULEZ_GIT_TOKEN` or `--token`) is sent to the host of every HTTPS include or installed skill the
-repository names. Use a token with the least scope that can read what you include, and review the hosts a repository
-names before running `generate` with a token in the environment. Skill sources run git with no credential helper and
+A token (`AI_RULEZ_GIT_TOKEN` or `--token`) is sent only to hosts you allowlist, never to a host a repository
+names on its own: it goes to `github.com` by default, or to the comma-separated hosts in `AI_RULEZ_GIT_TOKEN_HOSTS`
+(environment only, which replaces the default). It travels as a per-command `Authorization` header scoped to
+that host, so it is in neither the URL, the process arguments, nor the cached clone's `.git/config`. A repository
+that names another HTTPS host gets no token and a warning. Plain `http://`, `git://`, ssh and file sources never
+receive it. Use a token with the least scope that can read what you include. Skill sources run git with no credential helper and
 no prompt, so they fetch public repositories or use an SSH agent.
 
 ## What the checks cover
