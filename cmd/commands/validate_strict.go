@@ -198,11 +198,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			opts = append(opts, lint.WithSigning(findings))
 		}
 	}
-	if !strictSecurityOnly && lint.AnalyzerSelected(sel, lint.AnalyzerConfig) {
-		if findings := sbomFindingsFor(cfg); len(findings) > 0 {
-			opts = append(opts, lint.WithSBOM(findings))
-		}
-	}
+	opts = append(opts, sbomOptions(cfg, sel)...)
 	if lint.AnalyzerSelected(sel, lint.AnalyzerTraps) {
 		// The traps judge the files a run would write, whether or not generate has run.
 		opts = append(opts, lint.WithPlanned(generator.NewPlannedFiles(cfg)))

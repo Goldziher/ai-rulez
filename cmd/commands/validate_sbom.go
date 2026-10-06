@@ -48,6 +48,18 @@ func sbomFindingsFor(cfg *config.Config) []lint.SBOMFinding {
 	return append(out, committedSBOMDrift(cfg)...)
 }
 
+// sbomOptions is the lint option that carries the SBOM findings, none for a
+// security-only run or when the config analyzer is not selected.
+func sbomOptions(cfg *config.Config, sel []string) []lint.Option {
+	if strictSecurityOnly || !lint.AnalyzerSelected(sel, lint.AnalyzerConfig) {
+		return nil
+	}
+	if findings := sbomFindingsFor(cfg); len(findings) > 0 {
+		return []lint.Option{lint.WithSBOM(findings)}
+	}
+	return nil
+}
+
 func lockRelPath(cfg *config.Config) string {
 	rel, err := filepath.Rel(cfg.BaseDir, filepath.Join(cfg.ConfigDir, "ai-rulez.lock"))
 	if err != nil {
