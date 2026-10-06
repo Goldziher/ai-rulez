@@ -98,7 +98,7 @@ func TestResolverCreateSource(t *testing.T) {
 				Source: tt.source,
 			}
 
-			source, err := resolver.createSource(&includeConf)
+			source, err := resolver.createSource(context.Background(), &includeConf)
 
 			if tt.expectError {
 				if err == nil {
