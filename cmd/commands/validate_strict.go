@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,6 +28,8 @@ var (
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
+	// validateVerifiers is --verifiers: also report the verifiers as AR9H findings.
+	validateVerifiers bool
 	// validateApprovalsBase is --approvals-base: the git revision approvals are compared with (AR716).
 	validateApprovalsBase string
 	// validateRepoRoot is --repo-root: the directory repo-relative paths and
@@ -51,13 +54,13 @@ var (
 func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
-		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != ""
+		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != "" || validateVerifiers
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix and the baseline flags require --strict")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags require --strict")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
@@ -202,6 +205,9 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	scanner, err := scannerOptions()
 	if err != nil {
 		return nil, err
+	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
+		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(context.Background(), cfg)))
+	}
 	}
 	return lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
