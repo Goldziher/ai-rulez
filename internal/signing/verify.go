@@ -202,7 +202,11 @@ func (v *Verifier) verifyKey(b *bundle.Bundle, art verify.ArtifactPolicyOption, 
 			trusted = root.TrustedMaterialCollection{material, v.TrustedRoot}
 		}
 		opts := []verify.VerifierOption{}
-		if res.Logged && v.tlog() != TLogOff {
+		// Under "optional" a log entry that no root can check is ignored, not an
+		// error: the key signature is still verified and the time stays unknown
+		// (Weak), as for a bundle without a log.
+		checkLog := res.Logged && v.tlog() != TLogOff && (v.TrustedRoot != nil || v.tlog() == TLogRequired)
+		if checkLog {
 			if v.TrustedRoot == nil {
 				return Errorf(CodeRootUnavailable, "the bundle has a transparency log entry and no trusted root verifies it")
 			}
