@@ -631,8 +631,9 @@ digest = "sha256:…"
 A role is pinned when it declares `pin = true`; `ai-rulez lock --roles` pins every role, and `lock --role <name>`
 pins that role as well. The digest covers the files `generate --role <name>` would write (the same rendering the
 default pins use, plus the ai-rulez-rendered part of `.claude/settings.json`, so `skillOverrides` from
-`skill_mode` count). The role is rendered in memory; nothing is written. A plain `lock` re-pins exactly the roles
-that declare `pin = true`, so a role pinned only with `--roles` drops out on the next plain `lock`.
+`skill_mode` count). The role is rendered in memory; nothing is written. A plain `lock` re-pins the roles
+that declare `pin = true` and every role the lock already pins, so a role pinned with `--roles` or `--role` stays
+pinned. A pin whose role was removed from the configuration is dropped.
 
 - `lock --check` compares every pinned role and reports `output changed  outputs of role backend` (or `added` for a
   role with `pin = true` that the lock does not pin yet, `removed` for a pin whose role is gone). It also catches a

@@ -299,7 +299,7 @@ func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, w
 		if profileName == "" && current != nil {
 			profileName = current.Profile
 		}
-		snap, err := lockRoleSnapshot(cfg, profileName, false, govview.RoleSelection{Write: true, All: lockRoles, Only: lockRoleNames()})
+		snap, err := lockRoleSnapshot(cfg, profileName, false, govview.RoleSelection{Write: true, All: lockRoles, Lock: current, Only: lockRoleNames()})
 		if err != nil {
 			return err
 		}
