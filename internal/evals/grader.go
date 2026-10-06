@@ -23,6 +23,23 @@ const (
 // output is untrusted data and its size is not a reason to run up a bill.
 const maxTranscriptBytes = 64 << 10
 
+// DefaultJudgeCompletionTokens is the least completion budget of a built-in judge call.
+const DefaultJudgeCompletionTokens = 2048
+
+// completionFloor raises the completion budget of every request to at least min.
+type completionFloor struct {
+	llm.Client
+	min int
+}
+
+// Chat implements llm.Client.
+func (c completionFloor) Chat(ctx context.Context, req llm.ChatRequest) (llm.ChatResponse, error) {
+	if req.MaxTokens < c.min {
+		req.MaxTokens = c.min
+	}
+	return c.Client.Chat(ctx, req) //nolint:wrapcheck // the model layer's typed error is the useful one
+}
+
 // RubricGrade is one graded rubric.
 type RubricGrade struct {
 	// Score is in [0,1]: the share of the rubric the transcript satisfies.
@@ -53,6 +70,11 @@ type JudgeGrader struct {
 	Spent func() float64
 	// RedactSecrets sends secret-looking text masked instead of refusing the case.
 	RedactSecrets bool
+	// MinCompletionTokens is the completion budget a judge call gets at least. The
+	// model layer's judge asks for 300 tokens, which a reasoning model (Gemini 2.5
+	// flash) spends on its thinking before it writes the verdict, so the reply is cut
+	// off. Default DefaultJudgeCompletionTokens.
+	MinCompletionTokens int
 
 	mu sync.Mutex
 }
@@ -68,7 +90,11 @@ func (g *JudgeGrader) Grade(ctx context.Context, rubric, transcript string) (Rub
 	g.mu.Lock() // one judge call at a time: the budget guard and the cost delta stay simple
 	defer g.mu.Unlock()
 	transcript = boundTranscript(transcript)
-	v, err := llm.JudgeWith(ctx, g.Client, rubric, transcript, llm.JudgeOptions{RedactSecrets: g.RedactSecrets})
+	floor := g.MinCompletionTokens
+	if floor <= 0 {
+		floor = DefaultJudgeCompletionTokens
+	}
+	v, err := llm.JudgeWith(ctx, completionFloor{Client: g.Client, min: floor}, rubric, transcript, llm.JudgeOptions{RedactSecrets: g.RedactSecrets})
 	if err != nil {
 		return RubricGrade{}, err //nolint:wrapcheck // the model layer's typed error is the useful one
 	}
