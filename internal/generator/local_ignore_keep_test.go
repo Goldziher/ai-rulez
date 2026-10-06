@@ -45,7 +45,7 @@ func TestCollectGitignorePaths_KeepsLocalPatternsWhenLocalWasNotLoaded(t *testin
 
 			// Assert
 			assert.Equal(t, tt.want, patterns[".ai-rulez/config.local.*"])
-			assert.Equal(t, tt.want, patterns[".ai-rulez/local/"])
+			assert.True(t, patterns[".ai-rulez/local/"], "the local dir is ignored even before it exists")
 		})
 	}
 }
