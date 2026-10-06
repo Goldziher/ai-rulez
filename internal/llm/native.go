@@ -2,9 +2,11 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -69,6 +71,10 @@ type literLLM struct {
 	model      string
 	embedModel string
 	pricing    Pricing
+	// perInput is set once a batch embed came back with the wrong number of vectors (Gemini's
+	// native route answers a batch with one). Later batches then go out one input per request
+	// instead of repeating the wasted batch call.
+	perInput atomic.Bool
 }
 
 func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
@@ -211,6 +217,9 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	if len(req.Input) == 0 {
 		return EmbedResponse{Model: model}, nil
 	}
+	if len(req.Input) > 1 && l.perInput.Load() {
+		return l.embedEach(ctx, model, req, Usage{}, 0)
+	}
 	body, err := encodeEmbed(model, req)
 	if err != nil {
 		return EmbedResponse{}, newError(KindConfig, "cannot encode request: %v", err)
@@ -224,16 +233,29 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	}
 	resp, err := decodeEmbed(out, l.pricing, model, len(req.Input))
 	if errors.Is(err, errEmbedCount) && len(req.Input) > 1 {
-		return l.embedEach(ctx, model, req)
+		l.perInput.Store(true)
+		// The collapsed batch was still sent and billed: keep its usage and count it as a request.
+		return l.embedEach(ctx, model, req, batchUsage(out), 1)
 	}
 	return resp, err
 }
 
-// embedEach embeds the inputs one call at a time. Gemini's native route behind
+// batchUsage reads the usage of an embedding reply whose vector count was wrong.
+func batchUsage(body []byte) Usage {
+	var w wireEmbedResponse
+	if json.Unmarshal(body, &w) != nil {
+		return Usage{}
+	}
+	return Usage{PromptTokens: w.Usage.PromptTokens}
+}
+
+// embedEach embeds the inputs one request at a time. Gemini's native route behind
 // liter-llm answers a batch with a single vector, so the batch is retried as
-// singles rather than failing or returning too few vectors.
-func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest) (EmbedResponse, error) {
-	out := EmbedResponse{Model: model, CostKnown: true}
+// singles rather than failing or returning too few vectors. spent and requests
+// are what an already-sent batch cost, so the response charges and counts it.
+func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest, spent Usage, requests int) (EmbedResponse, error) {
+	cost, known := l.pricing.Cost(model, spent)
+	out := EmbedResponse{Model: model, Usage: spent, CostUSD: cost, CostKnown: known || spent.Total() == 0, Requests: requests}
 	for _, in := range req.Input {
 		one := req
 		one.Input = []string{in}
@@ -257,6 +279,7 @@ func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest
 		out.CostUSD += r.CostUSD
 		out.CostKnown = out.CostKnown && r.CostKnown
 		out.Model = r.Model
+		out.Requests++
 	}
 	return out, nil
 }

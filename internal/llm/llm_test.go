@@ -737,8 +737,8 @@ func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testi
 	if len(resp.Vectors) != 3 || resp.Vectors[0][0] != 1 || resp.Vectors[1][0] != 2 || resp.Vectors[2][0] != 3 {
 		t.Errorf("vectors = %v, want one per input in order", resp.Vectors)
 	}
-	if resp.Usage.PromptTokens != 6 {
-		t.Errorf("usage = %+v, want the per-input usage summed (6)", resp.Usage)
+	if resp.Usage.PromptTokens != 8 || resp.Requests != 4 {
+		t.Errorf("usage = %+v requests = %d, want the 3 singles and the collapsed batch charged (8 tokens, 4 requests)", resp.Usage, resp.Requests)
 	}
 	if calls != 4 {
 		t.Errorf("native calls = %d, want 1 batch + 3 singles", calls)
@@ -776,5 +776,48 @@ func TestRedactSecretsShouldKeepEnvironmentLookupsAndMaskLiterals(t *testing.T) 
 				t.Errorf("RedactSecrets(%q) = %q, changed=%v want %v", tc.in, got, changed, tc.changed)
 			}
 		})
+	}
+}
+
+// Once a batch has come back collapsed, later batches skip the wasted batch request, and the
+// budget counts every provider request against max_calls.
+func TestLiterLLMEmbedShouldRememberCollapsedBatchesAndCountEveryRequest(t *testing.T) {
+	// Arrange
+	calls := 0
+	stub := &stubNative{embed: func(b []byte) ([]byte, error) {
+		calls++
+		var in struct {
+			Input []string `json:"input"`
+		}
+		if err := json.Unmarshal(b, &in); err != nil {
+			return nil, err
+		}
+		return []byte(`{"data":[{"index":0,"embedding":[1,0]}],"usage":{"prompt_tokens":2}}`), nil
+	}}
+	l := &literLLM{native: stub, provider: "gemini", model: "gemini/m", embedModel: "gemini/e"}
+	budget := NewBudget(Limits{MaxCalls: 100}, NewPricing(Config{}))
+	c := WithBudget(l, budget, "gemini/m", "gemini/e")
+	req := EmbedRequest{Input: []string{"a", "b", "c"}}
+
+	// Act
+	first, err1 := c.Embed(context.Background(), req)
+	callsAfterFirst := calls
+	second, err2 := c.Embed(context.Background(), req)
+
+	// Assert
+	if err1 != nil || err2 != nil {
+		t.Fatalf("embed: %v %v", err1, err2)
+	}
+	if callsAfterFirst != 4 || calls != 7 {
+		t.Errorf("native calls = %d after the first batch and %d after the second, want 4 and 7 (the second skips the batch request)", callsAfterFirst, calls)
+	}
+	if len(first.Vectors) != 3 || len(second.Vectors) != 3 {
+		t.Errorf("vectors = %d and %d, want 3 each", len(first.Vectors), len(second.Vectors))
+	}
+	if first.Usage.PromptTokens != 8 || second.Usage.PromptTokens != 6 {
+		t.Errorf("tokens = %d and %d, want 8 (the collapsed batch is charged) and 6", first.Usage.PromptTokens, second.Usage.PromptTokens)
+	}
+	if got := budget.Spent().Calls; got != 7 {
+		t.Errorf("budget calls = %d, want every provider request counted (7)", got)
 	}
 }
