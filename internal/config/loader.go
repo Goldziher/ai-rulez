@@ -291,16 +291,6 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	// Convert inline MCP servers to map
 	config.MCPServers = serversToMap(config.MCPServersRaw)
 
-	// Backward compat: load legacy separate mcp.yaml/mcp.toml if present
-	if legacyServers := loadLegacyMCPFile(configDir); len(legacyServers) > 0 {
-		loadHost(lo).Logger().Warn("Separate mcp.yaml/mcp.toml is deprecated — add mcp_servers to your config file instead")
-		for name, server := range legacyServers {
-			if _, exists := config.MCPServers[name]; !exists {
-				config.MCPServers[name] = server
-			}
-		}
-	}
-
 	// Scan content directories
 	scanner := newProjectScanner(baseDir)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
@@ -1416,52 +1406,6 @@ func serversToMap(servers []MCPServer) map[string]*MCPServer {
 		result[servers[i].Name] = &clone
 	}
 	return result
-}
-
-// legacyMCPFileNames are the deprecated separate MCP files, in load order. Only
-// the first one that exists is loaded.
-var legacyMCPFileNames = []string{"mcp.toml", "mcp.yaml", "mcp.json"}
-
-// loadLegacyMCPFile loads MCP servers from a deprecated separate mcp.toml/mcp.yaml/mcp.json file.
-// Returns nil if no legacy file exists.
-func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
-	for _, filename := range legacyMCPFileNames {
-		path := filepath.Join(configDir, filename)
-		if _, err := os.Stat(path); err != nil {
-			continue
-		}
-		servers, err := DecodeLegacyMCPFile(path)
-		if err != nil {
-			logger.Warn("Failed to load legacy MCP file", "path", path, "error", err)
-			return nil
-		}
-		return serversToMap(servers)
-	}
-	return nil
-}
-
-// DecodeLegacyMCPFile reads the servers of one deprecated mcp.toml, mcp.yaml or
-// mcp.json file, as written.
-func DecodeLegacyMCPFile(path string) ([]MCPServer, error) {
-	data, err := readCapped(path)
-	if err != nil {
-		return nil, oops.With("path", path).Wrapf(err, "read legacy MCP file")
-	}
-	var cfg struct {
-		Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
-	}
-	switch filepath.Ext(path) {
-	case extTOML:
-		err = toml.Unmarshal(data, &cfg)
-	case extYAML, extYML:
-		err = yaml.Unmarshal(data, &cfg)
-	case extJSON:
-		err = json.Unmarshal(data, &cfg)
-	}
-	if err != nil {
-		return nil, oops.With("path", path).Wrapf(err, "parse legacy MCP file")
-	}
-	return cfg.Servers, nil
 }
 
 // SaveConfig writes a configuration back to its original on-disk format.
