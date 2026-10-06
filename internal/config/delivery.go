@@ -23,7 +23,7 @@ const dynamicSkillsPath = "generated://" + DynamicSkillsName + "/SKILL.md"
 const dynamicSkillsDescription = "Find and load more skills on demand from the ai-rulez MCP server. " +
 	"Use when a task needs domain conventions or a workflow that no listed skill covers."
 
-const dynamicSkillsBody = `More skills are available on demand and are not listed in this session. The ` + "`ai-rulez`" + ` MCP server serves them.
+const dynamicSkillsBody = `More skills are available on demand and are not listed in this session. The ` + "`{{server}}`" + ` MCP server serves them.
 
 1. Call ` + "`find_skill`" + ` with a short description of the task. It returns ranked matches.
 2. Call ` + "`load_skill`" + ` with the chosen ` + "`name`" + ` and follow the skill it returns.
@@ -209,12 +209,46 @@ func (c *Config) DeliveryFallbacks(tree *ContentTree) []DeliveryFallback {
 	return out
 }
 
-// DynamicSkillsStub builds the generated stub skill.
-func DynamicSkillsStub() ContentFile {
+// DefaultSkillsServerName is the server name docs register for `mcp --serve-skills`;
+// the stub names it when no [[mcp_servers]] entry runs that command.
+const DefaultSkillsServerName = "ai-rulez-skills"
+
+// skillsServerName is the name of the configured MCP server that runs
+// `mcp --serve-skills`, so the stub names a server the harness actually has.
+func (c *Config) skillsServerName() string {
+	runs := func(s *MCPServer) bool {
+		for _, a := range s.Args {
+			if a == "--serve-skills" {
+				return true
+			}
+		}
+		return false
+	}
+	for i := range c.MCPServersRaw {
+		if runs(&c.MCPServersRaw[i]) && c.MCPServersRaw[i].Name != "" {
+			return c.MCPServersRaw[i].Name
+		}
+	}
+	names := make([]string, 0, len(c.MCPServers))
+	for name, s := range c.MCPServers {
+		if s != nil && runs(s) {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	if len(names) > 0 {
+		return names[0]
+	}
+	return DefaultSkillsServerName
+}
+
+// DynamicSkillsStub builds the generated stub skill; server names the MCP
+// server that serves the skills.
+func DynamicSkillsStub(server string) ContentFile {
 	return ContentFile{
 		Name:     DynamicSkillsName,
 		Path:     dynamicSkillsPath,
-		Content:  dynamicSkillsBody,
+		Content:  strings.ReplaceAll(dynamicSkillsBody, "{{server}}", server),
 		Metadata: &Metadata{Extra: map[string]string{keyFrontmatterDescription: dynamicSkillsDescription}},
 	}
 }
@@ -245,7 +279,7 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 	}
 	switch authored := c.authoredStubCount(&out); {
 	case authored == 0:
-		out.Skills = append(out.Skills, DynamicSkillsStub())
+		out.Skills = append(out.Skills, DynamicSkillsStub(c.skillsServerName()))
 	case authored > 1:
 		c.warnDuplicateStub(authored)
 	}
