@@ -187,6 +187,49 @@ and `--evals` point at other files (a named file must exist).
 `--json` prints the same data as JSON (rows gain `feedback` and `eval` members, and the report `feedback_events`).
 The command reports and exits 0.
 
+## Exporting to a file
+
+`ai-rulez usage export --to file usage.ndjson` writes the log as an OTLP JSON file for an air-gapped collector, a
+cross-repo aggregation job or your own tooling. It is local: no network, no consent record, and it works whether or not
+`[telemetry]` is enabled.
+
+```console
+$ ai-rulez usage export --to file usage.ndjson
+wrote 118 events in 1 batches to usage.ndjson
+$ ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl --dry-run
+would write 40 events in 1 batches to usage.ndjson (nothing written)
+```
+
+- Each line is one logs request (`resourceLogs`), exactly the body an OTLP/HTTP `POST /v1/logs` would carry, so the
+  OpenTelemetry Collector's `otlpjsonfile` receiver reads the file as is. Batches follow the exporter's size (200
+  events per line).
+- **Identifier-only, allowlist enforced**: the file is built by the same encoder and allowlist as the network
+  exporter ([attribute table](telemetry.md#otlp-mapping)). Keys of a log line that are not on the list (a stray
+  `prompt`, `cwd`, `command`) are never read, a value that fails its validator is dropped, raw session ids from
+  version 1 lines are never written, and the session and path attributes stay out unless `include_session` and
+  `include_paths` are on in your user configuration. [`telemetry preview`](telemetry.md#previewing-an-export) shows the
+  same bytes and the exported and withheld fields.
+- **Deterministic**: events keep log order and are de-duplicated by `event_id`; a line without one (version 2 and older)
+  gets an id derived from its text; the observation time is the newest event time, so no clock is read. The same
+  log gives the same file, which is replaced atomically (mode 0600; a symlink at the destination is replaced, never
+  written through; the destination may not be the log itself).
+- `--to otlp` is not available here; `telemetry flush` sends the outbox.
+
+### Design decisions
+
+- **Logs only.** The `otlpjsonfile` receiver reads one signal per file and a backend can derive the counters from the
+  log records, so the file carries no metrics. A second file for metrics can be added later without changing this one.
+- **One digest.** The lock's skill digest (`ai-rulez/skill/v1`) is the identity because it is what `lock` already pins
+  and what `lock --check` verifies. A top-level `evals/` directory was never part of it (the loader does not read it as
+  a resource), so no lock digest changed and no lock migration is needed.
+- **Join classes by lock digest.** `report evals` matches a use to an eval record by the record's `lock_digest`; a
+  served-skill digest or a missing digest joins by id only (`legacy`).
+- **Served loads prefer the index digest.** A load through the skills server logs the index's canonical digest when
+  there is one, so it joins like any other; otherwise its own served-skill digest is logged under
+  `ai-rulez/served-skill/v1`.
+- **File export ignores the kill switches and consent.** `AI_RULEZ_TELEMETRY=off` and `DO_NOT_TRACK` stop recording and
+  network export; a file you ask for on the command line is a local copy, not telemetry.
+
 ## See also
 
 [Item-load telemetry and OTLP export](telemetry.md) extends the same log with rule, agent and context events (Claude Code
