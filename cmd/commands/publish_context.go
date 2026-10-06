@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -293,10 +294,6 @@ func (pc *publishContext) filteredFiles(runtimes []string) ([]generator.PluginFi
 		cp.Plugin = &p
 	}
 	if m := pc.cfg.Marketplace; m != nil {
-		if len(m.Members) > 0 {
-			return nil, publish.Errorf(publish.CodeConfig, publish.ExitFailed, "set runtimes in each member's own configuration",
-				"--runtime cannot filter [marketplace] members, which are separate projects")
-		}
 		mc := *m
 		if m.FromDomains != nil {
 			fd := *m.FromDomains
@@ -309,8 +306,13 @@ func (pc *publishContext) filteredFiles(runtimes []string) ([]generator.PluginFi
 		}
 		cp.Marketplace = &mc
 	}
-	files, err := generator.NewGenerator(&cp).PluginFiles(profile)
+	files, err := generator.NewGenerator(&cp).WithMemberRuntimes(runtimes).PluginFiles(profile)
 	if err != nil {
+		var memberErr *generator.MemberRuntimeError
+		if errors.As(err, &memberErr) {
+			return nil, publish.Errorf(publish.CodeConfig, publish.ExitFailed, "pass only runtimes every member ships, or publish the member on its own",
+				"--runtime: %s", memberErr.Error())
+		}
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	return files, nil
