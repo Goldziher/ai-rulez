@@ -195,7 +195,8 @@ no file system. `--emit NAME` (repeatable) or `[[publish.emitters]]` runs it int
 `--sign-key FILE` signs the archive with a PEM key (ECDSA or ed25519; cosign keys work; the password comes from
 `AI_RULEZ_SIGNING_KEY_PASSWORD` or `COSIGN_PASSWORD`, or the variable named by `--sign-key-password-env`). `--sign-keyless`
 signs with a Fulcio certificate and a Rekor entry (`--sign-token-env`, `--sign-interactive`, `--fulcio-url`, `--rekor-url`;
-the certificate names your identity and goes to a public log, so use a key for a private repository). Both go through
+the certificate names your identity and goes to a public log, so use a key for a private repository). `--dry-run` signs
+nothing and contacts nothing: it prints `would sign` and shows the signature files in the plan as placeholders. Both go through
 [`internal/signing`](signing.md), the same code as `ai-rulez sign`.
 
 The signature is a Sigstore bundle holding a message signature over the exact bytes of the tar.gz, the form
