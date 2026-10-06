@@ -649,3 +649,36 @@ func TestApprove_VerifyBaseFlagValidation(t *testing.T) {
 		})
 	}
 }
+
+// Items are pinned whatever the profile (it only selects outputs), so relocking
+// under another profile or pruning must keep the approval of a profile-scoped domain.
+func TestApprove_RelockAndPruneKeepApprovalsOfContentOutsideTheLockProfile(t *testing.T) {
+	// Arrange: rule backend/api exists only in profile "backend"
+	root := approveProject(t, "\n[profiles]\nbackend = [\"backend\"]\nfrontend = [\"frontend\"]\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "backend", "rules", "api.md"), "# API\nUse REST.\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "frontend", "rules", "ui.md"), "# UI\nUse React.\n")
+	lockProfile = "backend"
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	approveYes, approveReviewer = true, "alice@example.org"
+	require.Equal(t, 0, mustApprove(t, "rule:backend/api"))
+
+	// Act: relock for the frontend profile, which leaves backend/api out of the lock
+	lockProfile = "frontend"
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	resetApproveFlags()
+	approveYes = true
+	pruneCode, _, stderr := func() (int, string, string) {
+		approvePrune = true
+		return runApproveCmd(t)
+	}()
+
+	// Assert
+	require.Equal(t, 0, pruneCode, stderr)
+	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
+	require.NoError(t, err)
+	var kept bool
+	for _, a := range lock.Approval {
+		kept = kept || (a.Kind == "rule" && a.ID == "api" && a.Domain == "backend")
+	}
+	assert.True(t, kept, "the approval of backend/api survives: %s", lockText(t, root))
+}

@@ -1693,6 +1693,7 @@ ai-rulez validate [config-path] [flags]
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
 | `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--approvals-base`    | string  | With `--strict`: also report approvals added since this git revision for content that also changed since it (`AR716`, see [Approvals](approvals.md#approvals-are-assertions)) |
 | `--since-depth`       | string  | With `--since` or `--changed`: how many reference hops to follow from the changed files, a number or `all` (default `1`); each JSON finding carries a `hop` (`changed`, `dependent`, `transitive(n)`) |
 | `--since-max-files`   | int     | With `--since` or `--changed`: report at most this many files besides the changed ones, nearest first (`0`: no cap) |
 | `--repo-root`         | string  | Repository root that repo-relative paths and git-tracked globs resolve against (env `AI_RULEZ_REPO_ROOT`; default the git top level, else the config's parent); an error outside a git repository |
@@ -1854,6 +1855,7 @@ ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh
 ai-rulez approve include:shared --accept AR005  # accept a finding you read (stored with the record)
 ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
 ai-rulez approve --prune                        # drop records of removed or changed content
+ai-rulez approve --verify-base origin/main      # CI: approvals added together with the content they approve (AR716)
 ```
 
 | Flag | Description |
@@ -1861,16 +1863,18 @@ ai-rulez approve --prune                        # drop records of removed or cha
 | `--list`, `--all` | List what needs approval; `--all` adds pinned content that needs none |
 | `--diff` | Show files, scan findings and earlier approvals of the named items |
 | `--revoke`, `--prune` | Remove records |
+| `--verify-base <rev>` | Compare the lock with the one at the merge base of `<rev>` and `HEAD` and report every approval added since for content that was added or changed since (`AR716`); exit `2` when there is one; writes nothing |
 | `--reviewer` | Reviewer to record (default `$AI_RULEZ_REVIEWER`, else git `user.email`) |
 | `--note` | Free-text note, scanned for secrets |
 | `--accept <code>` | Accept an error-level scan finding by code (repeatable) |
-| `--expires`, `--at` | Expiry date (default today + `[governance] max_age`); approval time for reproducible runs |
+| `--expires`, `--at` | Expiry date (default today + `[governance] max_age`); approval time for reproducible runs (not in the future) |
 | `--yes` | Do not ask; required without a terminal |
 | `--format json` | With `--list` |
 
 Items are named `kind:id` or `kind:domain/id` (`skill:backend/deploy`, `include:shared`, `hook:PreToolUse:*:0`); only
 pinned content can be approved. Exit codes: `0` ok, `1` the command could not run or refused (an unknown or ambiguous
-item, an error-level finding, no `--yes` off a terminal, a reviewer outside `[governance] approvers`).
+item, an error-level finding, no `--yes` off a terminal, a reviewer outside `[governance] approvers`), `2` `--verify-base`
+found an approval added together with its content. The reviewer is stored lower-cased and trimmed.
 
 ## Update Command
 
