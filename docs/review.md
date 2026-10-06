@@ -314,7 +314,9 @@ pins the changed item; with `[governance]` approvals the change needs a new appr
 (empty patch, exit 0): the fix was rated better and that answer is cached. `--patch FILE` takes a patch written
 earlier instead of asking a model: it verifies the digest, the hunks, the checks and the security scan, and `--apply`
 writes it. A patch is a file anyone can hand over, so it may name only an item a fix run could have edited (never
-`config.toml`, the lock, a script or a calibration record). Exit 2 when a finding had no safe fix. The fix settings are `[review.fix]`; the judge model is `--judge-model`,
+`config.toml`, the lock, a script or a calibration record). The same pipeline backs
+[`improve --with builtin:review-fix`](improve.md#bundled-adapters), where the held-out eval gate, not the judge, decides
+whether the fix is kept. Exit 2 when a finding had no safe fix. The fix settings are `[review.fix]`; the judge model is `--judge-model`,
 else `[llm] model`; the fixer is `--model`, else `[review.fix] model`.
 
 ## Selecting items
