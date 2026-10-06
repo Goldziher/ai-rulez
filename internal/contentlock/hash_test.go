@@ -127,6 +127,10 @@ func TestModeFor(t *testing.T) {
 	assert.Equal(t, ModeRegular, ModeFor(0o600))
 	assert.Equal(t, ModeExecutable, ModeFor(0o755))
 	assert.Equal(t, ModeExecutable, ModeFor(0o100))
+	// git records only the owner execute bit: group/other bits alone are regular.
+	assert.Equal(t, ModeRegular, ModeFor(0o011))
+	assert.Equal(t, ModeRegular, ModeFor(0o654))
+	assert.Equal(t, ModeExecutable, ModeFor(0o700))
 }
 
 func TestScriptsAreHashedByteForByte(t *testing.T) {
