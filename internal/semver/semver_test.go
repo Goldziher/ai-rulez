@@ -2,6 +2,7 @@ package semver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -231,6 +232,41 @@ func TestConstraintPrereleaseRules(t *testing.T) {
 			c, err := ParseConstraint(tt.constraint)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, c.Check(mustParse(t, tt.version), tt.include))
+		})
+	}
+}
+
+func TestParseAge(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    time.Duration
+		invalid bool
+	}{
+		{in: "", want: 0},
+		{in: "0", want: 0},
+		{in: "12h", want: 12 * time.Hour},
+		{in: "7d", want: 7 * 24 * time.Hour},
+		{in: " 2w ", want: 14 * 24 * time.Hour},
+		{in: "0d", want: 0},
+		{in: "168h", want: 168 * time.Hour},
+		{in: "7", invalid: true},
+		{in: "d", invalid: true},
+		{in: "-1d", invalid: true},
+		{in: "1.5d", invalid: true},
+		{in: "7 days", invalid: true},
+		{in: "90m", invalid: true},
+		{in: "99999d", invalid: true},
+		{in: "99999999999999w", invalid: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got, err := ParseAge(tt.in)
+			if tt.invalid {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
