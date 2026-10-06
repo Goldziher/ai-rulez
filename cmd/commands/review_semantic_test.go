@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	reqItemRe = regexp.MustCompile(`<<<DATA-[0-9a-f]+ item=skill:([^>]+)>>>`)
+	reqItemRe = regexp.MustCompile(`<<<DATA-[0-9a-f]+ item=(?:skill|agent|command):([^>]+)>>>`)
 	reqDimRe  = regexp.MustCompile(`(?m)^dimension ([a-z0-9-]+):`)
 	reqDescRe = regexp.MustCompile(`(?m)^description: (.*)$`)
 )
