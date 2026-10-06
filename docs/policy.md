@@ -402,6 +402,12 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   reported only when the repository wrote a `[guard]` table without `generated = true`.
 - **Provenance** names the strongest layer that decides a key (a tie goes to the stronger anchor), and every
   contributing layer for a set.
-- **Known gaps.** `no_inline_ignore` and budget ceilings for unprotected codes are later phases. A policy value is not
-  checked against the secret scanner yet.
+- **`max_findings` is a gate, not a forgiveness.** Up to the ceiling the findings keep their own severity; one more is
+  `AR749`. The code is protected, so baselines, `[lint.tolerate]` and ignores cannot absorb it. The design's
+  `[lint.size] max_tokens` is the existing `[lint.budgets.<kind>]` table here.
+- **Known gaps.** A policy value is not checked against the secret scanner yet. `[mcp]`, `[hooks]` and `deny_digests`
+  bound what the repository's own `config.toml` and `ai-rulez.lock` say; hooks and MCP servers that arrive through an
+  include are not bounded yet. The release-time source (`forge` or `first-seen`) cannot be required by a policy yet, only
+  the age. Booleans are not compared when a child extends a parent. The `telemetry` and `llm` locks ignore
+  organization discovery, which needs a repository.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).
