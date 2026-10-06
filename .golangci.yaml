@@ -27,8 +27,37 @@ linters:
     - nilerr
     - copyloopvar
     - whitespace
+    - forbidigo
+    - depguard
 
   settings:
+    # Ambient authority (issue #229): library code takes its working directory, environment,
+    # clock and processes from values it is given (ambient.Host, runner.Runner) so the engine
+    # can run inside a service. tests/archlint enforces the same set from the AST with an empty
+    # allowlist; this makes the editor and CI lint say it too.
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: '^os\.(Getwd|Chdir|Getenv|LookupEnv|UserHomeDir|Environ|ExpandEnv|UserConfigDir|UserCacheDir|Hostname|Executable)$'
+          msg: take an ambient.Env (ambient.Host) or a path from the caller instead of the process environment
+        - pattern: '^time\.(Now|Since|Until)$'
+          msg: take an ambient.Clock; ambient.Clock(nil).Now() is the wall clock for deadlines that must run on real time
+        - pattern: '^exec\.(Command|CommandContext|LookPath)$'
+          msg: start processes through a runner.Runner (runner.LookPath asks whether a tool is installed)
+    depguard:
+      rules:
+        public-api-stays-a-library:
+          files: ["**/pkg/**/*.go"]
+          list-mode: lax
+          deny:
+            - pkg: github.com/Goldziher/ai-rulez/v5/cmd
+              desc: pkg/ is the public API and must not depend on the command line
+        engine-does-not-import-the-facade:
+          files: ["**/internal/**/*.go"]
+          list-mode: lax
+          deny:
+            - pkg: github.com/Goldziher/ai-rulez/v5/pkg
+              desc: internal packages must not import the public facade (pkg/airulez imports them)
     errcheck:
       check-type-assertions: true
       check-blank: true
@@ -105,6 +134,13 @@ linters:
     generated: lax
 
     rules:
+      # forbidigo applies to the engine's library packages only: the command line, the
+      # packages that are the process boundary (ambient, runner) or CLI-only by design
+      # (agents, watch, logger, telemetry), tests and fixtures are exempt.
+      - path: '^(cmd/|tests/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/)|_test\.go$'
+        linters:
+          - forbidigo
+
       - path: _test\.go
         linters:
           - errcheck

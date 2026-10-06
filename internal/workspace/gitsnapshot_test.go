@@ -4,13 +4,13 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
@@ -19,9 +19,8 @@ import (
 func runGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	all := append([]string{"-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", "-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)
-	cmd := exec.Command("git", all...) //nolint:gosec // fixed test arguments
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "HOME="+t.TempDir(), "GIT_CONFIG_NOSYSTEM=1")
+	cmd := gitutil.CommandNoContext(dir, all...)
+	cmd.Env = append(gitutil.Env(nil), "HOME="+t.TempDir(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 	return string(out)

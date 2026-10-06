@@ -2,9 +2,10 @@ package gitutil
 
 import (
 	"context"
-	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // strippedEnv are the variables that select which repository, index or object
@@ -27,7 +28,7 @@ var strippedEnv = []string{
 // repository. Use it for any process that runs git on the caller's behalf.
 func Env(environ []string) []string {
 	if environ == nil {
-		environ = os.Environ()
+		environ = runner.Environ()
 	}
 	out := make([]string, 0, len(environ))
 	for _, kv := range environ {
@@ -55,14 +56,14 @@ func isStripped(name string) bool {
 // version probes). Callers set Stdin, Stdout and Stderr as they would on an
 // exec.Cmd.
 func Command(ctx context.Context, dir string, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "git", gitArgs(dir, args)...) //nolint:gosec // callers pass fixed git subcommands
+	cmd := runner.Command(ctx, "git", gitArgs(dir, args)...)
 	cmd.Env = Env(nil)
 	return cmd
 }
 
 // CommandNoContext is Command for callers that have no context to pass.
 func CommandNoContext(dir string, args ...string) *exec.Cmd {
-	cmd := exec.Command("git", gitArgs(dir, args)...) //nolint:gosec // callers pass fixed git subcommands
+	cmd := runner.CommandNoContext("git", gitArgs(dir, args)...)
 	cmd.Env = Env(nil)
 	return cmd
 }

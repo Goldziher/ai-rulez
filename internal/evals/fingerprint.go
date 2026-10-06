@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // DefaultRunnerTimeout bounds one runner invocation (one skill) when no timeout is set.
@@ -140,7 +141,7 @@ func findProgram(name string) string {
 		}
 		return ""
 	}
-	if path, err := exec.LookPath(name); err == nil {
+	if path, err := runner.LookPath(name); err == nil {
 		return path
 	}
 	return ""

@@ -1,7 +1,9 @@
 package runner
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
@@ -85,3 +87,20 @@ func ScrubEnv(parent, pass, extra []string) []string {
 
 // HostEnv is os.Environ(), for callers that scrub the real environment.
 func HostEnv() []string { return os.Environ() }
+
+// Environ returns the environment of this process, for building the environment of
+// a child. Library code takes an environment from its Host; this is for the code
+// that starts the process and has none to inherit from.
+func Environ() []string { return os.Environ() }
+
+// Command builds an exec.Cmd for a caller that has to stream a child's output or
+// wire its standard streams itself, which Runner does not cover. Starting it is
+// the caller's business; the package gitutil builds its git invocations with it.
+func Command(ctx context.Context, name string, args ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, name, args...) //nolint:gosec // callers pass fixed program names
+}
+
+// CommandNoContext is Command for callers that have no context to pass.
+func CommandNoContext(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...) //nolint:gosec // callers pass fixed program names
+}

@@ -5,10 +5,10 @@ package doctor
 
 import (
 	"context"
-	"os/exec"
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // Severity ranks a finding.
@@ -113,7 +113,7 @@ type check func(ctx context.Context, s *state) []Finding
 // when it does not load; that failure is itself reported by the config check.
 func Run(ctx context.Context, o Options) *Report {
 	if o.LookPath == nil {
-		o.LookPath = exec.LookPath
+		o.LookPath = runner.LookPath
 	}
 	s := &state{opts: o}
 	s.cfg, s.loadErr = o.Load(ctx, config.WithoutRemote())
