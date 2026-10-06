@@ -66,7 +66,8 @@ type Generator struct {
 	lockRender bool
 	// localManifestPending is set once the run knows it will write the local manifest.
 	localManifestPending bool
-	localSkipped         bool // local files exist on disk but were not loaded (--no-local)
+	renderedMerged       map[string]bool // merged documents this run's outputs write, by manifest path
+	localSkipped         bool            // local files exist on disk but were not loaded (--no-local)
 
 	manifests map[string]generatedManifest // manifests read this run, by path
 
@@ -156,7 +157,12 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		return 0, err
 	}
 
-	logger.Info("Generating with configuration", "profile", activeProfile)
+	if role := g.Role(); role != "" {
+		// A role renders its own slice of the content, not a profile.
+		logger.Info("Generating with configuration", "role", role)
+	} else {
+		logger.Info("Generating with configuration", "profile", activeProfile)
+	}
 	if g.config.HasGuard() {
 		logger.Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
 			"harnesses", config.GuardHarnesses)
@@ -932,6 +938,9 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	}
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 	g.disambiguateRuleCollisions(flatOutputs)
+	g.markPreexistingDocuments(flatOutputs)
+	g.carryClaimAnnotations(flatOutputs)
+	g.dropUserHeldClaims(flatOutputs)
 	g.reclaimStaleMembers(flatOutputs)
 	g.warnInstructionSizes(flatOutputs)
 
@@ -1795,7 +1804,8 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 // written.
 //
 // In "full" mode the comparison is the in-header Content-Hash plus Source-Hash,
-// never the on-disk body, so a formatter touching the body does not matter.
+// and the on-disk body must still hash to its own Content-Hash: a body edited by
+// hand (or reformatted) is rewritten, since generated files are never edited.
 // "content" and "none" have no Source-Hash to carry header changes (style, text,
 // config directory), and "none" has no hash at all, so they compare the whole
 // rendered file. With [header] timestamp enabled the Generated: text is ignored
@@ -1808,8 +1818,15 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 			// Hashes in the frontmatter are the pre-banner layout: rewrite once.
 			return false
 		}
-		return existingContentHash != "" && existingContentHash == contentHash &&
-			existingSourceHash == g.sourceHashFor(output)
+		if existingContentHash == "" || existingContentHash != contentHash ||
+			existingSourceHash != g.sourceHashFor(output) {
+			return false
+		}
+		// The header hashes alone would leave a hand-edited body in place for ever
+		// (and --check failing): only a body that still matches its Content-Hash may
+		// be skipped, otherwise generate repairs the file.
+		existing, err := os.ReadFile(absPath)
+		return err == nil && !bodyEdited(string(existing), absPath)
 	}
 	existing, err := os.ReadFile(absPath)
 	if err != nil {
@@ -2503,8 +2520,18 @@ func (g *Generator) planLocalManifest(outputs []config.OutputFile) {
 			return
 		}
 	}
-	_, localMerged := g.splitMergedClaims(outputs)
-	g.localManifestPending = len(localMerged) > 0
+	// The record is also written for plain generated documents and digests, but
+	// only machine-local content forces its .gitignore entry; with managed
+	// ignores on, collectGitignorePaths lists it anyway.
+	for _, output := range outputs {
+		if !output.IsDir && len(output.MergeClaims) > 0 &&
+			(output.PartiallyOwned || output.Sensitive || output.LocalOnly) {
+			g.localManifestPending = true
+			return
+		}
+	}
+	committed, local := g.splitMergedClaims(outputs)
+	g.localManifestPending = len(local) > len(committed)
 }
 
 // readManifest reads a manifest at most once per run, so a corrupt one is
@@ -2586,26 +2613,60 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
 	defer func() { g.manifests = nil }()
-	whole := g.wholeMergedDocuments(outputs)
-	sharedDigests := manifestDigests(g.config.BaseDir, shared)
-	g.addMergedDigests(&sharedDigests, committedMerged, whole)
-	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, sharedDigests); err != nil {
+	// Digests, like claims, are proof only when this machine recorded them: they go
+	// to the machine-local manifest, never the committed one.
+	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, nil); err != nil {
 		return err
 	}
+	digests := manifestDigests(g.config.BaseDir, append(slices.Clone(shared), local...))
+	g.addMergedDigests(&digests, localMerged, g.wholeMergedDocuments(outputs))
 	if g.localSkipped {
 		// Local files were deliberately not loaded: their manifest is not ours to
-		// drop, and its record of merged documents stays what it was.
-		return nil
+		// drop. This run only adds what it rendered; the rest of the record stays.
+		return g.updateLocalManifest(localMerged, digests)
 	}
-	if len(local) == 0 && len(localMerged) == 0 {
+	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 {
+		if !g.removalConfined(g.localManifestPath()) {
+			return nil
+		}
 		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
 			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
 		}
 		return nil
 	}
-	localDigests := manifestDigests(g.config.BaseDir, local)
-	g.addMergedDigests(&localDigests, localMerged, whole)
-	return g.writeManifest(g.localManifestPath(), local, localMerged, localDigests)
+	return g.writeManifest(g.localManifestPath(), local, localMerged, digests)
+}
+
+// updateLocalManifest folds this run's claims and digests into the machine-local
+// manifest of a run that did not load the local inputs. A document keeps the
+// earlier claims on paths this run does not render, so a server only the local
+// overlay defines is still taken back by the next full run.
+func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, digests map[string]string) error {
+	if len(merged) == 0 && len(digests) == 0 {
+		return nil
+	}
+	prev := readManifestFile(g.localManifestPath())
+	outMerged := map[string][]jsonmerge.Claim{}
+	for rel, claims := range prev.Merged {
+		outMerged[rel] = claims
+	}
+	for rel, claims := range merged {
+		kept := slices.Clone(claims)
+		for _, old := range outMerged[rel] {
+			if !slices.ContainsFunc(claims, func(c jsonmerge.Claim) bool { return slices.Equal(c.Path, old.Path) }) {
+				kept = append(kept, old)
+			}
+		}
+		outMerged[rel] = kept
+	}
+	outDigests := map[string]string{}
+	for rel, sum := range prev.Digests {
+		outDigests[rel] = sum
+	}
+	for rel, sum := range digests {
+		outDigests[rel] = sum
+	}
+	return g.writeManifest(g.localManifestPath(), prev.Files, outMerged, outDigests)
 }
 
 // writeManifest writes a manifest after refusing a symlink that leaves the project.
@@ -2637,7 +2698,9 @@ func writeManifestFileDirs(path string, files []string, merged map[string][]json
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return oops.With("dir", filepath.Dir(path)).Wrapf(err, "create manifest directory")
 	}
-	return os.WriteFile(path, data, 0o644)
+	// path was resolved by guardWrite; the temp file + rename never truncates a
+	// manifest in place or follows a link planted since.
+	return config.WriteFileAtomic(path, data, 0o644)
 }
 
 // keepForRole marks the previously generated files a role run must not clean as
@@ -2713,6 +2776,10 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			continue
 		}
 		if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
+			continue
+		}
+		if !g.removalConfined(absPath) {
+			g.warnOnce("Stale file not removed: " + relPath + " is behind a symlink that leaves the project")
 			continue
 		}
 		if _, err := os.Stat(absPath); err != nil {
@@ -2807,6 +2874,31 @@ func (g *Generator) removeStaleManifestFiles(files []string) {
 	}
 }
 
+// removalConfined reports whether removing path stays inside the project: the
+// directory holding it, with every symlink resolved, must lie under a root the run
+// may write to, exactly as guardWrite requires of a write. Without it a generated
+// folder replaced by a link (.cursor/commands -> ../shared) would carry a removal
+// out of the checkout. User scope vets its paths with userMayTouch instead.
+func (g *Generator) removalConfined(path string) bool {
+	if g.userMode {
+		return true
+	}
+	resolved, _, err := resolveWriteTarget(filepath.Dir(filepath.Clean(path)), new(int))
+	if err != nil {
+		return false
+	}
+	for _, root := range g.writeRoots() {
+		realRoot, _, rerr := resolveWriteTarget(root, new(int))
+		if rerr != nil {
+			realRoot = root
+		}
+		if isUnderBaseDir(realRoot, resolved) {
+			return true
+		}
+	}
+	return false
+}
+
 // removeStaleFile removes a single stale file.
 func (g *Generator) removeStaleFile(filePath string) {
 	// In user scope a file is removed only when the directory holding it still
@@ -2814,6 +2906,10 @@ func (g *Generator) removeStaleFile(filePath string) {
 	// removal out of it.
 	if g.userMode && filePath != g.manifestPath() && filePath != g.localManifestPath() &&
 		!g.userMayTouch(filepath.Dir(filePath)) {
+		return
+	}
+	if !g.removalConfined(filePath) {
+		logger.Warn("Not removing a generated file behind a symlink that leaves the project", "path", filePath)
 		return
 	}
 	if err := os.Remove(filePath); err != nil {
@@ -2953,8 +3049,7 @@ func (g *Generator) localInputPatterns() []string {
 // .ai-rulez/local/ source subtree). The local manifest counts: besides local
 // outputs it records what ai-rulez merged into hand-authored documents.
 func (g *Generator) hasLocalGitignoreTargets() bool {
-	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || g.localManifestPending ||
-		pathIsFile(g.localManifestPath())
+	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || g.localManifestPending
 }
 
 // localGitignorePatternsOnDisk lists the machine-local ignore patterns for the
@@ -3063,6 +3158,11 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	if includeCommitted {
 		if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
 			paths[manifestRel] = true
+		}
+		// The machine-local record holds this machine's claims and digests.
+		if localRel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); localRel != "" &&
+			(g.localManifestPending || pathIsFile(g.localManifestPath())) {
+			paths[localRel] = true
 		}
 	}
 

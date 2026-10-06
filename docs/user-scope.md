@@ -85,7 +85,7 @@ a config-file argument. The full write list is printed before the first write, w
 - **Shared settings documents are merged, not rewritten.** `~/.claude/settings.json`, `~/.codex/hooks.json`,
   `~/.cursor/hooks.json` and `~/.gemini/settings.json` get only the keys ai-rulez owns (`hooks`,
   `permissions.*`, `env`, `skillOverrides` from [Hooks and permissions](settings.md)); every other key
-  survives `generate` and `clean`.
+  survives `generate` and `clean`. The generated-file [`[guard]`](settings.md#guard) is never added: it protects a project, not the home directory.
 - **No symlink escapes.** Every destination, resolved through symlinks, must stay inside the home directory (or the relocated tool home, see below).
   A `~/.claude` symlinked into `~/dotfiles` is followed; one pointing out of the home directory stops the
   run before anything is written. A symlinked file is skipped, except for the settings documents above.

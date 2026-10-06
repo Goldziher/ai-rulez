@@ -107,11 +107,13 @@ func TestGenerate_DeletesMergedDocumentWhenNothingUserAuthoredRemains(t *testing
 }
 
 func TestClean_FallsBackToKnownValuesWithoutARecord(t *testing.T) {
-	// Arrange: a document merged by 4.23.0, which kept no record of its keys.
+	// Arrange: a document merged by 4.23.0, which kept no record of its keys but
+	// listed it in the manifest.
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"gemini"}, "agents_md = true\n", ""))
 	writeAgentsMDFile(t, root, ".gemini/settings.json",
 		`{"theme":"dark","context":{"fileName":["AGENTS.md"]},"mcpServers":{"ai-rulez":{"command":"npx","args":["-y","ai-rulez@latest","mcp"]},"mine":{"command":"x"}}}`)
+	writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.json", `{"version":"1","files":[".gemini/settings.json"]}`)
 	cfg := loadAgentsMDConfig(t, root)
 
 	// Act

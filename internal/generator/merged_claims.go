@@ -19,9 +19,16 @@ import (
 // Merged JSON documents (.claude/settings.json, .gemini/settings.json,
 // opencode.json, ...) are shared with the consumer, so ai-rulez never deletes or
 // regenerates them whole. What it wrote into them is recorded as claims in the
-// machine-local manifest (the names of MCP servers can come from the local
-// overlay, so the record is per machine), and a claim that stops being produced,
-// or that clean is asked to remove, is taken back out with docmerge.Unmerge.
+// machine-local manifest, and a claim that stops being produced, or that clean is
+// asked to remove, is taken back out with docmerge.Unmerge.
+//
+// Trust: the committed manifest is a file anyone can edit, so it proves nothing.
+// A claim, and the digest that lets a document be deleted, count only when this
+// machine recorded them (the gitignored machine-local manifest); the committed
+// manifest lists the paths of merged documents for teammates and nothing more. A
+// document that existed before ai-rulez first wrote to it is the user's
+// (markPreexistingDocuments): it is never deleted, only emptied of what ai-rulez
+// itself recorded writing.
 //
 // Every claim is guarded by a digest of the value ai-rulez wrote, and only a value
 // that still matches it is taken back: an entry the user edited is theirs, stays,
@@ -46,22 +53,16 @@ type mergedEdit struct {
 	delete bool // nothing user-authored remains
 }
 
-// previousMergedClaims returns the claims the previous run recorded: the
-// committed manifest's (documents ai-rulez wrote whole) and the machine-local
-// one's (documents shared with the user, or carrying machine-local servers). The
-// local record is skipped when the run deliberately ignores local inputs.
+// previousMergedClaims returns the claims this machine's previous run recorded in
+// the machine-local manifest. The committed manifest is attacker-editable and
+// never supplies one. A run that deliberately ignores local inputs reads it too
+// but takes nothing back (see claimsToTakeBack), because the record cannot tell a
+// shared entry from a machine-local one.
 func (g *Generator) previousMergedClaims() map[string][]jsonmerge.Claim {
 	previous := map[string][]jsonmerge.Claim{}
-	for rel, claims := range g.readManifest(g.manifestPath()).Merged {
-		if g.trustedMergedPath(rel) {
+	for rel, claims := range g.readManifest(g.localManifestPath()).Merged {
+		if len(claims) > 0 && g.trustedMergedPath(rel) {
 			previous[rel] = claims
-		}
-	}
-	if !g.localSkipped {
-		for rel, claims := range g.readManifest(g.localManifestPath()).Merged {
-			if g.trustedMergedPath(rel) {
-				previous[rel] = claims
-			}
 		}
 	}
 	return previous
@@ -77,6 +78,9 @@ func (g *Generator) trustedMergedPath(rel string) bool {
 		return true
 	}
 	slashed := filepath.ToSlash(rel)
+	if g.renderedMerged[slashed] {
+		return true // a document this run's own outputs merge into (a custom provider's)
+	}
 	if slashed == "" || strings.HasPrefix(slashed, "/") || slices.Contains(strings.Split(slashed, "/"), "..") ||
 		!isMergedDocumentPath(mergedDocuments(), slashed) {
 		g.warnOnce("Ignoring a generated-manifest claim on " + rel + ": no preset merges into that file")
@@ -86,10 +90,10 @@ func (g *Generator) trustedMergedPath(rel string) bool {
 }
 
 // mergedDocDeletable reports whether ai-rulez may delete the merged document at
-// abs once nothing user-authored is left in it: only when the manifest recorded
+// abs once nothing user-authored is left in it: only when this machine recorded
 // the digest of the document as ai-rulez wrote it whole and the file still has
-// exactly those bytes. A forged or older manifest has no such digest, and the
-// document is then left (emptied of ai-rulez's keys) instead of deleted.
+// exactly those bytes. A forged, committed or older record has no such digest, and
+// the document is then left (emptied of ai-rulez's keys) instead of deleted.
 func (g *Generator) mergedDocDeletable(rel, abs string) bool {
 	want, ok := g.manifestDigestSet()[rel]
 	if !ok {
@@ -101,22 +105,17 @@ func (g *Generator) mergedDocDeletable(rel, abs string) bool {
 
 // currentMergedClaims collects the claims of this run's outputs by manifest path.
 func (g *Generator) currentMergedClaims(outputs []config.OutputFile) map[string][]jsonmerge.Claim {
-	committed, local := g.splitMergedClaims(outputs)
-	for rel, claims := range local {
-		committed[rel] = append(committed[rel], claims...)
-	}
-	return committed
+	_, local := g.splitMergedClaims(outputs)
+	return local
 }
 
-// splitMergedClaims separates the claims worth recording by where they are kept.
-// A document ai-rulez wrote whole is deleted whole, but a server dropped from the
-// config still has to leave it without taking a hand-written one along, so its
-// claims are kept in the committed manifest (they hold names and digests only).
-// Claims of a document shared with the user, of one carrying resolved secrets or
-// of one the machine-local inputs change go to the machine-local manifest
-// instead: the server names there can come from the local overlay, and putting a record in the
-// committed manifest of every project with an MCP server would also leave a
-// gitignored file behind in all of them.
+// splitMergedClaims separates what is recorded where. Every claim goes to the
+// machine-local manifest: it alone may license taking something back out of a
+// document, and a record in the committed manifest would be both forgeable and,
+// for the names of servers from the local overlay, a leak of machine-local setup.
+// The committed manifest gets the path of each document ai-rulez wrote whole and
+// that carries nothing machine-local, with no claims, so a teammate's guard still
+// knows the document is merged and shared.
 func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
 ) (committed, local map[string][]jsonmerge.Claim) {
 	committed, local = map[string][]jsonmerge.Claim{}, map[string][]jsonmerge.Claim{}
@@ -128,13 +127,159 @@ func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
 		if g.skippedPaths[rel] {
 			continue
 		}
-		if output.PartiallyOwned || output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims) {
-			local[rel] = append(local[rel], output.MergeClaims...)
-		} else {
-			committed[rel] = append(committed[rel], output.MergeClaims...)
+		fromLocal := output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims)
+		for _, claim := range output.MergeClaims {
+			claim.Local = fromLocal
+			local[rel] = append(local[rel], claim)
+		}
+		if !(output.PartiallyOwned || output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims)) {
+			committed[rel] = []jsonmerge.Claim{}
 		}
 	}
 	return committed, local
+}
+
+// markPreexistingDocuments makes a merged document that was already on disk the
+// first time ai-rulez wrote to it the user's: absent from every manifest's file
+// list, it was not created by ai-rulez, whatever its content (it may equal what
+// ai-rulez renders). It is flagged PartiallyOwned, so clean never deletes it and
+// only takes back what this machine recorded writing. A document ai-rulez wrote
+// whole is listed, because a whole document is recorded as a generated file.
+func (g *Generator) markPreexistingDocuments(outputs []config.OutputFile) {
+	g.renderedMerged = map[string]bool{}
+	for _, output := range outputs {
+		if !output.IsDir && len(output.MergeClaims) > 0 {
+			g.renderedMerged[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
+		}
+	}
+	if g.userMode {
+		return
+	}
+	listed := map[string]bool{}
+	for _, rel := range g.previousManifestFiles() {
+		listed[filepath.ToSlash(rel)] = true
+	}
+	for i := range outputs {
+		output := &outputs[i]
+		if output.IsDir || output.PartiallyOwned || len(output.MergeClaims) == 0 {
+			continue
+		}
+		abs := g.absOutputPath(output.Path)
+		if listed[filepath.ToSlash(g.convertToRelativePath(abs))] || !pathIsFile(abs) {
+			continue
+		}
+		output.PartiallyOwned = true
+	}
+}
+
+// carryClaimAnnotations copies what the previous run learned about a document's
+// original shape onto this run's claims. A claim is annotated from the document as
+// found when ai-rulez first merged into it (no final newline, an empty table the
+// user left); from the second run on the document already holds ai-rulez's keys,
+// so recomputing would forget those facts and clean could no longer restore the
+// original bytes.
+func (g *Generator) carryClaimAnnotations(outputs []config.OutputFile) {
+	previous := g.previousMergedClaims()
+	for i := range outputs {
+		output := &outputs[i]
+		if output.IsDir || len(output.MergeClaims) == 0 {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		prev := previous[rel]
+		if len(prev) == 0 || !pathIsFile(g.absOutputPath(output.Path)) {
+			continue
+		}
+		noEOL := slices.ContainsFunc(prev, func(c jsonmerge.Claim) bool { return c.NoFinalNewline })
+		claims := slices.Clone(output.MergeClaims)
+		for j := range claims {
+			claims[j].NoFinalNewline = claims[j].NoFinalNewline || noEOL
+			for k := range prev {
+				if !slices.Equal(prev[k].Path, claims[j].Path) {
+					continue
+				}
+				for _, empty := range prev[k].EmptyMaps {
+					if !claims[j].IsEmptyMap(empty) {
+						claims[j].EmptyMaps = append(claims[j].EmptyMaps, empty)
+					}
+				}
+				for _, ancestor := range prev[k].Preexisting {
+					if !claims[j].IsPreexisting(ancestor) {
+						claims[j].Preexisting = append(claims[j].Preexisting, ancestor)
+					}
+				}
+			}
+		}
+		output.MergeClaims = claims
+	}
+}
+
+// dropUserHeldClaims removes from the claims what the document already held, as
+// the user wrote it, before ai-rulez first merged into it: an array element or a
+// value identical to what ai-rulez renders was never ai-rulez's to take back.
+// What an earlier run claimed (a claim in prev for the same path) stays ours.
+func (g *Generator) dropUserHeldClaims(outputs []config.OutputFile) {
+	previous := g.previousMergedClaims()
+	for i := range outputs {
+		output := &outputs[i]
+		if output.IsDir || len(output.MergeClaims) == 0 {
+			continue
+		}
+		abs := g.absOutputPath(output.Path)
+		rel := filepath.ToSlash(g.convertToRelativePath(abs))
+		data, err := os.ReadFile(abs)
+		if err != nil {
+			continue
+		}
+		before, err := docmerge.DecodeTree(mergedDocFormat(rel), string(data))
+		if err != nil || len(before) == 0 {
+			continue
+		}
+		output.MergeClaims = withoutUserHeld(output.MergeClaims, previous[rel], before)
+	}
+}
+
+// withoutUserHeld is dropUserHeldClaims for one document: before is the document
+// as it stood on disk and prev what the previous run recorded for it.
+func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []jsonmerge.Claim {
+	kept := make([]jsonmerge.Claim, 0, len(claims))
+	for _, claim := range claims {
+		index := slices.IndexFunc(prev, func(c jsonmerge.Claim) bool { return slices.Equal(c.Path, claim.Path) })
+		value, present := jsonmerge.LookupTree(before, claim.Path)
+		if !present {
+			kept = append(kept, claim)
+			continue
+		}
+		if claim.HasElements() {
+			array, isArray := value.([]any)
+			if !isArray {
+				kept = append(kept, claim)
+				continue
+			}
+			held := array
+			if index >= 0 {
+				ours := prev[index].ElementsIn(array)
+				held = slices.DeleteFunc(slices.Clone(array), func(v any) bool {
+					i := slices.IndexFunc(ours, func(o any) bool { return jsonmerge.Digest(o) == jsonmerge.Digest(v) })
+					if i < 0 {
+						return false
+					}
+					ours = slices.Delete(ours, i, i+1)
+					return true
+				})
+			}
+			claim = claim.WithoutElements(jsonmerge.Claim{Elements: held})
+			if len(claim.ElementDigests()) > 0 {
+				kept = append(kept, claim)
+			}
+			continue
+		}
+		if index < 0 && claim.Sum != "" && jsonmerge.Digest(value) == claim.Sum {
+			continue // the user's own value, identical to the rendering
+		}
+		kept = append(kept, claim)
+	}
+	return kept
 }
 
 // reclaimStaleMembers clears PartiallyOwned on a merged document whose only
@@ -145,6 +290,10 @@ func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
 // afterwards (planUnmerge); a value the user edited does not count.
 func (g *Generator) reclaimStaleMembers(outputs []config.OutputFile) {
 	previous := g.previousMergedClaims()
+	listed := map[string]bool{}
+	for _, rel := range g.previousManifestFiles() {
+		listed[filepath.ToSlash(rel)] = true
+	}
 	for i := range outputs {
 		output := &outputs[i]
 		if output.IsDir || !output.PartiallyOwned || len(output.MergeClaims) == 0 {
@@ -152,7 +301,9 @@ func (g *Generator) reclaimStaleMembers(outputs []config.OutputFile) {
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		claims := previous[rel]
-		if len(claims) == 0 {
+		if len(claims) == 0 || !listed[rel] {
+			// Not a document ai-rulez wrote whole: what is in it besides its own
+			// keys belongs to the user, recorded or not.
 			continue
 		}
 		claims = append(guardClaims(claims, output.MergeClaims), output.MergeClaims...)
@@ -299,6 +450,10 @@ func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) ma
 
 	claims := map[string][]jsonmerge.Claim{}
 	for rel, prev := range previous {
+		if g.localSkipped && !clean {
+			// A run that ignores the local inputs must not take back what they wrote.
+			prev = slices.DeleteFunc(slices.Clone(prev), func(c jsonmerge.Claim) bool { return c.Local })
+		}
 		prev = guardClaims(prev, current[rel])
 		if clean {
 			claims[rel] = append(slices.Clone(prev), current[rel]...)
@@ -314,11 +469,18 @@ func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) ma
 			claims[rel] = cur
 		}
 	}
+	listed := map[string]bool{}
+	for _, rel := range g.previousManifestFiles() {
+		listed[filepath.ToSlash(rel)] = true
+	}
 	for _, rel := range mergedDocuments() {
-		if _, recorded := previous[rel]; recorded {
+		if _, recorded := previous[rel]; recorded || !listed[rel] {
+			// A document no manifest lists as written whole is the user's: the
+			// fallback guesses what ai-rulez wrote, and a guess must not delete
+			// a rule the user wrote themselves.
 			continue
 		}
-		claims[rel] = append(claims[rel], g.legacyClaims(rel)...)
+		claims[rel] = append(claims[rel], withoutPermissionClaims(g.legacyClaims(rel))...)
 	}
 	return claims
 }
@@ -435,4 +597,17 @@ func editedPaths(edits []mergedEdit) []string {
 // rewrites keeps the edits that rewrite a document rather than delete it.
 func rewrites(edits []mergedEdit) []mergedEdit {
 	return slices.DeleteFunc(slices.Clone(edits), func(edit mergedEdit) bool { return edit.delete })
+}
+
+// withoutPermissionClaims drops the claims on permission rules. The fallback for a
+// document with no record rests on a path the committed manifest lists, which
+// proves nothing, and a deny or ask rule the user wrote must never leave on that
+// evidence.
+func withoutPermissionClaims(claims []jsonmerge.Claim) []jsonmerge.Claim {
+	return slices.DeleteFunc(slices.Clone(claims), func(c jsonmerge.Claim) bool {
+		return slices.ContainsFunc(c.Path, func(seg string) bool {
+			seg = strings.ToLower(seg)
+			return strings.Contains(seg, "permission") || seg == "deny" || seg == "ask" || seg == "denied"
+		})
+	})
 }

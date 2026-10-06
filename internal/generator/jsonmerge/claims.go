@@ -54,11 +54,18 @@ type Claim struct {
 	Alone       bool     `json:"alone,omitempty"`
 
 	Preexisting [][]string `json:"preexisting,omitempty"`
+	// EmptyMaps is the part of Preexisting that held an empty map ({} in YAML), as
+	// opposed to a null, so Unmerge puts back what the user wrote.
+	EmptyMaps [][]string `json:"emptyMaps,omitempty"`
 
 	// NoFinalNewline records that the document did not end in a newline when
 	// ai-rulez first merged into it (Apply adds one), so Unmerge takes the newline
 	// it added back out and restores the original bytes.
 	NoFinalNewline bool `json:"noFinalNewline,omitempty"`
+
+	// Local records that the machine-local inputs (the overlay, local/ content)
+	// shaped what was written, so a run that does not load them leaves it alone.
+	Local bool `json:"local,omitempty"`
 }
 
 // claimWire is the manifest encoding of a Claim: element digests, never values.
@@ -73,7 +80,9 @@ type claimWire struct {
 	Sum            string     `json:"sum,omitempty"`
 	Alone          bool       `json:"alone,omitempty"`
 	Preexisting    [][]string `json:"preexisting,omitempty"`
+	EmptyMaps      [][]string `json:"emptyMaps,omitempty"`
 	NoFinalNewline bool       `json:"noFinalNewline,omitempty"`
+	Local          bool       `json:"local,omitempty"`
 }
 
 // MarshalJSON writes the claim with its elements as digests: a manifest records
@@ -86,7 +95,7 @@ func (c Claim) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(claimWire{
 		Path: c.Path, ElementSums: sums, Equals: equals, Sum: sum, Alone: c.Alone,
-		Preexisting: c.Preexisting, NoFinalNewline: c.NoFinalNewline,
+		Preexisting: c.Preexisting, EmptyMaps: c.EmptyMaps, NoFinalNewline: c.NoFinalNewline, Local: c.Local,
 	})
 }
 
@@ -130,7 +139,7 @@ func (c *Claim) UnmarshalJSON(data []byte) error {
 	}
 	*c = Claim{
 		Path: wire.Path, ElementSums: sums, Equals: wire.Equals, Sum: wire.Sum, Alone: wire.Alone,
-		Preexisting: wire.Preexisting, NoFinalNewline: wire.NoFinalNewline,
+		Preexisting: wire.Preexisting, EmptyMaps: wire.EmptyMaps, NoFinalNewline: wire.NoFinalNewline, Local: wire.Local,
 	}
 	c.Equals, c.Sum = c.persistedGuard()
 	if wire.Elements != nil {

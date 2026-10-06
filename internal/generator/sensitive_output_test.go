@@ -31,6 +31,8 @@ func TestGenerator_OutputsCarryingMCPSecretsAreOwnerOnly(t *testing.T) {
 			dir := writeHeadersProject(t, `["claude", "gemini", "opencode"]`, true,
 				`{ Authorization = "Bearer ${API_TOKEN}", X-Team = "core" }`)
 			if tt.existing != 0 {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"),
+					[]byte(".mcp.json\n.gemini/settings.json\nopencode.json\n"), 0o644))
 				for _, f := range secretFiles {
 					p := filepath.Join(dir, filepath.FromSlash(f))
 					require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
