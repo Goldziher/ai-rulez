@@ -1,12 +1,14 @@
 package schema
 
 import (
+	"crypto/sha256"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/kaptinlin/jsonschema"
 	"github.com/pelletier/go-toml/v2"
@@ -75,6 +77,29 @@ func validateFileAgainst(path string, schemaBytes []byte, label string, redact b
 	return validateWithSchemaBytes(data, schemaBytes, label, redact)
 }
 
+var (
+	compiledMu    sync.Mutex
+	compiledCache = map[[sha256.Size]byte]*jsonschema.Schema{}
+)
+
+// compiledSchema compiles schemaBytes once per process: the schemas are embedded
+// and large, and a command validates many documents (every config, overlay and
+// MCP file) against the same one. Compiled schemas are read-only, so they are shared.
+func compiledSchema(schemaBytes []byte) (*jsonschema.Schema, error) {
+	key := sha256.Sum256(schemaBytes)
+	compiledMu.Lock()
+	defer compiledMu.Unlock()
+	if cached, ok := compiledCache[key]; ok {
+		return cached, nil
+	}
+	compiled, err := jsonschema.NewCompiler().Compile(schemaBytes)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by the caller
+	}
+	compiledCache[key] = compiled
+	return compiled, nil
+}
+
 func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string, redact bool) error {
 	var yamlData any
 	if err := yaml.Unmarshal(configData, &yamlData); err != nil {
@@ -90,7 +115,7 @@ func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version stri
 			Wrapf(err, "convert YAML to JSON")
 	}
 
-	schema, err := jsonschema.NewCompiler().Compile(schemaBytes)
+	schema, err := compiledSchema(schemaBytes)
 	if err != nil {
 		return oops.
 			Hint("This is an internal schema compilation error").
