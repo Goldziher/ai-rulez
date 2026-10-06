@@ -69,7 +69,7 @@ func TestWrapBuildsTheBackendCommand(t *testing.T) {
 		{"darwin with network", "darwin", []string{"sandbox-exec"}, Spec{WriteDirs: []string{dir}, AllowNetwork: true}, BackendSandboxExec,
 			[]string{"/usr/bin/sandbox-exec"}, []string{"(deny file-write*)"}, true},
 		{"linux bwrap", "linux", []string{"bwrap", "unshare"}, Spec{WriteDirs: []string{dir}}, BackendBwrap,
-			[]string{"/usr/bin/bwrap", "--die-with-parent", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--unshare-net", "--bind", real, real, "--"}, nil, true},
+			[]string{"/usr/bin/bwrap", "--die-with-parent", "--new-session", "--unshare-pid", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--unshare-net", "--bind", real, real, "--"}, nil, true},
 		{"linux unshare", "linux", []string{"unshare"}, Spec{}, BackendUnshare,
 			[]string{"/usr/bin/unshare", "--net", "--map-root-user", "--"}, nil, false},
 	}

@@ -174,6 +174,14 @@ func EffectiveTimeout(d time.Duration) time.Duration {
 	return d
 }
 
+// LookPath finds name on PATH. A binary found only through a relative PATH
+// entry is reported as an error (exec.ErrDot), not returned. It exists so
+// library packages that must know whether a tool is installed do not import
+// os/exec themselves.
+func LookPath(name string) (string, error) {
+	return exec.LookPath(name) //nolint:wrapcheck // the message already names the binary
+}
+
 // resolve finds the executable the way a shell would, but reports a missing or
 // non-executable file as an error up front so the caller can tell "not
 // installed" from "ran and failed".
