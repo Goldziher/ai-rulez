@@ -106,16 +106,18 @@ func TestTamperedPayloadFailsVerification(t *testing.T) {
 func TestRollbackAgainstHighWaterMark(t *testing.T) {
 	setUserDirs(t)
 	lock := testLock(t, nil)
-	newer, pub := signKeyed(t, lock, LockMeta{Repository: "repo", Now: testNow})
-	trust := keyTrust(t, pub)
-	// A second bundle by the same key, signed earlier.
+	var newer []byte
+	var trust TrustSet
 	priv, pub2, err := GenerateKeyPair(nil)
 	require.NoError(t, err)
 	signer, err := LoadKeySigner(priv, nil)
 	require.NoError(t, err)
+	// The mark is per signer, so the older bundle comes from the same key as the newer one.
 	older, err := SignLock(context.Background(), signer, lock, LockMeta{Repository: "repo", Now: testNow.Add(-24 * time.Hour), Version: "5"})
 	require.NoError(t, err)
-	trust.Entries = append(trust.Entries, keyTrust(t, pub2).Entries...)
+	newer, err = SignLock(context.Background(), signer, lock, LockMeta{Repository: "repo", Now: testNow, Version: "5"})
+	require.NoError(t, err)
+	trust = keyTrust(t, pub2)
 	statePath, secretPath := StatePaths(nil)
 	st, err := OpenState(statePath, secretPath)
 	require.NoError(t, err)
