@@ -42,6 +42,12 @@ func TestExcerptOf(t *testing.T) {
 		{"CR and CRLF normalised", "a\r\nb\rc", "a\nb\nc", false},
 		{"frontmatter dropped", "---\nname: x\n---\n\nbody", "body", false},
 		{"invalid UTF-8 replaced", "a\xffb", "a�b", false},
+		{"frontmatter closed at the end of the text", "---\nname: x\n---", "", false},
+		{"empty frontmatter", "---\n---\nbody", "body", false},
+		{"a longer dash line is not the closing fence", "---\nname: x\n----\nbody", "---\nname: x\n----\nbody", false},
+		{"an unclosed fence is not frontmatter", "---\nintro text\nmore", "---\nintro text\nmore", false},
+		{"a horizontal rule later in the body is kept", "---\nname: x\n---\nbody\n---\nmore", "body\n---\nmore", false},
+		{"no frontmatter keeps the leading rule text", "---not a fence\nbody", "---not a fence\nbody", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,4 +160,24 @@ func TestViewCatalogV2(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLintAttributionScrubsBothSeparatorsAndKeepsDotDotNames(t *testing.T) {
+	// Arrange
+	base := t.TempDir()
+	cfg := &config.Config{BaseDir: base, ConfigDir: filepath.Join(base, ".ai-rulez")}
+	report := &lint.Report{Findings: []lint.Finding{
+		{Code: "AR900", Severity: lint.SeverityWarning, File: filepath.Join(base, "..hidden", "notes.md"), Line: 1, Message: "see " + base + `\sub\f.md and ` + base + "/sub/g.md"},
+		{Code: "AR901", Severity: lint.SeverityWarning, File: filepath.Join(filepath.Dir(base), "sibling.md"), Line: 1, Message: "outside"},
+	}}
+	attr := newLintAttribution(cfg, report)
+
+	// Act
+	overview := attr.overview("")
+
+	// Assert
+	require.Len(t, overview.Unattributed, 2)
+	assert.Equal(t, "..hidden/notes.md", overview.Unattributed[0].File, "a name that merely starts with two dots is inside the project")
+	assert.Equal(t, "see sub\\f.md and sub/g.md", overview.Unattributed[0].Message)
+	assert.Empty(t, overview.Unattributed[1].File, "a sibling of the project is outside it")
 }
