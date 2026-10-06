@@ -184,6 +184,9 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 		row.Notes = append(slices.Clone(row.Notes), "the eval record is unverified (unsigned, or signed with another key): ignored; run `ai-rulez eval run` to record a signed result")
 		record = nil
 	}
+	if record != nil && !record.HasRun() {
+		record = nil // only an activation measurement: there is no eval result to rank on
+	}
 	if in.Uses != nil {
 		n := in.Uses[skill.ID]
 		row.Uses = &n

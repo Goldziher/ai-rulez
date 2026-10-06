@@ -26,7 +26,7 @@ func resetEvalFlags(t *testing.T) {
 		evalFlags.changedOnly, evalFlags.base, evalFlags.force = false, "HEAD", false
 		evalFlags.threshold, evalFlags.allowExec, evalFlags.noWrite = 1, false, false
 		evalFlags.timeout = 30 * time.Minute
-		evalFlags.estimate = false
+		evalFlags.estimate, evalFlags.mode, evalFlags.surface, evalFlags.scope = false, evals.ModeCases, "", evals.ScopeDomain
 		if f := evalRunCmd.Flags().Lookup("threshold"); f != nil {
 			f.Changed = false
 		}
@@ -285,6 +285,106 @@ func TestEvalRun_ClaudeRunnerGetsTheEffectiveRunsAndTimeout(t *testing.T) {
 			assert.Equal(t, tt.wantRuns, claude.Runs)
 			assert.Equal(t, tt.wantEstimate, estimateRuns)
 			assert.Equal(t, 7*time.Minute, claude.Timeout)
+		})
+	}
+}
+
+const activationCLISkills = `cases:
+  - id: fires
+    prompt: Deploy the billing service to staging
+    expect_trigger: true
+  - id: quiet
+    prompt: bake a sourdough loaf
+    expect_trigger: false
+`
+
+func activationProject(t *testing.T) string {
+	t.Helper()
+	root := evalProject(t)
+	files := map[string]string{
+		".ai-rulez/skills/deploy/SKILL.md":          "---\nname: deploy\ndescription: Deploy a service to the staging environment\nkeywords: [staging]\n---\nbody\n",
+		".ai-rulez/skills/deploy/evals/a.eval.yaml": activationCLISkills,
+		".ai-rulez/skills/changelog/SKILL.md":       "---\nname: changelog\ndescription: Write release notes\n---\nbody\n",
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez", "skills", "changelog"), 0o750))
+	for name, body := range files {
+		require.NoError(t, os.WriteFile(filepath.Join(root, filepath.FromSlash(name)), []byte(body), 0o600))
+	}
+	return root
+}
+
+func TestEvalRun_ActivationRetrievalReportsAndRecords(t *testing.T) {
+	resetEvalFlags(t)
+	root := activationProject(t)
+	evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceRetrieval
+	evalFlags.format, evalFlags.date = evals.FormatJSON, "2026-10-06"
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+
+	failed, err := runEval(evalRunCmd, []string{"deploy"})
+
+	require.NoError(t, err)
+	assert.False(t, failed)
+	var report evals.ActivationReport
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	assert.Equal(t, evals.SurfaceRetrieval, report.Surface)
+	require.Len(t, report.Skills, 1)
+	require.NotNil(t, report.Skills[0].Recall)
+	assert.Equal(t, 1.0, report.Skills[0].Recall.Value)
+	store, err := evals.LoadStore(filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+	require.NoError(t, err)
+	record, ok := store.Get("deploy")
+	require.True(t, ok)
+	require.NotNil(t, record.Activation)
+	assert.Equal(t, "2026-10-06", record.Activation.Date)
+}
+
+func TestEvalRun_ActivationDryRunWritesNothingAndNoRunnerIsNeeded(t *testing.T) {
+	resetEvalFlags(t)
+	root := activationProject(t)
+	evalFlags.mode, evalFlags.surface, evalFlags.estimate = evals.ModeActivation, evals.SurfaceRetrieval, true
+	evalFlags.runnerCommand = "exit 9" // never started: retrieval calls no runner
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+
+	_, err := runEval(evalRunCmd, nil)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "# Skill activation results")
+	assert.NoFileExists(t, filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+}
+
+func TestEvalRun_ActivationFlagValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		set     func()
+		wantErr string
+	}{
+		{"unknown mode", func() { evalFlags.mode = "vibes" }, "unknown --mode"},
+		{"surface without activation", func() { evalFlags.surface = evals.SurfaceRetrieval }, "--surface needs --mode activation"},
+		{"scope without activation", func() { evalFlags.scope = evals.ScopeAll }, "--scope needs --mode activation"},
+		{"activation needs a surface", func() { evalFlags.mode = evals.ModeActivation }, "needs --surface"},
+		{"unknown surface", func() { evalFlags.mode, evalFlags.surface = evals.ModeActivation, "tarot" }, "unknown --surface"},
+		{"unknown scope", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.scope = evals.ModeActivation, evals.SurfaceRetrieval, "galaxy"
+		}, "unknown --scope"},
+		{"junit has no activation form", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.format = evals.ModeActivation, evals.SurfaceRetrieval, evals.FormatJUnit
+		}, "not junit"},
+		{"a runner without the capability is refused", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.runnerCommand = evals.ModeActivation, evals.SurfaceNative, "true"
+		}, "does not support activation mode"},
+		{"the built-in claude runner is refused too", func() { evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceNative }, "does not support activation mode"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetEvalFlags(t)
+			activationProject(t)
+			tt.set()
+
+			_, err := runEval(evalRunCmd, nil)
+
+			assert.ErrorContains(t, err, tt.wantErr)
 		})
 	}
 }
