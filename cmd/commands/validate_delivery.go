@@ -54,6 +54,41 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: p + "; [lock] enforce refuses to serve it (run `ai-rulez lock` after review)"})
 		}
 	}
+	return append(out, sourceRefusalFindings(cfg)...)
+}
+
+// sourceRefusalFindings reports the skills of the skill sources that the security
+// scan refuses to serve, which `lock` leaves unpinned. Skills authored in the
+// project are reported by the security rules themselves.
+func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
+	if len(cfg.SkillSources) == 0 {
+		return nil
+	}
+	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
+	includes.SkipFetch = true
+	refusals, err := (&mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}).ServedRefusals(context.Background())
+	if err != nil {
+		logger.Debug("Skipped the skill source refusal check", "error", err.Error())
+		return nil
+	}
+	authored := map[string]bool{}
+	if cfg.Content != nil {
+		for i := range cfg.Content.Skills {
+			authored[config.SkillID(cfg.Content.Skills[i])] = true
+		}
+		for _, d := range cfg.Content.Domains {
+			for i := range d.Skills {
+				authored[config.SkillID(d.Skills[i])] = true
+			}
+		}
+	}
+	var out []lint.DeliveryFinding
+	for _, r := range refusals {
+		if !authored[r.Name] {
+			out = append(out, lint.DeliveryFinding{Code: r.Code, Message: fmt.Sprintf(
+				"served skill %q is refused: %s; `ai-rulez lock` leaves it unpinned", r.Name, r.Reason)})
+		}
+	}
 	return out
 }
 
