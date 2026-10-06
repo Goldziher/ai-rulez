@@ -63,8 +63,8 @@ func loadSalt(path string) string {
 	if salt := readSalt(path); salt != "" {
 		return salt
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return ""
+	if err := safefs.EnsureParent(path); err != nil {
+		return "" // a symlinked directory is never written through
 	}
 	// An empty file (from an older crash) is replaced; a missing one is created.
 	if _, err := os.Stat(path); err == nil {
