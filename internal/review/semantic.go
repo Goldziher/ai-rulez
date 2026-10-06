@@ -346,11 +346,16 @@ func shortError(err error) string {
 	return s
 }
 
-// flaggedIn lists the dimensions the first vote gave something other than a pass.
+// injectionDimension is the one dimension whose first-vote pass is never accepted alone: a
+// single pass is the verdict an injected text is written to obtain, so it is always voted on.
+const injectionDimension = "injection-intent"
+
+// flaggedIn lists the dimensions the first vote gave something other than a pass, and the
+// injection dimension whatever it gave.
 func flaggedIn(dims []Dimension, votes []map[string]DimVerdict) []string {
 	var out []string
 	for _, d := range dims {
-		if v, ok := votes[0][d.ID]; ok && v.Verdict != VerdictPass {
+		if v, ok := votes[0][d.ID]; ok && (v.Verdict != VerdictPass || d.ID == injectionDimension) {
 			out = append(out, d.ID)
 		}
 	}
@@ -387,7 +392,7 @@ func MedianVerdict(verdicts []string) string {
 }
 
 // aggregateDim turns the votes of one dimension into its result. A first vote that
-// passes is accepted as it is (precision over recall); a flagged one takes the median
+// passes is accepted as it is (precision over recall), except on the injection dimension; a flagged one takes the median
 // of all votes, and a verdict the votes do not agree on (agreement below the rubric's
 // instability threshold) is marked unstable.
 func aggregateDim(d Dimension, votes []map[string]DimVerdict, threshold float64) *SemDim {
@@ -409,7 +414,7 @@ func aggregateDim(d Dimension, votes []map[string]DimVerdict, threshold float64)
 	}
 	sd.Votes = verdicts
 	final := verdicts[0]
-	if final != VerdictPass {
+	if final != VerdictPass || d.ID == injectionDimension {
 		final = MedianVerdict(verdicts)
 	}
 	sd.Verdict = final
