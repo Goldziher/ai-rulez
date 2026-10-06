@@ -2,7 +2,7 @@
 
 `ai-rulez search` ranks the skills your project serves against a query, with the same ranker as the `find_skill`
 tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labelled queries. By default it is
-lexical, offline and deterministic: nothing is sent anywhere and the same input always gives the same order.
+lexical and deterministic: no query or skill text is sent anywhere and the same input always gives the same order.
 Optionally it is hybrid: the lexical list is fused with cosine similarity over embeddings you bring (an
 OpenAI-compatible endpoint, Gemini through `literllm`, a local server, or a command), so a paraphrase such as
 "customer wants money back" finds the skill described as "issue a refund".
@@ -29,7 +29,9 @@ ai-rulez search --mode hybrid --explain "customer wants money back"
 
 The catalog is what the server would serve, selected with the same flags: `--profile`, `--targets`, `--domain`,
 `--allow`, `--deny`, `--source` (repeatable), `--role`, `--include-static`, `--offline` and `--frozen`. `--role` and
-`--profile` are mutually exclusive. A skill the server refuses (lock or scan state) is not in the catalog and is
+`--profile` are mutually exclusive. Like the server, `search` (and `search status`) fetches the remote
+skill sources the catalog is built from (`--source`, configured sources and includes) unless you pass `--offline` or
+`--frozen`; that fetch is separate from the embedding egress described under [Data egress](#data-egress). A skill the server refuses (lock or scan state) is not in the catalog and is
 not ranked. Several words are joined into one query. `--mode lexical|hybrid|vector` overrides `[search] mode`
 (and `AI_RULEZ_SEARCH_MODE`) for one run. A query that is the word `index`, `status` or `mine` alone is the
 subcommand; add another word to search for it.
