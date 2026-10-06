@@ -2031,7 +2031,7 @@ who published them. To add that, sign `lock --subject` with `cosign` ([recipe](l
 ### `ai-rulez sign [config-path]`
 
 Signs one subject into a Sigstore bundle (a DSSE envelope over an in-toto statement): the lock-subject statement of
-`ai-rulez.lock` (written next to the lock), a plugin bundle, a skill directory or an SBOM file. Verify it with
+`ai-rulez.lock` (written next to the lock), a plugin bundle, a skill directory, an SBOM file or an organization policy. Verify it with
 [`verify --attestation`](#ai-rulez-verify-config-path). See [Signing](signing.md) for the policy, keyless and KMS
 signing, thresholds, SLSA provenance and cosign interoperability.
 
@@ -2042,6 +2042,7 @@ ai-rulez sign --lock --key awskms:///alias/release   # a key held in a KMS
 ai-rulez sign --bundle dist/acme-plugin --key cosign.key --provenance
 ai-rulez sign --skill skills/deploy --key cosign.key
 ai-rulez sign --sbom sbom.cdx.json --key cosign.key
+ai-rulez sign --policy ai-rulez-policy.toml --key cosign.key   # an organization policy ([Policy](policy.md#signed-policies))
 ai-rulez sign --lock --key second.key --append       # a second signer, for [signing] thresholds
 ```
 
@@ -2051,6 +2052,7 @@ ai-rulez sign --lock --key second.key --append       # a second signer, for [sig
 | `--bundle <dir>` | Sign a plugin bundle: the tree digest of its files, to `<dir>/.ai-rulez.sigstore.json` |
 | `--skill <dir>` | Sign a skill directory a publisher ships, to `<dir>/.ai-rulez.sigstore.json` |
 | `--sbom <file>` | Sign any SBOM file, to `<file>.sigstore.json` |
+| `--policy <file>` | Sign an organization policy file, to `<file>.sigstore.json`; the file must parse as a policy |
 | `--provenance` | With `--bundle`: also write SLSA v1 provenance (`.ai-rulez.provenance.sigstore.json`) |
 | `--builder-id <id>` | With `--provenance`: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own) |
 | `--append` | Write a numbered co-signature file (`X.2.sigstore.json`) beside the existing attestation, for `[signing] thresholds` |

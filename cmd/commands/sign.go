@@ -48,6 +48,7 @@ var (
 	signBundle      string
 	signSkill       string
 	signSBOM        string
+	signPolicy      string
 	signProvenance  bool
 	signBuilderID   string
 	signAppend      bool
@@ -72,6 +73,10 @@ var SignCmd = &cobra.Command{
                                        against [[signing.trust]] entries with subject = "skill"
   ai-rulez sign --sbom <file>          any SBOM file (ai-rulez sbom, SPDX, CycloneDX),
                                        written to <file>.sigstore.json
+  ai-rulez sign --policy <file>        an organization policy file, written to
+                                       <file>.sigstore.json, where the policy loader looks
+                                       (--policy-signer-key / --policy-signer-identity, see
+                                       docs/policy.md); it is refused unless the file parses
 
 The lock statement survives re-formatting of the TOML. All of them verify with
 "ai-rulez verify --attestation" (--bundle, --skill, --sbom) or cosign
@@ -119,6 +124,7 @@ func init() {
 	f.StringVar(&signBundle, "bundle", "", "Sign the plugin bundle directory (tree digest of its files) into <dir>/.ai-rulez.sigstore.json")
 	f.StringVar(&signSkill, "skill", "", "Sign a skill directory a publisher ships into <dir>/.ai-rulez.sigstore.json")
 	f.StringVar(&signSBOM, "sbom", "", "Sign an SBOM file into <file>.sigstore.json")
+	f.StringVar(&signPolicy, "policy", "", "Sign an organization policy file into <file>.sigstore.json")
 	f.BoolVar(&signProvenance, "provenance", false, "With --bundle: also write a SLSA v1 provenance statement (.ai-rulez.provenance.sigstore.json); it is the signer's own account of the build")
 	f.StringVar(&signBuilderID, "builder-id", "", "With --provenance: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own)")
 	f.BoolVar(&signAppend, "append", false, "Write a co-signature file next to the existing attestation instead of replacing it (for [signing] thresholds)")
@@ -138,16 +144,16 @@ func init() {
 
 func validateSignFlags() error {
 	subjects := 0
-	for _, set := range []bool{signLock, signBundle != "", signSkill != "", signSBOM != ""} {
+	for _, set := range []bool{signLock, signBundle != "", signSkill != "", signSBOM != "", signPolicy != ""} {
 		if set {
 			subjects++
 		}
 	}
 	switch {
 	case subjects == 0:
-		return oops.Hint("pass --lock, --bundle <dir>, --skill <dir> or --sbom <file>").Errorf("nothing to sign")
+		return oops.Hint("pass --lock, --bundle <dir>, --skill <dir>, --sbom <file> or --policy <file>").Errorf("nothing to sign")
 	case subjects > 1:
-		return oops.Errorf("--lock, --bundle, --skill and --sbom are mutually exclusive: sign one subject at a time")
+		return oops.Errorf("--lock, --bundle, --skill, --sbom and --policy are mutually exclusive: sign one subject at a time")
 	case signProvenance && signBundle == "":
 		return oops.Errorf("--provenance applies to --bundle")
 	case signProvenance && signAppend:
@@ -203,6 +209,9 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	if err := validateSignFlags(); err != nil {
 		fmtError(err)
 		return 1
+	}
+	if signPolicy != "" {
+		return runSignPolicy(ctx, env)
 	}
 	if signBundle != "" || signSkill != "" || signSBOM != "" {
 		return runSignArtifact(ctx, env)
