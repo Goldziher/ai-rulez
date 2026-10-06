@@ -498,7 +498,7 @@ prompt has no result and the skill is not scored. `input_tokens`, `output_tokens
   `SKILL.md`, which shows up as a shell command; the run is killed as soon as one is read or after three commands, so
   the model never acts on the task. The commands that did start run read-only in an empty directory with `HOME` pointed
   at an empty directory and a scrubbed environment (`CODEX_HOME` stays, for the login). Codex reports usage only when a
-  run finishes, so this adapter reports no tokens and no cost and `--max-cost` cannot be enforced through it. It
+  run finishes, so this adapter reports no tokens and no cost. `--max-cost` cannot be enforced through it, so a capped run (without `--dry-run`) is refused; run `--dry-run` for the estimate, then run uncapped. It
   is experimental: verified live against codex-cli 0.160, one prompt per run costs on the order of 200,000 input tokens.
 - **`--runner-command`**: any other harness; implement the probe and the request above.
 
