@@ -137,7 +137,7 @@ func init() {
 
 	exportOKFCmd.Flags().StringVarP(&okfOut, "out", "o", "", "Bundle directory (default: okf.dir, docs/okf)")
 	exportOKFCmd.Flags().StringVarP(&okfProfile, "profile", "p", "", "Profile to export (default: from config or 'default')")
-	exportOKFCmd.Flags().StringVar(&okfRole, "role", "", "Export the slice of content a role selects (see `ai-rulez roles list`); mutually exclusive with --profile")
+	exportOKFCmd.Flags().StringVar(&okfRole, "role", "", "Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile")
 	exportOKFCmd.Flags().StringSliceVar(&okfInclude, "include", nil, "Kinds to export: rules,context,skills,agents,commands,checks (default: okf.include or all)")
 	exportOKFCmd.Flags().BoolVar(&okfCheck, "check", false, "Write nothing; exit 2 when the bundle on disk differs")
 	exportOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
