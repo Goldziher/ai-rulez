@@ -57,7 +57,10 @@ func TestScannersCLI_ListAndDoctor(t *testing.T) {
 
 	doctor := testutil.RunCLI(t, dir, "scanners", "doctor", "fake")
 	require.Equal(t, 0, doctor.ExitCode, doctor.Stdout+doctor.Stderr)
-	doctor.AssertStdoutContains(t, "version   fake-scan 1.2.3")
+	doctor.AssertStdoutContains(t, "not probed (pass --external)")
+	probed := testutil.RunCLI(t, dir, "scanners", "doctor", "fake", "--external")
+	require.Equal(t, 0, probed.ExitCode, probed.Stdout+probed.Stderr)
+	probed.AssertStdoutContains(t, "version   fake-scan 1.2.3")
 	doctor.AssertStdoutContains(t, "false: scrubbed environment")
 
 	unknown := testutil.RunCLI(t, dir, "scanners", "doctor", "ghost")
