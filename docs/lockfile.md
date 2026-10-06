@@ -112,7 +112,6 @@ path = ".claude/skills/deploy/SKILL.md"
 digest = "sha256:…"
 ```
 
-The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
 ### Scan records
 
 `lock` also writes one `[[scan]]` record per staged `egress = false` external scanner that has a cached result for the
@@ -132,6 +131,7 @@ A reviewer sees what was scanned at lock time and with what outcome. The records
 approvals: they do not make `lock --check` fail, and a scanner with no cached result for the content has no record
 (`lock` logs it). See [External scanners](strict-validation.md#lock-records).
 
+The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
 machine, as far as the content is: the `source` recorded for a skill that comes from an `[[includes]]` entry is
 `include:<name>/<path inside the include>`, never a path in your home directory or cache. A lock written before
 this recorded an absolute path for such skills; `lock --check` compares digests, not that field, so it still
