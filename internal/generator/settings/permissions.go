@@ -242,6 +242,19 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 	return jsonmerge.OwnedKey{Path: path, Value: value, Elements: claimed}
 }
 
+// docArrayKeyIfNeeded is docArrayKey that yields nothing for an array ai-rulez has
+// no element for and that neither the document nor an earlier run holds, so no
+// empty array is created or claimed.
+func docArrayKeyIfNeeded(cfg *config.Config, docPath string, path []string, ours []any) (jsonmerge.OwnedKey, bool) {
+	if len(ours) == 0 {
+		_, present := jsonmerge.LookupTree(docTree(docPath), path)
+		if !present && len(previousElementClaims(cfg, docPath, path)) == 0 {
+			return jsonmerge.OwnedKey{}, false
+		}
+	}
+	return docArrayKey(cfg, docPath, path, ours), true
+}
+
 // docMembersKey owns the given entries of the map at path one by one. An entry
 // the document already holds with another value that no earlier run wrote is the
 // consumer's and is left as it is (ai-rulez never overrides a rule of theirs, in

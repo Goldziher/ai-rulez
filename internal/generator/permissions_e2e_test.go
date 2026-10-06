@@ -171,3 +171,24 @@ func TestGenerate_UserOnlyHarnessesWriteNothingIntoTheProject(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, ".hermes", "config.yaml"))
 	assert.NoFileExists(t, filepath.Join(root, ".kimi-code", "config.toml"))
 }
+
+// TestGenerate_CursorDenyOnlyClaimsNoEmptyAllow pins that a deny-only [permissions]
+// writes no empty allow array, and that clean removes the document ai-rulez created.
+func TestGenerate_CursorDenyOnlyClaimsNoEmptyAllow(t *testing.T) {
+	quietWarnings(t)
+	// Arrange
+	cfg := "version = \"4.0\"\nname = \"p\"\npresets = [\"cursor\"]\ngitignore = false\n\n[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n"
+	root := writeProject(t, cfg, nil)
+
+	// Act
+	generateProject(t, root)
+	gen := generateProject(t, root)
+	body := readProjectFile(t, root, ".cursor/cli.json")
+	_, err := gen.Clean("default", CleanOptions{RemoveEdited: true})
+	require.NoError(t, err)
+
+	// Assert
+	assert.Contains(t, body, "deny")
+	assert.NotContains(t, body, `"allow"`, "no empty array is written")
+	assert.NoFileExists(t, filepath.Join(root, ".cursor", "cli.json"), "an emptied document ai-rulez created is removed")
+}

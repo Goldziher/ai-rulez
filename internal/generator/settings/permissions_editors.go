@@ -288,11 +288,19 @@ func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	if len(allow)+len(deny) == 0 {
 		return nil, nil
 	}
-	// Cursor's schema lists both arrays as required.
-	return []jsonmerge.OwnedKey{
-		docArrayKey(t.cfg, t.docPath, []string{"permissions", "allow"}, allow),
-		docArrayKey(t.cfg, t.docPath, []string{"permissions", "deny"}, deny),
-	}, nil
+	// An array with nothing to say is not created (and never claimed), so a
+	// deny-only config leaves no empty allow behind; one the document already
+	// holds, or that an earlier run wrote elements to, is still maintained.
+	var keys []jsonmerge.OwnedKey
+	for _, arr := range []struct {
+		name string
+		ours []any
+	}{{"allow", allow}, {"deny", deny}} {
+		if key, ok := docArrayKeyIfNeeded(t.cfg, t.docPath, []string{"permissions", arr.name}, arr.ours); ok {
+			keys = append(keys, key)
+		}
+	}
+	return keys, nil
 }
 
 func cursorRule(e permEntry) (string, string) {
