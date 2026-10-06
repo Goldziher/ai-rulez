@@ -769,6 +769,71 @@ func TestPublish_MultiPluginExecutesEachPluginsTarget(t *testing.T) {
 	assert.Equal(t, []string{"npm/acme-acme-alpha-1.4.0.tgz", "npm/acme-acme-beta-1.4.0.tgz"}, published)
 }
 
+// multiGHFake answers gh: `release view` finds the tags in existing, and
+// `release create` fails for the tags in failing.
+func multiGHFake(existing, failing []string) *runner.Fake {
+	return &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
+		if spec.Argv[0] != "gh" || len(spec.Argv) < 4 {
+			return runner.Result{Status: runner.StatusOK}
+		}
+		tag := spec.Argv[3]
+		switch spec.Argv[2] {
+		case "view":
+			for _, e := range existing {
+				if e == tag {
+					return runner.Result{Status: runner.StatusOK}
+				}
+			}
+			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("release not found")}
+		case "create":
+			for _, f := range failing {
+				if f == tag {
+					return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("HTTP 502")}
+				}
+			}
+		}
+		return runner.Result{Status: runner.StatusOK, Stdout: []byte("https://example.invalid/release\n")}
+	}}
+}
+
+func creates(f *runner.Fake) []string {
+	var tags []string
+	for _, c := range f.Calls() {
+		if c.Argv[0] == "gh" && len(c.Argv) > 3 && c.Argv[2] == "create" {
+			tags = append(tags, c.Argv[3])
+		}
+	}
+	return tags
+}
+
+func TestPublish_MultiPluginChecksEveryTargetBeforeUploadingAny(t *testing.T) {
+	multiProject(t)
+	publishTo, publishExecute, publishYes = publish.TargetGitHubRelease, true, true
+	fake := multiGHFake([]string{"acme-beta-v1.4.0"}, nil)
+	publishRunner = fake
+
+	_, err := runPublishCapture(t)
+
+	requirePublishError(t, err, publish.CodeTarget, publish.ExitFailed)
+	assert.Contains(t, err.Error(), "already exists")
+	assert.Contains(t, err.Error(), "nothing was published")
+	assert.Empty(t, creates(fake), "the existing second release stops the run before the first is created")
+}
+
+func TestPublish_MultiPluginFailurePartWayNamesWhatIsOut(t *testing.T) {
+	multiProject(t)
+	publishTo, publishExecute, publishYes = publish.TargetGitHubRelease, true, true
+	fake := multiGHFake(nil, []string{"acme-beta-v1.4.0"})
+	publishRunner = fake
+
+	_, err := runPublishCapture(t)
+
+	requirePublishError(t, err, publish.CodeTarget, publish.ExitFailed)
+	assert.Contains(t, err.Error(), "published: acme-alpha")
+	assert.Contains(t, err.Error(), "not published: acme-beta")
+	assert.Equal(t, []string{"acme-alpha-v1.4.0", "acme-beta-v1.4.0"}, creates(fake))
+}
+
 func TestPublish_MultiPluginRuntimeFilter(t *testing.T) {
 	root := multiProject(t)
 	publishRuntimes = []string{"claude"}
