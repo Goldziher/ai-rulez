@@ -21,21 +21,61 @@ func Digest(data []byte) string {
 }
 
 // Manifest describes one published bundle (schema/publish-manifest.schema.json).
-// Approval, Signature and SBOM are null until those features exist; the schema
-// reserves them so a consumer can refuse unsigned or unapproved bundles later.
+// Approval, Signature and SBOM are null when the bundle carries none, so a
+// consumer can refuse an unsigned or unapproved bundle by reading the manifest.
 type Manifest struct {
-	SchemaVersion int         `json:"schema_version"`
-	Name          string      `json:"name"`
-	Version       string      `json:"version"`
-	AIRulezVer    string      `json:"ai_rulez_version"`
-	Source        Source      `json:"source"`
-	Lock          LockInfo    `json:"lock"`
-	Runtimes      []string    `json:"runtimes"`
-	Files         []FileEntry `json:"files"`
-	Bundle        BundleInfo  `json:"bundle"`
-	Approval      any         `json:"approval"`
-	Signature     any         `json:"signature"`
-	SBOM          any         `json:"sbom"`
+	SchemaVersion int            `json:"schema_version"`
+	Name          string         `json:"name"`
+	Version       string         `json:"version"`
+	AIRulezVer    string         `json:"ai_rulez_version"`
+	Source        Source         `json:"source"`
+	Lock          LockInfo       `json:"lock"`
+	Runtimes      []string       `json:"runtimes"`
+	Files         []FileEntry    `json:"files"`
+	Bundle        BundleInfo     `json:"bundle"`
+	Approval      *ApprovalInfo  `json:"approval"`
+	Signature     *SignatureInfo `json:"signature"`
+	SBOM          *SBOMInfo      `json:"sbom"`
+}
+
+// ApprovalInfo summarises the approval state of the lock at publish time. It
+// is present when the [governance] policy selects content for approval.
+type ApprovalInfo struct {
+	// Required counts the items the policy selects, Approved those with a valid approval.
+	Required int `json:"required"`
+	Approved int `json:"approved"`
+}
+
+// SignatureSigstoreBundle is the only signature type: a Sigstore bundle.
+const SignatureSigstoreBundle = "sigstore-bundle"
+
+// SignatureInfo points at the Sigstore bundle that signs the archive (a
+// message signature over the exact bytes of the tar.gz, the form `cosign
+// sign-blob --bundle` writes). Signer is what the bundle claims; trusting it is
+// the verifier's decision.
+type SignatureInfo struct {
+	Type   string     `json:"type"`
+	File   string     `json:"file"`
+	Signer SignerInfo `json:"signer"`
+}
+
+// SignerInfo is who signed: a key (KeyID, "sha256:<hex>") or a certificate
+// identity with its OIDC issuer.
+type SignerInfo struct {
+	Kind     string `json:"kind"`
+	KeyID    string `json:"key_id,omitempty"`
+	Identity string `json:"identity,omitempty"`
+	Issuer   string `json:"issuer,omitempty"`
+}
+
+// SBOMCycloneDX is the only SBOM format.
+const SBOMCycloneDX = "cyclonedx"
+
+// SBOMInfo points at the SBOM shipped with the bundle.
+type SBOMInfo struct {
+	Format string `json:"format"`
+	File   string `json:"file"`
+	Digest string `json:"digest"`
 }
 
 // Source is where the bundle came from. Repo never carries credentials.
