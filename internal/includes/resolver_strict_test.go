@@ -52,6 +52,7 @@ func TestResolveIncludes_FailingIncludeIsAnErrorWhenLockIsStrict(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "gone")
+				assert.ErrorIs(t, err, config.ErrLockViolation, "the loader only propagates lock violations")
 				return
 			}
 			require.NoError(t, err)
