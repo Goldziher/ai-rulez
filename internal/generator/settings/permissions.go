@@ -311,3 +311,9 @@ func SupportsPermissions(preset string) bool {
 // userOnlyPermissionHarnesses read their permission settings from a user-level
 // file only; their sidecars are `user_only`.
 var userOnlyPermissionHarnesses = []string{"zed", "hermes", "kimi"}
+
+// PermissionsUserOnly reports whether the harness reads its permissions from a
+// user-level file, so a project run writes none for it.
+func PermissionsUserOnly(preset string) bool {
+	return slices.Contains(userOnlyPermissionHarnesses, preset)
+}
