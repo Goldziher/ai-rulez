@@ -8,7 +8,37 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
+
+func TestApprove_ForbidSelfApprovalRefusesAKeySignerThatNamesNoAuthor(t *testing.T) {
+	// Arrange: a signed record whose reviewer is key:<id> cannot be matched with a commit author
+	root := approveProject(t, "forbid_self_approval = true\n")
+	crossGit(t, root, "init", "-q", "-b", "main")
+	crossGit(t, root, "add", "-A")
+	crossGit(t, root, "commit", "-qm", "base")
+	cfg := mustLoadConfig(t)
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	require.NoError(t, err)
+	var item lockfile.Item
+	for _, it := range lock.Item {
+		if it.Kind == "rule" && it.ID == "style" {
+			item = it
+		}
+	}
+	require.NotEmpty(t, item.Digest)
+	lock.Approval = append(lock.Approval, lockfile.Approval{Kind: "rule", ID: "style", Digest: item.Digest,
+		Reviewer: "key:sha256:abc", Assurance: lockfile.AssuranceSigned, ApprovedAt: "2026-10-01T00:00:00Z"})
+
+	// Act
+	found, err := authorSelfApprovals(cfg, lock, "main")
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, found, 1)
+	assert.Contains(t, found[0].Message(), "key that names no author")
+}
 
 func TestApprove_VerifyBaseReadsOwnersFromTheBase(t *testing.T) {
 	// Arrange: bob is made an owner and approves in the same range
