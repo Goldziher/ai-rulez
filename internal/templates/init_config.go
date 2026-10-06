@@ -1,10 +1,10 @@
 package templates
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/pelletier/go-toml/v2"
 )
 
 // InitSubdirs are the content directories `ai-rulez init` creates inside the
@@ -74,14 +74,31 @@ presets = [`)
 	return b.String()
 }
 
-// tomlString renders s as a TOML string value using the encoder, so every quote,
-// backslash and control character is escaped.
+// tomlString renders s as a TOML basic string: every quote, backslash and control
+// character is escaped, so the value can never end the string or start a key.
 func tomlString(s string) string {
-	out, err := toml.Marshal(map[string]string{"v": s})
-	if err != nil {
-		return `""`
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch {
+		case r == '"':
+			b.WriteString(`\"`)
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r == '\t':
+			b.WriteString(`\t`)
+		case r == '\r':
+			b.WriteString(`\r`)
+		case r < 0x20 || r == 0x7f:
+			fmt.Fprintf(&b, `\u%04X`, r)
+		default:
+			b.WriteRune(r)
+		}
 	}
-	return strings.TrimSpace(strings.TrimPrefix(string(out), "v = "))
+	b.WriteByte('"')
+	return b.String()
 }
 
 // commentText makes s safe inside a one-line TOML comment: line breaks and other
