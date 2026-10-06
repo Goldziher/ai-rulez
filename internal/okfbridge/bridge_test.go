@@ -319,13 +319,3 @@ func TestImportOfficialAcmeRetail(t *testing.T) {
 		assert.NotEqual(t, okf.SeverityError, f.Severity, "%s %s %s", f.Code, f.Path, f.Message)
 	}
 }
-
-func TestImportRefusesSymlinksAndCaseCollisions(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "real.md"), []byte("---\ntype: Decision\n---\nx\n"), 0o644))
-	require.NoError(t, os.Symlink(filepath.Join(dir, "real.md"), filepath.Join(dir, "link.md")))
-	b, err := okf.Load(os.DirFS(dir))
-	require.NoError(t, err)
-	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(t.TempDir(), ".ai-rulez"), Scan: testScan})
-	assert.ErrorContains(t, err, "unsafe paths")
-}

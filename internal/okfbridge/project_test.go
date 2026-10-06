@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -67,4 +68,47 @@ func TestCheckProject(t *testing.T) {
 	res, err = okfbridge.CheckProject(cfg, tree)
 	require.NoError(t, err)
 	assert.Nil(t, res, "nothing configured, nothing checked")
+}
+
+func TestCheckProjectNamesAnEditedTitleAndHonoursTheConfiguredStyle(t *testing.T) {
+	// Arrange
+	root := sampleProject(t)
+	cfgFile := filepath.Join(root, ".ai-rulez", "config.yaml")
+	require.NoError(t, os.WriteFile(cfgFile, []byte("version: \"4.0\"\nname: sample\npresets:\n  - claude\n  - okf\nokf:\n  index_style: frontmatter\n"), 0o644))
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+	exp, err := okfbridge.Export(cfg.Content, okfbridge.ExportOptions{IndexStyle: okf.StyleFrontmatter})
+	require.NoError(t, err)
+	bundle := filepath.Join(root, "docs", "okf")
+	require.NoError(t, okf.WriteFiles(bundle, exp.Files, true))
+
+	// Act and assert: a bundle in the configured style is clean, without the style note.
+	res, err := okfbridge.CheckProject(cfg, cfg.Content)
+	require.NoError(t, err)
+	assert.Empty(t, res.Findings)
+
+	// A bundle in the other style is drift in the index files.
+	body, err := okfbridge.Export(cfg.Content, okfbridge.ExportOptions{})
+	require.NoError(t, err)
+	require.NoError(t, okf.WriteFiles(bundle, body.Files, true))
+	res, err = okfbridge.CheckProject(cfg, cfg.Content)
+	require.NoError(t, err)
+	assert.Contains(t, codesOf(res.Findings), "AR9B5 index.md")
+
+	// An edited title gets its own message.
+	require.NoError(t, okf.WriteFiles(bundle, exp.Files, true))
+	plain := filepath.Join(bundle, "rules", "plain.md")
+	data, err := os.ReadFile(plain)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(plain, []byte(strings.Replace(string(data), "title: Plain", "title: Edited", 1)), 0o644))
+	res, err = okfbridge.CheckProject(cfg, cfg.Content)
+	require.NoError(t, err)
+	var msgs []string
+	for _, f := range res.Findings {
+		if f.Code == okf.CodeExportDrift {
+			msgs = append(msgs, f.Message)
+		}
+	}
+	require.Len(t, msgs, 1)
+	assert.Contains(t, msgs[0], `title was edited in the bundle ("Edited", the sources say "Plain")`)
 }

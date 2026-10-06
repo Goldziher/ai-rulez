@@ -67,6 +67,8 @@ type IndexFileDoc struct {
 	Body        string
 	BodyOffset  int
 	Entries     []Entry
+	// Style is StyleFrontmatter or StyleBody, or "" when the file lists nothing.
+	Style string
 }
 
 // LogDoc is a log.md (reserved, SPEC section 9).
@@ -187,12 +189,35 @@ func (b *Bundle) add(p string, data []byte) {
 	offset := max(strings.Count(string(data), "\n")-strings.Count(body, "\n"), 0)
 	switch path.Base(p) {
 	case IndexFile:
-		b.Indexes[p] = &IndexFileDoc{Path: p, Frontmatter: fm, Body: body, BodyOffset: offset, Entries: ParseEntries(body)}
+		idx := &IndexFileDoc{Path: p, Frontmatter: fm, Body: body, BodyOffset: offset, Entries: ParseEntries(body)}
+		switch {
+		case isFrontmatterIndex(fm):
+			idx.Style = StyleFrontmatter
+			idx.Entries = append(frontmatterEntries(fm), idx.Entries...)
+		case len(idx.Entries) > 0:
+			idx.Style = StyleBody
+		}
+		b.Indexes[p] = idx
 	case LogFile:
 		b.Logs[p] = &LogDoc{Path: p, Body: body}
 	default:
 		b.Concepts[p] = &Concept{Path: p, Frontmatter: fm, Body: body, BodyOffset: offset}
 	}
+}
+
+// IndexStyle reports the index scheme of the bundle: the style of the root
+// index.md, or of the first nested index that lists something. It is "" when no
+// index lists anything.
+func (b *Bundle) IndexStyle() string {
+	if root, ok := b.Indexes[IndexFile]; ok && root.Style != "" {
+		return root.Style
+	}
+	for _, p := range sortedMapKeys(b.Indexes) {
+		if s := b.Indexes[p].Style; s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 // ConceptPaths returns the concept paths, sorted.
