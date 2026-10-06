@@ -58,6 +58,7 @@ For a tool that isn't built in, a custom preset can point at a declarative **pro
 Set `agents_md = true` to write `AGENTS.md` and `.agents/skills/` once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Off by default. See [docs/agents-md.md](docs/agents-md.md).
 
 Need the same knowledge outside coding agents? `ai-rulez export okf` writes rules, context and skills as an [Open Knowledge Format](docs/okf.md) bundle (the `okf` preset keeps it in sync on every `generate`), `ai-rulez import okf <dir|git-url>` turns an existing OKF bundle into `.ai-rulez/` sources, and `ai-rulez okf validate` lints any bundle. See [docs/okf.md](docs/okf.md).
+
 ## Beyond Instructions
 
 | Feature | What it does | Docs |

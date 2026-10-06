@@ -1040,21 +1040,66 @@
       "type": "object",
       "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9L0).",
       "properties": {
-        "provider": {"type": "string", "description": "Provider prefix for provider/model routing (used by the literllm backend)."},
-        "model": {"type": "string", "description": "Chat model name."},
-        "backend": {"type": "string", "enum": ["auto", "openaicompat", "literllm"], "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat."},
-        "base_url": {"type": "string", "description": "API root of an OpenAI-compatible endpoint, e.g. an in-VPC gateway. No credentials or query string."},
-        "api_key_env": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "Name of the environment variable holding the API key. Never the key itself."},
-        "embedding_model": {"type": "string", "description": "Model used for embeddings."},
-        "max_cost_usd": {"type": "number", "minimum": 0, "description": "Stop before estimated spend would exceed this (0 = unlimited)."},
-        "max_tokens": {"type": "integer", "minimum": 0, "description": "Stop before prompt plus completion tokens would exceed this (0 = unlimited)."},
-        "max_calls": {"type": "integer", "minimum": 0, "description": "Stop after this many provider calls (0 = unlimited)."},
-        "cache": {"type": "boolean", "description": "On-disk response cache under .ai-rulez/local/llm-cache/ (default true)."},
-        "allow_network": {"type": "boolean", "description": "Must be true for any provider call (default false)."},
-        "timeout_seconds": {"type": "integer", "minimum": 0, "description": "Per-call timeout including retries (default 60)."},
-        "max_retries": {"type": "integer", "minimum": -1, "description": "Retries after the first attempt (default 3, -1 disables)."},
-        "price_input_per_mtok": {"type": "number", "minimum": 0, "description": "USD per million prompt tokens; overrides the built-in price table."},
-        "price_output_per_mtok": {"type": "number", "minimum": 0, "description": "USD per million completion tokens; overrides the built-in price table."}
+        "provider": {
+          "type": "string",
+          "description": "Provider prefix for provider/model routing (used by the literllm backend)."
+        },
+        "model": { "type": "string", "description": "Chat model name." },
+        "backend": {
+          "type": "string",
+          "enum": ["auto", "openaicompat", "literllm"],
+          "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "API root of an OpenAI-compatible endpoint, e.g. an in-VPC gateway. No credentials or query string."
+        },
+        "api_key_env": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Name of the environment variable holding the API key. Never the key itself."
+        },
+        "embedding_model": { "type": "string", "description": "Model used for embeddings." },
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Stop before estimated spend would exceed this (0 = unlimited)."
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stop before prompt plus completion tokens would exceed this (0 = unlimited)."
+        },
+        "max_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stop after this many provider calls (0 = unlimited)."
+        },
+        "cache": {
+          "type": "boolean",
+          "description": "On-disk response cache under .ai-rulez/local/llm-cache/ (default true)."
+        },
+        "allow_network": { "type": "boolean", "description": "Must be true for any provider call (default false)." },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Per-call timeout including retries (default 60)."
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "Retries after the first attempt (default 3, -1 disables)."
+        },
+        "price_input_per_mtok": {
+          "type": "number",
+          "minimum": 0,
+          "description": "USD per million prompt tokens; overrides the built-in price table."
+        },
+        "price_output_per_mtok": {
+          "type": "number",
+          "minimum": 0,
+          "description": "USD per million completion tokens; overrides the built-in price table."
+        }
       },
       "additionalProperties": false
     },

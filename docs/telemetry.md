@@ -6,11 +6,11 @@ optionally shipping those identifier-only events to an OpenTelemetry collector. 
 local log works with no network, and a repository can never turn on network export for the people who clone it.
 
 ```console
-$ ai-rulez telemetry hook              # hooks that record loads (merge into .claude/settings.json)
-$ ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml; generate writes them
-$ ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
-$ ai-rulez telemetry flush             # ship the outbox now
-$ ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
+ai-rulez telemetry hook              # hooks that record loads (merge into .claude/settings.json)
+ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml; generate writes them
+ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
+ai-rulez telemetry flush             # ship the outbox now
+ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
 ```
 
 ## What is collected
