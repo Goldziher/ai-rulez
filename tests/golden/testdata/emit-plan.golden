@@ -37,7 +37,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-plan-before.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+plan-before.json file 0644 8496 7ef17c4888cd96ced8361142463e6a3f69724fbab0ac65342ea0a61c025eb21c
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -373,8 +373,8 @@ exit: 0
       "path": "CLAUDE.md",
       "action": "write",
       "mode": "0644",
-      "size": 405,
-      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+      "size": 404,
+      "sha256": "3e3fc5c1e6e6322b62b7511138b105040781a1cd61e42b792d2771a5ab96d9bb"
     }
   ],
   "removals": []
@@ -468,7 +468,7 @@ WARN  [permissions] ask rules are not generated for cursor: it has no ask list a
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-+ plan-after.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
++ plan-after.json file 0644 8496 7ef17c4888cd96ced8361142463e6a3f69724fbab0ac65342ea0a61c025eb21c
 --- home tree
 (no change)
 
@@ -1534,7 +1534,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-plan-after.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+plan-after.json file 0644 8496 7ef17c4888cd96ced8361142463e6a3f69724fbab0ac65342ea0a61c025eb21c
 >>>>
 {
   "schema": 1,
@@ -1863,14 +1863,14 @@ plan-after.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11
       "path": "CLAUDE.md",
       "action": "write",
       "mode": "0644",
-      "size": 405,
-      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+      "size": 404,
+      "sha256": "3e3fc5c1e6e6322b62b7511138b105040781a1cd61e42b792d2771a5ab96d9bb"
     }
   ],
   "removals": []
 }
 <<<<
-plan-before.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+plan-before.json file 0644 8496 7ef17c4888cd96ced8361142463e6a3f69724fbab0ac65342ea0a61c025eb21c
 >>>>
 {
   "schema": 1,
@@ -2199,14 +2199,14 @@ plan-before.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d1
       "path": "CLAUDE.md",
       "action": "write",
       "mode": "0644",
-      "size": 405,
-      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+      "size": 404,
+      "sha256": "3e3fc5c1e6e6322b62b7511138b105040781a1cd61e42b792d2771a5ab96d9bb"
     }
   ],
   "removals": []
 }
 <<<<
-plan-stale.json file 0644 5579 a6697d6cc5b8a719710cb898c19e931a5d16bb5a277cadd9476da8911b7d69ce
+plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d88cd127c58475ef
 >>>>
 {
   "schema": 1,
@@ -2362,8 +2362,8 @@ plan-stale.json file 0644 5579 a6697d6cc5b8a719710cb898c19e931a5d16bb5a277cadd94
       "path": "CLAUDE.md",
       "action": "write",
       "mode": "0644",
-      "size": 405,
-      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+      "size": 404,
+      "sha256": "3e3fc5c1e6e6322b62b7511138b105040781a1cd61e42b792d2771a5ab96d9bb"
     }
   ],
   "removals": [
