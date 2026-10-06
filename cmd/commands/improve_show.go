@@ -9,7 +9,6 @@ import (
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/improve"
 )
 
@@ -57,16 +56,15 @@ var improveCleanCmd = &cobra.Command{
 	Short: "(experimental) Delete saved improve runs",
 	Long: `Delete one saved run (by id) or every saved run (--all) under .ai-rulez/local/improve/. A run
 holds copies of the skill and its train cases and the optimizer's workspace, so clean them when you are done.
-Nothing outside that directory is touched; a run directory that is a symlink is unlinked, never followed, and a
-linked worktree made by improve pr is unregistered from git. --dry-run lists what would go; --all asks for
-confirmation unless --yes is given.`,
+Nothing outside that directory is touched; a run directory that is a symlink is unlinked, never followed.
+--dry-run lists what would go; --all asks for confirmation unless --yes is given.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
-		opts := &improve.CleanOptions{All: improveCleanFlags.all, DryRun: improveCleanFlags.dryRun, Git: gitutil.Git{}}
+		opts := &improve.CleanOptions{All: improveCleanFlags.all, DryRun: improveCleanFlags.dryRun}
 		if len(args) == 1 {
 			opts.RunID = args[0]
 		}
@@ -76,9 +74,6 @@ confirmation unless --yes is given.`,
 		}
 		if opts.ConfigDir, err = filepath.Abs(cfg.ConfigDir); err != nil {
 			return oops.Wrapf(err, "resolve config directory")
-		}
-		if opts.RepoDir, err = filepath.Abs(cfg.BaseDir); err != nil {
-			return oops.Wrapf(err, "resolve project directory")
 		}
 		if opts.All && !opts.DryRun && !improveFlags.yes && !confirmProceed("Delete every saved improve run?") {
 			return oops.Hint("Re-run with --yes to skip the prompt").Errorf("not confirmed: nothing was deleted")

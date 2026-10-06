@@ -1,0 +1,106 @@
+package commands
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/improve"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+)
+
+var improvePRFlags struct {
+	base     string
+	remote   string
+	draft    bool
+	noPush   bool
+	runEvals bool
+	evalArgs []string
+}
+
+var improvePRCmd = &cobra.Command{
+	Use:   "pr <run-id>",
+	Short: "(experimental) Open a pull request for an accepted improve run from an isolated worktree",
+	Long: `Turn an accepted run into a branch and a pull request without touching your checkout.
+
+It creates a linked git worktree from --base (default: the branch you are on), applies the candidate there
+after checking that the skill at the base is the one the run measured (AR9J1) and that the candidate still
+passes the diff policy, runs "ai-rulez lock" when the project has a lock, and commits on the new branch
+ai-rulez/improve/<skill>-<digest8>. With --run-evals it also runs "ai-rulez eval run <skill> --changed-only"
+in the worktree (it calls the eval runner and spends money; --eval-arg passes extra arguments such as
+--max-cost) so the lock check and AR997 pass; without it the command tells you to run it on the branch.
+
+When the remote exists, gh is on PATH and you confirm (or pass --yes), it pushes the branch with git and opens
+the pull request with gh using fixed arguments; otherwise it prints the two commands. ai-rulez makes no network
+call itself. The pull request body names what changed, the held-out numbers with their interval, the guards,
+the cost and egress, and a reviewer checklist, and says the change is NOT approved: nothing here sets approval.
+The worktree is removed afterwards; the branch stays. Commits skip git hooks. Refusals carry AR9J8.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := commandContext(cmd)
+		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
+		if err := checkFormatFlag(improveFlags.format); err != nil {
+			return err
+		}
+		cfg, err := loadConfigForCommand(ctx, nil)
+		if err != nil {
+			return err
+		}
+		configDirAbs, err := filepath.Abs(cfg.ConfigDir)
+		if err != nil {
+			return oops.Wrapf(err, "resolve config directory")
+		}
+		repo, err := filepath.Abs(cfg.BaseDir)
+		if err != nil {
+			return oops.Wrapf(err, "resolve project directory")
+		}
+		asJSON := improveFlags.format == formatJSON
+		out := cmd.OutOrStdout()
+		if asJSON {
+			out = cmd.ErrOrStderr() // stdout carries the result document only
+		}
+		opts := &improve.PROptions{
+			ConfigDir: configDirAbs, RepoDir: repo, RunID: args[0], Base: improvePRFlags.base, Remote: improvePRFlags.remote,
+			Draft: improvePRFlags.draft, NoPush: improvePRFlags.noPush, Yes: improveFlags.yes, Confirm: confirmProceed, Out: out,
+			Git: gitutil.Git{}, Exec: runner.Exec{}, RunEvals: improvePRFlags.runEvals, EvalArgs: improvePRFlags.evalArgs,
+			GHEnv: runner.ScrubEnv(os.Environ(), ghEnvPass, []string{"GH_PROMPT_DISABLED=1", "GH_NO_UPDATE_NOTIFIER=1"}),
+			Env:   gitutil.Env(nil), AllowScripts: improveFlags.allowScripts, AllowFrontmatter: improveFlags.allowFrontmatter,
+		}
+		if self, serr := improveSelf(); serr == nil {
+			opts.Self = self
+		}
+		res, err := improve.PR(ctx, opts)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		if asJSON {
+			return writeImproveJSON(cmd.OutOrStdout(), res)
+		}
+		if len(res.Refreshed) > 0 {
+			fmt.Fprintf(out, "Ran in the worktree: %s\n", strings.Join(res.Refreshed, "; "))
+		}
+		return nil
+	},
+}
+
+func init() {
+	f := improvePRCmd.Flags()
+	f.StringVar(&improvePRFlags.base, "base", "", "Branch or commit the worktree starts from and the pull request targets (default: the current branch)")
+	f.StringVar(&improvePRFlags.remote, "remote", improve.DefaultRemote, "Remote to push the branch to")
+	f.BoolVar(&improvePRFlags.draft, "draft", false, "Open the pull request as a draft")
+	f.BoolVar(&improvePRFlags.noPush, "no-push", false, "Commit on the branch only: no push, no pull request")
+	f.BoolVar(&improvePRFlags.runEvals, "run-evals", false, "Also run `eval run <skill> --changed-only` in the worktree (calls the eval runner and costs money)")
+	f.StringArrayVar(&improvePRFlags.evalArgs, "eval-arg", nil, "Extra argument for `eval run` with --run-evals, for example --eval-arg=--max-cost=2; repeatable")
+	f.BoolVarP(&improveFlags.yes, "yes", "y", false, "Push and open the pull request without the confirmation prompt")
+	f.BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
+	f.BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
+	addFormatFlag(f, &improveFlags.format, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(f)
+	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	ImproveCmd.AddCommand(improvePRCmd)
+}
