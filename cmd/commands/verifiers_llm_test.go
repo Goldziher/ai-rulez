@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const verifiersLLMSpec = verifiersBase + "[[verifiers]]\nname = \"actionable\"\nrule = \"r\"\nseverity = \"error\"\nwhen_changed = [\"*.txt\"]\n" +
@@ -76,6 +77,37 @@ func TestRunVerifiers_EstimateCallsNothingAndPrintsTheManifest(t *testing.T) {
 	assert.Equal(t, 0, got, out.String())
 	assert.Contains(t, out.String(), "estimate: 1 call(s) to gemini/gemini-2.5-flash")
 	assert.Contains(t, out.String(), "nothing was sent")
+}
+
+func TestRunVerifiers_BrokenLLMSettingsOnlyMatterWhenAnLLMVerifierRuns(t *testing.T) {
+	tests := []struct {
+		name        string
+		llmVerifier bool
+		want        int
+	}{
+		{"no llm verifier", false, 0},
+		{"llm verifier needs the config", true, exitVerifiersCannotRun},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			resetVerifiersFlags(t)
+			verifiersLLMProject(t, "")
+			if !tt.llmVerifier {
+				root, err := os.Getwd()
+				require.NoError(t, err)
+				writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), verifiersBase)
+			}
+			t.Setenv("AI_RULEZ_LLM_MAX_CALLS", "abc")
+			var out bytes.Buffer
+
+			// Act
+			got := runVerifiers(context.Background(), nil, &out)
+
+			// Assert
+			assert.Equal(t, tt.want, got, out.String())
+		})
+	}
 }
 
 func TestRunVerifiers_RejectsNegativeMaxCost(t *testing.T) {
