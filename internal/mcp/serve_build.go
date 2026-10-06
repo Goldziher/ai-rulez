@@ -90,11 +90,12 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	}
 	holder := &configHolder{}
 	holder.set(first.cfg)
+	record, closeSink := st.telemetry(first.cfg)
 	opts := ServeOptions{
 		Role:         st.Role,
 		Roles:        RolesFromConfig(holder.get),
 		BudgetBytes:  st.BudgetBytes,
-		Telemetry:    st.telemetry(first.cfg),
+		Telemetry:    record,
 		PollInterval: st.PollInterval,
 	}
 	if !st.NoWatch {
@@ -116,7 +117,9 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	if first.empty != "" {
 		logger.Warn(first.empty)
 	}
-	return NewSkillServerWith(st.Version, first.catalog, opts), nil
+	srv := NewSkillServerWith(st.Version, first.catalog, opts)
+	srv.closers = append(srv.closers, func() { closeSink(usageSinkFlushWait) })
+	return srv, nil
 }
 
 // initialFingerprint fingerprints the configuration directory and the local
@@ -429,11 +432,24 @@ func absUsageFiles(logPath string) []string {
 	return out
 }
 
-func (st *ServeSetup) telemetry(cfg *config.Config) func(SessionTelemetry) {
+func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetry), closeSink func(time.Duration)) {
 	logPath := st.usageLogPath(cfg)
 	options := usage.RecordOptions{LogPath: logPath, SinkCommand: st.UsageSink}
 	if cfg.ConfigDir != "" {
 		options.IndexPath = filepath.Join(cfg.ConfigDir, usage.IndexFileName)
+		if logPath == "" {
+			// A sink without a log has no salt file beside it; use the project's
+			// so a sink record carries the same salted session as a log line.
+			options.SaltPath = filepath.Join(cfg.ConfigDir, "local", "usage.salt")
+		}
+	}
+	closeSink = func(time.Duration) {}
+	if st.UsageSink != "" {
+		sink := usage.NewAsyncSink(st.UsageSink, usageSinkQueue, func(err error) {
+			logger.Warn("Usage sink failed", "error", err.Error())
+		})
+		options.AsyncSink = sink
+		closeSink = sink.Close
 	}
 	return func(t SessionTelemetry) {
 		_, err := usage.RecordServed(usage.ServedLoad{
@@ -442,8 +458,17 @@ func (st *ServeSetup) telemetry(cfg *config.Config) func(SessionTelemetry) {
 		if err != nil {
 			logger.Warn("Could not record the skill load", "skill", t.Skill, "error", err.Error())
 		}
-	}
+		if sink := options.AsyncSink; sink != nil && sink.Dropped() > 0 {
+			logger.Warn("Usage sink queue is full; dropping records", "dropped", sink.Dropped())
+		}
+	}, closeSink
 }
+
+// usageSinkQueue bounds the records waiting for a slow --usage-sink command.
+const usageSinkQueue = 256
+
+// usageSinkFlushWait is how long shutdown waits for queued sink records.
+const usageSinkFlushWait = 3 * time.Second
 
 // watchRoots lists the directories whose contents the catalog depends on: the
 // configuration directory and every local skill source.

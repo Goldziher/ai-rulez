@@ -62,6 +62,7 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 	closeTelemetry := wireMCPTelemetry(srv)
 	err := srv.GetMCPServer().Run(ctx, transport)
 	closeTelemetry()
+	srv.Close()
 	if err != nil {
 		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
 		os.Exit(1)
