@@ -28,7 +28,7 @@ func NewEnforcer(opts func() DiscoverOptions) *Enforcer { return &Enforcer{opts:
 // Load returns the policy in force, nil when none applies.
 func (e *Enforcer) Load() (*Resolved, error) {
 	o := e.opts()
-	key := o.Flag + "\x00" + o.envPolicy() + "\x00" + o.GOOS + "\x00" + o.Mode
+	key := o.cacheKey()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.have && e.key == key {
