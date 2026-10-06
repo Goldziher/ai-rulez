@@ -16,6 +16,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez cost`                 | Report the biggest context-cost offenders           |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
+| `ai-rulez approve`              | Record, list and revoke reviewer approvals bound to a content digest ([Approvals](approvals.md)) |
 | `ai-rulez update`               | Move pins of sources that use a `version` range to the newest allowed tag ([details](#update-command)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site ([Catalog](catalog.md)) |
@@ -1861,6 +1862,40 @@ ai-rulez update --accept-moved-tag shared   # re-pin a tag that moved, after rev
 | `--kind include\|skill\|source` | Limit the update to one kind |
 | `--format text\|json` | Output format; JSON follows `schema/update.schema.json` |
 | `--offline` | Refuses to run: update reads the remote's tags |
+## Approve Command
+
+### `ai-rulez approve [item...]`
+
+Records in `ai-rulez.lock` that a reviewer read the content with a given digest and accepted it, and lists, revokes and
+prunes those records. `[governance]` decides what needs one. See [Approvals](approvals.md) for the model, the policy
+keys and the enforcement points.
+
+```bash
+ai-rulez approve --list                         # status of everything that needs approval (--all: every pinned item)
+ai-rulez approve --list --format json           # schema/approve-list.schema.json
+ai-rulez approve --diff include:shared          # files, scan findings and the previous approval; writes nothing
+ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh" --yes
+ai-rulez approve include:shared --accept AR005  # accept a finding you read (stored with the record)
+ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
+ai-rulez approve --prune                        # drop records of removed or changed content
+```
+
+| Flag | Description |
+| --- | --- |
+| `--list`, `--all` | List what needs approval; `--all` adds pinned content that needs none |
+| `--diff` | Show files, scan findings and earlier approvals of the named items |
+| `--revoke`, `--prune` | Remove records |
+| `--reviewer` | Reviewer to record (default `$AI_RULEZ_REVIEWER`, else git `user.email`) |
+| `--note` | Free-text note, scanned for secrets |
+| `--accept <code>` | Accept an error-level scan finding by code (repeatable) |
+| `--expires`, `--at` | Expiry date (default today + `[governance] max_age`); approval time for reproducible runs |
+| `--yes` | Do not ask; required without a terminal |
+| `--format json` | With `--list` |
+
+Items are named `kind:id` or `kind:domain/id` (`skill:backend/deploy`, `include:shared`, `hook:PreToolUse:*:0`); only
+pinned content can be approved. Exit codes: `0` ok, `1` the command could not run or refused (an unknown or ambiguous
+item, an error-level finding, no `--yes` off a terminal, a reviewer outside `[governance] approvers`).
+
 
 Exit codes: `0` done or nothing to do, `1` could not run, `2` a source was refused (`AR732`, `AR730`, `AR731`) and
 nothing was written. `ai-rulez skill update` re-resolves plain refs and keeps range pins; `update` moves them.
