@@ -1773,11 +1773,11 @@ Rank the skills `mcp --serve-skills` would serve against a query, with the ranke
 | `--allow-exec` | Honour `[search.embeddings] command` from the repository config (it runs a program) |
 | `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
 
-A hybrid or vector search that cannot embed the query ranks lexically and reports `degraded` (`no_index`, `provider_unavailable`, `timeout`, `budget`, `network_disabled`).
+A hybrid or vector search that cannot embed the query ranks lexically and reports `degraded` (`no_index`, `provider_unavailable`, `timeout`, `budget`, `network_disabled`). With the default `[search] fusion = "auto"`, hybrid ranks by cosine alone while every skill has a current vector. With `[search] vector_min_sim` set, a vector ranking with no skill above it returns nothing and reports `abstained` (see [Abstaining](search.md#abstaining)).
 
 ### `ai-rulez search index` and `ai-rulez search status`
 
-`index` embeds the served skills and writes the index `find_skill` and `search --mode hybrid` read; only skills whose embedded text changed are sent. `--dry-run` shows the host, the number of texts and bytes and an estimate first; `--rebuild` re-embeds everything; `--items a,b` also re-embeds those skills although their text did not change (every changed or unindexed skill is embedded and sent regardless). A skill whose text looks like it holds a secret is withheld (`AR9D3`). Exit 2 when a budget or provider stop left skills without a vector (the finished ones are written). `status` reports the index against the served skills (`none`, `unreadable`, `incompatible`, `stale`, `fresh`) without any network call. See [Skill Search](search.md#building-the-index).
+`index` embeds the served skills and writes the index `find_skill` and `search --mode hybrid` read; only skills whose embedded text changed are sent. `--dry-run` shows the host, the number of texts and bytes and an estimate first; `--rebuild` re-embeds everything; `--items a,b` also re-embeds those skills although their text did not change (every changed or unindexed skill is embedded and sent regardless). A skill whose text looks like it holds a secret is withheld (`AR9D3`). A batch the provider rejects is split until the refused skill stands alone, which is skipped and named. Exit 2 when a skipped skill, a budget or a provider stop left skills without a vector (the finished ones are written). `status` reports the index against the served skills (`none`, `unreadable`, `incompatible`, `stale`, `fresh`) without any network call. See [Skill Search](search.md#building-the-index).
 
 ### `ai-rulez search mine`
 
@@ -1824,7 +1824,7 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 
 ### `ai-rulez search --eval <cases.yaml>`
 
-Measure the ranking against labelled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k.
+Measure the ranking against labelled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k. With positive and negative cases and a vector or hybrid mode it also prints the `[search] vector_min_sim` that best separates them (`calibration`, `abstain` rate; see [Abstaining](search.md#abstaining)).
 
 | Flag | Meaning |
 | --- | --- |
