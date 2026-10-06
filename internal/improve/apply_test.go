@@ -17,19 +17,42 @@ import (
 
 func acceptedRun(t *testing.T) (root, configDir string, plan *Plan, report *Report) {
 	t.Helper()
+	return acceptedRunWith(t, "\nGOOD advice.\n", nil)
+}
+
+// acceptedRunWith is acceptedRun with the text the optimizer appends and a hook over the run options.
+func acceptedRunWith(t *testing.T, appended string, tune func(*Options)) (root, configDir string, plan *Plan, report *Report) {
+	t.Helper()
 	root, configDir = project(t)
 	opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) {
-		appendSkill(t, dir, "\nGOOD advice.\n")
+		appendSkill(t, dir, appended)
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "references"), 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "references", "extra.md"), []byte("extra\n"), 0o600))
 	})
 	o := baseOptions(root, configDir, goodEval(), opt)
 	o.MaxRounds = 1
+	if tune != nil {
+		tune(&o)
+	}
 	plan = mustPrepare(t, &o)
 	report, err := plan.Execute(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, StatusAccepted, report.Status)
 	return root, configDir, plan, report
+}
+
+func TestApply_HonoursTheGrowthFactorTheRunWasAcceptedUnder(t *testing.T) {
+	// Arrange: a candidate that grows SKILL.md by more than 1.25x, accepted under max_skill_growth 2.
+	long := "\nGOOD advice: " + strings.Repeat("keep the rollout small and verify each step. ", 2) + "\n"
+	_, configDir, plan, report := acceptedRunWith(t, long, func(o *Options) { o.MaxSkillGrowth = 2 })
+	require.InDelta(t, 2.0, report.Gate.MaxSkillGrowth, 1e-9)
+
+	// Act
+	_, err := Apply(context.Background(), &ApplyOptions{ConfigDir: configDir, RunID: plan.RunID, Yes: true})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, readFileString(t, filepath.Join(configDir, "skills/deploy/SKILL.md")), "keep the rollout small")
 }
 
 func TestApply_WritesTheCandidateAndRefusesASecondTime(t *testing.T) {

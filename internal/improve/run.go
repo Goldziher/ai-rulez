@@ -156,6 +156,9 @@ type GateReport struct {
 	MaxRegressions  int     `json:"max_regressions"`
 	MaxRounds       int     `json:"max_rounds"`
 	MaxHoldoutEvals int     `json:"max_holdout_evals"`
+	// MaxSkillGrowth is the SKILL.md growth factor the run enforced; apply and pr re-check the
+	// candidate against the same factor (0 in an older report: the default).
+	MaxSkillGrowth float64 `json:"max_skill_growth,omitempty"`
 	// RequireCIAboveZero records --require-ci-above-zero.
 	RequireCIAboveZero bool `json:"require_ci_above_zero,omitempty"`
 }
@@ -216,7 +219,7 @@ func (p *Plan) Execute(ctx context.Context) (*Report, error) {
 		Schema: ReportSchema, RunID: p.RunID, Skill: p.Skill.ID, SkillPath: p.SkillRel, Date: o.Date, ToolVersion: o.ToolVersion,
 		OriginalDigest: p.OrigDigest, Harness: o.Harness, Model: o.Model, EvalRunner: o.Eval.Name(), Optimizer: Sanitize(o.OptimizerArgv[0], 200),
 		Runs: o.Runs, Constraints: p.Constraints, Egress: o.Egress, EnvPass: o.EnvPass, Warnings: append([]string(nil), p.Warnings...),
-		Gate:  GateReport{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, MaxRounds: o.MaxRounds, MaxHoldoutEvals: o.MaxHoldoutEvals, RequireCIAboveZero: o.RequireCIAboveZero},
+		Gate:  GateReport{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, MaxRounds: o.MaxRounds, MaxHoldoutEvals: o.MaxHoldoutEvals, MaxSkillGrowth: EffectiveGrowth(o.MaxSkillGrowth), RequireCIAboveZero: o.RequireCIAboveZero},
 		Split: SplitReport{Method: p.Split.Method, Tag: p.Split.Tag, Fraction: p.Split.Fraction, Train: IDs(p.Split.Train), HeldOut: IDs(p.Split.Held)},
 		Costs: Costs{MaxUSD: o.MaxCostUSD}, Adapter: o.Adapter, Isolation: p.isolation,
 	}

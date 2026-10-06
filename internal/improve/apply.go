@@ -126,7 +126,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 		}
 	}
 	skillMD := orig.Files[skillFile]
-	constraints := DefaultConstraints(counter.Count(string(skillMD.Data)), opts.AllowFrontmatter, opts.AllowScripts)
+	constraints := ConstraintsFor(counter.Count(string(skillMD.Data)), report.Gate.MaxSkillGrowth, opts.AllowFrontmatter, opts.AllowScripts)
 	if vs, _ := CheckDiff(&PolicyInput{
 		Original: orig, Candidate: cand, Constraints: constraints, AllowScripts: opts.AllowScripts, Counter: counter,
 	}); len(vs) > 0 {

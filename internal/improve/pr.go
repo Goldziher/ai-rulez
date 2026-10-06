@@ -208,7 +208,7 @@ func (p *prRun) applyAt(skillDir, base string) error {
 			return fmt.Errorf("token counter: %w", err)
 		}
 	}
-	constraints := DefaultConstraints(counter.Count(string(orig.Files[skillFile].Data)), o.AllowFrontmatter, o.AllowScripts)
+	constraints := ConstraintsFor(counter.Count(string(orig.Files[skillFile].Data)), r.Gate.MaxSkillGrowth, o.AllowFrontmatter, o.AllowScripts)
 	if vs, _ := CheckDiff(&PolicyInput{Original: orig, Candidate: p.cand, Constraints: constraints, AllowScripts: o.AllowScripts, Counter: counter}); len(vs) > 0 {
 		return refuse(CodePolicyViolation, "the candidate of run %s breaks the diff policy now: %s", o.RunID, vs[0])
 	}
