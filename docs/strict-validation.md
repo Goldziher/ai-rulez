@@ -162,10 +162,10 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213)) | proposed |
-| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214)) | proposed |
+| `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); no codes registered yet) | reserved |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR732` and `AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216)) | proposed |
-| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, the block is reserved) | reserved |
+| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
@@ -180,14 +180,14 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E6` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
-| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220)) | reserved |
+| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); no codes registered yet) | reserved |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
-| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227)) | reserved |
+| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); no codes registered yet) | reserved |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
-| `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225)) | reserved |
-| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224)) | reserved |
-| `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230)) | reserved |
+| `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
+| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); no codes registered yet) | reserved |
+| `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
