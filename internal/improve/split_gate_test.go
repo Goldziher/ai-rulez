@@ -1,6 +1,7 @@
 package improve
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
@@ -115,4 +116,32 @@ func TestCompare_PairsOnCommonCasesAndFlagsUnderpowered(t *testing.T) {
 	assert.Equal(t, []string{"a"}, cmp.Wins)
 	assert.InDelta(t, 1.0, cmp.Gain, 1e-9)
 	assert.True(t, cmp.Underpowered)
+}
+
+func TestGate_RequiresEvidence(t *testing.T) {
+	tests := []struct {
+		name string
+		base []CaseOutcome
+		cand []CaseOutcome
+		text string
+	}{
+		{"no overlap", []CaseOutcome{outcome("a", true)}, []CaseOutcome{outcome("b", true)}, "no held-out case"},
+		{"nothing scored", nil, nil, "no held-out case"},
+		{"candidate skipped a case", []CaseOutcome{outcome("a", false), outcome("b", true)}, []CaseOutcome{outcome("a", true)}, "skipped"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			cmp := Compare(tt.base, tt.cand)
+			v := Gate{MinGain: 0, MaxRegressions: 10}.Decide(cmp)
+
+			// Assert
+			assert.False(t, v.Accept)
+			assert.Contains(t, strings.Join(v.Reasons, ";"), tt.text)
+		})
+	}
+	t.Run("a skipped case is a loss", func(t *testing.T) {
+		cmp := Compare([]CaseOutcome{outcome("a", true), outcome("b", true)}, []CaseOutcome{outcome("a", true)})
+		assert.Equal(t, []string{"b"}, cmp.Losses)
+	})
 }

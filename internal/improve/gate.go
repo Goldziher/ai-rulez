@@ -223,6 +223,10 @@ type Comparison struct {
 	Unstable     []string  `json:"unstable,omitempty"`
 	Table        []PairRow `json:"table"`
 	Underpowered bool      `json:"underpowered"`
+	// BaseScored and Skipped are gate inputs, not part of the report: the
+	// cases the baseline scored, and those of them the candidate did not.
+	BaseScored int      `json:"-"`
+	Skipped    []string `json:"-"`
 }
 
 // Gate holds the acceptance thresholds.
@@ -250,8 +254,12 @@ func Compare(base, cand []CaseOutcome) Comparison {
 	var b, c []CaseOutcome
 	cmp := Comparison{Wins: []string{}, Losses: []string{}, Table: []PairRow{}}
 	for _, o := range base {
+		cmp.BaseScored++
 		co, ok := candBy[o.Case]
 		if !ok {
+			// A case the candidate could not be scored on is a loss, never a pass by absence.
+			cmp.Skipped = append(cmp.Skipped, o.Case)
+			cmp.Losses = append(cmp.Losses, o.Case)
 			continue
 		}
 		both[o.Case] = true
@@ -277,6 +285,12 @@ func Compare(base, cand []CaseOutcome) Comparison {
 // token cap are the diff policy's business and have already passed.
 func (g Gate) Decide(cmp Comparison) Verdict {
 	var reasons []string
+	switch {
+	case len(cmp.Table) == 0:
+		reasons = append(reasons, "no evidence: no held-out case was scored by both the baseline and the candidate")
+	case len(cmp.Skipped) > 0:
+		reasons = append(reasons, fmt.Sprintf("regression: the candidate skipped %d held-out case(s) the baseline scored", len(cmp.Skipped)))
+	}
 	if cmp.Gain+epsilon < g.MinGain {
 		reasons = append(reasons, fmt.Sprintf("below gain: %+.1f points, need %+.1f", cmp.Gain*100, g.MinGain*100))
 	}
