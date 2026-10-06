@@ -2,6 +2,9 @@ package commands
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -216,4 +219,24 @@ func TestUpdate_CleanTreeReportsZeroFindings(t *testing.T) {
 	require.Len(t, rep.Updates, 1)
 	assert.Equal(t, 0, rep.Updates[0].Scan.Errors)
 	assert.False(t, rep.Updates[0].Scan.Refused)
+}
+
+func TestUpdateMajor_WriteConfigKeepsTheFileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on windows")
+	}
+	// Arrange: config.toml is a shared project file, normally 0644.
+	f := newMajorFixture(t)
+	path := filepath.Join(f.root, ".ai-rulez", "config.toml")
+	require.NoError(t, os.Chmod(path, 0o644))
+	updateMajor, updateWriteConfig = true, true
+
+	// Act
+	_, code := runUpdateJSON(t)
+
+	// Assert
+	require.Equal(t, 0, code)
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "update must not tighten the project's config")
 }
