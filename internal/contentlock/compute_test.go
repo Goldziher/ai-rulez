@@ -356,3 +356,54 @@ func TestDuplicateIDsStayUniqueWhenARealIDEndsInSuffix(t *testing.T) {
 	assert.Len(t, got, 3)
 	assert.ElementsMatch(t, []string{"rule:/dup", "rule:/dup#2", "rule:/dup#2#2"}, got, "no two items share a key")
 }
+
+func TestComputePinsLegacyMCPServersLikeInlineOnes(t *testing.T) {
+	f := newFixture(t)
+	inline := config.MCPServer{Name: "a", Command: "npx"}
+	f.cfg.MCPServersRaw = []config.MCPServer{inline}
+	f.cfg.MCPServers = map[string]*config.MCPServer{"a": &inline}
+	base := f.items()["settings:/mcp-servers"]
+	require.NotEmpty(t, base)
+
+	// A server the loader merged in from a legacy mcp.yaml is in the map only.
+	legacy := config.MCPServer{Name: "legacy", Command: "node", Args: []string{"x.js"}}
+	f.cfg.MCPServers["legacy"] = &legacy
+	withLegacy := f.items()["settings:/mcp-servers"]
+	assert.NotEqual(t, base, withLegacy, "a legacy MCP server is pinned")
+
+	legacy.Args = []string{"evil.js"}
+	assert.NotEqual(t, withLegacy, f.items()["settings:/mcp-servers"], "editing a legacy file changes the pin")
+
+	only := newFixture(t)
+	only.cfg.MCPServersRaw = []config.MCPServer{{Name: "a", Command: "npx"}}
+	assert.Equal(t, base, only.items()["settings:/mcp-servers"], "projects without a legacy file keep their digest")
+}
+
+func TestTreeOfDetectsRelabelledRemoteEntries(t *testing.T) {
+	entry := func(mutate func(*lockfile.Entry)) string {
+		e := lockfile.Entry{Name: "pdf", Source: "https://example.com/a", Ref: "v1", Path: "skills/pdf", Commit: "c1", Digest: "sha256:d1"}
+		mutate(&e)
+		return TreeOf(&lockfile.File{Served: []lockfile.Entry{e}})
+	}
+	base := entry(func(*lockfile.Entry) {})
+	tests := []struct {
+		name   string
+		mutate func(*lockfile.Entry)
+	}{
+		{"view", func(e *lockfile.Entry) { e.View = "role:backend" }},
+		{"source", func(e *lockfile.Entry) { e.Source = "https://example.com/b" }},
+		{"ref", func(e *lockfile.Entry) { e.Ref = "v2" }},
+		{"path", func(e *lockfile.Entry) { e.Path = "skills/other" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NotEqual(t, base, entry(tt.mutate), "editing %s must change the tree digest", tt.name)
+		})
+	}
+	// Swapping the views of two entries changes the digest too.
+	a := lockfile.Entry{Name: "pdf", View: "role:a", Commit: "c", Digest: "sha256:1"}
+	b := lockfile.Entry{Name: "pdf", View: "role:b", Commit: "c", Digest: "sha256:2"}
+	swapped := lockfile.Entry{Name: "pdf", View: "role:a", Commit: "c", Digest: "sha256:2"}
+	other := lockfile.Entry{Name: "pdf", View: "role:b", Commit: "c", Digest: "sha256:1"}
+	assert.NotEqual(t, TreeOf(&lockfile.File{Served: []lockfile.Entry{a, b}}), TreeOf(&lockfile.File{Served: []lockfile.Entry{swapped, other}}))
+}

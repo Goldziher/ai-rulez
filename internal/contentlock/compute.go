@@ -362,15 +362,33 @@ func (c *collector) collectSettings() error {
 			return err
 		}
 	}
-	if len(c.cfg.MCPServersRaw) > 0 {
-		// As written in the configuration (placeholders unresolved), by name.
-		servers := append([]config.MCPServer(nil), c.cfg.MCPServersRaw...)
-		sort.SliceStable(servers, func(i, j int) bool { return servers[i].Name < servers[j].Name })
+	if servers := c.effectiveMCPServers(); len(servers) > 0 {
 		if err := add("mcp-servers", servers); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// effectiveMCPServers is the set of MCP servers generation uses, as written
+// (placeholders unresolved), by name: the [[mcp_servers]] of the configuration
+// and the servers of a legacy mcp.yaml, mcp.toml or mcp.json that the loader
+// merges in, so editing a legacy file changes the pin too.
+func (c *collector) effectiveMCPServers() []config.MCPServer {
+	servers := append([]config.MCPServer(nil), c.cfg.MCPServersRaw...)
+	seen := map[string]bool{}
+	for i := range servers {
+		seen[servers[i].Name] = true
+	}
+	for name, s := range c.cfg.MCPServers {
+		if s != nil && !seen[name] {
+			clone := s.Clone()
+			clone.Name = name
+			servers = append(servers, clone)
+		}
+	}
+	sort.SliceStable(servers, func(i, j int) bool { return servers[i].Name < servers[j].Name })
+	return servers
 }
 
 // outsideName flattens a path outside the project into one valid leaf segment.
