@@ -140,6 +140,11 @@ func readYAMLMember(path, member string) (value any, present bool, err error) {
 	return value, present && value != nil, nil
 }
 
+// wholeDocumentOurs reports whether an earlier run wrote the document whole.
+func wholeDocumentOurs(cfg *config.Config, outputPath string) bool {
+	return cfg != nil && cfg.Run != nil && cfg.Run.WasGenerated(projectRelativePath(cfg, outputPath))
+}
+
 func previousChecksClaims(cfg *config.Config, outputPath string) []jsonmerge.Claim {
 	if cfg == nil || cfg.Run == nil {
 		return nil
@@ -170,7 +175,15 @@ func claimableAugmentAreas(checks []config.ContentFile, cfg *config.Config, outp
 	}
 	for name, area := range areas {
 		current, exists := existing[name]
-		if !exists || sameYAMLValue(current, area) {
+		if !exists {
+			continue
+		}
+		if sameYAMLValue(current, area) {
+			if _, wasClaimed := claimed[name]; !wasClaimed && !wholeDocumentOurs(cfg, outputPath) {
+				// The user wrote exactly this area: it is theirs, so it is not
+				// claimed and clean leaves it.
+				delete(areas, name)
+			}
 			continue
 		}
 		// The record guards what ai-rulez wrote: an area it still holds is ours to
@@ -209,18 +222,22 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 		existing = list
 	}
 
-	var previous []any
+	var previous []jsonmerge.Claim
 	for _, claim := range previousChecksClaims(cfg, outputPath) {
 		if len(claim.Path) == 1 && claim.Path[0] == path[0] {
-			previous = append(previous, claim.ElementsIn(existing)...)
+			previous = append(previous, claim)
 		}
 	}
+	// Ownership comes from the shared planner's multiset rule (jsonmerge.PlanElements):
+	// each recorded copy is one element, so a group identical to what ai-rulez
+	// writes but never recorded is the user's and is not claimed.
+	owns := jsonmerge.ClaimsOwner[any](previous)
 
 	oursByName := make(map[string]any, len(checks))
 	for _, group := range gitlabInstructions(checks) {
 		oursByName[group.(map[string]any)["name"].(string)] = group
 	}
-	placed, skipped := map[string]bool{}, map[string]bool{}
+	placed, skipped, handWritten := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	entries := make([]any, 0, len(existing)+len(checks))
 	for _, element := range existing {
 		name := ""
@@ -228,12 +245,18 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 			name, _ = group["name"].(string)
 		}
 		ours, isOurs := oursByName[name]
+		owned := owns(element)
 		switch {
-		case isOurs && name != "" && (jsonmerge.ElementsContain(element, previous) || sameYAMLValue(element, ours)):
+		case isOurs && name != "" && owned:
 			if !placed[name] {
 				entries = append(entries, ours)
 				placed[name] = true
 			}
+		case isOurs && name != "" && sameYAMLValue(element, ours):
+			// The user wrote exactly what ai-rulez would: it is theirs, so it is kept
+			// and never claimed, and clean leaves it.
+			handWritten[name] = true
+			entries = append(entries, element)
 		case isOurs && name != "":
 			if !skipped[name] {
 				skipped[name] = true
@@ -241,16 +264,26 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 					"so the check of that name is not written there", sidecarPath, name), "hint", "rename the group or the check")
 			}
 			entries = append(entries, element)
-		case jsonmerge.ElementsContain(element, previous):
+		case owned:
 			// written by an earlier run for a check that is gone
 		default:
 			entries = append(entries, element)
 		}
 	}
-	claimed := make([]any, 0, len(oursByName))
+	entries, claimed := claimGroups(checks, entries, oursByName, placed, skipped, handWritten)
+	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+}
+
+// claimGroups appends the groups of checks the document lacks and lists the ones
+// ai-rulez owns: not a check whose name clashes with the user's group, and not a
+// group the user wrote identically.
+func claimGroups(checks []config.ContentFile, entries []any, oursByName map[string]any,
+	placed, skipped, handWritten map[string]bool,
+) (all, claimed []any) {
+	claimed = make([]any, 0, len(oursByName))
 	for _, check := range checks {
 		name := check.Name
-		if skipped[name] {
+		if skipped[name] || (handWritten[name] && !placed[name]) {
 			continue
 		}
 		if !placed[name] {
@@ -258,5 +291,5 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 		}
 		claimed = append(claimed, oursByName[name])
 	}
-	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+	return entries, claimed
 }
