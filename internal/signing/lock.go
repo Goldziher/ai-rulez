@@ -110,6 +110,12 @@ type LockPolicy struct {
 	MinHashVersion int
 	// State, when set, is consulted for rollback (AR727).
 	State *State
+	// ScopeRel is the config directory relative to the top of its checkout, and
+	// ScopeAbs its absolute path. They key the rollback mark together with the
+	// signer and the repository claim, so projects without an origin and the
+	// roots of one monorepo do not share a mark. ScopeRel is "" outside a
+	// checkout.
+	ScopeRel, ScopeAbs string
 	// Now is the clock for freshness; required (the package reads no ambient clock).
 	Now time.Time
 }
@@ -122,6 +128,8 @@ type LockReport struct {
 	Age time.Duration
 	// SigningTime is SignedAt, or the claimed issue time when Weak.
 	SigningTime time.Time
+	// StateKey is the rollback mark this report is checked and committed under.
+	StateKey string
 }
 
 // VerifyLock verifies a lock attestation against lock under policy, offline. It
@@ -141,19 +149,23 @@ func VerifyLock(data []byte, lock *lockfile.File, p LockPolicy) (*LockReport, er
 	if err := p.Trust.Check(res, SubjectLock, now); err != nil {
 		return nil, err
 	}
-	if err := CheckFresh(res, pred.IssuedAt, p.MaxAge, now); err != nil {
-		return nil, err
-	}
 	at := res.SignedAt
 	if at.IsZero() {
 		at = pred.IssuedAt
 	}
+	if err := checkNotFuture(at, now); err != nil {
+		return nil, err
+	}
+	if err := CheckFresh(res, pred.IssuedAt, p.MaxAge, now); err != nil {
+		return nil, err
+	}
+	key := stateKey(res.Signer, pred.Repository, p)
 	if p.State != nil && !at.IsZero() {
-		if err := p.State.Check(repoKey(pred), at); err != nil {
+		if err := p.State.Check(key, at); err != nil {
 			return nil, err
 		}
 	}
-	return &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at}, nil
+	return &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at, StateKey: key}, nil
 }
 
 // verifyLockBundle verifies a DSSE bundle (`ai-rulez sign --lock`) or a
@@ -210,14 +222,23 @@ func (r *LockReport) Commit(s *State) error {
 	if s == nil || r.SigningTime.IsZero() {
 		return nil
 	}
-	return s.Advance(repoKey(r.Predicate), r.SigningTime)
+	return s.Advance(r.StateKey, r.SigningTime)
 }
 
-func repoKey(p LockPredicate) string {
-	if p.Repository == "" {
-		return "unknown"
+// stateKey names the rollback mark of a signer in one project. The repository
+// is the signer's own claim, so it is never the whole key: a signer can claim
+// any repository, and keying by it alone would let one signer's future-dated
+// attestation block another's. The signer and the checkout scope keep marks
+// apart; the repository claim only lets two clones of one repository share one.
+func stateKey(signer SignerInfo, repo string, p LockPolicy) string {
+	who := "key:" + signer.KeyID
+	if signer.Kind == KindKeyless {
+		who = "keyless:" + signer.Identity + "@" + signer.Issuer
 	}
-	return p.Repository
+	if repo != "" && p.ScopeRel != "" {
+		return who + "|" + repo + "|" + p.ScopeRel
+	}
+	return who + "|path:" + p.ScopeAbs
 }
 
 func checkLockSubject(res *Result, lock *lockfile.File, minHash int) (LockPredicate, error) {

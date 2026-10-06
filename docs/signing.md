@@ -162,8 +162,15 @@ repository.
   without a log has no such time, so freshness falls back to the `issued_at` the signer wrote into the statement. The
   signer controls that claim, so such a result is reported `weak` and proves nothing about time. Use a log entry
   (`sign --tlog`, or keyless) when freshness matters.
-- **Rollback** is detected with a per-user high-water mark: the latest signing time verified for each repository. An
-  older attestation than one this machine already verified fails with `AR727`. The state is a file outside the repository
+- A signing time more than five minutes ahead of the local clock fails with `AR723` ("in the future"), for a log time
+  and for the signer's own `issued_at` claim alike: a future claim would otherwise pass every `max_age` and pin the
+  rollback mark ahead.
+- **Rollback** is detected with a per-user high-water mark: the latest signing time verified for each signer in each
+  project. The project is the `repository` claim plus the config directory's path inside its checkout (so the roots of a
+  monorepo are separate), or the absolute config directory when there is no claim or no checkout. The claim is the
+  signer's, so it never selects a mark by itself: a signer cannot touch another signer's mark. An older attestation than
+  one this machine already verified fails with `AR727`, and the message names the state file to delete if the newer
+  attestation was wrong. The state is a file outside the repository
   (`$XDG_STATE_HOME/ai-rulez/signing-state.json`, else `~/.local/state/ai-rulez/`) authenticated with an HMAC under a
   per-user secret (`$XDG_CONFIG_HOME/ai-rulez/signing-state.key`, the pattern the LLM cache uses), so a checkout cannot
   plant or reset it. A file that fails its HMAC is discarded with a warning. A fresh machine or a CI runner starts empty,
@@ -189,8 +196,8 @@ cosign verify-blob-attestation --bundle .ai-rulez/ai-rulez.lock.sigstore.json \
 The other direction also works: `verify --attestation` accepts the message-signature bundle that the
 [`cosign sign-blob` recipe](lockfile.md#sign-in-the-release-workflow) writes over `lock-subject.json`, recomputing that
 file from the lock, and the bundle `cosign attest-blob --type <predicate type> --hash <digest> --predicate <file>`
-writes (in-toto statement v0.1 is accepted besides v1; the predicate carries the fields shown in the example above). Such a bundle names no repository, so its rollback state is shared across repositories and, without
-a log entry, it has no signing time for `max_age`.
+writes (in-toto statement v0.1 is accepted besides v1; the predicate carries the fields shown in the example above). Such a bundle names no repository and has no `issued_at`, so without a log entry it has no signing time: `max_age`
+cannot be met and no rollback mark applies.
 
 ## Codes
 
@@ -199,7 +206,7 @@ a log entry, it has no signing time for `max_age`.
 | `AR720` | `signature-missing` | `require` asks for a signed lock and no attestation exists |
 | `AR721` | `signature-invalid` | bad bundle, envelope, signature, certificate chain or log proof |
 | `AR722` | `signer-not-trusted` | identity, issuer or key matches no trust entry or is outside its validity window; an unanchored `identity_regexp` |
-| `AR723` | `signature-stale` | older than `max_age`, or no time to measure it |
+| `AR723` | `signature-stale` | older than `max_age`, no time to measure it, or a signing time in the future |
 | `AR724` | `attestation-subject-mismatch` | the signed digest or `hash_version` differs from the lock (it changed after signing), or is below `min_hash_version` |
 | `AR725` | `trusted-root-unavailable` | a certificate bundle and no trusted root |
 | `AR726` | `tlog-proof-missing` | `tlog = "required"` and the bundle has no log entry |

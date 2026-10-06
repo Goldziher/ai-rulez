@@ -179,7 +179,7 @@ func TestVerifyAttestationRollback(t *testing.T) {
 	require.Equal(t, 0, code)
 	// A weak (log-less) bundle falls back to its claimed time: a later signature
 	// raises the mark, and the earlier bundle is then a rollback.
-	require.NoError(t, os.WriteFile(f.bundle(), signAt(t, f, 24), 0o644))
+	require.NoError(t, os.WriteFile(f.bundle(), signAt(t, f, 2*time.Minute), 0o644))
 	code, _, _ = f.verify(t, "")
 	require.Equal(t, 0, code)
 
@@ -193,7 +193,7 @@ func TestVerifyAttestationRollback(t *testing.T) {
 	assert.Equal(t, 0, code, "--no-state skips the rollback check")
 }
 
-func signAt(t *testing.T, f *signFixture, hoursAhead int) []byte {
+func signAt(t *testing.T, f *signFixture, ahead time.Duration) []byte {
 	t.Helper()
 	priv, err := os.ReadFile(f.privKey)
 	require.NoError(t, err)
@@ -201,7 +201,7 @@ func signAt(t *testing.T, f *signFixture, hoursAhead int) []byte {
 	require.NoError(t, err)
 	lock, err := lockfile.Load(filepath.Join(f.root, ".ai-rulez"))
 	require.NoError(t, err)
-	data, err := signing.SignLock(context.Background(), signer, lock, signing.LockMeta{Version: "5", Now: timeNowPlus(hoursAhead)})
+	data, err := signing.SignLock(context.Background(), signer, lock, signing.LockMeta{Version: "5", Now: time.Now().Add(ahead)})
 	require.NoError(t, err)
 	return data
 }
@@ -322,5 +322,3 @@ func TestNormalizeRemote(t *testing.T) {
 		})
 	}
 }
-
-func timeNowPlus(hours int) time.Time { return time.Now().Add(time.Duration(hours) * time.Hour) }
