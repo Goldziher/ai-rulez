@@ -1822,11 +1822,11 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 ### `ai-rulez scanners list|doctor`
 
 ```text
-ai-rulez scanners list [config-file]
-ai-rulez scanners doctor <name>... | --all
+ai-rulez scanners list [config-file] [--format text|json]
+ai-rulez scanners doctor <name>... | --all [--format text|json]
 ```
 
-`list` shows each scanner with its egress declaration, staged inputs and whether its binary is on `PATH`; it starts nothing. `doctor` checks the scanners you name (or `--all`): binary path, version (the scanner is started once with `--version` in a scrubbed environment, 10 second timeout), egress, `env_pass`, inputs, timeout and configuration problems. Exit `0` healthy, `2` a checked scanner is missing, misconfigured or has a network flag on an `egress = false` entry, `1` the configuration does not load or a name is unknown.
+`list` shows each scanner with its egress declaration, staged inputs and whether its binary is on `PATH`; it starts nothing. `doctor` checks the scanners you name (or `--all`): binary path, version (the scanner is started once with `--version` in a scrubbed environment, 10 second timeout), egress, `env_pass`, inputs, timeout and configuration problems. Exit `0` healthy, `2` a checked scanner is missing, misconfigured or has a network flag on an `egress = false` entry, `1` the configuration does not load or a name is unknown. `--format json` prints `{"scanners": [...]}` (name, command, path, found, egress, format, inputs, env_pass, timeout_seconds, problems, status, healthy, and for `doctor` the probed version) with the same exit codes.
 
 ## OKF Commands
 
