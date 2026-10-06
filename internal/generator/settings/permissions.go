@@ -232,30 +232,12 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 	if v, ok := jsonmerge.LookupTree(docTree(docPath), path); ok {
 		existing, _ = v.([]any) // a non-array value is the consumer's; the merge reports it
 	}
-	var previous []any
-	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-		if equalPath(claim.Path, path) {
-			previous = append(previous, claim.ElementsIn(existing)...)
-		}
+	value, claimed := planElements(previousElementClaims(cfg, docPath, path), existing, ours)
+	if value == nil {
+		value = []any{}
 	}
-	value := make([]any, 0, len(existing)+len(ours))
-	for _, element := range existing {
-		if containsValue(previous, element) && !containsValue(ours, element) {
-			continue
-		}
-		value = append(value, element)
-	}
-	kept := slices.Clone(value)
-	claimed := make([]any, 0, len(ours))
-	for _, element := range ours {
-		switch {
-		case !containsValue(kept, element):
-			kept = append(kept, element)
-			value = append(value, element)
-		case !containsValue(previous, element):
-			continue // identical to an element the consumer wrote: theirs
-		}
-		claimed = append(claimed, element)
+	if claimed == nil {
+		claimed = []any{}
 	}
 	return jsonmerge.OwnedKey{Path: path, Value: value, Elements: claimed}
 }

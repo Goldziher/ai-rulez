@@ -5,7 +5,10 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Protocols accepted by [telemetry] otlp_protocol. Only OTLP/HTTP with a JSON
@@ -48,6 +51,66 @@ type TelemetryConfig struct {
 	IncludeSession bool `yaml:"include_session,omitempty" json:"include_session,omitempty" toml:"include_session,omitempty"` //nolint:tagliatelle
 	// SaltFile is the file holding the session-hash salt. User scope only.
 	SaltFile string `yaml:"salt_file,omitempty" json:"salt_file,omitempty" toml:"salt_file,omitempty"` //nolint:tagliatelle
+	// Resource adds fixed labels (a team, an environment) to the OTLP resource, so
+	// a collector can group the data without a processor. User scope only: a
+	// repository value would label data on the user's collector. Keys are
+	// lower-case dotted names, at most TelemetryResourceMaxEntries entries of at
+	// most TelemetryResourceMaxValue characters; the service.*, host.*, user.*,
+	// process.*, os.* and ai_rulez.* namespaces are reserved so host or user data
+	// cannot be added.
+	Resource map[string]string `yaml:"resource,omitempty" json:"resource,omitempty" toml:"resource,omitempty"`
+}
+
+// Limits of [telemetry.resource].
+const (
+	TelemetryResourceMaxEntries = 8
+	TelemetryResourceMaxValue   = 128
+)
+
+var telemetryResourceKey = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`)
+
+// telemetryResourceReserved are the namespaces a resource label may not use.
+var telemetryResourceReserved = []string{"service.", "host.", "user.", "process.", "os.", "ai_rulez.", "telemetry.", "cloud.", "k8s.", "container."}
+
+// ValidateTelemetryResource returns one message per invalid label of a resource table.
+func ValidateTelemetryResource(resource map[string]string) []string {
+	var problems []string
+	add := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
+	if len(resource) > TelemetryResourceMaxEntries {
+		add("telemetry.resource: at most %d entries (got %d)", TelemetryResourceMaxEntries, len(resource))
+	}
+	keys := make([]string, 0, len(resource))
+	for key := range resource {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		value := resource[key]
+		switch {
+		case len(key) > 64 || !telemetryResourceKey.MatchString(key):
+			add("telemetry.resource.%s: key must match %s and be at most 64 characters", key, telemetryResourceKey)
+			continue
+		case hasReservedPrefix(key):
+			add("telemetry.resource.%s: key is reserved (service.*, host.*, user.*, process.*, os.*, ai_rulez.* and other detector namespaces)", key)
+			continue
+		case value == "":
+			add("telemetry.resource.%s: value must not be empty", key)
+		case utf8.RuneCountInString(value) > TelemetryResourceMaxValue:
+			add("telemetry.resource.%s: value must be at most %d characters", key, TelemetryResourceMaxValue)
+		case strings.ContainsFunc(value, unicode.IsControl):
+			add("telemetry.resource.%s: value contains a control character", key)
+		}
+	}
+	return problems
+}
+
+func hasReservedPrefix(key string) bool {
+	for _, prefix := range telemetryResourceReserved {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 var (
@@ -91,6 +154,7 @@ func (t *TelemetryConfig) Validate() []string {
 	if strings.ContainsRune(t.SaltFile, 0) {
 		add("telemetry.salt_file: contains a NUL byte")
 	}
+	problems = append(problems, ValidateTelemetryResource(t.Resource)...)
 	return problems
 }
 

@@ -155,12 +155,6 @@ func (c Claim) OwnsElement(value any) bool {
 	return sum != "" && slices.Contains(c.ElementDigests(), sum)
 }
 
-// ownsRaw is OwnsElement for an element still in its raw JSON form.
-func (c Claim) ownsRaw(raw json.RawMessage) bool {
-	sum := digestRaw(raw)
-	return sum != "" && slices.Contains(c.ElementDigests(), sum)
-}
-
 // ElementMatcher hands out the claimed elements one at a time: Take reports
 // whether a value is a claimed element that has not been matched yet, so a
 // document holding more identical elements than the claim lists keeps the extra
@@ -192,13 +186,15 @@ func (m *ElementMatcher) takeSum(sum string) bool {
 	return true
 }
 
-// ElementsIn returns the candidates the claim owns, in order. It is how a caller
-// holding the document's current elements learns which of them an earlier run
-// claimed, without the claim storing their values.
+// ElementsIn returns the candidates the claim owns, in order, as many copies of
+// a value as the claim lists. It is how a caller holding the document's current
+// elements learns which of them an earlier run claimed, without the claim
+// storing their values.
 func (c Claim) ElementsIn(candidates []any) []any {
 	var owned []any
+	matcher := c.NewElementMatcher()
 	for _, candidate := range candidates {
-		if c.OwnsElement(candidate) {
+		if matcher.Take(candidate) {
 			owned = append(owned, candidate)
 		}
 	}

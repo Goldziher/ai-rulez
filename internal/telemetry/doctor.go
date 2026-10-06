@@ -3,7 +3,9 @@ package telemetry
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -51,7 +53,7 @@ type DoctorBuffer struct {
 }
 
 // settingKeys is the display order of the resolved keys.
-var settingKeys = []string{"enabled", "allow_network", "otlp_endpoint", "otlp_protocol", "headers_env", "service_name", "sample", "include_paths", "include_session", "salt_file"}
+var settingKeys = []string{"enabled", "allow_network", "otlp_endpoint", "otlp_protocol", "headers_env", "service_name", "resource", "sample", "include_paths", "include_session", "salt_file"}
 
 // settingValue renders one key for display: never the endpoint path, never a
 // header, never a salt file path.
@@ -75,6 +77,15 @@ func settingValue(s *Settings, host, key string) string {
 		return strings.Join(s.HeadersEnv, ",")
 	case "service_name":
 		return s.ServiceName
+	case "resource":
+		if len(s.Resource) == 0 {
+			return "(none)"
+		}
+		pairs := make([]string, 0, len(s.Resource))
+		for _, key := range slices.Sorted(maps.Keys(s.Resource)) {
+			pairs = append(pairs, key+"="+s.Resource[key])
+		}
+		return strings.Join(pairs, ",")
 	case "sample":
 		return fmt.Sprint(s.Sample)
 	case "include_paths":

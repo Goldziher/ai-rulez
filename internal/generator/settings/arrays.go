@@ -77,15 +77,6 @@ func equalJSON(a, b json.RawMessage) bool {
 	return reflect.DeepEqual(x, y)
 }
 
-func containsJSON(list []json.RawMessage, value json.RawMessage) bool {
-	for _, item := range list {
-		if equalJSON(item, value) {
-			return true
-		}
-	}
-	return false
-}
-
 // arrayKey builds the owned key for an array in which ai-rulez owns only the
 // elements in ours and the consumer owns the rest. The written value is the
 // consumer's elements (byte-for-byte, in their order) plus the elements of ours
@@ -105,43 +96,83 @@ func arrayKey(cfg *config.Config, docPath string, path []string, ours []json.Raw
 	}
 	// A claim records digests, not values, so what an earlier run owned is read
 	// off the elements the document holds now.
-	var previous []json.RawMessage
-	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-		if !equalPath(claim.Path, path) {
-			continue
+	value, claimed := planElements(previousElementClaims(cfg, docPath, path), existing, ours)
+	generic := make([]any, 0, len(claimed))
+	for _, element := range claimed {
+		var parsed any
+		if json.Unmarshal(element, &parsed) == nil {
+			generic = append(generic, parsed)
 		}
-		for _, raw := range existing {
-			var value any
-			if json.Unmarshal(raw, &value) == nil && claim.OwnsElement(value) {
-				previous = append(previous, raw)
+	}
+	values := make([]any, len(value))
+	for i, element := range value {
+		values[i] = element
+	}
+	return jsonmerge.OwnedKey{Path: path, Value: values, Elements: generic}
+}
+
+// previousElementClaims lists the claims an earlier run recorded for the array at path.
+func previousElementClaims(cfg *config.Config, docPath string, path []string) []jsonmerge.Claim {
+	var claims []jsonmerge.Claim
+	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
+		if equalPath(claim.Path, path) {
+			claims = append(claims, claim)
+		}
+	}
+	return claims
+}
+
+// planElements decides an array in which ai-rulez owns only some elements. The
+// array keeps the consumer's elements in their order and appends the elements of
+// ours it lacks; an element an earlier run claimed that ours no longer wants
+// leaves, one copy per claimed copy, so a hand-written duplicate stays. claimed
+// is what this run added or already owned: an identical element the consumer
+// wrote is theirs and is never claimed, so clean cannot take it back. Elements
+// are compared by digest, which is how a manifest records them.
+func planElements[T any](previous []jsonmerge.Claim, existing, ours []T) (value, claimed []T) {
+	matchers := make([]*jsonmerge.ElementMatcher, len(previous))
+	for i, claim := range previous {
+		matchers[i] = claim.NewElementMatcher()
+	}
+	wanted := make(map[string]bool, len(ours))
+	for _, element := range ours {
+		wanted[jsonmerge.Digest(element)] = true
+	}
+	present := make(map[string]bool, len(existing)+len(ours))
+	retained := map[string]int{} // copies an earlier run claimed that stay
+	value = make([]T, 0, len(existing)+len(ours))
+	for _, element := range existing {
+		sum := jsonmerge.Digest(element)
+		owned := false
+		for _, matcher := range matchers {
+			if matcher.Take(element) {
+				owned = true
+				break
 			}
 		}
-	}
-
-	value := make([]any, 0, len(existing)+len(ours))
-	kept := make([]json.RawMessage, 0, len(existing)+len(ours))
-	for _, element := range existing {
-		if containsJSON(previous, element) && !containsJSON(ours, element) {
+		if owned && !wanted[sum] {
 			continue
 		}
-		kept = append(kept, element)
 		value = append(value, element)
+		present[sum] = true
+		if owned {
+			retained[sum]++
+		}
 	}
-	claimed := make([]any, 0, len(ours))
 	for _, element := range ours {
+		sum := jsonmerge.Digest(element)
 		switch {
-		case !containsJSON(kept, element):
-			kept = append(kept, element)
+		case !present[sum]:
+			present[sum] = true
 			value = append(value, element)
-		case !containsJSON(previous, element):
+		case retained[sum] > 0:
+			retained[sum]--
+		default:
 			continue // identical to an element the consumer wrote: theirs
 		}
-		var generic any
-		if json.Unmarshal(element, &generic) == nil {
-			claimed = append(claimed, generic)
-		}
+		claimed = append(claimed, element)
 	}
-	return jsonmerge.OwnedKey{Path: path, Value: value, Elements: claimed}
+	return value, claimed
 }
 
 func equalPath(a, b []string) bool { return slices.Equal(a, b) }
