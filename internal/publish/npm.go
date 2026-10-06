@@ -58,14 +58,16 @@ func NPMTarball(pkg, version string) string {
 	return NPMDir + "/" + flat + "-" + version + ".tgz"
 }
 
-// NPMPackArgv packs the package directory into dist/npm. Scripts never run.
+// NPMPackArgv packs the package directory into dist/npm. Scripts never run. The
+// directory is spelled "./npm/package": npm reads a bare "npm/package" as the
+// GitHub repository npm/package.
 func NPMPackArgv() []string {
-	return []string{"npm", "pack", "--ignore-scripts", "--pack-destination", NPMDir, NPMPackageDir}
+	return []string{"npm", "pack", "--ignore-scripts", "--pack-destination", NPMDir, "./" + NPMPackageDir}
 }
 
 // NPMPublishArgv publishes the tarball.
 func NPMPublishArgv(p NPMPlan) []string {
-	argv := []string{"npm", "publish", p.Tarball, "--access", p.Access, "--ignore-scripts"}
+	argv := []string{"npm", "publish", "./" + p.Tarball, "--access", p.Access, "--ignore-scripts"}
 	if p.Registry != "" {
 		argv = append(argv, "--registry", p.Registry)
 	}
