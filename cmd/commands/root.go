@@ -94,6 +94,7 @@ func init() {
 	RootCmd.AddCommand(UsageCmd)
 	RootCmd.AddCommand(ReportCmd)
 	RootCmd.AddCommand(EvalCmd)
+	RootCmd.AddCommand(ImproveCmd)
 	RootCmd.AddCommand(LocalCmd)
 	RootCmd.AddCommand(OKFCmd)
 	RootCmd.AddCommand(ExportCmd)
