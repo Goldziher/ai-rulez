@@ -30,6 +30,9 @@ func checkLLM(_ context.Context, s *state) []Finding {
 	for _, p := range d.Problems {
 		out = append(out, Finding{Check: CheckLLM, Severity: SeverityError, Message: llm.CodeConfigInvalid + " " + p, Hint: "see docs/llm.md"})
 	}
+	for _, w := range d.Warnings {
+		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning, Message: w, Hint: "see docs/llm.md, \"Plain-http gateways\""})
+	}
 	if d.AllowNetwork && d.APIKeyEnv != "" && !d.APIKeySet {
 		out = append(out, Finding{Check: CheckLLM, Severity: SeverityWarning,
 			Message: fmt.Sprintf("allow_network is true but %s is not set", d.APIKeyEnv), Hint: "export the variable named by llm.api_key_env"})
