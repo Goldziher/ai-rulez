@@ -443,6 +443,9 @@ How `ai-rulez guard` decides:
 - A path is blocked only when it is a wholly owned output listed in `.ai-rulez/.generated-manifest.json` or
   `.generated-manifest.local.json`. Documents ai-rulez only merges keys into (`.claude/settings.json`,
   `.vscode/settings.json`, `.mcp.json`, ...) are never blocked. Read-only tools are never blocked.
+- The machine-local manifest is believed only when git does not track it, the current user owns it and nobody
+  else can write to it; otherwise `generate`, `clean` and the guard ignore it and `generate` warns (run
+  `git rm --cached .ai-rulez/.generated-manifest.local.json`). A tracked local manifest is never written to.
 - It reads the two manifests and nothing else: no config load, no network, a few milliseconds.
 - It fails open on its own errors: a payload that does not parse, a project without a manifest and a path
   outside the project all exit 0. A blocked call exits 2 with the reason on stderr. A guard that errors must

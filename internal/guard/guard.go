@@ -21,6 +21,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // ExitBlock is the exit code every supported harness reads as "block this tool call".
@@ -329,7 +331,11 @@ func loadManifest(root string) owned {
 	set := owned{}
 	merged := map[string]bool{}
 	for _, name := range []string{manifestName, localManifestName} {
-		data, err := os.ReadFile(filepath.Join(root, configDirName, name))
+		path := filepath.Join(root, configDirName, name)
+		if name == localManifestName && gitutil.UntrustedLocalFile(path) != "" {
+			continue // forged or tracked: it must not decide what the guard protects
+		}
+		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
