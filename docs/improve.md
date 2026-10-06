@@ -236,8 +236,9 @@ A run that stops on an error after measuring (a crashing eval runner, say) still
 rounds and the spend so far and the reason `stopped: ...`, then exits 1.
 
 `improve show <run-id>` prints the report and the diff (`--format json` prints `improve-show/1`). The optimizer's
-text and the candidate's text are printed with control characters and bidi controls replaced, so a candidate cannot
-write terminal escapes; `apply` does the same for its diff. `improve clean <run-id>` or `--all` deletes runs
+text and the candidate's text (violation paths and details, refusal messages, round reasons, file names) are printed with control
+characters and bidi controls replaced, so a candidate cannot write terminal escapes, and a candidate file whose name holds
+such characters breaks the diff policy; `apply` does the same for its diff. `improve clean <run-id>` or `--all` deletes runs
 (`--dry-run`; `--all` asks unless `--yes`); a symlinked run or improve directory is unlinked or refused, never followed.
 
 Before each optimizer call the run directory outside `workspace/`, `home/` and `tmp/` (plan, original copy, train
