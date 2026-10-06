@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/parser"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -743,7 +744,9 @@ func (i *Importer) writeContent(items []ImportedContent) error {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		// EnsureParent refuses a symlinked component, so an existing link in
+		// the output tree cannot redirect the write outside it.
+		if err := safefs.EnsureParent(filepath.Join(dir, "x")); err != nil {
 			return oops.
 				With("path", dir).
 				Wrapf(err, "create directory")
@@ -770,7 +773,7 @@ func (i *Importer) writeContentFile(item *ImportedContent) error {
 	output := i.renderContentFile(item)
 
 	// Write file
-	if err := os.WriteFile(filename, []byte(output), 0o644); err != nil {
+	if err := safefs.WriteFileAtomic(filename, []byte(output)); err != nil {
 		return oops.
 			With("path", filename).
 			Wrapf(err, "write file")
@@ -788,7 +791,7 @@ func (i *Importer) contentFilename(item *ImportedContent) (string, error) {
 		return filepath.Join(i.outputDir, "context", item.Name+".md"), nil
 	case ContentTypeSkill:
 		dir := filepath.Join(i.outputDir, "skills", item.Name)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := safefs.EnsureParent(filepath.Join(dir, "SKILL.md")); err != nil {
 			return "", oops.
 				With("path", dir).
 				Wrapf(err, "create skill directory")
@@ -876,7 +879,7 @@ func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bo
 	output.WriteString(string(data))
 
 	configPath := filepath.Join(i.outputDir, "config.yaml")
-	if err := os.WriteFile(configPath, []byte(output.String()), 0o644); err != nil {
+	if err := safefs.WriteFileAtomic(configPath, []byte(output.String())); err != nil {
 		return oops.
 			With("path", configPath).
 			Wrapf(err, "write config file")
