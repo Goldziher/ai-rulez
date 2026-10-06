@@ -374,7 +374,7 @@ func servedFromSource(res *skillsource.Resolved, sk skillsource.Skill) generator
 		source += "#" + res.Spec.Path
 	}
 	return generator.ServedSkill{
-		ID: sk.Name, Source: source, Ref: res.Spec.Ref, Pinned: res.Pinned, Commit: res.Commit,
+		ID: sk.Name, Source: source, Ref: res.Spec.Want().Ref, Pinned: res.Pinned, Commit: res.Commit,
 		Trust: res.Spec.TrustLevel(), Delivery: config.DeliveryServed, Verbatim: true, Files: files,
 	}
 }

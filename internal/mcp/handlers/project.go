@@ -57,8 +57,8 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		if inc.Path != "" {
 			entry[keyPath] = inc.Path
 		}
-		if inc.Ref != "" {
-			entry["ref"] = inc.Ref
+		if ref := inc.RequestedRef(); ref != "" {
+			entry["ref"] = ref
 		}
 		if inc.MergeStrategy != "" {
 			entry["merge_strategy"] = inc.MergeStrategy

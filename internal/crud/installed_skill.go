@@ -135,7 +135,7 @@ func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSki
 			Name:   skill.Name,
 			Source: skill.Source,
 			Path:   skill.GetPath(),
-			Ref:    skill.Ref,
+			Ref:    skill.RequestedRef(),
 			Type:   sourceType,
 		})
 	}

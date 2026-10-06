@@ -151,15 +151,15 @@ func sourceComponents(cfg *config.Config, lock *lockfile.File) []Component {
 	}
 	for i := range cfg.Includes {
 		in := &cfg.Includes[i]
-		add(lockfile.KindInclude, in.Name, in.Source, in.Ref, in.Path)
+		add(lockfile.KindInclude, in.Name, in.Source, in.RequestedRef(), in.Path)
 	}
 	for i := range cfg.InstalledSkills {
 		sk := &cfg.InstalledSkills[i]
-		add(lockfile.KindSkill, sk.Name, sk.Source, sk.Ref, sk.Path)
+		add(lockfile.KindSkill, sk.Name, sk.Source, sk.RequestedRef(), sk.Path)
 	}
 	for i := range cfg.SkillSources {
 		ss := &cfg.SkillSources[i]
-		add(lockfile.KindSource, ss.Name, ss.URL, ss.Ref, ss.Path)
+		add(lockfile.KindSource, ss.Name, ss.URL, ss.RequestedRef(), ss.Path)
 	}
 	return out
 }
