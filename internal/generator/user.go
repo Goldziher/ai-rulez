@@ -659,6 +659,7 @@ func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
 	logger.Info("Generating user-level configuration", "profile", plan.Profile, "home", g.config.BaseDir)
 
 	stale := g.userStale(kept)
+	g.noteCreatedUserDirs(kept)
 	g.removeStaleManifestFiles(stale)
 	if err := g.writeOutputs(kept); err != nil {
 		return nil, err
@@ -689,6 +690,9 @@ func (g *Generator) userPruneCandidates(removed []string) []string {
 			}
 		}
 	}
+	if g.userDirs == nil {
+		g.loadUserDirs()
+	}
 	home := filepath.Clean(g.config.BaseDir)
 	keep := func(dir string) bool {
 		if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
@@ -700,6 +704,18 @@ func (g *Generator) userPruneCandidates(removed []string) []string {
 	var dirs []string
 	for _, file := range removed {
 		for dir := filepath.Dir(file); g.withinScope(dir); dir = filepath.Dir(dir) {
+			if g.userDirsRecorded && isUnderBaseDir(home, dir) {
+				// The manifest says which directories ai-rulez created: those go once
+				// empty, wherever they sit, and every other one stays.
+				if !g.userDirs[dir] || !g.userDirEligible(dir) {
+					break
+				}
+				if !seen[dir] {
+					seen[dir] = true
+					dirs = append(dirs, dir)
+				}
+				continue
+			}
 			inRoot := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
 			if keep(dir) && !inRoot {
 				break
@@ -714,6 +730,94 @@ func (g *Generator) userPruneCandidates(removed []string) []string {
 		}
 	}
 	return dirs
+}
+
+// userDirEligible reports whether dir may be recorded as created or removed as
+// such: strictly below the home directory and outside the user config.
+func (g *Generator) userDirEligible(dir string) bool {
+	home := filepath.Clean(g.config.BaseDir)
+	dir = filepath.Clean(dir)
+	if dir == home || !isUnderBaseDir(home, dir) || slices.Contains(g.userHomes, dir) {
+		return false
+	}
+	return g.config.ConfigDir == "" || !isUnderBaseDir(g.config.ConfigDir, dir)
+}
+
+// userMayRemoveDir reports whether dir may be removed once empty. Below the home
+// directory that is only a directory ai-rulez recorded as created, so one that
+// existed before (an empty ~/.claude/skills) stays; a manifest that predates the
+// record, and a relocated tool home, fall back to the content-folder rules.
+func (g *Generator) userMayRemoveDir(dir string) bool {
+	if g.userDirs == nil {
+		g.loadUserDirs()
+	}
+	if !g.userDirsRecorded || !isUnderBaseDir(g.config.BaseDir, dir) {
+		return true
+	}
+	return g.userDirs[filepath.Clean(dir)] && g.userDirEligible(dir)
+}
+
+// loadUserDirs reads the directories the previous run recorded as created,
+// trusting only entries that stay below the home directory.
+func (g *Generator) loadUserDirs() {
+	g.userDirs, g.userDirsRecorded = map[string]bool{}, false
+	recorded := g.readManifest(g.manifestPath()).Dirs
+	if recorded == nil {
+		return
+	}
+	g.userDirsRecorded = true
+	for _, rel := range *recorded {
+		if slices.Contains(strings.Split(rel, "/"), "..") || filepath.IsAbs(filepath.FromSlash(rel)) {
+			logger.Warn("Ignoring a manifest directory that climbs out of the home directory", "path", rel)
+			continue
+		}
+		if abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)); g.userDirEligible(abs) {
+			g.userDirs[abs] = true
+		}
+	}
+}
+
+// noteCreatedUserDirs adds to the recorded set every directory the outputs will
+// need that does not exist yet: those are ai-rulez's to remove again, and the
+// ones that exist already are not.
+func (g *Generator) noteCreatedUserDirs(outputs []config.OutputFile) {
+	g.loadUserDirs()
+	for _, output := range outputs {
+		dir := g.absOutputPath(output.Path)
+		if !output.IsDir {
+			dir = filepath.Dir(dir)
+		}
+		var missing []string
+		for ; g.userDirEligible(dir); dir = filepath.Dir(dir) {
+			if _, err := os.Lstat(dir); err == nil {
+				break
+			}
+			missing = append(missing, dir)
+		}
+		for _, d := range missing {
+			g.userDirs[d] = true
+		}
+	}
+	// A manifest from before directories were recorded gets a record from here on.
+	g.userDirsRecorded = true
+}
+
+// manifestDirs is the directory record the user manifest at path carries: the
+// recorded directories that still exist, or nil outside user scope.
+func (g *Generator) manifestDirs(path string) *[]string {
+	if !g.userMode || path != g.manifestPath() || !g.userDirsRecorded {
+		return nil
+	}
+	dirs := []string{}
+	for dir := range g.userDirs {
+		if info, err := os.Lstat(dir); err == nil && info.IsDir() {
+			if rel, relErr := filepath.Rel(g.config.BaseDir, dir); relErr == nil {
+				dirs = append(dirs, filepath.ToSlash(rel))
+			}
+		}
+	}
+	sort.Strings(dirs)
+	return &dirs
 }
 
 // userManaged reports whether clean may remove the generated file at abs.
