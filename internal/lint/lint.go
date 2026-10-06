@@ -107,7 +107,10 @@ func Failed(findings []Finding, failOn string) bool {
 		threshold = SeverityError
 	}
 	for i := range findings {
-		if findings[i].Severity.AtLeast(threshold) && !findings[i].IsAccepted() {
+		if findings[i].IsAccepted() {
+			continue
+		}
+		if findings[i].Severity.AtLeast(threshold) || findings[i].failsScannerPolicy() {
 			return true
 		}
 	}

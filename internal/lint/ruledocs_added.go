@@ -345,6 +345,11 @@ func init() {
 			Bad:  "A scanner that reports `/etc/passwd` or a path that is not under the stage",
 			Good: "Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy",
 		},
+		CodeScannerNoIsolation: {
+			Why:  "With isolation = \"auto\" a staged scanner is confined to no network and no writes outside its scratch directory when the system has sandbox-exec, bubblewrap or unshare; without one it runs with only a scrubbed environment.",
+			Bad:  "A staged scanner run on Windows or in a container with no user namespaces, with isolation unset",
+			Good: "Install a backend, set `isolation = \"none\"` to accept running unconfined, or `isolation = \"require\"` to refuse",
+		},
 		CodeLLMConfigInvalid: {
 			Why:  "An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.",
 			Bad:  "`api_key_env = \"sk-live-123\"`",

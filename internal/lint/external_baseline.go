@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"time"
@@ -37,6 +38,19 @@ type ScannerOptions struct {
 	Today string
 	// ShowSuppressed keeps results the scanner marked suppressed, as info.
 	ShowSuppressed bool
+	// Cache is the result cache of staged egress = false scanners; nil turns it
+	// off. NoCache bypasses it for this run (--no-scan-cache).
+	Cache   *ScanCache
+	NoCache bool
+	// DryRun prints every scanner's plan (command, staged files, environment
+	// names, isolation, cache state) to Out and starts nothing.
+	DryRun bool
+	Out    io.Writer
+
+	// required names the scanners whose absence is an error; degraded is set
+	// once AR9E7 was reported. Both are run state.
+	required map[string]bool
+	degraded bool
 }
 
 func (o ScannerOptions) today(host ambient.Host) string {
@@ -57,10 +71,39 @@ func (r *runner) scannerBaselinePath() string {
 	if p := r.opts.Scanner.BaselinePath; p != "" {
 		return p
 	}
+	if abs, problem := r.policyBaselinePath(); problem == "" && abs != "" {
+		return abs
+	}
 	if r.cfg.ConfigDir == "" {
 		return ""
 	}
 	return filepath.Join(r.cfg.ConfigDir, ScannerBaselineFile)
+}
+
+// policyBaselinePath resolves [lint.scanner_policy] baseline against the
+// project root. A committed config must not point outside the project, so an
+// absolute path, a ".." escape or a symlink that leaves the project is a problem.
+func (r *runner) policyBaselinePath() (abs, problem string) {
+	rel := policyOf(&r.lc).baseline
+	if rel == "" {
+		return "", ""
+	}
+	clean := filepath.Clean(filepath.FromSlash(rel))
+	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return "", fmt.Sprintf("lint.scanner_policy.baseline %q must be a path inside the project", rel)
+	}
+	abs = filepath.Join(r.rootAbs(), clean)
+	if real, err := filepath.EvalSymlinks(abs); err == nil && r.tree.Rel(real) == "" {
+		return "", fmt.Sprintf("lint.scanner_policy.baseline %q resolves outside the project", rel)
+	}
+	return abs, ""
+}
+
+// checkScannerBaselineLocation reports an unusable baseline location (AR9E0).
+func (r *runner) checkScannerBaselineLocation() {
+	if _, problem := r.policyBaselinePath(); problem != "" {
+		r.addRun(CodeScannerConfigInvalid, "scanner_policy", problem)
+	}
 }
 
 // scannerFingerprint is the identity of one scanner result. It is the scanner's
@@ -114,8 +157,12 @@ func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs strin
 func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 	all = dedupeScannerFindings(all)
 	findings := make([]Finding, len(all))
+	failOn := policyOf(&r.lc).failOn
 	for i := range all {
 		findings[i] = all[i].Finding
+		if failOn != "" {
+			findings[i].meta().ScannerFailOn = failOn
+		}
 		if p := r.tree.Rel(all[i].abs); all[i].abs != "" && p != "" {
 			findings[i].meta().Path = p
 		}
@@ -222,4 +269,14 @@ func (r *runner) addAt(code, abs, msg string) {
 		Code: code, Name: rule.Name, Severity: r.sev[code], File: file, Line: 1,
 		Message: strings.TrimSpace(msg), Root: r.display(r.rootAbs()),
 	})
+}
+
+// failsScannerPolicy reports whether a scanner finding reaches the
+// [lint.scanner_policy] fail_on threshold it was stamped with.
+func (f *Finding) failsScannerPolicy() bool {
+	if f.Meta == nil || f.Meta.ScannerFailOn == "" {
+		return false
+	}
+	threshold, ok := ParseSeverity(f.Meta.ScannerFailOn)
+	return ok && threshold != SeverityOff && f.Severity.AtLeast(threshold)
 }
