@@ -1316,7 +1316,17 @@ func stringSliceFromAny(v interface{}) []string {
 }
 
 // loadContentFile loads a content file and parses optional frontmatter
+//
+// A symlinked file is refused and its target is never read: an include (or a
+// cloned repository) could otherwise point a content file at any local file and
+// have it rendered into the outputs, and the content lock does not pin it.
 func loadContentFile(path string) (ContentFile, error) {
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		logger.Warn("Skipping symlinked content file; symlinks are not followed", "path", path)
+		return ContentFile{}, oops.
+			With("path", path).
+			Errorf("content file %s is a symlink; symlinks are not followed", path)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ContentFile{}, oops.
@@ -1340,11 +1350,14 @@ func loadContentFile(path string) (ContentFile, error) {
 	}, nil
 }
 
-// serversToMap converts a slice of MCPServer to a map keyed by server name
+// serversToMap converts a slice of MCPServer to a map keyed by server name. The
+// map holds copies: the generator mutates its servers while resolving
+// placeholders, and the as-written slice must not change with them.
 func serversToMap(servers []MCPServer) map[string]*MCPServer {
 	result := make(map[string]*MCPServer)
 	for i := range servers {
-		result[servers[i].Name] = &servers[i]
+		clone := servers[i].Clone()
+		result[servers[i].Name] = &clone
 	}
 	return result
 }
