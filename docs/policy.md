@@ -162,7 +162,8 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 ## What honors the policy
 
 - `validate` and `validate --strict`: the clamp is applied at load. `--strict` reports each attempt as an `AR74x`
-  finding; plain `validate` fails with the same lines. The severity floor and required codes are enforced inside the
+  finding and exits `2` (the findings are errors); plain `validate` fails with the same lines and exits `1`, as do
+  `generate` and `validate --show-policy`. The severity floor and required codes are enforced inside the
   lint run, so a floored finding cannot be demoted by a lint profile.
 - `generate` refuses to run on a configuration that loosens the policy, and so does each root of `generate
   --recursive` and `validate --recursive`; a root that fails is reported and the exit code is 1.
