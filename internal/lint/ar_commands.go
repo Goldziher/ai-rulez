@@ -18,7 +18,7 @@ const CodeCommandMissing = "AR403"
 
 func init() {
 	registerRules(RuleInfo{CodeCommandMissing, "command-missing", SeverityWarning, "a backticked `npm run X`, `make X`, `task X`, `just X` or `pytest -m X` names a script, target, task, recipe or marker the repository does not define"})
-	registerRunCheck(checkDeadCommands)
+	registerRunCheck(checkDeadCommands, AnalyzerReferences)
 }
 
 var (

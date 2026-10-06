@@ -20,7 +20,7 @@ const CodePluginManifest = "AR963"
 
 func init() {
 	registerRules(RuleInfo{CodePluginManifest, "plugin-manifest-invalid", SeverityError, "a .claude-plugin/plugin.json or marketplace.json breaks the documented schema (required or reserved names, non-./ paths, wrong types, unknown fields) or a shell-form plugin hook leaves ${CLAUDE_PLUGIN_ROOT} unquoted"})
-	registerRunCheck(checkPluginManifests)
+	registerRunCheck(checkPluginManifests, AnalyzerPlugin)
 }
 
 var (

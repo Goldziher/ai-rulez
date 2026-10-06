@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -43,6 +44,9 @@ type Combined struct {
 	Risk *CombinedRisk `json:"risk,omitempty"`
 	// ChangedOnly is set when the report was narrowed to changed files.
 	ChangedOnly *ChangedScope `json:"changed_only,omitempty"`
+	// Analyzers lists the analyzers that ran when the run was narrowed to some
+	// of them (--analyzer or [lint] analyzers); the other analyzers did not run.
+	Analyzers []string `json:"analyzers,omitempty"`
 }
 
 // Combine merges per-root reports into one document.
@@ -59,6 +63,11 @@ func Combine(reports []*Report) Combined {
 			c.ChangedOnly.Dependents += r.Scope.Dependents
 			c.ChangedOnly.Dropped += r.Scope.Dropped
 		}
+		for _, a := range r.Analyzers {
+			if !slices.Contains(c.Analyzers, a) {
+				c.Analyzers = append(c.Analyzers, a)
+			}
+		}
 		if r.Baseline != nil {
 			if c.Baseline == nil {
 				c.Baseline = &BaselineSummary{Paths: []string{}}
@@ -69,6 +78,7 @@ func Combine(reports []*Report) Combined {
 			c.Baseline.Expired = append(c.Baseline.Expired, r.Baseline.Expired...)
 		}
 	}
+	sort.Strings(c.Analyzers)
 	c.Risk = combineRisk(reports)
 	for _, r := range reports {
 		if r.Profile != "" && c.Profile == "" {
@@ -148,6 +158,9 @@ func WriteText(w io.Writer, c Combined) error {
 
 // writeBaselineText adds the baseline and budget lines of the text report.
 func writeBaselineText(sb *strings.Builder, c Combined) {
+	if len(c.Analyzers) > 0 {
+		fmt.Fprintf(sb, "analyzers run: %s (the others did not run)\n", strings.Join(c.Analyzers, ", "))
+	}
 	if s := c.ChangedOnly; s != nil {
 		fmt.Fprintf(sb, "changed-only since %s: %d changed file(s), %d file(s) referring to them; %d finding(s) in other files not shown\n", s.Since, s.Changed, s.Dependents, s.Dropped)
 	}
