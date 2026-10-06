@@ -3,10 +3,10 @@ package lint
 import (
 	"encoding/json"
 	"io"
-	"net/url"
-	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/sarifout"
 )
 
 // SARIF 2.1.0 output. Rule ids are the AR codes, artifact locations are
@@ -15,11 +15,10 @@ import (
 // scanning keeps tracking an alert after the file is edited above it.
 
 const (
-	sarifSchema      = "https://json.schemastore.org/sarif-2.1.0.json"
+	sarifSchema      = sarifout.Schema
 	sarifFingerprint = "aiRulezFingerprint/v1"
-	sarifSrcRoot     = "%SRCROOT%"
 	toolName         = "ai-rulez"
-	toolInfoURI      = "https://github.com/Goldziher/ai-rulez"
+	toolInfoURI      = sarifout.InformURI
 )
 
 type sarifDocument struct {
@@ -107,16 +106,7 @@ type sarifRegion struct {
 }
 
 // sarifLevel maps a severity to a SARIF result level.
-func sarifLevel(s Severity) string {
-	switch s {
-	case SeverityError:
-		return string(SeverityError)
-	case SeverityWarning:
-		return string(SeverityWarning)
-	default:
-		return "note"
-	}
-}
+func sarifLevel(s Severity) string { return sarifout.Level(string(s)) }
 
 // securitySeverity is the CVSS-like score GitHub code scanning reads from the
 // security-severity property to rank an alert (>=7 high, 4-6.9 medium, <4 low).
@@ -134,19 +124,6 @@ func securitySeverity(s Severity) string {
 // isSecurityCode reports whether code belongs to the AR0xx security family.
 func isSecurityCode(code string) bool {
 	return len(code) == 5 && strings.HasPrefix(code, "AR0")
-}
-
-// artifactURI renders a repository-relative slash path as a URI reference.
-func artifactURI(p string) (uri, base string) {
-	p = filepath.ToSlash(p)
-	if strings.HasPrefix(p, "/") || schemeRe.MatchString(p) {
-		return (&url.URL{Scheme: "file", Path: p}).String(), ""
-	}
-	parts := strings.Split(p, "/")
-	for i, seg := range parts {
-		parts[i] = url.PathEscape(seg)
-	}
-	return strings.Join(parts, "/"), sarifSrcRoot
 }
 
 func sarifRuleFor(code string, def Severity) sarifRule {
@@ -232,7 +209,7 @@ func buildSARIF(c Combined, version string) sarifDocument {
 
 func sarifResultFor(f *Finding, ruleIndex int, baselined bool) sarifOutResult {
 	path := f.RepoPath()
-	uri, base := artifactURI(path)
+	uri, base := sarifout.ArtifactURI(path)
 	res := sarifOutResult{
 		RuleID: f.Code, RuleIndex: ruleIndex, Level: sarifLevel(f.Severity),
 		Message: sarifOutText{Text: f.Message},
