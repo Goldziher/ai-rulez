@@ -264,12 +264,3 @@ func TestMergeOnlyTightens(t *testing.T) {
 		}
 	}
 }
-
-func anyCovers(patterns []string, item string) bool {
-	for _, p := range patterns {
-		if Covers(p, item) {
-			return true
-		}
-	}
-	return false
-}

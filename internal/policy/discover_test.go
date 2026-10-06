@@ -122,7 +122,7 @@ func TestParseRejects(t *testing.T) {
 		name, body, want string
 	}{
 		{"no version", "name = \"x\"\n", "policy_version is required"},
-		{"extends", "policy_version = 1\nextends = [\"x\"]\n", "extends is not supported"},
+		{"extends", "policy_version = 1\nextends = [\"x\"]\n", "extends is resolved when the policy is loaded"},
 		{"bad severity", "policy_version = 1\n[lint.severity_floor]\nAR001 = \"off\"\n", "not a severity"},
 		{"unknown rule floor", "policy_version = 1\n[lint.severity_floor]\nAR000 = \"error\"\n", "unknown rule"},
 		{"unknown required rule", "policy_version = 1\n[lint]\nrequired_codes = [\"nope\"]\n", "unknown rule"},

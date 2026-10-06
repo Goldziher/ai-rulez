@@ -20,6 +20,8 @@ type LayerView struct {
 	Name   string `json:"name,omitempty"`
 	Digest string `json:"digest"`
 	Note   string `json:"note,omitempty"`
+	// Extends lists the policies this layer extends.
+	Extends []string `json:"extends,omitempty"`
 }
 
 // Overrides summarizes what the repository did to the policy.
@@ -57,7 +59,7 @@ func BuildReport(r *Resolved, res *Result) Report {
 		rep.Mode = ModeWarn
 	}
 	for _, l := range r.Layers {
-		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest, Note: l.Note})
+		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest, Note: l.Note, Extends: l.Extends})
 	}
 	rep.Effective = r.Policy.Tree()
 	for k, v := range r.Provenance {
@@ -212,6 +214,9 @@ func (rep Report) WriteText(w io.Writer) {
 		name := ""
 		if l.Name != "" {
 			name = "  (" + l.Name + ")"
+		}
+		if len(l.Extends) > 0 {
+			name += "  extends " + strings.Join(l.Extends, ", ")
 		}
 		if l.Note != "" {
 			name += "  [" + l.Note + "]"
