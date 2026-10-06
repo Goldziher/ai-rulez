@@ -52,6 +52,8 @@ func TestExecuteNPM(t *testing.T) {
 		{"packs then publishes", npmNotFoundResult, npmOKResult, []string{"view", "pack", "publish"}, ""},
 		{"refuses an existing version", runner.Result{Status: runner.StatusOK, Stdout: []byte("1.4.0\n")}, npmOKResult, []string{"view"}, "already exists"},
 		{"npm missing", runner.Result{Status: runner.StatusUnavailable, Err: os.ErrNotExist}, npmOKResult, []string{"view"}, "npm was not found"},
+		{"a 404 in other words is not E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("proxy said: 404 page not found")}, npmOKResult, []string{"view"}, "page not found"},
+		{"npm's JSON error is E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stdout: []byte(`{"error":{"code":"E404","summary":"No match found"}}`)}, npmOKResult, []string{"view", "pack", "publish"}, ""},
 		{"view fails for another reason", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("network down")}, npmOKResult, []string{"view"}, "network down"},
 		{"publish fails", npmNotFoundResult, runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("403 forbidden")}, []string{"view", "pack", "publish"}, "403 forbidden"},
 	}
@@ -238,4 +240,34 @@ func TestBuild_NPMWarnsThatTheSignatureCoversTheArchiveOnly(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, strings.Join(d.Warnings, "\n"), "not the npm tarball")
+}
+
+func TestBuild_NPMPrereleaseNeedsAChannel(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		channel string
+		wantErr bool
+	}{
+		{"stable without a channel", "1.4.0", "", false},
+		{"prerelease with a channel", "1.4.0-rc.1", "next", false},
+		{"prerelease without a channel", "1.4.0-rc.1", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := npmInput()
+			in.Version, in.Channel = tt.version, tt.channel
+
+			_, err := Build(in)
+
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			var pe *Error
+			require.ErrorAs(t, err, &pe)
+			assert.Equal(t, CodeConfig, pe.Code)
+			assert.Contains(t, pe.Error(), "dist-tag")
+		})
+	}
 }
