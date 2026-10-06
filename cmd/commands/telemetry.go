@@ -275,7 +275,7 @@ func previewEvents(settings *telemetry.Settings, root, name string) (previewSour
 	}
 	path, label := telLog, telLog
 	if path == "" {
-		path = filepath.Join(localDir, "usage.jsonl")
+		path = defaultUsageLogPath()
 		label = filepath.Join(name, telemetry.LocalDirName, "usage.jsonl")
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 			return previewSource{label: label + " (missing)"}, nil
