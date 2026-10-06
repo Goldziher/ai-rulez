@@ -99,7 +99,10 @@ func (i *Importer) readDir(p string) ([]os.DirEntry, error) {
 	out := entries[:0]
 	for _, e := range entries {
 		if e.Type()&os.ModeSymlink != 0 {
-			logger.Warn("Skipping a symlink", "path", filepath.Join(p, e.Name()))
+			link := filepath.Join(p, e.Name())
+			target, _ := os.Readlink(link)
+			logger.Warn("Skipping symlink "+link+"; symlinks are not followed, copy the file to import it",
+				"path", link, "target", target)
 			continue
 		}
 		out = append(out, e)
