@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -347,4 +348,79 @@ func TestRoundTripAddsNoKeysToASkillWithoutNameOrDescription(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(got), "name:")
 	assert.NotContains(t, string(got), "description:")
+}
+
+func TestExportConceptsNeverClaimReservedNames(t *testing.T) {
+	// Arrange
+	root := sampleProject(t)
+	write(t, root, ".ai-rulez/rules/index.md", "---\ndescription: A rule named index\n---\nbody index\n")
+	write(t, root, ".ai-rulez/rules/log.md", "---\ndescription: A rule named log\n---\nbody log\n")
+
+	// Act
+	res := exportProject(t, root)
+
+	// Assert
+	byPath := map[string]string{}
+	for _, f := range res.Files {
+		byPath[f.Path] = string(f.Data)
+	}
+	assert.Contains(t, byPath["rules/index.md"], "# Concepts", "rules/index.md stays the generated index")
+	assert.NotContains(t, byPath["rules/index.md"], "body index")
+	assert.Contains(t, byPath["rules/index_.md"], "body index")
+	assert.Contains(t, byPath["rules/log_.md"], "body log")
+	dir := t.TempDir() + "/bundle"
+	writeBundle(t, dir, res.Files)
+	b, err := okf.Load(os.DirFS(dir))
+	require.NoError(t, err)
+	assert.Empty(t, b.Validate())
+
+	// And the real names come back on import.
+	fresh := t.TempDir()
+	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(fresh, ".ai-rulez/rules/index.md"))
+	assert.FileExists(t, filepath.Join(fresh, ".ai-rulez/rules/log.md"))
+}
+
+func TestRoundTripKeepsNonASCIINames(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/rules/résumé.md", "---\ndescription: Accents\n---\nbody\n")
+	write(t, root, ".ai-rulez/rules/日本語.md", "---\ndescription: CJK\n---\nbody2\n")
+	first := exportProject(t, root)
+	dir := t.TempDir() + "/b"
+	writeBundle(t, dir, first.Files)
+	b, err := okf.Load(os.DirFS(dir))
+	require.NoError(t, err)
+	fresh := t.TempDir()
+	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+
+	// Act
+	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
+
+	// Assert
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(fresh, ".ai-rulez/rules/résumé.md"))
+	assert.FileExists(t, filepath.Join(fresh, ".ai-rulez/rules/日本語.md"))
+}
+
+func TestImportReportsAnUnsafeDomain(t *testing.T) {
+	// Arrange
+	b := foreignBundle(map[string]string{"a.md": "---\ntype: Decision\nx-ai-rulez:\n  kind: rule\n  id: a\n  domain: \"../etc\"\n---\nx\n"})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+
+	// Act
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, res.Actions, 1)
+	assert.Equal(t, "rules/a.md", res.Actions[0].Path)
+	found := false
+	for _, f := range res.Findings {
+		found = found || (f.Code == okf.CodeLossyMapping && strings.Contains(f.Message, "../etc"))
+	}
+	assert.True(t, found, "the dropped domain is reported")
 }
