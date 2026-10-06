@@ -300,7 +300,8 @@ func pluginLoadOptions(plugin bool) []config.LoadOption {
 // Under --locked or --frozen, when every failure is the lock disagreeing with the
 // sources it is exitDrift, the code a single root exits with.
 func runRecursiveGenerate() int {
-	configFiles := findConfigFilesRecursively()
+	found := discoverConfigFiles()
+	configFiles := found.configs
 	if pluginMode {
 		var err error
 		configFiles, err = selectRecursivePluginConfigs(configFiles)
@@ -309,6 +310,9 @@ func runRecursiveGenerate() int {
 			return 1
 		}
 	}
+	// A nested V2/V3 config is no longer read, but it must not vanish from the
+	// run: loading it fails with the same ErrLegacyConfig message a single root gives.
+	configFiles = append(configFiles, found.legacy...)
 	if len(configFiles) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
@@ -377,11 +381,24 @@ func dirHasRootConfig(dir string) bool {
 // Once a config directory is encountered, its subtree is not descended into:
 // the config files are looked up directly with os.Stat.
 func findConfigFilesRecursively() []string {
-	var configFiles []string
+	return discoverConfigFiles().configs
+}
+
+// discoveredConfigs is what the recursive walk found: the config.toml files
+// and the V2/V3 config files of config directories that have no config.toml.
+type discoveredConfigs struct {
+	configs []string
+	legacy  []string
+}
+
+// discoverConfigFiles is findConfigFilesRecursively that also reports the
+// legacy config files it met, so `generate --recursive` can refuse them by name.
+func discoverConfigFiles() discoveredConfigs {
+	var found discoveredConfigs
 	spinner := progress.NewSpinner("Searching for configuration files...")
 
 	walkErr := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
-		return walkConfigDir(path, d, err, &configFiles, spinner)
+		return walkConfigDir(path, d, err, &found, spinner)
 	})
 
 	if err := spinner.Finish(); err != nil {
@@ -393,13 +410,13 @@ func findConfigFilesRecursively() []string {
 		os.Exit(1)
 	}
 
-	return configFiles
+	return found
 }
 
 // walkConfigDir is the per-entry callback for findConfigFilesRecursively.
 // It records any `.ai-rulez/config.*` it finds and returns SkipDir for
 // directories that cannot contain user content.
-func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner *progress.Bar) error {
+func walkConfigDir(path string, d os.DirEntry, err error, out *discoveredConfigs, spinner *progress.Bar) error {
 	if err != nil {
 		logger.Debug("walk: skipping entry", "path", path, "error", err)
 		if d != nil && d.IsDir() {
@@ -471,13 +488,17 @@ func isConfigDirPath(path string) bool {
 }
 
 // recordConfigDir appends dir's config file to out when one exists and bumps
-// the spinner; directories without a config file are silently skipped.
-func recordConfigDir(dir string, out *[]string, spinner *progress.Bar) {
+// the spinner. A directory with only a legacy V2/V3 config is recorded as
+// legacy; one with no config at all is skipped.
+func recordConfigDir(dir string, out *discoveredConfigs, spinner *progress.Bar) {
 	cfg := findConfigInDir(dir)
 	if cfg == "" {
+		if legacy := config.LegacyConfigIn(dir); legacy != "" {
+			out.legacy = append(out.legacy, legacy)
+		}
 		return
 	}
-	*out = append(*out, cfg)
+	out.configs = append(out.configs, cfg)
 	if err := spinner.Add(1); err != nil {
 		logger.Debug("Failed to update spinner", "error", err)
 	}
