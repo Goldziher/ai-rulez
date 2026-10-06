@@ -584,9 +584,24 @@ type stubNative struct {
 	freed       bool
 }
 
-func (s *stubNative) ChatJSON(b []byte) ([]byte, error)  { return s.chat(b) }
-func (s *stubNative) EmbedJSON(b []byte) ([]byte, error) { return s.embed(b) }
-func (s *stubNative) Free()                              { s.freed = true }
+func (s *stubNative) ChatJSON(_ context.Context, b []byte) ([]byte, error)  { return s.chat(b) }
+func (s *stubNative) EmbedJSON(_ context.Context, b []byte) ([]byte, error) { return s.embed(b) }
+func (s *stubNative) Free()                                                 { s.freed = true }
+
+// stubNativeErr is a typed native failure.
+type stubNativeErr struct {
+	variant    string
+	msg        string
+	status     int
+	transient  bool
+	retryAfter time.Duration
+}
+
+func (e *stubNativeErr) Error() string                   { return e.msg }
+func (e *stubNativeErr) NativeVariant() string           { return e.variant }
+func (e *stubNativeErr) NativeStatus() int               { return e.status }
+func (e *stubNativeErr) NativeTransient() bool           { return e.transient }
+func (e *stubNativeErr) NativeRetryAfter() time.Duration { return e.retryAfter }
 
 func TestLiterLLMAdapterWithStub(t *testing.T) {
 	stub := &stubNative{
@@ -598,7 +613,7 @@ func TestLiterLLMAdapterWithStub(t *testing.T) {
 			return []byte(`{"model":"gpt-4o-mini","choices":[{"message":{"content":[{"type":"text","text":"he"},{"type":"text","text":"llo"}]}}],"usage":{"prompt_tokens":3,"completion_tokens":2}}`), nil
 		},
 		embed: func([]byte) ([]byte, error) {
-			return nil, errors.New("[2] rate limited: slow down sk-abcdefghijklmnop")
+			return nil, fmt.Errorf("embed: %w", &stubNativeErr{variant: "RateLimited", msg: "rate limited: slow down sk-abcdefghijklmnop", status: 429, transient: true})
 		},
 	}
 	nativeMu.RLock()
@@ -627,16 +642,23 @@ func TestLiterLLMAdapterWithStub(t *testing.T) {
 	}
 }
 
-func TestNativeCallAbandonedOnCancel(t *testing.T) {
-	block := make(chan struct{})
-	defer close(block)
-	stub := &stubNative{chat: func([]byte) ([]byte, error) { <-block; return nil, nil }}
-	l := &literLLM{native: stub, model: "m"}
+func TestNativeCallHonoursContext(t *testing.T) {
+	// Arrange: a native client that, like liter-llm 2.1.3, returns the context error when ctx ends.
+	stub := &stubNative{chat: nil}
+	l := &literLLM{native: &ctxNative{stubNative: stub}, model: "m"}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
+	// Act / Assert
 	if _, err := l.Chat(ctx, chatReq("x")); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("want deadline, got %v", err)
 	}
+}
+
+type ctxNative struct{ *stubNative }
+
+func (c *ctxNative) ChatJSON(ctx context.Context, _ []byte) ([]byte, error) {
+	<-ctx.Done()
+	return nil, fmt.Errorf("native aborted: %w", ctx.Err())
 }
 
 func TestDiagnoseAndEstimate(t *testing.T) {

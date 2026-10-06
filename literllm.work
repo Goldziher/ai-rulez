@@ -4,3 +4,7 @@ use (
 	.
 	./internal/llm/literllm
 )
+
+// liter-llm 2.1.3 is not published yet: until it is, build against a local checkout with a
+// copy of this file that adds
+//   replace github.com/xberg-io/liter-llm/packages/go/v2 => /path/to/liter-llm/packages/go

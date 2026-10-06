@@ -3,51 +3,58 @@ package llm
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 )
 
-// The corpus pins the exact flat strings the liter-llm binding produces
-// ("[code] message", upstream issue #244), so a reworded upstream message fails
-// here instead of silently changing retry, budget or gate decisions.
+// The corpus pins the liter-llm error variant names the classifier reads, so a
+// renamed upstream variant fails here instead of silently changing retry,
+// budget or gate decisions.
 func TestClassifyNativeCorpus(t *testing.T) {
 	tests := []struct {
 		name       string
-		msg        string
+		err        error
 		kind       Kind
 		transient  bool
 		wantStatus int
+		wantRetry  time.Duration
 	}{
-		{"auth sentinel text", "[1] authentication failed: invalid x-api-key", KindAuth, false, 0},
-		{"unauthorized", "[1] Unauthorized", KindAuth, false, 0},
-		{"http 401", "[3] provider returned HTTP 401", KindAuth, false, 0},
-		{"http 403", "[3] HTTP 403 forbidden", KindAuth, false, 0},
-		{"rate limited", "[2] rate limited: retry after 20s", KindRateLimit, true, 0},
-		{"ratelimit one word", "[2] RateLimitError: too many requests", KindRateLimit, true, 0},
-		{"http 429", "[4] HTTP 429 Too Many Requests", KindRateLimit, true, 0},
-		{"context window", "[5] context window exceeded: 200123 tokens", KindContextLength, false, 0},
-		{"context length", "[5] maximum context length is 128000 tokens", KindContextLength, false, 0},
-		{"budget", "[6] budget exceeded", KindBudget, false, 0},
-		{"server 503", "[7] upstream HTTP 503 service unavailable", KindProvider, true, 503},
-		{"server 500", "[7] HTTP 500 internal error", KindProvider, true, 500},
-		// Unknown messages take the safe default: provider error, never retried.
-		{"unknown english", "[9] something nobody has seen before", KindProvider, false, 0},
-		{"unknown localised", "[2] Ratenbegrenzung erreicht", KindProvider, false, 0},
-		{"unknown empty body", "[8] native error", KindProvider, false, 0},
-		{"digits inside an id", "request req-14013-x failed", KindProvider, false, 0},
+		{"authentication", &stubNativeErr{variant: "Authentication", status: 401}, KindAuth, false, 401, 0},
+		{"rate limited with delay", &stubNativeErr{variant: "RateLimited", status: 429, transient: true, retryAfter: 20 * time.Second}, KindRateLimit, true, 429, 20 * time.Second},
+		{"context window", &stubNativeErr{variant: "ContextWindowExceeded", status: 400}, KindContextLength, false, 400, 0},
+		{"budget", &stubNativeErr{variant: "BudgetExceeded"}, KindBudget, false, 0, 0},
+		{"timeout", &stubNativeErr{variant: "Timeout", transient: true}, KindTimeout, true, 0, 0},
+		{"server error", &stubNativeErr{variant: "ServerError", status: 500, transient: true}, KindProvider, true, 500, 0},
+		{"service unavailable", &stubNativeErr{variant: "ServiceUnavailable", status: 503, transient: true}, KindProvider, true, 503, 0},
+		{"bad request", &stubNativeErr{variant: "BadRequest", status: 400}, KindProvider, false, 400, 0},
+		{"not found", &stubNativeErr{variant: "NotFound", status: 404}, KindProvider, false, 404, 0},
+		{"content policy", &stubNativeErr{variant: "ContentPolicy", status: 400}, KindProvider, false, 400, 0},
+		{"unknown variant", &stubNativeErr{variant: "SomethingNew"}, KindProvider, false, 0, 0},
+		{"wrapped typed error", fmt.Errorf("chat: %w", &stubNativeErr{variant: "RateLimited", transient: true}), KindRateLimit, true, 0, 0},
+		{"untyped error", errors.New("[2] rate limited: not trusted as text"), KindProvider, false, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			err := classifyNative(errors.New(tt.msg))
+			err := classifyNative(tt.err)
 			// Assert
 			var e *Error
 			if !errors.As(err, &e) {
 				t.Fatalf("want *Error, got %T", err)
 			}
-			if e.Kind != tt.kind || IsTransient(err) != tt.transient || e.Status != tt.wantStatus {
-				t.Errorf("%q: kind=%s transient=%v status=%d, want %s/%v/%d", tt.msg, e.Kind, IsTransient(err), e.Status, tt.kind, tt.transient, tt.wantStatus)
+			if e.Kind != tt.kind || IsTransient(err) != tt.transient || e.Status != tt.wantStatus || e.RetryAfter != tt.wantRetry {
+				t.Errorf("kind=%s transient=%v status=%d retry=%v, want %s/%v/%d/%v", e.Kind, IsTransient(err), e.Status, e.RetryAfter, tt.kind, tt.transient, tt.wantStatus, tt.wantRetry)
 			}
 		})
+	}
+}
+
+func TestClassifyNativeRedactsKeys(t *testing.T) {
+	err := classifyNative(&stubNativeErr{variant: "Authentication", msg: "bad key sk-abcdefghijklmnopqrstuvwx"})
+	if strings.Contains(err.Error(), "abcdefghij") {
+		t.Fatalf("key leaked: %v", err)
 	}
 }
 
