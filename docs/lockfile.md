@@ -121,12 +121,28 @@ path = "skills"
 commit = "0f3e…"
 digest = "sha256:…"
 
-[[served]]            # one per skill the skills server serves, in the unscoped view and in every role's
+[[served]]            # one per skill the skills server serves, in the default view and in every other view
 name = "deploy"
 source = ".ai-rulez/skills/deploy/SKILL.md"
 commit = ""
 digest = "sha256:…"   # the served-skill digest below
+
+[[served]]            # the same skill in another view: `view` is only written for a view other than the default
+name = "deploy"
+view = "role:backend"
+source = ".ai-rulez/skills/deploy/SKILL.md"
+commit = ""
+digest = "sha256:…"
 ```
+
+A served entry is keyed by name and `view`. The view is the way the skills server is started: `role:<name>` for
+`--role`, `profile:<name>` for `--profile`, `static` for `--include-static`, and `source:<name>` for each `--source`,
+joined by `+` (`role:backend+static`). The default view has no `view` key, so a project that uses no roles or view
+flags writes the same lock as before. A plain `ai-rulez lock` pins the default view, every role and every view the
+lock already records; `lock --role`, `--profile`, `--include-static` and `--source` add the view they name. The
+server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
+(locks written before views existed), but its digest must still match. `lock --strict` fails when the security scan
+refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.
 
 A served skill is a tree digest in the scheme below with the kind `served-skill` (`ai-rulez/served-skill/v1`), over
 the files the server returns, with the lines of the generated header that change without the skill changing left

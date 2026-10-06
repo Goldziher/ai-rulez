@@ -344,6 +344,7 @@ name_prefix = "acme-"                          # served as acme-pdf-forms, and S
 trust = "error"                                # scan level: error (default) or warn
 max_skills = 200                               # optional: skills the source may load (default 200)
 max_bytes = 67108864                           # optional: bytes of skill files it may load (default 64 MiB)
+max_clone_bytes = 268435456                    # optional: size limit of the git clone (default 256 MiB)
 ```
 
 `--source` takes the same thing on the command line: `[git+]<url>[@<tag|commit>][#<subdir>]` or a directory,
@@ -367,10 +368,26 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
   ssh-agent key); a private `https` repository is not supported. Each git command is cut off after five minutes.
 - **Limits.** A source may load at most `max_skills` skills (default 200) and `max_bytes` bytes of skill files
   (default 64 MiB); a larger source is an error naming the key. A skill has at most 2000 files.
+- **Clone size.** A git source is fetched as a partial clone (`--filter`), and with a `path` only that
+  subdirectory is checked out (a sparse checkout), so a large repository costs what the skills cost. The clone,
+  git data and checkout together, is capped at `max_clone_bytes` (default 256 MiB; the `AI_RULEZ_MAX_CLONE_BYTES`
+  environment variable sets it for every source that does not set its own). The size is watched while git runs:
+  a clone that grows past the limit is stopped, fails with an error naming `max_clone_bytes` and the source
+  (`skillsource.ErrCloneTooLarge`), and leaves nothing in the cache. Set `path`, or raise the limit.
+- **Cache integrity.** A source the lock covers is checked against the lock's digest. A source whose `ref` is a full
+  commit SHA but which the lock does not cover is checked against a digest recorded next to the cached tree
+  (`<tree>.digest`, written atomically, outside the tree so it never changes the tree digest, readable only by you).
+  If the tree no longer matches, or has no record (a cache written by an older release), it is fetched again;
+  with `--offline`/`--frozen` there is no fetch, so serving fails with a "cache damaged" error until you run once
+  online. The record catches damage and edits of the tree; it is not a defence against someone who can also
+  rewrite the record, which is what the lock is for.
 - **Cache and network.** Trees are cached per commit under `~/.cache/ai-rulez/skill-sources/`. `--frozen` requires
   the lock to cover the source and never touches the network (the commit must be cached). `--offline` does not
   require the lock: it uses the lock's commit, or the commit an earlier online run recorded for that ref.
-- **Local directories** need no network; a lock entry pins their digest, and serving refuses a changed tree.
+- **Local directories** need no network; a lock entry pins their digest, and serving refuses a changed tree. A
+  local `url`/`path` declared in the project's config must resolve, after symlinks, inside the project (a relative
+  one is relative to the project root); a committed config cannot point the server at another user's skill
+  directory. `--source <dir>` on the command line and sources in your user config may point anywhere.
 - **Safety.** Symlinks below the source are never followed; a `path` of a git source that goes through a
   symlink is refused, and a local source directory that is itself a symlink is resolved and digested through
   the link. A file over 2 MiB is dropped with a warning, a skill over 8 MiB is skipped with a warning. A source
@@ -417,12 +434,29 @@ the rendering for the default preset (`--targets` to serve another preset's rend
 design). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
 role. `ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
 
-`lock` pins the view a server started with no view flags serves: the configured `[[skill_sources]]`, the default
-profile and preset, the delivery rules (no `--include-static`), and every role. A server started with
-`--source`, `--include-static`, `--profile` or `--targets` serves a different set, and under `[lock] enforce`
-every skill that set adds is refused with `AR995` until it is in `[[served]]`; put a source you want pinned in
-`[[skill_sources]]` instead of passing it on the command line. A skill the security scan refuses is reported by
-`lock` and stops it from writing the lock, so a refused skill has to be fixed or excluded first.
+`[[served]]` entries are recorded per serve view: the way the server is started selects a set of skills, and
+the lock pins each set under a `view` key (see [Lock file](lockfile.md#served-skills-and-skill-sources)). A plain
+`lock` pins the default view (the configured `[[skill_sources]]`, the default profile and preset, the delivery
+rules), every role, and every view the lock already records. To pin another view, give `lock` the flags the
+server runs with:
+
+```bash
+ai-rulez lock --role backend                       # skills the backend role serves
+ai-rulez lock --profile team --include-static      # profile view that also serves static skills
+ai-rulez lock --source git+https://host/org/skills@v1.2.0#skills   # a command-line source, pinned with its commit
+ai-rulez mcp --serve-skills --role backend --frozen
+```
+
+`mcp --serve-skills` and `lock --check` read the pins of the view they run with, so a server started with
+`--role`, `--profile`, `--include-static` or `--source` finds its skills pinned once `lock` has pinned that view;
+otherwise every skill it adds is refused with `AR995`. A lock written before views existed (no `view` keys)
+still covers every view, as long as the digests match. `--targets` is not part of the view: it serves another
+rendering, which fails enforcement by design.
+
+A skill the security scan refuses is not pinned. By default `lock` reports it, pins every other skill, writes the
+lock and exits 3; `validate --strict` lists the refused skills of skill sources with their scan code (`AR0xx`). With
+`lock --strict` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
+excluded before it can be served under enforcement.
 
 ### Usage telemetry
 
