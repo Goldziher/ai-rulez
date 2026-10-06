@@ -167,3 +167,80 @@ func TestChangesIgnoreDiffPrefixConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstParentCommits(t *testing.T) {
+	// Arrange: base, a merged topic (merge commit) and a plain commit on main.
+	dir := diffFixture(t)
+	writeIn(t, dir, "b.txt", "b\n")
+	gitIn(t, dir, "add", ".")
+	gitIn(t, dir, "commit", "-q", "-m", "topic work")
+	gitIn(t, dir, "checkout", "-q", "main")
+	gitIn(t, dir, "merge", "-q", "--no-ff", "-m", "merge topic", "topic")
+	writeIn(t, dir, "c.txt", "c\n")
+	gitIn(t, dir, "add", ".")
+	gitIn(t, dir, "commit", "-q", "-m", "direct")
+
+	tests := []struct {
+		name string
+		n    int
+		want int
+	}{
+		{"all of them", 10, 3},
+		{"the newest two", 2, 2},
+		{"none", 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			commits, err := FirstParentCommits(dir, tt.n)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Len(t, commits, tt.want)
+		})
+	}
+	commits, err := FirstParentCommits(dir, 10)
+	require.NoError(t, err)
+	assert.Equal(t, "direct", commits[0].Subject)
+	assert.Equal(t, "merge topic", commits[1].Subject)
+	assert.NotEmpty(t, commits[1].Parent, "a merge commit has a first parent")
+	assert.Empty(t, commits[2].Parent, "the root commit has none")
+}
+
+func TestChangesBetween(t *testing.T) {
+	// Arrange
+	dir := diffFixture(t)
+	gitIn(t, dir, "checkout", "-q", "main")
+	base := revParse(t, dir, "HEAD")
+	writeIn(t, dir, "a.txt", "one\ntwo\nTHREE\nfour\n")
+	writeIn(t, dir, "fresh.txt", "x\n")
+	gitIn(t, dir, "add", ".")
+	gitIn(t, dir, "commit", "-q", "-m", "change")
+	head := revParse(t, dir, "HEAD")
+	writeIn(t, dir, "later.txt", "not in the range\n")
+
+	// Act
+	changes, err := ChangesBetween(dir, base, head)
+
+	// Assert
+	require.NoError(t, err)
+	got := byPath(changes)
+	assert.Equal(t, []LineRange{{3, 4}}, got["a.txt"].Added)
+	assert.True(t, got["fresh.txt"].AllAdded)
+	assert.NotContains(t, got, "later.txt", "the working tree is not part of a commit range")
+}
+
+func TestChangesBetweenRefusesAnOptionLookingRevision(t *testing.T) {
+	dir := diffFixture(t)
+
+	_, err := ChangesBetween(dir, "--output=x", "HEAD")
+
+	require.Error(t, err)
+}
+
+func revParse(t *testing.T, dir, rev string) string {
+	t.Helper()
+	out, err := CommandNoContext(dir, "rev-parse", rev).Output()
+	require.NoError(t, err)
+	return string(out[:len(out)-1])
+}
