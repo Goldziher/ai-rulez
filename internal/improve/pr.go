@@ -78,13 +78,28 @@ type PRResult struct {
 	BodyFile string   `json:"body_file"`
 }
 
-var unsafeBranchChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+var (
+	unsafeBranchChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+	dotRuns           = regexp.MustCompile(`\.{2,}`)
+)
+
+// branchName is the branch of a run: the skill id made safe for a ref name (no "..", no leading or trailing
+// "-" or ".", never ending in ".lock") and the first eight hex digits of the candidate digest.
+func branchName(skill, digest string) string {
+	id := dotRuns.ReplaceAllString(unsafeBranchChars.ReplaceAllString(skill, "-"), "-")
+	id = strings.TrimSuffix(strings.Trim(id, "-."), ".lock")
+	if id == "" {
+		id = "skill"
+	}
+	hex := strings.TrimPrefix(digest, "sha256:")
+	return fmt.Sprintf("ai-rulez/improve/%s-%s", id, hex[:min(8, len(hex))])
+}
 
 // PR turns an accepted run into a branch and a pull request without touching the user's checkout. It
 // creates a linked git worktree from the base, applies the candidate there, refreshes the lock (and,
 // on request, the eval results), commits on a new branch, and, when git has the remote and gh is
-// installed, pushes and opens the pull request with fixed gh arguments. ai-rulez makes no network
-// call itself. The change is never approved: the pull request says so.
+// installed, pushes and opens the pull request with fixed gh arguments. improve pr itself makes no network
+// call; the generate and lock it runs may fetch remote includes. The change is never approved: the pull request says so.
 func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	if opts.Out == nil {
 		opts.Out = io.Discard
@@ -116,7 +131,7 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	if _, err := g.CommitOf(ctx, top, base); err != nil {
 		return nil, refuse(CodePRRefused, "the base %q is not a commit of this repository: %v", base, err)
 	}
-	branch := fmt.Sprintf("ai-rulez/improve/%s-%s", strings.Trim(unsafeBranchChars.ReplaceAllString(p.report.Skill, "-"), "-."), strings.TrimPrefix(p.report.CandidateDigest, "sha256:")[:8])
+	branch := branchName(p.report.Skill, p.report.CandidateDigest)
 	if g.BranchExists(ctx, top, branch) {
 		return nil, refuse(CodePRRefused, "the branch %s already exists: delete it (git branch -D %s) or open the pull request from it", branch, branch)
 	}
@@ -139,10 +154,15 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		_ = g.WorktreePrune(ctx, top) //nolint:errcheck // drops a stale entry
 	}()
 
-	relProject, err := filepath.Rel(top, gitutil.Resolve(opts.RepoDir))
-	if err != nil {
-		return nil, fmt.Errorf("locate the project in the repository: %w", err)
+	relProject := gitutil.RepoRelative(top, opts.RepoDir)
+	if relProject == "" {
+		return nil, refuse(CodePRRefused, "%s is not inside the repository %s", opts.RepoDir, top)
 	}
+	relConfig, err := filepath.Rel(gitutil.Resolve(opts.RepoDir), gitutil.Resolve(opts.ConfigDir))
+	if err != nil || !filepath.IsLocal(relConfig) {
+		return nil, refuse(CodePRRefused, "the config directory %s is not inside the project %s", opts.ConfigDir, opts.RepoDir)
+	}
+	p.configRel = relConfig
 	projDir := filepath.Join(wt, relProject)
 	skillDir := filepath.Join(projDir, filepath.FromSlash(p.report.SkillPath))
 	if err := p.applyAt(wt, skillDir, base); err != nil {
@@ -169,6 +189,8 @@ type prRun struct {
 	// generated are the repository-relative generated outputs the project commits, refreshed by
 	// `ai-rulez generate` in the worktree and staged with the skill.
 	generated []string
+	// configRel is the config directory relative to the project root (".ai-rulez", ".config/ai-rulez").
+	configRel string
 }
 
 func loadPRRun(opts *PROptions) (*prRun, error) {
@@ -262,7 +284,7 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProjec
 		fmt.Fprintln(opts.Out, "note: ai-rulez was not found to re-run itself, so the generated outputs, the lock and the eval results were not refreshed: run `ai-rulez generate` and `ai-rulez lock` on the branch")
 		return nil
 	}
-	_, lockErr := os.Stat(filepath.Join(projDir, filepath.Base(opts.ConfigDir), lockfile.FileName))
+	_, lockErr := os.Stat(filepath.Join(projDir, p.configRel, lockfile.FileName))
 	hasLock := lockErr == nil
 	steps := [][]string{{"generate", "--yes"}}
 	if hasLock {
@@ -303,7 +325,7 @@ const maxManifestBytes = 4 << 20
 // manifest, when git tracks at least one of them at the base (the project commits its outputs). A project that
 // gitignores them gets none, so a pull request never adds generated files the project does not commit.
 func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, relProject string) []string {
-	data, err := readBounded(filepath.Join(projDir, filepath.Base(opts.ConfigDir), manifestName), maxManifestBytes)
+	data, err := readBounded(filepath.Join(projDir, p.configRel, manifestName), maxManifestBytes)
 	if err != nil {
 		return nil
 	}
@@ -319,7 +341,7 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 			files = append(files, filepath.ToSlash(filepath.Clean(filepath.FromSlash(f))))
 		}
 	}
-	manifestRel := filepath.ToSlash(filepath.Join(filepath.Base(opts.ConfigDir), manifestName))
+	manifestRel := filepath.ToSlash(filepath.Join(p.configRel, manifestName))
 	tracked, err := opts.Git.TrackedAmong(projDir, append(files, manifestRel))
 	if err != nil {
 		return nil
@@ -331,8 +353,17 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 	if !committed {
 		return nil
 	}
+	// git add refuses a gitignored path, so an output the project does not commit (next to ones it does) is
+	// dropped; a tracked file stays even when a pattern matches it.
+	ignored, err := opts.Git.IgnoredAmong(projDir, files)
+	if err != nil {
+		return nil
+	}
 	var out []string
 	for _, f := range files {
+		if ignored[f] && !tracked[f] {
+			continue
+		}
 		if _, err := os.Lstat(filepath.Join(projDir, filepath.FromSlash(f))); err == nil || tracked[f] {
 			out = append(out, filepath.ToSlash(filepath.Join(relProject, filepath.FromSlash(f))))
 		}
@@ -355,7 +386,7 @@ func readBounded(path string, limit int64) ([]byte, error) {
 // commit stages the skill, the lock and the eval results and commits them.
 func (p *prRun) commit(ctx context.Context, opts *PROptions, wt, relProject string, res *PRResult) error {
 	g := opts.Git
-	relConfig := filepath.Join(relProject, filepath.Base(opts.ConfigDir))
+	relConfig := filepath.Join(relProject, p.configRel)
 	paths := []string{filepath.ToSlash(filepath.Join(relProject, filepath.FromSlash(p.report.SkillPath)))}
 	for _, name := range []string{lockfile.FileName, "eval-results.json"} {
 		if _, err := os.Stat(filepath.Join(wt, relConfig, name)); err == nil {
