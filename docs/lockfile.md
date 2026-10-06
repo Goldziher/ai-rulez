@@ -151,10 +151,10 @@ digest = "sha256:…"
 ```
 
 A served entry is keyed by name and `view`. The view is the way the skills server is started: `role:<name>` for
-`--role`, `profile:<name>` for `--profile`, `static` for `--include-static`, and `source:<name>` for each `--source`,
+`--role`, `profile:<name>` for `--profile`, `targets:<preset>` for `--targets`, `static` for `--include-static`, and `source:<name>` for each `--source`,
 joined by `+` (`role:backend+static`). The default view has no `view` key, so a project that uses no roles or view
 flags writes the same lock as before. A plain `ai-rulez lock` pins the default view, every role and every view the
-lock already records; `lock --role`, `--profile`, `--include-static` and `--source` add the view they name. The
+lock already records; `lock --role`, `--profile`, `--targets`, `--include-static` and `--source` add the view they name. The
 server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
 (locks written before views existed), but its digest must still match. `lock --strict` fails when the security scan
 refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.

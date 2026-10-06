@@ -17,6 +17,7 @@ const (
 	flagServeOffline       = "offline"
 	flagServeIncludeStatic = "include-static"
 	flagServeBudget        = "budget-bytes"
+	flagServeMaxClone      = "max-clone-bytes"
 	flagServeUsageLog      = "usage-log"
 	flagServeUsageSink     = "usage-sink"
 	flagServeNoWatch       = "no-watch"
@@ -26,7 +27,7 @@ const (
 // dynamicServeFlagNames are the flags that only make sense with --serve-skills.
 var dynamicServeFlagNames = []string{
 	flagServeSource, flagServeRole, flagServeFrozen, flagServeOffline, flagServeIncludeStatic,
-	flagServeBudget, flagServeUsageLog, flagServeUsageSink, flagServeNoWatch, flagServePoll,
+	flagServeBudget, flagServeMaxClone, flagServeUsageLog, flagServeUsageSink, flagServeNoWatch, flagServePoll,
 }
 
 func registerDynamicServeFlags(cmd *cobra.Command) {
@@ -37,6 +38,7 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.Bool(flagServeOffline, false, "Never use the network; use cached content (requires --serve-skills)")
 	f.Bool(flagServeIncludeStatic, false, "Also serve skills whose delivery is static (requires --serve-skills)")
 	f.Int(flagServeBudget, 0, "Bytes of skill content a session may read (load_skill, get_skill, read_skill_file, resources/read); 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills)")
+	f.Int64(flagServeMaxClone, 0, "Largest git skill source clone in bytes for sources that set no max_clone_bytes; overrides AI_RULEZ_MAX_CLONE_BYTES; 0 uses the environment variable, then 256 MiB (requires --serve-skills)")
 	f.String(flagServeUsageLog, "", "Append one identifier-only JSON line per load_skill to this file (requires --serve-skills)")
 	f.String(flagServeUsageSink, "", "Shell command that receives each load_skill usage line on stdin (requires --serve-skills)")
 	f.Bool(flagServeNoWatch, false, "Do not reload skills when their files change (requires --serve-skills)")
@@ -48,6 +50,22 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 // It starts the live-reload watcher on ctx. Nothing is written to disk except
 // the optional usage log and the source cache.
 func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
+	setup, err := serveSetupFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+	applyServeNetworkPolicy(setup.Frozen, setup.Offline)
+
+	srv, err := setup.NewServer(ctx)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already wrapped
+	}
+	go srv.Watch(ctx)
+	return srv, nil
+}
+
+// serveSetupFromFlags reads the flags of `mcp --serve-skills`.
+func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	flags := cmd.Flags()
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: workingDir()}
 	var err error
@@ -67,6 +85,7 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 	read(flagServeOffline, func() (e error) { setup.Offline, e = flags.GetBool(flagServeOffline); return })
 	read(flagServeIncludeStatic, func() (e error) { setup.IncludeStatic, e = flags.GetBool(flagServeIncludeStatic); return })
 	read(flagServeBudget, func() (e error) { setup.BudgetBytes, e = flags.GetInt(flagServeBudget); return })
+	read(flagServeMaxClone, func() (e error) { setup.MaxCloneBytes, e = flags.GetInt64(flagServeMaxClone); return })
 	read(flagServeUsageLog, func() (e error) { setup.UsageLog, e = flags.GetString(flagServeUsageLog); return })
 	read(flagServeUsageSink, func() (e error) { setup.UsageSink, e = flags.GetString(flagServeUsageSink); return })
 	read(flagServeNoWatch, func() (e error) { setup.NoWatch, e = flags.GetBool(flagServeNoWatch); return })
@@ -74,14 +93,7 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped above
 	}
-	applyServeNetworkPolicy(setup.Frozen, setup.Offline)
-
-	srv, err := setup.NewServer(ctx)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // already wrapped
-	}
-	go srv.Watch(ctx)
-	return srv, nil
+	return setup, nil
 }
 
 // applyServeNetworkPolicy turns --frozen and --offline into the include lock

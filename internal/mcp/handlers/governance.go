@@ -27,10 +27,11 @@ import (
 const remoteSkippedNote = "remote includes and installed skills resolve from the local cache only: any that is not cached is left out; run `ai-rulez generate` to fetch it"
 
 // LockView is a serve view lock_status checks on top of the default one: the
-// selectors of `lock --role`, `--profile`, `--include-static` and `--source`.
+// selectors of `lock --role`, `--profile`, `--targets`, `--include-static` and `--source`.
 type LockView struct {
 	Role          string
 	Profile       string
+	Targets       string
 	IncludeStatic bool
 	Sources       []string
 }
@@ -136,9 +137,9 @@ func LockStatusHandler(version string, dynamic DynamicLockChanges) func(ctx cont
 		kind := request.GetString("kind", "")
 		profile := request.GetString("profile", "")
 		role := request.GetString("role", "")
-		view := LockView{Role: role, Profile: profile, IncludeStatic: request.GetBool("include_static", false), Sources: request.GetStringSlice("sources", nil)}
+		view := LockView{Role: role, Profile: profile, Targets: request.GetString("targets", ""), IncludeStatic: request.GetBool("include_static", false), Sources: request.GetStringSlice("sources", nil)}
 		var views []LockView
-		if view.Role != "" || view.Profile != "" || view.IncludeStatic || len(view.Sources) > 0 {
+		if view.Role != "" || view.Profile != "" || view.Targets != "" || view.IncludeStatic || len(view.Sources) > 0 {
 			views = []LockView{view}
 		}
 		var only []string

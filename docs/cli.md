@@ -1820,6 +1820,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
 | `--role <name>` | Also pin the skills this role serves, as a view of their own (see `mcp --serve-skills --role`), and the rendered outputs of the role. With `--check` or `--diff`, limits the role-output comparison to that role |
 | `--roles` | Also pin the rendered outputs of every role, as one digest per role; roles with `pin = true` are always pinned. Not with `--check`, `--diff`, `--kind` or names. See [Composing with roles](lockfile.md#composing-with-roles) |
+| `--targets <preset>` | Also pin the view that serves this preset's rendering of the skills (as `mcp --serve-skills --targets`) |
 | `--include-static` | Also pin the view that serves static skills too |
 | `--source <src>` | Also pin the view with this extra skill source (repeatable, as `mcp --serve-skills --source`). A view is recorded next to the default one as `[[served]]` entries with a `view` key, and a plain `lock` re-pins views recorded earlier |
 | `--strict` | Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
@@ -2120,7 +2121,8 @@ ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--fro
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
 `list_skill_resources` and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
 `--allow`, `--deny`, `--source` (repeatable), `--role`, `--frozen`, `--offline`, `--include-static`,
-`--budget-bytes`, `--usage-log`, `--usage-sink`, `--no-watch`, `--reload-interval`. `--role` names a role of
+`--budget-bytes`, `--max-clone-bytes` (overrides `AI_RULEZ_MAX_CLONE_BYTES`), `--usage-log`, `--usage-sink`,
+`--no-watch`, `--reload-interval`. `--role` names a role of
 `[[roles]]`: the server serves only that role's skills, with the role's [delivery](roles.md#delivery).
 
 See the [MCP Server Documentation](mcp-server.md) and [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)

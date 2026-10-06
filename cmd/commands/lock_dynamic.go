@@ -23,6 +23,7 @@ const exitUnpinned = 3
 var (
 	lockServeRole          string
 	lockServeIncludeStatic bool
+	lockServeTargets       string
 	lockServeSources       []string
 	lockStrict             bool
 	// lockUnpinned collects the refusals of the current run (runLockFor resets it
@@ -33,6 +34,7 @@ var (
 func init() {
 	f := LockCmd.Flags()
 	f.StringVar(&lockServeRole, "role", "", "Also pin the skills this role serves, as a view of their own (see mcp --serve-skills --role)")
+	f.StringVar(&lockServeTargets, "targets", "", "Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets)")
 	f.BoolVar(&lockServeIncludeStatic, "include-static", false, "Also pin the view that serves static skills too (see mcp --serve-skills --include-static)")
 	f.StringArrayVar(&lockServeSources, "source", nil, "Also pin the view with this extra skill source, repeatable (see mcp --serve-skills --source)")
 	f.BoolVar(&lockStrict, "strict", false, "Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3)")
@@ -40,10 +42,10 @@ func init() {
 
 // lockExtraViews is the view the serve-view flags select, if any.
 func lockExtraViews() []mcp.ServeSetup {
-	if lockServeRole == "" && lockProfile == "" && !lockServeIncludeStatic && len(lockServeSources) == 0 {
+	if lockServeRole == "" && lockProfile == "" && lockServeTargets == "" && !lockServeIncludeStatic && len(lockServeSources) == 0 {
 		return nil
 	}
-	return []mcp.ServeSetup{{Role: lockServeRole, Profile: lockProfile, IncludeStatic: lockServeIncludeStatic, Sources: lockServeSources}}
+	return []mcp.ServeSetup{{Role: lockServeRole, Profile: lockProfile, Preset: lockServeTargets, IncludeStatic: lockServeIncludeStatic, Sources: lockServeSources}}
 }
 
 // The lock command's part for dynamic skill loading: the commit and tree digest

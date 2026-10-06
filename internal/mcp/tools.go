@@ -797,6 +797,7 @@ func (s *Server) registerGovernanceTools() {
 				Enum("kind", "List only the changes of this kind (default: all); in_sync still covers the whole lock", govview.LockKinds, false).
 				String("profile", "Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view", false).
 				String("role", "Compare only this role's outputs and also check the skills it serves, as a view of their own (lock --role)", false).
+				String("targets", "Also check the view that serves this preset's rendering of the skills (lock --targets)", false).
 				Boolean("include_static", "Also check the view that serves static skills too (lock --include-static)", false).
 				StringArray("sources", "Also check the view with these extra skill sources (lock --source)", false)),
 			readOnlyAnnotations(),
@@ -804,7 +805,7 @@ func (s *Server) registerGovernanceTools() {
 		handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
 			extras := make([]ServeSetup, 0, len(views))
 			for _, v := range views {
-				extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+				extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
 			}
 			return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
 		}),

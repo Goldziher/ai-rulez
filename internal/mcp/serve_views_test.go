@@ -22,7 +22,9 @@ func TestServeSetup_ViewKeyRoundTrips(t *testing.T) {
 		{"include-static", ServeSetup{IncludeStatic: true}, "static"},
 		{"role with static", ServeSetup{Role: "backend", IncludeStatic: true}, "role:backend+static"},
 		{"sources are sorted", ServeSetup{Sources: []string{"./b-skills", "./a-skills"}}, "source:cli-a-skills+source:cli-b-skills"},
-		{"everything", ServeSetup{Profile: "p", IncludeStatic: true, Sources: []string{"./x"}}, "profile:p+static+source:cli-x"},
+		{"targets", ServeSetup{Preset: "cursor"}, "targets:cursor"},
+		{"role with targets", ServeSetup{Role: "backend", Preset: "cursor"}, "role:backend+targets:cursor"},
+		{"everything", ServeSetup{Profile: "p", Preset: "codex", IncludeStatic: true, Sources: []string{"./x"}}, "profile:p+targets:codex+static+source:cli-x"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -39,6 +41,7 @@ func TestServeSetup_ViewKeyRoundTrips(t *testing.T) {
 			require.True(t, ok)
 			assert.Equal(t, tt.setup.Role, back.Role)
 			assert.Equal(t, tt.setup.Profile, back.Profile)
+			assert.Equal(t, tt.setup.Preset, back.Preset)
 			assert.Equal(t, tt.setup.IncludeStatic, back.IncludeStatic)
 		})
 	}
