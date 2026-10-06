@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/samber/oops"
 )
@@ -53,7 +53,7 @@ func (s Spec) maxCloneBytes(global int64) int64 {
 	case global > 0:
 		return global
 	}
-	if v, err := strconv.ParseInt(strings.TrimSpace(os.Getenv(EnvMaxCloneBytes)), 10, 64); err == nil && v > 0 {
+	if v, err := strconv.ParseInt(strings.TrimSpace(ambient.Getenv(nil, EnvMaxCloneBytes)), 10, 64); err == nil && v > 0 {
 		return v
 	}
 	return DefaultMaxCloneBytes
@@ -65,7 +65,7 @@ func (s Spec) maxCloneFiles() int {
 	if s.MaxCloneFiles > 0 {
 		return s.MaxCloneFiles
 	}
-	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(EnvMaxCloneFiles))); err == nil && v > 0 {
+	if v, err := strconv.Atoi(strings.TrimSpace(ambient.Getenv(nil, EnvMaxCloneFiles))); err == nil && v > 0 {
 		return v
 	}
 	return DefaultMaxCloneFiles

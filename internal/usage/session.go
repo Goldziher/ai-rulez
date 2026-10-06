@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -54,7 +55,7 @@ func saltPathFor(options RecordOptions, cwd string) string {
 // a concurrent reader sees either no file or the complete salt, never an empty
 // one; a crash leaves no truncated file behind.
 func loadSalt(path string) string {
-	if salt := os.Getenv(SaltEnv); salt != "" {
+	if salt := ambient.Getenv(nil, SaltEnv); salt != "" {
 		return salt
 	}
 	if path == "" {
