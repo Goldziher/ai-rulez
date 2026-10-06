@@ -44,10 +44,10 @@ func TestServeSetup_UnknownDomainIsAnErrorAtStart(t *testing.T) {
 		"domains/ops/skills/deploy/SKILL.md": skillFile("deploy", "Deploy things", ""),
 	})
 
-	_, err := (&ServeSetup{WorkDir: root, NoWatch: true, Filter: SkillFilter{Domains: []string{"opps"}}}).NewServer(context.Background())
+	_, err := (&ServeSetup{WorkDir: root, NoWatch: true, Filter: SkillFilter{Domains: []string{"opz"}}}).NewServer(context.Background())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `unknown domain "opps"`)
+	assert.Contains(t, err.Error(), `unknown domain "opz"`)
 
 	srv, err := (&ServeSetup{WorkDir: root, NoWatch: true, Filter: SkillFilter{Domains: []string{"root", "ops"}}}).NewServer(context.Background())
 	require.NoError(t, err)
