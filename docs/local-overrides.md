@@ -188,19 +188,22 @@ create it on first use. Overlay files are validated against `schema/ai-rules-loc
 
 | Key kind | Keys | Rule |
 | -------- | ---- | ---- |
-| Scalars | `name`, `description`, `default`, `gitignore`, `compact`, ... | Local value wins |
-| Lists | Any list not named below | Local list replaces the shared list |
-| Tables | `profiles`, `header`, `defaults`, `mcp`, `rules`, `plugin`, `marketplace` | Merged per key; local keys win |
-| `presets` | | Ordered union: local entries are appended, duplicates collapse. `"!name"` drops a shared preset |
-| Named lists | `mcp_servers`, `plugins`, `includes`, `installed_skills`, `marketplaces`, `scopes` | Entries merge by `name` (`scopes` by `path` when unnamed). A local entry with `remove = true` deletes the shared entry; a new name appends |
+| Scalars | `name`, `description`, `default`, `gitignore`, `compact`, `agents_md`, `codex_skills_dir`, ... | Local value wins |
+| Lists | Any list not named below (`hooks`, `skill_sources`, `bundle_exclude`, the values of `profiles`, ...) | Local list replaces the shared list |
+| Tables | `profiles`, `header`, `defaults`, `mcp`, `rules`, `plugin`, `marketplace`, `placement`, `claude`, `lint`, `permissions`, `guard`, `role_manifest`, `lock`, `llm` | Merged per key, recursively; local keys win and lists inside replace the shared list. A table key that is not a table locally (including `null`) is an error |
+| Other tables | `domains`, `skills`, `okf`, `usage`, `telemetry`, `codex` | Merged per key like the tables above (a non-table local value replaces the shared one instead of erroring) |
+| `presets` | | Ordered union: local entries are appended, duplicates collapse (a table beats a bare name; two tables merge, the local one wins). `"!name"` drops a shared preset |
+| Named lists | `mcp_servers`, `plugins`, `includes`, `installed_skills`, `marketplaces`, `scopes`, `roles`, `verifiers` | Entries merge by `name` (`scopes` by `path` when unnamed). A local entry with `remove = true` deletes the shared entry; a new name appends |
 | `builtins` | | Local value replaces the shared one |
-| `version` | | Must equal the shared version if set |
+| `version` | | Must be a string and equal the shared version if set |
 
 Other rules:
 
 - Unknown keys are an error. Error messages name keys and entry positions, never values.
 - Dropping a preset or removing an entry that the shared config does not have produces a warning.
 - `remove` is not valid on preset tables; use `"!name"`.
+- Every named-list entry needs a `name` (a `scopes` entry a `name` or `path`); a duplicate local entry, or one that matches several shared entries, is an error.
+- `[llm]` and `[telemetry]` network, credential and `service_name` keys are ignored when they come from the overlay (user scope only), and a local include or `local_override` that points outside the project is allowed here but not in the committed `config.toml`. See the [trust model](trust-model.md).
 
 ```toml
 # .ai-rulez/config.local.toml
