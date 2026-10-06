@@ -64,9 +64,9 @@ type Config struct {
 	PriceOutputPerMTok float64 `yaml:"price_output_per_mtok,omitempty" json:"price_output_per_mtok,omitempty" toml:"price_output_per_mtok,omitempty"`
 
 	// repoProvider and repoModelRoute record that provider routing (the provider
-	// field, or a provider/ prefix in model) came from a repository config rather
+	// field, or a provider/ prefix in model or embedding_model) came from a repository config rather
 	// than from user scope. Set only by Resolve; see RoutingFromRepo.
-	repoProvider, repoModelRoute bool
+	repoProvider, repoModelRoute, repoEmbedRoute bool
 }
 
 // MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
@@ -128,6 +128,9 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	}
 	if strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")) != "" {
 		c.repoModelRoute = false
+	}
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_EMBEDDING_MODEL")) != "" {
+		c.repoEmbedRoute = false
 	}
 	str("BACKEND", &c.Backend)
 	str("BASE_URL", &c.BaseURL)

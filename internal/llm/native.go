@@ -65,6 +65,7 @@ func NativeAvailable() bool {
 // literLLM adapts a NativeClient to Client. Status: experimental.
 type literLLM struct {
 	native     NativeClient
+	provider   string // the provider prefix every request model must route to
 	model      string
 	embedModel string
 	pricing    Pricing
@@ -90,7 +91,42 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	if err != nil {
 		return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
 	}
-	return &literLLM{native: n, model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg)}, nil
+	return &literLLM{native: n, provider: routeProvider(cfg), model: cfg.FullModel(), embedModel: embedFull(cfg), pricing: NewPricing(cfg)}, nil
+}
+
+// routeProvider is the provider the configured models route to: the provider
+// field, else the prefix of the chat model, else of the embedding model.
+func routeProvider(cfg Config) string {
+	if cfg.Provider != "" {
+		return cfg.Provider
+	}
+	for _, m := range []string{cfg.Model, cfg.EmbeddingModel} {
+		if strings.Contains(m, "/") {
+			return modelPrefix(m)
+		}
+	}
+	return ""
+}
+
+// requestModel resolves a per-request model override. liter-llm routes on the
+// provider/ prefix, and with it picks the key, so an override that names another
+// provider could send the configured credential somewhere the user never chose
+// (a repository config sets verifier and embedding models). A bare override is
+// pinned to the configured provider; a prefixed one must already name it.
+func (l *literLLM) requestModel(override, configured string) (string, error) {
+	if override == "" || override == configured {
+		return configured, nil
+	}
+	if !strings.Contains(override, "/") {
+		if l.provider == "" {
+			return override, nil
+		}
+		return l.provider + "/" + override, nil
+	}
+	if modelPrefix(override) != l.provider {
+		return "", newError(KindConfig, "%s llm-config-invalid: refusing request model %q: its provider prefix is not the configured provider %q, so the configured key would be sent to another service; set provider and model in the user config instead", CodeConfigInvalid, override, l.provider)
+	}
+	return override, nil
 }
 
 func embedFull(cfg Config) string {
@@ -143,7 +179,10 @@ func classifyNative(err error) error {
 var errEmptyNative = permanentError("liter-llm returned an empty reply without an error")
 
 func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
-	model := firstNonEmpty(req.Model, l.model)
+	model, err := l.requestModel(req.Model, l.model)
+	if err != nil {
+		return ChatResponse{}, err
+	}
 	if model == "" {
 		return ChatResponse{}, newError(KindConfig, "%s llm-config-invalid: no model configured; set [llm] model", CodeConfigInvalid)
 	}
@@ -162,7 +201,10 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 }
 
 func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
-	model := firstNonEmpty(req.Model, l.embedModel)
+	model, err := l.requestModel(req.Model, l.embedModel)
+	if err != nil {
+		return EmbedResponse{}, err
+	}
 	if model == "" {
 		return EmbedResponse{}, newError(KindConfig, "%s llm-config-invalid: no embedding model configured; set [llm] embedding_model", CodeConfigInvalid)
 	}
