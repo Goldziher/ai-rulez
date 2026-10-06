@@ -308,9 +308,6 @@ func (r *runner) checkTraps() {
 	if len(relevant) == 0 {
 		return
 	}
-	if len(relevant) == 0 {
-		return
-	}
 	paths := r.tree.Paths()
 	paths = append(paths, r.ignoredGeneratedPaths(relevant, paths)...)
 	sort.Strings(paths)
