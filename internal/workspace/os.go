@@ -51,3 +51,27 @@ func vcsTop(abs string) string {
 		cur = parent
 	}
 }
+
+// IsDisk reports whether ws reads the real file system: only such a workspace
+// can be written to by a generate run, and only its root names a directory that
+// exists.
+func IsDisk(ws Workspace) bool {
+	w, ok := ws.(*fsWorkspace)
+	return ok && w.reach
+}
+
+// rooted is a Workspace that reports another root.
+type rooted struct {
+	Workspace
+	root string
+}
+
+func (r rooted) Root() string { return r.root }
+
+// WithRoot returns ws reporting root as its root. A workspace that is not backed by
+// the real file system is given a virtual root this way, so an engine that keeps
+// absolute paths in its data model never names a directory that exists on the disk
+// of the process; reads of such a path fail as if nothing had been generated there.
+func WithRoot(ws Workspace, root string) Workspace {
+	return rooted{Workspace: ws, root: filepath.Clean(root)}
+}

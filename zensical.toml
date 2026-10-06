@@ -57,6 +57,7 @@ nav = [
   { "CLI Commands" = "cli.md" },
   { "MCP Server" = "mcp-server.md" },
   { "Schema" = "schema.md" },
+  { "Embedding (Go API)" = "embedding.md" },
   { "Migrating to v5" = "migration-v5.md" },
   { "Proposals" = [
     { "Agent Extends" = "proposals/agent-extends.md" },

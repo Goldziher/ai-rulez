@@ -55,6 +55,40 @@ jobs:
           version: latest
           args: --timeout=5m
 
+  public-api:
+    name: Public API (pkg/airulez)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          cache: false
+
+      # tests/external is its own module: it imports ai-rulez as an outside
+      # consumer would, so a break in what pkg/airulez exposes fails here.
+      - name: Test as an external consumer
+        working-directory: tests/external
+        run: go test ./...
+
+      # The compatibility gate: pkg/... may only change additively inside a
+      # major version. It needs the network (module proxy and tags), so it runs
+      # here only; with no v5 release yet there is nothing to compare against.
+      - name: Compatibility with the last v5 release (gorelease)
+        run: |
+          base=$(git tag --list 'v5.*' --sort=-v:refname | grep -v -- '-' | head -n1 || true)
+          if [ -z "$base" ]; then
+            echo "::notice::no v5 release to compare pkg/airulez against yet"
+            exit 0
+          fi
+          go install golang.org/x/exp/cmd/gorelease@latest
+          gorelease -base="$base"
+
   npm-wrapper:
     name: npm wrapper (Node 24)
     runs-on: ubuntu-latest
