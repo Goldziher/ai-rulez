@@ -650,14 +650,15 @@ URL credentials and quoted source values are removed, since the merged config ca
 
 #### `init_project`
 
-Initialize a new ai-rulez project in the current directory. Unlike the CLI `init` (which defaults to
-TOML), this writes `.ai-rulez/config.yaml`.
+Initialize a new ai-rulez project in the current directory with the layout `ai-rulez init` creates:
+`.ai-rulez/config.toml` plus the `rules/`, `context/`, `skills/`, `agents/` and `domains/` directories. It refuses
+to overwrite an existing configuration.
 
 **Parameters:**
 
 - `project_name` (optional, string): Project name
 - `providers` (optional, array): Providers to enable, such as `claude` or `cursor`
-- `with_agents` (optional, boolean): Include sample agent configurations
+- `with_agents` (optional, boolean): Accepted for compatibility; `agents/` is always created
 - `all_providers` (optional, boolean): Enable the curated set of tool presets
 - `popular_providers` (optional, boolean): Same curated set — a shortcut for `all_providers`
 - `working_directory` (optional, string): Directory to operate in

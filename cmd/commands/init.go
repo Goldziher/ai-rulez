@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/spf13/cobra"
 )
@@ -243,49 +244,7 @@ func generateConfigJSON(projectName string) string {
 
 // generateConfigTOML generates a TOML configuration template
 func generateConfigTOML(projectName string) string {
-	var builder strings.Builder
-	builder.WriteString(`# AI-Rulez Configuration
-# Directory-based configuration with domain scoping
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Version (required)
-version = "4.0"
-
-# Project name (required)
-name = "`)
-	builder.WriteString(projectName)
-	builder.WriteString(`"
-
-# Optional description
-# description = "AI-powered development governance for `)
-	builder.WriteString(projectName)
-	builder.WriteString(`"
-
-# Presets: built-in tools or custom outputs
-# Built-in presets: `)
-	builder.WriteString(builtinPresetList())
-	builder.WriteString(`
-presets = ["claude"]
-
-# Default profile to use when generating
-# default = "full"
-
-# Named profiles (domain combinations)
-# [profiles]
-# full = ["backend", "frontend", "qa"]
-# backend = ["backend"]
-# frontend = ["frontend"]
-
-# Gitignore management
-# gitignore = true
-
-# MCP Servers (optional)
-# [[mcp_servers]]
-# name = "ai-rulez"
-# command = "npx"
-# args = ["-y", "ai-rulez@latest", "mcp"]
-`)
-	return builder.String()
+	return templates.InitConfigTOML(projectName, []string{"claude"})
 }
 
 // createDomainDirectories creates domain subdirectories
