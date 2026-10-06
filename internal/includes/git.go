@@ -427,6 +427,9 @@ func (s *GitSource) scanCachedContent(ctx context.Context) (*config.ContentTree,
 				With("repo", RedactURL(s.repoURL)).
 				Wrapf(err, "failed to scan content tree")
 		}
+		if scanned.ImportedVerifiers, err = config.ScanVerifierFiles(aiRulezDir); err != nil {
+			return nil, oops.Wrapf(err, "failed to scan verifiers")
+		}
 		storeScan(aiRulezDir, scanned)
 		contentTree = scanned
 	} else {
