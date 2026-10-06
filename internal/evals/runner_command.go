@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -65,6 +66,9 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	cmd.Stderr = r.Stderr
 	cmd.Env = append(cmd.Environ(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID)
 	if err := runTree(cmd); err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return nil, fmt.Errorf("runner command timed out after %s (raise --timeout)", timeout)
+		}
 		return nil, fmt.Errorf("runner command failed: %w", err)
 	}
 	var resp Response

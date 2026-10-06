@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,6 +90,19 @@ func TestCommandRunner_Errors(t *testing.T) {
 
 	_, err = (&CommandRunner{Command: `echo '{"version":1,"results":[{"case":"fires","arm":"sideways"}]}'`}).Run(context.Background(), req)
 	assert.ErrorContains(t, err, "arm must be")
+}
+
+func TestCommandRunner_TimeoutNamesTheLimit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the runner is a POSIX shell script")
+	}
+	req := sampleRequest(t)
+
+	_, err := (&CommandRunner{Command: "sleep 5", Timeout: 200 * time.Millisecond}).Run(context.Background(), req)
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "timed out after")
+	assert.NotContains(t, err.Error(), "signal: killed")
 }
 
 func TestBuildClaudePlugin_TranslatesCases(t *testing.T) {
