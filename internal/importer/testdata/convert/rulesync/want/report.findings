@@ -26,7 +26,8 @@ dropped | .rulesync/rules/coding-guidelines.md | cursor |  | tool-specific secti
 mapped | .rulesync/rules/coding-guidelines.md | rule | rules/coding-guidelines.md | 
 mapped | .rulesync/rules/overview.md | context | context/overview.md | 
 approximated | .rulesync/rules/overview.md | root | context/overview.md | root rules are written into every tool's root file; ai-rulez does that with context
-needs-action | .rulesync/rules/personal.md | localRoot |  | personal local rule is not imported into the committed tree; copy it to .ai-rulez/local/rules/ or .ai-rulez/local/context/ by hand
+mapped | .rulesync/rules/personal.md | context | local/context/personal.md | 
+approximated | .rulesync/rules/personal.md | localRoot | local/context/personal.md | personal rule imported into the machine-local tree .ai-rulez/local/, which git ignores; it never reaches a committed output
 dropped | .rulesync/rules/testing.md | devin |  | tool-specific section is not carried (keys: description); ai-rulez has no per-tool overrides
 approximated | .rulesync/rules/testing.md | devin.trigger | rules | activation taken from this section; it applies to every tool
 mapped | .rulesync/rules/testing.md | rule | rules/testing.md | 
