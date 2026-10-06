@@ -1,10 +1,13 @@
 package lint
 
+import "strings"
+
 // Codes of the model-judged review feature (docs/review.md). AR9G is the review
 // block of the allocation table in docs/strict-validation.md. Phase 0 (no model
 // call) emits AR9G8 from `rubric lint`, AR9G0 as a run note and AR9G1-AR9G7 from
-// the deterministic lint evidence behind each rubric dimension; AR9G9
-// (judge-calibration-stale) is reserved for the calibration phase.
+// the deterministic lint evidence behind each rubric dimension. With --semantic the
+// same codes carry the judge's verdicts, and AR9G9 (judge-calibration-stale) reports a
+// judge that has no matching calibration record.
 const (
 	CodeReviewRunNote           = "AR9G0"
 	CodeReviewTriggerVague      = "AR9G1"
@@ -15,6 +18,7 @@ const (
 	CodeReviewInstructionClash  = "AR9G6"
 	CodeReviewBodyStructure     = "AR9G7"
 	CodeReviewRubricInvalid     = "AR9G8"
+	CodeReviewCalibrationStale  = "AR9G9"
 	reviewCodeDescriptionSuffix = " (advisory: reported by `ai-rulez review`, never by `validate`)"
 )
 
@@ -29,6 +33,7 @@ func init() {
 		RuleInfo{CodeReviewInstructionClash, "instruction-conflict", SeverityWarning, "an item contradicts another item" + reviewCodeDescriptionSuffix},
 		RuleInfo{CodeReviewBodyStructure, "body-structure", SeverityInfo, "a body is bloated or badly structured" + reviewCodeDescriptionSuffix},
 		RuleInfo{CodeReviewRubricInvalid, "rubric-invalid", SeverityError, "a rubric (`.ai-rulez/rubrics/<id>/rubric.toml`) or one of its golden or calibration files is malformed"},
+		RuleInfo{CodeReviewCalibrationStale, "judge-calibration-stale", SeverityInfo, "a judged review ran on a model alias, or without a calibration record that matches the rubric, prompt, golden set and model" + reviewCodeDescriptionSuffix},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodeReviewRunNote: {
@@ -71,10 +76,33 @@ func init() {
 			Bad:  "A 900-line skill body with an unclosed code fence",
 			Good: "A short body, with detail moved to `references/`",
 		},
+		CodeReviewCalibrationStale: {
+			Why:  "A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labelled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.",
+			Bad:  "`review --semantic --gate` on `gemini-flash-latest`, or after editing `rubric.toml`, with the old `calibration.json`",
+			Good: "A pinned model id and a `calibration.json` written by `review calibrate` for the current rubric digest, prompt digest and golden set, younger than `max_age_days`",
+		},
 		CodeReviewRubricInvalid: {
 			Why:  "A rubric that does not parse, whose weights do not sum to 1, or that names an unknown lint twin cannot be scored against, so the review would silently use something other than what the file says.",
 			Bad:  "Dimension weights of 0.5 and 0.2",
 			Good: "Weights that sum to 1, unique dimension ids, and `twins` that are registered rule codes",
 		},
+	})
+}
+
+// secretRedaction replaces a credential in redacted text.
+const secretRedaction = "[REDACTED:" + CodeSecretDetected + "]"
+
+// RedactSecrets masks every credential the security scan (AR001) recognises with
+// [REDACTED:AR001]. `ai-rulez review` uses it for [review] on_secret = "redact": it
+// then re-scans the masked text and withholds the item if anything is left.
+func RedactSecrets(s string) string {
+	for _, p := range builtinSecrets {
+		s = p.re.ReplaceAllString(s, secretRedaction)
+	}
+	return genericCredential.ReplaceAllStringFunc(s, func(m string) string {
+		if sub := genericCredential.FindStringSubmatch(m); len(sub) > 1 && hasLetterAndDigit(sub[1]) {
+			return strings.Replace(m, sub[1], secretRedaction, 1)
+		}
+		return m
 	})
 }
