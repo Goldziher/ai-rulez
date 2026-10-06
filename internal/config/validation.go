@@ -24,6 +24,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateContentProblems(); err != nil {
+		return err
+	}
+
 	if err := c.validatePresets(); err != nil {
 		return err
 	}
