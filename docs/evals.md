@@ -321,6 +321,13 @@ as evidence. A record without a valid signature (committed from another machine,
 unverified: when `AR997` or `AR998` is enabled it is reported with an "unverified" message instead of being treated as
 a passing run. Lint never creates the key, so on a machine that has never run `eval run` every record is unverified.
 
+**CI.** A CI runner has no `eval-results.key` (it is per user and never committed), so every committed record is
+unverified there. With `require_fresh` or `min_pass_rate` set, `validate --strict` therefore reports `AR997` and
+`AR998` as "unverified" for every skill that has a record, whatever the stored pass rate, and they fail the build at
+the configured severity. Either run `eval run` in CI (it creates a key on the runner and records fresh, verified
+results), or leave `AR997` and `AR998` off in CI (`--lint-profile`, or `[lint.severity] AR997 = "off"` in the CI
+overlay) and enforce evals with the job that runs them.
+
 ```toml
 [lint.evals]
 require = true            # AR962: skills need cases
