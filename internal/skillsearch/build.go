@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/samber/oops"
 )
@@ -284,28 +286,74 @@ func (b *builder) finish() (*BuildResult, error) {
 // ErrLocked means another `search index` run holds the index directory.
 var ErrLocked = errors.New("another 'search index' run holds index.lock")
 
-// Lock takes the advisory lock of an index directory. The returned function
-// releases it. A lock older than ten minutes is taken over: its run died.
-func Lock(dir string) (release func(), err error) {
+// lockHeartbeat is how often a held lock refreshes its modification time, so a
+// build that outlives staleLockAge is not taken over while it still runs.
+const lockHeartbeat = staleLockAge / 5
+
+// Lock takes the advisory lock of an index directory (clock nil is the wall
+// clock). The returned function releases it, and removes the file only while it
+// is still this run's. A held lock keeps its modification time fresh; one that
+// has not been touched for ten minutes belongs to a dead run and is taken over.
+func Lock(dir string, clock ambient.Clock) (release func(), err error) {
+	return lockWith(dir, clock, lockHeartbeat)
+}
+
+func lockWith(dir string, clock ambient.Clock, heartbeat time.Duration) (release func(), err error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, oops.Wrapf(err, "create the search index directory")
 	}
 	path := filepath.Join(dir, lockFile)
+	token := fmt.Sprintf("%d %d\n", os.Getpid(), clock.Now().UnixNano())
 	for attempt := 0; attempt < 2; attempt++ {
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // project-controlled path
 		if err == nil {
-			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid()) //nolint:errcheck // informational
-			_ = f.Close()                              //nolint:errcheck // informational
-			return func() { _ = os.Remove(path) }, nil //nolint:errcheck // best effort
+			_, _ = f.WriteString(token) //nolint:errcheck // informational
+			_ = f.Close()               //nolint:errcheck // informational
+			return holdLock(path, token, clock, heartbeat), nil
 		}
 		if !os.IsExist(err) {
 			return nil, oops.Wrapf(err, "lock the search index")
 		}
 		info, statErr := os.Stat(path)
-		if statErr == nil && time.Since(info.ModTime()) < staleLockAge {
+		if statErr == nil && clock.Now().Sub(info.ModTime()) < staleLockAge {
 			return nil, oops.Hint("Wait for it to finish, or remove " + path + " if no run is active").Wrap(ErrLocked)
 		}
 		_ = os.Remove(path) //nolint:errcheck // a stale lock; the retry reports a real failure
 	}
 	return nil, ErrLocked
+}
+
+// holdLock keeps path fresh until the returned release runs.
+func holdLock(path, token string, clock ambient.Clock, heartbeat time.Duration) func() {
+	owned := func() bool {
+		b, err := os.ReadFile(path) //nolint:gosec // project-controlled path
+		return err == nil && string(b) == token
+	}
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		tick := time.NewTicker(heartbeat)
+		defer tick.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-tick.C:
+				if owned() {
+					now := clock.Now()
+					_ = os.Chtimes(path, now, now) //nolint:errcheck // the next beat retries
+				}
+			}
+		}
+	}()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			close(stop)
+			<-done
+			if owned() {
+				_ = os.Remove(path) //nolint:errcheck // best effort
+			}
+		})
+	}
 }
