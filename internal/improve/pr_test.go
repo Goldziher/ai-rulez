@@ -19,7 +19,7 @@ import (
 // gitIn runs git in dir with a world that cannot sign or read the user's configuration.
 func gitIn(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", "-c", "user.email=t@example.test", "-c", "user.name=t"}, args...)...) //nolint:gosec // test
+	cmd := gitutil.CommandNoContext("", append([]string{"-C", dir, "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", "-c", "user.email=t@example.test", "-c", "user.name=t"}, args...)...)
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
