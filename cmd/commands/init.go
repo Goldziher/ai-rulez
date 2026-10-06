@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
@@ -76,17 +77,21 @@ func runInit(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 
-		// Remove existing directory
-		if err := os.RemoveAll(configDir); err != nil {
-			logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
-			os.Exit(1)
+		// An import keeps the old directory until the new one is written; anything
+		// else starts from nothing.
+		if fromFlag == "" {
+			if err := os.RemoveAll(configDir); err != nil {
+				logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
+				os.Exit(1)
+			}
+			logger.Info("Existing " + configDir + "/ directory removed")
 		}
-		logger.Info("Existing " + configDir + "/ directory removed")
 	}
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
-		if err := runInitImport(cmd.Context(), workingDir, configDir); err != nil {
+		err := replaceConfigDir(configDir, func() error { return runInitImport(cmd.Context(), workingDir, configDir) })
+		if err != nil {
 			logger.Error("Failed to import from sources", "error", err)
 			os.Exit(1)
 		}
@@ -435,4 +440,35 @@ func handleHooksSetup() {
 		logger.Info(fmt.Sprintf("  ✅ Successfully configured %s for ai-rulez validation", hooks.GetHookSystemName(hookSystem)))
 		logger.Info("    Your AI rules will be validated automatically on git commit")
 	}
+}
+
+// replaceConfigDir runs write with configDir cleared, keeping the old directory
+// aside until write succeeds: a failed import puts it back instead of leaving the
+// project without a configuration.
+func replaceConfigDir(configDir string, write func() error) error {
+	if _, err := os.Stat(configDir); err != nil {
+		return write()
+	}
+	backup := fmt.Sprintf("%s.replaced-%d", configDir, os.Getpid())
+	if err := os.RemoveAll(backup); err != nil {
+		return oops.Wrapf(err, "clear %s", backup)
+	}
+	if err := os.Rename(configDir, backup); err != nil {
+		return oops.Wrapf(err, "move aside the existing %s/ directory", configDir)
+	}
+	if err := write(); err != nil {
+		if rmErr := os.RemoveAll(configDir); rmErr != nil {
+			return oops.Wrapf(err, "import failed and the partial %s/ could not be removed, the previous one is in %s", configDir, backup)
+		}
+		if mvErr := os.Rename(backup, configDir); mvErr != nil {
+			return oops.Wrapf(err, "import failed and the previous %s/ could not be restored from %s", configDir, backup)
+		}
+		return err
+	}
+	if err := os.RemoveAll(backup); err != nil {
+		logger.Warn("Could not remove the previous configuration directory", "path", backup, "error", err)
+	} else {
+		logger.Info("Existing " + configDir + "/ directory replaced")
+	}
+	return nil
 }
