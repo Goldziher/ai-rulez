@@ -137,7 +137,7 @@ func init() {
 	f.BoolVar(&convertKeepNames, "keep-names", false, "Never rename to resolve a name collision (between imported items, or with an existing file under --merge): report it instead")
 	f.StringVar(&convertDelivery, "delivery", "", "How the imported skills reach the agent: static, served or both ([skills] delivery, or the domain's with --domain)")
 	f.BoolVar(&convertFetch, "fetch", false, "Read the remote git sources the input names (rulesync sources, APM dependencies that are not installed) over the network: https only, scanned before anything is written, skills pinned to the commit that was read. Without it nothing is fetched and each source is reported")
-	f.BoolVar(&convertLock, "lock", false, "After writing, run `ai-rulez lock` on the converted config to pin remote sources, authored content and outputs (needs --write)")
+	f.BoolVar(&convertLock, "lock", false, "After writing, run ai-rulez lock on the converted config to pin remote sources, authored content and outputs (needs --write)")
 	f.BoolVar(&convertEnableHooks, "enable-hooks", false, "Write imported hooks as live [[hooks]]; without it they are a commented block you review first (a hook runs a command on your machine)")
 	f.BoolVar(&convertEnablePerms, "enable-permissions", false, "Write imported allow rules as live [permissions]; without it they are commented (an allow applies to every harness). Ask and deny rules are always live")
 	f.BoolVar(&convertList, "list", false, "List the importers and what each detects in --source")
