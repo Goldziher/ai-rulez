@@ -121,6 +121,8 @@ type OCIExecuteOptions struct {
 	Dir string
 	// Target overrides the registry client (tests).
 	Target oci.Target
+	// Force replaces a tag that already points at a different artifact.
+	Force bool
 }
 
 // ExecuteOCI pushes the artifact the plan describes. It rebuilds the manifest
@@ -148,6 +150,14 @@ func ExecuteOCI(ctx context.Context, plan Plan, opts OCIExecuteOptions) (string,
 	}
 	t := opts.Target
 	t.Ref = plan.Ref
+	repo := plan.Ref[:strings.LastIndex(plan.Ref, ":")]
+	existing, err := CheckOCI(ctx, plan, opts)
+	if err != nil {
+		return "", err
+	}
+	if existing == plan.OCIDigest {
+		return repo + "@" + existing, nil // already published: nothing to push
+	}
 	digest, err := oci.Push(ctx, t, a)
 	if err != nil {
 		return "", newError(CodeTarget, ExitFailed, "check `docker login` for the registry and that the repository exists",
@@ -156,8 +166,26 @@ func ExecuteOCI(ctx context.Context, plan Plan, opts OCIExecuteOptions) (string,
 	if digest != plan.OCIDigest {
 		return "", newError(CodeTarget, ExitFailed, "", "the registry holds %s, the plan recorded %s", digest, plan.OCIDigest)
 	}
-	repo := plan.Ref[:strings.LastIndex(plan.Ref, ":")]
 	return repo + "@" + digest, nil
+}
+
+// CheckOCI asks the registry what the plan's tag points at and refuses to
+// overwrite a different artifact unless opts.Force is set (an OCI tag is
+// mutable, so a silent push would replace a release consumers pinned by tag). It
+// returns the digest the tag holds, "" when it is free.
+func CheckOCI(ctx context.Context, plan Plan, opts OCIExecuteOptions) (string, error) {
+	t := opts.Target
+	t.Ref = plan.Ref
+	existing, found, err := oci.Resolve(ctx, t)
+	if err != nil {
+		return "", newError(CodeTarget, ExitFailed, "check `docker login` for the registry and that it is reachable",
+			"cannot tell whether %s already exists: %s", plan.Ref, Redact(err.Error()))
+	}
+	if found && existing != plan.OCIDigest && !opts.Force {
+		return "", newError(CodeTarget, ExitFailed, "bump [plugin] version, or pass --force to replace the tag",
+			"%s already exists and holds %s; OCI tags are mutable, so replacing a release needs --force", plan.Ref, existing)
+	}
+	return existing, nil
 }
 
 // readDistFiles reads the files an OCI push needs from a dist directory.

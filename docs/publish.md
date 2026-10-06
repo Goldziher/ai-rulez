@@ -132,7 +132,8 @@ digest is `oci_digest` in the plan, the digest the registry reports after the pu
 dist files and refuses to push unless it matches the plan. Registry credentials come from the Docker credential store
 (`DOCKER_CONFIG`, `~/.docker/config.json` and its helpers), the same place `docker login` writes them, and are used only for
 the registry the reference names. Plain HTTP is used for loopback registries only. Pin consumers by digest:
-`host/path@sha256:...`.
+`host/path@sha256:...`. An OCI tag is mutable, so `--execute` resolves the tag first and refuses to replace an artifact with a
+different digest unless `--force` is given; pushing the identical artifact again is a no-op.
 
 ### Several plugins
 

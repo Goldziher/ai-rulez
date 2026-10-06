@@ -451,6 +451,25 @@ func TestPublish_OCIPushAndVerifyAgainstALocalRegistry(t *testing.T) {
 	assert.Contains(t, verifyOut.String(), "verified acme 1.4.0")
 }
 
+func TestPublish_OCIPushRefusesToOverwriteATagUnlessForced(t *testing.T) {
+	root := publishProject(t)
+	host := localRegistryHost(t)
+	publishTo, publishOCIRef, publishExecute, publishYes = publish.TargetOCI, host+"/acme/skills/acme", true, true
+	_, err := runPublishCapture(t)
+	require.NoError(t, err)
+	reconfigure(t, root, strings.Replace(publishProjectConfig, "Acme skills.", "Acme skills, changed.", 1))
+	publishDist = filepath.Join(t.TempDir(), "dist")
+
+	_, err = runPublishCapture(t)
+
+	requirePublishError(t, err, publish.CodeTarget, publish.ExitFailed)
+	assert.Contains(t, err.Error(), "already exists")
+
+	publishForce = true
+	_, err = runPublishCapture(t)
+	require.NoError(t, err)
+}
+
 func TestPublish_OCIWithoutARepositoryIsAConfigError(t *testing.T) {
 	publishProject(t)
 	publishTo, publishDryRun = publish.TargetOCI, true

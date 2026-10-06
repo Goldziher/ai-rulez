@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -224,6 +226,28 @@ func Push(ctx context.Context, t Target, a Artifact) (string, error) {
 		return "", oops.With("ref", t.Ref).Wrapf(err, "push the OCI artifact")
 	}
 	return packed.Digest, nil
+}
+
+// Resolve returns the digest the reference's tag or digest points at in the
+// registry; found is false when it does not exist.
+func Resolve(ctx context.Context, t Target) (dig string, found bool, err error) {
+	repo, ref, err := repoFor(t)
+	if err != nil {
+		return "", false, err
+	}
+	if ref.Reference == "" {
+		return "", false, oops.Errorf("%q names no tag or digest to resolve", t.Ref)
+	}
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+	desc, err := repo.Resolve(ctx, ref.Reference)
+	switch {
+	case errors.Is(err, errdef.ErrNotFound):
+		return "", false, nil
+	case err != nil:
+		return "", false, oops.With("ref", t.Ref).Wrapf(err, "resolve the OCI reference")
+	}
+	return desc.Digest.String(), true, nil
 }
 
 // Pulled is an artifact read back from a registry.

@@ -205,7 +205,7 @@ func init() {
 	f.BoolVar(&publishDryRun, "dry-run", false, "Run preflight and print the artifacts and commands without writing or running anything")
 	f.BoolVar(&publishExecute, "execute", false, "Run the upload (needs --to and --yes)")
 	f.BoolVar(&publishYes, "yes", false, "Confirm --execute without a prompt")
-	f.BoolVar(&publishForce, "force", false, "With --to github-release --execute, replace the assets of an existing release instead of refusing")
+	f.BoolVar(&publishForce, "force", false, "With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing")
 	f.BoolVar(&publishAllowDirty, "allow-dirty", false, "Publish from a tree with uncommitted changes or no commit")
 	f.StringArrayVar(&publishTemplates, "template", nil, "Render this text/template into <dist>/emit/ (repeatable)")
 	addPublishSignFlags(f)
@@ -282,8 +282,8 @@ func checkPublishFlags() error {
 		return oops.Errorf("--execute needs --to")
 	case publishExecute && !publishYes:
 		return oops.Hint("review the commands with --dry-run, then pass --yes").Errorf("--execute needs --yes")
-	case publishForce && (!publishExecute || publishTo != publish.TargetGitHubRelease):
-		return oops.Errorf("--force only applies with --to github-release --execute")
+	case publishForce && (!publishExecute || (publishTo != publish.TargetGitHubRelease && publishTo != publish.TargetOCI)):
+		return oops.Errorf("--force only applies with --to github-release or --to oci, and --execute")
 	case publishTag != "" && !ghOrPin:
 		return oops.Errorf("--tag needs --to github-release or --marketplace")
 	case publishChannel != "" && !publish.ValidChannel(publishChannel):
@@ -431,7 +431,7 @@ func executeDist(ctx context.Context, d *publish.Dist, dir string) error {
 			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil), Notice: func(msg string) { logger.Info(msg) },
 		})
 	case publish.TargetOCI:
-		result, err = publish.ExecuteOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir})
+		result, err = publish.ExecuteOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir, Force: publishForce})
 	default:
 		return oops.Errorf("the plan has no target to execute")
 	}
