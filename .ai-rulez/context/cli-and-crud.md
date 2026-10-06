@@ -20,7 +20,7 @@ Core commands:
 - `ai-rulez validate` checks config and content structure (`--strict` adds deep content checks).
 - `ai-rulez doctor` runs read-only diagnostics (removed presets, drift, unresolved MCP placeholders, missing tools); it exits 2 on errors.
 - `ai-rulez verify` checks generated files against their `Content-Hash` offline.
-- `ai-rulez migrate v4` converts V3 YAML config to V4 TOML config.
+- `ai-rulez migrate v4` converts a V3 `.ai-rulez/config.yaml` to V4 TOML config (a flat `ai-rulez.yaml` is not read; move it to `.ai-rulez/config.yaml` first). `-C` selects another project's config.
 - `ai-rulez mcp` starts the MCP server (usually launched by the assistant).
 
 CRUD helpers manage file-based content:
