@@ -123,7 +123,7 @@ func TestGenerate_HandWrittenServersSurviveAndCleanRestoresTheOriginal(t *testin
 		name, preset, path string
 		servers            []string
 	}{
-		{"claude settings", "claude", ".claude/settings.json", nil},
+		{"claude .mcp.json", "claude", ".mcp.json", nil},
 		{"gemini settings", "gemini", ".gemini/settings.json", []string{"ai-rulez"}},
 	}
 	for _, tt := range tests {
@@ -152,7 +152,7 @@ func TestGenerate_HandWrittenServersSurviveAndCleanRestoresTheOriginal(t *testin
 
 func TestClean_LeavesAServerTheUserEditedAndSaysSo(t *testing.T) {
 	tests := []struct{ name, preset, path string }{
-		{"claude settings", "claude", ".claude/settings.json"},
+		{"claude .mcp.json", "claude", ".mcp.json"},
 		{"gemini settings", "gemini", ".gemini/settings.json"},
 	}
 	for _, tt := range tests {
@@ -212,7 +212,7 @@ func TestGenerate_ServerOfTheSameNameIsOverwrittenByTheConfig(t *testing.T) {
 	// Arrange
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude"}, "", mcpServerS1))
-	writeAgentsMDFile(t, root, ".claude/settings.json", userSettingsWithServer)
+	writeAgentsMDFile(t, root, ".mcp.json", userSettingsWithServer)
 
 	// Act
 	runAgentsMDGenerate(t, root)
@@ -223,7 +223,7 @@ func TestGenerate_ServerOfTheSameNameIsOverwrittenByTheConfig(t *testing.T) {
 			Command string `json:"command"`
 		} `json:"mcpServers"`
 	}
-	require.NoError(t, json.Unmarshal([]byte(readAgentsMDFile(t, root, ".claude/settings.json")), &doc))
+	require.NoError(t, json.Unmarshal([]byte(readAgentsMDFile(t, root, ".mcp.json")), &doc))
 	assert.Equal(t, "uvx", doc.MCPServers["s1"].Command, "the config wins on a name clash")
 }
 

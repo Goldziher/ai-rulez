@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -129,13 +130,13 @@ func TestClaudeSettingsSidecar_PreservesHandAuthoredKeys(t *testing.T) {
 	baseDir := writeFixture(t, relPath, handAuthoredClaudeSettings)
 
 	gen := claudeGen(t)
-	outputs, err := gen.Generate(&config.ContentTree{}, baseDir, oneMCPServerConfig(baseDir))
+	outputs, err := gen.Generate(&config.ContentTree{}, baseDir, pluginSettingsConfig(baseDir, &config.ClaudeSettings{Manage: true, EnablePlugins: []string{"demo"}}))
 	require.NoError(t, err)
 
 	settings := requireFile(t, outputs, relPath)
 
 	for _, key := range []string{
-		"$schema", "permissions", "env", "model", "outputStyle", "statusLine", "hooks", "skillOverrides",
+		"$schema", "permissions", "env", "model", "outputStyle", "statusLine", "hooks", "skillOverrides", "mcpServers",
 	} {
 		assert.Equal(t,
 			rawValue(t, handAuthoredClaudeSettings, key),
@@ -155,16 +156,16 @@ func TestClaudeSettingsSidecar_PreservesHandAuthoredKeys(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(settings.Content), &parsed))
 	assert.Equal(t, "off", parsed.SkillOverrides["init"], "skillOverrides.init must still be off")
 
-	// Only mcpServers changed: the generated server joins the hand-written one.
-	assert.Equal(t, "npx", parsed.MCPServers["generated"].Command)
-	assert.Equal(t, []string{"-y", "generated-server"}, parsed.MCPServers["generated"].Args)
+	// MCP servers are .mcp.json's business: the generated one never lands here and
+	// the hand-written one is untouched.
+	assert.NotContains(t, parsed.MCPServers, "generated")
 	assert.Contains(t, parsed.MCPServers, "stale-hand-authored",
 		"a server ai-rulez did not write is the consumer's")
 }
 
-// TestClaudeSettingsSidecar_CreatesFileWhenAbsent keeps the greenfield output
-// byte-identical to the pre-merge renderer so first-run output is unchanged.
-func TestClaudeSettingsSidecar_CreatesFileWhenAbsent(t *testing.T) {
+// TestClaudeSettingsSidecar_NotCreatedForMCPServersAlone: Claude Code reads
+// project MCP servers from .mcp.json, so servers alone write no settings.json.
+func TestClaudeSettingsSidecar_NotCreatedForMCPServersAlone(t *testing.T) {
 	t.Parallel()
 
 	baseDir := t.TempDir()
@@ -172,19 +173,9 @@ func TestClaudeSettingsSidecar_CreatesFileWhenAbsent(t *testing.T) {
 	outputs, err := gen.Generate(&config.ContentTree{}, baseDir, oneMCPServerConfig(baseDir))
 	require.NoError(t, err)
 
-	settings := requireFile(t, outputs, filepath.Join(".claude", "settings.json"))
-	assert.Equal(t, `{
-  "mcpServers": {
-    "generated": {
-      "args": [
-        "-y",
-        "generated-server"
-      ],
-      "command": "npx"
-    }
-  }
-}
-`, settings.Content)
+	for _, o := range outputs {
+		assert.False(t, strings.HasSuffix(filepath.ToSlash(o.Path), ".claude/settings.json"), "unexpected %s", o.Path)
+	}
 }
 
 // TestMCPJSONSidecar_PreservesUnownedKeys proves the merge is generic to the
@@ -260,12 +251,13 @@ func TestJSONSidecar_PreservesFourSpaceIndent(t *testing.T) {
 	baseDir := writeFixture(t, relPath, existing)
 
 	gen := claudeGen(t)
-	outputs, err := gen.Generate(&config.ContentTree{}, baseDir, oneMCPServerConfig(baseDir))
+	outputs, err := gen.Generate(&config.ContentTree{}, baseDir,
+		pluginSettingsConfig(baseDir, &config.ClaudeSettings{Manage: true, EnablePlugins: []string{"demo"}}))
 	require.NoError(t, err)
 
 	settings := requireFile(t, outputs, relPath)
 	assert.Contains(t, settings.Content, "\n    \"model\": \"opus\",")
-	assert.Contains(t, settings.Content, "\n    \"mcpServers\": {\n        \"generated\"")
+	assert.Contains(t, settings.Content, "\n    \"enabledPlugins\": {\n        \"demo@mk\"")
 }
 
 func pluginSettingsConfig(baseDir string, settings *config.ClaudeSettings) *config.Config {

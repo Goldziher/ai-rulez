@@ -2131,12 +2131,12 @@ args = ["--flag"]
 	assert.Equal(t, "off", skillOverrides["init"],
 		"skillOverrides.init must remain exactly 'off'")
 
-	// Assert mcpServers holds the configured server and the hand-written one: only
-	// servers ai-rulez recorded writing are its to take back
+	// MCP servers belong to .mcp.json: settings.json keeps the hand-written server
+	// and gains none.
 	mcpServers, ok := parsed["mcpServers"].(map[string]any)
 	require.True(t, ok, "mcpServers must be present and be an object")
-	assert.Contains(t, mcpServers, "new-server",
-		"mcpServers must contain the new configured server")
+	assert.NotContains(t, mcpServers, "new-server",
+		"the configured server is written to .mcp.json, not settings.json")
 	assert.Contains(t, mcpServers, "stale-server",
 		"a hand-written server must survive generation")
 }
@@ -2282,7 +2282,7 @@ command = "cmd"
 	var settingsParsed map[string]any
 	require.NoError(t, json.Unmarshal(settingsContent, &settingsParsed))
 	assert.Contains(t, settingsParsed, "permissions", "user key must be present after first generation")
-	assert.Contains(t, settingsParsed, "mcpServers", "mcpServers must be present after first generation")
+	assert.NotContains(t, settingsParsed, "mcpServers", "servers are written to .mcp.json, not settings.json")
 
 	mcpJSONContent, err := os.ReadFile(mcpJSONPath)
 	require.NoError(t, err)
@@ -2469,13 +2469,9 @@ func TestGenerator_SecretGuard_FiresForPartiallyOwnedFile(t *testing.T) {
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
-	// Pre-create hand-authored .claude/settings.json
-	claudeDir := filepath.Join(tempDir, ".claude")
-	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
-	settingsPath := filepath.Join(claudeDir, "settings.json")
-	require.NoError(t, os.WriteFile(settingsPath, []byte(`{
-  "permissions": { "read": ["**/*"] },
-  "skillOverrides": { "init": "off" }
+	// Pre-create a hand-authored .mcp.json
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".mcp.json"), []byte(`{
+  "customKey": "hand-authored-value"
 }
 `), 0o644))
 

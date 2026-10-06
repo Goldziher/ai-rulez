@@ -27,10 +27,10 @@ func mergedProject(t *testing.T) *driftProject {
 	t.Helper()
 	p := newDriftProject(t, driftSharedIgnoring)
 	p.git(t, "init", "-q")
-	p.writeFile(t, ".claude/settings.json", userClaudeSettings)
+	p.writeFile(t, ".mcp.json", userClaudeSettings)
 	p.overlay(t, overlayWithHTTPSecret)
 	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
-	require.Contains(t, p.read(t, ".claude/settings.json"), "HEADER-SECRET-1", "the overlay server is merged in")
+	require.Contains(t, p.read(t, ".mcp.json"), "HEADER-SECRET-1", "the overlay server is merged in")
 	require.NoError(t, os.Remove(filepath.Join(p.dir, "config.local.toml")))
 	return p
 }
@@ -44,22 +44,22 @@ func TestClean_RemovesOwnedKeysFromHandAuthoredSettings(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	assert.Equal(t, userClaudeSettings, p.read(t, ".claude/settings.json"))
+	assert.Equal(t, userClaudeSettings, p.read(t, ".mcp.json"))
 	assert.NotEmpty(t, plan.Unmerged)
 }
 
 func TestClean_DryRunLeavesMergedDocumentsAlone(t *testing.T) {
 	// Arrange
 	p := mergedProject(t)
-	before := p.read(t, ".claude/settings.json")
+	before := p.read(t, ".mcp.json")
 
 	// Act
 	plan, err := NewGenerator(p.load(t)).Clean("", CleanOptions{DryRun: true})
 
 	// Assert
 	require.NoError(t, err)
-	assert.Equal(t, before, p.read(t, ".claude/settings.json"))
-	assert.Contains(t, plan.Unmerged, filepath.Join(p.base, ".claude", "settings.json"))
+	assert.Equal(t, before, p.read(t, ".mcp.json"))
+	assert.Contains(t, plan.Unmerged, filepath.Join(p.base, ".mcp.json"))
 }
 
 func TestGenerate_StripsRemovedServerFromHandAuthoredSettings(t *testing.T) {
@@ -70,7 +70,7 @@ func TestGenerate_StripsRemovedServerFromHandAuthoredSettings(t *testing.T) {
 	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
 
 	// Assert
-	assert.Equal(t, userClaudeSettings, p.read(t, ".claude/settings.json"))
+	assert.Equal(t, userClaudeSettings, p.read(t, ".mcp.json"))
 }
 
 func TestGenerate_StripsPresetKeysWhenThePresetIsRemoved(t *testing.T) {
@@ -293,7 +293,7 @@ func TestGenerate_IgnoresTheLocalManifestThatHoldsMergeRecords(t *testing.T) {
 	// Arrange
 	p := newDriftProject(t, driftSharedIgnoring)
 	p.git(t, "init", "-q")
-	p.writeFile(t, ".claude/settings.json", userClaudeSettings)
+	p.writeFile(t, ".mcp.json", userClaudeSettings)
 	p.overlay(t, overlayWithHTTPSecret)
 
 	// Act
@@ -308,7 +308,7 @@ func TestGenerate_IgnoresTheLocalManifestWithoutAnyLocalInput(t *testing.T) {
 	root := t.TempDir()
 	cfg := "version = \"4.0\"\nname = \"shared\"\npresets = [\"claude\"]\n" + agentsMDMCPServer
 	writeAgentsMDProject(t, root, cfg)
-	writeAgentsMDFile(t, root, ".claude/settings.json", userClaudeSettings)
+	writeAgentsMDFile(t, root, ".mcp.json", userClaudeSettings)
 	p := &driftProject{base: root, dir: filepath.Join(root, ".ai-rulez")}
 	p.git(t, "init", "-q")
 
