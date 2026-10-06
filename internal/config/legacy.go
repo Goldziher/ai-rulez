@@ -51,6 +51,15 @@ func legacyConfigIn(configDir string) string {
 	return firstExistingFile(configDir, legacyLocalNames)
 }
 
+// LegacyConfigIn returns the V2/V3 config file inside configDir (a config
+// directory such as .ai-rulez/) when the directory has no config.toml, else "".
+func LegacyConfigIn(configDir string) string {
+	if hasConfigFile(configDir) {
+		return ""
+	}
+	return legacyConfigIn(configDir)
+}
+
 // FindLegacyConfig returns the V2/V3 config file that baseDir holds, or "": a
 // config.yaml, config.yml or config.json in .ai-rulez/ (or .config/ai-rulez/),
 // or a flat ai-rulez.yaml beside the project. A directory with a config.toml has
