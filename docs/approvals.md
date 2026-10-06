@@ -198,8 +198,9 @@ instead, with the token the [forge client](forge.md) finds in the environment (`
 a team). Nothing is cached: `validate` and the skills server never call the forge, so list the team in
 `[governance.teams]` for them.
 
-An organization [policy](policy.md) does not set a floor for `approvers_from`, `teams`, `min_assurance` or
-`forbid_self_approval` yet; the repository can change them in the same pull request they would gate.
+An organization [policy](policy.md) sets floors for `min_assurance` (the stronger level wins), `forbid_self_approval`
+(on if either sets it) and `approvers_from = "CODEOWNERS"` (`AR740` when the repository turns it off). Only `teams` has
+no floor; the repository can change it in the same pull request it would gate.
 
 ## Review-linked approvals
 
@@ -285,7 +286,9 @@ A denied digest can be neither approved nor used, whether or not `[governance]` 
 - `approve` refuses it, `validate --strict` reports `AR717` for any pinned content with that digest, and a denied
   skill is never served by `mcp --serve-skills` (refusal `AR717`);
 - `ai-rulez lock` refuses to pin it and leaves the lock as it was; change the content and lock again;
-- the entry names the digest, not the item, so it survives re-locking and keeps blocking a rollback to the old bytes.
+- the entry names the digest, not the item, so it survives re-locking and keeps blocking a rollback to the old bytes;
+- the policy's `sources.deny_digests` is a second, organization-wide list (`AR747`). Both lists block, and `approve`
+  refuses a digest on either: approving content that generation refuses would change nothing.
 
 `[[deny]]` entries sit outside the tree digest, are carried over by `lock` and `update`, and are covered by
 `approvals_digest`. Remove an entry by editing the lock in a reviewed change. An organization policy cannot ship a
