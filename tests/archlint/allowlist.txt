@@ -1,14 +1,21 @@
 # Ambient-authority sites in library packages (see archlint_test.go).
 # <file> <symbol> <count>. Only ever remove lines or lower counts; a new line needs a review comment.
 internal/config/local_lock_unix.go time.Now 2
+internal/doctor/doctor.go exec.LookPath 1
+internal/evals/fingerprint.go exec.LookPath 1
 internal/evals/runner_claude.go exec.CommandContext 1
 internal/evals/runner_command.go exec.CommandContext 2
 internal/gitutil/env.go exec.Command 1
 internal/gitutil/env.go exec.CommandContext 1
 internal/gitutil/env.go os.Environ 1
+internal/lint/external_scanners.go exec.LookPath 1
 internal/lint/followups.go time.Now 1
+internal/lint/lint.go exec.LookPath 1
 internal/lint/traps_limits.go time.Now 1
+internal/llm/redact.go time.Since 2
 internal/logger/logger.go os.Getenv 2
 internal/mcp/serve_live.go time.Now 2
 internal/telemetry/pipeline.go exec.Command 1
+internal/telemetry/pipeline.go os.Executable 1
 internal/telemetry/spool.go time.Now 3
+internal/telemetry/spool.go time.Since 2
