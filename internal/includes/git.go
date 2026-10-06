@@ -109,12 +109,12 @@ const cacheDirMode = 0o700
 // project's fetch cannot seed another's.
 func getIncludeCacheDir(host ambient.Host, sourceName, repoURL string) (string, error) {
 	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
-	dir := safeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:12]
+	dir := SafeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:cacheHashLen]
 	return config.CacheDirIn(host.Env, "includes", dir) //nolint:wrapcheck // already contextual
 }
 
-// safeCacheName keeps a source name usable as one path segment.
-func safeCacheName(name string) string {
+// SafeCacheName keeps a source name usable as one path segment.
+func SafeCacheName(name string) string {
 	var b strings.Builder
 	for _, r := range name {
 		switch {
@@ -128,6 +128,26 @@ func safeCacheName(name string) string {
 		return out
 	}
 	return "include"
+}
+
+// cacheHashLen is the length of the URL hash that ends a cache directory name.
+const cacheHashLen = 12
+
+// CacheDirMatches reports whether seg is the cache directory name of the
+// include called name: SafeCacheName(name), a dash and a lower-case hex hash of
+// exactly cacheHashLen characters. A prefix match is not enough: the include
+// "shared" must not claim the directory of "shared-extra".
+func CacheDirMatches(seg, name string) bool {
+	hash, ok := strings.CutPrefix(seg, SafeCacheName(name)+"-")
+	if !ok || len(hash) != cacheHashLen {
+		return false
+	}
+	for _, r := range hash {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // GitSource represents a git repository source
