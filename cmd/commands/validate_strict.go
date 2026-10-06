@@ -99,6 +99,15 @@ func checkFlagCombinations() error {
 	if validateSince != "" && validateChanged {
 		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
 	}
+	if changedRev() == "" && (validateSinceMax != 0 || (validateSinceDepth != "" && validateSinceDepth != "1")) {
+		return oops.Errorf("--since-depth and --since-max-files need --since or --changed")
+	}
+	if _, err := sinceDepth(); err != nil {
+		return err
+	}
+	if validateSinceMax < 0 {
+		return oops.Errorf("--since-max-files must not be negative")
+	}
 	if validateUpdateBaseline && validateStrictBaseline {
 		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
 	}

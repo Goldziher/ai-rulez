@@ -489,11 +489,24 @@ that exists, not only against the changed files. Only the *report* is narrowed, 
 2. files that refer to a changed file: by a markdown link, a backticked repository path, a skill, agent, rule or
    command name, a skill's `references/` or `scripts/` path, a frontmatter `skills:` entry or a hook command.
 
-So editing or deleting `guide.md` also shows the broken link in the rule that points at it. The dependency is one
-hop (a file that refers to a dependent is not shown). The text report ends with a `changed-only since <rev>` line and
-`--format json` carries a `changed_only` object. The baseline is applied to the full set first, so stale entries are
-judged against every finding, and a `[lint.budget]` is judged against the full set too; exit status reflects only
-the findings shown. `--update-baseline` cannot be combined with `--since`.
+So editing or deleting `guide.md` also shows the broken link in the rule that points at it. By default the dependency
+is one hop (a file that refers to a dependent is not shown). `--since-depth N` follows N hops and `--since-depth all`
+the whole reverse closure, so a change to a script a skill uses also reaches the agent that lists the skill:
+
+```bash
+ai-rulez validate --strict --since origin/main --since-depth all --since-max-files 200
+```
+
+The closure is a breadth-first walk over the same reference graph, so a cycle ends when no new file turns up and the
+order is stable. `--since-max-files N` caps the files shown besides the changed ones, nearest first (ties by path);
+the text report says how many were left out. Each finding carries a `hop` in `--format json`: `changed`,
+`dependent` (one hop) or `transitive(n)`, so CI can filter.
+
+The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
+`changed_only` object (`depth`, `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
+`dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
+finding, and a `[lint.budget]` is judged against the full set too; exit status reflects only the findings shown.
+`--update-baseline` cannot be combined with `--since`.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
 `GIT_CONFIG_*`, ...) removed from its environment, so the command is safe inside a git hook and never addresses the
