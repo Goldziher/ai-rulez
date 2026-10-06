@@ -74,7 +74,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 	switch sourceType {
 	case SourceTypeGit:
 		w := withVersion(lockfile.Want{
-			Kind: lockfile.KindSkill, Name: skillConf.Name, Source: RedactURL(skillConf.Source),
+			Kind: lockfile.KindSkill, Name: skillConf.Name, Source: lockSource(baseDir, skillConf.Source),
 			Path: skillPath, Ref: skillConf.Ref,
 		}, skillConf.VersionSpec())
 		p, err := pinFor(cfg, lock, w)
