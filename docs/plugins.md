@@ -18,6 +18,9 @@ arrays, which are the **consumer** side. `[[plugins]]` is rendered into
 recorded only and not emitted. See
 [Consumer plugins](configuration.md#plugins) for the fields.
 
+To turn a generated bundle into a checksummed release archive and upload it to a GitHub release, see
+[Publish](publish.md) (`ai-rulez publish`).
+
 ## Quick start
 
 ```toml

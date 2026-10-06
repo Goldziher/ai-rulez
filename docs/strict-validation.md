@@ -138,6 +138,12 @@ stdout.
 | AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, hooks not imported (convert report only) |
 | AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
 | AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
+| AR9N0 | `publish-preflight-failed` | error | A preflight gate of `ai-rulez publish` failed: `validate --strict`, `lock --check` or `verify --plugin` (publish only, see [Publish](publish.md)) |
+| AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
+| AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
+| AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
+| AR9N4 | `publish-target-failed` | error | The upload failed: `gh` is not installed, the release already exists, or `gh` exited non-zero (publish only) |
+| AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch (publish only) |
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
@@ -186,7 +192,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
-| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); no codes registered yet) | reserved |
+| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N5` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -2176,5 +2182,65 @@ a repository [llm] table sets allow_network, base_url, api_key_env or a price ov
 - Why: A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.
 - Bad: `allow_network = true` in the repository ai-rulez.toml
 - Good: Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK
+
+### AR9N0 publish-preflight-failed
+
+a preflight gate of `publish` failed: strict validation, the lock check or plugin verification (reported by publish, never by validate)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate --strict`, `lock --check` and `verify --plugin` first and writes nothing when one fails.
+- Bad: A skill edited after `ai-rulez lock`, or plugin files hand-edited since `generate --plugin`
+- Good: Run `ai-rulez lock` and `ai-rulez generate --plugin`, commit, and publish again
+
+### AR9N1 publish-bundle-unsafe
+
+the bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A release archive must hold only regular files below its root, so a symlink or an escaping path would let the archive reach files that were never reviewed.
+- Bad: A plugin skill directory that is a symlink to `~/skills`
+- Good: Copy the content into the project instead of linking it
+
+### AR9N2 publish-secret-found
+
+the secret scan of the bundle found a credential (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A published archive cannot be recalled. The same patterns as the security scan (cloud keys, tokens, private keys, credential assignments) are applied to every file of the bundle.
+- Bad: A hook script that carries `AWS_SECRET_ACCESS_KEY=...` literally
+- Good: Read the value from the environment at run time and rotate the leaked credential
+
+### AR9N3 publish-source-unreleasable
+
+the plugin has no version, or the source tree is dirty or has no commit (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A release is identified by its commit and `[plugin] version`; a dirty tree or a missing version makes the bundle impossible to reproduce.
+- Bad: `[plugin]` without `version`, or uncommitted changes next to the generated bundle
+- Good: Set `version`, commit, and publish; use `--allow-dirty` only for a throwaway build
+
+### AR9N4 publish-target-failed
+
+the upload step failed: gh is missing, the release exists or gh exited non-zero (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Uploads go through the platform's own CLI so ai-rulez never handles credentials. The step stops when that CLI is missing, the release already exists (releases are immutable) or it fails.
+- Bad: `publish --to github-release --execute --yes` without `gh` on PATH, or for a tag that already has a release
+- Good: Install and authenticate `gh`, push the tag, and use `--force` only to replace the assets of an existing release
+
+### AR9N5 publish-verify-mismatch
+
+`publish verify` found a digest, manifest or archive mismatch in a dist directory (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: `publish verify` recomputes SHA256SUMS, the manifest and the archive contents, so a file changed after the build, or an archive that no longer matches its manifest, is caught before it is installed.
+- Bad: An edited `ai-rulez.lock` next to a manifest that records the original digest
+- Good: Download the release again, or rebuild it with `ai-rulez publish`
 
 <!-- rules:end -->

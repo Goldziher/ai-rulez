@@ -99,6 +99,7 @@ func init() {
 	RootCmd.AddCommand(ImportCmd)
 	RootCmd.AddCommand(LLMCmd)
 	RootCmd.AddCommand(SearchCmd)
+	RootCmd.AddCommand(PublishCmd)
 }
 
 func initConfig() {
