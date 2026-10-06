@@ -75,7 +75,7 @@ func runReportEvals(out io.Writer) error {
 	if resultsPath == "" {
 		resultsPath = evals.DefaultStorePath(cfgDir)
 	}
-	store, err := evals.LoadStoreKeyed(resultsPath, evalResultsKey())
+	store, err := evals.LoadStoreKeyed(resultsPath, evals.UserKey())
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func loadEvalSummaries(path string) (map[string]usage.EvalSummary, error) {
 	if _, err := os.Stat(path); err != nil && !explicit {
 		return nil, nil //nolint:nilerr // the default results file is optional
 	}
-	store, err := evals.LoadStoreKeyed(path, evalResultsKey())
+	store, err := evals.LoadStoreKeyed(path, evals.UserKey())
 	if err != nil {
 		return nil, err
 	}
