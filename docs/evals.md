@@ -285,6 +285,7 @@ and holds no prompts or outputs):
       "id": "deploy-staging",
       "digest": "sha256:...",            // the skill's authored content when the run happened
       "cases_digest": "sha256:...",
+      "lock_digest": "sha256:...",       // the lock's digest of the skill; what usage logs join on
       "cache_key": "sha256:...",
       "runner": "claude-plugin-eval", "harness": "claude", "model": "haiku", "ablation": true,
       "date": "2026-10-05",             // from --date / $AI_RULEZ_EVAL_DATE, omitted when neither is set
@@ -297,7 +298,11 @@ and holds no prompts or outputs):
 ```
 
 The skill digest is the sha256 of every regular file under the skill directory except its top-level `evals/`, in path
-order (`path NUL length NUL bytes`); editing a case does not make the skill look edited. `last_pass` survives a later
+order (`path NUL length NUL bytes`); editing a case does not make the skill look edited. It is the cache and
+freshness key. `lock_digest` is the same skill under the [lock's](lockfile.md) scheme (`ai-rulez/skill/v1`: `SKILL.md`
+plus `references/`, `scripts/` and `assets/`, again without `evals/`), the identity the [usage log](usage-telemetry.md)
+carries as `digest`. A record without it (written by an earlier release) joins with usage by skill id only until the
+skill is evaluated again; a cached run backfills it. `last_pass` survives a later
 failing run, which is what freshness compares against.
 
 ## Linting cases and results
@@ -335,6 +340,18 @@ A skill with no recorded passing run is not reported stale (that is what `AR962`
 Rows are ordered by action, then by number of reasons, then by pass rate (worst first), then by `SKILL.md` size.
 Without a usage log nothing is concluded about use. `--json` prints the same data. `report usage` shows feedback
 counts and the eval pass rate next to each skill.
+
+With a usage log each row also carries a `join` class (and `join_uses`, the uses behind it by class) saying how far
+the usage evidence is tied to the evaluated skill:
+
+| Class | Meaning |
+| --- | --- |
+| `exact` | a use was logged at the skill digest the eval ran on (the record's `lock_digest`) |
+| `stale` | the uses carry a digest, but none is the evaluated one: the score describes another version of the skill |
+| `legacy` | the record has no `lock_digest`, or the uses have no canonical digest (version 2 log lines, an index without digests): matched by skill id only |
+| `none` | the skill has no logged use, or no eval record |
+
+The class does not change the recommended action; it says how much weight a row's usage deserves.
 
 ## Bundling cases into a plugin
 

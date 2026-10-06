@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,4 +134,48 @@ func TestSkillsIndex_IsCleanedWithTheOtherOutputs(t *testing.T) {
 	generateIndexProject(t, root)
 	_, err = os.Stat(path)
 	assert.True(t, os.IsNotExist(err))
+}
+
+// The skills index, the eval store and the lock must describe one skill with one
+// digest, or usage cannot join with eval results. This is the regression gate.
+func TestSkillsIndex_DigestEqualsTheLockAndEvalDigest(t *testing.T) {
+	root := indexProject(t, "[usage]\nskills_index = true\n")
+	evalCase := filepath.Join(root, ".ai-rulez", "skills", "alpha", "evals", "main.eval.yaml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(evalCase), 0o750))
+	require.NoError(t, os.WriteFile(evalCase, []byte("cases: []\n"), 0o600))
+	generateIndexProject(t, root)
+
+	index, err := usage.LoadIndex(filepath.Join(root, ".ai-rulez", usage.IndexFileName))
+	require.NoError(t, err)
+	indexed := map[string]string{}
+	for _, record := range index.Skills {
+		indexed[record.ID] = record.Digest
+	}
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+	snap, err := contentlock.Compute(cfg, contentlock.Options{})
+	require.NoError(t, err)
+	locked := map[string]string{}
+	for _, item := range snap.Items {
+		if item.Kind == contentlock.KindSkill {
+			locked[item.ID] = item.Digest
+		}
+	}
+
+	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, indexed["alpha"])
+	assert.Equal(t, locked["alpha"], indexed["alpha"], "the index carries the lock's digest")
+	assert.Equal(t, locked["beta"], indexed["beta"])
+	fromDir, err := contentlock.SkillDirDigest(filepath.Join(root, ".ai-rulez", "skills", "alpha"))
+	require.NoError(t, err)
+	assert.Equal(t, fromDir, indexed["alpha"], "the eval store's digest of the directory agrees")
+
+	require.NoError(t, os.WriteFile(evalCase, []byte("cases: []\n# edited\n"), 0o600))
+	generateIndexProject(t, root)
+	index, err = usage.LoadIndex(filepath.Join(root, ".ai-rulez", usage.IndexFileName))
+	require.NoError(t, err)
+	for _, record := range index.Skills {
+		if record.ID == "alpha" {
+			assert.Equal(t, indexed["alpha"], record.Digest, "editing an eval case is not editing the skill")
+		}
+	}
 }

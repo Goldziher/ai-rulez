@@ -142,3 +142,36 @@ func TestMulti_FansOutAndJoinsErrors(t *testing.T) {
 	assert.IsType(t, Nop{}, Compose())
 	assert.NoError(t, m.Close(context.Background()))
 }
+
+func TestFromUsageEntry_KeepsTheLogLineEventID(t *testing.T) {
+	tests := []struct {
+		name    string
+		eventID string
+		want    string
+	}{
+		{"a v3 line keeps its id so log and spool dedupe", "0123456789abcdef", "0123456789abcdef"},
+		{"a v2 line has none", "", ""},
+		{"a malformed id is dropped", "not-an-id\nx", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event := FromUsageEntry(&usage.Entry{ID: "a", Skill: "a", EventID: tt.eventID, Harness: "claude"})
+
+			assert.Equal(t, tt.want, event.EventID)
+		})
+	}
+}
+
+func TestToUsageEntry_CarriesEventIDAndNamesTheServedDigestScheme(t *testing.T) {
+	served := Event{Kind: KindSkill, ID: "a", Source: SourceMCP, Served: true, Digest: "sha256:abc", EventID: "0123456789abcdef"}
+	hashed := Event{Kind: KindSkill, ID: "a", Source: SourceHook, Digest: "blake3:aa"}
+
+	servedEntry, hashedEntry := ToUsageEntry(&served), ToUsageEntry(&hashed)
+
+	assert.Equal(t, "0123456789abcdef", servedEntry.EventID)
+	assert.Equal(t, "sha256:abc", servedEntry.Digest)
+	assert.Equal(t, usage.DigestSchemeServed, servedEntry.DigestScheme)
+	assert.Equal(t, "blake3:aa", hashedEntry.Hash)
+	assert.Empty(t, hashedEntry.Digest)
+	assert.Empty(t, hashedEntry.DigestScheme)
+}

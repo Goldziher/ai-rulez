@@ -41,7 +41,11 @@ type RankInput struct {
 	// so "never used" cannot be concluded.
 	Uses map[string]int
 	// Feedback counts feedback kinds per skill id.
-	Feedback    map[string]map[string]int
+	Feedback map[string]map[string]int
+	// UseDigests counts, per skill id, the logged uses by canonical skill digest
+	// (scheme "ai-rulez/skill/v1"); the empty key counts uses logged without one.
+	// nil means the log carried no digests, so every use joins as legacy.
+	UseDigests  map[string]map[string]int
 	MinPassRate float64
 	MinTrigger  float64
 }
@@ -60,6 +64,54 @@ type RankRow struct {
 	SkillTokens      int            `json:"skill_tokens"`
 	Feedback         map[string]int `json:"feedback,omitempty"`
 	Stale            bool           `json:"stale,omitempty"`
+	// Join says how far the usage evidence is tied to the evaluated skill: see
+	// the Join* constants. Empty when no usage log was given.
+	Join string `json:"join,omitempty"`
+	// JoinUses counts the uses behind Join by class.
+	JoinUses map[string]int `json:"join_uses,omitempty"`
+}
+
+// Join classes of usage evidence against an eval record.
+const (
+	// JoinExact: a use was logged at the skill digest the eval record covers.
+	JoinExact = "exact"
+	// JoinStale: uses carry a digest, none the one the eval ran on, so the
+	// evidence describes another version of the skill.
+	JoinStale = "stale"
+	// JoinLegacy: no canonical digest on the eval record or on the uses, so the
+	// two match by skill id only.
+	JoinLegacy = "legacy"
+	// JoinNone: nothing to join, a skill without logged uses or without an eval record.
+	JoinNone = "none"
+)
+
+// joinClass classifies the uses of a skill against its eval record.
+func joinClass(in *RankInput, id string, record *SkillRecord) (string, map[string]int) {
+	uses := in.Uses[id]
+	if uses == 0 || record == nil {
+		return JoinNone, nil
+	}
+	counts := map[string]int{}
+	if record.LockDigest == "" {
+		counts[JoinLegacy] = uses
+		return JoinLegacy, counts
+	}
+	digests := in.UseDigests[id]
+	exact, legacy := digests[record.LockDigest], digests[""]
+	counts[JoinExact], counts[JoinLegacy] = exact, legacy
+	counts[JoinStale] = max(uses-exact-legacy, 0)
+	for class, n := range counts {
+		if n == 0 {
+			delete(counts, class)
+		}
+	}
+	switch {
+	case exact > 0:
+		return JoinExact, counts
+	case counts[JoinStale] > 0:
+		return JoinStale, counts
+	}
+	return JoinLegacy, counts
 }
 
 // Rank recommends, per skill, whether to rewrite, prune, review or keep it. The
@@ -120,6 +172,7 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 	if in.Uses != nil {
 		n := in.Uses[skill.ID]
 		row.Uses = &n
+		row.Join, row.JoinUses = joinClass(in, skill.ID, record)
 	}
 	if record != nil {
 		sc := record.Score

@@ -104,3 +104,67 @@ func TestRank_WeakEvidenceDoesNotConcludeAnything(t *testing.T) {
 	assert.Equal(t, ActionPrune, rows[0].Action, "with events in the log, a skill without any is unused")
 	assert.Equal(t, "a", rows[0].ID)
 }
+
+func TestRank_JoinClasses(t *testing.T) {
+	const current, older = "sha256:cur", "sha256:old"
+	score := SkillScore{Scored: 5, PassRate: 1, AblationCases: 5, AblationDelta: fp(0.4)}
+	withLock := func(id, lock string) SkillRecord {
+		r := rec(id, score, "sha256:"+id, true)
+		r.LockDigest = lock
+		return r
+	}
+	store := NewStore()
+	store.Put(withLock("exact", current))
+	store.Put(withLock("mixed", current))
+	store.Put(withLock("stale", current))
+	store.Put(withLock("no-digests", current))
+	store.Put(rec("old-record", score, "sha256:o", true))
+	store.Put(withLock("unused", current))
+
+	rows := Rank(RankInput{
+		Store: store,
+		Skills: []RankSkill{
+			{ID: "exact"}, {ID: "mixed"}, {ID: "stale"}, {ID: "no-digests"}, {ID: "old-record"}, {ID: "unused"}, {ID: "no-record"},
+		},
+		Uses: map[string]int{"exact": 2, "mixed": 4, "stale": 3, "no-digests": 2, "old-record": 5, "no-record": 1, "unused": 0},
+		UseDigests: map[string]map[string]int{
+			"exact":      {current: 2},
+			"mixed":      {current: 1, older: 2, "": 1},
+			"stale":      {older: 3},
+			"no-digests": {"": 2},
+			"old-record": {current: 5},
+			"no-record":  {current: 1},
+		},
+		MinPassRate: 0.8, MinTrigger: 0.8,
+	})
+
+	got := map[string]RankRow{}
+	for _, row := range rows {
+		got[row.ID] = row
+	}
+	tests := []struct {
+		id    string
+		class string
+		uses  map[string]int
+	}{
+		{"exact", JoinExact, map[string]int{JoinExact: 2}},
+		{"mixed", JoinExact, map[string]int{JoinExact: 1, JoinStale: 2, JoinLegacy: 1}},
+		{"stale", JoinStale, map[string]int{JoinStale: 3}},
+		{"no-digests", JoinLegacy, map[string]int{JoinLegacy: 2}},
+		{"old-record", JoinLegacy, map[string]int{JoinLegacy: 5}},
+		{"unused", JoinNone, nil},
+		{"no-record", JoinNone, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			assert.Equal(t, tt.class, got[tt.id].Join)
+			assert.Equal(t, tt.uses, got[tt.id].JoinUses)
+		})
+	}
+}
+
+func TestRank_NoUsageLogHasNoJoinClass(t *testing.T) {
+	rows := Rank(RankInput{Store: NewStore(), Skills: []RankSkill{{ID: "a"}}})
+
+	assert.Empty(t, rows[0].Join)
+}

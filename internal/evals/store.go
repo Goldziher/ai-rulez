@@ -31,6 +31,10 @@ type SkillRecord struct {
 	// Digest is the sha256 of the skill's authored content when the run happened.
 	Digest      string `json:"digest"`
 	CasesDigest string `json:"cases_digest"`
+	// LockDigest is the skill's canonical digest (the lock's item digest, scheme
+	// "ai-rulez/skill/v1") when the run happened: the key usage logs join on.
+	// Empty on a record written before it existed, which then joins by id only.
+	LockDigest string `json:"lock_digest,omitempty"`
 	// CacheKey identifies everything that determines the result; an equal key means
 	// the run need not be repeated.
 	CacheKey string `json:"cache_key"`

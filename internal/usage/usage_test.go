@@ -14,6 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const alphaDigest = "sha256:262d721306783b4c3b554a1345253c266f6f991733dad6a347e1b55d5e57ac05"
+
+func fixedNonce() string { return "n1" }
+
 var fixedClock = func() time.Time { return time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC) }
 
 func writeIndex(t *testing.T, dir string, records ...SkillRecord) string {
@@ -64,7 +68,7 @@ func TestRecord(t *testing.T) {
 	t.Parallel()
 
 	project := t.TempDir()
-	indexPath := writeIndex(t, project, SkillRecord{ID: "alpha", Source: "s", Hash: "blake3:aa"},
+	indexPath := writeIndex(t, project, SkillRecord{ID: "alpha", Source: "s", Hash: "blake3:aa", Digest: alphaDigest},
 		SkillRecord{ID: "dup", Source: "one", Hash: "blake3:11"}, SkillRecord{ID: "dup", Source: "two", Hash: "blake3:22"})
 
 	tests := []struct {
@@ -76,17 +80,17 @@ func TestRecord(t *testing.T) {
 		{
 			name:  "skill tool call",
 			event: `{"hook_event_name":"PreToolUse","session_id":"s1","tool_name":"Skill","tool_input":{"skill":"alpha"}}`,
-			want:  &Entry{Skill: "alpha", ID: "alpha", Hash: "blake3:aa", Session: "s1", Invocation: "tool"},
+			want:  &Entry{Skill: "alpha", ID: "alpha", Hash: "blake3:aa", Digest: alphaDigest, Session: "s1", Invocation: "tool"},
 		},
 		{
 			name:  "plugin skill resolves to its own name",
 			event: `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"billing:alpha"}}`,
-			want:  &Entry{Skill: "billing:alpha", ID: "alpha", Hash: "blake3:aa", Invocation: "tool"},
+			want:  &Entry{Skill: "billing:alpha", ID: "alpha", Hash: "blake3:aa", Digest: alphaDigest, Invocation: "tool"},
 		},
 		{
 			name:  "slash command",
 			event: `{"hook_event_name":"UserPromptExpansion","session_id":"s2","command_name":"alpha","command_args":"secret","prompt":"/alpha secret"}`,
-			want:  &Entry{Skill: "alpha", ID: "alpha", Hash: "blake3:aa", Session: "s2", Invocation: "slash"},
+			want:  &Entry{Skill: "alpha", ID: "alpha", Hash: "blake3:aa", Digest: alphaDigest, Session: "s2", Invocation: "slash"},
 		},
 		{
 			name:  "ambiguous id has no hash",
@@ -106,7 +110,7 @@ func TestRecord(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			log := filepath.Join(t.TempDir(), "nested", "usage.jsonl")
-			entry, err := Record(strings.NewReader(tt.event), RecordOptions{LogPath: log, IndexPath: indexPath, Now: fixedClock})
+			entry, err := Record(strings.NewReader(tt.event), RecordOptions{LogPath: log, IndexPath: indexPath, Now: fixedClock, Nonce: fixedNonce})
 			require.NoError(t, err)
 			if tt.noEntry {
 				assert.Nil(t, entry)
@@ -122,6 +126,13 @@ func TestRecord(t *testing.T) {
 				tt.want.Session = HashSession(strings.TrimSpace(string(salt)), tt.want.Session)
 				assert.Len(t, tt.want.Session, 16)
 			}
+			if tt.want.Digest != "" {
+				tt.want.DigestScheme = DigestSchemeSkill
+			}
+			require.Regexp(t, `^[0-9a-f]{16}$`, entry.EventID)
+			saltBytes, saltErr := os.ReadFile(filepath.Join(filepath.Dir(log), "usage.salt"))
+			require.NoError(t, saltErr, "the event id needs the machine salt")
+			tt.want.EventID = newEventID(strings.TrimSpace(string(saltBytes)), tt.want, RecordOptions{Nonce: fixedNonce})
 			assert.Equal(t, tt.want, entry)
 
 			data, err := os.ReadFile(log)
@@ -272,4 +283,81 @@ func TestRunSink_DoesNotInheritRepositorySelection(t *testing.T) {
 	assert.NotContains(t, string(data), "GIT_DIR=")
 	assert.NotContains(t, string(data), "GIT_INDEX_FILE=")
 	assert.Contains(t, string(data), "GIT_AUTHOR_NAME=kept")
+}
+
+func TestRecord_EventID(t *testing.T) {
+	t.Parallel()
+
+	event := `{"hook_event_name":"PreToolUse","session_id":"s1","tool_name":"Skill","tool_input":{"skill":"alpha"}}`
+	record := func(t *testing.T, dir string, nonce string) *Entry {
+		t.Helper()
+		entry, err := Record(strings.NewReader(event), RecordOptions{LogPath: filepath.Join(dir, "usage.jsonl"), Now: fixedClock, Nonce: func() string { return nonce }})
+		require.NoError(t, err)
+		return entry
+	}
+	dir := t.TempDir()
+
+	first, same, other := record(t, dir, "a"), record(t, dir, "a"), record(t, dir, "b")
+
+	assert.Equal(t, first.EventID, same.EventID, "the same load replayed keeps its id")
+	assert.NotEqual(t, first.EventID, other.EventID, "two loads in one second differ")
+	assert.NotEqual(t, first.EventID, record(t, t.TempDir(), "a").EventID, "another machine's salt gives another id")
+}
+
+func TestRecord_V3LineFields(t *testing.T) {
+	t.Parallel()
+
+	project := t.TempDir()
+	indexPath := writeIndex(t, project, SkillRecord{ID: "alpha", Source: "s", Hash: "blake3:aa", Digest: alphaDigest})
+	log := filepath.Join(t.TempDir(), "usage.jsonl")
+
+	_, err := Record(strings.NewReader(`{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"alpha"}}`),
+		RecordOptions{LogPath: log, IndexPath: indexPath, Now: fixedClock, Nonce: fixedNonce})
+
+	require.NoError(t, err)
+	data, err := os.ReadFile(log)
+	require.NoError(t, err)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(data, &raw))
+	assert.EqualValues(t, 3, raw["v"])
+	assert.Equal(t, alphaDigest, raw["digest"])
+	assert.Equal(t, DigestSchemeSkill, raw["digest_scheme"])
+	assert.Equal(t, "blake3:aa", raw["hash"], "the v2 hash stays for readers of older logs")
+	assert.Contains(t, raw, "event_id")
+}
+
+func TestRecord_IndexWithoutDigestLogsNoDigest(t *testing.T) {
+	t.Parallel()
+
+	indexPath := writeIndex(t, t.TempDir(), SkillRecord{ID: "alpha", Source: "s", Hash: "blake3:aa"})
+
+	entry, err := Record(strings.NewReader(`{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"alpha"}}`),
+		RecordOptions{LogPath: filepath.Join(t.TempDir(), "usage.jsonl"), IndexPath: indexPath, Now: fixedClock})
+
+	require.NoError(t, err)
+	assert.Equal(t, "blake3:aa", entry.Hash)
+	assert.Empty(t, entry.Digest)
+	assert.Empty(t, entry.DigestScheme)
+}
+
+func TestReadLog_ReadsV2AndV3Lines(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "usage.jsonl")
+	lines := `{"v":2,"ts":"2026-10-01T00:00:00Z","event":"skill_invoked","skill":"a","id":"a","hash":"blake3:aa","invocation":"tool","harness":"claude","outcome":"loaded"}
+{"v":3,"ts":"2026-10-02T00:00:00Z","event":"skill_invoked","skill":"a","id":"a","hash":"blake3:aa","digest":"` + alphaDigest + `","digest_scheme":"ai-rulez/skill/v1","event_id":"0123456789abcdef","invocation":"tool","harness":"claude","outcome":"loaded"}
+{"ts":"2026-09-30T00:00:00Z","event":"skill_invoked","skill":"a","id":"a","session":"raw-id","invocation":"tool","harness":"claude"}
+`
+	require.NoError(t, os.WriteFile(path, []byte(lines), 0o600))
+
+	entries, skipped, err := ReadLog(path)
+
+	require.NoError(t, err)
+	assert.Zero(t, skipped)
+	require.Len(t, entries, 3)
+	assert.Empty(t, entries[0].Digest)
+	assert.Equal(t, alphaDigest, entries[1].Digest)
+	assert.Equal(t, DigestSchemeSkill, entries[1].DigestScheme)
+	assert.Equal(t, "0123456789abcdef", entries[1].EventID)
+	assert.Zero(t, entries[2].Version)
 }

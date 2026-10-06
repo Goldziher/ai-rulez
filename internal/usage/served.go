@@ -22,8 +22,9 @@ type ServedLoad struct {
 const InvocationMCP = "mcp"
 
 // RecordServed logs one `load_skill` through the same sinks and entry format as
-// the hook recorder, with served=true. The content hash comes from the skills
-// index when the skill is in it. With neither a log path nor a sink command in
+// the hook recorder, with served=true. The content hash and canonical digest
+// come from the skills index when the skill is in it; without a digest there the
+// served load's own provenance digest is logged under its own scheme. With neither a log path nor a sink command in
 // options nothing is written (the recorder stays off until opted into).
 func RecordServed(load ServedLoad, options RecordOptions) (*Entry, error) {
 	now := time.Now
@@ -45,11 +46,17 @@ func RecordServed(load ServedLoad, options RecordOptions) (*Entry, error) {
 		Invocation: InvocationMCP,
 		Harness:    harness,
 		Served:     true,
-		Digest:     load.Digest,
 		Resource:   load.Resource,
 	}
 	entry.Session = hashedSession(load.Session, options, "")
-	entry.Hash = lookupHash(options.IndexPath, "", entry.ID)
+	entry.Hash, entry.Digest = lookupIdentity(options.IndexPath, "", entry.ID)
+	switch {
+	case entry.Digest != "":
+		entry.DigestScheme = DigestSchemeSkill // the index's canonical digest joins with eval results
+	case load.Digest != "":
+		entry.Digest, entry.DigestScheme = load.Digest, DigestSchemeServed
+	}
+	entry.EventID = newEventID(loadSalt(saltPathFor(options, "")), entry, options)
 	if options.LogPath == "" && options.SinkCommand == "" {
 		return entry, nil
 	}
