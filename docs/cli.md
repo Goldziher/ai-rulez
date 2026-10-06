@@ -1269,6 +1269,7 @@ ai-rulez cost --budget 8000 --on-demand-budget 60000   # exit 2 when over, namin
 | `--no-local`, `--config-dir` | | | As for `tokens` |
 
 Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be loaded.
+
 ## Verifiers Command
 
 ### `ai-rulez verifiers run|list [config-file]`

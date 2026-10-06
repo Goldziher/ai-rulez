@@ -15,9 +15,15 @@
       "type": "object",
       "required": ["path"],
       "properties": {
-        "path": { "$ref": "#/definitions/relativePath", "description": "Where the file is created in the case's working directory." },
+        "path": {
+          "$ref": "#/definitions/relativePath",
+          "description": "Where the file is created in the case's working directory."
+        },
         "content": { "type": "string", "description": "Inline file content." },
-        "source": { "$ref": "#/definitions/relativePath", "description": "A file next to the case file to copy. Mutually exclusive with content." }
+        "source": {
+          "$ref": "#/definitions/relativePath",
+          "description": "A file next to the case file to copy. Mutually exclusive with content."
+        }
       },
       "additionalProperties": false
     },
@@ -26,10 +32,21 @@
       "required": ["type"],
       "properties": {
         "type": { "enum": ["contains", "not_contains", "regex", "file_exists", "command_exit"] },
-        "value": { "type": "string", "minLength": 1, "description": "Text for contains and not_contains, an RE2 pattern for regex." },
-        "path": { "$ref": "#/definitions/relativePath", "description": "contains/not_contains/regex: check this file instead of the final answer. file_exists: the file to look for." },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Text for contains and not_contains, an RE2 pattern for regex."
+        },
+        "path": {
+          "$ref": "#/definitions/relativePath",
+          "description": "contains/not_contains/regex: check this file instead of the final answer. file_exists: the file to look for."
+        },
         "exists": { "type": "boolean", "description": "file_exists only. false asserts absence. Default true." },
-        "command": { "type": "string", "minLength": 1, "description": "command_exit only. Run through the shell in the working directory; needs --allow-exec." },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "command_exit only. Run through the shell in the working directory; needs --allow-exec."
+        },
         "exit_code": { "type": "integer", "description": "command_exit only. Expected exit status. Default 0." }
       },
       "additionalProperties": false
@@ -40,7 +57,10 @@
         "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
         "description": { "type": "string" },
         "prompt": { "type": "string", "minLength": 1 },
-        "prompt_file": { "$ref": "#/definitions/relativePath", "description": "A file next to the case file holding the prompt. Mutually exclusive with prompt." },
+        "prompt_file": {
+          "$ref": "#/definitions/relativePath",
+          "description": "A file next to the case file holding the prompt. Mutually exclusive with prompt."
+        },
         "expect_trigger": { "type": "boolean", "description": "Whether the skill should fire for the prompt." },
         "near_miss": {
           "type": "array",
@@ -50,7 +70,12 @@
         "files": { "type": "array", "items": { "$ref": "#/definitions/fixture" } },
         "assertions": { "type": "array", "items": { "$ref": "#/definitions/assertion" } },
         "rubric": { "type": "string", "description": "Graded by a model grader the runner provides." },
-        "rubric_min_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Pass mark for the rubric. Default 0.7." },
+        "rubric_min_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Pass mark for the rubric. Default 0.7."
+        },
         "model": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]*$" } }
       },
@@ -66,7 +91,10 @@
       "items": {
         "allOf": [
           { "$ref": "#/definitions/case" },
-          { "required": ["id", "expect_trigger"], "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }] }
+          {
+            "required": ["id", "expect_trigger"],
+            "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }]
+          }
         ]
       }
     },
@@ -84,8 +112,17 @@
     "tags": { "$ref": "#/definitions/case/properties/tags" }
   },
   "oneOf": [
-    { "required": ["cases"], "not": { "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }, { "required": ["expect_trigger"] }] } },
-    { "required": ["expect_trigger"], "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }], "not": { "required": ["cases"] } }
+    {
+      "required": ["cases"],
+      "not": {
+        "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }, { "required": ["expect_trigger"] }]
+      }
+    },
+    {
+      "required": ["expect_trigger"],
+      "anyOf": [{ "required": ["prompt"] }, { "required": ["prompt_file"] }],
+      "not": { "required": ["cases"] }
+    }
   ],
   "additionalProperties": false
 }
