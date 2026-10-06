@@ -81,6 +81,10 @@ type Generator struct {
 	userLayouts map[string]*userscope.Layout
 	userHomes   []string
 	warned      map[string]bool // merged-document warnings already issued by this Generator
+	// userDirs are the directories below the home directory that ai-rulez created
+	// (absolute); userDirsRecorded is false for a manifest that predates them.
+	userDirs         map[string]bool
+	userDirsRecorded bool
 
 	// role is the flattened role a `generate --role` run renders; nil otherwise.
 	// It replaces the profile selection (see roles.go).
@@ -94,6 +98,10 @@ type generatedManifest struct {
 	// merged_claims.go): in the committed manifest for a document it wrote whole,
 	// in the machine-local manifest for one shared with the user.
 	Merged map[string][]jsonmerge.Claim `json:"merged,omitempty"`
+	// Dirs lists, in the user manifest only, the directories ai-rulez created
+	// below the home directory (slash paths relative to it), so clean removes
+	// those once empty and never one that existed before. Nil: not recorded.
+	Dirs *[]string `json:"dirs,omitempty"`
 }
 
 // NewGenerator creates a new generator
@@ -2597,16 +2605,20 @@ func (g *Generator) writeManifest(path string, files []string, merged map[string
 	if err != nil {
 		return err
 	}
-	return writeManifestFile(resolved, files, merged)
+	return writeManifestFileDirs(resolved, files, merged, g.manifestDirs(path))
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
+	return writeManifestFileDirs(path, files, merged, nil)
+}
+
+func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim, dirs *[]string) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Dirs: dirs}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}
