@@ -787,6 +787,10 @@ func importGate(cfg *config.Config) error {
 	if dryRun || pluginMode {
 		return nil
 	}
+	// The signature gate comes first: unsigned content is refused before it is scanned.
+	if err := skillSignatureGate(cfg); err != nil {
+		return err
+	}
 	return enforceScanImports(cfg)
 }
 
