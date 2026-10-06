@@ -206,9 +206,9 @@ func Unmerge(path string, format Format, claims []Claim) (Unmerged, error) {
 	case FormatJSON, FormatJSONC:
 		return jsonmerge.Unmerge(path, claims)
 	case FormatTOML:
-		return tomlmerge.Unmerge(path, claims)
+		return withoutHashHeader(tomlmerge.Unmerge(path, claims))
 	case FormatYAML:
-		return yamlmerge.Unmerge(path, claims)
+		return withoutHashHeader(yamlmerge.Unmerge(path, claims))
 	case FormatMarkdown:
 		existing, found, err := jsonmerge.ReadExisting(path)
 		if err != nil || !found {
@@ -227,14 +227,39 @@ func UnmergeDocument(path string, format Format, existing string, claims []Claim
 	case FormatJSON, FormatJSONC:
 		return jsonmerge.UnmergeDocument(path, existing, claims)
 	case FormatTOML:
-		return tomlmerge.UnmergeDocument(path, existing, claims)
+		return withoutHashHeader(tomlmerge.UnmergeDocument(path, existing, claims))
 	case FormatYAML:
-		return yamlmerge.UnmergeDocument(path, existing, claims)
+		return withoutHashHeader(yamlmerge.UnmergeDocument(path, existing, claims))
 	case FormatMarkdown:
 		return unmergeMarkdown(path, existing, claims)
 	default:
 		return Unmerged{}, unsupported(format)
 	}
+}
+
+// withoutHashHeader drops the Content-Hash and Source-Hash lines generate stamps
+// into the leading comment block of a merged document, so that taking ai-rulez's
+// content back out leaves the file as the user wrote it.
+func withoutHashHeader(result Unmerged, err error) (Unmerged, error) {
+	if err != nil || !result.Changed || result.Body == "" {
+		return result, err
+	}
+	var out strings.Builder
+	inHeader := true
+	for _, line := range strings.SplitAfter(result.Body, "\n") {
+		if inHeader {
+			trimmed := strings.TrimSpace(line)
+			switch {
+			case strings.HasPrefix(trimmed, "# Content-Hash: "), strings.HasPrefix(trimmed, "# Source-Hash: "):
+				continue
+			case !strings.HasPrefix(trimmed, "#"):
+				inHeader = false
+			}
+		}
+		out.WriteString(line)
+	}
+	result.Body = out.String()
+	return result, nil
 }
 
 func unsupported(format Format) error {
