@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -244,10 +243,46 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 		kept.Skills = c.keepStatic(d.Skills, name)
 		out.Domains[name] = &kept
 	}
-	if !slices.ContainsFunc(out.Skills, func(s ContentFile) bool { return SkillID(s) == DynamicSkillsName }) {
+	switch authored := c.authoredStubCount(&out); {
+	case authored == 0:
 		out.Skills = append(out.Skills, DynamicSkillsStub())
+	case authored > 1:
+		c.warnDuplicateStub(authored)
 	}
 	return &out
+}
+
+// authoredStubCount counts the skills named dynamic-skills that tree renders,
+// in the root and in every domain. Any one of them stands in for the generated stub.
+func (c *Config) authoredStubCount(tree *ContentTree) int {
+	isStub := func(s ContentFile) bool { return SkillID(s) == DynamicSkillsName }
+	n := 0
+	for _, s := range tree.Skills {
+		if isStub(s) {
+			n++
+		}
+	}
+	for _, d := range tree.Domains {
+		for _, s := range d.Skills {
+			if isStub(s) {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// warnDuplicateStub says, once per project, that several authored skills are
+// named dynamic-skills, so the harness gets whichever its tree keeps last.
+func (c *Config) warnDuplicateStub(n int) {
+	key := c.BaseDir + "\x00duplicate-stub"
+	fallbackWarnMu.Lock()
+	done := fallbackWarned[key]
+	fallbackWarned[key] = true
+	fallbackWarnMu.Unlock()
+	if !done {
+		logger.Warn(fmt.Sprintf("%d authored skills are named %q; they replace the generated stub and collide in a harness skill tree: rename all but one", n, DynamicSkillsName))
+	}
 }
 
 func (c *Config) keepStatic(skills []ContentFile, domain string) []ContentFile {

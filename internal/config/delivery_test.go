@@ -94,6 +94,56 @@ func TestContentForPreset_ExcludesServedAndAddsStubOnce(t *testing.T) {
 	assert.Equal(t, 1, stubs)
 }
 
+func TestContentForPreset_AuthoredDomainStubWins(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		tree          *ContentTree
+		wantAuthored  int
+		wantGenerated int
+	}{
+		{"domain skill wins", &ContentTree{
+			Skills:  []ContentFile{skillWith("x", "served")},
+			Domains: map[string]*Domain{"ops": {Skills: []ContentFile{skillWith(DynamicSkillsName, "static")}}},
+		}, 1, 0},
+		{"root and domain both authored", &ContentTree{
+			Skills:  []ContentFile{skillWith(DynamicSkillsName, "static"), skillWith("x", "served")},
+			Domains: map[string]*Domain{"ops": {Skills: []ContentFile{skillWith(DynamicSkillsName, "static")}}},
+		}, 2, 0},
+		{"a served domain skill of that name is not rendered, so the stub is added", &ContentTree{
+			Skills:  []ContentFile{skillWith("x", "served")},
+			Domains: map[string]*Domain{"ops": {Skills: []ContentFile{skillWith(DynamicSkillsName, "served")}}},
+		}, 0, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &Config{Content: tt.tree}
+
+			got := cfg.ContentForPreset("claude")
+
+			var authored, generated int
+			count := func(skills []ContentFile) {
+				for _, s := range skills {
+					switch {
+					case SkillID(s) != DynamicSkillsName:
+					case s.Path == dynamicSkillsPath:
+						generated++
+					default:
+						authored++
+					}
+				}
+			}
+			count(got.Skills)
+			for _, d := range got.Domains {
+				count(d.Skills)
+			}
+			assert.Equal(t, tt.wantAuthored, authored)
+			assert.Equal(t, tt.wantGenerated, generated)
+		})
+	}
+}
+
 func TestContentForPreset_AuthoredStubWins(t *testing.T) {
 	t.Parallel()
 	cfg := &Config{Content: &ContentTree{Skills: []ContentFile{skillWith(DynamicSkillsName, "static"), skillWith("x", "served")}}}
