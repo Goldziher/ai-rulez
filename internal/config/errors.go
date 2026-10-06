@@ -13,4 +13,9 @@ var (
 	// match ai-rulez.lock. Unlike other resolution failures it is fatal: loading
 	// continues with local content only for a flaky remote, never for a lock mismatch.
 	ErrLockViolation = errors.New("ai-rulez.lock violation")
+	// ErrIncludeOutsideProject marks a local include declared in the committed
+	// project config that resolves outside the project. It is fatal like a lock
+	// violation: dropping the include with a warning would hide a path a
+	// repository should never be able to name.
+	ErrIncludeOutsideProject = errors.New("local include is outside the project")
 )
