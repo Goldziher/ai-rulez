@@ -71,6 +71,9 @@ func provenance(layers []Layer) map[string]string {
 		return p.Governance.MinApprovers > 0 && p.Governance.MinApprovers == eff.Governance.MinApprovers
 	})
 	all("governance.approvers", func(p Policy) bool { return p.Governance.Approvers.Set })
+	all("mcp.allowed_commands", func(p Policy) bool { return p.MCP.AllowedCommands.Set })
+	all("mcp.deny_transports", func(p Policy) bool { return len(p.MCP.DenyTransports) > 0 })
+	firstWith("hooks.allow", func(p Policy) bool { return p.Hooks.Forbidden })
 	firstWith("guard.generated", func(p Policy) bool { return p.Guard.Generated })
 	return out
 }

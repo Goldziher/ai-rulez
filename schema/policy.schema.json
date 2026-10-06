@@ -180,6 +180,33 @@
           "items": { "type": "string", "minLength": 1 }
         }
       }
+    },
+    "mcp": {
+      "type": "object",
+      "description": "Bounds the repository's [[mcp_servers]]. A server outside the bound is not loaded and is reported (AR748).",
+      "additionalProperties": false,
+      "properties": {
+        "allowed_commands": {
+          "type": "array",
+          "description": "The only commands a stdio server may run, compared as written (npx does not cover /usr/bin/npx). An empty list allows no stdio server. Layers intersect.",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "deny_transports": {
+          "type": "array",
+          "description": "Transports no server may use. Layers union.",
+          "items": { "enum": ["stdio", "http", "sse"] }
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow": {
+          "type": "boolean",
+          "description": "false makes every [[hooks]] group a violation (AR748); the groups are not loaded. true constrains nothing."
+        }
+      }
     }
   },
   "definitions": {
