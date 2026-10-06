@@ -676,7 +676,7 @@ upload, a credential used for a network call):
 | `egress` | Environment | Network flags | Runs |
 | --- | --- | --- | --- |
 | unset (legacy) | the full inherited environment | not checked | always; `AR9E1` warns |
-| `false` | scrubbed: `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `TZ`, `LANG`, `LANGUAGE`, every `LC_*` variable, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
+| `false` | scrubbed: `PATH`, `HOME`, `USER`, `TZ`, `LANG`, `LANGUAGE`, every `LC_*` variable, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
 | `true` | scrubbed as above | not checked | only with `--allow-egress=<name>` on the command line (repeatable); otherwise `AR9E4` |
 
 `egress = false` is a declaration with two enforced layers, not a sandbox: the scrubbed environment (proxy and

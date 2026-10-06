@@ -1033,7 +1033,7 @@ ai-rulez generate [config-file] [flags]
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
-Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on every regeneration, so a hook or MCP command that arrives with a pulled change is shown when the run that would write it happens.
+Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on each regeneration (what is new since the previous run), so a hook or MCP command that arrives with a pulled change is shown by the run that writes it.
 
 Exit codes: `0` written, `1` a configuration failed to load, validate or generate (every root of a `--recursive` run is still processed), `2` `--check` found drift or `--locked`/`--frozen` found an authored source that differs from the lock (also a recursive run where every failure is lock drift). See [Exit Codes](#exit-codes).
 

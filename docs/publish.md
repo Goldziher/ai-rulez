@@ -57,7 +57,7 @@ The source tree check lists every untracked file (`--untracked-files=all`) and g
 `--repo` (default `[plugin] repository`, else the origin remote; `OWNER/REPO` or `HOST/OWNER/REPO`). Tag and repo are
 validated against an allowlist before reaching an argv. `--execute` checks `gh release view` first and refuses an
 existing release (releases are immutable) unless `--force`, which runs `gh release upload --clobber` instead. gh gets
-only a fixed set of variables: `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `TMPDIR`, `TMP`, `TEMP`, `TZ`, `LANG`,
+only a fixed set of variables: `PATH`, `HOME`, `USER`, `TMPDIR`, `TMP`, `TEMP`, `TZ`, `LANG`,
 `LANGUAGE`, `LC_*` (non-secret), `NO_COLOR=1`, `TERM=dumb` (plus the Windows system variables), and `GH_TOKEN`,
 `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN`, `GITHUB_ENTERPRISE_TOKEN`, `GH_HOST`, `GH_CONFIG_DIR`, `XDG_CONFIG_HOME`,
 `XDG_STATE_HOME`, `XDG_DATA_HOME`, proxy and certificate settings. The printed `would run` line is shell-quoted; gh
