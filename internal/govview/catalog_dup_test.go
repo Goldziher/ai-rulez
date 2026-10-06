@@ -1,4 +1,4 @@
-package commands
+package govview
 
 import (
 	"testing"
@@ -17,7 +17,7 @@ func TestDigestIndexFindsDisambiguatedDuplicates(t *testing.T) {
 		{Kind: "rule", ID: "dup#2", Path: "rules/dup.mdc", Digest: "sha256:two"},
 		{Kind: "rule", ID: "solo", Digest: "sha256:solo"},
 	}
-	index := newDigestIndex(items)
+	index := NewDigestIndex(items)
 
 	tests := []struct {
 		name             string
@@ -32,7 +32,7 @@ func TestDigestIndexFindsDisambiguatedDuplicates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			got := index.lookup(tt.kind, tt.domain, tt.id, tt.path)
+			got := index.Lookup(tt.kind, tt.domain, tt.id, tt.path)
 
 			// Assert
 			assert.Equal(t, tt.want, got)

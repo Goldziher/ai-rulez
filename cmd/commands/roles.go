@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -126,20 +127,6 @@ func runRolesList(out io.Writer) error {
 			r.Totals.Items, r.Totals.ByKind[config.RoleKindSkill], r.Totals.Tokens, r.Description)
 	}
 	return tw.Flush() //nolint:wrapcheck // writer error
-}
-
-// roleModeOutcomes is what each skill_mode of the role comes to on the configured
-// harnesses (see roles.PlanSkillModes).
-func roleModeOutcomes(cfg *config.Config, name string) ([]roles.SkillOutcome, error) {
-	res, err := cfg.ResolveRole(name)
-	if err != nil {
-		return nil, oops.Wrap(err)
-	}
-	outcomes := roles.PlanSkillModes(cfg, res)
-	if outcomes == nil {
-		outcomes = []roles.SkillOutcome{}
-	}
-	return outcomes, nil
 }
 
 // printModeOutcomes lists the skill modes that a configured harness cannot honour,
@@ -273,16 +260,13 @@ func runRolesResolve(out io.Writer, name string) error {
 	if err != nil {
 		return oops.Wrap(err)
 	}
-	role, err := roles.BuildRole(cfg, name, counter)
+	resolved, err := govview.ResolveRole(cfg, name, counter)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	outcomes, err := roleModeOutcomes(cfg, name)
-	if err != nil {
-		return err
-	}
+	role, outcomes := resolved.Role, resolved.SkillModes
 	if rolesFormat == formatJSON {
-		return writeJSON(out, map[string]any{"schema_version": roles.SchemaVersion, "tokenizer": counter.Name(), "role": role, "skill_modes": outcomes})
+		return writeJSON(out, resolved)
 	}
 	w := reportWriter{out}
 	w.printf("role %s: %d item(s), %d bytes, ~%d tokens (%s)\n", role.Name, role.Totals.Items, role.Totals.Bytes, role.Totals.Tokens, counter.Name())
