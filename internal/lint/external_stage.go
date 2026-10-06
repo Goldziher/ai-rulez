@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -283,7 +285,7 @@ func (r *runner) mcpStageJSON() []byte {
 	list := make([]entry, 0, len(servers))
 	for i := range servers {
 		s := &servers[i]
-		e := entry{Name: s.Name, Transport: s.Transport, Command: s.Command, Args: s.Args, URL: s.URL}
+		e := entry{Name: s.Name, Transport: s.Transport, Command: s.Command, Args: redactStageArgs(s.Args), URL: redactStageURL(s.URL)}
 		for k := range s.Env {
 			e.EnvNames = append(e.EnvNames, k)
 		}
@@ -299,6 +301,41 @@ func (r *runner) mcpStageJSON() []byte {
 		return nil
 	}
 	return append(data, '\n')
+}
+
+var secretFlagRe = regexp.MustCompile(`(?i)^-{1,2}[\w-]*(?:token|key|secret|password|passwd|credential|auth)[\w-]*$`)
+
+// redactStageArgs masks secrets in server arguments: the value of a flag named
+// like a credential (`--api-key abc`, `--token=abc`) and any key-looking text.
+func redactStageArgs(args []string) []string {
+	if len(args) == 0 {
+		return nil
+	}
+	const masked = "[REDACTED]"
+	out := make([]string, len(args))
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if name, _, hasValue := strings.Cut(a, "="); hasValue && secretFlagRe.MatchString(name) {
+			out[i] = name + "=" + masked
+			continue
+		}
+		out[i] = llm.RedactSecrets(a)
+		if secretFlagRe.MatchString(a) && i+1 < len(args) {
+			out[i+1] = masked
+			i++
+		}
+	}
+	return out
+}
+
+// redactStageURL drops userinfo, query and fragment from a server URL.
+func redactStageURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return llm.RedactSecrets(raw)
+	}
+	u.User, u.RawQuery, u.Fragment = nil, "", ""
+	return u.String()
 }
 
 // write creates the stage tree, then makes it read-only (directories 0500,
