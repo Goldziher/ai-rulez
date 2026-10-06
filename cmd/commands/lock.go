@@ -348,13 +348,12 @@ func checkLockAt(path string) int {
 	if code == 1 {
 		return code
 	}
-	if lockVerifyTags {
-		c := verifyTagsAt(path)
-		if c == 1 {
-			return c
-		}
-		code = worstExit(code, c)
+	// verifyTagsAt decides whether to ask the remotes: --verify-tags or [lock] verify_tags.
+	c := verifyTagsAt(path)
+	if c == 1 {
+		return c
 	}
+	code = worstExit(code, c)
 	code = worstExit(code, checkLockSignatureAt(path))
 	if code == 0 && upToDate != nil {
 		upToDate()

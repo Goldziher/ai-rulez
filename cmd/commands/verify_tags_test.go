@@ -25,6 +25,7 @@ func lockedAgeFixture(t *testing.T, lockTable string) *ageFixture {
 func TestLockCheckVerifyTags(t *testing.T) {
 	tests := []struct {
 		name       string
+		table      string
 		verify     bool
 		mutate     func(f *ageFixture)
 		wantCode   int
@@ -40,6 +41,11 @@ func TestLockCheckVerifyTags(t *testing.T) {
 			mutate: func(f *ageFixture) { f.repo.DeleteTag("v1.2.0") },
 		},
 		{
+			name: "the [lock] verify_tags key alone asks the remote, as the docs say", table: "[lock]\nverify_tags = true\n",
+			wantCode: exitDrift, wantStderr: "AR732",
+			mutate: func(f *ageFixture) { f.release("evil", "v1.2.0", true) },
+		},
+		{
 			name: "without --verify-tags the offline check does not look (the default is unchanged)", verify: false, wantCode: 0,
 			mutate: func(f *ageFixture) { f.release("evil", "v1.2.0", true) },
 		},
@@ -47,7 +53,7 @@ func TestLockCheckVerifyTags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			f := lockedAgeFixture(t, "")
+			f := lockedAgeFixture(t, tt.table)
 			tt.mutate(f)
 			lockVerifyTags = tt.verify
 
