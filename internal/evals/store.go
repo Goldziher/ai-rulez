@@ -48,6 +48,9 @@ type SkillRecord struct {
 	// Passing says the run met the pass threshold.
 	Passing bool       `json:"passing"`
 	Score   SkillScore `json:"score"`
+	// Estimate is what the run was projected to cost next to what it cost; nil on a
+	// record that predates it.
+	Estimate *EstimateRecord `json:"estimate,omitempty"`
 	// LastPass is the most recent passing run, kept when a later run fails.
 	LastPass *PassMark `json:"last_pass,omitempty"`
 	// MAC authenticates the record with the user's own key (hmac-sha256 over the
