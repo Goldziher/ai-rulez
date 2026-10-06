@@ -166,6 +166,7 @@ allowed_hosts  = ["github.com/example-org", "*.example.org"]   # includes, insta
 deny_hosts     = ["github.com/example-org/archived"]
 require_pinned = true                                           # the lock is enforced; an unpinned remote is an error
 min_release_age = "7d"                                          # the youngest tag any source may adopt
+min_release_age_source = "first-seen"                           # release time from the forge or first sighting, never a committer's date
 deny_digests    = ["sha256:0000000000000000000000000000000000000000000000000000000000000000"]  # known-bad content, blocked everywhere
 
 [lint]
@@ -292,6 +293,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.security.trusted_orgs` | the repository's entries the list names; the policy list when it sets none or none is left. An empty policy list trusts no organization | an entry the list does not name; the entry is dropped | `AR740` |
 | `lint.capability.max_network_commands` | the lower value; an unset repository value is the lower of the policy bound and the built-in 5 | a higher explicit value | `AR740` |
 | `sources.min_release_age` | the longer age; an unset `[lock]` or per-source age takes it | a younger `[lock] min_release_age` or per-source age, including `"0"` | `AR740` |
+| `sources.min_release_age_source` | the stronger of `forge` and `first-seen`; an unset `[lock]` source takes `forge`, and keeps `auto` under `first-seen` | a weaker `[lock] min_release_age_source`: `commit`, and `auto` or `first-seen` under `forge` (`auto` can fall back to `first-seen`) | `AR740` |
 | `lint.budgets.<kind>.max_lines`, `.max_tokens` | the lower value per kind and field; an unset one is the lower of the policy bound and the built-in budget | a higher explicit `[lint.budgets.<kind>]` value | `AR740` |
 | `lint.load_budgets.<id>` | the lower value per id; an unset one is the lower of the policy bound and the built-in limit | a higher explicit value | `AR740` |
 | `lint.scanner_policy.preset` | the stronger preset (`off` < `baseline` < `strict`) | a weaker explicit preset (an unset one takes the policy's) | `AR740` |
@@ -439,7 +441,6 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   inside a local include's directory) is imported. A violation unloads the key and is `AR748`, reported against the
   imported file. Builtin packs are not bounded (they ship with the binary).
 - **Known gaps.** A policy value is not checked against the secret scanner yet. `deny_digests`
-  bounds what the repository's own `ai-rulez.lock` says. The release-time source (`forge` or `first-seen`) cannot be required by a policy yet, only
-  the age. Booleans are not compared when a child extends a parent. The `telemetry` and `llm` locks ignore
+  bounds what the repository's own `ai-rulez.lock` says. Booleans are not compared when a child extends a parent. The `telemetry` and `llm` locks ignore
   organization discovery, which needs a repository.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).

@@ -37,6 +37,9 @@ func provenance(layers []Layer) map[string]string {
 	firstWith("sources.min_release_age", func(p Policy) bool {
 		return p.Sources.MinReleaseAge > 0 && p.Sources.MinReleaseAge == eff.Sources.MinReleaseAge
 	})
+	firstWith("sources.min_release_age_source", func(p Policy) bool {
+		return p.Sources.MinReleaseAgeSource != "" && p.Sources.MinReleaseAgeSource == eff.Sources.MinReleaseAgeSource
+	})
 	for kind, sb := range eff.Lint.SizeBudgets {
 		if sb.MaxLines > 0 {
 			firstWith("lint.budgets."+kind+".max_lines", func(p Policy) bool { return p.Lint.SizeBudgets[kind].MaxLines == sb.MaxLines })
