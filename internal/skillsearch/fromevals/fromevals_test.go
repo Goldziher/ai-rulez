@@ -68,3 +68,26 @@ func TestDerive_NoEvalsIsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, got.Cases)
 }
+
+// The catalog keys skills by their frontmatter name, which need not be the directory name.
+func TestDerive_UsesTheFrontmatterNameNotTheDirectoryName(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	root := t.TempDir()
+	write(t, root, "skills/dir-name/SKILL.md", "---\nname: catalog-name\ndescription: d\n---\n")
+	write(t, root, "skills/dir-name/evals/a.eval.yaml", "id: one\nprompt: do the thing\nexpect_trigger: true\n")
+	write(t, root, "skills/no-name/SKILL.md", "---\ndescription: d\n---\n")
+	write(t, root, "skills/no-name/evals/a.eval.yaml", "id: two\nprompt: do another\nexpect_trigger: false\n")
+
+	// Act
+	got, err := Derive(root)
+
+	// Assert
+	require.NoError(t, err)
+	byID := map[string]skillsearch.Case{}
+	for _, c := range got.Cases {
+		byID[c.ID] = c
+	}
+	assert.Equal(t, []string{"catalog-name"}, byID["dir-name/one"].ExpectIDs(), "expected skills use the name the catalog serves")
+	assert.Equal(t, []string{"no-name"}, byID["no-name/two"].Avoid, "a skill without a name falls back to its directory")
+}
