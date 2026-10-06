@@ -152,7 +152,7 @@ in `lock --check`, `generate --locked`, `validate --strict` and the skills serve
 | `AR713` | `approver-not-authorized` | Every record of the current digest is by a reviewer outside `approvers` |
 | `AR714` | `approval-insufficient` | Fewer distinct valid reviewers than `min_approvers` |
 | `AR715` | `approval-orphan` | A record names content that no longer exists (warning) |
-| `AR716` | `approval-with-change` | An approval was added in the same change as the content it approves, or (with `forbid_self_approval`) the reviewer authored a change to it (only with `approve --verify-base` or `validate --strict --approvals-base`) |
+| `AR716` | `approval-with-change` | An approval was added in the same change as the content it approves, or (with `forbid_self_approval`) the reviewer authored a change to it (only with `approve --verify-base` or `validate --strict --approvals-base`); also a change to CODEOWNERS or `[governance]` in the range, and a new approval by a reviewer who did not own the item at the merge base |
 | `AR717` | `approval-denied` | The content's digest is on the `[[deny]]` list |
 | `AR718` | `approval-unverified` | Every approval of the current digest claims an assurance (`signed`, `review-linked`) that could not be verified |
 | `AR719` | `approver-unresolved` | `approvers_from` or a team cannot be resolved, so nobody is authorized by it |
@@ -397,7 +397,14 @@ needed. An approval of content the base already pinned at the same digest is a l
 revision, or a configuration outside a git work tree, is an error (exit 1), never a pass; a base without a lock counts
 every approval as new. A finding means the change cannot vouch for itself: require a second reviewer (code owners on
 `ai-rulez.lock`) or land the content first and approve it in a following change. Also treat any pull request that
-touches `[[approval]]`, `[[deny]]` or `[governance]` as sensitive. The stronger [assurance levels](#assurance-levels)
+touches `[[approval]]`, `[[deny]]` or `[governance]` as sensitive.
+
+With a base revision the same checks also read who may approve from the merge base, not from the change: `AR716` is
+raised when the CODEOWNERS file `approvers_from` names, or the `[governance]` table of `config.toml`, differs between
+the merge base and the working tree, and for each new approval whose reviewer does not own the item in CODEOWNERS as it
+was at the merge base. A pull request cannot authorize itself by adding its author to CODEOWNERS. Without a base
+revision `approvers_from` reads the working tree, so `asserted` is not a security boundary: set
+`min_assurance = "review-linked"` or higher where approvals must hold against a hostile change. The stronger [assurance levels](#assurance-levels)
 exist for the cases where that review is not enough: `review-linked` ties a record to a forge review, `signed` to a
 signer a `[[signing.trust]]` entry names, and the approval set is part of the signed
 [lock subject](lockfile.md#signing-the-lock).
