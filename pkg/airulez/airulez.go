@@ -531,7 +531,7 @@ type GenerateOptions struct {
 // Experimental.
 type Drift struct {
 	Path string
-	// Kind is "missing", "stale", "edited" or "orphan".
+	// Kind is "missing", "stale", "edited", "orphan" or "blocked".
 	Kind string
 }
 

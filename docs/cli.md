@@ -1138,6 +1138,9 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
 | `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it |
+| `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
+
+With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.
 
 Exit codes: `0` nothing differs, `1` the check could not run (configuration invalid, a nested root failed to load, or an environment variable an MCP server references is unset: `--check` renders the outputs and needs the same secrets as `generate`), `2` at least one file differs. A trailing-newline-only difference is not reported, because `generate` normalizes it. With `[header] hashes = "none"` there is no hash to compare, so every difference is `stale`. `--check` cannot be combined with `--dry-run`, `--plugin` (use `verify --plugin`) or `--gitignore`.
 

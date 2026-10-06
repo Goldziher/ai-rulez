@@ -354,92 +354,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 (no change)
 
 ## step 4: ai-rulez generate --check
-exit: 2
+exit: 0
 --- stdout
-stale: .agents/skills/build/SKILL.md
-stale: .agents/skills/deployer/SKILL.md
-stale: .agents/skills/quick/SKILL.md
-stale: .agents/skills/reviewer/SKILL.md
-stale: .agents/skills/scratch/SKILL.md
-stale: .agents/skills/ship/SKILL.md
-stale: .claude/agents/architect.md
-stale: .claude/agents/helper.md
-stale: .claude/agents/tester.md
-stale: .claude/rules/always.md
-stale: .claude/rules/auto.md
-stale: .claude/rules/lab.local.md
-stale: .claude/rules/manual.md
-stale: .claude/rules/mine.local.md
-stale: .claude/rules/targeted.md
-stale: .claude/rules/typescript.md
-stale: .claude/skills/build/SKILL.md
-stale: .claude/skills/deployer/SKILL.md
-stale: .claude/skills/quick/SKILL.md
-stale: .claude/skills/reviewer/SKILL.md
-stale: .claude/skills/scratch/SKILL.md
-stale: .claude/skills/ship/SKILL.md
-stale: .codex/rules/ai-rulez.rules
-stale: .cursor/agents/architect.md
-stale: .cursor/agents/helper.md
-stale: .cursor/agents/tester.md
-stale: .cursor/rules/always.mdc
-stale: .cursor/rules/auto.mdc
-stale: .cursor/rules/context-architecture.mdc
-stale: .cursor/rules/context-overview.mdc
-stale: .cursor/rules/lab.local.mdc
-stale: .cursor/rules/manual.mdc
-stale: .cursor/rules/mine.local.mdc
-stale: .cursor/rules/targeted.mdc
-stale: .cursor/rules/typescript.mdc
-stale: .gemini/agents/architect.md
-stale: .gemini/agents/helper.md
-stale: .gemini/agents/tester.md
-stale: .github/agents/architect.agent.md
-stale: .github/agents/helper.agent.md
-stale: .github/agents/tester.agent.md
-stale: .github/copilot-instructions.md
-stale: .github/instructions/ai-rulez.local.instructions.md
-stale: .github/instructions/always.instructions.md
-stale: .github/instructions/lab.local.instructions.md
-stale: .github/instructions/mine.local.instructions.md
-stale: .github/instructions/typescript.instructions.md
-stale: .github/prompts/build.prompt.md
-stale: .github/prompts/quick.prompt.md
-stale: .github/prompts/ship.prompt.md
-stale: .github/skills/deployer/SKILL.md
-stale: .github/skills/reviewer/SKILL.md
-stale: .github/skills/scratch/SKILL.md
-stale: .kilo/agents/architect.md
-stale: .kilo/agents/helper.md
-stale: .kilo/agents/tester.md
-stale: .kilo/commands/build.md
-stale: .kilo/commands/quick.md
-stale: .kilo/commands/ship.md
-stale: .kilo/rules/always.md
-stale: .kilo/rules/auto.md
-stale: .kilo/rules/lab.local.md
-stale: .kilo/rules/manual.md
-stale: .kilo/rules/mine.local.md
-stale: .kilo/rules/typescript.md
-stale: .kilo/skills/deployer/SKILL.md
-stale: .kilo/skills/reviewer/SKILL.md
-stale: .kilo/skills/scratch/SKILL.md
-stale: .opencode/agents/architect.md
-stale: .opencode/agents/helper.md
-stale: .opencode/agents/tester.md
-stale: .opencode/commands/build.md
-stale: .opencode/commands/quick.md
-stale: .opencode/commands/ship.md
-stale: .opencode/skills/deployer/SKILL.md
-stale: .opencode/skills/reviewer/SKILL.md
-stale: .opencode/skills/scratch/SKILL.md
-stale: AGENTS.local.md
-stale: AGENTS.md
-stale: AGENTS.override.md
-stale: CLAUDE.local.md
-stale: CLAUDE.md
-stale: GEMINI.local.md
-stale: GEMINI.md
 --- stderr
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -465,7 +381,8 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written preset=gemini items=command quick
-84 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+INFO  Generated files are up to date roots=1
 --- project tree
 (no change)
 --- home tree

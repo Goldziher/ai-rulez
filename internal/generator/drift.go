@@ -30,6 +30,10 @@ const (
 	// DriftOrphan: the file is in the previous manifest, no longer rendered, and
 	// a generate run would delete it.
 	DriftOrphan DriftKind = "orphan"
+	// DriftBlocked: a machine-local input would change this file and generate
+	// refuses to write it (it is tracked or not ignored); `generate` and
+	// `generate --dry-run` report the same refusal. --allow-local-drift lifts it.
+	DriftBlocked DriftKind = "blocked"
 )
 
 // Drift is one generated file that differs from its expected state.
