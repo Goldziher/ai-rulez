@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"io"
 	"os"
 	"path/filepath"
@@ -178,7 +179,7 @@ func (p *Pipeline) updateAgents(fn func(map[string]int64)) {
 	}
 	defer release()
 	state := map[string]int64{}
-	if data, readErr := os.ReadFile(p.agentStatePath()); readErr == nil { //nolint:gosec // machine-local state
+	if data, readErr := safefs.ReadRegular(p.agentStatePath()); readErr == nil {
 		_ = json.Unmarshal(data, &state) //nolint:errcheck // a corrupt file starts over
 	}
 	cutoff := p.Clock().Add(-agentStateTTL).UnixMilli()

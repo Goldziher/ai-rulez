@@ -3,7 +3,7 @@ package usage
 import (
 	"bufio"
 	"encoding/json"
-	"os"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"sort"
 
 	"github.com/samber/oops"
@@ -49,7 +49,7 @@ type Report struct {
 
 // ReadLog reads a JSON Lines usage log.
 func ReadLog(path string) (entries []Entry, skipped int, err error) {
-	file, err := os.Open(path) //nolint:gosec // user-chosen log path
+	file, err := safefs.OpenRegular(path)
 	if err != nil {
 		return nil, 0, oops.With("path", path).Wrapf(err, "open usage log")
 	}
