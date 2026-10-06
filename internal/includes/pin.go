@@ -61,6 +61,15 @@ func record(baseDir, kind, name string, o observed) {
 	observedMu.Unlock()
 }
 
+// ObservedCommit is the commit a fetch of the named source resolved to in this
+// process, or "" when none was fetched. It lets a `lock` run pin the include of
+// a served skill before the lock file that records it has been written.
+func ObservedCommit(baseDir, kind, name string) string {
+	observedMu.Lock()
+	defer observedMu.Unlock()
+	return observedBy[observedKey(baseDir, kind, name)].commit
+}
+
 // ResetObserved forgets the recorded resolutions.
 func ResetObserved() {
 	observedMu.Lock()
