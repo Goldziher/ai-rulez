@@ -154,6 +154,9 @@ func Loosens(parent, child Policy) []string {
 	if c, p := child.Sources.MinReleaseAge, parent.Sources.MinReleaseAge; c > 0 && c < p {
 		add("sources.min_release_age", "%s is shorter than the parent's %s", formatAge(c), formatAge(p))
 	}
+	if c, p := child.Sources.MinReleaseAgeSource, parent.Sources.MinReleaseAgeSource; c != "" && ageSourceRank[c] < ageSourceRank[p] {
+		add("sources.min_release_age_source", "%q is weaker than the parent's %q", c, p)
+	}
 	for _, code := range sortedKeys(child.Lint.SeverityFloor) {
 		if p, ok := parent.Lint.SeverityFloor[code]; ok && severityRank[child.Lint.SeverityFloor[code]] < severityRank[p] {
 			add("lint.severity_floor."+code, "%q is below the parent's %q", child.Lint.SeverityFloor[code], p)

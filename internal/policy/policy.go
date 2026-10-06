@@ -91,6 +91,11 @@ type Sources struct {
 	// MinReleaseAge is the youngest a tag may be to be adopted: the floor under
 	// [lock] min_release_age and each source's own. 0 for no floor.
 	MinReleaseAge time.Duration
+	// MinReleaseAgeSource is the least trustworthy source a tag's release time
+	// may come from: "forge" (only the forge's publish time) or "first-seen"
+	// (the forge or this machine's first sighting, never a committer's date).
+	// "" for no requirement.
+	MinReleaseAgeSource string
 	// DenyDigests lists sha256 digests of known-bad content: no include, installed
 	// skill, skill source or authored item the lock pins may have one of them.
 	DenyDigests []string
@@ -219,7 +224,9 @@ type fileSources struct {
 	DenyHosts     []string  `toml:"deny_hosts"`
 	RequirePinned *bool     `toml:"require_pinned"`
 	MinReleaseAge string    `toml:"min_release_age"`
-	DenyDigests   []string  `toml:"deny_digests"`
+	// MinReleaseAgeSource is the release-time source floor (see Sources).
+	MinReleaseAgeSource string   `toml:"min_release_age_source"`
+	DenyDigests         []string `toml:"deny_digests"`
 }
 
 type fileLint struct {
@@ -414,6 +421,14 @@ func (s *Sources) fromDoc(d *fileSources) error {
 			return err
 		}
 		s.MinReleaseAge = age
+	}
+	switch src := strings.ToLower(strings.TrimSpace(d.MinReleaseAgeSource)); src {
+	case "":
+	case config.AgeSourceForge, config.AgeSourceFirstSeen:
+		s.MinReleaseAgeSource = src
+	default:
+		return fmt.Errorf("sources.min_release_age_source: %q is not a floor (use %q or %q; auto and commit are the repository's choices, and a committer's date is never required)",
+			d.MinReleaseAgeSource, config.AgeSourceForge, config.AgeSourceFirstSeen)
 	}
 	return nil
 }
