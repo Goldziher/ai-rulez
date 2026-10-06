@@ -213,7 +213,42 @@ would write 40 events in 1 batches to usage.ndjson (nothing written)
   gets an id derived from its text and line number (two identical lines stay two events); the observation time is the newest event time, so no clock is read. The same
   log gives the same file, which is replaced atomically (mode 0600; a symlink at the destination is replaced, never
   written through; the destination may not be the log itself).
-- `--to otlp` is not available here; `telemetry flush` sends the outbox.
+- `--with-evals` adds one `eval_result` record per verified eval result (see
+  [eval results](telemetry.md#what-is-collected)); a result is built from `.ai-rulez/eval-results.json`, never from the log.
+- `--to otlp` sends instead of writing, see [below](#pushing-to-a-collector).
+
+## Pushing to a collector
+
+`ai-rulez usage export --to otlp` pushes the log past the export cursor to the collector you consented to with
+[`telemetry enable`](telemetry.md#the-consent-record). It is the by-hand form of what every flush does first: queue the
+events the outbox does not already hold, send them with retry, move the cursor.
+
+```console
+$ ai-rulez usage export --to otlp
+queued 12 events from the usage log and 0 eval results (3 already queued or delivered); delivered 12 in 1 batches
+$ ai-rulez usage export --to otlp --with-evals
+$ ai-rulez usage export --to otlp --all        # also the history from before consent
+$ ai-rulez usage export --to otlp --dry-run    # count only: nothing queued, sent or moved
+```
+
+It needs consent (`telemetry status` says whether you have it), exits 1 when delivery fails so CI notices (the background
+flush stays silent), and an event is never sent twice: the cursor and a ring of delivered event ids see to that.
+Eval results are queued once per result. See [the export cursor](telemetry.md#the-export-cursor-and-catch-up).
+
+## Pruning the log
+
+`ai-rulez usage prune --keep-days 90` deletes lines older than 90 days that are behind the export cursor, so an event
+still waiting to be exported is never lost to a prune. See [pruning the usage log](telemetry.md#pruning-the-usage-log) for
+the rules, `--dry-run` and `--ignore-cursor`.
+
+## Joining several logs
+
+`ai-rulez report evals --usage a/usage.jsonl --usage b/usage.jsonl` merges the usage of several repositories or
+machines: an event that appears in more than one log counts once, by its `event_id` (lines without one, version 2 and
+older, all count). `--from-otlp` reads every `--usage` file as OTLP JSON instead (what `usage export --to file` writes, or
+a collector's file exporter produces). The digest scheme travels in the export, so `exact`, `stale` and `legacy` mean the
+same as for a native log; a served-skill digest is never taken for the canonical one. A load of a supporting file is not
+counted as a use. `--usage-log` is the same flag as `--usage`.
 
 ### Design decisions
 
