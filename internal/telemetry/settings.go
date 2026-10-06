@@ -162,6 +162,7 @@ func Resolve(layers Layers) Settings {
 	}
 	applyEnv(&s, getenv)
 	applyConsent(&s, layers)
+	s.Endpoint = config.NormalizeTelemetryEndpoint(s.Endpoint, s.Protocol)
 
 	// Validate the effective result too: an invalid env override must not export.
 	effective := config.TelemetryConfig{
@@ -231,7 +232,7 @@ func applyConsent(s *Settings, layers Layers) {
 		s.IncludeSession = true
 		s.Sources["include_session"] = ScopeConsent
 	}
-	reason := c.Check(s.Endpoint, s.Protocol, s.IncludePaths, s.IncludeSession)
+	reason := c.Check(config.NormalizeTelemetryEndpoint(s.Endpoint, s.Protocol), s.Protocol, s.IncludePaths, s.IncludeSession)
 	switch {
 	case s.ConsentState == ConsentDenied:
 		// An explicit refusal in the environment stays.

@@ -340,7 +340,7 @@ keep the series count per skill constant. A gauge point exists only for a score 
 | --- | --- | --- |
 | `http/json` (default) | OTLP/HTTP, gzipped JSON body, `Content-Type: application/json` | base URL; `/v1/logs` and `/v1/metrics` are appended |
 | `http/protobuf` | OTLP/HTTP, gzipped protobuf body, `Content-Type: application/x-protobuf` | same as above |
-| `grpc` | OTLP/gRPC `LogsService` and `MetricsService`, gzip-compressed calls | `host[:port]` (default port 4317), no path; `https` uses TLS, `http` is loopback only and plaintext |
+| `grpc` | OTLP/gRPC `LogsService` and `MetricsService`, gzip-compressed calls | `host[:port]` (default port 4317), no path; a bare `host:port` means `https` (TLS), `http://` is loopback only and plaintext |
 
 Headers from `headers_env` travel as HTTP headers or gRPC metadata (keys lower-cased). Retry classes are the same: gRPC
 `Unavailable`, `ResourceExhausted`, `DeadlineExceeded`, `Aborted` and `Canceled` are retried (a server `RetryInfo` delay

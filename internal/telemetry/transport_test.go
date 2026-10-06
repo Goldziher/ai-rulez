@@ -290,6 +290,8 @@ func TestGRPCTarget(t *testing.T) {
 	}{
 		{endpoint: "https://collector.example.org", want: "collector.example.org:4317", tls: true},
 		{endpoint: "https://collector.example.org:4443/", want: "collector.example.org:4443", tls: true},
+		{endpoint: "collector.internal:4317", want: "collector.internal:4317", tls: true},
+		{endpoint: "collector.internal", want: "collector.internal:4317", tls: true},
 		{endpoint: "http://127.0.0.1:4317", want: "127.0.0.1:4317"},
 		{endpoint: "http://[::1]", want: "[::1]:4317"},
 		{endpoint: "://bad", wantErr: true},
