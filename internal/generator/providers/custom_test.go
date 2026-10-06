@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 const demoSpec = `name = "demo"
@@ -38,19 +39,19 @@ func TestProviderSpecFactory(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "demo.toml"), []byte(demoSpec), 0o644))
 
 	t.Run("resolves a matching provider", func(t *testing.T) {
-		gen, err := reg.Provider(config.Preset{Name: "demo", Provider: "demo.toml"}, dir)
+		gen, err := reg.Provider(config.Preset{Name: "demo", Provider: "demo.toml"}, dir, workspace.OSView(dir))
 		require.NoError(t, err)
 		assert.Equal(t, "demo", gen.GetName())
 	})
 
 	t.Run("rejects a name mismatch", func(t *testing.T) {
-		_, err := reg.Provider(config.Preset{Name: "other", Provider: "demo.toml"}, dir)
+		_, err := reg.Provider(config.Preset{Name: "other", Provider: "demo.toml"}, dir, workspace.OSView(dir))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "does not match preset name")
 	})
 
 	t.Run("rejects path traversal", func(t *testing.T) {
-		_, err := reg.Provider(config.Preset{Name: "demo", Provider: "../demo.toml"}, dir)
+		_, err := reg.Provider(config.Preset{Name: "demo", Provider: "../demo.toml"}, dir, workspace.OSView(dir))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "escapes the project root")
 	})

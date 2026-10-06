@@ -150,7 +150,7 @@ func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 			if cfg.Registry == nil || cfg.Registry.Provider == nil {
 				return nil, fmt.Errorf("provider preset generator factory not initialized")
 			}
-			generator, err = cfg.Registry.Provider(preset, cfg.BaseDir)
+			generator, err = cfg.Registry.Provider(preset, cfg.BaseDir, cfg.View())
 		default:
 			if cfg.Registry == nil || cfg.Registry.Custom == nil {
 				return nil, fmt.Errorf("custom preset generator factory not initialized")

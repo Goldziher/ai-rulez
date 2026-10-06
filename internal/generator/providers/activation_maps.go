@@ -30,7 +30,7 @@ func MappedRulesFolders(cfg *config.Config) []MappedRulesFolder {
 		case preset.IsBuiltIn():
 			gen, err = LoadBuiltin(preset.BuiltIn)
 		case preset.Provider != "":
-			gen, err = loadCustomProvider(preset, cfg.BaseDir)
+			gen, err = loadCustomProvider(preset, cfg.BaseDir, cfg.View())
 		default:
 			continue
 		}
