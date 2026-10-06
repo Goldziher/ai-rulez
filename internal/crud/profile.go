@@ -2,6 +2,7 @@ package crud
 
 import (
 	"context"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
@@ -246,6 +247,7 @@ func (op *OperatorImpl) ListProfiles(ctx context.Context) ([]ProfileInfo, error)
 		}
 		infos = append(infos, info)
 	}
+	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
 
 	return infos, nil
 }
