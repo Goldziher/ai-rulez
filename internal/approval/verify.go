@@ -24,10 +24,16 @@ type SelfApproval struct {
 	// Author, when set, makes this a forbid_self_approval finding: the reviewer
 	// is the author of commits that touched the item since the base revision.
 	Author string
+	// Note, when set, is the whole finding: a change to CODEOWNERS or
+	// [governance] in the reviewed range, not tied to one approval.
+	Note string
 }
 
 // Message is a complete sentence for a finding.
 func (s SelfApproval) Message() string {
+	if s.Note != "" {
+		return s.Note
+	}
 	if s.Author != "" {
 		return fmt.Sprintf("the approval of %s by %s comes from the author of a change to it (%s) and [governance] forbid_self_approval is set; another reviewer must approve",
 			s.Ref, s.Approval.Reviewer, s.Author)
