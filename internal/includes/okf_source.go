@@ -45,7 +45,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 	}
 	if DetectSourceType(source) == SourceTypeGit {
 		w := withVersion(lockfile.Want{
-			Kind: lockfile.KindInclude, Name: c.Name, Source: RedactURL(source), Path: c.Path, Ref: c.Ref,
+			Kind: lockfile.KindInclude, Name: c.Name, Source: lockSource(r.baseDir, source), Path: c.Path, Ref: c.Ref,
 		}, c.VersionSpec())
 		p, err := pinFor(r.cfg, r.lock, w)
 		if err != nil {
