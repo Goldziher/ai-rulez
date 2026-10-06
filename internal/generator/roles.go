@@ -200,6 +200,11 @@ func skillsWithKeys(skills []config.ContentFile, domain string, keys map[string]
 // is approximated for them.
 func (g *Generator) warnRoleSkillModeHarnesses(name string, outcomes []roles.SkillOutcome) {
 	for _, o := range outcomes {
+		if len(o.Overridden) > 0 {
+			logger.Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Overridden, ", ")+
+				": the skill's own frontmatter sets disable-model-invocation or user-invocable to another value, and an author's key is never overwritten",
+				"role", name, "skill", o.Key())
+		}
 		if len(o.Degraded) == 0 {
 			continue
 		}
