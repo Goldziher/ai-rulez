@@ -235,3 +235,49 @@ func TestDigestChangesWithGoldenFiles(t *testing.T) {
 	// Assert
 	assert.NotEqual(t, before.Digest, after.Digest)
 }
+
+func TestLintDirReportsEveryProblemNotJustTheFirst(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(string) string
+		want   []string
+	}{
+		{
+			"an unknown key does not hide the rest",
+			func(s string) string {
+				s = strings.Replace(s, "weight = 0.6", "weight = 0.5", 1)
+				return "surprise = 1\n" + s
+			},
+			[]string{"surprise", "weights sum to 0.900"},
+		},
+		{
+			"two unknown keys",
+			func(s string) string { return "first = 1\nsecond = 2\n" + s },
+			[]string{"first", "second"},
+		},
+		{
+			"an out of range code used twice is also a reused code",
+			func(s string) string { return strings.ReplaceAll(s, `code = "AR9G7"`, `code = "AR9G9"`) },
+			[]string{"must be one of AR9G1-AR9G7", "reuses code AR9G9"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			body := tt.mutate(minimalRubric)
+			if strings.Contains(tt.name, "out of range") {
+				body = strings.Replace(body, `code = "AR9G1"`, `code = "AR9G9"`, 1)
+			}
+			dir := writeRubric(t, t.TempDir(), "mine", body)
+
+			// Act
+			problems, err := LintDir(dir)
+
+			// Assert
+			require.NoError(t, err)
+			for _, w := range tt.want {
+				assert.Contains(t, messages(problems), w)
+			}
+		})
+	}
+}
