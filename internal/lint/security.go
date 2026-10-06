@@ -111,6 +111,26 @@ func (r *runner) securityScan(abs, raw string) {
 }
 
 func (r *runner) scanHidden(abs string, no int, line string, firstLine bool) {
+	if found := hiddenIn(line, firstLine); len(found) > 0 {
+		r.add(CodeHiddenCharacters, abs, no, "hidden character(s): %s", strings.Join(found, ", "))
+	}
+}
+
+// DetectHidden reports whether text holds a zero-width, bidirectional-control
+// or Unicode tag character the AR002 rule flags, and returns the first one
+// found. It applies no lint setting, severity or ignore: a caller deciding what
+// may leave the machine cannot let repository config switch the check off.
+func DetectHidden(text string) (string, bool) {
+	for i, line := range strings.Split(text, "\n") {
+		if found := hiddenIn(line, i == 0); len(found) > 0 {
+			return found[0], true
+		}
+	}
+	return "", false
+}
+
+// hiddenIn lists the hidden characters of one line.
+func hiddenIn(line string, firstLine bool) []string {
 	runes := []rune(line)
 	seen := map[rune]bool{}
 	var found []string
@@ -134,9 +154,7 @@ func (r *runner) scanHidden(abs string, no int, line string, firstLine bool) {
 		}
 		found = append(found, fmt.Sprintf("U+%04X %s (column %d)", c, name, i+1))
 	}
-	if len(found) > 0 {
-		r.add(CodeHiddenCharacters, abs, no, "hidden character(s): %s", strings.Join(found, ", "))
-	}
+	return found
 }
 
 // joinerIsLegitimate accepts a joiner between two non-ASCII characters, as in

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 const reviewConfigBody = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
@@ -253,4 +256,57 @@ func TestRubricLintListShow(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, found, out.String())
 	})
+}
+
+func TestReviewEstimateWithholdsRegardlessOfLintSuppressions(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+	}{
+		{"ignored code", "\n[lint]\nignore = [\"AR001\", \"secret-detected\"]\n"},
+		{"severity off", "\n[lint.severity]\nAR001 = \"off\"\n"},
+		{"ignored path", "\n[lint]\nignore_paths = [\"skills/**\"]\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			reviewProject(t, tt.config)
+			reviewFlags.estimate = true
+			var out bytes.Buffer
+
+			// Act
+			_, err := runReview(ReviewCmd, nil, &out)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "withheld (never sent): skill:leak")
+			assert.NotContains(t, out.String(), "AKIAIOSFODNN7EXAMPLE")
+		})
+	}
+}
+
+// llmLockEnforcer is a policy that forbids model calls and clamps nothing else.
+type llmLockEnforcer struct{}
+
+func (llmLockEnforcer) Enforce(context.Context, *config.Config) (*config.PolicyOutcome, error) {
+	return &config.PolicyOutcome{}, nil
+}
+
+func (llmLockEnforcer) Locks(feature string) bool { return feature == "llm" }
+
+func TestReviewEstimateRefusedUnderAPolicyLLMLock(t *testing.T) {
+	// Arrange
+	reviewProject(t, "\n[llm]\nmodel = \"claude-haiku-4-5\"\n")
+	reviewFlags.estimate = true
+	config.SetPolicyEnforcer(llmLockEnforcer{})
+	t.Cleanup(func() { config.SetPolicyEnforcer(policyEnforcer) })
+	var out bytes.Buffer
+
+	// Act
+	refused, err := runReview(ReviewCmd, nil, &out)
+
+	// Assert
+	require.NoError(t, err)
+	assert.True(t, refused)
+	assert.Contains(t, out.String(), "policy forbids model calls")
 }
