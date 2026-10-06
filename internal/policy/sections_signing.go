@@ -89,6 +89,14 @@ func (s *Signing) fromDoc(d *fileSigning) error {
 		}
 		s.MinHashVersion = *d.MinHashVersion
 	}
+	if err := s.thresholdsFromDoc(d); err != nil {
+		return err
+	}
+	return s.trustFromDoc(d)
+}
+
+// thresholdsFromDoc reads signing.thresholds.
+func (s *Signing) thresholdsFromDoc(d *fileSigning) error {
 	for subject, k := range d.Thresholds {
 		if !slices.Contains(trustSubjects, subject) {
 			return fmt.Errorf("signing.thresholds: %q is not a subject (use %s)", subject, strings.Join(trustSubjects, ", "))
@@ -100,6 +108,11 @@ func (s *Signing) fromDoc(d *fileSigning) error {
 	if len(d.Thresholds) > 0 {
 		s.Thresholds = maps.Clone(d.Thresholds)
 	}
+	return nil
+}
+
+// trustFromDoc reads signing.trust and allow_repo_identities.
+func (s *Signing) trustFromDoc(d *fileSigning) error {
 	if d.AllowRepoIdentities != nil && *d.AllowRepoIdentities && len(d.Trust) > 0 {
 		return fmt.Errorf("signing.allow_repo_identities = true contradicts [[signing.trust]]: a listed trust set already bounds the repository's signers")
 	}
