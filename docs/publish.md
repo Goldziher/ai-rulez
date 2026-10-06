@@ -224,10 +224,10 @@ verifies a release signed here. The manifest's `signature` records the file and 
 A signature over the archive alone does not bind the manifest, the lock copy or the SBOM, so a release is signed twice:
 the archive (above) and a DSSE in-toto statement, `<name>-<version>.attestation.sigstore.json`, of predicate type
 `https://github.com/Goldziher/ai-rulez/attestations/publish/v1`. Its subjects are the archive, the lock copy and the SBOM
-(sha256) and its predicate carries the plugin `name`, `version`, lock tree and those digests. The manifest cannot be signed
+(sha256) and its predicate carries the plugin `name`, `version`, lock tree, those digests, the `source` (repository, commit, dirty flag) and the `approval` summary. The manifest cannot be signed
 itself (it records the signature), so the statement is what ties it to the signed files. Keyless signing makes two
 certificates and two log entries. `publish verify` with a trusted signer checks the statement's signature and signer, that
-it names the manifest's name and version, and that the digests equal the files in the directory; a signed release without
+it names the manifest's name, version, source and approval summary, and that the digests equal the files in the directory; a signed release without
 the statement is a mismatch (`AR9N7`). Independently of signing, verify compares the `name` and `version` in the archive's
 own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabelled as another
 plugin or version is flagged.

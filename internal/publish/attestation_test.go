@@ -55,6 +55,10 @@ func TestVerifyReleaseAttestation_RejectsARelabelledOrSwappedRelease(t *testing.
 		{"another lock", func(_ *Manifest, f *ReleaseFiles) { f.Lock = []byte("version = 1\n") }, trust, "attestation signs"},
 		{"another sbom", func(_ *Manifest, f *ReleaseFiles) { f.SBOM = []byte("{}") }, trust, "attestation signs"},
 		{"sbom dropped from the manifest", func(m *Manifest, _ *ReleaseFiles) { m.SBOM = nil }, trust, "SBOM the manifest does not name"},
+		{"another source commit", func(m *Manifest, _ *ReleaseFiles) { m.Source.Commit = strings.Repeat("e", 40) }, trust, "source"},
+		{"another source repo", func(m *Manifest, _ *ReleaseFiles) { m.Source.Repo = "https://example.test/evil.git" }, trust, "source"},
+		{"dirty flag cleared", func(m *Manifest, _ *ReleaseFiles) { m.Source.Dirty = !m.Source.Dirty }, trust, "source"},
+		{"an approval summary added", func(m *Manifest, _ *ReleaseFiles) { m.Approval = &ApprovalInfo{Required: 3, Approved: 3} }, trust, "approval summary"},
 		{"an untrusted signer", func(*Manifest, *ReleaseFiles) {}, otherTrust, ""},
 	}
 	for _, tt := range tests {
