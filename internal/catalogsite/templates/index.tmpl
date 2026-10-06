@@ -15,9 +15,10 @@
 <table id="items">
 <caption>Items</caption>
 <thead><tr><th scope="col">Kind</th><th scope="col">Name</th><th scope="col">Domain</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col" class="num">Listing tokens</th><th scope="col">Lint</th><th scope="col">Approval</th>{{if .HasEval}}<th scope="col">Eval</th>{{end}}{{if .HasUsage}}<th scope="col" class="num">Uses</th>{{end}}<th scope="col" class="num">Roles</th><th scope="col">Digest</th></tr></thead>
-<tbody>
-{{range .Rows}}<tr data-kind="{{.Kind}}" data-status="{{.Status}}" data-text="{{.Search}}"><td>{{.Kind}}</td><th scope="row" dir="auto"><a href="{{.Href}}">{{s .ID}}</a>{{if .Hidden}} <span class="badge badge-warn">contains hidden characters</span>{{end}}</th><td dir="auto">{{s .Domain}}</td><td dir="auto">{{s .Owner}}</td><td dir="auto">{{s .Version}}</td><td class="num">{{.Listing}}</td><td>{{template "badge" .}}</td><td dir="auto">{{s .Approval}}</td>{{if $.HasEval}}<td>{{s .EvalCell}}</td>{{end}}{{if $.HasUsage}}<td class="num">{{s .UsageCell}}</td>{{end}}<td class="num">{{.Roles}}</td><td><code>{{.DigestShort}}</code></td></tr>
+{{range $page, $rows := .RowGroups}}<tbody data-page="{{$page}}">
+{{range $rows}}<tr data-kind="{{.Kind}}" data-status="{{.Status}}" data-text="{{.Search}}"><td>{{.Kind}}</td><th scope="row" dir="auto"><a href="{{.Href}}">{{s .ID}}</a>{{if .Hidden}} <span class="badge badge-warn">contains hidden characters</span>{{end}}</th><td dir="auto">{{s .Domain}}</td><td dir="auto">{{s .Owner}}</td><td dir="auto">{{s .Version}}</td><td class="num">{{.Listing}}</td><td>{{template "badge" .}}</td><td dir="auto">{{s .Approval}}</td>{{if $.HasEval}}<td>{{s .EvalCell}}</td>{{end}}{{if $.HasUsage}}<td class="num">{{s .UsageCell}}</td>{{end}}<td class="num">{{.Roles}}</td><td><code>{{.DigestShort}}</code></td></tr>
 {{end}}</tbody>
+{{end}}
 </table>
 {{else}}
 <p>This catalog has no items: the project defines no rules, context, skills, agents or commands.</p>

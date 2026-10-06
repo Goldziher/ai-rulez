@@ -268,6 +268,34 @@
       },
       "type": "array"
     },
+    "catalog": {
+      "additionalProperties": false,
+      "description": "Defaults for `ai-rulez catalog` and its static site (see docs/catalog.md). A command-line flag overrides each key.",
+      "properties": {
+        "exclude_owners": {
+          "description": "Leave owner names out of the catalog JSON and the site. Default false.",
+          "type": "boolean"
+        },
+        "include_excerpt": {
+          "description": "Include a body excerpt of each item. Default: true, except for an indexable site.",
+          "type": "boolean"
+        },
+        "indexable": {
+          "description": "Let search engines index the site (no robots.txt, no noindex). Default false.",
+          "type": "boolean"
+        },
+        "max_items_per_page": {
+          "description": "Overview rows per page of the static site. 0 or unset: 200.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "title": {
+          "description": "Title of the static site. Default: AI-Rulez catalog.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "claude": {
       "additionalProperties": false,
       "description": "Claude Code specific output options.",

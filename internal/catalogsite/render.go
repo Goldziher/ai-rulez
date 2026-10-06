@@ -45,7 +45,13 @@ type Options struct {
 	// Indexable lets search engines crawl the site (robots.txt and the noindex
 	// meta are left out).
 	Indexable bool
+	// PageSize is how many overview rows one page shows before the rest moves to
+	// the next page; DefaultPageSize when not positive.
+	PageSize int
 }
+
+// DefaultPageSize is the overview page size when Options.PageSize is not set.
+const DefaultPageSize = 200
 
 // Site is a rendered site: every file by slash path, and the digest of its
 // catalog.json.
@@ -133,6 +139,7 @@ type page struct {
 	Indexable                                                     bool
 	Doc                                                           *govview.CatalogDocV2
 	Rows                                                          []row
+	RowGroups                                                     [][]row
 	Kinds                                                         []string
 	Item                                                          *itemPage
 	Role                                                          *rolePage
@@ -330,6 +337,13 @@ func (b *builder) renderIndex() error {
 	for i := range b.doc.Items {
 		p.Rows = append(p.Rows, b.rowOf(i, ""))
 		kinds[b.doc.Items[i].Kind] = true
+	}
+	size := b.opts.PageSize
+	if size <= 0 {
+		size = DefaultPageSize
+	}
+	for start := 0; start < len(p.Rows); start += size {
+		p.RowGroups = append(p.RowGroups, p.Rows[start:min(start+size, len(p.Rows))])
 	}
 	for k := range kinds {
 		p.Kinds = append(p.Kinds, k)

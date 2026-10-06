@@ -492,6 +492,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
 		Lock            *LockConfig            `toml:"lock"`
 		Governance      *GovernanceConfig      `toml:"governance"`
+		Catalog         *CatalogConfig         `toml:"catalog"`
 		Signing         *SigningConfig         `toml:"signing"`
 		LLM             *llm.Config            `toml:"llm"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
@@ -578,6 +579,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest:    raw.RoleManifest,
 		Lock:            raw.Lock,
 		Governance:      raw.Governance,
+		Catalog:         raw.Catalog,
 		Signing:         raw.Signing,
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,

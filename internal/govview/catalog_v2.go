@@ -495,3 +495,16 @@ func (a *lintAttribution) overview(reason string) CatalogLint {
 	})
 	return out
 }
+
+// OmitOwners returns doc without the owner of any item (catalog [catalog]
+// exclude_owners, --no-owners). doc itself is not changed.
+func OmitOwners(doc *CatalogDocV2) *CatalogDocV2 {
+	out := *doc
+	out.Items = make([]CatalogItemV2, len(doc.Items))
+	copy(out.Items, doc.Items)
+	for i := range out.Items {
+		out.Items[i].Owner = ""
+	}
+	out.Notes = append(append([]string{}, doc.Notes...), "owners were switched off: item owners are omitted")
+	return &out
+}
