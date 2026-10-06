@@ -521,8 +521,8 @@ comments; only a document that does not parse fails, with a hint naming the path
 
 ### What ai-rulez may change
 
-The committed manifest (`.ai-rulez/.generated-manifest.json`) is a file anyone with commit access can edit, so
-it proves nothing. ai-rulez takes something back or deletes it only on proof of authorship:
+The shared manifest (`.ai-rulez/.generated-manifest.json`; committed when `gitignore` is off, gitignored
+otherwise) is a file anyone who can commit, or who can write to a clone, can edit, so it proves nothing. ai-rulez takes something back or deletes it only on proof of authorship:
 
 1. an in-file `Content-Hash` that matches the body of the file, or
 2. a claim or digest in the gitignored machine-local manifest (`.ai-rulez/.generated-manifest.local.json`),
@@ -531,7 +531,7 @@ it proves nothing. ai-rulez takes something back or deletes it only on proof of 
 
 Consequences:
 
-- The committed manifest lists generated paths for teammates and the guard. It never supplies a claim, a
+- The shared manifest lists generated paths for teammates and the guard. It never supplies a claim, a
   digest or a licence to remove a `permissions` deny or ask rule.
 - A claim removes a value only while it still equals the digest recorded when ai-rulez wrote it; an edited
   value is yours and stays.
