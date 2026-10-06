@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/publish-manifest.schema.json",
+  "title": "ai-rulez publish manifest",
+  "description": "<name>-<version>.manifest.json written by `ai-rulez publish`: what a published plugin bundle contains and where it came from. approval, signature and sbom are reserved: they are null until those features exist, so a consumer can later refuse unsigned or unapproved bundles.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "name",
+    "version",
+    "ai_rulez_version",
+    "source",
+    "lock",
+    "runtimes",
+    "files",
+    "bundle",
+    "approval",
+    "signature",
+    "sbom"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z._+-]*$" },
+    "ai_rulez_version": { "type": "string", "description": "The ai-rulez release that built the bundle." },
+    "source": {
+      "type": "object",
+      "required": ["repo", "commit", "dirty"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": { "type": "string", "description": "Repository URL without credentials; empty when unknown." },
+        "commit": { "type": "string", "description": "HEAD commit; empty without git." },
+        "dirty": { "type": "boolean", "description": "True when the tree had uncommitted changes (only possible with --allow-dirty)." }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "required": ["version", "tree", "file_digest"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "tree": { "type": "string", "pattern": "^(sha256:[0-9a-f]{64})?$", "description": "The lock's content tree digest." },
+        "file_digest": { "$ref": "#/definitions/digest", "description": "Digest of the ai-rulez.lock copy in the release." }
+      }
+    },
+    "runtimes": { "type": "array", "items": { "type": "string" }, "description": "Plugin runtimes in the bundle, sorted." },
+    "files": {
+      "type": "array",
+      "description": "Every file of the archive, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": ["path", "size", "digest"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 0 },
+          "digest": { "$ref": "#/definitions/digest" }
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "required": ["file", "digest", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string", "pattern": "\\.tar\\.gz$" },
+        "digest": { "$ref": "#/definitions/digest" },
+        "size": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "approval": { "type": "null", "description": "Reserved for approval state." },
+    "signature": { "type": "null", "description": "Reserved for a bundle signature." },
+    "sbom": { "type": "null", "description": "Reserved for an SBOM reference." }
+  },
+  "definitions": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
