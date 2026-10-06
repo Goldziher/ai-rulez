@@ -62,6 +62,8 @@ type Resolved struct {
 	RefKind string
 	// Tag and TagObject record what a version constraint resolved to.
 	Tag, TagObject string
+	// Released and ReleasedFrom record the release time of Tag when known (min_release_age).
+	Released, ReleasedFrom string
 	// Skills are the discovered skills after include/exclude selection, by name.
 	Skills []Skill
 }
@@ -75,14 +77,14 @@ func (s Spec) Want() lockfile.Want {
 // versionSpec is the version constraint of the source, from the version key or
 // the ref shorthand.
 func (s Spec) versionSpec() config.VersionSpec {
-	c := config.SkillSourceConfig{Ref: s.Ref, Version: s.Version, TagPrefix: s.TagPrefix, IncludePrerelease: s.IncludePrerelease}
+	c := config.SkillSourceConfig{Ref: s.Ref, Version: s.Version, TagPrefix: s.TagPrefix, IncludePrerelease: s.IncludePrerelease, MinReleaseAge: s.MinReleaseAge}
 	return c.VersionSpec()
 }
 
 // Entry is the lock entry recording what the source resolved to.
 func (r *Resolved) Entry() lockfile.Entry {
 	w := r.Spec.Want()
-	return lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: r.Commit, Digest: r.Digest, Tag: r.Tag, TagObject: r.TagObject}
+	return lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: r.Commit, Digest: r.Digest, Tag: r.Tag, TagObject: r.TagObject, Released: r.Released, ReleasedFrom: r.ReleasedFrom}
 }
 
 // Resolve fetches (or finds in the cache) the source and lists its skills.
@@ -200,7 +202,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	if err != nil {
 		return nil, err
 	}
-	res.Tag, res.TagObject = tag.Tag, tag.TagObject
+	res.Tag, res.TagObject, res.Released, res.ReleasedFrom = tag.Tag, tag.TagObject, tag.Released, tag.ReleasedFrom
 	if warnUnpinned(res, opts) {
 		logger.Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
 			"source", spec.Name, "ref", refLabel(spec.Want().Ref), "commit", commit)
@@ -338,7 +340,7 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 // range is resolved against the remote's tags, the way `lock` and `update` do.
 func pickVersion(ctx context.Context, spec Spec, opts Options, q commitSearch, w lockfile.Want) (commit, kind string, tag includes.Resolution, err error) {
 	if q.covered {
-		return q.entry.Commit, kindSHA, includes.Resolution{Commit: q.entry.Commit, Tag: q.entry.Tag, TagObject: q.entry.TagObject}, nil
+		return q.entry.Commit, kindSHA, includes.Resolution{Commit: q.entry.Commit, Tag: q.entry.Tag, TagObject: q.entry.TagObject, Released: q.entry.Released, ReleasedFrom: q.entry.ReleasedFrom}, nil
 	}
 	list := func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return tagresolve.ListTags(ctx, func(ctx context.Context, args ...string) (string, error) { return runGit(ctx, "", args...) }, q.url)
