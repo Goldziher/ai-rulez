@@ -50,10 +50,10 @@ AI_RULEZ_TELEMETRY=off and DO_NOT_TRACK=1 still win over a record, and so does a
 }
 
 func runTelemetryEnable(out io.Writer) error {
-	if config.PolicyLocks("telemetry") {
+	root, name := telemetryRoot(""), telemetryConfigDirName()
+	if config.PolicyLocksIn("telemetry", root) {
 		return oops.Hint("Ask the owner of the organization policy.").Errorf("an organization policy forbids telemetry export")
 	}
-	root, name := telemetryRoot(""), telemetryConfigDirName()
 	settings := telemetry.ResolveFor(root, name, nil)
 
 	endpoint := telEnableEndpoint
