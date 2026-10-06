@@ -1,0 +1,44 @@
+package commands
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+)
+
+// TrustCmd groups the commands that manage the Sigstore trust anchor.
+var TrustCmd = &cobra.Command{
+	Use:   "trust",
+	Short: "Manage the Sigstore trusted root used to verify keyless attestations",
+}
+
+// TrustUpdateCmd fetches the trusted root; it is the only network step of verification.
+var TrustUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Fetch the public-good Sigstore trusted root and cache it for offline verification",
+	Long: `Fetch the public-good Sigstore trusted root over TUF and cache it under
+~/.cache/ai-rulez/sigstore/trusted_root.json. "verify --attestation" reads this
+file when neither --trusted-root nor [signing] trusted_root names another, and
+never touches the network itself. Key-signed attestations need no trusted root.
+
+This is the only command that contacts a Sigstore service for verification. For
+a private Sigstore deployment, pass its trusted root file with --trusted-root.`,
+	Args: cobra.NoArgs,
+	Run: func(_ *cobra.Command, _ []string) {
+		path, err := signing.UpdateTrustedRoot(nil)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		logger.Success("Cached the Sigstore trusted root", "path", path)
+		fmt.Fprintln(os.Stdout, path)
+	},
+}
+
+func init() {
+	TrustCmd.AddCommand(TrustUpdateCmd)
+}

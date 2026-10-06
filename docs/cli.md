@@ -1250,6 +1250,20 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--profile` / `-p`    | string  | configured default | Profile used when the plugin was generated                 |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 
+| `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
+| `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
+| `--trusted-root`      | string  | cache of `trust update` | With `--attestation`: Sigstore trusted root file for keyless bundles |
+| `--public-key`        | string  | none               | With `--attestation`: also trust this PEM public key (repeatable) |
+| `--identity` / `--issuer` | string | none            | With `--attestation`: also trust this certificate identity and its OIDC issuer |
+| `--no-state`          | boolean | false              | With `--attestation`: skip the per-user rollback state     |
+| `--format`            | string  | `text`             | With `--attestation`: `text` or `json` (`schema/verify-attestation.schema.json`) |
+
+Verify the signed lock (exit `0` verified, `1` cannot run, `2` verification failed with an `AR720` to `AR727` code):
+
+```bash
+ai-rulez verify --attestation
+ai-rulez verify --attestation --public-key release.pub --format json
+```
 Verify one producer:
 
 ```bash
@@ -1816,7 +1830,7 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 
 | Flag | Description |
 | --- | --- |
-| `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed |
+| `--check` | Verify the lock against the configuration, the sources, the rendered outputs and any cached remote content; exit 2 naming each added, removed or changed item and whether its source or its output changed. When `[signing] require` names the lock it also verifies the signed attestation (`AR720` to `AR727`, see [Signing](signing.md)) |
 | `--diff` | Print how the sources and outputs differ from the lock; exits 0. `--format json` follows `schema/lock-diff.schema.json` |
 | `--subject` | Print the lock-subject digest (the value a signature over the lock commits to) and what it is computed from; reads the lock only, offline. `--format json` prints the statement (`schema/lock-subject.schema.json`), `--output <file>` writes it. Exit 2 when the stored `tree` does not match the entries. See [Signing the lock](lockfile.md#signing-the-lock) |
 | `--outdated` | List the remote includes, installed skills and skill sources that use a `version` constraint with the pinned, allowed and latest tag; reads tags only and writes nothing. `--format json` follows `schema/lock-outdated.schema.json`. Exit 2 for a moved tag (`AR732`) or an unsatisfiable constraint (`AR730`), and with `--fail-on-outdated` for any allowed update. Names and `--kind` limit it. See [Version constraints](lockfile.md#version-constraints) |
@@ -1865,6 +1879,41 @@ ai-rulez approve include:shared --accept AR005  # accept a finding you read (sto
 ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
 ai-rulez approve --prune                        # drop records of removed or changed content
 ai-rulez approve --verify-base origin/main      # CI: approvals added together with the content they approve (AR716)
+## Sign Command
+
+### `ai-rulez sign [config-path]`
+
+Signs the lock-subject statement of `ai-rulez.lock` into a Sigstore bundle (a DSSE envelope over an in-toto statement)
+written next to the lock. Verify it with [`verify --attestation`](#ai-rulez-verify-config-path). See [Signing](signing.md)
+for the policy, keyless mode and cosign interoperability.
+
+```bash
+ai-rulez sign --lock --key cosign.key        # key mode, offline
+ai-rulez sign --lock --keyless               # Fulcio + Rekor; the identity and digest go to a public log
+```
+
+| Flag | Description |
+| --- | --- |
+| `--lock` | Sign the lock-subject statement (required: the only subject so far) |
+| `--key <file>` | PEM private key (ECDSA P-256/P-384/P-521 or ed25519; PKCS#8 or a cosign key). The password comes from `AI_RULEZ_SIGNING_KEY_PASSWORD` or `COSIGN_PASSWORD` |
+| `--key-password-env <VAR>` | Read the key password from this variable instead |
+| `--keyless` | Sign with a short-lived Fulcio certificate and a Rekor log entry (network) |
+| `--identity-token-env <VAR>` | With `--keyless`: variable holding the OIDC token (default: the GitHub Actions runtime token) |
+| `--interactive` | With `--keyless`: open a browser for the OIDC login when no token is available |
+| `--fulcio-url`, `--rekor-url` | Use another Sigstore deployment (default: the public-good instances) |
+| `--tlog` | With `--key`: also record the signature in Rekor |
+| `--embed-items` | Put the pinned item ids and digests in the statement |
+| `--output <file>` | Write the bundle here instead of `.ai-rulez/ai-rulez.lock.sigstore.json` |
+
+Exit codes: `0` signed, `1` the command could not run, `2` the lock's tree does not match its entries.
+
+## Trust Command
+
+### `ai-rulez trust update`
+
+Fetches the public-good Sigstore trusted root over TUF and caches it in `~/.cache/ai-rulez/sigstore/trusted_root.json`
+for offline verification of keyless attestations. It is the only command that touches the network for verification.
+
 ```
 
 | Flag | Description |

@@ -421,8 +421,9 @@ there is no second algorithm.
 ## Signing the lock
 
 The lock proves that bytes did not change; it does not say who produced them. To add that, sign the lock and verify
-the signature in CI. `ai-rulez lock --subject` prints what to sign, so you can use `cosign` today with no
-signing code in ai-rulez.
+the signature in CI. `ai-rulez sign --lock` and `ai-rulez verify --attestation` do both with a `[signing]` policy
+(see [Signing](signing.md)). `ai-rulez lock --subject` prints what is signed, so you can also use `cosign` with no
+signing code in ai-rulez; the recipe below stays valid, and `verify --attestation` accepts the bundle it writes.
 
 What is signed is the **lock subject**, not the bytes of `ai-rulez.lock`. The file is TOML that tools rewrite;
 what matters is its meaning, so the subject is a digest over the recomputed `tree` and the settings the pins were
@@ -478,7 +479,9 @@ steps:
 ```
 
 Commit `.ai-rulez/ai-rulez.lock.sigstore.json` next to the lock (or publish it with the release). With a key
-instead of an OIDC identity: `cosign sign-blob --key cosign.key --bundle ... lock-subject.json`.
+instead of an OIDC identity: `cosign sign-blob --key cosign.key --bundle ... lock-subject.json`. The default sidecar
+of `ai-rulez sign --lock` has the same name (a DSSE attestation instead of a blob signature); either kind verifies
+with `ai-rulez verify --attestation`. Do not mix the two in one release.
 
 ### Verify
 
@@ -500,10 +503,10 @@ Because the statement is recomputed from the lock in the checkout, verification 
 signing, when a pin was edited, or when the bundle belongs to another repository's lock. `lock --check` is still
 needed: it compares the lock with the sources; the signature only says who vouched for the lock.
 
-Limits, stated plainly: a valid signature means "produced by that identity", not "safe". A validly signed older
-lock is still valid; this recipe has no freshness or rollback check, so pin the signer and review lock changes.
-ai-rulez does not verify the signature itself and does not manage trust roots. Signing plugin bundles and served
-skills, an in-tool `sign` / `verify --attestation` and an identity policy are not implemented.
+Limits, stated plainly: a valid signature means "produced by that identity", not "safe". The cosign recipe has no
+freshness or rollback check, so pin the signer and review lock changes. `ai-rulez verify --attestation` adds an identity
+policy, `max_age` and a per-machine rollback check on top of the same bundle (see [Signing](signing.md)). Signing
+plugin bundles and served skills is not implemented.
 
 ## Commands
 
