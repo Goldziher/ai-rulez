@@ -138,7 +138,8 @@ With `[governance]` configured, or approval records in the lock, every pinned it
 from the same evaluation as [`ai-rulez approve`](approvals.md): `ai-rulez:approval` is `approved`, `not-required`,
 `missing`, `stale`, `expired`, `unauthorized` or `insufficient`; `ai-rulez:approvers` lists the reviewers of the current
 digest, `ai-rulez:approval-assurance` is `asserted` and `ai-rulez:approval-expires` the earliest expiry. Expiry is judged
-by the wall clock. SPDX also gets one `REVIEW` annotation per approving reviewer, dated with the record's `approved_at`.
+by the wall clock, except under `--check`, which judges it at the time the committed document records (so an approval
+that expires later does not make an unchanged SBOM drift; `approve --list` and `validate --strict` report the expiry). SPDX also gets one `REVIEW` annotation per approving reviewer, dated with the record's `approved_at`.
 Approvals are claims recorded in the lock, not proof of review.
 
 Reviewer identities are personal data. `--redact-reviewers` replaces each with `reviewer-` and eight hex digits of a
