@@ -590,12 +590,12 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Permissions:     raw.Permissions,
 		OKF:             raw.OKF,
 	}
+	cfg.VerifiersSettings = raw.VerifiersSet
 
 	return cfg, nil
 }
 
 // presetsFromTOML converts the TOML `presets` array — a mix of built-in name
-	cfg.VerifiersSettings = raw.VerifiersSet
 // strings and custom/provider inline tables (TOML 1.0 allows mixed arrays) —
 // into typed Presets. Inline tables are re-encoded as JSON and routed through
 // Preset.UnmarshalJSON so the YAML/JSON/TOML object forms share one code path.
