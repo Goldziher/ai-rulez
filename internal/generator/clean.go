@@ -91,7 +91,15 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 
 	// Scoped rule files sit in subfolders of the root rules folders that are not
 	// outputs themselves; the folders this removal empties are part of the plan.
-	dirs = append(existingDirs(dirs), g.emptiedDirs(plan.Files)...)
+	dirs = existingDirs(dirs)
+	removing := plan.Files
+	if g.userMode {
+		dirs = slices.DeleteFunc(dirs, func(dir string) bool { return !g.userMayRemoveDir(dir) })
+		// A generated folder that holds no file (~/.cursor/commands) empties its
+		// parent too, so the parents of the folders count as removed.
+		removing = append(slices.Clone(plan.Files), dirs...)
+	}
+	dirs = append(dirs, g.emptiedDirs(removing)...)
 	// Deepest-first so children are removed before their parents.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
 	plan.Dirs = slices.Compact(dirs)
@@ -349,7 +357,7 @@ func (g *Generator) isPrunableDir(dir string) bool {
 // removeEmptyDir is removeDirIfEmpty, which in user scope first refuses a
 // directory that resolves outside the home directory (or a relocated tool home).
 func (g *Generator) removeEmptyDir(dir string) {
-	if g.userMode && !g.userMayTouch(dir) {
+	if g.userMode && (!g.userMayTouch(dir) || !g.userMayRemoveDir(dir)) {
 		return
 	}
 	removeDirIfEmpty(dir)
