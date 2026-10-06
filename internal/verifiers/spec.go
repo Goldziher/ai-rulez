@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -21,12 +22,20 @@ const (
 	CodeVerifierFailed    = "AR9H1"
 	CodeVerifierInvalid   = "AR9H2"
 	CodeVerifierDeadScope = "AR9H5"
+	// CodeVerifierCommand is a command predicate that was refused (no --allow-exec,
+	// an untrusted include) or did not run (not found, timed out).
+	CodeVerifierCommand = "AR9H3"
+	// CodeVerifierLLMSkipped is an llm predicate that was not evaluated.
+	CodeVerifierLLMSkipped = "AR9H4"
+	// CodeVerifierNoExamples is a verifier without self-test examples
+	// ([verifiers_settings] require_examples).
+	CodeVerifierNoExamples = "AR9H6"
 )
 
 const (
 	// VerifiersDirName is the directory under the config directory that holds
 	// verifier declaration files (`*.toml`, each with [[verifiers]] tables).
-	VerifiersDirName = "verifiers"
+	VerifiersDirName = config.VerifiersDirName
 	// maxSpecFileBytes bounds one declaration file.
 	maxSpecFileBytes = 1 << 20
 	// maxDepth is the deepest all/any/not nesting a predicate may have.
@@ -65,6 +74,9 @@ type Spec struct {
 
 	// source is the declaration file, relative to the project root.
 	source string
+	// origin names the include the declaration arrived through; empty for the
+	// project's own verifiers.
+	origin string
 }
 
 // The predicate types live in vspec so config.toml can declare them inline.
@@ -74,6 +86,8 @@ type (
 	FileExistsPred = vspec.FileExistsPred
 	PairedPred     = vspec.PairedPred
 	GlobCountPred  = vspec.GlobCountPred
+	CommandPred    = vspec.CommandPred
+	LLMPred        = vspec.LLMPred
 	Example        = vspec.Example
 )
 
@@ -156,7 +170,8 @@ func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
 		if !isMissing(err) {
 			problems = append(problems, Problem{File: relTo(cfg.BaseDir, dir), Message: "cannot read directory: " + err.Error()})
 		}
-		return specs, problems
+		imported, importProblems := loadImported(cfg, seen)
+		return append(specs, imported...), append(problems, importProblems...)
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	for _, e := range entries {
@@ -185,8 +200,104 @@ func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
 			specs = append(specs, sp)
 		}
 	}
+	imported, importProblems := loadImported(cfg, seen)
+	return append(specs, imported...), append(problems, importProblems...)
+}
+
+// loadImported reads the verifier files that arrived through includes. They are
+// validated like the project's own; one that uses the command predicate is
+// refused unless its include is named in [verifiers_settings] trust_exec_from
+// and pinned in the lock, so an include can never make this project run a program.
+func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, problems []Problem) {
+	if cfg.Content == nil {
+		return nil, nil
+	}
+	settings := config.VerifiersSettings{}
+	if cfg.VerifiersSettings != nil {
+		settings = *cfg.VerifiersSettings
+	}
+	for _, f := range cfg.Content.ImportedVerifiers {
+		src := "include:" + f.Include + "/" + VerifiersDirName + "/" + f.Name
+		parsed, err := parseSpecs([]byte(f.Data))
+		if err != nil {
+			problems = append(problems, Problem{File: src, Message: err.Error()})
+			continue
+		}
+		for i := range parsed {
+			sp := parsed[i]
+			sp.source, sp.origin = src, f.Include
+			if msg := validateSpec(cfg, &sp); msg != "" {
+				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
+				continue
+			}
+			if msg := importRefusal(cfg, settings, &sp); msg != "" {
+				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
+				continue
+			}
+			if prev, dup := seen[sp.ID]; dup {
+				problems = append(problems, Problem{ID: sp.ID, File: src, Message: "duplicate verifier id (already declared in " + prev + ")"})
+				continue
+			}
+			seen[sp.ID] = src
+			specs = append(specs, sp)
+		}
+	}
 	return specs, problems
 }
+
+// importRefusal returns why an imported verifier may not be used, or "".
+func importRefusal(cfg *config.Config, s config.VerifiersSettings, sp *Spec) string {
+	if !usesCommand(sp.Require) {
+		return ""
+	}
+	if !importTrusted(s, sp.origin) {
+		return "uses the command predicate, which a verifier imported from include " + quote(sp.origin) +
+			" may not: list the include in [verifiers_settings] trust_exec_from (it must also be pinned in ai-rulez.lock)"
+	}
+	if !includePinned(cfg, sp.origin) {
+		return "include " + quote(sp.origin) + " is trusted to run commands but is not pinned in ai-rulez.lock: run `ai-rulez lock`"
+	}
+	return ""
+}
+
+// usesCommand reports whether a predicate tree contains a command predicate.
+func usesCommand(r *Require) bool {
+	if r == nil {
+		return false
+	}
+	if r.Command != nil {
+		return true
+	}
+	for _, kids := range [][]Require{r.All, r.Any} {
+		for i := range kids {
+			if usesCommand(&kids[i]) {
+				return true
+			}
+		}
+	}
+	return usesCommand(r.Not)
+}
+
+// includePinned reports whether the lock pins the include: a commit and digest
+// for a remote one, a tree digest (kind local-include) for a local path.
+func includePinned(cfg *config.Config, name string) bool {
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil || lock == nil {
+		return false
+	}
+	if lock.Find(lockfile.KindInclude, name) != nil {
+		return true
+	}
+	for _, it := range lock.Item {
+		if it.Kind == localIncludeKind && it.ID == name {
+			return true
+		}
+	}
+	return false
+}
+
+// localIncludeKind is the lock item kind of a local-path include (contentlock.KindLocalInclude).
+const localIncludeKind = "local-include"
 
 func relTo(base, p string) string {
 	if rel, err := filepath.Rel(base, p); err == nil && !strings.HasPrefix(rel, "..") {
@@ -216,6 +327,12 @@ func readSpecFile(file string) ([]Spec, error) {
 	if len(data) > maxSpecFileBytes {
 		return nil, oops.Errorf("file is larger than %d KiB", maxSpecFileBytes>>10)
 	}
+	return parseSpecs(data)
+}
+
+// parseSpecs decodes the [[verifiers]] tables of one declaration file; an
+// unknown key is an error.
+func parseSpecs(data []byte) ([]Spec, error) {
 	var parsed specFile
 	dec := toml.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -250,6 +367,9 @@ func validateSpec(cfg *config.Config, s *Spec) string {
 	if msg := validateRequire(s.Require, 1, &needs); msg != "" {
 		return msg
 	}
+	if msg := validateLLMPlacement(s.Require, true); msg != "" {
+		return msg
+	}
 	if needs.scope && len(s.WhenChanged) == 0 {
 		return "this predicate checks the changed files, so the verifier needs when_changed"
 	}
@@ -258,7 +378,7 @@ func validateSpec(cfg *config.Config, s *Spec) string {
 
 func quote(s string) string { return `"` + s + `"` }
 
-type predicateNeeds struct{ scope bool }
+type predicateNeeds struct{ scope, command, llm bool }
 
 func validateTarget(cfg *config.Config, s *Spec) string {
 	n := 0
@@ -290,13 +410,13 @@ func validateRequire(r *Require, depth int, needs *predicateNeeds) string {
 	}
 	set := 0
 	for _, b := range []bool{r.Regex != nil, r.Forbid != nil, r.FileExists != nil, r.Paired != nil,
-		r.GlobCount != nil, len(r.All) > 0, len(r.Any) > 0, r.Not != nil} {
+		r.GlobCount != nil, r.Command != nil, r.LLM != nil, len(r.All) > 0, len(r.Any) > 0, r.Not != nil} {
 		if b {
 			set++
 		}
 	}
 	if set != 1 {
-		return "a predicate table must set exactly one of regex, forbid, file_exists, paired, glob_count, all, any, not"
+		return "a predicate table must set exactly one of regex, forbid, file_exists, paired, glob_count, command, llm, all, any, not"
 	}
 	switch {
 	case r.Regex != nil:
@@ -310,6 +430,10 @@ func validateRequire(r *Require, depth int, needs *predicateNeeds) string {
 		return validatePaired(r.Paired)
 	case r.GlobCount != nil:
 		return validateGlobCount(r.GlobCount)
+	case r.Command != nil:
+		return validateCommand(r.Command, needs)
+	case r.LLM != nil:
+		return validateLLM(r.LLM, needs)
 	case len(r.All) > 0:
 		return validateChildren("all", r.All, depth, needs)
 	case len(r.Any) > 0:
@@ -401,6 +525,75 @@ func validateGlobCount(p *GlobCountPred) string {
 	return ""
 }
 
+func validateCommand(p *CommandPred, needs *predicateNeeds) string {
+	if len(p.Argv) == 0 || strings.TrimSpace(p.Argv[0]) == "" {
+		return "command needs a non-empty argv (the program and its arguments; there is no shell)"
+	}
+	for _, a := range p.Argv {
+		if strings.ContainsRune(a, 0) {
+			return "command.argv must not contain a NUL byte"
+		}
+	}
+	switch p.PassFiles {
+	case "":
+	case passFilesArgs, passFilesStdin0:
+		needs.scope = true
+	default:
+		return "command.pass_files " + quote(p.PassFiles) + " must be args or stdin0"
+	}
+	if p.TimeoutS < 0 || p.TimeoutS > maxCommandTimeoutS {
+		return "command.timeout_s must be between 1 and " + itoa(maxCommandTimeoutS)
+	}
+	if p.ExpectExit != nil && (*p.ExpectExit < 0 || *p.ExpectExit > maxStatus) {
+		return "command.expect_exit must be between 0 and 255"
+	}
+	needs.command = true
+	return ""
+}
+
+func validateLLM(p *LLMPred, needs *predicateNeeds) string {
+	if len(p.Checklist) == 0 || len(p.Checklist) > maxChecklist {
+		return "llm.checklist needs 1 to " + itoa(maxChecklist) + " items"
+	}
+	for i, item := range p.Checklist {
+		if strings.TrimSpace(item) == "" || len(item) > maxChecklistItem {
+			return "llm.checklist[" + itoa(i) + "] must be a statement of at most " + itoa(maxChecklistItem) + " bytes"
+		}
+	}
+	if p.MaxDiffBytes != 0 && (p.MaxDiffBytes < minMaxDiffBytes || p.MaxDiffBytes > maxMaxDiffBytes) {
+		return "llm.max_diff_bytes must be between " + itoa(minMaxDiffBytes) + " and " + itoa(maxMaxDiffBytes)
+	}
+	if strings.ContainsFunc(p.Model, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		return "llm.model must not contain control characters"
+	}
+	needs.scope = true
+	needs.llm = true
+	return ""
+}
+
+// validateLLMPlacement allows an llm predicate only at the root of the tree or
+// directly under `all`: under `any` or `not` its advisory verdict would decide
+// the verifier, and a deterministic failure must always win.
+func validateLLMPlacement(r *Require, allowed bool) string {
+	if r.LLM != nil && !allowed {
+		return "the llm predicate may only be the root predicate or a direct member of `all`"
+	}
+	for i := range r.All {
+		if msg := validateLLMPlacement(&r.All[i], allowed); msg != "" {
+			return msg
+		}
+	}
+	for i := range r.Any {
+		if msg := validateLLMPlacement(&r.Any[i], false); msg != "" {
+			return msg
+		}
+	}
+	if r.Not != nil {
+		return validateLLMPlacement(r.Not, false)
+	}
+	return ""
+}
+
 func validateExamples(s *Spec) string {
 	for i, ex := range s.Examples {
 		switch ex.Expect {
@@ -423,6 +616,11 @@ func validateExamples(s *Spec) string {
 // findTarget locates the content file a verifier names: `id` among root and
 // domain items, or `domain/id` in that domain.
 func findTarget(cfg *config.Config, kind, id string) (config.ContentFile, bool) {
+	return findTargetIn(cfg.Content, kind, id)
+}
+
+// findTargetIn is findTarget over an explicit content tree.
+func findTargetIn(content *config.ContentTree, kind, id string) (config.ContentFile, bool) {
 	pick := func(files []config.ContentFile, name string) (config.ContentFile, bool) {
 		for _, f := range files {
 			if f.Name == name {
@@ -456,22 +654,22 @@ func findTarget(cfg *config.Config, kind, id string) (config.ContentFile, bool) 
 		}
 	}
 	if domain, name, ok := strings.Cut(id, "/"); ok {
-		d := cfg.Content.Domains[domain]
+		d := content.Domains[domain]
 		if d == nil {
 			return config.ContentFile{}, false
 		}
-		return pick(listOf(cfg.Content, d), name)
+		return pick(listOf(content, d), name)
 	}
-	if f, ok := pick(listOf(cfg.Content, nil), id); ok {
+	if f, ok := pick(listOf(content, nil), id); ok {
 		return f, true
 	}
-	names := make([]string, 0, len(cfg.Content.Domains))
-	for n := range cfg.Content.Domains {
+	names := make([]string, 0, len(content.Domains))
+	for n := range content.Domains {
 		names = append(names, n)
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		if f, ok := pick(listOf(cfg.Content, cfg.Content.Domains[n]), id); ok {
+		if f, ok := pick(listOf(content, content.Domains[n]), id); ok {
 			return f, true
 		}
 	}
