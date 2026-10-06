@@ -94,8 +94,12 @@ func convertOKFBundle(dir, name string, include []string) (*config.ContentTree, 
 	if err := os.MkdirAll(target, 0o755); err != nil { //nolint:gosec // temp dir
 		return nil, oops.Wrapf(err, "create temp directory")
 	}
-	if _, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: target, Scan: OKFScan}); err != nil {
+	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: target, Scan: OKFScan})
+	if err != nil {
 		return nil, oops.With("include", name).Wrapf(err, "convert OKF bundle")
+	}
+	for _, p := range b.Problems {
+		logger.Warn("OKF include skipped an unsafe bundle path", "include", name, "path", p.Path, "reason", p.Message)
 	}
 	tree, err := config.ScanContentTree(target)
 	if err != nil {
