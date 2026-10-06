@@ -382,6 +382,10 @@ func (x *Exporter) HeaderNamesSet() (set, unset []string) {
 		getenv = os.Getenv
 	}
 	for _, name := range x.HeadersEnv {
+		if !headerEnvName.MatchString(name) {
+			unset = append(unset, hiddenHeaderName) // never look up or print a pasted credential
+			continue
+		}
 		if getenv(name) != "" {
 			set = append(set, name)
 		} else {
