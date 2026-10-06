@@ -69,7 +69,7 @@ price_output_per_mtok. Nothing is sent. An unknown model prints "cost unknown".`
 
 func init() {
 	LLMCmd.AddCommand(llmDoctorCmd, llmEstimateCmd)
-	LLMCmd.PersistentFlags().BoolVar(&llmJSON, "json", false, "Print JSON")
+	addJSONFormat(LLMCmd.PersistentFlags(), &llmJSON, "")
 	LLMCmd.PersistentFlags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay")
 	LLMCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	llmDoctorCmd.Flags().BoolVar(&llmPing, "ping", false, "Make one 1-token call (needs allow_network = true)")

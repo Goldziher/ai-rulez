@@ -86,7 +86,7 @@ func init() {
 	includeRemoveCmd.Flags().BoolVarP(&includeForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Add flags for include list
-	includeListCmd.Flags().BoolVarP(&includeJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(includeListCmd.Flags(), &includeJSON, "j")
 }
 
 func runIncludeAdd(cmd *cobra.Command, args []string) {

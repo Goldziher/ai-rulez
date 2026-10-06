@@ -109,7 +109,7 @@ func init() {
 	skillRemoveCmd.Flags().BoolVarP(&skillForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Flags for skill list
-	skillListCmd.Flags().BoolVarP(&skillJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(skillListCmd.Flags(), &skillJSON, "j")
 }
 
 func runSkillInstall(cmd *cobra.Command, args []string) {

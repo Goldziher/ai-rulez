@@ -264,7 +264,7 @@ network, and an integration never needs to parse config files.
    identity-provider groups, find the role whose `match.groups` contains one of them (choosing by your own
    precedence when several match), and print the role name. ai-rulez does not look at `match`.
 3. **Preview.** `ai-rulez roles resolve <name> --format json` lists exactly the items the role keeps, with owner,
-   version, bytes and tokens. `ai-rulez tokens --role <name> --json` reports the token surface.
+   version, bytes and tokens. `ai-rulez tokens --role <name> --format json` reports the token surface.
 4. **Apply.** Run `ai-rulez generate --user --role <name> --yes` (user level) or `ai-rulez generate --role <name>`
    (project level). Exit code 0 means the files were written.
 5. **Show the whole catalog.** `ai-rulez catalog --format json` lists every item with its owner, version, size,

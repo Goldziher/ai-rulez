@@ -17,8 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const formatText = "text"
-
 var (
 	lockCheck       bool
 	lockDiffFlag    bool
@@ -87,7 +85,7 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockOffline, "offline", false, "With --outdated: refuse to run (it needs the network); use --check to verify the lock offline")
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
-	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check, --diff, --outdated and --subject: text (default) or json")
+	addFormatFlag(LockCmd.Flags(), &lockFormat, "", formatText, formatText, formatJSON) // of --check, --diff, --outdated and --subject
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
@@ -102,16 +100,6 @@ func runLock(_ *cobra.Command, args []string) {
 	if code := runLockFor(lockKind, args); code != 0 {
 		os.Exit(code)
 	}
-}
-
-// checkFormatFlag validates a --format value shared by the commands that print
-// text or json. An empty value is accepted when the command has no default.
-func checkFormatFlag(value string) error {
-	switch value {
-	case "", formatText, formatJSON:
-		return nil
-	}
-	return oops.Errorf("unknown --format %q (use text or json)", value)
 }
 
 // validateLockFlags rejects flag combinations `lock` cannot honour.

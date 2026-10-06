@@ -72,7 +72,7 @@ default and off with --indexable; pass --include-excerpt=false to leave them out
 }
 
 func init() {
-	CatalogCmd.Flags().StringVar(&catalogFormat, "format", "", "Output format: text (default) or json")
+	addFormatFlag(CatalogCmd.Flags(), &catalogFormat, "", formatText, formatText, formatJSON)
 	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 (default) or 2")
 	CatalogCmd.Flags().StringVar(&catalogHTMLDir, "html", "", "Write a static website of the catalog into this directory")
 	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")
@@ -93,8 +93,8 @@ type (
 )
 
 func checkCatalogFlags() error {
-	if catalogFormat != "" && catalogFormat != formatText && catalogFormat != formatJSON {
-		return oops.Errorf("unknown --format %q (use text or json)", catalogFormat)
+	if err := checkFormatFlag(catalogFormat); err != nil {
+		return err
 	}
 	if catalogSchemaFlag != govview.CatalogSchemaVersion && catalogSchemaFlag != govview.CatalogSchemaVersionV2 {
 		return oops.Errorf("unknown --schema-version %d (use 1 or 2)", catalogSchemaFlag)

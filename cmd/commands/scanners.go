@@ -88,7 +88,7 @@ func init() {
 	ScannersDoctorCmd.Flags().BoolVar(&scannersAll, "all", false, "Check every configured scanner")
 	ScannersDoctorCmd.Flags().BoolVar(&scannersProbe, "external", false, "Start each checked scanner once with --version (it is a program the repository named)")
 	for _, c := range []*cobra.Command{ScannersListCmd, ScannersDoctorCmd} {
-		c.Flags().StringVar(&scannersFormat, "format", formatText, "Output format: text or json")
+		addFormatFlag(c.Flags(), &scannersFormat, formatText, formatText, formatText, formatJSON)
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}

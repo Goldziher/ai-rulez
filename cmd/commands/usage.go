@@ -452,6 +452,6 @@ func init() {
 	reportUsageCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index to join against (default <config dir>/skills-index.json)")
 	reportUsageCmd.Flags().StringVar(&reportFeedback, "feedback", "", "Feedback log to join (default feedback.jsonl beside the usage log, when present)")
 	reportUsageCmd.Flags().StringVar(&reportEvals, "evals", "", "Eval results to join (default <config dir>/eval-results.json, when present)")
-	reportUsageCmd.Flags().BoolVarP(&reportJSON, "json", "j", false, "Emit the report as JSON")
+	addJSONFormat(reportUsageCmd.Flags(), &reportJSON, "j")
 	reportUsageCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

@@ -27,13 +27,14 @@ includes, dynamic generation, and MCP server integration.`,
 	SilenceUsage: true,
 	// main prints the returned error once; cobra's own "Error:" line would repeat it.
 	SilenceErrors: true,
-	PersistentPreRun: func(_ *cobra.Command, _ []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		switch {
 		case viper.GetBool("debug"):
 			logger.SetLevel(slog.LevelDebug)
 		case viper.GetBool("quiet"):
 			logger.SetLevel(slog.LevelError)
 		}
+		return normalizeFormatFlags(cmd)
 	},
 }
 

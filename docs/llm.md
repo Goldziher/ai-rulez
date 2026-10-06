@@ -75,7 +75,7 @@ or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway
 ## Commands
 
 ```text
-ai-rulez llm doctor [--ping] [--json]   resolved backend, model, base_url host (never the key),
+ai-rulez llm doctor [--ping] [--format json]   resolved backend, model, base_url host (never the key),
                                         whether the key variable is set, network gate, cache dir, limits
 ai-rulez llm estimate <file>            approximate tokens and worst-case cost of sending the file; no call
 ```

@@ -42,14 +42,14 @@ type = "generated_in_sync"
 
 ```bash
 ai-rulez verifiers run                  # table, exit 2 when an error-severity verifier fails
-ai-rulez verifiers run --json           # machine-readable (--format json; conflicts with another --format)
+ai-rulez verifiers run --format json    # machine-readable (--json is a deprecated alias and conflicts with another --format)
 ai-rulez verifiers run --strict         # warning-severity failures also fail (--fail-on warning)
 ai-rulez verifiers run --name readme    # only the named verifier (repeatable)
 ai-rulez verifiers run --since origin/main   # only what changed since the merge base
 ai-rulez verifiers run --staged         # only what is staged (pre-commit)
 ai-rulez verifiers run --rule database  # only verifiers that enforce this rule or skill
 ai-rulez verifiers run --format sarif --out verifiers.sarif   # also junit, json, text
-ai-rulez verifiers list [--json]        # what is declared, without evaluating
+ai-rulez verifiers list [--format json]        # what is declared, without evaluating
 ai-rulez verifiers explain <name>       # what it checks, the rule it enforces, how to fix it
 ai-rulez verifiers test [name...]       # run the self-test examples offline
 ```
