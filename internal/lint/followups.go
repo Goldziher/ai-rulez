@@ -48,6 +48,8 @@ var (
 	// ruleKeys are the keys rules and context files understand, including the
 	// Cursor and Windsurf spellings ai-rulez maps.
 	ruleKeys = []string{keyGlobs, keyPaths, "glob", "alwaysApply", "trigger", "activation", "description", "name"}
+	// checkKeys are the frontmatter keys of a code-review check (docs/checks.md).
+	checkKeys = []string{"description", "severity", "tools", "targets"}
 	// ownKeys are the ai-rulez keys valid on every kind.
 	ownKeys = []string{
 		"priority", "targets", "aliases", "keywords", "usage", "shortcut", "category", "placement", "short-description",
@@ -70,6 +72,8 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 		add(claudeSkillKeys)
 	case kindAgent:
 		add(claudeAgentKeys)
+	case kindCheck:
+		add(checkKeys)
 	default:
 		add(ruleKeys)
 	}
