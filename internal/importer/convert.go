@@ -54,6 +54,16 @@ type ConvertOptions struct {
 	// (ask and deny rules are always live, they only narrow).
 	EnableHooks       bool
 	EnablePermissions bool
+	// Merge adds beside an existing tree without touching a file of it: an item
+	// whose file exists with other content is imported as NAME-imported. It
+	// excludes Force.
+	Merge bool
+	// KeepNames never renames to resolve a collision (between imported items, or
+	// with an existing file under Merge): the collision is an error.
+	KeepNames bool
+	// Delivery sets how the imported skills reach the agent: static, served or
+	// both ([skills] delivery, or the domain's when Domain is set).
+	Delivery string
 }
 
 // Detection is what one importer recognises in a source directory.
@@ -115,15 +125,23 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return nil, oops.Hint("Use lowercase letters, digits and hyphens").Errorf("invalid domain name %q", opts.Domain)
 	}
 
+	if opts.Merge && opts.Force {
+		return nil, oops.Hint("--merge keeps every existing file; --force replaces them").Errorf("--merge and --force cannot be combined")
+	}
+
 	importers, err := pickImporters(abs, opts.From)
 	if err != nil {
 		return nil, err
 	}
 	importers, autoSkippedNative := preferRulesync(importers, opts.From)
 
-	plan, err := runImporters(abs, importers, Options{SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort})
+	plan, err := runImporters(abs, importers, Options{SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames})
 	if err != nil {
 		return nil, err
+	}
+	if len(plan.collisions) > 0 {
+		return nil, oops.Hint("Rename one of the sources, or drop --keep-names to give the later one a stable suffix").
+			Errorf("name collisions with --keep-names: %s", describeCollisions(plan.collisions))
 	}
 	if autoSkippedNative {
 		plan.add(newFinding(StatusDropped, "(native files)", "", "",
@@ -139,11 +157,19 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 			Errorf("nothing to convert: the selected importers found no importable content in %s", abs)
 	}
 
+	if opts.Merge {
+		if err := mergeRename(plan, intoAbs, opts.Domain, opts.KeepNames); err != nil {
+			return nil, err
+		}
+	}
 	reportDisabled(plan, opts.EnableHooks, opts.EnablePermissions)
-	sortFindings(plan)
 	live, off := splitEnabled(plan, opts.EnableHooks, opts.EnablePermissions)
 	cfg := buildConfig(plan, filepath.Base(abs))
 	cfg.Hooks, cfg.Permissions = live.Hooks, live.Permissions
+	if err := applyDelivery(cfg, plan, opts.Delivery, opts.Domain); err != nil {
+		return nil, err
+	}
+	sortFindings(plan)
 	// The staged copy carries every imported hook and rule, live or not, so
 	// validation and the scan cover the commented block too.
 	stage := *cfg
@@ -159,6 +185,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		Into:          filepath.ToSlash(into),
 		Findings:      plan.Findings,
 		plan:          planSummary(plan),
+		needsLock:     len(plan.InstalledSkills) > 0,
 	}
 
 	files, err := buildFiles(plan, cfg, opts.Domain)
@@ -310,7 +337,7 @@ func runImporters(abs string, importers []Format, opt Options) (*Plan, error) {
 	sort.SliceStable(importers, func(i, j int) bool {
 		return importers[i].Name() == skillsLockName && importers[j].Name() != skillsLockName
 	})
-	merged := &Plan{}
+	merged := &Plan{keepNames: opt.KeepNames}
 	for _, imp := range importers {
 		p, err := imp.Plan(fsys, opt)
 		if err != nil {
@@ -530,6 +557,9 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 		}
 	}
 	added += mergeHooksAndPermissions(merged, add)
+	n, deliveryNotes := mergeDelivery(merged, add)
+	added += n
+	notes = append(notes, deliveryNotes...)
 	return merged, added, notes
 }
 
