@@ -286,6 +286,30 @@ func TestRunConvert_LockPinsTheConvertedTree(t *testing.T) {
 	assert.NoError(t, err, "--lock writes the lock next to the converted config")
 }
 
+func TestRunConvert_LockToleratesAnUnsetMCPVariable(t *testing.T) {
+	// Arrange: an imported MCP server whose token placeholder is not set in this environment.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("AI_RULEZ_TEST_UNSET_TOKEN", "")
+	require.NoError(t, os.Unsetenv("AI_RULEZ_TEST_UNSET_TOKEN"))
+	dir := convertProject(t)
+	mcp := `{"mcpServers":{"api":{"type":"http","url":"https://mcp.example.com/mcp","headers":{"Authorization":"Bearer ${AI_RULEZ_TEST_UNSET_TOKEN}"}}}}`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".mcp.json"), []byte(mcp), 0o644))
+	resetConvertFlags(t, dir)
+	convertWrite, convertLock = true, true
+
+	// Act
+	var out bytes.Buffer
+	code := runConvert(context.Background(), &out, false)
+
+	// Assert
+	require.Equal(t, 0, code, out.String())
+	_, err := os.Stat(filepath.Join(dir, ".ai-rulez", "ai-rulez.lock"))
+	assert.NoError(t, err, "the lock is written although the variable is unset")
+}
+
 func TestPrintConvertReport_ReportsAFailureToWriteTheFile(t *testing.T) {
 	resetConvertFlags(t, t.TempDir())
 	convertReport = t.TempDir() // a directory: the file cannot be written
