@@ -127,3 +127,25 @@ func TestServeSetup_UsageFilesAreAbsoluteAndIncludeTheSalt(t *testing.T) {
 	}
 	assert.Equal(t, "usage.salt", filepath.Base(got[1]))
 }
+
+func TestServeSetup_InitialFingerprintAgreesWithTheWatcherForALogInTheConfigDir(t *testing.T) {
+	// Arrange: a usage log and its salt inside the config directory, outside `local/`.
+	root := project(t, baseConfig, map[string]string{
+		"skills/core/SKILL.md": skillFile("core", "Core conventions", ""),
+		"logs/usage.jsonl":     "line\n",
+		"logs/usage.salt":      "salt\n",
+	})
+	logPath := filepath.Join(root, ".ai-rulez", "logs", "usage.jsonl")
+	st := &ServeSetup{WorkDir: root, UsageLog: logPath}
+	cfgDir, err := filepath.Abs(filepath.Join(root, ".ai-rulez"))
+	require.NoError(t, err)
+
+	// Act
+	baseline, err := st.initialFingerprint()
+	require.NoError(t, err)
+	poll, err := fingerprint([]string{cfgDir}, st.usageFiles(&config.Config{})...)
+	require.NoError(t, err)
+
+	// Assert
+	assert.Equal(t, poll, baseline, "the first poll must not see a change that is only the usage files")
+}
