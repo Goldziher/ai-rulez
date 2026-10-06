@@ -14,6 +14,8 @@ import (
 // Refusal records why a skill is not served.
 type Refusal struct {
 	Name string
+	// View is the serve view the skill was refused in ("" for the default view).
+	View string
 	// Code is the strict-validation code of the reason (AR001.. from the security
 	// scan, AR995 for a lock mismatch).
 	Code   string
@@ -34,6 +36,8 @@ type Admission struct {
 	Lock *lockfile.File
 	// Enforce refuses a skill that the lock does not pin with exactly its digest.
 	Enforce bool
+	// View is the serve view whose pins the lock is read at (see ServeSetup.ViewKey).
+	View string
 	// DefaultTrust is the scan level for a skill that names none: "warn" for
 	// skills authored in the project, "error" for everything that came from a
 	// remote. nil means "warn".
@@ -55,6 +59,7 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 	for _, skill := range c.skills {
 		cp := *skill
 		if r := a.check(&cp); r != nil {
+			r.View = a.View
 			out.refused[cp.Name] = *r
 			logger.Warn("Refusing to serve a skill", "skill", cp.Name, "code", r.Code, "reason", r.Reason)
 			continue
@@ -89,18 +94,28 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 	if r := a.scan(s); r != nil {
 		return r
 	}
-	entry := a.Lock.Find(lockfile.KindServed, s.Name)
+	entry := servedPin(a.Lock, a.View, s.Name)
 	s.Locked = entry != nil && entry.Digest == s.LockDigest
 	if !a.Enforce {
 		return nil
 	}
 	switch {
 	case entry == nil:
-		return &Refusal{s.Name, CodeServedLockMismatch, fmt.Sprintf("[lock] enforce is on and %s does not pin this skill; review it, then run `ai-rulez lock`", lockfile.FileName)}
+		return &Refusal{Name: s.Name, Code: CodeServedLockMismatch, Reason: fmt.Sprintf("[lock] enforce is on and %s does not pin this skill; review it, then run `ai-rulez lock`", lockfile.FileName)}
 	case !s.Locked:
-		return &Refusal{s.Name, CodeServedLockMismatch, fmt.Sprintf("digest %s differs from the lock's %s; the skill changed since it was locked (run `ai-rulez lock` only after reviewing the change)", s.LockDigest, entry.Digest)}
+		return &Refusal{Name: s.Name, Code: CodeServedLockMismatch, Reason: fmt.Sprintf("digest %s differs from the lock's %s; the skill changed since it was locked (run `ai-rulez lock` only after reviewing the change)", s.LockDigest, entry.Digest)}
 	}
 	return nil
+}
+
+// servedPin finds the lock's pin of a served skill in a view. An entry written
+// before views existed has no view and applies to every view, so it is the
+// fallback; its digest is still compared, so it can only agree with what is served.
+func servedPin(lock *lockfile.File, view, name string) *lockfile.Entry {
+	if e := lock.FindView(lockfile.KindServed, name, view); e != nil || view == "" {
+		return e
+	}
+	return lock.FindView(lockfile.KindServed, name, "")
 }
 
 // dropUnscannable removes the files the security scan could not read from what
@@ -156,5 +171,5 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 		}
 		parts = append(parts, fmt.Sprintf("%s %s at %s:%d", f.Code, f.Name, f.File, f.Line))
 	}
-	return &Refusal{s.Name, blocking[0].Code, "security scan (trust=" + level + "): " + strings.Join(parts, "; ")}
+	return &Refusal{Name: s.Name, Code: blocking[0].Code, Reason: "security scan (trust=" + level + "): " + strings.Join(parts, "; ")}
 }
