@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -151,8 +150,8 @@ func TestPublish_IsByteIdenticalAcrossRunsAndUmasks(t *testing.T) {
 	publishProject(t)
 	outside := t.TempDir()
 	run := func(umask int, dist string) map[string]string {
-		old := syscall.Umask(umask)
-		defer syscall.Umask(old)
+		old := setUmask(umask)
+		defer setUmask(old)
 		publishDist = filepath.Join(outside, dist)
 		_, err := runPublishCapture(t)
 		require.NoError(t, err)
