@@ -64,10 +64,13 @@ detects something, skills-lock first):
                 .gemini/settings.json, .cursor/hooks.json, .cursor/cli.json and .github/hooks
   rulesync      rulesync.jsonc and .rulesync/ (rules, commands, subagents, skills, checks,
                 mcp.jsonc, hooks.jsonc, permissions.jsonc, ignore)
+  apm           Microsoft APM: apm.yml (dependencies, MCP servers, target), .apm/
+                primitives (instructions, agents, chatmodes, prompts, skills, context,
+                hooks), installed apm_modules/ and apm.lock.yaml
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
 
-When a rulesync project is detected, auto skips native: the tool files next to
-.rulesync/ are its generated output. Use --from native,rulesync to read both.
+When a rulesync or APM project is detected, auto skips native: the tool files next
+to their inputs are generated output. Use --from native,rulesync to read both.
 
 Nothing is written unless --write is given. Without --write or --dry-run, a
 terminal gets a dry run and a script is asked to choose. Existing .ai-rulez/
@@ -104,7 +107,7 @@ validation, or --fail-on matched.`,
 
 func init() {
 	f := ConvertCmd.Flags()
-	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, skills-lock or auto (every detected importer)")
+	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, skills-lock or auto (every detected importer)")
 	f.StringVar(&convertSource, "source", ".", "Directory to read")
 	f.StringVar(&convertInto, "into", importer.DefaultConfigDir, "Config directory to write: relative to --source unless absolute; never written through a symlink")
 	f.StringVar(&convertDomain, "domain", "", "Put the imported content in this domain (safe next to an existing tree)")

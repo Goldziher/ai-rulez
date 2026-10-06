@@ -133,7 +133,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	importers, autoSkippedNative := preferRulesync(importers, opts.From)
+	importers, generatedFrom := preferSources(importers, opts.From)
 
 	plan, err := runImporters(abs, importers, Options{SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames})
 	if err != nil {
@@ -143,17 +143,19 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return nil, oops.Hint("Rename one of the sources, or drop --keep-names to give the later one a stable suffix").
 			Errorf("name collisions with --keep-names: %s", describeCollisions(plan.collisions))
 	}
-	if autoSkippedNative {
+	if generatedFrom != "" {
 		plan.add(newFinding(StatusDropped, "(native files)", "", "",
-			"CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from .rulesync/ and were not imported; use --from native,rulesync to import both"))
+			"CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from "+generatedFrom+" and were not imported; use --from native,"+strings.Join(importerNames(importers), ",")+" to import both"))
 		sortFindings(plan)
 	}
-	names := make([]string, 0, len(importers))
-	for _, imp := range importers {
-		names = append(names, imp.Name())
-	}
+	names := importerNames(importers)
+	plan.reportUnfetched()
 	if plan.empty() {
-		return nil, oops.Hint("Run `ai-rulez convert --list` to see what each importer detects").
+		hint := "Run `ai-rulez convert --list` to see what each importer detects"
+		if len(plan.Remotes) > 0 {
+			hint = fmt.Sprintf("The input names %d remote source(s) that are not on disk; rerun with --fetch to import them", len(plan.Remotes))
+		}
+		return nil, oops.Hint(hint).
 			Errorf("nothing to convert: the selected importers found no importable content in %s", abs)
 	}
 
@@ -286,23 +288,38 @@ func pickImporters(abs string, from []string) ([]Format, error) {
 	return out, nil
 }
 
-// preferRulesync drops the native importer from an automatic run that also
-// detects a rulesync project: the tool files next to .rulesync/ are its
-// generated output, so importing them as well would duplicate every rule.
-// An explicit --from keeps what was asked for.
-func preferRulesync(importers []Format, from []string) ([]Format, bool) {
+func importerNames(importers []Format) []string {
+	names := make([]string, 0, len(importers))
+	for _, imp := range importers {
+		names = append(names, imp.Name())
+	}
+	return names
+}
+
+// generatorRoots name the input trees whose tool files are generated output.
+var generatorRoots = map[string]string{rulesyncName: ".rulesync/", apmName: ".apm/ and apm_modules/"}
+
+// preferSources drops the native importer from an automatic run that also
+// detects a project of a tool that generates the tool files (rulesync, APM): the
+// files next to its inputs are its output, so importing them as well would
+// duplicate every rule. It returns the sources that made it drop native, "" when
+// it did not. An explicit --from keeps what was asked for.
+func preferSources(importers []Format, from []string) ([]Format, string) {
 	for _, f := range from {
 		if n := strings.TrimSpace(f); n != "" && n != autoFrom {
-			return importers, false
+			return importers, ""
 		}
 	}
-	hasRulesync, hasNative := false, false
+	hasNative := false
+	var roots []string
 	for _, imp := range importers {
-		hasRulesync = hasRulesync || imp.Name() == rulesyncName
 		hasNative = hasNative || imp.Name() == nativeName
+		if root, ok := generatorRoots[imp.Name()]; ok {
+			roots = append(roots, root)
+		}
 	}
-	if !hasRulesync || !hasNative {
-		return importers, false
+	if !hasNative || len(roots) == 0 {
+		return importers, ""
 	}
 	var out []Format
 	for _, imp := range importers {
@@ -310,7 +327,7 @@ func preferRulesync(importers []Format, from []string) ([]Format, bool) {
 			out = append(out, imp)
 		}
 	}
-	return out, true
+	return out, strings.Join(roots, " and ")
 }
 
 // autoImporters returns every importer that detects something. They all run;

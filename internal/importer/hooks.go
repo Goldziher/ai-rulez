@@ -280,9 +280,13 @@ func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool
 		sort.Strings(left)
 		b.p.add(newFinding(StatusDropped, src.file, field, "", "handler keys with no ai-rulez equivalent were not carried: "+strings.Join(left, ", ")))
 	}
-	if strings.Contains(command, ".rulesync/") {
+	switch {
+	case strings.Contains(command, ".rulesync/"):
 		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
 			"the command runs a script from the rulesync input tree; copy the script into the project and point the hook at it (a script path)"))
+	case strings.Contains(command, "PLUGIN_ROOT"):
+		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
+			"the command runs a script from the package root, which does not exist in this project; copy the script into the project and point the hook at it (a script path)"))
 	}
 	return a, true
 }
