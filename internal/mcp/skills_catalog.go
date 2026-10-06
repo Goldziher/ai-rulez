@@ -73,6 +73,9 @@ type CatalogSkill struct {
 	LockDigest string
 	// Locked reports that ai-rulez.lock records exactly this skill's digest.
 	Locked bool
+	// Approved and Approvers report the [governance] approvals of this digest (serve_approval.go).
+	Approved  bool
+	Approvers []string
 	// ScanFindings counts security findings that did not block serving.
 	ScanFindings int
 	// Unscanned lists files that are not served because the security scan cannot

@@ -924,6 +924,42 @@
       },
       "additionalProperties": false
     },
+    "governance": {
+      "type": "object",
+      "description": "Which pinned content needs a recorded reviewer approval in ai-rulez.lock (see docs/approvals.md).",
+      "properties": {
+        "require_approval": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(remote|local|all|kind:[a-z_-]+)$" },
+          "description": "Content that needs approval: remote (includes, installed skills, skill sources, remote served skills), local (every authored item), all, or kind:<kind> (kind:hook, kind:mcp_server, kind:skill, ...)."
+        },
+        "exempt": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs over kind:id or kind:domain/id (* matches any run of characters) that never need approval."
+        },
+        "min_approvers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Distinct reviewers that must approve one digest. Default 1."
+        },
+        "approvers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowlist of reviewer strings (exact match). Empty allows any reviewer."
+        },
+        "max_age": {
+          "type": "string",
+          "pattern": "^([0-9]+d|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "description": "Default lifetime of a new approval, such as 365d or 720h. Empty means no expiry."
+        },
+        "enforce": {
+          "type": "boolean",
+          "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate --strict reports it either way."
+        }
+      },
+      "additionalProperties": false
+    },
     "usage": {
       "type": "object",
       "description": "Usage-telemetry support (opt-in, no network).",

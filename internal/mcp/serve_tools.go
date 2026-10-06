@@ -198,6 +198,10 @@ func (s *Server) addProvenance(out map[string]any, skill *CatalogSkill) {
 	}
 	prov["lock_digest"] = skill.LockDigest
 	prov["locked"] = skill.Locked
+	if skill.Approved {
+		prov["approved"] = true
+		prov["approvers"] = skill.Approvers
+	}
 	if skill.ScanFindings > 0 {
 		prov["scan_warnings"] = skill.ScanFindings
 	}

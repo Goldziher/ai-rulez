@@ -411,8 +411,9 @@ lock_subject = SHA256( lp("ai-rulez/lock-subject/v1") || lp(tree) || lp(approval
 
 - `tree` is recomputed from the lock entries, never read from the file. `lock --subject` fails (exit 2) when the
   stored `tree` disagrees, so a hand-edited lock is not signed.
-- `approvals_digest` is the empty string until approval state exists. The slot is already part of the formula, so
-  signatures made today stay valid when approvals are added (an empty string and `lp("")` are the same bytes).
+- `approvals_digest` is the empty string. [Approvals](approvals.md) are recorded in the lock but are not yet part of the
+  subject, so a signature does not cover them; the slot is already part of the formula, so signatures made today stay
+  valid when approvals are added to it (an empty string and `lp("")` are the same bytes).
 - `hash_version` is `1`, the lock `version`: the hashing scheme is part of the lock format.
 - `scope` is the recorded `[lock] scope` (`all` when the lock records none); `outputs_pinned` is `1` or `0`.
 - `lp(x)` and `u64(n)` are defined in [Hashing scheme](#hashing-scheme); `u8` is one byte.

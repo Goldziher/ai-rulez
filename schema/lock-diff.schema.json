@@ -20,7 +20,7 @@
         "required": ["scope", "change"],
         "additionalProperties": false,
         "properties": {
-          "scope": { "enum": ["source", "output", "remote", "served", "lock"] },
+          "scope": { "enum": ["source", "output", "remote", "served", "lock", "approval"] },
           "change": { "enum": ["added", "removed", "changed"] },
           "kind": { "type": "string" },
           "id": { "type": "string" },

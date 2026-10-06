@@ -75,6 +75,19 @@ type Excerpt struct {
 	Truncated bool   `json:"truncated"`
 }
 
+// ItemApproval is the reviewer-approval state of one item (docs/approvals.md).
+type ItemApproval struct {
+	// Required says [governance] require_approval selects the item.
+	Required bool `json:"required"`
+	// Status is approval.Status*: ok, missing, stale, expired, unauthorized,
+	// insufficient, or not_required for an item that has records but needs none.
+	Status string `json:"status"`
+	// Reviewers are the distinct reviewers whose approval of the current digest applies.
+	Reviewers []string `json:"reviewers"`
+	Assurance string   `json:"assurance,omitempty"`
+	Expires   string   `json:"expires,omitempty"`
+}
+
 // CatalogItemV2 is one item of the version 2 catalog.
 type CatalogItemV2 struct {
 	Ref         string        `json:"ref"`
@@ -94,8 +107,9 @@ type CatalogItemV2 struct {
 	LoadCost    LoadCost      `json:"load_cost"`
 	// Lint is absent when the lint engine could not run (see CatalogLint).
 	Lint *ItemLint `json:"lint,omitempty"`
-	// Approval is reserved: always null until approval state is recorded.
-	Approval *struct{} `json:"approval"`
+	// Approval is null unless [governance] requires approval of the item or the
+	// lock records an approval of it (see ItemApproval).
+	Approval *ItemApproval `json:"approval"`
 	// Excerpt is absent when excerpts were switched off.
 	Excerpt      *Excerpt          `json:"excerpt,omitempty"`
 	Roles        []string          `json:"roles"`
@@ -182,6 +196,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		Notes:         append([]string{}, v1.notes...),
 	}
 	attrib := newLintAttribution(cfg, opts.Lint)
+	approvals := newApprovalIndex(cfg)
 	seen := map[string]int{}
 	for i := range v1.Items {
 		it := &v1.Items[i]
@@ -191,6 +206,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 			Source: CatalogSource{Type: sourceType(it.Path, files[i])},
 			Bytes:  it.Bytes, Tokens: it.Tokens, Digest: it.Digest, Roles: it.Roles, RoleDelivery: it.RoleDelivery,
 			LoadCost: LoadCost{BodyTokens: it.Tokens},
+			Approval: approvals.forItem(it.Kind, it.Domain, it.ID, it.Digest),
 		}
 		if cf := files[i]; cf != nil {
 			out.Description = config.SkillDescription(cf.Metadata)

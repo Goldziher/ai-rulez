@@ -24,7 +24,7 @@ strict superset of the version 1 fields, plus:
 | `items[].load_cost` | `listing_tokens` (what the harness always lists: skill name and description), `body_tokens` (loaded on use), `resource_tokens` and `resources` (bundled files) |
 | `items[].lint` | `status` (`ok`, `warn`, `error`), counts and findings, from the same engine as `validate --strict`; absent when lint could not run |
 | `items[].excerpt` | first 2 KiB of the body, plain text; off with `--include-excerpt=false` |
-| `items[].approval` | always `null`; reserved for approval state |
+| `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}` when `[governance]` requires approval of the item or the lock records one; see [Approvals](approvals.md) |
 | `lint` | project totals, counts per code, and the findings no item owns |
 | `notes` | why a section is missing or narrowed |
 

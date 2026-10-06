@@ -81,6 +81,8 @@ func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, 
 	if dynamic != nil {
 		diff.Changes = append(diff.Changes, dynamic(cfg, lock)...)
 	}
+	approvalChanges, approvalNotes := ApprovalChanges(cfg, lock, snap.Items, ApprovalNow())
+	diff.Changes, diff.Notes = append(diff.Changes, approvalChanges...), append(diff.Notes, approvalNotes...)
 	switch {
 	case lock == nil && cfg.LockEnforced():
 		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Added,
