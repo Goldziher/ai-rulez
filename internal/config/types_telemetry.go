@@ -142,10 +142,11 @@ func (t *TelemetryConfig) Validate() []string {
 			TelemetryProtocolHTTPJSON, TelemetryProtocolHTTPProtobuf, TelemetryProtocolGRPC)
 	}
 	if t.OTLPEndpoint != "" {
-		if problem := ValidateTelemetryEndpoint(t.OTLPEndpoint); problem != "" {
+		endpoint := NormalizeTelemetryEndpoint(t.OTLPEndpoint, t.OTLPProtocol)
+		if problem := ValidateTelemetryEndpoint(endpoint); problem != "" {
 			add("telemetry.otlp_endpoint: %s", problem)
 		} else if t.OTLPProtocol == TelemetryProtocolGRPC {
-			if parsed, err := url.Parse(t.OTLPEndpoint); err == nil && strings.Trim(parsed.Path, "/") != "" {
+			if parsed, err := url.Parse(endpoint); err == nil && strings.Trim(parsed.Path, "/") != "" {
 				add("telemetry.otlp_endpoint: a grpc endpoint names host[:port] only, without a path")
 			}
 		}
@@ -166,6 +167,17 @@ func (t *TelemetryConfig) Validate() []string {
 	}
 	problems = append(problems, ValidateTelemetryResource(t.Resource)...)
 	return problems
+}
+
+// NormalizeTelemetryEndpoint returns the endpoint in URL form. A gRPC endpoint is
+// documented as host[:port], so one without a scheme means https (TLS); every other
+// protocol, and an endpoint that already has a scheme, is returned unchanged.
+func NormalizeTelemetryEndpoint(endpoint, protocol string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if protocol == TelemetryProtocolGRPC && endpoint != "" && !strings.Contains(endpoint, "://") {
+		return "https://" + endpoint
+	}
+	return endpoint
 }
 
 // ValidateTelemetryEndpoint returns a problem description for an endpoint that is
