@@ -29,12 +29,31 @@ var MigrateCmd = &cobra.Command{
 	},
 }
 
+// migrateTarget resolves what to migrate: the project directory, the config
+// directory and the path handed to the loader. -C/--config names a config file
+// (or the config directory) anywhere; without it the .ai-rulez of the working
+// directory is used.
+func migrateTarget() (workingDir, configDir, loadPath string) {
+	if cfgFile == "" {
+		workingDir = "."
+		return workingDir, filepath.Join(workingDir, ".ai-rulez"), workingDir
+	}
+	abs, err := filepath.Abs(cfgFile)
+	if err != nil {
+		abs = cfgFile
+	}
+	configDir = filepath.Dir(abs)
+	if info, serr := os.Stat(abs); serr == nil && info.IsDir() {
+		configDir = abs
+	}
+	return filepath.Dir(configDir), configDir, abs
+}
+
 func runMigrateV4() {
-	workingDir := "."
-	configDir := filepath.Join(workingDir, ".ai-rulez")
+	workingDir, configDir, loadPath := migrateTarget()
 
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		logger.Error("No .ai-rulez directory found", "path", workingDir)
+		logger.Error("No config directory found", "path", configDir)
 		fmt.Println("Run 'ai-rulez init' to create a new configuration")
 		os.Exit(1)
 	}
@@ -47,7 +66,13 @@ func runMigrateV4() {
 		return
 	}
 
-	cfg, err := config.LoadConfig(context.Background(), workingDir, config.WithoutLocal())
+	var cfg *config.Config
+	var err error
+	if cfgFile != "" {
+		cfg, err = config.LoadConfigFromFile(context.Background(), loadPath, config.WithoutLocal())
+	} else {
+		cfg, err = config.LoadConfig(context.Background(), workingDir, config.WithoutLocal())
+	}
 	if err != nil {
 		logger.Error("Failed to load config", "error", err)
 		os.Exit(1)
@@ -74,7 +99,7 @@ func runMigrateV4() {
 	removeOldConfigFiles(configDir, written)
 
 	fmt.Println("\n✅ Migration complete!")
-	fmt.Println("   Config: .ai-rulez/config.toml")
+	fmt.Println("   Config:", filepath.ToSlash(tomlPath))
 	fmt.Println("   Version: 4.0")
 }
 
