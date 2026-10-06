@@ -6,10 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
@@ -30,6 +32,8 @@ var (
 	telBackground bool
 	telJSON       bool
 	telTimeout    time.Duration
+	telLog        string
+	telLimit      int
 )
 
 // roleEnv names the environment variable that supplies the role when --role is
@@ -50,6 +54,7 @@ identifier-only events, and optionally export them to an OpenTelemetry collector
   ai-rulez telemetry record   the command those hooks run; reads one hook event on stdin
   ai-rulez telemetry flush    ship the local outbox to the collector now
   ai-rulez telemetry doctor   show the resolved configuration, consent state and buffer
+  ai-rulez telemetry preview  print exactly what an export would send (no network)
 
 Everything is off by default. See docs/telemetry.md for what is collected, what never
 is, and the rule that a repository cannot enable network export.`,
@@ -180,6 +185,122 @@ any header), the outbox size and the last flush. Prints no event content.`,
 	},
 }
 
+var telemetryPreviewCmd = &cobra.Command{
+	Use:   "preview",
+	Short: "Print exactly what an export would send, without sending anything",
+	Long: `Encode pending events with the allowlisted encoder an export uses and print the requests that
+would be made: the destination, the exact JSON body of each request, and which fields are exported
+and which are withheld. Nothing is sent and nothing is written; no network connection is opened,
+and this works whether or not export is enabled or consented to.
+
+The events come from the outbox when export is active, otherwise from the usage log (--log FILE
+picks another log). Sampling applies to a log, as it would when recording. A request shows only the
+scheme, host and path of the endpoint, never a header or credential. --limit N previews the first N
+events (default 5, 0 for all).`,
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return runTelemetryPreview(cmd.OutOrStdout())
+	},
+}
+
+// previewSource is where a preview's events came from.
+type previewSource struct {
+	label  string
+	events []telemetry.Event
+	// rejected counts log lines that failed validation.
+	rejected int
+}
+
+func runTelemetryPreview(out io.Writer) error {
+	if telLimit < 0 {
+		return oops.Errorf("--limit must not be negative")
+	}
+	root, name := telemetryRoot(""), telemetryConfigDirName()
+	settings := telemetry.ResolveFor(root, name, nil)
+	source, err := previewEvents(&settings, root, name)
+	if err != nil {
+		return err
+	}
+	w := reportWriter{out}
+	total := len(source.events)
+	shown := source.events
+	if telLimit > 0 && total > telLimit {
+		shown = shown[:telLimit]
+	}
+	encoder := settings.Encoder(Version)
+	plan, err := encoder.Plan(shown, telemetry.DefaultBatchMax, true)
+	if err != nil {
+		return err
+	}
+	exported, withheld := encoder.Fields()
+
+	w.printf("source: %s (%d events, previewing %d)\n", source.label, total, len(shown))
+	if source.rejected > 0 {
+		w.printf("left out: %d lines that failed validation\n", source.rejected)
+	}
+	if blockers := settings.ExportBlockers(); len(blockers) > 0 {
+		w.printf("export: off (%s); this is what would be sent once it is on\n", strings.Join(blockers, "; "))
+	} else {
+		w.printf("export: on\n")
+	}
+	if len(plan) == 0 {
+		w.printf("\nNothing to send.\n")
+		return nil
+	}
+	for i := range plan {
+		request := &plan[i]
+		target := telemetry.DisplayURL(settings.Endpoint, request.Path)
+		if target == "" {
+			target = "<no endpoint configured>" + request.Path
+		}
+		w.printf("\nPOST %s  (%d events, gzip, %d bytes)\n%s\n", target, request.Events, request.GzipBytes, request.Body)
+	}
+	w.printf("\nfields exported: %s\n", strings.Join(exported, ", "))
+	w.printf("fields withheld: %s\n", orNone(withheld))
+	w.printf("\nNothing was sent.\n")
+	return nil
+}
+
+// previewEvents loads the events to preview: the outbox when export is active
+// and no log was named, else the usage log.
+func previewEvents(settings *telemetry.Settings, root, name string) (previewSource, error) {
+	localDir := telemetry.LocalDir(root, name)
+	if telLog == "" && settings.ExportActive() {
+		spool := &telemetry.Spool{Dir: localDir}
+		events, corrupt, err := spool.Pending()
+		if err != nil {
+			return previewSource{}, err
+		}
+		return previewSource{label: "outbox " + filepath.Join(name, telemetry.LocalDirName, telemetry.OutboxFileName), events: events, rejected: corrupt}, nil
+	}
+	path, label := telLog, telLog
+	if path == "" {
+		path = filepath.Join(localDir, "usage.jsonl")
+		label = filepath.Join(name, telemetry.LocalDirName, "usage.jsonl")
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			return previewSource{label: label + " (missing)"}, nil
+		}
+	}
+	read, err := telemetry.ReadLogEvents(path)
+	if err != nil {
+		return previewSource{}, err
+	}
+	kept := read.Events[:0:0]
+	for i := range read.Events {
+		if telemetry.Sampled(settings.Sample, &read.Events[i]) {
+			kept = append(kept, read.Events[i])
+		}
+	}
+	return previewSource{label: label + " (usage log)", events: kept, rejected: read.Rejected}, nil
+}
+
+func orNone(list []string) string {
+	if len(list) == 0 {
+		return "none"
+	}
+	return strings.Join(list, ", ")
+}
+
 func telemetryConfigDirName() string {
 	if telConfigDir != "" {
 		return telConfigDir
@@ -265,12 +386,12 @@ func wireMCPTelemetry(srv *mcp.Server) func() {
 
 func init() {
 	RootCmd.AddCommand(TelemetryCmd)
-	TelemetryCmd.AddCommand(telemetryHookCmd, telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd)
+	TelemetryCmd.AddCommand(telemetryHookCmd, telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd, telemetryPreviewCmd)
 	for _, c := range []*cobra.Command{telemetryHookCmd, telemetryRecordCmd} {
 		c.Flags().StringVar(&telHarness, "harness", "", "Harness: claude (default), codex or cursor")
 		c.Flags().StringVar(&telRole, flagRole, "", "Role active in this session (recorded as given; else $"+roleEnv+")")
 	}
-	for _, c := range []*cobra.Command{telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd} {
+	for _, c := range []*cobra.Command{telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd, telemetryPreviewCmd} {
 		c.Flags().StringVar(&telRoot, "root", "", "Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory)")
 		c.Flags().StringVarP(&telConfigDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
@@ -279,5 +400,7 @@ func init() {
 	telemetryHookCmd.Flags().StringVarP(&telOutput, "output", "o", "", "Write the template to this file instead of stdout")
 	telemetryFlushCmd.Flags().BoolVar(&telBackground, "background", false, "Silent mode used by hooks: exit 0 whatever happens")
 	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
+	telemetryPreviewCmd.Flags().StringVar(&telLog, "log", "", "Usage log to preview instead of the outbox (default <config dir>/local/usage.jsonl)")
+	telemetryPreviewCmd.Flags().IntVar(&telLimit, "limit", 5, "Preview the first N events (0 for all)")
 	telemetryDoctorCmd.Flags().BoolVarP(&telJSON, "json", "j", false, "Emit the report as JSON")
 }

@@ -1516,6 +1516,7 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 | `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
 | `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
 | `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
+| `ai-rulez telemetry preview [--log f] [--limit n] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
 | `ai-rulez telemetry doctor [--json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
 | `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 

@@ -10,6 +10,7 @@ ai-rulez telemetry hook              # hooks that record loads (merge into .clau
 ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml; generate writes them
 ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
 ai-rulez telemetry flush             # ship the outbox now
+ai-rulez telemetry preview           # print exactly what an export would send; sends nothing
 ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
 ```
 
@@ -225,6 +226,38 @@ is neither listed nor mapped to the record envelope, so a new field cannot leave
 | `ai_rulez.agent.duration` | histogram, `ms`, bounds 100, 500, 1000, 5000, 15000, 60000, 300000 | `kind`, `id`, `harness` |
 
 Session and path are never metric labels.
+
+## Previewing an export
+
+`ai-rulez telemetry preview` encodes pending events with the same allowlisted encoder the exporter uses and prints
+what a flush would send, without opening a connection or writing anything. It works whether or not export is
+enabled or consented to, so you can audit the payload before turning it on.
+
+```console
+$ ai-rulez telemetry preview --limit 2
+source: .ai-rulez/local/usage.jsonl (usage log) (118 events, previewing 2)
+export: off (telemetry is not enabled; allow_network is not set in user scope; no otlp_endpoint in user scope); this is what would be sent once it is on
+
+POST https://collector.example.org:4318/v1/logs  (2 events, gzip, 412 bytes)
+{"resourceLogs":[ ... exact body ... ]}
+
+POST https://collector.example.org:4318/v1/metrics  (2 events, gzip, 389 bytes)
+{"resourceMetrics":[ ... exact body ... ]}
+
+fields exported: event.name, ai_rulez.item.kind, ai_rulez.item.id, ...
+fields withheld: ai_rulez.item.path, ai_rulez.session
+
+Nothing was sent.
+```
+
+- The events come from the outbox when export is active (what the next flush sends), otherwise from the usage log;
+  `--log FILE` previews another log. A log is read through the same validators as the exporter: a field that fails
+  its pattern is dropped, an event whose kind or id fails is left out and counted, raw session ids from version 1
+  lines are never exported, and an event with no `event_id` (log version 2 and older) gets one derived from its line.
+- `--limit N` previews the first N events (default 5, `0` for all). Sampling applies to a log as it would on recording.
+- The destination shows the scheme, host and path of the endpoint only: user info and query are dropped, headers
+  (`headers_env`) are never shown. Without an endpoint it says `<no endpoint configured>`.
+- `fields withheld` lists the allowlist attributes whose opt-in (`include_paths`, `include_session`) is closed.
 
 ## Example collector and queries
 
