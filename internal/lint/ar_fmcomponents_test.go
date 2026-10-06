@@ -60,6 +60,12 @@ func TestFrontmatterHooksAreChecked(t *testing.T) {
 		{"script exists but is not executable", `"${CLAUDE_PROJECT_DIR}/tools/hook.sh"`, map[string]string{"tools/hook.sh": "#!/bin/sh\n"}, 0o644, map[string]int{CodeHookNotExecutable: 1}, 8},
 		{"relative script is missing", `./tools/nope.sh`, nil, 0, map[string]int{CodeHookMissing: 1}, 8},
 		{"relative script is not executable", `./tools/hook.sh`, map[string]string{"tools/hook.sh": "#!/bin/sh\n"}, 0o644, map[string]int{CodeHookNotExecutable: 1}, 8},
+		{"bash launcher, script missing", `bash ./tools/nope.sh`, nil, 0, map[string]int{CodeHookMissing: 1}, 8},
+		{"sh launcher with a bare path, script missing", `sh tools/nope.sh`, nil, 0, map[string]int{CodeHookMissing: 1}, 8},
+		{"bash launcher with a flag, script missing", `bash -e tools/nope.sh`, nil, 0, map[string]int{CodeHookMissing: 1}, 8},
+		{"env-wrapped launcher, script missing", `/usr/bin/env bash tools/nope.sh`, nil, 0, map[string]int{CodeHookMissing: 1}, 8},
+		{"launcher with an existing script needs no exec bit", `bash ./tools/hook.sh`, map[string]string{"tools/hook.sh": "#!/bin/sh\n"}, 0o644, map[string]int{}, 0},
+		{"inline code is not a script", `"bash -c 'echo hi'"`, nil, 0, map[string]int{}, 0},
 		{"unpinned npx -y", `"npx -y some-linter --fix"`, nil, 0, map[string]int{CodeUnpinnedExec: 1}, 8},
 		{"pinned npx -y", `"npx -y some-linter@1.2.3 --fix"`, nil, 0, map[string]int{}, 0},
 	}
@@ -174,5 +180,88 @@ func TestFrontmatterComponentChecksRunUnderTheirAnalyzers(t *testing.T) {
 		want := &Report{Findings: append([]Finding(nil), full.Findings...)}
 		FilterAnalyzers(want, []string{name})
 		assert.Equal(t, findingKeys(want.Findings), findingKeys(sel.Findings), name)
+	}
+}
+
+func TestLauncherScript(t *testing.T) {
+	tests := []struct {
+		command string
+		want    string
+	}{
+		{"bash ./x.sh", "./x.sh"},
+		{"sh x.sh", "x.sh"},
+		{"bash -e x.sh", "x.sh"},
+		{"bash -eu -o pipefail x.sh arg", "x.sh"},
+		{"zsh x.zsh", "x.zsh"},
+		{"dash x.sh", "x.sh"},
+		{"python hook.py", "hook.py"},
+		{"python3 -u hook.py", "hook.py"},
+		{"python3.12 -W error hook.py", "hook.py"},
+		{"node -r ts-node/register hook.js", "hook.js"},
+		{"ruby -I lib hook.rb", "hook.rb"},
+		{"perl -w hook.pl", "hook.pl"},
+		{"/usr/bin/env bash x.sh", "x.sh"},
+		{"env FOO=1 bash x.sh", "x.sh"},
+		{"FOO=1 bash x.sh", "x.sh"},
+		{"/bin/bash -- x.sh", "x.sh"},
+		{"bash -c 'echo hi'", ""},
+		{"bash -ec 'echo hi'", ""},
+		{"python3 -c 'print(1)'", ""},
+		{"python3 -m pytest", ""},
+		{"node -e 'run()'", ""},
+		{"perl -ne 'print'", ""},
+		{"bash", ""},
+		{"bash -", ""},
+		{"bash /abs/x.sh", ""},
+		{"bash ~/x.sh", ""},
+		{"bash $HOME/x.sh", ""},
+		{"bash \"$CLAUDE_PROJECT_DIR\"/x.sh", ""},
+		{"echo bash x.sh", ""},
+		{"./x.sh", ""},
+		{"make test", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.command, func(t *testing.T) {
+			// Act
+			got := launcherScript(shellWords(tt.command))
+			// Assert
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestSettingsHookLauncherScripts(t *testing.T) {
+	tests := []struct {
+		name, command string
+		files         map[string]string
+		want          int
+	}{
+		{"bash with a missing script", "bash ./tools/nope.sh", nil, 1},
+		{"sh with a missing script", "sh tools/nope.sh", nil, 1},
+		{"bash flag with a missing script", "bash -e tools/nope.sh", nil, 1},
+		{"env-wrapped with a missing script", "/usr/bin/env bash tools/nope.sh", nil, 1},
+		{"python with a missing script", "python3 tools/nope.py", nil, 1},
+		{"existing script", "bash tools/ok.sh", map[string]string{"tools/ok.sh": "#!/bin/sh\n"}, 0},
+		{"second command of a chain", "echo hi && node tools/nope.js", nil, 1},
+		{"inline code", "bash -c 'echo hi'", nil, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			files := map[string]string{
+				".ai-rulez/config.toml": baseConfig,
+				".claude/settings.json": `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"` + tt.command + `"}]}]}}`,
+			}
+			for k, v := range tt.files {
+				files[k] = v
+			}
+			root := t.TempDir()
+			writeFiles(t, root, files)
+			gitAdd(t, root)
+			// Act
+			fs := lintDir(t, root)
+			// Assert
+			assert.Equal(t, tt.want, countCode(fs, CodeHookMissing), dump(fs))
+		})
 	}
 }
