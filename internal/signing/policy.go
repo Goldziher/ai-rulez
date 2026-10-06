@@ -278,28 +278,40 @@ func readInProject(base, rel string) ([]byte, error) {
 }
 
 // RequiredLockFindings verifies the lock attestation when [signing] require names
-// the lock, for `lock --check`, `generate --locked` and `validate --strict`. It
-// returns nil when nothing is required or the attestation is good, else one
-// *Error per problem (a policy that cannot be built is reported as AR720 with the
-// reason). It reads the rollback state but never writes it.
+// the lock, for `validate --strict`. It returns nil when nothing is required or
+// the attestation is good, else one *Error per problem (a policy that cannot be
+// built is reported as AR720 with the reason). It reads the rollback state but
+// never writes it.
 func RequiredLockFindings(cfg *config.Config, env ambient.Env, now time.Time) []*Error {
+	findings, err := RequiredLockCheck(cfg, env, now)
+	if err != nil {
+		return []*Error{{Code: CodeMissing, Reason: "cannot verify the lock attestation: " + err.Error()}}
+	}
+	return findings
+}
+
+// RequiredLockCheck is RequiredLockFindings for `lock --check` and
+// `generate --locked`: a policy that cannot be built (an unreadable key_file, no
+// trusted signer) is the returned error, "could not run" as in
+// `verify --attestation` (exit 1), and findings are verification failures.
+func RequiredLockCheck(cfg *config.Config, env ambient.Env, now time.Time) ([]*Error, error) {
 	if !cfg.Signing.Requires(config.SigningSubjectLock) {
-		return nil
+		return nil, nil
 	}
 	check, err := PrepareLockCheck(cfg, VerifyOptions{Env: env, Now: now})
 	if err != nil {
 		var e *Error
 		if errors.As(err, &e) {
-			return []*Error{e}
+			return []*Error{e}, nil
 		}
-		return []*Error{{Code: CodeMissing, Reason: "cannot verify the lock attestation: " + err.Error()}}
+		return nil, err
 	}
 	if _, err := check.Verify(); err != nil {
 		var e *Error
 		if errors.As(err, &e) {
-			return []*Error{e}
+			return []*Error{e}, nil
 		}
-		return []*Error{{Code: CodeInvalid, Reason: err.Error()}}
+		return []*Error{{Code: CodeInvalid, Reason: err.Error()}}, nil
 	}
-	return nil
+	return nil, nil
 }
