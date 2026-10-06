@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +16,7 @@ func TestOpenRegular(t *testing.T) {
 	regular := filepath.Join(dir, "regular")
 	require.NoError(t, os.WriteFile(regular, []byte("x"), 0o600))
 	link := filepath.Join(dir, "link")
-	require.NoError(t, os.Symlink(regular, link))
+	testutil.SymlinkOrSkip(t, regular, link)
 
 	tests := []struct {
 		name    string

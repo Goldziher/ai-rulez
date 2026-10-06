@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,9 +59,7 @@ func TestReadLogEvents_RefusesASymlinkedLog(t *testing.T) {
 	real := filepath.Join(dir, "real.jsonl")
 	require.NoError(t, os.WriteFile(real, []byte(previewLog), 0o600))
 	link := filepath.Join(dir, "link.jsonl")
-	if err := os.Symlink(real, link); err != nil {
-		t.Skip("symlinks unavailable")
-	}
+	testutil.SymlinkOrSkip(t, real, link)
 
 	_, err := ReadLogEvents(link)
 

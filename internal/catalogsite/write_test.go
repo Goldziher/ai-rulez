@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -135,7 +137,7 @@ func TestWrite_SymlinkCannotRedirectWritesOrRemovals(t *testing.T) {
 	require.NoError(t, os.WriteFile(secret, []byte("precious"), 0o644))
 	dir := filepath.Join(parent, "out")
 	require.NoError(t, os.Mkdir(dir, 0o755))
-	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "link")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "link"))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte("link/secret.txt\n"), 0o644))
 
 	// Act
