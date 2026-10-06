@@ -135,5 +135,5 @@ type fileEntry struct {
 
 // review is one approving reviewer of an item, as an SPDX REVIEW annotation.
 type review struct {
-	reviewer, at, digest string
+	reviewer, at, digest, assurance string
 }
