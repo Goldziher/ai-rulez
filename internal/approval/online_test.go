@@ -26,15 +26,11 @@ func review(id int64, login, state, commit string, minutes int) forge.Review {
 	return forge.Review{ID: id, Login: login, State: state, CommitID: commit, Submitted: baseTime.Add(time.Duration(minutes) * time.Minute)}
 }
 
-// fakeForge lists pull request 7 (authored by dave) as containing both commits.
+// fakeForge serves pull request 7 (authored by dave), whose final head is headSHA.
 func fakeForge(reviews ...forge.Review) *forge.Fake {
-	pr := []forge.PullRequest{{Number: 7, Author: "dave", HeadSHA: headSHA}}
 	return &forge.Fake{
-		PRs: map[string][]forge.PullRequest{
-			testRepo.String() + "@" + headSHA: pr,
-			testRepo.String() + "@" + oldSHA:  pr,
-		},
-		ReviewsBy: map[string][]forge.Review{testRepo.String() + "#7": reviews},
+		PRByNumber: map[string]forge.PullRequest{testRepo.String() + "#7": {Number: 7, Author: "dave", HeadSHA: headSHA}},
+		ReviewsBy:  map[string][]forge.Review{testRepo.String() + "#7": reviews},
 	}
 }
 
@@ -62,12 +58,14 @@ func TestApprovingReviews(t *testing.T) {
 			[]forge.Review{review(1, "alice", forge.ReviewApproved, headSHA, 1), review(2, "alice", forge.ReviewCommented, headSHA, 2)}, sameEverywhere, []string{"alice"}},
 		{"approving again after changes requested counts",
 			[]forge.Review{review(1, "alice", forge.ReviewChangesRequested, headSHA, 1), review(2, "alice", forge.ReviewApproved, headSHA, 2)}, sameEverywhere, []string{"alice"}},
-		{"a review of an earlier commit counts when it pinned the same digest",
-			[]forge.Review{review(1, "alice", forge.ReviewApproved, oldSHA, 1)}, sameEverywhere, []string{"alice"}},
-		{"a review of an earlier commit with other content approved something else",
-			[]forge.Review{review(1, "alice", forge.ReviewApproved, oldSHA, 1)}, map[string]string{headSHA: approvedDigest, oldSHA: "sha256:bbbb"}, nil},
-		{"a commit whose lock does not pin the content", []forge.Review{review(1, "alice", forge.ReviewApproved, oldSHA, 1)}, map[string]string{headSHA: approvedDigest}, nil},
-		{"two reviewers", []forge.Review{review(1, "bob", forge.ReviewApproved, headSHA, 1), review(2, "Alice", forge.ReviewApproved, oldSHA, 2)}, sameEverywhere, []string{"Alice", "bob"}},
+		{"a review of an earlier head does not count, even for the same digest",
+			[]forge.Review{review(1, "alice", forge.ReviewApproved, oldSHA, 1)}, sameEverywhere, nil},
+		{"a re-review of the final head counts after an earlier-head one",
+			[]forge.Review{review(1, "alice", forge.ReviewApproved, oldSHA, 1), review(2, "alice", forge.ReviewApproved, headSHA, 2)}, sameEverywhere, []string{"alice"}},
+		{"the final head whose content has another digest approved something else",
+			[]forge.Review{review(1, "alice", forge.ReviewApproved, headSHA, 1)}, map[string]string{headSHA: "sha256:bbbb"}, nil},
+		{"a final head that does not pin the content", []forge.Review{review(1, "alice", forge.ReviewApproved, headSHA, 1)}, map[string]string{oldSHA: approvedDigest}, nil},
+		{"two reviewers", []forge.Review{review(1, "bob", forge.ReviewApproved, headSHA, 1), review(2, "Alice", forge.ReviewApproved, headSHA, 2)}, sameEverywhere, []string{"Alice", "bob"}},
 		{"the pending state never approves", []forge.Review{review(1, "alice", forge.ReviewPending, headSHA, 1)}, sameEverywhere, nil},
 	}
 	for _, tt := range tests {
@@ -93,9 +91,15 @@ func TestApprovingReviews_Failures(t *testing.T) {
 	approved := review(1, "alice", forge.ReviewApproved, headSHA, 1)
 	q := ReviewQuery{Repo: testRepo, PR: 7, Digest: approvedDigest, PinnedAt: pinned(map[string]string{headSHA: approvedDigest})}
 
-	t.Run("a review on a commit outside the pull request approved nothing here", func(t *testing.T) {
+	t.Run("a pull request the forge does not know is an error", func(t *testing.T) {
 		c := fakeForge(approved)
-		c.PRs = map[string][]forge.PullRequest{testRepo.String() + "@" + headSHA: {{Number: 99, Author: "dave"}}}
+		c.PRByNumber = nil
+		_, err := ApprovingReviews(context.Background(), c, q)
+		assert.ErrorIs(t, err, forge.ErrNotFound)
+	})
+	t.Run("a pull request without a head commit approves nothing", func(t *testing.T) {
+		c := fakeForge(approved)
+		c.PRByNumber = map[string]forge.PullRequest{testRepo.String() + "#7": {Number: 7, Author: "dave"}}
 		got, err := ApprovingReviews(context.Background(), c, q)
 		require.NoError(t, err)
 		assert.Empty(t, got)

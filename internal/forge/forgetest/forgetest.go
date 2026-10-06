@@ -203,6 +203,27 @@ func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 			return
 		}
 		writeJSON(w, map[string]any{"commit": map[string]any{"committer": map[string]any{"date": d}, "author": map[string]any{"date": d}}})
+	case strings.HasPrefix(path, "pulls/") && !strings.Contains(strings.TrimPrefix(path, "pulls/"), "/"):
+		n, err := strconv.Atoi(strings.TrimPrefix(path, "pulls/"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		for _, prs := range s.PRs {
+			for _, pr := range prs {
+				if pr.Number != n {
+					continue
+				}
+				m := map[string]any{"number": pr.Number, "state": pr.State, "user": map[string]any{"login": pr.Author},
+					"base": map[string]any{"ref": pr.BaseRef}, "head": map[string]any{"sha": pr.HeadSHA}, "merge_commit_sha": pr.MergeCommit}
+				if pr.Merged {
+					m["merged_at"] = time.Unix(1, 0).UTC()
+				}
+				writeJSON(w, m)
+				return
+			}
+		}
+		http.NotFound(w, r)
 	case strings.HasPrefix(path, "pulls/") && strings.HasSuffix(path, "/reviews"):
 		n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(path, "pulls/"), "/reviews"))
 		if err != nil {

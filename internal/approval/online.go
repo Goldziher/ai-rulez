@@ -2,7 +2,6 @@ package approval
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -19,11 +18,11 @@ type ReviewQuery struct {
 	// PR is the pull request number.
 	PR int
 	// Digest is the digest of the content being approved. A review counts only
-	// when the lock at the commit the reviewer saw pinned this digest: the
+	// when the content at the pull request's final head has this digest: the
 	// review was of exactly this content.
 	Digest string
-	// PinnedAt returns the digest the lock at commit sha pins for the content,
-	// and whether it pins it at all. A commit that is not in the local clone is
+	// PinnedAt returns the digest of the content as it is at commit sha, and
+	// whether the content exists there. A commit that is not in the local clone is
 	// an error (fetch the pull request head).
 	PinnedAt func(ctx context.Context, sha string) (digest string, pinned bool, err error)
 }
@@ -75,39 +74,40 @@ func ParseReviewRef(ref string) (repo forge.Repo, pr int, review int64, err erro
 	return repo, pr, review, nil
 }
 
-// ErrNotInPullRequest means the forge does not list the pull request among those
-// containing the commit a review was made on.
-var ErrNotInPullRequest = errors.New("the reviewed commit is not part of the pull request")
-
 // ApprovingReviews returns the reviews that approve q.Digest: the latest
 // decisive review of each reviewer is APPROVED (a later CHANGES_REQUESTED or
 // DISMISSED withdraws it; comments neither approve nor withdraw), the commit the
-// reviewer saw belongs to the pull request, and the lock at that commit pinned
-// q.Digest, so the content they reviewed is the content being approved.
-// Incomplete listings are errors: a truncated review list is never counted.
+// reviewer saw is the pull request's final head (a review of an earlier head
+// approved something else, even when the content looks the same), and the
+// content at that commit has the digest q.Digest. Incomplete listings are
+// errors: a truncated review list is never counted.
 func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]ReviewApproval, error) {
+	pr, err := c.PullRequest(ctx, q.Repo, q.PR)
+	if err != nil {
+		return nil, fmt.Errorf("read pull request #%d: %w", q.PR, err)
+	}
 	reviews, err := c.Reviews(ctx, q.Repo, q.PR)
 	if err != nil {
 		return nil, fmt.Errorf("list the reviews of #%d: %w", q.PR, err)
 	}
-	prs := map[string]*forge.PullRequest{}
 	var out []ReviewApproval
+	pinnedAtHead := ""
+	checked := false
 	for login, r := range latestDecisive(reviews) {
-		if r.State != forge.ReviewApproved || r.CommitID == "" {
+		if r.State != forge.ReviewApproved || r.CommitID == "" || pr.HeadSHA == "" || !strings.EqualFold(r.CommitID, pr.HeadSHA) {
 			continue
 		}
-		pr, err := q.pullRequestOf(ctx, c, r.CommitID, prs)
-		if err != nil {
-			return nil, err
+		if !checked {
+			digest, pinned, err := q.PinnedAt(ctx, pr.HeadSHA)
+			if err != nil {
+				return nil, fmt.Errorf("read the content at the reviewed commit %s: %w", shortSHA(pr.HeadSHA), err)
+			}
+			if pinned {
+				pinnedAtHead = digest
+			}
+			checked = true
 		}
-		if pr == nil {
-			continue // a review on a commit outside the pull request approved nothing here
-		}
-		digest, pinned, err := q.PinnedAt(ctx, r.CommitID)
-		if err != nil {
-			return nil, fmt.Errorf("read the lock at the reviewed commit %s: %w", shortSHA(r.CommitID), err)
-		}
-		if !pinned || digest != q.Digest {
+		if pinnedAtHead != q.Digest {
 			continue
 		}
 		out = append(out, ReviewApproval{
@@ -136,26 +136,6 @@ func latestDecisive(reviews []forge.Review) map[string]forge.Review {
 		}
 	}
 	return latest
-}
-
-// pullRequestOf returns the pull request q.PR when the forge lists it among those
-// containing commit, nil when it does not; answers are cached per commit.
-func (q ReviewQuery) pullRequestOf(ctx context.Context, c forge.Client, commit string, cache map[string]*forge.PullRequest) (*forge.PullRequest, error) {
-	if pr, ok := cache[commit]; ok {
-		return pr, nil
-	}
-	list, err := c.PullRequestsForCommit(ctx, q.Repo, commit)
-	if err != nil {
-		return nil, fmt.Errorf("list the pull requests of %s: %w", shortSHA(commit), err)
-	}
-	var found *forge.PullRequest
-	for i := range list {
-		if list[i].Number == q.PR {
-			found = &list[i]
-		}
-	}
-	cache[commit] = found
-	return found, nil
 }
 
 // VerifyReviewRecord re-checks a review-linked record online: its ref must name
