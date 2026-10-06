@@ -1033,7 +1033,7 @@ ai-rulez generate [config-file] [flags]
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
-Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`.
+Before writing, `generate` also prints a summary of hook commands, command-based MCP servers, `[permissions] allow` rules and other command-bearing settings that are new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It only warns; `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The MCP `generate_outputs` tool returns the same summary as `new_commands`. With `--watch` the summary is printed on every regeneration, so a hook or MCP command that arrives with a pulled change is shown when the run that would write it happens.
 
 Exit codes: `0` written, `1` a configuration failed to load, validate or generate (every root of a `--recursive` run is still processed), `2` `--check` found drift or `--locked`/`--frozen` found an authored source that differs from the lock (also a recursive run where every failure is lock drift). See [Exit Codes](#exit-codes).
 
@@ -1057,6 +1057,7 @@ Exit codes: `0` nothing differs, `1` the check could not run (configuration inva
 - Changes are debounced for 300 ms, so a save storm or `git checkout` produces one run.
 - Runs never overlap. A change that arrives during a run triggers exactly one more run afterwards.
 - Generated output, the generated manifests and editor swap/backup files (`*.swp`, `*~`, `.#*`, `4913`, ...) never trigger a run.
+- Every regeneration runs the same preflight as a one-shot `generate`, including the summary of new hook and MCP commands.
 - A configuration that fails to load or validate is logged and watching continues, so you can fix it and the next save regenerates.
 - If `.ai-rulez/` is deleted and re-created (for example by switching branches), it is watched again.
 - `SIGINT` / `SIGTERM` stop it cleanly, after any run in progress finishes. The first one cancels the run in progress; a second Ctrl-C kills the process immediately.
