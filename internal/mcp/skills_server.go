@@ -82,7 +82,7 @@ func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest
 	}
 	session := s.serve.sessionID(req.Session)
 	if err := s.chargeRead(session, len(file.Content)); err != nil {
-		return nil, err
+		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: err.Error()}
 	}
 	contents := &sdkmcp.ResourceContents{URI: file.URI, MIMEType: file.MIME}
 	if utf8.Valid(file.Content) {

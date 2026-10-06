@@ -148,6 +148,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	out := skillSummary(skill, 0)
 	delete(out, "files")
 	out["path"] = rel
+	out[keyURI] = file.URI
 	out["content"] = content
 	out["bytes"] = len(content)
 	out["truncated"] = truncated
