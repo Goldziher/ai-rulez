@@ -298,6 +298,8 @@ func npmFake(t *testing.T) *runner.Fake {
 			return runner.Result{Status: runner.StatusOK}
 		}
 		switch spec.Argv[1] {
+		case "config":
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"registry":"https://registry.npmjs.org/"}`)}
 		case "view":
 			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("npm ERR! code E404")}
 		case "pack":
@@ -347,7 +349,7 @@ func TestPublish_NPMExecuteUsesAFilteredEnvironment(t *testing.T) {
 		assert.NotContains(t, filepath.ToSlash(c.Dir), "/dist", "npm runs from an empty temporary directory, not the dist directory")
 		assert.False(t, c.InheritEnv)
 	}
-	assert.Equal(t, [][]string{{"npm", "view"}, {"npm", "pack"}, {"npm", "publish"}}, npmCalls)
+	assert.Equal(t, [][]string{{"npm", "config"}, {"npm", "view"}, {"npm", "pack"}, {"npm", "publish"}}, npmCalls)
 	for name, content := range readDist(t, publishDist) {
 		assert.NotContains(t, content, "token-for-npm-only", name)
 	}
@@ -368,6 +370,7 @@ d=$(dirname "$0")
 echo "$@" >> "$d/npm.log"
 pwd >> "$d/npm.cwd"
 case "$1" in
+  config) echo "{\"registry\":\"https://registry.npmjs.org/\"}";;
   view) echo "npm ERR! code E404" >&2; exit 1;;
   pack)
     while [ $# -gt 0 ]; do
@@ -405,8 +408,41 @@ func TestPublish_NPMExecuteIgnoresAProjectNpmrc(t *testing.T) {
 		assert.NotContains(t, cwd, rootResolved, "npm must not run inside the project")
 	}
 	logged, _ := os.ReadFile(filepath.Join(fake, "npm.log")) //nolint:errcheck // asserted below
-	assert.Equal(t, 3, strings.Count(string(logged), "--userconfig"))
-	assert.Equal(t, 3, strings.Count(string(logged), "--globalconfig"))
+	assert.Equal(t, 4, strings.Count(string(logged), "--userconfig"))
+	assert.Equal(t, 4, strings.Count(string(logged), "--globalconfig"))
+}
+
+func TestPublish_NPMRegistryFromTheCommittedConfigNeedsConfirmation(t *testing.T) {
+	// Arrange: the committed config names a registry, which would receive the user's npm token.
+	root := publishProject(t)
+	cfgPath := filepath.Join(root, ".ai-rulez", "config.toml")
+	cfg, err := os.ReadFile(cfgPath)
+	require.NoError(t, err)
+	writeFile(t, cfgPath, string(cfg)+"\n[publish.npm]\nscope = \"@acme\"\nregistry = \"https://npm.example.com\"\n")
+	publishGit(t, root, "add", "-A")
+	publishGit(t, root, "commit", "-q", "-m", "registry")
+	publishTo, publishExecute, publishYes = publish.TargetNPM, true, true
+	fake := npmFake(t)
+	publishRunner = fake
+
+	// Act
+	_, refused := runPublishCapture(t)
+
+	// Assert: refused without --confirm-registry, and nothing but npm's own config was read.
+	require.Error(t, refused)
+	assert.Contains(t, refused.Error(), "confirm that registry by name")
+	for _, c := range fake.Calls() {
+		if c.Argv[0] == "npm" {
+			assert.Equal(t, "config", c.Argv[1])
+		}
+	}
+
+	// Act again with the confirmation.
+	publishConfirmReg = "https://npm.example.com"
+	_, err = runPublishCapture(t)
+
+	// Assert
+	require.NoError(t, err)
 }
 
 func TestPublish_NPMNeedsAScope(t *testing.T) {
