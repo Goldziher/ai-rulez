@@ -56,7 +56,7 @@ func (p project) build(t *testing.T) (*sbom.BOM, string) {
 	}
 	cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
 	require.NoError(t, err)
-	bom, err := sbom.Build(cfg, "9.9.9")
+	bom, err := sbom.Build(cfg, "9.9.9", sbom.Options{})
 	require.NoError(t, err)
 	var buf bytes.Buffer
 	require.NoError(t, sbom.Write(&buf, bom))
@@ -219,10 +219,10 @@ func TestMCPServerPURLs(t *testing.T) {
 	}{
 		{"npx scoped with version", "npx", `["-y", "@scope/pkg@1.2.3", "--flag"]`, "pkg:npm/%40scope/pkg@1.2.3"},
 		{"npx unversioned", "npx", `["pkg"]`, "pkg:npm/pkg"},
-		{"npx -p package", "npx", `["-p", "left-pad@2", "run"]`, "pkg:npm/left-pad@2"},
+		{"npx -p package", "npx", `["-p", "left-pad@2", "run"]`, "pkg:npm/left-pad"},
 		{"npx path is not a package", "npx", `["./local.js"]`, ""},
-		{"bunx", "bunx", `["pkg@3"]`, "pkg:npm/pkg@3"},
-		{"pnpm dlx", "pnpm", `["dlx", "pkg@3"]`, "pkg:npm/pkg@3"},
+		{"bunx", "bunx", `["pkg@3.1.0"]`, "pkg:npm/pkg@3.1.0"},
+		{"pnpm dlx", "pnpm", `["dlx", "pkg@3.1.0"]`, "pkg:npm/pkg@3.1.0"},
 		{"uvx pinned", "uvx", `["Mcp_Server==0.4.0"]`, "pkg:pypi/mcp-server@0.4.0"},
 		{"uvx from", "uvx", `["--from", "tool@1.0", "cmd"]`, "pkg:pypi/tool@1.0"},
 		{"pipx run", "pipx", `["run", "tool"]`, "pkg:pypi/tool"},
