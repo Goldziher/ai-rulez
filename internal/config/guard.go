@@ -2,6 +2,7 @@ package config
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -33,9 +34,11 @@ const HookBuiltinGuard = "guard"
 // outside this list is skipped, never approximated.
 //
 // Evidence, read 2026-10-06 (docs/settings.md [guard] lists the URLs): Claude Code,
-// Codex, Gemini CLI, Cursor, Factory and Copilot each document exit code 2 as a
-// block of the pre-tool call.
-var GuardHarnesses = []string{HarnessClaude, HarnessCodex, HarnessGemini, HarnessCursor, HarnessFactory, HarnessCopilot}
+// Codex, Gemini CLI, Cursor, Factory, Copilot and Copilot CLI each document exit
+// code 2 as a block of the pre-tool call.
+var GuardHarnesses = []string{
+	HarnessClaude, HarnessCodex, HarnessGemini, HarnessCursor, HarnessFactory, HarnessCopilot, HarnessCopilotCLI,
+}
 
 // guardMatcher selects the file-editing tools in Claude Code's vocabulary; each
 // harness's own names are derived through internal/toolnames.
@@ -118,6 +121,18 @@ func (c *Config) EnableGuardHooks(binaryVersion string) {
 			Timeout: guardTimeoutSeconds,
 		}},
 	})
+}
+
+// DropGuardHooks removes the synthesized guard group. User scope calls it once the
+// scope is known: NewGenerator adds the group before SetUserScope runs, and the
+// guard protects a project's generated files, not the home directory.
+func (c *Config) DropGuardHooks() {
+	if c == nil {
+		return
+	}
+	guardMu.Lock()
+	defer guardMu.Unlock()
+	c.Hooks = slices.DeleteFunc(c.Hooks, func(g HookGroup) bool { return g.Builtin == HookBuiltinGuard })
 }
 
 // UserHooks returns the hook groups the user wrote, without synthesized ones.
