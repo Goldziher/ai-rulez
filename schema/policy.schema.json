@@ -248,15 +248,27 @@
           "minimum": 0,
           "description": "The lowest attestation hash scheme the repository may accept. Layers take the largest."
         },
+        "thresholds": {
+          "type": "object",
+          "description": "Per subject, the fewest distinct signers the repository must require; it may raise a threshold, never lower it. Layers take the largest.",
+          "additionalProperties": false,
+          "properties": {
+            "lock": { "type": "integer", "minimum": 1 },
+            "bundle": { "type": "integer", "minimum": 1 },
+            "skill": { "type": "integer", "minimum": 1 },
+            "sbom": { "type": "integer", "minimum": 1 },
+            "approval": { "type": "integer", "minimum": 1 }
+          }
+        },
         "trust": {
           "type": "array",
-          "description": "The only signers the repository may trust: certificate identities. A repository entry not listed here is dropped; with none left the policy list applies. Layers intersect.",
+          "description": "The only signers the repository may trust: certificate identities. Only the subjects named here are governed (all of them when the list is empty): a repository entry for a governed subject that is not listed is dropped, and the policy's are added when none is left. Layers intersect.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["issuer"],
             "properties": {
-              "subject": { "const": "lock" },
+              "subject": { "enum": ["lock", "bundle", "skill", "sbom", "approval"] },
               "identity": { "type": "string", "minLength": 1, "pattern": "^\\S+$" },
               "identity_regexp": {
                 "type": "string",

@@ -94,6 +94,7 @@ func provenance(layers []Layer) map[string]string {
 		return p.Signing.MinHashVersion > 0 && p.Signing.MinHashVersion == eff.Signing.MinHashVersion
 	})
 	all("signing.trust", func(p Policy) bool { return p.Signing.Trust.Set })
+	all("signing.thresholds", func(p Policy) bool { return len(p.Signing.Thresholds) > 0 })
 	all("mcp.allowed_commands", func(p Policy) bool { return p.MCP.AllowedCommands.Set })
 	all("mcp.deny_transports", func(p Policy) bool { return len(p.MCP.DenyTransports) > 0 })
 	firstWith("hooks.allow", func(p Policy) bool { return p.Hooks.Forbidden })
