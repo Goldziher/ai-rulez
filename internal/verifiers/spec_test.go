@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -633,4 +634,36 @@ func TestRun_InlineSpecInConfigToml(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, Explain(&buf, cfg, "no-drop"))
 	assert.Contains(t, buf.String(), "fix: remove DROP")
+}
+
+func TestWriteSARIF_EscapesPathsLikeTheLintWriter(t *testing.T) {
+	rep := &Report{Results: []Result{{
+		Name: "v", Status: StatusFail, Code: "AR9H1", Severity: severityError, Message: "m",
+		Findings: []Finding{{File: `my docs\a#b.sql`, Line: 2, Message: "m"}},
+	}}}
+	var buf bytes.Buffer
+
+	require.NoError(t, WriteSARIF(&buf, rep, ""))
+
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &doc))
+	r := doc["runs"].([]any)[0].(map[string]any)["results"].([]any)[0].(map[string]any)
+	loc := r["locations"].([]any)[0].(map[string]any)["physicalLocation"].(map[string]any)["artifactLocation"].(map[string]any)
+	assert.Equal(t, "my%20docs/a%23b.sql", loc["uri"])
+	assert.Equal(t, "%SRCROOT%", loc["uriBaseId"])
+}
+
+func TestWriteSARIF_ReportsARunLevelError(t *testing.T) {
+	rep := &Report{Err: errors.New("--since and --staged cannot be combined")}
+	var buf bytes.Buffer
+
+	require.NoError(t, WriteSARIF(&buf, rep, ""))
+
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &doc))
+	inv := doc["runs"].([]any)[0].(map[string]any)["invocations"].([]any)[0].(map[string]any)
+	assert.Equal(t, false, inv["executionSuccessful"])
+	notes := inv["toolExecutionNotifications"].([]any)
+	require.Len(t, notes, 1)
+	assert.Contains(t, notes[0].(map[string]any)["message"].(map[string]any)["text"], "cannot be combined")
 }
