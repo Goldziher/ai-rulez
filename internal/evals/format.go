@@ -53,8 +53,13 @@ func (r *RunReport) writeMarkdown(w io.Writer) error {
 	}
 	b.WriteString("\n\n")
 	if r.DryRun {
-		fmt.Fprintf(&b, "Dry run: %d agent runs, about %d input and %d output tokens, estimated **$%.2f** (a rough estimate).\n\n",
-			r.Estimate.AgentRuns, r.Estimate.InputTokens, r.Estimate.OutputTokens, r.Estimate.CostUSD)
+		e := r.Estimate
+		fmt.Fprintf(&b, "Dry run: %d agent runs, tokens in %s, out %s, estimated cost **$%.2f** (range $%.2f to $%.2f; a rough estimate).\n\n",
+			e.AgentRuns, tokenRange(e.InputTokensLow, e.InputTokens, e.InputTokensHigh), tokenRange(e.OutputTokensLow, e.OutputTokens, e.OutputTokensHigh),
+			e.CostUSD, e.CostLowUSD, e.CostHighUSD)
+		if !r.PriceKnown {
+			b.WriteString("The model has no built-in price: the estimate uses the sonnet tier. Pass `--price-in` and `--price-out` for a real figure.\n\n")
+		}
 	}
 	b.WriteString("| Skill | Status | Cases | Pass rate | Trigger precision | Trigger recall | Ablation delta | Skill tokens | Cost |\n")
 	b.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
@@ -70,6 +75,11 @@ func (r *RunReport) writeMarkdown(w io.Writer) error {
 	}
 	_, err := io.WriteString(w, b.String())
 	return err
+}
+
+// tokenRange renders low, expected and high as "low / expected / high".
+func tokenRange(low, expected, high int) string {
+	return fmt.Sprintf("%d / %d / %d", low, expected, high)
 }
 
 func markdownRow(s *SkillRun) string {
