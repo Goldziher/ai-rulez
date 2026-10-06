@@ -52,10 +52,14 @@ func TestImprovePR_OpensAPullRequestWithAFakeGH(t *testing.T) {
 	remote := filepath.Join(t.TempDir(), "origin.git")
 	run(root, "init", "-q", "--bare", remote)
 	run(root, "remote", "add", "origin", remote)
+	run(root, "push", "-q", "origin", "main")
 	bin := t.TempDir()
 	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$(dirname \"$0\")/gh.log\"\necho https://github.com/example/repo/pull/1\n"
 	require.NoError(t, os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0o755)) //nolint:gosec // a test script
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	resolved, lerr := exec.LookPath("gh")
+	require.NoError(t, lerr)
+	require.Equal(t, filepath.Join(bin, "gh"), resolved, "the fake gh must come first on PATH, or this test would run a real gh")
 	improveFlags.format, improveFlags.yes = formatJSON, true
 	improvePRFlags.draft = true
 	t.Cleanup(func() { improvePRFlags.draft = false })
@@ -93,4 +97,37 @@ func TestImprovePR_RefusesAnUnknownRun(t *testing.T) {
 	// Assert
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no saved run")
+}
+
+func TestImprovePRChildEnv_ScrubsTheHostEnvironment(t *testing.T) {
+	// Arrange
+	host := []string{
+		"PATH=/usr/bin", "HOME=/home/u", "XDG_CONFIG_HOME=/home/u/.config", "LANG=C",
+		"AWS_SECRET_ACCESS_KEY=hunter2", "ANTHROPIC_API_KEY=sk-test", "GITHUB_TOKEN=ghp_test", "NPM_TOKEN=npm_test",
+		"GIT_DIR=/elsewhere", "SOME_VAR=1",
+	}
+
+	t.Run("by default only the base set survives", func(t *testing.T) {
+		// Act
+		env := improvePRChildEnv(host, nil)
+
+		// Assert
+		assert.Contains(t, env, "PATH=/usr/bin")
+		assert.Contains(t, env, "HOME=/home/u")
+		assert.Contains(t, env, "XDG_CONFIG_HOME=/home/u/.config")
+		for _, kv := range env {
+			for _, secret := range []string{"hunter2", "sk-test", "ghp_test", "npm_test", "/elsewhere", "SOME_VAR"} {
+				assert.NotContains(t, kv, secret)
+			}
+		}
+	})
+	t.Run("--env-pass forwards exactly the named variables", func(t *testing.T) {
+		// Act
+		env := improvePRChildEnv(host, []string{"ANTHROPIC_API_KEY"})
+
+		// Assert
+		assert.Contains(t, env, "ANTHROPIC_API_KEY=sk-test")
+		assert.NotContains(t, strings.Join(env, "\n"), "hunter2")
+		assert.NotContains(t, strings.Join(env, "\n"), "ghp_test")
+	})
 }
