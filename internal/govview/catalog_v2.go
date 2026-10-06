@@ -33,7 +33,7 @@ const (
 
 // CatalogSource says where an item's content comes from.
 type CatalogSource struct {
-	// Type is local, include or builtin.
+	// Type is local or include.
 	Type string `json:"type"`
 }
 
@@ -278,12 +278,7 @@ func loadCost(it *CatalogItem, cf *config.ContentFile, description string, count
 // invalid UTF-8 replaced, cut at a rune boundary.
 func excerptOf(body string) *Excerpt {
 	body = strings.ToValidUTF8(strings.ReplaceAll(strings.ReplaceAll(body, "\r\n", "\n"), "\r", "\n"), "�")
-	if strings.HasPrefix(body, "---\n") {
-		if end := strings.Index(body[4:], "\n---"); end >= 0 {
-			rest := body[4+end+4:]
-			body = strings.TrimLeft(rest, "\n")
-		}
-	}
+	body = stripFrontmatter(body)
 	if len(body) <= ExcerptLimit {
 		return &Excerpt{Text: body}
 	}
@@ -292,6 +287,33 @@ func excerptOf(body string) *Excerpt {
 		cut--
 	}
 	return &Excerpt{Text: body[:cut], Truncated: true}
+}
+
+// stripFrontmatter drops a leading "---" block when a line of exactly "---"
+// closes it (at a line end or the end of the text); text that only starts with
+// dashes, or whose fence is never closed, is not frontmatter and is kept whole.
+func stripFrontmatter(body string) string {
+	if !strings.HasPrefix(body, "---\n") {
+		return body
+	}
+	rest := body[4:]
+	offset := 0
+	for offset <= len(rest) {
+		end := strings.IndexByte(rest[offset:], '\n')
+		line := rest[offset:]
+		next := len(rest)
+		if end >= 0 {
+			line, next = rest[offset:offset+end], offset+end+1
+		}
+		if strings.TrimRight(line, " \t") == "---" {
+			return strings.TrimLeft(rest[min(next, len(rest)):], "\n")
+		}
+		if end < 0 {
+			break
+		}
+		offset = next
+	}
+	return body
 }
 
 // lintAttribution maps the findings of a lint report onto catalog items by file.
@@ -383,7 +405,8 @@ func (a *lintAttribution) finding(f *lint.Finding) LintFinding {
 	msg := f.Message
 	for _, root := range []string{a.baseAbs, gitutil.Resolve(a.baseAbs)} {
 		if root != "" {
-			msg = strings.ReplaceAll(msg, root+string(filepath.Separator), "")
+			// Both separator forms: a message may quote a path written with either.
+			msg = strings.ReplaceAll(strings.ReplaceAll(msg, root+"/", ""), root+`\`, "")
 		}
 	}
 	return LintFinding{Code: f.Code, Severity: string(f.Severity), Message: msg, Line: f.Line}
@@ -417,7 +440,7 @@ func (a *lintAttribution) overview(reason string) CatalogLint {
 		if !filepath.IsAbs(abs) {
 			abs = filepath.Join(a.cwd, filepath.FromSlash(abs))
 		}
-		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			pf.File = filepath.ToSlash(rel)
 		}
 		out.Unattributed = append(out.Unattributed, pf)
