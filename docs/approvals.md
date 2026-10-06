@@ -249,6 +249,11 @@ bundle is written to `.ai-rulez/attestations/<sha256 of the bundle>.sigstore.jso
 same flags as [`sign`](signing.md). The signer's verified identity replaces the free-form reviewer: the certificate
 identity for keyless, `key:<fingerprint>` for a key. `--reviewer` does not combine with `--sign`.
 
+A keyless signature goes to a public log and cannot be taken back, so `approvers` and CODEOWNERS are checked **before**
+anything is signed. The identity is read from the ID token (its verified `email`, or `job_workflow_ref` of a GitHub
+Actions token). When an allowlist or `approvers_from` is set and the token's certificate identity cannot be told, the
+approval is refused with nothing logged: sign with `--key` or a token of a readable shape.
+
 Say who may sign approvals with `[[signing.trust]]` entries whose `subject` is `"approval"`:
 
 ```toml
