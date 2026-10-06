@@ -1,0 +1,78 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude']
+
+[permissions]
+ask = ['Bash(git push:*)']
+deny = ['Bash(curl)', 'Bash(rm -rf:*)', 'Read(./.env)', 'Read(.env)']
+
+# Imported by `ai-rulez convert` and DISABLED: review, then uncomment or rerun convert with --enable-hooks / --enable-permissions.
+# Each hook runs a command on your machine; read every command first.
+# [[hooks]]
+# event = 'PostToolUse'
+# matcher = 'Edit|Write'
+# targets = ['claude']
+#
+# [[hooks.hooks]]
+# command = 'npx prettier --write "$CLAUDE_FILE_PATHS"'
+# async = true
+#
+# [[hooks]]
+# event = 'PreToolUse'
+# targets = ['gemini']
+#
+# [[hooks.hooks]]
+# command = './scripts/check-command.sh'
+# timeout = 10
+#
+# [hooks.matchers]
+# gemini = 'run_shell_command'
+#
+# [[hooks]]
+# event = 'PreToolUse'
+# targets = ['cursor']
+#
+# [[hooks.hooks]]
+# command = './scripts/check-command.sh'
+# timeout = 10
+#
+# [hooks.matchers]
+# cursor = 'Shell'
+#
+# [[hooks]]
+# event = 'PreToolUse'
+# matcher = 'Bash'
+# targets = ['claude']
+#
+# [[hooks.hooks]]
+# command = './scripts/check-command.sh'
+# timeout = 10
+#
+# [[hooks]]
+# event = 'SessionStart'
+# targets = ['codex']
+#
+# [[hooks.hooks]]
+# command = 'git pull --ff-only'
+# timeout = 30
+#
+# [[hooks]]
+# event = 'Stop'
+# targets = ['claude', 'codex']
+#
+# [[hooks.hooks]]
+# command = 'echo done'
+#
+# [[hooks]]
+# event = 'Stop'
+# targets = ['copilot']
+#
+# [[hooks.hooks]]
+# command = 'echo done'
+# timeout = 5
+#
+# Allow rules widen what every harness may do; add them to [permissions] only after review.
+# allow = ['Bash(ls)', 'Bash(npm run test:*)', 'Read(./src/**)', 'Read(src/**)']

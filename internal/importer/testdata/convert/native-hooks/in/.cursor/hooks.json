@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [{ "command": "./scripts/check-command.sh", "timeout": 10, "matcher": "Shell" }],
+    "afterFileEdit": [{ "command": "./scripts/format.sh" }]
+  }
+}
