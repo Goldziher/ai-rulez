@@ -130,48 +130,5 @@
     "AGENTS.md",
     "CLAUDE.md",
     "opencode.json"
-  ],
-  "merged": {
-    ".codex/config.toml": [
-      {
-        "path": [
-          "mcp_servers",
-          "ai-rulez"
-        ],
-        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
-      }
-    ],
-    ".mcp.json": [
-      {
-        "path": [
-          "mcpServers",
-          "ai-rulez"
-        ],
-        "sum": "687b450bf90d36d32e71a4c08ce21969ad4f151f1d686a4fa6f001e862d38c0b"
-      }
-    ],
-    "opencode.json": [
-      {
-        "path": [
-          "$schema"
-        ],
-        "sum": "5b44767d48bb2a2ba170d7412d260e9c0d31fcdc2e7cbd38225464a63880d42e"
-      },
-      {
-        "path": [
-          "instructions"
-        ],
-        "elementSums": [
-          "59744dbf84a2973dbb56fbcd87da54df692a39176f2935c18835ed8e6daa1d9a"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "ai-rulez"
-        ],
-        "sum": "a4080dc069318dcf0ba4ecef396ff522f7efd05495b73fa38e35a8b9dc6d22fc"
-      }
-    ]
-  }
+  ]
 }
