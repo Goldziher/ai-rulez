@@ -734,3 +734,38 @@ func TestConvert_RulesyncIsDeterministic(t *testing.T) {
 	// Assert
 	assert.Equal(t, first, second)
 }
+
+func TestRulesyncPlan_InputRootsEdgeCases(t *testing.T) {
+	tests := []struct {
+		name       string
+		config     string
+		wantRels   []string
+		wantReport string // field of the unsupported finding, "" for none
+		wantItems  int    // overrides reported as approximated
+	}{
+		{"a string where a list is expected", `{"inputRoots":"overlay/.rulesync"}`, []string{"rules/base.md"}, "inputRoots", 0},
+		{"a non-string inputRoot", `{"inputRoot":42}`, []string{"rules/base.md"}, "inputRoot", 0},
+		{"a non-string entry in the list", `{"inputRoots":[".rulesync", 7]}`, []string{"rules/base.md"}, "inputRoots", 0},
+		{"the project root is refused", `{"inputRoots":[".", "./"]}`, []string{"rules/base.md"}, "inputRoots", 0},
+		{"a repeated root is read once", `{"inputRoots":[".rulesync", "./.rulesync", ".rulesync/"]}`, []string{"rules/base.md"}, "", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files := map[string]string{
+				"rulesync.jsonc":          tt.config,
+				".rulesync/rules/base.md": "Base.\n",
+				"README.md":               "not a rule\n",
+			}
+
+			p := rulesyncPlan(t, files)
+
+			assert.Equal(t, tt.wantRels, itemRels(p))
+			if tt.wantReport != "" {
+				assert.NotNil(t, findingFor(p, StatusUnsupported, "rulesync.jsonc", tt.wantReport))
+			}
+			for i := range p.Findings {
+				assert.NotEqual(t, StatusApproximated, p.Findings[i].Status, "a repeated root must not report itself as an override: %v", p.Findings[i])
+			}
+		})
+	}
+}
