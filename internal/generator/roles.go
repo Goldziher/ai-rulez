@@ -2,7 +2,7 @@ package generator
 
 import (
 	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/samber/oops"
@@ -17,24 +17,30 @@ import (
 // content tree is narrowed by the role's domains and selectors, and the role's
 // skill_mode entries are rendered as Claude Code skillOverrides through the same
 // merge-by-key ownership as [claude.settings.managed] (only the listed skills are
-// owned, every other key of .claude/settings.json is left alone). It is an error
-// to combine a role with a profile; the caller checks that.
+// owned, every other key of .claude/settings.json is left alone). For the other
+// harnesses a mode is rendered where the vendor documents an equivalent, and an
+// "off" skill a harness cannot hide follows [role_manifest] skill_mode_fallback
+// (see roles.PlanSkillModes). It is an error to combine a role with a profile;
+// the caller checks that.
 func (g *Generator) SetRole(name string) error {
 	resolved, err := g.config.ResolveRole(name)
 	if err != nil {
 		return oops.Wrap(err)
 	}
 	flat := resolved.Flat()
+	outcomes := roles.PlanSkillModes(g.config, resolved)
+	flat = applyModeFallback(flat, outcomes)
 	g.role = flat
 	// Work on a copy of the config so one Config can serve several roles in turn
 	// (tokens --by-role) without the delivery or overrides of one leaking into
 	// the next. Skills the role serves are left out of the static trees and
 	// reach the agent through the skills server instead.
 	cp := *g.config
-	cp.SetRoleDelivery(resolved.DeliveryOverride)
+	cp.SetRoleDelivery(withServedFallback(resolved.DeliveryOverride, outcomes))
+	cp.Content = withSkillKeys(cp.Content, outcomes)
 	g.config = &cp
-	g.applyRoleSkillOverrides(resolved)
-	g.warnRoleSkillModeHarnesses(name, flat)
+	g.applyRoleSkillOverrides(resolved, outcomes)
+	g.warnRoleSkillModeHarnesses(name, outcomes)
 	return nil
 }
 
@@ -48,9 +54,22 @@ func (g *Generator) Role() string {
 
 // applyRoleSkillOverrides merges the role's skillOverrides over the explicit
 // [claude.settings.managed] ones (a role is the more specific statement). The
-// shared Claude config is cloned, never mutated.
-func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole) {
-	if len(res.SkillOverrides) == 0 {
+// shared Claude config is cloned, never mutated. A skill the fallback drops is
+// not rendered, so it gets no override.
+func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole, outcomes []roles.SkillOutcome) {
+	dropped := map[string]bool{}
+	for _, o := range outcomes {
+		if o.Action == roles.ActionDrop {
+			dropped[o.ID] = true
+		}
+	}
+	overrides := map[string]string{}
+	for skill, mode := range res.SkillOverrides {
+		if !dropped[skill] {
+			overrides[skill] = mode
+		}
+	}
+	if len(overrides) == 0 {
 		return
 	}
 	claude := config.ClaudeConfig{}
@@ -65,11 +84,11 @@ func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole) {
 	if settings.Managed != nil {
 		managed = *settings.Managed
 	}
-	merged := make(map[string]string, len(managed.SkillOverrides)+len(res.SkillOverrides))
+	merged := make(map[string]string, len(managed.SkillOverrides)+len(overrides))
 	for k, v := range managed.SkillOverrides {
 		merged[k] = v
 	}
-	for k, v := range res.SkillOverrides {
+	for k, v := range overrides {
 		merged[k] = v
 	}
 	managed.SkillOverrides = merged
@@ -80,26 +99,122 @@ func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole) {
 	g.config = &cp
 }
 
-// warnRoleSkillModeHarnesses names the configured presets that cannot express a
-// per-skill invocation mode. Only Claude Code documents one (skillOverrides);
-// nothing is approximated for the others.
-func (g *Generator) warnRoleSkillModeHarnesses(name string, flat *config.RoleConfig) {
-	if len(flat.SkillMode) == 0 {
-		return
-	}
-	var others []string
-	for i := range g.config.Presets {
-		p := g.config.Presets[i].GetName()
-		if p != presetClaude && p != presetMCP {
-			others = append(others, p)
+// applyModeFallback returns the role with the skills the "drop" fallback removes
+// added to its skills exclude list (a copy; the resolved role is not touched).
+func applyModeFallback(flat *config.RoleConfig, outcomes []roles.SkillOutcome) *config.RoleConfig {
+	var drop []string
+	for _, o := range outcomes {
+		if o.Action == roles.ActionDrop {
+			drop = append(drop, o.Key())
 		}
 	}
-	if len(others) == 0 {
-		return
+	if len(drop) == 0 {
+		return flat
 	}
-	sort.Strings(others)
-	logger.Warn("skill_mode of role "+name+" is applied to Claude Code only (skillOverrides); these presets have no documented per-skill invocation setting, so it is not applied",
-		"presets", strings.Join(others, ", "))
+	cp := *flat
+	sel := config.RoleSelector{}
+	if cp.Skills != nil {
+		sel = *cp.Skills
+	}
+	sel.Exclude = append(append([]string(nil), sel.Exclude...), drop...)
+	cp.Skills = &sel
+	return &cp
+}
+
+// withServedFallback adds the skills the "serve" fallback moves to served
+// delivery to the role's delivery override.
+func withServedFallback(override map[string]string, outcomes []roles.SkillOutcome) map[string]string {
+	out := map[string]string{}
+	for k, v := range override {
+		out[k] = v
+	}
+	for _, o := range outcomes {
+		if o.Action == roles.ActionServe {
+			out[o.Key()] = string(config.DeliveryServed)
+		}
+	}
+	return out
+}
+
+// withSkillKeys returns the content tree with the invocation keys a role's
+// skill_mode needs written into the frontmatter of its skills (a copy; the loaded
+// tree is shared). A key the skill's author set is never overwritten.
+func withSkillKeys(tree *config.ContentTree, outcomes []roles.SkillOutcome) *config.ContentTree {
+	if tree == nil {
+		return nil
+	}
+	keys := map[string]map[string]bool{}
+	for _, o := range outcomes {
+		if o.Action == roles.ActionFrontmatter {
+			keys[o.Key()] = o.Keys
+		}
+	}
+	if len(keys) == 0 {
+		return tree
+	}
+	cp := *tree
+	cp.Skills = skillsWithKeys(tree.Skills, "", keys)
+	cp.Domains = make(map[string]*config.Domain, len(tree.Domains))
+	for name, d := range tree.Domains {
+		dc := *d
+		dc.Skills = skillsWithKeys(d.Skills, name, keys)
+		cp.Domains[name] = &dc
+	}
+	return &cp
+}
+
+func skillsWithKeys(skills []config.ContentFile, domain string, keys map[string]map[string]bool) []config.ContentFile {
+	out := make([]config.ContentFile, len(skills))
+	copy(out, skills)
+	for i := range out {
+		id := config.SkillID(out[i])
+		key := id
+		if domain != "" {
+			key = domain + "/" + id
+		}
+		want, ok := keys[key]
+		if !ok {
+			continue
+		}
+		meta := config.Metadata{}
+		if out[i].Metadata != nil {
+			meta = *out[i].Metadata
+		}
+		extra := make(map[string]string, len(meta.Extra)+len(want))
+		for k, v := range meta.Extra {
+			extra[k] = v
+		}
+		for k, v := range want {
+			if _, set := meta.ExtraBool(k); !set {
+				extra[k] = strconv.FormatBool(v)
+			}
+		}
+		meta.Extra = extra
+		out[i].Metadata = &meta
+	}
+	return out
+}
+
+// warnRoleSkillModeHarnesses names, per skill, the configured presets that cannot
+// express the mode the role sets, so the person knows what is not applied. Nothing
+// is approximated for them.
+func (g *Generator) warnRoleSkillModeHarnesses(name string, outcomes []roles.SkillOutcome) {
+	for _, o := range outcomes {
+		if len(o.Degraded) == 0 {
+			continue
+		}
+		switch o.Action {
+		case roles.ActionDrop:
+			logger.Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
+				"; the skill is left out ([role_manifest] skill_mode_fallback = \"drop\")", "role", name, "skill", o.Key())
+		case roles.ActionServe:
+			logger.Warn("skill_mode off of skill "+o.Key()+" in role "+name+" has no documented setting on "+strings.Join(o.Degraded, ", ")+
+				"; the skill is served over MCP instead ([role_manifest] skill_mode_fallback = \"serve\")", "role", name, "skill", o.Key())
+		default:
+			logger.Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Degraded, ", ")+
+				": no documented per-skill setting; the skill stays listed there", "role", name, "skill", o.Key())
+		}
+	}
 }
 
 // rolesManifestOutput builds <config dir>/roles.json when [role_manifest]
@@ -152,8 +267,5 @@ func (g *Generator) sharedConfig() (*config.Config, error) {
 	return shared, nil
 }
 
-// Preset names the role warning treats specially.
-const (
-	presetClaude = "claude"
-	presetMCP    = "mcp"
-)
+// presetClaude is the preset whose settings carry skillOverrides.
+const presetClaude = "claude"

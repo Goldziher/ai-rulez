@@ -83,6 +83,25 @@ type RoleConfig struct {
 type RoleManifestConfig struct {
 	// Enabled writes <config dir>/roles.json on generate.
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// SkillModeFallback is what generate --role does with a skill whose skill_mode is
+	// "off" on a harness that has no documented setting for it: "drop" (default)
+	// leaves the skill out, "serve" moves it to served delivery. It lives here
+	// because TOML cannot use roles as both an array and a table.
+	SkillModeFallback string `yaml:"skill_mode_fallback,omitempty" json:"skill_mode_fallback,omitempty" toml:"skill_mode_fallback,omitempty"` //nolint:tagliatelle
+}
+
+// Values of [role_manifest] skill_mode_fallback.
+const (
+	SkillModeFallbackDrop  = "drop"
+	SkillModeFallbackServe = "serve"
+)
+
+// RoleSkillModeFallback returns the configured fallback, "drop" when unset.
+func (c *Config) RoleSkillModeFallback() string {
+	if c != nil && c.RoleManifest != nil && c.RoleManifest.SkillModeFallback == SkillModeFallbackServe {
+		return SkillModeFallbackServe
+	}
+	return SkillModeFallbackDrop
 }
 
 // RoleManifestEnabled reports whether generate writes roles.json.
@@ -138,6 +157,15 @@ func (c *Config) RoleNames() []string {
 // references, unreachable dependencies) and inheritance problems are reported by
 // RoleProblems, which `validate --strict` surfaces as AR971 to AR973.
 func (c *Config) validateRoles() error {
+	if c.RoleManifest != nil {
+		switch c.RoleManifest.SkillModeFallback {
+		case "", SkillModeFallbackDrop, SkillModeFallbackServe:
+		default:
+			return oops.With("field", "role_manifest.skill_mode_fallback").
+				Hint("Use \"drop\" or \"serve\"").
+				Errorf("role_manifest.skill_mode_fallback is %q, not drop or serve", c.RoleManifest.SkillModeFallback)
+		}
+	}
 	seen := map[string]bool{}
 	modes := SkillOverrideValues()
 	for i := range c.Roles {

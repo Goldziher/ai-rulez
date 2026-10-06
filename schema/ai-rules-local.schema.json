@@ -676,6 +676,13 @@
           },
           "type": "array"
         },
+        "analyzers": {
+          "description": "Allow-list of lint analyzers (security, references, hooks, ...): only these run. `validate --analyzer` replaces it for one run. Empty runs every analyzer.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "budget": {
           "additionalProperties": {
             "minimum": 0,
@@ -815,11 +822,6 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "analyzers": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Allow-list of lint analyzers (security, references, hooks, ...): only these run. `validate --analyzer` replaces it for one run. Empty runs every analyzer."
         },
         "known_names": {
           "description": "Skill, agent, rule or command names provided outside this tree.",
@@ -984,6 +986,10 @@
           "description": "Must be true for any provider call (default false).",
           "type": "boolean"
         },
+        "allow_plain_http": {
+          "description": "User scope only. Together with plain_http_hosts, lets an API key be sent over plain http to a listed non-loopback gateway.",
+          "type": "boolean"
+        },
         "api_key_env": {
           "description": "Name of the environment variable holding the API key. Never the key itself.",
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
@@ -1030,19 +1036,17 @@
           "description": "Chat model name.",
           "type": "string"
         },
+        "plain_http_hosts": {
+          "description": "User scope only. Allow-list (host or host:port) for allow_plain_http.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "price_input_per_mtok": {
           "description": "USD per million prompt tokens; overrides the built-in price table.",
           "minimum": 0,
           "type": "number"
-        },
-        "allow_plain_http": {
-          "type": "boolean",
-          "description": "User scope only. Together with plain_http_hosts, lets an API key be sent over plain http to a listed non-loopback gateway."
-        },
-        "plain_http_hosts": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "User scope only. Allow-list (host or host:port) for allow_plain_http."
         },
         "price_output_per_mtok": {
           "description": "USD per million completion tokens; overrides the built-in price table.",
@@ -1972,6 +1976,11 @@
         "enabled": {
           "description": "Write <config dir>/roles.json on generate: every role with its resolved item ids, byte sizes and token estimates.",
           "type": "boolean"
+        },
+        "skill_mode_fallback": {
+          "description": "What generate --role does with a skill whose skill_mode is off on a harness with no documented per-skill setting: drop (default) leaves it out, serve moves it to served delivery. Lives here because TOML cannot use roles as both an array and a table.",
+          "enum": ["drop", "serve"],
+          "type": "string"
         }
       },
       "type": "object"
