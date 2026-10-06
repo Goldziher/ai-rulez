@@ -14,6 +14,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 )
 
 // Harness traps (AR9C1...): files a harness silently ignores. The traps are
@@ -31,6 +32,8 @@ const (
 	predNameSuffixRequired = "name-suffix-required"
 	predFrontmatterEnum    = "frontmatter-enum"
 	predFrontmatterMissing = "frontmatter-missing-all"
+	predKeyMisspelt        = "key-misspelt"
+	predSizeOver           = "size-over"
 )
 
 // File kinds a trap can apply to.
@@ -81,6 +84,17 @@ type TrapPredicate struct {
 	Key         string   `toml:"key"`
 	Keys        []string `toml:"keys"`
 	Unless      []string `toml:"unless"`
+	// Canonical lists the real key spellings of key-misspelt: a key that equals
+	// one ignoring case, hyphens and underscores, but not exactly, is flagged.
+	Canonical []string `toml:"canonical"`
+	// LimitID names the row of limits.toml a size-over predicate measures against.
+	LimitID string `toml:"limit_id"`
+	// Measure is what size-over counts: frontmatter-chars (the values of Keys),
+	// file-chars, file-bytes, or chain-bytes (the AGENTS.md files from the lint
+	// root down to the file).
+	Measure string `toml:"measure"`
+
+	limit harnesslimits.Limit // resolved from LimitID when the table loads
 }
 
 var (
@@ -95,6 +109,10 @@ func Traps() ([]Trap, error) {
 		var t trapTable
 		if err := toml.Unmarshal(trapsTOML, &t); err != nil {
 			trapsErr = fmt.Errorf("parse traps.toml: %w", err)
+			return
+		}
+		if err := resolveLimits(t.Trap); err != nil {
+			trapsErr = err
 			return
 		}
 		trapsLoaded = t.Trap
@@ -112,7 +130,7 @@ type trapHit struct {
 // scope directory, at the root or in a nested package, and has the suffix.
 func (s TrapScope) matches(rel string) bool {
 	dir := strings.Trim(s.Dir, "/")
-	if !(strings.HasPrefix(rel, dir+"/") || strings.Contains(rel, "/"+dir+"/")) {
+	if dir != "" && !(strings.HasPrefix(rel, dir+"/") || strings.Contains(rel, "/"+dir+"/")) {
 		return false
 	}
 	return s.Suffix == "" || strings.HasSuffix(strings.ToLower(rel), strings.ToLower(s.Suffix))
@@ -142,6 +160,10 @@ func (p TrapPredicate) eval(rel string, content []byte) []trapHit {
 		return p.evalEnum(content)
 	case predFrontmatterMissing:
 		return p.evalMissing(content)
+	case predKeyMisspelt:
+		return p.evalMisspelt(content)
+	case predSizeOver:
+		return p.evalSize(content)
 	}
 	return nil
 }
@@ -227,6 +249,7 @@ func (r *runner) activeHarnesses() map[string]bool {
 // checkTraps runs the trap table over the tracked files under the lint root.
 // It reads the files on disk, so a generated file is seen as last written.
 func (r *runner) checkTraps() {
+	r.checkTableAge()
 	traps, err := Traps()
 	if err != nil || len(traps) == 0 {
 		return
@@ -243,6 +266,7 @@ func (r *runner) checkTraps() {
 	}
 	paths := r.tree.Paths()
 	sort.Strings(paths)
+	chains := map[string][]chainFile{}
 	for _, f := range paths {
 		rel, ok := r.underRoot(f)
 		if !ok {
@@ -265,11 +289,17 @@ func (r *runner) checkTraps() {
 			if !t.Scope.hasKind(kind) {
 				continue
 			}
+			abs := filepath.Join(r.tree.Top, filepath.FromSlash(f))
+			if t.Predicate.isChain() {
+				chains[t.Code+"/"+t.Harness] = append(chains[t.Code+"/"+t.Harness], chainFile{rel: rel, abs: abs, size: len(content), generated: generated})
+				continue
+			}
 			for _, hit := range t.Predicate.eval(rel, content) {
-				r.addTrap(t, filepath.Join(r.tree.Top, filepath.FromSlash(f)), hit, generated)
+				r.addTrap(t, abs, hit, generated)
 			}
 		}
 	}
+	r.checkChains(relevant, chains)
 }
 
 // underRoot returns f relative to the lint root, or false when f is outside it.

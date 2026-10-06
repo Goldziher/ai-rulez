@@ -117,15 +117,21 @@ stdout.
 | AR9L1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
 | AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)) |
 | AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
+| AR9C0 | `harness-table-stale` | warning | A trap or harness-limits row whose `verified_on` is older than `[lint.traps] max_table_age_days` (off unless above 0). See [Harness traps](harness-traps.md) |
 | AR9C1 | `cursor-rule-extension-ignored` | warning | A file in `.cursor/rules` that is not `.mdc` (Cursor ignores it; `README.md` and folder-style `RULE.md` are exempt); error when ai-rulez generated it. See [Harness traps](harness-traps.md) |
 | AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
 | AR9C3 | `copilot-exclude-agent-invalid` | warning | A `.instructions.md` file whose `excludeAgent` is neither `code-review` nor `cloud-agent` (the older `coding-agent` is still accepted) |
 | AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
+| AR9C7 | `claude-frontmatter-key-spelling` | warning | A `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` frontmatter key spelled as a variant of a documented key (`disable_model_invocation`, `max_turns`); Claude Code ignores it silently. Error when ai-rulez generated it |
+| AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
+| AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes) |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
 | AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
+| AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
+| AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped |
 | AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#convert)) |
 | AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
 | AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
@@ -170,9 +176,9 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR996`-`AR999` | Eval cases and results (`AR996`-`AR998`) | allocated |
 | `AR9A0`-`AR9A9` | Eval results file (`AR9A0`; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A1`-`AR9A5`) | allocated |
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
-| `AR9C0`-`AR9C9` | Harness traps (`AR9C1`-`AR9C4` used; `AR9C0` is free for another trap, see [Harness traps](harness-traps.md)) | allocated |
+| `AR9C0`-`AR9C9` | Harness traps (`AR9C0`-`AR9C4` and `AR9C7`-`AR9C9` used; `AR9C5`-`AR9C6` are free for the Kiro traps, see [Harness traps](harness-traps.md)) | allocated |
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
-| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E4` used) | allocated |
+| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E6` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220)) | reserved |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
@@ -382,7 +388,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E4`, `AR9K1`, `AR9L1` |
+| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E6`, `AR9K1`, `AR9L1` |
 | `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR305`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
@@ -396,7 +402,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `delivery` | `AR989`-`AR994` |
 | `evals` | `AR996`-`AR998`, `AR9A0` |
 | `okf` | `AR9B0`-`AR9B9` |
-| `traps` | `AR9C1`-`AR9C4` |
+| `traps` | `AR9C0`-`AR9C4`, `AR9C7`-`AR9C9` |
 | `config` | `AR731`, `AR9K0`, `AR9L0` (invalid version constraints, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
@@ -1820,6 +1826,16 @@ import okf met a concept whose x-ai-rulez data cannot be mapped (it imports by i
 - Bad: A concept with an unknown `x-ai-rulez` key
 - Good: Keep only mappable `x-ai-rulez` keys
 
+### AR9C0 harness-table-stale
+
+a row of the harness trap or limits table was last verified more than [lint.traps] max_table_age_days ago (off unless the setting is above 0)
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: The vendor limits and trap rows are checked by hand against the vendor pages; an old date means the rule may describe a harness that has changed.
+- Bad: `[lint.traps] max_table_age_days = 90` with a row verified 200 days ago
+- Good: Re-check the row against its source, update `quote` and `verified_on`
+
 ### AR9C1 cursor-rule-extension-ignored
 
 a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)
@@ -1859,6 +1875,36 @@ a file in .github/instructions does not end in .instructions.md, so Copilot skip
 - Why: Copilot reads only files named *.instructions.md in .github/instructions and skips the rest.
 - Bad: `.github/instructions/tests.md`
 - Good: `.github/instructions/tests.instructions.md`
+
+### AR9C7 claude-frontmatter-key-spelling
+
+a Claude Code skill or subagent file spells a frontmatter key in a variant (underscore for hyphen, wrong case) that Claude Code silently ignores
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Claude Code ignores a frontmatter field it does not recognise without reporting an error, so `user_invocable` silently does nothing.
+- Bad: `disable_model_invocation: true` in a SKILL.md, or `max_turns: 5` in a subagent
+- Good: `disable-model-invocation: true`; `maxTurns: 5`
+
+### AR9C8 claude-listing-truncated
+
+a generated Claude Code skill has description plus when_to_use past the skill listing cap, so the rest is cut off
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Claude Code cuts the combined description and when_to_use text at 1,536 characters in the skill listing, so a trigger phrase past the cap never reaches the model.
+- Bad: A generated skill whose description and when_to_use add up to 2,000 characters
+- Good: Put the key use case first and keep the pair under 1,536 characters
+
+### AR9C9 harness-limit-exceeded
+
+a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files), so the rest is not loaded
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Codex stops reading AGENTS.md files past project_doc_max_bytes, and Devin and Antigravity truncate a rule file past their per-file limit, so the content past it is never loaded.
+- Bad: A generated `.devin/rules/style.md` of 15,000 characters
+- Good: Split the rule, shorten it, or move detail into a skill
 
 ### AR9D2 search-cases-invalid
 
@@ -1929,6 +1975,26 @@ a [[lint.external]] scanner was not run: egress = true without --allow-egress, o
 - Why: A scanner that can reach the network could send repository content away, so it runs only when the user allows it.
 - Bad: `egress = true` run without `--allow-egress`
 - Good: Run with `--allow-egress=<name>` after reviewing the scanner
+
+### AR9E5 scanner-baseline-expired
+
+an entry of scanner-baseline.json passed its expires date, so the finding it accepted is reported again
+
+- Default severity: `warning`
+- Analyzer: `security` (scope `bundle`)
+- Why: A baseline entry that accepts a scanner finding forever hides it after the code or the scanner changes; an expiry date forces a review.
+- Bad: An entry of `scanner-baseline.json` with `expires` in the past
+- Good: Fix the finding and remove the entry, or renew it with `scan --external --write-baseline --reason`
+
+### AR9E6 scanner-out-of-scope-result
+
+a staged [[lint.external]] scanner reported a result for a file that was not staged for it; the result was dropped
+
+- Default severity: `warning`
+- Analyzer: `security` (scope `bundle`)
+- Why: A staged scanner sees only the files staged for it. A result for any other path cannot be attributed to ai-rulez content and may be an attempt to attach a finding to an arbitrary file, so it is dropped.
+- Bad: A scanner that reports `/etc/passwd` or a path that is not under the stage
+- Good: Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy
 
 ### AR9F0 convert-input-invalid
 
