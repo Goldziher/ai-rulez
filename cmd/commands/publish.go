@@ -282,7 +282,7 @@ func checkPublishFlags() error {
 		return oops.Errorf("--execute needs --to")
 	case publishExecute && !publishYes:
 		return oops.Hint("review the commands with --dry-run, then pass --yes").Errorf("--execute needs --yes")
-	case publishForce && !(publishExecute && publishTo == publish.TargetGitHubRelease):
+	case publishForce && (!publishExecute || publishTo != publish.TargetGitHubRelease):
 		return oops.Errorf("--force only applies with --to github-release --execute")
 	case publishTag != "" && !ghOrPin:
 		return oops.Errorf("--tag needs --to github-release or --marketplace")

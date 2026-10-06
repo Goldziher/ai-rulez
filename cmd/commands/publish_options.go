@@ -71,6 +71,15 @@ func resolvePublishOptions(cfg *config.Config) (*publishOptions, error) {
 			return nil, publish.Errorf(publish.CodeConfig, publish.ExitFailed, "known runtimes: "+strings.Join(config.KnownPluginRuntimes, ", "), "unknown runtime %q", r)
 		}
 	}
+	o.applyTargetTables(p)
+	if err := o.collectEmitters(cfg.BaseDir, p); err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
+// applyTargetTables merges the target tables of [publish] with the flags.
+func (o *publishOptions) applyTargetTables(p *config.PublishConfig) {
 	if p.GitHubRelease != nil {
 		o.ghRepo = p.GitHubRelease.Repo
 	}
@@ -94,6 +103,11 @@ func resolvePublishOptions(cfg *config.Config) (*publishOptions, error) {
 			o.channelRefs[name] = ref
 		}
 	}
+}
+
+// collectEmitters gathers the emitters of the flags and the table, and reads
+// the template files.
+func (o *publishOptions) collectEmitters(base string, p *config.PublishConfig) error {
 	names := map[string]bool{}
 	for _, name := range publishEmit {
 		names[name] = true
@@ -106,27 +120,27 @@ func resolvePublishOptions(cfg *config.Config) (*publishOptions, error) {
 			}
 			continue
 		}
-		t, err := readProjectTemplate(cfg.BaseDir, e.Template, e.Output)
+		t, err := readProjectTemplate(base, e.Template, e.Output)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		o.templates = append(o.templates, t)
 	}
 	for _, path := range publishTemplates {
 		body, err := os.ReadFile(path) //nolint:gosec // an explicit --template chosen by the user
 		if err != nil {
-			return nil, oops.With("path", path).Wrapf(err, "read template")
+			return oops.With("path", path).Wrapf(err, "read template")
 		}
 		o.templates = append(o.templates, publish.Template{Name: filepath.Base(path), Body: string(body)})
 	}
 	for name := range names {
 		if _, ok := pemit.Lookup(name); !ok {
-			return nil, publish.Errorf(publish.CodeConfig, publish.ExitFailed, "known emitters: "+strings.Join(pemit.Names(), ", "), "unknown emitter %q", name)
+			return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "known emitters: "+strings.Join(pemit.Names(), ", "), "unknown emitter %q", name)
 		}
 		o.emitters = append(o.emitters, name)
 	}
 	sort.Strings(o.emitters)
-	return o, nil
+	return nil
 }
 
 // readProjectTemplate reads a [[publish.emitters]] template that must sit

@@ -87,7 +87,7 @@ func ociArtifact(m Manifest, manifestBytes []byte, files map[string][]byte, mtim
 }
 
 // packOCI packs the artifact of a built dist.
-func packOCI(m Manifest, manifestBytes []byte, files map[string][]byte, mtime int64, _ string) (oci.Packed, error) {
+func packOCI(m Manifest, manifestBytes []byte, files map[string][]byte, mtime int64) (oci.Packed, error) {
 	a, err := ociArtifact(m, manifestBytes, files, mtime)
 	if err != nil {
 		return oci.Packed{}, err
