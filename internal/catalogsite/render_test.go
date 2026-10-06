@@ -80,12 +80,15 @@ var (
 		"nav": true, "main": true, "footer": true, "p": true, "h1": true, "h2": true, "table": true, "caption": true,
 		"thead": true, "tbody": true, "tr": true, "th": true, "td": true, "code": true, "pre": true, "ul": true, "li": true,
 		"span": true, "form": true, "label": true, "input": true, "select": true, "option": true, "section": true, "script": true,
+		"div": true, "svg": true, "g": true, "path": true, "polygon": true, "rect": true, "text": true,
 	}
 	allowedAttrs = map[string]bool{
 		"lang": true, "charset": true, "name": true, "content": true, "http-equiv": true, "rel": true, "href": true, "src": true,
 		"defer": true, "class": true, "id": true, "scope": true, "dir": true, "aria-label": true, "aria-current": true,
 		"aria-live": true, "role": true, "for": true, "type": true, "autocomplete": true, "placeholder": true, "value": true,
 		"data-kind": true, "data-status": true, "data-text": true, "data-page": true,
+		"viewbox": true, "width": true, "height": true, "d": true, "points": true, "x": true, "y": true, "rx": true,
+		"aria-labelledby": true, "tabindex": true,
 	}
 	schemeRE = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*:`)
 )

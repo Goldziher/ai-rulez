@@ -70,6 +70,9 @@ type CatalogDiff struct {
 	Items         DiffSection `json:"items"`
 	MCPServers    DiffSection `json:"mcp_servers"`
 	Roles         DiffSection `json:"roles"`
+	// Edges are the dependencies between items ("from -> to"); only added and
+	// removed ones exist.
+	Edges DiffSection `json:"edges"`
 	// Lint compares the project lint totals of the two sides; null when either side has none.
 	Lint *LintDiff `json:"lint"`
 	// Notes say what the comparison could not cover.
@@ -99,12 +102,13 @@ func DiffCatalogs(from, to *CatalogDocV2, fromSide, toSide DiffSide) (*CatalogDi
 	out.Items = diffItems(from.Items, to.Items)
 	out.MCPServers = diffMCP(from.MCPServers, to.MCPServers)
 	out.Roles = diffRoles(from.Roles, to.Roles)
+	out.Edges = diffEdges(from.Edges, to.Edges)
 	if from.Lint.Available && to.Lint.Available {
 		out.Lint = &LintDiff{From: from.Lint.Summary, To: to.Lint.Summary}
 	} else {
 		out.Notes = append(out.Notes, "lint totals are not compared: lint did not run on one side")
 	}
-	out.Identical = out.Items.Empty() && out.MCPServers.Empty() && out.Roles.Empty() &&
+	out.Identical = out.Items.Empty() && out.MCPServers.Empty() && out.Roles.Empty() && out.Edges.Empty() &&
 		(out.Lint == nil || out.Lint.From == out.Lint.To)
 	return out, nil
 }
@@ -329,4 +333,27 @@ func ParseCatalogV2(data []byte) (*CatalogDocV2, error) {
 		return nil, oops.Wrapf(err, "parse catalog document")
 	}
 	return &doc, nil
+}
+
+func diffEdges(from, to []CatalogEdge) DiffSection {
+	sec := newSection()
+	label := func(e CatalogEdge) string { return e.From + " -> " + e.To }
+	old := map[string]bool{}
+	for _, e := range from {
+		old[label(e)] = true
+	}
+	now := map[string]bool{}
+	for _, e := range to {
+		now[label(e)] = true
+		if !old[label(e)] {
+			sec.Added = append(sec.Added, DiffEntry{Ref: label(e), Kind: e.Kind})
+		}
+	}
+	for _, e := range from {
+		if !now[label(e)] {
+			sec.Removed = append(sec.Removed, DiffEntry{Ref: label(e), Kind: e.Kind})
+		}
+	}
+	sortSection(&sec)
+	return sec
 }

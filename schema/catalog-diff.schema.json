@@ -4,7 +4,7 @@
   "title": "ai-rulez catalog diff",
   "description": "Output of `ai-rulez catalog diff --format json`: what was added, removed or changed between two version 2 catalogs (JSON files or git revisions). Items and MCP servers are matched by their stable ref, roles by name. A consumer must refuse an unknown schema_version.",
   "type": "object",
-  "required": ["schema_version", "from", "to", "identical", "items", "mcp_servers", "roles", "lint", "notes"],
+  "required": ["schema_version", "from", "to", "identical", "items", "mcp_servers", "roles", "edges", "lint", "notes"],
   "additionalProperties": false,
   "definitions": {
     "side": {
@@ -85,6 +85,10 @@
     "items": { "$ref": "#/definitions/section" },
     "mcp_servers": { "$ref": "#/definitions/section" },
     "roles": { "$ref": "#/definitions/section" },
+    "edges": {
+      "description": "Dependencies between items, as \"from -> to\" refs; only added and removed ones exist.",
+      "$ref": "#/definitions/section"
+    },
     "lint": {
       "description": "Project lint totals of both sides; null when lint did not run on one of them.",
       "oneOf": [
