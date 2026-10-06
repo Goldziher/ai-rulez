@@ -636,11 +636,12 @@ A role is pinned when it declares `pin = true`; `ai-rulez lock --roles` pins eve
 pins that role as well. The digest covers the files `generate --role <name>` would write (the same rendering the
 default pins use, plus the ai-rulez-rendered part of `.claude/settings.json`, so `skillOverrides` from
 `skill_mode` count). The role is rendered in memory; nothing is written. A plain `lock` re-pins the roles
-that declare `pin = true` and every role the lock already pins, so a role pinned with `--roles` or `--role` stays
-pinned. A pin whose role was removed from the configuration is dropped.
+that declare `pin = true` and every role pinned with `--roles` or `--role` (the pin carries `requested = true`), which
+stay pinned. Removing `pin = true` (or setting it to `false`) unpins a role that only its own key pinned: `lock --check`
+reports the pin as `removed` and `lock` drops it. A pin whose role was removed from the configuration is dropped.
 
 - `lock --check` compares every pinned role and reports `output changed  outputs of role backend` (or `added` for a
-  role with `pin = true` that the lock does not pin yet, `removed` for a pin whose role is gone). It also catches a
+  role with `pin = true` that the lock does not pin yet, `removed` for a pin whose role is gone or no longer pinned). It also catches a
   change that leaves the sources alone, such as a new generator release or a `delivery` entry. `--role <name>`
   limits the role comparison to one role; naming a role that is not pinned is an error.
 - `lock --diff` adds, for a changed role, the per-file digests of its current rendering (`files` in the JSON), so

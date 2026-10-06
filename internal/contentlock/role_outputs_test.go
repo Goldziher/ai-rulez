@@ -14,7 +14,7 @@ func roleOut(path, data string) Output { return Output{Path: path, Mode: 0o644, 
 func lockWithRoles(t *testing.T, rendered map[string][]Output) *lockfile.File {
 	t.Helper()
 	snap := &Snapshot{}
-	require.NoError(t, computeRoleOutputs(snap, rendered))
+	require.NoError(t, computeRoleOutputs(snap, rendered, nil))
 	f := &lockfile.File{Version: lockfile.Version, Output: snap.Outputs}
 	f.Tree = TreeOf(f)
 	return f
@@ -68,7 +68,7 @@ func TestCompareRoles(t *testing.T) {
 func TestRoleOutputsDoNotTouchDefaultOutputs(t *testing.T) {
 	// Arrange
 	snap := &Snapshot{}
-	require.NoError(t, computeRoleOutputs(snap, map[string][]Output{"dev": {roleOut("CLAUDE.md", "a")}}))
+	require.NoError(t, computeRoleOutputs(snap, map[string][]Output{"dev": {roleOut("CLAUDE.md", "a")}}, nil))
 	withRole := &lockfile.File{Output: append([]lockfile.OutputPin{{Path: "CLAUDE.md", Digest: "sha256:1"}}, snap.Outputs...)}
 	plain := &lockfile.File{Output: []lockfile.OutputPin{{Path: "CLAUDE.md", Digest: "sha256:1"}}}
 
@@ -85,7 +85,7 @@ func TestRoleFilesOnlyInDiffMode(t *testing.T) {
 	// Arrange
 	lock := lockWithRoles(t, map[string][]Output{"dev": {roleOut("CLAUDE.md", "a")}})
 	snap := &Snapshot{Options: Options{CheckRoles: true}}
-	require.NoError(t, computeRoleOutputs(snap, map[string][]Output{"dev": {roleOut("CLAUDE.md", "b")}}))
+	require.NoError(t, computeRoleOutputs(snap, map[string][]Output{"dev": {roleOut("CLAUDE.md", "b")}}, nil))
 
 	// Act
 	plain := &Diff{Changes: []Change{}}

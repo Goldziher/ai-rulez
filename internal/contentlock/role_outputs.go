@@ -16,7 +16,7 @@ const KindRoleOutput = "role"
 // aggregate is the tree digest of every output file of the role, so it moves when
 // any file's bytes, set or mode does. Unlike the default outputs it does not
 // depend on [lock] include_outputs: pinning a role is its own opt-in.
-func computeRoleOutputs(snap *Snapshot, roles map[string][]Output) error {
+func computeRoleOutputs(snap *Snapshot, roles map[string][]Output, requested map[string]bool) error {
 	names := make([]string, 0, len(roles))
 	for name := range roles {
 		names = append(names, name)
@@ -41,7 +41,7 @@ func computeRoleOutputs(snap *Snapshot, roles map[string][]Output) error {
 		}
 		sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 		snap.RoleFiles[name] = files
-		snap.Outputs = append(snap.Outputs, lockfile.OutputPin{Role: name, Digest: aggregate})
+		snap.Outputs = append(snap.Outputs, lockfile.OutputPin{Role: name, Digest: aggregate, Requested: requested[name]})
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func (d *Diff) roleChange(snap *Snapshot, change string, cur lockfile.OutputPin,
 // which must not pay for the full snapshot.
 func CompareRoles(lock *lockfile.File, rendered map[string][]Output, only []string) ([]Change, error) {
 	snap := &Snapshot{Options: Options{CheckRoles: true, OnlyRoles: only}}
-	if err := computeRoleOutputs(snap, rendered); err != nil {
+	if err := computeRoleOutputs(snap, rendered, nil); err != nil {
 		return nil, err
 	}
 	d := &Diff{Changes: []Change{}}

@@ -109,6 +109,10 @@ type OutputPin struct {
 	Role   string `toml:"role,omitempty"`
 	Path   string `toml:"path,omitempty"`
 	Digest string `toml:"digest"`
+	// Requested marks a role pin asked for on the command line (`lock --roles`,
+	// `lock --role`) rather than by the role's own pin = true. Only such a pin
+	// survives a plain `lock` after the role stops declaring pin = true.
+	Requested bool `toml:"requested,omitempty"`
 }
 
 // File is the parsed lock.
