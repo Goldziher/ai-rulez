@@ -61,6 +61,9 @@ type Options struct {
 	// NoApprovals leaves the approval status out; RedactReviewers replaces reviewer
 	// identities with a salted hash.
 	NoApprovals, RedactReviewers bool
+	// RedactKey, when set, keys the reviewer hash (HMAC-SHA-256): without it the
+	// salt is public and a reviewer identity can be confirmed by guessing it.
+	RedactKey string
 	// Signature, when set, is recorded on the project component.
 	Signature *Signature
 	// Timestamp, when not zero, is written as the document time (CycloneDX
