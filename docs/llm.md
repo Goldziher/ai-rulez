@@ -151,7 +151,7 @@ How it is linked, and why it is not in the default build:
    ```sh
    GOWORK=/path/to/go.work CGO_ENABLED=1 \
      CGO_LDFLAGS="-L/path/to/static-lib-dir -framework Security -framework CoreFoundation -framework SystemConfiguration -liconv -lresolv" \
-     go build -tags literllm -o ai-rulez ./cmd
+     go build -tags literllm -o ai-rulez ./cmd/ai-rulez
    ```
 
 The bridge module's own tests are compiled only with `-tags literllm` (and cgo), so a plain `go test ./...` inside
