@@ -3243,15 +3243,6 @@
       },
       "type": "array"
     },
-    "version": {
-      "description": "Configuration version (4.0)",
-      "enum": ["4.0"],
-      "type": "string"
-    }
-  },
-  "title": "AI Rules Local Overlay Configuration",
-  "type": "object"
-}
     "verifiers_settings": {
       "additionalProperties": false,
       "description": "Limits and policy of `ai-rulez verifiers run`.",
@@ -3293,3 +3284,12 @@
       },
       "type": "object"
     },
+    "version": {
+      "description": "Configuration version (4.0)",
+      "enum": ["4.0"],
+      "type": "string"
+    }
+  },
+  "title": "AI Rules Local Overlay Configuration",
+  "type": "object"
+}
