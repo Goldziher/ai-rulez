@@ -72,7 +72,11 @@ func TestEnsureSecretOutputsIgnored_URLCredentialsRequireAnIgnoredFile(t *testin
 		Gitignore:  &off,
 		MCPServers: map[string]*config.MCPServer{"s": {URL: "https://example.com/mcp?token=abc123"}},
 	})
-	outputs := []config.OutputFile{{Path: filepath.Join(dir, ".mcp.json")}, {Path: filepath.Join(dir, ".xum", "mcp.jsonc")}}
+	const holder = `{"url":"https://example.com/mcp?token=abc123"}`
+	outputs := []config.OutputFile{
+		{Path: filepath.Join(dir, ".mcp.json"), Content: holder},
+		{Path: filepath.Join(dir, ".xum", "mcp.jsonc"), Content: holder},
+	}
 
 	err := gen.ensureSecretOutputsIgnored(outputs)
 
