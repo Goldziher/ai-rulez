@@ -47,3 +47,14 @@ func LoadBuiltin(name string) (*Generator, error) {
 	}
 	return New(spec), nil
 }
+
+// BuiltinRendersSkills reports whether the embedded provider spec of the named
+// preset writes skills at project level. A name without an embedded spec (a Go
+// preset) reports true: every Go preset renders skills.
+func BuiltinRendersSkills(name string) bool {
+	g, err := LoadBuiltin(name)
+	if err != nil {
+		return true
+	}
+	return g.Spec.Outputs[OutputTypeSkills] != nil
+}

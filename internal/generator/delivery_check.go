@@ -5,13 +5,14 @@ import (
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/samber/oops"
 )
 
 // PresetsMissingStub lists the configured presets whose harness can call MCP and
 // that should carry the dynamic-skills stub (because a skill is served) but whose
 // rendered output has none: the stub was excluded, replaced by an unrelated
-// skill, or the preset renders no skills at all. Nothing is written.
+// skill. A preset that renders no skills needs none. Nothing is written.
 func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
 	generateMu.Lock()
 	defer generateMu.Unlock()
@@ -31,8 +32,8 @@ func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
 	}
 	var missing []string
 	for preset, outputs := range render.byPreset {
-		if !config.HarnessSupportsMCP(preset) {
-			continue
+		if !config.HarnessSupportsMCP(preset) || !providers.BuiltinRendersSkills(preset) {
+			continue // no MCP to call, or no skills rendered for a stub to sit in
 		}
 		if !hasStub(outputs) {
 			missing = append(missing, preset)

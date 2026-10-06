@@ -36,7 +36,7 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 		}
 		for _, preset := range missing {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeDeliveryStubMissing, Message: fmt.Sprintf(
-				"skills are served but preset %q has no %q stub skill, so its agent is never told to call find_skill; a skill of that name may shadow it, or the preset renders no skills", preset, config.DynamicSkillsName)})
+				"skills are served but preset %q has no %q stub skill, so its agent is never told to call find_skill; a skill of that name may shadow it", preset, config.DynamicSkillsName)})
 		}
 		if hasMCPPreset(cfg) && !runsSkillsServer(cfg) {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedNoServer, Message: "skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`; add one (command \"ai-rulez\", args [\"mcp\", \"--serve-skills\"])"})
@@ -57,19 +57,31 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 	return append(out, sourceRefusalFindings(cfg)...)
 }
 
-// sourceRefusalFindings reports the skills of the skill sources that the security
-// scan refuses to serve, which `lock` leaves unpinned. Skills authored in the
-// project are reported by the security rules themselves.
+// sourceRefusalFindings runs the admission scan the server runs over the served
+// view (authored skills and skill sources) and reports what it would do: the
+// skills it refuses, which `lock` leaves unpinned, and the files it cannot read
+// (AR989). Findings of the security rules on an authored skill are reported by
+// those rules themselves, so only refusals of source skills are repeated here.
 func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
-	if len(cfg.SkillSources) == 0 {
-		return nil
-	}
 	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 	includes.SkipFetch = true
-	refusals, err := (&mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}).ServedRefusals(context.Background())
+	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
+	var out []lint.DeliveryFinding
+	reports, err := setup.ServedScanReports(context.Background())
+	if err != nil {
+		logger.Debug("Skipped the served file scan check", "error", err.Error())
+		return nil
+	}
+	for _, r := range reports {
+		out = append(out, scanReportFindings(r)...)
+	}
+	if len(cfg.SkillSources) == 0 {
+		return out
+	}
+	refusals, err := setup.ServedRefusals(context.Background())
 	if err != nil {
 		logger.Debug("Skipped the skill source refusal check", "error", err.Error())
-		return nil
+		return out
 	}
 	authored := map[string]bool{}
 	if cfg.Content != nil {
@@ -82,12 +94,31 @@ func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
 			}
 		}
 	}
-	var out []lint.DeliveryFinding
 	for _, r := range refusals {
-		if !authored[r.Name] {
+		if !authored[r.Name] && r.Code != lint.CodeServedUnscannable {
 			out = append(out, lint.DeliveryFinding{Code: r.Code, Message: fmt.Sprintf(
 				"served skill %q is refused: %s; `ai-rulez lock` leaves it unpinned", r.Name, r.Reason)})
 		}
+	}
+	return out
+}
+
+// scanReportFindings words the unscannable files of one skill as the server
+// treats them: a SKILL.md refuses the skill; a supporting file is served with a
+// warning at trust "warn" and left out at trust "error".
+func scanReportFindings(r mcp.ScanReport) []lint.DeliveryFinding {
+	var out []lint.DeliveryFinding
+	for _, f := range r.Findings {
+		var effect string
+		switch {
+		case f.Severity == lint.SeverityError:
+			effect = fmt.Sprintf("the server refuses skill %q", r.Skill)
+		case r.Level == config.TrustError:
+			effect = fmt.Sprintf("the server does not serve it (trust = %q; unserved: %s)", r.Level, strings.Join(r.Unserved, ", "))
+		default:
+			effect = fmt.Sprintf("the server serves it with this warning (trust = %q)", r.Level)
+		}
+		out = append(out, lint.DeliveryFinding{Code: f.Code, Message: fmt.Sprintf("%s: %s; %s", f.File, f.Message, effect)})
 	}
 	return out
 }
