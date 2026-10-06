@@ -1,0 +1,32 @@
+{{define "graph"}}{{template "head" .}}
+<h1>Dependency graph</h1>
+{{with .Graph}}{{if .Rows}}
+<p>An item that names a skill in its <code>skills:</code> frontmatter depends on it. Roles are drawn on the left with the items they keep.</p>
+{{range .Notes}}<p class="note">{{s .}}</p>
+{{end}}
+{{if .Drawn}}<p id="graph-desc">{{.Summary}}</p>
+<div class="graph" role="region" aria-label="Dependency graph, scrollable" tabindex="0">
+<svg class="graph-svg" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="graph-title graph-desc">
+<title id="graph-title">Dependency graph</title>
+{{range .Edges}}<path class="{{.Class}}" d="{{.Path}}"></path><polygon class="arrow {{.Class}}" points="{{.Head}}"></polygon>
+{{end}}{{range .Nodes}}<a href="{{.Href}}"><g class="{{.Class}}"><title>{{s .Full}}</title><rect x="{{.X}}" y="{{.Y}}" width="{{.W}}" height="{{.H}}" rx="4"></rect><text x="{{.TX}}" y="{{.TY}}">{{s .Label}}</text></g></a>
+{{end}}</svg>
+</div>
+{{end}}
+{{if .Cycles}}<h2>Dependency cycles</h2>
+<p>These dependencies close a loop, so no layering can put every dependency to the right of its user. They are drawn dashed.</p>
+<ul>{{range .Cycles}}<li dir="auto"><code>{{s .}}</code></li>{{end}}</ul>
+{{end}}
+<h2>Dependencies as a table</h2>
+<table id="deps">
+<caption>Dependencies</caption>
+<thead><tr><th scope="col">From</th><th scope="col">Relation</th><th scope="col">To</th></tr></thead>
+<tbody>
+{{range .Rows}}<tr><th scope="row" dir="auto">{{s .From}}</th><td>{{s .Kind}}</td><td dir="auto">{{s .To}}</td></tr>
+{{end}}</tbody>
+</table>
+{{else}}
+<p>No item names another skill in its <code>skills:</code> frontmatter, so there are no dependencies to draw.</p>
+{{range .Notes}}<p class="note">{{s .}}</p>
+{{end}}{{end}}{{end}}
+{{template "foot" .}}{{end}}

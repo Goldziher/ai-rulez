@@ -15,6 +15,7 @@
 <p class="brand">{{s .SiteTitle}}</p>
 <nav aria-label="Catalog">
 <a href="{{.Root}}index.html"{{if eq .Current "index"}} aria-current="page"{{end}}>Overview</a>
+<a href="{{.Root}}graph.html"{{if eq .Current "graph"}} aria-current="page"{{end}}>Graph</a>
 <a href="{{.Root}}mcp.html"{{if eq .Current "mcp"}} aria-current="page"{{end}}>MCP</a>
 <a href="{{.Root}}lock.html"{{if eq .Current "lock"}} aria-current="page"{{end}}>Lock</a>
 <a href="{{.Root}}lint.html"{{if eq .Current "lint"}} aria-current="page"{{end}}>Lint</a>

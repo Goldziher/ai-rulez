@@ -146,6 +146,7 @@ type page struct {
 	RoleLinks                                                     []linkRef
 	Groups                                                        []lintGroup
 	MCP                                                           []mcpRow
+	Graph                                                         *graphView
 	LockInSync                                                    string
 	SchemaVersion                                                 int
 	HasEval, HasUsage                                             bool
@@ -248,7 +249,7 @@ func (b *builder) emit(path, name string, data page) error {
 
 func (b *builder) render() error {
 	b.assignPaths()
-	steps := []func() error{b.renderIndex, b.renderItems, b.renderRoles, b.renderLock, b.renderMCP, b.renderLint, b.renderAbout}
+	steps := []func() error{b.renderIndex, b.renderItems, b.renderRoles, b.renderLock, b.renderMCP, b.renderGraph, b.renderLint, b.renderAbout}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -587,4 +588,11 @@ func usageRows(u *govview.ItemUsage) []kv {
 		rows = append(rows, kv{"Last seen", u.LastSeen})
 	}
 	return rows
+}
+
+func (b *builder) renderGraph() error {
+	p := b.base("Dependency graph", "", "graph")
+	gv := b.buildGraph()
+	p.Graph = &gv
+	return b.emit("graph.html", "graph", p)
 }

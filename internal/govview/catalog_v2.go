@@ -171,10 +171,13 @@ type CatalogDocV2 struct {
 	// MCPServers are the project's MCP servers: names, transports and the names
 	// of their env and header entries, never their values (see CatalogMCPServer).
 	MCPServers []CatalogMCPServer `json:"mcp_servers"`
-	Roles      []CatalogRole      `json:"roles"`
-	Lock       CatalogLock        `json:"lock"`
-	Lint       CatalogLint        `json:"lint"`
-	Notes      []string           `json:"notes"`
+	// Edges are the dependencies between items: an item that names a skill in its
+	// `skills:` frontmatter uses that skill (see CatalogEdge).
+	Edges []CatalogEdge `json:"edges"`
+	Roles []CatalogRole `json:"roles"`
+	Lock  CatalogLock   `json:"lock"`
+	Lint  CatalogLint   `json:"lint"`
+	Notes []string      `json:"notes"`
 }
 
 // CatalogOptions tunes BuildCatalogV2.
@@ -243,6 +246,9 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		}
 		doc.Items = append(doc.Items, out)
 	}
+	var edgeNotes []string
+	doc.Edges, edgeNotes = buildEdges(doc.Items, files)
+	doc.Notes = append(doc.Notes, edgeNotes...)
 	attachSignals(doc, &opts)
 	doc.Lint = attrib.overview(opts.LintReason)
 	if opts.NoExcerpt {
@@ -269,6 +275,16 @@ func ViewCatalogV2(doc *CatalogDocV2, role string) (*CatalogDocV2, error) {
 	for i := range doc.Items {
 		if slices.Contains(doc.Items[i].Roles, role) {
 			out.Items = append(out.Items, doc.Items[i])
+		}
+	}
+	kept := map[string]bool{}
+	for i := range out.Items {
+		kept[out.Items[i].Ref] = true
+	}
+	out.Edges = []CatalogEdge{}
+	for _, e := range doc.Edges {
+		if kept[e.From] && kept[e.To] {
+			out.Edges = append(out.Edges, e)
 		}
 	}
 	out.Notes = append(append([]string{}, doc.Notes...), "role-scoped catalog: only the items role "+role+" keeps")

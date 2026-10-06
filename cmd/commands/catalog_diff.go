@@ -34,7 +34,7 @@ var catalogDiffCmd = &cobra.Command{
 	Short: "Compare two catalogs: JSON files or git revisions",
 	Long: `Compare two catalogs and print what was added, removed or changed: items (by
 digest, description, owner, version, load cost, lint status, approval and roles),
-MCP servers, roles and the lint totals.
+MCP servers, roles, skill dependencies and the lint totals.
 
 Each argument is a catalog JSON file written by ` + "`catalog --format json --schema-version 2`" + ` (or the
 catalog.json of a ` + "`--html`" + ` site), or a git revision. A revision is read from git without
@@ -246,6 +246,7 @@ func writeCatalogDiffText(w reportWriter, d *govview.CatalogDiff) {
 	writeDiffSection(w, "items", &d.Items)
 	writeDiffSection(w, "mcp servers", &d.MCPServers)
 	writeDiffSection(w, "roles", &d.Roles)
+	writeDiffSection(w, "dependencies", &d.Edges)
 	if d.Lint != nil && d.Lint.From != d.Lint.To {
 		w.printf("lint: %d errors, %d warnings, %d infos -> %d errors, %d warnings, %d infos\n",
 			d.Lint.From.Errors, d.Lint.From.Warnings, d.Lint.From.Infos, d.Lint.To.Errors, d.Lint.To.Warnings, d.Lint.To.Infos)
