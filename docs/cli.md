@@ -1720,6 +1720,8 @@ Validate every config in a monorepo (all roots are checked; exit status 1 if any
 ```bash
 ai-rulez validate --recursive
 ```
+| `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
+| `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
 
 Validate current configuration:
 
@@ -1989,7 +1991,7 @@ ai-rulez scanners list [config-file] [--format text|json]
 ai-rulez scanners doctor <name>... | --all [--external] [--format text|json]
 ```
 
-`list` shows each scanner with its egress declaration, staged inputs and whether its binary is on `PATH`; it starts nothing. `doctor` checks the scanners you name (or `--all`): binary path, version (only with `--external`, the same consent as `scan --external`: the scanner, a program the repository names, is started once with `--version` in a scrubbed environment, 10 second timeout; otherwise "not probed (pass --external)"), egress, `env_pass`, inputs, timeout and configuration problems. Exit `0` healthy, `2` a checked scanner is missing, misconfigured or has a network flag on an `egress = false` entry, `1` the configuration does not load or a name is unknown. `--format json` prints `{"scanners": [...]}` (name, command, path, found, egress, format, inputs, env_pass, timeout_seconds, problems, status, healthy, and for `doctor` the probed version) with the same exit codes.
+`list` shows each scanner (including the members of the `[lint.scanner_policy]` preset) with its egress declaration, staged inputs, the presets that contain its profile and whether its binary is on `PATH`; it starts nothing. `doctor` checks the scanners you name (or `--all`): binary path, version (only with `--external`, the same consent as `scan --external`: the scanner, a program the repository names, is started once with `--version` in a scrubbed environment, 10 second timeout; otherwise "not probed (pass --external)"), egress (and what an egress profile's vendor receives), profile, preset, `required`, version range, `env_pass`, inputs, the isolation this system would apply, timeout and configuration problems. Exit `0` healthy, `2` a checked scanner is missing, misconfigured or has a network flag on an `egress = false` entry, `1` the configuration does not load or a name is unknown. `--format json` prints `{"scanners": [...]}` (name, command, path, found, egress, format, inputs, env_pass, timeout_seconds, problems, status, healthy, profile, presets, from_preset, required, version_range, data_sent, isolation, isolation_backend, and for `doctor` the probed version) with the same exit codes.
 
 ## OKF Commands
 
@@ -2057,6 +2059,10 @@ Starts the Model Context Protocol (MCP) server to allow AI assistants to program
 ```bash
 ai-rulez mcp
 ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--frozen]
+| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-run) |
+| `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
+
+`[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
 ```
 
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,

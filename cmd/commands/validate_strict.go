@@ -93,7 +93,7 @@ func checkFlagValues() error {
 // checkFlagCombinations rejects strict flags that contradict each other.
 func checkFlagCombinations() error {
 	if validateDryRun && !fixRequested() {
-		return oops.Errorf("--dry-run only applies with --fix or --fix-unsafe")
+		return oops.Errorf("--dry-run only applies with --fix, --fix-unsafe or --external")
 	}
 	if fixRequested() && validateUpdateBaseline {
 		return oops.Errorf("--fix and --update-baseline cannot be combined: fix first, then record what is left")
@@ -212,6 +212,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 // analyzerSelection is the analyzer allow-list of a run: --analyzer, else
 // [lint] analyzers, else (the scan command) the security analyzer; nil runs
 // every analyzer.
+	scanner = withScannerCache(scanner, cfg)
 func analyzerSelection(cfg *config.Config) []string {
 	if len(validateAnalyzers) > 0 {
 		return validateAnalyzers
@@ -255,6 +256,9 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		combined.Budgets = append(combined.Budgets, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
+	if scannerDryRun() {
+		return 0 // the scanner plan was printed; nothing ran, so there is no report
+	}
 		fmtError(err)
 		return 1
 	}
