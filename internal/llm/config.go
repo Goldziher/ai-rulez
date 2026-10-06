@@ -66,8 +66,6 @@ const (
 	DefaultMaxRetries     = 3
 	// DefaultCompletionCap bounds a completion when a budget is active and the request sets no cap.
 	DefaultCompletionCap = 1024
-	// CacheDirRel is the cache location relative to the ai-rulez config directory.
-	CacheDirRel = "local/llm-cache"
 )
 
 // CacheEnabled reports whether the response cache is on (default true).
