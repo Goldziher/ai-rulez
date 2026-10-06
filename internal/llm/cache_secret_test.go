@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,6 +34,31 @@ func TestEnvOptionControlsHomeAndSecretLocations(t *testing.T) {
 			}
 			if tt.wantCache == "" && cache != "" || tt.wantCache != "" && filepath.Dir(cache) != tt.wantCache {
 				t.Errorf("cache dir = %q, want under %q", cache, tt.wantCache)
+			}
+		})
+	}
+}
+
+func TestSecretDirTooOpen(t *testing.T) {
+	tests := []struct {
+		name string
+		mode os.FileMode
+		goos string
+		want bool
+	}{
+		{"private dir on unix", 0o700, "linux", false},
+		{"group writable on unix", 0o770, "linux", true},
+		{"world writable on darwin", 0o707, "darwin", true},
+		{"windows reports 0777 for every directory", 0o777, "windows", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := secretDirTooOpen(tt.mode, tt.goos)
+
+			// Assert
+			if got != tt.want {
+				t.Fatalf("secretDirTooOpen(%o, %s) = %v, want %v", tt.mode, tt.goos, got, tt.want)
 			}
 		})
 	}
