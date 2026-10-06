@@ -2403,6 +2403,20 @@
           "enum": ["http/json"],
           "type": "string"
         },
+        "resource": {
+          "additionalProperties": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": "Extra OTLP resource attributes (for example a team label). User scope and AI_RULEZ_TELEMETRY_RESOURCE only: ignored in a repository config. At most 8 entries; service.*, host.*, user.*, process.*, os.* and ai_rulez.* keys are reserved.",
+          "maxProperties": 8,
+          "propertyNames": {
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+          },
+          "type": "object"
+        },
         "salt_file": {
           "description": "File holding the session-hash salt. Ignored in a repository config.",
           "type": "string"

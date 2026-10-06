@@ -30,6 +30,7 @@ func TestResolve_RepoConfigCannotEnableNetworkExport(t *testing.T) {
 	hostile := &config.TelemetryConfig{
 		Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://evil.example.com", HeadersEnv: []string{"HOME_TOKEN"},
 		IncludePaths: true, IncludeSession: true, SaltFile: "/etc/passwd", ServiceName: "mine",
+		Resource: map[string]string{"team": "evil"},
 	}
 	s := Resolve(Layers{Repo: hostile, Getenv: env()})
 	assert.True(t, s.RecordActive(), "a repo may switch local recording on")
@@ -41,7 +42,8 @@ func TestResolve_RepoConfigCannotEnableNetworkExport(t *testing.T) {
 	assert.False(t, s.IncludeSession)
 	assert.Empty(t, s.SaltFile)
 	assert.Equal(t, DefaultServiceName, s.ServiceName, "service_name lands on the user's collector data: user scope only")
-	assert.ElementsMatch(t, []string{"allow_network", "otlp_endpoint", "headers_env", "include_paths", "include_session", "salt_file", "service_name"}, s.Ignored)
+	assert.ElementsMatch(t, []string{"allow_network", "otlp_endpoint", "headers_env", "include_paths", "include_session", "salt_file", "service_name", "resource"}, s.Ignored)
+	assert.Empty(t, s.Resource, "a repository cannot label the data on the user's collector")
 }
 
 func TestResolve_ServiceNameIsUserScopeOnly(t *testing.T) {
@@ -176,4 +178,61 @@ func TestResolveFor_BrokenConfigNeverBreaksAHook(t *testing.T) {
 	s := ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", t.TempDir()))
 	assert.False(t, s.RecordActive())
 	assert.NotEmpty(t, s.Problems)
+}
+
+func TestResolve_ResourceIsUserScopeAndEnvOnly(t *testing.T) {
+	repo := &config.TelemetryConfig{Resource: map[string]string{"team": "attacker"}}
+	user := &config.TelemetryConfig{Resource: map[string]string{"team": "platform", "env": "prod"}}
+
+	fromRepo := Resolve(Layers{Repo: repo, Getenv: env()})
+	assert.Empty(t, fromRepo.Resource)
+	assert.Contains(t, fromRepo.Ignored, "resource")
+
+	fromUser := Resolve(Layers{Repo: repo, User: user, Getenv: env()})
+	assert.Equal(t, map[string]string{"team": "platform", "env": "prod"}, fromUser.Resource)
+	assert.Equal(t, ScopeUser, fromUser.Sources["resource"])
+
+	fromEnv := Resolve(Layers{User: user, Getenv: env(EnvResource, "team=data, region=eu")})
+	assert.Equal(t, map[string]string{"team": "data", "env": "prod", "region": "eu"}, fromEnv.Resource, "env wins per key")
+	assert.Equal(t, ScopeEnv, fromEnv.Sources["resource"])
+}
+
+func TestResolve_InvalidResourceBlocksExport(t *testing.T) {
+	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
+	tests := []struct {
+		name string
+		user *config.TelemetryConfig
+		env  func(string) string
+	}{
+		{"reserved key in user config", &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org", Resource: map[string]string{"host.name": "x"}}, env()},
+		{"reserved key from env", user, env(EnvResource, "user.id=bob")},
+		{"malformed env pair", user, env(EnvResource, "team")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Resolve(Layers{User: tt.user, Getenv: tt.env})
+			assert.False(t, s.ExportActive())
+			assert.NotEmpty(t, s.Problems)
+		})
+	}
+}
+
+func TestDiagnose_ShowsResourceAndItsSource(t *testing.T) {
+	// Arrange
+	user := &config.TelemetryConfig{Enabled: true, Resource: map[string]string{"team": "platform", "env": "prod"}}
+	repo := &config.TelemetryConfig{Resource: map[string]string{"team": "evil"}}
+	s := Resolve(Layers{User: user, Repo: repo, Getenv: env()})
+
+	// Act
+	report := Diagnose(&s, t.TempDir(), env())
+
+	// Assert
+	var got DoctorSetting
+	for _, setting := range report.Settings {
+		if setting.Key == "resource" {
+			got = setting
+		}
+	}
+	assert.Equal(t, DoctorSetting{Key: "resource", Value: "env=prod,team=platform", Source: ScopeUser}, got)
+	assert.Contains(t, report.IgnoredRepoKeys, "resource")
 }
