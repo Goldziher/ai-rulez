@@ -1742,9 +1742,9 @@ ai-rulez migrate v4
 1. Finds `.ai-rulez/` in the current directory
 2. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only, `$schema` becomes `schema`), whether or not `config.toml` already exists. If more than one `config.local.*` file exists the overlay is left alone with a warning
 3. Returns without further changes if `.ai-rulez/config.toml` already exists
-4. Loads the existing shared configuration (without the overlay), including legacy MCP files if present
-5. Writes `.ai-rulez/config.toml` with `version = "4.0"`
-6. Removes old `.ai-rulez/config.yaml`, `.ai-rulez/config.json`, `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files
+4. Loads the existing shared configuration (without the overlay), including the servers of a legacy MCP file (the loader reads the first of `mcp.toml`, `mcp.yaml`, `mcp.json`)
+5. Writes `.ai-rulez/config.toml` with `version = "4.0"`: the inline `mcp_servers` in their written order, then the legacy-file servers sorted by name, without duplicates
+6. Removes old `.ai-rulez/config.yaml` and `.ai-rulez/config.json`, and each `mcp.toml`, `mcp.yaml` or `mcp.json` whose servers are all in the new `config.toml`; a legacy MCP file with a server that was not carried over is kept, with a warning
 
 **After Migration:**
 
