@@ -320,6 +320,18 @@ func (p Policy) Names(reviewer string, s Subject) bool {
 	return covered && p.Teams.Matches(owners, reviewer)
 }
 
+// IdentityOf returns the person a signing key belongs to when the reviewer is
+// "key:<fingerprint>" and its [[signing.trust]] entry names one (reviewer = "..."),
+// else reviewer itself. forbid_self_approval matches commit authors with it.
+func (p Policy) IdentityOf(reviewer string) string {
+	if m, ok := p.Signed.(IdentityMapper); ok && strings.HasPrefix(reviewer, "key:") {
+		if who := m.IdentityOf(reviewer); who != "" {
+			return who
+		}
+	}
+	return reviewer
+}
+
 // AuthorizedFor is Authorized and, when approvers_from is set, the requirement
 // that reviewer owns the path of s according to CODEOWNERS. A CODEOWNERS file
 // that cannot be read, a path no line covers and a team that cannot be expanded

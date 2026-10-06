@@ -1106,6 +1106,10 @@
                 "type": "string",
                 "description": "PEM public key inside the project, instead of an identity."
               },
+              "reviewer": {
+                "type": "string",
+                "description": "The person a key_file belongs to (an email or github:login), so forbid_self_approval can match approvals signed with the key to commit authors."
+              },
               "valid_from": {
                 "type": "string",
                 "description": "Earliest signing time accepted: 2026-01-01 or an RFC 3339 time."

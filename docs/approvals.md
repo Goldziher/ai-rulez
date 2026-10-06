@@ -325,7 +325,9 @@ author's addresses is not caught. It limits honest mistakes, not collusion; a se
 lock are the control.
 
 A signed approval is matched by its verified signer, not by the record's reviewer string. A key signature (`key:<id>`) names
-no author, so with `forbid_self_approval` it is reported as `AR716`: sign with a keyless identity instead.
+no author, so with `forbid_self_approval` it is reported as `AR716`: sign with a keyless identity instead, or name the
+key's owner in its trust entry (`reviewer = "alice@example.org"` on the `[[signing.trust]]` entry with `key_file`,
+see [signing](signing.md#policy)); the owner's identity is then matched with commit authors like any other reviewer.
 
 ## Verifying approvals
 
