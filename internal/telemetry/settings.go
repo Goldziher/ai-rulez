@@ -128,6 +128,9 @@ type Layers struct {
 	ConsentErr error
 	// Getenv reads the environment; nil means the real environment.
 	Getenv func(string) string
+	// Root is the project directory, so an organization policy discovered from the
+	// repository's owner can forbid export too; "" for none.
+	Root string
 }
 
 // Resolve applies the layers in precedence order (kill switches, environment,
@@ -170,7 +173,7 @@ func Resolve(layers Layers) Settings {
 		ServiceName: s.ServiceName, Sample: &s.Sample, SaltFile: s.SaltFile, Resource: s.Resource,
 	}
 	s.addBlocking(effective.Validate()...)
-	if config.PolicyLocks("telemetry") {
+	if config.PolicyLocksIn("telemetry", layers.Root) {
 		// An organization policy switches export off whatever the user scope says.
 		s.AllowNetwork = false
 		set("allow_network", ScopePolicy)
@@ -519,7 +522,7 @@ func ResolveFor(root, configDirName string, getenv func(string) string) Settings
 	user, _, userErr := LoadUser(getenv)
 	repo, repoErr := LoadRepo(root, configDirName)
 	consent, consentErr := LoadConsent(ConsentPath(getenv))
-	s := Resolve(Layers{Repo: repo, User: user, Consent: consent, ConsentErr: consentErr, Getenv: getenv})
+	s := Resolve(Layers{Repo: repo, User: user, Consent: consent, ConsentErr: consentErr, Getenv: getenv, Root: root})
 	if userErr != nil {
 		s.addBlocking("user config: " + firstLine(userErr.Error()))
 	}
