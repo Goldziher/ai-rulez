@@ -180,3 +180,116 @@ func TestReport_ValidatesAgainstTheSchema(t *testing.T) {
 		t.Fatalf("report does not match schema/improve-report.schema.json: %s", errs)
 	}
 }
+
+func TestApply_ReportBinding(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(t *testing.T, plan *Plan)
+		text   string
+	}{
+		{"report edited", func(t *testing.T, p *Plan) {
+			f := filepath.Join(p.RunDir(), "report.json")
+			require.NoError(t, os.WriteFile(f, []byte(strings.Replace(readFileString(t, f), `"max_skill_tokens"`, `"max_skill_tokens_x"`, 1)), 0o600))
+		}, "not signed"},
+		{"mac removed", func(t *testing.T, p *Plan) {
+			require.NoError(t, os.Remove(filepath.Join(p.RunDir(), ReportMACFile)))
+		}, "not signed"},
+		{"mac forged", func(t *testing.T, p *Plan) {
+			require.NoError(t, os.WriteFile(filepath.Join(p.RunDir(), ReportMACFile), []byte(strings.Repeat("0", 64)+"\n"), 0o600))
+		}, "not signed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			_, configDir, plan, _ := acceptedRun(t)
+			tt.mutate(t, plan)
+
+			// Act
+			_, err := Apply(context.Background(), &ApplyOptions{ConfigDir: configDir, RunID: plan.RunID, Yes: true})
+
+			// Assert
+			var refusal *Refusal
+			require.ErrorAs(t, err, &refusal)
+			assert.Contains(t, refusal.Error(), tt.text)
+			assert.NotContains(t, readFileString(t, filepath.Join(configDir, "skills/deploy/SKILL.md")), "GOOD advice.")
+		})
+	}
+}
+
+func TestApply_RefusesARunSignedWithAnotherKey(t *testing.T) {
+	// Arrange
+	_, configDir, plan, _ := acceptedRun(t)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// Act
+	_, err := Apply(context.Background(), &ApplyOptions{ConfigDir: configDir, RunID: plan.RunID, Yes: true})
+
+	// Assert
+	var refusal *Refusal
+	require.ErrorAs(t, err, &refusal)
+	assert.Contains(t, refusal.Error(), "not signed")
+}
+
+func scriptRun(t *testing.T) (configDir string, plan *Plan) {
+	t.Helper()
+	root, configDir := project(t)
+	opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) {
+		appendSkill(t, dir, "\nGOOD advice.\n")
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "scripts"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "scripts", "run.sh"), []byte("echo hi\n"), 0o600))
+	})
+	o := baseOptions(root, configDir, goodEval(), opt)
+	o.MaxRounds, o.AllowScripts = 1, true
+	plan = mustPrepare(t, &o)
+	report, err := plan.Execute(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, StatusAccepted, report.Status)
+	return configDir, plan
+}
+
+func TestApply_ScriptEditsNeedAllowScripts(t *testing.T) {
+	// Arrange
+	configDir, plan := scriptRun(t)
+	opts := &ApplyOptions{ConfigDir: configDir, RunID: plan.RunID, Yes: true}
+
+	// Act: the run recorded scripts/** as editable, apply does not take that from the report
+	_, err := Apply(context.Background(), opts)
+
+	// Assert
+	var refusal *Refusal
+	require.ErrorAs(t, err, &refusal)
+	assert.Equal(t, CodePolicyViolation, refusal.Code)
+	assert.NoFileExists(t, filepath.Join(configDir, "skills/deploy/scripts/run.sh"))
+
+	// Act again with the flag
+	opts.AllowScripts = true
+	res, err := Apply(context.Background(), opts)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, res.Written, "scripts/run.sh")
+}
+
+func TestApply_RollsBackWhenAWriteFails(t *testing.T) {
+	// Arrange
+	_, configDir, plan, _ := acceptedRun(t)
+	skillDir := filepath.Join(configDir, "skills/deploy")
+	before := readFileString(t, filepath.Join(skillDir, "SKILL.md"))
+	// a plain file where the candidate needs the references directory
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "references"), []byte("blocker"), 0o600))
+	t.Cleanup(func() { _ = os.Remove(filepath.Join(skillDir, "references")) })
+	live, err := ReadTree(skillDir)
+	require.NoError(t, err)
+	rep, _, err := LoadReport(configDir, plan.RunID)
+	require.NoError(t, err)
+
+	// Act: the skill digest changed (the blocker), so use the lower-level swap directly
+	cand, err := ReadTree(filepath.Join(plan.RunDir(), "rounds", "1", "candidate", rep.Skill))
+	require.NoError(t, err)
+	_, _, err = writeTree(skillDir, live, cand)
+
+	// Assert
+	require.Error(t, err)
+	assert.Equal(t, before, readFileString(t, filepath.Join(skillDir, "SKILL.md")), "SKILL.md was restored")
+	assert.Equal(t, "blocker", readFileString(t, filepath.Join(skillDir, "references")))
+}
