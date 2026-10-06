@@ -153,7 +153,9 @@ list is left alone, `clean` takes back exactly what was recorded, and a second r
 role lists is the role's while the role renders. If you had written a different value for it by hand,
 `generate --role` warns, replaces it, and remembers yours in `<config dir>/local/.role-skill-overrides.json`
 (machine-local, always gitignored); a plain `generate`, or a role that no longer lists the skill, puts your value
-back. A value you changed after the role wrote it is yours and is left alone. Switching from one role
+back. This holds for every run that writes the settings: `generate`, each regeneration of `generate --watch --role`,
+and `generate --user`; `mcp --serve-skills --role` only serves skills and never writes `.claude/settings.json`, so it
+changes nothing there. A value you changed after the role wrote it is yours and is left alone. Switching from one role
 to another removes the first role's entries and writes the second's. A role's modes win over the same skill in
 `[claude.settings.managed] skill_overrides`.
 
