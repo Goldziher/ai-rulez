@@ -29,31 +29,42 @@ type RoleSelection struct {
 	Enabled bool
 }
 
-// names resolves the selection to role names that exist in cfg.
-func (s RoleSelection) names(cfg *config.Config) ([]string, error) {
+// names resolves the selection to role names that exist in cfg, and the subset
+// that is pinned only because a command line asked for it (lockfile.OutputPin.Requested).
+func (s RoleSelection) names(cfg *config.Config) (names []string, requested map[string]bool, err error) {
 	exists := map[string]bool{}
+	declared := map[string]bool{}
 	pinned := map[string]bool{}
+	requested = map[string]bool{}
 	for i := range cfg.Roles {
 		exists[cfg.Roles[i].Name] = true
-		if cfg.Roles[i].Pin || (s.Write && s.All) {
+		if cfg.Roles[i].Pin {
+			declared[cfg.Roles[i].Name] = true
 			pinned[cfg.Roles[i].Name] = true
+		} else if s.Write && s.All {
+			pinned[cfg.Roles[i].Name] = true
+			requested[cfg.Roles[i].Name] = true
 		}
 	}
-	// A role the lock already pins stays pinned (a role pinned with `lock
-	// --roles` survives a plain `lock`) unless the role left the config.
+	// A role pinned with `lock --roles` survives a plain `lock`; one that was pinned
+	// by its own pin = true does not outlive that key, so setting it to false
+	// unpins the role (the check reports the pin as removed, `lock` drops it). A
+	// role that left the config is dropped either way.
 	for _, o := range s.Lock.RoleOutputs() {
-		if exists[o.Role] {
+		if exists[o.Role] && o.Requested {
 			pinned[o.Role] = true
+			requested[o.Role] = !declared[o.Role]
 		}
 	}
 	for _, r := range s.Only {
 		if !exists[r] {
-			return nil, oops.With("role", r).Hint("`ai-rulez roles list` shows the configured roles").Errorf("unknown role %q", r)
+			return nil, nil, oops.With("role", r).Hint("`ai-rulez roles list` shows the configured roles").Errorf("unknown role %q", r)
 		}
 		if s.Write {
 			pinned[r] = true
+			requested[r] = !declared[r]
 		} else if !pinned[r] {
-			return nil, oops.With("role", r).Hint("pin it with `ai-rulez lock --role "+r+"` or set pin = true on the role").
+			return nil, nil, oops.With("role", r).Hint("pin it with `ai-rulez lock --role "+r+"` or set pin = true on the role").
 				Errorf("role %q is not pinned in the lock", r)
 		}
 	}
@@ -68,21 +79,24 @@ func (s RoleSelection) names(cfg *config.Config) ([]string, error) {
 			}
 		}
 	}
-	names := make([]string, 0, len(pinned))
+	names = make([]string, 0, len(pinned))
 	for name := range pinned {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	return names, nil
+	return names, requested, nil
 }
 
 // SnapshotRoles is Snapshot plus the pins of the selected roles' rendered
 // outputs. Every role is rendered in memory: nothing is written.
 func SnapshotRoles(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, sel RoleSelection) (*contentlock.Snapshot, error) {
 	var roleOutputs map[string][]contentlock.Output
+	var requested map[string]bool
 	check := sel.Enabled && !sel.Write
 	if (sel.Write || sel.Enabled) && !sourcesOnly {
-		names, err := sel.names(cfg)
+		var names []string
+		var err error
+		names, requested, err = sel.names(cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +110,7 @@ func SnapshotRoles(cfg *config.Config, profileName string, sourcesOnly bool, too
 		}
 	}
 	return snapshot(cfg, profileName, sourcesOnly, toolVersion, func(o *contentlock.Options) {
-		o.RoleOutputs, o.CheckRoles, o.RoleFiles = roleOutputs, check && !sourcesOnly, sel.Files
+		o.RoleOutputs, o.RequestedRoles, o.CheckRoles, o.RoleFiles = roleOutputs, requested, check && !sourcesOnly, sel.Files
 		if !sel.Write {
 			o.OnlyRoles = sel.Only
 		}
