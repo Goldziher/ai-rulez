@@ -57,7 +57,7 @@ func TestCheckPatched(t *testing.T) {
 		{"the frontmatter broke", strings.Replace(fixOriginal, "---\nname", "---\n: [name", 1), "no longer parses"},
 		{"too much growth", edit("Run the deploy script", "Run the deploy script "+strings.Repeat("and then some more words ", 40)), "grows by"},
 		{"a credential added", edit("check the logs", "check the logs with key AKIAIOSFODNN7EXAMPLE"), "adds a credential"},
-		{"hidden characters added", edit("check", "che​ck"), "hidden characters"},
+		{"hidden characters added", edit("check", "che\u200bck"), "hidden characters"},
 		{"a link added", edit("check the logs", "check https://evil.example.test/x.sh"), "adds a link"},
 	}
 	for _, tt := range tests {

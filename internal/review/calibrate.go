@@ -509,8 +509,8 @@ func judgeThresholds(rb *Rubric, d Dimension, dc DimCalibration, predicted, posi
 	if dc.Consistency < c.MinConsistency {
 		misses = append(misses, fmt.Sprintf("consistency %.2f below %.2f", dc.Consistency, c.MinConsistency))
 	}
-	if min, ok := c.MinRecall[d.ID]; ok && positives > 0 && dc.Recall < min {
-		misses = append(misses, fmt.Sprintf("recall %.2f below %.2f", dc.Recall, min))
+	if floor, ok := c.MinRecall[d.ID]; ok && positives > 0 && dc.Recall < floor {
+		misses = append(misses, fmt.Sprintf("recall %.2f below %.2f", dc.Recall, floor))
 	}
 	if c.MinPrecision > 0 && predicted > 0 && dc.Precision < c.MinPrecision {
 		misses = append(misses, fmt.Sprintf("precision %.2f below %.2f", dc.Precision, c.MinPrecision))
