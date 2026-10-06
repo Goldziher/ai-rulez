@@ -116,7 +116,7 @@ func (x *approvalIndex) forItem(kind, domain, id, digest string) *ItemApproval {
 		out.Reviewers = []string{}
 	}
 	if len(r.Reviewers) > 0 {
-		out.Assurance = lockfile.AssuranceAsserted
+		out.Assurance = r.Assurance
 	}
 	return out
 }

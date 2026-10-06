@@ -17,7 +17,10 @@
         "exempt": { "type": "array", "items": { "type": "string" } },
         "min_approvers": { "type": "integer", "minimum": 1 },
         "approvers": { "type": "array", "items": { "type": "string" } },
-        "enforce": { "type": "boolean" }
+        "enforce": { "type": "boolean" },
+        "min_assurance": { "enum": ["asserted", "review-linked", "signed"] },
+        "approvers_from": { "type": "string" },
+        "forbid_self_approval": { "type": "boolean" }
       }
     },
     "items": {
@@ -35,13 +38,28 @@
           "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
           "required": { "type": "boolean" },
           "status": {
-            "enum": ["not_required", "ok", "missing", "stale", "expired", "unauthorized", "insufficient"]
+            "enum": [
+              "not_required",
+              "ok",
+              "missing",
+              "stale",
+              "expired",
+              "unauthorized",
+              "insufficient",
+              "denied",
+              "unverified"
+            ]
           },
           "code": {
-            "enum": ["AR710", "AR711", "AR712", "AR713", "AR714"],
+            "enum": ["AR710", "AR711", "AR712", "AR713", "AR714", "AR717", "AR718"],
             "description": "The strict-validation code of a failing status."
           },
           "reviewers": { "type": "array", "items": { "type": "string" } },
+          "assurance": {
+            "enum": ["asserted", "review-linked", "signed"],
+            "description": "The weakest assurance among the approvals that apply."
+          },
+          "detail": { "type": "string", "description": "The deny reason, or why an approval did not count." },
           "expires": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
           "approved_digest": {
             "type": "string",

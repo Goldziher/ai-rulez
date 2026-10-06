@@ -228,10 +228,20 @@
                 "properties": {
                   "required": { "type": "boolean" },
                   "status": {
-                    "enum": ["not_required", "ok", "missing", "stale", "expired", "unauthorized", "insufficient"]
+                    "enum": [
+                      "not_required",
+                      "ok",
+                      "missing",
+                      "stale",
+                      "expired",
+                      "unauthorized",
+                      "insufficient",
+                      "denied",
+                      "unverified"
+                    ]
                   },
                   "reviewers": { "type": "array", "items": { "type": "string" } },
-                  "assurance": { "enum": ["asserted"] },
+                  "assurance": { "enum": ["asserted", "review-linked", "signed"] },
                   "expires": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
                 }
               }
