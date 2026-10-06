@@ -86,7 +86,7 @@ func Build(s Settings, o BuildOptions) *Pipeline {
 		p.Spool = &Spool{Dir: LocalDir(o.Root, o.ConfigDirName)}
 		p.Exporter = &Exporter{
 			Spool: p.Spool, Endpoint: s.Endpoint, HeadersEnv: s.HeadersEnv, Getenv: o.Getenv,
-			Encoder: Encoder{ServiceName: s.ServiceName, ServiceVersion: o.Version, IncludePaths: s.IncludePaths, IncludeSession: s.IncludeSession},
+			Encoder: Encoder{ServiceName: s.ServiceName, ServiceVersion: o.Version, Resource: s.Resource, IncludePaths: s.IncludePaths, IncludeSession: s.IncludeSession},
 			Now:     clock,
 		}
 		p.OTLP = &OTLP{Spool: p.Spool, Exporter: p.Exporter, Sample: s.Sample}

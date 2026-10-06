@@ -3,6 +3,8 @@ package telemetry
 import (
 	"encoding/json"
 	"hash/fnv"
+	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -65,6 +67,9 @@ type otlpScope struct {
 type Encoder struct {
 	ServiceName    string
 	ServiceVersion string
+	// Resource is the validated [telemetry.resource] table, emitted sorted by key
+	// after the fixed attributes.
+	Resource map[string]string
 	// IncludePaths and IncludeSession open the gated attributes.
 	IncludePaths   bool
 	IncludeSession bool
@@ -80,6 +85,9 @@ func (en *Encoder) resource() otlpResource {
 		attrs = append(attrs, strAttr(resourceServiceVer, en.ServiceVersion))
 	}
 	attrs = append(attrs, strAttr(resourceSchemaKey, strconv.Itoa(SchemaVersion)))
+	for _, key := range slices.Sorted(maps.Keys(en.Resource)) {
+		attrs = append(attrs, strAttr(key, en.Resource[key]))
+	}
 	return otlpResource{Attributes: attrs}
 }
 

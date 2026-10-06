@@ -3,6 +3,7 @@ package telemetry
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -27,6 +28,7 @@ const (
 	EnvIncludePaths   = "AI_RULEZ_TELEMETRY_INCLUDE_PATHS"
 	EnvIncludeSession = "AI_RULEZ_TELEMETRY_INCLUDE_SESSION"
 	EnvSaltFile       = "AI_RULEZ_TELEMETRY_SALT_FILE"
+	EnvResource       = "AI_RULEZ_TELEMETRY_RESOURCE"
 	envDoNotTrack     = "DO_NOT_TRACK"
 )
 
@@ -55,6 +57,8 @@ type Settings struct {
 	IncludeSession bool
 	SaltFile       string
 	ServiceName    string
+	// Resource holds the extra resource attributes; user scope and environment only.
+	Resource map[string]string
 	// Sample is the fraction of sessions exported, 0..1.
 	Sample float64
 	// Killed names the kill switch in force ("AI_RULEZ_TELEMETRY=off",
@@ -126,7 +130,7 @@ func Resolve(layers Layers) Settings {
 	// Validate the effective result too: an invalid env override must not export.
 	effective := config.TelemetryConfig{
 		OTLPEndpoint: s.Endpoint, OTLPProtocol: s.Protocol, HeadersEnv: s.HeadersEnv,
-		ServiceName: s.ServiceName, Sample: &s.Sample, SaltFile: s.SaltFile,
+		ServiceName: s.ServiceName, Sample: &s.Sample, SaltFile: s.SaltFile, Resource: s.Resource,
 	}
 	s.addBlocking(effective.Validate()...)
 	return s
@@ -159,6 +163,7 @@ func PrivilegedKeys(repo *config.TelemetryConfig) []string {
 	add(repo.IncludeSession, "include_session")
 	add(repo.SaltFile != "", "salt_file")
 	add(repo.ServiceName != "", "service_name")
+	add(len(repo.Resource) > 0, "resource")
 	return out
 }
 
@@ -203,6 +208,10 @@ func applyUser(s *Settings, user *config.TelemetryConfig, scope string) {
 	if user.SaltFile != "" {
 		s.SaltFile = user.SaltFile
 		set("salt_file")
+	}
+	if len(user.Resource) > 0 {
+		s.Resource = maps.Clone(user.Resource)
+		set("resource")
 	}
 }
 
@@ -259,6 +268,20 @@ func applyEnv(s *Settings, getenv func(string) string) {
 	if v := getenv(EnvSaltFile); v != "" {
 		s.SaltFile = v
 		set("salt_file")
+	}
+	if v := getenv(EnvResource); v != "" {
+		if s.Resource == nil {
+			s.Resource = map[string]string{}
+		}
+		for _, pair := range splitList(v) {
+			key, value, ok := strings.Cut(pair, "=")
+			if !ok {
+				s.addBlocking(EnvResource + ": each entry must be key=value")
+				continue
+			}
+			s.Resource[strings.TrimSpace(key)] = strings.TrimSpace(value)
+		}
+		set("resource")
 	}
 }
 

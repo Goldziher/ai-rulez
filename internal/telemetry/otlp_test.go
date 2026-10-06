@@ -101,3 +101,25 @@ func HashForTest(i int) string {
 	}
 	return string(out)
 }
+
+func TestEncoder_ResourceAttributesAreSortedAndAfterTheFixedOnes(t *testing.T) {
+	// Arrange
+	en := Encoder{ServiceName: "ai-rulez", ServiceVersion: "5.0.0", Resource: map[string]string{"team": "platform", "deployment.environment": "prod"}}
+
+	// Act
+	body, err := en.EncodeLogs(sampleEvents()[:1], fixedNow)
+
+	// Assert
+	require.NoError(t, err)
+	var doc struct {
+		ResourceLogs []struct {
+			Resource otlpResource `json:"resource"`
+		} `json:"resourceLogs"`
+	}
+	require.NoError(t, json.Unmarshal(body, &doc))
+	var keys []string
+	for _, a := range doc.ResourceLogs[0].Resource.Attributes {
+		keys = append(keys, a.Key)
+	}
+	assert.Equal(t, []string{"service.name", "service.version", "ai_rulez.schema_version", "deployment.environment", "team"}, keys)
+}
