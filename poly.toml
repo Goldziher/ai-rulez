@@ -23,6 +23,7 @@ exclude = [
   "internal/lint/testdata/**",
   "internal/okf/testdata/**",
   "internal/okfbridge/testdata/**",
+  "internal/sbom/testdata/**",
   "docs/snippets",
   "node_modules/**",
   "release/**",
