@@ -313,9 +313,9 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `signing.min_hash_version` | the larger value | a lower explicit `[signing] min_hash_version` | `AR740` |
 | `signing.trust`, `signing.allow_repo_identities` | per subject (`lock`, `bundle`, `skill`, `sbom`, `approval`), for the subjects the list names: the repository's signers the list names (compared on subject, identity or `identity_regexp`, and issuer); the policy's entries for the subject when none is left. Entries for subjects the list does not name are not touched. An empty list (or `allow_repo_identities = false` alone) governs every subject and trusts nobody, so verification fails closed. A `key_file` is never in the list | a signer the list does not name for a governed subject, including any `key_file` or shorthand `identity`; the entry is dropped | `AR740` |
 | `signing.thresholds` | per subject, the larger value; a subject the repository leaves unset takes the floor | a lower explicit `[signing.thresholds]` value | `AR740` |
-| `mcp.allowed_commands` | the repository's stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded | `AR748` |
-| `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded | `AR748` |
-| `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded | `AR748` |
+| `mcp.allowed_commands` | the stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded. An imported agent, skill or command with such an inline `mcpServers` entry loses the whole `mcpServers` key | `AR748` |
+| `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded (inline `mcpServers` of imported content: as above) | `AR748` |
+| `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded. An imported agent, skill or command that declares `hooks` in its frontmatter loses the key | `AR748` |
 | `governance.approvers` | the repository's entries that the list names; the policy list when it sets none or none is left. An empty policy list means nobody may approve | an entry the list does not name; the entry is dropped | `AR740` |
 
 `[governance]` matters because approvals are records in the repository's own lock: without a floor the repository
@@ -433,9 +433,13 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 - **`max_findings` is a gate, not a forgiveness.** Up to the ceiling the findings keep their own severity; one more is
   `AR749`. The code is protected, so baselines, `[lint.tolerate]` and ignores cannot absorb it. The design's
   `[lint.size] max_tokens` is the existing `[lint.budgets.<kind>]` table here.
-- **Known gaps.** A policy value is not checked against the secret scanner yet. `[mcp]`, `[hooks]` and `deny_digests`
-  bound what the repository's own `config.toml` and `ai-rulez.lock` say; hooks and MCP servers that arrive through an
-  include are not bounded yet. The release-time source (`forge` or `first-seen`) cannot be required by a policy yet, only
+- **Imported hooks and MCP servers.** MCP servers cannot be imported from an include, but an agent, skill or command
+  an include or an installed skill delivers can declare `hooks` and `mcpServers` in its frontmatter. `[hooks]` and
+  `[mcp]` bound those too, once the content is loaded: a file outside the project's own configuration directory (or
+  inside a local include's directory) is imported. A violation unloads the key and is `AR748`, reported against the
+  imported file. Builtin packs are not bounded (they ship with the binary).
+- **Known gaps.** A policy value is not checked against the secret scanner yet. `deny_digests`
+  bounds what the repository's own `ai-rulez.lock` says. The release-time source (`forge` or `first-seen`) cannot be required by a policy yet, only
   the age. Booleans are not compared when a child extends a parent. The `telemetry` and `llm` locks ignore
   organization discovery, which needs a repository.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).

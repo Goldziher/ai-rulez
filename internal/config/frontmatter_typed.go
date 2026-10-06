@@ -122,6 +122,19 @@ func (m *Metadata) TypedExtra(key string) (any, bool) {
 	return nil, false
 }
 
+// DropExtra removes extra frontmatter keys with their typed values, so a
+// generator no longer emits them. The organization policy uses it to unload what
+// imported content declares in its frontmatter (hooks, mcpServers).
+func (m *Metadata) DropExtra(keys ...string) {
+	if m == nil {
+		return
+	}
+	for _, k := range keys {
+		delete(m.Extra, k)
+		delete(m.extraNodes, k)
+	}
+}
+
 // cloneNode returns a deep copy, so callers may edit a value without touching
 // the parsed metadata shared across presets.
 func cloneNode(n *yaml.Node) *yaml.Node {

@@ -133,6 +133,15 @@ func (e *Enforcer) Enforce(_ context.Context, cfg *config.Config) (*config.Polic
 	return r.Apply(cfg).Outcome, nil
 }
 
+// EnforceContent implements config.ContentEnforcer.
+func (e *Enforcer) EnforceContent(_ context.Context, cfg *config.Config) []config.PolicyViolation {
+	r, err := e.LoadFor(cfg.BaseDir)
+	if err != nil || r == nil {
+		return nil // Enforce already failed the load on a policy that cannot be used
+	}
+	return r.ApplyContent(cfg)
+}
+
 // Locks implements config.PolicyEnforcer; an unusable policy locks everything.
 func (e *Enforcer) Locks(feature string) bool {
 	r, err := e.Load()
