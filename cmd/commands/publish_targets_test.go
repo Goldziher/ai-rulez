@@ -1,9 +1,13 @@
 package commands
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"log"
 	"net/http/httptest"
 	"os"
@@ -305,12 +309,35 @@ func npmFake(t *testing.T) *runner.Fake {
 		case "pack":
 			for i, a := range spec.Argv {
 				if a == "--pack-destination" {
-					require.NoError(t, os.WriteFile(filepath.Join(spec.Argv[i+1], npmTarballName(spec.Argv[len(spec.Argv)-1])), []byte("tarball"), 0o600))
+					require.NoError(t, os.WriteFile(filepath.Join(spec.Argv[i+1], npmTarballName(spec.Argv[len(spec.Argv)-1])), packNPMDir(t, spec.Argv[len(spec.Argv)-1]), 0o600))
 				}
 			}
 		}
 		return runner.Result{Status: runner.StatusOK}
 	}}
+}
+
+// packNPMDir stands in for `npm pack`: a gzip tar of the package directory with its files under package/.
+func packNPMDir(t *testing.T, dir string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(zw)
+	require.NoError(t, filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, p) //nolint:errcheck // below dir
+		body, rerr := os.ReadFile(p)   //nolint:gosec // a test dist
+		require.NoError(t, rerr)
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: "package/" + filepath.ToSlash(rel), Size: int64(len(body)), Mode: 0o644, Typeflag: tar.TypeReg}))
+		_, werr := tw.Write(body)
+		require.NoError(t, werr)
+		return nil
+	}))
+	require.NoError(t, tw.Close())
+	require.NoError(t, zw.Close())
+	return buf.Bytes()
 }
 
 // npmTarballName is what npm pack names the tarball of a package directory
@@ -375,9 +402,13 @@ case "$1" in
   pack)
     while [ $# -gt 0 ]; do
       if [ "$1" = "--pack-destination" ]; then dest="$2"; fi
+      pkg="$1"
       shift
     done
-    printf tarball > "$dest/acme-acme-1.4.0.tgz";;
+    stage=$(mktemp -d)
+    mkdir "$stage/package"
+    cp -R "$pkg/." "$stage/package/"
+    COPYFILE_DISABLE=1 tar -czf "$dest/acme-acme-1.4.0.tgz" -C "$stage" package;;
 esac
 exit 0
 `
