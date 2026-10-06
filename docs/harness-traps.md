@@ -23,8 +23,8 @@ $ ai-rulez validate --strict
   by hand).
 - Over the files git tracks (or the directory tree outside git) below the lint root, at the root or in a nested
   package. It reads files on disk, so a generated file is seen as last written; run `ai-rulez generate` first.
-  Traps that apply to generated files (`AR9C7` to `AR9C9`) also scan the gitignored output directories
-  (`.claude/skills`, `.claude/agents`) at the lint root and keep the files that carry the ai-rulez banner, because
+  Traps that apply to generated files (`AR9C1`, `AR9C3` to `AR9C9`) also scan the gitignored output directories of
+  their scope (`.claude/skills`, `.claude/agents`, `.kiro/agents`, `.kiro/steering`, `.devin/rules`, ...) at the lint root and keep the files that carry the ai-rulez banner, because
   Claude Code outputs are gitignored and git does not list them. A gitignored hand-written file is not checked.
 - Severity is `warning` for a hand-written file (it could be a README). A file that carries the ai-rulez banner
   and is certainly ignored by the harness is an `error`, because it means a preset is broken. An explicit
@@ -71,7 +71,8 @@ for every project that has them (no preset gate), report `AR9CA`, and may use an
 vocabulary (`ext-not-in`, `name-suffix-required`, `frontmatter-enum`, `frontmatter-missing-all`, `key-misspelt`,
 `size-over`, `frontmatter-first`, `json-key-required-if`). `source`, `quote` and `verified_on` are optional. A row
 needs `name`, `harness` (a label), `message` and a scope with `dir` or `suffix`; `scope.dir` must stay inside the
-project. `size-over` takes its own `limit` and `measure` (`file-chars`, `file-bytes` or `frontmatter-chars`). An
+project, use forward slashes (`.` is the project root), and a `suffix` that starts with neither `.` nor `/`
+(`REVIEW.md`) names a whole file name. `ext-not-in` needs `allowed`. `size-over` takes its own `limit` and `measure` (`file-chars`, `file-bytes` or `frontmatter-chars`). An
 invalid row or file (unknown field, unknown kind) is reported as `AR9CA` and skipped. At most 64 files of 256 KiB.
 
 ```toml
@@ -91,9 +92,9 @@ keys = ["title"]
 
 ## Autofix
 
-`ai-rulez validate --strict --fix` applies the safe trap fixes. Today that is `AR9C7`: it renames a misspelt
+`ai-rulez validate --strict --fix` applies the safe trap fixes. Today that is `AR9C7` and project `AR9CA` rows of kind `key-misspelt`: it renames a misspelt
 frontmatter key (`user_invocable` to `user-invocable`) in a hand-written skill or agent file, which may live outside
-`.ai-rulez/`. A generated output is never edited (fix its source), and the other traps have no mechanical fix:
+`.ai-rulez/`, and only while the documented key is absent (a file that has both spellings is reported, not edited). A generated output is never edited (fix its source), and the other traps have no mechanical fix:
 renaming or moving a file, or choosing `resources`, is a decision.
 
 ## Keeping the table fresh
