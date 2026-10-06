@@ -14,3 +14,18 @@ func TestChecksAreScanned(t *testing.T) {
 		},
 	})
 }
+
+func TestChecksFrontmatterKeysAreKnownAR303(t *testing.T) {
+	runRuleCases(t, []ruleCase{
+		{
+			name:   "documented check keys",
+			files:  map[string]string{".ai-rulez/checks/review.md": "---\ndescription: Flags issues\nseverity: high\ntools: [Read, Grep]\ntargets: [cursor, kilo]\n---\n\nCheck the diff.\n"},
+			absent: []string{"AR303"},
+		},
+		{
+			name:  "a typo is still reported",
+			files: map[string]string{".ai-rulez/checks/review.md": "---\ndescription: Flags issues\nseverty: high\n---\n\nCheck the diff.\n"},
+			want:  []string{"AR303:checks/review.md:3"},
+		},
+	})
+}
