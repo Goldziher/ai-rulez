@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -114,24 +115,26 @@ type item struct {
 }
 
 type runner struct {
-	cfg         *config.Config
-	lc          config.LintConfig
-	tree        *Tree
-	baseRel     string
-	cwd         string
-	sev         map[string]Severity
-	ignore      map[string]bool
-	ignorePaths []globMatcher
-	allow       []globMatcher
-	skills      map[string]bool
-	commands    map[string]bool
-	agents      map[string]bool
-	rules       map[string]bool
-	contexts    map[string]bool
-	items       []item
-	docs        map[string]doc
-	counter     tokens.Counter
-	findings    []Finding
+	cfg          *config.Config
+	mcpOnce      sync.Once
+	mcpEffective []config.MCPServer
+	lc           config.LintConfig
+	tree         *Tree
+	baseRel      string
+	cwd          string
+	sev          map[string]Severity
+	ignore       map[string]bool
+	ignorePaths  []globMatcher
+	allow        []globMatcher
+	skills       map[string]bool
+	commands     map[string]bool
+	agents       map[string]bool
+	rules        map[string]bool
+	contexts     map[string]bool
+	items        []item
+	docs         map[string]doc
+	counter      tokens.Counter
+	findings     []Finding
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
 	forceSev Severity
@@ -919,14 +922,10 @@ func (r *runner) checkMCP() {
 		text = strings.Split(string(data), "\n")
 		r.docs[path] = doc{lines: text}
 	}
-	names := make([]string, 0, len(r.cfg.MCPServers))
-	for n := range r.cfg.MCPServers {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		s := r.cfg.MCPServers[n]
-		if s == nil || !s.IsEnabled() || s.GetTransport() != config.TransportStdio || s.Command == "" || strings.Contains(s.Command, "$") {
+	for i := range r.effectiveMCPServers() {
+		s := &r.mcpEffective[i]
+		n := s.Name
+		if !s.IsEnabled() || s.GetTransport() != config.TransportStdio || s.Command == "" || strings.Contains(s.Command, "$") {
 			continue
 		}
 		if r.commandResolves(s.Command) {
