@@ -62,7 +62,10 @@ advisory and carries a fingerprint that survives line moves.
 Run before anything is planned, and they decide what is ever eligible to leave the machine:
 
 - An item with a secret or hidden-character finding (`AR001`, `AR002`) on its file or its skill resources is
-  **withheld**: no score, no manifest entry, `AR9G0` note. It is never redacted and sent.
+  **withheld**: no score, no manifest entry, `AR9G0` note. It is never redacted and sent. The decision does not
+  rest on the lint findings alone: review scans the item's own text for a credential or a hidden character
+  directly, so `[lint] ignore`, `[lint.severity]`, `ignore_paths` and an inline `ai-rulez-lint-ignore` cannot make an
+  item eligible to leave the machine.
 - A twin **error** pre-empts the dimension: a judge would not be asked, so the manifest leaves it out of the calls.
 - `[review] exclude` globs (matched against the name, the id and the path) exclude an item.
 - Content from includes, installed skills, skill sources and builtins is skipped unless `--include-imports`. It is
@@ -98,9 +101,11 @@ egress manifest (estimate; nothing is sent in this build)
 - **Caps**: `--max-cost` / `--max-calls`, else `[review] max_cost_usd` / `max_calls`, else 0.50 USD and 300 calls
   (`--max-cost 0` means unlimited). The estimate is **refused** (exit 1, listed
   under `refused`) when even the lower bound exceeds a cap, or when the model has no price and a cost cap is set.
-  With no model configured nothing is priced and nothing is refused.
-- `--show-prompt` prints the exact planned messages. The nonce of the data fence is shown as `<nonce>` so the plan and
-  its hash are reproducible; a real run would draw a random one.
+  With no model configured nothing is priced and nothing is refused. An organization policy that forbids model calls
+  (`[llm] allow_network = false`) refuses the estimate too.
+- `--show-prompt` prints the exact planned messages. The nonce of the data fence is shown as `<nonce:000000000000000000000000>`, as long as a real 128-bit hex nonce, so the plan and its hash are
+  reproducible and the byte counts realistic; a real run would draw a random one. An item's `sha256` covers the data
+  of every call planned for it.
 
 ## Rubrics
 
