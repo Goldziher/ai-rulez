@@ -1,8 +1,0 @@
-version: "3.0"
-name: multi-preset-test
-description: Test with multiple presets
-presets:
-  - claude
-  - cursor
-  - devin
-gitignore: false
