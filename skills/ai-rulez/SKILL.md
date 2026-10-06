@@ -38,10 +38,8 @@ npx ai-rulez@latest
 # Python (no install)
 uvx ai-rulez
 
-# Go: build from source (the module path has no /v4 suffix, so
-# `go install …@latest` resolves to an old 1.x build)
-git clone https://github.com/Goldziher/ai-rulez
-cd ai-rulez && go build -o ai-rulez ./cmd
+# Go (the module path needs /v5; without it @latest resolves to an old 1.x build)
+go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
 ```
 
 ## Quick Start

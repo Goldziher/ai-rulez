@@ -20,7 +20,7 @@ func TestAIRulezCrossplatformBuild(t *testing.T) {
 
 	projectRoot := findProjectRoot(t)
 
-	cmd := exec.Command("go", "build", "-o", getBinaryName("ai-rulez-test"), "./cmd")
+	cmd := exec.Command("go", "build", "-o", getBinaryName("ai-rulez-test"), "./cmd/ai-rulez")
 	cmd.Dir = projectRoot
 
 	output, err := cmd.CombinedOutput()
@@ -51,7 +51,7 @@ func TestAIRulezBasicCommands(t *testing.T) {
 	binaryName := getBinaryName("ai-rulez-platform-test")
 	binaryPath := filepath.Join(tempDir, binaryName)
 
-	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
+	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/ai-rulez")
 	cmd.Dir = projectRoot
 
 	output, err := cmd.CombinedOutput()

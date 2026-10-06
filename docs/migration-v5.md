@@ -112,7 +112,7 @@ enforce` is not `false`), not only under `--locked` or `--frozen`.
 ## Go module path
 
 The Go module is now `github.com/Goldziher/ai-rulez/v5`. Code that imports ai-rulez packages, or installs the
-CLI with `go install`, must use the `/v5` path (for example `go install github.com/Goldziher/ai-rulez/v5/cmd@latest`).
+CLI with `go install`, must use the `/v5` path (for example `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`).
 The npm, PyPI and Homebrew distributions are unaffected.
 
 ## Where to look

@@ -40,7 +40,7 @@ tasks:
 
         # Go CLI version
         sed -i '' 's/Version  = ".*"/Version  = "{{.VERSION}}"/' cmd/commands/root.go
-        sed -i '' 's/var version = ".*"/var version = "{{.VERSION}}"/' cmd/main.go
+        sed -i '' 's/var version = ".*"/var version = "{{.VERSION}}"/' cmd/ai-rulez/main.go
 
         # npm release wrapper
         sed -i '' 's/"version": ".*"/"version": "{{.VERSION}}"/' release/npm/package.json
@@ -71,7 +71,7 @@ tasks:
 
         echo "Done. Updated version to {{.VERSION}} in:"
         echo "  - cmd/commands/root.go"
-        echo "  - cmd/main.go"
+        echo "  - cmd/ai-rulez/main.go"
         echo "  - release/npm/package.json"
         echo "  - pyproject.toml"
         echo "  - release/pypi/__init__.py"
@@ -85,7 +85,7 @@ tasks:
   build:
     desc: "Build the CLI binary"
     cmds:
-      - go build -o bin/ai-rulez ./cmd/main.go
+      - go build -o bin/ai-rulez ./cmd/ai-rulez
 
   test:
     desc: "Run unit and integration tests"
@@ -166,12 +166,12 @@ tasks:
   generate:
     desc: "Generate ai-rulez configuration files"
     cmds:
-      - go run ./cmd/main.go generate
+      - go run ./cmd/ai-rulez generate
 
   validate:
     desc: "Validate ai-rulez configuration"
     cmds:
-      - go run ./cmd/main.go validate
+      - go run ./cmd/ai-rulez validate
 
   clean:
     desc: "Clean build artifacts"
