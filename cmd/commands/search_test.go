@@ -259,3 +259,34 @@ func TestSearchCmd_Registered(t *testing.T) {
 		assert.NotNil(t, cmd.Flags().Lookup(name), "--%s", name)
 	}
 }
+
+func TestSearchEval_BaselineAtAnotherKIsRefused(t *testing.T) {
+	searchProject(t)
+	resetSearch(t)
+	cases := writeCases(t, "version: 1\ncases:\n  - {id: a, query: pull request, expect: [git-workflow]}\n")
+	baseline := filepath.Join(t.TempDir(), "base.json")
+	setSearchFlag(t, "eval", cases)
+	setSearchFlag(t, "k", "3")
+	setSearchFlag(t, "out", baseline)
+	code, _, errOut := execSearch(t)
+	require.Equal(t, 0, code, errOut)
+
+	resetSearch(t)
+	setSearchFlag(t, "eval", cases)
+	setSearchFlag(t, "k", "7")
+	setSearchFlag(t, "baseline", baseline)
+	code, _, _ = execSearch(t)
+
+	assert.Equal(t, 1, code)
+}
+
+func TestSearchEval_NegativeKIsRejected(t *testing.T) {
+	searchProject(t)
+	resetSearch(t)
+	setSearchFlag(t, "eval", writeCases(t, "version: 1\ncases:\n  - {id: a, query: pull request, expect: [git-workflow]}\n"))
+	setSearchFlag(t, "k", "-1")
+
+	code, _, _ := execSearch(t)
+
+	assert.Equal(t, 1, code)
+}
