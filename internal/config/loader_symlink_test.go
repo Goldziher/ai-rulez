@@ -50,7 +50,7 @@ func TestLoadContentFile_SymlinkErrorNamesFileAndNeverReadsTarget(t *testing.T) 
 	link := filepath.Join(dir, "leak.md")
 	testutil.SymlinkOrSkip(t, secret, link)
 
-	_, err := loadContentFile(link)
+	_, err := loadContentFile(osView(dir), link)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "leak.md")
