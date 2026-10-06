@@ -153,6 +153,11 @@ func NewGenerator(cfg *config.Config) *Generator {
 		// every hook renderer treats it as any other group.
 		cfg.EnableGuardHooks(schema.Version)
 	}
+	if cfg != nil && cfg.RulesDirs == nil {
+		// Created here, before any copy of the config is made or any goroutine adds
+		// a folder: AddRulesDir's lazy creation is not synchronized.
+		cfg.RulesDirs = &config.RulesDirSet{}
+	}
 	if cfg != nil && cfg.Registry == nil {
 		cfg.Registry = registry.Default()
 	}
