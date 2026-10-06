@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // Cache location and secret. They live in the user's directories, outside the
@@ -54,41 +55,65 @@ func CacheDirFor(opts Options) string {
 
 // secretPathFor returns the per-user cache secret path: opts.SecretPath, else
 // $XDG_CONFIG_HOME/ai-rulez/llm-cache.key, else ~/.config/ai-rulez/llm-cache.key.
+//
+// XDG_CONFIG_HOME comes from the environment, so a repository whose .envrc or
+// dev-shell sets it can relocate the secret into the checkout. The consequence
+// is bounded (the key authenticates cached responses and committed eval results
+// for that shell only, and is still created 0600 in a non-shared directory), but
+// keep XDG_CONFIG_HOME out of untrusted environment files.
 func secretPathFor(opts Options) string {
 	if opts.SecretPath != "" {
 		return opts.SecretPath
 	}
+	return UserSecretPath(cacheSecretFile)
+}
+
+// UserSecretPath returns the path of the per-user secret file name in the user
+// config directory ($XDG_CONFIG_HOME/ai-rulez, else ~/.config/ai-rulez), or ""
+// when there is no home directory.
+func UserSecretPath(name string) string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
-		return filepath.Join(xdg, "ai-rulez", cacheSecretFile)
+		return filepath.Join(xdg, "ai-rulez", name)
 	}
 	home := userHome()
 	if home == "" {
 		return ""
 	}
-	return filepath.Join(home, ".config", "ai-rulez", cacheSecretFile)
+	return filepath.Join(home, ".config", "ai-rulez", name)
 }
 
-// loadOrCreateSecret reads the cache secret, creating it (mode 0600, parent
-// 0700) on first use. A missing, truncated or symlinked secret file is replaced
-// or refused rather than trusted: a replaced secret simply invalidates every old
-// entry, which then fail their MAC and are removed.
+// LoadSecretFile reads the 32-byte secret at path, creating it on first use. It
+// is the helper behind the cache secret and the eval-result MAC key.
+func LoadSecretFile(path string) ([]byte, error) { return loadOrCreateSecret(path) }
+
+// loadOrCreateSecret reads the secret, creating it (mode 0600, parent 0700) on
+// first use. A missing, truncated, group/world-accessible or symlinked secret
+// file is replaced or refused rather than trusted: a replaced secret simply
+// invalidates every old entry, which then fail their MAC and are removed. The
+// replacement is a rename of a private temp file, never remove-then-create, so a
+// secret another process created in the meantime is re-validated and kept.
 func loadOrCreateSecret(path string) ([]byte, error) {
 	if path == "" {
 		return nil, errors.New("no user directory for the cache secret")
 	}
-	if fi, err := os.Lstat(path); err == nil {
-		if !fi.Mode().IsRegular() {
-			return nil, errors.New("cache secret is not a regular file")
-		}
-		if b, rerr := readSecret(path); rerr == nil && len(b) == cacheSecretBytes {
-			return b, nil
-		}
-		if err := os.Remove(path); err != nil {
-			return nil, err
-		}
-	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, err
+	}
+	if info, err := os.Stat(filepath.Dir(path)); err != nil {
+		return nil, err
+	} else if info.Mode().Perm()&0o022 != 0 {
+		return nil, errors.New("cache secret directory is writable by group or others")
+	}
+	existed := false
+	if _, err := os.Lstat(path); err == nil {
+		existed = true
+		b, rerr := readSecret(path)
+		if rerr == nil {
+			return b, nil
+		}
+		if errors.Is(rerr, errSecretNotRegular) {
+			return nil, rerr
+		}
 	}
 	secret := make([]byte, cacheSecretBytes)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
@@ -108,9 +133,22 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 	if werr != nil {
 		return nil, werr
 	}
+	if existed {
+		// An unusable file (empty, short, loose mode) is replaced atomically, after
+		// a last look in case another process just fixed it.
+		if b, rerr := readSecret(path); rerr == nil {
+			return b, nil
+		} else if errors.Is(rerr, errSecretNotRegular) {
+			return nil, rerr
+		}
+		if err := os.Rename(tmp.Name(), path); err != nil {
+			return nil, err
+		}
+		return secret, nil
+	}
 	if err := os.Link(tmp.Name(), path); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			if b, rerr := readSecret(path); rerr == nil && len(b) == cacheSecretBytes {
+			if b, rerr := readSecret(path); rerr == nil {
 				return b, nil
 			}
 		}
@@ -119,11 +157,40 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 	return secret, nil
 }
 
+var errSecretNotRegular = errors.New("secret is not a regular file")
+
+// readSecret reads and validates the secret file: regular (a symlink swapped in
+// after the caller's Lstat is caught by comparing the opened file with a fresh
+// Lstat), mode 0600 on Unix, exactly cacheSecretBytes long.
 func readSecret(path string) ([]byte, error) {
-	f, err := os.Open(path) //nolint:gosec // fixed per-user path
+	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	return io.ReadAll(io.LimitReader(f, cacheSecretBytes+1))
+	if !info.Mode().IsRegular() {
+		return nil, errSecretNotRegular
+	}
+	f, err := os.Open(path) //nolint:gosec // fixed per-user path, Lstat-checked above
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	opened, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(info, opened) {
+		return nil, errSecretNotRegular
+	}
+	if runtime.GOOS != "windows" && opened.Mode().Perm()&0o077 != 0 {
+		return nil, errors.New("secret file is accessible by group or others")
+	}
+	b, err := io.ReadAll(io.LimitReader(f, cacheSecretBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) != cacheSecretBytes {
+		return nil, errors.New("secret file has the wrong length")
+	}
+	return b, nil
 }
