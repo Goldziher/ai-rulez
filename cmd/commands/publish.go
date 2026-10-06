@@ -287,6 +287,8 @@ func checkPublishFlags() error {
 		return oops.Errorf("--force only applies with --to github-release or --to oci, and --execute")
 	case publishTag != "" && !ghOrPin:
 		return oops.Errorf("--tag needs --to github-release or --marketplace")
+	case publishSince != "" && !publish.ValidSince(publishSince):
+		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "pass a tag name such as v1.3.0", "invalid --since %q", publishSince)
 	case publishChannel != "" && !publish.ValidChannel(publishChannel):
 		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "channels are lower-case letters, digits and '-'", "invalid --channel %q", publishChannel)
 	case publishOCIRef != "" && publishTo != publish.TargetOCI:
