@@ -3,7 +3,6 @@ package usage
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 
 	"github.com/samber/oops"
 )
@@ -96,7 +98,7 @@ func RecordFeedback(skill, kind string, options FeedbackOptions) (*FeedbackEntry
 	if options.LogPath == "" {
 		return nil, oops.Errorf("no feedback log path")
 	}
-	now := time.Now
+	now := ambient.Clock(nil).Now
 	if options.Now != nil {
 		now = options.Now
 	}

@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // Cache location and secret. They live in the user's directories, outside the
@@ -21,8 +23,8 @@ const (
 )
 
 // userHome returns the home directory or "".
-func userHome() string {
-	h, err := os.UserHomeDir()
+func userHome(env ambient.Env) string {
+	h, err := ambient.OrOS(env).UserHomeDir()
 	if err != nil {
 		return ""
 	}
@@ -41,7 +43,7 @@ func CacheDirFor(opts Options) string {
 	if opts.ConfigDir == "" {
 		return ""
 	}
-	home := userHome()
+	home := userHome(opts.Env)
 	if home == "" {
 		return ""
 	}
@@ -65,17 +67,21 @@ func secretPathFor(opts Options) string {
 	if opts.SecretPath != "" {
 		return opts.SecretPath
 	}
-	return UserSecretPath(cacheSecretFile)
+	return UserSecretPathIn(opts.Env, cacheSecretFile)
 }
 
 // UserSecretPath returns the path of the per-user secret file name in the user
 // config directory ($XDG_CONFIG_HOME/ai-rulez, else ~/.config/ai-rulez), or ""
 // when there is no home directory.
-func UserSecretPath(name string) string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
+func UserSecretPath(name string) string { return UserSecretPathIn(nil, name) }
+
+// UserSecretPathIn is UserSecretPath reading the environment and home directory
+// from env (nil: the real ones).
+func UserSecretPathIn(env ambient.Env, name string) string {
+	if xdg := ambient.Getenv(env, "XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
 		return filepath.Join(xdg, "ai-rulez", name)
 	}
-	home := userHome()
+	home := userHome(env)
 	if home == "" {
 		return ""
 	}

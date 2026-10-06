@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // PromptYesNo displays a yes/no prompt and returns true if user selects yes
@@ -53,7 +55,7 @@ func isInteractive() bool {
 	// Check CI environment variables
 	ciEnvs := []string{"CI", "CONTINUOUS_INTEGRATION", "BUILD_ID"}
 	for _, env := range ciEnvs {
-		if os.Getenv(env) != "" {
+		if ambient.Getenv(nil, env) != "" {
 			return false
 		}
 	}

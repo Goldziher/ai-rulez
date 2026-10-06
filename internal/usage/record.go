@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -198,7 +199,7 @@ func Record(in io.Reader, options RecordOptions) (*Entry, error) {
 	}
 	entry.Served, entry.Role = options.Served, strings.TrimSpace(options.Role)
 	entry.Session = hashedSession(event.SessionID, options, event.CWD)
-	now := time.Now
+	now := ambient.Clock(nil).Now
 	if options.Now != nil {
 		now = options.Now
 	}
@@ -418,7 +419,7 @@ func lookupIdentity(indexPath, cwd, id string) (hash, digest string) {
 func randomNonce() string {
 	raw := make([]byte, 8)
 	if _, err := rand.Read(raw); err != nil {
-		return strconv.FormatInt(time.Now().UnixNano(), 10)
+		return strconv.FormatInt(ambient.Clock(nil).Now().UnixNano(), 10)
 	}
 	return hex.EncodeToString(raw)
 }

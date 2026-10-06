@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // Diagnosis is the resolved, secret-free view of the LLM setup.
@@ -36,7 +37,7 @@ type Diagnosis struct {
 func Diagnose(cfg Config, opts Options) Diagnosis {
 	getenv := opts.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(opts.Env)
 	}
 	d := Diagnosis{
 		Backend:        ResolveBackend(cfg.Backend),

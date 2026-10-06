@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 )
@@ -204,11 +205,11 @@ func cleanRelPath(p string) (string, bool) {
 }
 
 // Clock supplies the time. The Recorder reads it once per event; nothing else in
-// the package calls time.Now for an event timestamp.
+// the package reads the wall clock for an event timestamp.
 type Clock func() time.Time
 
 // SystemClock is the wall clock in UTC.
-func SystemClock() time.Time { return time.Now().UTC() }
+func SystemClock() time.Time { return ambient.Clock(nil).Now().UTC() }
 
 // FormatTime renders an event timestamp.
 func FormatTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }

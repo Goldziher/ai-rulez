@@ -3,6 +3,8 @@ package usage
 import (
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // ServedLoad describes one load through the skills server. Like every usage
@@ -27,7 +29,7 @@ const InvocationMCP = "mcp"
 // served load's own provenance digest is logged under its own scheme. With neither a log path nor a sink command in
 // options nothing is written (the recorder stays off until opted into).
 func RecordServed(load ServedLoad, options RecordOptions) (*Entry, error) {
-	now := time.Now
+	now := ambient.Clock(nil).Now
 	if options.Now != nil {
 		now = options.Now
 	}
