@@ -141,7 +141,7 @@ func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([
 		if !ok || s.Digest != a.Digest {
 			continue
 		}
-		who := signerOf(policy, a, s)
+		who := policy.IdentityOf(signerOf(policy, a, s))
 		if a.Assurance == lockfile.AssuranceSigned && strings.HasPrefix(approval.Identity(who), "key:") {
 			note := fmt.Sprintf("the signed approval of %s is by %s, a key that names no author: [governance] forbid_self_approval cannot tell whether the signer wrote the change; sign with a keyless identity", s.Ref(), who)
 			out = append(out, approval.SelfApproval{Approval: a, Ref: s.Ref(), Note: note})

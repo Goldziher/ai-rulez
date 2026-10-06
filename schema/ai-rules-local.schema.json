@@ -3301,6 +3301,10 @@
                 "description": "PEM public key inside the project, instead of an identity.",
                 "type": "string"
               },
+              "reviewer": {
+                "description": "The person a key_file belongs to (an email or github:login), so forbid_self_approval can match approvals signed with the key to commit authors.",
+                "type": "string"
+              },
               "source": {
                 "description": "With subject = skill: the [[skill_sources]] or [[installed_skills]] name this publisher may sign for.",
                 "type": "string"

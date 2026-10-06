@@ -112,7 +112,10 @@ key_file = "keys/release.pub"
 - `identity` and `issuer` are matched **exactly** against the certificate's subject alternative name and OIDC issuer.
   `identity_regexp` must be anchored with `^` and `$` and is matched against the whole identity; an unanchored pattern
   is rejected at load time (`AR722`). An identity entry always needs an `issuer`.
-- A key entry trusts a PEM public key (`key_file`), matched by its SHA-256 fingerprint.
+- A key entry trusts a PEM public key (`key_file`), matched by its SHA-256 fingerprint. `reviewer = "alice@example.org"`
+  (or `github:alice`) names the person the key belongs to: `[governance] forbid_self_approval` then compares that
+  identity with commit authors for approvals signed with the key, which otherwise cannot be told from anyone
+  ([approvals](approvals.md#approvals-are-assertions)).
 - `subject` scopes an entry to what the signer may vouch for: the `lock` (the default), a plugin `bundle`, a published
   `skill`, an `sbom` or an `approval` (who may sign an [approval](approvals.md#signed-approvals)). A release key trusted
   for the lock does not vouch for a skill or an approval. `source` (skill entries only)

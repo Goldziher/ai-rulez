@@ -28,6 +28,9 @@ type TrustEntry struct {
 	Issuer string
 	// Key trusts signatures by this public key instead of an identity.
 	Key crypto.PublicKey
+	// Reviewer names the person Key belongs to (an email or "github:login"); it
+	// lets approvals signed with the key be matched with commit authors.
+	Reviewer string
 	// ValidFrom and ValidUntil bound the signing time the entry accepts; a zero
 	// bound is open. ValidUntil is inclusive.
 	ValidFrom, ValidUntil time.Time
