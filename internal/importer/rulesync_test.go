@@ -430,7 +430,7 @@ func TestRulesyncPlan_MCPPrecedenceAndInvalid(t *testing.T) {
 	assert.NotNil(t, findingFor(p, StatusUnsupported, ".rulesync/hooks.json", ""))
 }
 
-func TestRulesyncPlan_HooksAndPermissionsAreReportedNotImported(t *testing.T) {
+func TestRulesyncPlan_HooksAndPermissionsAreImported(t *testing.T) {
 	// Arrange
 	files := map[string]string{
 		".rulesync/hooks.jsonc":       `{"version":1,"hooks":{"sessionStart":[{"command":"x"}]},"claudecode":{"hooks":{"preToolUse":[]}}}`,
@@ -441,14 +441,10 @@ func TestRulesyncPlan_HooksAndPermissionsAreReportedNotImported(t *testing.T) {
 	p := rulesyncPlan(t, files)
 
 	// Assert
-	hooks := findingFor(p, StatusNeedsAction, ".rulesync/hooks.jsonc", "hooks")
-	require.NotNil(t, hooks)
-	assert.Contains(t, hooks.Reason, "sessionStart")
-	assert.Contains(t, hooks.Reason, "claudecode:preToolUse")
-	perms := findingFor(p, StatusNeedsAction, ".rulesync/permissions.jsonc", "permissions")
-	require.NotNil(t, perms)
-	assert.Contains(t, perms.Reason, "bash")
-	assert.Contains(t, perms.Reason, "codexcli:approval_policy")
+	require.Len(t, p.Hooks, 1)
+	assert.Equal(t, "SessionStart", p.Hooks[0].Event)
+	assert.Equal(t, []string{"Bash(rm *)"}, p.Permissions.Deny)
+	assert.NotNil(t, findingFor(p, StatusDropped, ".rulesync/permissions.jsonc", "codexcli"))
 }
 
 func TestRulesyncPlan_Config(t *testing.T) {

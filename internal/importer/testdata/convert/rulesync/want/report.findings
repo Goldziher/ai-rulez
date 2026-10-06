@@ -1,4 +1,6 @@
+needs-action | (hooks) | hooks | config.toml | 1 hook group(s) were written as a commented block, not enabled: each runs a command on your machine. Review them, then uncomment or rerun with --enable-hooks
 dropped | (native files) |  |  | CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from .rulesync/ and were not imported; use --from native,rulesync to import both
+needs-action | (permissions) | permissions.allow | config.toml | 1 allow rule(s) were written as a commented block, not enabled: an allow would apply to every harness. Review them, then uncomment or rerun with --enable-permissions
 dropped | .rulesync/.aiignore |  |  | 2 ignore pattern(s) not imported: ignore files are deprecated upstream and ai-rulez has no ignore feature; deny reads with [permissions] instead
 mapped | .rulesync/checks/security.md | check | checks/security.md | 
 mapped | .rulesync/commands/git/commit.md | command | commands/git-commit.md | 
@@ -6,13 +8,15 @@ approximated | .rulesync/commands/git/commit.md | name | commands/git-commit | t
 mapped | .rulesync/commands/review-pr.md | command | commands/review-pr.md | 
 dropped | .rulesync/commands/review-pr.md | copilot |  | tool-specific section is not carried (keys: agent); ai-rulez has no per-tool overrides
 dropped | .rulesync/commands/review-pr.md | roo |  | tool-specific section is not carried (keys: mode); ai-rulez has no per-tool overrides
-needs-action | .rulesync/hooks.jsonc | hooks |  | hooks are not imported yet (afterFileEdit, sessionStart); add [[hooks]] to config.toml by hand and review it (imported hooks are never enabled automatically)
+unsupported | .rulesync/hooks.jsonc | hooks |  | events with no ai-rulez hook event were not imported: afterFileEdit
+mapped | .rulesync/hooks.jsonc | hooks.SessionStart | hooks.SessionStart | 
 dropped | .rulesync/mcp.jsonc | claudecode.mcpServers |  | servers scoped to claudecode (claude-only) are not imported; ai-rulez MCP servers are not scoped per tool, add them by hand if every preset may use them
 mapped | .rulesync/mcp.jsonc | mcpServers.context7 | mcp_servers.context7 | 
 dropped | .rulesync/mcp.jsonc | mcpServers.context7.disabledTools |  | per-tool filtering has no ai-rulez equivalent
 mapped | .rulesync/mcp.jsonc | mcpServers.deepwiki | mcp_servers.deepwiki | 
 approximated | .rulesync/mcp.jsonc | mcpServers.deepwiki.targets |  | per-server targets are not carried; the server is generated for every preset
-needs-action | .rulesync/permissions.jsonc | permissions |  | permissions are not imported yet (bash, read); add [permissions] to config.toml by hand and review it (imported permissions are never enabled automatically)
+mapped | .rulesync/permissions.jsonc | permission.bash | permissions | 
+mapped | .rulesync/permissions.jsonc | permission.read | permissions | 
 approximated | .rulesync/rules/.curated/shared-style.md |  |  | installed from a remote source by `rulesync install`; imported as a local file and no longer tracked
 mapped | .rulesync/rules/.curated/shared-style.md | rule | rules/shared-style.md | 
 dropped | .rulesync/rules/ci/github-actions.md | copilot |  | tool-specific section is not carried (keys: excludeAgent, name); ai-rulez has no per-tool overrides

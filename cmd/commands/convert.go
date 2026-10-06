@@ -37,6 +37,8 @@ var (
 	convertSplitHeadings bool
 	convertList          bool
 	convertAllowFindings []string
+	convertEnableHooks   bool
+	convertEnablePerms   bool
 )
 
 // ConvertCmd converts another tool's configuration into an .ai-rulez/ tree.
@@ -52,9 +54,11 @@ detects something, skills-lock first):
   native        CLAUDE.md, AGENTS.md, GEMINI.md, .cursor/rules, .github/instructions,
                 .kiro/steering, .windsurf, .roo, .clinerules, .qwen, .junie,
                 .agents/skills, skills, agents and commands of every supported preset,
-                and MCP files (.mcp.json, .cursor/mcp.json, .vscode/mcp.json, ...)
+                MCP files (.mcp.json, .cursor/mcp.json, .vscode/mcp.json, ...), and the
+                hooks and permissions of .claude/settings.json, .codex/hooks.json,
+                .gemini/settings.json, .cursor/hooks.json, .cursor/cli.json and .github/hooks
   rulesync      rulesync.jsonc and .rulesync/ (rules, commands, subagents, skills, checks,
-                mcp.jsonc, ignore); hooks and permissions are reported, not yet imported
+                mcp.jsonc, hooks.jsonc, permissions.jsonc, ignore)
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
 
 When a rulesync project is detected, auto skips native: the tool files next to
@@ -67,7 +71,10 @@ An existing config.toml is never replaced, not even with --force: new presets,
 [[mcp_servers]] and [[installed_skills]] are merged into it (existing entries
 win). --into is relative to --source unless absolute, and nothing is written
 through a symlink at or below it. Source files are never modified, and nothing
-is fetched or executed. The converted tree is validated and security-scanned in
+is fetched or executed. Imported hooks never run on their own: they are written
+to config.toml as a commented block, enabled by --enable-hooks (an imported allow
+rule likewise needs --enable-permissions; ask and deny rules are live because they
+only narrow). The converted tree is validated and security-scanned in
 a scratch directory first, and a blocked scan writes nothing. Scan findings name
 the source file and line they came from (the planned .ai-rulez path is added in
 parentheses); --allow-findings CODE lets a code through.
@@ -98,6 +105,8 @@ func init() {
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
 	f.StringSliceVar(&convertAllowFindings, "allow-findings", nil, "Write despite security findings of these codes (for example AR001, a secret in the source); they stay in the report. Discouraged")
+	f.BoolVar(&convertEnableHooks, "enable-hooks", false, "Write imported hooks as live [[hooks]]; without it they are a commented block you review first (a hook runs a command on your machine)")
+	f.BoolVar(&convertEnablePerms, "enable-permissions", false, "Write imported allow rules as live [permissions]; without it they are commented (an allow applies to every harness). Ask and deny rules are always live")
 	f.BoolVar(&convertList, "list", false, "List the importers and what each detects in --source")
 }
 
@@ -147,7 +156,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	report, err := importer.Convert(ctx, importer.ConvertOptions{
 		Source: convertSource, Into: convertInto, From: convertFrom, Domain: convertDomain,
 		Write: write, Force: convertForce, SplitHeadings: convertSplitHeadings, BestEffort: convertBestEffort,
-		AllowFindings: convertAllowFindings,
+		AllowFindings: convertAllowFindings, EnableHooks: convertEnableHooks, EnablePermissions: convertEnablePerms,
 	})
 	if report != nil {
 		if werr := printConvertReport(out, report); werr != nil {

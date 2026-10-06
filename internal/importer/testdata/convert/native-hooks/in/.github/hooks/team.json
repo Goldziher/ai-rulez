@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [{ "type": "command", "bash": "echo done", "timeoutSec": 5 }]
+  }
+}

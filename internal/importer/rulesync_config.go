@@ -277,69 +277,14 @@ func onlyWildcard(v any) bool {
 	return len(l) == 0 || (len(l) == 1 && l[0] == "*")
 }
 
-// importHooksAndPermissions reports hooks.jsonc and permissions.jsonc. Their
-// mapping onto [[hooks]] and [permissions] is a later phase, so they are listed
-// as needing action rather than imported.
+// importHooksAndPermissions reads hooks.jsonc and permissions.jsonc. What they
+// declare lands in the plan as [[hooks]] and [permissions]; convert writes both
+// disabled unless asked (see hooks.go).
 func (b *rulesyncPlanner) importHooksAndPermissions(root string) {
 	if file := b.firstExisting(root, "hooks.jsonc", "hooks.json"); file != "" {
-		b.reportUnmapped(file, "hooks", "[[hooks]]", func(doc map[string]json.RawMessage) []string {
-			return collectKeys(doc, "hooks")
-		})
+		b.importHooks(file)
 	}
 	if file := b.firstExisting(root, "permissions.jsonc", "permissions.json"); file != "" {
-		b.reportUnmapped(file, "permissions", "[permissions]", func(doc map[string]json.RawMessage) []string {
-			return collectKeys(doc, "permission")
-		})
+		b.importPermissions(file)
 	}
-}
-
-func (b *rulesyncPlanner) reportUnmapped(file, what, target string, collect func(map[string]json.RawMessage) []string) {
-	doc, ok := b.readJSONC(file)
-	if !ok {
-		return
-	}
-	entries := collect(doc)
-	detail := "nothing declared"
-	if len(entries) > 0 {
-		detail = strings.Join(entries, ", ")
-	}
-	b.p.add(newFinding(StatusNeedsAction, file, what, "",
-		fmt.Sprintf("%s are not imported yet (%s); add %s to config.toml by hand and review it (imported %s are never enabled automatically)",
-			what, detail, target, what)))
-}
-
-// collectKeys lists the shared entries under key and the entries of each
-// tool-scoped block (`{tool}.{key}`), as "name" and "tool:name".
-func collectKeys(doc map[string]json.RawMessage, key string) []string {
-	var out []string
-	add := func(prefix string, raw json.RawMessage) {
-		var m map[string]json.RawMessage
-		if json.Unmarshal(raw, &m) != nil {
-			return
-		}
-		for k := range m {
-			out = append(out, prefix+k)
-		}
-	}
-	if raw, ok := doc[key]; ok {
-		add("", raw)
-	}
-	for tool, raw := range doc {
-		if tool == key || tool == "$schema" || tool == "version" {
-			continue
-		}
-		var scoped map[string]json.RawMessage
-		if json.Unmarshal(raw, &scoped) == nil {
-			if inner, ok := scoped[key]; ok {
-				add(tool+":", inner)
-			} else if key == "permission" {
-				// permissions.jsonc tool blocks are free-form settings of that tool.
-				for k := range scoped {
-					out = append(out, tool+":"+k)
-				}
-			}
-		}
-	}
-	sort.Strings(out)
-	return out
 }

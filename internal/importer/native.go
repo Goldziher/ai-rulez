@@ -40,6 +40,11 @@ func (nativeImporter) Detect(fsys fs.FS) []string {
 			found = append(found, m.Path)
 		}
 	}
+	for _, f := range nativeSettingsFiles {
+		if _, ok := r.exists(f); ok {
+			found = append(found, f)
+		}
+	}
 	sort.Strings(found)
 	return dedupeStrings(found)
 }
@@ -78,6 +83,9 @@ func (n nativeImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	}
 	importMCP(p, r)
 	importClaudeSettings(p, r)
+	importCursorPermissions(p, r)
+	reportUnmappedPermissions(p, r)
+	importNativeHooks(p, r)
 	r.flushProblems(p)
 
 	for preset := range presetsSeen {

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 )
 
@@ -20,12 +21,14 @@ func resetConvertFlags(t *testing.T, source string) {
 	convertDryRun, convertWrite, convertForce = false, false, false
 	convertReport, convertFormat, convertFailOn = "", "text", nil
 	convertBestEffort, convertSplitHeadings, convertList = false, false, false
+	convertEnableHooks, convertEnablePerms = false, false
 	t.Cleanup(func() { resetConvertFlags2() })
 }
 
 func resetConvertFlags2() {
 	convertFrom, convertSource, convertInto, convertDomain = []string{"auto"}, ".", ".ai-rulez", ""
 	convertDryRun, convertWrite, convertForce, convertReport, convertFormat, convertFailOn = false, false, false, "", "text", nil
+	convertEnableHooks, convertEnablePerms = false, false
 }
 
 func convertProject(t *testing.T) string {
@@ -149,6 +152,47 @@ func TestRunConvert_ForceKeepsExistingConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(cfg), "name = 'mine'")
 	assert.Contains(t, string(cfg), "'codex'")
+}
+
+func TestRunConvert_EnableFlagsDecideWhetherHooksAreLive(t *testing.T) {
+	const settings = `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo done"}]}]},"permissions":{"allow":["Bash(ls)"]}}`
+	tests := []struct {
+		name         string
+		hooks, perms bool
+		wantHooks    int
+		wantAllow    int
+	}{
+		{name: "nothing enabled by default"},
+		{name: "hooks only", hooks: true, wantHooks: 1},
+		{name: "permissions only", perms: true, wantAllow: 1},
+		{name: "both", hooks: true, perms: true, wantHooks: 1, wantAllow: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := convertProject(t)
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".claude"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, ".claude", "settings.json"), []byte(settings), 0o644))
+			resetConvertFlags(t, dir)
+			convertWrite, convertEnableHooks, convertEnablePerms = true, tt.hooks, tt.perms
+
+			// Act
+			code := runConvert(context.Background(), &bytes.Buffer{}, false)
+
+			// Assert
+			require.Equal(t, 0, code)
+			data, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
+			require.NoError(t, err)
+			cfg, err := config.DecodeTOMLConfig(data, "config.toml")
+			require.NoError(t, err)
+			assert.Len(t, cfg.Hooks, tt.wantHooks)
+			allow := 0
+			if cfg.Permissions != nil {
+				allow = len(cfg.Permissions.Allow)
+			}
+			assert.Equal(t, tt.wantAllow, allow)
+		})
+	}
 }
 
 func TestPrintConvertReport_ReportsAFailureToWriteTheFile(t *testing.T) {

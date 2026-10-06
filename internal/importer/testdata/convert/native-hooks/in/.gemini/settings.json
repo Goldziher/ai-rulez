@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [{ "type": "command", "command": "./scripts/check-command.sh", "timeout": 10000 }]
+      }
+    ]
+  },
+  "tools": { "allowed": ["run_shell_command(ls)"] }
+}

@@ -3,24 +3,17 @@
 
 version = '4.0'
 name = 'fixture'
-presets = ['claude', 'codex', 'copilot', 'cursor', 'opencode']
-
-[[mcp_servers]]
-name = 'context7'
-description = 'Library docs'
-command = 'npx'
-args = ['-y', '@upstash/context7-mcp']
-
-[mcp_servers.env]
-CONTEXT7_TOKEN = '${CONTEXT7_TOKEN}'
+presets = ['claude', 'codex', 'copilot', 'opencode', 'takt']
 
 [[mcp_servers]]
 name = 'deepwiki'
 transport = 'http'
 url = 'https://mcp.deepwiki.com/mcp'
 
-[permissions]
-deny = ['Bash(rm *)', 'Read(.env)']
+[[mcp_servers]]
+name = 'rulesync'
+command = 'pnpm'
+args = ['dev', 'mcp']
 
 # Imported by `ai-rulez convert` and DISABLED: review, then uncomment or rerun convert with --enable-hooks / --enable-permissions.
 # Each hook runs a command on your machine; read every command first.
@@ -28,7 +21,4 @@ deny = ['Bash(rm *)', 'Read(.env)']
 # event = 'SessionStart'
 #
 # [[hooks.hooks]]
-# command = 'git pull'
-#
-# Allow rules widen what every harness may do; add them to [permissions] only after review.
-# allow = ['Bash(git status)']
+# command = 'git pull && pnpm i'

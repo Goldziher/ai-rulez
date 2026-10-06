@@ -303,13 +303,14 @@ func TestNativePlan_MCP(t *testing.T) {
 	}
 }
 
-func TestNativePlan_ClaudeSettingsNeedAction(t *testing.T) {
+func TestNativePlan_ClaudeSettingsWithoutHooksOrRulesImportsNothing(t *testing.T) {
 	p := planOf(t, nativeImporter{}, mapFS(map[string]string{
 		"CLAUDE.md":             "x\n",
-		".claude/settings.json": `{"hooks":{"PreToolUse":[]},"permissions":{"allow":[]}}`,
+		".claude/settings.json": `{"hooks":{"PreToolUse":[]},"permissions":{"allow":[]},"model":"opus"}`,
 	}), Options{})
-	assert.NotNil(t, findingFor(p, StatusNeedsAction, ".claude/settings.json", "hooks"))
-	assert.NotNil(t, findingFor(p, StatusNeedsAction, ".claude/settings.json", "permissions"))
+	assert.Empty(t, p.Hooks)
+	assert.True(t, p.Permissions.IsEmpty())
+	assert.NotNil(t, findingFor(p, StatusDropped, ".claude/settings.json", "model"), "other settings keys are reported, not silently ignored")
 }
 
 const lockV1 = `{"version":1,"skills":{

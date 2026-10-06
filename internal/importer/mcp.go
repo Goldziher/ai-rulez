@@ -194,28 +194,3 @@ func stringMap(v any) map[string]string {
 	}
 	return out
 }
-
-// importClaudeSettings reports hooks and permissions in .claude/settings.json:
-// importing them is a later phase and imported hooks are never auto-enabled.
-func importClaudeSettings(p *Plan, r *reader) {
-	const file = ".claude/settings.json"
-	if _, ok := r.exists(file); !ok {
-		return
-	}
-	data, err := r.read(file)
-	if err != nil {
-		p.add(newFinding(StatusDropped, file, "", "", skipReasonOr(err)))
-		return
-	}
-	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(data, &doc); err != nil {
-		p.add(newFinding(StatusDropped, file, "", "", "not valid JSON, so its hooks and permissions were not read: "+err.Error()))
-		return
-	}
-	for _, key := range []string{"hooks", "permissions"} {
-		if _, ok := doc[key]; ok {
-			p.add(newFinding(StatusNeedsAction, file, key, "",
-				"not imported yet; add it to config.toml by hand and review it (imported hooks are never enabled automatically)"))
-		}
-	}
-}

@@ -47,6 +47,11 @@ type ConvertOptions struct {
 	// AllowFindings lists scan codes (for example AR001) whose error findings do
 	// not block the write. They stay in the report, marked allowed.
 	AllowFindings []string
+	// EnableHooks writes imported hooks as live [[hooks]]; without it they are a
+	// commented block. EnablePermissions does the same for imported allow rules
+	// (ask and deny rules are always live, they only narrow).
+	EnableHooks       bool
+	EnablePermissions bool
 }
 
 // Detection is what one importer recognises in a source directory.
@@ -127,12 +132,24 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	for _, imp := range importers {
 		names = append(names, imp.Name())
 	}
-	if len(plan.Items) == 0 && len(plan.MCPServers) == 0 && len(plan.InstalledSkills) == 0 {
+	if plan.empty() {
 		return nil, oops.Hint("Run `ai-rulez convert --list` to see what each importer detects").
 			Errorf("nothing to convert: the selected importers found no importable content in %s", abs)
 	}
 
+	reportDisabled(plan, opts.EnableHooks, opts.EnablePermissions)
+	sortFindings(plan)
+	live, off := splitEnabled(plan, opts.EnableHooks, opts.EnablePermissions)
 	cfg := buildConfig(plan, filepath.Base(abs))
+	cfg.Hooks, cfg.Permissions = live.Hooks, live.Permissions
+	// The staged copy carries every imported hook and rule, live or not, so
+	// validation and the scan cover the commented block too.
+	stage := *cfg
+	stage.Hooks = plan.Hooks
+	if !plan.Permissions.IsEmpty() {
+		all := plan.Permissions
+		stage.Permissions = &all
+	}
 	report := &Report{
 		SchemaVersion: ReportSchemaVersion,
 		Importer:      strings.Join(names, ","),
@@ -149,14 +166,19 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	if err := checkTargets(abs, intoAbs, files); err != nil {
 		return report, err
 	}
-	cfgAction, err := resolveConfig(intoAbs, cfg, plan, report, files)
+	cfgAction, err := resolveConfig(intoAbs, cfg, plan, report, files, &off)
 	if err != nil {
 		return report, err
 	}
+	block, err := off.render()
+	if err != nil {
+		return report, err
+	}
+	cfgAction = appendDisabled(files, block, cfgAction)
 	classify(report, files, intoAbs, opts.Force, cfgAction)
 	report.count()
 
-	if err := checkStaged(ctx, report, files, cfg, scanContext{srcDir: abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings}); err != nil {
+	if err := checkStaged(ctx, report, files, &stage, scanContext{srcDir: abs, origins: origins(plan, opts.Domain), allow: opts.AllowFindings}); err != nil {
 		return nil, err
 	}
 	if report.Security.Blocked || report.Validation.Errors > 0 || !opts.Write {
@@ -368,7 +390,7 @@ var otherConfigNames = []string{"config.yaml", "config.yml", "config.json"}
 // [[installed_skills]] are merged into it (existing entries win), and a config
 // in a V3 format or one that cannot be parsed stops the run. The returned
 // action is the config.toml action, or "" when it is not written.
-func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Report, files map[string][]byte) (string, error) {
+func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Report, files map[string][]byte, off *disabledSet) (string, error) {
 	for _, name := range otherConfigNames {
 		if _, err := os.Lstat(filepath.Join(intoAbs, name)); err != nil {
 			continue
@@ -399,6 +421,7 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 			Wrapf(err, "existing %s cannot be parsed", configTOML)
 	}
 
+	off.withoutExisting(existing)
 	merged, added, notes := mergeConfig(existing, cfg, plan.presetDefaulted)
 	for _, n := range notes {
 		report.Findings = append(report.Findings, newFinding(StatusNeedsAction, configTOML, n.field, "", n.reason))
@@ -480,6 +503,7 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 			notes = append(notes, mergeNote{"installed_skills." + s.Name, "an installed_skills entry named " + s.Name + " already exists and was kept; the imported one differs"})
 		}
 	}
+	added += mergeHooksAndPermissions(merged, add)
 	return merged, added, notes
 }
 
