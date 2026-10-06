@@ -1211,6 +1211,62 @@ List all profiles in the configuration.
 
 ---
 
+### Governance Tools
+
+Four read-only tools expose the roles, lock and catalog surface of the CLI. They never write a file and never use
+the network: remote includes and installed skills resolve from the local cache only, and one that is not cached is
+left out (the result then carries a second text block saying so). Each returns the JSON of the matching CLI command
+with `--format json`, compacted onto one line, so a client can parse either source the same way. They are annotated
+read-only and registered on the authoring server only (not on `--serve-skills`). Mutating lock operations
+(`lock`, `update`) stay CLI-only.
+
+All four take the common parameters `config_file`, `config_dir`, `no_local` and `working_directory`
+(`lock_status` always ignores the machine-local overlay, as `lock --check` does).
+
+| Tool | CLI equivalent | Parameters |
+| --- | --- | --- |
+| `list_roles` | `roles list --format json` | common only |
+| `resolve_role` | `roles resolve <role> --format json` | `role` (required), `limit` |
+| `lock_status` | `lock --check --format json` | `kind` |
+| `catalog` | `catalog --format json` | `kind`, `role`, `limit` |
+
+**Output limits.** `resolve_role` and `catalog` list at most `limit` items (default 200, maximum 1000; a smaller
+value wins). When the list is cut the document gains `"truncated": true` and `"total_items": <matching items>`;
+`totals` and `roles` still describe every item. `list_roles` returns one entry per declared role, and
+`lock_status` one change per differing item; neither is capped.
+
+#### `resolve_role`
+
+What a person holding a role gets: the document of [`roles resolve`](roles.md), with `role.items` capped at `limit`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `role` | string | Role name, as listed by `list_roles` (required) |
+| `limit` | number | Maximum items returned |
+
+#### `lock_status`
+
+The comparison of `ai-rulez.lock` with the authored sources, the generated outputs, the skill sources and the served
+skills ([`lock --check`](lockfile.md)), following `schema/lock-diff.schema.json`. A project without a lock is in
+sync unless `[lock] enforce = true`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `kind` | string | List only the changes of one kind: `include`, `skill`, `source`, `served`, or `content` (authored items and generated outputs). `in_sync` still covers the whole lock |
+
+#### `catalog`
+
+Every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and the lock status
+(see [`catalog`](roles.md#integrating-an-identity-tool-or-ui)).
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `kind` | string | Only items of this kind: `rule`, `skill`, `agent`, `command`, `check` or `context` |
+| `role` | string | Only the items this role keeps; `roles` shrinks to that role |
+| `limit` | number | Maximum items returned |
+
+---
+
 ## Common MCP Workflows
 
 ### Creating a Domain with Rules
