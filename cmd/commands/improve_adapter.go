@@ -46,7 +46,7 @@ var improveAdapterFlags struct {
 // by hand.
 var improveAdapterCmd = &cobra.Command{
 	Use:    "adapter <name>",
-	Short:  "Run a bundled optimizer adapter (internal: started by improve run --with builtin:<name>)",
+	Short:  "Run a bundled optimizer adapter (internal, started by improve run)",
 	Hidden: true,
 	Args:   cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
