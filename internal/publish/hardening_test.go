@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -161,10 +163,10 @@ func TestDistWrite_RefusesSymlinks(t *testing.T) {
 		plant func(t *testing.T, dir, outside string)
 	}{
 		{"artifact leaf is a symlink", func(t *testing.T, dir, outside string) {
-			require.NoError(t, os.Symlink(filepath.Join(outside, "victim"), filepath.Join(dir, LockFile)))
+			testutil.SymlinkOrSkip(t, filepath.Join(outside, "victim"), filepath.Join(dir, LockFile))
 		}},
 		{"emit is a symlinked directory", func(t *testing.T, dir, outside string) {
-			require.NoError(t, os.Symlink(outside, filepath.Join(dir, EmitDir)))
+			testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, EmitDir))
 		}},
 	}
 	for _, tt := range tests {
@@ -213,7 +215,7 @@ func TestDistWrite_RemovalDoesNotFollowSymlinkedDirectories(t *testing.T) {
 	outside := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(outside, "x.json"), []byte("precious"), 0o600))
 	require.NoError(t, os.RemoveAll(filepath.Join(dir, EmitDir)))
-	require.NoError(t, os.Symlink(outside, filepath.Join(dir, EmitDir)))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, EmitDir))
 	next, err := Build(sampleInput()) // no template: emit/x.json is only in the old plan
 
 	// Act
