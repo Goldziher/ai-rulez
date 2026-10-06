@@ -74,6 +74,8 @@ type built struct {
 	sources []*skillsource.Resolved
 	// view is the serve view this build is of (ServeSetup.ViewKey).
 	view string
+	// empty says why nothing is served, when nothing is.
+	empty string
 }
 
 // NewServer builds the catalog and the skills server around it. The caller runs
@@ -110,8 +112,8 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			opts.Baseline = baseline
 		}
 	}
-	if len(first.catalog.Skills()) == 0 {
-		logger.Warn("No skills are served: nothing has delivery served or both, and no skill source is configured (pass --include-static to serve every skill)")
+	if first.empty != "" {
+		logger.Warn(first.empty)
 	}
 	return NewSkillServerWith(st.Version, first.catalog, opts), nil
 }
@@ -217,9 +219,15 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		}
 	}
 
+	if err := st.checkDomains(cfg); err != nil {
+		return nil, err
+	}
 	catalog, err := BuildCatalog(profile, preset, served, st.Filter)
 	if err != nil {
 		return nil, oops.Wrapf(err, "build skill catalog")
+	}
+	if len(catalog.Skills()) == 0 {
+		b.empty = noSkillsMessage(served, st.Filter)
 	}
 	if bo.admit {
 		adm := Admission{Config: cfg, Enforce: cfg.LockEnforced() && !bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
@@ -725,4 +733,55 @@ func (st *ServeSetup) ServedScanReports(ctx context.Context, extras ...ServeSetu
 		}
 	}
 	return out, nil
+}
+
+// checkDomains refuses a --domain that names no domain of the project, as an
+// unknown role or profile is refused: a typo would otherwise serve nothing.
+// "root" names the skills that belong to no domain.
+func (st *ServeSetup) checkDomains(cfg *config.Config) error {
+	for _, d := range st.Filter.Domains {
+		d = strings.TrimSpace(d)
+		if d == "root" {
+			continue
+		}
+		if cfg.Content != nil {
+			if _, ok := cfg.Content.Domains[d]; ok {
+				continue
+			}
+		}
+		return oops.Hint("Use `ai-rulez domain list` for the domains, or `root` for skills in no domain").Errorf("unknown domain %q", d)
+	}
+	return nil
+}
+
+// noSkillsMessage says why a server serves nothing: no skill has delivery served
+// and no source is configured, or the --domain, --allow and --deny filters
+// removed what was served (each filter with how many skills it leaves alone).
+func noSkillsMessage(served []generator.ServedSkill, f SkillFilter) string {
+	if len(served) == 0 {
+		return "No skills are served: nothing has delivery served or both, and no skill source is configured (pass --include-static to serve every skill)"
+	}
+	count := func(only SkillFilter) int {
+		n := 0
+		for i := range served {
+			if only.allows(&served[i]) {
+				n++
+			}
+		}
+		return n
+	}
+	var parts []string
+	if len(f.Domains) > 0 {
+		parts = append(parts, fmt.Sprintf("--domain %s keeps %d", strings.Join(f.Domains, ","), count(SkillFilter{Domains: f.Domains})))
+	}
+	if len(f.Allow) > 0 {
+		parts = append(parts, fmt.Sprintf("--allow %s keeps %d", strings.Join(f.Allow, ","), count(SkillFilter{Allow: f.Allow})))
+	}
+	if len(f.Deny) > 0 {
+		parts = append(parts, fmt.Sprintf("--deny %s leaves %d", strings.Join(f.Deny, ","), count(SkillFilter{Deny: f.Deny})))
+	}
+	if len(parts) == 0 {
+		return fmt.Sprintf("No skills are served: %d skill(s) were rendered but none could be represented (see the warnings above)", len(served))
+	}
+	return fmt.Sprintf("No skills are served: %d skill(s) have delivery served, but the filters removed all of them (%s)", len(served), strings.Join(parts, "; "))
 }
