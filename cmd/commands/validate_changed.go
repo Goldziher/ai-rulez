@@ -50,12 +50,21 @@ func changedRev() string {
 	return ""
 }
 
+// strictOnly words a flag description that only applies in strict mode: validate
+// needs --strict, scan always runs it, so its help must not mention the flag.
+func strictOnly(cmd *cobra.Command, text string) string {
+	if cmd.Name() == "scan" {
+		return strings.ToUpper(text[:1]) + text[1:]
+	}
+	return "With --strict, " + text
+}
+
 func addChangedFlags(cmd *cobra.Command) {
 	f := cmd.Flags()
-	f.StringVar(&validateSince, "since", "", "With --strict, report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree")
+	f.StringVar(&validateSince, "since", "", strictOnly(cmd, "report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree"))
 	f.StringVar(&validateSinceDepth, "since-depth", "1", "With --since or --changed, how many reference hops to follow from the changed files: a number or \"all\" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json)")
 	f.IntVar(&validateSinceMax, "since-max-files", 0, "With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap)")
-	f.BoolVar(&validateChanged, "changed", false, "With --strict, shorthand for --since HEAD: only files with uncommitted or untracked changes")
+	f.BoolVar(&validateChanged, "changed", false, strictOnly(cmd, "shorthand for --since HEAD: only files with uncommitted or untracked changes"))
 }
 
 // narrowToChanged narrows each report to the changed files of its repository.
