@@ -104,6 +104,9 @@ func (x *Exporter) Flush(ctx context.Context) (FlushResult, error) {
 		return result, nil
 	}
 	defer release()
+	// Whatever the caller asked for, the flush ends before its lock can look stale.
+	ctx, cancel := context.WithTimeout(ctx, MaxFlushTimeout)
+	defer cancel()
 	x.Client = x.client() // one transport for every request of this exporter
 
 	events, _, err := x.Spool.Pending()

@@ -40,8 +40,24 @@ func TestResolve_RepoConfigCannotEnableNetworkExport(t *testing.T) {
 	assert.False(t, s.IncludePaths)
 	assert.False(t, s.IncludeSession)
 	assert.Empty(t, s.SaltFile)
-	assert.Equal(t, "mine", s.ServiceName, "harmless keys are honored")
-	assert.ElementsMatch(t, []string{"allow_network", "otlp_endpoint", "headers_env", "include_paths", "include_session", "salt_file"}, s.Ignored)
+	assert.Equal(t, DefaultServiceName, s.ServiceName, "service_name lands on the user's collector data: user scope only")
+	assert.ElementsMatch(t, []string{"allow_network", "otlp_endpoint", "headers_env", "include_paths", "include_session", "salt_file", "service_name"}, s.Ignored)
+}
+
+func TestResolve_ServiceNameIsUserScopeOnly(t *testing.T) {
+	repo := &config.TelemetryConfig{ServiceName: "attacker-chosen"}
+	user := &config.TelemetryConfig{ServiceName: "my-team"}
+
+	fromRepo := Resolve(Layers{Repo: repo, Getenv: env()})
+	assert.Equal(t, DefaultServiceName, fromRepo.ServiceName)
+	assert.Contains(t, fromRepo.Ignored, "service_name")
+
+	fromUser := Resolve(Layers{Repo: repo, User: user, Getenv: env()})
+	assert.Equal(t, "my-team", fromUser.ServiceName)
+	assert.Equal(t, ScopeUser, fromUser.Sources["service_name"])
+
+	fromEnv := Resolve(Layers{Repo: repo, User: user, Getenv: env(EnvServiceName, "from-env")})
+	assert.Equal(t, "from-env", fromEnv.ServiceName)
 }
 
 func TestResolve_UserScopeOptsInAndRepoCannotRedirectIt(t *testing.T) {

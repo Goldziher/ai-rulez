@@ -139,6 +139,9 @@ flush runs at a time. --background is what the hooks start: it is silent and exi
 		if timeout <= 0 {
 			timeout = telemetry.FlushTimeout
 		}
+		if timeout > telemetry.MaxFlushTimeout {
+			return oops.Errorf("--timeout %s exceeds the maximum %s (the flush lock would look stale and be taken over)", timeout, telemetry.MaxFlushTimeout)
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		result, err := p.Exporter.Flush(ctx)
@@ -275,6 +278,6 @@ func init() {
 	telemetryHookCmd.Flags().StringVar(&telFormat, "format", "json", "Output: json (a hooks block) or toml ([[hooks]] groups for config.toml)")
 	telemetryHookCmd.Flags().StringVarP(&telOutput, "output", "o", "", "Write the template to this file instead of stdout")
 	telemetryFlushCmd.Flags().BoolVar(&telBackground, "background", false, "Silent mode used by hooks: exit 0 whatever happens")
-	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s)")
+	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
 	telemetryDoctorCmd.Flags().BoolVarP(&telJSON, "json", "j", false, "Emit the report as JSON")
 }
