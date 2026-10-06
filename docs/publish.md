@@ -108,7 +108,7 @@ packs the planned directory with the real npm when it is installed.
   that is not `https://`. The dry-run plan shows an approximation read from the environment and your user npmrc. A registry
   chosen by the committed `[publish.npm] registry` receives your npm token, so it is refused unless you name it with
   `--confirm-registry URL` (the public registry needs none; a registry from your own npm configuration needs none either). The packed tarball is
-  digested after `npm pack`, checked again before `npm publish` and reported with its digest. npm gets a filtered environment:
+  compared with the package directory as it verified (every entry must be a regular file with the same digest; `package.json` keys must match the plan and carry no scripts), digested after `npm pack`, checked again before `npm publish` and reported with its digest. npm gets a filtered environment:
   the base set plus `NODE_AUTH_TOKEN`, `NPM_TOKEN`, `NPM_CONFIG_*` for the user config, registry and cache, proxy and
   certificate settings. Its output is redacted before it is shown.
 - The signature covers the release archive, not the tarball npm packs, so `require_signature` fails an npm release (`AR9N7`)
