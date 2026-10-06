@@ -150,7 +150,7 @@ func extractDetailedErrors(result *jsonschema.EvaluationResult) []string {
 
 	errors = append(errors, extractNestedErrors(result.ToList(), "")...)
 
-	return deduplicateErrors(errors)
+	return refineMessages(deduplicateErrors(errors))
 }
 
 func formatError(field string, err *jsonschema.EvaluationError, path string) string {
