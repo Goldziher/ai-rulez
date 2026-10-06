@@ -101,13 +101,9 @@ type step struct {
 	path string   // stepWrite, stepRemove, stepAppend
 	data string   // stepWrite, stepAppend
 	dir  string   // stepRun: working directory relative to the project root
-	// unordered sorts the output lines: the command lists a map in random order today.
-	unordered bool
 }
 
 func run(args ...string) step { return step{kind: stepRun, args: args} }
-
-func runSorted(args ...string) step { return step{kind: stepRun, args: args, unordered: true} }
 
 func runEnv(env []string, args ...string) step { return step{kind: stepRun, args: args, env: env} }
 
@@ -192,11 +188,6 @@ func execute(t *testing.T, sc scenario) string {
 			if sc.maskDigests {
 				so, se = hexDigest.ReplaceAllString(so, "<sha256>"), hexDigest.ReplaceAllString(se, "<sha256>")
 			}
-			if st.unordered || slices.Contains(st.args, "--dry-run") {
-				// The dry-run listing walks maps in places (known, tracked in the S0 report);
-				// the set of lines is the contract until that is fixed.
-				so, se = sortLines(so), sortLines(se)
-			}
 			fmt.Fprintf(&out, "\n## step %d: ai-rulez %s\nexit: %d\n--- stdout\n%s--- stderr\n%s", i+1,
 				strings.Join(st.args, " "), exit, so, se)
 		}
@@ -211,15 +202,6 @@ func execute(t *testing.T, sc scenario) string {
 }
 
 var hexDigest = regexp.MustCompile(`[0-9a-f]{64}`)
-
-func sortLines(s string) string {
-	if s == "" {
-		return s
-	}
-	lines := strings.Split(strings.TrimSuffix(s, "\n"), "\n")
-	sort.Strings(lines)
-	return strings.Join(lines, "\n") + "\n"
-}
 
 func expand(sub *strings.Replacer, in []string) []string {
 	out := make([]string, len(in))

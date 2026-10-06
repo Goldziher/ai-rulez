@@ -132,8 +132,8 @@ func otherScenarios() []scenario {
 				runEnv(goldenEnv, "generate", "--yes", "--profile", "full"),
 				runEnv(goldenEnv, "generate", "--yes", "--profile", "nope"),
 				run("list", "rules"),
-				runSorted("domain", "list"),
-				runSorted("profile", "list"),
+				run("domain", "list"),
+				run("profile", "list"),
 			},
 		},
 		scenario{
