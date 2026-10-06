@@ -627,13 +627,22 @@ func (g *Generator) withCatalogSkill(tree *config.ContentTree) (*config.ContentT
 // entry.
 func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, plugin.MemberEntry, error) {
 	memberDir := filepath.Join(g.config.BaseDir, member)
-	memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal(), config.WithResolvers(g.config.Resolve))
-	if err == nil {
-		memberCfg.Diag = g.config.Diag
+	// The member is read the way the root was: through its workspace, host and
+	// registry, within the run's context.
+	loadOpts := []config.LoadOption{
+		config.WithoutLocal(),
+		config.WithResolvers(g.config.Resolve),
+		config.WithHost(g.host()),
+		config.WithRegistry(g.config.Registry),
 	}
+	if g.config.Workspace != nil {
+		loadOpts = append(loadOpts, config.WithWorkspace(g.config.Workspace))
+	}
+	memberCfg, err := config.LoadConfig(g.context(), memberDir, loadOpts...)
 	if err != nil {
 		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
 	}
+	memberCfg.Diag = g.config.Diag
 	if memberCfg.Plugin == nil {
 		return nil, plugin.MemberEntry{}, oops.
 			With("member", member).
