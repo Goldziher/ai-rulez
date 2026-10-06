@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -381,5 +382,36 @@ func TestVerifiersSection(t *testing.T) {
 				assert.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestValidateFileConcurrentUseOfTheCachedSchema(t *testing.T) {
+	// Arrange
+	good := writeTOML(t, "version = \"4.0\"\nname = \"x\"\n")
+	bad := writeTOML(t, "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\n")
+	var wg sync.WaitGroup
+	errs := make([]error, 16)
+
+	// Act
+	for i := range errs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if i%2 == 0 {
+				errs[i] = schema.ValidateFile(good)
+				return
+			}
+			errs[i] = schema.ValidateFile(bad)
+		}()
+	}
+	wg.Wait()
+
+	// Assert
+	for i, err := range errs {
+		if i%2 == 0 {
+			assert.NoError(t, err)
+		} else {
+			assert.Error(t, err)
+		}
 	}
 }
