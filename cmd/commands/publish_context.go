@@ -40,6 +40,7 @@ type publishContext struct {
 	signer    signing.Signer
 	prevLock  []byte
 	prevLabel string
+	top       string
 	repoPath  string
 	ctx       context.Context
 }
@@ -111,6 +112,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 			return nil, err
 		}
 	}
+	pc.top = top
 	pc.prevLock, pc.prevLabel, err = pc.previousLock(top)
 	if err != nil {
 		return nil, err
@@ -167,6 +169,26 @@ func (pc *publishContext) resolveRepo(pluginRepo string) string {
 		return r
 	}
 	return publish.RepoFromURL(pc.src.Remote)
+}
+
+// previousLockFor is the previous lock of one plugin. A single plugin, and any
+// run with --since, share the context's; a multi-plugin release diffs each
+// plugin against the closest earlier tag of that plugin (<name>-v*), or has no
+// changes section when it has none.
+func (pc *publishContext) previousLockFor(spec *pluginSpec) (data []byte, label string) {
+	if !pc.multi || publishSince != "" || pc.top == "" {
+		return pc.prevLock, pc.prevLabel
+	}
+	tag := publish.PreviousTagMatching(pc.ctx, publishRunner, pc.cfg.BaseDir, spec.tag, spec.name+"-v*")
+	if tag == "" {
+		return nil, ""
+	}
+	lockRel := gitutil.RepoRelative(pc.top, lockfile.Path(pc.cfg.ConfigDir))
+	data, ok := gitutil.New(publishRunner).ShowFile(pc.cfg.BaseDir, tag, lockRel)
+	if !ok {
+		return nil, ""
+	}
+	return data, tag
 }
 
 // previousLock reads the lock the release notes diff against: the lock at
@@ -356,9 +378,10 @@ func (pc *publishContext) newInput(spec *pluginSpec) (*publish.Input, error) {
 		Runtimes: spec.runtimes, Files: spec.files, Lock: pc.lockBytes, LockVersion: pc.lock.Version, LockTree: pc.lock.Tree,
 		Source: pc.src.Source, Mtime: pc.mtime, Target: publishTo, Channel: publishChannel,
 		Templates: pc.opts.templates, NPM: pc.opts.npm, SBOM: pc.sbom, Approval: pc.approval,
-		PreviousLock: pc.prevLock, PreviousLabel: pc.prevLabel, PreviousExplicit: publishSince != "", RequireSignature: pc.opts.requireSignature,
+		PreviousExplicit: publishSince != "", RequireSignature: pc.opts.requireSignature,
 		Sign: pc.signCallback(), Repo: pc.repo, Tag: spec.tag,
 	}
+	in.PreviousLock, in.PreviousLabel = pc.previousLockFor(spec)
 	if !pc.multi {
 		in.Emit = pc.emitRequestFor(spec.tag)
 	}

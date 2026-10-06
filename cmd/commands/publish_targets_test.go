@@ -726,6 +726,22 @@ func TestPublish_MultiPluginVerifyNoticesAMissingPluginDirectory(t *testing.T) {
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
 }
 
+func TestPublish_MultiPluginReleaseNotesDiffAgainstThePluginsPreviousTag(t *testing.T) {
+	root := multiProject(t)
+	publishGit(t, root, "tag", "acme-alpha-v1.3.0")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "alpha", "skills", "new-skill", "SKILL.md"),
+		"---\nname: new-skill\ndescription: Use when adding things; not otherwise.\n---\n\n# New\n\nDo it.\n")
+	reconfigure(t, root, publishDomainsConfig)
+
+	_, err := runPublishCapture(t)
+
+	require.NoError(t, err)
+	files := readDist(t, filepath.Join(root, "dist"))
+	assert.Contains(t, files["plugins/acme-alpha/RELEASE_NOTES.md"], "## Changes since acme-alpha-v1.3.0")
+	assert.Contains(t, files["plugins/acme-alpha/RELEASE_NOTES.md"], "new-skill")
+	assert.NotContains(t, files["plugins/acme-beta/RELEASE_NOTES.md"], "Changes since", "beta has no earlier tag")
+}
+
 func TestPublish_MultiPluginOnlySelectsPlugins(t *testing.T) {
 	root := multiProject(t)
 	publishOnly = []string{"acme-beta"}
