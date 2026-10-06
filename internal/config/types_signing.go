@@ -195,7 +195,7 @@ func (c *Config) validateSigning() error {
 		return fail("identity", "use identity and issuer, or key_file, not both; add [[signing.trust]] entries for several signers")
 	}
 	for i, t := range s.Trust {
-		if err := validateSigningTrust(t, s.SigningTLog()); err != nil {
+		if err := validateSigningTrust(t); err != nil {
 			return oops.With("field", fmt.Sprintf("signing.trust[%d]", i)).Wrap(err)
 		}
 	}
@@ -212,7 +212,7 @@ func (c *Config) validateSigning() error {
 	return nil
 }
 
-func validateSigningTrust(t SigningTrust, _ string) error {
+func validateSigningTrust(t SigningTrust) error {
 	if t.Subject != "" && t.Subject != SigningSubjectLock {
 		return fmt.Errorf("invalid subject %q (only %q is supported)", t.Subject, SigningSubjectLock)
 	}

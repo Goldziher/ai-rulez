@@ -22,7 +22,6 @@ import (
 
 var (
 	verifyAttestation     bool
-	verifyAttLock         bool
 	verifyAttFile         string
 	verifyTrustedRoot     string
 	verifyPublicKeys      []string
