@@ -794,11 +794,19 @@ func (s *Server) registerGovernanceTools() {
 	s.addTool(
 		newAnnotatedTool("lock_status", "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only.",
 			common(newSchemaBuilder().
-				Enum("kind", "List only the changes of this kind (default: all); in_sync still covers the whole lock", govview.LockKinds, false)),
+				Enum("kind", "List only the changes of this kind (default: all); in_sync still covers the whole lock", govview.LockKinds, false).
+				String("profile", "Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view", false).
+				String("role", "Compare only this role's outputs and also check the skills it serves, as a view of their own (lock --role)", false).
+				Boolean("include_static", "Also check the view that serves static skills too (lock --include-static)", false).
+				StringArray("sources", "Also check the view with these extra skill sources (lock --source)", false)),
 			readOnlyAnnotations(),
 		),
-		handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File) []contentlock.Change {
-			return DynamicLockChanges(ctx, cfg, lock, s.version)
+		handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
+			extras := make([]ServeSetup, 0, len(views))
+			for _, v := range views {
+				extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+			}
+			return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
 		}),
 	)
 

@@ -26,9 +26,19 @@ import (
 
 const remoteSkippedNote = "remote includes and installed skills resolve from the local cache only: any that is not cached is left out; run `ai-rulez generate` to fetch it"
 
+// LockView is a serve view lock_status checks on top of the default one: the
+// selectors of `lock --role`, `--profile`, `--include-static` and `--source`.
+type LockView struct {
+	Role          string
+	Profile       string
+	IncludeStatic bool
+	Sources       []string
+}
+
 // DynamicLockChanges reports the source and served pin changes for lock_status.
-// It is injected by internal/mcp, which owns the skills server.
-type DynamicLockChanges func(ctx context.Context, cfg *config.Config, lock *lockfile.File) []contentlock.Change
+// It is injected by internal/mcp, which owns the skills server. views is empty
+// unless the call selects a serve view.
+type DynamicLockChanges func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []LockView) []contentlock.Change
 
 // loadOffline loads the project from the local cache only. remoteSkipped is true
 // when an include was not cached and had to be left out.
@@ -117,18 +127,35 @@ func ResolveRoleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 // LockStatusHandler returns the comparison of ai-rulez.lock with the working tree
 // (`lock --check --format json`) without fetching anything. kind narrows the
 // listed changes (see govview.LockKinds); in_sync always covers the whole lock.
+// profile, role, include_static and sources are the selectors of `lock --check`:
+// profile overrides the profile the lock recorded, role limits the role
+// comparison, and together with include_static and sources they select the serve
+// view whose pins are compared.
 func LockStatusHandler(version string, dynamic DynamicLockChanges) func(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
 	return func(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
 		kind := request.GetString("kind", "")
+		profile := request.GetString("profile", "")
+		role := request.GetString("role", "")
+		view := LockView{Role: role, Profile: profile, IncludeStatic: request.GetBool("include_static", false), Sources: request.GetStringSlice("sources", nil)}
+		var views []LockView
+		if view.Role != "" || view.Profile != "" || view.IncludeStatic || len(view.Sources) > 0 {
+			views = []LockView{view}
+		}
+		var only []string
+		if role != "" {
+			only = []string{role}
+		}
 		cfg, skipped, _, err := loadOffline(ctx, request, true)
 		if err != nil {
 			return ToolError(err)
 		}
 		var changes govview.DynamicChanges
 		if dynamic != nil {
-			changes = func(cfg *config.Config, lock *lockfile.File) []contentlock.Change { return dynamic(ctx, cfg, lock) }
+			changes = func(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
+				return dynamic(ctx, cfg, lock, views)
+			}
 		}
-		diff, err := govview.CheckLock(cfg, skipped, "", version, changes)
+		diff, err := govview.CheckLockRoles(cfg, skipped, profile, version, changes, govview.RoleSelection{Only: only})
 		if err != nil {
 			return ToolError(err)
 		}
