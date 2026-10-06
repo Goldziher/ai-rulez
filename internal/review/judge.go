@@ -10,6 +10,7 @@ import (
 	"math/rand/v2"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/samber/oops"
 
@@ -334,6 +335,16 @@ func verdictAt(rank int) string {
 // normSpace collapses every run of whitespace to one space and trims the ends.
 func normSpace(s string) string { return strings.Join(strings.Fields(s), " ") }
 
+// Quote size bounds: a one-character quote is found in any text, and the reply contract asks for at most 20 words.
+const (
+	minQuoteRunes = 8
+	maxQuoteWords = 20
+)
+
+func quoteSized(nq string) bool {
+	return utf8.RuneCountInString(nq) >= minQuoteRunes && len(strings.Fields(nq)) <= maxQuoteWords
+}
+
 // checkEvidence applies the deterministic evidence check to one dimension's answer.
 // Every quote must appear verbatim (whitespace-normalised) in the corpus. Quotes that
 // do not are dropped and counted. A warn or fail left with no valid quote is itself
@@ -351,6 +362,10 @@ func checkEvidence(dv DimVerdict, dim Dimension, corpus []string) (out DimVerdic
 	for _, q := range dv.Evidence {
 		nq := normSpace(q.Quote)
 		if nq == "" {
+			continue
+		}
+		if !quoteSized(nq) {
+			hallucinated++
 			continue
 		}
 		found := false
