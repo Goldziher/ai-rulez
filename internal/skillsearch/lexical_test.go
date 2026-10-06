@@ -93,7 +93,7 @@ func TestStemConflatesInflectionsOfOneWord(t *testing.T) {
 
 func TestStemKeepsDistinctWordsApart(t *testing.T) {
 	t.Parallel()
-	assert.NotEqual(t, stem("class"), stem("clas"))
+	assert.NotEqual(t, stem("class"), stem("clasp"))
 	assert.Equal(t, "class", stem("class"), "a double s is not a plural")
 	assert.NotEqual(t, stem("image"), stem("migration"))
 	assert.Equal(t, "use", stem("use"), "short words are left alone")

@@ -96,7 +96,7 @@ func endsSibilant(s string) bool {
 }
 
 // dropSilentE removes a final "e" from a word of five letters or more, so "cache"
-// and the "cach" left by "cached" and "caching" agree.
+// and the stem left by "cached" and "caching" agree.
 func dropSilentE(w string) string {
 	if len(w) > 4 && strings.HasSuffix(w, "e") {
 		return w[:len(w)-1]
