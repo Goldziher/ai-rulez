@@ -164,6 +164,11 @@
               "type": "string",
               "pattern": "\\.tar\\.gz\\.sigstore\\.json$"
             },
+            "attestation": {
+              "type": "string",
+              "pattern": "\\.attestation\\.sigstore\\.json$",
+              "description": "A Sigstore bundle holding a signed in-toto statement that binds the plugin name, version and the archive, lock copy and SBOM digests, so a manifest relabelled after signing fails verification."
+            },
             "signer": {
               "type": "object",
               "required": ["kind"],
