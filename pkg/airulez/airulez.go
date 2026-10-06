@@ -40,6 +40,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -64,11 +65,97 @@ type Snapshot = workspace.Snapshot
 // Experimental.
 type MemWorkspace = workspace.Mem
 
-// Runner starts the external commands (git) an operation needs; DenyAll refuses
+// Spec describes one external command a Runner is asked to start.
+//
+// Experimental.
+type Spec struct {
+	// Argv is the command and its arguments.
+	Argv []string
+	// Dir is the working directory; empty means the current directory.
+	Dir string
+	// Env is the complete environment (KEY=VALUE) of the child, unless InheritEnv.
+	Env []string
+	// InheritEnv passes the parent's environment to the child.
+	InheritEnv bool
+	// Stdin is piped to the child; nil connects it to the null device.
+	Stdin []byte
+	// Timeout bounds the run; zero asks for the default.
+	Timeout time.Duration
+	// MaxOutput caps each of stdout and stderr in bytes; zero asks for the default.
+	MaxOutput int64
+}
+
+// Status is the coarse outcome of a command.
+//
+// Experimental.
+type Status string
+
+// Outcomes of a command.
+const (
+	// StatusOK means the command ran and exited with status 0.
+	StatusOK Status = "ok"
+	// StatusExit means the command ran and exited non-zero.
+	StatusExit Status = "exit"
+	// StatusTimeout means the command was killed at its timeout.
+	StatusTimeout Status = "timeout"
+	// StatusUnavailable means the command was not found, or was refused.
+	StatusUnavailable Status = "unavailable"
+	// StatusError means the command could not be started or waited on.
+	StatusError Status = "error"
+)
+
+// Result is what a command produced. A failure is a Status, never a Go error.
+//
+// Experimental.
+type Result struct {
+	Status Status
+	// ExitCode is the exit status, -1 when the command did not exit normally.
+	ExitCode int
+	Stdout   []byte
+	Stderr   []byte
+	// StdoutTruncated and StderrTruncated report output beyond Spec.MaxOutput.
+	StdoutTruncated bool
+	StderrTruncated bool
+	// Timeout is the timeout that applied; Duration how long the run took.
+	Timeout  time.Duration
+	Duration time.Duration
+	// Err is the underlying error for every Status but StatusOK.
+	Err error
+}
+
+// Runner starts the external commands (git) an operation needs. An embedding
+// service implements it to deny, record, sandbox or fake them; DenyAll refuses
 // every one.
 //
 // Experimental.
-type Runner = runner.Runner
+type Runner interface {
+	Run(ctx context.Context, spec Spec) Result
+}
+
+type denyAll struct{}
+
+func (denyAll) Run(_ context.Context, spec Spec) Result {
+	return Result{Status: StatusUnavailable, ExitCode: -1, Err: &runner.DeniedError{Argv: append([]string(nil), spec.Argv...)}}
+}
+
+// runnerAdapter presents a public Runner to the engine.
+type runnerAdapter struct{ r Runner }
+
+func (a runnerAdapter) Run(ctx context.Context, spec runner.Spec) runner.Result {
+	res := a.r.Run(ctx, Spec{Argv: spec.Argv, Dir: spec.Dir, Env: spec.Env, InheritEnv: spec.InheritEnv,
+		Stdin: spec.Stdin, Timeout: spec.Timeout, MaxOutput: spec.MaxOutput})
+	return runner.Result{Status: runner.Status(res.Status), ExitCode: res.ExitCode, Stdout: res.Stdout, Stderr: res.Stderr,
+		StdoutTruncated: res.StdoutTruncated, StderrTruncated: res.StderrTruncated,
+		Timeout: res.Timeout, Duration: res.Duration, Err: res.Err}
+}
+
+// engineRunner is r as the engine's runner; nil stays nil (the real git).
+func engineRunner(r Runner) runner.Runner {
+	if r == nil {
+		return nil
+	}
+	return runnerAdapter{r: r}
+}
 
 // Env is the environment a load may read.
 //
@@ -93,7 +180,7 @@ type Logger = logger.Logger
 // DenyAll is the Runner that refuses every command. It is the default of Options.
 //
 // Experimental.
-var DenyAll Runner = runner.Deny{}
+var DenyAll Runner = denyAll{}
 
 // DirWorkspace returns a Workspace over the directory dir of the real file
 // system. Only such a workspace can be generated to disk.
@@ -115,7 +202,7 @@ func NewMemWorkspace() *MemWorkspace { return workspace.NewMem(virtualRoot()) }
 //
 // Experimental.
 func GitSnapshot(ctx context.Context, repoDir, rev string, r Runner) (Snapshot, error) {
-	return workspace.GitSnapshot(ctx, repoDir, rev, r) //nolint:wrapcheck // already contextual
+	return workspace.GitSnapshot(ctx, repoDir, rev, engineRunner(r)) //nolint:wrapcheck // already contextual
 }
 
 // virtualRoot is a root that names no directory on the disk of this process.
@@ -149,8 +236,11 @@ type Options struct {
 	// GitToken authenticates remote fetches that need one; it goes only to hosts
 	// the fetch code allowlists.
 	GitToken string
-	// WithoutLocal ignores the machine-local overlay and content.
-	WithoutLocal bool
+	// WithLocal reads the machine-local overlay (config.local.toml) and content
+	// (.ai-rulez/local) of the directory. It is off by default: an embedding
+	// service loads untrusted trees, and machine-local files carry the trust of
+	// the machine they were written on.
+	WithLocal bool
 }
 
 // Project is a loaded configuration and its content. Its operations are
@@ -162,6 +252,8 @@ type Project struct {
 	mu   sync.Mutex
 	cfg  *config.Config
 	disk bool
+	// git answers repository questions through the Options.Runner.
+	git gitutil.Git
 }
 
 // Error is returned for the failures a caller is expected to tell apart; the
@@ -175,7 +267,12 @@ type Error struct {
 	Err error
 }
 
-func (e *Error) Error() string { return e.Code + ": " + e.Err.Error() }
+func (e *Error) Error() string {
+	if e.Err == nil {
+		return e.Code
+	}
+	return e.Code + ": " + e.Err.Error()
+}
 func (e *Error) Unwrap() error { return e.Err }
 
 // Error codes.
@@ -184,6 +281,10 @@ const (
 	CodeLoad = "load"
 	// CodePlan is a plan that could not be rendered.
 	CodePlan = "plan"
+	// CodeValidate is a validation that could not run (as opposed to findings).
+	CodeValidate = "validate"
+	// CodeApply is a generate run that failed while applying its plan.
+	CodeApply = "apply"
 	// CodeDiskRequired is a write requested on a workspace that is not a directory.
 	CodeDiskRequired = "disk-required"
 )
@@ -208,7 +309,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	if o.Logger != nil {
 		log = o.Logger
 	}
-	var run runner.Runner = runner.Deny{}
+	var run Runner = DenyAll
 	if o.Runner != nil {
 		run = o.Runner
 	}
@@ -218,10 +319,10 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	}
 	opts := []config.LoadOption{
 		config.WithWorkspace(ws),
-		config.WithHost(ambient.Host{Env: env, Clock: o.Clock, Runner: run, Log: log}),
+		config.WithHost(ambient.Host{Env: env, Clock: o.Clock, Runner: runnerAdapter{r: run}, Log: log}),
 		config.WithRegistry(registry.Default()),
 	}
-	if o.WithoutLocal {
+	if !o.WithLocal {
 		opts = append(opts, config.WithoutLocal())
 	}
 	if o.Remote {
@@ -233,7 +334,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	if err != nil {
 		return nil, &Error{Code: CodeLoad, Err: err}
 	}
-	return &Project{cfg: cfg, disk: disk}, nil
+	return &Project{cfg: cfg, disk: disk, git: gitutil.New(runnerAdapter{r: run})}, nil
 }
 
 // Name is the project name from its configuration.
@@ -257,7 +358,8 @@ func (p *Project) Presets() []string {
 // Experimental.
 type ValidateOptions struct {
 	// Strict also runs the content and security checks (stable AR codes). It
-	// needs a directory workspace inside a git work tree.
+	// needs a directory workspace; git, to index tracked files, runs through
+	// Options.Runner (with the default DenyAll the directory is walked instead).
 	Strict bool
 }
 
@@ -300,13 +402,14 @@ func (p *Project) Validate(_ context.Context, o ValidateOptions) (*Report, error
 	if !p.disk {
 		return nil, &Error{Code: CodeDiskRequired, Err: oops.Wrapf(ErrDiskRequired, "strict validation reads the repository tree")}
 	}
-	tree, err := lint.LoadTree(p.cfg.BaseDir) //nolint:contextcheck // git runs through the Host runner, with no context to pass
+	// git runs through Options.Runner: the default DenyAll indexes by walking the directory.
+	tree, err := lint.LoadTreeWith(p.git, p.cfg.BaseDir, "")
 	if err != nil {
-		return nil, oops.Wrapf(err, "index repository files")
+		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "index repository files")}
 	}
 	lr, err := lint.Run(p.cfg, tree)
 	if err != nil {
-		return nil, oops.Wrapf(err, "run the strict checks")
+		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "run the strict checks")}
 	}
 	for _, f := range lr.Findings {
 		report.Findings = append(report.Findings, Finding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
@@ -472,7 +575,7 @@ func (p *Project) Generate(ctx context.Context, o GenerateOptions) (*GenerateRes
 	}
 	res, err := g.Apply(plan, applier)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
+		return nil, &Error{Code: CodeApply, Err: err}
 	}
 	out := &GenerateResult{Written: res.Written, Lines: res.Lines}
 	for _, d := range res.Drift {
