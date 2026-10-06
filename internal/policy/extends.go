@@ -71,6 +71,32 @@ func (l *loader) expand(layer Layer, ref Ref, stack []string) ([]Layer, Policy, 
 	return out, Merge(parentEff, layer.Policy), nil
 }
 
+// Keys of the switches a policy turns on, with how a Policy answers for each.
+const (
+	switchRequirePinned      = "sources.require_pinned"
+	switchLockEnforce        = "lock.enforce"
+	switchLockIncludeOutputs = "lock.include_outputs"
+	switchTelemetryNetwork   = "telemetry.allow_network"
+	switchLLMNetwork         = "llm.allow_network"
+	switchGuardGenerated     = "guard.generated"
+	switchGovernanceEnforce  = "governance.enforce"
+	switchForbidSelfApproval = "governance.forbid_self_approval"
+	switchHooksAllow         = "hooks.allow"
+)
+
+// switchValues reports, per switch key, whether a policy has the restriction on.
+var switchValues = map[string]func(Policy) bool{
+	switchRequirePinned:      func(p Policy) bool { return p.Sources.RequirePinned },
+	switchLockEnforce:        func(p Policy) bool { return p.Lock.Enforce },
+	switchLockIncludeOutputs: func(p Policy) bool { return p.Lock.IncludeOutputs },
+	switchTelemetryNetwork:   func(p Policy) bool { return p.Telemetry.Disabled },
+	switchLLMNetwork:         func(p Policy) bool { return p.LLM.Disabled },
+	switchGuardGenerated:     func(p Policy) bool { return p.Guard.Generated },
+	switchGovernanceEnforce:  func(p Policy) bool { return p.Governance.Enforce },
+	switchForbidSelfApproval: func(p Policy) bool { return p.Governance.ForbidSelfApproval },
+	switchHooksAllow:         func(p Policy) bool { return p.Hooks.Forbidden },
+}
+
 func displayChain(stack []string) []string {
 	out := make([]string, len(stack))
 	for i, s := range stack {
@@ -116,10 +142,11 @@ func wrapExtendsError(path string, err error) error {
 
 // Loosens lists the keys where child states a value weaker than parent's. It
 // compares only values child states: a key child leaves alone is not a loosening
-// (the fold uses the parent's), and a switch left off cannot be told from one
-// never written, so booleans are not compared. Merge(parent, child) is never
-// weaker than parent on any key, whatever this reports; the report is what lets
-// an author learn that the value they wrote has no effect.
+// (the fold uses the parent's). A switch counts when the child wrote it in the
+// weaker direction (`require_pinned = false`, `allow_network = true`) and the
+// parent turns it on; a switch the child never wrote is not compared. Merge(parent,
+// child) is never weaker than parent on any key, whatever this reports; the
+// report is what lets an author learn that the value they wrote has no effect.
 func Loosens(parent, child Policy) []string {
 	var out []string
 	add := func(key, format string, args ...any) {
@@ -141,6 +168,11 @@ func Loosens(parent, child Policy) []string {
 					add(key, "%q is not in the parent's %s", item, quoteList(p.Items))
 				}
 			}
+		}
+	}
+	for _, key := range child.statedLoose {
+		if on := switchValues[key]; on != nil && on(parent) {
+			add(key, "is written as the weaker value, but the parent turns the restriction on")
 		}
 	}
 	listPatterns("sources.allowed_hosts", parent.Sources.Allowed, child.Sources.Allowed)
