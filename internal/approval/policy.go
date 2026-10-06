@@ -98,6 +98,9 @@ func RemoteServed(source, ref, commit string) bool {
 
 // Policy is the [governance] table in evaluable form.
 type Policy struct {
+	// Floor holds the selectors an organization policy imposes; Exempt never
+	// narrows them.
+	Floor        []string
 	Selectors    []string
 	Exempt       []string
 	MinApprovers int
@@ -115,7 +118,7 @@ func PolicyOf(cfg *config.Config) Policy {
 	g := cfg.Governance
 	p := Policy{
 		Selectors: g.RequireApproval, Exempt: g.Exempt, MinApprovers: g.MinApprovers,
-		Enforce: g.Enforce,
+		Enforce: g.Enforce, Floor: g.PolicyFloor,
 	}
 	for _, a := range g.Approvers {
 		p.Approvers = append(p.Approvers, NormalizeReviewer(a))
@@ -127,7 +130,7 @@ func PolicyOf(cfg *config.Config) Policy {
 }
 
 // Active reports whether the policy requires approval of anything.
-func (p Policy) Active() bool { return len(p.Selectors) > 0 }
+func (p Policy) Active() bool { return len(p.Selectors) > 0 || len(p.Floor) > 0 }
 
 // LockProblem is the AR710 message for a policy that is active and enforced but
 // has no lock, or a lock that pins no content, to approve against; "" when there
@@ -153,14 +156,22 @@ func NormalizeReviewer(r string) string { return strings.ToLower(strings.TrimSpa
 
 func (p Policy) minApprovers() int { return max(p.MinApprovers, 1) }
 
-// Requires reports whether s needs approval under the policy.
+// Requires reports whether s needs approval under the policy: the organization
+// floor always applies; the repository's own selectors apply unless exempt.
 func (p Policy) Requires(s Subject) bool {
+	if selects(p.Floor, s) {
+		return true
+	}
 	for _, ex := range p.Exempt {
 		if globMatch(ex, s.Ref()) {
 			return false
 		}
 	}
-	for _, sel := range p.Selectors {
+	return selects(p.Selectors, s)
+}
+
+func selects(selectors []string, s Subject) bool {
+	for _, sel := range selectors {
 		switch sel {
 		case config.ApprovalSelectorAll:
 			if s.Class != ClassServedLocal {
@@ -215,10 +226,18 @@ func globMatch(pattern, name string) bool {
 	return px == len(pattern)
 }
 
+// NobodyMayApprove is the single "approver" that an organization policy with an
+// empty approvers list leaves: Authorized never accepts anyone then, not even a
+// reviewer string equal to it.
+const NobodyMayApprove = "\x00"
+
 // Authorized reports whether reviewer may approve: any reviewer when no allowlist is set.
 func (p Policy) Authorized(reviewer string) bool {
 	if len(p.Approvers) == 0 {
 		return true
+	}
+	if len(p.Approvers) == 1 && p.Approvers[0] == NobodyMayApprove {
+		return false
 	}
 	reviewer = NormalizeReviewer(reviewer)
 	for _, a := range p.Approvers {

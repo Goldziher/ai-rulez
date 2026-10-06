@@ -52,6 +52,10 @@ func randomPolicy(rng *rand.Rand) Policy {
 	p.Telemetry.Disabled = rng.Intn(3) == 0
 	p.LLM.Disabled = rng.Intn(3) == 0
 	p.Guard.Generated = rng.Intn(3) == 0
+	p.Governance.Enforce = rng.Intn(3) == 0
+	p.Governance.RequireApproval = pick(rng, []string{"remote", "local", "kind:hook", "kind:skill"})
+	p.Governance.MinApprovers = rng.Intn(4)
+	p.Governance.Approvers = randomList(rng, []string{"a@x.org", "b@x.org", "c@x.org"})
 	return p
 }
 
