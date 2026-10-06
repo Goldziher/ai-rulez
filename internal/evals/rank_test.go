@@ -168,3 +168,29 @@ func TestRank_NoUsageLogHasNoJoinClass(t *testing.T) {
 
 	assert.Empty(t, rows[0].Join)
 }
+
+func TestRank_NilUseDigestsJoinsEveryUseAsLegacy(t *testing.T) {
+	store := NewStore()
+	r := rec("a", SkillScore{Scored: 5, PassRate: 1}, "sha256:a", true)
+	r.LockDigest = "sha256:cur"
+	store.Put(r)
+
+	rows := Rank(RankInput{Store: store, Skills: []RankSkill{{ID: "a"}}, Uses: map[string]int{"a": 3}})
+
+	assert.Equal(t, JoinLegacy, rows[0].Join, "no digests were logged: the evidence is not another version's")
+	assert.Equal(t, map[string]int{JoinLegacy: 3}, rows[0].JoinUses)
+}
+
+func TestRank_SkillNotesReachTheRow(t *testing.T) {
+	rows := Rank(RankInput{Store: NewStore(), Skills: []RankSkill{
+		{ID: "a", Notes: []string{"could not digest the skill: boom; staleness was not checked"}},
+		{ID: "b"},
+	}})
+
+	byID := map[string]RankRow{}
+	for _, row := range rows {
+		byID[row.ID] = row
+	}
+	assert.Equal(t, []string{"could not digest the skill: boom; staleness was not checked"}, byID["a"].Notes)
+	assert.Empty(t, byID["b"].Notes)
+}

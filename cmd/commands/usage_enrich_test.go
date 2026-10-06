@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -256,4 +257,22 @@ func TestReportEvals_JoinClasses(t *testing.T) {
 	out.Reset()
 	require.NoError(t, runReportEvals(&out))
 	assert.Contains(t, out.String(), "join stale")
+}
+
+func TestRankSkillFor_RecordsWhatItCouldNotMeasure(t *testing.T) {
+	counter, err := tokens.New("")
+	require.NoError(t, err)
+
+	missing := rankSkillFor("gone", filepath.Join(t.TempDir(), "absent"), counter)
+
+	assert.Len(t, missing.Notes, 2, "an unreadable skill says it has no token count and no digest")
+	assert.Empty(t, missing.Digest)
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: ok\ndescription: d\n---\nBody.\n"), 0o600))
+	ok := rankSkillFor("ok", dir, counter)
+
+	assert.Empty(t, ok.Notes)
+	assert.NotEmpty(t, ok.Digest)
+	assert.Positive(t, ok.SkillTokens)
 }
