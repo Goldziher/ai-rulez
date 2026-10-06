@@ -56,6 +56,9 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 	baseDir := cfg.BaseDir
 	// Check for local override first
 	if skillConf.LocalOverride != "" && !refreshing(lockfile.KindSkill, skillConf.Name) {
+		if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
+			return config.ContentFile{}, err
+		}
 		localDir := resolveSkillLocalOverride(baseDir, skillConf)
 		if localDir != "" {
 			logger.Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
