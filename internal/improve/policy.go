@@ -36,12 +36,18 @@ func DefaultConstraints(origTokens int, allowFrontmatter, allowScripts bool) Con
 // MaxGrowthLimit is the largest max_skill_growth a configuration may ask for.
 const MaxGrowthLimit = 2.0
 
+// EffectiveGrowth is the growth factor ConstraintsFor applies for a configured one.
+func EffectiveGrowth(growth float64) float64 {
+	if growth < 1 || growth > MaxGrowthLimit || math.IsNaN(growth) {
+		return growthFactor
+	}
+	return growth
+}
+
 // ConstraintsFor is DefaultConstraints with an explicit growth factor
 // ([improve] max_skill_growth); a factor outside [1, MaxGrowthLimit] falls back to the default.
 func ConstraintsFor(origTokens int, growth float64, allowFrontmatter, allowScripts bool) Constraints {
-	if growth < 1 || growth > MaxGrowthLimit || math.IsNaN(growth) {
-		growth = growthFactor
-	}
+	growth = EffectiveGrowth(growth)
 	c := Constraints{
 		Editable:             []string{skillFile, "references/**"},
 		FrontmatterImmutable: []string{"name", "allowed-tools", "disable-model-invocation", "model"},
