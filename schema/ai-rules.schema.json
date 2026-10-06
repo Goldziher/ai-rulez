@@ -1095,6 +1095,15 @@
           "minimum": 0,
           "description": "USD per million prompt tokens; overrides the built-in price table."
         },
+        "allow_plain_http": {
+          "type": "boolean",
+          "description": "User scope only. Together with plain_http_hosts, lets an API key be sent over plain http to a listed non-loopback gateway."
+        },
+        "plain_http_hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User scope only. Allow-list (host or host:port) for allow_plain_http."
+        },
         "price_output_per_mtok": {
           "type": "number",
           "minimum": 0,
