@@ -405,6 +405,12 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 
 // validateVersion checks that version is "3.0" or "4.0"
 func (c *Config) validateVersion() error {
+	if c.Version == "" {
+		return oops.
+			With("field", "version").
+			Hint("Add version = \"4.0\" at the top of your config file").
+			Errorf("missing required key: version")
+	}
 	if c.Version != ConfigVersionV3 && c.Version != ConfigVersionV4 {
 		return oops.
 			With("field", "version").
@@ -451,17 +457,38 @@ func (c *Config) validatePresets() error {
 	return nil
 }
 
+// removedPresetHints explains the presets that no longer exist.
+var removedPresetHints = map[string]string{
+	"windsurf":     "The windsurf preset was renamed to devin: use \"devin\" instead",
+	"continue-dev": "The continue-dev preset was removed and has no replacement: drop it from presets",
+}
+
+// removedPresetSuffix names what became of a removed preset, for the error line.
+func removedPresetSuffix(name string) string {
+	switch name {
+	case "windsurf":
+		return " (renamed to devin)"
+	case "continue-dev":
+		return " (removed)"
+	}
+	return ""
+}
+
 // validatePreset validates a single preset
 func (c *Config) validatePreset(preset *Preset, index int) error {
 	// Check if it's a built-in preset
 	if preset.IsBuiltIn() {
 		if !isValidBuiltInPreset(preset.BuiltIn) {
+			hint := fmt.Sprintf("Use a valid built-in preset name\nAvailable presets: %s", getBuiltInPresetNames())
+			if note, removed := removedPresetHints[preset.BuiltIn]; removed {
+				hint = note + "\n" + hint
+			}
 			return oops.
 				With("field", fmt.Sprintf("presets[%d]", index)).
 				With("preset", preset.BuiltIn).
 				With("available_presets", getBuiltInPresetNames()).
-				Hint(fmt.Sprintf("Use a valid built-in preset name\nAvailable presets: %s", getBuiltInPresetNames())).
-				Errorf("unknown built-in preset: %q", preset.BuiltIn)
+				Hint(hint).
+				Errorf("unknown built-in preset: %q%s", preset.BuiltIn, removedPresetSuffix(preset.BuiltIn))
 		}
 		return nil
 	}
