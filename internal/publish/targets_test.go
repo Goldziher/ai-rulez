@@ -327,13 +327,31 @@ func TestBuild_ReleaseNotesWithoutChanges(t *testing.T) {
 	assert.Contains(t, string(d.Files[NotesFile]), "No authored content or remote pin changed.")
 }
 
-func TestBuild_ReleaseNotesRejectAnUnreadablePreviousLock(t *testing.T) {
-	in := committedInput()
-	in.PreviousLock = []byte("not = [toml")
+func TestBuild_ReleaseNotesRejectAnUnreadablePreviousLockOnlyWhenNamed(t *testing.T) {
+	tests := []struct {
+		name     string
+		explicit bool
+		wantErr  bool
+	}{
+		{"named with --since", true, true},
+		{"found as the previous tag", false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := committedInput()
+			in.PreviousLock, in.PreviousLabel, in.PreviousExplicit = []byte("not = [toml"), "v1.3.0", tt.explicit
 
-	_, err := Build(in)
+			d, err := Build(in)
 
-	require.Error(t, err)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err, "a bad lock at an old tag must not block a release")
+			assert.Contains(t, strings.Join(d.Warnings, "\n"), "v1.3.0 cannot be read")
+			assert.NotContains(t, string(d.Files[NotesFile]), "Changes since")
+		})
+	}
 }
 
 func TestRedact(t *testing.T) {

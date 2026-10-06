@@ -356,7 +356,7 @@ func (pc *publishContext) newInput(spec *pluginSpec) (*publish.Input, error) {
 		Runtimes: spec.runtimes, Files: spec.files, Lock: pc.lockBytes, LockVersion: pc.lock.Version, LockTree: pc.lock.Tree,
 		Source: pc.src.Source, Mtime: pc.mtime, Target: publishTo, Channel: publishChannel,
 		Templates: pc.opts.templates, NPM: pc.opts.npm, SBOM: pc.sbom, Approval: pc.approval,
-		PreviousLock: pc.prevLock, PreviousLabel: pc.prevLabel, RequireSignature: pc.opts.requireSignature,
+		PreviousLock: pc.prevLock, PreviousLabel: pc.prevLabel, PreviousExplicit: publishSince != "", RequireSignature: pc.opts.requireSignature,
 		Sign: pc.signCallback(), Repo: pc.repo, Tag: spec.tag,
 	}
 	if !pc.multi {
