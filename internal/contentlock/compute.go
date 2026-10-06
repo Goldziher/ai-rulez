@@ -389,23 +389,12 @@ func (c *collector) collectSettings() error {
 	return nil
 }
 
-// effectiveMCPServers is the set of MCP servers generation uses, as written
-// (placeholders unresolved), by name: the [[mcp_servers]] of the configuration
-// and the servers of a legacy mcp.yaml, mcp.toml or mcp.json that the loader
-// merges in, so editing a legacy file changes the pin too.
+// effectiveMCPServers is config.Config.EffectiveMCPServers (the servers as
+// written, legacy mcp files included, so editing one changes the pin too) in
+// name order. The authored order is not part of the digest: a pin recorded
+// before this ordering stays valid.
 func (c *collector) effectiveMCPServers() []config.MCPServer {
-	servers := append([]config.MCPServer(nil), c.cfg.MCPServersRaw...)
-	seen := map[string]bool{}
-	for i := range servers {
-		seen[servers[i].Name] = true
-	}
-	for name, s := range c.cfg.MCPServers {
-		if s != nil && !seen[name] {
-			clone := s.Clone()
-			clone.Name = name
-			servers = append(servers, clone)
-		}
-	}
+	servers := c.cfg.EffectiveMCPServers()
 	sort.SliceStable(servers, func(i, j int) bool { return servers[i].Name < servers[j].Name })
 	return servers
 }
