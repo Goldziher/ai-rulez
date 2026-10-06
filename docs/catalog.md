@@ -27,6 +27,7 @@ strict superset of the version 1 fields, plus:
 | `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}` when `[governance]` requires approval of the item or the lock records one; see [Approvals](approvals.md) |
 | `items[].eval`, `items[].usage` | with `--with-eval` / `--with-usage`: a skill's recorded eval result and use count, see [Eval and usage](#eval-and-usage) |
 | `mcp_servers` | the project's MCP servers: `ref`, `name`, `transport`, `command_basename`, `enabled`, `profiles`, `pinned` (exact version or digest in a package-runner launch; `null` when not applicable), and the *names* of `env` and `headers` entries, each marked `literal` or with the variable it references (`ref`); `warnings` flags an unpinned launch or a credential written as a literal |
+| `edges` | dependencies between items: `{from, to, kind: "uses"}`, where `from` names the skill `to` in its `skills:` frontmatter (both are item refs); roles are not edges, see `items[].roles` |
 | `lint` | project totals, counts per code, and the findings no item owns |
 | `notes` | why a section is missing or narrowed |
 
@@ -61,6 +62,20 @@ The log names a skill by id only, so the use of two skills that share an id is l
 notes say so). The overview table gains an Eval and a Uses column when any skill has the data; each item page gets
 an Eval and a Usage table.
 
+## Dependency graph
+
+The site has a `graph.html` page: items that name a skill in their `skills:` frontmatter (agents, skills, rules)
+drawn as an SVG, left to right, so an item sits to the left of the skills it uses (longest path layering; roles
+are drawn in a first column with the items they keep). It is a hand-laid, deterministic drawing: integer
+coordinates, no script, no external library, no `url()` references, and the same bytes for the same catalog. Every
+node links to its item page. The same edges are listed in a table below the drawing, which is the accessible
+alternative to the picture.
+
+A name resolves to the skill of the same domain, else to the root skill, else to the only skill of that name. A name
+that matches nothing, or several skills in other domains, is left out and said in `notes`: it is never guessed. A
+dependency loop is drawn dashed and listed. A graph over 150 items is shown as the table only, and role edges are left
+out past 300.
+
 ## Comparing catalogs
 
 ```bash
@@ -71,8 +86,8 @@ ai-rulez catalog diff before.json after.json --exit-code
 
 Prints what was added, removed or changed between two catalogs: items (matched by `ref`; a change lists the fields
 that differ: digest, description, owner, version, path, source, delivery, listing/body/resource tokens, lint status,
-approval status, roles), MCP servers (transport, command, pin status, env and header names), roles, and the lint
-totals. JSON output validates against `schema/catalog-diff.schema.json`.
+approval status, roles), MCP servers (transport, command, pin status, env and header names), roles, dependency edges
+and the lint totals. JSON output validates against `schema/catalog-diff.schema.json`.
 
 Each argument is a catalog JSON file (`catalog --format json --schema-version 2`, or a site's `catalog.json`;
 a `schema_version` other than 2 is refused) or a git revision. A revision is read without touching the working
@@ -94,7 +109,7 @@ ai-rulez catalog --html site/ --role backend --clean
 ```
 
 Writes a directory with an overview (search by name, domain, owner, kind and lint status), one page per item and
-per role, the MCP servers, the lock status, the lint findings, an About page, `catalog.json` (the version 2 document the pages are
+per role, the MCP servers, the dependency graph, the lock status, the lint findings, an About page, `catalog.json` (the version 2 document the pages are
 rendered from), `assets/catalog.css`, `assets/catalog.js` and `robots.txt`.
 
 - **Offline.** All links are relative, so the site works from `file://` and under any URL path. Nothing is fetched:
