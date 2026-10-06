@@ -52,7 +52,7 @@ ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0
 ```
 
 Use it to see whether a change to a skill description or to the ranker helped, and to gate a pull request on it.
-`--eval` takes the queries from the file; it does not accept a query argument. `--k` overrides the file's cut-off.
+`--eval` takes the queries from the file; it does not accept a query argument. `--k` overrides the file's cut-off; a value above 100 is an error, not clamped.
 
 ## Cases file
 
@@ -79,7 +79,8 @@ Per run: `top1` (a relevant skill is first), `recall_at_k` (relevant skills in t
 `hit_at_k` (any relevant skill in the top k) and `mrr` (1 over the rank of the first relevant skill, 0 if
 none), overall and per tag. Negative cases are left out of the metrics and listed with the skill that ranked first
 and its score. A 95% bootstrap interval (1000 resamples, fixed seed) is printed for `top1`, `recall_at_k` and `mrr`;
-it is never gated on.
+it is never gated on. The text output prints the overall metrics with the intervals, then a `by tag:` section and a
+`negatives` section (each negative case with the skill that ranked first).
 
 `--format json` prints [`search-eval.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/search-eval.v1.schema.json),
 which is also what `--out` writes and a later `--baseline` reads. Each case records `rank` (null when not
