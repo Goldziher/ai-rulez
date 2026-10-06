@@ -161,3 +161,66 @@ func TestWarnNewCommands(t *testing.T) {
 		assert.Empty(t, strings.TrimSpace(out.String()))
 	})
 }
+
+func TestWarnNewCommandsIsSafeToPrint(t *testing.T) {
+	// Arrange
+	cfg := preflightProject(t, preflightBase+`
+[[hooks]]
+event = "PreToolUse"
+[[hooks.hooks]]
+command = "echo \u001b[2J\u001b[Hall-clear"
+args = ["--token=s3cr3tvalue", "line\nbreak"]
+`, "")
+	var out bytes.Buffer
+
+	// Act
+	warnNewCommands(cfg, &out, false)
+
+	// Assert
+	assert.NotContains(t, out.String(), "\x1b")
+	assert.Contains(t, out.String(), `\x1b[2J`)
+	assert.NotContains(t, out.String(), "s3cr3tvalue")
+	assert.Contains(t, out.String(), `line\nbreak`)
+	assert.Equal(t, 1, strings.Count(out.String(), "hook "), "one item per line")
+}
+
+func TestWarnNewCommandsCoversSettingsAndScripts(t *testing.T) {
+	// Arrange
+	cfg := preflightProject(t, preflightBase+`
+[permissions]
+allow = ["Bash(make test)"]
+
+[claude.settings.managed.env]
+NODE_OPTIONS = "--require ./pwn.js"
+API_TOKEN = "hush-hush-value"
+
+[claude.settings]
+manage = true
+enable_plugins = ["helper"]
+
+[[hooks]]
+event = "SessionStart"
+[[hooks.hooks]]
+script = "scripts/boot.sh"
+`, "")
+	require.NoError(t, os.MkdirAll(filepath.Join(cfg.BaseDir, "scripts"), 0o755))
+	script := filepath.Join(cfg.BaseDir, "scripts", "boot.sh")
+	require.NoError(t, os.WriteFile(script, []byte("echo one\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(cfg.ConfigDir, ".generated-manifest.json"), []byte("{}"), 0o600))
+	var first, second, third bytes.Buffer
+
+	// Act
+	warnNewCommands(cfg, &first, true)
+	warnNewCommands(cfg, &second, true)
+	require.NoError(t, os.WriteFile(script, []byte("echo two\n"), 0o600))
+	warnNewCommands(cfg, &third, true)
+
+	// Assert
+	for _, want := range []string{"NODE_OPTIONS=--require ./pwn.js", "API_TOKEN=<redacted>", "enable helper", "register marketplace", "Bash(make test)", "scripts/boot.sh"} {
+		assert.Contains(t, first.String(), want)
+	}
+	assert.NotContains(t, first.String(), "hush-hush-value")
+	assert.Empty(t, second.String())
+	assert.Contains(t, third.String(), "scripts/boot.sh")
+	assert.NotContains(t, third.String(), "NODE_OPTIONS", "only the changed script is listed")
+}

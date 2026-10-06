@@ -95,12 +95,12 @@ self_server = true
 ```
 
 The entry is merged into an existing `.mcp.json`, so hand-authored servers survive, and
-`.claude/settings.json` is not touched. See [Configuration: `mcp`](configuration.md#mcp) for
+`.claude/settings.json` is not touched (Claude Code reads project MCP servers from `.mcp.json` only). See [Configuration: `mcp`](configuration.md#mcp) for
 `self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
 key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
-unless `.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`,
+unless `.mcp.json`, `.gemini/settings.json`, `.agents/settings.json`,
 `opencode.json`, or a scoped variant is gitignored or covered by planned `--gitignore` patterns.
 Secret-bearing values are redacted before source-hash calculation, not from generated MCP config
 files. Any generated file that contains a resolved secret value is written with mode `0600`.
@@ -117,7 +117,9 @@ Set `enabled = false` on an inline `[[mcp_servers]]` entry to skip it in generat
 When enabled, the MCP server provides your AI assistant with access to your configuration and CRUD operations. The server supports:
 
 - **Read Configuration**: Inspect rules, context, skills, profiles, and presets
-- **Generate Outputs**: Programmatically trigger generation of tool-specific files
+- **Generate Outputs**: Programmatically trigger generation of tool-specific files. There is no terminal over MCP, so
+  the hook, MCP, env, plugin and allow-rule commands the run newly wrote are returned as `new_commands` (and written to
+  stderr); an unchanged run omits the field. See [Configuration](configuration.md#checks-generate-runs-before-it-writes)
 - **Validate Configuration**: Check configuration validity and report errors
 - **CRUD Operations**: Create, read, update, and delete domains, rules, context, skills, includes, and profiles
 
@@ -137,7 +139,8 @@ than authors of configuration. It implements the MCP [Skills extension](https://
 (`io.modelcontextprotocol/skills`, SEP-2640, status *Final*, verified 2026-10-04), so a client that
 supports MCP but not a local skills directory can discover and load the skills of a profile with no
 files on disk. The authoring tools (create, update, delete, generate, ...) are **not registered** in
-this mode.
+this mode. It never writes `.claude/settings.json`, so `--role` does not touch the role's `skillOverrides`
+(`generate --role` does, and restores the hand-written values it replaced).
 
 ```bash
 ai-rulez mcp --serve-skills --profile backend
