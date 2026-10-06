@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -288,7 +289,10 @@ func lockWith(items ...lockfile.Item) []byte {
 	return []byte("version = 2\ntree = \"sha256:x\"\n" + func() string {
 		var sb strings.Builder
 		for _, it := range items {
-			sb.WriteString("\n[[item]]\nkind = \"" + it.Kind + "\"\nid = \"" + it.ID + "\"\ndigest = \"" + it.Digest + "\"\n")
+			sb.WriteString("\n[[item]]\nkind = " + strconv.Quote(it.Kind) + "\nid = " + strconv.Quote(it.ID) + "\ndigest = " + strconv.Quote(it.Digest) + "\n")
+			if it.Domain != "" {
+				sb.WriteString("domain = " + strconv.Quote(it.Domain) + "\n")
+			}
 		}
 		return sb.String()
 	}())
@@ -315,6 +319,35 @@ func TestBuild_ReleaseNotesListTheLockDiff(t *testing.T) {
 	assert.Contains(t, notes, "### Changed\n\n- skill `deploy` dddddddddddd")
 	assert.Contains(t, notes, "### Removed\n\n- rule `removed`")
 	assert.NotContains(t, notes, strings.Repeat("d", 64), "digests are shortened")
+}
+
+func TestMdCode(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"deploy", "`deploy`"},
+		{"a`b", "``a`b``"},
+		{"`lead", "`` `lead ``"},
+		{"two\nlines", "`two lines`"},
+		{"x\u202Ey", "`xy`"},
+		{"[click](https://evil.example)", "`[click](https://evil.example)`"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			assert.Equal(t, tt.want, mdCode(tt.in))
+		})
+	}
+}
+
+func TestBuild_ReleaseNotesQuoteUntrustedIDsAndDomains(t *testing.T) {
+	in := committedInput()
+	in.Lock = lockWith(lockfile.Item{Kind: "skill", Domain: "ev`il\n# Heading", ID: "x`](http://evil.example)", Digest: "sha256:" + strings.Repeat("d", 64)})
+	in.PreviousLock, in.PreviousLabel = lockWith(), "v1.3.0"
+
+	d, err := Build(in)
+
+	require.NoError(t, err)
+	notes := string(d.Files[NotesFile])
+	assert.Contains(t, notes, "- skill ``x`](http://evil.example)`` (domain ``ev`il # Heading``) dddddddddddd")
+	assert.NotContains(t, notes, "\n# Heading")
 }
 
 func TestBuild_ReleaseNotesWithoutChanges(t *testing.T) {
