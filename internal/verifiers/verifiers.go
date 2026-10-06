@@ -263,6 +263,23 @@ func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	return rep
 }
 
+// UsesLLM reports whether a Run with opts would evaluate an llm verifier, so a
+// caller builds the model client (and reads the user's [llm] settings) only
+// then. An unreadable selection reports true: Run reports the error itself.
+func UsesLLM(cfg *config.Config, opts Options) bool {
+	specs, problems := LoadSpecs(cfg)
+	selected, err := selectEntries(declaredEntries(cfg, specs), opts, len(problems) > 0)
+	if err != nil {
+		return true
+	}
+	for _, e := range selected {
+		if e.spec != nil && usesLLM(e.spec.Require) {
+			return true
+		}
+	}
+	return false
+}
+
 // declaredEntries lists the flat verifiers of config.toml, then the specs.
 func declaredEntries(cfg *config.Config, specs []Spec) []entry {
 	entries := make([]entry, 0, len(cfg.Verifiers)+len(specs))
