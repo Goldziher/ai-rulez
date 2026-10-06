@@ -135,6 +135,14 @@ func violationOrPlain(w lockfile.Want, err error) error {
 	return oops.Wrapf(err, "%s %q", w.Kind, w.Name)
 }
 
+// RunMode says how a resolution run may behave.
+type RunMode struct {
+	// Refresh: the run may move the pin (`lock`, `update`).
+	Refresh bool
+	// Offline: the network may not be used.
+	Offline bool
+}
+
 // Resolution is the commit and tag a version constraint resolved to.
 type Resolution struct {
 	Commit, Tag, TagObject string
@@ -142,21 +150,21 @@ type Resolution struct {
 
 // resolveConstraint picks the commit of a constraint source that has no usable pin.
 func resolveConstraint(ctx context.Context, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
-	res, err := ResolveVersion(ctx, lock, w, refreshing(w.Kind, w.Name), offline(ctx), func(ctx context.Context) ([]tagresolve.RawTag, error) {
+	res, err := ResolveVersion(ctx, lock, w, RunMode{Refresh: refreshing(w.Kind, w.Name), Offline: offline(ctx)}, func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return ListRemoteTags(ctx, repoURL, token)
 	})
 	return res.Commit, tagInfo{res.Tag, res.TagObject}, err
 }
 
-// ResolveVersion resolves w's constraint against the tags list returns. refresh
-// says the run may move the pin (`lock`, `update`): a pin that still satisfies
+// ResolveVersion resolves w's constraint against the tags list returns. A
+// Refresh run may move the pin (`lock`, `update`): a pin that still satisfies
 // the constraint is then kept, unless Advance selects the source, after
 // checking that its tag was not moved. Offline, only a kept pin resolves.
-func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, refresh, isOffline bool, list func(context.Context) ([]tagresolve.RawTag, error)) (Resolution, error) {
+func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, run RunMode, list func(context.Context) ([]tagresolve.RawTag, error)) (Resolution, error) {
 	entry := lock.Find(w.Kind, w.Name)
 	advance := Advance != nil && Advance(w.Kind, w.Name)
-	keep := refresh && entry.Covers(w) && !advance
-	if isOffline {
+	keep := run.Refresh && entry.Covers(w) && !advance
+	if run.Offline {
 		if keep {
 			return Resolution{entry.Commit, entry.Tag, entry.TagObject}, nil
 		}
