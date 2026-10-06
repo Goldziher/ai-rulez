@@ -29,6 +29,10 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 		out = append(out, lint.DeliveryFinding{Code: lint.CodeDeliveryStaticFallback, Message: fmt.Sprintf(
 			"preset %q has no MCP support, so its served skills (%s) are written as static files for it instead; no stub is generated there", fb.Preset, strings.Join(fb.Skills, ", "))})
 	}
+	for _, preset := range cfg.SourceSkillBlindPresets() {
+		out = append(out, lint.DeliveryFinding{Code: lint.CodeDeliveryStaticFallback, Message: fmt.Sprintf(
+			"preset %q has no MCP support, so the skills of [[skill_sources]] never reach it: they are served only, never written as static files", preset)})
+	}
 	if served {
 		missing, err := generator.NewGenerator(cfg).PresetsMissingStub("")
 		if err != nil {
