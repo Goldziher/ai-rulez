@@ -12,10 +12,9 @@ import (
 //   - item:   one content item (a rule, skill, agent or command) or one config entry
 //   - bundle: a relation between items, or the project as a whole
 //
-// The classification is a lookup table, not a plugin interface: the runner
-// still executes every check, and `validate --analyzer` filters the report.
-// That is enough to select a family in CI and to label SARIF rules; a
-// per-analyzer execution model would be a rewrite of the runner.
+// The classification is an explicit table: every registered code is listed
+// under its analyzer (TestEveryRegisteredCodeHasAnExplicitAnalyzer fails for a
+// code that is not). `validate --analyzer` filters the report by it.
 
 // Analyzer names.
 const (
@@ -28,6 +27,14 @@ const (
 	AnalyzerBudgets      = "budgets"
 	AnalyzerMetadata     = "metadata"
 	AnalyzerPlugin       = "plugin"
+	AnalyzerConfig       = "config"
+	AnalyzerRoles        = "roles"
+	AnalyzerLock         = "lock"
+	AnalyzerDelivery     = "delivery"
+	AnalyzerEvals        = "evals"
+	AnalyzerOKF          = "okf"
+	AnalyzerTraps        = "traps"
+	AnalyzerConvert      = "convert"
 )
 
 // Scopes.
@@ -40,36 +47,73 @@ const (
 // AnalyzerInfo is the classification of one rule.
 type AnalyzerInfo struct{ Name, Scope string }
 
-var analyzerOverrides = map[string]AnalyzerInfo{
-	CodeSecretDetected: {AnalyzerSecurity, ScopeFile}, CodeHiddenCharacters: {AnalyzerSecurity, ScopeFile},
-	CodeCommentInstruction: {AnalyzerSecurity, ScopeFile}, CodeInjectionPhrase: {AnalyzerSecurity, ScopeFile},
-	CodeShellExec: {AnalyzerSecurity, ScopeFile}, CodeShellAccess: {AnalyzerSecurity, ScopeFile},
-	CodeOutboundHost: {AnalyzerSecurity, ScopeFile}, CodeEncodedBlob: {AnalyzerSecurity, ScopeFile},
-	CodeExternalFinding:  {AnalyzerSecurity, ScopeFile},
-	CodeToolBreadth:      {AnalyzerSecurity, ScopeItem},
-	CodeUnpinnedRemote:   {AnalyzerSecurity, ScopeBundle},
-	CodeLinkUnresolved:   {AnalyzerReferences, ScopeFile},
-	CodeAnchorUnresolved: {AnalyzerReferences, ScopeFile},
-	CodePathMissing:      {AnalyzerReferences, ScopeFile}, CodeSkillResourceMissing: {AnalyzerReferences, ScopeFile},
-	CodeReferenceUnknown: {AnalyzerReferences, ScopeFile},
-	CodeHookMissing:      {AnalyzerHooks, ScopeBundle}, CodeHookNotExecutable: {AnalyzerHooks, ScopeBundle},
-	CodeHookSourceMissing: {AnalyzerHooks, ScopeBundle}, CodeHookSourceNotExec: {AnalyzerHooks, ScopeBundle},
-	CodeScriptNotExecutable: {AnalyzerHooks, ScopeItem}, CodePermissionOverbroad: {AnalyzerSecurity, ScopeBundle},
-	CodeMCPCommandNotFound: {AnalyzerMCP, ScopeBundle},
-	CodeDescriptionDup:     {AnalyzerDuplicates, ScopeBundle}, CodeDescriptionNearDup: {AnalyzerDuplicates, ScopeBundle},
-	CodeDuplicateCollapsed: {AnalyzerDuplicates, ScopeBundle},
-	CodeSizeLines:          {AnalyzerBudgets, ScopeItem}, CodeSizeTokens: {AnalyzerBudgets, ScopeItem},
-	CodePluginVersionDrift: {AnalyzerPlugin, ScopeBundle}, CodeEvalsMissing: {AnalyzerPlugin, ScopeItem},
+// analyzerGroup lists the codes of one analyzer with one scope.
+type analyzerGroup struct {
+	name, scope string
+	codes       []string
 }
 
-// SetAnalyzer classifies a rule, overriding the family default. Rule packages
-// call it from an init function next to their registration.
+// analyzerGroups is the classification table. Codes that carry a scope other
+// than the one of their family (a file-level security rule, a bundle-level
+// hook rule) are listed in their own group.
+var analyzerGroups = []analyzerGroup{
+	{AnalyzerSecurity, ScopeFile, []string{
+		"AR001", "AR002", "AR003", "AR004", "AR005", "AR006", "AR008", "AR009", "AR011",
+	}},
+	{AnalyzerSecurity, ScopeItem, []string{
+		"AR007", "AR012", "AR013", "AR014", "AR015", "AR016", "AR017", "AR018", "AR019", "AR020", "AR021", "AR022",
+		"AR023", "AR024", "AR025", "AR026", "AR027", "AR028", "AR029", "AR030", "AR031", "AR032", "AR033", "AR034",
+	}},
+	// Project-level security: supply chain, permissions, scanner egress and
+	// the trust rule of the user-only [llm] and [telemetry] keys.
+	{AnalyzerSecurity, ScopeBundle, []string{
+		"AR010", "AR506", "AR9E0", "AR9E1", "AR9E2", "AR9E3", "AR9E4", "AR9K1", "AR9L1",
+	}},
+	{AnalyzerReferences, ScopeFile, []string{"AR201", "AR202", "AR301", "AR401", "AR402"}},
+	{AnalyzerReferences, ScopeItem, []string{"AR101", "AR210", "AR302", "AR303", "AR304", "AR305", "AR403"}},
+	{AnalyzerHooks, ScopeBundle, []string{"AR501", "AR502", "AR504", "AR505"}},
+	{AnalyzerHooks, ScopeItem, []string{"AR503", "AR507"}},
+	{AnalyzerMCP, ScopeBundle, []string{"AR601"}},
+	{AnalyzerMCP, ScopeItem, []string{"AR602"}},
+	{AnalyzerDuplicates, ScopeBundle, []string{"AR701", "AR702", "AR703"}},
+	{AnalyzerDescriptions, ScopeItem, []string{"AR801", "AR802", "AR803", "AR804", "AR805"}},
+	{AnalyzerBudgets, ScopeItem, []string{"AR901", "AR902"}},
+	{AnalyzerMetadata, ScopeItem, []string{"AR951", "AR952", "AR953", "AR954"}},
+	{AnalyzerPlugin, ScopeBundle, []string{"AR961"}},
+	{AnalyzerPlugin, ScopeItem, []string{"AR962", "AR963", "AR964"}},
+	{AnalyzerRoles, ScopeItem, []string{"AR971", "AR972", "AR973"}},
+	// Drift against ai-rulez.lock, including the served-skill lock.
+	{AnalyzerLock, ScopeBundle, []string{"AR981", "AR982", "AR995"}},
+	{AnalyzerDelivery, ScopeItem, []string{"AR989", "AR990", "AR991", "AR992", "AR993", "AR994"}},
+	{AnalyzerEvals, ScopeItem, []string{"AR996", "AR997", "AR998", "AR9A0"}},
+	{AnalyzerOKF, ScopeItem, []string{"AR9B0", "AR9B1", "AR9B2", "AR9B3", "AR9B4", "AR9B5", "AR9B6", "AR9B7", "AR9B8", "AR9B9"}},
+	{AnalyzerTraps, ScopeFile, []string{"AR9C1", "AR9C2", "AR9C3", "AR9C4"}},
+	// Invalid [telemetry] and [llm] tables.
+	{AnalyzerConfig, ScopeBundle, []string{"AR9K0", "AR9L0"}},
+	{AnalyzerConvert, ScopeItem, []string{"AR9F0", "AR9F1", "AR9F2", "AR9F3", "AR9F4", "AR9F5"}},
+}
+
+var analyzerOverrides = buildAnalyzerTable()
+
+func buildAnalyzerTable() map[string]AnalyzerInfo {
+	table := map[string]AnalyzerInfo{}
+	for _, g := range analyzerGroups {
+		for _, code := range g.codes {
+			table[code] = AnalyzerInfo{g.name, g.scope}
+		}
+	}
+	return table
+}
+
+// SetAnalyzer classifies a rule that is not in the table above. Rule packages
+// may call it from an init function next to their registration.
 func SetAnalyzer(code, analyzer, scope string) {
 	analyzerOverrides[code] = AnalyzerInfo{Name: analyzer, Scope: scope}
 }
 
-// AnalyzerFor returns the analyzer and scope of a rule code. Codes without an
-// explicit entry fall back on their family (the hundreds digit).
+// AnalyzerFor returns the analyzer and scope of a rule code. Only codes that
+// are not registered fall back on their family (the hundreds digit): every
+// registered code has an explicit entry.
 func AnalyzerFor(code string) AnalyzerInfo {
 	if a, ok := analyzerOverrides[code]; ok {
 		return a
