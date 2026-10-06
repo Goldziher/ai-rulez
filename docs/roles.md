@@ -150,9 +150,10 @@ For every skill the role keeps and gives a mode, `generate` writes `skillOverrid
 `.claude/settings.json` (or `~/.claude/settings.json` with `--user`) through the same per-key ownership as
 [`[claude.settings.managed]`](settings.md): only the listed skill ids are owned, every skill id the role does not
 list is left alone, `clean` takes back exactly what was recorded, and a second run changes nothing. A skill id the
-role lists is the role's: if you had written a different value for it by hand, `generate --role` replaces it, and
-when the role no longer lists the skill the key is removed, not restored to your value. Write such a setting in
-`[claude.settings.managed] skill_overrides` instead. Switching from one role
+role lists is the role's while the role renders. If you had written a different value for it by hand,
+`generate --role` warns, replaces it, and remembers yours in `<config dir>/local/.role-skill-overrides.json`
+(machine-local, always gitignored); a plain `generate`, or a role that no longer lists the skill, puts your value
+back. A value you changed after the role wrote it is yours and is left alone. Switching from one role
 to another removes the first role's entries and writes the second's. A role's modes win over the same skill in
 `[claude.settings.managed] skill_overrides`.
 
@@ -163,11 +164,45 @@ to another removes the first role's entries and writes the second's. A role's mo
 | `user-invocable-only` | hidden from the model; the user can still run it as `/name` |
 | `off` | hidden from the model and the user |
 
-Other harnesses: only Claude Code documents a per-skill invocation state in a settings file. For every other
-configured preset `generate --role` warns, naming the presets, that `skill_mode` was not applied. Nothing is
-approximated: a role that must restrict skills on another harness does it with `include` / `exclude`.
+## `skill_mode` on other harnesses
+
+Only Claude Code has a per-skill settings key. For the other harnesses ai-rulez renders a mode where the vendor
+documents an equivalent and says so where it does not. One content tree is rendered for every preset of the run,
+so a mode is written into the skill's `SKILL.md` frontmatter (or, for Codex, `agents/openai.yaml`) and each harness
+reads what it understands. A key you set in the skill's own frontmatter is never overwritten.
+
+| Preset | `user-invocable-only` | `off` | `name-only` | Source (read 2026-10-06) |
+| --- | --- | --- | --- | --- |
+| `claude` | `skillOverrides` | `skillOverrides` | `skillOverrides` | [Claude Code skills](https://code.claude.com/docs/en/skills) |
+| `cursor` | `disable-model-invocation: true` | no documented setting | no | [Cursor skills](https://cursor.com/docs/context/skills) |
+| `codex` | `agents/openai.yaml` `policy.allow_implicit_invocation: false` | documented (`[[skills.config]] enabled = false`) but needs an absolute path, not rendered | no | [Codex skills](https://developers.openai.com/codex/skills) |
+| `copilot` | `disable-model-invocation: true` | `disable-model-invocation: true` and `user-invocable: false` | no | [VS Code agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills) |
+| `opencode` | no | documented (`permission.skill` = `deny` in `opencode.json`), not rendered | no | [OpenCode skills](https://opencode.ai/docs/skills/) |
+| `gemini` | no | only the `/skills disable` command is documented, no settings key | no | [Gemini CLI skills](https://geminicli.com/docs/cli/skills/) |
+| every other preset | not documented | not documented | not documented | not checked |
+
+`on` is every harness's default. A cell that says "no" or "not documented" means ai-rulez writes nothing for it and
+the skill stays listed on that harness for `user-invocable-only` and `name-only`.
+
+For `off`, a skill is hidden only when every configured preset can hide it. Otherwise `generate --role` follows
+`skill_mode_fallback`:
+
+```toml
+[role_manifest]
+skill_mode_fallback = "drop"   # drop (default) or serve
+```
+
+`drop` leaves the skill out of the role's render; `serve` moves it to [served delivery](#delivery), reachable with
+`find_skill` on harnesses that can call MCP. The setting lives in `[role_manifest]` because TOML cannot use `roles` as
+both an array and a table. Because one tree is rendered, the fallback applies to every harness of the run, Claude Code
+included (its `skillOverrides` entry is then not written for a dropped skill). Each skill and harness that is not
+honoured is named in a warning. `ai-rulez roles resolve <name>` lists them (`skill_modes` in `--format json`), and
+`ai-rulez doctor` reports them.
 
 ## Strict validation
+
+`generate --role <name>` prints the AR971 findings of that role as warnings before it writes anything, so a typo in a
+domain or in an `exclude` entry is not silent.
 
 | Code | Meaning |
 | --- | --- |
