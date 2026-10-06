@@ -74,6 +74,7 @@ rrf_k       = 60
 weights     = { lexical = 1.0, vector = 1.0 }
 candidates  = 50            # per list, before fusion
 query_timeout_ms = 800      # the query embedding; on timeout the ranking is lexical
+batch_size  = 64            # texts per embedding call of `search index`; use 1 for Gemini through literllm
 index_dir   = "local/search"  # under the config dir; any directory outside local/ is meant to be committed
 dtype       = "float32"     # float32 | float16 (half the size)
 log_queries = false         # see Query mining
@@ -103,7 +104,9 @@ Fusion. Each list is cut to `candidates` and the two are combined:
   `a = weights.lexical / (weights.lexical + weights.vector)`. More sensitive to the score distribution.
 
 Ties order by name. A query that contains a skill's exact id as whole words ("use the deploy-staging skill") pins
-that skill first; only exact ids pin, so a keyword-stuffed description gains nothing from it. `vector` mode ranks by
+that skill first. An id that is one ordinary word (`test`, `build`, `fix`) pins only when the query calls it a
+skill ("use the build skill"): without that rule, "write the failing test first" pinned `test` over `tdd-workflow`
+in an evaluation. Only exact ids pin, so a keyword-stuffed description gains nothing from it. `vector` mode ranks by
 cosine alone. A hybrid result always lists the nearest skills even when none is a good match: RRF scores have no
 absolute meaning, so there is no abstention; use negative cases in an evaluation to see how a model behaves.
 
