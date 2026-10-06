@@ -577,6 +577,12 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 		return 0, err
 	}
 
+	// The organization policy applies to every root, not only a single one.
+	if err := policyGate(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		fileCounter.ErrorFor(configPath, err)

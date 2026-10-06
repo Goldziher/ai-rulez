@@ -226,6 +226,11 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	if err := checkLocalIncludes(cfg); err != nil {
 		return nil, err
 	}
+	if !validateStrict { // a strict run reports the attempts as AR74x findings
+		if err := policyGate(cfg); err != nil {
+			return nil, err
+		}
+	}
 	warnWorktreeMarketplace(cfg)
 	return cfg, nil
 }

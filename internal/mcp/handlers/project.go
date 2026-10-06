@@ -569,6 +569,9 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	if err != nil {
 		return nil, err
 	}
+	if err := config.CheckPolicy(cfg); err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
@@ -680,6 +683,12 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 			keyError: redactError(err),
 		}
 		return ToolSuccess(result)
+	}
+	if err := config.CheckPolicy(cfg); err != nil {
+		return ToolSuccess(map[string]interface{}{
+			keyValid: false,
+			keyError: redactError(err),
+		})
 	}
 	if cfg.LocalOverlay != nil {
 		if err := schema.ValidateLocalFile(cfg.LocalOverlay.Path); err != nil {
