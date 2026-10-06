@@ -132,6 +132,9 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 	if len(bytes.TrimSpace(out)) == 0 {
 		return nil, fmt.Errorf("no output")
 	}
+	if name, ok := adapterName(format); ok {
+		return parseAdapter(name, out, exitCode, keepSuppressed)
+	}
 	if strings.EqualFold(format, "json") {
 		var list []externalFinding
 		if err := json.Unmarshal(out, &list); err != nil {
