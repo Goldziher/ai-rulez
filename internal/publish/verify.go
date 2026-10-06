@@ -50,6 +50,7 @@ type VerifyChecks struct {
 	// Signature says whom to trust; with no signer named the signature is not checked.
 	Signature VerifyOptions
 	// RequireSignature turns an unsigned or unverified bundle into a problem.
+	// Naming a trusted signer implies it.
 	RequireSignature bool
 }
 
@@ -69,6 +70,9 @@ func Verify(dir string) (VerifyResult, error) { return VerifyWith(dir, VerifyChe
 
 // VerifyWith is Verify plus the signature checks.
 func VerifyWith(dir string, checks VerifyChecks) (VerifyResult, error) {
+	// Naming a trusted signer asks for a signed release: a stripped signature
+	// must not verify clean.
+	checks.RequireSignature = checks.RequireSignature || checks.Signature.Trusts()
 	res := VerifyResult{Problems: []Problem{}}
 	recorded, ok, err := verifySums(dir, &res)
 	if err != nil || !ok {
