@@ -8,9 +8,14 @@ import (
 )
 
 // baseEnv are the variables every scrubbed environment keeps: enough for a
-// tool to find binaries, a home and temp directory, and a locale.
+// tool to find binaries, a home and temp directory, and a locale. The locale
+// (LANG, LANGUAGE and every LC_*) is kept because the scanners and gh decide
+// their output encoding from it (Python and others pick the stdout codec from
+// LC_ALL/LC_CTYPE/LANG), and the caller parses that output. SHELL and LOGNAME
+// are not kept: no caller needs either (USER covers identity, tools that run a
+// shell use /bin/sh), and SHELL names a program the child could launch.
 var baseEnv = map[string]bool{
-	"PATH": true, "HOME": true, "USER": true, "LOGNAME": true, "SHELL": true, "TMPDIR": true, "TMP": true,
+	"PATH": true, "HOME": true, "USER": true, "TMPDIR": true, "TMP": true,
 	"TEMP": true, "TZ": true, "LANG": true, "LANGUAGE": true,
 	// Windows needs these for a process to start at all.
 	"SYSTEMROOT": true, "WINDIR": true, "COMSPEC": true, "PATHEXT": true, "USERPROFILE": true,
