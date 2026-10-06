@@ -10,7 +10,7 @@ targets:
 
 ## Core Go CLI
 
-- `cmd/main.go`: boots the CLI and injects the version string.
+- `cmd/ai-rulez/main.go`: boots the CLI and injects the version string.
 - `cmd/commands/`: Cobra command implementations (`generate`, `validate`, `migrate`, `mcp`, CRUD helpers).
 - `internal/`: service packages for config loading, generator, templates, includes, CRUD, MCP, validator, logger, and migration.
 
