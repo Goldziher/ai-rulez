@@ -318,15 +318,7 @@ func lintDimension(d Dimension, codes, seenID, seenCode map[string]bool, add fun
 		add(marker, "duplicate dimension id %q", d.ID)
 	}
 	seenID[d.ID] = true
-	if d.Code != "" && (!dimCodeRe.MatchString(d.Code) || !codes[d.Code]) {
-		add(marker, "dimension %q code %q must be one of AR9G1-AR9G7 (the codes review registers)", d.ID, d.Code)
-	}
-	if d.Code != "" && seenCode[d.Code] {
-		add(marker, "dimension %q reuses code %s", d.ID, d.Code)
-	}
-	if d.Code != "" {
-		seenCode[d.Code] = true
-	}
+	lintDimensionCode(d, marker, codes, seenCode, add)
 	if d.Group != GroupIntrinsic && d.Group != GroupContextual {
 		add(marker, "dimension %q group must be %q or %q", d.ID, GroupIntrinsic, GroupContextual)
 	}
@@ -346,6 +338,21 @@ func lintDimension(d Dimension, codes, seenID, seenCode map[string]bool, add fun
 			add(t, "dimension %q twin %q is not a registered lint rule code", d.ID, t)
 		}
 	}
+}
+
+// lintDimensionCode checks a dimension's code on both counts: out of range and
+// reused are independent problems, so a code that is both reports both.
+func lintDimensionCode(d Dimension, marker string, codes, seenCode map[string]bool, add func(string, string, ...any)) {
+	if d.Code == "" {
+		return
+	}
+	if !dimCodeRe.MatchString(d.Code) || !codes[d.Code] {
+		add(marker, "dimension %q code %q must be one of AR9G1-AR9G7 (the codes review registers)", d.ID, d.Code)
+	}
+	if seenCode[d.Code] {
+		add(marker, "dimension %q reuses code %s", d.ID, d.Code)
+	}
+	seenCode[d.Code] = true
 }
 
 func lintGolden(dir string, r *Rubric) ([]Problem, []fileBytes) {
