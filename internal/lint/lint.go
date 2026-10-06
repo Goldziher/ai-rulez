@@ -81,6 +81,8 @@ type Report struct {
 	// ConfigFile is the display path of the configuration file, where the
 	// policy reports a suppression attempt.
 	ConfigFile string `json:"-"`
+	// PolicyWarn is --policy-mode warn: the policy's own findings are warnings.
+	PolicyWarn bool `json:"-"`
 	// Units counts the units (checks and scans) the run executed, by name: the
 	// proof that an analyzer that was not selected did not run.
 	Units map[string]int `json:"-"`
@@ -327,7 +329,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
 		Units: map[string]int{}, unitRuns: r.units}
 	for name, u := range r.units {
 		rep.Units[name] = u.count

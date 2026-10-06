@@ -2317,6 +2317,7 @@ These flags work with all commands:
 | `--config` / `-C`  | string  | Config file path (auto-discovered if not specified)                             |
 | `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 | `--policy`         | string  | [Organization policy](policy.md) file (tighten-only); also `AI_RULEZ_POLICY` and the managed path |
+| `--policy-mode`    | string  | `enforce` (default) or `warn`: with `warn` a repository that loosens the [policy](policy.md) is reported as warnings and the run does not fail; the policy values are still enforced |
 | `--verbose` / `-V` | boolean | Enable verbose output                                                           |
 | `--debug` / `-D`   | boolean | Enable debug output                                                             |
 | `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |

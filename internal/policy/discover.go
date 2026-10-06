@@ -32,7 +32,18 @@ type DiscoverOptions struct {
 	GOOS string
 	// ManagedPaths replaces the managed locations (tests).
 	ManagedPaths []string
+	// Mode is --policy-mode: ModeEnforce (default, "") or ModeWarn.
+	Mode string
 }
+
+// Policy modes (--policy-mode).
+const (
+	ModeEnforce = "enforce"
+	ModeWarn    = "warn"
+)
+
+// ValidMode reports whether mode is a policy mode ("" is the default, enforce).
+func ValidMode(mode string) bool { return mode == "" || mode == ModeEnforce || mode == ModeWarn }
 
 // UnavailableError is a demanded policy that cannot be read (AR742).
 type UnavailableError struct {

@@ -202,6 +202,16 @@ conservative: when it cannot prove that every location the repository pattern ma
 pattern, the answer is no. A false reject is safe; a false accept is not (a fuzz test checks this against a brute-force
 universe).
 
+## Rolling a policy out: `--policy-mode warn`
+
+`--policy-mode warn` lets a policy land before every repository complies. The policy values are still enforced (the
+clamp is unchanged), but each loosening attempt is reported as a warning instead of an error: the `AR74x` findings
+become warnings, `generate` and `validate` log the violations and carry on, `validate --show-policy` exits `0` and
+prints `mode: warn`, and the JSON report has `"mode": "warn"`. Ai-rulez logs a warning at load so the mode is never
+silent. An unavailable or invalid policy (`AR741`-`AR743`) still fails closed, so `warn` can only relax how a
+violation is judged, never whether the policy is loaded. Set it on the trusted side, with the policy itself: a
+repository cannot set it.
+
 ## `validate --show-policy`
 
 ```console

@@ -8,6 +8,10 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },
+    "mode": {
+      "const": "warn",
+      "description": "Present only with --policy-mode warn: violations are warnings and do not fail the run."
+    },
     "layers": {
       "type": "array",
       "description": "Strongest anchor first: flag, env, managed.",

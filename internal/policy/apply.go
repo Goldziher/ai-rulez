@@ -20,6 +20,9 @@ const noHostSentinel = "policy.invalid"
 // Resolved is a policy ready to apply: the folded rules, the layers they came
 // from, and which layer decided each key.
 type Resolved struct {
+	// Warn is --policy-mode warn: violations are reported as warnings; the policy
+	// values are still enforced.
+	Warn       bool
 	Layers     []Layer
 	Policy     Policy
 	Provenance map[string]string
@@ -56,6 +59,7 @@ type applier struct {
 // is simply used.
 func (r *Resolved) Apply(cfg *config.Config) Result {
 	a := &applier{res: r, cfg: cfg, out: &config.PolicyOutcome{
+		Warn:           r.Warn,
 		SeverityFloor:  map[string]string{},
 		RequiredCodes:  append([]string(nil), r.Policy.Lint.RequiredCodes...),
 		NoInlineIgnore: append([]string(nil), r.Policy.Lint.NoInlineIgnore...),

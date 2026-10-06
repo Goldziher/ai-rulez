@@ -30,6 +30,7 @@ type Overrides struct {
 // Report is the machine-readable effective policy (schema/policy-effective.schema.json).
 type Report struct {
 	SchemaVersion int                      `json:"schema_version"`
+	Mode          string                   `json:"mode,omitempty"`
 	Layers        []LayerView              `json:"layers"`
 	Effective     map[string]any           `json:"effective"`
 	Provenance    map[string]string        `json:"provenance"`
@@ -50,6 +51,9 @@ func BuildReport(r *Resolved, res *Result) Report {
 	}
 	if r == nil {
 		return rep
+	}
+	if r.Warn {
+		rep.Mode = ModeWarn
 	}
 	for _, l := range r.Layers {
 		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest})
@@ -196,6 +200,9 @@ func (rep Report) WriteText(w io.Writer) {
 		return
 	}
 	fmt.Fprintf(w, "policy: %d layer%s\n", len(rep.Layers), plural(len(rep.Layers)))
+	if rep.Mode == ModeWarn {
+		fmt.Fprintln(w, "mode: warn (violations are reported as warnings; the policy values are still enforced)")
+	}
 	width := 0
 	for _, l := range rep.Layers {
 		width = max(width, len(l.Source))
