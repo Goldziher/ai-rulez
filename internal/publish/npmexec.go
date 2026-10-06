@@ -23,6 +23,9 @@ type NPMExecuteOptions struct {
 	Dir string
 	// Env is the complete environment of npm, built by the caller (runner.ScrubEnv).
 	Env []string
+	// ConfirmRegistry is the registry URL the operator confirmed. A registry chosen by the committed
+	// [publish.npm] config (other than the public one) is refused unless it equals this.
+	ConfirmRegistry string
 	// Notice receives what the operator should see before the upload (the
 	// effective registry); nil prints nothing.
 	Notice func(msg string)
@@ -117,11 +120,6 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	if err := requireVerifiedDist(abs); err != nil {
 		return nil, err
 	}
-	registry := NPMEffectiveRegistry(*plan.NPM, opts.Env)
-	if !strings.HasPrefix(registry, "https://") {
-		return nil, newError(CodeTarget, ExitFailed, "set [publish.npm] registry to an https URL, or fix the registry in your npm configuration",
-			"the effective npm registry %q is not an https:// URL", registry)
-	}
 	tmp, err := os.MkdirTemp("", "ai-rulez-npm-*")
 	if err != nil {
 		return nil, newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
@@ -131,17 +129,70 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 		os.RemoveAll(tmp) //nolint:errcheck // best effort cleanup of our own directory
 		return nil, err
 	}
-	if opts.Notice != nil {
-		opts.Notice("npm registry: " + registry)
-	}
 	r = runner.Or(r)
-	return &npmSession{
+	sess := &npmSession{
 		plan: plan, abs: abs, tmp: tmp, flags: cfg.flags(*plan.NPM),
 		run: func(argv []string) runner.Result {
 			return r.Run(ctx, runner.Spec{Argv: argv, Dir: tmp, Env: opts.Env, Timeout: uploadTimeout})
 		},
-	}, nil
+	}
+	registry, err := sess.effectiveRegistry()
+	if err == nil {
+		err = checkNPMRegistry(*plan.NPM, registry, opts.ConfirmRegistry)
+	}
+	if err != nil {
+		sess.close()
+		return nil, err
+	}
+	if opts.Notice != nil {
+		opts.Notice("npm registry: " + registry)
+	}
+	return sess, nil
 }
+
+// effectiveRegistry asks npm itself which registry the package goes to, under the same isolated flags the pack,
+// view and publish calls get: environment variables (npm_config_registry, npm_config_@scope:registry, ...), the
+// user's npmrc and the built-in default all count the way npm applies them, which a reimplementation would miss.
+func (s *npmSession) effectiveRegistry() (string, error) {
+	argv := append([]string{"npm", "config", "list", "--json", "-l"}, s.flags...)
+	if s.plan.NPM.Registry != "" {
+		argv = append(argv, "--registry", s.plan.NPM.Registry)
+	}
+	res := s.run(argv)
+	if res.Status != runner.StatusOK {
+		return "", npmFailure("npm config list", res)
+	}
+	var conf map[string]any
+	if err := json.Unmarshal(res.Stdout, &conf); err != nil {
+		return "", newError(CodeTarget, ExitFailed, "", "cannot read the effective npm registry from npm config list: output is not JSON")
+	}
+	scope, _, _ := strings.Cut(s.plan.NPM.Package, "/")
+	for _, key := range []string{scope + ":registry", "registry"} {
+		if v, ok := conf[key].(string); ok && v != "" {
+			return v, nil
+		}
+	}
+	return defaultNPMRegistry, nil
+}
+
+// checkNPMRegistry requires an https registry, and a registry that the committed [publish.npm] config chose
+// (plan.Registry) to be confirmed by value: that registry receives the user's npm token, so a repository must
+// not be able to name one silently. Registries from the user's own npm configuration are theirs and need no
+// confirmation.
+func checkNPMRegistry(p NPMPlan, registry, confirmed string) error {
+	if !strings.HasPrefix(registry, "https://") {
+		return newError(CodeTarget, ExitFailed, "set [publish.npm] registry to an https URL, or fix the registry in your npm configuration",
+			"the effective npm registry %q is not an https:// URL", registry)
+	}
+	if p.Registry != "" && normalizeRegistry(p.Registry) != normalizeRegistry(defaultNPMRegistry) &&
+		normalizeRegistry(confirmed) != normalizeRegistry(p.Registry) {
+		return newError(CodeTarget, ExitFailed, "check the registry, then pass --confirm-registry "+p.Registry,
+			"the committed [publish.npm] config sends your npm credentials to %s: confirm that registry by name", p.Registry)
+	}
+	return nil
+}
+
+func normalizeRegistry(u string) string { return strings.ToLower(strings.TrimRight(strings.TrimSpace(u), "/")) }
 
 // checkFree refuses a version the registry already holds (npm versions are immutable).
 func (s *npmSession) checkFree() error {

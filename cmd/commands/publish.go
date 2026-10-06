@@ -34,6 +34,7 @@ var (
 	publishDryRun       bool
 	publishExecute      bool
 	publishYes          bool
+	publishConfirmReg   string
 	publishForce        bool
 	publishAllowDirty   bool
 	publishMarketplace  bool
@@ -206,6 +207,7 @@ func init() {
 	f.BoolVar(&publishDryRun, "dry-run", false, "Run preflight and print the artifacts and commands without writing or running anything")
 	f.BoolVar(&publishExecute, "execute", false, "Run the upload (needs --to and --yes)")
 	f.BoolVar(&publishYes, "yes", false, "Confirm --execute without a prompt")
+	f.StringVar(&publishConfirmReg, "confirm-registry", "", "With --to npm: the registry URL [publish.npm] names, confirming it may receive your npm credentials (required for a registry other than the public one)")
 	f.BoolVar(&publishForce, "force", false, "With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing")
 	f.BoolVar(&publishAllowDirty, "allow-dirty", false, "Publish from a tree with uncommitted changes or no commit")
 	f.StringArrayVar(&publishTemplates, "template", nil, "Render this text/template into <dist>/emit/ (repeatable)")
@@ -431,7 +433,7 @@ func executeDist(ctx context.Context, d *publish.Dist, dir string) error {
 		})
 	case publish.TargetNPM:
 		result, err = publish.ExecuteNPM(ctx, publishRunner, d.Plan, publish.NPMExecuteOptions{
-			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil), Notice: func(msg string) { logger.Info(msg) },
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil), ConfirmRegistry: publishConfirmReg, Notice: func(msg string) { logger.Info(msg) },
 		})
 	case publish.TargetOCI:
 		result, err = publish.ExecuteOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir, Force: publishForce})
@@ -460,7 +462,7 @@ func checkDist(ctx context.Context, d *publish.Dist, dir string) error {
 		})
 	case publish.TargetNPM:
 		err = publish.CheckNPM(ctx, publishRunner, d.Plan, publish.NPMExecuteOptions{
-			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil),
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil), ConfirmRegistry: publishConfirmReg,
 		})
 	case publish.TargetOCI:
 		_, err = publish.CheckOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir, Force: publishForce})
