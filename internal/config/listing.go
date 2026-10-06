@@ -58,7 +58,7 @@ const ClaudeSkillDescriptionLimit = 1536
 //   - cursor, copilot: the docs describe discovery by name and description
 //     without saying it is a per-request listing; modeled as listed.
 //
-// Presets absent from this table (amp, antigravity, baz, continue-dev, hermes,
+// Presets absent from this table (amp, antigravity, baz, hermes,
 // xum) are not modeled, so their listing cost is reported as zero rather than
 // guessed.
 var builtinListings = map[string]ListingSpec{

@@ -141,3 +141,12 @@ func TestListingFrontmatter(t *testing.T) {
 		})
 	}
 }
+
+func TestListingNotes_DoNotMentionRemovedPresets(t *testing.T) {
+	report := &TokenReport{Runtimes: []RuntimeTokens{{ListedItems: 1}}}
+
+	notes := strings.Join(listingNotes(report), "\n")
+
+	assert.NotEmpty(t, notes)
+	assert.NotContains(t, notes, "continue-dev", "continue-dev was removed in v5")
+}
