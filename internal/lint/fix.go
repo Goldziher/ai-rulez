@@ -302,56 +302,9 @@ func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("stat %s: %w", file, err)
 	}
-	oldLines := strings.Split(string(data), "\n")
-	crlf := strings.Contains(string(data), "\r\n")
-	newAt := append([]string(nil), oldLines...)
-	after := make([][]string, len(oldLines))
-	sort.Slice(edits, func(i, j int) bool { return edits[i].Line < edits[j].Line })
-	applied, wantEOL := 0, false
-	for _, e := range edits {
-		if e.Line < 1 || e.Line > len(newAt) {
-			return "", errStale
-		}
-		idx := e.Line - 1
-		cur, cr := strings.TrimSuffix(newAt[idx], "\r"), ""
-		if strings.HasSuffix(newAt[idx], "\r") {
-			cr = "\r"
-		}
-		switch {
-		case cur == e.Old:
-			if e.New != e.Old {
-				newAt[idx] = e.New + cr
-				applied++
-			}
-		case cur != e.New:
-			return "", errStale
-		}
-		if e.After != "" {
-			lines := strings.Split(e.After, "\n")
-			if !followedBy(oldLines, idx, lines) {
-				after[idx] = lines
-				applied++
-			}
-		}
-		wantEOL = wantEOL || e.FinalNewline
-	}
-	rows := make([]diffRow, 0, len(oldLines)+1)
-	eol := ""
-	if crlf {
-		eol = "\r"
-	}
-	for i, old := range oldLines {
-		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
-		for _, l := range after[i] {
-			rows = append(rows, diffRow{new: l + eol, hasNew: true})
-		}
-	}
-	if last := rows[len(rows)-1]; wantEOL && last.new != "" {
-		if !strings.HasSuffix(last.new, "\r") {
-			rows[len(rows)-1].new += eol
-		}
-		rows = append(rows, diffRow{hasNew: true})
-		applied++
+	rows, applied, err := editRows(string(data), edits)
+	if err != nil {
+		return "", err
 	}
 	if applied == 0 {
 		return "", nil
@@ -368,6 +321,72 @@ func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 		}
 	}
 	return unifiedRowDiff(file, rows), nil
+}
+
+// editRows applies edits to the text of a file and returns the before and after
+// of every line, with the number of changes made (0 when already fixed).
+func editRows(text string, edits []Edit) (rows []diffRow, applied int, err error) {
+	oldLines := strings.Split(text, "\n")
+	newAt := append([]string(nil), oldLines...)
+	after := make([][]string, len(oldLines))
+	sort.Slice(edits, func(i, j int) bool { return edits[i].Line < edits[j].Line })
+	wantEOL := false
+	for _, e := range edits {
+		if e.Line < 1 || e.Line > len(newAt) {
+			return nil, 0, errStale
+		}
+		changed, stale := applyEdit(e, newAt, oldLines, after)
+		if stale {
+			return nil, 0, errStale
+		}
+		applied += changed
+		wantEOL = wantEOL || e.FinalNewline
+	}
+	eol := ""
+	if strings.Contains(text, "\r\n") {
+		eol = "\r"
+	}
+	for i, old := range oldLines {
+		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
+		for _, l := range after[i] {
+			rows = append(rows, diffRow{new: l + eol, hasNew: true})
+		}
+	}
+	if last := rows[len(rows)-1]; wantEOL && last.new != "" {
+		if !strings.HasSuffix(last.new, "\r") {
+			rows[len(rows)-1].new += eol
+		}
+		rows = append(rows, diffRow{hasNew: true})
+		applied++
+	}
+	return rows, applied, nil
+}
+
+// applyEdit applies one edit to newAt (the replaced lines) and after (inserted
+// lines). It returns how many changes it made and whether the file no longer
+// has the line the edit expects.
+func applyEdit(e Edit, newAt, oldLines []string, after [][]string) (changed int, stale bool) {
+	idx := e.Line - 1
+	cur, cr := strings.TrimSuffix(newAt[idx], "\r"), ""
+	if strings.HasSuffix(newAt[idx], "\r") {
+		cr = "\r"
+	}
+	switch {
+	case cur == e.Old:
+		if e.New != e.Old {
+			newAt[idx] = e.New + cr
+			changed++
+		}
+	case cur != e.New:
+		return 0, true
+	}
+	if e.After != "" {
+		if lines := strings.Split(e.After, "\n"); !followedBy(oldLines, idx, lines) {
+			after[idx] = lines
+			changed++
+		}
+	}
+	return changed, false
 }
 
 // followedBy reports whether the lines right after index idx are lines (CRs ignored).
