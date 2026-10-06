@@ -10,10 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 const ruleBody = "# Database\n\n## Migrations\n\nEvery migration needs a down section.\n"
@@ -114,7 +117,7 @@ func TestLoadSpecs_RefusesSymlinkedFile(t *testing.T) {
 	cfg := specProject(t, nil, "")
 	outside := filepath.Join(t.TempDir(), "evil.toml")
 	require.NoError(t, os.WriteFile(outside, []byte("[[verifiers]]\nid = \"x\"\n"), 0o644))
-	require.NoError(t, os.Symlink(outside, filepath.Join(cfg.ConfigDir, VerifiersDirName, "link.toml")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(cfg.ConfigDir, VerifiersDirName, "link.toml"))
 
 	specs, problems := LoadSpecs(cfg)
 

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -87,7 +89,7 @@ func TestSkillSources_NameASymlinkedSkillMdInTheError(t *testing.T) {
 	require.NoError(t, os.MkdirAll(dir, 0o755))
 	target := filepath.Join(root, "real.md")
 	require.NoError(t, os.WriteFile(target, []byte("x"), 0o644))
-	require.NoError(t, os.Symlink(target, filepath.Join(dir, "SKILL.md")))
+	testutil.SymlinkOrSkip(t, target, filepath.Join(dir, "SKILL.md"))
 
 	// Act
 	link := symlinkedMarker(dir)
@@ -104,7 +106,7 @@ func TestResolveInstalledSkill_LocalSymlinkedSkillMdErrorNamesTheLink(t *testing
 	require.NoError(t, os.MkdirAll(dir, 0o755))
 	target := filepath.Join(base, "real.md")
 	require.NoError(t, os.WriteFile(target, []byte("x"), 0o644))
-	require.NoError(t, os.Symlink(target, filepath.Join(dir, "SKILL.md")))
+	testutil.SymlinkOrSkip(t, target, filepath.Join(dir, "SKILL.md"))
 	cfg := &config.Config{BaseDir: base}
 	conf := &config.InstalledSkillConfig{Name: "s", Source: ".", Path: "skills/s"}
 

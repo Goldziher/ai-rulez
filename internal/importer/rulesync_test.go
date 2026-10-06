@@ -8,10 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // rulesyncTargets is the tool-target list of rulesync (src/types/tool-target-tuples.ts of
@@ -567,7 +570,7 @@ func TestRulesyncPlan_SymlinksAreNotFollowed(t *testing.T) {
 	outside := filepath.Join(t.TempDir(), "secret.md")
 	require.NoError(t, os.WriteFile(outside, []byte("outside\n"), 0o644))
 	writeTree(t, dir, map[string]string{".rulesync/rules/ok.md": "Fine.\n"})
-	require.NoError(t, os.Symlink(outside, filepath.Join(dir, ".rulesync", "rules", "link.md")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, ".rulesync", "rules", "link.md"))
 
 	// Act
 	p, err := rulesyncImporter{}.Plan(os.DirFS(dir), Options{})
