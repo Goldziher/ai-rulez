@@ -182,7 +182,7 @@ func init() {
 	f.StringVar(&improveFlags.date, "date", "", "Date recorded in the report (default $"+EvalDateEnv+"; the clock is never read)")
 	f.Float64Var(&improveFlags.priceIn, "price-in", 0, "USD per million input tokens for the estimate (default by model tier)")
 	f.Float64Var(&improveFlags.priceOut, "price-out", 0, "USD per million output tokens for the estimate (default by model tier)")
-	f.StringVar(&improveFlags.adapter, "adapter", "", "Bundled optimizer adapter, the same as --with builtin:NAME (see `improve adapters`)")
+	f.StringVar(&improveFlags.adapter, "adapter", "", "Bundled optimizer adapter, the same as --with builtin:NAME (see improve adapters)")
 	f.BoolVar(&improveFlags.trustRepoOptimizer, "trust-repo-optimizer", false, "Use [improve] optimizer and env_pass from a repository config (they choose a command that runs on your machine)")
 	f.BoolVar(&improveFlags.requireCIAboveZero, "require-ci-above-zero", false, "Also require the 95% bootstrap interval of the held-out gain to exclude zero")
 	f.StringVar(&improveFlags.isolation, "isolation", "", "Confine the optimizer: none (default), auto (when a sandbox backend works) or require (refuse without one)")
