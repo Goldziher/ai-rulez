@@ -124,6 +124,13 @@ type BaselineResult struct {
 	Expired []BaselineEntry `json:"expired,omitempty"`
 }
 
+// analyzerRan reports whether the analyzer of code ran under a selection (nil
+// selection: all). An entry of an analyzer that did not run cannot match
+// anything, so it is not stale.
+func analyzerRan(selection []string, code string) bool {
+	return selection == nil || AnalyzerSelected(selection, AnalyzerFor(code).Name)
+}
+
 // ApplyBaseline marks the findings of r that b accepts. today is a YYYY-MM-DD
 // date supplied by the caller, so the result is deterministic.
 func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
@@ -152,7 +159,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		res.Accepted++
 	}
 	for _, e := range b.Entries {
-		if !matched[e.Fingerprint] {
+		if !matched[e.Fingerprint] && analyzerRan(r.Analyzers, e.Code) {
 			res.Stale = append(res.Stale, e)
 		}
 	}
@@ -160,7 +167,9 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 }
 
 // UpdateBaseline builds the baseline that accepts every finding of r. Entries
-// that still match keep their reason and expiry; stale entries are dropped. A
+// that still match keep their reason and expiry; stale entries are dropped,
+// except the entries of an analyzer that did not run (r.Analyzers), which are
+// kept untouched. A
 // new entry gets reason. It returns an error when an entry for a security rule
 // (AR0xx) would be added without a reason: accepting a security finding must be
 // explained.
@@ -174,6 +183,14 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	out := &Baseline{Version: baselineVersion, Entries: []BaselineEntry{}}
 	seen := map[string]bool{}
 	var unexplained []string
+	if prev != nil {
+		for _, e := range prev.Entries {
+			if !analyzerRan(r.Analyzers, e.Code) {
+				out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
+				seen[e.Fingerprint] = true
+			}
+		}
+	}
 	for i := range r.Findings {
 		f := &r.Findings[i]
 		fp := f.Fingerprint()

@@ -219,3 +219,32 @@ func TestAnalyzerFilter(t *testing.T) {
 	validateAnalyzers = []string{"security"}
 	assert.Error(t, checkStrictFlags(), "--analyzer needs --strict")
 }
+
+func TestAnalyzerRunKeepsBaselineEntriesOfAnalyzersThatDidNotRun(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	basePath := filepath.Join(root, ".ai-rulez", lint.BaselineFile)
+	validateUpdateBaseline = true
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline = false
+	before, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	require.Len(t, before.Entries, 1)
+	require.Equal(t, "AR201", before.Entries[0].Code)
+
+	// Act: a security-only run does not run the references analyzer
+	validateAnalyzers = []string{lint.AnalyzerSecurity}
+	validateStrictBaseline = true
+	strictRun := runStrict(t, root, loadStrictProject(t, root))
+	validateStrictBaseline = false
+	validateUpdateBaseline = true
+	updateRun := runStrict(t, root, loadStrictProject(t, root))
+	validateUpdateBaseline = false
+
+	// Assert
+	assert.Equal(t, 0, strictRun, "an entry of an analyzer that did not run is not stale")
+	assert.Equal(t, 0, updateRun)
+	after, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	assert.Equal(t, before.Entries, after.Entries, "--update-baseline keeps the entry untouched")
+}

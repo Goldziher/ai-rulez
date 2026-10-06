@@ -24,7 +24,7 @@ func init() {
 		RuleInfo{CodeSecretInConfig, "secret-in-env-or-header", SeverityError, "an MCP server env value, header, command-line flag or settings env holds a literal credential instead of a ${VAR} reference"},
 		RuleInfo{CodeMCPConfigInvalid, "mcp-config-invalid", SeverityError, "an MCP server definition is malformed: missing command or url, unknown transport, wrong field types, duplicate name, empty server or deprecated SSE transport"},
 	)
-	registerRunCheck(checkMCPConfig)
+	registerRunCheck(checkMCPConfig, AnalyzerMCP, AnalyzerSecurity)
 }
 
 // mcpServer is an MCP server definition read from any supported source.

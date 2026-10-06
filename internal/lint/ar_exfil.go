@@ -28,13 +28,13 @@ func init() {
 		RuleInfo{CodeRawIPURL, "raw-ip-url", SeverityInfo, "a URL points at a public IPv4 address instead of a host name"},
 		RuleInfo{CodeDataURILink, "data-uri-link", SeverityWarning, "a markdown link or image target starts with data: or javascript:"},
 	)
-	registerTextScan(scanExfilCommands)
-	registerTextScan(scanImageExfil)
-	registerTextScan(scanDataURIs)
-	registerTextScan(scanRawIPs)
-	registerTextScan(scanInsecureHTTP)
-	registerTextScan(scanEscapes)
-	registerRunCheck(checkInsecureConfig)
+	registerTextScan(scanExfilCommands, AnalyzerSecurity)
+	registerTextScan(scanImageExfil, AnalyzerSecurity)
+	registerTextScan(scanDataURIs, AnalyzerSecurity)
+	registerTextScan(scanRawIPs, AnalyzerSecurity)
+	registerTextScan(scanInsecureHTTP, AnalyzerSecurity)
+	registerTextScan(scanEscapes, AnalyzerSecurity)
+	registerRunCheck(checkInsecureConfig, AnalyzerSecurity)
 }
 
 // logicalLines returns the lines of t with shell continuation lines joined into

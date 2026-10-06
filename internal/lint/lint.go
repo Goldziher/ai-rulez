@@ -66,6 +66,15 @@ type Report struct {
 	Profile string `json:"-"`
 	// Risk is the advisory risk score, set by the caller after the baseline.
 	Risk *RiskReport `json:"-"`
+	// Analyzers is the analyzer selection the run used (--analyzer or
+	// [lint] analyzers); nil when every analyzer ran. Baseline entries of the
+	// analyzers that did not run are neither stale nor rewritten.
+	Analyzers []string `json:"-"`
+	// Units counts the units (checks and scans) the run executed, by name: the
+	// proof that an analyzer that was not selected did not run.
+	Units map[string]int `json:"-"`
+	// unitRuns keeps the analyzers each unit declared, for tests.
+	unitRuns map[string]unitRun
 }
 
 // Counts returns findings per severity.
@@ -143,6 +152,11 @@ type runner struct {
 	// example-fence lines per file.
 	exampleGlobs []globMatcher
 	exampleCache map[string]map[int]bool
+	// sel is the analyzer selection (nil: all); units counts what ran; cur is
+	// the unit being executed.
+	sel   map[string]bool
+	units map[string]unitRun
+	cur   *unitSpec
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -154,6 +168,12 @@ type Options struct {
 	// AllowEgress names the [[lint.external]] scanners with egress = true that
 	// may run in this invocation (--allow-egress).
 	AllowEgress []string
+	// Analyzers runs only these analyzers (--analyzer). Empty uses the
+	// [lint] analyzers setting, and then every analyzer.
+	Analyzers []string
+	// NeedDeps keeps the checks that build the reference graph running although
+	// their analyzer is not selected: changed-only reporting (--since) needs it.
+	NeedDeps bool
 }
 
 // PluginDrift describes a generated plugin whose content changed against the
@@ -203,36 +223,44 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.baseRel = ""
 	}
 	r.resolveSettings()
+	r.sel = parseSelection(so.Analyzers)
+	if r.sel == nil {
+		r.sel = parseSelection(r.lc.Analyzers)
+	}
+	if so.SecurityOnly && r.sel == nil {
+		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
+	}
 	r.collect()
 	for i := range r.items {
 		if r.items[i].owned {
 			r.checkItem(&r.items[i])
 		}
 	}
-	r.checkDuplicates()
-	r.checkMCP()
-	r.checkHooks(baseAbs)
-	r.checkCollapsed()
-	r.checkUnpinned()
-	r.checkDelivery()
-	r.scanImported()
-	r.checkPluginDrift()
-	r.checkEvalRunner()
-	r.checkRoles()
-	r.checkLockDrift()
-	r.checkOKF()
-	r.checkTelemetry()
-	r.checkExternalConfig()
-	r.checkTraps()
+	r.unit(unitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
+	r.unit(unitOf("mcp-command", AnalyzerMCP), r.checkMCP)
+	r.unit(depUnitOf("settings-hooks", AnalyzerHooks), func() { r.checkHooks(baseAbs) })
+	r.unit(unitOf("collapsed", AnalyzerDuplicates), r.checkCollapsed)
+	r.unit(unitOf("unpinned", AnalyzerSecurity), r.checkUnpinned)
+	r.unit(unitOf("delivery", AnalyzerDelivery, AnalyzerSecurity, AnalyzerLock), r.checkDelivery)
+	r.unit(unitOf("imported", AnalyzerSecurity), r.scanImported)
+	r.unit(unitOf("plugin-drift", AnalyzerPlugin), r.checkPluginDrift)
+	r.unit(unitOf("eval-runner", AnalyzerEvals), r.checkEvalRunner)
+	r.unit(unitOf("roles", AnalyzerRoles), r.checkRoles)
+	r.unit(unitOf("lock-drift", AnalyzerLock), r.checkLockDrift)
+	r.unit(unitOf("okf", AnalyzerOKF), r.checkOKF)
+	r.unit(unitOf("telemetry", AnalyzerConfig, AnalyzerSecurity), r.checkTelemetry)
+	r.unit(unitOf("external-config", AnalyzerSecurity), r.checkExternalConfig)
+	r.unit(unitOf("traps", AnalyzerTraps), r.checkTraps)
 	if so.External {
-		r.runExternal()
+		r.unit(unitOf("external", AnalyzerSecurity), r.runExternal)
 	}
 	r.runRunChecks()
 	if so.SecurityOnly {
 		r.findings = securityOnly(r.findings)
 	}
-	r.checkSettingsConfig()
-	r.checkLLMConfig()
+	r.unit(unitOf("settings-config", AnalyzerHooks, AnalyzerSecurity), r.checkSettingsConfig)
+	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
+	r.keepSelected()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
@@ -245,11 +273,38 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		return a.Code < b.Code
 	})
 	assignIdentity(r.findings, tree, r.cwd)
-	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps()}
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
+		Units: map[string]int{}, unitRuns: r.units}
+	for name, u := range r.units {
+		rep.Units[name] = u.count
+	}
 	if p, ok := LookupProfile(r.lc.Profile); ok && p.Name != ProfileDefault {
 		rep.Profile = p.Name
 	}
 	return rep, nil
+}
+
+func keys(set map[string]bool) []string {
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	return out
+}
+
+// keepSelected drops the findings of analyzers outside the selection: a unit
+// may report rules of an analyzer that was not asked for.
+func (r *runner) keepSelected() {
+	if r.sel == nil {
+		return
+	}
+	kept := r.findings[:0:0]
+	for i := range r.findings {
+		if r.sel[AnalyzerFor(r.findings[i].Code).Name] {
+			kept = append(kept, r.findings[i])
+		}
+	}
+	r.findings = kept
 }
 
 func (r *runner) resolveSettings() {
@@ -306,6 +361,9 @@ func ValidateSettings(lc *config.LintConfig) []string {
 		return nil
 	}
 	var problems []string
+	for _, a := range ValidateAnalyzerNames(lc.Analyzers) {
+		problems = append(problems, fmt.Sprintf("lint.analyzers: unknown analyzer %q (use %s)", a, strings.Join(AnalyzerNames(), ", ")))
+	}
 	for _, key := range lc.Ignore {
 		if _, ok := lookupRule(key); !ok {
 			problems = append(problems, fmt.Sprintf("lint.ignore: unknown rule %q", key))
@@ -347,6 +405,7 @@ func (r *runner) display(abs string) string {
 // add records a finding unless it is disabled, ignored in config, or ignored
 // by an inline `ai-rulez-lint-ignore` comment on the line or the one above.
 func (r *runner) add(code, abs string, line int, format string, args ...any) {
+	r.audit(code)
 	sev := r.sev[code]
 	if sev == SeverityOff || r.ignore[code] {
 		return
@@ -553,25 +612,25 @@ func (r *runner) checkItem(it *item) {
 	}
 	d := parseDoc(raw)
 	r.docs[it.abs] = d
-	r.securityScan(it.abs, raw)
+	r.unit(unitOf("security-scan", AnalyzerSecurity), func() { r.securityScan(it.abs, raw) })
 	if !it.isDoc {
 		fm := parseFrontmatterDoc(d)
-		r.checkFrontmatterKeys(it, fm)
-		r.checkTypedMetadata(it, fm)
-		r.checkSuperseded(it, fm)
-		r.checkToolBreadth(it, fm)
-		r.scanResources(it)
-		r.checkGlobs(it, d)
-		r.checkDescription(it, d)
-		r.checkBudget(it, raw)
-		r.checkRequiredMetadata(it, d, fm)
-		r.checkSkillName(it, d)
-		r.checkFrontmatterSkills(it, d)
-		r.checkScripts(it)
-		r.checkEvals(it, d)
+		r.unit(unitOf("frontmatter-keys", AnalyzerReferences), func() { r.checkFrontmatterKeys(it, fm) })
+		r.unit(unitOf("typed-metadata", AnalyzerMetadata), func() { r.checkTypedMetadata(it, fm) })
+		r.unit(unitOf("superseded", AnalyzerMetadata), func() { r.checkSuperseded(it, fm) })
+		r.unit(unitOf("tool-breadth", AnalyzerSecurity), func() { r.checkToolBreadth(it, fm) })
+		r.unit(unitOf("resources", AnalyzerSecurity), func() { r.scanResources(it) })
+		r.unit(unitOf("globs", AnalyzerReferences), func() { r.checkGlobs(it, d) })
+		r.unit(unitOf("description", AnalyzerDescriptions), func() { r.checkDescription(it, d) })
+		r.unit(unitOf("budget", AnalyzerBudgets), func() { r.checkBudget(it, raw) })
+		r.unit(unitOf("required-metadata", AnalyzerMetadata), func() { r.checkRequiredMetadata(it, d, fm) })
+		r.unit(unitOf("skill-name", AnalyzerDescriptions), func() { r.checkSkillName(it, d) })
+		r.unit(depUnitOf("frontmatter-skills", AnalyzerReferences), func() { r.checkFrontmatterSkills(it, d) })
+		r.unit(unitOf("scripts", AnalyzerHooks), func() { r.checkScripts(it) })
+		r.unit(unitOf("evals-missing", AnalyzerPlugin), func() { r.checkEvals(it, d) })
 		r.runItemChecks(it, d, fm)
 	}
-	r.scanBody(it, d)
+	r.unit(depUnitOf("body-references", AnalyzerReferences), func() { r.scanBody(it, d) })
 }
 
 func (r *runner) checkGlobs(it *item, d doc) {

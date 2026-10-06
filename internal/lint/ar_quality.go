@@ -13,8 +13,8 @@ const descWarnAt = 900
 
 func init() {
 	registerRules(RuleInfo{CodeBodyEmpty, "body-empty", SeverityWarning, "a skill, agent, command or rule has frontmatter but no body, so it instructs nothing"})
-	registerItemCheck(checkBodyEmpty)
-	registerItemCheck(checkDescriptionNearLimit)
+	registerItemCheck(checkBodyEmpty, AnalyzerDescriptions)
+	registerItemCheck(checkDescriptionNearLimit, AnalyzerDescriptions)
 }
 
 func checkBodyEmpty(r *runner, it *item, d doc, _ frontmatter) {
