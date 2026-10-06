@@ -422,6 +422,7 @@ func validateNewSettings(lc *config.LintConfig) []string {
 	problems = append(problems, validateSecurity(lc.Security)...)
 	problems = append(problems, validateCapabilityAndLoadBudgets(lc)...)
 	problems = append(problems, validateExternal(lc.External)...)
+	problems = append(problems, validateScannerPolicy(lc)...)
 	return problems
 }
 
@@ -513,10 +514,8 @@ func validateExternal(list []config.LintExternal) []string {
 		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 {
 			problems = append(problems, fmt.Sprintf("lint.external[%d]: name and command are required", i))
 		}
-		switch strings.ToLower(ex.Format) {
-		case "", "sarif", "json":
-		default:
-			problems = append(problems, fmt.Sprintf("lint.external[%d]: unknown format %q (use sarif or json)", i, ex.Format))
+		if !validFormat(ex.Format) {
+			problems = append(problems, fmt.Sprintf("lint.external[%d]: unknown format %q (use sarif, json or adapter:<%s>)", i, ex.Format, strings.Join(knownAdapters, "|")))
 		}
 	}
 	return problems

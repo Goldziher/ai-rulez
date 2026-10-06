@@ -13,8 +13,9 @@ import (
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
-// ScannerInfo describes one [[lint.external]] entry for `scanners list` and
-// `scanners doctor`. InspectScanners fills it without running anything.
+// ScannerInfo describes one scanner (a [[lint.external]] entry or a member of
+// the [lint.scanner_policy] preset) for `scanners list` and `scanners doctor`.
+// InspectScanners fills it without running anything.
 type ScannerInfo struct {
 	Name    string
 	Command string
@@ -31,6 +32,22 @@ type ScannerInfo struct {
 	Problems []string
 	// EgressFlag is the argument that makes an egress = false scanner reach the network (AR9E4).
 	EgressFlag string
+	// Profile is the embedded profile the entry uses ("" for none).
+	Profile string
+	// Presets lists the presets that contain the profile; FromPreset is set for a
+	// scanner that exists only because of [lint.scanner_policy] preset.
+	Presets    []string
+	FromPreset bool
+	// Required is set when a failure of this scanner is an error.
+	Required bool
+	// Version is the version range the entry requires ("" for none).
+	Version string
+	// DataSent is what an egress scanner's vendor documents receiving.
+	DataSent []string
+	// Isolation is the [lint.scanner_policy] isolation mode and Backend the
+	// confinement tool this system would use ("" when none).
+	Isolation string
+	Backend   string
 }
 
 // Found reports whether the executable was resolved.
@@ -45,38 +62,39 @@ func (s ScannerInfo) Healthy() bool {
 	return len(s.Problems) == 0 && s.EgressFlag == "" && s.Found()
 }
 
-// InspectScanners describes every named [[lint.external]] entry in config order.
-// It looks the binary up but never starts it. dir anchors a relative command.
-func InspectScanners(lc *config.LintConfig, dir string) []ScannerInfo {
-	if lc == nil {
+// InspectScanners describes every named scanner of cfg: the preset's members,
+// then the [[lint.external]] entries in config order. It looks the binary up but
+// never starts it. dir anchors a relative command.
+func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
+	if cfg == nil || cfg.Lint == nil {
 		return nil
 	}
+	pol := policyOf(cfg.Lint)
 	var out []ScannerInfo
-	for _, ex := range lc.External {
-		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 {
-			continue
-		}
+	for _, sc := range resolveScanners(cfg.Lint, cfg.Plugin != nil || cfg.Marketplace != nil) {
 		info := ScannerInfo{
-			Name: ex.Name, Command: ex.Command[0], Egress: "undeclared", Format: ex.Format, Inputs: ex.Inputs,
-			EnvPass: ex.EnvPass, Problems: externalProblems(ex),
+			Name: sc.Name, Command: sc.Command[0], Egress: "undeclared", Format: sc.Format, Inputs: sc.Inputs,
+			EnvPass: sc.EnvPass, Problems: sc.allProblems(), Profile: sc.Profile, Presets: sc.Presets,
+			FromPreset: sc.FromPreset, Required: sc.Required, Version: sc.Version, DataSent: sc.DataSent,
+			Isolation: string(pol.isolation), Backend: string(scannerSandbox.Backend()),
 		}
 		if info.Format == "" {
 			info.Format = "sarif"
 		}
-		if ex.Egress != nil {
+		if sc.Egress != nil {
 			info.Egress = "false"
-			if *ex.Egress {
+			if *sc.Egress {
 				info.Egress = "true"
 			} else {
-				info.EgressFlag = egressFlagViolation(ex.Command)
+				info.EgressFlag = sc.egressFlag()
 			}
 		}
 		var timeout time.Duration
-		if ex.Timeout != "" {
-			timeout, _ = time.ParseDuration(ex.Timeout) //nolint:errcheck // an invalid value is in Problems
+		if sc.Timeout != "" {
+			timeout, _ = time.ParseDuration(sc.Timeout) //nolint:errcheck // an invalid value is in Problems
 		}
 		info.Timeout = cmdrun.EffectiveTimeout(timeout)
-		info.Path = lookExecutable(ex.Command[0], dir)
+		info.Path = lookExecutable(sc.Command[0], dir)
 		out = append(out, info)
 	}
 	return out

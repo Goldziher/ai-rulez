@@ -1547,11 +1547,28 @@
           "description": "External scanners run with `validate --strict --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "type": "object",
-            "required": ["name", "command"],
+            "required": ["name"],
+            "anyOf": [{ "required": ["command"] }, { "required": ["profile"] }],
             "properties": {
               "name": { "type": "string" },
               "command": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-              "format": { "type": "string", "enum": ["sarif", "json"] },
+              "format": {
+                "type": "string",
+                "enum": ["sarif", "json", "adapter:snyk-json", "adapter:claude-validate-json"]
+              },
+              "profile": {
+                "type": "string",
+                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
+                "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's."
+              },
+              "version": {
+                "type": "string",
+                "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2)."
+              },
+              "required": {
+                "type": "boolean",
+                "description": "A missing, outdated or failing scanner is an error instead of a notice."
+              },
               "egress": {
                 "type": "boolean",
                 "description": "Whether content derived from the scanned files can leave the machine. Unset keeps the legacy full environment and is reported as AR9E1. false scrubs the environment and rejects known egress flags (AR9E4); true runs only when the scanner is named in --allow-egress."
@@ -1817,6 +1834,39 @@
                     },
                     "async": {
                       "type": "boolean"
+        "scanner_policy": {
+          "type": "object",
+          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
+          "properties": {
+            "preset": {
+              "enum": ["off", "baseline", "strict"],
+              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off."
+            },
+            "required": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scanner names whose absence, outdated version or failure is an error."
+            },
+            "fail_on": {
+              "enum": ["error", "warning", "info"],
+              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
+            },
+            "baseline": {
+              "type": "string",
+              "description": "Scanner baseline file, relative to the project root; it must stay inside the project."
+            },
+            "isolation": {
+              "enum": ["auto", "none", "require"],
+              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines."
+            },
+            "allow_egress": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it."
+            }
+          },
+          "additionalProperties": false
+        },
                     },
                     "if": {
                       "type": "string"

@@ -143,8 +143,8 @@ stdout.
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
-| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
-| AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
+| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`, or its `--version` is outside `version`; it was not run (a notice, not an error; an error when the scanner is `required`, including one that no entry or preset provides) |
+| AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF or adapter output, or exited non-zero with no results; or `isolation = "require"` and the scanner cannot be confined |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
 | AR9C5 | `kiro-agent-steering-not-loaded` | warning | A `.kiro/agents/*.json` custom agent without `resources` while `.kiro/steering/*.md` exists |
 | AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A `.kiro/steering/*.md` file whose `inclusion` frontmatter follows a blank line or text, so Kiro does not read it |
@@ -160,6 +160,7 @@ stdout.
 | AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
 | AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
 | AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
+| AR9E7 | `scanner-isolation-degraded` | warning | `isolation = "auto"` found no process isolation backend, so staged scanners ran without network or write confinement (once per run) |
 | AR9N4 | `publish-target-failed` | error | The upload failed: `gh` is not installed, the release already exists, or `gh` exited non-zero (publish only) |
 | AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch (publish only) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
@@ -214,7 +215,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
 | `AR9C0`-`AR9CA` | Harness traps (`AR9C0`-`AR9CA` used; see [Harness traps](harness-traps.md)) | allocated |
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
-| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E6` used) | allocated |
+| `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E7` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G8` used by `review` and `rubric lint`, `AR9G9` is for the calibration phase) | allocated |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
@@ -306,7 +307,7 @@ claude-skill-listing = 1200        # ids: claude-skill-listing, codex-agents-cha
 [[lint.external]]                  # run with --external only
 name = "my-scanner"
 command = ["my-scanner", "--sarif"]
-format = "sarif"                   # sarif (default) | json
+format = "sarif"                   # sarif (default) | json | adapter:snyk-json | adapter:claude-validate-json
 egress = false                     # required for hardening; see External scanners
 timeout = "120s"                   # default 2m, max 15m
 env_pass = []                      # extra environment variable names for an egress = false scanner
@@ -326,6 +327,18 @@ confusion_threshold = 0.25         # AR9A2: share of a skill's prompts a sibling
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
 command 300 / 3000. The skill figures follow the Agent Skills recommendation (`SKILL.md` under 500 lines and
+# inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
+# profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
+# version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
+# required = true                  # a missing, outdated or failing scanner is an error
+
+[lint.scanner_policy]
+preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
+required = ["agnix"]               # names whose absence or failure is an error
+fail_on = "warning"                # lowest scanner finding severity that fails the run (scanner findings only)
+baseline = ".ai-rulez/scanner-baseline.json"   # relative to the project root, must stay inside it
+isolation = "auto"                 # auto (default) | none | require, see Isolation
+allow_egress = []                  # set: --allow-egress=<name> also needs the name here; [] forbids every egress scanner
 5000 tokens). Token counts use the embedded `cl100k_base` tokenizer and are approximate.
 
 An unknown code, severity or content kind in `[lint]` is an error (exit 1) rather than a silently disabled check.
@@ -437,7 +450,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E6`, `AR9K1`, `AR9L1` |
+| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
 | `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR305`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
@@ -687,9 +700,8 @@ credential variables, such as `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_API_KEY`, 
 `*_WEBHOOK_URL`, `COOKIE`, `SESSION`, `DATABASE_URL`, `AWS_*` keys and `HTTPS_PROXY`, are removed and rejected in
 `env_pass`, `AR9E0`; `HOME` is kept, so credentials stored in files below it, such as `~/.aws`, `~/.config` or
 `~/.netrc`, stay reachable by the scanner) and the argv check, which is a heuristic that catches a flag added later, not a scanner that
-ignores its flags. Network isolation (`unshare`, `sandbox-exec`) is not implemented; run the scanner under
-`docker run --network=none` when you need it. Repository config alone cannot enable an egress scanner, so a CI job
-opts in per invocation. Timeout, caps and the group kill apply to every entry, including legacy ones; the
+ignores its flags. Process isolation (below) adds the third layer for staged scanners. Repository config alone
+cannot enable an egress scanner, so a CI job opts in per invocation. Timeout, caps and the group kill apply to every entry, including legacy ones; the
 environment scrub applies once `egress` is set. The hardened runner is the `internal/runner` package, reused by
 later features that execute commands.
 
@@ -709,6 +721,98 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 | AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
 | AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
 | AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
+### Policy, presets and profiles
+
+`[lint.scanner_policy]` sets the policy for every scanner at once; all keys are optional.
+
+| Key | Meaning |
+| --- | --- |
+| `preset` | `off` (default), `baseline` or `strict`: the embedded profiles that run with `--external` without a `[[lint.external]]` entry |
+| `required` | Scanner names whose absence, outdated version or failure is an error (`AR9E2` becomes an error; a name no entry or preset provides is reported the same way) |
+| `fail_on` | The lowest severity of a **scanner** finding that fails the run (`error`, `warning`, `info`), even when `--fail-on` or `[lint] fail_on` is higher. `strict` implies `warning` |
+| `baseline` | The scanner baseline file, relative to the project root; an absolute path or one that leaves the project is `AR9E0`. `--scanner-baseline` wins |
+| `isolation` | `auto` (default), `none` or `require`, see Isolation |
+| `allow_egress` | Unset: `--allow-egress=<name>` alone allows an egress scanner. Set (even `[]`): the name must also be listed, so a committed list narrows what a CI flag can enable. Presets never read it |
+
+The profiles live in the binary (`internal/lint/scanners/profiles.toml`), each with `source`, `verified_on` and
+`tested_versions` (empty until a contract test has passed against a real binary). Nothing is downloaded or
+installed; a scanner that is not on `PATH` is an `AR9E2` notice.
+
+| Profile | Egress | Format | Presets | Notes |
+| --- | --- | --- | --- | --- |
+| `agnix` | no | SARIF | baseline, strict | `agnix --format sarif <stage>`; not yet checked against a real binary |
+| `claude-plugin-validate` | no | `adapter:claude-validate-json` | baseline, strict (only with `[plugin]` or `[marketplace]`) | `claude plugin validate --json <stage>`; staged in the plugin layout (`skills/<name>/SKILL.md`, `agents/`, `commands/`); output shape checked against claude 2.1.285 |
+| `cisco-skill-scanner` | no | SARIF | strict | deterministic mode; its LLM, VirusTotal, AI Defense and OSV flags are deny-listed; not yet checked against a real binary |
+| `snyk-agent-scan` | **yes** | `adapter:snyk-json` | none | needs `SNYK_TOKEN` (passed through to it); never part of a preset; the vendor documents receiving skill content, MCP server configuration and tool descriptions, and agent application details |
+
+A preset member is replaced by an entry with the same name or the same `profile`. `[[lint.external]]` with
+`profile = "<name>"` inherits the profile's command, format, inputs, egress declaration (it cannot declare
+less egress than the profile: `AR9E0`), severity map and flag deny-list; keys set on the entry win.
+`ai-rulez scanners list` shows the preset of each scanner.
+
+### Isolation
+
+A staged scanner (one with `inputs`) runs confined when `isolation` allows it: no network (unless it declares
+`egress = true`) and no writes outside its scratch directory, which holds the stage, `HOME`, `TMPDIR` and the `{out}`
+file. The backends are in `internal/sandbox`: macOS `sandbox-exec` (deprecated by Apple, still present; network and
+filesystem), Linux `bwrap` (network and filesystem) or `unshare --net` (network only). A scanner that is not
+installed is not wrapped. On any other system, or where the tool is installed but cannot work (user namespaces
+disabled, already inside a sandbox), no backend is available:
+
+| `isolation` | A backend works | No backend |
+| --- | --- | --- |
+| `auto` (default) | confined | runs unconfined; one `AR9E7` warning per run |
+| `require` | confined | the scanner does not run (`AR9E3`) |
+| `none` | runs unconfined, silently | runs unconfined, silently |
+
+A scanner without `inputs` runs in the project root and cannot be confined: `require` refuses it (`AR9E3`), `auto`
+leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
+shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR`/`HOME`, or set `isolation = "none"`.
+
+### Result cache and `--dry-run`
+
+The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
+the staged content, the scanner binary (path, size, modification time), its command line and its mapping keys
+(`format`, `inputs`, `env_pass`, `severity_map`, `max_severity`, `--show-suppressed`) are unchanged, so an
+unchanged tree costs no scanner run. Entries hold normalised findings only, never the raw report, and carry an
+HMAC made with a per-user secret (`~/.config/ai-rulez/scan-cache.key`, mode 0600) like the LLM cache: an edited,
+truncated, planted or symlinked entry is a miss and is removed. A failed run is never cached; an `egress = true`
+scanner never is. A scanner that updates without changing its binary file (`uvx`, `npx`) is not noticed: pin the
+version in the command, or pass `--no-scan-cache`.
+
+`scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
+its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
+variables it would receive (never values), the staged files and the cache state (`hit`, `miss`, `off`), and starts
+nothing. It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
+to stderr so stdout stays the report format.
+
+### Adapters
+
+`format = "adapter:<name>"` reads the JSON of a tool that does not print SARIF. An adapter is as strict as the SARIF
+reader: another shape, an empty document after a failing exit, or more than 10,000 results is `AR9E3`.
+
+- `claude-validate-json`: `claude plugin validate --json`. `errors` are errors, `warnings` warnings, `notes` info; the
+  rule is `<type>:<code or path>`; `success = false` without an error is a failed run. The target must be a directory
+  with `skills/`, `agents/` or `commands/` at its root, which is what the `claude-plugin-validate` profile stages.
+- `snyk-json`: a report of `{"issues": [...]}`, a bare list, or `{"<file>": {"issues": [...]}}`; each issue reads the
+  first set of `id`/`code`/`rule`, `severity`/`level`, `message`/`description`/`title`, `file`/`path`/`filename` and
+  `line`/`start_line`. The shape is a best effort pinned to the profile, not yet checked against a real binary.
+
+### Egress banner
+
+Before an `egress = true` scanner starts (it needs `--allow-egress=<name>`, and `allow_egress` when set), ai-rulez
+logs a warning on stderr that the scan can send data off the machine, naming what its profile documents the vendor
+receiving, or "content derived from the scanned files" for a hand-written entry. The choice is never persisted in a
+committed file.
+
+### Lock records
+
+`ai-rulez lock` writes one `[[scan]]` record per staged `egress = false` scanner that has a cached result for the
+current content: `scanner`, `version` (its `--version` line when it ran), `tree` (digest of the staged content),
+`findings`, `max_severity` and `result` (`pass`, or `fail` when a finding reaches `fail_on`, `error` by default;
+counted before the scanner baseline). `lock` starts no program, so run `scan --external` first; a scanner with no
+cached result has no record, and `lock` says so. The records sit outside the tree digest, like approvals.
+
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
 | AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
 | AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
@@ -2276,8 +2380,7 @@ a staged [[lint.external]] scanner reported a result for a file that was not sta
 - Bad: A scanner that reports `/etc/passwd` or a path that is not under the stage
 - Good: Check the scanner's configuration (`inputs`, command) so it reports only on the staged copy
 
-### AR9F0 convert-input-invalid
-### AR9CA project-trap
+### AR9E7 scanner-isolation-degraded
 
 a trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid
 

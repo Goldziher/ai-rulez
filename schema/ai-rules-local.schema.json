@@ -1040,7 +1040,7 @@
                 "type": "array"
               },
               "format": {
-                "enum": ["sarif", "json"],
+                "enum": ["sarif", "json", "adapter:snyk-json", "adapter:claude-validate-json"],
                 "type": "string"
               },
               "inputs": {
@@ -1122,6 +1122,15 @@
                 "description": "A date older than this many days is stale (AR953). Date type only.",
                 "minimum": 0,
                 "type": "integer"
+              },
+              "profile": {
+                "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's.",
+                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
+                "type": "string"
+              },
+              "required": {
+                "description": "A missing, outdated or failing scanner is an error instead of a notice.",
+                "type": "boolean"
               },
               "required": {
                 "description": "Report an item of the configured kinds that lacks the key (AR951).",
@@ -1251,6 +1260,43 @@
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
+        "scanner_policy": {
+          "additionalProperties": false,
+          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
+          "properties": {
+            "allow_egress": {
+              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "baseline": {
+              "description": "Scanner baseline file, relative to the project root; it must stay inside the project.",
+              "type": "string"
+            },
+            "fail_on": {
+              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
+              "enum": ["error", "warning", "info"]
+            },
+            "isolation": {
+              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
+              "enum": ["auto", "none", "require"]
+            },
+            "preset": {
+              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",
+              "enum": ["off", "baseline", "strict"]
+            },
+            "required": {
+              "description": "Scanner names whose absence, outdated version or failure is an error.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
           "type": "object"
         },
         "tolerate": {

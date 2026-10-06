@@ -71,6 +71,7 @@ const (
 	CodeScannerEgressBlocked    = "AR9E4"
 	CodeScannerBaselineExpired  = "AR9E5"
 	CodeScannerOutOfScope       = "AR9E6"
+	CodeScannerNoIsolation      = "AR9E7"
 	CodeCursorRuleExtension     = "AR9C1"
 	CodeCursorRuleNotApplied    = "AR9C2"
 	CodeCopilotExcludeAgent     = "AR9C3"
@@ -241,6 +242,10 @@ type FindingMeta struct {
 	// AcceptReason is the baseline entry's reason.
 	AcceptReason string
 	// Analyzer and Scope classify the rule that produced the finding.
+	// ScannerFailOn is the [lint.scanner_policy] fail_on threshold of a scanner
+	// finding: one at least this severe fails the run even when it is below the
+	// run's own threshold.
+	ScannerFailOn string
 	Analyzer, Scope string
 	// Fix is the mechanical correction, when one exists.
 	Fix *Fix
