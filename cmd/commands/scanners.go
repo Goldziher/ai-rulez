@@ -20,6 +20,7 @@ const exitScannersUnhealthy = 2
 
 var (
 	scannersAll    bool
+	scannersProbe  bool
 	scannersFormat string
 )
 
@@ -29,7 +30,7 @@ var ScannersCmd = &cobra.Command{
 	Short: "Inspect the external scanners configured in [[lint.external]]",
 	Long: `Show and check the third-party scanners that "scan --external" and
 "validate --strict --external" run. "list" only looks the binaries up; "doctor"
-also starts the ones you name to ask their version.`,
+starts a scanner to ask its version only with --external.`,
 }
 
 // ScannersListCmd lists the configured scanners.
@@ -63,13 +64,14 @@ var ScannersDoctorCmd = &cobra.Command{
 	Use:   "doctor <name>... | --all",
 	Short: "Check named scanners: binary, version, egress, environment and configuration",
 	Long: `For each named scanner (or every one with --all) report whether its binary is on
-PATH, its version (the scanner is started once with --version, with a scrubbed
-environment and a 10 second timeout), its egress declaration, the environment
+PATH, its version (only with --external: the scanner is then started once with
+--version, with a scrubbed environment and a 10 second timeout), its egress declaration, the environment
 variables it may receive, its timeout and staged inputs, and any configuration
 problem that stops "scan --external" from running it (AR9E0, AR9E4).
 
-Because doctor starts a program named in the repository's configuration, it runs
-only the scanners you name. Exit 0 when every checked scanner is healthy, 2 when
+A scanner command comes from the repository's configuration, so doctor starts
+nothing unless you pass --external (the same consent "scan --external" needs), and
+then only the scanners you name or --all. Exit 0 when every checked scanner is healthy, 2 when
 one is not installed, is misconfigured, or has a network flag on an egress = false
 entry, 1 when the configuration cannot be loaded or a name is unknown.`,
 	Args:    cobra.ArbitraryArgs,
@@ -83,7 +85,8 @@ entry, 1 when the configuration cannot be loaded or a name is unknown.`,
 
 func init() {
 	ScannersCmd.AddCommand(ScannersListCmd, ScannersDoctorCmd)
-	ScannersDoctorCmd.Flags().BoolVar(&scannersAll, "all", false, "Check every configured scanner (starts each one to ask its version)")
+	ScannersDoctorCmd.Flags().BoolVar(&scannersAll, "all", false, "Check every configured scanner")
+	ScannersDoctorCmd.Flags().BoolVar(&scannersProbe, "external", false, "Start each checked scanner once with --version (it is a program the repository named)")
 	for _, c := range []*cobra.Command{ScannersListCmd, ScannersDoctorCmd} {
 		c.Flags().StringVar(&scannersFormat, "format", formatText, "Output format: text or json")
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
@@ -156,7 +159,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 	if scannersFormat == formatJSON {
 		versions := map[string]string{}
 		for _, s := range selected {
-			if s.Found() {
+			if s.Found() && scannersProbe {
 				versions[s.Name] = lint.ProbeScannerVersion(ctx, s)
 			}
 		}
@@ -176,7 +179,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 		if i > 0 {
 			fmt.Fprintln(out)
 		}
-		if !writeDoctor(ctx, out, s) {
+		if !writeDoctor(ctx, out, s, scannersProbe) {
 			code = exitScannersUnhealthy
 		}
 	}
@@ -215,13 +218,15 @@ func selectScanners(infos []lint.ScannerInfo, names []string, all bool) (selecte
 }
 
 // writeDoctor prints one scanner's report and reports whether it is healthy.
-func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo) bool {
+func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe bool) bool {
 	row := func(key, value string) { fmt.Fprintf(out, "  %-9s %s\n", key, value) }
 	fmt.Fprintln(out, s.Name)
 	if s.Found() {
-		version := lint.ProbeScannerVersion(ctx, s)
-		if version == "" {
-			version = "unknown (--version printed nothing usable)"
+		version := "not probed (pass --external)"
+		if probe {
+			if version = lint.ProbeScannerVersion(ctx, s); version == "" {
+				version = "unknown (--version printed nothing usable)"
+			}
 		}
 		row("binary", s.Path)
 		row("version", version)
