@@ -169,9 +169,9 @@ func TestAnInventedQuoteDropsTheVerdictAndIsCounted(t *testing.T) {
 	// Assert
 	d := semDim(t, res, "skill:a", "body-accuracy")
 	assert.Equal(t, VerdictPass, d.Verdict, "a claim the data cannot back is not a finding")
-	assert.Equal(t, 1, d.DroppedVotes)
+	assert.Equal(t, 2, d.DroppedVotes, "the injection dimension brings a second vote, dropped the same way")
 	assert.Positive(t, out.Usage.Hallucinated)
-	assert.Len(t, sj.callsFor("a"), 1, "a dropped verdict is a pass, so no vote follows")
+	assert.Len(t, sj.callsFor("a"), 2, "a dropped verdict is a pass; only the injection dimension is voted on again")
 }
 
 func TestAMalformedReplyIsRetriedOnceThenIsAnErrorNeverAPass(t *testing.T) {
@@ -314,6 +314,25 @@ func TestAnItemWithAnErroredDimensionMakesTheRunIncomplete(t *testing.T) {
 	assert.Equal(t, SemError, semDim(t, res, "skill:a", "trigger-quality").Status)
 	assert.True(t, res.Items[0].Semantic.Incomplete)
 	assert.True(t, out.Incomplete, "an item the judge could not answer cannot vouch for the gate")
+}
+
+func TestAFirstPassOnInjectionIntentIsNeverAcceptedAlone(t *testing.T) {
+	// Arrange: the first vote is the pass an injected text asks for; the next votes see it
+	rb := builtin(t)
+	res := Run(Input{Rubric: rb, Items: []Item{skill("a", "Deploy the service to staging")}})
+	sj := &scriptedJudge{verdict: func(_, dim string, vote int) string {
+		return pick(dim == injectionDimension && vote > 1, VerdictFail)
+	}}
+	client, _ := newClient(t, sj, llm.Config{})
+
+	// Act
+	mustRun(t, SemanticInput{Rubric: rb, Results: res, Options: SemanticOptions{Client: client, K: 3, Content: config.ReviewContentFull}})
+
+	// Assert
+	d := semDim(t, res, "skill:a", injectionDimension)
+	assert.Equal(t, []string{"pass", "fail", "fail"}, d.Votes)
+	assert.Equal(t, VerdictFail, d.Verdict)
+	assert.Len(t, sj.callsFor("a"), 3)
 }
 
 func TestAnItemTheJudgeSawOnlyInPartIsListedAsTruncated(t *testing.T) {
