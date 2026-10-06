@@ -195,6 +195,13 @@ func runUpdate(names []string) int {
 
 func moveKey(kind, name string) string { return kind + "\x00" + name }
 
+// updateRefreshFilter limits the remote refresh of an update to the sources
+// that move, matched by kind and name (the name alone also matched a same-named
+// include, skill or source of another kind).
+func updateRefreshFilter(moves map[string]*moveTo) func(kind, name string) bool {
+	return func(kind, name string) bool { return moves[moveKey(kind, name)] != nil }
+}
+
 func updateAt(path, kind string, names []string) int {
 	ctx := context.Background()
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
@@ -334,6 +341,7 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 	includes.AllowDowngrade, includes.AcceptMovedTag = updateAllowDowngrade, updateAcceptMoved
 	defer func() { includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false }()
 	defer prepareLockRun(true, "", wanted)()
+	includes.RefreshFilter = updateRefreshFilter(rep.moves) // by kind and name: a same-named source of another kind stays put
 
 	fresh, err := loadForLock(path, config.WithoutLocal())
 	if err != nil {
