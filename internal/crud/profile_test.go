@@ -395,3 +395,30 @@ func TestListProfiles(t *testing.T) {
 		})
 	}
 }
+
+// TestListProfilesSortedByName guards the deterministic order of the listing,
+// which comes from a map in the config.
+func TestListProfilesSortedByName(t *testing.T) {
+	// Arrange
+	baseDir := setupTestProject(t)
+	op, err := crud.NewOperator(baseDir)
+	require.NoError(t, err)
+	_, err = op.AddDomain(context.Background(), &crud.AddDomainRequest{Name: "backend"})
+	require.NoError(t, err)
+	for _, name := range []string{"zeta", "alpha", "mid", "beta", "omega", "gamma"} {
+		require.NoError(t, op.AddProfile(context.Background(), name, []string{"backend"}))
+	}
+
+	for range 20 {
+		// Act
+		profiles, err := op.ListProfiles(context.Background())
+		require.NoError(t, err)
+
+		// Assert
+		var names []string
+		for _, p := range profiles {
+			names = append(names, p.Name)
+		}
+		require.Equal(t, []string{"alpha", "beta", "gamma", "mid", "omega", "zeta"}, names)
+	}
+}
