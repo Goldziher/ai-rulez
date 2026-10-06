@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -64,6 +65,14 @@ type PolicyEnforcer interface {
 	Locks(feature string) bool
 }
 
+// ContentEnforcer is a PolicyEnforcer that also bounds the content includes and
+// installed skills deliver. Enforce runs before anything is fetched, so what that
+// content declares (hooks and MCP servers in its frontmatter) is judged once it
+// is loaded. The violations it returns are added to the outcome.
+type ContentEnforcer interface {
+	EnforceContent(ctx context.Context, cfg *Config) []PolicyViolation
+}
+
 type enforcerBox struct{ e PolicyEnforcer }
 
 var policyEnforcer atomic.Pointer[enforcerBox]
@@ -101,6 +110,31 @@ func applyPolicy(ctx context.Context, cfg *Config) error {
 	}
 	cfg.PolicyOutcome = out
 	return nil
+}
+
+// applyContentPolicy bounds the imported content of a loaded configuration. It
+// does nothing without a policy in force (a nil outcome).
+func applyContentPolicy(ctx context.Context, cfg *Config) {
+	b := policyEnforcer.Load()
+	if b == nil || cfg.PolicyOutcome == nil {
+		return
+	}
+	ce, ok := b.e.(ContentEnforcer)
+	if !ok {
+		return
+	}
+	found := ce.EnforceContent(ctx, cfg)
+	if len(found) == 0 {
+		return
+	}
+	v := append(cfg.PolicyOutcome.Violations, found...)
+	sort.SliceStable(v, func(i, j int) bool {
+		if v[i].Code != v[j].Code {
+			return v[i].Code < v[j].Code
+		}
+		return v[i].Key < v[j].Key
+	})
+	cfg.PolicyOutcome.Violations = v
 }
 
 func policyLines(out *PolicyOutcome) []string {
