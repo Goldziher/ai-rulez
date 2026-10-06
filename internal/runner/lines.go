@@ -79,9 +79,14 @@ func (Exec) RunLines(ctx context.Context, spec Spec, onLine LineFunc) Result { /
 		}
 	}
 	if stopped {
-		tree.kill(cmd) // the caller has what it wanted: end the whole process group now
+		// The caller has what it wanted: end the whole process group now. No drain:
+		// a child forked while the signal was sent can escape it and keep the pipe
+		// open; Wait closes the pipe once the command itself has exited, and the
+		// kill after Wait reaches the straggler, which is still in the group.
+		tree.kill(cmd)
+	} else {
+		_, _ = io.Copy(io.Discard, stdout) //nolint:errcheck // drain so Wait cannot block on the pipe
 	}
-	_, _ = io.Copy(io.Discard, stdout) //nolint:errcheck // drain so Wait cannot block on the pipe
 	waitErr := cmd.Wait()
 	tree.kill(cmd) // a helper that outlived the command must not outlive the run
 	res.Duration = time.Since(start)
