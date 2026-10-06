@@ -34,7 +34,8 @@ type TelemetryConfig struct {
 	// HeadersEnv names environment variables whose values are "k=v,k2=v2" header
 	// lists. Names only: a literal credential is rejected. User scope only.
 	HeadersEnv []string `yaml:"headers_env,omitempty" json:"headers_env,omitempty" toml:"headers_env,omitempty"` //nolint:tagliatelle
-	// ServiceName is the service.name resource attribute (default "ai-rulez").
+	// ServiceName is the service.name resource attribute (default "ai-rulez"). User
+	// scope only: a repository value is ignored (it would land on the user's collector).
 	ServiceName string `yaml:"service_name,omitempty" json:"service_name,omitempty" toml:"service_name,omitempty"` //nolint:tagliatelle
 	// Sample is the fraction of sessions exported, 0..1 (default 1). Sampling is
 	// per salted session hash, so one session is wholly in or out.

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -225,7 +226,7 @@ func (s *Spool) SpawnDue(now time.Time, interval time.Duration) bool {
 		due = err != nil || now.Sub(last) >= interval
 	}
 	if due {
-		_ = os.WriteFile(marker, nil, 0o600) //nolint:errcheck // the marker only rate-limits
+		_ = safefs.WriteFileAtomic(marker, nil) //nolint:errcheck // the marker only rate-limits; a planted symlink is replaced, never written through
 	}
 	return due
 }
@@ -260,27 +261,7 @@ func writeLines(path string, lines [][]byte) error {
 }
 
 func writeFileAtomic(path string, data []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp*")
-	if err != nil {
-		return oops.With("path", path).Wrapf(err, "create temp file")
-	}
-	name := tmp.Name()
-	if err := os.Chmod(name, 0o600); err != nil {
-		_ = tmp.Close()     //nolint:errcheck // the chmod error is the one to report
-		_ = os.Remove(name) //nolint:errcheck // best-effort cleanup
-		return oops.Wrapf(err, "chmod temp file")
-	}
-	_, writeErr := tmp.Write(data)
-	closeErr := tmp.Close()
-	if err := errors.Join(writeErr, closeErr); err != nil {
-		_ = os.Remove(name) //nolint:errcheck // best-effort cleanup
-		return oops.With("path", path).Wrapf(err, "write temp file")
-	}
-	if err := os.Rename(name, path); err != nil {
-		_ = os.Remove(name) //nolint:errcheck // best-effort cleanup
-		return oops.With("path", path).Wrapf(err, "replace file")
-	}
-	return nil
+	return safefs.WriteFileAtomic(path, data) //nolint:wrapcheck // safefs errors carry the path
 }
 
 // lock takes an exclusive lock file, waiting up to wait. A lock older than
@@ -291,6 +272,14 @@ func writeFileAtomic(path string, data []byte) error {
 // past stale) never deletes the new owner's lock. A takeover runs under a short
 // guard file (path + ".takeover"): two processes that both found the same stale
 // lock cannot each remove the other's fresh one.
+//
+// Known residual window: releaseLock reads the token and then removes by name, so
+// a holder that ran past stale can still remove a successor's lock created
+// between the two calls. The window is microseconds, needs a holder stalled for
+// the stale period, and the worst outcome is two writers overlapping once; every
+// write the lock protects is a whole-line append or an atomic rename, so no file
+// is corrupted. A rename-to-tombstone scheme would shrink it without closing it
+// (rename and verify are still two steps), so it is documented, not rebuilt.
 func lock(path string, wait, stale time.Duration) (release func(), err error) {
 	token := newLockToken()
 	deadline := time.Now().Add(wait)

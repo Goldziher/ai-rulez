@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 const saltFileName = "usage.salt"
@@ -93,20 +95,14 @@ func loadSalt(path string) string {
 }
 
 // readSalt returns the trimmed contents of the salt file, tightening its mode to
-// 0600 when it is looser. "" means missing, empty or unreadable.
+// 0600 when it is looser. "" means missing, empty, unreadable or not a regular
+// file: a symlinked salt (a repository can plant one) is never read or chmodded.
 func readSalt(path string) string {
-	data, err := os.ReadFile(path) //nolint:gosec // the machine-local salt file
+	data, err := safefs.ReadRegular(path)
 	if err != nil {
 		return ""
 	}
-	salt := strings.TrimSpace(string(data))
-	if salt == "" {
-		return ""
-	}
-	if info, statErr := os.Stat(path); statErr == nil && info.Mode().Perm()&0o077 != 0 {
-		_ = os.Chmod(path, 0o600) //nolint:errcheck // best effort: the salt is still usable
-	}
-	return salt
+	return strings.TrimSpace(string(data))
 }
 
 // LoadSalt returns the session-hash salt for a salt file path (or the

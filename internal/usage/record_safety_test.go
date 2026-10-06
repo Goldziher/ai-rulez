@@ -152,3 +152,22 @@ func TestRecordCommand_QuotesTheExecutable(t *testing.T) {
 	got := recordCommand(&HookTemplateOptions{Executable: "/Users/a b/bin/ai-rulez"}, HarnessClaude)
 	assert.True(t, strings.HasPrefix(got, `'/Users/a b/bin/ai-rulez' usage record`), got)
 }
+
+func TestLoadSalt_IgnoresASymlinkedSaltFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs privileges on windows")
+	}
+	t.Setenv(SaltEnv, "")
+	dir := t.TempDir()
+	victim := filepath.Join(dir, "victim")
+	require.NoError(t, os.WriteFile(victim, []byte("planted-salt\n"), 0o644))
+	path := filepath.Join(dir, "usage.salt")
+	require.NoError(t, os.Symlink(victim, path))
+
+	salt := loadSalt(path)
+
+	assert.NotEqual(t, "planted-salt", salt, "a symlinked salt must not be read")
+	info, err := os.Stat(victim)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "the target's mode must not be changed")
+}
