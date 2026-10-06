@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/catalog-diff.schema.json",
+  "title": "ai-rulez catalog diff",
+  "description": "Output of `ai-rulez catalog diff --format json`: what was added, removed or changed between two version 2 catalogs (JSON files or git revisions). Items and MCP servers are matched by their stable ref, roles by name. A consumer must refuse an unknown schema_version.",
+  "type": "object",
+  "required": ["schema_version", "from", "to", "identical", "items", "mcp_servers", "roles", "lint", "notes"],
+  "additionalProperties": false,
+  "definitions": {
+    "side": {
+      "type": "object",
+      "required": ["label", "items", "listing_tokens", "body_tokens"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "description": "What was named: a file name, a revision, or working tree." },
+        "commit": { "type": "string", "description": "The commit a revision resolved to." },
+        "lock_tree": { "type": "string" },
+        "items": { "type": "integer", "minimum": 0 },
+        "listing_tokens": { "type": "integer", "minimum": 0 },
+        "body_tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["ref"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string" },
+        "kind": { "type": "string" },
+        "tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Listing plus body tokens of an added or removed item."
+        }
+      }
+    },
+    "changed": {
+      "type": "object",
+      "required": ["ref", "changes"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string" },
+        "kind": { "type": "string" },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "field": { "type": "string" },
+              "from": { "type": "string" },
+              "to": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["added", "removed", "changed"],
+      "additionalProperties": false,
+      "properties": {
+        "added": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+        "removed": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+        "changed": { "type": "array", "items": { "$ref": "#/definitions/changed" } }
+      }
+    },
+    "lintSummary": {
+      "type": "object",
+      "required": ["errors", "warnings", "infos"],
+      "additionalProperties": false,
+      "properties": {
+        "errors": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "infos": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "from": { "$ref": "#/definitions/side" },
+    "to": { "$ref": "#/definitions/side" },
+    "identical": { "type": "boolean" },
+    "items": { "$ref": "#/definitions/section" },
+    "mcp_servers": { "$ref": "#/definitions/section" },
+    "roles": { "$ref": "#/definitions/section" },
+    "lint": {
+      "description": "Project lint totals of both sides; null when lint did not run on one of them.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["from", "to"],
+          "additionalProperties": false,
+          "properties": {
+            "from": { "$ref": "#/definitions/lintSummary" },
+            "to": { "$ref": "#/definitions/lintSummary" }
+          }
+        }
+      ]
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}
