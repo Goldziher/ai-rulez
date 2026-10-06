@@ -627,16 +627,16 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Roles           []RoleConfig           `toml:"roles"`
 		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
 		Lock            *LockConfig            `toml:"lock"`
+		Governance      *GovernanceConfig      `toml:"governance"`
 		LLM             *llm.Config            `toml:"llm"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
+		Review          *ReviewConfig          `toml:"review"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
-		Governance      *GovernanceConfig      `toml:"governance"`
 		Claude          *ClaudeConfig          `toml:"claude"`
 		Codex           *CodexConfig           `toml:"codex"`
 		Hooks           []HookGroup            `toml:"hooks"`
-		Review          *ReviewConfig          `toml:"review"`
 		Guard           *GuardConfig           `toml:"guard"`
 		Permissions     *Permissions           `toml:"permissions"`
 		OKF             *OKFConfig             `toml:"okf"`
@@ -711,17 +711,17 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Roles:           raw.Roles,
 		RoleManifest:    raw.RoleManifest,
 		Lock:            raw.Lock,
+		Governance:      raw.Governance,
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,
+		Review:          raw.Review,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,
-		Governance:      raw.Governance,
 		Claude:          raw.Claude,
 		Codex:           raw.Codex,
 		Hooks:           raw.Hooks,
 		Guard:           raw.Guard,
-		Review:          raw.Review,
 		Permissions:     raw.Permissions,
 		OKF:             raw.OKF,
 	}

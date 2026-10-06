@@ -1102,6 +1102,37 @@
         "additionalProperties": false
       }
     },
+    "review": {
+      "type": "object",
+      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
+      "properties": {
+        "rubric": {
+          "type": "string",
+          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics."
+        },
+        "content": {
+          "type": "string",
+          "enum": ["descriptions", "full"],
+          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Name globs of items the review skips."
+        },
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset."
+        },
+        "max_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
+        }
+      },
+      "additionalProperties": false
+    },
     "telemetry": {
       "type": "object",
       "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",
@@ -1138,37 +1169,6 @@
         },
         "sample": {
           "type": "number",
-    "review": {
-      "type": "object",
-      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
-      "properties": {
-        "rubric": {
-          "type": "string",
-          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics."
-        },
-        "content": {
-          "type": "string",
-          "enum": ["descriptions", "full"],
-          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body."
-        },
-        "exclude": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Name globs of items the review skips."
-        },
-        "max_cost_usd": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset."
-        },
-        "max_calls": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
-        }
-      },
-      "additionalProperties": false
-    },
           "minimum": 0,
           "maximum": 1,
           "description": "Fraction of sessions exported, decided per salted session hash. Default 1."
