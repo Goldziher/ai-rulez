@@ -4,8 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // maxSymlinkHops bounds how many links one write path may traverse, matching the
@@ -24,8 +27,17 @@ const maxSymlinkHops = 40
 // overwrite arbitrary files, so it is an error naming the link.
 func (g *Generator) guardWrite(abs string) (string, bool, error) {
 	abs = filepath.Clean(abs)
+	// Fail closed: a generator never writes outside the project (or the user-scope
+	// roots), whatever a config-supplied path says, and never into a git directory.
 	if !g.withinScope(abs) {
-		return abs, false, nil
+		return "", false, oops.With("path", abs).
+			Hint("Output paths must stay inside the project directory").
+			Errorf("refusing to write %s: it is outside the project", abs)
+	}
+	if g.inGitDir(abs) {
+		return "", false, oops.With("path", abs).
+			Hint("ai-rulez never writes inside .git; a path like that in a preset or provider spec is rejected").
+			Errorf("refusing to write %s: it is inside a git directory", abs)
 	}
 	hops := 0
 	resolved, viaLink, err := resolveWriteTarget(abs, &hops)
@@ -86,4 +98,22 @@ func resolveWriteTarget(p string, hops *int) (string, bool, error) {
 	}
 	resolved, _, err := resolveWriteTarget(dest, hops)
 	return resolved, true, err
+}
+
+// inGitDir reports whether abs, relative to the root that scopes it, has a
+// segment naming a git directory.
+func (g *Generator) inGitDir(abs string) bool {
+	for _, root := range g.writeRoots() {
+		rel, err := filepath.Rel(root, abs)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		for _, seg := range strings.Split(filepath.ToSlash(rel), "/") {
+			if config.IsGitDirName(seg) {
+				return true
+			}
+		}
+		return false
+	}
+	return false
 }

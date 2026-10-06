@@ -531,6 +531,14 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 			Errorf("custom preset %q missing required field 'path'", preset.Name)
 	}
 
+	if err := ValidateOutputPath("path", preset.Path); err != nil {
+		return oops.
+			With("field", fmt.Sprintf("presets[%d].path", index)).
+			With("preset_name", preset.Name).
+			Hint("A custom preset path must stay inside the project and out of .git/ and .ai-rulez/").
+			Wrapf(err, "custom preset %q has an unsafe 'path'", preset.Name)
+	}
+
 	return nil
 }
 
