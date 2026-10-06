@@ -96,7 +96,7 @@ func runActivationRuns(ctx context.Context, req *Request, concurrency int, one a
 func aggregateActivation(c *Case, outs []activationOutcome) Result {
 	res := Result{Case: c.ID, Arm: ArmWith}
 	counts := map[string]int{}
-	usable := 0
+	usable, errored := 0, 0
 	var lastErr string
 	for i := range outs {
 		o := &outs[i]
@@ -105,6 +105,7 @@ func aggregateActivation(c *Case, outs []activationOutcome) Result {
 		res.CostUSD += o.costUSD
 		if o.err != "" {
 			lastErr = o.err
+			errored++
 			continue
 		}
 		usable++
@@ -122,7 +123,7 @@ func aggregateActivation(c *Case, outs []activationOutcome) Result {
 		}
 		return res
 	}
-	res.Runs, res.FiredCounts = usable, counts
+	res.Runs, res.ErroredRuns, res.FiredCounts = usable, errored, counts
 	for id, n := range counts {
 		if id != firedNone && n > 0 {
 			res.Fired = append(res.Fired, id)
