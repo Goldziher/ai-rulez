@@ -443,9 +443,29 @@ func bootstrap(cases []CaseResult) map[string]Interval {
 	out := map[string]Interval{}
 	for name, vals := range series(cases) {
 		means := resampleMeans(vals)
-		out[name] = Interval{Low: round(means[int(0.025*float64(len(means)))]), High: round(means[int(0.975*float64(len(means)))-1])}
+		low, high := intervalOf(means)
+		out[name] = Interval{Low: round(low), High: round(high)}
 	}
 	return out
+}
+
+// percentileBounds are the indexes of the 2.5th and 97.5th percentile of n sorted resamples, in integer
+// arithmetic so that no float rounding can move a bound by one.
+func percentileBounds(n int) (lo, hi int) {
+	if n <= 0 {
+		return 0, 0
+	}
+	lo, hi = n*25/1000, n*975/1000-1
+	return lo, min(max(hi, 0), n-1)
+}
+
+// intervalOf is the 95% interval of the sorted bootstrap distribution means.
+func intervalOf(means []float64) (low, high float64) {
+	if len(means) == 0 {
+		return 0, 0
+	}
+	lo, hi := percentileBounds(len(means))
+	return means[lo], means[hi]
 }
 
 // resampleMeans is the sorted bootstrap distribution of the mean of vals.
@@ -489,11 +509,8 @@ func paired(byMode map[string]*ModeResult) map[string]map[string]Diff {
 				delta[i] = vals[i] - ref[i]
 				mean += delta[i]
 			}
-			means := resampleMeans(delta)
-			diffs[name] = Diff{
-				Diff: round(mean / float64(len(vals))),
-				Low:  round(means[int(0.025*float64(len(means)))]), High: round(means[int(0.975*float64(len(means)))-1]),
-			}
+			low, high := intervalOf(resampleMeans(delta))
+			diffs[name] = Diff{Diff: round(mean / float64(len(vals))), Low: round(low), High: round(high)}
 		}
 		out[mode] = diffs
 	}
