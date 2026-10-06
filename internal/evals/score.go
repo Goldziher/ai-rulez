@@ -58,9 +58,13 @@ type SkillScore struct {
 	// SkillTokens is the token count of the skill's SKILL.md (cl100k_base, an
 	// approximation). RunTokens and CostUSD are what the runner reported for the
 	// "with" and "without" arms together.
-	SkillTokens int     `json:"skill_tokens"`
-	RunTokens   int     `json:"run_tokens"`
-	CostUSD     float64 `json:"cost_usd"`
+	SkillTokens int `json:"skill_tokens"`
+	RunTokens   int `json:"run_tokens"`
+	// RunInputTokens and RunOutputTokens split RunTokens when the runner reports the
+	// split; `eval calibrate-estimate` reads them.
+	RunInputTokens  int     `json:"run_input_tokens,omitempty"`
+	RunOutputTokens int     `json:"run_output_tokens,omitempty"`
+	CostUSD         float64 `json:"cost_usd"`
 }
 
 // ScoreOptions configures Score.
@@ -100,7 +104,7 @@ func Score(cases []Case, resp *Response, opts ScoreOptions) (SkillScore, []CaseS
 		totalCost = (float64(inTokens)*opts.Price.InPerMTok + float64(outTokens)*opts.Price.OutPerMTok) / 1e6
 	}
 
-	score := SkillScore{Cases: len(cases), SkillTokens: opts.SkillTokens, RunTokens: totalTokens, CostUSD: round(totalCost)}
+	score := SkillScore{Cases: len(cases), SkillTokens: opts.SkillTokens, RunTokens: totalTokens, RunInputTokens: inTokens, RunOutputTokens: outTokens, CostUSD: round(totalCost)}
 	scores := make([]CaseScore, 0, len(cases))
 	var t tally
 	for i := range cases {

@@ -61,6 +61,11 @@ type RunOptions struct {
 	Counter     tokens.Counter
 	// Price overrides the model price tier for estimates when non-zero.
 	Price Price
+	// Params are the assumptions behind the estimate; zero fields keep the built-in values.
+	Params EstimateParams
+	// MaxCostMode is the estimate figure that must fit under MaxCostUSD before the
+	// run starts: CostModeExpected (default) or CostModeHigh.
+	MaxCostMode string
 	// EstimateRuns is the agent runs per case and arm assumed by the estimate.
 	EstimateRuns int
 	// Store holds earlier results (for the cache) and receives new ones.
@@ -142,6 +147,11 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	}
 	if err := checkOptions(opts); err != nil {
 		return nil, err
+	}
+	switch opts.MaxCostMode {
+	case "", CostModeExpected, CostModeHigh:
+	default:
+		return nil, fmt.Errorf("unknown max cost mode %q (use %s or %s)", opts.MaxCostMode, CostModeExpected, CostModeHigh)
 	}
 	e := &engine{opts: opts, counter: opts.Counter, threshold: defaultThreshold, price: opts.Price, store: opts.Store, model: opts.Model, runnerName: "none"}
 	if e.counter == nil {
@@ -228,9 +238,15 @@ func (e *engine) planAll(selected []Skill) ([]plannedSkill, error) {
 			e.report.Estimate = e.report.Estimate.Add(*p.run.Estimate)
 		}
 	}
-	if !e.opts.DryRun && e.opts.MaxCostUSD > 0 && e.report.Estimate.CostUSD > e.opts.MaxCostUSD {
-		return nil, fmt.Errorf("estimated cost $%.2f exceeds --max-cost $%.2f (%d agent runs); narrow the skills, lower runs, or raise the limit",
-			e.report.Estimate.CostUSD, e.opts.MaxCostUSD, e.report.Estimate.AgentRuns)
+	if !e.opts.DryRun && e.opts.MaxCostUSD > 0 {
+		figure, label := e.report.Estimate.CostUSD, "estimated"
+		if e.opts.MaxCostMode == CostModeHigh {
+			figure, label = e.report.Estimate.CostHighUSD, "high-end estimated"
+		}
+		if figure > e.opts.MaxCostUSD {
+			return nil, fmt.Errorf("%s cost $%.2f exceeds --max-cost $%.2f (%d agent runs); narrow the skills, lower runs, or raise the limit",
+				label, figure, e.opts.MaxCostUSD, e.report.Estimate.AgentRuns)
+		}
 	}
 	return plans, nil
 }
@@ -284,6 +300,13 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		return p, nil
 	}
 	cases := Expand(authored)
+	for i := range cases {
+		// A runner that only knows the free-text rubric still gets the checklist,
+		// rendered; rubric_items travels along for one that understands it.
+		if len(cases[i].RubricItems) > 0 {
+			cases[i].Rubric = cases[i].RubricText()
+		}
+	}
 	p.run.CaseCount = len(cases)
 	digest, err := SkillDigest(skill.Dir)
 	if err != nil {
@@ -303,7 +326,7 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		Version: ProtocolVersion, Harness: e.opts.Harness, Model: e.opts.Model, Ablation: e.opts.Ablation,
 		Skill: SkillRef{ID: skill.ID, Dir: skill.Dir, Digest: digest}, Cases: cases,
 	}
-	est := EstimateRun(p.req, skillTokens(skill, e.counter), e.opts.EstimateRuns, e.price, e.counter)
+	est := EstimateRunWith(e.opts.Params, p.req, skillTokens(skill, e.counter), e.opts.EstimateRuns, e.price, e.counter)
 	p.run.Estimate = &est
 	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) &&
 		// The key is an unkeyed hash a committed file can carry, so also require the
@@ -413,7 +436,7 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		if p.run.Estimate != nil {
-			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens)
+			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens).WithUsage(p.run.Estimate, score.RunInputTokens, score.RunOutputTokens)
 		}
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
 		if !cacheable(&score) {

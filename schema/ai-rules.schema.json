@@ -2003,6 +2003,33 @@
               "minimum": 0,
               "maximum": 1,
               "description": "Enable skill-confusable (AR9A2): report a sibling that won at least this share of a skill's positive activation prompts."
+            },
+            "estimate": {
+              "type": "object",
+              "description": "Assumptions of the `ai-rulez eval run` cost estimate. `ai-rulez eval calibrate-estimate` proposes measured values. Zero or unset keeps the built-in value.",
+              "properties": {
+                "overhead_tokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The harness's own input tokens per agent run (system prompt, tools). Built-in 2000."
+                },
+                "assumed_output_tokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Output tokens per agent run of a case run. Built-in 600."
+                },
+                "activation_output_tokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Output tokens per activation decision. Built-in 150."
+                },
+                "tool_loop_factor": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Scales the tool-loop re-read in the high figure. Built-in 1."
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

@@ -1103,6 +1103,33 @@
               "minimum": 0,
               "type": "number"
             },
+            "estimate": {
+              "additionalProperties": false,
+              "description": "Assumptions of the `ai-rulez eval run` cost estimate. `ai-rulez eval calibrate-estimate` proposes measured values. Zero or unset keeps the built-in value.",
+              "properties": {
+                "activation_output_tokens": {
+                  "description": "Output tokens per activation decision. Built-in 150.",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "assumed_output_tokens": {
+                  "description": "Output tokens per agent run of a case run. Built-in 600.",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "overhead_tokens": {
+                  "description": "The harness's own input tokens per agent run (system prompt, tools). Built-in 2000.",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "tool_loop_factor": {
+                  "description": "Scales the tool-loop re-read in the high figure. Built-in 1.",
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
             "min_activation_precision": {
               "description": "Enable activation-low (AR9A1): report a skill whose recorded activation precision is below this.",
               "maximum": 1,

@@ -26,6 +26,7 @@ var evalFlags struct {
 	runner        string
 	runnerCommand string
 	claudeBin     string
+	codexBin      string
 	runnerArgs    []string
 	runs          int
 	judgeModel    string
@@ -40,6 +41,7 @@ var evalFlags struct {
 	format        string
 	out           string
 	maxCost       float64
+	maxCostMode   string
 	date          string
 	changedOnly   bool
 	base          string
@@ -70,6 +72,8 @@ schema/eval-case.schema.json. A runner executes them:
 
   claude-plugin-eval   translate the cases for "claude plugin eval" and run it (harness claude)
   command              pipe the request JSON to --runner-command, read the response JSON
+  claude-native        native activation surface through "claude -p" (harness claude)
+  codex-native         native activation surface through "codex exec" (harness codex)
 
 Results are recorded in .ai-rulez/eval-results.json with the skill's sha256 digest, and a
 skill whose digest, cases, runner settings, harness, model, ablation setting and --allow-exec are
@@ -86,9 +90,11 @@ each recorded run keeps the estimate next to what the runner reported.
 --mode activation measures only whether the right skill is chosen for a prompt. --surface retrieval
 ranks the prompts of the cases with the offline find_skill ranker (no model, no cost) and reports
 activation rates with Wilson intervals, recall@k and a confusion matrix between sibling skills;
---scope picks which skills compete. --surface native needs a runner that declares the activation
-capability and is refused otherwise. The command exits 2 when a skill fails its pass threshold, errors, or has
-invalid cases.`,
+--scope picks which skills compete. --surface native installs every competing skill in a harness,
+repeats each prompt --runs times (default 5) and records which skills the model loaded; it needs a runner
+that declares the activation capability and the native surface (claude-native and codex-native do; a command
+runner answers the capabilities probe) and is refused otherwise. The command exits 2 when a skill fails its pass
+threshold, errors, or has invalid cases.`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		failed, err := runEval(cmd, args)
@@ -105,11 +111,12 @@ invalid cases.`,
 func init() {
 	f := evalRunCmd.Flags()
 	f.StringVar(&evalFlags.harness, "harness", "claude", "Harness the cases run against (recorded in the results)")
-	f.StringVar(&evalFlags.runner, "runner", "", "Runner: claude-plugin-eval or command (default claude-plugin-eval for the claude harness, command when --runner-command is set)")
+	f.StringVar(&evalFlags.runner, "runner", "", "Runner: claude-plugin-eval, command, claude-native or codex-native (default claude-plugin-eval for the claude harness, command when --runner-command is set; claude-native or codex-native for --surface native)")
 	f.StringVar(&evalFlags.runnerCommand, "runner-command", "", "Shell command for the command runner: receives the request JSON on stdin, prints the response JSON")
-	f.StringVar(&evalFlags.claudeBin, "claude-bin", "claude", "claude executable for the claude-plugin-eval runner")
+	f.StringVar(&evalFlags.claudeBin, "claude-bin", "claude", "claude executable for the claude-plugin-eval and claude-native runners")
+	f.StringVar(&evalFlags.codexBin, "codex-bin", "codex", "codex executable for the codex-native runner")
 	f.StringArrayVar(&evalFlags.runnerArgs, "runner-arg", nil, "Extra argument for the claude-plugin-eval runner (for example --trust-plugin); repeatable")
-	f.IntVar(&evalFlags.runs, "runs", 0, "Runs per case for claude-plugin-eval (default 3, always passed to claude explicitly)")
+	f.IntVar(&evalFlags.runs, "runs", 0, "Runs per case: for claude-plugin-eval (default 3, always passed to claude explicitly) and per prompt for --surface native (default 5)")
 	f.StringVar(&evalFlags.judgeModel, "judge-model", "", "Grader model for claude-plugin-eval")
 	f.DurationVar(&evalFlags.timeout, "timeout", 30*time.Minute, "Time limit for one skill with either runner; the runner's whole process tree is killed when it ends")
 	f.StringVar(&evalFlags.model, "model", "", "Model to run the cases with (cases may override it)")
@@ -117,12 +124,13 @@ func init() {
 	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost range; call no runner and write nothing")
 	f.BoolVar(&evalFlags.estimate, "estimate", false, "Alias of --dry-run")
 	f.StringVar(&evalFlags.mode, "mode", evals.ModeCases, "What to measure: cases (full eval cases through a runner) or activation (only whether the right skill is chosen)")
-	f.StringVar(&evalFlags.surface, "surface", "", "With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner with the activation capability)")
+	f.StringVar(&evalFlags.surface, "surface", "", "With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner that declares the activation capability and the native surface)")
 	f.StringVar(&evalFlags.scope, "scope", evals.ScopeDomain, "With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
 	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
 	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
+	f.StringVar(&evalFlags.maxCostMode, "max-cost-mode", "", "Estimate figure that must fit under --max-cost before a run starts: expected (default for case runs) or high (default for --mode activation)")
 	f.StringVar(&evalFlags.date, "date", "", "Date recorded in the results (default $"+EvalDateEnv+"; the clock is never read)")
 	f.BoolVar(&evalFlags.changedOnly, "changed-only", false, "Only skills with files changed against --base (git diff, plus untracked files)")
 	f.StringVar(&evalFlags.base, "base", "HEAD", "Git ref --changed-only compares the working tree against")
@@ -149,12 +157,13 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 		return false, err
 	}
 	if evalFlags.mode == evals.ModeActivation {
-		return runEvalActivation(ctx, cmd, skills, cfg.ConfigDir, cfg.BaseDir)
+		return runEvalActivation(ctx, cmd, skills, cfg)
 	}
 	opts, err := buildEvalOptions(cmd, skills, cfg.ConfigDir, cfg.BaseDir)
 	if err != nil {
 		return false, err
 	}
+	opts.Params = estimateParams(cfg)
 	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
 		floor := cfg.Lint.Evals.MinPassRate
 		opts.PassThreshold = &floor
@@ -234,7 +243,7 @@ func validateEvalFlags(cmd *cobra.Command) error {
 	if evalFlags.runs < 0 {
 		return oops.Errorf("--runs must be >= 0, got %d", evalFlags.runs)
 	}
-	if err := validateActivationFlags(cmd); err != nil {
+	if err := validateActivationFlags(); err != nil {
 		return err
 	}
 	if evalFlags.timeout < 0 {
@@ -271,7 +280,7 @@ func buildEvalOptions(cmd *cobra.Command, skills []string, cfgDir, baseDir strin
 	opts := &evals.RunOptions{
 		ConfigDir: absDir, Skills: skills, Harness: evalFlags.harness, Model: evalFlags.model,
 		Ablation: evalFlags.ablation, DryRun: evalDryRun(), Force: evalFlags.force,
-		MaxCostUSD: evalFlags.maxCost, Date: date,
+		MaxCostUSD: evalFlags.maxCost, MaxCostMode: evalFlags.maxCostMode, Date: date,
 		Grade: evals.GradeOptions{AllowExec: evalFlags.allowExec}, ToolVersion: Version,
 		Price: evals.Price{InPerMTok: evalFlags.priceIn, OutPerMTok: evalFlags.priceOut},
 	}

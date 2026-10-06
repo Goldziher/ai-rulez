@@ -10,9 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -57,6 +59,17 @@ type Fixture struct {
 	Source string `yaml:"source,omitempty" json:"source,omitempty"`
 }
 
+// RubricItem is one weighted criterion of a checklist rubric.
+type RubricItem struct {
+	// Text is the criterion, as a grader reads it.
+	Text string `yaml:"text" json:"text"`
+	// Weight is the criterion's share of the score. Default 1; must be > 0.
+	Weight *float64 `yaml:"weight,omitempty" json:"weight,omitempty"`
+}
+
+// maxRubricItems bounds a checklist: it is sent to a grader whole.
+const maxRubricItems = 50
+
 // Assertion is one deterministic check on a run.
 type Assertion struct {
 	Type string `yaml:"type" json:"type"`
@@ -88,9 +101,12 @@ type Case struct {
 	NearMiss   []string    `yaml:"near_miss,omitempty" json:"near_miss,omitempty"`
 	Files      []Fixture   `yaml:"files,omitempty" json:"files,omitempty"`
 	Assertions []Assertion `yaml:"assertions,omitempty" json:"assertions,omitempty"`
-	// Rubric is graded by a model grader the runner provides.
+	// Rubric is graded by a model grader the runner provides (or --grader builtin).
 	Rubric string `yaml:"rubric,omitempty" json:"rubric,omitempty"`
-	// RubricMinScore is the pass mark (0-1) for Rubric. Default 0.7.
+	// RubricItems is a weighted checklist, an alternative to Rubric: the grader
+	// scores the share of the total weight the answer satisfies.
+	RubricItems []RubricItem `yaml:"rubric_items,omitempty" json:"rubric_items,omitempty"`
+	// RubricMinScore is the pass mark (0-1) for Rubric or RubricItems. Default 0.7.
 	RubricMinScore *float64 `yaml:"rubric_min_score,omitempty" json:"rubric_min_score,omitempty"`
 	Model          string   `yaml:"model,omitempty" json:"model,omitempty"`
 	Tags           []string `yaml:"tags,omitempty" json:"tags,omitempty"`
@@ -100,6 +116,10 @@ type Case struct {
 	Line        int    `yaml:"-" json:"-"`
 	NearMissOf  string `yaml:"-" json:"near_miss_of,omitempty"`
 	ResolvedDir string `yaml:"-" json:"-"`
+	// Target and Runs are set for an activation request: the skill that should (or,
+	// for a negative case, should not) load, and the repetitions of the prompt.
+	Target string `yaml:"-" json:"target,omitempty"`
+	Runs   int    `yaml:"-" json:"runs,omitempty"`
 }
 
 // CaseFile is the on-disk document: a list of cases, or a single case written at
@@ -322,11 +342,33 @@ func (c *Case) validateFixtures() []string {
 func (c *Case) validateGrading() []string {
 	var out []string
 	if c.RubricMinScore != nil {
-		if c.Rubric == "" {
-			out = append(out, "rubric_min_score needs a rubric")
+		if !c.HasRubric() {
+			out = append(out, "rubric_min_score needs a rubric or rubric_items")
 		}
 		if *c.RubricMinScore < 0 || *c.RubricMinScore > 1 {
 			out = append(out, "rubric_min_score must be between 0 and 1")
+		}
+	}
+	return append(out, c.validateRubricItems()...)
+}
+
+func (c *Case) validateRubricItems() []string {
+	var out []string
+	if len(c.RubricItems) == 0 {
+		return nil
+	}
+	if c.Rubric != "" {
+		out = append(out, "rubric and rubric_items are mutually exclusive")
+	}
+	if len(c.RubricItems) > maxRubricItems {
+		out = append(out, fmt.Sprintf("rubric_items has %d items; the limit is %d", len(c.RubricItems), maxRubricItems))
+	}
+	for i, item := range c.RubricItems {
+		if strings.TrimSpace(item.Text) == "" {
+			out = append(out, fmt.Sprintf("rubric_items[%d].text is empty", i))
+		}
+		if w := item.Weight; w != nil && (math.IsNaN(*w) || math.IsInf(*w, 0) || *w <= 0) {
+			out = append(out, fmt.Sprintf("rubric_items[%d].weight must be a finite number > 0", i))
 		}
 	}
 	return out
@@ -446,6 +488,37 @@ func appendUnique(list []string, extra string) []string {
 	}
 	return append(out, extra)
 }
+
+// HasRubric reports whether the case has a rubric of either form.
+func (c *Case) HasRubric() bool { return c.Rubric != "" || len(c.RubricItems) > 0 }
+
+// itemWeight is the weight of a rubric item (1 when unset).
+func (i RubricItem) itemWeight() float64 {
+	if i.Weight == nil {
+		return 1
+	}
+	return *i.Weight
+}
+
+// RubricText is the rubric as a grader reads it: Rubric verbatim, or the weighted
+// checklist of RubricItems with the scoring rule stated.
+func (c *Case) RubricText() string {
+	if len(c.RubricItems) == 0 {
+		return c.Rubric
+	}
+	total := 0.0
+	for _, item := range c.RubricItems {
+		total += item.itemWeight()
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Score the answer against this weighted checklist (total weight %s). The score is the sum of the weights of the items the answer satisfies divided by the total weight, a number from 0 to 1.\n", formatWeight(total))
+	for n, item := range c.RubricItems {
+		fmt.Fprintf(&b, "%d. (weight %s) %s\n", n+1, formatWeight(item.itemWeight()), strings.TrimSpace(item.Text))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func formatWeight(w float64) string { return strconv.FormatFloat(w, 'f', -1, 64) }
 
 // Expects reports whether the case expects the skill to trigger.
 func (c *Case) Expects() bool { return c.ExpectTrigger != nil && *c.ExpectTrigger }

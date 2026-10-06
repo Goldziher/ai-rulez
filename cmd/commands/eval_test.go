@@ -21,6 +21,7 @@ func resetEvalFlags(t *testing.T) {
 	reset := func() {
 		evalFlags.harness, evalFlags.runner, evalFlags.runnerCommand = "claude", "", ""
 		evalFlags.claudeBin, evalFlags.runnerArgs, evalFlags.runs = "claude", nil, 0
+		evalFlags.codexBin, evalFlags.maxCostMode = "codex", ""
 		evalFlags.ablation, evalFlags.dryRun, evalFlags.format = false, false, evals.FormatMarkdown
 		evalFlags.out, evalFlags.maxCost, evalFlags.date = "", 0, ""
 		evalFlags.changedOnly, evalFlags.base, evalFlags.force = false, "HEAD", false
@@ -371,10 +372,27 @@ func TestEvalRun_ActivationFlagValidation(t *testing.T) {
 		{"junit has no activation form", func() {
 			evalFlags.mode, evalFlags.surface, evalFlags.format = evals.ModeActivation, evals.SurfaceRetrieval, evals.FormatJUnit
 		}, "not junit"},
-		{"a runner without the capability is refused", func() {
-			evalFlags.mode, evalFlags.surface, evalFlags.runnerCommand = evals.ModeActivation, evals.SurfaceNative, "true"
+		{"a command runner that answers the probe without the capability is refused", func() {
+			evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceNative
+			evalFlags.runnerCommand = `printf '{"version":1}'`
 		}, "does not support activation mode"},
-		{"the built-in claude runner is refused too", func() { evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceNative }, "does not support activation mode"},
+		{"a command runner that does not answer the probe is refused", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.runnerCommand = evals.ModeActivation, evals.SurfaceNative, "true"
+		}, "capabilities handshake failed"},
+		{"the plugin-eval runner does not declare the capability", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.runner = evals.ModeActivation, evals.SurfaceNative, evals.RunnerClaudePluginEval
+		}, "does not support activation mode"},
+		{"a surface the runner does not declare is refused", func() {
+			evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceNative
+			evalFlags.runnerCommand = `printf '{"version":1,"capabilities":["activation"],"surfaces":["other"]}'`
+		}, "does not support the native surface"},
+		{"unknown max-cost-mode", func() { evalFlags.maxCostMode = "wild" }, "unknown --max-cost-mode"},
+		{"an unknown runner", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.runner = evals.ModeActivation, evals.SurfaceNative, "magic"
+		}, "unknown runner"},
+		{"no built-in runner for a harness", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.harness = evals.ModeActivation, evals.SurfaceNative, "gemini"
+		}, "no built-in native activation runner"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -387,6 +405,82 @@ func TestEvalRun_ActivationFlagValidation(t *testing.T) {
 			assert.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+// fakeClaude is a claude executable that answers one stream-json run: it loads the
+// skill when the prompt (stdin) mentions staging.
+func fakeClaude(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake claude is a POSIX shell script")
+	}
+	script := filepath.Join(t.TempDir(), "claude")
+	body := `#!/bin/sh
+prompt=$(cat)
+case "$prompt" in
+*staging*) echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"ai-rulez-activation:deploy"}}]}}' ;;
+esac
+echo '{"type":"result","subtype":"error_max_turns","is_error":true,"total_cost_usd":0.01,"usage":{"input_tokens":100,"output_tokens":10}}'
+exit 1
+`
+	require.NoError(t, os.WriteFile(script, []byte(body), 0o700))
+	return script
+}
+
+func TestEvalRun_ActivationNativeThroughTheClaudeAdapter(t *testing.T) {
+	resetEvalFlags(t)
+	root := activationProject(t)
+	evalFlags.mode, evalFlags.surface, evalFlags.runs = evals.ModeActivation, evals.SurfaceNative, 3
+	evalFlags.claudeBin, evalFlags.format, evalFlags.date = fakeClaude(t), evals.FormatJSON, "2026-10-06"
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+
+	failed, err := runEval(evalRunCmd, []string{"deploy"})
+
+	require.NoError(t, err)
+	assert.False(t, failed)
+	var report evals.ActivationReport
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	assert.Equal(t, evals.SurfaceNative, report.Surface)
+	assert.Equal(t, evals.RunnerClaudeNative, report.Runner)
+	assert.Equal(t, 3, report.Runs)
+	assert.InDelta(t, 0.06, report.Cost.ActualUSD, 1e-9, "two prompts, three runs, $0.01 each")
+	require.Len(t, report.Skills, 1)
+	assert.True(t, report.Skills[0].Passing)
+	assert.Equal(t, map[string]int{"deploy": 3}, report.Skills[0].Prompts[0].FiredCounts)
+	store, err := evals.LoadStore(filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+	require.NoError(t, err)
+	record, ok := store.Get("deploy")
+	require.True(t, ok)
+	require.NotNil(t, record.Activation)
+	assert.Equal(t, evals.SurfaceNative, record.Activation.Surface)
+}
+
+func TestEvalRun_ActivationNativeDryRunNeedsNoRunnerAndCallsNone(t *testing.T) {
+	resetEvalFlags(t)
+	root := activationProject(t)
+	evalFlags.mode, evalFlags.surface, evalFlags.estimate = evals.ModeActivation, evals.SurfaceNative, true
+	evalFlags.claudeBin = filepath.Join(t.TempDir(), "does-not-exist")
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+
+	failed, err := runEval(evalRunCmd, nil)
+
+	require.NoError(t, err)
+	assert.False(t, failed)
+	assert.Contains(t, out.String(), "dry run: ")
+	assert.NoFileExists(t, filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+}
+
+func TestEvalRun_ActivationNativeMaxCostRefusesBeforeRunning(t *testing.T) {
+	resetEvalFlags(t)
+	activationProject(t)
+	evalFlags.mode, evalFlags.surface, evalFlags.maxCost = evals.ModeActivation, evals.SurfaceNative, 0.0001
+	evalFlags.claudeBin = filepath.Join(t.TempDir(), "never-started")
+
+	_, err := runEval(evalRunCmd, []string{"deploy"})
+
+	assert.ErrorContains(t, err, "exceeds --max-cost")
 }
 
 func TestEvalRun_EstimateIsAnAliasOfDryRun(t *testing.T) {

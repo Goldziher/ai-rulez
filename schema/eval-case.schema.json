@@ -51,6 +51,19 @@
       },
       "additionalProperties": false
     },
+    "rubricItem": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "description": "The criterion, as a grader reads it." },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The criterion's share of the score. Default 1."
+        }
+      },
+      "additionalProperties": false
+    },
     "case": {
       "type": "object",
       "properties": {
@@ -69,12 +82,22 @@
         },
         "files": { "type": "array", "items": { "$ref": "#/definitions/fixture" } },
         "assertions": { "type": "array", "items": { "$ref": "#/definitions/assertion" } },
-        "rubric": { "type": "string", "description": "Graded by a model grader the runner provides." },
+        "rubric": {
+          "type": "string",
+          "description": "Graded by a model grader the runner provides, or by --grader builtin."
+        },
+        "rubric_items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": { "$ref": "#/definitions/rubricItem" },
+          "description": "A weighted checklist, an alternative to rubric (the two are mutually exclusive). The grader scores the share of the total weight the answer satisfies."
+        },
         "rubric_min_score": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Pass mark for the rubric. Default 0.7."
+          "description": "Pass mark for the rubric or rubric_items. Default 0.7."
         },
         "model": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]*$" } }
@@ -107,6 +130,7 @@
     "files": { "$ref": "#/definitions/case/properties/files" },
     "assertions": { "$ref": "#/definitions/case/properties/assertions" },
     "rubric": { "$ref": "#/definitions/case/properties/rubric" },
+    "rubric_items": { "$ref": "#/definitions/case/properties/rubric_items" },
     "rubric_min_score": { "$ref": "#/definitions/case/properties/rubric_min_score" },
     "model": { "$ref": "#/definitions/case/properties/model" },
     "tags": { "$ref": "#/definitions/case/properties/tags" }
