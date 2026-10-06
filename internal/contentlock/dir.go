@@ -7,9 +7,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // Tree kinds of fetched or cached directories. Each is its own domain, so the
@@ -35,19 +38,29 @@ const (
 // tests can force chunk boundaries inside a CRLF pair.
 var streamChunk = 64 * 1024
 
+// Leaf kinds of a tree besides a regular file. A symlink is pinned as its link
+// target string, an irregular entry (a Windows junction, a socket, a device) as
+// its path alone; neither is ever followed or read.
+const (
+	modeSymlink   = "120000"
+	modeIrregular = "000000"
+)
+
 type treeFile struct {
-	rel  string // "/"-separated, relative to the root
-	abs  string
-	info os.FileInfo
+	rel    string // "/"-separated, relative to the root
+	abs    string
+	info   os.FileInfo
+	mode   string // "" for a regular file, modeSymlink or modeIrregular
+	target string // link target of a symlink
 }
 
-// readTree returns the regular files below dir: VCS metadata (.git below the
-// root) and the cache bookkeeping files at the root are left out, so the digest
-// of a fresh clone equals the digest of the same tree re-read later. A symlinked
-// root is refused (WalkDir does not follow it, so every such tree would share
-// one constant digest) and so is any symlink inside the tree: its target is not
-// pinned by the digest, so skipping it silently would let the target change, or
-// be read by a loader, outside the lock.
+// readTree returns the leaves below dir: VCS metadata (.git below the root) and
+// the cache bookkeeping files at the root are left out, so the digest of a fresh
+// clone equals the digest of the same tree re-read later. A symlinked root is
+// refused (WalkDir does not follow it, so every such tree would share one
+// constant digest). A symlink inside the tree is never followed: it is a leaf of
+// its own that records the link target, so retargeting it changes the digest. An
+// irregular entry (a junction, socket or device) is a leaf without content.
 //
 // keep, when not nil, limits the tree to the top-level entries it names; a
 // symlink outside them is not examined.
@@ -74,7 +87,12 @@ func readTree(dir string, keep map[string]bool) ([]treeFile, error) {
 			return nil
 		}
 		if d.Type()&fs.ModeSymlink != 0 {
-			return oops.With("path", rel).Errorf("%s is a symlink; symlinks cannot be pinned, replace it with the file itself", rel)
+			target, err := os.Readlink(path)
+			if err != nil {
+				return err //nolint:wrapcheck // wrapped by the caller
+			}
+			files = append(files, treeFile{rel: rel, abs: path, mode: modeSymlink, target: filepath.ToSlash(target)})
+			return nil
 		}
 		if d.IsDir() {
 			if d.Name() == ".git" && path != dir {
@@ -90,6 +108,7 @@ func readTree(dir string, keep map[string]bool) ([]treeFile, error) {
 			return err //nolint:wrapcheck // wrapped by the caller
 		}
 		if !info.Mode().IsRegular() {
+			files = append(files, treeFile{rel: rel, abs: path, mode: modeIrregular})
 			return nil
 		}
 		files = append(files, treeFile{rel: rel, abs: path, info: info})
@@ -117,8 +136,17 @@ func digestTree(kind, dir string, keep map[string]bool) (string, error) {
 		return "", err
 	}
 	entries := make([]leafSum, len(files))
+	modeOf := treeModes(runtime.GOOS, dir, gitutil.TrackedFiles)
 	for i, f := range files {
-		mode := fileMode(f.abs, f.info)
+		switch f.mode {
+		case modeSymlink:
+			entries[i] = leafSum{path: f.rel, mode: modeSymlink, sum: symlinkDigest(f.rel, f.target)}
+			continue
+		case modeIrregular:
+			entries[i] = leafSum{path: f.rel, mode: modeIrregular, sum: irregularDigest(f.rel)}
+			continue
+		}
+		mode := modeOf(f)
 		sum, err := streamLeafDigest(f.abs, f.rel, mode)
 		if err != nil {
 			return "", oops.With("dir", dir).With("path", f.rel).Wrapf(err, "digest directory")
@@ -130,6 +158,30 @@ func digestTree(kind, dir string, keep map[string]bool) (string, error) {
 		return "", oops.With("dir", dir).Wrapf(err, "digest directory")
 	}
 	return digest, nil
+}
+
+// symlinkDigest hashes a symlink leaf:
+//
+//	sha256( lp("ai-rulez/symlink/v1") || lp(path) || lp(target) )
+func symlinkDigest(rel, target string) [sha256.Size]byte {
+	h := sha256.New()
+	for _, field := range []string{label("symlink"), rel, target} {
+		writeLP(h, []byte(field))
+	}
+	var out [sha256.Size]byte
+	copy(out[:], h.Sum(nil))
+	return out
+}
+
+// irregularDigest hashes an irregular leaf: sha256( lp("ai-rulez/irregular/v1") || lp(path) ).
+func irregularDigest(rel string) [sha256.Size]byte {
+	h := sha256.New()
+	for _, field := range []string{label("irregular"), rel} {
+		writeLP(h, []byte(field))
+	}
+	var out [sha256.Size]byte
+	copy(out[:], h.Sum(nil))
+	return out
 }
 
 // streamLeafDigest computes leafDigest of the file at abs without loading it. A

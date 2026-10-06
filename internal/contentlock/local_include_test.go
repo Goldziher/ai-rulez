@@ -64,18 +64,12 @@ func TestCompute_LocalIncludeProblems(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlinks need privileges on Windows")
 	}
-	secret := filepath.Join(t.TempDir(), "secret.txt")
-	require.NoError(t, os.WriteFile(secret, []byte("TOP-SECRET"), 0o600))
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, f *fixture)
 		want  string
 	}{
 		{"missing path", func(t *testing.T, f *fixture) {}, "not found"},
-		{"symlinked content", func(t *testing.T, f *fixture) {
-			writeAt(t, f.root, "vendor/shared/rules/ok.md", "# ok\n")
-			require.NoError(t, os.Symlink(secret, filepath.Join(f.root, "vendor", "shared", "rules", "leak.md")))
-		}, "symlink"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,10 +82,30 @@ func TestCompute_LocalIncludeProblems(t *testing.T) {
 			require.Len(t, snap.Problems, 1)
 			assert.Contains(t, snap.Problems[0], "shared")
 			assert.Contains(t, snap.Problems[0], tt.want)
-			assert.NotContains(t, snap.Problems[0], "TOP-SECRET")
 			assert.Empty(t, snap.Items)
 		})
 	}
+}
+
+func TestCompute_LocalIncludeWithASymlinkIsPinnedByLinkTarget(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	f := newFixture(t)
+	writeAt(t, f.root, "vendor/shared/rules/ok.md", "# ok\n")
+	link := filepath.Join(f.root, "vendor", "shared", "rules", "leak.md")
+	require.NoError(t, os.Symlink("ok.md", link))
+	f.cfg.Includes = []config.IncludeConfig{{Name: "shared", Source: "vendor/shared"}}
+
+	before := localIncludeSnapshot(t, f)
+	require.NoError(t, os.Remove(link))
+	require.NoError(t, os.Symlink("elsewhere.md", link))
+	after := localIncludeSnapshot(t, f)
+
+	require.Empty(t, before.Problems)
+	require.Len(t, before.Items, 1)
+	require.Len(t, after.Items, 1)
+	assert.NotEqual(t, before.Items[0].Digest, after.Items[0].Digest)
 }
 
 func TestCompute_RemoteIncludesAreNotPinnedAsLocal(t *testing.T) {
