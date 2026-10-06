@@ -84,7 +84,7 @@ func TestResolverCreateSource(t *testing.T) {
 		},
 		{
 			name:        "local absolute path",
-			source:      "/absolute/path",
+			source:      "/tmp/absolute/path",
 			expectType:  SourceTypeLocal,
 			expectError: false,
 		},
