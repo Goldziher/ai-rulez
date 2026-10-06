@@ -345,7 +345,7 @@ func reviewedProject(t *testing.T, extra string, reviews ...forge.Review) (root,
 }
 
 func ghReview(id int64, login, state, commit string) forge.Review {
-	return forge.Review{ID: id, Login: login, State: state, CommitID: commit, Submitted: time.Date(2026, 10, 1, 12, int(id), 0, 0, time.UTC)}
+	return forge.Review{ID: id, Login: login, State: state, CommitID: commit, Submitted: time.Date(2026, 10, 1, 12, int(id), 0, 0, time.UTC), AuthorAssociation: forge.AssociationMember}
 }
 
 func TestApprove_FromGithubReviewLinksTheApprovingReviews(t *testing.T) {

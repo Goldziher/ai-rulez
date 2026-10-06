@@ -212,6 +212,28 @@ type Review struct {
 	// final head): a review of an earlier head approved something else.
 	CommitID  string
 	Submitted time.Time
+	// AuthorAssociation is the reviewer's relationship to the repository as the
+	// forge reports it: OWNER, MEMBER, COLLABORATOR, CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR,
+	// FIRST_TIMER, MANNEQUIN or NONE. Only the first three can approve a change.
+	AuthorAssociation string
+}
+
+// Author associations that make a review count as a maintainer's.
+const (
+	AssociationOwner        = "OWNER"
+	AssociationMember       = "MEMBER"
+	AssociationCollaborator = "COLLABORATOR"
+)
+
+// Maintainer reports whether the review's author is an owner, member or
+// collaborator of the repository: anyone can leave a review on a public
+// repository, but only these relationships carry write access to it.
+func (r Review) Maintainer() bool {
+	switch strings.ToUpper(r.AuthorAssociation) {
+	case AssociationOwner, AssociationMember, AssociationCollaborator:
+		return true
+	}
+	return false
 }
 
 // Codeowners is a CODEOWNERS file.

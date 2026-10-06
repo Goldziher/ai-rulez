@@ -305,6 +305,21 @@ func (p Policy) Authorized(reviewer string) bool {
 	return p.Teams.Matches(p.Approvers, reviewer)
 }
 
+// Names reports whether the policy explicitly names reviewer for s: the reviewer
+// is in [governance] approvers (a user, or a member of a listed team), or owns
+// the path of s according to CODEOWNERS. A policy that names nobody names no one;
+// unlike Authorized, an empty allowlist does not stand for everybody.
+func (p Policy) Names(reviewer string, s Subject) bool {
+	if len(p.Approvers) > 0 && !(len(p.Approvers) == 1 && p.Approvers[0] == NobodyMayApprove) && p.Teams.Matches(p.Approvers, reviewer) {
+		return true
+	}
+	if p.Owners == nil {
+		return false
+	}
+	owners, covered := p.Owners.OwnersOf(s)
+	return covered && p.Teams.Matches(owners, reviewer)
+}
+
 // AuthorizedFor is Authorized and, when approvers_from is set, the requirement
 // that reviewer owns the path of s according to CODEOWNERS. A CODEOWNERS file
 // that cannot be read, a path no line covers and a team that cannot be expanded

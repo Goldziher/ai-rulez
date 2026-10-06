@@ -12,7 +12,7 @@
 | `CommitDate(repo, sha)` | `GET /commits/{sha}` | committer date (forgeable) |
 | `PullRequestsForCommit(repo, sha)` | `GET /commits/{sha}/pulls` | the PR a merged commit came from |
 | `PullRequest(repo, n)` | `GET /pulls/{n}` | the pull request's author and current head commit |
-| `Reviews(repo, n)` | `GET /pulls/{n}/reviews` | who approved, and at which head commit |
+| `Reviews(repo, n)` | `GET /pulls/{n}/reviews` | who approved, at which head commit, and the reviewer's `author_association` |
 | `Codeowners(repo, ref)` | `GET /contents/{path}?ref=` | `.github/CODEOWNERS`, then `CODEOWNERS`, then `docs/CODEOWNERS` |
 | `TeamMembers(team)`, `IsTeamMember(team, login)` | `GET /orgs/{org}/teams/{slug}/members`, `.../memberships/{login}` | expanding `@org/team` owners |
 
