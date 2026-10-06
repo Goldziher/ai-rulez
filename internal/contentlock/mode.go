@@ -1,35 +1,55 @@
 package contentlock
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
-// fileMode returns the digest mode (ModeRegular or ModeExecutable) of the file at
-// abs. On a filesystem that keeps Unix permission bits it is the execute bit of
-// the file. Windows filesystems have no execute bit (Go reports 0666 or 0444), so
-// there the bit comes from the git index (`git ls-files -s`, the mode git itself
+// modeResolver gives the digest mode (ModeRegular or ModeExecutable) of single
+// files across one run. On a filesystem that keeps Unix permission bits it is the
+// execute bit of the file. Windows filesystems have no execute bit (Go reports
+// 0666 or 0444), so there the bit comes from the git index (the mode git itself
 // would check out on Unix); without git or outside a repository the file is
 // regular. A checkout therefore pins the same digest on every operating system
-// as long as the repository records the bit.
-func fileMode(abs string, info os.FileInfo) string {
-	return fileModeFor(runtime.GOOS, abs, info, gitIndexMode)
+// as long as the repository records the bit. The index is read once per tree
+// (tracked, one bounded `git ls-files` call), never once per file.
+type modeResolver struct {
+	goos    string
+	tracked func(dir string) (map[string]uint32, bool, error)
+	trees   map[string]map[string]uint32
 }
 
-func fileModeFor(goos, abs string, info os.FileInfo, index func(abs string) (string, bool)) string {
-	if goos == "windows" {
-		if mode, ok := index(abs); ok {
-			return mode
+func newModeResolver() *modeResolver {
+	return &modeResolver{goos: runtime.GOOS, tracked: gitutil.TrackedFiles, trees: map[string]map[string]uint32{}}
+}
+
+// mode returns the digest mode of the file at abs, whose index entries are read
+// from the tree rooted at root.
+func (r *modeResolver) mode(root, abs string, info os.FileInfo) string {
+	if r.goos != "windows" {
+		return ModeFor(uint32(info.Mode().Perm()))
+	}
+	files, seen := r.trees[root]
+	if !seen {
+		var ok bool
+		var err error
+		if files, ok, err = r.tracked(root); !ok || err != nil {
+			files = nil
 		}
+		r.trees[root] = files
+	}
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return ModeRegular
 	}
-	return ModeFor(uint32(info.Mode().Perm()))
+	if files[filepath.ToSlash(rel)] == 0o100755 {
+		return ModeExecutable
+	}
+	return ModeRegular
 }
 
 // treeModes returns the mode resolver of one tree. Off Windows it reads the
@@ -37,7 +57,7 @@ func fileModeFor(goos, abs string, info os.FileInfo, index func(abs string) (str
 // tree (one bounded `git ls-files` call through tracked), never once per file.
 func treeModes(goos, dir string, tracked func(dir string) (map[string]uint32, bool, error)) func(f treeFile) string {
 	if goos != "windows" {
-		return func(f treeFile) string { return fileModeFor(goos, f.abs, f.info, nil) }
+		return func(f treeFile) string { return ModeFor(uint32(f.info.Mode().Perm())) }
 	}
 	files, ok, err := tracked(dir)
 	return func(f treeFile) string {
@@ -46,29 +66,4 @@ func treeModes(goos, dir string, tracked func(dir string) (map[string]uint32, bo
 		}
 		return ModeRegular
 	}
-}
-
-// indexLookupTimeout bounds the one-file git index lookup.
-const indexLookupTimeout = 30 * time.Second
-
-// gitIndexMode reads the mode git has recorded for abs.
-func gitIndexMode(abs string) (string, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), indexLookupTimeout)
-	defer cancel()
-	cmd := gitutil.Command(ctx, filepath.Dir(abs), "ls-files", "-s", "--", filepath.Base(abs))
-	out, err := cmd.Output()
-	if err != nil {
-		return "", false
-	}
-	fields := strings.Fields(string(out))
-	if len(fields) < 1 {
-		return "", false
-	}
-	switch fields[0] {
-	case ModeExecutable:
-		return ModeExecutable, true
-	case ModeRegular, "120000":
-		return ModeRegular, true
-	}
-	return "", false
 }
