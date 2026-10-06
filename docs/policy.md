@@ -52,6 +52,13 @@ scan_imports  = "error"
 directive_tags = ["assistant"]                                  # always checked by AR018; the repository may add more
 trusted_orgs   = ["anthropics", "github"]                       # the repository may name only these
 
+[lint.scanner_policy]
+preset = "baseline"                                             # the weakest scanner preset; the repository may use a stronger one
+required = ["agnix"]                                            # always required; the repository's own list is added
+fail_on = "warning"                                             # the most permissive threshold for scanner findings
+isolation = "require"                                           # the weakest isolation of staged scanners
+allow_egress = []                                               # the scanners --allow-egress may enable; [] forbids every egress scanner
+
 [lint.capability]
 max_network_commands = 3                                        # AR030 limit; the repository may set a lower one
 
@@ -120,6 +127,11 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.security.trusted_orgs` | the repository's entries the list names; the policy list when it sets none or none is left. An empty policy list trusts no organization | an entry the list does not name; the entry is dropped | `AR740` |
 | `lint.capability.max_network_commands` | the lower value; an unset repository value is the lower of the policy bound and the built-in 5 | a higher explicit value | `AR740` |
 | `lint.load_budgets.<id>` | the lower value per id; an unset one is the lower of the policy bound and the built-in limit | a higher explicit value | `AR740` |
+| `lint.scanner_policy.preset` | the stronger preset (`off` < `baseline` < `strict`) | a weaker explicit preset (an unset one takes the policy's) | `AR740` |
+| `lint.scanner_policy.required` | union with the repository's list | (nothing to report: the repository's list only adds) | none |
+| `lint.scanner_policy.fail_on` | the stricter threshold (`error` < `warning` < `info`) | a looser explicit threshold | `AR740` |
+| `lint.scanner_policy.isolation` | the stronger level (`none` < `auto` < `require`) | a weaker explicit level | `AR740` |
+| `lint.scanner_policy.allow_egress` | the repository's entries the policy names; the policy list when it sets none. An empty policy list allows no scanner to send content off the machine | an entry the list does not name; the entry is dropped | `AR740` |
 | `telemetry.allow_network`, `llm.allow_network` | `false` | `allow_network = true` in the repository (already ignored by the trust rule, now also reported) | `AR740` |
 | `guard.generated` | `true` | a `[guard]` table without `generated = true` | `AR740` |
 | `governance.enforce` | `true` | a `[governance]` table without `enforce = true` | `AR740` |

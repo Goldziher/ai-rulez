@@ -26,8 +26,9 @@ func Merge(a, b Policy) Policy {
 				DirectiveTags: union(a.Lint.Security.DirectiveTags, b.Lint.Security.DirectiveTags),
 				TrustedOrgs:   intersectExact(a.Lint.Security.TrustedOrgs, b.Lint.Security.TrustedOrgs),
 			},
-			Capability:  Capability{MaxNetworkCommands: lowerLimit(a.Lint.Capability.MaxNetworkCommands, b.Lint.Capability.MaxNetworkCommands)},
-			LoadBudgets: lowerLimits(a.Lint.LoadBudgets, b.Lint.LoadBudgets),
+			Capability:    Capability{MaxNetworkCommands: lowerLimit(a.Lint.Capability.MaxNetworkCommands, b.Lint.Capability.MaxNetworkCommands)},
+			LoadBudgets:   lowerLimits(a.Lint.LoadBudgets, b.Lint.LoadBudgets),
+			ScannerPolicy: mergeScannerPolicy(a.Lint.ScannerPolicy, b.Lint.ScannerPolicy),
 		},
 		Lock: Lock{
 			Enforce:        a.Lock.Enforce || b.Lock.Enforce,
