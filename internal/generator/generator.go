@@ -2540,12 +2540,56 @@ func (g *Generator) readManifest(path string) generatedManifest {
 	if manifest, ok := g.manifests[path]; ok {
 		return manifest
 	}
-	manifest := readManifestFile(path)
+	var manifest generatedManifest
+	if path == g.localManifestPath() && g.localManifestUntrusted() {
+		manifest = generatedManifest{}
+	} else {
+		manifest = readManifestFile(path)
+	}
 	if g.manifests == nil {
 		g.manifests = map[string]generatedManifest{}
 	}
 	g.manifests[path] = manifest
 	return manifest
+}
+
+// localManifestUntrusted reports whether the machine-local manifest must be
+// ignored: a repository can commit that file with forged claims and digests, and
+// .gitignore does not stop a tracked one. It warns once per Generator.
+func (g *Generator) localManifestUntrusted() bool {
+	reason := gitutil.UntrustedLocalFile(g.localManifestPath())
+	if reason == "" {
+		return false
+	}
+	g.warnOnce("Ignoring "+g.localManifestRel()+": "+reason+"; its claims and digests are not trusted",
+		"fix", g.localManifestFix(reason))
+	return true
+}
+
+func (g *Generator) localManifestRel() string {
+	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
+		return rel
+	}
+	return generatedLocalManifestName
+}
+
+func (g *Generator) localManifestFix(reason string) string {
+	if reason == "git tracks it" {
+		return "git rm --cached " + g.localManifestRel()
+	}
+	return "delete it and run generate again"
+}
+
+// localManifestTracked reports whether git tracks the machine-local manifest. A
+// run never writes claims into such a file: a hostile repository could have
+// pre-filled it, and the write would turn into a tracked change.
+func (g *Generator) localManifestTracked() bool {
+	if !gitutil.IsTracked(g.localManifestPath()) {
+		return false
+	}
+	g.warnOnce("Not writing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
+		"fix", "git rm --cached "+g.localManifestRel())
+	return true
 }
 
 func readManifestFile(path string) generatedManifest {
@@ -2626,7 +2670,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		return g.updateLocalManifest(localMerged, digests)
 	}
 	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 {
-		if !g.removalConfined(g.localManifestPath()) {
+		if !g.removalConfined(g.localManifestPath()) || g.localManifestTracked() {
 			return nil
 		}
 		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
@@ -2645,7 +2689,7 @@ func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, dig
 	if len(merged) == 0 && len(digests) == 0 {
 		return nil
 	}
-	prev := readManifestFile(g.localManifestPath())
+	prev := g.readManifest(g.localManifestPath())
 	outMerged := map[string][]jsonmerge.Claim{}
 	for rel, claims := range prev.Merged {
 		outMerged[rel] = claims
@@ -2672,6 +2716,9 @@ func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, dig
 // writeManifest writes a manifest after refusing a symlink that leaves the project.
 func (g *Generator) writeManifest(path string, files []string, merged map[string][]jsonmerge.Claim,
 	digests map[string]string) error {
+	if path == g.localManifestPath() && g.localManifestTracked() {
+		return nil
+	}
 	resolved, _, err := g.guardWrite(path)
 	if err != nil {
 		return err
