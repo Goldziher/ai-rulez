@@ -66,15 +66,14 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	// useful while the outputs are being removed.
 	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { logger.Debug(msg) })()
 
+	g.lenientMCP = true // clean needs paths and claims, never secret values
+	defer func() { g.lenientMCP = false }()
 	outputs, activeProfile, err := g.collectForClean(profile)
 	if err != nil {
 		return nil, err
 	}
 
-	// Clean removes the local manifest itself, so the files it lists go with it
-	// whether or not the local inputs are still loaded.
-	g.localSkipped = false
-
+	g.localSkipped = false // the local manifest's files go with it, loaded or not
 	plan := &CleanPlan{Profile: activeProfile}
 	g.previousFiles = nil
 	defer func() { g.previousFiles = nil }()
@@ -111,9 +110,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		if mp := g.manifestPath(); pathIsFile(mp) {
 			plan.ManifestPath = mp
 		}
-		if mp := g.localManifestPath(); pathIsFile(mp) {
-			plan.LocalManifestPath = mp
-		}
+		plan.LocalManifestPath = g.removableLocalManifest()
 	}
 	plan.GitignoreEdited = !opts.KeepGitignore && !g.userMode && g.gitignoreHasManagedBlock()
 
@@ -137,6 +134,23 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	g.cleanGitignore(opts, plan)
 
 	return plan, nil
+}
+
+// removableLocalManifest returns the machine-local manifest when clean may delete
+// it. A tracked one is the repository's, not machine state: deleting it would
+// become a tracked change, so it is kept with a warning, as generate refuses to
+// write it.
+func (g *Generator) removableLocalManifest() string {
+	mp := g.localManifestPath()
+	if !pathIsFile(mp) {
+		return ""
+	}
+	if gitutil.IsTracked(mp) {
+		g.warnOnce("Not removing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
+			"fix", "git rm --cached "+g.localManifestRel())
+		return ""
+	}
+	return mp
 }
 
 // collectCleanTargets adds the generated files of outputs to plan.Files and
