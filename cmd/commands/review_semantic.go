@@ -254,10 +254,12 @@ func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.
 
 	var comparison *rv.ModelComparison
 	if len(models) > 1 && est.Totals.CallsMin > 0 {
-		comparison, runErr = compareModels(cmd, cfg, js, rb, res, models, k, rc)
+		var extra rv.RunUsage
+		comparison, extra, runErr = compareModels(cmd, cfg, js, rb, res, models, k, rc)
 		if runErr != nil {
 			return exitReviewRefused, runErr
 		}
+		outcome.Usage.Add(extra)
 	}
 
 	report := rv.NewReport(rb, res, nil)
@@ -304,7 +306,8 @@ func judgeWith(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, lc llm.Co
 }
 
 // compareModels judges the items again with each further model and compares the verdicts.
-func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *rv.Rubric, res *rv.Results, models []string, k int, rc *reviewContext) (*rv.ModelComparison, error) {
+func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *rv.Rubric, res *rv.Results, models []string, k int, rc *reviewContext) (*rv.ModelComparison, rv.RunUsage, error) {
+	var used rv.RunUsage
 	names := []string{js.lc.FullModel()}
 	tables := []map[string]map[string]string{rv.VerdictTable(res)}
 	share := float64(len(models))
@@ -315,9 +318,11 @@ func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *r
 			lc.MaxCalls = tighterInt(js.resolved.Config.MaxCalls, max(js.maxCalls/len(models), 1))
 		}
 		other := res.CloneUnjudged()
-		if _, err := judgeWith(cmd, cfg, js, lc, rb, other, k, rc.content()); err != nil {
-			return nil, err
+		out, err := judgeWith(cmd, cfg, js, lc, rb, other, k, rc.content())
+		if err != nil {
+			return nil, used, err
 		}
+		used.Add(out.Usage)
 		names = append(names, lc.FullModel())
 		tables = append(tables, rv.VerdictTable(other))
 	}
@@ -325,7 +330,7 @@ func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *r
 	for _, d := range rb.Dimensions {
 		dims = append(dims, d.ID)
 	}
-	return rv.CompareModels(names, tables, dims), nil
+	return rv.CompareModels(names, tables, dims), used, nil
 }
 
 // addRunNotes adds the run-level findings: items left unjudged (AR9G0) and a judge that is not

@@ -234,7 +234,7 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 	for attempt := 1; attempt <= maxFixAttempts; attempt++ {
 		p.Attempts = attempt
 		patched, note, usage, err := proposeEdits(ctx, in, rejection)
-		p.Usage.add(usage)
+		p.Usage.Add(usage)
 		if err != nil {
 			if fatalFix(err) {
 				return p, err
