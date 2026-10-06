@@ -282,3 +282,28 @@ func TestContentForPreset_SkillSourcesAloneGetTheStub(t *testing.T) {
 	plain := &ContentTree{Skills: []ContentFile{skillWith("core", "")}}
 	assert.False(t, (&Config{Content: plain}).ServesSkills(plain))
 }
+
+func TestSourceSkillBlindPresets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		sources int
+		presets []string
+		want    []string
+	}{
+		{"no sources", 0, []string{"claude", "rovodev"}, nil},
+		{"only MCP presets", 1, []string{"claude", "codex"}, nil},
+		{"a preset without MCP", 1, []string{"claude", "rovodev"}, []string{"rovodev"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &Config{SkillSources: make([]SkillSourceConfig, tt.sources)}
+			for _, p := range tt.presets {
+				cfg.Presets = append(cfg.Presets, Preset{BuiltIn: p})
+			}
+
+			assert.Equal(t, tt.want, cfg.SourceSkillBlindPresets())
+		})
+	}
+}
