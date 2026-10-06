@@ -259,3 +259,31 @@ func TestEvalRun_SavesResultsOfFinishedSkillsWhenALaterStepFails(t *testing.T) {
 	_, ok := store.Get("deploy")
 	assert.True(t, ok, "results are saved before the report is written")
 }
+
+func TestEvalRun_ClaudeRunnerGetsTheEffectiveRunsAndTimeout(t *testing.T) {
+	tests := []struct {
+		name         string
+		flagRuns     int
+		wantRuns     int
+		wantEstimate int
+	}{
+		{"default is the estimate's assumed 3, passed explicitly", 0, 3, 3},
+		{"explicit value is passed through", 5, 5, 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetEvalFlags(t)
+			evalFlags.runs = tt.flagRuns
+			evalFlags.timeout = 7 * time.Minute
+
+			runner, estimateRuns, err := buildEvalRunner(evalRunCmd)
+
+			require.NoError(t, err)
+			claude, ok := runner.(*evals.ClaudePluginEval)
+			require.True(t, ok)
+			assert.Equal(t, tt.wantRuns, claude.Runs)
+			assert.Equal(t, tt.wantEstimate, estimateRuns)
+			assert.Equal(t, 7*time.Minute, claude.Timeout)
+		})
+	}
+}

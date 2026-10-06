@@ -98,6 +98,9 @@ func problemLines(s *SkillRun) []string {
 	if s.Error != "" {
 		lines = append(lines, "- "+s.Error)
 	}
+	for _, w := range s.Warnings {
+		lines = append(lines, "- warning: "+w)
+	}
 	for i := range s.Cases {
 		c := &s.Cases[i]
 		if c.Status != StatusFailed && c.Status != StatusError {

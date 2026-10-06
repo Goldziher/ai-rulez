@@ -69,7 +69,10 @@ schema/eval-case.schema.json. A runner executes them:
 
 Results are recorded in .ai-rulez/eval-results.json with the skill's sha256 digest, and a
 skill whose digest, cases, runner settings, harness, model, ablation setting and --allow-exec are
-unchanged is not re-run (--force overrides); runs with errored cases are never cached. Flags are
+unchanged is not re-run (--force overrides); runs with errored cases are never cached.
+The results file is an unsigned, committed file: a stored result is replayed only when its
+recorded digests match the skill on disk, but anyone who can edit the file can write a passing
+record. A CI gate must therefore use --force (or verify the file's provenance). Flags are
 checked before anything is run, and each skill's result is saved as soon as it finishes. --dry-run lists what would run and an estimated cost without
 calling any runner. The command exits 2 when a skill fails its pass threshold, errors, or has
 invalid cases.`,
@@ -93,15 +96,15 @@ func init() {
 	f.StringVar(&evalFlags.runnerCommand, "runner-command", "", "Shell command for the command runner: receives the request JSON on stdin, prints the response JSON")
 	f.StringVar(&evalFlags.claudeBin, "claude-bin", "claude", "claude executable for the claude-plugin-eval runner")
 	f.StringArrayVar(&evalFlags.runnerArgs, "runner-arg", nil, "Extra argument for the claude-plugin-eval runner (for example --trust-plugin); repeatable")
-	f.IntVar(&evalFlags.runs, "runs", 0, "Runs per case for claude-plugin-eval (its default is 3)")
+	f.IntVar(&evalFlags.runs, "runs", 0, "Runs per case for claude-plugin-eval (default 3, always passed to claude explicitly)")
 	f.StringVar(&evalFlags.judgeModel, "judge-model", "", "Grader model for claude-plugin-eval")
-	f.DurationVar(&evalFlags.timeout, "timeout", 30*time.Minute, "Time limit for one skill with the command runner")
+	f.DurationVar(&evalFlags.timeout, "timeout", 30*time.Minute, "Time limit for one skill with either runner; the runner's whole process tree is killed when it ends")
 	f.StringVar(&evalFlags.model, "model", "", "Model to run the cases with (cases may override it)")
 	f.BoolVar(&evalFlags.ablation, "ablation", false, "Also run every case without the skill and report the delta")
 	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost; call no runner and write nothing")
 	f.StringVar(&evalFlags.format, "format", evals.FormatMarkdown, "Report format: json, markdown or junit")
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
-	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Stop above this many USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it")
+	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory per-skill cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
 	f.StringVar(&evalFlags.date, "date", "", "Date recorded in the results (default $"+EvalDateEnv+"; the clock is never read)")
 	f.BoolVar(&evalFlags.changedOnly, "changed-only", false, "Only skills with files changed against --base (git diff, plus untracked files)")
 	f.StringVar(&evalFlags.base, "base", "HEAD", "Git ref --changed-only compares the working tree against")
@@ -300,8 +303,10 @@ func buildEvalRunner(cmd *cobra.Command) (evals.Runner, int, error) {
 		if runs <= 0 {
 			runs = 3
 		}
-		return &evals.ClaudePluginEval{Bin: evalFlags.claudeBin, Runs: evalFlags.runs, JudgeModel: evalFlags.judgeModel,
-			ExtraArgs: evalFlags.runnerArgs, Stderr: cmd.ErrOrStderr()}, runs, nil
+		// Pass the effective run count: the estimate assumes it, so claude must be told the
+		// same number instead of falling back to a default of its own.
+		return &evals.ClaudePluginEval{Bin: evalFlags.claudeBin, Runs: runs, JudgeModel: evalFlags.judgeModel,
+			ExtraArgs: evalFlags.runnerArgs, Timeout: evalFlags.timeout, Stderr: cmd.ErrOrStderr()}, runs, nil
 	case evals.RunnerCommand:
 		if evalFlags.runnerCommand == "" {
 			return nil, 1, oops.Errorf("--runner command needs --runner-command")

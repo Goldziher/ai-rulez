@@ -41,7 +41,12 @@ type RunOptions struct {
 	// Force ignores the result cache.
 	Force bool
 	// MaxCostUSD stops the run: a pre-flight estimate above it refuses to start, and
-	// a skill is skipped once actual spend reaches it. Zero means no limit.
+	// a skill is skipped once actual spend reaches it. Zero means no limit. It is an
+	// advisory cap checked between skills, not a hard per-call limit: a runner is
+	// handed the budget left (Request.MaxCostUSD) and may overshoot it, which is
+	// reported as a warning. A runner that reports no cost at all is assumed to have
+	// spent the whole remaining budget, so the run stops. RunnerTimeout, not this,
+	// bounds the time of one skill.
 	MaxCostUSD float64
 	// Date is recorded in the results; the caller supplies it (no clock is read).
 	Date string
@@ -65,18 +70,21 @@ type RunOptions struct {
 
 // SkillRun is the outcome of one skill in a run.
 type SkillRun struct {
-	ID          string       `json:"id"`
-	Status      string       `json:"status"`
-	Digest      string       `json:"digest,omitempty"`
-	CasesDigest string       `json:"cases_digest,omitempty"`
-	Passing     bool         `json:"passing"`
-	Score       *SkillScore  `json:"score,omitempty"`
-	Cases       []CaseScore  `json:"cases,omitempty"`
-	Estimate    *Estimate    `json:"estimate,omitempty"`
-	CaseCount   int          `json:"case_count"`
-	Error       string       `json:"error,omitempty"`
-	Problems    []Problem    `json:"problems,omitempty"`
-	Record      *SkillRecord `json:"-"`
+	ID          string      `json:"id"`
+	Status      string      `json:"status"`
+	Digest      string      `json:"digest,omitempty"`
+	CasesDigest string      `json:"cases_digest,omitempty"`
+	Passing     bool        `json:"passing"`
+	Score       *SkillScore `json:"score,omitempty"`
+	Cases       []CaseScore `json:"cases,omitempty"`
+	Estimate    *Estimate   `json:"estimate,omitempty"`
+	CaseCount   int         `json:"case_count"`
+	Error       string      `json:"error,omitempty"`
+	// Warnings are non-fatal findings: a cost above the budget the runner was given, or a
+	// runner that reported no cost under --max-cost.
+	Warnings []string     `json:"warnings,omitempty"`
+	Problems []Problem    `json:"problems,omitempty"`
+	Record   *SkillRecord `json:"-"`
 }
 
 // RunReport is the outcome of a whole run.
@@ -271,7 +279,10 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 	}
 	est := EstimateRun(p.req, skillTokens(skill, e.counter), e.opts.EstimateRuns, e.price, e.counter)
 	p.run.Estimate = &est
-	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) {
+	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) &&
+		// The key is an unkeyed hash a committed file can carry, so also require the
+		// recorded digests to match what is on disk now: an edited skill always re-runs.
+		old.Digest == p.run.Digest && old.CasesDigest == p.run.CasesDigest {
 		p.run.Status = RunCached
 	}
 	return p, nil
@@ -347,7 +358,19 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 			return run
 		}
 		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price}) //nolint:contextcheck // local grading is bounded by GradeOptions.CommandTimeout
-		e.report.CostUSD = round(e.report.CostUSD + score.CostUSD)
+		charged := score.CostUSD
+		if budget := p.req.MaxCostUSD; budget > 0 {
+			switch {
+			case !costReported(resp):
+				// Reporting nothing is not spending nothing: charge the whole budget this skill
+				// was given, so the next skill is refused rather than run on an unknown spend.
+				charged = max(charged, budget)
+				run.Warnings = append(run.Warnings, fmt.Sprintf("the runner reported no cost; assumed the whole remaining --max-cost budget ($%.2f) was spent", budget))
+			case score.CostUSD > budget:
+				run.Warnings = append(run.Warnings, fmt.Sprintf("cost $%.2f exceeds the $%.2f budget this skill was given (--max-cost is checked between skills, not enforced inside a runner)", score.CostUSD, budget))
+			}
+		}
+		e.report.CostUSD = round(e.report.CostUSD + charged)
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
 		if !cacheable(&score) {
@@ -360,6 +383,21 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		})
 	}
 	return run
+}
+
+// costReported says whether a runner gave any cost information (a cost, or token
+// counts the price table can turn into one).
+func costReported(resp *Response) bool {
+	if resp.CostUSD > 0 {
+		return true
+	}
+	for i := range resp.Results {
+		r := &resp.Results[i]
+		if r.CostUSD > 0 || r.InputTokens > 0 || r.OutputTokens > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func remaining(limit, spent float64) float64 {
