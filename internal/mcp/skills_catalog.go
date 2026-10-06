@@ -188,7 +188,11 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	}
 	desc := stringField(front, "description")
 	if strings.TrimSpace(desc) == "" {
-		return nil, oops.Errorf("skill %q has no description; the Skills extension requires one", src.ID)
+		// The extension requires a description. Falling back to the name keeps the
+		// skill findable; the bytes served are untouched, so digests still match.
+		logger.Warn("A served skill has no description; using its name (add a description frontmatter field so find_skill can rank it)", "skill", src.ID)
+		desc = name
+		front["description"] = desc
 	}
 	skill := &CatalogSkill{
 		Name:        name,

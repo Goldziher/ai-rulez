@@ -68,8 +68,9 @@ func TestBuildCatalog_SkipsUnrepresentableSkills(t *testing.T) {
 	good := servedSkill("good", "", "A good skill", nil)
 	cat, err := BuildCatalog("p", "claude", []generator.ServedSkill{noDescription, noFrontmatter, good}, SkillFilter{})
 	require.NoError(t, err, "one bad skill must not stop the server")
-	require.Len(t, cat.Skills(), 1)
-	assert.Equal(t, "good", cat.Skills()[0].Name)
+	assert.Equal(t, []string{"good", "x"}, catalogNames(cat), "a skill without a description is served under its name; one without frontmatter is skipped")
+	x, _ := cat.Lookup("x")
+	assert.Equal(t, "x", x.Description)
 }
 
 func TestBuildCatalog_SkipsSkillsWithUnsafeNames(t *testing.T) {
