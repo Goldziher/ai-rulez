@@ -80,11 +80,8 @@ type SkillRun struct {
 	Score       *SkillScore `json:"score,omitempty"`
 	Cases       []CaseScore `json:"cases,omitempty"`
 	Estimate    *Estimate   `json:"estimate,omitempty"`
-	// EstimateVsActual sets the estimate next to what the runner reported, for a run
-	// that happened; absent when the runner reported no cost.
-	EstimateVsActual *EstimateRecord `json:"estimate_vs_actual,omitempty"`
-	CaseCount        int             `json:"case_count"`
-	Error            string          `json:"error,omitempty"`
+	CaseCount   int         `json:"case_count"`
+	Error       string      `json:"error,omitempty"`
 	// Warnings are non-fatal findings: a cost above the budget the runner was given, or a
 	// runner that reported no cost under --max-cost.
 	Warnings []string     `json:"warnings,omitempty"`
@@ -104,9 +101,6 @@ type RunReport struct {
 	Estimate Estimate   `json:"estimate"`
 	// CostUSD is the actual cost the runner reported.
 	CostUSD float64 `json:"cost_usd"`
-	// PriceKnown is false when the model has no entry in the price table, so the
-	// estimate used the sonnet tier as a stand-in (--price-in and --price-out replace it).
-	PriceKnown bool `json:"price_known"`
 	// Failed is set when a skill failed its threshold, errored or had invalid cases.
 	Failed bool `json:"failed"`
 }
@@ -117,7 +111,6 @@ type engine struct {
 	counter    tokens.Counter
 	threshold  float64
 	price      Price
-	priceKnown bool
 	store      *Store
 	model      string
 	runnerName string
@@ -150,12 +143,8 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.PassThreshold != nil {
 		e.threshold = *opts.PassThreshold
 	}
-	e.priceKnown = true
 	if e.price == (Price{}) {
-		e.price, e.priceKnown = PriceFor(opts.Model)
-		if !e.priceKnown && opts.MaxCostUSD > 0 {
-			return nil, fmt.Errorf("model %q has no built-in price, so --max-cost cannot be checked: pass --price-in and --price-out, or use a model the price table lists", opts.Model)
-		}
+		e.price = PriceFor(opts.Model)
 	}
 	if e.store == nil {
 		e.store = NewStore()
@@ -166,7 +155,7 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner != nil {
 		e.runnerName = opts.Runner.Name()
 	}
-	e.report = &RunReport{Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown}
+	e.report = &RunReport{Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun}
 	return e, nil
 }
 
@@ -404,9 +393,6 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		reportedCost := score.CostUSD
 		score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
-		if p.run.Estimate != nil {
-			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens)
-		}
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
 		if !cacheable(&score) {
 			return run // never store an infrastructure failure: it would mask the last good result
@@ -416,7 +402,7 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		e.store.Put(SkillRecord{
 			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, LockDigest: run.LockDigest, CacheKey: e.cacheKey(&run),
 			Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,
-			Date: e.opts.Date, Passing: run.Passing, Score: stored, Estimate: run.EstimateVsActual,
+			Date: e.opts.Date, Passing: run.Passing, Score: stored,
 		})
 	}
 	return run

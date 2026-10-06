@@ -102,6 +102,7 @@ func init() {
 	RootCmd.AddCommand(PublishCmd)
 }
 
+	RootCmd.AddCommand(ReviewCmd, RubricCmd)
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)

@@ -162,6 +162,7 @@ The schema files are available in the repository:
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
+| `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes |
