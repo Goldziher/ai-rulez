@@ -145,7 +145,8 @@ against the manifest, the plan against the manifest, and the archive's
 determinism rules (sorted entries, uid/gid 0, normalised modes).
 
 An OCI reference (host/path:tag or host/path@sha256:...) is pulled into a
-temporary directory first; pin by digest. A multi-plugin dist directory verifies
+temporary directory first; pin by digest. verify prints the digest a reference resolved
+to and warns when it is a tag, which its owner can move. A multi-plugin dist directory verifies
 every plugin and the aggregate checksums.
 
 A signed bundle is reported as unverified unless a trusted signer is named:

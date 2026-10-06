@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
@@ -414,9 +415,15 @@ func resolveVerifyTarget(ctx context.Context, target string) (dir string, cleanu
 		return "", noop, oops.Wrapf(err, "create temporary directory")
 	}
 	cleanup = func() { os.RemoveAll(tmp) } //nolint:errcheck // best effort cleanup of our own directory
-	if err := publish.PullOCI(ctx, oci.Target{Ref: target}, tmp); err != nil {
+	digest, err := publish.PullOCI(ctx, oci.Target{Ref: target}, tmp)
+	if err != nil {
 		cleanup()
 		return "", noop, err //nolint:wrapcheck // a publish.Error carries the exit status
+	}
+	logger.Info("resolved the OCI reference", "ref", target, "digest", digest)
+	if publish.OCIRefIsMutable(target) {
+		logger.Warn("the reference is a tag, which its owner can move; verify checks the content it pointed at just now. Pin by digest and name a trusted signer (--key, --identity)",
+			"pin", digest)
 	}
 	return tmp, cleanup, nil
 }
