@@ -6,17 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/spf13/cobra"
 )
 
 var (
-	formatFlag       string
 	domainsFlag      string
 	skipContentFlag  bool
 	fromFlag         string
@@ -35,14 +32,7 @@ rules, context, and skills for your selected AI assistants.`,
 	Run:  runInit,
 }
 
-const (
-	formatTOML = "toml"
-	formatYAML = "yaml"
-	formatJSON = "json"
-)
-
 func init() {
-	InitCmd.Flags().StringVarP(&formatFlag, "format", "f", formatTOML, "Config format: toml, yaml, or json")
 	InitCmd.Flags().StringVarP(&domainsFlag, "domains", "d", "", "Comma-separated list of domain directories to create")
 	InitCmd.Flags().BoolVarP(&skipContentFlag, "skip-content", "s", false, "Skip creating example content files")
 	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
@@ -145,20 +135,8 @@ func createStructure(projectName, configDir string) error {
 	}
 
 	// Generate and write config file
-	var configContent string
-	var configPath string
-
-	switch formatFlag {
-	case formatJSON:
-		configContent = generateConfigJSON(projectName)
-		configPath = filepath.Join(configDir, "config.json")
-	case formatTOML:
-		configContent = generateConfigTOML(projectName)
-		configPath = filepath.Join(configDir, "config.toml")
-	default: // yaml
-		configContent = generateConfig(projectName)
-		configPath = filepath.Join(configDir, "config.yaml")
-	}
+	configPath := filepath.Join(configDir, configFileTOML)
+	configContent := generateConfigTOML(projectName)
 
 	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
@@ -166,80 +144,6 @@ func createStructure(projectName, configDir string) error {
 
 	logger.Debug("Created structure", "config", configPath)
 	return nil
-}
-
-// generateConfig generates a YAML configuration template
-// builtinPresetList names every built-in preset, for the comment in a new config.
-func builtinPresetList() string {
-	return strings.Join(config.IndividualPresetNames(), ", ")
-}
-
-func generateConfig(projectName string) string {
-	var builder strings.Builder
-
-	builder.WriteString(`# AI-Rulez Configuration
-# Directory-based configuration with domain scoping
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Schema reference for IDE validation
-$schema: `)
-	builder.WriteString(schema.SchemaURL(schema.ConfigSchemaFile))
-	builder.WriteString(`
-
-# Version (required)
-version: "4.0"
-
-# Project name (required)
-name: "`)
-	builder.WriteString(projectName)
-	builder.WriteString(`"
-
-# Optional description
-# description: "AI-powered development governance for `)
-	builder.WriteString(projectName)
-	builder.WriteString(`"
-
-# Presets: built-in tools or custom outputs
-# Built-in presets: `)
-	builder.WriteString(builtinPresetList())
-	builder.WriteString(`
-presets:
-  - claude
-
-# Default profile to use when generating
-# default: full
-
-# Named profiles (domain combinations)
-# profiles:
-#   full: [backend, frontend, qa]
-#   backend: [backend]
-#   frontend: [frontend]
-
-# Gitignore management
-# gitignore: true
-
-# MCP Servers (optional)
-# mcp_servers:
-#   - name: ai-rulez
-#     command: npx
-#     args: ["-y", "ai-rulez@latest", "mcp"]
-`)
-
-	return builder.String()
-}
-
-// generateConfigJSON generates a JSON configuration template
-func generateConfigJSON(projectName string) string {
-	return fmt.Sprintf(`{
-  "$schema": "%s",
-  "$comment": "AI-Rulez Configuration - Directory-based configuration with domain scoping",
-  "version": "4.0",
-  "name": "%s",
-  "description": "AI-powered development governance for %s",
-  "presets": ["claude"],
-  "gitignore": true
-}
-`, schema.SchemaURL(schema.ConfigSchemaFile), projectName, projectName)
 }
 
 // generateConfigTOML generates a TOML configuration template
@@ -372,7 +276,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 
 ## Responsibilities
 
-- Detect whether the project uses AI-Rulez (.ai-rulez/) or a legacy V2 config.
+- Detect whether the project uses AI-Rulez (.ai-rulez/config.toml).
 - Edit source files in .ai-rulez/ instead of patching generated assistant files directly
 - Prefer the AI-Rulez MCP server for safe reads and CRUD operations when it is available
 - Use the CLI to validate, generate, and inspect configuration changes
@@ -380,7 +284,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 
 ## Workflow
 
-1. Check for .ai-rulez/config.yaml (or config.toml), .ai-rulez/skills/, domain folders.
+1. Check for .ai-rulez/config.toml, .ai-rulez/skills/, domain folders.
 2. If MCP is configured in the config, prefer the MCP server for reading and modifying AI-Rulez content.
 3. Update the relevant source files under .ai-rulez/: rules, context, skills, agents, domains, or config.
 4. Run ai-rulez validate when changing configuration structure.
@@ -393,16 +297,15 @@ Use this skill when working in a project that is managed by AI-Rulez.
 - ai-rulez add|remove|list rule|context|skill|agent — manage content files.
 - ai-rulez validate — ensure config and tree structure are sound.
 - ai-rulez generate [--profile <name>] — render tool presets after edits.
-- ai-rulez migrate — convert legacy ai-rulez.yaml to .ai-rulez/.
 
 ## Guidelines
 
 - Treat .ai-rulez/ as the source of truth.
 - Generated files such as AGENTS.md, CLAUDE.md, or .cursor/ outputs should only change via generation.
-- Use ai-rulez init to bootstrap, generate to render outputs, validate to check structure, and migrate for format migration.
+- Use ai-rulez init to bootstrap, generate to render outputs, and validate to check structure.
 - Remember that root content is always included, while domains are controlled by profiles.
 - MCP can expose read, CRUD, generate, and validate operations for assistants.
-- When changing presets, profiles, or domains in config.yaml, rerun validate then generate so downstream files stay in sync.
+- When changing presets, profiles, or domains in config.toml, rerun validate then generate so downstream files stay in sync.
 `
 
 	aiRulezSkill = strings.ReplaceAll(aiRulezSkill, ".ai-rulez/", configDir+"/")
@@ -435,16 +338,7 @@ func displaySuccessMessage(projectName, configDir string) {
 	logger.Info("\nDirectory structure:")
 	logger.Info("  " + configDir + "/")
 
-	// Determine config filename based on format flag
-	var configFilename string
-	switch formatFlag {
-	case formatYAML:
-		configFilename = configFileYAML
-	case formatJSON:
-		configFilename = configFileJSON
-	default:
-		configFilename = configFileTOML
-	}
+	configFilename := configFileTOML
 
 	logger.Info(fmt.Sprintf("  ├── %s", configFilename))
 	logger.Info("  ├── rules/         # Base rules (always included)")
@@ -486,14 +380,14 @@ func displayImportSuccessMessage(sources, configDir string) {
 
 	logger.Info("\nImported structure:")
 	logger.Info("  " + configDir + "/")
-	logger.Info("  ├── config.yaml")
+	logger.Info("  ├── config.toml")
 	logger.Info("  ├── rules/         # Imported rules")
 	logger.Info("  ├── context/       # Imported context")
 	logger.Info("  └── skills/        # Imported skills")
 
 	logger.Info("\nNext steps:")
 	logger.Info("  1. Review imported content in " + configDir + "/")
-	logger.Info("  2. Edit " + configDir + "/config.yaml to customize presets")
+	logger.Info("  2. Edit " + configDir + "/config.toml to customize presets")
 	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 }
 

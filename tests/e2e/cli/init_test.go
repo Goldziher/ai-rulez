@@ -44,18 +44,13 @@ func (s *InitCLITestSuite) TestInitSetupHooks() {
 	s.Contains(modifiedContent, "ai-rulez validate", "The validate command should be added to lefthook.yml")
 }
 
-func (s *InitCLITestSuite) TestInitWithFormat() {
+func (s *InitCLITestSuite) TestInitFormatFlagIsGone() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
 	}, "init", "FormatProject", "--format", "yaml", "--yes")
 
-	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
-
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
-	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
-
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "FormatProject")
+	s.NotEqual(0, result.ExitCode, "init writes config.toml only, so --format is rejected")
+	s.False(testutil.FileExists(s.T(), filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")))
 }
 
 func (s *InitCLITestSuite) TestBasicInit() {
@@ -129,17 +124,6 @@ func (s *InitCLITestSuite) TestInitExistingConfig() {
 
 	// In non-interactive mode without explicit approval, init should fail
 	s.NotEqual(0, result.ExitCode, "init should fail when .ai-rulez/ already exists in non-interactive mode")
-}
-
-func (s *InitCLITestSuite) TestInitWithJsonFormat() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "JSONProject", "--format", "json", "--yes")
-
-	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
-
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.json")
-	s.True(testutil.FileExists(s.T(), configPath), "JSON config file should be created")
 }
 
 func (s *InitCLITestSuite) TestInitMultipleDomains() {

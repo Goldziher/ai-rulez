@@ -11,6 +11,7 @@ import (
 // Output formats shared by the commands that print a report.
 const (
 	formatText = "text"
+	formatJSON = "json"
 	// formatValuesAnnotation holds the values a --format flag accepts, so the
 	// root command can reject any other one with a single wording.
 	formatValuesAnnotation = "ai-rulez-format-values"
