@@ -140,8 +140,10 @@ func approvalGate(cfg *config.Config, require bool) (*publish.ApprovalInfo, erro
 const maxPublishListed = 10
 
 // publishSBOM renders the project SBOM (CycloneDX) from the lock and the cache.
+// It leaves out the approval status, so no reviewer identity leaves the
+// repository, as with the shipped lock copy, and carries no timestamp.
 func publishSBOM(cfg *config.Config) ([]byte, error) {
-	bom, err := sbom.Build(cfg, Version)
+	bom, err := sbom.Build(cfg, Version, sbom.Options{NoApprovals: true})
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
