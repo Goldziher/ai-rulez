@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
@@ -36,6 +35,12 @@ const (
 
 // Token environment variables, in order of precedence.
 var tokenEnvs = []string{"GITHUB_TOKEN", "GH_TOKEN"}
+
+// HostsEnv lists, comma separated, the hosts the forge client may contact (and
+// send the GitHub token to). It is separate from the clone token allowlist: a
+// GitLab or Gitea host trusted with a clone token must not receive the GitHub
+// token, and does not speak this API.
+const HostsEnv = "AI_RULEZ_FORGE_HOSTS"
 
 // Options configure an HTTPClient. The zero value is a working online client
 // for the real process environment.
@@ -111,9 +116,23 @@ func (c *HTTPClient) apiBase(host string) string {
 	}
 }
 
-// allowed reports whether host may be contacted: the git-token allowlist.
+// Hosts returns the hosts the forge client may contact: HostsEnv, else github.com.
+func Hosts(h ambient.Host) []string {
+	var hosts []string
+	for _, v := range strings.Split(h.GetEnv(HostsEnv), ",") {
+		if v = strings.ToLower(strings.TrimSpace(v)); v != "" {
+			hosts = append(hosts, v)
+		}
+	}
+	if len(hosts) == 0 {
+		return []string{"github.com"}
+	}
+	return hosts
+}
+
+// allowed reports whether host may be contacted: the forge host allowlist.
 func (c *HTTPClient) allowed(host string) bool {
-	for _, h := range includes.TokenHosts(c.opt.Host) {
+	for _, h := range Hosts(c.opt.Host) {
 		if h == host {
 			return true
 		}
@@ -175,7 +194,7 @@ func (c *HTTPClient) do(ctx context.Context, req request, rawURL string) ([]byte
 		return nil, nil, ErrOffline
 	}
 	if !c.allowed(req.host) {
-		return nil, nil, oops.With("host", req.host).Hint("Add the host to " + includes.TokenHostsEnv).Wrap(ErrHostNotAllowed)
+		return nil, nil, oops.With("host", req.host).Hint("Add the host to " + HostsEnv).Wrap(ErrHostNotAllowed)
 	}
 	target := rawURL
 	if target == "" {
