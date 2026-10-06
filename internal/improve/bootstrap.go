@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -16,6 +15,10 @@ const (
 	BootstrapResamples = 10000
 	// bootstrapConfidence is the two-sided level of the interval.
 	bootstrapConfidence = 0.95
+	// bootstrapTailPermille is each tail of that level in thousandths, so the percentile indexes are
+	// integer arithmetic and no float rounding can move one by a resample.
+	bootstrapTailPermille = 25
+	permille              = 1000
 )
 
 // CI is a percentile bootstrap interval of the held-out pass-rate gain.
@@ -64,10 +67,16 @@ func BootstrapGain(rows []PairRow, resamples int) *CI {
 		gains[b] = float64(total) / float64(n)
 	}
 	sort.Float64s(gains)
-	tail := (1 - bootstrapConfidence) / 2
-	lo := gains[int(math.Floor(tail*float64(resamples)))]
-	hi := gains[min(int(math.Ceil((1-tail)*float64(resamples)))-1, resamples-1)]
-	return &CI{Low: roundRate(lo), High: roundRate(hi), Confidence: bootstrapConfidence, Resamples: resamples}
+	loIdx, hiIdx := tailIndexes(resamples)
+	return &CI{Low: roundRate(gains[loIdx]), High: roundRate(gains[hiIdx]), Confidence: bootstrapConfidence, Resamples: resamples}
+}
+
+// tailIndexes are the indexes of the lower and upper percentile of n sorted resamples: the floor of the
+// lower tail and the ceiling of the upper one, minus one.
+func tailIndexes(n int) (lo, hi int) {
+	lo = n * bootstrapTailPermille / permille
+	hi = (n*(permille-bootstrapTailPermille)+permille-1)/permille - 1
+	return min(lo, n-1), min(max(hi, 0), n-1)
 }
 
 // underpoweredWarning says why a comparison is weak evidence.
