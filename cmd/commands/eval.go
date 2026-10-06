@@ -33,7 +33,6 @@ var evalFlags struct {
 	model         string
 	ablation      bool
 	dryRun        bool
-	estimate      bool
 	format        string
 	out           string
 	maxCost       float64
@@ -77,8 +76,7 @@ A record that cannot be verified (written on another machine, or edited by hand)
 unverified and re-run. CI without the user key therefore re-runs committed records instead of
 trusting them; --force also forces a re-run. Flags are
 checked before anything is run, and each skill's result is saved as soon as it finishes. --dry-run lists what would run and an estimated cost without
-calling any runner; --estimate is an alias. The estimate is a range (low, expected, high), and
-each recorded run keeps the estimate next to what the runner reported. The command exits 2 when a skill fails its pass threshold, errors, or has
+calling any runner. The command exits 2 when a skill fails its pass threshold, errors, or has
 invalid cases.`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -105,8 +103,7 @@ func init() {
 	f.DurationVar(&evalFlags.timeout, "timeout", 30*time.Minute, "Time limit for one skill with either runner; the runner's whole process tree is killed when it ends")
 	f.StringVar(&evalFlags.model, "model", "", "Model to run the cases with (cases may override it)")
 	f.BoolVar(&evalFlags.ablation, "ablation", false, "Also run every case without the skill and report the delta")
-	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost range; call no runner and write nothing")
-	f.BoolVar(&evalFlags.estimate, "estimate", false, "Alias of --dry-run")
+	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost; call no runner and write nothing")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
 	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
@@ -252,7 +249,7 @@ func buildEvalOptions(cmd *cobra.Command, skills []string, cfgDir, baseDir strin
 	}
 	opts := &evals.RunOptions{
 		ConfigDir: absDir, Skills: skills, Harness: evalFlags.harness, Model: evalFlags.model,
-		Ablation: evalFlags.ablation, DryRun: evalDryRun(), Force: evalFlags.force,
+		Ablation: evalFlags.ablation, DryRun: evalFlags.dryRun, Force: evalFlags.force,
 		MaxCostUSD: evalFlags.maxCost, Date: date,
 		Grade: evals.GradeOptions{AllowExec: evalFlags.allowExec}, ToolVersion: Version,
 		Price: evals.Price{InPerMTok: evalFlags.priceIn, OutPerMTok: evalFlags.priceOut},
@@ -261,12 +258,24 @@ func buildEvalOptions(cmd *cobra.Command, skills []string, cfgDir, baseDir strin
 		threshold := evalFlags.threshold
 		opts.PassThreshold = &threshold
 	}
-	if opts.Changed, err = changedEvalSkills(absDir, baseDir); err != nil {
-		return nil, err
+	if evalFlags.changedOnly {
+		all, err := evals.FindSkills(absDir)
+		if err != nil {
+			return nil, oops.Wrapf(err, "list skills")
+		}
+		repo, err := filepath.Abs(baseDir)
+		if err != nil {
+			return nil, oops.Wrapf(err, "resolve project directory")
+		}
+		changed, err := evals.ChangedSkills(evals.ExecGit, repo, evalFlags.base, all)
+		if err != nil {
+			return nil, oops.Wrapf(err, "find changed skills")
+		}
+		opts.Changed = changed
 	}
 	runner, runs, err := buildEvalRunner(cmd)
 	if err != nil {
-		if !evalDryRun() {
+		if !evalFlags.dryRun {
 			return nil, err
 		}
 		runs = 1 // a dry run needs no runner, only the run count for its estimate
@@ -276,26 +285,6 @@ func buildEvalOptions(cmd *cobra.Command, skills []string, cfgDir, baseDir strin
 	}
 	opts.Runner, opts.EstimateRuns = runner, runs
 	return opts, nil
-}
-
-// evalDryRun says whether the run only estimates: --dry-run or its alias --estimate.
-func evalDryRun() bool { return evalFlags.dryRun || evalFlags.estimate }
-
-// changedEvalSkills is the set of skills --changed-only selects; nil without the flag.
-func changedEvalSkills(absDir, baseDir string) (map[string]bool, error) {
-	if !evalFlags.changedOnly {
-		return nil, nil
-	}
-	all, err := evals.FindSkills(absDir)
-	if err != nil {
-		return nil, oops.Wrapf(err, "list skills")
-	}
-	repo, err := filepath.Abs(baseDir)
-	if err != nil {
-		return nil, oops.Wrapf(err, "resolve project directory")
-	}
-	changed, err := evals.ChangedSkills(evals.ExecGit, repo, evalFlags.base, all)
-	return changed, oops.Wrapf(err, "find changed skills")
 }
 
 // buildEvalRunner selects the runner and the runs per case its estimate assumes.

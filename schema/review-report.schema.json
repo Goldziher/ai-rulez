@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/review-report.schema.json",
+  "title": "ai-rulez review report",
+  "description": "Output of `ai-rulez review --format json`: the rubric with its published weights and formula, one entry per selected item, and with --estimate the egress manifest of a model-judged run. Phase 0 is offline: run.calls is always 0.",
+  "type": "object",
+  "required": ["schema", "rubric", "run", "summary", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "review-report/1" },
+    "rubric": {
+      "type": "object",
+      "required": ["id", "version", "ref", "digest", "formula", "applies_to", "dimensions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 },
+        "ref": { "type": "string", "description": "builtin:<id> or the directory name under .ai-rulez/rubrics." },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "formula": { "type": "string" },
+        "applies_to": { "type": "array", "items": { "enum": ["skill", "agent", "command", "rule"] } },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "group", "weight", "severity"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "code": { "type": "string", "pattern": "^AR9G[1-7]$" },
+              "group": { "enum": ["intrinsic", "contextual"] },
+              "weight": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+              "severity": { "enum": ["info", "warning"] },
+              "twins": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "required": ["phase", "offline", "calls", "tokens", "cost_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "phase": { "const": 0 },
+        "offline": { "const": true },
+        "calls": { "const": 0 },
+        "tokens": { "const": 0 },
+        "cost_usd": { "const": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["items", "scored", "withheld", "excluded", "skipped", "mean_score"],
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "integer", "minimum": 0 },
+        "scored": { "type": "integer", "minimum": 0 },
+        "withheld": { "type": "integer", "minimum": 0 },
+        "excluded": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "mean_score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "name", "path", "owned", "status", "score"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["skill", "agent", "command", "rule"] },
+          "name": { "type": "string" },
+          "domain": { "type": "string" },
+          "path": { "type": "string" },
+          "digest": { "type": "string" },
+          "owned": { "type": "boolean" },
+          "status": { "enum": ["scored", "withheld", "excluded", "skipped"] },
+          "reason": { "type": "string" },
+          "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "weight", "status"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string" },
+                "code": { "type": "string" },
+                "weight": { "type": "number" },
+                "status": { "enum": ["scored", "not-scored"] },
+                "verdict": { "enum": ["pass", "warn", "fail"] },
+                "preempted": { "type": "boolean" },
+                "note": { "type": "string" },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["code", "severity", "message"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "code": { "type": "string" },
+                      "name": { "type": "string" },
+                      "severity": { "type": "string" },
+                      "line": { "type": "integer" },
+                      "message": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "estimate": {
+      "type": "object",
+      "description": "The egress manifest and cost range of a model-judged run (--estimate). Nothing is sent: sent is always false. Items carry sizes and hashes, never content.",
+      "required": ["sent", "content_mode", "host", "network_allowed", "items", "totals", "cost_known", "cap"],
+      "additionalProperties": false,
+      "properties": {
+        "sent": { "const": false },
+        "content_mode": { "enum": ["descriptions", "full"] },
+        "model": { "type": "string" },
+        "host": { "type": "string" },
+        "network_allowed": { "type": "boolean" },
+        "ignored_llm_keys": { "type": "array", "items": { "type": "string" } },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "path", "bytes", "sha256", "calls"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "path": { "type": "string" },
+              "bytes": { "type": "integer" },
+              "sha256": { "type": "string" },
+              "truncated": { "type": "boolean" },
+              "calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["group", "dimensions", "bytes", "input_tokens", "output_tokens_max"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "group": { "enum": ["intrinsic", "contextual"] },
+                    "dimensions": { "type": "array", "items": { "type": "string" } },
+                    "siblings": { "type": "array", "items": { "type": "string" } },
+                    "bytes": { "type": "integer" },
+                    "input_tokens": { "type": "integer" },
+                    "output_tokens_max": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "withheld": { "type": "array", "items": { "type": "string" } },
+        "totals": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "cost_min_usd": { "type": "number" },
+        "cost_max_usd": { "type": "number" },
+        "cost_known": { "type": "boolean" },
+        "cap": {
+          "type": "object",
+          "required": ["max_cost_usd", "max_calls"],
+          "additionalProperties": false,
+          "properties": {
+            "max_cost_usd": { "type": "number", "description": "0 means unlimited." },
+            "max_calls": { "type": "integer", "description": "0 means unlimited." }
+          }
+        },
+        "refused": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Why a real run would be refused before its first call."
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["item", "group", "system", "user"],
+            "additionalProperties": false,
+            "properties": {
+              "item": { "type": "string" },
+              "group": { "type": "string" },
+              "system": { "type": "string" },
+              "user": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
