@@ -271,8 +271,8 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 				return nil, err
 			}
 		}
-		if c.Rubric != "" {
-			if err := writeMarkdown(filepath.Join(caseDir, "graders", "rubric.md"), map[string]any{keyType: "llm"}, c.Rubric); err != nil {
+		if c.HasRubric() {
+			if err := writeMarkdown(filepath.Join(caseDir, "graders", "rubric.md"), map[string]any{keyType: "llm"}, c.RubricText()); err != nil {
 				return nil, err
 			}
 		}

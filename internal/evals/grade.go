@@ -36,7 +36,7 @@ type OutcomeGrade struct {
 // GradeOutcome evaluates the assertions and rubric of c against a result. A
 // runner-supplied verdict (Result.Passed) wins over local grading.
 func GradeOutcome(c *Case, r *Result, opts GradeOptions) OutcomeGrade {
-	grade := OutcomeGrade{Graded: len(c.Assertions) > 0 || c.Rubric != ""}
+	grade := OutcomeGrade{Graded: len(c.Assertions) > 0 || c.HasRubric()}
 	if !grade.Graded {
 		grade.Passed = true
 		return grade
@@ -55,7 +55,7 @@ func GradeOutcome(c *Case, r *Result, opts GradeOptions) OutcomeGrade {
 			grade.Failures = append(grade.Failures, fmt.Sprintf("assertions[%d] %s: %s", i, c.Assertions[i].Type, msg))
 		}
 	}
-	if c.Rubric != "" {
+	if c.HasRubric() {
 		pass := DefaultRubricMinScore
 		if c.RubricMinScore != nil {
 			pass = *c.RubricMinScore

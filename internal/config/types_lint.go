@@ -234,6 +234,22 @@ type LintEvals struct {
 	// ConfusionThreshold turns the skill-confusable check (AR9A2) on: a sibling that
 	// won at least this share (0-1) of a skill's positive activation prompts is reported.
 	ConfusionThreshold float64 `yaml:"confusion_threshold,omitempty" json:"confusion_threshold,omitempty" toml:"confusion_threshold,omitempty"` //nolint:tagliatelle
+	// Estimate overrides the assumptions behind the eval cost estimate;
+	// `ai-rulez eval calibrate-estimate` proposes values measured from earlier runs.
+	Estimate *LintEvalsEstimate `yaml:"estimate,omitempty" json:"estimate,omitempty" toml:"estimate,omitempty"`
+}
+
+// LintEvalsEstimate holds the assumptions of the eval cost estimate. Zero keeps
+// the built-in value.
+type LintEvalsEstimate struct {
+	// OverheadTokens is the harness's own input per agent run (system prompt, tools).
+	OverheadTokens int `yaml:"overhead_tokens,omitempty" json:"overhead_tokens,omitempty" toml:"overhead_tokens,omitempty"` //nolint:tagliatelle
+	// AssumedOutputTokens is the output per agent run of a case run.
+	AssumedOutputTokens int `yaml:"assumed_output_tokens,omitempty" json:"assumed_output_tokens,omitempty" toml:"assumed_output_tokens,omitempty"` //nolint:tagliatelle
+	// ActivationOutputTokens is the output per activation decision.
+	ActivationOutputTokens int `yaml:"activation_output_tokens,omitempty" json:"activation_output_tokens,omitempty" toml:"activation_output_tokens,omitempty"` //nolint:tagliatelle
+	// ToolLoopFactor scales the tool-loop re-read in the high figure.
+	ToolLoopFactor float64 `yaml:"tool_loop_factor,omitempty" json:"tool_loop_factor,omitempty" toml:"tool_loop_factor,omitempty"` //nolint:tagliatelle
 }
 
 // LintDescription tunes description quality checks.

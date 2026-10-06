@@ -78,7 +78,7 @@ cases:
         command: grep -q ok deploy.log
         exit_code: 0
     rubric: The answer names the staging cluster and the rollout command it ran.
-    rubric_min_score: 0.8            # default 0.7
+    rubric_min_score: 0.8            # default 0.7; applies to rubric and rubric_items
     model: haiku                     # overrides --model for this case
     tags: [smoke, deploy]
 
@@ -95,7 +95,8 @@ cases:
 | `near_miss` | Prompts that look like they should fire the skill but must not. Each becomes a derived negative case `<id>.near-miss-<n>` tagged `near-miss`. Only on `expect_trigger: true` cases. |
 | `files` | Fixtures: `path` (relative to the working directory) with inline `content` or a `source` file. |
 | `assertions` | Deterministic checks, below. |
-| `rubric`, `rubric_min_score` | Judged by a model grader that the runner supplies. |
+| `rubric`, `rubric_min_score` | Judged by a model grader that the runner supplies, or by `--grader builtin`. |
+| `rubric_items` | A weighted checklist instead of `rubric` (the two are mutually exclusive): a list of `text` and optional `weight` (finite, above 0, default 1), at most 50. The grader scores the share of the total weight the answer satisfies, a number from 0 to 1, which `rubric_min_score` (default 0.7) is compared with. A runner that has only a free-text rubric receives the checklist rendered as one (`Score the answer against this weighted checklist (total weight 6): 1. (weight 3) ...`), so `rubric_items` works with every runner. |
 | `model`, `tags` | Per-case model override, free tags. |
 
 Assertions:
@@ -212,6 +213,8 @@ Cases are self-contained: near misses are expanded and `prompt_file` and fixture
 }
 ```
 
+- A case with `rubric_items` arrives with `rubric` set to the rendered checklist as well, so a runner that only knows
+  `rubric` grades it correctly; `rubric_items` is sent too.
 - `triggered` is required for the `with` arm. The `without` arm (only with `--ablation`) needs no `triggered`.
 - Give `output` (and `work_dir`, for file assertions) and ai-rulez grades the assertions itself; or give `passed` to
   report your own verdict on the outcome checks, which wins over local grading. `rubric_score` (0-1) is required for
@@ -319,23 +322,114 @@ signed like the rest of the record, and judged by `AR9A1` and `AR9A2` (off until
 `eval run` keeps the block; an activation run does not touch the case-run result. `--dry-run`/`--estimate` ranks and
 prints but writes nothing; it still exits `2` when a skill fails its threshold, as a real run does.
 
-The `native` surface (the model decides, with all competing skills installed in the harness) needs a runner that
-declares the `activation` capability. `--surface native` therefore checks the runner first and refuses one that does
-not, with "runner does not support activation mode", instead of running full cases and reporting those as
-activation. No built-in runner declares it in this release, so `native` is refused everywhere; it is planned.
+### The native surface
+
+```bash
+ai-rulez eval run --mode activation --surface native --model haiku --runs 5
+ai-rulez eval run deploy-staging --mode activation --surface native --dry-run   # the estimate, no model call
+```
+
+`native` asks a harness's model. For each skill it installs **every competing skill** (the `--scope` set) in the
+harness at once, repeats each prompt of the skill's cases `--runs` times (default 5), stops each run at the first turn
+and records which skills loaded. A one-skill harness can never show a stolen trigger; this one can. A prompt's
+**activation rate** is the share of runs in which the skill under test loaded, reported with its Wilson interval and
+the per-skill counts (`fired_counts`, with `none` for runs in which no skill loaded). A positive prompt passes at a
+rate of at least 0.8, a negative one at most 0.2; a prompt that passes but would fail with one run going the other way
+is **borderline** (3 or more runs, never a perfect score), so 4 of 5 reads differently from 5 of 5. Borderline prompts
+count as passing. Recall, precision and false activation are computed from the thresholded prompts (as on the
+retrieval surface); `run_recall` and `run_false_activation` pool the individual runs, with their own intervals. A
+positive prompt that fails and that a sibling won most often counts towards that sibling's `stolen_by`. The confusion
+matrix counts runs, not prompts. A prompt the runner gave no result for is an `error` prompt, the skill is reported
+with an error and not scored, and nothing is recorded or cached for it.
+
+A skill's measurement is stored in `eval-results.json` (`activation`: rates, the runner, harness, model, run count,
+the cache key and the estimate next to what the run cost) and replayed, as `cached`, while the skill, the competing
+set (a sibling's edited description changes it), the cases, the runner and its settings, the model, the run count and
+the ai-rulez version are unchanged. `--force` repeats it. A stored record that is not signed with your key is never
+replayed.
+
+**Runners and the capability handshake.** A runner declares what it supports, and ai-rulez asks before it sends
+anything: `--surface native` is refused (exit 1, "runner ... does not support activation mode") for a runner that does
+not declare the `activation` capability and the `native` surface, never run as full cases. `claude-native` and
+`codex-native` declare both. The `command` runner is probed: ai-rulez starts the command once with the request
+`{"version":1,"mode":"capabilities"}` (no skill, no cases; `AI_RULEZ_EVAL_MODE=capabilities` in the environment) and
+reads
+
+```json
+{ "version": 1, "capabilities": ["activation"], "surfaces": ["native"] }
+```
+
+A command that answers without `capabilities` (every runner written before this) is refused; one that answers the
+probe with `results` is refused too, since it ran something. `--dry-run` skips the probe and every runner call.
+
+The activation request a capable command receives:
+
+```json
+{
+  "version": 1, "mode": "activation", "surface": "native", "harness": "claude", "model": "haiku",
+  "runs": 5, "max_turns": 1, "max_cost_usd": 0.5,
+  "skill": { "id": "deploy-staging", "dir": "...", "digest": "sha256:...", "description": "..." },
+  "skills": [
+    { "id": "deploy-staging", "dir": "...", "digest": "sha256:...", "description": "Deploy a service to staging" },
+    { "id": "release-notes", "dir": "...", "digest": "sha256:...", "description": "Write release notes" }
+  ],
+  "cases": [
+    { "id": "deploy-basic", "prompt": "Deploy the billing service to staging", "expect_trigger": true, "target": "deploy-staging", "runs": 5 }
+  ]
+}
+```
+
+`skills` is the installed set (the skill under test is in it); fixtures, assertions and rubrics are not sent. The
+response has one `with` result per case and no `without` arm:
+
+```json
+{ "version": 1, "results": [
+  { "case": "deploy-basic", "arm": "with", "runs": 5, "fired_counts": { "deploy-staging": 4, "release-notes": 1 },
+    "input_tokens": 20500, "output_tokens": 600, "cost_usd": 0.0071 } ] }
+```
+
+`runs` (at least 1) and `fired_counts` (ids from `skills`, plus `none`; each count at most `runs`) are validated; a
+result with `error` or `skipped` needs neither. `input_tokens`, `output_tokens` and `cost_usd` feed the estimate record.
+
+- **`claude-native`** (harness `claude`, the default for `--surface native`): writes every skill of the set into one
+  throwaway plugin and runs, for each prompt and repetition, `claude -p --output-format stream-json --verbose
+  --max-turns 1 --no-session-persistence --setting-sources "" --permission-mode dontAsk --tools Skill --allowedTools
+  Skill --plugin-dir <plugin> [--model M]` in an empty directory, with the prompt on stdin. A `Skill` tool call in the
+  transcript (`ai-rulez-activation:<id>`) is a load; cost and tokens come from the closing `result` line (cache reads and
+  writes count as input). Four runs are in flight at a time and the adapter enforces `--max-cost` itself: once the
+  spend reaches the budget no further run starts. No user, project or local settings are loaded, so the skills in your
+  own Claude Code configuration do not compete; the harness's built-in skills and any enabled plugins still do, and
+  Claude Code's own system prompt makes each run cost far more input than the default estimate assumes (see
+  `eval calibrate-estimate`). Run it with `--model haiku` unless you mean to pay for a larger model.
+- **`codex-native`** (harness `codex`): writes the set to `<work>/.agents/skills/<id>/` and runs `codex exec --json
+  --ephemeral --ignore-user-config --ignore-rules -s read-only` from stdin. Codex loads a skill by reading its
+  `SKILL.md`, which shows up as a shell command; the run is killed as soon as one is read or after three commands, so
+  the model never acts on the task. The commands that did start run read-only in an empty directory with `HOME` pointed
+  at an empty directory and a scrubbed environment (`CODEX_HOME` stays, for the login). Codex reports usage only when a
+  run finishes, so this adapter reports no tokens and no cost and `--max-cost` cannot be enforced through it. It
+  is experimental: verified live against codex-cli 0.160, one prompt per run costs on the order of 200,000 input tokens.
+- **`--runner-command`**: any other harness; implement the probe and the request above.
+
+`--max-cost` is checked against the **high** estimate figure before a native run starts (`--max-cost-mode expected`
+checks the expected figure instead; for case runs the default is `expected`). Between skills, spend that reached the
+cap skips the rest, as for case runs. `--timeout` bounds one skill's runner call.
 
 ### Design decisions
 
-- `--surface` has no default: the planned default (`native`) does not exist yet, and silently choosing the offline
-  ranker would look like measuring a model.
-- Retrieval is one deterministic run per prompt, so a rate is 0 or 1. The thresholds that make repeated native runs
-  meaningful (a positive passes at an activation rate of 0.8 or more, a negative at 0.2 or less) are in the code
-  and the `borderline` prompt status is reserved for them.
+- `--surface` has no default: silently choosing the offline ranker would look like measuring a model, and choosing
+  `native` would spend money.
+- Retrieval is one deterministic run per prompt, so a rate is 0 or 1 and a prompt is never borderline. The native
+  thresholds (a positive passes at an activation rate of 0.8 or more, a negative at 0.2 or less) apply to repeated runs.
+- "Borderline" is one run from failing, not "the Wilson interval straddles the threshold": at five runs every
+  interval straddles 0.8, so that rule would mark everything.
+- One turn (`max_turns` 1) is enough: the decision to load a skill is in the first turn. The design's default of 2
+  would pay for a second turn that does not change the answer.
+- The default scope for large catalogs stays `domain`: bounded, at the price of missing a cross-domain steal; use
+  `--scope all` to look for those.
 - The confusion matrix is reported once at the top level; each skill carries its own `stolen_by` list.
 - A record measured on an older skill digest, or one that is not signed with your key, is not judged by `AR9A1` and
   `AR9A2` (an unsigned one is reported as unverified, like `AR997`).
-- Not in this release: the `native` surface and its protocol, `--max-cost-mode`, `eval calibrate-estimate`,
-  `--description-from`, and the lint rules `AR9A3`-`AR9A5`.
+- Not implemented: `--description-from` (a candidate description for one run, from the design's phase 5).
 
 ## Scores and the results file
 

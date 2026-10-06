@@ -39,14 +39,29 @@ type SkillRef struct {
 	// its evals/ directory is not part of the skill a harness loads).
 	Dir    string `json:"dir"`
 	Digest string `json:"digest"`
+	// Description is the skill's description. It is sent for the skills of an
+	// activation request, where the description is what the model chooses by.
+	Description string `json:"description,omitempty"`
 }
 
 // Request is the document a runner receives (on stdin, for the command runner).
 type Request struct {
-	Version int      `json:"version"`
+	Version int `json:"version"`
+	// Mode is empty (or "cases") for a full case run, "activation" for an
+	// activation request and "capabilities" for the handshake probe, which carries
+	// no skill and no cases.
+	Mode    string   `json:"mode,omitempty"`
+	Surface string   `json:"surface,omitempty"`
 	Skill   SkillRef `json:"skill"`
-	Harness string   `json:"harness"`
-	Model   string   `json:"model,omitempty"`
+	// Skills is the installed set of an activation request: every skill the
+	// harness must have available at once, the skill under test among them.
+	Skills  []SkillRef `json:"skills,omitempty"`
+	Harness string     `json:"harness"`
+	Model   string     `json:"model,omitempty"`
+	// Runs is how often each prompt of an activation request is repeated, and
+	// MaxTurns bounds one run (the decision is in the first turn).
+	Runs     int `json:"runs,omitempty"`
+	MaxTurns int `json:"max_turns,omitempty"`
 	// Ablation asks for an extra run of every case without the skill.
 	Ablation bool `json:"ablation"`
 	// MaxCostUSD is the budget left for this skill; 0 means no limit.
@@ -75,6 +90,13 @@ type Result struct {
 	InputTokens  int      `json:"input_tokens,omitempty"`
 	OutputTokens int      `json:"output_tokens,omitempty"`
 	CostUSD      float64  `json:"cost_usd,omitempty"`
+	// Fired, FiredCounts and Runs answer an activation request: how often each skill
+	// of the installed set loaded over Runs repetitions of the prompt (a skill that
+	// never loaded is absent). Triggered says whether the case's target loaded in
+	// most of them and is informational; ai-rulez scores from FiredCounts.
+	Fired       []string       `json:"fired,omitempty"`
+	FiredCounts map[string]int `json:"fired_counts,omitempty"`
+	Runs        int            `json:"runs,omitempty"`
 	// Skipped marks a case the runner cannot run (for example an assertion type it
 	// does not support); Reason says why. Skipped cases are not scored.
 	Skipped bool   `json:"skipped,omitempty"`
@@ -89,6 +111,11 @@ type Response struct {
 	Results []Result `json:"results"`
 	// CostUSD is the total cost when the runner reports it per response only.
 	CostUSD float64 `json:"cost_usd,omitempty"`
+	// Capabilities and Surfaces answer the handshake probe (Request.Mode
+	// "capabilities"): what the runner can do and, for activation, on which
+	// surfaces. A response to any other request leaves them out.
+	Capabilities []string `json:"capabilities,omitempty"`
+	Surfaces     []string `json:"surfaces,omitempty"`
 }
 
 // Validate checks a response against the request it answers.
@@ -120,6 +147,55 @@ func (r *Response) Validate(req *Request) error {
 		if result.RubricScore != nil && (*result.RubricScore < 0 || *result.RubricScore > 1) {
 			return fmt.Errorf("results[%d]: rubric_score must be between 0 and 1", i)
 		}
+		if req.Mode == ModeActivation {
+			if err := result.validateActivation(i, req); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// validateActivation checks the activation fields of one result against the
+// request: the arm, the run count and that only installed skills fired.
+func (r *Result) validateActivation(index int, req *Request) error {
+	if r.Arm != ArmWith {
+		return fmt.Errorf("results[%d]: an activation response has only the %q arm", index, ArmWith)
+	}
+	if r.Skipped || r.Error != "" {
+		return nil
+	}
+	if r.Runs < 1 {
+		return fmt.Errorf("results[%d]: runs must be >= 1 in an activation response", index)
+	}
+	installed := map[string]bool{}
+	for i := range req.Skills {
+		installed[req.Skills[i].ID] = true
+	}
+	total := 0
+	for id, n := range r.FiredCounts {
+		if !installed[id] && id != firedNone {
+			return fmt.Errorf("results[%d]: fired_counts names %q, which is not in the installed set", index, id)
+		}
+		if n < 0 || n > r.Runs {
+			return fmt.Errorf("results[%d]: fired_counts[%q] is %d, outside 0..runs (%d)", index, id, n, r.Runs)
+		}
+		total += n
+	}
+	if total > r.Runs*len(installed) {
+		return fmt.Errorf("results[%d]: fired_counts sums to %d over %d runs", index, total, r.Runs)
+	}
+	return nil
+}
+
+// ValidateProbe checks the answer to the handshake probe: the protocol version and
+// no results (a runner that answers a probe with results ran something).
+func (r *Response) ValidateProbe() error {
+	if r.Version != ProtocolVersion {
+		return fmt.Errorf("runner answered protocol version %d, want %d", r.Version, ProtocolVersion)
+	}
+	if len(r.Results) > 0 {
+		return fmt.Errorf("runner answered the capabilities probe with %d results; it does not implement the handshake", len(r.Results))
 	}
 	return nil
 }
