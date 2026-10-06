@@ -2244,6 +2244,39 @@
       "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
       "type": "object"
     },
+    "review": {
+      "additionalProperties": false,
+      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
+      "properties": {
+        "content": {
+          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body.",
+          "enum": ["descriptions", "full"],
+          "type": "string"
+        },
+        "exclude": {
+          "description": "Name globs of items the review skips.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_calls": {
+          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_cost_usd": {
+          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset.",
+          "minimum": 0,
+          "type": "number"
+        },
+        "rubric": {
+          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "role_manifest": {
       "additionalProperties": false,
       "description": "Options for the roles.json manifest (a separate table because roles is an array).",
@@ -2305,39 +2338,6 @@
                 "type": "array"
               }
             },
-    "review": {
-      "additionalProperties": false,
-      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
-      "properties": {
-        "content": {
-          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body.",
-          "enum": ["descriptions", "full"],
-          "type": "string"
-        },
-        "exclude": {
-          "description": "Name globs of items the review skips.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "max_calls": {
-          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset.",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "max_cost_usd": {
-          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset.",
-          "minimum": 0,
-          "type": "number"
-        },
-        "rubric": {
-          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics.",
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
             "type": "object"
           },
           "commands": {
@@ -2401,6 +2401,10 @@
             "pattern": "^[a-z0-9][a-z0-9_-]*$",
             "type": "string"
           },
+          "pin": {
+            "description": "Record the digest of this role's rendered outputs in ai-rulez.lock, checked by `lock --check` and `generate --check --locked --role`. Not inherited through extends.",
+            "type": "boolean"
+          },
           "remove": {
             "description": "Set to true to delete the shared entry with the same name",
             "type": "boolean"
@@ -2434,10 +2438,6 @@
             "type": "object"
           },
           "skills": {
-          "pin": {
-            "description": "Record the digest of this role's rendered outputs in ai-rulez.lock, checked by `lock --check` and `generate --check --locked --role`. Not inherited through extends.",
-            "type": "boolean"
-          },
             "additionalProperties": false,
             "description": "Include/exclude selectors for skills. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
             "properties": {

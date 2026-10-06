@@ -1618,7 +1618,6 @@ Rank the skills `mcp --serve-skills` would serve against a query, with the ranke
 | `--format text\|json` | Output format (default `text`) |
 | `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
 
-### `ai-rulez search --eval <cases.yaml>`
 ### `ai-rulez improve run <skill> --with CMD` (experimental)
 
 Runs an external optimizer on a throwaway copy of an authored skill and accepts its candidate only if a held-out eval set improves without regressions. The authored skill is untouched until `improve apply`, which never commits. Required: `--with` and `--max-cost`.
@@ -1643,6 +1642,7 @@ Exit 0: candidate accepted. Exit 2: no acceptable candidate (report written). Ex
 
 Shows the diff of an accepted run and writes it into the skill after confirmation (`--yes` skips it). Refuses with `AR9J1` when the skill changed since the run.
 
+### `ai-rulez search --eval <cases.yaml>`
 
 Measure the ranking against labelled queries: top-1, recall@k, hit@k and MRR.
 
@@ -1838,31 +1838,6 @@ refuses a remote source the lock does not cover, as `--locked` does. Pinning `re
 ai-rulez does not verify signatures itself: the lock proves the bytes did not change since you reviewed them, not
 who published them. To add that, sign `lock --subject` with `cosign` ([recipe](lockfile.md#signing-the-lock)).
 
-## Update Command
-
-### `ai-rulez update [name...]`
-
-Move the lock entries of includes, installed skills and skill sources that ask for a version range
-(`version = "^1.2"`) to the newest tag the range allows. Only the lock changes. See
-[Version constraints](lockfile.md#version-constraints) for resolution, the moved-tag and downgrade defenses and the
-design decisions.
-
-```bash
-ai-rulez lock --outdated          # what has newer tags
-ai-rulez update --dry-run         # what update would change; fetches the new trees into the cache, writes no lock
-ai-rulez update shared            # one source
-ai-rulez update --kind skill      # every installed skill with a range
-ai-rulez update --accept-moved-tag shared   # re-pin a tag that moved, after reviewing the new commit
-```
-
-| Flag | Description |
-| --- | --- |
-| `--dry-run` | Show what would change (tags, commits, tree digests, changed files); write nothing |
-| `--allow-downgrade` | Allow a tag with lower precedence than the pinned one |
-| `--accept-moved-tag` | Re-pin a tag that now points to another commit (`AR732`) |
-| `--kind include\|skill\|source` | Limit the update to one kind |
-| `--format text\|json` | Output format; JSON follows `schema/update.schema.json` |
-| `--offline` | Refuses to run: update reads the remote's tags |
 ## Approve Command
 
 ### `ai-rulez approve [item...]`
@@ -1897,6 +1872,31 @@ Items are named `kind:id` or `kind:domain/id` (`skill:backend/deploy`, `include:
 pinned content can be approved. Exit codes: `0` ok, `1` the command could not run or refused (an unknown or ambiguous
 item, an error-level finding, no `--yes` off a terminal, a reviewer outside `[governance] approvers`).
 
+## Update Command
+
+### `ai-rulez update [name...]`
+
+Move the lock entries of includes, installed skills and skill sources that ask for a version range
+(`version = "^1.2"`) to the newest tag the range allows. Only the lock changes. See
+[Version constraints](lockfile.md#version-constraints) for resolution, the moved-tag and downgrade defenses and the
+design decisions.
+
+```bash
+ai-rulez lock --outdated          # what has newer tags
+ai-rulez update --dry-run         # what update would change; fetches the new trees into the cache, writes no lock
+ai-rulez update shared            # one source
+ai-rulez update --kind skill      # every installed skill with a range
+ai-rulez update --accept-moved-tag shared   # re-pin a tag that moved, after reviewing the new commit
+```
+
+| Flag | Description |
+| --- | --- |
+| `--dry-run` | Show what would change (tags, commits, tree digests, changed files); write nothing |
+| `--allow-downgrade` | Allow a tag with lower precedence than the pinned one |
+| `--accept-moved-tag` | Re-pin a tag that now points to another commit (`AR732`) |
+| `--kind include\|skill\|source` | Limit the update to one kind |
+| `--format text\|json` | Output format; JSON follows `schema/update.schema.json` |
+| `--offline` | Refuses to run: update reads the remote's tags |
 
 Exit codes: `0` done or nothing to do, `1` could not run, `2` a source was refused (`AR732`, `AR730`, `AR731`) and
 nothing was written. `ai-rulez skill update` re-resolves plain refs and keeps range pins; `update` moves them.
