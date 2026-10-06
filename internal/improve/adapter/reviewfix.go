@@ -101,6 +101,7 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	prop, err := rv.ProposeFix(ctx, rv.FixInput{
 		Rubric: rb, Item: *ir, Findings: findings, Pool: res.Pool(), Fixer: client, FixerModel: o.FixerModel,
 		Verifier: rv.NewJudge(rb, judge), MaxGrowthPercent: growth, LintCheck: withTokenLimit(scanDelta(ir), req.Constraints.MaxSkillTokens),
+		Feedback: previousRoundFeedback(req.Previous),
 	})
 	if prop != nil {
 		resp.CostUSD += prop.Usage.CostUSD
@@ -119,6 +120,32 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	resp.Summary = "review-fix: " + prop.Note
 	resp.Notes = fmt.Sprintf("%s %s before %v, after %v, %d attempt(s)", prop.Code, prop.Dimension, prop.Before, prop.After, prop.Attempts)
 	return resp, nil
+}
+
+// previousRoundFeedback tells the fixer how the loop's last round ended. An adapter is stateless (each round is a
+// new process), so the request's previous field is the only memory it has. The loop already limits it: reasons are
+// given only for rounds decided before the held-out set was consulted, so nothing here carries held-out data.
+func previousRoundFeedback(prev *improve.PreviousRound) string {
+	if prev == nil {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Round %d ended: %s.", prev.Round, prev.Decision)
+	if prev.WorkspaceKept {
+		b.WriteString(" The file below still holds that attempt.")
+	} else {
+		b.WriteString(" The file below was reset to the state before it.")
+	}
+	if len(prev.Reasons) > 0 {
+		b.WriteString("\nReasons:")
+		for _, r := range prev.Reasons {
+			fmt.Fprintf(&b, "\n- %s", r)
+		}
+	}
+	if prev.Summary != "" {
+		fmt.Fprintf(&b, "\nIts own summary: %s", prev.Summary)
+	}
+	return b.String()
 }
 
 // Check refuses settings the adapter cannot run with (AR9J9): no model, no network opt-in, no fixer
