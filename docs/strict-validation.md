@@ -198,6 +198,7 @@ stdout.
 | AR9G6 | `instruction-conflict` | warning | An item contradicts another item (`review`; needs the judge, no offline evidence) |
 | AR9G7 | `body-structure` | info | A body is bloated or badly structured (`review`; offline evidence is `AR805`, `AR806`, `AR901`, `AR902`) |
 | AR9G8 | `rubric-invalid` | error | A `.ai-rulez/rubrics/<id>/rubric.toml`, golden file or `calibration.json` is malformed (`ai-rulez rubric lint`) |
+| AR9G9 | `judge-calibration-stale` | info | A judged `review` ran on a floating model alias or without a calibration record that matches the rubric, prompt, golden set and model (`review --semantic`; see [Review](review.md#calibration-and-the-gate)) |
 | AR9D0 | `search-config-invalid` | error | The `[search]` table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number, or an `index_dir` outside the config directory |
 | AR9D1 | `search-index-stale` | warning | A committed search index (an `index_dir` outside `local/`) no longer matches the skills or the embedding model. See [Skill search](search.md) |
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
@@ -249,7 +250,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D0`-`AR9D4` used, `AR9D5`-`AR9D9` free) | allocated |
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E7` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
-| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G8` used by `review` and `rubric lint`, `AR9G9` is for the calibration phase) | allocated |
+| `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G9` are used by `review` and `rubric lint`) | allocated |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`-`AR9H6` used, never emitted by `validate` unless `--verifiers` is given) | allocated |
 | `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J3` used; never emitted by `validate`) | allocated |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
@@ -2890,6 +2891,16 @@ a rubric (`.ai-rulez/rubrics/<id>/rubric.toml`) or one of its golden or calibrat
 - Why: A rubric that does not parse, whose weights do not sum to 1, or that names an unknown lint twin cannot be scored against, so the review would silently use something other than what the file says.
 - Bad: Dimension weights of 0.5 and 0.2
 - Good: Weights that sum to 1, unique dimension ids, and `twins` that are registered rule codes
+
+### AR9G9 judge-calibration-stale
+
+a judged review ran on a model alias, or without a calibration record that matches the rubric, prompt, golden set and model (advisory: reported by `ai-rulez review`, never by `validate`)
+
+- Default severity: `info`
+- Analyzer: `descriptions` (scope `item`)
+- Why: A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labelled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.
+- Bad: `review --semantic --gate` on `gemini-flash-latest`, or after editing `rubric.toml`, with the old `calibration.json`
+- Good: A pinned model id and a `calibration.json` written by `review calibrate` for the current rubric digest, prompt digest and golden set, younger than `max_age_days`
 
 ### AR9H1 verifier-failed
 
