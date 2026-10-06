@@ -60,6 +60,11 @@ type State struct {
 	Sent        int64  `json:"sent"`
 	Dropped     int64  `json:"dropped"`
 	Rejected    int64  `json:"rejected"`
+	// Failures counts flushes that did not fully deliver (a transient error or a
+	// rejection); ConsecutiveFailures resets on the next clean flush. Failures are
+	// silent to the harness and surface only here and in `telemetry status`.
+	Failures            int64 `json:"failures,omitempty"`
+	ConsecutiveFailures int64 `json:"consecutive_failures,omitempty"`
 }
 
 func (s *Spool) outbox() string    { return filepath.Join(s.Dir, OutboxFileName) }
