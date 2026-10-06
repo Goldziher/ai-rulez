@@ -2,22 +2,22 @@
 // Filters the overview table and adds copy buttons to digests. No network.
 (function () {
   "use strict";
-  var table = document.getElementById("items");
-  var q = document.getElementById("q");
-  var kind = document.getElementById("kind");
-  var status = document.getElementById("status");
-  var count = document.getElementById("count");
+  var table = document.querySelector("#items");
+  var q = document.querySelector("#q");
+  var kind = document.querySelector("#kind");
+  var status = document.querySelector("#status");
+  var count = document.querySelector("#count");
 
   if (table && q && kind && status) {
     var rows = Array.prototype.slice.call(table.tBodies[0].rows);
     var apply = function () {
-      var words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var words = q.value.toLowerCase().split(/\s+/u).filter(Boolean);
       var shown = 0;
       rows.forEach(function (row) {
-        var text = row.getAttribute("data-text") || "";
+        var text = row.dataset.text || "";
         var ok =
-          (!kind.value || row.getAttribute("data-kind") === kind.value) &&
-          (!status.value || row.getAttribute("data-status") === status.value) &&
+          (!kind.value || row.dataset.kind === kind.value) &&
+          (!status.value || row.dataset.status === status.value) &&
           words.every(function (w) {
             return text.indexOf(w) !== -1;
           });
@@ -58,8 +58,7 @@
           button.textContent = "Copied";
         });
       });
-      code.parentNode.appendChild(document.createTextNode(" "));
-      code.parentNode.appendChild(button);
+      code.parentNode.append(document.createTextNode(" "), button);
     });
   }
 })();
