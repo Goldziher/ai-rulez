@@ -3,12 +3,13 @@ package llm
 import (
 	"net"
 	"net/url"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // CodeConfigInvalid is the strict-validation code for a bad [llm] table.
@@ -113,7 +114,7 @@ func (c Config) FullModel() string {
 // WithEnv returns a copy with AI_RULEZ_LLM_* overrides applied. getenv may be nil (os.Getenv).
 func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(nil)
 	}
 	str := func(name string, dst *string) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {

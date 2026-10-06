@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -92,7 +93,7 @@ func (s Settings) ExportActive() bool {
 type Layers struct {
 	Repo *config.TelemetryConfig
 	User *config.TelemetryConfig
-	// Getenv reads the environment; nil means os.Getenv.
+	// Getenv reads the environment; nil means the real environment.
 	Getenv func(string) string
 }
 
@@ -102,7 +103,7 @@ type Layers struct {
 func Resolve(layers Layers) Settings {
 	getenv := layers.Getenv
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = ambient.GetenvFunc(nil)
 	}
 	s := Settings{
 		Protocol: config.TelemetryProtocolHTTPJSON, ServiceName: DefaultServiceName, Sample: 1,

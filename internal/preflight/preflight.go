@@ -17,6 +17,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -34,7 +35,7 @@ const (
 
 // AckedByEnv reports whether AI_RULEZ_ACK_COMMANDS silences the summary.
 func AckedByEnv() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(EnvAck))) {
+	switch strings.ToLower(strings.TrimSpace(ambient.Getenv(nil, EnvAck))) {
 	case "1", "true", "yes", "on":
 		return true
 	}

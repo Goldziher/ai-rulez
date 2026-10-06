@@ -30,6 +30,12 @@ func Getenv(e Env, name string) string {
 	return v
 }
 
+// GetenvFunc returns e's lookup as a plain function; nil e is the real
+// environment. It is the default for a Getenv field a caller may leave unset.
+func GetenvFunc(e Env) func(string) string {
+	return func(name string) string { return Getenv(e, name) }
+}
+
 // Expand replaces ${var} and $var in s from e, like os.ExpandEnv.
 func Expand(e Env, s string) string {
 	return os.Expand(s, func(name string) string { return Getenv(e, name) })
