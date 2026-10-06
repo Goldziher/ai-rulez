@@ -68,8 +68,11 @@ detects something, skills-lock first):
   apm           Microsoft APM: apm.yml (dependencies, MCP servers, target), .apm/
                 primitives (instructions, agents, chatmodes, prompts, skills, context,
                 hooks), installed apm_modules/ and apm.lock.yaml
+  okf           an OKF bundle (index.md naming okf_version) at the source root or in
+                docs/okf: the mapping of ` + "`ai-rulez import okf`" + `, with convert's report,
+                scan and write. --domain places the bundle in a domain
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
-  tessl         tessl.json and the vendored .tessl/plugins/<workspace>/<plugin>/
+  tessl        tessl.json and the vendored .tessl/plugins/<workspace>/<plugin>/
                 skills and rules; each eval scenario (task.md and criteria.json) becomes
                 a *.eval.yaml case of the plugin's skill. A plugin that is not on disk is
                 reported: nothing is fetched from the registry
@@ -116,7 +119,7 @@ validation, or --fail-on matched.`,
 
 func init() {
 	f := ConvertCmd.Flags()
-	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, tessl, skills-lock or auto (every detected importer)")
+	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, tessl, okf, skills-lock or auto (every detected importer)")
 	f.StringVar(&convertSource, "source", ".", "Directory to read")
 	f.StringVar(&convertInto, "into", importer.DefaultConfigDir, "Config directory to write: relative to --source unless absolute; never written through a symlink")
 	f.StringVar(&convertDomain, "domain", "", "Put the imported content in this domain (safe next to an existing tree)")

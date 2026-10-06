@@ -31,6 +31,9 @@ func origins(plan *Plan, domain string) map[string][]string {
 			out[placed(domain, f.Path)] = srcs
 		}
 	}
+	for _, f := range plan.Raw {
+		out[f.Path] = f.Sources
+	}
 	return out
 }
 
