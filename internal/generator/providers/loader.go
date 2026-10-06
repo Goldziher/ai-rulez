@@ -99,7 +99,7 @@ func validateLocalFile(root *RootSpec) error {
 	case strings.EqualFold(clean, path.Clean(root.File)):
 		return fmt.Errorf("root.local_file: %q is the root file itself; it must name a separate file", local)
 	}
-	return nil
+	return config.ValidateOutputPath("root.local_file", local) //nolint:wrapcheck // names the field
 }
 
 // specName is the shape of a provider name: it becomes a preset name and appears
@@ -254,6 +254,10 @@ func validateRelativeFile(field, p string) error {
 	}
 	if !fs.ValidPath(p) || p == "." || strings.ContainsAny(p, `\:`) {
 		return fmt.Errorf("%s: %q must be a relative, slash-separated path without \"..\"", field, p)
+	}
+	// A spec comes from the repository; keep it off git and ai-rulez control data.
+	if err := config.ValidateOutputPath(field, p); err != nil {
+		return err //nolint:wrapcheck // the message already names the field
 	}
 	return nil
 }
@@ -566,7 +570,7 @@ func validateSplitDir(typ, dir string) error {
 		clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
 		return fmt.Errorf("outputs[%q].dir: split needs a relative path inside the project, got %q", typ, dir)
 	}
-	return nil
+	return config.ValidateOutputPath(fmt.Sprintf("outputs[%q].dir", typ), dir) //nolint:wrapcheck // names the field
 }
 
 func validateSplitFilename(typ, filename string) error {
