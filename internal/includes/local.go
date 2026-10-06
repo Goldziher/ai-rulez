@@ -71,6 +71,9 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")
 	}
+	if contentTree.ImportedVerifiers, err = config.ScanVerifierFiles(scanDir); err != nil {
+		return nil, oops.Wrapf(err, "failed to scan verifiers")
+	}
 
 	// Filter content based on include list if specified
 	if len(s.include) > 0 {
