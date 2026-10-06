@@ -154,7 +154,9 @@ type runner struct {
 	// protected holds the codes the organization policy protects from every
 	// suppression route; attempts records the routes a repository tried on them.
 	protected map[string]bool
-	attempts  map[string]map[string]bool
+	// noInline holds the codes whose inline ignore comments the policy refuses.
+	noInline map[string]bool
+	attempts map[string]map[string]bool
 	// forceSev replaces the severity of every finding while imported content is
 	// scanned (lint.security.scan_imports).
 	forceSev Severity
@@ -311,6 +313,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
 	r.unit(unitOf("search-index", AnalyzerSearch, AnalyzerConfig), r.checkSearchIndex)
 	r.reportSuppressionAttempts()
+	r.checkMaxFindings()
 	r.keepSelected()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {

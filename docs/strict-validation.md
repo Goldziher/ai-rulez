@@ -93,6 +93,7 @@ stdout.
 | AR743 | `policy-invalid` | error | A policy file is unusable: not TOML, an unknown key or rule, a bad pattern, or newer than this ai-rulez |
 | AR744 | `policy-required-missing` | error | The repository turns off or ignores a rule code the organization policy requires |
 | AR745 | `source-not-allowed` | error | An include, installed skill or skill source comes from a host the organization policy does not allow or denies |
+| AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
 | AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
@@ -223,7 +224,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR719` used, see [Approvals](approvals.md)) | allocated |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
-| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745` and `AR748` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
+| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745`, `AR748` and `AR749` registered, `AR741` is for pinned policies; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
@@ -490,7 +491,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A2` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `traps` | `AR9C0`-`AR9CA` |
-| `config` | `AR731`, `AR740`-`AR745`, `AR748`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, `[telemetry]` and `[llm]` tables) |
+| `config` | `AR731`, `AR740`-`AR745`, `AR748`, `AR749`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -1937,6 +1938,16 @@ an MCP server or hook group the organization policy forbids (a denied transport,
 - Why: An MCP server runs a command or reaches a remote endpoint, and a hook runs a command on every tool event, so the organization bounds both. A server or hook outside the bound is dropped from the run and reported, so a pull request cannot add one that the policy bars.
 - Bad: `[[mcp_servers]] command = "bash"` under `mcp.allowed_commands = ["npx", "uvx"]`, or any `[[hooks]]` group when the policy sets `hooks.allow = false`
 - Good: Use an allowed command, or ask the policy owners to widen the policy; the repository cannot
+
+### AR749 policy-budget-exceeded
+
+a rule has more findings than the organization policy's lint.max_findings ceiling allows (0 allows none); always an error
+
+- Default severity: `error`
+- Analyzer: `config` (scope `bundle`)
+- Why: A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.
+- Bad: Three AR703 findings under `[lint.max_findings] AR703 = 0`
+- Good: Fix the findings; the ceiling is lowered over time by the policy owners, not raised by the repository
 
 ### AR801 description-missing
 

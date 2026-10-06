@@ -102,6 +102,12 @@ type Lint struct {
 	// SizeBudgets maps a content kind to the largest size budget the repository
 	// may set for it ([lint.budgets.<kind>]).
 	SizeBudgets map[string]SizeBudget
+	// MaxFindings maps a rule code to the most findings of it a run may have: one
+	// more is AR749. The lower of the layers wins; 0 allows none.
+	MaxFindings map[string]int
+	// NoInlineIgnore lists rule codes whose inline ignore comments are not
+	// honored. Layers union.
+	NoInlineIgnore []string
 }
 
 // Capability governs [lint.capability].
@@ -196,9 +202,11 @@ type fileLint struct {
 	Capability    *struct {
 		MaxNetworkCommands *int `toml:"max_network_commands"`
 	} `toml:"capability"`
-	LoadBudgets   map[string]int            `toml:"load_budgets"`
-	ScannerPolicy *fileScannerPolicy        `toml:"scanner_policy"`
-	Budgets       map[string]fileSizeBudget `toml:"budgets"`
+	LoadBudgets    map[string]int            `toml:"load_budgets"`
+	ScannerPolicy  *fileScannerPolicy        `toml:"scanner_policy"`
+	Budgets        map[string]fileSizeBudget `toml:"budgets"`
+	MaxFindings    map[string]int            `toml:"max_findings"`
+	NoInlineIgnore []string                  `toml:"no_inline_ignore"`
 }
 
 type fileSecurity struct {
@@ -387,6 +395,24 @@ func (l *Lint) fromDoc(d *fileLint) error {
 		return err
 	}
 	l.SizeBudgets = budgets
+	if l.NoInlineIgnore, err = normalizeCodes("lint.no_inline_ignore", d.NoInlineIgnore); err != nil {
+		return err
+	}
+	for key, limit := range d.MaxFindings {
+		code, ok := lint.ResolveCode(key)
+		if !ok {
+			return fmt.Errorf("lint.max_findings: unknown rule %q (the policy is newer than this ai-rulez, or the name is wrong)", key)
+		}
+		if limit < 0 {
+			return fmt.Errorf("lint.max_findings.%s: %d must not be negative", key, limit)
+		}
+		if l.MaxFindings == nil {
+			l.MaxFindings = map[string]int{}
+		}
+		if cur, dup := l.MaxFindings[code]; !dup || limit < cur {
+			l.MaxFindings[code] = limit
+		}
+	}
 	return l.Security.fromDoc(d.Security)
 }
 

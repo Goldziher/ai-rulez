@@ -44,6 +44,10 @@ func provenance(layers []Layer) map[string]string {
 			firstWith("lint.budgets."+kind+".max_tokens", func(p Policy) bool { return p.Lint.SizeBudgets[kind].MaxTokens == sb.MaxTokens })
 		}
 	}
+	for code, limit := range eff.Lint.MaxFindings {
+		firstWith("lint.max_findings."+code, func(p Policy) bool { v, ok := p.Lint.MaxFindings[code]; return ok && v == limit })
+	}
+	all("lint.no_inline_ignore", func(p Policy) bool { return len(p.Lint.NoInlineIgnore) > 0 })
 	all("lint.required_codes", func(p Policy) bool { return len(p.Lint.RequiredCodes) > 0 })
 	for code, sev := range eff.Lint.SeverityFloor {
 		firstWith("lint.severity_floor."+code, func(p Policy) bool { return p.Lint.SeverityFloor[code] == sev })
