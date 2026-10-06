@@ -31,3 +31,21 @@ func TestCheckRoleModes_ReportsDegradedModes(t *testing.T) {
 		}
 	}
 }
+
+func TestRun_IncludesTheRoleModesCheck(t *testing.T) {
+	// Arrange
+	cfgBody := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\", \"cursor\"]\ngitignore = false\n\n" +
+		"[[roles]]\nname = \"r\"\n[roles.skill_mode]\nhidden = \"off\"\n"
+	dir := project(t, map[string]string{
+		".ai-rulez/config.toml":            cfgBody,
+		".ai-rulez/skills/hidden/SKILL.md": "---\nname: hidden\ndescription: Use when hidden.\n---\n# h\n",
+	})
+
+	// Act
+	report := run(t, dir)
+
+	// Assert
+	if len(byCheck(report, CheckRoleModes)) != 1 {
+		t.Fatalf("doctor did not run the role modes check: %+v", report.Findings)
+	}
+}
