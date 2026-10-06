@@ -488,3 +488,48 @@ func TestEstimateActivation(t *testing.T) {
 	custom := EstimateActivation(EstimateParams{OverheadTokens: 25000}, req, 5, price, mustCounter(t))
 	assert.Greater(t, custom.InputTokens, est.InputTokens, "a measured overhead replaces the default")
 }
+
+// costBlindRunner declares native activation and says it reports no cost.
+type costBlindRunner struct{ nativeRunner }
+
+func (costBlindRunner) ReportsCost() bool { return false }
+
+func TestRunActivationNative_MaxCostIsRefusedForARunnerThatReportsNoCost(t *testing.T) {
+	tests := []struct {
+		name    string
+		max     float64
+		dry     bool
+		wantErr string
+	}{
+		{name: "a cap cannot be enforced", max: 5, wantErr: "reports no cost"},
+		{name: "no cap runs", max: 0},
+		{name: "a dry run needs no enforcement", max: 5, dry: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := activationProject(t)
+			opts := nativeOptions(cfg, costBlindRunner{scripted(nil)})
+			opts.MaxCostUSD, opts.DryRun = tt.max, tt.dry
+
+			// Act
+			_, err := RunActivation(context.Background(), opts)
+
+			// Assert
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				assert.Contains(t, err.Error(), "--max-cost")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestCodexNative_ReportsNoCost(t *testing.T) {
+	var r Runner = &CodexNative{}
+	blind, ok := r.(CostReporter)
+	require.True(t, ok)
+	assert.False(t, blind.ReportsCost())
+}

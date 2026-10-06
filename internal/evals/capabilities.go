@@ -28,6 +28,13 @@ type SurfaceReporter interface {
 	Surfaces() []string
 }
 
+// CostReporter is implemented by runners that know whether they report what a
+// run cost. A runner that reports false cannot honour --max-cost (the budget is
+// only ever checked against reported spend), so a capped run refuses to start.
+type CostReporter interface {
+	ReportsCost() bool
+}
+
 // Handshaker is implemented by runners that learn what they support by asking
 // (the command runner sends the probe to its command). It is consulted before
 // CapabilityReporter and SurfaceReporter.

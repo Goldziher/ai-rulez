@@ -35,8 +35,8 @@ const codexCommandLimit = 3
 // CODEX_HOME stays the real one, for the login.
 //
 // Codex reports token usage only when a run finishes, and an early stop never does,
-// so this adapter reports no tokens and no cost; --max-cost cannot be enforced
-// through it.
+// so this adapter reports no tokens and no cost. --max-cost cannot be enforced
+// through it, and a capped run is refused (CostReporter).
 type CodexNative struct {
 	// Bin is the codex executable. Default "codex".
 	Bin string
@@ -63,6 +63,9 @@ func (*CodexNative) Capabilities() []string { return []string{CapabilityActivati
 
 // Surfaces implements SurfaceReporter.
 func (*CodexNative) Surfaces() []string { return []string{SurfaceNative} }
+
+// ReportsCost implements CostReporter: a codex run is stopped early, so no usage is ever reported.
+func (*CodexNative) ReportsCost() bool { return false }
 
 func (r *CodexNative) bin() string {
 	if r.Bin == "" {

@@ -81,6 +81,9 @@ func runActivationNative(ctx context.Context, opts *ActivationOptions) (*Activat
 		if err := RequireSurface(ctx, opts.Runner, CapabilityActivation, SurfaceNative); err != nil {
 			return nil, err
 		}
+		if cr, ok := opts.Runner.(CostReporter); ok && !cr.ReportsCost() && opts.MaxCostUSD > 0 {
+			return nil, fmt.Errorf("the %s runner reports no cost, so --max-cost cannot be enforced: drop --max-cost (--dry-run prints the estimate first), or use a runner that reports usage", opts.Runner.Name())
+		}
 	}
 	plans := make([]*nativePlan, 0, len(selected))
 	for i := range selected {
