@@ -1,0 +1,43 @@
+{
+  "": [],
+  "I need to run a schema migration on the users table": [
+    "db-migrations 6.262298",
+    "data-migration 2.229787",
+    "incident-response 1.247831"
+  ],
+  "deploy": [
+    "deploy-staging 2.353528",
+    "deploy-prod 2.237794"
+  ],
+  "deploy to production": [
+    "deploy-prod 4.411643",
+    "deploy-staging 2.353528",
+    "incident-response 1.874523"
+  ],
+  "fill in this PDF form": [
+    "pdf-processing 9.022862"
+  ],
+  "migrations": [
+    "db-migrations 2.252403",
+    "data-migration 2.229787"
+  ],
+  "moving record": [
+    "data-migration 2.200358"
+  ],
+  "open a pull request for this branch": [
+    "git-workflow 9.041542",
+    "refund-policy 1.208386"
+  ],
+  "production is down": [
+    "incident-response 4.496590",
+    "deploy-prod 2.173849"
+  ],
+  "refunds": [
+    "refund-policy 2.957097"
+  ],
+  "the customer wants their money back": [
+    "refund-policy 10.570072"
+  ],
+  "the of and": [],
+  "zebra crossing": []
+}
