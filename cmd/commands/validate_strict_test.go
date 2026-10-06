@@ -212,3 +212,25 @@ func TestScanLongTextDoesNotPromiseNothingRuns(t *testing.T) {
 	assert.NotContains(t, ScanCmd.Long, "Nothing is fetched or executed.", "--external runs programs")
 	assert.Contains(t, ScanCmd.Long, "--external")
 }
+
+func TestCheckAllowEgressRejectsUndeclaredScanner(t *testing.T) {
+	cfg := &config.Config{Lint: &config.LintConfig{External: []config.LintExternal{{Name: "semgrep"}}}}
+	tests := []struct {
+		name    string
+		allow   []string
+		wantErr bool
+	}{
+		{"declared", []string{"semgrep"}, false},
+		{"typo", []string{"semgerp"}, true},
+		{"none", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			old := validateAllowEgress
+			t.Cleanup(func() { validateAllowEgress = old })
+			validateAllowEgress = tt.allow
+			err := checkAllowEgress(cfg)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
