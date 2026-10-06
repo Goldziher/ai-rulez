@@ -332,6 +332,20 @@
         }
       }
     },
+    "edges": {
+      "type": "array",
+      "description": "Dependencies between items: from names the skill to in its skills: frontmatter. Both are item refs; roles are not edges (see items[].roles).",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "kind": { "enum": ["uses"] }
+        }
+      }
+    },
     "roles": {
       "type": "array",
       "items": {

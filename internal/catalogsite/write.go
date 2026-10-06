@@ -220,7 +220,7 @@ func isHexDigest(s string) bool {
 
 // siteTopLevel are the files the renderer writes at the top of the site.
 var siteTopLevel = map[string]bool{
-	"index.html": true, "about.html": true, "lint.html": true, "lock.html": true, "mcp.html": true,
+	"index.html": true, "about.html": true, "lint.html": true, "lock.html": true, "mcp.html": true, "graph.html": true,
 	"catalog.json": true, "robots.txt": true,
 }
 
