@@ -62,6 +62,40 @@ func TestDetectSourceType(t *testing.T) {
 	}
 }
 
+func TestDetectSourceType_Forms(t *testing.T) {
+	tests := []struct {
+		source string
+		want   SourceType
+	}{
+		{"ssh://git@github.com/org/repo.git", SourceTypeGit},
+		{"ssh://git@host:2222/org/repo.git", SourceTypeGit},
+		{"git://example.com/repo.git", SourceTypeGit},
+		{"git+ssh://git@host/repo.git", SourceTypeGit},
+		{"git@github.com:org/repo.git", SourceTypeGit},
+		{"user@host:path/repo.git", SourceTypeGit},
+		{"https://github.com/org/repo", SourceTypeGit},
+		{"HTTPS://github.com/org/repo", SourceTypeGit},
+		{"file:///tmp/repo", SourceTypeGit},
+		{`C:\Users\me\repo`, SourceTypeLocal},
+		{"C:/Users/me/repo", SourceTypeLocal},
+		{`C:\Users\me@corp\repo`, SourceTypeLocal},
+		{"D:rel", SourceTypeLocal},
+		{"/home/a@b:c/repo", SourceTypeLocal},
+		{"./dir@x:y", SourceTypeLocal},
+		{"../shared", SourceTypeLocal},
+		{"shared/rules", SourceTypeLocal},
+		{"host:path", SourceTypeLocal},
+		{"@host:path", SourceTypeLocal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.source, func(t *testing.T) {
+			if got := DetectSourceType(tt.source); got != tt.want {
+				t.Errorf("DetectSourceType(%q) = %v, want %v", tt.source, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsGitURL(t *testing.T) {
 	tests := []struct {
 		name     string
