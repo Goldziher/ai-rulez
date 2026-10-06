@@ -37,6 +37,12 @@ type PolicyOutcome struct {
 	SeverityFloor map[string]string
 	// RequiredCodes lists the rule codes that may not be turned off or ignored.
 	RequiredCodes []string
+	// MaxFindings maps a rule code to the most findings of it the policy
+	// allows; the lint package reports AR749 for a code over its ceiling.
+	MaxFindings map[string]int
+	// NoInlineIgnore lists the rule codes whose inline `ai-rulez-lint-ignore`
+	// comments are not honored.
+	NoInlineIgnore []string
 	// Accepted lists repository overrides the policy allowed, such as an
 	// allowlist the repository narrowed.
 	Accepted []string

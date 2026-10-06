@@ -43,9 +43,14 @@ min_release_age = "7d"                                          # the youngest t
 [lint]
 required_codes = ["AR001", "AR005", "AR008"]                    # may be neither turned off nor ignored
 
+no_inline_ignore = ["AR001"]                                    # ai-rulez-lint-ignore comments are not honored for these
+
 [lint.severity_floor]
 AR001 = "error"
 AR008 = "warning"
+
+[lint.max_findings]
+AR005 = 0                                                       # more than this many findings of a code is AR749
 
 [lint.security]
 allowed_hosts = ["github.com", "*.example.org"]                 # bounds the repository's own list
@@ -144,6 +149,8 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lock.include_outputs` | output digests are pinned | `[lock] include_outputs = false` | `AR740` |
 | `lint.required_codes` | union of layers | `[lint.severity] CODE = "off"` or `[lint] ignore` | `AR744` |
 | `lint.severity_floor` | the higher severity of the layers | a lower `[lint.severity]`, or `[lint] ignore` of a floored code | `AR740` |
+| `lint.no_inline_ignore` | union of layers | an `ai-rulez-lint-ignore` comment for a listed code; the finding is still reported | `AR740` |
+| `lint.max_findings.<code>` | the lower ceiling per code (`0` allows none). The code is protected: baselines, `[lint.tolerate]` and ignores do not apply | (a ceiling is not a repository key; going over it is reported) | `AR749` |
 | `lint.security.allowed_hosts` | repository entries the list covers; the policy list when it sets none | an entry the list does not provably cover; the entry is dropped | `AR740` |
 | `lint.security.scan_imports` | the stricter level (`off` < `warn` < unset < `error`) | a weaker explicit level | `AR740` |
 | `lint.security.directive_tags` | union of layers, then the repository's own tags | (nothing to report: the repository's list only adds) | none |

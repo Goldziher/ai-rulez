@@ -56,9 +56,16 @@ type applier struct {
 // is simply used.
 func (r *Resolved) Apply(cfg *config.Config) Result {
 	a := &applier{res: r, cfg: cfg, out: &config.PolicyOutcome{
-		SeverityFloor: map[string]string{},
-		RequiredCodes: append([]string(nil), r.Policy.Lint.RequiredCodes...),
+		SeverityFloor:  map[string]string{},
+		RequiredCodes:  append([]string(nil), r.Policy.Lint.RequiredCodes...),
+		NoInlineIgnore: append([]string(nil), r.Policy.Lint.NoInlineIgnore...),
 	}}
+	if len(r.Policy.Lint.MaxFindings) > 0 {
+		a.out.MaxFindings = map[string]int{}
+		for code, limit := range r.Policy.Lint.MaxFindings {
+			a.out.MaxFindings[code] = limit
+		}
+	}
 	for code, sev := range r.Policy.Lint.SeverityFloor {
 		a.out.SeverityFloor[code] = sev
 	}

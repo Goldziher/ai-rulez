@@ -110,6 +110,15 @@ func (p Policy) Tree() map[string]any {
 	}
 	p.Lint.addKnobs(table)
 	addSizeBudgets(p.Lint.SizeBudgets, table)
+	if len(p.Lint.MaxFindings) > 0 {
+		ceilings := table("lint", "max_findings")
+		for k, v := range p.Lint.MaxFindings {
+			ceilings[k] = v
+		}
+	}
+	if len(p.Lint.NoInlineIgnore) > 0 {
+		table("lint")["no_inline_ignore"] = p.Lint.NoInlineIgnore
+	}
 	p.Lint.ScannerPolicy.addTo(table)
 	if p.Lock.Enforce {
 		table("lock")["enforce"] = true

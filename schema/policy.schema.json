@@ -43,6 +43,16 @@
           "items": { "type": "string" },
           "description": "Rule codes or names that may be neither turned off nor ignored."
         },
+        "no_inline_ignore": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Rule codes or names whose inline ai-rulez-lint-ignore comments are not honored; an attempt is reported (AR740). Layers union."
+        },
+        "max_findings": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "description": "Rule code or name to the most findings of it a run may have; one more is AR749. 0 allows none. The lower of the layers wins; baselines, [lint.tolerate] and ignores cannot absorb it."
+        },
         "severity_floor": {
           "type": "object",
           "additionalProperties": { "enum": ["info", "warning", "error"] },
