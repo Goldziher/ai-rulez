@@ -73,7 +73,7 @@ func init() {
 	f.BoolVar(&updateAllowDowngrade, "allow-downgrade", false, "Allow a tag with lower precedence than the pinned one")
 	f.BoolVar(&updateAcceptMoved, "accept-moved-tag", false, "Re-pin a tag that now points to another commit (AR732) after you reviewed it")
 	f.StringVar(&updateKind, "kind", "", "Limit the update to include, skill or source")
-	f.StringVar(&updateFormat, "format", "", "Output format: text (default) or json")
+	addFormatFlag(f, &updateFormat, "", formatText, formatText, formatJSON)
 	f.BoolVar(&updateOffline, "offline", false, "Refuse to run: update reads the remote's tags")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RootCmd.AddCommand(UpdateCmd)

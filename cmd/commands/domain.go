@@ -64,7 +64,7 @@ func init() {
 	domainRemoveCmd.Flags().BoolVarP(&domainForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Add flags to domain list command
-	domainListCmd.Flags().BoolVarP(&domainJSON, "json", "j", false, "Output as JSON")
+	addJSONFormat(domainListCmd.Flags(), &domainJSON, "j")
 }
 
 func runDomainAdd(cmd *cobra.Command, args []string) {

@@ -184,7 +184,7 @@ Each row also shows the feedback counts for that skill (`feedback: misled 2, gre
 (`eval: 75% (failing)`) when `feedback.jsonl` sits beside the log and `.ai-rulez/eval-results.json` exists; `--feedback`
 and `--evals` point at other files (a named file must exist).
 
-`--json` prints the same data as JSON (rows gain `feedback` and `eval` members, and the report `feedback_events`).
+`--format json` prints the same data as JSON (rows gain `feedback` and `eval` members, and the report `feedback_events`).
 The command reports and exits 0.
 
 ## Exporting to a file
