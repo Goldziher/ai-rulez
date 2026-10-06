@@ -77,6 +77,9 @@ func TestLiterLLMRefusesUserKeyWithRepoChosenProvider(t *testing.T) {
 		{"repo prefix matching the user's provider is fine", &Config{Model: "openai/m"}, &Config{Provider: "openai", APIKeyEnv: "K", AllowNetwork: true}, nil, false, ""},
 		{"repo prefix differing from the user's provider", &Config{Model: "evil/m"}, &Config{Provider: "openai", APIKeyEnv: "K", AllowNetwork: true}, nil, true, "model"},
 		{"user sets provider and model", &Config{Provider: "evil"}, &Config{Provider: "openai", Model: "gpt-4o-mini", APIKeyEnv: "K", AllowNetwork: true}, nil, false, ""},
+		{"env-only user, repo provider", &Config{Provider: "evil", Model: "m"}, nil, map[string]string{"AI_RULEZ_LLM_API_KEY_ENV": "K", "AI_RULEZ_LLM_ALLOW_NETWORK": "1"}, true, "provider"},
+		{"env-only user, repo model prefix", &Config{Model: "evil/m"}, nil, map[string]string{"AI_RULEZ_LLM_API_KEY_ENV": "K", "AI_RULEZ_LLM_ALLOW_NETWORK": "1"}, true, "model"},
+		{"env-only user, env supplies provider and model", &Config{Provider: "evil", Model: "evil/m"}, nil, map[string]string{"AI_RULEZ_LLM_API_KEY_ENV": "K", "AI_RULEZ_LLM_ALLOW_NETWORK": "1", "AI_RULEZ_LLM_PROVIDER": "openai", "AI_RULEZ_LLM_MODEL": "gpt-4o-mini"}, false, ""},
 		{"env supplies the provider", &Config{Provider: "evil", Model: "m"}, &Config{APIKeyEnv: "K", AllowNetwork: true}, map[string]string{"AI_RULEZ_LLM_PROVIDER": "openai"}, false, ""},
 	}
 	for _, tt := range tests {

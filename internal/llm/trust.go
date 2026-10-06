@@ -50,10 +50,10 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 		ignored = repo.PrivilegedKeys()
 		cfg = repo.stripPrivileged()
 	}
-	if user == nil {
-		return cfg, ignored
+	var u Config // no user scope: the environment (WithEnv) is the only user input
+	if user != nil {
+		u = *user
 	}
-	u := *user
 	merged := u
 	// Non-privileged keys the user leaves unset fall back to the repository's.
 	fill := func(dst *string, repoVal string) {
@@ -81,6 +81,8 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 	merged.repoProvider = u.Provider == "" && cfg.Provider != ""
 	merged.repoModelRoute = u.Model == "" && strings.Contains(cfg.Model, "/") &&
 		(u.Provider == "" || modelPrefix(cfg.Model) != u.Provider)
+	// Without a user config the flags still apply: an env-only user (AI_RULEZ_LLM_*)
+	// sends a key too, and WithEnv clears the flags when the env sets the routing.
 	merged.MaxCostUSD = tighterFloat(u.MaxCostUSD, cfg.MaxCostUSD)
 	merged.MaxTokens = tighterInt(u.MaxTokens, cfg.MaxTokens)
 	merged.MaxCalls = tighterInt(u.MaxCalls, cfg.MaxCalls)
