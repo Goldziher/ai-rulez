@@ -210,16 +210,20 @@ func TestRulesyncPlan_RuleFrontmatter(t *testing.T) {
 	}
 }
 
-func TestRulesyncPlan_LocalRootIsNotImported(t *testing.T) {
+func TestRulesyncPlan_LocalRootGoesToTheLocalTree(t *testing.T) {
 	// Arrange
-	files := map[string]string{".rulesync/rules/me.md": "---\nlocalRoot: true\n---\nPersonal.\n"}
+	files := map[string]string{
+		".rulesync/rules/me.md":     "---\nlocalRoot: true\ndescription: Mine\n---\nPersonal.\n",
+		".rulesync/rules/shared.md": "---\nroot: false\ntargets: ['*']\n---\nShared.\n",
+	}
 
 	// Act
 	p := rulesyncPlan(t, files)
 
 	// Assert
-	assert.Empty(t, p.Items)
-	assert.NotNil(t, findingFor(p, StatusNeedsAction, ".rulesync/rules/me.md", "localRoot"))
+	assert.Equal(t, []string{"local/context/me.md", "rules/shared.md"}, itemRels(p))
+	require.NotNil(t, findingFor(p, StatusApproximated, ".rulesync/rules/me.md", "localRoot"))
+	assert.Contains(t, string(p.Items[0].Main)+string(p.Items[1].Main), "Personal.")
 }
 
 // TestRulesyncPlan_NoFrontmatterKeyIsSilent feeds every frontmatter key and tool section

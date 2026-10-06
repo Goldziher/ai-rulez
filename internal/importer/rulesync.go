@@ -173,7 +173,7 @@ type rulesyncPlanner struct {
 }
 
 func (b *rulesyncPlanner) addItem(it Item) {
-	key := string(it.Kind) + "\x00" + it.Name
+	key := it.root() + string(it.Kind) + "\x00" + it.Name
 	if i, ok := b.seen[key]; ok {
 		b.p.add(newFinding(StatusApproximated, it.Sources[0], "name", it.Rel(),
 			"overrides the item of the same name from "+b.p.Items[i].Sources[0]+" (a later input root wins)"))
