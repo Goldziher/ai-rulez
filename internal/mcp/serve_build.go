@@ -142,7 +142,9 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 			roots = append(roots, abs)
 		}
 	}
-	return fingerprint(roots, st.UsageLog)
+	// The same exclusions the watcher applies later, including the session salt
+	// beside the log: a baseline that counts it differs from the first poll.
+	return fingerprint(roots, absUsageFiles(st.UsageLog)...)
 }
 
 type buildOptions struct {
@@ -410,7 +412,11 @@ func (st *ServeSetup) usageLogPath(cfg *config.Config) string {
 // usageFiles lists, as absolute paths, the files a load_skill writes: the usage
 // log and the session salt beside it. Writing them must not trigger a reload.
 func (st *ServeSetup) usageFiles(cfg *config.Config) []string {
-	logPath := st.usageLogPath(cfg)
+	return absUsageFiles(st.usageLogPath(cfg))
+}
+
+// absUsageFiles is logPath and the salt file beside it, absolute; nil for no log.
+func absUsageFiles(logPath string) []string {
 	if logPath == "" {
 		return nil
 	}
