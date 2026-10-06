@@ -202,3 +202,22 @@ func TestServedProblems_NamesTheViewThatDisagrees(t *testing.T) {
 	assert.Contains(t, text, "served migrate (view static): digest", "the view the lock recorded is checked too")
 	assert.NotContains(t, text, "frontend")
 }
+
+func TestViewNamesARemovedRole(t *testing.T) {
+	roles := []string{"dev", "ops"}
+	tests := []struct {
+		name string
+		view ServeSetup
+		want bool
+	}{
+		{"a defined role", ServeSetup{Role: "dev"}, false},
+		{"a role that left the config", ServeSetup{Role: "gone"}, true},
+		{"a profile view", ServeSetup{Profile: "gone"}, false},
+		{"the static view", ServeSetup{IncludeStatic: true}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, namesRemovedRole(roles, tt.view))
+		})
+	}
+}
