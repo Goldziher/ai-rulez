@@ -32,7 +32,7 @@
 //	res, err := v.Verify(bundleJSON)          // *signing.Error with an AR code on failure
 //	err = trust.Check(res, "lock", time.Now()) // AR722 when the signer is not trusted
 //	err = res.Statement.RequireSubject("sha256", hex) // AR724 when the digest differs
-//	err = signing.CheckFresh(res, maxAge, now) // AR723
+//	err = signing.CheckFresh(res, claimedAt, maxAge, now) // AR723
 //
 // The Result carries the verified payload, the signer (key id, or certificate
 // identity and issuer), and the time a transparency log or timestamp authority
