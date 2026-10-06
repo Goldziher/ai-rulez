@@ -3,6 +3,10 @@ package mcp
 import (
 	"context"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -280,6 +284,8 @@ func (s *Server) registerProjectTools() {
 		),
 		handlers.RunVerifiersHandler,
 	)
+
+	s.registerGovernanceTools()
 
 	s.addTool(
 		newAnnotatedTool("init_project", "Initialize a new ai-rulez project in the current directory",
@@ -749,5 +755,58 @@ func (s *Server) registerCRUDTools() {
 			readOnlyAnnotations(),
 		),
 		handlers.ListProfilesHandler,
+	)
+}
+
+// registerGovernanceTools adds the read-only roles, lock and catalog tools. They
+// never write and never use the network: remote includes resolve from the local
+// cache only. Mutating lock operations (lock, update) stay CLI-only.
+func (s *Server) registerGovernanceTools() {
+	common := func(b *toolSchemaBuilder) *toolSchemaBuilder {
+		return b.
+			String("config_file", "Path to the root configuration file (optional)", false).
+			String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
+			Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
+			WorkingDirectory()
+	}
+
+	s.addTool(
+		newAnnotatedTool("list_roles", "List the [[roles]] with their item counts and token estimates: the roles.json manifest (roles list --format json). Read-only, offline.",
+			common(newSchemaBuilder()),
+			readOnlyAnnotations(),
+		),
+		handlers.ListRolesHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("resolve_role", "Resolve what a person holding a role gets: the items it keeps with sizes, skill modes and delivery (roles resolve <role> --format json). Read-only, offline; the item list is capped at limit.",
+			common(newSchemaBuilder().
+				String("role", "Role name (see list_roles)", true).
+				Number("limit", "Maximum items returned (default 200, max 1000); the totals always count every item", false)),
+			readOnlyAnnotations(),
+		),
+		handlers.ResolveRoleHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("lock_status", "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only.",
+			common(newSchemaBuilder().
+				Enum("kind", "List only the changes of this kind (default: all); in_sync still covers the whole lock", govview.LockKinds, false)),
+			readOnlyAnnotations(),
+		),
+		handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File) []contentlock.Change {
+			return DynamicLockChanges(ctx, cfg, lock, s.version)
+		}),
+	)
+
+	s.addTool(
+		newAnnotatedTool("catalog", "List every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and lock status (catalog --format json). Read-only, offline; capped at limit items.",
+			common(newSchemaBuilder().
+				Enum("kind", "Only items of this kind (default: all)", append(append([]string(nil), config.RoleKinds...), contentlock.KindContext), false).
+				String("role", "Only items this role keeps (see list_roles)", false).
+				Number("limit", "Maximum items returned (default 200, max 1000); total_items and truncated report a cut", false)),
+			readOnlyAnnotations(),
+		),
+		handlers.CatalogHandler(s.version),
 	)
 }
