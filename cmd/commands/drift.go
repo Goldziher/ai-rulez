@@ -118,7 +118,7 @@ func runDriftCheck(args []string, isRecursive bool, mode driftMode) int {
 
 // runDriftCheckGated is runDriftCheck with a gate run on every loaded config
 // before its generated files are compared, so one load serves both. A gate error
-// that is lock drift (errLockedSourceDrift or config.ErrLockViolation) counts as
+// that is lock drift (see isLockedDrift) counts as
 // drift (exit 2), any other gate error as a failure (exit 1).
 func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate func(*config.Config) error) int {
 	fix := "run `ai-rulez generate` and commit the result"
@@ -163,7 +163,7 @@ func runGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed
 		return false, false
 	}
 	fmtError(err)
-	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation) {
+	if isLockedDrift(err) {
 		return true, false
 	}
 	return false, true
