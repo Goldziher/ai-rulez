@@ -42,7 +42,7 @@ func TestTelemetryConfigInvalid(t *testing.T) {
 
 func TestTelemetryRepoKeyIgnoredWarns(t *testing.T) {
 	root := t.TempDir()
-	writeFiles(t, root, telemetryFixture("[telemetry]\nenabled = true\nallow_network = true\notlp_endpoint = \"https://collector.example.org\"\n"))
+	writeFiles(t, root, telemetryFixture("[telemetry]\nenabled = true\nallow_network = true\notlp_endpoint = \"https://collector.example.org\"\nservice_name = \"team-x\"\n"))
 	gitAdd(t, root)
 	findings := lintDir(t, root)
 	if countCode(findings, CodeTelemetryKeyIgnored) != 1 {
@@ -55,7 +55,7 @@ func TestTelemetryRepoKeyIgnoredWarns(t *testing.T) {
 
 func TestTelemetryCleanConfigIsSilent(t *testing.T) {
 	root := t.TempDir()
-	writeFiles(t, root, telemetryFixture("[telemetry]\nenabled = true\nsample = 0.5\nservice_name = \"team-x\"\n"))
+	writeFiles(t, root, telemetryFixture("[telemetry]\nenabled = true\nsample = 0.5\n"))
 	gitAdd(t, root)
 	findings := lintDir(t, root)
 	if countCode(findings, CodeTelemetryConfigInvalid)+countCode(findings, CodeTelemetryKeyIgnored) != 0 {
