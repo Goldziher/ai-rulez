@@ -342,6 +342,17 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 	return d, cachedCommit(cacheDir), true, nil
 }
 
+// NotCached lists the remote sources whose content is not in the local cache.
+func NotCached(cfg *config.Config) []lockfile.Want {
+	var out []lockfile.Want
+	for _, w := range Lockable(cfg) {
+		if dir, _, _ := cachedTree(cfg, w); dir == "" {
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
 // FormatProblems renders problems one per line.
 func FormatProblems(ps []Problem) string {
 	lines := make([]string, len(ps))
