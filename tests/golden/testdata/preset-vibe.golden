@@ -1,0 +1,165 @@
+# scenario preset-vibe
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=8
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 361 735bf5f7dd16d9b880fb53ea2529287c5d188ac8a1decc6215ada3deb8ce00b9
+.ai-rulez/.generated-manifest.local.json file 0644 2199 d2b9a4ae62a6c1964a278c04315a1f3229af4faf63eb2ef68e6588b4fd79e58a
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 825 3c34ab0aeabf4dff61b1ecc32bfb4d8a921f86a22cbdd9b6d0ee1a87482234a2
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 255 acb46274c37eb118ef0e455c87bf9e8bee1bea8b0482f54d45d4b9b1c67ded7b
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.vibe/ dir 0755
+.vibe/config.toml file 0600 420 26a8d7daa9da7c768542be85dfdfa39582e529d4e6f46ebb9e652025d64053e2
+.vibe/hooks.toml file 0644 118 1195d1e717dd778350667879a765c24623d4d7937c988b32e7db1d4728435e40
+.vibe/skills/ dir 0755
+.vibe/skills/deployer/ dir 0755
+.vibe/skills/deployer/SKILL.md file 0644 259 194d012cc854720e62387c6161c86b61546bd7a06904b3617a89cfc8f14ef82e
+.vibe/skills/reviewer/ dir 0755
+.vibe/skills/reviewer/SKILL.md file 0644 506 305085d58cdedb9b61a9ca1c51bbfb79e0fb8873ca7825b738dc6c1b78b17cc2
+.vibe/skills/reviewer/references/ dir 0755
+.vibe/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.vibe/skills/reviewer/scripts/ dir 0755
+.vibe/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+AGENTS.md file 0644 874 04f2a1123ba07c4f0c85b0c96b24489b4272d7fc6c0322a19fedc412eed068e7
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=8
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 3 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .mcp.json
+INFO    remove file: .vibe/config.toml
+INFO    remove file: .vibe/hooks.toml
+INFO    remove file: .vibe/skills/deployer/SKILL.md
+INFO    remove file: .vibe/skills/reviewer/SKILL.md
+INFO    remove file: .vibe/skills/reviewer/references/checklist.md
+INFO    remove file: .vibe/skills/reviewer/scripts/run.sh
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .vibe/skills/reviewer/scripts
+INFO    remove dir (if empty): .vibe/skills/reviewer/references
+INFO    remove dir (if empty): .vibe/skills/reviewer
+INFO    remove dir (if empty): .vibe/skills/deployer
+INFO    remove dir (if empty): .vibe/skills
+INFO    remove dir (if empty): .vibe
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=8 directories=6
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 825 3c34ab0aeabf4dff61b1ecc32bfb4d8a921f86a22cbdd9b6d0ee1a87482234a2
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

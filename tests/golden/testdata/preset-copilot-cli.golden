@@ -1,0 +1,186 @@
+# scenario preset-copilot-cli
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 636 24e3a63c401a9d88c89ae9b5a5bcfb80006daf62f4d877265d0a3b10f4945b48
+.ai-rulez/.generated-manifest.local.json file 0644 1727 6576707b9da165e6744cd7ccfe812d32ee689032d6789a84b1a89fe2b0960a42
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 832 f0174da720d60699d72469ba6bcafc92f55131e8925226d10bd91a7706c8e186
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.github/ dir 0755
+.github/agents/ dir 0755
+.github/agents/architect.agent.md file 0644 273 b3fb6906dc97d702efff6f195d344f7206b3cd7f4b2190237e61a34951d0f3ff
+.github/agents/tester.agent.md file 0644 245 62d1adfd7bf996577c4b34493dc64eb3bb48b2f86f96a85a64d813dd851c95e6
+.github/copilot/ dir 0755
+.github/copilot-instructions.md file 0644 712 32a4a768f7747b0a1e47754f0336357f31c4d0634a8f7743912ff185ff5c4a8b
+.github/copilot/settings.json file 0644 45 8f922c87b4ec0ff563d36bb76c848e6d4b40c4f26ff6d53cf76592eb85110532
+.github/hooks/ dir 0755
+.github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
+.github/instructions/ dir 0755
+.github/instructions/always.instructions.md file 0644 347 3150fdea195895ea084f42c05f096231f5150c87c22e655621870c1984598e1b
+.github/instructions/typescript.instructions.md file 0644 373 8668aa234125eea184029a8160a35bb5483576b6bf4cb336378187366da39fc0
+.github/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
+.github/skills/ dir 0755
+.github/skills/deployer/ dir 0755
+.github/skills/deployer/SKILL.md file 0644 261 995baccf2efdc0cb0dddb768480b778f3289d0139d3c84fe221bf0f395eb99ca
+.github/skills/reviewer/ dir 0755
+.github/skills/reviewer/SKILL.md file 0644 508 9f87a49761aa71d80f0f8523ac2d2ae71d3453a0170800bbd4dd2b3c6458def7
+.github/skills/reviewer/references/ dir 0755
+.github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.github/skills/reviewer/scripts/ dir 0755
+.github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 427 6cf156763291a1ec69765b2e23bfa40a413b20a69f69d7d91633ffa27946a2c5
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 7 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .github/agents/architect.agent.md
+INFO    remove file: .github/agents/tester.agent.md
+INFO    remove file: .github/copilot-instructions.md
+INFO    remove file: .github/copilot/settings.json
+INFO    remove file: .github/hooks/ai-rulez.json
+INFO    remove file: .github/instructions/always.instructions.md
+INFO    remove file: .github/instructions/typescript.instructions.md
+INFO    remove file: .github/mcp.json
+INFO    remove file: .github/skills/deployer/SKILL.md
+INFO    remove file: .github/skills/reviewer/SKILL.md
+INFO    remove file: .github/skills/reviewer/references/checklist.md
+INFO    remove file: .github/skills/reviewer/scripts/run.sh
+INFO    remove file: .mcp.json
+INFO    remove dir (if empty): .github/skills/reviewer/scripts
+INFO    remove dir (if empty): .github/skills/reviewer/references
+INFO    remove dir (if empty): .github/skills/reviewer
+INFO    remove dir (if empty): .github/skills/deployer
+INFO    remove dir (if empty): .github/skills
+INFO    remove dir (if empty): .github/instructions
+INFO    remove dir (if empty): .github/hooks
+INFO    remove dir (if empty): .github/copilot
+INFO    remove dir (if empty): .github/agents
+INFO    remove dir (if empty): .github
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=13 directories=10
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 832 f0174da720d60699d72469ba6bcafc92f55131e8925226d10bd91a7706c8e186
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

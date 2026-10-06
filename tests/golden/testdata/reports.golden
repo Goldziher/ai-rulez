@@ -1,0 +1,1178 @@
+# scenario reports
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=73
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 295 c0837b409995cfbbbd447dd83eee007005b4a0b044dbd065074e1e387b9519e6
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 271 0a87c8bdc028a15c6cf3e62705f2217253088c22993180970bb63d18d476d763
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
+.ai-rulez/.generated-manifest.local.json file 0644 12425 904c090ded81e7d4d709ff0eca944386a5d0d4f4471f5104432bc4b5ea4f570a
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 879 707e490a887b3bf3783e25cc60ad8305471e837945d4763dc6b7c27e3bb78562
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.claude/agents/tester.md file 0644 258 a9e9fe75485b49bacef5891b39aef865f8bf18380875516ab383788636e1704e
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 2ab1cd0e8f57ffa1689b4783d1aae3204e2f2326dc3a411e9304f6ff1a083a3e
+.claude/rules/auto.md file 0644 302 973b0db27f52d8ba3345b3176d5aa92f169b7dca9c498baee597f1f24b92edb3
+.claude/rules/manual.md file 0644 313 19d821313aafa8f86c45fbd7db1839a07ef783044941dc869f1b44700be78642
+.claude/rules/targeted.md file 0644 309 f94e9309e5b91e5105afdad4f05fbf2c29e2e130738cde8e38b4c6b9a434686d
+.claude/rules/typescript.md file 0644 376 0791fd74494946b73e876111350ceecdbbf27c60348d76ec8872cb1ef028bbf4
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 04915e0fe640da81827bd0f6751e0d0780119bb25c9e2ba3290c82997c04726a
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 8f9da103d00f84e2e1957015095611a9c993c44e816f2b73dac0bdc168aa1d9e
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 971ece4e984fcf9187673e152b8ac7759f87c245648ed84550b4a219d989f438
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 9d341e8036e1756762c3751530f94b49be25e1601afd26e1e650d351f09f82af
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 7b1e7083f973ddbd2143b6777c6754c4618bc43f56771ee16be29de2a1e28ff2
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.cursor/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 8410f5018def9af1cdf1a3680d49f32e6f66fdb8e5e7cf226391e3c99aa0deb5
+.cursor/rules/auto.mdc file 0644 362 4a4ff6c7533c87a47a362e5b7644e1c358ad204de81b203d3c26c70502232eb1
+.cursor/rules/context-architecture.mdc file 0644 340 b53b60e20095e30b911b6a38083722e88a3b11aff951de766c6234fea082c249
+.cursor/rules/context-overview.mdc file 0644 351 8df75e5ba9eba5a440e5d36b42e1489dbb28da9f3e775d33bd18fd2ad17c34a8
+.cursor/rules/manual.mdc file 0644 340 2f003b535b416e45a83b3ca8ad3cb858c7c749944f095952c3a200c41fabc7d2
+.cursor/rules/targeted.mdc file 0644 335 ddf1ed861653df5becd110ea4396397b910692527c95c9273e5691bcfd82b543
+.cursor/rules/typescript.mdc file 0644 390 2fdea94a93a3001f6a4d37b085aed470bba9020bb9abdd5e764857b31f486d4a
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 1249633eac30fc5787db1acf4ca2c1f9e98d4b911cc2f1519c872e5023e148d7
+.gemini/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.gemini/settings.json file 0644 1389 659f0f934bccba7146d22b21eab16153f7e229a9f00308a2e3476d75d9adf691
+.github/ dir 0755
+.github/agents/ dir 0755
+.github/agents/architect.agent.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.github/agents/tester.agent.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.github/copilot-instructions.md file 0644 712 1d90bdf3388e4992ab4652cf4079f13b235f8e8af959b96026853cdd9dbc3e8d
+.github/hooks/ dir 0755
+.github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
+.github/instructions/ dir 0755
+.github/instructions/always.instructions.md file 0644 347 91052e3abc11a6dda9a137fe0769d7d886c2b15e58d7fba65453245a3ec1786a
+.github/instructions/typescript.instructions.md file 0644 373 158de33be03cd5d06cd00689888b85bb7e602346342cc5ad495ac39c92035e4e
+.github/prompts/ dir 0755
+.github/prompts/build.prompt.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
+.github/prompts/ship.prompt.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.github/skills/ dir 0755
+.github/skills/deployer/ dir 0755
+.github/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.github/skills/reviewer/ dir 0755
+.github/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.github/skills/reviewer/references/ dir 0755
+.github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.github/skills/reviewer/scripts/ dir 0755
+.github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 1206 84e44e460ce95cd918df0fd506075ba55cedfbc00884f7fae37823ba0eaf00a9
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 bd89f33c6b6f6f4e9c415cd4e195d27f6098fc9c2ce2a833bd97314d19d757d2
+.opencode/agents/tester.md file 0644 256 5f56d22a43303cec05b56623d2e36cf9731093452b9bdaf8364e115998492044
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
+.opencode/commands/ship.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+.opencode/skills/ dir 0755
+.opencode/skills/deployer/ dir 0755
+.opencode/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.opencode/skills/reviewer/ dir 0755
+.opencode/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.opencode/skills/reviewer/references/ dir 0755
+.opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.opencode/skills/reviewer/scripts/ dir 0755
+.opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.vscode/ dir 0755
+.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
+AGENTS.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
+CLAUDE.md file 0644 575 10812b979313438f84a1d8fdf06945d56d9e7ac4b058fe1d322feb41ec64ecda
+GEMINI.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
+opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez tokens
+exit: 0
+--- stdout
+Token surface — profile "default"
+Tokenizer: cl100k_base (approximate)
+
+runtime claude — 15 files
+  always loaded                                                 531
+    CLAUDE.md                                                   202
+      header                                                     85
+      title                                                       3
+      description                                                 4
+      context_inline (2)                                         14
+        overview                                                  7
+        architecture                                              7
+      provenance hashes and section boundaries                   96
+    provider rule files (4)                                     140
+    skill listing (2)                                            65
+      names (2)                                                   4
+      descriptions (2)                                            7
+      per-entry framing (estimate) (2)                           54
+    command listing (2)                                          62
+      names (2)                                                   2
+      descriptions (2)                                            6
+      per-entry framing (estimate) (2)                           54
+    agent listing (2)                                            62
+      names (2)                                                   3
+      descriptions (2)                                            5
+      per-entry framing (estimate) (2)                           54
+  conditional                                                    56
+    path-scoped rule files                                       56
+  on demand                                                   1,211
+    skill bodies (2)                                             14
+    skill file overhead (2)                                      79
+    command bodies (2)                                           11
+    command file overhead (2)                                    38
+    agent bodies (2)                                             13
+    agent file overhead (2)                                      32
+    skill resources (2)                                          16
+    per-file provenance hashes (11)                           1,008
+  unmodeled                                                     265
+    sidecar documents                                           265
+
+runtime codex — 10 files
+  always loaded                                                 523
+    AGENTS.md                                                   273
+      header                                                    183
+      provenance hashes and section boundaries                   90
+    provider rule files                                          83
+    skill listing (4)                                           167
+      names (4)                                                   6
+      descriptions (4)                                           11
+      paths (4)                                                  42
+      per-entry framing (estimate) (4)                          108
+  on demand                                                     421
+    skill bodies (4)                                             73
+    agent bodies (2)                                             56
+    per-file provenance hashes (3)                              292
+  unmodeled                                                     250
+    sidecar documents (2)                                       250
+
+runtime gemini — 4 files
+  always loaded                                                 338
+    GEMINI.md                                                   273
+      header                                                    183
+      provenance hashes and section boundaries                   90
+    skill listing (2)                                            65
+      names (2)                                                   4
+      descriptions (2)                                            7
+      per-entry framing (estimate) (2)                           54
+  on demand                                                     225
+    agent bodies (2)                                             35
+    per-file provenance hashes (2)                              190
+  unmodeled                                                     389
+    sidecar documents                                           389
+
+runtime cursor — 20 files
+  always loaded                                                 237
+    provider rule files (4)                                     170
+    agent-requested rule descriptions                             2
+    skill listing (2)                                            65
+      names (2)                                                   4
+      descriptions (2)                                            7
+      per-entry framing (estimate) (2)                           54
+  conditional                                                    58
+    path-scoped rule files                                       58
+  on demand                                                   1,304
+    agent-requested rule files                                   41
+    manual rule files                                            43
+    skill bodies (2)                                             94
+    command bodies (2)                                           33
+    agent bodies (2)                                             40
+    skill resources (2)                                          16
+    per-file provenance hashes (11)                           1,037
+  unmodeled                                                     570
+    sidecar documents (4)                                       516
+    unclassified outputs                                         54
+
+runtime copilot — 14 files
+  always loaded                                                 110
+    provider rule files                                          45
+    skill listing (2)                                            65
+      names (2)                                                   4
+      descriptions (2)                                            7
+      per-entry framing (estimate) (2)                           54
+  conditional                                                    53
+    path-scoped rule files                                       53
+  on demand                                                   1,022
+    skill bodies (2)                                             94
+    command bodies (2)                                           27
+    agent bodies (2)                                             40
+    skill resources (2)                                          16
+    per-file provenance hashes (9)                              845
+  unmodeled                                                     472
+    sidecar documents (3)                                       334
+    unclassified outputs                                        138
+
+runtime opencode — 10 files
+  always loaded                                                  65
+    skill listing (2)                                            65
+      names (2)                                                   4
+      descriptions (2)                                            7
+      per-entry framing (estimate) (2)                           54
+  on demand                                                     747
+    skill bodies (2)                                             94
+    command bodies (2)                                           27
+    agent bodies (2)                                             39
+    skill resources (2)                                          16
+    per-file provenance hashes (6)                              571
+  unmodeled                                                   2,692
+    sidecar documents                                           240
+    unclassified outputs                                      2,452
+
+Headline always-loaded surface: 531 tokens (claude, the largest single runtime)
+  of which item listing (estimate): 189 tokens; pre-listing model reported 356
+
+Per domain:
+  domain                             always  conditional    on demand
+  (root)                                435           56          203
+
+Scope and caveats:
+  - Counts are approximations. Claude's tokenizer is not published; this report uses cl100k_base
+    offline. Use the numbers to compare profiles and to compare before and after an edit, not as
+    absolute truth.
+  - ai-rulez counts only the artifacts it generates. The agent harness adds a fixed floor of its
+    own system prompt and tool schemas, plus per-artifact overhead, neither of which ai-rulez
+    can see. This report never predicts a session total.
+  - Runtimes are not additive. One session loads one runtime's root instructions file, so
+    emitting both CLAUDE.md and AGENTS.md costs one of them, not both. The headline figure is
+    the largest single runtime.
+  - "conditional" is surface some harness modes carry and others do not. For a harness that
+    lists skills (see the listing lines) skill descriptions are part of the always-loaded
+    listing instead.
+  - Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, and two
+    digests of the same length tokenize to slightly different counts. Expect a few tokens of
+    movement per artifact between two profiles for that reason alone.
+  - Listing lines estimate what a harness puts in the prompt at session start to advertise
+    skills, commands and agents: each entry's name and description, its path where the harness
+    includes one, and 27 tokens of framing per entry. The framing constant is calibrated against
+    Claude Code (100 skills measured at 64 tokens each) and is an estimate for every other
+    harness. The listing is part of the always-loaded figure and of --budget; always_legacy and
+    conditional_legacy keep the numbers the earlier model reported.
+  - A harness bounds its listing (Codex: a share of the context window; Claude Code: a total
+    budget on top of the per-entry description cap) and shortens or omits entries beyond it. The
+    listing lines do not apply that bound, so a very large skill set is an upper estimate.
+    Presets absent from the listing table (amp, antigravity, baz, hermes, xum) are not modeled
+    and report no listing. Skills written only to the shared .agents/skills tree by agents_md
+    are not attributed to a preset.
+  - Preset "codex" is not described by the provider DSL, so its outputs are classified from
+    their paths and its instructions file is measured as one total with no per-section split.
+  - Preset "gemini" is not described by the provider DSL, so its outputs are classified from
+    their paths and its instructions file is measured as one total with no per-section split.
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez cost
+exit: 0
+--- stdout
+Context cost - profile "default", target claude (cl100k_base, approximate)
+
+  always loaded         531 tokens
+  conditional            56 tokens
+  on demand           1,211 tokens
+
+Top always-loaded items (estimate from sources):
+        33    6%  skill deployer
+        32    6%  skill reviewer
+        31    6%  agent architect
+        31    6%  command build
+        31    6%  command ship
+        30    6%  agent tester
+        11    2%  rule targeted
+         8    2%  rule always
+         8    2%  rule auto
+         7    1%  context architecture
+
+Top on-demand items (estimate from sources):
+         7    1%  skill deployer
+         7    1%  skill reviewer
+         7    1%  agent architect
+         7    1%  command build
+         6    0%  agent tester
+         4    0%  command ship
+
+
+Notes:
+  - Runtime totals are the `ai-rulez tokens` figures for the target; the item table is estimated from the sources and does not add up to them exactly (file framing, root file sections and provider differences are not attributed to items).
+  - Counts are approximations (cl100k_base); the agent harness adds a fixed floor ai-rulez cannot see.
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez catalog
+exit: 0
+--- stdout
+KIND     DOMAIN  ID            OWNER  VERSION  TOKENS  ROLES
+agent    -       architect     -      -        23      0
+agent    -       tester        -      -        22      0
+check    -       security      -      -        29      0
+check    -       style         -      -        16      0
+command  -       build         -      -        19      0
+command  -       ship          -      -        16      0
+context  -       architecture  -      -        7       0
+context  -       overview      -      -        13      0
+rule     -       always        -      -        14      0
+rule     -       auto          -      -        19      0
+rule     -       manual        -      -        17      0
+rule     -       targeted      -      -        24      0
+rule     -       typescript    -      -        36      0
+skill    -       deployer      -      -        21      0
+skill    -       reviewer      -      -        19      0
+
+15 item(s), 0 role(s); lock: none
+--- stderr
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez sbom
+exit: 0
+--- stdout
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:fa53425e-3fca-57f7-8f4a-35f96a88ffce",
+  "version": 1,
+  "metadata": {
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "ai-rulez",
+          "version": "$VERSION"
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "ai-rulez:project",
+      "name": "golden",
+      "properties": [
+        {
+          "name": "ai-rulez:lock",
+          "value": "absent"
+        },
+        {
+          "name": "ai-rulez:tree",
+          "value": "sha256:0b25428929b196cb1ef2383c2f0077d13455fb7f41b096547a96d135a679c080"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:agent::architect",
+      "group": "agent",
+      "name": "architect",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:0ebdb36bf4c043ccd023e8eaf1c6d7e75e8e067f08ae38a92f863f53640eca2f"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "agent"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "agents/architect.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:agent::tester",
+      "group": "agent",
+      "name": "tester",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:2942ddb0ae22fcb9c7af1de20c8be2aafcb6c57196f042cbbc8cf8e796e9248a"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "agent"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "agents/tester.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:check::security",
+      "group": "check",
+      "name": "security",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:879dea75dd059e8eba5b93376e835e097d054e86a60007808ab61a414fbd1a51"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "check"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "checks/security.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:check::style",
+      "group": "check",
+      "name": "style",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:a7665cc01a96b6711d3a11b0fff4af6d1d255172ac7ea6deddecd850f1278212"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "check"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "checks/style.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:command::build",
+      "group": "command",
+      "name": "build",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:442188e9397ec9534e67bbfb9c21f7a0c31b6e33765170070a1999105b97c388"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "command"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "commands/build.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:command::ship",
+      "group": "command",
+      "name": "ship",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:014be33e3f509d6559dc388409f046e1ae817e55a091270c463ed30957854ee4"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "command"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "commands/ship.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:context::architecture",
+      "group": "context",
+      "name": "architecture",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:5dba569c51361f83ec280e8aa3e49c13ac51619f3563fc320d517a95776c6659"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "context"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "context/architecture.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:context::overview",
+      "group": "context",
+      "name": "overview",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:0fb7cc4f3c76223b02c4e7ca01616c3f58917425012e1ab8f11fd4cca3602dd3"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "context"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "context/overview.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:hook::PreToolUse:Bash:0",
+      "group": "hook",
+      "name": "PreToolUse:Bash:0",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:415e17ac36c3b9141af8aeea4f3474697f0985465993852bcbab56009b542063"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "hook"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:hook::SessionStart:*:0",
+      "group": "hook",
+      "name": "SessionStart:*:0",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:e3205af9cb00eae19f090ec2a6c6ab223c125cda3b779a003ea98b20720bd615"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "hook"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:rule::always",
+      "group": "rule",
+      "name": "always",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:3ee6dae4ce2212371d52d95d8ccaed0495de2052a0a36abe6f93162a885e22a6"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "rule"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "rules/always.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:rule::auto",
+      "group": "rule",
+      "name": "auto",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:9a825258bca03238b684bb6386a199bea634299470869cff062563f00050f15f"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "rule"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "rules/auto.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:rule::manual",
+      "group": "rule",
+      "name": "manual",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:05c42944cae09062e773990116d0e853862b380efbb101f3eebe43af4998860e"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "rule"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "rules/manual.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:rule::targeted",
+      "group": "rule",
+      "name": "targeted",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:23d05c8d8113a4ab804f1815f6cdde9652722123da2d0dc3f8a5250cc14446e8"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "rule"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "rules/targeted.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:rule::typescript",
+      "group": "rule",
+      "name": "typescript",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:5ba8401ddf2cbb7aa89acba86af582ae49c3aeedce261d6509e10b24d9e67452"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "rule"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "rules/typescript.md"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:settings::permissions",
+      "group": "settings",
+      "name": "permissions",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:b80580146b6d00dac2de1c2f92050a086a00accd22e533ce79f0154c442af413"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "settings"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:skill::deployer",
+      "group": "skill",
+      "name": "deployer",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:2ba53d2dcc1ff92b731006286b96b95ee1d6d36c1cee5d4e65943a91e5c6fa4e"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "skill"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "skills/deployer"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "ai-rulez:item:skill::reviewer",
+      "group": "skill",
+      "name": "reviewer",
+      "properties": [
+        {
+          "name": "ai-rulez:digest",
+          "value": "sha256:be1edc1798e461069e46578c244320c877a8b569d22ebf394bc65b5d6d5dbe47"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "skill"
+        },
+        {
+          "name": "ai-rulez:path",
+          "value": "skills/reviewer"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "ai-rulez:mcp:local-tool",
+      "name": "local-tool",
+      "purl": "pkg:npm/golden-mcp",
+      "properties": [
+        {
+          "name": "ai-rulez:enabled",
+          "value": "true"
+        },
+        {
+          "name": "ai-rulez:env-keys",
+          "value": "API_TOKEN"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "mcp-server"
+        },
+        {
+          "name": "ai-rulez:mcp-command",
+          "value": "npx"
+        },
+        {
+          "name": "ai-rulez:purl-source",
+          "value": "heuristic"
+        }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "bom-ref": "ai-rulez:mcp:remote-tool",
+      "name": "remote-tool",
+      "endpoints": [
+        "https://mcp.example.com"
+      ],
+      "authenticated": true,
+      "x-trust-boundary": true,
+      "properties": [
+        {
+          "name": "ai-rulez:enabled",
+          "value": "true"
+        },
+        {
+          "name": "ai-rulez:header-keys",
+          "value": "Authorization"
+        },
+        {
+          "name": "ai-rulez:kind",
+          "value": "mcp-server"
+        },
+        {
+          "name": "ai-rulez:mcp-transport",
+          "value": "http"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "ai-rulez:project",
+      "dependsOn": [
+        "ai-rulez:item:agent::architect",
+        "ai-rulez:item:agent::tester",
+        "ai-rulez:item:check::security",
+        "ai-rulez:item:check::style",
+        "ai-rulez:item:command::build",
+        "ai-rulez:item:command::ship",
+        "ai-rulez:item:context::architecture",
+        "ai-rulez:item:context::overview",
+        "ai-rulez:item:hook::PreToolUse:Bash:0",
+        "ai-rulez:item:hook::SessionStart:*:0",
+        "ai-rulez:item:rule::always",
+        "ai-rulez:item:rule::auto",
+        "ai-rulez:item:rule::manual",
+        "ai-rulez:item:rule::targeted",
+        "ai-rulez:item:rule::typescript",
+        "ai-rulez:item:settings::permissions",
+        "ai-rulez:item:skill::deployer",
+        "ai-rulez:item:skill::reviewer",
+        "ai-rulez:mcp:local-tool",
+        "ai-rulez:mcp:remote-tool"
+      ]
+    }
+  ]
+}
+--- stderr
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 6: ai-rulez list rules
+exit: 0
+--- stdout
+--- stderr
+INFO  Rules:
+INFO    (root):
+INFO      • always [critical]
+INFO      • auto
+INFO      • manual [low]
+INFO      • targeted (targets: [claude cursor])
+INFO      • typescript [high]
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 7: ai-rulez list skills
+exit: 0
+--- stdout
+--- stderr
+INFO  Skills:
+INFO    (root):
+INFO      • deployer
+INFO      • reviewer
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 8: ai-rulez list checks
+exit: 0
+--- stdout
+--- stderr
+INFO  Checks:
+INFO    (root):
+INFO      • security
+INFO      • style
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 9: ai-rulez validate --strict
+exit: 0
+--- stdout
+.ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
+.ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
+.ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
+.ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
+.ai-rulez/config.toml:11: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
+.ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
+
+strict validation: 0 error(s), 7 warning(s), 0 info across 1 root(s)
+  AR012 mcp-unpinned-package         1
+  AR503 script-not-executable        1
+  AR802 description-length           5
+risk (advisory, never fails the run): high (score 56/100)
+  medium      8  .ai-rulez/agents/architect.md
+  medium      8  .ai-rulez/agents/tester.md
+  medium      8  .ai-rulez/commands/build.md
+  medium      8  .ai-rulez/commands/ship.md
+  medium      8  .ai-rulez/config.toml
+  ... and 2 more item(s)
+--- stderr
+INFO  Configuration is valid path=$ROOT/.ai-rulez
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 10: ai-rulez doctor
+exit: 0
+--- stdout
+SEVERITY  CHECK    MESSAGE
+warning   mcp-env  MCP server "local-tool" env API_TOKEN references ${GOLDEN_TOKEN}, which is not set
+                     fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
+warning   mcp-env  MCP server "remote-tool" headers Authorization references ${GOLDEN_TOKEN}, which is not set
+                     fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
+info      drift    drift not checked: MCP placeholders are unresolved (see the mcp-env findings)
+info      tools    preset "cursor": cursor-agent or cursor not found on PATH; its files are still generated
+info      tools    preset "gemini": gemini not found on PATH; its files are still generated
+
+0 errors, 2 warnings, 3 info
+--- stderr
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 295 c0837b409995cfbbbd447dd83eee007005b4a0b044dbd065074e1e387b9519e6
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 271 0a87c8bdc028a15c6cf3e62705f2217253088c22993180970bb63d18d476d763
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
+.ai-rulez/.generated-manifest.local.json file 0644 12425 904c090ded81e7d4d709ff0eca944386a5d0d4f4471f5104432bc4b5ea4f570a
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 879 707e490a887b3bf3783e25cc60ad8305471e837945d4763dc6b7c27e3bb78562
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.claude/agents/tester.md file 0644 258 a9e9fe75485b49bacef5891b39aef865f8bf18380875516ab383788636e1704e
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 2ab1cd0e8f57ffa1689b4783d1aae3204e2f2326dc3a411e9304f6ff1a083a3e
+.claude/rules/auto.md file 0644 302 973b0db27f52d8ba3345b3176d5aa92f169b7dca9c498baee597f1f24b92edb3
+.claude/rules/manual.md file 0644 313 19d821313aafa8f86c45fbd7db1839a07ef783044941dc869f1b44700be78642
+.claude/rules/targeted.md file 0644 309 f94e9309e5b91e5105afdad4f05fbf2c29e2e130738cde8e38b4c6b9a434686d
+.claude/rules/typescript.md file 0644 376 0791fd74494946b73e876111350ceecdbbf27c60348d76ec8872cb1ef028bbf4
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 04915e0fe640da81827bd0f6751e0d0780119bb25c9e2ba3290c82997c04726a
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 8f9da103d00f84e2e1957015095611a9c993c44e816f2b73dac0bdc168aa1d9e
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 971ece4e984fcf9187673e152b8ac7759f87c245648ed84550b4a219d989f438
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 9d341e8036e1756762c3751530f94b49be25e1601afd26e1e650d351f09f82af
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 7b1e7083f973ddbd2143b6777c6754c4618bc43f56771ee16be29de2a1e28ff2
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.cursor/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 8410f5018def9af1cdf1a3680d49f32e6f66fdb8e5e7cf226391e3c99aa0deb5
+.cursor/rules/auto.mdc file 0644 362 4a4ff6c7533c87a47a362e5b7644e1c358ad204de81b203d3c26c70502232eb1
+.cursor/rules/context-architecture.mdc file 0644 340 b53b60e20095e30b911b6a38083722e88a3b11aff951de766c6234fea082c249
+.cursor/rules/context-overview.mdc file 0644 351 8df75e5ba9eba5a440e5d36b42e1489dbb28da9f3e775d33bd18fd2ad17c34a8
+.cursor/rules/manual.mdc file 0644 340 2f003b535b416e45a83b3ca8ad3cb858c7c749944f095952c3a200c41fabc7d2
+.cursor/rules/targeted.mdc file 0644 335 ddf1ed861653df5becd110ea4396397b910692527c95c9273e5691bcfd82b543
+.cursor/rules/typescript.mdc file 0644 390 2fdea94a93a3001f6a4d37b085aed470bba9020bb9abdd5e764857b31f486d4a
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 1249633eac30fc5787db1acf4ca2c1f9e98d4b911cc2f1519c872e5023e148d7
+.gemini/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.gemini/settings.json file 0644 1389 659f0f934bccba7146d22b21eab16153f7e229a9f00308a2e3476d75d9adf691
+.github/ dir 0755
+.github/agents/ dir 0755
+.github/agents/architect.agent.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
+.github/agents/tester.agent.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.github/copilot-instructions.md file 0644 712 1d90bdf3388e4992ab4652cf4079f13b235f8e8af959b96026853cdd9dbc3e8d
+.github/hooks/ dir 0755
+.github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
+.github/instructions/ dir 0755
+.github/instructions/always.instructions.md file 0644 347 91052e3abc11a6dda9a137fe0769d7d886c2b15e58d7fba65453245a3ec1786a
+.github/instructions/typescript.instructions.md file 0644 373 158de33be03cd5d06cd00689888b85bb7e602346342cc5ad495ac39c92035e4e
+.github/prompts/ dir 0755
+.github/prompts/build.prompt.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
+.github/prompts/ship.prompt.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.github/skills/ dir 0755
+.github/skills/deployer/ dir 0755
+.github/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.github/skills/reviewer/ dir 0755
+.github/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.github/skills/reviewer/references/ dir 0755
+.github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.github/skills/reviewer/scripts/ dir 0755
+.github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 1206 84e44e460ce95cd918df0fd506075ba55cedfbc00884f7fae37823ba0eaf00a9
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 bd89f33c6b6f6f4e9c415cd4e195d27f6098fc9c2ce2a833bd97314d19d757d2
+.opencode/agents/tester.md file 0644 256 5f56d22a43303cec05b56623d2e36cf9731093452b9bdaf8364e115998492044
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
+.opencode/commands/ship.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+.opencode/skills/ dir 0755
+.opencode/skills/deployer/ dir 0755
+.opencode/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.opencode/skills/reviewer/ dir 0755
+.opencode/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.opencode/skills/reviewer/references/ dir 0755
+.opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.opencode/skills/reviewer/scripts/ dir 0755
+.opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.vscode/ dir 0755
+.vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
+.vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
+AGENTS.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
+CLAUDE.md file 0644 575 10812b979313438f84a1d8fdf06945d56d9e7ac4b058fe1d322feb41ec64ecda
+GEMINI.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
+opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
