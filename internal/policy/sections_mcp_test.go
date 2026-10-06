@@ -48,7 +48,9 @@ func TestHooksAllowTrueConstrainsNothing(t *testing.T) {
 	_, p, err := Parse("p.toml", []byte("policy_version = 1\n[hooks]\nallow = true\n"))
 	// Assert
 	require.NoError(t, err)
-	assert.Equal(t, Policy{}, p)
+	assert.Equal(t, []string{"hooks.allow"}, p.statedLoose, "the explicit allow is remembered for the extends check")
+	p.statedLoose = nil
+	assert.Equal(t, Policy{}, p, "and constrains nothing")
 }
 
 func TestMergeMCPAndHooks(t *testing.T) {
