@@ -169,10 +169,29 @@ The ai-rulez version recorded in the document (`metadata.tools`, SPDX `creationI
 the tool does not fail the check on its own. A `--timestamp` that moves (`now`) always differs: do not use one with
 `--check`, or pin it with `SOURCE_DATE_EPOCH`.
 
+## In `validate --strict`
+
+`validate --strict` builds the SBOM in memory (nothing is written, no network) and reports the same findings under the
+`config` analyzer, against `config.toml`:
+
+- `AR750` and `AR751` (`info`) for MCP packages and remote sources that cannot be given an exact version or a package
+  URL, as `--strict-pins` does (an unpinned `npx` package is also `AR012`; the two say it from the lint and the SBOM
+  side);
+- `AR752` (`error`) when `ai-rulez.lock` exists and no longer matches the sources. A project without a lock is not a
+  finding here: `--require-lock` is the opt-in for that. The lock drift codes (`AR98x`) name what changed;
+- `AR753` (`error`) when a committed CycloneDX SBOM at the project root (`ai-bom.cdx.json` or `sbom.cdx.json`) differs
+  from a fresh one. The document says how it was made (`ai-rulez:files`, `profile`, `role`, the listed outputs, its
+  timestamp), so no flags are needed; whether `--no-approvals` was used is not recorded, so the document is current when
+  either reading matches. A file another tool made, an SPDX file, a document with hashed reviewers (`--redact-reviewers`)
+  or a recorded attestation check (`--verify`) is skipped: use `sbom --check` for those, which takes the flags itself.
+
 ## Signing the SBOM
 
-An SBOM proves nothing about who made it. Sign it with `ai-rulez sign --sbom` (see [Signing](signing.md)), which attests
-the document's SHA-256 with the same key or keyless identity as the lock. `sbom` itself writes no signature.
+An SBOM proves nothing about who made it. Sign it with `ai-rulez sign --sbom sbom.cdx.json --key cosign.key` (see
+[Signing](signing.md)), which attests the document's SHA-256 (the file's bytes, whatever the format) with a key or a
+keyless identity and writes `sbom.cdx.json.sigstore.json` next to it. Check it with
+`ai-rulez verify --sbom sbom.cdx.json` against `[[signing.trust]]` entries with `subject = "sbom"`. `sbom` itself writes
+no signature, and a later `sbom -o` that changes the file makes the old attestation fail (`AR724`).
 
 ## Determinism
 
@@ -216,6 +235,6 @@ digests are pinned in a test, so updating one is a reviewed change. Any CycloneD
 - **MCP purls**: a declared `package` is authoritative; a guess identifies what the launcher would download, not what
   is installed, and is marked as heuristic.
 - **Settings pins**: the `mcp-servers` settings pin is omitted (secrets), every other settings pin is listed.
-- **Findings** (`AR750`-`AR753`) are reported by `sbom` itself, not by `validate --strict`; see
-  [strict validation](strict-validation.md#code-ranges).
+- **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate --strict`; see
+  [In `validate --strict`](#in-validate-strict).
 - **Not offered**: `--include-builtins`, `--redact-hosts`, `--spec-version`, a `[sbom]` config table and `sbom --sign`.
