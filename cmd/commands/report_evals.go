@@ -43,6 +43,10 @@ With a usage log each row also says how the uses join with the eval record:
   legacy   no canonical digest on the record or the uses (older logs, older results): by id only
   none     the skill has no logged use, or no eval record
 
+A record that is unsigned or signed with another key (committed from another machine, or
+hand-edited) is marked "unverified" and ignored: the skill counts as having no eval results.
+"ai-rulez eval run" re-runs and signs it.
+
 Without a usage log nothing is concluded about use. The command reports and exits 0.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -71,7 +75,7 @@ func runReportEvals(out io.Writer) error {
 	if resultsPath == "" {
 		resultsPath = evals.DefaultStorePath(cfgDir)
 	}
-	store, err := evals.LoadStore(resultsPath)
+	store, err := evals.LoadStoreKeyed(resultsPath, evalResultsKey())
 	if err != nil {
 		return err
 	}
@@ -217,13 +221,16 @@ func loadEvalSummaries(path string) (map[string]usage.EvalSummary, error) {
 	if _, err := os.Stat(path); err != nil && !explicit {
 		return nil, nil //nolint:nilerr // the default results file is optional
 	}
-	store, err := evals.LoadStore(path)
+	store, err := evals.LoadStoreKeyed(path, evalResultsKey())
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[string]usage.EvalSummary, len(store.Skills))
 	for i := range store.Skills {
 		r := &store.Skills[i]
+		if !r.Verified() {
+			continue // unsigned or foreign-signed records are never reported as results
+		}
 		out[r.ID] = usage.EvalSummary{
 			PassRate: r.Score.PassRate, TriggerPrecision: r.Score.TriggerPrecision, TriggerRecall: r.Score.TriggerRecall,
 			AblationDelta: r.Score.AblationDelta, Passing: r.Passing, Date: r.Date,
