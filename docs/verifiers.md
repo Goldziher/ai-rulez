@@ -333,7 +333,10 @@ without examples are listed.
 - The `command` and `llm` predicates exist only in the spec form. A flat `type = "command"` is rejected.
 - Imports follow the design: an include's verifiers cannot run a command unless the include is in `trust_exec_from`
   and pinned in `ai-rulez.lock`. An include's verifiers are loaded only from `<include>/verifiers/*.toml`; an include
-  with an `include = [...]` filter brings none, and installed skills do not ship verifiers.
+  with an `include = [...]` filter brings none.
+- An installed skill may ship verifiers in `<skill>/verifiers/*.toml` (the same file format). They load with the skill,
+  report as `skill:<name>/verifiers/<file>`, and are covered by the skill's pin in `ai-rulez.lock`. They are data only: a
+  skill's verifier can never use the `command` predicate, whatever `trust_exec_from` says.
 - An `llm` verdict is advisory. Gating on a model verdict (the design's calibration record) is not implemented, so the
   severity of an `llm` verifier is capped at `warning` and there is no flag that lifts the cap.
 

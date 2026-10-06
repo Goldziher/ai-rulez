@@ -413,6 +413,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 			continue
 		}
 		s.Profiles = profilesByName[s.Name]
+		config.Content.ImportedVerifiers = append(config.Content.ImportedVerifiers, s.Verifiers...)
 		config.Content.Skills = append(config.Content.Skills, s)
 		existingNames[s.Name] = true
 	}
