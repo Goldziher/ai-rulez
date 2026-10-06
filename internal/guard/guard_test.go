@@ -184,11 +184,9 @@ func TestCheck_LargePatches(t *testing.T) {
 			got := Check(strings.NewReader(payload), root)
 
 			// Assert
-			budget := time.Second
-			if raceEnabled {
-				budget = 10 * time.Second
+			if !raceEnabled { // the race detector slows the regexp 20-80x, so only a normal build is timed
+				assert.Less(t, time.Since(start), time.Second, "a large patch must not outlast the harness timeout")
 			}
-			assert.Less(t, time.Since(start), budget, "a large patch must not outlast the harness timeout")
 			assert.Equal(t, tt.wantBlock, got.Block)
 			assert.Equal(t, tt.wantPath, got.Path)
 			assert.Contains(t, got.Message(), tt.wantMsg)
