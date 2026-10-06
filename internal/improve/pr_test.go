@@ -3,6 +3,7 @@ package improve
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -469,6 +470,51 @@ func TestPR_DoesNotCommitOutputsTheProjectIgnores(t *testing.T) {
 	assert.NotContains(t, files, ".ai-rulez/.generated-manifest.json")
 }
 
+func TestPR_SkipsGitignoredOutputsNextToCommittedOnes(t *testing.T) {
+	// Arrange: CLAUDE.md is committed, GEMINI.md is generated but gitignored; both are in the manifest.
+	w := newPRWorld(t)
+	require.NoError(t, os.WriteFile(filepath.Join(w.root, ".gitignore"), []byte("GEMINI.md\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(w.root, "CLAUDE.md"), []byte("generated before\n"), 0o600))
+	manifest := `{"version":"1","files":["CLAUDE.md","GEMINI.md"]}`
+	require.NoError(t, os.WriteFile(filepath.Join(w.configDir, ".generated-manifest.json"), []byte(manifest), 0o600))
+	gitIn(t, w.root, "add", ".gitignore", "CLAUDE.md", ".ai-rulez/.generated-manifest.json")
+	gitIn(t, w.root, "commit", "-q", "-m", "commit the outputs")
+	gitIn(t, w.root, "push", "-q", "origin", "main")
+	self := filepath.Join(t.TempDir(), "fake-ai-rulez")
+	script := "#!/bin/sh\necho regenerated > CLAUDE.md; echo gemini > GEMINI.md; printf '" + manifest + "' > .ai-rulez/.generated-manifest.json\n"
+	require.NoError(t, os.WriteFile(self, []byte(script), 0o755)) //nolint:gosec // a test script
+	w.opts.Self = []string{self}
+
+	// Act
+	res, err := PR(context.Background(), &w.opts)
+
+	// Assert
+	require.NoError(t, err, w.out.String())
+	files := strings.Split(gitIn(t, w.root, "show", "--name-only", "--format=", res.Branch), "\n")
+	assert.Contains(t, files, "CLAUDE.md")
+	assert.NotContains(t, files, "GEMINI.md")
+}
+
+func TestBranchName(t *testing.T) {
+	tests := []struct{ name, skill, digest, want string }{
+		{"plain", "deploy", "sha256:0123456789abcdef", "ai-rulez/improve/deploy-01234567"},
+		{"dot runs would be an invalid ref", "a..b", "sha256:0123456789abcdef", "ai-rulez/improve/a-b-01234567"},
+		{"a .lock suffix is refused by git", "x.lock", "sha256:0123456789abcdef", "ai-rulez/improve/x-01234567"},
+		{"nothing usable", "...", "sha256:0123456789abcdef", "ai-rulez/improve/skill-01234567"},
+		{"a short digest does not panic", "deploy", "sha256:abc", "ai-rulez/improve/deploy-abc"},
+		{"an empty digest does not panic", "deploy", "", "ai-rulez/improve/deploy-"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange / Act
+			got := branchName(tt.skill, tt.digest)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestPR_AFailingGenerate(t *testing.T) {
 	t.Run("stops the pull request when a lock pins the outputs", func(t *testing.T) {
 		// Arrange
@@ -502,4 +548,31 @@ func TestPR_AFailingGenerate(t *testing.T) {
 		assert.Contains(t, w.out.String(), "generated outputs were not refreshed")
 		assert.Empty(t, res.Refreshed)
 	})
+}
+
+func TestPR_StagesTheLockOfAConfigDirectoryNotNamedLikeItsParent(t *testing.T) {
+	// Arrange: the config directory is .config/ai-rulez, so its base name is not its path below the project.
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root, configDir, plan, _ := acceptedRunAt(t, ".config/ai-rulez", "\nGOOD advice.\n", nil)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "ai-rulez.lock"), []byte("version = 1\n"), 0o600))
+	gitIn(t, root, "add", ".config")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	self := filepath.Join(t.TempDir(), "fake-ai-rulez")
+	script := "#!/bin/sh\ncase \"$1\" in\n  lock) echo \"# lock refreshed\" >> .config/ai-rulez/ai-rulez.lock ;;\nesac\n"
+	require.NoError(t, os.WriteFile(self, []byte(script), 0o755)) //nolint:gosec // a test script
+	opts := PROptions{
+		ConfigDir: configDir, RepoDir: root, RunID: plan.RunID, Out: io.Discard, Yes: true, NoPush: true, Self: []string{self},
+		Exec: runner.Exec{}, Git: gitutil.Git{}, Env: []string{"PATH=/usr/bin:/bin"},
+	}
+
+	// Act
+	res, err := PR(context.Background(), &opts)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, res.Refreshed, "ai-rulez lock", "the lock is found at the config directory's real path")
+	assert.Contains(t, gitIn(t, root, "show", res.Branch+":.config/ai-rulez/ai-rulez.lock"), "# lock refreshed")
 }

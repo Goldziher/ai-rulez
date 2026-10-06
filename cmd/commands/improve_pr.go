@@ -51,8 +51,8 @@ in the worktree (it calls the eval runner and spends money; --eval-arg passes ex
 
 When the remote exists, gh is on PATH, the base is a branch the remote has and holds no unpushed commits, and you
 confirm (or pass --yes), it pushes the branch with git and opens the pull request with gh using fixed arguments
-(--repo names the repository the remote URL points at); otherwise it prints the two commands. ai-rulez makes no network
-call itself. The pull request body names what changed, the held-out numbers with their interval, the guards,
+(--repo names the repository the remote URL points at); otherwise it prints the two commands. improve pr itself makes no network
+call, but the generate and lock it runs in the worktree fetch remote includes and sources as they do anywhere. The pull request body names what changed, the held-out numbers with their interval, the guards,
 the cost and egress, and a reviewer checklist, and says the change is NOT approved: nothing here sets approval.
 The worktree is removed afterwards; the branch stays. Commits skip git hooks. Refusals carry AR9J8.`,
 	Args: cobra.ExactArgs(1),

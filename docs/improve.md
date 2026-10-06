@@ -305,7 +305,7 @@ even if the run itself used them. Files are written all or nothing.
    `gh pr create [--repo OWNER/REPO] --base B --head BRANCH --title T --body-file F [--draft]`; `--repo` names the
    repository the remote URL points at, so a fork receives the pull request on the fork. Otherwise (no remote, no `gh`,
    `--no-push`, not confirmed, an unusable base) it prints the two commands. The body file is written before the
-   worktree exists, so a write failure leaves no branch. ai-rulez makes no network call itself: git and `gh` use their
+   worktree exists, so a write failure leaves no branch. improve pr itself makes no network call, but the `generate` and `lock` it runs in the worktree fetch remote includes and sources as they do anywhere (and `eval run` calls the eval runner); git and `gh` use their
    own credentials, and `gh` gets a scrubbed environment plus the usual `GH_*`/proxy names.
 
 The body states what changed, the held-out table with the interval and the wins and losses, the guards that held, cost,
