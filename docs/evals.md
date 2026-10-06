@@ -260,11 +260,20 @@ delete the `mac`.
   `--price-in` and `--price-out`). Haiku, sonnet and opus are listed under their short names too; no `--model` is
   priced as sonnet, and the report says so (`priced_as`, and a line in the markdown). A model the table does not list is priced as sonnet for the estimate (the report says so), and with
   `--max-cost` it is refused unless `--price-in` and `--price-out` are given.
+- The assumptions above are defaults. `[lint.evals.estimate]` overrides them (`overhead_tokens`,
+  `assumed_output_tokens`, `activation_output_tokens`, `tool_loop_factor`; zero keeps the built-in value), and
+  [`eval calibrate-estimate`](#calibrating-the-estimate) proposes measured values. The harness overhead matters most:
+  Claude Code's own system prompt, tools and skill listing make a one-turn activation run cost about 25,000 input
+  tokens, not 2,000.
+- An **activation** estimate (`--mode activation --surface native`) is tighter, since a run is one turn with no
+  fixtures and no tool loop: the overhead, the names and descriptions of the installed set and the prompt in, and 150
+  tokens out, times prompts times `--runs`; low is 0.9 times the input and 0.5 times the output, high 1.25 and 2.
 - Every run records the estimate next to what the runner reported, in the report (`estimate_vs_actual`) and in the
   skill's record in `eval-results.json` (`estimate`: `low_usd`, `expected_usd`, `high_usd`, `actual_usd`, `error` =
-  actual/expected - 1 and `in_range`). A runner that reports no cost leaves the actual out. The history shows how far
-  off the estimate tends to be; it never leaves the machine.
-- `--max-cost USD` is an advisory budget for the whole run (all skills together), not a per-skill cap and not a hard limit. It refuses to start when the estimate exceeds it, hands each runner the remaining budget
+  actual/expected - 1, `in_range`, and the run count, token split and assumptions the calibration reads). A runner that
+  reports no cost leaves the actual out. The history shows how far off the estimate tends to be; it never leaves the
+  machine.
+- `--max-cost USD` is an advisory budget for the whole run (all skills together), not a per-skill cap and not a hard limit. It refuses to start when the estimate exceeds it (the expected figure for case runs, the high figure for `--mode activation`; `--max-cost-mode expected|high` chooses), hands each runner the remaining budget
   (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
   reported spend reaches it (status `skipped-over-budget`, exit 2). It is checked between skills; inside one skill only the runner can enforce it, and `--timeout` bounds the time. When a runner reports more than the budget it was given, the report carries a warning. A runner that reports no cost and no tokens at all is assumed to have spent the whole remaining budget (with a warning), so the run stops instead of continuing on an unknown spend. Spend is counted conservatively: the larger of
   the sum of per-case costs and the runner's own total, tokens priced with `--price-in`/`--price-out` when no cost is
@@ -272,6 +281,33 @@ delete the `mac`.
   `command` runner should enforce `max_cost_usd` itself: it is the only one that knows what it spends. Negative or
   non-finite costs and token counts in a response are rejected.
 - `--changed-only`, the cache and `--runs` keep the number of runs down; `tags` and skill names narrow it by hand.
+
+### Calibrating the estimate
+
+```bash
+ai-rulez eval calibrate-estimate                 # propose assumptions from the recorded runs
+ai-rulez eval calibrate-estimate --model haiku --format json
+```
+
+Reads `eval-results.json` and fits the assumptions to what the runs reported: for each harness, model and kind of
+run (case runs and activation runs are separate groups; different models are never mixed) the harness overhead moves
+by the median gap between the input tokens the runner reported and the ones the estimate expected, per agent run, and
+the output assumption (`assumed_output_tokens`, or `activation_output_tokens` for activation) likewise. The
+tool-loop factor is left alone: one record cannot separate it from the overhead. The output shows the current and
+proposed values, the median token error before and after, the recorded cost error (median and p90), and a
+`[lint.evals.estimate]` table to copy into your configuration:
+
+```text
+activation, harness claude, model haiku: 6 run(s)
+  overhead_tokens           2000 -> 25912
+  activation_output_tokens   150 -> 48
+  token error (median)     +862% -> -2%; recorded cost error median 351%, p90 402%
+```
+
+Only records signed with your key count; a run whose runner reported no token split is left out, and a group with
+fewer than 3 runs (`--min-samples`) is marked low-confidence. The store keeps one record per skill and kind, so the
+samples are the latest run of each skill. Nothing is written or sent anywhere; the command is deterministic and
+offline.
 
 ## Activation mode
 

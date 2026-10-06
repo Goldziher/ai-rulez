@@ -311,7 +311,7 @@ func (n *nativeRun) executeOne(ctx context.Context, plan *nativePlan, spent *flo
 	}
 	*spent += charged
 	run.CostUSD = round(cost)
-	run.EstimateVsActual = NewEstimateRecord(&plan.estimate, cost, in+out).WithUsage(&plan.estimate, in, out)
+	run.EstimateVsActual = NewEstimateRecord(&plan.estimate, cost, in+out).WithUsage(&plan.estimate, in, out, n.opts.Params)
 	n.scoreNative(&run, plan, resp)
 	if run.Status == RunRan && run.Error == "" && n.opts.Store != nil {
 		rec := run.Record(SurfaceNative, n.report.Scope, n.opts.Date)

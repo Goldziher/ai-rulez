@@ -17,6 +17,7 @@ import (
 
 func resetEvalFlags(t *testing.T) {
 	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // the eval-results key stays out of the real home
 	prevDir := configDir
 	reset := func() {
 		evalFlags.harness, evalFlags.runner, evalFlags.runnerCommand = "claude", "", ""

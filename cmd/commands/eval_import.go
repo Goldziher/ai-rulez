@@ -57,6 +57,7 @@ func init() {
 	f.StringVar(&evalImportFlags.report, "report", "", "Also write the machine-readable report (JSON) to this file")
 	f.BoolVar(&evalImportFlags.force, "force", false, "Overwrite existing files")
 	addFormatFlag(f, &evalImportFlags.format, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	EvalCmd.AddCommand(evalImportCmd)
 }

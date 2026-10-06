@@ -83,14 +83,14 @@ type Estimate struct {
 // [lint.evals.estimate] (or --overhead-tokens and friends) applies them.
 type EstimateParams struct {
 	// OverheadTokens is the harness's own input per agent run (system prompt and tools).
-	OverheadTokens int
+	OverheadTokens int `json:"overhead_tokens"`
 	// AssumedOutputTokens is the output per agent run.
-	AssumedOutputTokens int
+	AssumedOutputTokens int `json:"assumed_output_tokens"`
 	// ToolLoopFactor scales the tool-loop re-read in the high figure.
-	ToolLoopFactor float64
+	ToolLoopFactor float64 `json:"tool_loop_factor"`
 	// ActivationOutputTokens is the output of one activation decision (a skill
 	// call or a short answer).
-	ActivationOutputTokens int
+	ActivationOutputTokens int `json:"activation_output_tokens"`
 }
 
 // DefaultEstimateParams returns the built-in assumptions.
@@ -205,6 +205,9 @@ type EstimateRecord struct {
 	ExpectedOutputTokens int `json:"expected_output_tokens,omitempty"`
 	ActualInputTokens    int `json:"actual_input_tokens,omitempty"`
 	ActualOutputTokens   int `json:"actual_output_tokens,omitempty"`
+	// Params are the assumptions the estimate was made under, so a calibration can
+	// tell what to move.
+	Params *EstimateParams `json:"params,omitempty"`
 	// ActualUSD and ActualTokens are what the runner reported (cost, and input plus
 	// output tokens); both are absent when it reported neither.
 	ActualUSD    float64 `json:"actual_usd,omitempty"`
@@ -217,9 +220,11 @@ type EstimateRecord struct {
 
 // WithUsage adds the run count and the input/output split of the estimate and of
 // what the runner reported, and returns the record.
-func (r *EstimateRecord) WithUsage(est *Estimate, inputTokens, outputTokens int) *EstimateRecord {
+func (r *EstimateRecord) WithUsage(est *Estimate, inputTokens, outputTokens int, params EstimateParams) *EstimateRecord {
 	r.AgentRuns, r.ExpectedInputTokens, r.ExpectedOutputTokens = est.AgentRuns, est.InputTokens, est.OutputTokens
 	r.ActualInputTokens, r.ActualOutputTokens = inputTokens, outputTokens
+	p := params.withDefaults()
+	r.Params = &p
 	return r
 }
 

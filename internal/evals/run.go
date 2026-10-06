@@ -436,7 +436,7 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		if p.run.Estimate != nil {
-			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens).WithUsage(p.run.Estimate, score.RunInputTokens, score.RunOutputTokens)
+			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens).WithUsage(p.run.Estimate, score.RunInputTokens, score.RunOutputTokens, e.opts.Params)
 		}
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
 		if !cacheable(&score) {
