@@ -179,7 +179,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		Items:         make([]CatalogItemV2, 0, len(v1.Items)),
 		Roles:         v1.Roles,
 		Lock:          v1.Lock,
-		Notes:         []string{},
+		Notes:         append([]string{}, v1.notes...),
 	}
 	attrib := newLintAttribution(cfg, opts.Lint)
 	seen := map[string]int{}
