@@ -403,3 +403,14 @@ func TestFrontmatterIndexReportsMissingEntryAndUnknownKey(t *testing.T) {
 	assert.Equal(t, 8, ghost.Line, "the line of the ghost entry within the file")
 	assert.Contains(t, codes(got), "AR9B0 index.md", "b.md is not listed")
 }
+
+func TestBuildIndexesEscapesDescriptions(t *testing.T) {
+	// Arrange
+	in := []IndexInput{{Path: "rules/a.md", Title: "A", Description: "see [x](http://evil.example) <b>bold</b>"}}
+
+	// Act
+	out := BuildIndexes(in, nil, "")
+
+	// Assert
+	assert.Equal(t, "# Concepts\n\n* [A](a.md) - see \\[x\\](http://evil.example) \\<b\\>bold\\</b\\>\n", string(out["rules/index.md"]))
+}
