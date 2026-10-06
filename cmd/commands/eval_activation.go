@@ -100,6 +100,34 @@ func estimateParams(cfg *config.Config) evals.EstimateParams {
 		ActivationOutputTokens: e.ActivationOutputTokens, ToolLoopFactor: e.ToolLoopFactor}
 }
 
+// evalPrice resolves the price the estimate uses: --price-in and --price-out, else
+// [lint.evals.estimate] price_in_per_mtok and price_out_per_mtok, and for a side
+// left unset the price table's price for the model. No price at all is the zero
+// Price, which keeps the table.
+func evalPrice(cfg *config.Config, model string) evals.Price {
+	in, out := evalFlags.priceIn, evalFlags.priceOut
+	if cfg != nil && cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.Estimate != nil {
+		e := cfg.Lint.Evals.Estimate
+		if in == 0 {
+			in = e.PriceInPerMTok
+		}
+		if out == 0 {
+			out = e.PriceOutPerMTok
+		}
+	}
+	if in == 0 && out == 0 {
+		return evals.Price{}
+	}
+	table, _ := evals.PriceFor(model)
+	if in == 0 {
+		in = table.InPerMTok
+	}
+	if out == 0 {
+		out = table.OutPerMTok
+	}
+	return evals.Price{InPerMTok: in, OutPerMTok: out}
+}
+
 // runEvalActivation runs `eval run --mode activation`, on the retrieval surface or
 // the native one.
 func runEvalActivation(ctx context.Context, cmd *cobra.Command, skills []string, cfg *config.Config) (failed bool, err error) {
@@ -161,7 +189,7 @@ func configureNative(cmd *cobra.Command, opts *evals.ActivationOptions, cfg *con
 	if opts.MaxCostMode == "" {
 		opts.MaxCostMode = evals.CostModeHigh // activation is cheap, so the cap holds the worst case
 	}
-	opts.Price = evals.Price{InPerMTok: evalFlags.priceIn, OutPerMTok: evalFlags.priceOut}
+	opts.Price = evalPrice(cfg, evalFlags.model)
 	opts.Params, opts.ToolVersion, opts.Timeout = estimateParams(cfg), Version, evalFlags.timeout
 	runner, harness, err := buildActivationRunner(cmd)
 	if err != nil {

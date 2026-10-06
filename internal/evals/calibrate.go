@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -65,6 +66,12 @@ type CalibrationGroup struct {
 	TokenErrorAfter  float64 `json:"token_error_after"`
 	CostErrorMedian  float64 `json:"cost_error_median"`
 	CostErrorP90     float64 `json:"cost_error_p90"`
+	// ListPriceIn is the price table's USD per million input tokens for the model and
+	// EffectivePriceIn what the runs were really billed per input token (output at
+	// the list price): below the list price when the harness caches its prompt. Zero
+	// when the model has no listed price or no run reported a cost.
+	ListPriceIn      float64 `json:"list_price_in_per_mtok,omitempty"`
+	EffectivePriceIn float64 `json:"effective_price_in_per_mtok,omitempty"`
 }
 
 // sample is one recorded run reduced to what the fit needs.
@@ -178,8 +185,34 @@ func fitGroup(kind, harness, model string, samples []sample, minSamples int) Cal
 		}
 	}
 	g.TokenErrorBefore, g.TokenErrorAfter = round(median(before)), round(median(after))
+	g.ListPriceIn, g.EffectivePriceIn = effectiveInputPrice(model, samples)
 	g.CostErrorMedian, g.CostErrorP90 = round(median(errsAbs)), round(quantile(errsAbs, 0.9))
 	return g
+}
+
+// effectiveInputPrice is the median USD per million input tokens the runs were
+// billed, with output tokens at the model's list price; zero when the model has no
+// listed price or no sample reported a cost.
+func effectiveInputPrice(model string, samples []sample) (list, effective float64) {
+	price, known := PriceFor(model)
+	if !known {
+		return 0, 0
+	}
+	var per []float64
+	for _, s := range samples {
+		r := s.rec
+		if r.ActualUSD <= 0 || r.ActualInputTokens <= 0 {
+			continue
+		}
+		in := (r.ActualUSD*1e6 - float64(r.ActualOutputTokens)*price.OutPerMTok) / float64(r.ActualInputTokens)
+		if in > 0 {
+			per = append(per, in)
+		}
+	}
+	if len(per) == 0 {
+		return price.InPerMTok, 0
+	}
+	return price.InPerMTok, math.Round(median(per)*1e4) / 1e4
 }
 
 // recordParams are the assumptions a record's estimate was made under.
@@ -233,6 +266,9 @@ func (c *Calibration) WriteText(w io.Writer) error {
 		}
 		fmt.Fprintf(&b, "  token error (median)     %+5.0f%% -> %+.0f%%; recorded cost error median %.0f%%, p90 %.0f%%\n",
 			g.TokenErrorBefore*100, g.TokenErrorAfter*100, g.CostErrorMedian*100, g.CostErrorP90*100)
+		if priceDiffers(g) {
+			fmt.Fprintf(&b, "  input price per MTok     %s list -> %s billed (prompt caching)\n", formatPrice(g.ListPriceIn), formatPrice(g.EffectivePriceIn))
+		}
 	}
 	c.writeSkips(&b)
 	g := c.Groups[best]
@@ -243,9 +279,19 @@ func (c *Calibration) WriteText(w io.Writer) error {
 	} else {
 		fmt.Fprintf(&b, "assumed_output_tokens = %d\n", g.Proposed.AssumedOutputTokens)
 	}
+	if priceDiffers(g) {
+		fmt.Fprintf(&b, "price_in_per_mtok = %s  # list price %s: the harness bills cached input at a discount\n", strconv.FormatFloat(g.EffectivePriceIn, 'f', -1, 64), formatPrice(g.ListPriceIn))
+	}
 	_, err := io.WriteString(w, b.String())
 	return err
 }
+
+// priceDiffers says the billed input price is far enough from the list price to propose.
+func priceDiffers(g CalibrationGroup) bool {
+	return g.ListPriceIn > 0 && g.EffectivePriceIn > 0 && math.Abs(g.EffectivePriceIn/g.ListPriceIn-1) > 0.10
+}
+
+func formatPrice(v float64) string { return "$" + strconv.FormatFloat(v, 'f', -1, 64) }
 
 func (c *Calibration) writeSkips(b *strings.Builder) {
 	s := c.Skipped

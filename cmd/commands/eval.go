@@ -163,7 +163,7 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	opts.Params = estimateParams(cfg)
+	opts.Params, opts.Price = estimateParams(cfg), evalPrice(cfg, evalFlags.model)
 	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
 		floor := cfg.Lint.Evals.MinPassRate
 		opts.PassThreshold = &floor
