@@ -150,9 +150,9 @@ The npm package supports an **offline mode**: if platform-specific binaries are 
 
 ```bash
 # 1. Build binaries for target platforms (refer to .goreleaser.yaml for all platforms)
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o release/npm/bin/ai-rulez-linux-amd64 ./cmd
-CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o release/npm/bin/ai-rulez-windows-amd64.exe ./cmd
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o release/npm/bin/ai-rulez-linux-amd64 ./cmd/ai-rulez
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd/ai-rulez
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o release/npm/bin/ai-rulez-windows-amd64.exe ./cmd/ai-rulez
 # ... add more platforms as needed
 
 # 2. (Optional) Modify package.json for your scope/version

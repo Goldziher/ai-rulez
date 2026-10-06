@@ -58,7 +58,7 @@ func SetupTestBinary(t *testing.T) string {
 	binaryPath = filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d", binaryName, os.Getpid()))
 
 	//nolint:gosec // G204: Test utility needs to build binary with variables
-	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
+	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/ai-rulez")
 	cmd.Dir = projectRoot
 
 	output, err := cmd.CombinedOutput()
