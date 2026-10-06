@@ -1,10 +1,12 @@
 package jsonmerge
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"slices"
 	"sort"
@@ -61,9 +63,12 @@ type Claim struct {
 
 // claimWire is the manifest encoding of a Claim: element digests, never values.
 type claimWire struct {
-	Path           []string   `json:"path"`
-	Elements       []any      `json:"elements,omitempty"`
-	ElementSums    []string   `json:"elementSums,omitempty"`
+	Path     []string `json:"path"`
+	Elements []any    `json:"elements,omitempty"`
+	// ElementSums is a pointer so an element claim with no element left is written
+	// as "elementSums": [] and read back as an element claim, not as a claim on the
+	// whole key (omitempty would drop an empty slice).
+	ElementSums    *[]string  `json:"elementSums,omitempty"`
 	Equals         any        `json:"equals,omitempty"`
 	Sum            string     `json:"sum,omitempty"`
 	Alone          bool       `json:"alone,omitempty"`
@@ -75,8 +80,12 @@ type claimWire struct {
 // which elements are ours without copying their values, which can be secrets.
 func (c Claim) MarshalJSON() ([]byte, error) {
 	equals, sum := c.persistedGuard()
+	var sums *[]string
+	if digests := c.ElementDigests(); digests != nil {
+		sums = &digests
+	}
 	return json.Marshal(claimWire{
-		Path: c.Path, ElementSums: c.ElementDigests(), Equals: equals, Sum: sum, Alone: c.Alone,
+		Path: c.Path, ElementSums: sums, Equals: equals, Sum: sum, Alone: c.Alone,
 		Preexisting: c.Preexisting, NoFinalNewline: c.NoFinalNewline,
 	})
 }
@@ -112,8 +121,15 @@ func (c *Claim) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &wire); err != nil {
 		return err //nolint:wrapcheck // decoding error is self-describing
 	}
+	var sums []string
+	if wire.ElementSums != nil {
+		sums = *wire.ElementSums
+		if sums == nil {
+			sums = []string{}
+		}
+	}
 	*c = Claim{
-		Path: wire.Path, ElementSums: wire.ElementSums, Equals: wire.Equals, Sum: wire.Sum, Alone: wire.Alone,
+		Path: wire.Path, ElementSums: sums, Equals: wire.Equals, Sum: wire.Sum, Alone: wire.Alone,
 		Preexisting: wire.Preexisting, NoFinalNewline: wire.NoFinalNewline,
 	}
 	c.Equals, c.Sum = c.persistedGuard()
@@ -224,9 +240,16 @@ func Digest(value any) string {
 }
 
 func digestRaw(raw []byte) string {
+	// UseNumber keeps a number's digits: float64 would give two integers above
+	// 2^53 one digest, and the claim would own a value the user had changed.
 	var normalized any
-	if json.Unmarshal(raw, &normalized) != nil {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	if dec.Decode(&normalized) != nil {
 		return ""
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		return "" // trailing data after the value
 	}
 	canonical, err := json.Marshal(normalized)
 	if err != nil {
