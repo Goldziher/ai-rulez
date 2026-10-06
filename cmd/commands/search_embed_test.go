@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -368,11 +369,28 @@ func TestSearchEval_DegradedEmbeddingsAreNeverAPass(t *testing.T) {
 	srv.setFail(true)
 	setSearchFlag(t, "eval", writeCases(t, searchGoodCases))
 	setSearchFlag(t, "mode", "hybrid")
+	out := filepath.Join(t.TempDir(), "base.json")
+	setSearchFlag(t, "out", out)
 
 	code, _, errOut = execSearch(t)
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, errOut, "fell back to lexical")
+	_, statErr := os.Stat(out)
+	assert.True(t, os.IsNotExist(statErr), "a degraded run must not become a baseline")
+}
+
+func TestDegradedEvalMessage_NamesTheReasonWhenOnlyNegativeCasesDegraded(t *testing.T) {
+	// Arrange
+	res := &skillsearch.Result{ByMode: map[string]*skillsearch.ModeResult{
+		"hybrid": {DegradedCases: 1, Cases: []skillsearch.CaseResult{{ID: "a"}}, Negatives: []skillsearch.NegativeResult{{ID: "n", Degraded: "timeout"}}},
+	}}
+
+	// Act
+	got := degradedEvalMessage(res)
+
+	// Assert
+	assert.Contains(t, got, "hybrid: 1 cases fell back to lexical (timeout)")
 }
 
 func TestSearchEval_FromEvalsDerivesCases(t *testing.T) {

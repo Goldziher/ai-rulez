@@ -520,9 +520,14 @@ func LoadBaseline(path string) (*Result, error) {
 
 // CompareBaseline records which cases went from hit to miss and back. Cases
 // present in only one of the two runs are ignored: they are not comparable. It
-// fails when the two runs used different cut-offs: a hit at k=10 is not a hit at
-// k=3, so every flip would be an artifact of the flag.
+// fails when the two runs used different cut-offs (a hit at k=10 is not a hit at
+// k=3) or ranked in different modes (a hybrid hit is not a lexical hit), so every
+// flip would be an artifact of the flag.
 func (r *Result) CompareBaseline(base *Result) error {
+	if bm, rm := baselineMode(base.Mode), baselineMode(r.Mode); bm != rm {
+		return oops.Hint("rerun with --mode "+bm+", or save a new baseline with --out").
+			Errorf("the baseline was ranked in %s mode but this run uses %s", bm, rm)
+	}
 	if base.K != r.K {
 		return oops.Hint("rerun with --k "+strconv.Itoa(base.K)+", or save a new baseline with --out").
 			Errorf("the baseline was evaluated at k=%d but this run uses k=%d", base.K, r.K)
@@ -547,6 +552,14 @@ func (r *Result) CompareBaseline(base *Result) error {
 	sort.Strings(flips.Fixed)
 	r.Flips = flips
 	return nil
+}
+
+// baselineMode names the mode of a result; one written before modes existed is lexical.
+func baselineMode(m string) string {
+	if m == "" {
+		return ModeLexical
+	}
+	return m
 }
 
 // Minimums are absolute floors, keyed by metric name.
