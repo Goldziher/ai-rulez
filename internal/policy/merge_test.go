@@ -74,6 +74,9 @@ func randomPolicy(rng *rand.Rand) Policy {
 	p.Governance.RequireApproval = pick(rng, []string{"remote", "local", "kind:hook", "kind:skill"})
 	p.Governance.MinApprovers = rng.Intn(4)
 	p.Governance.Approvers = randomList(rng, []string{"a@x.org", "b@x.org", "c@x.org"})
+	p.MCP.AllowedCommands = randomList(rng, []string{"npx", "uvx", "node", "bash"})
+	p.MCP.DenyTransports = pick(rng, mcpTransports)
+	p.Hooks.Forbidden = rng.Intn(3) == 0
 	return p
 }
 
@@ -194,6 +197,12 @@ func TestMergeOnlyTightens(t *testing.T) {
 			}
 			assert.True(t, !side.Lock.Enforce || m.Lock.Enforce)
 			assert.True(t, !side.Telemetry.Disabled || m.Telemetry.Disabled)
+			if side.MCP.AllowedCommands.Set {
+				assert.True(t, m.MCP.AllowedCommands.Set)
+				assert.Subset(t, side.MCP.AllowedCommands.Items, m.MCP.AllowedCommands.Items, "a command escaped the allowlist")
+			}
+			assert.Subset(t, m.MCP.DenyTransports, side.MCP.DenyTransports)
+			assert.True(t, !side.Hooks.Forbidden || m.Hooks.Forbidden)
 		}
 	}
 }

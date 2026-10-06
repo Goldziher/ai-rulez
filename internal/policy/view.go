@@ -135,6 +135,10 @@ func (p Policy) Tree() map[string]any {
 	if g.Approvers.Set {
 		table("governance")["approvers"] = nonNil(g.Approvers.Items)
 	}
+	p.MCP.addTo(table)
+	if p.Hooks.Forbidden {
+		table("hooks")["allow"] = false
+	}
 	return root
 }
 

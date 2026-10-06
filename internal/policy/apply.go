@@ -81,6 +81,8 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.networks()
 	a.guard()
 	a.governance()
+	a.mcpServers()
+	a.hooks()
 	sort.SliceStable(a.out.Violations, func(i, j int) bool {
 		x, y := a.out.Violations[i], a.out.Violations[j]
 		if x.Code != y.Code {

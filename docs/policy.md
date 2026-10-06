@@ -83,6 +83,13 @@ enforce          = true                                         # approvals are 
 require_approval = ["remote", "kind:hook"]                      # always required; the repository's exempt cannot narrow it
 min_approvers    = 2
 approvers        = ["alice@example.org", "bob@example.org"]     # only these reviewers count
+
+[mcp]
+allowed_commands = ["npx", "uvx"]                               # the only commands a stdio MCP server may run
+deny_transports  = ["http", "sse"]                              # no remote MCP endpoint
+
+[hooks]
+allow = false                                                   # any [[hooks]] group is a violation
 ```
 
 Rule codes may be written as codes (`AR001`) or names (`secret-detected`). A code this ai-rulez does not know is an
@@ -137,6 +144,9 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `governance.enforce` | `true` | a `[governance]` table without `enforce = true` | `AR740` |
 | `governance.require_approval` | union with the repository's selectors; the policy's are not narrowed by `exempt` | (nothing to report: `exempt` is simply not applied to them) | none |
 | `governance.min_approvers` | the larger value | a lower explicit `min_approvers` | `AR740` |
+| `mcp.allowed_commands` | the repository's stdio servers whose command the list names (compared as written); an empty list allows none | an MCP server running another command; the server is not loaded | `AR748` |
+| `mcp.deny_transports` | union of layers | an MCP server on a denied transport (`stdio`, `http`, `sse`); the server is not loaded | `AR748` |
+| `hooks.allow` | `false` forbids every hook group | a `[[hooks]]` group; it is not loaded | `AR748` |
 | `governance.approvers` | the repository's entries that the list names; the policy list when it sets none or none is left. An empty policy list means nobody may approve | an entry the list does not name; the entry is dropped | `AR740` |
 
 `[governance]` matters because approvals are records in the repository's own lock: without a floor the repository
