@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	toml "github.com/pelletier/go-toml/v2"
 
@@ -79,6 +80,9 @@ type Sources struct {
 	Deny []string
 	// RequirePinned makes the lock enforced, so an unpinned remote is an error.
 	RequirePinned bool
+	// MinReleaseAge is the youngest a tag may be to be adopted: the floor under
+	// [lock] min_release_age and each source's own. 0 for no floor.
+	MinReleaseAge time.Duration
 }
 
 // Lint governs the strict-validation settings.
@@ -95,6 +99,9 @@ type Lint struct {
 	LoadBudgets map[string]int
 	// ScannerPolicy governs [lint.scanner_policy] (scanners.go).
 	ScannerPolicy ScannerPolicy
+	// SizeBudgets maps a content kind to the largest size budget the repository
+	// may set for it ([lint.budgets.<kind>]).
+	SizeBudgets map[string]SizeBudget
 }
 
 // Capability governs [lint.capability].
@@ -179,6 +186,7 @@ type fileSources struct {
 	AllowedHosts  *[]string `toml:"allowed_hosts"`
 	DenyHosts     []string  `toml:"deny_hosts"`
 	RequirePinned *bool     `toml:"require_pinned"`
+	MinReleaseAge string    `toml:"min_release_age"`
 }
 
 type fileLint struct {
@@ -188,8 +196,9 @@ type fileLint struct {
 	Capability    *struct {
 		MaxNetworkCommands *int `toml:"max_network_commands"`
 	} `toml:"capability"`
-	LoadBudgets   map[string]int     `toml:"load_budgets"`
-	ScannerPolicy *fileScannerPolicy `toml:"scanner_policy"`
+	LoadBudgets   map[string]int            `toml:"load_budgets"`
+	ScannerPolicy *fileScannerPolicy        `toml:"scanner_policy"`
+	Budgets       map[string]fileSizeBudget `toml:"budgets"`
 }
 
 type fileSecurity struct {
@@ -315,6 +324,13 @@ func (s *Sources) fromDoc(d *fileSources) error {
 	}
 	s.Deny = deny
 	s.RequirePinned = d.RequirePinned != nil && *d.RequirePinned
+	if d.MinReleaseAge != "" {
+		age, err := parseMinReleaseAge(d.MinReleaseAge)
+		if err != nil {
+			return err
+		}
+		s.MinReleaseAge = age
+	}
 	return nil
 }
 
@@ -366,6 +382,11 @@ func (l *Lint) fromDoc(d *fileLint) error {
 	if err := l.ScannerPolicy.fromDoc(d.ScannerPolicy); err != nil {
 		return err
 	}
+	budgets, err := parseSizeBudgets(d.Budgets)
+	if err != nil {
+		return err
+	}
+	l.SizeBudgets = budgets
 	return l.Security.fromDoc(d.Security)
 }
 

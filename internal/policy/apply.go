@@ -76,8 +76,10 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.trustedOrgs()
 	a.maxNetworkCommands()
 	a.loadBudgets()
+	a.sizeBudgets()
 	a.scannerPolicy()
 	a.lock()
+	a.minReleaseAge()
 	a.networks()
 	a.guard()
 	a.governance()
@@ -126,6 +128,8 @@ func policyKeyOf(key string) string {
 		return "lint.severity_floor." + strings.TrimPrefix(strings.TrimPrefix(key, "lint.severity."), "lint.ignore.")
 	case key == "lock.enforce":
 		return "lock.enforce"
+	case strings.HasSuffix(key, ".min_release_age"):
+		return "sources.min_release_age"
 	}
 	return key
 }

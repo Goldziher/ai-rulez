@@ -66,6 +66,9 @@ func TestPolicySchemaRejectsWhatTheParserRejects(t *testing.T) {
 		{"trust without issuer", "policy_version = 1\n[[signing.trust]]\nidentity = \"a@b.c\"\n"},
 		{"trust with both identity forms", "policy_version = 1\n[[signing.trust]]\nidentity = \"a\"\nidentity_regexp = \"^a$\"\nissuer = \"i\"\n"},
 		{"unknown transport", "policy_version = 1\n[mcp]\ndeny_transports = [\"ws\"]\n"},
+		{"bad release age", "policy_version = 1\n[sources]\nmin_release_age = \"soon\"\n"},
+		{"unknown budget kind", "policy_version = 1\n[lint.budgets.poem]\nmax_lines = 3\n"},
+		{"zero budget", "policy_version = 1\n[lint.budgets.rule]\nmax_lines = 0\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

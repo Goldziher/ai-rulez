@@ -86,6 +86,17 @@ func randomPolicy(rng *rand.Rand) Policy {
 		p.Signing.MaxAge = time.Duration(1+rng.Intn(400)) * 24 * time.Hour
 	}
 	p.Signing.MinHashVersion = rng.Intn(4)
+	if rng.Intn(2) == 0 {
+		p.Sources.MinReleaseAge = time.Duration(1+rng.Intn(60)) * 24 * time.Hour
+	}
+	for _, kind := range []string{"rule", "skill", "agent"} {
+		if rng.Intn(3) == 0 {
+			if p.Lint.SizeBudgets == nil {
+				p.Lint.SizeBudgets = map[string]SizeBudget{}
+			}
+			p.Lint.SizeBudgets[kind] = SizeBudget{MaxLines: rng.Intn(3) * 100, MaxTokens: rng.Intn(3) * 1000}
+		}
+	}
 	p.Signing.Trust = randomList(rng, []string{"subject=lock identity=a issuer=i", "subject=lock identity=b issuer=i", "subject=lock identity_regexp=^c$ issuer=i"})
 	return p
 }
@@ -213,6 +224,17 @@ func TestMergeOnlyTightens(t *testing.T) {
 			}
 			assert.Subset(t, m.MCP.DenyTransports, side.MCP.DenyTransports)
 			assert.True(t, !side.Hooks.Forbidden || m.Hooks.Forbidden)
+			assert.GreaterOrEqual(t, m.Sources.MinReleaseAge, side.Sources.MinReleaseAge)
+			for kind, sb := range side.Lint.SizeBudgets {
+				if sb.MaxLines > 0 {
+					assert.Positive(t, m.Lint.SizeBudgets[kind].MaxLines)
+					assert.LessOrEqual(t, m.Lint.SizeBudgets[kind].MaxLines, sb.MaxLines)
+				}
+				if sb.MaxTokens > 0 {
+					assert.Positive(t, m.Lint.SizeBudgets[kind].MaxTokens)
+					assert.LessOrEqual(t, m.Lint.SizeBudgets[kind].MaxTokens, sb.MaxTokens)
+				}
+			}
 			assert.Subset(t, m.Signing.RequireVerified, side.Signing.RequireVerified)
 			assert.GreaterOrEqual(t, tlogRank[m.Signing.TLog], tlogRank[side.Signing.TLog])
 			if side.Signing.MaxAge > 0 {
