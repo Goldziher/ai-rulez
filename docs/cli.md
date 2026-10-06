@@ -1871,7 +1871,7 @@ Lints any OKF bundle with the `AR9B0`-`AR9B9` checks. The default `--fail-on err
 
 ### `ai-rulez migrate v4`
 
-Migrate configuration from V3 (YAML) to V4 (TOML format).
+Migrate configuration from V3 (YAML) to V4 (TOML format). The input is a V3 **`.ai-rulez/config.yaml`** (or `config.json`) directory config. A legacy flat V2 file (`ai-rulez.yaml`, `.ai-rulez.yaml`, ...) is not read by this command: `migrate v4` stops with "No config directory found" when there is no `.ai-rulez/`, so move the file to `.ai-rulez/config.yaml` first.
 
 **Syntax:**
 
@@ -1883,7 +1883,7 @@ ai-rulez migrate v4
 
 - `v4`, `4`, or `4.0` (required): Target configuration version.
 
-The migrate command has no command-local flags.
+The migrate command has no command-local flags. The global `-C, --config PATH` is honoured: pass the config file (or the config directory) of a project elsewhere and its directory is migrated instead of `./.ai-rulez`.
 
 **Examples:**
 
@@ -1893,9 +1893,15 @@ Migrate current directory:
 ai-rulez migrate v4
 ```
 
+Migrate another project:
+
+```bash
+ai-rulez -C ../service/.ai-rulez/config.yaml migrate v4
+```
+
 **What It Does:**
 
-1. Finds `.ai-rulez/` in the current directory
+1. Finds `.ai-rulez/` in the current directory (or the directory of `-C`)
 2. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only, `$schema` becomes `schema`), whether or not `config.toml` already exists. If more than one `config.local.*` file exists the overlay is left alone with a warning
 3. Returns without further changes if `.ai-rulez/config.toml` already exists
 4. Loads the existing shared configuration (without the overlay), including the servers of a legacy MCP file (the loader reads the first of `mcp.toml`, `mcp.yaml`, `mcp.json`)
@@ -1991,7 +1997,7 @@ Commands that load a project directory use the following config order:
 4. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, `ai_rulez.yaml`, `ai_rulez.yml`, `.ai_rulez.yaml`, or `.ai_rulez.yml` are discovered for migration
 5. **Error**: No configuration found
 
-The search walks up from the current directory. Legacy flat V2 config files are migration inputs. Use `ai-rulez migrate v4` before running V4
+The search walks up from the current directory. Legacy flat V2 config files are discovered but `ai-rulez migrate v4` does not convert them (it needs `.ai-rulez/config.yaml`); move the file there first, then run `ai-rulez migrate v4` before V4
 generation workflows. `.ai-rulez/` and `.config/ai-rulez/` are checked before the legacy flat filenames.
 
 Example detection flow:
