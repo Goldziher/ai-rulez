@@ -143,6 +143,11 @@ func TestNativePlan_Permissions(t *testing.T) {
 			files: map[string]string{".cursor/cli.json": `{"permissions":{"allow":["Shell(ls)","Write(src/**)","Mcp(github:create_issue)"],"deny":["Read(.env)","Mcp(evil:*)"]}}`},
 			want:  config.Permissions{Allow: []string{"Bash(ls)", "Edit(src/**)", "mcp__github__create_issue"}, Deny: []string{"Read(.env)", "mcp__evil"}},
 		},
+		{
+			name:  "a cursor shell deny covers every command that starts with the base",
+			files: map[string]string{".cursor/cli.json": `{"permissions":{"allow":["Shell(ls)"],"deny":["Shell(rm)","Shell(git push)","Shell(curl *)"]}}`},
+			want:  config.Permissions{Allow: []string{"Bash(ls)"}, Deny: []string{"Bash(curl *)", "Bash(git push:*)", "Bash(rm:*)"}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
