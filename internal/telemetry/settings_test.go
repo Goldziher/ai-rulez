@@ -96,10 +96,11 @@ func TestResolve_KillSwitchesWin(t *testing.T) {
 
 func TestResolve_InsecureEndpointAndBadProtocolBlockExport(t *testing.T) {
 	for name, user := range map[string]*config.TelemetryConfig{
-		"plain http":  {Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://collector.example.org"},
-		"credentials": {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://user:pw@collector.example.org"},
-		"grpc":        {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org", OTLPProtocol: "grpc"},
-		"query":       {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org?x=1"},
+		"plain http":       {Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://collector.example.org"},
+		"credentials":      {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://user:pw@collector.example.org"},
+		"unknown protocol": {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org", OTLPProtocol: "carrier-pigeon"},
+		"grpc with a path": {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org/v1/logs", OTLPProtocol: "grpc"},
+		"query":            {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org?x=1"},
 	} {
 		s := Resolve(Layers{User: user, Getenv: env()})
 		assert.False(t, s.ExportActive(), name)
