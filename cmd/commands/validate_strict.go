@@ -95,7 +95,7 @@ func checkFlagValues() error {
 
 // checkFlagCombinations rejects strict flags that contradict each other.
 func checkFlagCombinations() error {
-	if validateDryRun && !fixRequested() {
+	if validateDryRun && !fixRequested() && !validateExtern {
 		return oops.Errorf("--dry-run only applies with --fix, --fix-unsafe or --external")
 	}
 	if fixRequested() && validateUpdateBaseline {
@@ -205,13 +205,14 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
 		}
 	}
-	scanner, err := scannerOptions()
-	if err != nil {
-		return nil, err
 	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
 		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(context.Background(), cfg)))
 	}
+	scanner, err := scannerOptions()
+	if err != nil {
+		return nil, err
 	}
+	scanner = withScannerCache(scanner, cfg)
 	return lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
 		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
@@ -221,7 +222,6 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 // analyzerSelection is the analyzer allow-list of a run: --analyzer, else
 // [lint] analyzers, else (the scan command) the security analyzer; nil runs
 // every analyzer.
-	scanner = withScannerCache(scanner, cfg)
 func analyzerSelection(cfg *config.Config) []string {
 	if len(validateAnalyzers) > 0 {
 		return validateAnalyzers
@@ -256,6 +256,9 @@ func failOnFor(cfg *config.Config) string {
 // Each root is judged against its own threshold, so one root's [lint] fail_on
 // never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
+	if scannerDryRun() {
+		return 0 // the scanner plan was printed; nothing ran, so there is no report
+	}
 	excess, code, done := prepareReports(reports, cfgs)
 	if done {
 		return code
@@ -265,9 +268,6 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		combined.Budgets = append(combined.Budgets, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
-	if scannerDryRun() {
-		return 0 // the scanner plan was printed; nothing ran, so there is no report
-	}
 		fmtError(err)
 		return 1
 	}
