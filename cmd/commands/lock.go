@@ -76,8 +76,12 @@ The lock also pins [[skill_sources]] (commit and tree digest, kind "source") and
 the digest of every skill the skills server would serve (kind "served"), which
 [lock] enforce = true checks before serving.
 
+Before a remote tree is pinned to something new, it gets the security scan
+(AR001-AR009), as "update" does: error findings refuse the pin (exit 2, nothing
+written) unless --accept-findings.
+
 Exit codes: 0 ok; 1 the command could not run (a tool error); 2 --check found
-a stale lock (drift); 3 the lock was written but served skills were left
+a stale lock (drift) or the pre-pin scan refused a tree; 3 the lock was written but served skills were left
 unpinned because the security scan refuses them. Over several roots
 (--recursive) the most severe code wins: 1, then 2, then 3.`,
 	Run: runLock,
@@ -90,6 +94,7 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockOutdated, "outdated", false, "Report sources whose version constraint allows a newer tag than the pinned one (uses the network, writes nothing)")
 	LockCmd.Flags().BoolVar(&lockFailOnOutdated, "fail-on-outdated", false, "With --outdated: exit 2 when any source has an allowed update")
 	LockCmd.Flags().BoolVar(&lockOffline, "offline", false, "With --outdated: refuse to run (it needs the network); use --check to verify the lock offline")
+	LockCmd.Flags().BoolVar(&lockAcceptFindings, "accept-findings", false, "Pin a source although the security scan of its new tree has error findings (review them first)")
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
 	addFormatFlag(LockCmd.Flags(), &lockFormat, "", formatText, formatText, formatJSON) // of --check, --diff, --outdated and --subject
@@ -231,6 +236,10 @@ func writeLockAt(path, kind string, names []string) int {
 	if err := deniedPinsError(next); err != nil {
 		fmtError(err)
 		return 1
+	}
+	if refused := scanNewPins(cfg, current, next); refused > 0 {
+		fmt.Fprintf(os.Stderr, "refused %d source(s): the security scan of the new tree has error findings; review them, then pass --accept-findings. Nothing was written\n", refused)
+		return exitDrift
 	}
 	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
