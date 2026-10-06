@@ -25,6 +25,10 @@ type ReviewQuery struct {
 	// whether the content exists there. A commit that is not in the local clone is
 	// an error (fetch the pull request head).
 	PinnedAt func(ctx context.Context, sha string) (digest string, pinned bool, err error)
+	// Named reports whether the policy names the reviewer for this content
+	// ([governance] approvers or CODEOWNERS). A reviewer who is not an owner,
+	// member or collaborator of the repository counts only when named; nil names nobody.
+	Named func(login string) bool
 }
 
 // ReviewApproval is one approving review that applies to the commit.
@@ -76,7 +80,8 @@ func ParseReviewRef(ref string) (repo forge.Repo, pr int, review int64, err erro
 
 // ApprovingReviews returns the reviews that approve q.Digest: the latest
 // decisive review of each reviewer is APPROVED (a later CHANGES_REQUESTED or
-// DISMISSED withdraws it; comments neither approve nor withdraw), the commit the
+// DISMISSED withdraws it; comments neither approve nor withdraw), the reviewer is
+// an owner, member or collaborator of the repository or named by the policy, the commit the
 // reviewer saw is the pull request's final head (a review of an earlier head
 // approved something else, even when the content looks the same), and the
 // content at that commit has the digest q.Digest. Incomplete listings are
@@ -96,6 +101,9 @@ func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]Rev
 	for login, r := range latestDecisive(reviews) {
 		if r.State != forge.ReviewApproved || r.CommitID == "" || pr.HeadSHA == "" || !strings.EqualFold(r.CommitID, pr.HeadSHA) {
 			continue
+		}
+		if !r.Maintainer() && (q.Named == nil || !q.Named(r.Login)) {
+			continue // anyone can review a public repository: an outsider approves nothing
 		}
 		if !checked {
 			digest, pinned, err := q.PinnedAt(ctx, pr.HeadSHA)

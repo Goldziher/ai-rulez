@@ -232,7 +232,7 @@ func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 		}
 		var out []map[string]any
 		for _, rv := range s.Reviews[n] {
-			out = append(out, map[string]any{"id": rv.ID, "user": map[string]any{"login": rv.Login}, "state": rv.State, "commit_id": rv.CommitID, "submitted_at": rv.Submitted})
+			out = append(out, map[string]any{"id": rv.ID, "user": map[string]any{"login": rv.Login}, "state": rv.State, "commit_id": rv.CommitID, "submitted_at": rv.Submitted, "author_association": rv.AuthorAssociation})
 		}
 		s.list(w, r, out)
 	case strings.HasPrefix(path, "contents/"):

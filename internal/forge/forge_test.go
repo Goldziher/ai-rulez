@@ -193,7 +193,7 @@ func TestPullRequestsAndReviews(t *testing.T) {
 	srv.PRs = map[string][]forge.PullRequest{sha1: {{Number: 7, State: "closed", Merged: true, Author: "alice", BaseRef: "main", HeadSHA: sha2, MergeCommit: sha1}}}
 	srv.Reviews = map[int][]forge.Review{7: {
 		{ID: 1, Login: "bob", State: forge.ReviewChangesRequested, CommitID: sha2, Submitted: t0},
-		{ID: 2, Login: "bob", State: forge.ReviewApproved, CommitID: sha2, Submitted: t0.Add(time.Hour)},
+		{ID: 2, Login: "bob", State: forge.ReviewApproved, CommitID: sha2, Submitted: t0.Add(time.Hour), AuthorAssociation: forge.AssociationCollaborator},
 	}}
 	c := srv.Client(nil)
 
@@ -215,6 +215,9 @@ func TestPullRequestsAndReviews(t *testing.T) {
 	require.Len(t, reviews, 2)
 	assert.Equal(t, forge.ReviewApproved, reviews[1].State)
 	assert.Equal(t, sha2, reviews[1].CommitID)
+	assert.True(t, reviews[1].Maintainer(), "a collaborator is a maintainer")
+	assert.Equal(t, forge.AssociationCollaborator, reviews[1].AuthorAssociation)
+	assert.False(t, reviews[0].Maintainer(), "no association reported is an outsider")
 	assert.True(t, reviews[1].Submitted.Equal(t0.Add(time.Hour)))
 
 	_, err = c.Reviews(context.Background(), repo, 0)
