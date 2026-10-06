@@ -2,6 +2,7 @@ package lockfile
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -144,4 +145,55 @@ func TestSavedLockWithoutViewsHasNoViewKey(t *testing.T) {
 	data, err := os.ReadFile(Path(dir))
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "view")
+}
+
+func TestEntryCoversVersionConstraints(t *testing.T) {
+	pinned := &Entry{Source: "https://example.com/r", Ref: "^1.2", Tag: "v1.2.4", Commit: "c1", Digest: "sha256:1"}
+	want := func(mut func(*Want)) Want {
+		w := Want{Source: "https://example.com/r", Ref: "^1.2", Constraint: "^1.2"}
+		if mut != nil {
+			mut(&w)
+		}
+		return w
+	}
+	tests := []struct {
+		name string
+		e    *Entry
+		w    Want
+		want bool
+	}{
+		{"the pinned tag satisfies the constraint", pinned, want(nil), true},
+		{"a narrower constraint the tag no longer satisfies", pinned, want(func(w *Want) { w.Ref, w.Constraint = "^1.3", "^1.3" }), false},
+		{"a constraint edit that keeps the tag valid still changes the recorded ref", pinned, want(func(w *Want) { w.Ref, w.Constraint = "~1.2.0", "~1.2.0" }), false},
+		{"a tag prefix the tag does not carry", pinned, want(func(w *Want) { w.TagPrefix = "deploy/v" }), false},
+		{"a pin with no tag is not a version pin", &Entry{Source: "https://example.com/r", Ref: "^1.2", Commit: "c1"}, want(nil), false},
+		{"a pin whose tag is not a version", &Entry{Source: "https://example.com/r", Ref: "^1.2", Tag: "latest"}, want(nil), false},
+		{"a prerelease tag needs include_prerelease", &Entry{Source: "https://example.com/r", Ref: "^1.2", Tag: "v1.3.0-rc.1"}, want(nil), false},
+		{"and is covered with it", &Entry{Source: "https://example.com/r", Ref: "^1.2", Tag: "v1.3.0-rc.1"}, want(func(w *Want) { w.IncludePrerelease = true }), true},
+		{"a prefixed tag", &Entry{Source: "https://example.com/r", Ref: "~2.1.0", Tag: "deploy/v2.1.3"}, want(func(w *Want) { w.Ref, w.Constraint, w.TagPrefix = "~2.1.0", "~2.1.0", "deploy/v" }), true},
+		{"a plain want is unaffected by the tag", &Entry{Source: "https://example.com/r", Ref: "main", Tag: "v1"}, Want{Source: "https://example.com/r", Ref: "main"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.e.Covers(tt.w))
+		})
+	}
+}
+
+func TestTagFieldsRoundTripAndAreOmittedWhenEmpty(t *testing.T) {
+	dir := t.TempDir()
+	f := &File{}
+	f.Set(KindInclude, Entry{Name: "shared", Source: "https://example.com/r", Ref: "^1.2", Tag: "v1.2.4", TagObject: "7a9c", Commit: "0f3e", Digest: "sha256:1"})
+	f.Set(KindInclude, Entry{Name: "plain", Source: "https://example.com/p", Ref: "main", Commit: "c2", Digest: "sha256:2"})
+
+	require.NoError(t, Save(dir, f))
+	data, err := os.ReadFile(Path(dir))
+	require.NoError(t, err)
+	got, err := Load(dir)
+	require.NoError(t, err)
+
+	assert.Equal(t, "v1.2.4", got.Find(KindInclude, "shared").Tag)
+	assert.Equal(t, "7a9c", got.Find(KindInclude, "shared").TagObject)
+	assert.Equal(t, 1, strings.Count(string(data), "tag = "), "an entry without a tag writes no tag key")
+	assert.Equal(t, 1, strings.Count(string(data), "tag_object = "))
 }
