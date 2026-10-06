@@ -3,6 +3,8 @@ package generator
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -245,4 +247,70 @@ func TestPlanOutputsRejectsRoleAndProfile(t *testing.T) {
 
 	// Assert
 	require.Error(t, err)
+}
+
+// TestPlanDigestsEqualWrittenFilesForEveryPreset enables every preset and requires each planned
+// whole-file output to carry the digest of the bytes generate writes (header hashes off, so the
+// only difference left would be a rendering one such as the trailing newline).
+func TestPlanDigestsEqualWrittenFilesForEveryPreset(t *testing.T) {
+	// Arrange
+	files := map[string]string{
+		"rules/style.md":    "---\npriority: high\n---\n\nUse tabs.\n",
+		"skills/s/SKILL.md": "---\nname: s\ndescription: A skill\n---\n\nDo it.\n",
+	}
+	base := writeChecksProject(t, config.IndividualPresetNames(), files, "\n[header]\nhashes = \"none\"\ntimestamp = false\n")
+	cfg, err := config.LoadConfig(context.Background(), base)
+	require.NoError(t, err)
+	plan, err := PlanOutputs(context.Background(), cfg, PlanOptions{})
+	require.NoError(t, err)
+
+	// Act
+	generateChecksProject(t, base, "default")
+
+	// Assert
+	checked := 0
+	for _, f := range plan.Files {
+		if f.Action != PlanWrite || f.Sensitive || f.SHA256 == "" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(base, filepath.FromSlash(f.Path)))
+		require.NoError(t, err, f.Path)
+		sum := sha256.Sum256(data)
+		assert.Equal(t, hex.EncodeToString(sum[:]), f.SHA256, "plan digest of %s differs from the written file", f.Path)
+		assert.Equal(t, len(data), f.Size, f.Path)
+		checked++
+	}
+	assert.Greater(t, checked, 50)
+}
+
+func TestPlanOmitsTheDigestOfAnOutputHoldingADetectedSecret(t *testing.T) {
+	// Arrange: a literal credential in a rule lands in the rendered instruction files
+	dir := planProject(t, strings.Replace(planConfig, "args = [\"--key\", \"literal-secret-value-123\"]", `args = ["-y"]`, 1))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "rules", "leak.md"), []byte("---\npriority: high\n---\n# Leak\n\nUse AKIAIOSFODNN7EXAMPLE for the bucket.\n"), 0o644))
+	cfg := loadPlanConfig(t, dir, map[string]string{"PLAN_TEST_TOKEN": "t"})
+
+	// Act
+	plan, err := PlanOutputs(context.Background(), cfg, PlanOptions{})
+	require.NoError(t, err)
+
+	// Assert
+	byPath := map[string]PlanFile{}
+	for _, f := range plan.Files {
+		byPath[f.Path] = f
+	}
+	claude := byPath[".claude/rules/leak.md"]
+	assert.Empty(t, claude.SHA256, "the digest of an output holding a credential is not published")
+	assert.Zero(t, claude.Size)
+	assert.False(t, claude.Sensitive)
+	assert.Equal(t, PlanWrite, claude.Action)
+	data, err := MarshalPlan(plan)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "AKIAIOSFODNN7EXAMPLE")
+	var digested int
+	for _, f := range plan.Files {
+		if f.SHA256 != "" {
+			digested++
+		}
+	}
+	assert.Positive(t, digested, "outputs without a credential keep their digest")
 }

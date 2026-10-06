@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -76,7 +77,8 @@ type PlanFile struct {
 	// Size and SHA256 describe the content ai-rulez renders for the path, as
 	// the presets produce it: the Generated stamp and the Content-Hash and
 	// Source-Hash lines are not part of it. They are omitted for a sensitive
-	// output, whose content may carry a secret.
+	// output, whose content may carry a secret, and for an output whose content
+	// holds a credential the security scan detects.
 	Size   int    `json:"size,omitempty"`
 	SHA256 string `json:"sha256,omitempty"`
 	// LocalOnly marks a machine-local output (gitignored, never committed).
@@ -226,7 +228,10 @@ func (g *Generator) planFile(o *config.OutputFile) PlanFile {
 	}
 	data := o.RawContent
 	if data == nil {
-		data = []byte(stripGeneratedStamp(o.Content, o.Path))
+		data = []byte(normalizeTrailingNewline(stripGeneratedStamp(o.Content, o.Path))) // as finalContent writes it
+	}
+	if _, found := lint.DetectSecret(string(data)); found {
+		return f // a credential the output carries must not be confirmable from its digest
 	}
 	sum := sha256.Sum256(data)
 	f.Size, f.SHA256 = len(data), hex.EncodeToString(sum[:])
