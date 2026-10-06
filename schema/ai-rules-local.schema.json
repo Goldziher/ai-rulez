@@ -172,7 +172,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-local.schema.json",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "description": "Schema for config.local.* machine-local overlay files merged onto the shared ai-rulez config",

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Goldziher/ai-rulez/schema/eval-case.schema.json",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/eval-case.schema.json",
   "title": "ai-rulez skill eval cases",
   "description": "Harness-neutral eval cases for a skill. Files named *.eval.yaml, *.eval.yml or *.eval.json under skills/<name>/evals/ or .ai-rulez/evals/<name>/. A file holds a `cases` list, or one case written at the top level.",
   "type": "object",
