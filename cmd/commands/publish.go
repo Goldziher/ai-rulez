@@ -218,7 +218,7 @@ func init() {
 	v.StringArrayVar(&publishVerifyKeys, "key", nil, "Trusted PEM public key for the release signature (repeatable)")
 	v.StringVar(&publishVerifyIdentity, "identity", "", "Trusted certificate identity of a keyless signature (needs --issuer)")
 	v.StringVar(&publishVerifyIssuer, "issuer", "", "OIDC issuer of --identity")
-	v.StringVar(&publishVerifyRoot, "trusted-root", "", "Sigstore trusted root file (default: the one `ai-rulez trust update` cached)")
+	v.StringVar(&publishVerifyRoot, "trusted-root", "", "Sigstore trusted root file (default: the root from ai-rulez trust update)")
 	v.BoolVar(&publishVerifyRequire, "require-signature", false, "Fail an unsigned bundle, or one whose signer is not verified")
 	addFormatFlag(v, &publishFormat, formatText, formatText, formatText, formatJSON)
 	addJSONFlagAlias(v)
