@@ -700,56 +700,19 @@ func runGenerateCheck(args []string) {
 	}
 }
 
-// generateCheckCode is `generate --check`: with --locked or --frozen it first
-// requires the sources to match ai-rulez.lock (the same gate `generate` applies
-// before writing), then compares the generated files.
+// generateCheckCode is `generate --check`: it first requires the sources to
+// match ai-rulez.lock when --locked or --frozen is set or the lock is enforced
+// (a lock exists and [lock] enforce is not false), the same gate `generate`
+// applies before writing, then compares the generated files. Each root is
+// loaded once for both.
 func generateCheckCode(args []string) int {
 	if err := checkGenerateCheckFlags(); err != nil {
 		fmtError(err)
 		return 1
 	}
-	if code := lockedCheckCode(args); code != 0 {
-		return code
-	}
-	return runDriftCheck(args, recursive, driftRender)
-}
-
-// lockedCheckCode runs the locked-content gate for `generate --check` on one
-// root (args) or every root (recursive). It returns 0 when the flags are off or
-// the sources match, exitDrift when the lock and the sources disagree, else 1.
-func lockedCheckCode(args []string) int {
-	if !generateLocked && !generateFrozen {
-		return 0
-	}
-	paths := []string{""}
-	if recursive {
-		paths = findConfigFilesRecursively()
-	}
-	code := 0
-	for _, path := range paths {
-		var cfg *config.Config
-		var err error
-		if path != "" {
-			cfg, err = config.LoadConfigFromFile(context.Background(), path)
-		} else {
-			cfg, err = loadConfigForCommand(context.Background(), args)
-		}
-		if err == nil {
-			err = enforceLockedContent(cfg)
-		}
-		if err == nil {
-			continue
-		}
-		fmtError(err)
-		c := 1
-		if errors.Is(err, errLockedSourceDrift) || errors.Is(err, config.ErrLockViolation) {
-			c = exitDrift
-		}
-		if code == 0 || c < code { // a tool failure (1) outranks drift (2)
-			code = c
-		}
-	}
-	return code
+	return runDriftCheckGated(args, recursive, driftRender, func(cfg *config.Config) error {
+		return enforceLockedContentFor(cfg, true)
+	})
 }
 
 // importGate scans imported content before anything is written, when
@@ -802,7 +765,14 @@ func exitOnLockedDrift(err error) {
 // lock pins authored content, every source must still match it. generate never
 // writes the lock.
 func enforceLockedContent(cfg *config.Config) error {
-	if !generateLocked && !generateFrozen {
+	return enforceLockedContentFor(cfg, false)
+}
+
+// enforceLockedContentFor is enforceLockedContent for a run that may also be
+// `generate --check`, which verifies the content whenever the lock is enforced,
+// not only under --locked or --frozen.
+func enforceLockedContentFor(cfg *config.Config, check bool) error {
+	if !generateLocked && !generateFrozen && !(check && cfg.LockEnforced()) {
 		return nil
 	}
 	lines, err := verifyLockedSources(cfg)

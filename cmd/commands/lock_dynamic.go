@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
-	"github.com/spf13/cobra"
 )
 
 // exitUnpinned is the exit code of a `lock` that wrote the lock but left served
@@ -29,7 +27,8 @@ var (
 	lockServeIncludeStatic bool
 	lockServeSources       []string
 	lockStrict             bool
-	// lockUnpinned collects the refusals of this run, for the exit code.
+	// lockUnpinned collects the refusals of the current run (runLockFor resets it
+	// per run); a root that left skills unpinned reports exitUnpinned.
 	lockUnpinned []mcp.Refusal
 )
 
@@ -39,12 +38,6 @@ func init() {
 	f.BoolVar(&lockServeIncludeStatic, "include-static", false, "Also pin the view that serves static skills too (see mcp --serve-skills --include-static)")
 	f.StringArrayVar(&lockServeSources, "source", nil, "Also pin the view with this extra skill source, repeatable (see mcp --serve-skills --source)")
 	f.BoolVar(&lockStrict, "strict", false, "Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3)")
-	LockCmd.PostRun = func(*cobra.Command, []string) {
-		if len(lockUnpinned) > 0 {
-			fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --strict to fail instead\n", len(lockUnpinned))
-			os.Exit(exitUnpinned)
-		}
-	}
 }
 
 // lockExtraViews is the view the serve-view flags select, if any.

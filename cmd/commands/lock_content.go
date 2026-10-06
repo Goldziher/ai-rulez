@@ -134,15 +134,9 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 		}
 		return nil, nil
 	}
-	// The lock pins the shared sources: the machine-local overlay is not part of it.
-	shared := cfg
-	if cfg.LocalOverlay != nil || cfg.LocalContent != nil {
-		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
-		if _, statErr := os.Stat(path); statErr == nil {
-			if reloaded, loadErr := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal()); loadErr == nil {
-				shared = reloaded
-			}
-		}
+	shared, err := sharedConfig(cfg)
+	if err != nil {
+		return nil, err
 	}
 	snap, err := lockSnapshot(shared, lock.Profile, true)
 	if err != nil {
@@ -154,6 +148,24 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 		lines = append(lines, diff.Changes[i].Line())
 	}
 	return lines, nil
+}
+
+// sharedConfig returns cfg without the machine-local overlay: the lock pins the
+// shared sources only. A reload that fails is an error, never a silent fallback
+// to cfg, which would compare the local overlay against the shared pins.
+func sharedConfig(cfg *config.Config) (*config.Config, error) {
+	if cfg.LocalOverlay == nil && cfg.LocalContent == nil {
+		return cfg, nil
+	}
+	path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+	if _, err := os.Stat(path); err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
+	}
+	reloaded, err := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal())
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
+	}
+	return reloaded, nil
 }
 
 // lockDriftFor returns the AR981 and AR982 findings for strict validation. It
@@ -179,12 +191,9 @@ func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 	if !lock.HasContentPins() {
 		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}
 	}
-	shared := cfg
-	if cfg.LocalOverlay != nil || cfg.LocalContent != nil {
-		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
-		if reloaded, loadErr := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal()); loadErr == nil {
-			shared = reloaded
-		}
+	shared, err := sharedConfig(cfg)
+	if err != nil {
+		return unverifiable(err)
 	}
 	snap, err := lockSnapshot(shared, lock.Profile, false)
 	if err != nil {

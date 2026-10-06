@@ -57,7 +57,10 @@ The lock also pins [[skill_sources]] (commit and tree digest, kind "source") and
 the digest of every skill the skills server would serve (kind "served"), which
 [lock] enforce = true checks before serving.
 
-Exit codes: 0 ok, 1 the command could not run, 2 --check found a stale lock.`,
+Exit codes: 0 ok; 1 the command could not run (a tool error); 2 --check found
+a stale lock (drift); 3 the lock was written but served skills were left
+unpinned because the security scan refuses them. Over several roots
+(--recursive) the most severe code wins: 1, then 2, then 3.`,
 	Run: runLock,
 }
 
@@ -97,6 +100,7 @@ func runLockFor(kind string, names []string) int {
 	if lockRecursive {
 		paths = findConfigFilesRecursively()
 	}
+	lockUnpinned = nil // per run: a long-lived process must not carry refusals over
 	code := 0
 	for _, path := range paths {
 		var c int
@@ -108,9 +112,10 @@ func runLockFor(kind string, names []string) int {
 		default:
 			c = writeLockAt(path, kind, names)
 		}
-		if c > code {
-			code = c
-		}
+		code = worstExit(code, c)
+	}
+	if len(lockUnpinned) > 0 {
+		fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --strict to fail instead\n", len(lockUnpinned))
 	}
 	return code
 }
@@ -128,6 +133,7 @@ func writeLockAt(path, kind string, names []string) int {
 		wanted[n] = true
 	}
 	remoteRefresh := !lockContentOnly
+	unpinnedBefore := len(lockUnpinned)
 	defer prepareLockRun(remoteRefresh, kind, wanted)()
 
 	cfg, err := loadForLock(path, config.WithoutLocal())
@@ -166,6 +172,9 @@ func writeLockAt(path, kind string, names []string) int {
 		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.Output), next.Tree)
 	}
 	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
+	if len(lockUnpinned) > unpinnedBefore {
+		return exitUnpinned
+	}
 	return 0
 }
 
