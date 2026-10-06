@@ -84,7 +84,10 @@ func (i Item) Key() string { return i.Kind + "\x00" + i.Domain + "\x00" + i.ID }
 // OutputPin pins one generated output file: its path relative to the project
 // root and the digest of its header-free rendering.
 type OutputPin struct {
-	Path   string `toml:"path"`
+	// Role, when set, makes this the aggregate pin of the outputs of that role
+	// (Path is then empty); see role_outputs.go.
+	Role   string `toml:"role,omitempty"`
+	Path   string `toml:"path,omitempty"`
 	Digest string `toml:"digest"`
 }
 
@@ -200,7 +203,12 @@ func sortedItems(in []Item) []Item {
 
 func sortedOutputs(in []OutputPin) []OutputPin {
 	out := append([]OutputPin(nil), in...)
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Role != out[j].Role {
+			return out[i].Role < out[j].Role
+		}
+		return out[i].Path < out[j].Path
+	})
 	return out
 }
 

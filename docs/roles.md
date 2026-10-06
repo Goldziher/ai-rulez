@@ -52,6 +52,7 @@ deploy = "on"                        # child wins over the parent's "user-invoca
 | `skills`, `rules`, `agents`, `commands`, `checks` | `include` and `exclude` lists. An entry is an item id or a [`path.Match`](https://pkg.go.dev/path#Match) glob; an entry containing `/` is matched against `domain/id`. An empty `include` keeps everything the domains provide; `exclude` always wins. There is no selector for `context`: context files stay. |
 | `skill_mode` | Skill id or glob to a Claude Code `skillOverrides` state. |
 | `delivery` | Skill id or glob to `static`, `served` or `both`: how the skill reaches this role's agent (see [Delivery](#delivery)). |
+| `pin` | `true` records the digest of the role's rendered outputs in `ai-rulez.lock`. Not inherited. |
 | `extends` | The name of one parent role. |
 | `match` | `groups`: hint strings for an external tool. Not inherited. |
 
@@ -281,9 +282,12 @@ other interface: lists come from `roles.json` / `catalog`, previews from `roles 
 ## Roles and the lock file
 
 The [lock file](lockfile.md) pins each role declaration as an item (`kind = "role"`), so adding a role, or
-changing what a role includes, shows up in the lock diff and is caught by `lock --check`. Outputs generated for a
-single role are not pinned: the lock pins the default rendering, and `generate --locked --role <name>` verifies
-that the *sources* still match the lock before generating the role's slice. Skills a role delivers as `served` are
+changing what a role includes, shows up in the lock diff and is caught by `lock --check`. The lock pins the
+default rendering; a role's rendered outputs are pinned, as one digest per role, when the role sets `pin = true`
+(or with `lock --roles`). `lock --check [--role <name>]` and `generate --check --locked --role <name>` then
+catch a change in what the role renders that leaves the sources alone, for example a new `skill_mode` entry or a
+generator release; see [Composing with roles](lockfile.md#composing-with-roles). Roles without a pin are
+unchanged, and `generate --locked --role <name>` still verifies that the *sources* match the lock. Skills a role delivers as `served` are
 pinned as `[[served]]` entries (see [Served skills and skill sources](lockfile.md#served-skills-and-skill-sources)),
 so `[lock] enforce` holds for a server started with `--role`. Checks are a role-selectable kind and are pinned like
 rules.
