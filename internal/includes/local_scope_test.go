@@ -72,3 +72,46 @@ func TestResolver_CreateSource_CommittedLocalOverrideStaysInsideProject(t *testi
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "outside the project")
 }
+
+// A local include that leaves the project is an error when the project config
+// declares it, not a warning that drops the include and exits 0; the machine-local
+// overlay stays allowed.
+func TestResolveIncludes_OutsideLocalIncludeIsAnError(t *testing.T) {
+	tests := []struct {
+		name    string
+		overlay bool
+		wantErr bool
+	}{
+		{"declared in the committed config", false, true},
+		{"declared in the local overlay", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			project := filepath.Join(root, "project")
+			require.NoError(t, os.MkdirAll(filepath.Join(project, ".ai-rulez"), 0o755))
+			require.NoError(t, os.MkdirAll(filepath.Join(root, "victim", "rules"), 0o755))
+			cfg := &config.Config{
+				BaseDir: project, ConfigDir: filepath.Join(project, ".ai-rulez"),
+				Includes: []config.IncludeConfig{{Name: "x", Source: "../victim"}},
+				Content:  &config.ContentTree{Domains: map[string]*config.Domain{}},
+			}
+			if tt.overlay {
+				cfg.LocalOverlay = &config.LocalOverlay{Doc: map[string]any{"includes": []any{map[string]any{"name": "x", "source": "../victim"}}}}
+			}
+
+			// Act
+			_, err := NewResolver(project, "").ResolveIncludes(t.Context(), cfg)
+
+			// Assert
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, config.ErrIncludeOutsideProject)
+				assert.Contains(t, err.Error(), "outside the project")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
