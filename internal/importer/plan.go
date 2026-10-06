@@ -80,6 +80,9 @@ func newFinding(status Status, source, field, target, reason string) Finding {
 type File struct {
 	Path string
 	Data []byte
+	// Exec marks a file the source kept executable (a script); it is written
+	// with the execute bits.
+	Exec bool
 }
 
 // Item is one piece of content to write below the config directory.
@@ -145,7 +148,7 @@ func (it *Item) Files() []File {
 		res := append([]File(nil), it.Resources...)
 		sort.Slice(res, func(i, j int) bool { return res[i].Path < res[j].Path })
 		for _, r := range res {
-			out = append(out, File{Path: it.root() + "skills/" + it.Name + "/" + r.Path, Data: r.Data})
+			out = append(out, File{Path: it.root() + "skills/" + it.Name + "/" + r.Path, Data: r.Data, Exec: r.Exec})
 		}
 	}
 	return out
@@ -171,6 +174,8 @@ type RawFile struct {
 	Path    string
 	Data    []byte
 	Sources []string
+	// Exec marks an executable file (see File.Exec).
+	Exec bool
 }
 
 // Plan is what an importer wants to write. Building one reads only. An
