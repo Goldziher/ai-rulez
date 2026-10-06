@@ -107,7 +107,8 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			holder.set(b.cfg)
 			return b.catalog, nil
 		}
-		opts.Fingerprint = func() (string, error) { return fingerprint(roots) }
+		logs := st.usageFiles(first.cfg)
+		opts.Fingerprint = func() (string, error) { return fingerprint(roots, logs...) }
 		if baselineErr == nil {
 			opts.Baseline = baseline
 		}
@@ -390,18 +391,40 @@ func defaultTrust(cfg *config.Config) func(*CatalogSkill) string {
 		imports = config.TrustWarn
 	}
 	return func(s *CatalogSkill) string {
-		if s.Ref != "" || s.Commit != "" || includes.IsGitURL(s.Source) {
+		if s.Imported || s.Ref != "" || s.Commit != "" || includes.IsGitURL(s.Source) {
 			return imports
 		}
 		return config.TrustWarn
 	}
 }
 
-func (st *ServeSetup) telemetry(cfg *config.Config) func(SessionTelemetry) {
+// usageLogPath is the file load_skill appends usage to, or "".
+func (st *ServeSetup) usageLogPath(cfg *config.Config) string {
 	logPath := st.UsageLog
 	if logPath == "" && st.UsageSink == "" && cfg.Usage != nil && cfg.Usage.SkillsIndex && cfg.ConfigDir != "" {
 		logPath = filepath.Join(cfg.ConfigDir, "local", "usage.jsonl")
 	}
+	return logPath
+}
+
+// usageFiles lists, as absolute paths, the files a load_skill writes: the usage
+// log and the session salt beside it. Writing them must not trigger a reload.
+func (st *ServeSetup) usageFiles(cfg *config.Config) []string {
+	logPath := st.usageLogPath(cfg)
+	if logPath == "" {
+		return nil
+	}
+	var out []string
+	for _, p := range []string{logPath, usage.DefaultSaltPath(logPath)} {
+		if abs, err := filepath.Abs(p); err == nil {
+			out = append(out, abs)
+		}
+	}
+	return out
+}
+
+func (st *ServeSetup) telemetry(cfg *config.Config) func(SessionTelemetry) {
+	logPath := st.usageLogPath(cfg)
 	options := usage.RecordOptions{LogPath: logPath, SinkCommand: st.UsageSink}
 	if cfg.ConfigDir != "" {
 		options.IndexPath = filepath.Join(cfg.ConfigDir, usage.IndexFileName)
@@ -482,11 +505,18 @@ func isCacheBookkeeping(root, p string) bool {
 }
 
 func isUsageLog(p string, logs []string) bool {
-	if strings.HasSuffix(p, ".jsonl") && filepath.Base(filepath.Dir(p)) == "local" {
+	if filepath.Base(filepath.Dir(p)) == "local" && (strings.HasSuffix(p, ".jsonl") || filepath.Base(p) == "usage.salt") {
 		return true
 	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		abs = filepath.Clean(p)
+	}
 	for _, l := range logs {
-		if l != "" && filepath.Clean(l) == filepath.Clean(p) {
+		if l == "" {
+			continue
+		}
+		if la, err := filepath.Abs(l); err == nil && la == abs {
 			return true
 		}
 	}

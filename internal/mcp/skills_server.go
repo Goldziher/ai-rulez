@@ -145,8 +145,12 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 
 func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
 	key := req.GetString(keyName, "")
-	skill, ok := s.cat().Lookup(key)
+	cat := s.cat()
+	skill, ok := cat.Lookup(key)
 	if !ok {
+		if r, refused := cat.Refusal(key); refused {
+			return handlers.ToolError(fmt.Errorf("skill %q is refused (%s): %s", key, r.Code, r.Reason))
+		}
 		return handlers.ToolError(fmt.Errorf("no served skill %q", key))
 	}
 	session, _ := s.sessionInfo(req)

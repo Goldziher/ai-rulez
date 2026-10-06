@@ -66,6 +66,9 @@ type CatalogSkill struct {
 	Delivery    string
 	Commit      string
 	Trust       string
+	// Imported marks a skill whose content comes from an include or from outside
+	// the project; it is scanned at the strict level.
+	Imported bool
 	// LockDigest is the digest ai-rulez.lock pins (see lockDigest).
 	LockDigest string
 	// Locked reports that ai-rulez.lock records exactly this skill's digest.
@@ -207,6 +210,7 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 		Delivery:    string(src.Delivery),
 		Commit:      src.Commit,
 		Trust:       src.Trust,
+		Imported:    src.Imported,
 		Frontmatter: front,
 	}
 	if len(skill.Triggers) == 0 {
