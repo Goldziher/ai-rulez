@@ -926,6 +926,13 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 			continue
 		}
 
+		// A frontmatter that never closes would be served as body text with no
+		// name or description; treat it as malformed like an unparseable one.
+		if contentFile.Metadata == nil && !contentFile.MalformedFrontmatter && hasUnclosedFrontmatter(contentFile.Content) {
+			logger.Warn("Ignoring skill frontmatter with no closing '---'", "skill", entry.Name(), "path", skillPath)
+			contentFile.MalformedFrontmatter = true
+		}
+
 		// Override the name with the directory name instead of filename
 		contentFile.Name = entry.Name()
 
@@ -1159,6 +1166,21 @@ func scanAgents(agentsPath string) ([]ContentFile, error) {
 func ParseFrontmatterPublic(content string) (metadata *Metadata, body string) {
 	metadata, body, _ = parseFrontmatter(content)
 	return metadata, body
+}
+
+// hasUnclosedFrontmatter reports whether content opens a frontmatter block with
+// "---" and never closes it.
+func hasUnclosedFrontmatter(content string) bool {
+	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
+		return false
+	}
+	lines := strings.Split(content, "\n")
+	for _, line := range lines[1:] {
+		if strings.TrimSpace(line) == "---" {
+			return false
+		}
+	}
+	return true
 }
 
 // parseFrontmatter parses optional YAML frontmatter from content.
