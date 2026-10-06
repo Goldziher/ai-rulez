@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/lock-subject.schema.json",
+  "title": "ai-rulez lock subject",
+  "description": "Output of `ai-rulez lock --subject --format json`: the lock-subject digest a signature over the lock commits to, and the fields it is computed from.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "type",
+    "subject",
+    "tree",
+    "approvals_digest",
+    "hash_version",
+    "scope",
+    "outputs_pinned"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "type": {
+      "const": "ai-rulez/lock-subject/v1",
+      "description": "The domain-separation label of the subject digest."
+    },
+    "subject": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The lock-subject digest: the value to sign."
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "The top-level lock digest, recomputed from the entries."
+    },
+    "approvals_digest": { "type": "string", "description": "Digest of the approval set; empty until approvals exist." },
+    "hash_version": { "type": "integer", "minimum": 1 },
+    "scope": { "type": "string", "description": "The [lock] scope the pins were written with (all or skills)." },
+    "outputs_pinned": { "type": "boolean" }
+  }
+}

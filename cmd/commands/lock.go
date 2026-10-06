@@ -27,6 +27,9 @@ var (
 	lockRecursive   bool
 	lockKind        string
 	lockProfile     string
+
+	lockSubject       bool
+	lockSubjectOutput string
 )
 
 // LockCmd writes and verifies ai-rulez.lock.
@@ -53,6 +56,9 @@ includes or skills; the other pins (and the content pins) are kept.
   ai-rulez lock --check --format json
                                 the same comparison as JSON on stdout (the
                                 MCP lock_status tool returns this document)
+  ai-rulez lock --subject       print the lock-subject digest to sign with
+                                cosign (--output <file> writes the statement,
+                                --format json prints it); offline, read-only
 
 --check names every added, removed or changed item and whether its source or its
 generated output changed.
@@ -72,7 +78,9 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockCheck, "check", false, "Verify ai-rulez.lock against the configuration and cached content without writing or using the network")
 	LockCmd.Flags().BoolVar(&lockDiffFlag, "diff", false, "Show how the lock differs from the sources and outputs (for pull request review); exits 0")
 	LockCmd.Flags().BoolVar(&lockContentOnly, "content-only", false, "Re-pin authored content and outputs only: no network, remote pins are kept")
-	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check and --diff: text (default) or json")
+	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
+	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
+	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check, --diff and --subject: text (default) or json")
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
@@ -92,6 +100,14 @@ func runLock(_ *cobra.Command, args []string) {
 		fmtError(oops.Errorf("--check and --diff are mutually exclusive"))
 		os.Exit(1)
 	}
+	if lockSubjectOutput != "" && !lockSubject {
+		fmtError(oops.Errorf("--output needs --subject"))
+		os.Exit(1)
+	}
+	if lockSubject && (lockCheck || lockDiffFlag || lockContentOnly || lockKind != "" || len(args) > 0) {
+		fmtError(oops.Errorf("--subject only reads the lock: it cannot be combined with --check, --diff, --content-only, --kind or names"))
+		os.Exit(1)
+	}
 	if code := runLockFor(lockKind, args); code != 0 {
 		os.Exit(code)
 	}
@@ -109,6 +125,8 @@ func runLockFor(kind string, names []string) int {
 	for _, path := range paths {
 		var c int
 		switch {
+		case lockSubject:
+			c = lockSubjectAt(path)
 		case lockCheck:
 			c = checkLockAt(path)
 		case lockDiffFlag:
