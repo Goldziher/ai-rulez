@@ -90,6 +90,9 @@ type Input struct {
 	// PreviousLabel names it (the tag it came from).
 	PreviousLock  []byte
 	PreviousLabel string
+	// PreviousExplicit is set when the previous release was named (--since): a
+	// lock that cannot be parsed is then an error, not a note.
+	PreviousExplicit bool
 	// RequireSignature makes Build fail unless Sign is set (AR9N7).
 	RequireSignature bool
 	// Sign signs the release archive and the statement binding its name,
@@ -304,10 +307,11 @@ func Build(in Input) (*Dist, error) {
 	if in.Target == TargetNPM && in.Sign != nil {
 		d.Warnings = append(d.Warnings, "the signature covers the release archive, not the npm tarball that --to npm publishes")
 	}
-	notes, err := releaseNotes(in, manifest)
+	notes, noteWarnings, err := releaseNotes(in, manifest)
 	if err != nil {
 		return nil, err
 	}
+	d.Warnings = append(d.Warnings, noteWarnings...)
 	d.Files[NotesFile], roles[NotesFile] = notes, "notes"
 
 	sums := make([]SumEntry, 0, len(d.Files))
@@ -438,7 +442,10 @@ func buildPlan(in Input, d *Dist, roles map[string]string, tp targetPlan) Plan {
 	return plan
 }
 
-func releaseNotes(in Input, m Manifest) ([]byte, error) {
+// releaseNotes renders RELEASE_NOTES.md. A previous lock that cannot be parsed
+// leaves the changes section out with a warning, unless it was named explicitly:
+// a bad tag from a past release must not block a new one.
+func releaseNotes(in Input, m Manifest) (notes []byte, warnings []string, err error) {
 	var sb strings.Builder
 	sb.WriteString("# " + in.Name + " " + in.Version + "\n\n")
 	sb.WriteString("- Bundle: `" + m.Bundle.File + "` (" + m.Bundle.Digest + ")\n")
@@ -455,21 +462,25 @@ func releaseNotes(in Input, m Manifest) ([]byte, error) {
 	}
 	if len(in.PreviousLock) > 0 {
 		prev, err := parseLock(in.PreviousLock, in.PreviousLabel)
-		if err != nil {
-			return nil, err
+		switch {
+		case err != nil && in.PreviousExplicit:
+			return nil, nil, err
+		case err != nil:
+			warnings = append(warnings, "the release notes omit the changes section: the lock at "+in.PreviousLabel+" cannot be read")
+		default:
+			cur, err := parseLock(in.Lock, in.Name)
+			if err != nil {
+				return nil, nil, err
+			}
+			label := in.PreviousLabel
+			if label == "" {
+				label = "the previous release"
+			}
+			sb.WriteString(notesSection(label, DiffLocks(prev, cur)))
 		}
-		cur, err := parseLock(in.Lock, in.Name)
-		if err != nil {
-			return nil, err
-		}
-		label := in.PreviousLabel
-		if label == "" {
-			label = "the previous release"
-		}
-		sb.WriteString(notesSection(label, DiffLocks(prev, cur)))
 	}
 	sb.WriteString("\nVerify the download with `ai-rulez publish verify <dir>` or `sha256sum -c SHA256SUMS`.\n")
-	return []byte(sb.String()), nil
+	return []byte(sb.String()), warnings, nil
 }
 
 // templateData is what an emitter template sees: plain values, no methods.
