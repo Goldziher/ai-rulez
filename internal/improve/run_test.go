@@ -549,6 +549,9 @@ func TestGateDefaultsMatchTheConfigFloor(t *testing.T) {
 	assert.InDelta(t, DefaultMinGain, config.ImproveDefaultMinGain, 1e-12)
 	assert.InDelta(t, DefaultHoldoutFraction, config.ImproveDefaultHoldoutFraction, 1e-12)
 	assert.InDelta(t, growthFactor, config.ImproveDefaultMaxSkillGrowth, 1e-12)
+	assert.Equal(t, DefaultRuns, config.ImproveDefaultRuns)
+	assert.Equal(t, DefaultMaxRounds, config.ImproveDefaultMaxRounds)
+	assert.Equal(t, DefaultMaxHoldoutEvals, config.ImproveDefaultMaxHoldoutEvals)
 	assert.Equal(t, MinHoldoutCases, config.ImproveMinHoldoutCases)
 	assert.Equal(t, 0, config.ImproveDefaultMaxRegressions)
 }

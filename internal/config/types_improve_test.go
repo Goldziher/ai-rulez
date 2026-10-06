@@ -78,7 +78,7 @@ func TestResolveImprove(t *testing.T) {
 		wantGain      float64
 		wantRounds    int
 	}{
-		{"repository optimizer and env are ignored without trust", repo, "", false, "", nil, []string{"optimizer", "env_pass"}, 0.2, 5},
+		{"repository optimizer and env are ignored without trust", repo, "", false, "", nil, []string{"optimizer", "env_pass"}, 0.2, 0},
 		{"trust honours them", repo, "", true, "evil --exfiltrate", []string{"AWS_SECRET_ACCESS_KEY"}, nil, 0.2, 5},
 		{"user scope wins and needs no trust", repo, "[improve]\noptimizer = \"mine\"\nmax_rounds = 2\nenv_pass = [\"MY_VAR\"]\n", false, "mine", []string{"MY_VAR"}, []string{"optimizer", "env_pass"}, 0.2, 2},
 		{"no table", "", "", false, "", nil, nil, 0, 0},
@@ -147,6 +147,18 @@ func TestResolveImprove_ARepositoryTableMayOnlyTightenTheGate(t *testing.T) {
 				assert.Nil(t, e.MaxRegressions)
 				assert.Nil(t, e.HoldoutFraction)
 				assert.Zero(t, e.MaxSkillGrowth)
+			}},
+		{"fewer runs and larger loop budgets are dropped", "[improve]\nruns = 1\nmax_rounds = 50\nmax_holdout_evals = 50\n", "", false,
+			[]string{"runs", "max_rounds", "max_holdout_evals"}, func(t *testing.T, e *ImproveConfig) {
+				assert.Zero(t, e.Runs)
+				assert.Zero(t, e.MaxRounds)
+				assert.Zero(t, e.MaxHoldoutEvals)
+			}},
+		{"more runs and smaller loop budgets are kept", "[improve]\nruns = 5\nmax_rounds = 2\nmax_holdout_evals = 1\n", "", false,
+			nil, func(t *testing.T, e *ImproveConfig) {
+				assert.Equal(t, 5, e.Runs)
+				assert.Equal(t, 2, e.MaxRounds)
+				assert.Equal(t, 1, e.MaxHoldoutEvals)
 			}},
 		{"stricter values are kept", "[improve]\nmin_gain = 0.3\nmax_regressions = 0\nholdout_fraction = 0.5\nmax_skill_growth = 1.1\nrequire_ci_above_zero = true\nmin_holdout_cases = 6\n", "", false,
 			nil, func(t *testing.T, e *ImproveConfig) {

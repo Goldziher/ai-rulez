@@ -213,8 +213,9 @@ workspace and an egress policy if the optimizer is not code you trust.
 reported and ignored (`AR9J6`). The same keys in the user config file are used without it.
 
 **A repository may tighten the gate, not weaken it.** A repository `[improve]` table is honoured for `min_gain`,
-`max_regressions`, `holdout_fraction` and `max_skill_growth` only when the value is at least as strict as the default
-(gain >= 0.05, 0 regressions, held-out share >= 0.3, growth <= 1.25); `require_ci_above_zero = true` and a higher
+`max_regressions`, `holdout_fraction`, `max_skill_growth`, `runs`, `max_rounds` and `max_holdout_evals` only when the
+value is at least as strict as the default (gain >= 0.05, 0 regressions, held-out share >= 0.3, growth <= 1.25,
+runs >= 3, rounds <= 3, held-out evaluations <= 3); `require_ci_above_zero = true` and a higher
 `min_holdout_cases` always apply. A looser value is dropped with an `AR9J6` warning unless `--trust-repo-optimizer` is
 given. `validate --strict` reports the repository keys `improve run` will not honour (`AR9J6`, a warning). The user config file may set any value, and so may a flag. The consent summary prints the effective gate:
 minimum gain, regressions, held-out floor and share, growth limit and the interval requirement.
