@@ -112,8 +112,8 @@ func runUpdate(names []string) int {
 		fmtError(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
 		return 1
 	}
-	if updateFormat != "" && updateFormat != formatText && updateFormat != formatJSON {
-		fmtError(oops.Errorf("unknown --format %q (use text or json)", updateFormat))
+	if err := checkFormatFlag(updateFormat); err != nil {
+		fmtError(err)
 		return 1
 	}
 	lockOffline = updateOffline
