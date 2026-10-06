@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/improve-report.schema.json",
+  "title": "ai-rulez improve report",
+  "description": "report.json of an `ai-rulez improve` run (improve-report/1, experimental): the split by case id, every round's decision with the held-out comparison, costs, egress and the policy violations. Written to .ai-rulez/local/improve/<run-id>/ and never committed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "skill",
+    "skill_path",
+    "status",
+    "original_digest",
+    "split",
+    "harness",
+    "eval_runner",
+    "optimizer",
+    "runs",
+    "gate",
+    "constraints",
+    "rounds",
+    "costs"
+  ],
+  "properties": {
+    "schema": {
+      "const": "improve-report/1"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^imp-[0-9a-f]{8}(-[0-9]+)?$"
+    },
+    "skill": {
+      "type": "string"
+    },
+    "skill_path": {
+      "type": "string",
+      "description": "Repository-relative skill directory the patch paths use."
+    },
+    "date": {
+      "type": "string"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "status": {
+      "enum": ["accepted", "no-candidate"]
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the loop stopped, or why no candidate was accepted."
+    },
+    "original_digest": {
+      "type": "string"
+    },
+    "candidate_digest": {
+      "type": "string"
+    },
+    "accepted_round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "train", "held_out"],
+      "properties": {
+        "method": {
+          "enum": ["tag", "fraction"]
+        },
+        "tag": {
+          "type": "string"
+        },
+        "fraction": {
+          "type": "number"
+        },
+        "train": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "held_out": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "harness": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "eval_runner": {
+      "type": "string"
+    },
+    "optimizer": {
+      "type": "string",
+      "description": "The optimizer program (argv[0]); arguments are not recorded."
+    },
+    "runs": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_gain", "max_regressions", "max_rounds", "max_holdout_evals"],
+      "properties": {
+        "min_gain": {
+          "type": "number"
+        },
+        "max_regressions": {
+          "type": "integer"
+        },
+        "max_rounds": {
+          "type": "integer"
+        },
+        "max_holdout_evals": {
+          "type": "integer"
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["editable", "frontmatter_immutable", "max_skill_tokens", "forbid"],
+      "properties": {
+        "editable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frontmatter_immutable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_skill_tokens": {
+          "type": "integer"
+        },
+        "forbid": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "baseline_held_out": {
+      "$ref": "#/$defs/metrics"
+    },
+    "baseline_train": {
+      "$ref": "#/$defs/metrics"
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/round"
+      }
+    },
+    "costs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eval_usd", "optimizer_reported_usd", "total_usd", "max_usd"],
+      "properties": {
+        "eval_usd": {
+          "type": "number"
+        },
+        "optimizer_reported_usd": {
+          "type": "number"
+        },
+        "total_usd": {
+          "type": "number"
+        },
+        "max_usd": {
+          "type": "number"
+        },
+        "optimizer_reported_no_cost": {
+          "type": "boolean"
+        }
+      }
+    },
+    "egress": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "env_pass": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names only; values are never recorded."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scored", "passed", "pass_rate", "trigger_precision", "trigger_recall", "near_miss_false_positives"],
+      "properties": {
+        "scored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "trigger_precision": {
+          "type": ["number", "null"]
+        },
+        "trigger_recall": {
+          "type": ["number", "null"]
+        },
+        "near_miss_false_positives": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "rule", "detail"],
+      "properties": {
+        "code": {
+          "const": "AR9J3"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "candidate", "gain", "wins", "losses", "table", "underpowered"],
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/metrics"
+        },
+        "candidate": {
+          "$ref": "#/$defs/metrics"
+        },
+        "gain": {
+          "type": "number"
+        },
+        "wins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "losses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unstable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "table": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "base_pass", "candidate_pass"],
+            "properties": {
+              "case": {
+                "type": "string"
+              },
+              "base_pass": {
+                "type": "boolean"
+              },
+              "candidate_pass": {
+                "type": "boolean"
+              },
+              "unstable": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "underpowered": {
+          "type": "boolean"
+        }
+      }
+    },
+    "round": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["round", "decision", "cost_usd", "optimizer_cost_usd"],
+      "properties": {
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decision": {
+          "type": "string",
+          "description": "accepted, or rejected: <policy|regression|below gain|optimizer failed|no change|over budget>."
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/violation"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string",
+          "description": "The optimizer's own text, control characters removed; untrusted."
+        },
+        "notes": {
+          "type": "string",
+          "description": "The optimizer's own text, control characters removed; untrusted."
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "candidate_digest": {
+          "type": "string"
+        },
+        "train_after": {
+          "$ref": "#/$defs/metrics"
+        },
+        "held_out": {
+          "$ref": "#/$defs/comparison"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "optimizer_cost_usd": {
+          "type": "number"
+        },
+        "description": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["before", "after"],
+          "properties": {
+            "before": {
+              "type": "string"
+            },
+            "after": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
