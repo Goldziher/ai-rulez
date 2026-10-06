@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func repoWithSymlinkedGitignore(t *testing.T) (dir, target string) {
@@ -21,9 +23,7 @@ func repoWithSymlinkedGitignore(t *testing.T) (dir, target string) {
 	require.NoError(t, err, string(out))
 	target = filepath.Join(t.TempDir(), "shared-gitignore")
 	require.NoError(t, os.WriteFile(target, []byte("# shared\n"), 0o644))
-	if err := os.Symlink(target, filepath.Join(dir, ".gitignore")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, target, filepath.Join(dir, ".gitignore"))
 	return dir, target
 }
 

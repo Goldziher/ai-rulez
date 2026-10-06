@@ -6,10 +6,12 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/okf"
-	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func importBundle(t *testing.T, files map[string]string, opts okfbridge.ImportOptions) (*okfbridge.ImportResult, string) {
@@ -201,8 +203,8 @@ func TestImportSkipsSymlinksWithAWarning(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "real.md"), []byte("---\ntype: Decision\n---\nx\n"), 0o644))
-	require.NoError(t, os.Symlink(filepath.Join(dir, "real.md"), filepath.Join(dir, "link.md")))
-	require.NoError(t, os.Symlink(t.TempDir(), filepath.Join(dir, "linkdir")))
+	testutil.SymlinkOrSkip(t, filepath.Join(dir, "real.md"), filepath.Join(dir, "link.md"))
+	testutil.SymlinkOrSkip(t, t.TempDir(), filepath.Join(dir, "linkdir"))
 	b, err := okf.Load(os.DirFS(dir))
 	require.NoError(t, err)
 	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")

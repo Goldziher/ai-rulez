@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func localIncludeSnapshot(t *testing.T, f *fixture) *Snapshot {
@@ -94,12 +95,12 @@ func TestCompute_LocalIncludeWithASymlinkIsPinnedByLinkTarget(t *testing.T) {
 	f := newFixture(t)
 	writeAt(t, f.root, "vendor/shared/rules/ok.md", "# ok\n")
 	link := filepath.Join(f.root, "vendor", "shared", "rules", "leak.md")
-	require.NoError(t, os.Symlink("ok.md", link))
+	testutil.SymlinkOrSkip(t, "ok.md", link)
 	f.cfg.Includes = []config.IncludeConfig{{Name: "shared", Source: "vendor/shared"}}
 
 	before := localIncludeSnapshot(t, f)
 	require.NoError(t, os.Remove(link))
-	require.NoError(t, os.Symlink("elsewhere.md", link))
+	testutil.SymlinkOrSkip(t, "elsewhere.md", link)
 	after := localIncludeSnapshot(t, f)
 
 	require.Empty(t, before.Problems)

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestLocalOperator_IgnoresLocalTreeBeforeWriting(t *testing.T) {
@@ -90,7 +91,7 @@ func TestFileManager_AtomicWriteIgnoresPredictableTempFile(t *testing.T) {
 	victim := filepath.Join(dir, "victim.txt")
 	require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o600))
 	target := filepath.Join(dir, "rule.md")
-	require.NoError(t, os.Symlink(victim, target+".tmp"))
+	testutil.SymlinkOrSkip(t, victim, target+".tmp")
 	fm := crud.NewFileManager(dir)
 
 	// Act

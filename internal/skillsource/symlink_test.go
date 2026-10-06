@@ -2,19 +2,20 @@ package skillsource
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestResolve_LocalSymlinkedRootIsDigestedThroughTheLink(t *testing.T) {
 	real := t.TempDir()
 	write(t, real, "pdf/SKILL.md", skillMD("pdf", "Work with PDF files"))
 	link := filepath.Join(t.TempDir(), "skills-link")
-	require.NoError(t, os.Symlink(real, link))
+	testutil.SymlinkOrSkip(t, real, link)
 
 	viaLink, err := Resolve(context.Background(), Spec{Name: "local", URL: link, AllowOutside: true}, Options{})
 	require.NoError(t, err)
@@ -34,8 +35,8 @@ func TestResolve_GitPathThroughASymlinkIsRefused(t *testing.T) {
 	f := newFixture(t)
 	outside := t.TempDir()
 	write(t, outside, "evil/SKILL.md", skillMD("evil", "Outside the repository"))
-	require.NoError(t, os.Symlink(outside, filepath.Join(f.work, "linked")))
-	require.NoError(t, os.Symlink("skills", filepath.Join(f.work, "alias")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(f.work, "linked"))
+	testutil.SymlinkOrSkip(t, "skills", filepath.Join(f.work, "alias"))
 	git(t, f.work, "add", "-A")
 	git(t, f.work, "commit", "--quiet", "-m", "links")
 	git(t, f.work, "push", "--quiet", f.bare, "main")

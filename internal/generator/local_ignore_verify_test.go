@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const driftSharedIgnoring = `version = "4.0"
@@ -73,9 +74,7 @@ func TestGenerate_SymlinkedRootGitignoreIsNotWrittenThrough(t *testing.T) {
 	p.git(t, "init", "-q")
 	target := filepath.Join(t.TempDir(), "shared-gitignore")
 	require.NoError(t, os.WriteFile(target, []byte("# kept\n"), 0o644))
-	if err := os.Symlink(target, filepath.Join(p.base, ".gitignore")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, target, filepath.Join(p.base, ".gitignore"))
 	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
 
 	// Act

@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestGitignoreSymlinkedToADeviceNeverHangs(t *testing.T) {
@@ -34,9 +36,7 @@ func TestGitignoreSymlinkedToADeviceNeverHangs(t *testing.T) {
 			// Arrange
 			p := newDriftProject(t, driftSharedIgnoring)
 			p.git(t, "init", "-q")
-			if err := os.Symlink("/dev/zero", filepath.Join(p.base, ".gitignore")); err != nil {
-				t.Skipf("symlinks unavailable: %v", err)
-			}
+			testutil.SymlinkOrSkip(t, "/dev/zero", filepath.Join(p.base, ".gitignore"))
 			p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
 
 			// Act
@@ -62,9 +62,7 @@ func TestGenerate_SymlinkedGitignoreKeepsPatternsItListsItself(t *testing.T) {
 	p.git(t, "init", "-q")
 	target := filepath.Join(t.TempDir(), "shared-gitignore")
 	require.NoError(t, os.WriteFile(target, []byte(".claude/rules/*.local.*\n.ai-rulez/local/\n"), 0o644))
-	if err := os.Symlink(target, filepath.Join(p.base, ".gitignore")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, target, filepath.Join(p.base, ".gitignore"))
 	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
 
 	// Act

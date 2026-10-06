@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func gitAvailable(t *testing.T) {
@@ -187,9 +189,7 @@ func TestIgnoreRulesMirrored_SkipsSymlinkedIgnoreFiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(sub, 0o755))
 	target := filepath.Join(t.TempDir(), "elsewhere")
 	require.NoError(t, os.WriteFile(target, []byte("secret.md\n"), 0o600))
-	if err := os.Symlink(target, filepath.Join(sub, ".gitignore")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
+	testutil.SymlinkOrSkip(t, target, filepath.Join(sub, ".gitignore"))
 
 	rules, err := IgnoreRulesMirrored(dir, []string{"sub/secret.md"}, nil)
 
@@ -206,7 +206,7 @@ func TestIgnoreRulesMirrored_SkipsDeviceIgnoreFiles(t *testing.T) {
 	runGit(t, dir, "init", "-q")
 	sub := filepath.Join(dir, "sub")
 	require.NoError(t, os.MkdirAll(sub, 0o755))
-	require.NoError(t, os.Symlink("/dev/zero", filepath.Join(sub, ".gitignore")))
+	testutil.SymlinkOrSkip(t, "/dev/zero", filepath.Join(sub, ".gitignore"))
 
 	_, err := IgnoreRulesMirrored(dir, []string{"sub/x"}, nil)
 

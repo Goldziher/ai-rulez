@@ -12,6 +12,8 @@ import (
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const securityShared = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
@@ -74,7 +76,7 @@ func TestLocalDoc_SaveRefusesSymlinkedOverlay(t *testing.T) {
 	_, configDir := overlayProject(t, securityShared)
 	real := filepath.Join(t.TempDir(), "elsewhere.toml")
 	require.NoError(t, os.WriteFile(real, []byte("name = \"kept\"\n"), 0o600))
-	require.NoError(t, os.Symlink(real, filepath.Join(configDir, "config.local.toml")))
+	testutil.SymlinkOrSkip(t, real, filepath.Join(configDir, "config.local.toml"))
 	d, err := OpenLocalDoc(configDir, "config.toml")
 	require.NoError(t, err)
 	t.Cleanup(d.Close)

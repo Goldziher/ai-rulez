@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func runOne(t *testing.T, root string, v config.VerifierConfig) Result {
@@ -147,7 +149,7 @@ func TestFileExists_SymlinkSemantics(t *testing.T) {
 		"out-dir":     outside,
 		"in-dir-link": "dir",
 	} {
-		require.NoError(t, os.Symlink(target, filepath.Join(root, link)))
+		testutil.SymlinkOrSkip(t, target, filepath.Join(root, link))
 	}
 	tests := []struct {
 		name string
@@ -180,7 +182,7 @@ func TestFileExists_MissingIsNotAnErrorEvenWhenRootIsASymlink(t *testing.T) {
 	}
 	real := writeFiles(t, map[string]string{"a.txt": "x"})
 	link := filepath.Join(t.TempDir(), "root-link")
-	require.NoError(t, os.Symlink(real, link))
+	testutil.SymlinkOrSkip(t, real, link)
 
 	res := runOne(t, link, config.VerifierConfig{Type: "file_exists", Path: "a.txt"})
 

@@ -105,6 +105,16 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # The runner account is an administrator, so symlink creation is allowed;
+      # enable Developer Mode too and set AI_RULEZ_REQUIRE_SYMLINKS so the
+      # symlink tests fail instead of skipping if that ever stops being true.
+      - name: Enable symlinks (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
+          "AI_RULEZ_REQUIRE_SYMLINKS=1" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Run all tests (unit + platform)
         run: task test
 

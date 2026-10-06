@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const eventTimeout = 10 * time.Second
@@ -302,16 +304,10 @@ func TestWatcher_FollowsSymlinkedTargetAndSubdirectories(t *testing.T) {
 	external := filepath.Join(base, "shared-rules")
 	mustWrite(t, filepath.Join(realRoot, "config.toml"), "a")
 	mustWrite(t, filepath.Join(external, "r.md"), "a")
-	if err := os.Symlink(realRoot, linkedRoot); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
-	}
-	if err := os.Symlink(external, filepath.Join(realRoot, "rules")); err != nil {
-		t.Fatal(err)
-	}
+	testutil.SymlinkOrSkip(t, realRoot, linkedRoot)
+	testutil.SymlinkOrSkip(t, external, filepath.Join(realRoot, "rules"))
 	// A link back to an ancestor must not make the walk loop.
-	if err := os.Symlink(realRoot, filepath.Join(external, "loop")); err != nil {
-		t.Fatal(err)
-	}
+	testutil.SymlinkOrSkip(t, realRoot, filepath.Join(external, "loop"))
 	c := newCollector()
 	startWatcher(t, nil, c, Target{Path: linkedRoot})
 

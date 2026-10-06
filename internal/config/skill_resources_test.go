@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestLoadSkillResources(t *testing.T) {
@@ -130,7 +132,7 @@ func TestLoadSkillResources(t *testing.T) {
 		// Real reference plus a symlink pointing outside the skill tree.
 		require.NoError(t, os.WriteFile(
 			filepath.Join(dir, "references", "real.md"), []byte("real\n"), 0o644))
-		require.NoError(t, os.Symlink(secretPath, filepath.Join(dir, "references", "exfil.md")))
+		testutil.SymlinkOrSkip(t, secretPath, filepath.Join(dir, "references", "exfil.md"))
 
 		resources, err := LoadSkillResources(dir)
 		require.NoError(t, err)
@@ -150,7 +152,7 @@ func TestLoadSkillResources(t *testing.T) {
 		attackerDir := t.TempDir()
 		require.NoError(t, os.WriteFile(
 			filepath.Join(attackerDir, "secret.md"), []byte("classified"), 0o644))
-		require.NoError(t, os.Symlink(attackerDir, filepath.Join(dir, "references")))
+		testutil.SymlinkOrSkip(t, attackerDir, filepath.Join(dir, "references"))
 
 		resources, err := LoadSkillResources(dir)
 		require.NoError(t, err)
@@ -167,7 +169,7 @@ func TestLoadSkillResources(t *testing.T) {
 		attackerDir := t.TempDir()
 		require.NoError(t, os.WriteFile(
 			filepath.Join(attackerDir, "secret.md"), []byte("classified"), 0o644))
-		require.NoError(t, os.Symlink(attackerDir, filepath.Join(dir, "references", "evil")))
+		testutil.SymlinkOrSkip(t, attackerDir, filepath.Join(dir, "references", "evil"))
 
 		resources, err := LoadSkillResources(dir)
 		require.NoError(t, err)
@@ -182,9 +184,7 @@ func TestLoadSkillResources(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "references"), 0o755))
-		require.NoError(t, os.Symlink(
-			"/nonexistent/path/to/nowhere",
-			filepath.Join(dir, "references", "dead.md")))
+		testutil.SymlinkOrSkip(t, "/nonexistent/path/to/nowhere", filepath.Join(dir, "references", "dead.md"))
 
 		resources, err := LoadSkillResources(dir)
 		require.NoError(t, err)
