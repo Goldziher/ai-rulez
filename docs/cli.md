@@ -2139,6 +2139,7 @@ These flags work with all commands:
 | `--debug` / `-D`   | boolean | Enable debug output                                                             |
 | `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
+| `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
 Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` is accepted wherever `--format json` exists; it is hidden from help and warns that it is deprecated. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,

@@ -39,6 +39,9 @@ includes, dynamic generation, and MCP server integration.`,
 }
 
 func Execute() error {
+	// main sets Version from the build after init has run.
+	RootCmd.Version = Version
+	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
 	return RootCmd.Execute()
 }
