@@ -7,6 +7,10 @@ shipped code, `package.json` pins the Node version the rules mention, generated 
 A verifier never uses the network, never starts a process and never writes. The same input gives the same
 result.
 
+Two forms exist. The flat `[[verifiers]]` entries of `config.toml` below check the whole repository. The
+rule-linked specs under `.ai-rulez/verifiers/*.toml` ([next section](#rule-linked-verifiers)) attach a check
+to the rule or skill it enforces, run on changed files only, and can combine predicates.
+
 ```toml
 [[verifiers]]
 name = "readme"
@@ -37,10 +41,16 @@ type = "generated_in_sync"
 
 ```bash
 ai-rulez verifiers run                  # table, exit 2 when an error-severity verifier fails
-ai-rulez verifiers run --json           # machine-readable
-ai-rulez verifiers run --strict         # warning-severity failures also fail
+ai-rulez verifiers run --json           # machine-readable (--format json)
+ai-rulez verifiers run --strict         # warning-severity failures also fail (--fail-on warning)
 ai-rulez verifiers run --name readme    # only the named verifier (repeatable)
-ai-rulez verifiers list                 # what is declared, without evaluating
+ai-rulez verifiers run --since origin/main   # only what changed since the merge base
+ai-rulez verifiers run --staged         # only what is staged (pre-commit)
+ai-rulez verifiers run --rule database  # only verifiers that enforce this rule or skill
+ai-rulez verifiers run --format sarif --out verifiers.sarif   # also junit, json, text
+ai-rulez verifiers list [--json]        # what is declared, without evaluating
+ai-rulez verifiers explain <name>       # what it checks, the rule it enforces, how to fix it
+ai-rulez verifiers test [name...]       # run the self-test examples offline
 ```
 
 | Code | Meaning |
@@ -107,6 +117,148 @@ that expand to more than 64 `{a,b}` alternatives, a `key_equals` file that is no
   as `\xNN` or `\uNNNN`, in the table and in JSON, so a hostile file name cannot rewrite the terminal. A
   canceled run (Ctrl-C) marks the verifiers it did not reach as `error`.
 
+## Rule-linked verifiers
+
+A file `.ai-rulez/verifiers/<anything>.toml` holds `[[verifiers]]` tables. Each names the item it enforces,
+so a failure reports the rule or skill that declared the check. The directory is never rendered into generated
+outputs (it costs no context). Declarations are checked on every run; one that cannot be used is reported as
+`AR9H2` (status `error`, exit `1` when nothing failed) and never silently skipped.
+
+```toml
+[[verifiers]]
+id = "migrations-have-down"
+rule = "database"                  # exactly one of rule, skill, agent, command; `id` or `domain/id`
+anchor = "## Migrations"           # optional heading in the rule file; findings point at its line
+severity = "error"                 # error | warning (default) | info
+message = "Every migration needs a '-- down' section."
+fix = "Add a '-- down' section that reverses the change."
+when_changed = ["db/migrations/*.sql"]   # scope: changed files matching these globs
+exclude = ["db/migrations/legacy/**"]
+
+[verifiers.require.regex]          # exactly one predicate table
+regex = "(?m)^-- down\\b"
+in = "same-file"
+
+[[verifiers.examples]]             # self-tests for `verifiers test`
+name = "with down passes"
+files = { "db/migrations/0001.sql" = "CREATE TABLE t();\n-- down\nDROP TABLE t;\n" }
+changed = ["db/migrations/0001.sql"]
+expect = "pass"
+```
+
+`id` is lowercase letters, digits, `.`, `_`, `-`, and unique across `config.toml` and every spec file. Unknown
+keys are an error. The format has a JSON Schema,
+[`schema/verifiers-spec.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-spec.schema.json).
+
+### Predicates
+
+| Predicate | Fields | Holds when |
+| --- | --- | --- |
+| `regex` | `regex`, `in`, `files` | the RE2 pattern matches in each scoped file (`same-file`, default), in each scoped file's added lines (`diff-added`), or in at least one file (`any-file`) |
+| `forbid` | same as `regex` | the pattern does not match |
+| `file_exists` | `path`, `exists` (default true) | the path exists (or, with `exists = false`, does not); `path` may use a template |
+| `paired` | `for_each`, `requires_changed` or `requires_exists` | for every scoped file matching `for_each`, the derived path was changed too, or exists |
+| `glob_count` | `files`, `exclude`, `min`, `max` | the number of repository files matching `files` is within bounds |
+| `all` / `any` / `not` | arrays of predicate tables (`not`: one table) | boolean composition, at most 4 levels deep |
+
+Combinators repeat the table: `[[verifiers.require.all]]` followed by `[verifiers.require.all.regex]`, or
+`[verifiers.require.not.file_exists]`.
+
+- **Scope.** `when_changed` selects the changed, still existing files the verifier looks at (all files when no
+  `--since` or `--staged` is given). It is required when a predicate examines scoped files (`same-file` and
+  `diff-added` `regex` and `forbid`, `paired`, a templated `file_exists`). Without it the verifier is
+  whole-repository and runs on every invocation. When `when_changed` selects nothing the status is
+  `not_applicable` and the run is not failed.
+- **Full tree.** Predicates resolve against the whole repository, not only the diff: `requires_exists`,
+  `any-file`, `glob_count` and `file_exists` see unchanged files. The repository is the tracked files plus
+  untracked files that are not ignored (a directory walk outside git); symlinks are never listed or followed.
+- **`diff-added`** counts only added lines: `forbid` with it is the usual way to ratchet a rule on legacy code, so
+  only new violations fail. With `--all` and in self-tests every line counts as added. A rename keeps its old
+  path, so a moved file is not treated as new.
+- **Templates** in `paired` and `file_exists`: `{path}` (the scoped file), `{dir}`, `{stem}` (file name without
+  extension), `{ext}` (with the dot) and `{rel}`. `for_each` is a literal path whose `{rel}` captures the rest
+  (`src/api/{rel}.py` matches `src/api/v1/users.py` with `rel = v1/users`), or, without `{rel}`, a glob. The
+  derived path must stay inside the project; `..`, an absolute path and an unknown variable are errors.
+- **Matching.** Patterns are RE2 (linear time, no backreferences, so a hostile pattern cannot stall a run). Files
+  are matched with line endings normalised to LF. Binary files and files over 5 MiB are skipped and listed in
+  the result's `notes`. A finding quotes at most 120 characters of the matched text with credential-looking
+  text masked, and at most 50 findings are kept per verifier.
+
+### Changed-only runs
+
+`--since REV` evaluates the files changed between the merge base of `REV` and `HEAD` and the working tree
+(committed, staged, unstaged and untracked, renames detected). `--staged` evaluates what is staged; file contents
+are read from the working tree. Both go through the hardened git helpers, never use the network, and
+**fail with exit `1` when the base cannot be used**: a revision that does not exist, a repository without a
+common ancestor (a shallow clone: fetch the base ref first), a directory that is not a repository, or `--staged`
+in a repository without commits. A missing base never passes vacuously. `--since`, `--staged` and `--all` are
+mutually exclusive.
+
+### Output and failure mapping
+
+Every finding carries the verifier, its `AR9H1` code, the subject `file:line`, the message, the `fix`, and the
+target: the rule or skill, its source file and the `anchor` line.
+
+```console
+$ ai-rulez verifiers run --since origin/main
+STATUS  SEVERITY  NAME                      MESSAGE
+fail    error     migrations-have-down      Every migration needs a '-- down' section.
+fail    error     new-endpoints-have-tests  src/api/orders.py: expected tests/api/test_orders.py to be changed too
+
+AR9H1 migrations-have-down (rule "database", .ai-rulez/rules/database.md:3)
+  db/migrations/0042.sql  pattern `(?m)^-- down\b` not found
+  fix: Add a '-- down' section that reverses the change.
+AR9H1 new-endpoints-have-tests (rule "api-conventions", .ai-rulez/rules/api-conventions.md)
+  src/api/orders.py  expected tests/api/test_orders.py to be changed too
+
+0 passed, 2 failed, 0 could not run (since origin/main)
+```
+
+| Format | Shape |
+| --- | --- |
+| `text` | the table above plus a block per failure (default) |
+| `json` | summary, `mode` and results; follows [`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json) |
+| `sarif` | SARIF 2.1.0: `ruleId` is `AR9H1/<verifier id>`, the location is the subject file, `relatedLocations` is the declaring rule (with the anchor line), `properties.rule` is the rule id, and `partialFingerprints` hashes verifier, path and normalised matched text so a line shift keeps the identity |
+| `junit` | one suite per rule (`rule:<id>`, `skill:<id>`, or `config` for a flat verifier), one case per verifier and subject; invalid declarations are `error`, `not_applicable` is `skipped` |
+
+`--out FILE` writes the report there (atomically) instead of stdout. `--fail-on error|warning|info|none` sets the
+lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unchanged.
+
+### Codes
+
+| Code | Meaning |
+| --- | --- |
+| `AR9H1` `verifier-failed` | a predicate did not hold; severity is the verifier's own |
+| `AR9H2` `verifier-invalid` | bad regex, unknown or missing target, a missing `anchor` heading, two predicates, a bad template or example, an unknown key, a duplicate `id`, a symlinked or oversized file |
+| `AR9H5` `verifier-dead-scope` | `when_changed` matches no file of the repository; only with `--strict-applicability` |
+
+They are reported by the `verifiers` commands, not by `validate`; `ai-rulez validate --explain AR9H1` describes them.
+
+### Self-tests
+
+`verifiers test [name...]` runs each verifier's `[[verifiers.examples]]` offline. An example gets a temporary
+directory with its `files`; the `changed` files count as changed and entirely added, so no git repository is
+involved. `expect` is `pass`, `fail` or `not_applicable`. Exit `0` when every example matches, `2` when one
+does not or a declaration is invalid, `1` when the config does not load or a name is unknown. Verifiers
+without examples are listed.
+
+### Design decisions
+
+- Rule-linked specs live in `.ai-rulez/verifiers/*.toml`; flat `[[verifiers]]` in `config.toml` keep working
+  unchanged and have no rule link. Declaring rule-linked fields (`rule`, `fix`, `when_changed`, combinators) in
+  `config.toml` itself is not available yet. A spec `id` may not repeat a `config.toml` name.
+- `severity` defaults to `warning` for specs (as the design proposes) and to `error` for flat entries (their
+  existing behaviour).
+- Predicates are tables (`[verifiers.require.regex]`), not keys on `require`, so `regex` is one name for the
+  predicate and its pattern field.
+- A missing `anchor` heading is `AR9H2`, so the finding-to-rule mapping cannot rot.
+- The verifier verb is `verifiers run`; `validate --strict --verifiers` is not provided.
+- `linguist-generated` files are not excluded by default; use `exclude`.
+- `diff-added` ships in this slice; it needs a base, and with `--all` every line is added.
+- SARIF `ruleId` is `AR9H1/<verifier id>`, as proposed.
+- Verifiers are not marked `inactive` when their rule is outside the active profile; a target that exists
+  anywhere in the content tree counts.
+
 ## Local overlay
 
 `config.local.toml` may declare `[[verifiers]]`; entries are merged by `name`, and a local entry replaces the
@@ -114,6 +266,8 @@ shared one with the same name.
 
 ## Not yet
 
-A `command` type that runs a program and checks its exit status is planned; it will reuse the hardened command
-runner, so the type is rejected by validation until then. Verifiers declared per domain, `all`/`any`/`not`
-composition and changed-files-only runs are not available.
+Not available: the `command` predicate that runs a program and checks its exit status (it will reuse the
+hardened command runner, behind `--allow-exec`), LLM checklist verifiers, `verifiers suggest`, lock pinning of
+verifiers (kind `verifier`) and import restrictions for verifiers that arrive through includes, `AR9H3` and
+`AR9H4`, the `AR9H6` missing-examples rule and the `[verifiers_settings]` table, and rule-linked fields in
+`config.toml` itself.

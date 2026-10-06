@@ -102,3 +102,62 @@ func TestRunVerifiersHandler_GeneratedInSync(t *testing.T) {
 		})
 	}
 }
+
+func TestRunVerifiersHandler_SpecMapsFailureToRuleAndHonoursSince(t *testing.T) {
+	// Arrange: a real project (loaded through the config loader) with a spec
+	// that enforces the rule "database"; no git repository, so since must fail.
+	dir := t.TempDir()
+	write := func(rel, content string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		require.NoError(t, os.WriteFile(p, []byte(content), 0o600))
+	}
+	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	write(".ai-rulez/rules/database.md", "# Database\n\nNeeds a down section.\n")
+	write("db/1.sql", "create\n")
+	write(".ai-rulez/verifiers/db.toml", `[[verifiers]]
+id = "has-down"
+rule = "database"
+severity = "error"
+fix = "add a down section"
+when_changed = ["db/*.sql"]
+[verifiers.require.regex]
+regex = "-- down"
+`)
+
+	// Act
+	res, err := RunVerifiersHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir}))
+	since, sinceErr := RunVerifiersHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir, "since": "main"}))
+
+	// Assert
+	require.NoError(t, err)
+	require.False(t, res.IsError, textOf(t, res))
+	var out struct {
+		OK      bool           `json:"ok"`
+		Summary map[string]int `json:"summary"`
+		Results []struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+			Code   string `json:"code"`
+			Target struct {
+				Kind string `json:"kind"`
+				ID   string `json:"id"`
+				Path string `json:"path"`
+			} `json:"target"`
+			Findings []struct {
+				File string `json:"file"`
+			} `json:"findings"`
+		} `json:"results"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(textOf(t, res)), &out))
+	assert.False(t, out.OK)
+	assert.Equal(t, 1, out.Summary["fail"])
+	require.Len(t, out.Results, 1)
+	assert.Equal(t, "AR9H1", out.Results[0].Code)
+	assert.Equal(t, "database", out.Results[0].Target.ID)
+	assert.Equal(t, ".ai-rulez/rules/database.md", out.Results[0].Target.Path)
+	require.Len(t, out.Results[0].Findings, 1)
+	assert.Equal(t, "db/1.sql", out.Results[0].Findings[0].File)
+	require.NoError(t, sinceErr)
+	assert.True(t, since.IsError, "a base that does not resolve is an error, never a pass")
+}

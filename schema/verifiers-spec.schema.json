@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verifiers-spec.schema.json",
+  "title": "ai-rulez verifier declaration file",
+  "description": "A file under .ai-rulez/verifiers/*.toml: [[verifiers]] tables that attach a predicate to the rule, skill, agent or command it enforces. See docs/verifiers.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verifiers": { "type": "array", "items": { "$ref": "#/$defs/verifier" } }
+  },
+  "$defs": {
+    "verifier": {
+      "type": "object",
+      "required": ["id", "require"],
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["rule"] },
+        { "required": ["skill"] },
+        { "required": ["agent"] },
+        { "required": ["command"] }
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
+        "description": { "type": "string" },
+        "rule": { "type": "string", "description": "A rule id, or domain/id." },
+        "skill": { "type": "string" },
+        "agent": { "type": "string" },
+        "command": { "type": "string" },
+        "anchor": { "type": "string", "description": "A heading line of the target file; findings point at it." },
+        "severity": { "enum": ["error", "warning", "info"], "default": "warning" },
+        "message": { "type": "string" },
+        "fix": { "type": "string" },
+        "when_changed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs; the verifier checks the changed files that match."
+        },
+        "exclude": { "type": "array", "items": { "type": "string" } },
+        "require": { "$ref": "#/$defs/require" },
+        "examples": { "type": "array", "items": { "$ref": "#/$defs/example" } }
+      }
+    },
+    "require": {
+      "type": "object",
+      "description": "Exactly one predicate or combinator.",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "regex": { "$ref": "#/$defs/regex" },
+        "forbid": { "$ref": "#/$defs/regex" },
+        "file_exists": {
+          "type": "object",
+          "required": ["path"],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "May use {path}, {dir}, {stem}, {ext}, {rel} of each scoped file."
+            },
+            "exists": { "type": "boolean", "default": true }
+          }
+        },
+        "paired": {
+          "type": "object",
+          "required": ["for_each"],
+          "additionalProperties": false,
+          "oneOf": [{ "required": ["requires_changed"] }, { "required": ["requires_exists"] }],
+          "properties": {
+            "for_each": { "type": "string", "description": "A literal path with {rel}, or a glob." },
+            "requires_changed": { "type": "string" },
+            "requires_exists": { "type": "string" }
+          }
+        },
+        "glob_count": {
+          "type": "object",
+          "required": ["files"],
+          "additionalProperties": false,
+          "properties": {
+            "files": { "type": "string" },
+            "exclude": { "type": "array", "items": { "type": "string" } },
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/require" } },
+        "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/require" } },
+        "not": { "$ref": "#/$defs/require" }
+      }
+    },
+    "regex": {
+      "type": "object",
+      "required": ["regex"],
+      "additionalProperties": false,
+      "properties": {
+        "regex": { "type": "string", "description": "An RE2 expression." },
+        "in": { "enum": ["same-file", "diff-added", "any-file"], "default": "same-file" },
+        "files": { "type": "string", "description": "Glob selecting the files of an any-file predicate." }
+      }
+    },
+    "example": {
+      "type": "object",
+      "required": ["name", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "files": { "type": "object", "additionalProperties": { "type": "string" } },
+        "changed": { "type": "array", "items": { "type": "string" } },
+        "expect": { "enum": ["pass", "fail", "not_applicable"] }
+      }
+    }
+  }
+}

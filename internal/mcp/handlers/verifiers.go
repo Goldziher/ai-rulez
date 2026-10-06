@@ -22,8 +22,10 @@ func mcpDrift(cfg *config.Config, profile string) ([]string, error) {
 	return verifiers.DefaultDrift(cfg, profile)
 }
 
-// RunVerifiersHandler evaluates the [[verifiers]] repo checks
-// (`ai-rulez verifiers run`) and returns one result per verifier. It never
+// RunVerifiersHandler evaluates the [[verifiers]] repo checks and the
+// .ai-rulez/verifiers/*.toml specs (`ai-rulez verifiers run`) and returns one
+// result per verifier; each result carries its findings and the rule it enforces.
+// since, staged and rule narrow the run like the CLI flags. It never
 // writes and never uses the network: includes are not resolved, so a
 // generated_in_sync verifier of a project that declares them cannot be
 // evaluated here.
@@ -43,8 +45,11 @@ func RunVerifiersHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		names = strings.Split(name, ",")
 	}
 	report := verifiers.Run(ctx, cfg, verifiers.Options{
-		Names: names,
-		Drift: mcpDrift,
+		Names:  names,
+		Drift:  mcpDrift,
+		Since:  request.GetString("since", ""),
+		Staged: request.GetBool("staged", false),
+		Rule:   request.GetString("rule", ""),
 	})
 	if report.Err != nil {
 		return ToolError(report.Err)
@@ -57,10 +62,12 @@ func RunVerifiersHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		"ok":         !report.CannotRun() && !report.Failed(strict),
 		"cannot_run": report.CannotRun(),
 		"summary": map[string]int{
-			string(verifiers.StatusPass):  counts[verifiers.StatusPass],
-			string(verifiers.StatusFail):  counts[verifiers.StatusFail],
-			string(verifiers.StatusError): counts[verifiers.StatusError],
+			string(verifiers.StatusPass):          counts[verifiers.StatusPass],
+			string(verifiers.StatusFail):          counts[verifiers.StatusFail],
+			string(verifiers.StatusError):         counts[verifiers.StatusError],
+			string(verifiers.StatusNotApplicable): counts[verifiers.StatusNotApplicable],
 		},
+		"mode":    report.Mode,
 		"root":    incl.RedactURL(report.Root),
 		"results": report.Results,
 	})

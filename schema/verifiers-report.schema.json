@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verifiers-report.schema.json",
+  "title": "ai-rulez verifiers report",
+  "description": "The report printed by `ai-rulez verifiers run --format json` (and the result of the MCP run_verifiers tool, which adds ok and cannot_run): one result per verifier, with the findings and the rule or skill each verifier enforces.",
+  "type": "object",
+  "required": ["summary", "results"],
+  "properties": {
+    "root": { "type": "string", "description": "The project root." },
+    "mode": {
+      "type": "string",
+      "description": "Which files counted as changed: \"all\", \"since <rev>\" or \"staged\"."
+    },
+    "summary": {
+      "type": "object",
+      "description": "Result counts per status.",
+      "required": ["pass", "fail", "error"],
+      "properties": {
+        "pass": { "type": "integer", "minimum": 0 },
+        "fail": { "type": "integer", "minimum": 0 },
+        "error": { "type": "integer", "minimum": 0 },
+        "not_applicable": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "results": { "type": "array", "items": { "$ref": "#/$defs/result" } }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "required": ["name", "type", "severity", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "The verifier id (or the declaration file of an invalid one)." },
+        "type": {
+          "type": "string",
+          "description": "The root predicate: file_exists, file_absent, glob_count, regex, forbid, key_equals, generated_in_sync, paired, all, any, not, or invalid."
+        },
+        "severity": { "enum": ["error", "warning", "info"] },
+        "status": { "enum": ["pass", "fail", "error", "not_applicable"] },
+        "description": { "type": "string" },
+        "message": { "type": "string" },
+        "code": {
+          "enum": ["AR9H1", "AR9H2", "AR9H5"],
+          "description": "AR9H1 predicate did not hold, AR9H2 invalid declaration, AR9H5 dead when_changed scope."
+        },
+        "target": { "$ref": "#/$defs/target" },
+        "fix": { "type": "string" },
+        "source": { "type": "string", "description": "The declaration file under .ai-rulez/verifiers/." },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+        "notes": { "type": "array", "items": { "type": "string" }, "description": "Files skipped (binary, oversized)." }
+      }
+    },
+    "target": {
+      "type": "object",
+      "description": "The rule, skill, agent or command a verifier enforces.",
+      "required": ["kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["rule", "skill", "agent", "command"] },
+        "id": { "type": "string" },
+        "path": { "type": "string", "description": "Source file relative to the project root." },
+        "line": { "type": "integer", "minimum": 1, "description": "Line of the anchor heading." }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["message"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "message": { "type": "string" },
+        "match": {
+          "type": "string",
+          "description": "The offending text, at most 120 characters, credential-looking text masked."
+        }
+      }
+    }
+  }
+}
