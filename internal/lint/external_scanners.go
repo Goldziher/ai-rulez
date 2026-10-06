@@ -2,6 +2,7 @@ package lint
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
 
 // ScannerInfo describes one scanner (a [[lint.external]] entry or a member of
@@ -124,22 +126,42 @@ func lookExecutable(name, dir string) string {
 
 // ProbeScannerVersion asks the scanner for its version (`<command> --version`)
 // through the hardened runner: scrubbed environment, a scratch working
-// directory, a short timeout. It returns "" when the scanner printed nothing usable.
-func ProbeScannerVersion(ctx context.Context, info ScannerInfo) string {
+// directory, a short timeout. The probe runs the scanner, so it follows the
+// scanner's isolation mode: confined (no network, writes only in the scratch
+// directory) whenever a backend works, unconfined only for "none" or for "auto"
+// with no backend, and refused with an error for "require" with no backend.
+// The version is "" when the scanner printed nothing usable.
+func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) {
 	if !info.Found() {
-		return ""
+		return "", nil
+	}
+	mode, err := sandbox.ParseMode(info.Isolation)
+	if err != nil {
+		mode = sandbox.ModeAuto
+	}
+	confine, err := scannerSandbox.Resolve(ctx, mode)
+	if err != nil {
+		return "", fmt.Errorf("isolation = \"require\" but %w", err)
 	}
 	dir, err := os.MkdirTemp("", "ai-rulez-probe-")
 	if err != nil {
-		return ""
+		return "", nil
 	}
 	defer os.RemoveAll(dir) //nolint:errcheck // a temp directory
+	argv := []string{info.Path, "--version"}
+	if confine {
+		w, werr := scannerSandbox.Wrap(sandbox.Spec{WriteDirs: []string{dir}}, argv)
+		if werr != nil {
+			return "", fmt.Errorf("could not apply isolation: %w", werr)
+		}
+		argv = w.Argv
+	}
 	res := cmdrun.Run(ctx, cmdrun.Spec{
-		Argv: []string{info.Path, "--version"}, Dir: dir, Timeout: 10 * time.Second, MaxOutput: 64 << 10,
+		Argv: argv, Dir: dir, Timeout: 10 * time.Second, MaxOutput: 64 << 10,
 		Env: cmdrun.ScrubEnv(cmdrun.HostEnv(), nil, []string{"HOME=" + dir, "TMPDIR=" + dir}),
 	})
 	if res.Status != cmdrun.StatusOK && res.Status != cmdrun.StatusExit {
-		return ""
+		return "", nil
 	}
 	for _, text := range []string{string(res.Stdout), string(res.Stderr)} {
 		for _, line := range strings.Split(text, "\n") {
@@ -147,9 +169,9 @@ func ProbeScannerVersion(ctx context.Context, info ScannerInfo) string {
 				if len(line) > 80 {
 					line = line[:80]
 				}
-				return line
+				return line, nil
 			}
 		}
 	}
-	return ""
+	return "", nil
 }
