@@ -171,3 +171,22 @@ func TestLoadSalt_IgnoresASymlinkedSaltFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "the target's mode must not be changed")
 }
+
+func TestLoadSalt_DoesNotCreateAFileThroughASymlinkedDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs privileges on windows")
+	}
+	t.Setenv(SaltEnv, "")
+	root := t.TempDir()
+	target := filepath.Join(root, "elsewhere")
+	require.NoError(t, os.MkdirAll(target, 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
+	require.NoError(t, os.Symlink(target, filepath.Join(root, ".ai-rulez", "local")))
+
+	salt := loadSalt(filepath.Join(root, ".ai-rulez", "local", "usage.salt"))
+
+	assert.Empty(t, salt)
+	entries, err := os.ReadDir(target)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "nothing may be created behind the link")
+}
