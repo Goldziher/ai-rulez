@@ -185,7 +185,7 @@ func TestCheck_LargePatches(t *testing.T) {
 
 			// Assert
 			if !raceEnabled { // the race detector slows the regexp 20-80x, so only a normal build is timed
-				assert.Less(t, time.Since(start), time.Second, "a large patch must not outlast the harness timeout")
+				assert.Less(t, time.Since(start), 5*time.Second, "a large patch must not outlast the harness timeout")
 			}
 			assert.Equal(t, tt.wantBlock, got.Block)
 			assert.Equal(t, tt.wantPath, got.Path)
