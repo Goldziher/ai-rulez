@@ -219,6 +219,7 @@ func (g *Generator) GeneratePlugin(profile string) error {
 // GeneratePluginFiles is GeneratePlugin returning the number of files written,
 // directories excluded.
 func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
+	g.diagnostics() // the run's warnings share one collector from the start
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return 0, err
@@ -283,6 +284,7 @@ func checkPluginGenerated(expected []config.OutputFile) error {
 // VerifyPlugin verifies the generated plugin bundles against their provenance
 // sidecars without regenerating or modifying files.
 func (g *Generator) VerifyPlugin(profile string) error {
+	g.diagnostics() // the run's warnings share one collector from the start
 	expected, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return oops.Wrapf(err, "render expected plugin outputs")
@@ -364,6 +366,7 @@ func (g *Generator) verifyDomainPluginProvenance(expected []config.OutputFile) e
 
 // DryRunPlugin returns the plugin generation plan without writing files.
 func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
+	g.diagnostics() // the run's warnings share one collector from the start
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
