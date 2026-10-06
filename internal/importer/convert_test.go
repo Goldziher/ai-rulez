@@ -635,3 +635,34 @@ func TestReport_ConformsToSchema(t *testing.T) {
 	result := schema.Validate(buf.Bytes())
 	assert.True(t, result.IsValid(), "%v", result.Errors)
 }
+
+func TestSkillsLock_RefusesQueryFragmentAndReportsCollisions(t *testing.T) {
+	// Arrange
+	lock := `{"version":1,"skills":{
+ "tok":{"source":"https://git.example/x/y.git?token=abc","sourceType":"git","computedHash":"1"},
+ "frag":{"source":"https://git.example/x/y.git#abc123","sourceType":"git","computedHash":"1"},
+ "scp":{"source":"git@git.example:x/y.git?t=1","sourceType":"git","computedHash":"1"},
+ "My Skill":{"source":"acme/one","sourceType":"github","computedHash":"1"},
+ "my-skill":{"source":"acme/two","sourceType":"github","computedHash":"2"}
+}}`
+
+	// Act
+	p := planOf(t, skillsLockImporter{}, mapFS(map[string]string{"skills-lock.json": lock}), Options{})
+
+	// Assert
+	for _, s := range p.InstalledSkills {
+		assert.NotContains(t, s.Source, "token", "a source with a query is never written")
+		assert.NotContains(t, s.Source, "#")
+	}
+	for _, name := range []string{"tok", "frag", "scp"} {
+		assert.NotNil(t, findingFor(p, StatusUnsupported, "skills-lock.json", "skills."+name), name)
+	}
+	assert.Len(t, p.InstalledSkills, 1)
+	collisions := 0
+	for _, f := range p.Findings {
+		if f.Status == StatusUnsupported && strings.Contains(f.Reason, "collides") {
+			collisions++
+		}
+	}
+	assert.Equal(t, 1, collisions, "the dropped duplicate is reported")
+}

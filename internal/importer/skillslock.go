@@ -103,6 +103,13 @@ func importLockEntry(p *Plan, name, field string, e skillsLockEntry) {
 		p.add(newFinding(StatusUnsupported, skillsLockFile, field, "", "source "+reason))
 		return
 	}
+	for _, have := range p.InstalledSkills {
+		if have.Name == clean {
+			p.add(newFinding(StatusUnsupported, skillsLockFile, field, "",
+				fmt.Sprintf("not imported: its name collides with another entry as %q after sanitising; rename one in the lock and rerun", clean)))
+			return
+		}
+	}
 	skill := config.InstalledSkillConfig{Name: clean, Source: source, Ref: e.Ref}
 	if e.SkillPath != "" {
 		skill.Path = lockSkillDir(e.SkillPath)
@@ -182,6 +189,9 @@ func gitSourceProblem(src string) string {
 		if err != nil || u.Host == "" {
 			return "is not a valid URL"
 		}
+		if u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || strings.Contains(src, "#") {
+			return "carries a query string or fragment (a token often travels there); use a plain repository URL"
+		}
 		if u.User != nil {
 			if _, hasPassword := u.User.Password(); hasPassword || u.Scheme == "https" {
 				return "embeds credentials; use a ${VAR} reference or a credential helper"
@@ -189,6 +199,9 @@ func gitSourceProblem(src string) string {
 		}
 		return ""
 	case scpSource.MatchString(src):
+		if strings.ContainsAny(src, "?#") {
+			return "carries a query string or fragment; use a plain repository path"
+		}
 		return ""
 	}
 	return "must be an https://, ssh:// or git@host:path URL"
