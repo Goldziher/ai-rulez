@@ -121,6 +121,12 @@ func (x *Index) byText(digest string) (int, bool) {
 	return 0, false
 }
 
+// Batcher is implemented by an embedder that cannot take a whole batch (liter-llm routing to Gemini
+// answers a batch with one vector): Build never sends more than MaxBatch texts per call.
+type Batcher interface {
+	MaxBatch() int
+}
+
 // Rejection is a skill the provider refused to embed on its own, after the batch it was in was split.
 type Rejection struct {
 	ID     string
@@ -188,6 +194,9 @@ func Build(ctx context.Context, items []Item, o *BuildOptions) (*BuildResult, er
 	batch := o.BatchSize
 	if batch <= 0 {
 		batch = cfg.BatchSize
+	}
+	if l, ok := o.Embedder.(Batcher); ok && l.MaxBatch() > 0 {
+		batch = min(batch, l.MaxBatch())
 	}
 	for start := 0; start < len(plan.todo) && b.res.Err == nil; start += batch {
 		if err := ctx.Err(); err != nil {

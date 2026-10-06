@@ -76,7 +76,7 @@ rrf_k       = 60
 weights     = { lexical = 1.0, vector = 1.0 }
 candidates  = 50            # per list, before fusion
 query_timeout_ms = 800      # the query embedding; on timeout the ranking is lexical
-batch_size  = 64            # texts per embedding call of `search index`; use 1 for Gemini through literllm
+batch_size  = 64            # texts per embedding call of `search index` (Gemini through literllm is sent one by one automatically)
 index_dir   = "local/search"  # under the config dir; any directory outside local/ is meant to be committed
 dtype       = "float32"     # float32 | float16 (half the size)
 log_queries = false         # user scope only (user config file or AI_RULEZ_SEARCH_LOG_QUERIES=1); see Query mining
