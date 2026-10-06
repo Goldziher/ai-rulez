@@ -105,6 +105,12 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 		return nil, nil, err
 	}
 
+	// [governance] is the repository's review policy: a machine-local overlay
+	// cannot relax it.
+	if _, ok := loc["governance"]; ok {
+		delete(loc, "governance")
+		warnings = append(warnings, "ignored [governance] in the local config: the approval policy is shared and cannot be overridden per machine")
+	}
 	for _, key := range sortedKeys(loc) {
 		w, err := mergeTopLevelKey(merged, loc[key], key)
 		if err != nil {

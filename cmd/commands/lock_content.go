@@ -78,6 +78,7 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	for i := range diff.Changes {
 		lines = append(lines, diff.Changes[i].Line())
 	}
+	lines = append(lines, approvalLockedLines(shared, lock, snap.Items)...)
 	roleLines, err := verifyLockedRoleOutputs(shared, lock, generateRole)
 	if err != nil {
 		return nil, err

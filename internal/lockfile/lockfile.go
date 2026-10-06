@@ -111,6 +111,8 @@ type File struct {
 	Served []Entry     `toml:"served,omitempty"`
 	Item   []Item      `toml:"item,omitempty"`
 	Output []OutputPin `toml:"output,omitempty"`
+	// Approval records reviewer approvals (approval.go); outside the tree digest.
+	Approval []Approval `toml:"approval,omitempty"`
 }
 
 // HasContentPins reports whether the lock pins authored content.
@@ -168,6 +170,7 @@ func Save(configDir string, f *File) error {
 	out.Include, out.Skill = sorted(f.Include), sorted(f.Skill)
 	out.Source, out.Served = sorted(f.Source), sorted(f.Served)
 	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
+	out.Approval = sortedApprovals(f.Approval)
 	var buf bytes.Buffer
 	buf.WriteString("# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.\n")
 	buf.WriteString("# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.\n\n")

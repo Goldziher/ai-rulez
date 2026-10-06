@@ -83,6 +83,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
 - **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
 - **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
+- **`governance`**: `[governance]` approval policy (`require_approval`, `exempt`, `min_approvers`, `approvers`, `max_age`, `enforce`); see [Approvals](approvals.md)
 - **`lock`**: `[lock]` content pinning (`enforce`, `include_outputs`, `scope`); see [Lock file](lockfile.md)
 - **`lint`**: `[lint]` strict-validation settings (severities, ignores, budgets, `tolerate`, `security`, `evals`, `traps`, `metadata`, `external` scanners); see [Strict validation](strict-validation.md)
 - **`verifiers`**: `[[verifiers]]` deterministic repository checks run by `ai-rulez verifiers run`; see [Verifiers](verifiers.md)
@@ -162,6 +163,8 @@ The schema files are available in the repository:
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
+| `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
+| `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
 | `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query |
