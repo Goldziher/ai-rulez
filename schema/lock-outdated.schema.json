@@ -31,7 +31,8 @@
               "tag-missing",
               "unsatisfiable",
               "invalid",
-              "downgrade-only"
+              "downgrade-only",
+              "locked-non-version"
             ]
           },
           "code": { "enum": ["AR730", "AR731", "AR732", "AR735"] },

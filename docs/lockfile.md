@@ -244,9 +244,11 @@ deploy  skill    ~2.1.0      v2.1.3  v2.1.3   v2.2.0  up to date within the cons
 It lists tags only (one `git ls-remote` per repository, no content is fetched) and writes nothing. `--format json`
 follows [`schema/lock-outdated.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-outdated.schema.json).
 Each source has a `status`: `up-to-date`, `updatable`, `not-locked`, `tag-moved` (`AR732`), `tag-missing` (`AR735`),
-`unsatisfiable` (`AR730`), `invalid` (`AR731`) or `downgrade-only`. Names and `--kind include|skill|source` limit
+`unsatisfiable` (`AR730`), `invalid` (`AR731`), `downgrade-only`, or `locked-non-version` (the pinned tag is not a
+version, e.g. a constraint was added to a source pinned by an arbitrary ref; `update` moves it only with
+`--allow-downgrade`). Names and `--kind include|skill|source` limit
 the report. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
-update, and always `2` for a moved tag or an unsatisfiable constraint, `1` when it could not run. It needs the
+update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
 network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
 scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
 
@@ -275,7 +277,8 @@ pins and content pins of other items are not recomputed (as with `lock <name>`):
 
 - **Moved tags (`AR732`).** A tag that now points to another commit than the pinned one is refused with exit `2`
   and nothing is written; `lock` refuses it too. Review the new commit, then `update --accept-moved-tag` re-pins that
-  tag at its new commit. A tag that was deleted (`AR735`) only warns: the pinned commit is still used.
+  tag at its new commit. A tag that was deleted (`AR735`) only warns in `lock`/`update` (the pinned commit is still used), but
+  `lock --outdated` counts it as an error.
 - **Downgrades.** `update` never selects a tag with lower precedence than the pinned one (a truncated tag list, a
   mirror, an attacker can roll a pin back) unless `--allow-downgrade`. Withheld newer tags are undetectable;
   `--outdated` can only compare what the remote advertises.
