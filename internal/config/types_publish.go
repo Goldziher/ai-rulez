@@ -40,7 +40,8 @@ type PublishConfig struct {
 	// Runtimes restricts the published bundle to these plugin runtimes
 	// (default: the [plugin] runtimes). `publish --runtime` overrides it.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
-	// RequireSignature makes publish fail without a signature (`--sign`).
+	// RequireSignature makes publish fail unless it signs the archive
+	// (`--sign-key` or `--sign-keyless`); `publish emit` is not gated.
 	RequireSignature bool `yaml:"require_signature,omitempty" json:"require_signature,omitempty" toml:"require_signature,omitempty"` //nolint:tagliatelle
 	// RequireApproved makes publish fail unless every content item the
 	// [governance] policy selects is approved in ai-rulez.lock.
