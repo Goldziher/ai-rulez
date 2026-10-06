@@ -163,7 +163,8 @@ earliest on ties) is kept, or the first with `--stop-at-first-accept`.
 of the paired held-out cases, seeded from the case ids and outcomes so the same run always reports the same
 interval. It is informative, not a gate: with 5 to 20 cases almost nothing is significant, and pretending otherwise
 is worse than saying so. A run with fewer than 8 held-out cases, or an interval that includes zero, is marked
-`underpowered` (`AR9J5`). `--require-ci-above-zero` (or `[improve] require_ci_above_zero`) makes the lower end of the
+`underpowered` (`AR9J5`); the round warns about it only when it was accepted. Unstable cases count as no change in the
+interval, as they do in the gate. `--require-ci-above-zero` (or `[improve] require_ci_above_zero`) makes the lower end of the
 interval a gate condition, for suites large enough to clear it; the decision is then `rejected: below confidence`.
 
 ## Cost
