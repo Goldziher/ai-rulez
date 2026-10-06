@@ -42,3 +42,19 @@ func TestServeSetup_ServedScanReportsCoverAuthoredAndSourceSkills(t *testing.T) 
 	assert.Equal(t, "error", a.Level)
 	assert.ElementsMatch(t, []string{"references/big.md", "references/nul.md"}, a.Unserved)
 }
+
+func TestServeSetup_SkillWithoutDescriptionIsServedUnderItsName(t *testing.T) {
+	// Arrange: a verbatim source skill with no description frontmatter.
+	dir := t.TempDir()
+	writeFile(t, dir, "nodesc/SKILL.md", "---\nname: nodesc\n---\n\n# nodesc\n")
+	root := project(t, baseConfig, nil)
+
+	// Act
+	srv := newServerFor(t, &ServeSetup{WorkDir: root, Sources: []string{dir}})
+
+	// Assert
+	skill, ok := srv.Catalog().Lookup("nodesc")
+	require.True(t, ok, "a skill without a description is served")
+	assert.Equal(t, "nodesc", skill.Description)
+	assert.NotContains(t, string(skill.Files[0].Content), "description", "the served bytes are not rewritten")
+}
