@@ -1,6 +1,6 @@
 # LLM access
 
-`internal/llm.Client` is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place. It is the layer future features (rubric graders, semantic review, embeddings) are meant to use; today the only command that uses it is `ai-rulez llm doctor` (and its `--ping`), plus the `llm` section of `ai-rulez doctor`.
+`internal/llm.Client` is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place. Its consumers are the rubric grader of `eval run`, `review --semantic`, `review calibrate`, `review fix` and `review explain`, the LLM-backed `[[verifiers]]`, the embeddings behind `search` (skill search index), and the diagnostics `llm doctor` (and its `--ping`) and the `llm` section of `ai-rulez doctor`.
 
 **Nothing calls a model unless you turn it on.** `allow_network` defaults to `false`; every call is refused with a message that names the setting.
 
@@ -104,7 +104,7 @@ Model-side retention and training terms are the provider's; check them before se
 
 ### Cost controls
 
-Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families, the embedding models, Claude families) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
 
 ## Backends
 
