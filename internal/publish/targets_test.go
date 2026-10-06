@@ -564,6 +564,50 @@ func TestExecuteOCI_PushesTheReviewedArtifactToALocalRegistry(t *testing.T) {
 	assert.Equal(t, d.Files["acme-1.4.0.tar.gz"], got.Layers[0].Data)
 }
 
+func TestExecuteOCI_DoesNotOverwriteAnExistingTag(t *testing.T) {
+	// Arrange: the tag already points at another artifact.
+	host := newRegistry(t)
+	ref := host + "/acme/skills/acme"
+	dirOld, old := writeBuilt(t, ociInput(ref))
+	_, err := ExecuteOCI(context.Background(), old.Plan, OCIExecuteOptions{Dir: dirOld})
+	require.NoError(t, err)
+	changed := ociInput(ref)
+	changed.Files = append(changed.Files, File{Path: "skills/new/SKILL.md", Data: []byte("new")})
+	dir, d := writeBuilt(t, changed)
+	require.NotEqual(t, old.Plan.OCIDigest, d.Plan.OCIDigest)
+
+	// Act
+	_, err = ExecuteOCI(context.Background(), d.Plan, OCIExecuteOptions{Dir: dir})
+
+	// Assert
+	var pe *Error
+	require.ErrorAs(t, err, &pe)
+	assert.Equal(t, CodeTarget, pe.Code)
+	assert.Contains(t, err.Error(), "already exists")
+	got, err := oci.Pull(context.Background(), oci.Target{Ref: ref + ":1.4.0"})
+	require.NoError(t, err)
+	assert.Equal(t, old.Plan.OCIDigest, got.Digest, "the registry still holds the first release")
+
+	// Force replaces it.
+	_, err = ExecuteOCI(context.Background(), d.Plan, OCIExecuteOptions{Dir: dir, Force: true})
+	require.NoError(t, err)
+	got, err = oci.Pull(context.Background(), oci.Target{Ref: ref + ":1.4.0"})
+	require.NoError(t, err)
+	assert.Equal(t, d.Plan.OCIDigest, got.Digest)
+}
+
+func TestExecuteOCI_PushingTheSameArtifactAgainIsANoOp(t *testing.T) {
+	host := newRegistry(t)
+	dir, d := writeBuilt(t, ociInput(host+"/acme/skills/acme"))
+	_, err := ExecuteOCI(context.Background(), d.Plan, OCIExecuteOptions{Dir: dir})
+	require.NoError(t, err)
+
+	pushed, err := ExecuteOCI(context.Background(), d.Plan, OCIExecuteOptions{Dir: dir})
+
+	require.NoError(t, err)
+	assert.Equal(t, host+"/acme/skills/acme@"+d.Plan.OCIDigest, pushed)
+}
+
 func TestExecuteOCI_RefusesFilesThatNoLongerMatchThePlan(t *testing.T) {
 	host := newRegistry(t)
 	dir, d := writeBuilt(t, ociInput(host+"/acme/skills/acme"))
