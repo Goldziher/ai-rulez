@@ -1,11 +1,14 @@
 package publish
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
@@ -239,9 +242,27 @@ func envValue(env []string, name string) string {
 	return ""
 }
 
-// npmNotFound reports whether a failed `npm view` said the version does not exist.
+// npmE404 matches npm's error code in its text output ("npm error code E404").
+var npmE404 = regexp.MustCompile(`\bE404\b`)
+
+// npmNotFound reports whether a failed `npm view --json` said the version does
+// not exist: the error code E404 in npm's JSON error (or, from an older npm, its
+// text). Words such as "not found" or a bare 404 in other output (a proxy page,
+// a missing command) do not count: they would let a broken registry look like a
+// free version.
 func npmNotFound(res runner.Result) bool {
-	return strings.Contains(strings.ToLower(string(res.Stderr)), "e404") ||
-		strings.Contains(strings.ToLower(string(res.Stdout)), "e404") ||
-		strings.Contains(strings.ToLower(string(res.Stderr)), "not found")
+	for _, out := range [][]byte{res.Stdout, res.Stderr} {
+		var doc struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		if json.Unmarshal(bytes.TrimSpace(out), &doc) == nil && doc.Error.Code == "E404" {
+			return true
+		}
+		if npmE404.Match(out) {
+			return true
+		}
+	}
+	return false
 }
