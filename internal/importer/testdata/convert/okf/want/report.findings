@@ -1,0 +1,12 @@
+approximated | (project) | presets | presets | no tool-specific file identifies a preset (AGENTS.md and .agents/skills are shared by many tools); defaulting to claude, adjust `presets` in config.toml
+mapped | docs/okf/agents/reviewer.md | concept | agents/reviewer.md | 
+mapped | docs/okf/checks/no-todo.md | concept | checks/no-todo.md | 
+mapped | docs/okf/commands/ship.md | concept | commands/ship.md | 
+mapped | docs/okf/context/architecture.md | concept | context/architecture.md | 
+mapped | docs/okf/domains/backend/rules/db.md | concept | domains/backend/rules/db.md | 
+mapped | docs/okf/rules/plain.md | concept | rules/plain.md | 
+mapped | docs/okf/rules/testing.md | concept | rules/testing.md | 
+mapped | docs/okf/skills/release/SKILL.md | concept | skills/release/SKILL.md | 
+mapped | docs/okf/skills/release/references/checklist.md | concept | skills/release/references/checklist.md | 
+mapped | docs/okf/skills/release/references/index_.md | concept | skills/release/references/index.md | 
+mapped | docs/okf/skills/release/scripts/tag.sh | concept | skills/release/scripts/tag.sh | 

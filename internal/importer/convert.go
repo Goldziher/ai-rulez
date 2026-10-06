@@ -142,7 +142,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 	importers, generatedFrom := preferSources(importers, opts.From)
 
 	plan, err := runImporters(ctx, abs, importers, Options{
-		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher,
+		SplitHeadings: opts.SplitHeadings, BestEffort: opts.BestEffort, KeepNames: opts.KeepNames, Fetch: opts.Fetch, Fetcher: opts.Fetcher, Domain: opts.Domain,
 	})
 	if err != nil {
 		return nil, err
@@ -432,6 +432,9 @@ func planSummary(p *Plan) string {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k.label))
 		}
 	}
+	if n := len(p.Raw); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d bundle files", n))
+	}
 	if n := len(p.MCPServers); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d mcp servers", n))
 	}
@@ -448,6 +451,9 @@ func buildFiles(plan *Plan, cfg *config.Config, domain string) (map[string][]byt
 		for _, f := range plan.Items[i].Files() {
 			files[placed(domain, f.Path)] = f.Data
 		}
+	}
+	for _, f := range plan.Raw {
+		files[f.Path] = f.Data // already below its domain
 	}
 	data, err := config.MarshalTOML(cfg)
 	if err != nil {
