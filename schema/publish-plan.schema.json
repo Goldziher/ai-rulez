@@ -40,7 +40,11 @@
         }
       }
     },
-    "upload": { "type": "array", "items": { "type": "string" }, "description": "The artifacts the github-release command uploads." },
+    "upload": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The artifacts the github-release command uploads."
+    },
     "commands": {
       "type": "array",
       "items": {
