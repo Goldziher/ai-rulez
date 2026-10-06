@@ -331,3 +331,23 @@ func TestCheckLock(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(res.Dir, "sql", "SKILL.md"), []byte("tampered"), 0o644))
 	assert.Contains(t, CheckLock([]config.SkillSourceConfig{src}, lock, cache)[0].Message, "cached content digest")
 }
+
+func TestWarnUnpinned(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		res  *Resolved
+		opts Options
+		want bool
+	}{
+		{"unpinned serve run warns", &Resolved{}, Options{}, true},
+		{"pinned source is quiet", &Resolved{Pinned: true}, Options{}, false},
+		{"refresh run (lock, update) pins it and does not warn", &Resolved{}, Options{Refresh: true}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, warnUnpinned(tt.res, tt.opts))
+		})
+	}
+}
