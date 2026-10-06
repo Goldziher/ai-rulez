@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Codes for the MCP configuration checks.
@@ -56,17 +58,8 @@ var mcpJSONFiles = []struct{ rel, key string }{
 func (r *runner) mcpServers() []*mcpServer {
 	var out []*mcpServer
 	if cfgPath := r.configFilePath(); cfgPath != "" {
-		names := make([]string, 0, len(r.cfg.MCPServers))
-		for n := range r.cfg.MCPServers {
-			names = append(names, n)
-		}
-		sort.Strings(names)
-		for _, n := range names {
-			s := r.cfg.MCPServers[n]
-			if s == nil {
-				continue
-			}
-			out = append(out, &mcpServer{file: cfgPath, name: n, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
+		for _, s := range r.effectiveMCPServers() {
+			out = append(out, &mcpServer{file: cfgPath, name: s.Name, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
 		}
 	}
 	for _, f := range mcpJSONFiles {
@@ -76,13 +69,31 @@ func (r *runner) mcpServers() []*mcpServer {
 			continue
 		}
 		for _, srv := range decodeMCPJSON(p, f.key, data) {
-			if _, generated := r.cfg.MCPServers[srv.name]; generated {
+			if r.declaresMCPServer(srv.name) {
 				continue // the file mirrors config.toml, which is checked at its source
 			}
 			out = append(out, srv)
 		}
 	}
 	return append(out, r.frontmatterMCPServers()...)
+}
+
+// effectiveMCPServers is the configured servers as written. The render that
+// precedes a strict run resolves ${VAR} placeholders in cfg.MCPServers, so the
+// secret and pinning checks must not read that map: a reference would look like
+// the credential it resolves to.
+func (r *runner) effectiveMCPServers() []config.MCPServer {
+	r.mcpOnce.Do(func() { r.mcpEffective = r.cfg.EffectiveMCPServers() })
+	return r.mcpEffective
+}
+
+func (r *runner) declaresMCPServer(name string) bool {
+	for _, s := range r.effectiveMCPServers() {
+		if s.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
