@@ -289,6 +289,10 @@
           "minimum": 0,
           "type": "integer"
         },
+        "render_markdown": {
+          "description": "Render item excerpts as sanitized Markdown (no raw HTML, links shown as text) instead of plain text. Default false.",
+          "type": "boolean"
+        },
         "title": {
           "description": "Title of the static site. Default: AI-Rulez catalog.",
           "type": "string"

@@ -143,6 +143,7 @@ include_excerpt = true       # body excerpts (--include-excerpt); default on, of
 exclude_owners = false       # leave owner names out of the JSON and the site (--no-owners)
 indexable = false            # let search engines in (--indexable)
 max_items_per_page = 200     # overview rows per page (--max-items-per-page); 0 means 200
+render_markdown = false      # render excerpts as sanitized Markdown (--render-markdown)
 ```
 
 Every key is optional and a flag that is given wins. `include_excerpt` and `exclude_owners` also apply to
@@ -151,6 +152,25 @@ Every key is optional and a flag that is given wins. `include_excerpt` and `excl
 The overview lists `max_items_per_page` rows per page. All rows are in the one `index.html` (one `<tbody>` per page),
 so browsing, find-in-page and the no-JavaScript view show everything; the script shows one page at a time with
 Previous/Next buttons and shows every page while a filter is active. The page size does not change `catalog.json`.
+
+### Markdown excerpts
+
+`--render-markdown` (or `render_markdown = true`) shows each item's excerpt as formatted Markdown instead of plain
+text. The renderer is a sanitizer by construction, not by filtering: the text is parsed as CommonMark and turned into
+a tree whose nodes are only paragraphs, headings (shifted to `h3`-`h6`, below the page's own headings), lists, quotes,
+code blocks, emphasis, code spans, line breaks and rules. The tree has no field that holds markup, and the page is
+built from it by `html/template`, so every character of the body is escaped.
+
+- Raw HTML (block or inline, comments included) is shown as literal text, never interpreted.
+- Links are not anchors: the label is kept and the destination is shown as text after it, so a `javascript:`,
+  `data:` or remote URL never becomes an `href`. Images show their alt text and the destination as text; nothing is
+  loaded.
+- Depth is capped at 12 levels and the tree at 4,000 nodes (a notice says so), so a hostile body cannot recurse or
+  inflate the page.
+- The Content-Security-Policy stays as strict as before; the Markdown view needs no script and no new source.
+
+The excerpt is still the first 2 KiB of the body, so a long document is cut mid-structure. Excerpts are off with
+`--indexable` unless asked for.
 
 ### Freshness check
 
@@ -165,7 +185,7 @@ same gate detects a tampered hosted copy. Use it in CI to keep a committed site 
 not combine. Files are read through the directory only: a symlink in it is reported, never followed.
 
 Flags: `--role R` (items role `R` keeps), `--include-excerpt` (default on), `--indexable` (no `robots.txt`, no
-`noindex`; excerpts default off), `--clean`, `--base-title T`, `--allow-findings`, `--check`, `--with-eval[=FILE]`, `--with-usage[=FILE]`.
+`noindex`; excerpts default off), `--clean`, `--base-title T`, `--allow-findings`, `--render-markdown`, `--max-items-per-page`, `--no-owners`, `--check`, `--with-eval[=FILE]`, `--with-usage[=FILE]`.
 
 A published catalog exposes names, descriptions, owners, token costs and lint findings: treat it like the
 configuration directory it describes.
@@ -189,6 +209,5 @@ configuration directory it describes.
 
 ## Not yet built
 
-`--no-lint-messages`, `--no-owners`,
-`--link-sources`, `--single-file` and Markdown rendering of bodies are later phases of the
-design.
+`--no-lint-messages`, `--link-sources`, `--single-file`, a `catalog diff` page and approval or signature attestations
+in the diff remain from the design.
