@@ -76,6 +76,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.trustedOrgs()
 	a.maxNetworkCommands()
 	a.loadBudgets()
+	a.scannerPolicy()
 	a.lock()
 	a.networks()
 	a.guard()

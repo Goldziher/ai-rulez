@@ -90,6 +90,8 @@ type Lint struct {
 	// LoadBudgets maps a load-budget id to the largest limit the repository may
 	// set for it (the lower of the layers wins).
 	LoadBudgets map[string]int
+	// ScannerPolicy governs [lint.scanner_policy] (scanners.go).
+	ScannerPolicy ScannerPolicy
 }
 
 // Capability governs [lint.capability].
@@ -180,7 +182,8 @@ type fileLint struct {
 	Capability    *struct {
 		MaxNetworkCommands *int `toml:"max_network_commands"`
 	} `toml:"capability"`
-	LoadBudgets map[string]int `toml:"load_budgets"`
+	LoadBudgets   map[string]int     `toml:"load_budgets"`
+	ScannerPolicy *fileScannerPolicy `toml:"scanner_policy"`
 }
 
 type fileSecurity struct {
@@ -350,6 +353,9 @@ func (l *Lint) fromDoc(d *fileLint) error {
 			l.LoadBudgets = map[string]int{}
 		}
 		l.LoadBudgets[id] = limit
+	}
+	if err := l.ScannerPolicy.fromDoc(d.ScannerPolicy); err != nil {
+		return err
 	}
 	return l.Security.fromDoc(d.Security)
 }
