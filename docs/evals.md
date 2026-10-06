@@ -305,7 +305,7 @@ delete the `mac`.
   `price_out_per_mtok` for what the runs are really billed at; zero keeps the built-in value, and `--price-in` and
   `--price-out` win), and
   [`eval calibrate-estimate`](#calibrating-the-estimate) proposes measured values. The harness overhead matters most:
-  Claude Code's own system prompt, tools and skill listing make a one-turn activation run cost about 25,000 input
+  Claude Code's own system prompt, tools and skill listing make a one-turn activation run cost about 24,000 input
   tokens, not 2,000.
 - An **activation** estimate (`--mode activation --surface native`) is tighter, since a run is one turn with no
   fixtures and no tool loop: the overhead, the names and descriptions of the installed set and the prompt in, and 150
@@ -341,10 +341,15 @@ proposed values, the median token error before and after, the recorded cost erro
 
 ```text
 activation, harness claude, model haiku: 6 run(s)
-  overhead_tokens           2000 -> 25912
-  activation_output_tokens   150 -> 48
-  token error (median)     +862% -> -2%; recorded cost error median 351%, p90 402%
+  overhead_tokens            2000 -> 23875
+  activation_output_tokens    150 -> 307
+  token error (median)      +718% -> -0%; recorded cost error median 161%, p90 204%
+  input price per MTok     $1 list -> $0.3209 billed (prompt caching)
 ```
+
+(Real output from one native activation run of six skills with Claude Code and `haiku`: 120 agent runs. With the
+proposed values, the next estimate of the same run was $1.14 against an actual $1.10, every skill within its
+`[low, high]` range, instead of $0.44 against $1.19.)
 
 The cost can be far below the token count priced at list: Claude Code caches its prompt, so most input tokens are
 billed at a fraction of the list price. When the billed cost implies an input price more than 10% off the list price
@@ -504,6 +509,11 @@ cap skips the rest, as for case runs. `--timeout` bounds one skill's runner call
   thresholds (a positive passes at an activation rate of 0.8 or more, a negative at 0.2 or less) apply to repeated runs.
 - "Borderline" is one run from failing, not "the Wilson interval straddles the threshold": at five runs every
   interval straddles 0.8, so that rule would mark everything.
+- Repetition matters. In a live run of 24 prompts with Claude Code and `haiku`, the same prompt fired its skill in 5
+  of 5 runs one time and 3 of 5 the next, and on 23 of 24 prompts the pass or fail verdict held between two
+  repetitions. The offline ranker agreed with the model's behaviour on only 16 of those 24 prompts: it ranks the right
+  skill first, while the model often loads a generic sibling (`repository-layout`) instead, so retrieval is a cheap
+  pre-check, not a substitute for `native`.
 - One turn (`max_turns` 1) is enough: the decision to load a skill is in the first turn. The design's default of 2
   would pay for a second turn that does not change the answer.
 - The default scope for large catalogs stays `domain`: bounded, at the price of missing a cross-domain steal; use

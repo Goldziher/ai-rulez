@@ -319,11 +319,21 @@ func (r *ActivationReport) writeMarkdown(w io.Writer) error {
 	} else {
 		b.WriteString(", cost $0.00.\n\n" + r.Note + ".\n\n")
 	}
-	b.WriteString("| Skill | Status | Prompts | Recall | Precision | False activation | recall@1 | recall@3 | MRR |\n")
-	b.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	if r.Surface == SurfaceNative {
+		b.WriteString("| Skill | Status | Prompts | Recall | Precision | False activation | Run recall | Cost |\n")
+		b.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	} else {
+		b.WriteString("| Skill | Status | Prompts | Recall | Precision | False activation | recall@1 | recall@3 | MRR |\n")
+		b.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	}
 	for i := range r.Skills {
 		s := &r.Skills[i]
 		if s.Status == RunNoCases || s.Status == RunNotChanged {
+			continue
+		}
+		if r.Surface == SurfaceNative {
+			fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %s | %s | $%.3f |\n", s.ID, activationStatus(s), len(s.Prompts),
+				rateText(s.Recall), rateText(s.Precision), rateText(s.FalseActivation), rateText(s.RunRecall), s.CostUSD)
 			continue
 		}
 		fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %s | %s | %s | %s |\n", s.ID, activationStatus(s), len(s.Prompts),
