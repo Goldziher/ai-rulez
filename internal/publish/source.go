@@ -60,9 +60,24 @@ func ReadSource(ctx context.Context, r runner.Runner, dir, excludeRel string) So
 		info.Source.Dirty = status != ""
 	}
 	if remote, ok := out("remote", "get-url", "origin"); ok {
-		info.Remote = StripCredentials(remote)
+		info.Remote = PublicRemote(remote)
 	}
 	return info
+}
+
+// PublicRemote is StripCredentials for a remote that may be published: a local
+// path or a file:// URL (a clone from disk) is dropped, because the manifest
+// records the repository and must not carry the publisher's directory layout.
+func PublicRemote(remote string) string {
+	r := strings.TrimSpace(remote)
+	switch {
+	case strings.HasPrefix(strings.ToLower(r), "file:"),
+		strings.HasPrefix(r, "/"), strings.HasPrefix(r, "./"), strings.HasPrefix(r, "../"), strings.HasPrefix(r, "~"),
+		strings.HasPrefix(r, `\`), r == "." || r == "..",
+		len(r) >= 3 && r[1] == ':' && (r[2] == '\\' || r[2] == '/'):
+		return ""
+	}
+	return StripCredentials(r)
 }
 
 // StripCredentials removes userinfo and a query from a URL; scp-style and local

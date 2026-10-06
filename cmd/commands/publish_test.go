@@ -426,6 +426,24 @@ func TestPublish_Gates(t *testing.T) {
 	}
 }
 
+func TestPublish_ManifestNeverRecordsALocalOriginPath(t *testing.T) {
+	// Arrange: no [plugin] repository, and an origin that is a directory on disk.
+	root := publishProject(t)
+	reconfigure(t, root, strings.Replace(publishProjectConfig, "repository = \"https://github.com/acme/skills\"\n", "", 1))
+	publishGit(t, root, "remote", "add", "origin", filepath.Join(root, "..", "elsewhere"))
+
+	// Act
+	_, err := runPublishCapture(t)
+
+	// Assert
+	require.NoError(t, err)
+	dist := readDist(t, filepath.Join(root, "dist"))
+	assert.Equal(t, "", manifestOf(t, dist).Source.Repo)
+	for name, content := range dist {
+		assert.NotContains(t, content, "elsewhere", name)
+	}
+}
+
 func TestPublish_RefusesABundleGitDoesNotTrack(t *testing.T) {
 	// Arrange: the bundle exists on disk but is gitignored, so the clean tree
 	// check passes and a marketplace pinned to the commit would lack the files.
