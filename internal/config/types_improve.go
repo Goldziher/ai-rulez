@@ -32,6 +32,9 @@ const (
 	ImproveDefaultMaxRegressions  = 0
 	ImproveDefaultHoldoutFraction = 0.3
 	ImproveDefaultMaxSkillGrowth  = 1.25
+	ImproveDefaultRuns            = 3
+	ImproveDefaultMaxRounds       = 3
+	ImproveDefaultMaxHoldoutEvals = 3
 )
 
 // ImproveConfig is the [improve] table: defaults of `ai-rulez improve run` (docs/improve.md). A flag always
@@ -212,6 +215,17 @@ func (c *ImproveConfig) LooserGateKeys() []string {
 	if g := c.MaxSkillGrowth; g > ImproveDefaultMaxSkillGrowth+1e-9 {
 		loose = append(loose, "max_skill_growth")
 	}
+	// Fewer runs weaken the confidence interval; a larger round or held-out budget lets a candidate be tuned
+	// against the held-out set and spends more on the optimizer.
+	if c.Runs > 0 && c.Runs < ImproveDefaultRuns {
+		loose = append(loose, "runs")
+	}
+	if c.MaxRounds > ImproveDefaultMaxRounds {
+		loose = append(loose, "max_rounds")
+	}
+	if c.MaxHoldoutEvals > ImproveDefaultMaxHoldoutEvals {
+		loose = append(loose, "max_holdout_evals")
+	}
 	return loose
 }
 
@@ -228,6 +242,12 @@ func (c *ImproveConfig) dropLooseGateKeys() []string {
 			c.HoldoutFraction = nil
 		case "max_skill_growth":
 			c.MaxSkillGrowth = 0
+		case "runs":
+			c.Runs = 0
+		case "max_rounds":
+			c.MaxRounds = 0
+		case "max_holdout_evals":
+			c.MaxHoldoutEvals = 0
 		}
 	}
 	return loose
