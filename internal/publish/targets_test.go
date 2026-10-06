@@ -794,6 +794,7 @@ func TestVerifyWith_Signature(t *testing.T) {
 		{"another key", dir, VerifyChecks{Signature: otherTrust}, "unverified", "does not verify"},
 		{"unsigned", unsignedDir, VerifyChecks{}, "none", ""},
 		{"unsigned, required", unsignedDir, VerifyChecks{RequireSignature: true}, "none", "not signed"},
+		{"unsigned, a trusted key named", unsignedDir, VerifyChecks{Signature: trust}, "none", "not signed"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
