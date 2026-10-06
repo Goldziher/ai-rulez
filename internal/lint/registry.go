@@ -14,10 +14,16 @@ type (
 	runCheck func(r *runner)
 )
 
+// registered pairs a hook with the unit that gates it.
+type registered[F any] struct {
+	unit unitSpec
+	fn   F
+}
+
 var (
-	itemChecks []itemCheck
-	textScans  []textScan
-	runChecks  []runCheck
+	itemChecks []registered[itemCheck]
+	textScans  []registered[textScan]
+	runChecks  []registered[runCheck]
 )
 
 // registerRules adds rules to the code registry.
@@ -31,13 +37,23 @@ func registerRuleDocs(docs map[string]RuleDoc) {
 	}
 }
 
-func registerItemCheck(fn itemCheck) { itemChecks = append(itemChecks, fn) }
-func registerTextScan(fn textScan)   { textScans = append(textScans, fn) }
-func registerRunCheck(fn runCheck)   { runChecks = append(runChecks, fn) }
+// The register functions take the analyzers whose rules the hook can report, so
+// a run that selects other analyzers skips it (see units.go).
+func registerItemCheck(fn itemCheck, analyzers ...string) {
+	itemChecks = append(itemChecks, registered[itemCheck]{mustDeclare("item check", fn, analyzers), fn})
+}
+
+func registerTextScan(fn textScan, analyzers ...string) {
+	textScans = append(textScans, registered[textScan]{mustDeclare("text scan", fn, analyzers), fn})
+}
+
+func registerRunCheck(fn runCheck, analyzers ...string) {
+	runChecks = append(runChecks, registered[runCheck]{mustDeclare("run check", fn, analyzers), fn})
+}
 
 func (r *runner) runItemChecks(it *item, d doc, fm frontmatter) {
-	for _, fn := range itemChecks {
-		fn(r, it, d, fm)
+	for _, c := range itemChecks {
+		r.unit(c.unit, func() { c.fn(r, it, d, fm) })
 	}
 }
 
@@ -45,15 +61,21 @@ func (r *runner) runTextScans(abs, raw string) {
 	if len(textScans) == 0 {
 		return
 	}
-	t := newScanText(r, abs, raw)
-	for _, fn := range textScans {
-		fn(r, t)
+	var t *scanText
+	for _, c := range textScans {
+		if !r.selected(c.unit) {
+			continue
+		}
+		if t == nil {
+			t = newScanText(r, abs, raw)
+		}
+		r.unit(c.unit, func() { c.fn(r, t) })
 	}
 }
 
 func (r *runner) runRunChecks() {
-	for _, fn := range runChecks {
-		fn(r)
+	for _, c := range runChecks {
+		r.unit(c.unit, func() { c.fn(r) })
 	}
 }
 

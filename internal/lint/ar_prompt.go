@@ -29,11 +29,11 @@ func init() {
 		regexp.MustCompile(`^\s*(?:[-*>]\s*)*(?:DEVELOPER MODE|DEV MODE|DAN MODE|JAILBREAK)\b`),
 	)
 	hiddenRunes[0x00AD] = "SOFT HYPHEN"
-	registerTextScan(scanDirectiveLabels)
-	registerTextScan(scanFakeTags)
-	registerTextScan(scanConfigTamper)
-	registerTextScan(scanSelfPropagation)
-	registerTextScan(scanRefComments)
+	registerTextScan(scanDirectiveLabels, AnalyzerSecurity)
+	registerTextScan(scanFakeTags, AnalyzerSecurity)
+	registerTextScan(scanConfigTamper, AnalyzerSecurity)
+	registerTextScan(scanSelfPropagation, AnalyzerSecurity)
+	registerTextScan(scanRefComments, AnalyzerSecurity)
 }
 
 var (

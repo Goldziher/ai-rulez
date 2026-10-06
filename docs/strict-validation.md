@@ -193,6 +193,7 @@ override individual `[lint]` keys.
 ```toml
 [lint]
 fail_on = "error"                  # error (default) | warning | none
+analyzers = ["security", "references"]   # run only these analyzers (see Analyzers and scopes); default: all
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
 example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
@@ -392,12 +393,20 @@ Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`
 not, so a new rule cannot silently land in another analyzer. Code ranges and their owners are in
 [Code ranges](#code-ranges).
 
-`--analyzer security,references` (or repeated) narrows the report to those analyzers, for example to run only the
-security family in one CI job and the rest in another. It filters the *report*: every check still runs, the baseline
-is applied to the full set first (so other analyzers' entries are not reported stale), and budgets and the exit code
-reflect only the analyzers you selected. Running only the chosen analyzers (instead of filtering) and a
-`[lint] analyzers` setting are not implemented: the runner is one pass, and making the checks independently
-schedulable would be a rewrite.
+`--analyzer security,references` (or repeated) and `[lint] analyzers = ["security", "references"]` run only those
+analyzers. Each check declares the analyzers whose rules it reports, and a check none of them selects is skipped, so
+a security-only job does not count tokens, resolve links or parse frontmatter for metadata checks. The report is the
+full run's report restricted to those analyzers (a test compares the two for every analyzer). The flag replaces the
+config list for that invocation; an unknown name is an error. The text report says `analyzers run: ...` and
+`--format json` has an `analyzers` array.
+
+- Baseline: an entry for an analyzer that did not run is neither stale nor expired, and `--update-baseline` keeps it
+  as it is, so a security-only run cannot erase the accepted findings of the others.
+- Budgets and the exit code reflect the analyzers that ran.
+- `--since` and `--changed` still compute the reference graph, which the `references` checks build, but report
+  none of their findings when `references` is not selected.
+- `scan` is `validate --strict` with the `security` analyzer.
+- `go test ./internal/lint -run '^$' -bench AnalyzerSelection -benchmem` compares the two on 300 skills of 120 lines: a security-only run took 6.6 s against 9.8 s for a full run and allocated 149 MB against 1.4 GB.
 
 ## Documenting risky commands: example regions
 

@@ -10,6 +10,10 @@ type LintConfig struct {
 	// FailOn is the lowest severity that makes the command exit non-zero:
 	// "error" (default), "warning", or "none".
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
+	// Analyzers is an allow-list of lint analyzers (security, references,
+	// hooks, ...): only these run. `validate --analyzer` replaces it for one
+	// invocation. Empty runs every analyzer.
+	Analyzers []string `yaml:"analyzers,omitempty" json:"analyzers,omitempty" toml:"analyzers,omitempty"`
 	// Ignore lists finding codes (AR401) or names (path-missing) to drop.
 	Ignore []string `yaml:"ignore,omitempty" json:"ignore,omitempty" toml:"ignore,omitempty"`
 	// IgnorePaths lists globs, relative to the config directory, of source

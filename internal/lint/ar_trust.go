@@ -23,8 +23,8 @@ func init() {
 		RuleInfo{CodeAuthorityClaim, "authority-claim", SeverityInfo, "an installed skill's description claims to be official, verified or trusted, but its source owner is not a known organization"},
 		RuleInfo{CodeLowAnalyzability, "low-analyzability", SeverityInfo, "most of a skill directory is binary, archived or oversize, so the scan did not read it"},
 	)
-	registerRunCheck(checkInstalledTrust)
-	registerRunCheck(checkAnalyzability)
+	registerRunCheck(checkInstalledTrust, AnalyzerSecurity)
+	registerRunCheck(checkAnalyzability, AnalyzerSecurity)
 }
 
 var (

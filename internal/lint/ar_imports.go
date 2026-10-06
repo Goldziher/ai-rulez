@@ -16,7 +16,7 @@ const maxImportHops = 5
 
 func init() {
 	registerRules(RuleInfo{CodeImportInvalid, "import-invalid", SeverityError, "an `@path` memory import points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it"})
-	registerRunCheck(checkImports)
+	registerRunCheck(checkImports, AnalyzerReferences)
 }
 
 var (

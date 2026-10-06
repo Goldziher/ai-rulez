@@ -21,9 +21,9 @@ func init() {
 		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb"},
 		RuleInfo{CodeStealthCommand, "stealth-command", SeverityError, "a command erases shell history or evidence (history -c, unset HISTFILE, HISTFILE=/dev/null, shred, chattr +i): no legitimate skill does this"},
 	)
-	registerTextScan(scanUnpinnedExec)
-	registerTextScan(scanDestructive)
-	registerTextScan(scanStealth)
+	registerTextScan(scanUnpinnedExec, AnalyzerSecurity)
+	registerTextScan(scanDestructive, AnalyzerSecurity)
+	registerTextScan(scanStealth, AnalyzerSecurity)
 }
 
 var unpinnedStartRe = regexp.MustCompile(unpinnedStartWordsPat)
