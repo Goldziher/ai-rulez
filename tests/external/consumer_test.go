@@ -10,6 +10,7 @@ package external
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -82,4 +83,35 @@ func asError(err error, target **airulez.Error) bool {
 		err = u.Unwrap()
 	}
 	return false
+}
+
+// recordingRunner is a Runner an outside module can write: it only needs the
+// public Spec and Result types.
+type recordingRunner struct{ argv [][]string }
+
+func (r *recordingRunner) Run(_ context.Context, spec airulez.Spec) airulez.Result {
+	r.argv = append(r.argv, spec.Argv)
+	return airulez.Result{Status: airulez.StatusUnavailable, ExitCode: -1, Err: errors.New("no commands in this service")}
+}
+
+func TestAServiceCanImplementItsOwnRunner(t *testing.T) {
+	ctx := context.Background()
+	run := &recordingRunner{}
+	var asRunner airulez.Runner = run
+	ws := airulez.NewMemWorkspace()
+	ws.Set(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"consumer\"\npresets = [\"claude\"]\n", 0o644)
+
+	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: asRunner})
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if _, err := project.Plan(ctx, airulez.PlanOptions{}); err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if _, err := airulez.GitSnapshot(ctx, t.TempDir(), "HEAD", asRunner); err == nil {
+		t.Fatal("a snapshot with a runner that starts nothing must fail")
+	}
+	if len(run.argv) == 0 || run.argv[0][0] != "git" {
+		t.Errorf("the service's runner was not asked to start the version control tool: %v", run.argv)
+	}
 }
