@@ -88,3 +88,36 @@ func TestDeliveryFindings_LockEnforcementReportsUnpinnedSkills(t *testing.T) {
 	assert.Contains(t, got[lint.CodeServedLockMismatch], "served heavy: not pinned")
 	assert.True(t, strings.Contains(got[lint.CodeServedLockMismatch], "ai-rulez lock"))
 }
+
+func TestDeliveryFindings_PresetWithoutSkillsNeedsNoStub(t *testing.T) {
+	// Arrange: gitlab-duo can call MCP but renders no skills (docs/harnesses.md).
+	cfg := deliveryProject(t, `["claude", "gitlab-duo"]`, "", servedSkillFiles)
+
+	// Act
+	got := codesOf(deliveryFindings(cfg))
+
+	// Assert
+	assert.NotContains(t, got, lint.CodeDeliveryStubMissing, "no stub is generated for a preset that renders no skills")
+}
+
+func TestDeliveryFindings_UnscannableServedFilesOfAuthoredSkills(t *testing.T) {
+	// Arrange: authored served skills the server refuses (NUL in SKILL.md) or
+	// serves with a warning (a reference over 512 KiB).
+	cfg := deliveryProject(t, `["claude"]`,
+		"\n[[mcp_servers]]\nname = \"skills\"\ncommand = \"ai-rulez\"\nargs = [\"mcp\", \"--serve-skills\"]\n",
+		map[string]string{
+			"skills/nulmd/SKILL.md":         "---\ndescription: NUL in SKILL.md\ndelivery: served\n---\nBody\x00\n",
+			"skills/bigref/SKILL.md":        "---\ndescription: Big reference\ndelivery: served\n---\nBody\n",
+			"skills/bigref/references/b.md": strings.Repeat("x", 600*1024),
+		})
+
+	// Act
+	got := codesOf(deliveryFindings(cfg))
+
+	// Assert
+	require.Contains(t, got, lint.CodeServedUnscannable)
+	assert.Contains(t, got[lint.CodeServedUnscannable], "skill://nulmd/SKILL.md")
+	assert.Contains(t, got[lint.CodeServedUnscannable], "skill://bigref/references/b.md")
+	assert.Contains(t, got[lint.CodeServedUnscannable], "the server refuses skill \"nulmd\"")
+	assert.Contains(t, got[lint.CodeServedUnscannable], "serves it with this warning")
+}
