@@ -3,7 +3,6 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"time"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Hook event names handled by HandleHook. Claude Code's are verified against the
@@ -75,6 +76,9 @@ type HookOptions struct {
 // not handle. Only Claude Code's InstructionsLoaded, SubagentStart and
 // SubagentStop are handled here; skill loads stay with `usage record`.
 func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOptions) (*Event, error) {
+	if !p.Settings.RecordActive() {
+		return nil, nil // nothing is recorded: do not read or parse the harness's input
+	}
 	data, err := io.ReadAll(io.LimitReader(in, hookInputLimit))
 	if err != nil {
 		return nil, oops.Wrapf(err, "read hook event")
@@ -82,9 +86,6 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 	var payload hookPayload
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, oops.Wrapf(err, "parse hook event")
-	}
-	if !p.Settings.RecordActive() {
-		return nil, nil
 	}
 	payload.normalize()
 	harness := options.Harness
@@ -112,9 +113,15 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 			}
 		}
 	case strings.ToLower(HookSubagentStart):
+		if payload.AgentType == "" {
+			return nil, nil // no id to record under; a hook must not fail the harness over it
+		}
 		event.Kind, event.ID, event.LoadReason = KindAgent, payload.AgentType, ReasonSubagentStart
 		p.noteAgentStart(payload)
 	case strings.ToLower(HookSubagentStop):
+		if payload.AgentType == "" {
+			return nil, nil
+		}
 		event.Kind, event.ID, event.LoadReason = KindAgent, payload.AgentType, ReasonSubagentStop
 		event.Outcome = OutcomeUsed
 		event.DurationMS = payload.DurationMS
