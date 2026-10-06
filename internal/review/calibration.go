@@ -235,6 +235,9 @@ func recordDigest(rec *CalibrationRecord) string {
 // "gemini-2.5-flash" are one model), and the "models/" prefix some providers report.
 func SameModel(a, b string) bool { return trimModel(a) == trimModel(b) }
 
+// TrimModel drops the provider prefix of a model id.
+func TrimModel(m string) string { return trimModel(m) }
+
 func trimModel(m string) string {
 	m = strings.TrimPrefix(m, "models/")
 	if i := strings.LastIndex(m, "/"); i >= 0 {
