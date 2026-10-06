@@ -29,6 +29,9 @@ var (
 	catalogClean         bool
 	catalogTitle         string
 	catalogAllowFindings []string
+	// catalogWithEval and catalogWithUsage hold the file --with-eval and
+	// --with-usage name, or catalogDefaultInput for the project's own.
+	catalogWithEval, catalogWithUsage string
 	// catalogExcerptSet records that --include-excerpt was given, so the
 	// default (on, except for --indexable) is not mistaken for a choice.
 	catalogExcerptSet bool
@@ -82,6 +85,10 @@ func init() {
 	CatalogCmd.Flags().BoolVar(&catalogClean, "clean", false, "With --html: remove files a previous run wrote that the site no longer has")
 	CatalogCmd.Flags().StringVar(&catalogTitle, "base-title", "", "With --html: site title (default: AI-Rulez catalog)")
 	CatalogCmd.Flags().StringSliceVar(&catalogAllowFindings, "allow-findings", nil, "With --html: publish despite findings of these codes (AR001: a secret in an item)")
+	CatalogCmd.Flags().StringVar(&catalogWithEval, "with-eval", "", "Add each skill's recorded eval result (default file: <config dir>/eval-results.json)")
+	CatalogCmd.Flags().StringVar(&catalogWithUsage, "with-usage", "", "Add each skill's use count from a usage log (default file: <config dir>/local/usage.jsonl)")
+	CatalogCmd.Flags().Lookup("with-eval").NoOptDefVal = catalogDefaultInput
+	CatalogCmd.Flags().Lookup("with-usage").NoOptDefVal = catalogDefaultInput
 	CatalogCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	CatalogCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -107,6 +114,9 @@ func checkCatalogFlags() error {
 		return oops.Errorf("--role, --clean, --indexable, --base-title and --allow-findings apply to --html only")
 	case catalogHTMLDir == "" && catalogFormat != formatJSON && catalogSchemaFlag != govview.CatalogSchemaVersion:
 		return oops.Errorf("--schema-version applies to --format json")
+	case (catalogWithEval != "" || catalogWithUsage != "") && catalogHTMLDir == "" &&
+		(catalogFormat != formatJSON || catalogSchemaFlag != govview.CatalogSchemaVersionV2):
+		return oops.Errorf("--with-eval and --with-usage apply to --html and to --format json --schema-version 2")
 	}
 	return nil
 }
@@ -168,6 +178,9 @@ func buildCatalogV2(cfg *config.Config, counter tokens.Counter, excerpt bool) (*
 		opts.LintReason = "the lint engine could not run"
 	} else {
 		opts.Lint = report
+	}
+	if err := addCatalogSignals(cfg, &opts); err != nil {
+		return nil, err
 	}
 	return govview.BuildCatalogV2(cfg, counter, Version, opts)
 }

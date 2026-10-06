@@ -41,6 +41,20 @@
 </table>
 {{else}}<p>{{template "badge" .}} No findings.</p>{{end}}
 {{else}}<p>Lint did not run for this catalog.</p>{{end}}
+{{if .Eval}}<h2>Eval</h2>
+<table>
+<caption>Recorded eval result</caption>
+<tbody>
+{{range .Eval}}<tr><th scope="row">{{s .Key}}</th><td>{{s .Value}}</td></tr>
+{{end}}</tbody>
+</table>{{end}}
+{{if .Usage}}<h2>Usage</h2>
+<table>
+<caption>Recorded use</caption>
+<tbody>
+{{range .Usage}}<tr><th scope="row">{{s .Key}}</th><td>{{s .Value}}</td></tr>
+{{end}}</tbody>
+</table>{{end}}
 <h2>Roles</h2>
 {{if .RoleLinks}}<ul>{{range .RoleLinks}}<li>{{if .Href}}<a href="{{.Href}}">{{s .Name}}</a>{{else}}{{s .Name}}{{end}}</li>{{end}}</ul>{{else}}<p>No role keeps this item.</p>{{end}}
 {{if .RoleDelivery}}<h2>Delivery by role</h2>

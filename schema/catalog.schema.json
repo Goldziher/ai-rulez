@@ -237,6 +237,45 @@
               }
             ]
           },
+          "eval": {
+            "type": "object",
+            "description": "A skill's recorded eval result (catalog --with-eval): aggregate figures only. Absent when none was recorded or none was asked for.",
+            "required": [
+              "cases",
+              "pass_rate",
+              "passing",
+              "ablation_delta",
+              "trigger_precision",
+              "trigger_recall",
+              "stale",
+              "verified"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "cases": { "type": "integer", "minimum": 0, "description": "Scored cases." },
+              "pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+              "passing": { "type": "boolean" },
+              "ablation_delta": { "type": ["number", "null"] },
+              "trigger_precision": { "type": ["number", "null"] },
+              "trigger_recall": { "type": ["number", "null"] },
+              "stale": { "type": "boolean", "description": "The skill changed after the run." },
+              "verified": {
+                "type": "boolean",
+                "description": "The record carries a valid signature of this machine's key."
+              },
+              "date": { "type": "string" }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "description": "A skill's recorded use (catalog --with-usage): a count and the last day. Absent when the skill was not used or no log was asked for.",
+            "required": ["invocations"],
+            "additionalProperties": false,
+            "properties": {
+              "invocations": { "type": "integer", "minimum": 0 },
+              "last_seen": { "type": "string" }
+            }
+          },
           "excerpt": {
             "type": "object",
             "description": "First 2 KiB of the body, plain text. Absent when excerpts were switched off.",
