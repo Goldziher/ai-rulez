@@ -428,6 +428,10 @@ func TestPrepare_Refusals(t *testing.T) {
 		{"secret in skill", func(t *testing.T, _, c string, _ *Options) {
 			appendSkill(t, filepath.Join(c, "skills/deploy"), "\nAWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
 		}, "AR001", "secret"},
+		{"secret in train rubric_items", func(t *testing.T, _, c string, _ *Options) {
+			body := "cases:\n  - id: train-rubric\n    prompt: Deploy it\n    expect_trigger: true\n    rubric_items:\n      - text: \"Mentions AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\"\n"
+			require.NoError(t, os.WriteFile(filepath.Join(c, "skills/deploy/evals/rubric.eval.yaml"), []byte(body), 0o600))
+		}, "AR001", "train-rubric"},
 		{"over estimate", func(_ *testing.T, _, _ string, o *Options) {
 			o.MaxCostUSD = 0.001
 			o.Price = evals.Price{InPerMTok: 3000, OutPerMTok: 15000}
