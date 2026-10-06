@@ -64,7 +64,9 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 	if reason := skillSourceProblem(skill.Source); reason != "" {
 		return bad("source", reason)
 	}
-	if reason := skillRefProblem(skill.Ref); reason != "" {
+	// A ref with ^, ~, * or a space is a version constraint (see IsVersionSugar),
+	// checked as one by validateVersionKeys; git refs cannot contain them.
+	if reason := skillRefProblem(skill.Ref); reason != "" && !IsVersionConstraintRef(skill.Ref) {
 		return bad("ref", reason)
 	}
 	if reason := skillPathProblem(skill.Path); reason != "" {
