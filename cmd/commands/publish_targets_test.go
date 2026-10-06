@@ -706,6 +706,26 @@ func TestPublish_MultiPluginWritesOneDistPerPluginAndAnAggregate(t *testing.T) {
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
 }
 
+func TestPublish_MultiPluginVerifyNoticesAMissingPluginDirectory(t *testing.T) {
+	root := multiProject(t)
+	_, err := runPublishCapture(t)
+	require.NoError(t, err)
+	dist := filepath.Join(root, "dist")
+	assert.Contains(t, readDist(t, dist), "aggregate/plugins.json", "the aggregate always lists the plugins of the release")
+	verify := func() error {
+		var out strings.Builder
+		var verr error
+		_, _ = capture(t, func() { verr = runPublishVerify(context.Background(), &out, dist) })
+		return verr
+	}
+	require.NoError(t, verify())
+
+	require.NoError(t, os.RemoveAll(filepath.Join(dist, "plugins", "acme-beta")))
+
+	err = verify()
+	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
+}
+
 func TestPublish_MultiPluginOnlySelectsPlugins(t *testing.T) {
 	root := multiProject(t)
 	publishOnly = []string{"acme-beta"}
