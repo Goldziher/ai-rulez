@@ -88,6 +88,13 @@ func describeRequire(b *strings.Builder, r *Require, indent string) {
 		fmt.Fprintf(b, "%spaired: for each %s, require %s\n", indent, r.Paired.ForEach, how)
 	case r.GlobCount != nil:
 		fmt.Fprintf(b, "%sglob_count %s min=%s max=%s\n", indent, r.GlobCount.Files, optInt(r.GlobCount.Min), optInt(r.GlobCount.Max))
+	case r.Command != nil:
+		fmt.Fprintf(b, "%scommand `%s` must exit %d (runs only with --allow-exec)\n", indent, sanitize(strings.Join(r.Command.Argv, " ")), expectExit(r.Command))
+	case r.LLM != nil:
+		fmt.Fprintf(b, "%sllm checklist (advisory, runs only with --allow-llm; the changed lines are sent to the model):\n", indent)
+		for i, item := range r.LLM.Checklist {
+			fmt.Fprintf(b, "%s  %d. %s\n", indent, i+1, sanitize(item))
+		}
 	case len(r.All) > 0:
 		describeGroup(b, "all of", r.All, indent)
 	case len(r.Any) > 0:
@@ -179,4 +186,11 @@ func List(cfg *config.Config) []ListRow {
 		rows = append(rows, ListRow{Name: sanitize(name), Type: "invalid", Severity: severityError, Source: p.File, Invalid: sanitize(p.Message)})
 	}
 	return rows
+}
+
+func expectExit(p *CommandPred) int {
+	if p.ExpectExit != nil {
+		return *p.ExpectExit
+	}
+	return 0
 }

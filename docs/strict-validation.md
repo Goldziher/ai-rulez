@@ -176,7 +176,10 @@ stdout.
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
 | AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands only) |
-| AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` only) |
+| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run` and `test` only) |
+| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld or `--estimate` (`verifiers run` only; shown as skipped, never as a pass) |
+| AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` or `[verifiers_settings] warn_dead`) |
+| AR9H6 | `verifier-no-examples` | warning | A spec verifier has no `[[verifiers.examples]]` (`verifiers run` with `[verifiers_settings] require_examples`) |
 | AR9J1 | `improve-run-stale` | info | A saved `improve` run's original digest no longer matches the skill; `improve apply` refuses (see [Improve](improve.md)) |
 | AR9J2 | `improve-no-holdout` | off | A skill has fewer than three scored held-out eval cases, or none that is negative, so `improve` refuses to run |
 | AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (report only; the round is rejected before any eval spend) |
@@ -218,7 +221,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E7` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G8` used by `review` and `rubric lint`, `AR9G9` is for the calibration phase) | allocated |
-| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
+| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`-`AR9H6` used, never emitted by `validate` unless `--verifiers` is given) | allocated |
 | `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J3` used; never emitted by `validate`) | allocated |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
@@ -2700,3 +2703,33 @@ the upload step failed: gh is missing, the release exists or gh exited non-zero 
 - Good: Download the release again, or rebuild it with `ai-rulez publish`
 
 <!-- rules:end -->
+### AR9H3 verifier-command-failed-to-run
+
+a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (verifiers report only)
+
+- Default severity: `error`
+- Analyzer: `verifiers` (scope `item`)
+- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. Only `ai-rulez verifiers run` and `test` report it.
+- Bad: `argv = ["make", "check-lock"]` run in CI without `--allow-exec`, or a program that is not installed
+- Good: Pass `--allow-exec` for trusted refs only, install the program, or raise `timeout_s` (capped by `max_timeout_s`)
+
+### AR9H4 verifier-llm-skipped
+
+an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld, or --estimate was given; never counted as a pass (verifiers report only)
+
+- Default severity: `info`
+- Analyzer: `verifiers` (scope `item`)
+- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters), the verifier is skipped and shown as skipped, never as passed. Only `ai-rulez verifiers run` reports it.
+- Bad: An `llm` verifier in CI without `--allow-llm`, which silently looks green
+- Good: Pass `--allow-llm` where model use is allowed, or read the skipped line as 'not checked'
+
+### AR9H6 verifier-no-examples
+
+a verifier has no self-test examples (verifiers report only, with [verifiers_settings] require_examples)
+
+- Default severity: `warning`
+- Analyzer: `verifiers` (scope `item`)
+- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. Only `ai-rulez verifiers run` reports it.
+- Bad: A spec verifier with a `forbid` regex and no examples
+- Good: Add a passing and a failing example and run `ai-rulez verifiers test`
+

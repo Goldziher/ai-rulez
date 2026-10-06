@@ -95,7 +95,23 @@ func (e *Env) stat(ctx context.Context, rel string) (real string, exists bool, e
 	return cur, true, nil
 }
 
-// readFile reads up to maxFileBytes of a repo-relative file. truncated is true
+// fileLimit is how much of a file a content predicate reads.
+func (e *Env) fileLimit() int {
+	if s := e.settings(); s.MaxFileBytes > 0 {
+		return s.MaxFileBytes
+	}
+	return defaultMaxFileBytes
+}
+
+// sizeText renders a byte limit: "5 MiB" for whole mebibytes, else "N bytes".
+func sizeText(n int) string {
+	if n%(1<<20) == 0 {
+		return itoa(n>>20) + " MiB"
+	}
+	return itoa(n) + " bytes"
+}
+
+// readFile reads up to the file limit of a repo-relative file. truncated is true
 // when the file is larger, in which case data is only its prefix.
 func (e *Env) readFile(ctx context.Context, rel string) (data []byte, truncated bool, err error) {
 	real, exists, err := e.stat(ctx, rel)
@@ -110,12 +126,13 @@ func (e *Env) readFile(ctx context.Context, rel string) (data []byte, truncated 
 		return nil, false, oops.Wrapf(err, "read %s", rel)
 	}
 	defer f.Close()
-	data, err = io.ReadAll(io.LimitReader(f, maxFileBytes+1))
+	limit := e.fileLimit()
+	data, err = io.ReadAll(io.LimitReader(f, int64(limit)+1))
 	if err != nil {
 		return nil, false, oops.Wrapf(err, "read %s", rel)
 	}
-	if len(data) > maxFileBytes {
-		return data[:maxFileBytes], true, nil
+	if len(data) > limit {
+		return data[:limit], true, nil
 	}
 	return data, false, nil
 }

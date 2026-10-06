@@ -46,6 +46,13 @@ func (t *TestReport) Failed() bool {
 // `changed` files count as entirely added. Git and the real project are never
 // touched. names restricts the run; an unknown name is an error.
 func RunExamples(ctx context.Context, cfg *config.Config, names []string) (*TestReport, error) {
+	return RunExamplesWith(ctx, cfg, names, Options{})
+}
+
+// RunExamplesWith is RunExamples with run options: AllowExec lets the command
+// predicates of the examples run (in the example's temporary directory),
+// Runner and Environ replace the process starter and environment.
+func RunExamplesWith(ctx context.Context, cfg *config.Config, names []string, opts Options) (*TestReport, error) {
 	specs, problems := LoadSpecs(cfg)
 	rep := &TestReport{Results: []ExampleResult{}, Problems: problems}
 	picked := specs
@@ -78,14 +85,19 @@ func RunExamples(ctx context.Context, cfg *config.Config, names []string) (*Test
 			continue
 		}
 		for _, ex := range sp.Examples {
-			rep.Results = append(rep.Results, runExample(ctx, cfg, sp, ex))
+			rep.Results = append(rep.Results, runExample(ctx, cfg, sp, ex, opts))
 		}
 	}
 	return rep, nil
 }
 
-func runExample(ctx context.Context, cfg *config.Config, sp *Spec, ex Example) ExampleResult {
+func runExample(ctx context.Context, cfg *config.Config, sp *Spec, ex Example, opts Options) ExampleResult {
 	out := ExampleResult{Verifier: sp.ID, Example: ex.Name, Want: ex.Expect}
+	if usesLLM(sp.Require) && opts.LLM == nil {
+		// An example cannot say what a model will answer; it needs a real run.
+		out.Got, out.OK, out.Message = StatusSkipped, true, "the llm predicate needs a model: not run offline"
+		return out
+	}
 	dir, err := os.MkdirTemp("", "ai-rulez-verifier-test-")
 	if err != nil {
 		out.Got, out.Message = StatusError, err.Error()
@@ -115,7 +127,8 @@ func runExample(ctx context.Context, cfg *config.Config, sp *Spec, ex Example) E
 	for _, c := range ex.Changed {
 		changes = append(changes, gitutil.Change{Path: filepath.ToSlash(filepath.Clean(c)), Status: 'A', AllAdded: true})
 	}
-	env := &Env{Cfg: cfg, Root: dir}
+	opts.Since, opts.Staged = "", false
+	env := &Env{Cfg: cfg, Root: dir, opts: opts}
 	env.scope = newScope(ModeAll, "", changes, tree)
 	res := evaluateSpec(ctx, env, sp)
 	out.Got, out.Message = res.Status, res.Message

@@ -102,7 +102,7 @@ func casesFor(res Result, failOn string) []junitCase {
 	switch res.Status {
 	case StatusPass:
 		return []junitCase{{Name: class, ClassName: class}}
-	case StatusNotApplicable:
+	case StatusNotApplicable, StatusSkipped, StatusInactive:
 		return []junitCase{{Name: class, ClassName: class, Skipped: &struct{}{}}}
 	case StatusError:
 		return []junitCase{{Name: class, ClassName: class, Error: &junitProblem{Message: res.Message, Type: nonEmpty(res.Code, "error"), Text: res.Message}}}

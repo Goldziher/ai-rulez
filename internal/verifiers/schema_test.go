@@ -29,6 +29,15 @@ func TestSpecSchemaAgreesWithTheLoader(t *testing.T) {
 		{"two targets", head + "skill = \"s\"\n[verifiers.require.regex]\nregex = \"x\"\n", false},
 		{"unknown key", head + "bogus = 1\n[verifiers.require.regex]\nregex = \"x\"\n", false},
 		{"bad in", head + "[verifiers.require.regex]\nregex = \"x\"\nin = \"nowhere\"\n", false},
+		{"command", head + "when_changed = [\"a\"]\n[verifiers.require.command]\nargv = [\"make\", \"check\"]\npass_files = \"stdin0\"\ntimeout_s = 60\nexpect_exit = 1\n", true},
+		{"command without argv", head + "[verifiers.require.command]\ntimeout_s = 60\n", false},
+		{"command with bad pass_files", head + "[verifiers.require.command]\nargv = [\"x\"]\npass_files = \"env\"\n", false},
+		{"command with shell", head + "[verifiers.require.command]\nargv = [\"x\"]\nshell = true\n", false},
+		{"llm", head + "[verifiers.require.llm]\nchecklist = [\"a\"]\nmax_diff_bytes = 2000\n", true},
+		{"llm under all", head + "[[verifiers.require.all]]\n[verifiers.require.all.llm]\nchecklist = [\"a\"]\n", true},
+		{"llm without checklist", head + "[verifiers.require.llm]\nmodel = \"m\"\n", false},
+		{"llm with empty checklist", head + "[verifiers.require.llm]\nchecklist = []\n", false},
+		{"llm with unknown field", head + "[verifiers.require.llm]\nchecklist = [\"a\"]\nthreshold = 1\n", false},
 		{"paired without requirement", head + "[verifiers.require.paired]\nfor_each = \"a\"\n", false},
 	}
 	for _, tt := range tests {

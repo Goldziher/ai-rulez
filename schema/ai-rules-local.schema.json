@@ -105,6 +105,35 @@
           "minItems": 1,
           "type": "array"
         },
+        "command": {
+          "additionalProperties": false,
+          "description": "Runs a program (no shell) in the project root with a scrubbed environment; only with --allow-exec.",
+          "properties": {
+            "argv": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "expect_exit": {
+              "default": 0,
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "pass_files": {
+              "description": "Hand the scoped files to the program as arguments or NUL-separated on stdin.",
+              "enum": ["args", "stdin0"]
+            },
+            "timeout_s": {
+              "maximum": 900,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
         "file_exists": {
           "additionalProperties": false,
           "properties": {
@@ -141,6 +170,32 @@
             "min": {
               "minimum": 0,
               "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "llm": {
+          "additionalProperties": false,
+          "description": "Asks a model whether the changed lines satisfy a checklist. Advisory (never above warning), only with --allow-llm; allowed only as the root predicate or directly under `all`.",
+          "properties": {
+            "checklist": {
+              "items": {
+                "maxLength": 500,
+                "type": "string"
+              },
+              "maxItems": 20,
+              "minItems": 1,
+              "type": "array"
+            },
+            "max_diff_bytes": {
+              "description": "Changed text per call; default 24000.",
+              "maximum": 200000,
+              "minimum": 1024,
+              "type": "integer"
+            },
+            "model": {
+              "description": "Overrides the configured [llm] model.",
+              "type": "string"
             }
           },
           "type": "object"

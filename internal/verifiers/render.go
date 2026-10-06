@@ -14,23 +14,31 @@ type jsonReport struct {
 	Mode    string         `json:"mode,omitempty"`
 	Summary map[string]int `json:"summary"`
 	Results []Result       `json:"results"`
+	LLM     *LLMUsage      `json:"llm,omitempty"`
 }
 
 func summary(r *Report) map[string]int {
 	c := r.Counts()
-	return map[string]int{
+	out := map[string]int{
 		string(StatusPass):          c[StatusPass],
 		string(StatusFail):          c[StatusFail],
 		string(StatusError):         c[StatusError],
 		string(StatusNotApplicable): c[StatusNotApplicable],
 	}
+	// Reported only when present, so a report without these stays as it was.
+	for _, s := range []Status{StatusSkipped, StatusInactive} {
+		if c[s] > 0 {
+			out[string(s)] = c[s]
+		}
+	}
+	return out
 }
 
 // WriteJSON writes the report as indented JSON.
 func WriteJSON(w io.Writer, r *Report) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(jsonReport{Root: r.Root, Mode: r.Mode, Summary: summary(r), Results: r.Results}); err != nil {
+	if err := enc.Encode(jsonReport{Root: r.Root, Mode: r.Mode, Summary: summary(r), Results: r.Results, LLM: r.LLM}); err != nil {
 		return oops.Wrapf(err, "write verifiers report")
 	}
 	return nil
@@ -56,8 +64,20 @@ func WriteText(w io.Writer, r *Report) error {
 	if n := c[StatusNotApplicable]; n > 0 {
 		line += fmt.Sprintf(", %d not applicable", n)
 	}
+	if n := c[StatusSkipped]; n > 0 {
+		line += fmt.Sprintf(", %d skipped", n)
+	}
+	if n := c[StatusInactive]; n > 0 {
+		line += fmt.Sprintf(", %d inactive", n)
+	}
 	if r.Mode != "" {
 		line += " (" + r.Mode + ")"
+	}
+	if u := r.LLM; u != nil && u.Calls > 0 {
+		line += fmt.Sprintf("\nllm: %d call(s), %d from cache, %d prompt + %d completion tokens, about $%.4f", u.Calls, u.Cached, u.PromptTokens, u.CompletionTokens, u.CostUSD)
+		if u.MaxCostUSD > 0 {
+			line += fmt.Sprintf(" of $%.2f", u.MaxCostUSD)
+		}
 	}
 	_, err := fmt.Fprintln(w, line)
 	return wrapWrite(err)
@@ -68,7 +88,7 @@ func WriteText(w io.Writer, r *Report) error {
 func writeDetails(w io.Writer, r *Report) {
 	first := true
 	for _, res := range r.Results {
-		if res.Status != StatusFail && res.Code != CodeVerifierInvalid {
+		if res.Status != StatusFail && !(res.Status == StatusError && res.Code != "") {
 			continue
 		}
 		if len(res.Findings) == 0 && res.Fix == "" && res.Target == nil {

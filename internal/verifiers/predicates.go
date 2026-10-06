@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	// maxFileBytes bounds how much of a file a content predicate reads. A file
-	// larger than this is only partly checked, which regex and forbid report as
-	// an error rather than pass on the strength of a prefix.
-	maxFileBytes = 5 << 20
+	// defaultMaxFileBytes bounds how much of a file a content predicate reads
+	// ([verifiers_settings] max_file_bytes overrides it). A file larger than
+	// this is only partly checked, which regex and forbid report as an error
+	// rather than pass on the strength of a prefix.
+	defaultMaxFileBytes = 5 << 20
 	// maxReported bounds the file:line locations a failure message lists.
 	maxReported = 10
 )
@@ -73,10 +74,10 @@ func predGlobCount(ctx context.Context, env *Env, v config.VerifierConfig) (Outc
 }
 
 // unchecked describes files a content predicate could not examine fully.
-func unchecked(files []string) error {
+func unchecked(env *Env, files []string) error {
 	return oops.Hint("Narrow `glob` or add the file to `exclude`.").
-		Errorf("%d file(s) could not be fully checked (binary or over %d MiB): %s",
-			len(files), maxFileBytes>>20, listFirst(files))
+		Errorf("%d file(s) could not be fully checked (binary or over %s): %s",
+			len(files), sizeText(env.fileLimit()), listFirst(files))
 }
 
 func predRegex(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome, error) {
@@ -122,7 +123,7 @@ func predRegex(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome,
 			Findings: fileFindings(missing, fmt.Sprintf("pattern %q not found", v.Pattern))}, nil
 	}
 	if len(skipped) > 0 {
-		return Outcome{}, unchecked(skipped)
+		return Outcome{}, unchecked(env, skipped)
 	}
 	return Outcome{Pass: true, Message: fmt.Sprintf("%d file(s)", checked)}, nil
 }
@@ -178,12 +179,12 @@ scan:
 	if len(hits) > 0 {
 		msg := fmt.Sprintf("forbidden pattern %q at %s", v.Pattern, listCapped(hits))
 		if len(skipped) > 0 {
-			msg += fmt.Sprintf("; %d file(s) were not fully checked (binary or over %d MiB)", len(skipped), maxFileBytes>>20)
+			msg += fmt.Sprintf("; %d file(s) were not fully checked (binary or over %s)", len(skipped), sizeText(env.fileLimit()))
 		}
 		return Outcome{Message: msg, Findings: hitFindings[:min(len(hitFindings), maxReported)]}, nil
 	}
 	if len(skipped) > 0 {
-		return Outcome{}, unchecked(skipped)
+		return Outcome{}, unchecked(env, skipped)
 	}
 	return Outcome{Pass: true, Message: fmt.Sprintf("%d file(s)", checked)}, nil
 }
@@ -227,7 +228,7 @@ func predKeyEquals(ctx context.Context, env *Env, v config.VerifierConfig) (Outc
 		return Outcome{}, err
 	}
 	if truncated {
-		return Outcome{}, oops.Errorf("%s is over %d MiB and cannot be parsed", v.Path, maxFileBytes>>20)
+		return Outcome{}, oops.Errorf("%s is over %s and cannot be parsed", v.Path, sizeText(env.fileLimit()))
 	}
 	var doc any
 	if err := decode(data, &doc); err != nil {

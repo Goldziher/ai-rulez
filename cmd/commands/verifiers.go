@@ -41,7 +41,25 @@ var (
 	verifiersOut      string
 	verifiersDead     bool
 	verifiersListJSON bool
+	verifiersExec     bool
+	verifiersRole     string
 )
+
+// verifiersAllowExecEnv is the CI spelling of --allow-exec.
+const verifiersAllowExecEnv = "AI_RULEZ_VERIFIERS_ALLOW_EXEC"
+
+// allowExec reports whether command predicates may run: --allow-exec or the
+// environment variable set to 1 or true. Nothing else implies it.
+func allowExec() bool {
+	if verifiersExec {
+		return true
+	}
+	switch strings.ToLower(os.Getenv(verifiersAllowExecEnv)) {
+	case "1", "true":
+		return true
+	}
+	return false
+}
 
 // VerifiersCmd groups the deterministic repo checks declared as [[verifiers]].
 var VerifiersCmd = &cobra.Command{
@@ -51,7 +69,9 @@ var VerifiersCmd = &cobra.Command{
 declare in .ai-rulez/config.toml as [[verifiers]]: a file exists or is absent, a
 glob matches a bounded number of files, a regex is present in (or forbidden from)
 files, a JSON, YAML or TOML key has a value, generated files match their sources.
-They never use the network and never start a process.
+They never use the network and never start a process, except two predicates of a
+rule-linked verifier that run only when you opt in: command (--allow-exec) and llm
+(--allow-llm, which sends the changed lines to the configured model).
 
 Larger sets, rule-linked verifiers (failures name the rule or skill they enforce), the
 paired predicate and all/any/not combinators live in .ai-rulez/verifiers/*.toml
@@ -128,8 +148,9 @@ func init() {
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
 	addJSONAlias(VerifiersRunCmd.Flags(), &verifiersJSON, "")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
-	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Profile for generated_in_sync verifiers that name none (default: from config)")
+	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config)")
 	f := VerifiersRunCmd.Flags()
+	f.StringVar(&verifiersRole, "role", "", "Active role: verifiers whose rule or skill the role does not keep are reported inactive")
 	f.StringVar(&verifiersSince, "since", "", "Evaluate only files changed since the merge base of REV and HEAD (plus uncommitted and untracked)")
 	f.BoolVar(&verifiersStaged, "staged", false, "Evaluate only staged changes")
 	f.BoolVar(&verifiersAll, "all", false, "Evaluate every file (the default)")
@@ -138,6 +159,11 @@ func init() {
 	f.StringVar(&verifiersFailOn, "fail-on", "", "Lowest failing severity: error (default), warning, info or none")
 	f.StringVar(&verifiersOut, "out", "", "Write the report to this file instead of stdout")
 	f.BoolVar(&verifiersDead, "strict-applicability", false, "Report a verifier whose when_changed matches no file (AR9H5)")
+	f.BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates run a program (or set "+verifiersAllowExecEnv+"=1); never implied by another flag")
+	f.BoolVar(&verifiersAllowLLM, "allow-llm", false, "Evaluate llm verifiers: sends the changed lines to the configured model (needs allow_network in the user config)")
+	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most an llm verifier run may cost in USD (0 removes this cap; [llm] limits still apply)")
+	f.BoolVar(&verifiersEstimate, "estimate", false, "Print which files and how many bytes llm verifiers would send and the cost bound, and call nothing")
+	VerifiersTestCmd.Flags().BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates of the examples run a program (or set "+verifiersAllowExecEnv+"=1)")
 	addJSONFormat(VerifiersListCmd.Flags(), &verifiersListJSON, "")
 	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd} {
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
@@ -180,6 +206,12 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 			}
 		}
 	}
+	var releaseLLM func()
+	if opts.LLM, releaseLLM, err = verifierLLMOptions(ctx, cfg); err != nil {
+		fmtError(err)
+		return exitVerifiersCannotRun
+	}
+	defer releaseLLM()
 	report := verifiers.Run(ctx, cfg, opts)
 	if report.Err != nil {
 		fmtError(report.Err)
@@ -256,7 +288,8 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 	}
 	return verifiers.Options{
 		Names: verifiersNames, Since: verifiersSince, Staged: verifiersStaged,
-		Rule: verifiersRule, StrictApplicability: verifiersDead,
+		Rule: verifiersRule, StrictApplicability: verifiersDead, AllowExec: allowExec(),
+		Profile: verifiersProfile, Role: verifiersRole,
 	}, format, failOn, nil
 }
 
@@ -290,7 +323,7 @@ func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
-	report, err := verifiers.RunExamples(ctx, cfg, names)
+	report, err := verifiers.RunExamplesWith(ctx, cfg, names, verifiers.Options{AllowExec: allowExec()})
 	if err != nil {
 		fmtError(err)
 		return exitVerifiersCannotRun
