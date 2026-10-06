@@ -25,6 +25,7 @@ strict superset of the version 1 fields, plus:
 | `items[].lint` | `status` (`ok`, `warn`, `error`), counts and findings, from the same engine as `validate --strict`; absent when lint could not run |
 | `items[].excerpt` | first 2 KiB of the body, plain text; off with `--include-excerpt=false` |
 | `items[].approval` | `null`, or `{required, status, reviewers, assurance, expires}` when `[governance]` requires approval of the item or the lock records one; see [Approvals](approvals.md) |
+| `items[].eval`, `items[].usage` | with `--with-eval` / `--with-usage`: a skill's recorded eval result and use count, see [Eval and usage](#eval-and-usage) |
 | `mcp_servers` | the project's MCP servers: `ref`, `name`, `transport`, `command_basename`, `enabled`, `profiles`, `pinned` (exact version or digest in a package-runner launch; `null` when not applicable), and the *names* of `env` and `headers` entries, each marked `literal` or with the variable it references (`ref`); `warnings` flags an unpinned launch or a credential written as a literal |
 | `lint` | project totals, counts per code, and the findings no item owns |
 | `notes` | why a section is missing or narrowed |
@@ -34,6 +35,31 @@ secrets and internal hostnames. Only the executable's file name and the names of
 
 Paths are relative to the configuration directory; no absolute path of the machine appears. A consumer must refuse
 a `schema_version` it does not know. The MCP `catalog` tool prints version 1, equal to the CLI default.
+
+## Eval and usage
+
+```bash
+ai-rulez catalog --format json --schema-version 2 --with-eval --with-usage
+ai-rulez catalog --html site/ --with-eval=path/to/eval-results.json --with-usage=path/to/usage.jsonl
+```
+
+Both are off by default. Without a value they read the project's own files, `eval-results.json` in the configuration
+directory and `local/usage.jsonl` (the log the usage hooks write); `--with-eval=FILE` / `--with-usage=FILE` name
+another file (a file called `default` needs `./default`). A missing file is not an error: the catalog's `notes`
+say `eval-results.json not found: eval fields are omitted`, and nothing is invented. A file that cannot be parsed is
+an error.
+
+Only an allowlist of aggregates is copied:
+
+- `eval`: `cases` (scored), `pass_rate`, `passing`, `ablation_delta`, `trigger_precision`, `trigger_recall`, `stale`
+  (the skill's lock digest differs from the one the run recorded), `verified` (the record carries a valid signature
+  of this machine's key; a result committed from another machine is shown but unverified) and `date`.
+- `usage`: `invocations` and `last_seen` (a day). Sessions, harnesses, outcomes, feedback and notes never enter the
+  catalog.
+
+The log names a skill by id only, so the use of two skills that share an id is left out rather than guessed (the
+notes say so). The overview table gains an Eval and a Uses column when any skill has the data; each item page gets
+an Eval and a Usage table.
 
 ## Static website
 
@@ -93,6 +119,6 @@ configuration directory it describes.
 
 ## Not yet built
 
-eval and usage sections, `--check` freshness gate, `--no-lint-messages`, `--no-owners`,
+`--check` freshness gate, `--no-lint-messages`, `--no-owners`,
 `--link-sources`, `--single-file` and Markdown rendering of bodies are later phases of the
 design.
