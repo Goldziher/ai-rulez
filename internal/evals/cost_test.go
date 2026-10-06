@@ -1,6 +1,7 @@
 package evals
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -221,6 +222,42 @@ func TestRun_MaxCostRefusesAModelWithoutAPrice(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.known, report.PriceKnown)
+		})
+	}
+}
+
+func TestRun_EstimateWithoutAModelSaysItIsPricedAsSonnet(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		price Price
+		want  string
+	}{
+		{"no model", "", Price{}, "sonnet"},
+		{"the default model", "default", Price{}, "sonnet"},
+		{"a listed model", "haiku", Price{}, ""},
+		{"an explicit price", "", Price{InPerMTok: 1, OutPerMTok: 2}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := projectWithSkills(t)
+			opts := baseOptions(cfg, goodRunner())
+			opts.DryRun, opts.Model, opts.Price = true, tt.model, tt.price
+
+			// Act
+			report, err := Run(context.Background(), opts)
+			require.NoError(t, err)
+			var md bytes.Buffer
+			require.NoError(t, report.Write(&md, FormatMarkdown))
+
+			// Assert
+			assert.Equal(t, tt.want, report.PricedAs)
+			if tt.want == "" {
+				assert.NotContains(t, md.String(), "priced as")
+				return
+			}
+			assert.Contains(t, md.String(), "No model was set, so the estimate is priced as sonnet")
 		})
 	}
 }
