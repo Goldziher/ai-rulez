@@ -51,19 +51,18 @@ func TestLoadConfigWithIncludes_LocalIncludes(t *testing.T) {
 		require.NoError(t, os.MkdirAll(includeConfigDir, 0o755))
 
 		// Create config.yaml with includes
-		configContent := `version: "3.0"
-name: test-with-includes
-description: Test config with local includes
-presets:
-  - claude
-includes:
-  - name: shared-rules
-    source: ./shared-rules
-    include:
-      - rules
+		configContent := `version = "4.0"
+name = "test-with-includes"
+description = "Test config with local includes"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-rules"
+source = "./shared-rules"
+include = ["rules"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -133,22 +132,22 @@ func TestLoadConfigWithIncludes_MixedIncludes(t *testing.T) {
 		))
 
 		// Create config with multiple includes
-		configContent := `version: "3.0"
-name: test-mixed-includes
-presets:
-  - claude
-includes:
-  - name: include1
-    source: ./include1
-    include:
-      - rules
-  - name: include2
-    source: ./include2
-    include:
-      - context
+		configContent := `version = "4.0"
+name = "test-mixed-includes"
+presets = ["claude"]
+
+[[includes]]
+name = "include1"
+source = "./include1"
+include = ["rules"]
+
+[[includes]]
+name = "include2"
+source = "./include2"
+include = ["context"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -194,19 +193,18 @@ func TestLoadConfigWithIncludes_MergeStrategies(t *testing.T) {
 		))
 
 		// Config with explicit local-override strategy
-		configContent := `version: "3.0"
-name: test-local-override
-presets:
-  - claude
-includes:
-  - name: shared-include
-    source: ./shared-include
-    include:
-      - rules
-    merge_strategy: local-override
+		configContent := `version = "4.0"
+name = "test-local-override"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-include"
+source = "./shared-include"
+include = ["rules"]
+merge_strategy = "local-override"
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -259,19 +257,18 @@ includes:
 		))
 
 		// Config with include-override strategy
-		configContent := `version: "3.0"
-name: test-include-override
-presets:
-  - claude
-includes:
-  - name: shared-include
-    source: ./shared-include
-    include:
-      - rules
-    merge_strategy: include-override
+		configContent := `version = "4.0"
+name = "test-include-override"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-include"
+source = "./shared-include"
+include = ["rules"]
+merge_strategy = "include-override"
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -319,19 +316,18 @@ func TestLoadConfigWithIncludes_DomainInstall(t *testing.T) {
 		))
 
 		// Config with install_to
-		configContent := `version: "3.0"
-name: test-domain-install
-presets:
-  - claude
-includes:
-  - name: backend-rules
-    source: ./backend-rules
-    include:
-      - rules
-    install_to: domains/backend
+		configContent := `version = "4.0"
+name = "test-domain-install"
+presets = ["claude"]
+
+[[includes]]
+name = "backend-rules"
+source = "./backend-rules"
+include = ["rules"]
+install_to = "domains/backend"
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -376,13 +372,12 @@ func TestLoadConfigWithIncludes_NoIncludesSpecified(t *testing.T) {
 		))
 
 		// Config without includes
-		configContent := `version: "3.0"
-name: test-no-includes
-presets:
-  - claude
+		configContent := `version = "4.0"
+name = "test-no-includes"
+presets = ["claude"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))
@@ -414,18 +409,17 @@ func TestLoadConfigWithIncludes_NonexistentInclude(t *testing.T) {
 		))
 
 		// Config with nonexistent include
-		configContent := `version: "3.0"
-name: test-nonexistent-include
-presets:
-  - claude
-includes:
-  - name: nonexistent
-    source: ./nonexistent-path
-    include:
-      - rules
+		configContent := `version = "4.0"
+name = "test-nonexistent-include"
+presets = ["claude"]
+
+[[includes]]
+name = "nonexistent"
+source = "./nonexistent-path"
+include = ["rules"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, "config.yaml"),
+			filepath.Join(configDir, "config.toml"),
 			[]byte(configContent),
 			0o644,
 		))

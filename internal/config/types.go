@@ -469,32 +469,6 @@ func (b *BuiltinsConfig) GetNames() []string {
 	return b.Names
 }
 
-// UnmarshalYAML implements custom YAML unmarshaling for BuiltinsConfig
-func (b *BuiltinsConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Try boolean first
-	var boolVal bool
-	if err := unmarshal(&boolVal); err == nil {
-		b.All = &boolVal
-		return nil
-	}
-
-	// Try array of strings
-	var names []string
-	if err := unmarshal(&names); err != nil {
-		return err
-	}
-	b.Names = names
-	return nil
-}
-
-// MarshalYAML implements custom YAML marshaling for BuiltinsConfig
-func (b BuiltinsConfig) MarshalYAML() (interface{}, error) { //nolint:gocritic // Value receiver required for marshaling
-	if b.All != nil {
-		return *b.All, nil
-	}
-	return b.Names, nil
-}
-
 // UnmarshalJSON implements custom JSON unmarshaling for BuiltinsConfig
 func (b *BuiltinsConfig) UnmarshalJSON(data []byte) error {
 	// Try boolean first
@@ -548,46 +522,8 @@ const (
 	PresetTypeJSON      PresetType = "json"
 )
 
-// Config schema versions accepted by the loader and validator.
-const (
-	ConfigVersionV3 = "3.0"
-	ConfigVersionV4 = "4.0"
-)
-
-// UnmarshalYAML implements custom YAML unmarshaling for Preset
-func (p *Preset) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Try to unmarshal as a string (built-in preset)
-	var builtIn string
-	if err := unmarshal(&builtIn); err == nil {
-		p.BuiltIn = builtIn
-		return nil
-	}
-
-	// Try to unmarshal as a custom preset object
-	type presetAlias Preset
-	var custom presetAlias
-	if err := unmarshal(&custom); err != nil {
-		return err
-	}
-
-	p.Name = custom.Name
-	p.Type = custom.Type
-	p.Path = custom.Path
-	p.Template = custom.Template
-	p.Provider = custom.Provider
-	return nil
-}
-
-// MarshalYAML implements custom YAML marshaling for Preset
-func (p Preset) MarshalYAML() (interface{}, error) { //nolint:gocritic // Value receiver required for marshaling
-	if p.IsBuiltIn() {
-		return p.BuiltIn, nil
-	}
-
-	// Marshal as custom preset object
-	type presetAlias Preset
-	return presetAlias(p), nil
-}
+// ConfigVersionV4 is the config schema version the loader and validator accept.
+const ConfigVersionV4 = "4.0"
 
 // UnmarshalJSON implements custom JSON unmarshaling for Preset
 func (p *Preset) UnmarshalJSON(data []byte) error {
@@ -953,11 +889,6 @@ func (c *Config) HasProfile(profile string) bool {
 // GetVersion returns the config version
 func (c *Config) GetVersion() string {
 	return c.Version
-}
-
-// IsV3 returns true if this is a V3 config (version == "3.0")
-func (c *Config) IsV3() bool {
-	return c.Version == ConfigVersionV3
 }
 
 // IsV4 returns true if this is a V4 config (version == "4.0")

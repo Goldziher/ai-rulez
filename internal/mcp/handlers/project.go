@@ -25,14 +25,6 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		return ToolError(fmt.Errorf("failed to get directory: %w", err))
 	}
 
-	version, err := config.DetectConfigVersion(dir)
-	if err != nil {
-		return ToolError(err)
-	}
-	if version != config.VersionDir {
-		return ToolError(fmt.Errorf("read_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
-	}
-
 	// The editable view is the shared config; the machine-local overlay is
 	// reported separately and by key path only (it may hold secrets).
 	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
@@ -116,7 +108,7 @@ const keyError = "error"
 // the key paths it sets, never its values (it may hold secrets). Nil when there
 // is no overlay.
 func localOverlayInfo(cfg *config.Config) map[string]interface{} {
-	overlay, err := config.ReadLocalOverlay(cfg.ConfigDir, cfg.ConfigFile)
+	overlay, err := config.ReadLocalOverlay(cfg.ConfigDir)
 	if err != nil {
 		return map[string]interface{}{keyError: redactError(err)}
 	}
@@ -352,14 +344,6 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return ToolError(fmt.Errorf("failed to get directory: %w", err))
 	}
 
-	version, err := config.DetectConfigVersion(dir)
-	if err != nil {
-		return ToolError(err)
-	}
-	if version != config.VersionDir {
-		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
-	}
-
 	if request.GetBool("local", false) {
 		return updateLocalConfig(ctx, request, dir)
 	}
@@ -414,7 +398,7 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 	return generateForDirectory(ctx, request, baseDir, dryRun)
 }
 
-var recursiveConfigFiles = []string{"config.toml", "config.yaml", "config.yml", "config.json"}
+var recursiveConfigFiles = []string{"config.toml"}
 
 func dirHasRecursiveConfig(dir string) bool {
 	for _, f := range recursiveConfigFiles {
@@ -807,7 +791,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 
 // existingConfigFile returns the config file already in dir, or "".
 func existingConfigFile(dir string) string {
-	for _, name := range []string{"config.toml", "config.yaml", "config.yml", "config.json"} {
+	for _, name := range []string{"config.toml"} {
 		path := filepath.Join(dir, name)
 		if _, err := os.Stat(path); err == nil {
 			return path

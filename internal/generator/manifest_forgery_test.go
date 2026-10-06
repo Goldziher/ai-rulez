@@ -158,10 +158,10 @@ func TestGenerate_HeaderlessGeneratedFileNeedsRecordedDigest(t *testing.T) {
 
 	// Arrange: header_hashes = none leaves no in-file proof; the manifest digest is it.
 	dir := narrowingProject(t)
-	cfgPath := filepath.Join(dir, ".ai-rulez", "config.yaml")
+	cfgPath := filepath.Join(dir, ".ai-rulez", "config.toml")
 	cfgData, err := os.ReadFile(cfgPath)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(cfgPath, append(cfgData, []byte("header_hashes: none\n")...), 0o644))
+	require.NoError(t, os.WriteFile(cfgPath, append(cfgData, []byte("\n[header]\nhashes = \"none\"\n")...), 0o644))
 	generateProfile(t, dir, "full")
 	dropped := filepath.Join(dir, ".claude", "skills", "dropped", "SKILL.md")
 	require.FileExists(t, dropped)

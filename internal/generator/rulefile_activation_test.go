@@ -68,8 +68,8 @@ func ruleFileTokenReport(t *testing.T) *TokenReport {
 	dir := t.TempDir()
 	rules := filepath.Join(dir, ".ai-rulez", "rules")
 	require.NoError(t, os.MkdirAll(rules, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.yaml"),
-		[]byte("version: \"3.0\"\nname: t\npresets:\n  - claude\ngitignore: false\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"),
+		[]byte("version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(rules, "always-rule.md"),
 		[]byte("---\npriority: high\n---\n\nAlways on rule body.\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(rules, "go-rule.md"),

@@ -54,7 +54,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes content reports a hand edit as edited",
-			header: "header:\n  hashes: content\n",
+			header: "[header]\nhashes = \"content\"\n",
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},
@@ -62,7 +62,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes none compares the whole file",
-			header: "header:\n  hashes: none\n",
+			header: "[header]\nhashes = \"none\"\n",
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},

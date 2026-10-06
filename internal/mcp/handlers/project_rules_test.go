@@ -14,15 +14,13 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// rulesFormats maps each supported config format to its filename and a minimal body.
+// rulesFormats maps the supported config format to its filename and a minimal body.
 var rulesFormats = []struct {
 	name string
 	file string
 	body string
 }{
-	{"yaml", "config.yaml", "version: \"4.0\"\nname: test\npresets:\n  - claude\n"},
 	{"toml", "config.toml", "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"},
-	{"json", "config.json", "{\"version\":\"4.0\",\"name\":\"test\",\"presets\":[\"claude\"]}\n"},
 }
 
 func writeRulesProject(t *testing.T, file, body string) (dir, path string) {

@@ -17,7 +17,7 @@ import (
 // tokensFixturePath is the committed fixture the generator tests also use.
 func tokensFixturePath(t *testing.T) string {
 	t.Helper()
-	path, err := filepath.Abs(filepath.Join("..", "..", "tests", "fixtures", "config", "tokens", ".ai-rulez", "config.yaml"))
+	path, err := filepath.Abs(filepath.Join("..", "..", "tests", "fixtures", "config", "tokens", ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 	return path
 }

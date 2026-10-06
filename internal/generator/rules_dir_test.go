@@ -143,8 +143,8 @@ func newDevinProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic"), dir)
-	cfgYAML := "version: \"3.0\"\nname: x\npresets:\n  - devin\ngitignore: true\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.yaml"), []byte(cfgYAML), 0o644))
+	cfgYAML := "version = \"4.0\"\nname = \"x\"\npresets = [\"devin\"]\ngitignore = true\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(cfgYAML), 0o644))
 	return dir
 }
 

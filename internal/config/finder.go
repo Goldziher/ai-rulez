@@ -46,6 +46,10 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 				return configPath, nil
 			}
 		}
+		// A V2/V3 file with no config.toml beside it: say so, never walk past it.
+		if legacy := FindLegacyConfig(dir); legacy != "" {
+			return "", newLegacyConfigError(legacy)
+		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -57,7 +61,7 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 	return "", oops.
 		With("search_dir", startDir).
 		With("supported_names", configNames).
-		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, %s/config.yaml, or %s/config.toml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName)).
+		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate %s/config.toml (or %s/config.toml)\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName)).
 		Errorf("no configuration file found")
 }
 
@@ -81,23 +85,14 @@ func IsConfigDirAncestor(path, configDirName string) bool {
 }
 
 // configNamesForDirNames returns, in priority order, the config file paths to
-// probe: for each config directory (tool-specific first, then the .config/
-// convention), the directory-based config filenames, followed by the legacy V2
-// flat files. Returned paths are slash-separated.
+// probe: config.toml in each config directory (tool-specific first, then the
+// .config/ convention). Returned paths are slash-separated.
 func configNamesForDirNames(dirNames []string) []string {
-	bases := []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename}
-	names := make([]string, 0, len(dirNames)*len(bases)+8)
+	names := make([]string, 0, len(dirNames))
 	for _, dirName := range dirNames {
-		for _, base := range bases {
-			names = append(names, dirName+"/"+base)
-		}
+		names = append(names, dirName+"/"+configTOMLFilename)
 	}
-	return append(names,
-		".ai-rulez.yaml", ".ai-rulez.yml",
-		configFilenameYAMLV2, configFilenameYMLV2,
-		".ai_rulez.yaml", ".ai_rulez.yml",
-		"ai_rulez.yaml", "ai_rulez.yml",
-	)
+	return names
 }
 
 // localVariantName inserts ".local" before the extension of a base filename

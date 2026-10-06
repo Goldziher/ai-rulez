@@ -8,117 +8,158 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
-func TestDetectConfigVersion(t *testing.T) {
-	t.Run("detects directory-based config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configDir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(configDir, 0o755))
+func TestFindLegacyConfig(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  string // relative to the project, "" for none
+	}{
+		{"V3 directory config.yaml", map[string]string{".ai-rulez/config.yaml": "version: \"3.0\"\n"}, ".ai-rulez/config.yaml"},
+		{"V3 directory config.yml", map[string]string{".ai-rulez/config.yml": "version: \"3.0\"\n"}, ".ai-rulez/config.yml"},
+		{"V3 directory config.json", map[string]string{".ai-rulez/config.json": "{}"}, ".ai-rulez/config.json"},
+		{"V2 flat ai-rulez.yaml", map[string]string{"ai-rulez.yaml": "metadata:\n  name: x\n"}, "ai-rulez.yaml"},
+		{"V2 flat .ai-rulez.yml", map[string]string{".ai-rulez.yml": "metadata:\n  name: x\n"}, ".ai-rulez.yml"},
+		{"V2 flat ai_rulez.yaml", map[string]string{"ai_rulez.yaml": "metadata:\n  name: x\n"}, "ai_rulez.yaml"},
+		{"config.toml wins over a stale config.yaml", map[string]string{
+			".ai-rulez/config.toml": "version = \"4.0\"\n", ".ai-rulez/config.yaml": "x: 1\n",
+		}, ""},
+		{"nothing", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			for rel, body := range tt.files {
+				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(root, rel)), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(root, rel), []byte(body), 0o644))
+			}
 
-		version, err := DetectConfigVersion(tempDir)
-		require.NoError(t, err)
-		assert.Equal(t, VersionDir, version)
-	})
+			// Act
+			got := FindLegacyConfig(root)
 
-	t.Run("detects v2 config with yaml", func(t *testing.T) {
-		tempDir := t.TempDir()
-		v2File := filepath.Join(tempDir, "ai-rulez.yaml")
-		require.NoError(t, os.WriteFile(v2File, []byte("metadata:\n  name: test\n"), 0o644))
-
-		version, err := DetectConfigVersion(tempDir)
-		require.NoError(t, err)
-		assert.Equal(t, "v2", version)
-	})
-
-	t.Run("detects v2 config with yml", func(t *testing.T) {
-		tempDir := t.TempDir()
-		v2File := filepath.Join(tempDir, "ai-rulez.yml")
-		require.NoError(t, os.WriteFile(v2File, []byte("metadata:\n  name: test\n"), 0o644))
-
-		version, err := DetectConfigVersion(tempDir)
-		require.NoError(t, err)
-		assert.Equal(t, "v2", version)
-	})
-
-	t.Run("returns empty string when no config found", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		version, err := DetectConfigVersion(tempDir)
-		require.NoError(t, err)
-		assert.Equal(t, "", version)
-	})
-
-	t.Run("prefers directory-based when both exist", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configDir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(configDir, 0o755))
-		v2File := filepath.Join(tempDir, "ai-rulez.yaml")
-		require.NoError(t, os.WriteFile(v2File, []byte("metadata:\n  name: test\n"), 0o644))
-
-		version, err := DetectConfigVersion(tempDir)
-		require.NoError(t, err)
-		assert.Equal(t, VersionDir, version)
-	})
+			// Assert
+			if tt.want == "" {
+				assert.Empty(t, got)
+				return
+			}
+			assert.Equal(t, filepath.Join(root, filepath.FromSlash(tt.want)), got)
+		})
+	}
 }
 
-func TestLoadConfig_YAML(t *testing.T) {
-	t.Run("loads minimal YAML config", func(t *testing.T) {
+// TestLoadConfig_LegacyFilesAreRefused covers every way a V2/V3-only project is
+// reached: the error names the file and the 4.x migration, and wraps ErrLegacyConfig.
+func TestLoadConfig_LegacyFilesAreRefused(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		load     func(root string) error
+		wantHint string
+	}{
+		{"V3 config.yaml via LoadConfig", ".ai-rulez/config.yaml", func(root string) error {
+			_, err := LoadConfig(context.Background(), root)
+			return err
+		}, ""},
+		{"V3 config.json via LoadConfig", ".ai-rulez/config.json", func(root string) error {
+			_, err := LoadConfig(context.Background(), root)
+			return err
+		}, ""},
+		{"V2 ai-rulez.yaml via LoadConfig", "ai-rulez.yaml", func(root string) error {
+			_, err := LoadConfig(context.Background(), root)
+			return err
+		}, "move it to .ai-rulez/config.yaml first"},
+		{"V3 config.yaml via an explicit file path", ".ai-rulez/config.yaml", func(root string) error {
+			_, err := LoadConfigFromFile(context.Background(), filepath.Join(root, ".ai-rulez", "config.yaml"))
+			return err
+		}, ""},
+		{"V3 config.yaml via the config directory path", ".ai-rulez/config.yaml", func(root string) error {
+			_, err := LoadConfigFromFile(context.Background(), filepath.Join(root, ".ai-rulez"))
+			return err
+		}, ""},
+		{"V3 config.yaml found by discovery", ".ai-rulez/config.yaml", func(root string) error {
+			_, err := FindConfigFile(root)
+			return err
+		}, ""},
+		{"V3 config.local.yaml beside a config.toml", ".ai-rulez/config.local.yaml", func(root string) error {
+			require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"),
+				[]byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
+			_, err := LoadConfig(context.Background(), root)
+			return err
+		}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(root, tt.file)), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(root, tt.file), []byte("version: \"3.0\"\nname: p\n"), 0o644))
+
+			// Act
+			err := tt.load(root)
+
+			// Assert
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrLegacyConfig)
+			assert.Contains(t, err.Error(), filepath.Base(tt.file))
+			assert.Contains(t, err.Error(), "npx ai-rulez@4 migrate v4")
+			var oe oops.OopsError
+			require.ErrorAs(t, err, &oe)
+			assert.Contains(t, oe.Hint(), tt.wantHint)
+		})
+	}
+}
+
+func TestLoadConfig_TOML(t *testing.T) {
+	t.Run("loads minimal TOML config", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-project
-presets:
-  - claude
+		configContent := `version = "4.0"
+name = "test-project"
+presets = ["claude"]
 `
-		configFile := filepath.Join(configDir, configYAMLFilename)
+		configFile := filepath.Join(configDir, configTOMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
 		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
-		assert.Equal(t, "3.0", config.Version)
+		assert.Equal(t, "4.0", config.Version)
 		assert.Equal(t, "test-project", config.Name)
 		assert.Len(t, config.Presets, 1)
 		assert.True(t, config.Presets[0].IsBuiltIn())
 		assert.Equal(t, "claude", config.Presets[0].BuiltIn)
 	})
 
-	t.Run("loads full YAML config with profiles", func(t *testing.T) {
+	t.Run("loads full TOML config with profiles", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: my-project
-description: A test project
-presets:
-  - claude
-  - cursor
-  - name: custom
-    type: markdown
-    path: CUSTOM.md
-default: full
-profiles:
-  full:
-    - backend
-    - frontend
-  backend:
-    - backend
-gitignore: true
+		configContent := `version = "4.0"
+name = "my-project"
+description = "A test project"
+presets = ["claude", "cursor", { name = "custom", type = "markdown", path = "CUSTOM.md" }]
+default = "full"
+gitignore = true
+
+[profiles]
+full = ["backend", "frontend"]
+backend = ["backend"]
 `
-		configFile := filepath.Join(configDir, configYAMLFilename)
+		configFile := filepath.Join(configDir, configTOMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
 		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
-		assert.Equal(t, "3.0", config.Version)
+		assert.Equal(t, "4.0", config.Version)
 		assert.Equal(t, "my-project", config.Name)
 		assert.Equal(t, "A test project", config.Description)
 		assert.Len(t, config.Presets, 3)
@@ -165,17 +206,17 @@ gitignore: true
 		assert.Contains(t, err.Error(), "no config file found")
 	})
 
-	t.Run("returns error on invalid YAML", func(t *testing.T) {
+	t.Run("returns error on invalid TOML", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configFile := filepath.Join(configDir, configYAMLFilename)
-		require.NoError(t, os.WriteFile(configFile, []byte("invalid: yaml: syntax:"), 0o644))
+		configFile := filepath.Join(configDir, configTOMLFilename)
+		require.NoError(t, os.WriteFile(configFile, []byte("invalid = = toml"), 0o644))
 
 		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parse YAML config")
+		assert.Contains(t, err.Error(), "parse TOML config")
 	})
 }
 
@@ -253,85 +294,6 @@ copilot = "gpt-5"
 	assert.Equal(t, "xhigh", cfg.Defaults.EffortByPreset["claude"])
 	assert.Equal(t, "opus", cfg.Defaults.ModelByPreset["claude"])
 	assert.Equal(t, "gpt-5", cfg.Defaults.ModelByPreset["copilot"])
-}
-
-func TestLoadConfig_JSON(t *testing.T) {
-	t.Run("loads minimal JSON config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configDir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-		configData := map[string]interface{}{
-			"version": "3.0",
-			"name":    "test-project",
-			"presets": []string{"claude"},
-		}
-		configBytes, err := json.MarshalIndent(configData, "", "  ")
-		require.NoError(t, err)
-
-		configFile := filepath.Join(configDir, configJSONFilename)
-		require.NoError(t, os.WriteFile(configFile, configBytes, 0o644))
-
-		config, err := LoadConfig(context.Background(), tempDir)
-		require.NoError(t, err)
-		assert.NotNil(t, config)
-		assert.Equal(t, "3.0", config.Version)
-		assert.Equal(t, "test-project", config.Name)
-		assert.Len(t, config.Presets, 1)
-	})
-
-	t.Run("loads full JSON config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configDir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-		configData := map[string]interface{}{
-			"version":     "3.0",
-			"name":        "my-project",
-			"description": "A test project",
-			"presets": []interface{}{
-				"claude",
-				"cursor",
-				map[string]string{
-					"name": "custom",
-					"type": "markdown",
-					"path": "CUSTOM.md",
-				},
-			},
-			"default": "full",
-			"profiles": map[string][]string{
-				"full":    {"backend", "frontend"},
-				"backend": {"backend"},
-			},
-		}
-		configBytes, err := json.MarshalIndent(configData, "", "  ")
-		require.NoError(t, err)
-
-		configFile := filepath.Join(configDir, configJSONFilename)
-		require.NoError(t, os.WriteFile(configFile, configBytes, 0o644))
-
-		config, err := LoadConfig(context.Background(), tempDir)
-		require.NoError(t, err)
-		assert.NotNil(t, config)
-		assert.Equal(t, "3.0", config.Version)
-		assert.Equal(t, "my-project", config.Name)
-		assert.Len(t, config.Presets, 3)
-		assert.Equal(t, "full", config.Default)
-		assert.Len(t, config.Profiles, 2)
-	})
-
-	t.Run("returns error on invalid JSON", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configDir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(configDir, 0o755))
-
-		configFile := filepath.Join(configDir, configJSONFilename)
-		require.NoError(t, os.WriteFile(configFile, []byte("{invalid json}"), 0o644))
-
-		_, err := LoadConfig(context.Background(), tempDir)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parse JSON config")
-	})
 }
 
 func TestScanContentTree(t *testing.T) {
@@ -609,7 +571,7 @@ Body`
 func TestValidate(t *testing.T) {
 	t.Run("validates minimal config", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "claude"},
@@ -636,7 +598,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on missing name", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "",
 			Presets: []Preset{
 				{BuiltIn: "claude"},
@@ -650,7 +612,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on missing presets", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{},
 		}
@@ -662,7 +624,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on invalid built-in preset", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "invalid-preset"},
@@ -676,7 +638,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on custom preset without name", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{
@@ -693,7 +655,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on custom preset without type", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{
@@ -710,7 +672,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on custom preset without path", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{
@@ -727,7 +689,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on custom preset with invalid type", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{
@@ -745,7 +707,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("warns but does not fail when skill description is missing", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "codex"},
@@ -769,7 +731,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("accepts skill description when present", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "codex"},
@@ -796,7 +758,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails when default specified without profiles", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "claude"},
@@ -811,7 +773,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails when default profile doesn't exist", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "claude"},
@@ -829,7 +791,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("validates full config", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{
 				{BuiltIn: "claude"},
@@ -852,7 +814,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on installed skill with empty name", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
@@ -867,7 +829,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on installed skill with empty source", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
@@ -882,7 +844,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("fails on duplicate installed skill names", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
@@ -898,7 +860,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("accepts valid installed skills", func(t *testing.T) {
 		config := &Config{
-			Version: "3.0",
+			Version: "4.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
@@ -912,65 +874,8 @@ func TestValidate(t *testing.T) {
 	})
 }
 
-func TestSaveConfig_PreservesOrdering(t *testing.T) {
+func TestSaveConfig_WritesTOML(t *testing.T) {
 	t.Parallel()
-
-	t.Run("preserves field ordering and comments for YAML", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		aiRulezDir := filepath.Join(dir, ".ai-rulez")
-		require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
-
-		original := `# Project config
-$schema: https://example.com/schema.json
-version: "3.0"
-name: my-project
-description: A test project
-presets:
-  - claude
-  - cursor
-# end of file
-`
-		yamlPath := filepath.Join(aiRulezDir, "config.yaml")
-		require.NoError(t, os.WriteFile(yamlPath, []byte(original), 0o644))
-
-		// Load, modify, and save
-		cfg, err := loadConfigYAML(yamlPath)
-		require.NoError(t, err)
-
-		cfg.InstalledSkills = []InstalledSkillConfig{
-			{Name: "test-skill", Source: "https://github.com/example/repo"},
-		}
-
-		err = SaveConfig(cfg, aiRulezDir)
-		require.NoError(t, err)
-
-		// Read back
-		saved, err := os.ReadFile(yamlPath)
-		require.NoError(t, err)
-		content := string(saved)
-
-		// Field ordering: $schema before version before name before description before presets
-		schemaIdx := indexOfSubstring(content, "$schema:")
-		versionIdx := indexOfSubstring(content, "version:")
-		nameIdx := indexOfSubstring(content, "name:")
-		descIdx := indexOfSubstring(content, "description:")
-		presetsIdx := indexOfSubstring(content, "presets:")
-		skillsIdx := indexOfSubstring(content, "installed_skills:")
-
-		assert.Greater(t, versionIdx, schemaIdx, "$schema should come before version")
-		assert.Greater(t, nameIdx, versionIdx, "version should come before name")
-		assert.Greater(t, descIdx, nameIdx, "name should come before description")
-		assert.Greater(t, presetsIdx, descIdx, "description should come before presets")
-		assert.Greater(t, skillsIdx, presetsIdx, "installed_skills should come after presets")
-
-		// Comments preserved
-		assert.Contains(t, content, "# Project config")
-
-		// New section present
-		assert.Contains(t, content, "installed_skills:")
-		assert.Contains(t, content, "test-skill")
-	})
 
 	t.Run("removes dropped fields", func(t *testing.T) {
 		t.Parallel()
@@ -978,18 +883,18 @@ presets:
 		aiRulezDir := filepath.Join(dir, ".ai-rulez")
 		require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-		original := `version: "3.0"
-name: my-project
-presets:
-  - claude
-installed_skills:
-  - name: old-skill
-    source: https://github.com/example/old
-`
-		yamlPath := filepath.Join(aiRulezDir, "config.yaml")
-		require.NoError(t, os.WriteFile(yamlPath, []byte(original), 0o644))
+		original := `version = "4.0"
+name = "my-project"
+presets = ["claude"]
 
-		cfg, err := loadConfigYAML(yamlPath)
+[[installed_skills]]
+name = "old-skill"
+source = "https://github.com/example/old"
+`
+		tomlPath := filepath.Join(aiRulezDir, "config.toml")
+		require.NoError(t, os.WriteFile(tomlPath, []byte(original), 0o644))
+
+		cfg, err := loadConfigTOML(tomlPath)
 		require.NoError(t, err)
 
 		// Remove installed skills
@@ -998,85 +903,28 @@ installed_skills:
 		err = SaveConfig(cfg, aiRulezDir)
 		require.NoError(t, err)
 
-		saved, err := os.ReadFile(yamlPath)
+		saved, err := os.ReadFile(tomlPath)
 		require.NoError(t, err)
 		content := string(saved)
 
 		assert.NotContains(t, content, "installed_skills")
 		assert.NotContains(t, content, "old-skill")
-		assert.Contains(t, content, "presets:")
+		assert.Contains(t, content, "presets")
 	})
-}
 
-func indexOfSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	t.Run("never creates a V3 file", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		cfg := &Config{Version: "4.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}}
+
+		require.NoError(t, SaveConfig(cfg, dir))
+
+		assert.FileExists(t, filepath.Join(dir, "config.toml"))
+		assert.NoFileExists(t, filepath.Join(dir, "config.yaml"))
+	})
 }
 
 func TestPresetMarshaling(t *testing.T) {
-	t.Run("unmarshals built-in preset from YAML", func(t *testing.T) {
-		yamlContent := `presets:
-  - claude
-  - cursor
-`
-		var config struct {
-			Presets []Preset `yaml:"presets"`
-		}
-		err := yaml.Unmarshal([]byte(yamlContent), &config)
-		require.NoError(t, err)
-		assert.Len(t, config.Presets, 2)
-		assert.True(t, config.Presets[0].IsBuiltIn())
-		assert.Equal(t, "claude", config.Presets[0].BuiltIn)
-		assert.True(t, config.Presets[1].IsBuiltIn())
-		assert.Equal(t, "cursor", config.Presets[1].BuiltIn)
-	})
-
-	t.Run("unmarshals custom preset from YAML", func(t *testing.T) {
-		yamlContent := `presets:
-  - name: custom
-    type: markdown
-    path: CUSTOM.md
-    template: "Custom template"
-`
-		var config struct {
-			Presets []Preset `yaml:"presets"`
-		}
-		err := yaml.Unmarshal([]byte(yamlContent), &config)
-		require.NoError(t, err)
-		assert.Len(t, config.Presets, 1)
-		assert.False(t, config.Presets[0].IsBuiltIn())
-		assert.Equal(t, "custom", config.Presets[0].Name)
-		assert.Equal(t, PresetTypeMarkdown, config.Presets[0].Type)
-		assert.Equal(t, "CUSTOM.md", config.Presets[0].Path)
-		assert.Equal(t, "Custom template", config.Presets[0].Template)
-	})
-
-	t.Run("unmarshals mixed presets from YAML", func(t *testing.T) {
-		yamlContent := `presets:
-  - claude
-  - name: custom
-    type: markdown
-    path: CUSTOM.md
-  - cursor
-`
-		var config struct {
-			Presets []Preset `yaml:"presets"`
-		}
-		err := yaml.Unmarshal([]byte(yamlContent), &config)
-		require.NoError(t, err)
-		assert.Len(t, config.Presets, 3)
-		assert.True(t, config.Presets[0].IsBuiltIn())
-		assert.Equal(t, "claude", config.Presets[0].BuiltIn)
-		assert.False(t, config.Presets[1].IsBuiltIn())
-		assert.Equal(t, "custom", config.Presets[1].Name)
-		assert.True(t, config.Presets[2].IsBuiltIn())
-		assert.Equal(t, "cursor", config.Presets[2].BuiltIn)
-	})
-
 	t.Run("unmarshals built-in preset from JSON", func(t *testing.T) {
 		jsonContent := `{
   "presets": ["claude", "cursor"]
