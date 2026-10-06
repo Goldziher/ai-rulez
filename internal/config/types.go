@@ -60,6 +60,8 @@ type Config struct {
 	Catalog *CatalogConfig `yaml:"catalog,omitempty" json:"catalog,omitempty" toml:"catalog,omitempty"`
 	// Signing is the [signing] table: who may sign the lock and how fresh the signature must be (types_signing.go).
 	Signing *SigningConfig `yaml:"signing,omitempty" json:"signing,omitempty" toml:"signing,omitempty"`
+	// Publish is the [publish] table: what `ai-rulez publish` ships and its policy gates (types_publish.go).
+	Publish *PublishConfig `yaml:"publish,omitempty" json:"publish,omitempty" toml:"publish,omitempty"`
 
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`

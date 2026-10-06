@@ -1136,6 +1136,116 @@
       },
       "additionalProperties": false
     },
+    "publish": {
+      "type": "object",
+      "description": "What `ai-rulez publish` ships and its policy gates (see docs/publish.md). It has no credential keys: registries and forges authenticate through their own CLIs and environment.",
+      "properties": {
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "cursor",
+              "codex",
+              "gemini",
+              "kimi",
+              "opencode",
+              "factory",
+              "hermes",
+              "agent-plugins",
+              "copilot"
+            ]
+          },
+          "description": "Restrict the published bundle to these plugin runtimes. Default: the [plugin] runtimes."
+        },
+        "require_signature": {
+          "type": "boolean",
+          "description": "Fail publish unless the bundle is signed (--sign key or keyless)."
+        },
+        "require_approved": {
+          "type": "boolean",
+          "description": "Fail publish unless every item the [governance] policy selects is approved in ai-rulez.lock."
+        },
+        "allow_dirty": {
+          "type": "boolean",
+          "description": "Publish from a tree with uncommitted changes (the manifest records dirty = true)."
+        },
+        "github_release": {
+          "type": "object",
+          "properties": {
+            "repo": {
+              "type": "string",
+              "description": "OWNER/REPO (or HOST/OWNER/REPO). Default: [plugin] repository, else the origin remote."
+            }
+          },
+          "additionalProperties": false
+        },
+        "oci": {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Repository to push to, host/path without tag or digest, such as ghcr.io/acme/skills/conventions. The tag is the plugin version."
+            }
+          },
+          "additionalProperties": false
+        },
+        "npm": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "pattern": "^@[a-z0-9][a-z0-9._-]*$",
+              "description": "npm scope, such as @acme."
+            },
+            "access": {
+              "type": "string",
+              "enum": ["restricted", "public"],
+              "description": "npm access level. Default restricted."
+            },
+            "registry": {
+              "type": "string",
+              "pattern": "^https://",
+              "description": "Registry URL (https only). Default: the npm client's."
+            }
+          },
+          "additionalProperties": false
+        },
+        "marketplace": {
+          "type": "object",
+          "properties": {
+            "channels": {
+              "type": "object",
+              "description": "Channel name to the git ref its pinned marketplace index points at. A channel not listed pins the release tag.",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "emitters": {
+          "type": "array",
+          "description": "Emitters run by publish; each writes files under <dist>/emit/ and never contacts the target system.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"]
+              },
+              "template": {
+                "type": "string",
+                "description": "Project-relative text/template file (template emitter)."
+              },
+              "output": { "type": "string", "description": "Output file name under <dist>/emit/ (template emitter)." }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "usage": {
       "type": "object",
       "description": "Usage-telemetry support (opt-in, no network).",

@@ -189,6 +189,10 @@ stdout.
 | AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
 | AR9N4 | `publish-target-failed` | error | The upload failed: `gh` is not installed, the release already exists, or `gh` exited non-zero (publish only) |
 | AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch (publish only) |
+| AR9N6 | `publish-config-invalid` | error | The `[publish]` table, a publish flag or a target option is invalid: unknown emitter, runtime or channel, a bad tag, scope or OCI reference (publish only) |
+| AR9N7 | `publish-unsigned` | error | `require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only) |
+| AR9N8 | `publish-unapproved` | error | `require_approved` is set and content the governance policy selects has no valid approval (publish only) |
+| AR9N9 | `publish-emitter-experimental` | warning | An emitter whose format is not verified against vendor documentation was requested with `--experimental` (publish only) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -262,7 +266,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
-| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N5` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
+| `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -3157,5 +3161,45 @@ the upload step failed: gh is missing, the release exists or gh exited non-zero 
 - Why: `publish verify` recomputes SHA256SUMS, the manifest and the archive contents, so a file changed after the build, or an archive that no longer matches its manifest, is caught before it is installed.
 - Bad: An edited `ai-rulez.lock` next to a manifest that records the original digest
 - Good: Download the release again, or rebuild it with `ai-rulez publish`
+
+### AR9N6 publish-config-invalid
+
+the [publish] table, a publish flag or a target option is invalid: unknown emitter, runtime or channel, a bad tag, scope or OCI reference (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Publish arguments reach registries and release tools, so every tag, scope, reference, channel and emitter name is checked against an allowlist before anything is built.
+- Bad: `[publish.oci] ref = "ghcr.io/Acme/skills:1.0"` (upper case, with a tag), or `--runtime vim`
+- Good: `ref = "ghcr.io/acme/skills"`; the tag is the plugin version
+
+### AR9N7 publish-unsigned
+
+`require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A consumer that must trust the publisher needs a signature it can verify offline, so `require_signature` stops the publish when the bundle is unsigned or its signature does not check out.
+- Bad: `require_signature = true` and `publish` without `--sign-key` or `--sign-keyless`
+- Good: Sign with `--sign-key release.key` (or `--sign-keyless` in CI) and let publish verify the bundle it wrote
+
+### AR9N8 publish-unapproved
+
+`require_approved` is set and content the governance policy selects has no valid approval (publish only)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: `require_approved` reuses the lock's approval records, so a bundle cannot ship content that the [governance] policy selects but no reviewer approved.
+- Bad: A skill changed after its `ai-rulez approve`, then `publish` with `require_approved = true`
+- Good: Review with `ai-rulez approve --diff` and approve the item, then publish
+
+### AR9N9 publish-emitter-experimental
+
+an emitter whose format is not verified against vendor documentation was requested with --experimental (publish only)
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labelled experimental and needs `--experimental`.
+- Bad: Uploading `emit/port/*.json` to a catalog without checking it against your blueprint
+- Good: Validate the files against your own blueprint or registry, or render exactly what you need with the template emitter
 
 <!-- rules:end -->

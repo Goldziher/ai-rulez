@@ -494,6 +494,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Governance      *GovernanceConfig      `toml:"governance"`
 		Catalog         *CatalogConfig         `toml:"catalog"`
 		Signing         *SigningConfig         `toml:"signing"`
+		Publish         *PublishConfig         `toml:"publish"`
 		LLM             *llm.Config            `toml:"llm"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
 		Review          *ReviewConfig          `toml:"review"`
@@ -582,6 +583,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Governance:      raw.Governance,
 		Catalog:         raw.Catalog,
 		Signing:         raw.Signing,
+		Publish:         raw.Publish,
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,
 		Review:          raw.Review,

@@ -22,6 +22,14 @@ const (
 	CodeTarget = "AR9N4"
 	// CodeVerify: `publish verify` found a digest, manifest or archive mismatch.
 	CodeVerify = "AR9N5"
+	// CodeConfig: the [publish] table, a flag or a target option is invalid.
+	CodeConfig = "AR9N6"
+	// CodeUnsigned: require_signature is set and the bundle is unsigned, or its signature does not verify.
+	CodeUnsigned = "AR9N7"
+	// CodeUnapproved: require_approved is set and an item the governance policy selects is not approved.
+	CodeUnapproved = "AR9N8"
+	// CodeExperimental: an emitter whose format is not verified against vendor documentation was requested.
+	CodeExperimental = "AR9N9"
 )
 
 // Exit codes: 1 the run could not complete, 2 a gate or verification failed.

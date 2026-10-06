@@ -2584,6 +2584,120 @@
       "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
       "type": "object"
     },
+    "publish": {
+      "additionalProperties": false,
+      "description": "What `ai-rulez publish` ships and its policy gates (see docs/publish.md). It has no credential keys: registries and forges authenticate through their own CLIs and environment.",
+      "properties": {
+        "allow_dirty": {
+          "description": "Publish from a tree with uncommitted changes (the manifest records dirty = true).",
+          "type": "boolean"
+        },
+        "emitters": {
+          "description": "Emitters run by publish; each writes files under <dist>/emit/ and never contacts the target system.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"],
+                "type": "string"
+              },
+              "output": {
+                "description": "Output file name under <dist>/emit/ (template emitter).",
+                "type": "string"
+              },
+              "template": {
+                "description": "Project-relative text/template file (template emitter).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "github_release": {
+          "additionalProperties": false,
+          "properties": {
+            "repo": {
+              "description": "OWNER/REPO (or HOST/OWNER/REPO). Default: [plugin] repository, else the origin remote.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "marketplace": {
+          "additionalProperties": false,
+          "properties": {
+            "channels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Channel name to the git ref its pinned marketplace index points at. A channel not listed pins the release tag.",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "npm": {
+          "additionalProperties": false,
+          "properties": {
+            "access": {
+              "description": "npm access level. Default restricted.",
+              "enum": ["restricted", "public"],
+              "type": "string"
+            },
+            "registry": {
+              "description": "Registry URL (https only). Default: the npm client's.",
+              "pattern": "^https://",
+              "type": "string"
+            },
+            "scope": {
+              "description": "npm scope, such as @acme.",
+              "pattern": "^@[a-z0-9][a-z0-9._-]*$",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "oci": {
+          "additionalProperties": false,
+          "properties": {
+            "ref": {
+              "description": "Repository to push to, host/path without tag or digest, such as ghcr.io/acme/skills/conventions. The tag is the plugin version.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "require_approved": {
+          "description": "Fail publish unless every item the [governance] policy selects is approved in ai-rulez.lock.",
+          "type": "boolean"
+        },
+        "require_signature": {
+          "description": "Fail publish unless the bundle is signed (--sign key or keyless).",
+          "type": "boolean"
+        },
+        "runtimes": {
+          "description": "Restrict the published bundle to these plugin runtimes. Default: the [plugin] runtimes.",
+          "items": {
+            "enum": [
+              "claude",
+              "cursor",
+              "codex",
+              "gemini",
+              "kimi",
+              "opencode",
+              "factory",
+              "hermes",
+              "agent-plugins",
+              "copilot"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "review": {
       "additionalProperties": false,
       "description": "Settings of `ai-rulez review`: the rubric, what an item sends to a judge, exclusions, spend ceilings, the secret policy and the gate and fix settings. See docs/review.md.",
