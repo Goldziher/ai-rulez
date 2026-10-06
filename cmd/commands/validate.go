@@ -72,14 +72,14 @@ schema compliance, and structural issues.`,
 			configPath := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
 			if err := schema.ValidateFile(configPath); err != nil {
 				logger.Error("Configuration failed schema validation", "path", configPath)
-				fmtError(err)
+				fmtError(schemaFailure(cfg, err))
 				os.Exit(1)
 			}
 		}
 
 		if err := validateLocalOverlay(cfg); err != nil {
 			logger.Error("Local overlay failed schema validation", "path", cfg.LocalOverlay.Path)
-			fmtError(err)
+			fmtError(schemaFailure(cfg, err))
 			os.Exit(1)
 		}
 		if cfg.LocalOverlay != nil {
@@ -189,11 +189,11 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	}
 	if !cfg.IsV3() {
 		if err := schema.ValidateFile(configPath); err != nil {
-			return nil, err
+			return nil, schemaFailure(cfg, err)
 		}
 	}
 	if err := validateLocalOverlay(cfg); err != nil {
-		return nil, err
+		return nil, schemaFailure(cfg, err)
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -203,6 +203,24 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	}
 	warnWorktreeMarketplace(cfg)
 	return cfg, nil
+}
+
+// schemaFailure rewords a schema validation error as the findings `generate`
+// prints for the same problems: one line per unknown key with the closest known
+// key, instead of the raw "- - additionalProperties: ..." list. An error the
+// findings do not explain is returned unchanged.
+func schemaFailure(cfg *config.Config, err error) error {
+	findings, ferr := config.SchemaFindings(cfg)
+	if ferr != nil || len(findings) == 0 {
+		return err
+	}
+	lines := make([]string, len(findings))
+	for i, f := range findings {
+		lines[i] = f.String()
+	}
+	return oops.With("errors", lines).
+		Hint("Fix the keys above; a \"did you mean\" names the closest known key").
+		Errorf("configuration has %d unknown or invalid key(s)", len(lines))
 }
 
 // validateLocalOverlay checks the config.local.* overlay, when one was merged,
