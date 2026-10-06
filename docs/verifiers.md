@@ -337,8 +337,9 @@ without examples are listed.
 - An installed skill may ship verifiers in `<skill>/verifiers/*.toml` (the same file format). They load with the skill,
   report as `skill:<name>/verifiers/<file>`, and are covered by the skill's pin in `ai-rulez.lock`. They are data only: a
   skill's verifier can never use the `command` predicate, whatever `trust_exec_from` says.
-- An `llm` verdict is advisory. Gating on a model verdict (the design's calibration record) is not implemented, so the
-  severity of an `llm` verifier is capped at `warning` and there is no flag that lifts the cap.
+- An `llm` verdict is advisory and capped at `warning` unless the verifier is calibrated and the run passes
+  `--gate-llm` (see [Calibrating llm verifiers](#calibrating-llm-verifiers)). The record is a lighter cousin of the review
+  calibration: it measures precision and recall of the `fail` verdict on labelled examples, not agreement or consistency.
 
 ## Local overlay
 
@@ -411,9 +412,37 @@ and the refusal is noted. With no failure, the refusal is the result (`error`, e
   `--max-cost` (default $0.50, `0` removes it) refuses a call whose worst-case cost would exceed what is left, and the
   `[llm]` budget (`max_cost_usd`, `max_tokens`, `max_calls`) applies on top. An unknown price with a cap set refuses.
   `--estimate` prints, per call, the files and byte counts (never content) and the cost bound, and calls nothing.
-- **Advisory.** Results carry `advisory: true`; `severity = "error"` is reported as `warning`. `verifiers test` does not
-  run the examples of an `llm` verifier (it cannot know what a model answers).
+- **Advisory, unless calibrated.** Results carry `advisory: true`; `severity = "error"` is reported as `warning`.
+  `verifiers test` does not run the examples of an `llm` verifier (it cannot know what a model answers).
+  [Calibration](#calibrating-llm-verifiers) is what lets one gate.
 - Provider errors, timeouts and budget refusals skip the verifier (`AR9H4`) rather than fail the run, and are visible.
+
+## Calibrating llm verifiers
+
+A model's `fail` is a claim, not a fact. To let one fail the run, label examples and measure it:
+
+```toml
+[[verifiers.examples]]
+name = "swallows the cause"
+changed = ["a.go"]
+expect = "fail"
+[verifiers.examples.files]
+"a.go" = "package a\nfunc f() error { return errors.New(\"failed\") }\n"
+```
+
+`ai-rulez verifiers calibrate [name...] --allow-llm` runs every example of the `llm` verifiers through the model (each
+example's files count as entirely added) and records, per verifier, how often a `fail` verdict was right (precision) and
+how many real failures it found (recall), with 95% Wilson intervals, in
+`.ai-rulez/verifiers/calibration/<id>.json`. Commit it. The record passes at a precision of at least 0.80 on at least
+10 examples, at least 3 expected to `fail` and at least 3 to `pass`, none of them unevaluated (a refusal, an unusable
+reply or a budget stop). It needs `--allow-llm` and `allow_network` like a run; `--estimate` prints what would be sent;
+`--no-write` only prints. Exit `2` when a record does not pass (it is still written).
+
+`verifiers run --gate-llm` then lets a failing `llm` verifier declared `severity = "error"` keep that severity, with
+`advisory` false and a note naming the figures, but only while the record is current: the same `llm` predicate
+(checklist, model, `max_diff_bytes`), examples, prompt version and model it was measured with, and a passing status.
+Anything else (no record, a failed bar, an edited checklist, another model) leaves the verdict capped at `warning` and
+the note says why. Without `--gate-llm` nothing changes.
 
 ## Suggesting verifiers
 
@@ -465,4 +494,6 @@ include's tree is already pinned by commit and digest.
 
 ## Not done
 
-Nothing is listed here at the moment.
+- Calibration measures precision and recall of one verdict on the verifier's own examples. The review design's
+  consistency votes, metamorphic probes and calibration curve are not part of it.
+- The model verdicts of `verifiers run` over MCP (`run_verifiers`) never gate: the tool sends nothing to a model.

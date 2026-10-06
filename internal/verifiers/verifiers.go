@@ -198,6 +198,10 @@ type Options struct {
 	// Environ is the parent environment of commands (KEY=VALUE); nil is the
 	// process environment. Only the allowlist survives into the child.
 	Environ []string
+
+	// sharedLLM, when set, is the model accounting every Env of the run shares
+	// (calibration runs many examples under one cost cap).
+	sharedLLM *llmRun
 }
 
 // Env is what predicates share for one run.
