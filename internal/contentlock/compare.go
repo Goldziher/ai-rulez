@@ -299,11 +299,11 @@ func (c Change) Line() string {
 		return "approval: " + c.Detail
 	}
 	what := "output " + c.Path
-	if c.Scope == ScopeSource {
-		what = describe(c.Kind, c.Domain, c.ID)
 	if c.Scope == ScopeOutput && c.Kind == KindRoleOutput {
 		what = "outputs of role " + c.ID
 	}
+	if c.Scope == ScopeSource {
+		what = describe(c.Kind, c.Domain, c.ID)
 		if c.Path != "" {
 			what += " (" + c.Path + ")"
 		}

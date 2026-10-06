@@ -59,8 +59,8 @@ type tomlOutput struct {
 	Governance      *GovernanceConfig      `toml:"governance,omitempty"`
 	LLM             *llm.Config            `toml:"llm,omitempty"`
 	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
-	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Review          *ReviewConfig          `toml:"review,omitempty"`
+	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
 	MCPServers      []MCPServer            `toml:"mcp_servers,omitempty"`
@@ -156,9 +156,9 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Governance:      cfg.Governance,
 		LLM:             cfg.LLM,
 		Telemetry:       cfg.Telemetry,
+		Review:          cfg.Review,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
-		Review:          cfg.Review,
 		Marketplaces:    cfg.Marketplaces,
 		MCPServers:      mcpServers,
 		MCP:             cfg.MCP,

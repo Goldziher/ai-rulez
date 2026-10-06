@@ -162,24 +162,22 @@ The schema files are available in the repository:
 | `schema/plan.schema.json`         | JSON Schema | v1      | `ai-rulez generate --emit-plan FILE` and `generator.PlanOutputs`: every file a run would write, merge or remove, with digests and no secrets; see [Embedding the plan](cli.md#embedding-the-plan) |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
-| `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
+| `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/lock-subject.schema.json` | JSON Schema | v1      | `ai-rulez lock --subject --format json`: the lock-subject digest a signature commits to |
 | `schema/approve-list.schema.json` | JSON Schema | v1      | `ai-rulez approve --list --format json`: the `[governance]` policy and the approval status of pinned content; see [Approvals](approvals.md) |
-| `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query |
 | `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |
 | `schema/publish-manifest.schema.json` | JSON Schema | v1    | `<name>-<version>.manifest.json` written by `ai-rulez publish`: the bundle's files, source, lock and digests |
 | `schema/publish-plan.schema.json` | JSON Schema | v1    | `publish-plan.json` (and `ai-rulez publish --format json`): artifacts with digests and the argv `--execute` would run |
-| `schema/eval-activation.v1.schema.json` | JSON Schema | v1 | `ai-rulez eval run --mode activation --format json`: activation rates, intervals and the confusion matrix; see [Activation mode](evals.md#activation-mode) |
-| `schema/improve-report.schema.json` | JSON Schema | v1    | `report.json` of an experimental `ai-rulez improve` run (`improve-report/1`) |
 | `schema/eval-case.schema.json`    | JSON Schema | v1      | `*.eval.yaml` / `.yml` / `.json` skill eval cases under `skills/<name>/` |
 | `schema/eval-activation.v1.schema.json` | JSON Schema | v1 | `ai-rulez eval run --mode activation --format json`: activation rates, intervals and the confusion matrix; see [Activation mode](evals.md#activation-mode) |
+| `schema/improve-report.schema.json` | JSON Schema | v1    | `report.json` of an experimental `ai-rulez improve` run (`improve-report/1`) |
 | `schema/verifiers-report.schema.json` | JSON Schema | v1  | `ai-rulez verifiers run --format json` and the MCP `run_verifiers` result; see [Verifiers](verifiers.md) |
+| `schema/verifiers-spec.schema.json` | JSON Schema | v1    | `.ai-rulez/verifiers/*.toml` declaration files; see [Verifiers](verifiers.md#rule-linked-verifiers) |
 | `schema/policy.schema.json` | JSON Schema | v1 | An organization policy file (`--policy`, `AI_RULEZ_POLICY`, managed path); see [Organization policy](policy.md) |
 | `schema/policy-effective.schema.json` | JSON Schema | v1 | `ai-rulez validate --show-policy --format json`: the policy layers, the effective policy with the origin of every value, and what the repository tried to loosen |
-| `schema/verifiers-spec.schema.json` | JSON Schema | v1    | `.ai-rulez/verifiers/*.toml` declaration files; see [Verifiers](verifiers.md#rule-linked-verifiers) |
 
 Access them at (versioned to the release; `main` is the tip):
 
