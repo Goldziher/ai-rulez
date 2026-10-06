@@ -18,6 +18,9 @@ func TestLookup(t *testing.T) {
 		{"provider prefix is dropped", "anthropic/claude-sonnet-4", Price{3, 15}, true},
 		{"case is ignored", "Claude-Opus-4", Price{15, 75}, true},
 		{"short eval name", "haiku", Price{1, 5}, true},
+		{"gemini flash-lite beats flash by prefix", "gemini/gemini-2.5-flash-lite", Price{0.10, 0.40}, true},
+		{"gemini flash", "gemini-2.5-flash-preview", Price{0.30, 2.50}, true},
+		{"gemini embedding", "gemini-embedding-001", Price{0.15, 0}, true},
 		{"unknown", "mystery", Price{}, false},
 	}
 	for _, tt := range tests {
