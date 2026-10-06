@@ -112,6 +112,25 @@ digest = "sha256:…"
 ```
 
 The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
+### Scan records
+
+`lock` also writes one `[[scan]]` record per staged `egress = false` external scanner that has a cached result for the
+current content (`scan --external` fills the cache; `lock` starts no program):
+
+```toml
+[[scan]]
+scanner = "cisco-skill-scanner"
+version = "skill-scanner 1.2.0"
+tree = "sha256:…"          # digest of the content staged for the scanner
+findings = 2               # before the scanner baseline
+max_severity = "warning"
+result = "pass"            # fail when a finding reaches [lint.scanner_policy] fail_on (error by default)
+```
+
+A reviewer sees what was scanned at lock time and with what outcome. The records are outside the tree digest, like
+approvals: they do not make `lock --check` fail, and a scanner with no cached result for the content has no record
+(`lock` logs it). See [External scanners](strict-validation.md#lock-records).
+
 machine, as far as the content is: the `source` recorded for a skill that comes from an `[[includes]]` entry is
 `include:<name>/<path inside the include>`, never a path in your home directory or cache. A lock written before
 this recorded an absolute path for such skills; `lock --check` compares digests, not that field, so it still

@@ -1775,7 +1775,8 @@ review a lock diff. It records:
 - for every `[[skill_sources]]` entry (`[[source]]`: commit and tree digest) and every skill the skills server
   serves (`[[served]]`: a `sha256:` digest in the same scheme as the content pins; skills that only a role serves
   are included): the entries [`[lock] enforce`](lockfile.md#served-skills-and-skill-sources) checks at serve time;
-- a digest of each generated output, and one `tree` digest over everything.
+- a digest of each generated output, and one `tree` digest over everything;
+- one `[[scan]]` record per staged external scanner with a cached result for the current content (what was scanned and the outcome; `lock` starts no scanner, so run `scan --external` first; see [Lock file](lockfile.md#scan-records)).
 
 Local-path includes are pinned as `local-include` items, and project scripts run by agent, skill and command frontmatter `hooks` are pinned with their item. Sources are recorded as written in the config, with credentials in a URL redacted. A symlink inside a pinned tree is pinned by its link target.
 
