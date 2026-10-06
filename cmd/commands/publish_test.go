@@ -761,3 +761,34 @@ func TestShellJoin(t *testing.T) {
 		})
 	}
 }
+
+func TestMultiSpecs_RefusesDuplicatePluginNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		plugins string
+		wantErr bool
+	}{
+		{"distinct", `{"name":"a","source":"./a","version":"1.0.0"},{"name":"b","source":"./b","version":"1.0.0"}`, false},
+		{"same name", `{"name":"a","source":"./a","version":"1.0.0"},{"name":"a","source":"./b","version":"2.0.0"}`, true},
+		{"names differing in case", `{"name":"a","source":"./a","version":"1.0.0"},{"name":"A","source":"./b","version":"1.0.0"}`, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetPublishFlags(t)
+			files := []generator.PluginFile{
+				{Path: ".claude-plugin/marketplace.json", Data: []byte(`{"plugins":[` + tt.plugins + `]}`)},
+				{Path: "a/skills/x/SKILL.md", Data: []byte("a")},
+				{Path: "b/skills/x/SKILL.md", Data: []byte("b")},
+			}
+
+			_, err := (&publishContext{}).multiSpecs(files)
+
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			requirePublishError(t, err, publish.CodeConfig, publish.ExitGate)
+			assert.Contains(t, err.Error(), "overwrite each other")
+		})
+	}
+}
