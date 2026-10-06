@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -154,4 +155,73 @@ func (s *ApproveCLITestSuite) lockText() string {
 	data, err := os.ReadFile(filepath.Join(s.dir, ".ai-rulez", "ai-rulez.lock"))
 	s.Require().NoError(err)
 	return string(data)
+}
+
+// A deleted or stripped lock must not switch the approvals off. The project has
+// no remote include, whose own lock checks would refuse first.
+func (s *ApproveCLITestSuite) TestEnforcedGovernanceFailsClosedWithoutALock() {
+	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "4.0"
+name = "p"
+presets = ["claude"]
+gitignore = false
+
+[governance]
+require_approval = ["local"]
+enforce = true
+`)
+	s.Require().Equal(0, s.run("lock").ExitCode)
+	lockPath := filepath.Join(s.dir, ".ai-rulez", "ai-rulez.lock")
+	s.Require().NoError(os.WriteFile(lockPath, []byte("version = 1\n"), 0o600)) // a lock stripped of its pins
+
+	locked := s.run("generate", "--locked")
+	s.NotEqual(0, locked.ExitCode, locked.Stdout)
+	s.Contains(locked.Stderr+locked.Stdout, "AR710")
+	check := s.run("lock", "--check")
+	s.Equal(2, check.ExitCode, check.Stdout)
+	s.Contains(check.Stderr, "AR710")
+	strict := s.strict()
+	s.Equal(2, strict.ExitCode)
+	s.Contains(strict.Stdout, "AR710")
+
+	// Locking again is still possible: the refusal is about approvals, not about writing the lock.
+	s.Equal(0, s.run("lock").ExitCode)
+}
+
+// The reviewer of record is compared case-insensitively.
+func (s *ApproveCLITestSuite) TestReviewerIsNormalised() {
+	s.Require().Equal(0, s.run("lock").ExitCode)
+	s.Require().Equal(0, s.run("approve", "include:shared", "--reviewer", " Alice@Example.ORG ", "--yes").ExitCode)
+	s.Contains(s.lockText(), "reviewer = 'alice@example.org'")
+	s.Equal(0, s.run("approve", "--revoke", "include:shared", "--reviewer", "ALICE@example.org").ExitCode)
+}
+
+// The CI control for forgeable approvals: approvals added with their content are reported.
+func (s *ApproveCLITestSuite) TestVerifyBaseFlagsAnApprovalAddedWithItsContent() {
+	s.Require().Equal(0, s.run("lock").ExitCode)
+	git := func(args ...string) {
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
+		cmd.Dir = s.dir
+		out, err := cmd.CombinedOutput()
+		s.Require().NoError(err, string(out))
+	}
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-qm", "base")
+
+	// A change that moves the include to a new version and approves it in one go.
+	s.release("two", "v1.1.0")
+	s.Require().Equal(0, s.run("update").ExitCode)
+	s.Require().Equal(0, s.run("approve", "include:shared", "--reviewer", "mallory@example.org", "--yes").ExitCode)
+
+	verify := s.run("approve", "--verify-base", "main")
+	s.Equal(2, verify.ExitCode, verify.Stderr)
+	s.Contains(verify.Stdout, "AR716")
+	s.Contains(verify.Stdout, "include:shared")
+
+	strict := s.run("validate", "--strict", "--approvals-base", "main", "--format", "json")
+	s.Equal(2, strict.ExitCode)
+	s.Contains(strict.Stdout, "AR716")
+
+	missing := s.run("approve", "--verify-base", "no-such-branch")
+	s.Equal(1, missing.ExitCode, "an unreadable base never passes")
 }
