@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -95,6 +96,12 @@ type Options struct {
 	// MaxCostUSD is required (> 0): measured eval cost plus reported optimizer cost.
 	MaxCostUSD        float64
 	StopAtFirstAccept bool
+	// Isolation is how the optimizer is confined: none (the default), auto or require.
+	Isolation sandbox.Mode
+	// Sandbox is the confinement backend; nil uses the system's.
+	Sandbox *sandbox.Sandbox
+	// Adapter names the bundled adapter in use (recorded in the report).
+	Adapter string
 	// MaxSkillGrowth bounds SKILL.md growth as a factor of the original tokens (0: 1.25).
 	MaxSkillGrowth float64
 	// RequireCIAboveZero makes the bootstrap interval of the gain part of the gate.
@@ -126,6 +133,8 @@ type Plan struct {
 	heldCases   []evals.Case
 	trainCases  []evals.Case
 	runDir      string
+	isolation   *IsolationReport
+	sandbox     *sandbox.Sandbox
 }
 
 // ParseArgv splits an optimizer command: a JSON array of strings, or words
@@ -150,7 +159,7 @@ func ParseArgv(s string) ([]string, error) {
 
 // Prepare checks every precondition and computes the plan. It writes nothing
 // and calls no optimizer or eval runner, so it backs --dry-run too.
-func Prepare(_ context.Context, opts *Options) (*Plan, error) {
+func Prepare(ctx context.Context, opts *Options) (*Plan, error) {
 	o := *opts
 	applyDefaults(&o)
 	if err := checkSettings(&o); err != nil {
@@ -168,6 +177,9 @@ func Prepare(_ context.Context, opts *Options) (*Plan, error) {
 		return nil, refuse("", "%q is not an authored skill of this project: improve works on skills under .ai-rulez/skills or a domain, not on includes, installed or built-in skills", o.SkillID)
 	}
 	p := &Plan{Opts: o, Skill: skills[idx]}
+	if err := p.resolveIsolation(ctx); err != nil {
+		return nil, err
+	}
 	if err := p.loadCases(); err != nil {
 		return nil, err
 	}
@@ -421,6 +433,7 @@ func (p *Plan) Summary() string {
 	} else {
 		b.WriteString("  egress:      none declared (ai-rulez cannot block the optimizer's network access; use a container or CI egress policy)\n")
 	}
+	b.WriteString(p.isolationLine())
 	fmt.Fprintf(&b, "  run:         .ai-rulez/%s/%s (nothing outside it changes until `improve apply`)\n", filepath.ToSlash(LocalDir), p.RunID)
 	for _, w := range p.Warnings {
 		fmt.Fprintf(&b, "  warning:     %s\n", w)

@@ -207,6 +207,33 @@
       "items": {
         "type": "string"
       }
+    },
+    "adapter": {
+      "type": "string",
+      "description": "The bundled adapter the optimizer was (builtin:<name>); absent for --with."
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "confined"],
+      "description": "How the optimizer was confined.",
+      "properties": {
+        "mode": {
+          "enum": ["none", "auto", "require"]
+        },
+        "backend": {
+          "type": "string"
+        },
+        "confined": {
+          "type": "boolean"
+        },
+        "no_network": {
+          "type": "boolean"
+        },
+        "no_writes": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {

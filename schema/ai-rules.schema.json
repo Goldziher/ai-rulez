@@ -1518,7 +1518,7 @@
         "isolation": {
           "type": "string",
           "enum": ["auto", "none", "require"],
-          "description": "How the optimizer is confined: auto (default) confines when a sandbox backend works, none never does, require refuses to run without one."
+          "description": "How the optimizer is confined: none (default) never confines it, auto confines when a sandbox backend works, require refuses to run without one."
         },
         "env_pass": {
           "type": "array",
