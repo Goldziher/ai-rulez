@@ -2,11 +2,13 @@ package improve
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,6 +96,12 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// The body needs only the report. Writing it before the worktree and the commit means a failure here
+	// leaves no branch behind.
+	bodyFile := filepath.Join(p.dir, "pr-body.md")
+	if err := safeWriteBody(bodyFile, prBody(p.report, opts.RunID)); err != nil {
+		return nil, err
+	}
 	g := opts.Git
 	top := g.TopLevel(opts.RepoDir)
 	if top == "" {
@@ -137,11 +145,11 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	}
 	projDir := filepath.Join(wt, relProject)
 	skillDir := filepath.Join(projDir, filepath.FromSlash(p.report.SkillPath))
-	if err := p.applyAt(skillDir, base); err != nil {
+	if err := p.applyAt(wt, skillDir, base); err != nil {
 		return nil, err
 	}
-	res = &PRResult{Branch: branch, Base: base, BodyFile: filepath.Join(p.dir, "pr-body.md")}
-	if err := p.refresh(ctx, opts, projDir, res); err != nil {
+	res = &PRResult{Branch: branch, Base: base, BodyFile: bodyFile}
+	if err := p.refresh(ctx, opts, projDir, relProject, res); err != nil {
 		return nil, err
 	}
 	if err := p.commit(ctx, opts, wt, relProject, res); err != nil {
@@ -149,9 +157,6 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	}
 	committed = true
 	fmt.Fprintf(opts.Out, "Committed %s on %s (from %s); your checkout was not touched.\n", res.Commit[:min(12, len(res.Commit))], branch, base)
-	if err := safeWriteBody(res.BodyFile, prBody(p.report, opts.RunID)); err != nil {
-		return res, err
-	}
 	return res, p.publish(ctx, opts, top, res)
 }
 
@@ -161,6 +166,9 @@ type prRun struct {
 	dir    string
 	cand   *Tree
 	opts   *PROptions
+	// generated are the repository-relative generated outputs the project commits, refreshed by
+	// `ai-rulez generate` in the worktree and staged with the skill.
+	generated []string
 }
 
 func loadPRRun(opts *PROptions) (*prRun, error) {
@@ -187,8 +195,11 @@ func loadPRRun(opts *PROptions) (*prRun, error) {
 
 // applyAt writes the candidate into the skill at the base, after checking that the base holds the same
 // skill the run measured and that the candidate still passes the diff policy.
-func (p *prRun) applyAt(skillDir, base string) error {
+func (p *prRun) applyAt(wt, skillDir, base string) error {
 	r, o := p.report, p.opts
+	if err := plainPath(wt, skillDir); err != nil {
+		return refuse(CodePRRefused, "the base %s has a symlink on the path to %s (%v): improve pr will not write through it", base, r.SkillPath, err)
+	}
 	if info, err := os.Lstat(skillDir); err != nil || !info.IsDir() {
 		return refuse(CodePRRefused, "the base %s has no skill directory at %s", base, r.SkillPath)
 	}
@@ -218,16 +229,43 @@ func (p *prRun) applyAt(skillDir, base string) error {
 	return nil
 }
 
-// refresh brings the lock (and, on request, the eval results) up to date inside the worktree, so the
-// lock check and AR997 pass on the pull request. A failure stops the pull request.
-func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir string, res *PRResult) error {
+// plainPath checks that no component of target below root (the skill directory and every parent up to
+// the worktree) is a symlink, so a committed link cannot redirect the write outside the worktree.
+func plainPath(root, target string) error {
+	rel, err := filepath.Rel(root, target)
+	if err != nil || !filepath.IsLocal(rel) {
+		return fmt.Errorf("%s is not below the worktree", target)
+	}
+	cur := root
+	for _, part := range strings.Split(filepath.ToSlash(rel), "/") {
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		switch {
+		case os.IsNotExist(err):
+			return nil // the caller reports the missing directory
+		case err != nil:
+			return err //nolint:wrapcheck // named in the refusal
+		case info.Mode()&os.ModeSymlink != 0:
+			return fmt.Errorf("%s is a symlink", part)
+		}
+	}
+	return nil
+}
+
+// refresh brings the generated outputs, the lock (and, on request, the eval results) up to date inside the
+// worktree, so the lock check and AR997 pass on the pull request. Outputs come first: the lock pins them, so a
+// lock made over stale outputs would not verify. A failure stops the pull request, except a failed generate in a
+// project without a lock, which only warns.
+func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProject string, res *PRResult) error {
 	if len(opts.Self) == 0 {
 		res.Refreshed = nil
-		fmt.Fprintln(opts.Out, "note: ai-rulez was not found to re-run itself, so the lock and the eval results were not refreshed: run `ai-rulez lock` on the branch")
+		fmt.Fprintln(opts.Out, "note: ai-rulez was not found to re-run itself, so the generated outputs, the lock and the eval results were not refreshed: run `ai-rulez generate` and `ai-rulez lock` on the branch")
 		return nil
 	}
-	steps := [][]string{}
-	if _, err := os.Stat(filepath.Join(projDir, filepath.Base(opts.ConfigDir), lockfile.FileName)); err == nil {
+	_, lockErr := os.Stat(filepath.Join(projDir, filepath.Base(opts.ConfigDir), lockfile.FileName))
+	hasLock := lockErr == nil
+	steps := [][]string{{"generate", "--yes"}}
+	if hasLock {
 		steps = append(steps, []string{"lock"})
 	}
 	if opts.RunEvals {
@@ -240,11 +278,78 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir string, re
 		argv := append(append([]string(nil), opts.Self...), args...)
 		r := run.Run(ctx, runner.Spec{Argv: argv, Dir: projDir, Env: opts.Env, Timeout: refreshTimeout})
 		if r.Status != runner.StatusOK {
-			return refuse(CodePRRefused, "`ai-rulez %s` failed in the worktree (%s, exit %d): %s", strings.Join(args, " "), r.Status, r.ExitCode, Sanitize(string(r.Stderr)+string(r.Stdout), 600))
+			why := fmt.Sprintf("`ai-rulez %s` failed in the worktree (%s, exit %d): %s", strings.Join(args, " "), r.Status, r.ExitCode, Sanitize(string(r.Stderr)+string(r.Stdout), 600))
+			if args[0] == "generate" && !hasLock {
+				fmt.Fprintf(opts.Out, "warning: %s; the generated outputs were not refreshed: run `ai-rulez generate` on the branch if the project commits them\n", why)
+				continue
+			}
+			return refuse(CodePRRefused, "%s", why)
 		}
 		res.Refreshed = append(res.Refreshed, "ai-rulez "+strings.Join(args, " "))
+		if args[0] == "generate" {
+			p.generated = p.committedOutputs(ctx, opts, projDir, relProject)
+		}
 	}
 	return nil
+}
+
+// manifestName is the file `generate` writes next to the config to list the outputs it made.
+const manifestName = ".generated-manifest.json"
+
+// maxManifestBytes bounds the manifest read from the worktree.
+const maxManifestBytes = 4 << 20
+
+// committedOutputs returns the repository-relative generated outputs to stage: the files of the generate
+// manifest, when git tracks at least one of them at the base (the project commits its outputs). A project that
+// gitignores them gets none, so a pull request never adds generated files the project does not commit.
+func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, relProject string) []string {
+	data, err := readBounded(filepath.Join(projDir, filepath.Base(opts.ConfigDir), manifestName), maxManifestBytes)
+	if err != nil {
+		return nil
+	}
+	var m struct {
+		Files []string `json:"files"`
+	}
+	if json.Unmarshal(data, &m) != nil {
+		return nil
+	}
+	var files []string
+	for _, f := range m.Files {
+		if f != "" && filepath.IsLocal(filepath.FromSlash(f)) {
+			files = append(files, filepath.ToSlash(filepath.Clean(filepath.FromSlash(f))))
+		}
+	}
+	manifestRel := filepath.ToSlash(filepath.Join(filepath.Base(opts.ConfigDir), manifestName))
+	tracked, err := opts.Git.TrackedAmong(projDir, append(files, manifestRel))
+	if err != nil {
+		return nil
+	}
+	committed := false
+	for _, f := range files {
+		committed = committed || tracked[f]
+	}
+	if !committed {
+		return nil
+	}
+	var out []string
+	for _, f := range files {
+		if _, err := os.Lstat(filepath.Join(projDir, filepath.FromSlash(f))); err == nil || tracked[f] {
+			out = append(out, filepath.ToSlash(filepath.Join(relProject, filepath.FromSlash(f))))
+		}
+	}
+	if tracked[manifestRel] {
+		out = append(out, filepath.ToSlash(filepath.Join(relProject, filepath.FromSlash(manifestRel))))
+	}
+	return out
+}
+
+func readBounded(path string, limit int64) ([]byte, error) {
+	f, err := os.Open(path) //nolint:gosec // a file of the worktree this run created
+	if err != nil {
+		return nil, err //nolint:wrapcheck // the caller ignores the cause
+	}
+	defer f.Close() //nolint:errcheck // read only
+	return io.ReadAll(io.LimitReader(f, limit))
 }
 
 // commit stages the skill, the lock and the eval results and commits them.
@@ -257,6 +362,7 @@ func (p *prRun) commit(ctx context.Context, opts *PROptions, wt, relProject stri
 			paths = append(paths, filepath.ToSlash(filepath.Join(relConfig, name)))
 		}
 	}
+	paths = append(paths, p.generated...)
 	if err := g.Add(ctx, wt, paths...); err != nil {
 		return refuse(CodePRRefused, "stage the change: %v", err)
 	}
@@ -280,7 +386,13 @@ func (p *prRun) commit(ctx context.Context, opts *PROptions, wt, relProject stri
 func (p *prRun) publish(ctx context.Context, opts *PROptions, top string, res *PRResult) error {
 	g := opts.Git
 	title := prTitle(p.report)
-	prArgs := []string{"gh", "pr", "create", "--base", strings.TrimPrefix(res.Base, opts.Remote+"/"), "--head", res.Branch, "--title", title, "--body-file", res.BodyFile}
+	prArgs := []string{"gh", "pr", "create"}
+	// Without --repo gh picks the repository itself, and for a fork it picks the upstream, where the pushed
+	// branch does not exist. Name the repository the branch was pushed to when its URL says which it is.
+	if repo := remoteRepo(ctx, g, top, opts.Remote); repo != "" {
+		prArgs = append(prArgs, "--repo", repo)
+	}
+	prArgs = append(prArgs, "--base", strings.TrimPrefix(res.Base, opts.Remote+"/"), "--head", res.Branch, "--title", title, "--body-file", res.BodyFile)
 	if opts.Draft {
 		prArgs = append(prArgs, "--draft")
 	}
@@ -301,7 +413,11 @@ func (p *prRun) publish(ctx context.Context, opts *PROptions, top string, res *P
 		return manual("The remote " + opts.Remote + " does not exist.")
 	case ghErr != nil:
 		return manual("gh (the GitHub CLI) was not found on PATH.")
-	case !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Push %s to %s and open a pull request with gh?", res.Branch, opts.Remote))):
+	}
+	if why := baseProblem(ctx, g, top, opts.Remote, res.Base); why != "" {
+		return manual(why + " Nothing was pushed.")
+	}
+	if !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Push %s to %s and open a pull request with gh?", res.Branch, opts.Remote))) {
 		return manual("Not confirmed: nothing was pushed.")
 	}
 	if err := g.Push(ctx, top, opts.Remote, res.Branch); err != nil {
@@ -320,6 +436,60 @@ func (p *prRun) publish(ctx context.Context, opts *PROptions, top string, res *P
 	}
 	fmt.Fprintf(opts.Out, "Opened the pull request: %s\nIt is not approved: review the full diff.\n", orElse(res.URL, "(gh printed no URL)"))
 	return nil
+}
+
+// baseProblem says why the pull request cannot target base on the remote: it is not a branch the remote
+// has (gh --base needs a branch, so a commit id fails after the push), or the local base holds commits the
+// remote lacks (the pull request would carry them). It reads local refs only; "" means no problem found.
+func baseProblem(ctx context.Context, g gitutil.Git, top, remote, base string) string {
+	branch := strings.TrimPrefix(base, remote+"/")
+	remoteRef := "refs/remotes/" + remote + "/" + branch
+	if _, err := g.Output(ctx, top, "rev-parse", "--verify", "--quiet", "--end-of-options", remoteRef+"^{commit}"); err != nil {
+		return fmt.Sprintf("The base %s is not a branch of %s that this checkout knows (gh needs a branch to target: run `git fetch %s`, or pass --base BRANCH).", Sanitize(base, 100), remote, remote)
+	}
+	out, err := g.Output(ctx, top, "rev-list", "--count", "--end-of-options", remoteRef+".."+base)
+	if err != nil {
+		return fmt.Sprintf("Could not compare %s with %s/%s: %s.", Sanitize(base, 100), remote, Sanitize(branch, 100), Sanitize(err.Error(), 200))
+	}
+	if n, _ := strconv.Atoi(out); n > 0 { //nolint:errcheck // a non-number counts as none
+		return fmt.Sprintf("The base %s has %d commit(s) that %s/%s does not, so the pull request would carry them: push the base first.", Sanitize(base, 100), n, remote, Sanitize(branch, 100))
+	}
+	return ""
+}
+
+// remoteRepo names the repository a remote points at, in the form gh --repo takes (OWNER/REPO, or
+// HOST/OWNER/REPO off github.com), or "" when the URL is not a forge URL of that shape.
+func remoteRepo(ctx context.Context, g gitutil.Git, top, remote string) string {
+	url, err := g.Output(ctx, top, "config", "--get", "remote."+remote+".url")
+	if err != nil {
+		return ""
+	}
+	return parseRepoURL(url)
+}
+
+var (
+	urlRemote  = regexp.MustCompile(`^(?:https?|ssh|git\+ssh)://(?:[^@/]+@)?([^/:@]+)(?::[0-9]+)?/(.+?)(?:\.git)?/?$`)
+	scpRemote  = regexp.MustCompile(`^(?:[^@/:]+@)?([^/:@]+):([^/].*?)(?:\.git)?/?$`)
+	repoSegmnt = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]*$`)
+)
+
+func parseRepoURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	m := urlRemote.FindStringSubmatch(raw)
+	if m == nil {
+		m = scpRemote.FindStringSubmatch(raw)
+	}
+	if m == nil {
+		return ""
+	}
+	host, path := m[1], strings.Split(m[2], "/")
+	if len(path) != 2 || !repoSegmnt.MatchString(host) || !repoSegmnt.MatchString(path[0]) || !repoSegmnt.MatchString(path[1]) {
+		return ""
+	}
+	if strings.EqualFold(host, "github.com") {
+		return path[0] + "/" + path[1]
+	}
+	return host + "/" + path[0] + "/" + path[1]
 }
 
 func orElse(s, fallback string) string {

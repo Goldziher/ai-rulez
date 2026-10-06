@@ -277,17 +277,26 @@ even if the run itself used them. Files are written all or nothing.
 
 1. Creates a linked git worktree (in a temporary directory) on a new branch `ai-rulez/improve/<skill>-<digest8>` started
    from `--base` (default: the branch you are on). A detached HEAD needs `--base`. An existing branch of that name is refused.
-2. Checks that the skill at the base has the digest the run measured (`AR9J1` otherwise), re-checks the diff policy and
-   writes the candidate there.
-3. Runs `ai-rulez lock` in the worktree when the project has a lock. With `--run-evals` it also runs
+2. Checks that the skill at the base has the digest the run measured (`AR9J1` otherwise), that no component of the
+   path to it is a symlink, re-checks the diff policy (with the growth factor the run used) and writes the candidate there.
+3. Runs `ai-rulez generate --yes` in the worktree, so the outputs the lock pins are not stale; when git tracks any file of
+   the generate manifest (the project commits its outputs), all of them are staged with the skill. A project that
+   ignores its outputs gets none. A failing generate stops the pull request when the project has a lock and only warns
+   without one. Then it runs `ai-rulez lock` when the project has a lock. These commands run with a scrubbed
+   environment (the base variables and `XDG_*`/`AI_RULEZ_HOME`; credentials only by name with `--env-pass`, which an
+   eval runner needs). With `--run-evals` it also runs
    `ai-rulez eval run <skill> --changed-only` (plus any `--eval-arg`) so `AR997` holds; that calls the eval runner and
    spends money, so it is off by default and the command says what to run on the branch instead. A failing step stops
    the pull request and leaves no branch.
 4. Stages the skill, the lock and the eval results, and makes one commit (`chore(skills): improve <skill> ...`; git
    hooks are skipped). The worktree is removed; the branch stays.
-5. When the remote exists, `gh` is on `PATH` and you confirm (or pass `--yes`), pushes with `git push --set-upstream` and
-   runs `gh pr create --base B --head BRANCH --title T --body-file F [--draft]`. Otherwise (no remote, no `gh`,
-   `--no-push`, not confirmed) it prints the two commands. ai-rulez makes no network call itself: git and `gh` use their
+5. When the remote exists, `gh` is on `PATH`, the base is a branch the remote has with no unpushed commits (a commit id,
+   an unpushed branch or a base ahead of the remote would break or pollute the pull request), and you confirm (or pass
+   `--yes`), pushes with `git push --set-upstream` and runs
+   `gh pr create [--repo OWNER/REPO] --base B --head BRANCH --title T --body-file F [--draft]`; `--repo` names the
+   repository the remote URL points at, so a fork receives the pull request on the fork. Otherwise (no remote, no `gh`,
+   `--no-push`, not confirmed, an unusable base) it prints the two commands. The body file is written before the
+   worktree exists, so a write failure leaves no branch. ai-rulez makes no network call itself: git and `gh` use their
    own credentials, and `gh` gets a scrubbed environment plus the usual `GH_*`/proxy names.
 
 The body states what changed, the held-out table with the interval and the wins and losses, the guards that held, cost,

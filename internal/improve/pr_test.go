@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // gitIn runs git in dir with a world that cannot sign or read the user's configuration.
@@ -33,6 +34,8 @@ type prWorld struct {
 	report                                *Report
 	opts                                  PROptions
 	out                                   *strings.Builder
+	// looked are the programs PR asked LookPath for; the fake gh must be what it resolved.
+	looked []string
 }
 
 func newPRWorld(t *testing.T) *prWorld {
@@ -47,6 +50,7 @@ func newPRWorld(t *testing.T) *prWorld {
 	remote := filepath.Join(t.TempDir(), "origin.git")
 	gitIn(t, root, "init", "-q", "--bare", remote)
 	gitIn(t, root, "remote", "add", "origin", remote)
+	gitIn(t, root, "push", "-q", "origin", "main") // the base is a branch the remote has, as in a real checkout
 
 	bin := t.TempDir()
 	ghLog := filepath.Join(t.TempDir(), "gh.log")
@@ -55,7 +59,7 @@ func newPRWorld(t *testing.T) *prWorld {
 	w := &prWorld{root: root, configDir: configDir, remote: remote, ghLog: ghLog, ghBin: filepath.Join(bin, "gh"), plan: plan, report: report, out: &strings.Builder{}}
 	w.opts = PROptions{
 		ConfigDir: configDir, RepoDir: root, RunID: plan.RunID, Out: w.out, Yes: true,
-		Exec: runner.Exec{}, LookPath: func(string) (string, error) { return w.ghBin, nil },
+		Exec: runner.Exec{}, LookPath: func(name string) (string, error) { w.looked = append(w.looked, name); return w.ghBin, nil },
 		GHEnv: []string{"PATH=/usr/bin:/bin", "GH_LOG=" + ghLog}, Env: []string{"PATH=/usr/bin:/bin"},
 		Git: gitutil.Git{},
 	}
@@ -97,6 +101,7 @@ func TestPR_OpensAPullRequestFromAnIsolatedWorktree(t *testing.T) {
 
 	// pushed and opened with fixed gh arguments
 	assert.True(t, res.Pushed)
+	assert.Equal(t, []string{"gh"}, w.looked, "gh was resolved through the injected lookup, which returned the fake")
 	assert.Equal(t, "https://github.com/example/repo/pull/7", res.URL)
 	assert.Equal(t, res.Commit, gitIn(t, w.remote, "rev-parse", "refs/heads/"+res.Branch))
 	args := strings.Split(strings.TrimSpace(readFileString(t, w.ghLog)), "\n")
@@ -114,6 +119,7 @@ func TestPR_DraftFlagAndCustomBase(t *testing.T) {
 	// Arrange
 	w := newPRWorld(t)
 	gitIn(t, w.root, "branch", "release")
+	gitIn(t, w.root, "push", "-q", "origin", "release")
 	w.opts.Base, w.opts.Draft = "release", true
 
 	// Act
@@ -244,7 +250,7 @@ func TestPR_RefreshesTheLockAndEvalResultsInTheWorktree(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err, w.out.String())
-	assert.Equal(t, []string{"ai-rulez lock", "ai-rulez eval run deploy --changed-only --max-cost 2"}, res.Refreshed)
+	assert.Equal(t, []string{"ai-rulez generate --yes", "ai-rulez lock", "ai-rulez eval run deploy --changed-only --max-cost 2"}, res.Refreshed)
 	files := strings.Split(gitIn(t, w.root, "show", "--name-only", "--format=", res.Branch), "\n")
 	assert.Contains(t, files, ".ai-rulez/ai-rulez.lock")
 	assert.Contains(t, files, ".ai-rulez/eval-results.json")
@@ -295,4 +301,205 @@ func TestPRBody_UntrustedTextCannotBreakOutOfItsFence(t *testing.T) {
 	assert.Contains(t, body, "``w`1``", "a code span with a backtick is delimited by a longer run")
 	assert.Contains(t, body, "``evil`opt``")
 	assert.Contains(t, body, "**Not approved**")
+}
+
+func TestParseRepoURL(t *testing.T) {
+	tests := []struct{ url, want string }{
+		{"https://github.com/example/repo.git", "example/repo"},
+		{"https://github.com/example/repo", "example/repo"},
+		{"https://user@github.com/example/repo.git/", "example/repo"},
+		{"git@github.com:example/repo.git", "example/repo"},
+		{"ssh://git@github.com/example/repo.git", "example/repo"},
+		{"ssh://git@ghe.example.com:2222/team/tools.git", "ghe.example.com/team/tools"},
+		{"git@ghe.example.com:team/tools", "ghe.example.com/team/tools"},
+		{"/tmp/origin.git", ""},
+		{"../origin.git", ""},
+		{"file:///tmp/origin.git", ""},
+		{"https://gitlab.com/group/sub/repo.git", ""},
+		{"https://github.com/-evil/repo", ""},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.url, func(t *testing.T) {
+			assert.Equal(t, tt.want, parseRepoURL(tt.url))
+		})
+	}
+}
+
+func TestPR_TargetsThePushedRepositoryWithRepoFlag(t *testing.T) {
+	// Arrange: the remote's URL names a forge repository, while pushes are redirected to the local bare origin.
+	w := newPRWorld(t)
+	gitIn(t, w.root, "config", "remote.origin.url", "https://github.com/example/fork.git")
+	gitIn(t, w.root, "config", "url."+w.remote+".insteadOf", "https://github.com/example/fork.git")
+
+	// Act
+	res, err := PR(context.Background(), &w.opts)
+
+	// Assert
+	require.NoError(t, err, w.out.String())
+	args := strings.Split(strings.TrimSpace(readFileString(t, w.ghLog)), "\n")
+	assert.Equal(t, []string{"pr", "create", "--repo", "example/fork", "--base", "main", "--head", res.Branch}, args[:8])
+	assert.Contains(t, strings.Join(res.Commands, "\n"), "--repo example/fork")
+}
+
+func TestPR_DoesNotPushWhenTheBaseCannotBeTheTargetOfAPullRequest(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(t *testing.T, w *prWorld)
+		want   string
+	}{
+		{"base is a commit id, not a branch", func(t *testing.T, w *prWorld) {
+			w.opts.Base = gitIn(t, w.root, "rev-parse", "HEAD")
+		}, "is not a branch of origin"},
+		{"base is a local branch the remote lacks", func(t *testing.T, w *prWorld) {
+			gitIn(t, w.root, "branch", "unpushed")
+			w.opts.Base = "unpushed"
+		}, "is not a branch of origin"},
+		{"base is ahead of the remote", func(t *testing.T, w *prWorld) {
+			require.NoError(t, os.WriteFile(filepath.Join(w.root, "README.md"), []byte("local only\n"), 0o600))
+			gitIn(t, w.root, "add", "README.md")
+			gitIn(t, w.root, "commit", "-q", "-m", "unpushed work")
+		}, "1 commit(s) that origin/main does not"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			w := newPRWorld(t)
+			tt.mutate(t, w)
+
+			// Act
+			res, err := PR(context.Background(), &w.opts)
+
+			// Assert: the commit exists locally, nothing was pushed and gh never ran.
+			require.NoError(t, err, w.out.String())
+			assert.False(t, res.Pushed)
+			assert.Contains(t, w.out.String(), tt.want)
+			assert.Contains(t, w.out.String(), "Nothing was pushed")
+			assert.Empty(t, gitIn(t, w.remote, "branch", "--list", res.Branch))
+			assert.NoFileExists(t, w.ghLog)
+		})
+	}
+}
+
+func TestPR_AFailedBodyWriteLeavesNoBranch(t *testing.T) {
+	// Arrange: the body file cannot be written because a directory sits at its path.
+	w := newPRWorld(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(w.plan.RunDir(), "pr-body.md"), 0o750))
+
+	// Act
+	_, err := PR(context.Background(), &w.opts)
+
+	// Assert
+	require.Error(t, err)
+	assert.Empty(t, gitIn(t, w.root, "branch", "--list", "ai-rulez/*"), "no branch is left behind")
+	assert.NoFileExists(t, w.ghLog)
+}
+
+func TestPR_RefusesASymlinkedParentOfTheSkill(t *testing.T) {
+	// Arrange: the base commit holds .ai-rulez/skills as a symlink to another directory of the repository.
+	w := newPRWorld(t)
+	gitIn(t, w.root, "mv", ".ai-rulez/skills", ".ai-rulez/skills-real")
+	testutil.SymlinkOrSkip(t, "skills-real", filepath.Join(w.configDir, "skills"))
+	gitIn(t, w.root, "add", ".ai-rulez/skills")
+	gitIn(t, w.root, "commit", "-q", "-m", "link the skills directory")
+
+	// Act
+	_, err := PR(context.Background(), &w.opts)
+
+	// Assert
+	var refusal *Refusal
+	require.ErrorAs(t, err, &refusal)
+	assert.Equal(t, CodePRRefused, refusal.Code)
+	assert.Contains(t, refusal.Error(), "symlink")
+	assert.Empty(t, gitIn(t, w.root, "branch", "--list", "ai-rulez/*"))
+}
+
+// generatingSelf is a stand-in for ai-rulez: generate rewrites CLAUDE.md from the skill and the manifest lists
+// it; lock records the digest of what generate wrote, so the order of the two is observable.
+func generatingSelf(t *testing.T, failGenerate bool) string {
+	t.Helper()
+	self := filepath.Join(t.TempDir(), "fake-ai-rulez")
+	gen := `skill=$(tr -d '\n' < .ai-rulez/skills/deploy/SKILL.md | cksum | cut -d' ' -f1); echo "generated $skill" > CLAUDE.md; printf '{"version":"1","files":["CLAUDE.md"]}' > .ai-rulez/.generated-manifest.json`
+	if failGenerate {
+		gen = `echo 'generate exploded' >&2; exit 2`
+	}
+	script := "#!/bin/sh\ncase \"$1\" in\n  generate) " + gen + " ;;\n  lock) cp CLAUDE.md .ai-rulez/ai-rulez.lock 2>/dev/null || echo 'lock before generate' > .ai-rulez/ai-rulez.lock ;;\nesac\n"
+	require.NoError(t, os.WriteFile(self, []byte(script), 0o755)) //nolint:gosec // a test script
+	return self
+}
+
+func TestPR_RegeneratesCommittedOutputsBeforeTheLock(t *testing.T) {
+	// Arrange: the project commits CLAUDE.md, its manifest and a lock that pins it.
+	w := newPRWorld(t)
+	require.NoError(t, os.WriteFile(filepath.Join(w.root, "CLAUDE.md"), []byte("generated before\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(w.configDir, ".generated-manifest.json"), []byte(`{"version":"1","files":["CLAUDE.md"]}`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(w.configDir, "ai-rulez.lock"), []byte("old lock\n"), 0o600))
+	gitIn(t, w.root, "add", "CLAUDE.md", ".ai-rulez/.generated-manifest.json", ".ai-rulez/ai-rulez.lock")
+	gitIn(t, w.root, "commit", "-q", "-m", "commit the outputs")
+	gitIn(t, w.root, "push", "-q", "origin", "main")
+	w.opts.Self = []string{generatingSelf(t, false)}
+
+	// Act
+	res, err := PR(context.Background(), &w.opts)
+
+	// Assert: the refreshed output is in the commit, and the lock was made after it.
+	require.NoError(t, err, w.out.String())
+	assert.Equal(t, []string{"ai-rulez generate --yes", "ai-rulez lock"}, res.Refreshed)
+	files := strings.Split(gitIn(t, w.root, "show", "--name-only", "--format=", res.Branch), "\n")
+	assert.Contains(t, files, "CLAUDE.md")
+	assert.Contains(t, files, ".ai-rulez/ai-rulez.lock")
+	out := gitIn(t, w.root, "show", res.Branch+":CLAUDE.md")
+	assert.True(t, strings.HasPrefix(out, "generated "), out)
+	assert.Equal(t, out, gitIn(t, w.root, "show", res.Branch+":.ai-rulez/ai-rulez.lock"), "the lock pins what generate wrote, not the stale output")
+	assert.Equal(t, "generated before", strings.TrimSpace(readFileString(t, filepath.Join(w.root, "CLAUDE.md"))), "the checkout's own output is untouched")
+}
+
+func TestPR_DoesNotCommitOutputsTheProjectIgnores(t *testing.T) {
+	// Arrange: generate writes CLAUDE.md, but git tracks none of the manifest's files.
+	w := newPRWorld(t)
+	w.opts.Self = []string{generatingSelf(t, false)}
+
+	// Act
+	res, err := PR(context.Background(), &w.opts)
+
+	// Assert
+	require.NoError(t, err, w.out.String())
+	files := strings.Split(gitIn(t, w.root, "show", "--name-only", "--format=", res.Branch), "\n")
+	assert.NotContains(t, files, "CLAUDE.md")
+	assert.NotContains(t, files, ".ai-rulez/.generated-manifest.json")
+}
+
+func TestPR_AFailingGenerate(t *testing.T) {
+	t.Run("stops the pull request when a lock pins the outputs", func(t *testing.T) {
+		// Arrange
+		w := newPRWorld(t)
+		require.NoError(t, os.WriteFile(filepath.Join(w.configDir, "ai-rulez.lock"), []byte("old lock\n"), 0o600))
+		gitIn(t, w.root, "add", ".ai-rulez/ai-rulez.lock")
+		gitIn(t, w.root, "commit", "-q", "-m", "lock")
+		gitIn(t, w.root, "push", "-q", "origin", "main")
+		w.opts.Self = []string{generatingSelf(t, true)}
+
+		// Act
+		_, err := PR(context.Background(), &w.opts)
+
+		// Assert
+		var refusal *Refusal
+		require.ErrorAs(t, err, &refusal)
+		assert.Contains(t, refusal.Error(), "generate")
+		assert.Contains(t, refusal.Error(), "generate exploded")
+		assert.Empty(t, gitIn(t, w.root, "branch", "--list", "ai-rulez/*"))
+	})
+	t.Run("only warns without a lock", func(t *testing.T) {
+		// Arrange
+		w := newPRWorld(t)
+		w.opts.Self = []string{generatingSelf(t, true)}
+
+		// Act
+		res, err := PR(context.Background(), &w.opts)
+
+		// Assert
+		require.NoError(t, err, w.out.String())
+		assert.Contains(t, w.out.String(), "generated outputs were not refreshed")
+		assert.Empty(t, res.Refreshed)
+	})
 }
