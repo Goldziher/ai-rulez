@@ -81,6 +81,10 @@ stdout.
 | AR701 | `description-duplicate` | warning | Two skills, agents or commands have identical descriptions |
 | AR702 | `description-near-duplicate` | warning | Descriptions overlap at or above `near_duplicate_threshold` (word-set Jaccard) |
 | AR703 | `duplicate-collapsed` | warning | Two sources define the same rule, context, skill or command name and generation silently keeps one (root over domains over includes over builtins). Message names both paths; allow intentional shadowing with `allow_overrides` |
+| AR730 | `constraint-unsatisfiable` | error | No tag of a source satisfies its `version` constraint, or the source has no semantic version tags (see [Lock file](lockfile.md#version-constraints)) |
+| AR731 | `constraint-invalid` | error | A `version` constraint does not parse, or an include, installed skill or skill source sets both `ref` and `version` |
+| AR732 | `tag-moved` | error | A tag pinned in `ai-rulez.lock` now points to another commit; raised by `lock`, `lock --outdated` and `update`, which never follow it silently |
+| AR735 | `locked-tag-missing` | warning | A tag pinned in `ai-rulez.lock` no longer exists on the remote; the pinned commit is still used |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
 | AR803 | `description-style` | off | Description does not say when to use the item; turned on by `require_use_when = true` |
@@ -128,6 +132,11 @@ stdout.
 | AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, hooks not imported (convert report only) |
 | AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
 | AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
+| AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
+| AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
+| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
+| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands only) |
+| AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` only) |
 
 ### Code ranges
 
@@ -148,9 +157,9 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR700`-`AR709` | Duplicate descriptions (`AR701`-`AR703`) | allocated |
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213)) | proposed |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214)) | proposed |
-| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215)) | proposed |
+| `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR732` and `AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216)) | proposed |
-| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217)) | proposed |
+| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, the block is reserved) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
@@ -162,11 +171,11 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9A0`-`AR9A9` | Eval results file (`AR9A0`; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A1`-`AR9A5`) | allocated |
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
 | `AR9C0`-`AR9C9` | Harness traps (`AR9C1`-`AR9C4` used; `AR9C0` is free for another trap, see [Harness traps](harness-traps.md)) | allocated |
-| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222)) | reserved |
+| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E4` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220)) | reserved |
-| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221)); `verifiers run` emits none yet | reserved |
+| `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`, `AR9H2`, `AR9H5` used; `AR9H3` and `AR9H4` are for the `command` and LLM phases) | allocated |
 | `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227)) | reserved |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
@@ -383,12 +392,12 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `metadata` | `AR951`-`AR954` |
 | `plugin` | `AR961`-`AR964` |
 | `roles` | `AR971`-`AR973` |
-| `lock` | `AR981`, `AR982`, `AR995` |
+| `lock` | `AR730`, `AR732`, `AR735`, `AR981`, `AR982`, `AR995` |
 | `delivery` | `AR989`-`AR994` |
 | `evals` | `AR996`-`AR998`, `AR9A0` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `traps` | `AR9C1`-`AR9C4` |
-| `config` | `AR9K0`, `AR9L0` (invalid `[telemetry]` and `[llm]` tables) |
+| `config` | `AR731`, `AR9K0`, `AR9L0` (invalid version constraints, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -1341,6 +1350,46 @@ two sources define the same name and one was silently dropped (allow intentional
 - Bad: A root rule and an include both named `testing`
 - Good: Rename one, or list the intentional override in lint.allow_overrides
 
+### AR730 constraint-unsatisfiable
+
+no tag of the source satisfies its version constraint (or the source has no semantic version tags)
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A range such as `^1.2` is resolved against the repository's semantic-version tags. With no matching tag there is nothing to pin, and falling back to a branch would change what the constraint means.
+- Bad: `version = "^3"` on a repository whose highest tag is `v2.4.0`, or on a repository with no version tags
+- Good: Widen the constraint, set `tag_prefix` for a monorepo, set `include_prerelease = true`, or pin a commit SHA with `ref`
+
+### AR731 constraint-invalid
+
+a version constraint does not parse, or an include, installed skill or skill source sets both ref and version
+
+- Default severity: `error`
+- Analyzer: `config` (scope `bundle`)
+- Why: `ref` names a git ref and `version` a range; setting both leaves it unclear which one the lock records. A constraint that does not parse cannot be resolved.
+- Bad: `ref = "main"` together with `version = "^1"`, or `version = "^^1"`
+- Good: Use one of them: `version = "^1.2"` (or `ref = "^1.2"` as shorthand), npm-style syntax
+
+### AR732 tag-moved
+
+a tag pinned in ai-rulez.lock now points to another commit; it is never followed silently
+
+- Default severity: `error`
+- Analyzer: `lock` (scope `bundle`)
+- Why: A tag is a promise that a version never changes. A tag that moved after it was pinned is a force-push, the way a compromised maintainer or a rewritten release shows up.
+- Bad: `v1.2.4` was pinned at commit 0f3e and the remote now has it at b21c
+- Good: Review the new commit, then run `ai-rulez update <source> --accept-moved-tag` to re-pin it
+
+### AR735 locked-tag-missing
+
+a tag pinned in ai-rulez.lock no longer exists on the remote; the pinned commit is still used
+
+- Default severity: `warning`
+- Analyzer: `lock` (scope `bundle`)
+- Why: The tag was deleted from the remote. The pinned commit may still be fetchable, so generation continues, but the version label can no longer be checked.
+- Bad: A release tag removed after the lock was written
+- Good: Run `ai-rulez update` to move to an existing tag, or pin the commit SHA
+
 ### AR801 description-missing
 
 a skill, agent or command has no description
@@ -1811,6 +1860,26 @@ a file in .github/instructions does not end in .instructions.md, so Copilot skip
 - Bad: `.github/instructions/tests.md`
 - Good: `.github/instructions/tests.instructions.md`
 
+### AR9D2 search-cases-invalid
+
+a skill search cases file cannot be used: not valid JSON, unknown key, unsupported schema version or an invalid case (search --eval only)
+
+- Default severity: `error`
+- Analyzer: `search` (scope `item`)
+- Why: A cases file that does not parse or validate would silently measure nothing, so `search --eval` refuses it and names every problem. Only `ai-rulez search --eval` reports it.
+- Bad: A case without a query, or a file with `schema_version = 2`
+- Good: Fix the listed problems; every case needs a query and the expected skills
+
+### AR9D4 search-eval-regression
+
+a skill search metric is below its minimum, or more cases regressed against the baseline than allowed (search --eval only)
+
+- Default severity: `error`
+- Analyzer: `search` (scope `bundle`)
+- Why: Search quality fell below the minimum the cases file sets, or more cases flipped from hit to miss against the baseline than allowed. Only `ai-rulez search --eval` reports it and exits non-zero.
+- Bad: A skill description rewrite that drops recall@5 under the configured minimum
+- Good: Restore the discoverability of the skill, or lower the minimum deliberately
+
 ### AR9E0 scanner-config-invalid
 
 a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
@@ -1920,6 +1989,36 @@ the security scan of the planned tree blocked the write (convert report only)
 - Why: The planned tree failed the security scan (the AR0xx family), so nothing was written. Only `ai-rulez convert` reports it.
 - Bad: A converted rule that contains `curl ... | sh`
 - Good: Remove or rewrite the flagged text in the source file and convert again
+
+### AR9H1 verifier-failed
+
+a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (verifiers report only)
+
+- Default severity: `warning`
+- Analyzer: `verifiers` (scope `item`)
+- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). Only `ai-rulez verifiers run` reports it.
+- Bad: A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one
+- Good: Apply the verifier's `fix`: add the section, or change the verifier if the rule changed
+
+### AR9H2 verifier-invalid
+
+a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (verifiers report only)
+
+- Default severity: `error`
+- Analyzer: `verifiers` (scope `item`)
+- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. Only `ai-rulez verifiers run`, `list` and `test` report it.
+- Bad: `rule = "ghost"` naming a rule that does not exist, or `regex = "("`
+- Good: Name an existing rule, skill, agent or command and a valid RE2 regex
+
+### AR9H5 verifier-dead-scope
+
+a verifier's when_changed matches no file in the repository, so it can never apply (verifiers report only, with --strict-applicability)
+
+- Default severity: `warning`
+- Analyzer: `verifiers` (scope `item`)
+- Why: A `when_changed` glob that matches no file of the repository means the verifier silently stopped working. Only `ai-rulez verifiers run --strict-applicability` reports it.
+- Bad: `when_changed = ["src/handlres/**"]` after a typo or a directory rename
+- Good: Fix the glob, or delete the verifier
 
 ### AR9K0 telemetry-config-invalid
 
