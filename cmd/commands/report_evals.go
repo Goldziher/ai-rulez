@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
@@ -16,12 +17,21 @@ import (
 )
 
 var reportEvalsFlags struct {
-	usageLog   string
-	feedback   string
-	results    string
-	minPass    float64
-	minTrigger float64
-	json       bool
+	// usageLogs and usageLogsAlias hold --usage and --usage-log; both repeat and
+	// are read together (a flag set cannot share one slice between two flags).
+	usageLogs      []string
+	usageLogsAlias []string
+	fromOTLP       bool
+	feedback       string
+	results        string
+	minPass        float64
+	minTrigger     float64
+	json           bool
+}
+
+// evalsUsagePaths is every usage log named by --usage and --usage-log, in order.
+func evalsUsagePaths() []string {
+	return append(append([]string(nil), reportEvalsFlags.usageLogs...), reportEvalsFlags.usageLogsAlias...)
 }
 
 var reportEvalsCmd = &cobra.Command{
@@ -47,6 +57,11 @@ A record that is unsigned or signed with another key (committed from another mac
 hand-edited) is marked "unverified" and ignored: the skill counts as having no eval results.
 "ai-rulez eval run" re-runs and signs it.
 
+--usage may repeat (--usage-log is the same flag): the logs of several repositories or machines are
+merged and an event that appears in more than one counts once, by its event id. --from-otlp reads every
+--usage file as OTLP JSON (what "usage export --to file" writes or a collector's file exporter produces)
+instead of a native usage log; the digest scheme travels in the export, so the join classes are the same.
+
 Without a usage log nothing is concluded about use. The command reports and exits 0.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -56,8 +71,10 @@ Without a usage log nothing is concluded about use. The command reports and exit
 
 func init() {
 	f := reportEvalsCmd.Flags()
-	f.StringVar(&reportEvalsFlags.usageLog, "usage-log", "", "Usage log (default <config dir>/local/usage.jsonl, when present)")
-	f.StringVar(&reportEvalsFlags.feedback, "feedback", "", "Feedback log (default feedback.jsonl beside the usage log, when present)")
+	f.StringArrayVar(&reportEvalsFlags.usageLogs, "usage", nil, "Usage log; repeat for several (default <config dir>/local/usage.jsonl, when present)")
+	f.StringArrayVar(&reportEvalsFlags.usageLogsAlias, "usage-log", nil, "Same as --usage")
+	f.BoolVar(&reportEvalsFlags.fromOTLP, "from-otlp", false, "Read every --usage file as OTLP JSON (usage export --to file output) instead of a native log")
+	f.StringVar(&reportEvalsFlags.feedback, "feedback", "", "Feedback log (default feedback.jsonl beside the first usage log, when present)")
 	f.StringVar(&reportEvalsFlags.results, "results", "", "Eval results (default <config dir>/eval-results.json)")
 	f.Float64Var(&reportEvalsFlags.minPass, "min-pass-rate", evals.DefaultMinPassRate, "Pass rate below which a skill is a rewrite candidate")
 	f.Float64Var(&reportEvalsFlags.minTrigger, "min-trigger", evals.DefaultMinTrigger, "Trigger precision and recall below which a skill is a rewrite candidate")
@@ -92,7 +109,8 @@ func runReportEvals(out io.Writer) error {
 		rs := rankSkillFor(skills[i].ID, skills[i].Dir, counter)
 		in.Skills = append(in.Skills, rs)
 	}
-	if err := joinRankUsage(&in, cfgDir); err != nil {
+	src, err := joinRankUsage(&in, cfgDir)
+	if err != nil {
 		return err
 	}
 	rows := evals.Rank(in)
@@ -100,7 +118,14 @@ func runReportEvals(out io.Writer) error {
 	if reportEvalsFlags.json {
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")
-		return oops.Wrapf(encoder.Encode(map[string]any{"schema_version": 1, "usage_log": in.Uses != nil, "skills": rows}), "encode evals report")
+		doc := map[string]any{"schema_version": 1, "usage_log": in.Uses != nil, "skills": rows}
+		if src.logs > 0 {
+			doc["usage_sources"] = map[string]int{"logs": src.logs, "events": src.events, "duplicates": src.duplicates}
+		}
+		return oops.Wrapf(encoder.Encode(doc), "encode evals report")
+	}
+	if src.logs > 1 || src.duplicates > 0 {
+		reportWriter{out}.printf("Usage: %d logs, %d events (%d duplicates removed by event id)\n", src.logs, src.events, src.duplicates)
 	}
 	writeEvalsReport(reportWriter{out}, rows, in.Uses != nil)
 	return nil
@@ -126,22 +151,41 @@ func rankSkillFor(id, dir string, counter tokens.Counter) evals.RankSkill {
 	return rs
 }
 
+// usageSources says what the usage input held, for the report header.
+type usageSources struct{ logs, events, duplicates int }
+
 // joinRankUsage reads the usage and feedback logs into the ranking input. A log
 // left at its default location is optional; one named by a flag must exist.
-func joinRankUsage(in *evals.RankInput, cfgDir string) error {
-	usagePath := reportEvalsFlags.usageLog
-	explicit := usagePath != ""
+// Several logs are merged by event id, so a repository log and its export, or two
+// machines' copies, count each event once.
+func joinRankUsage(in *evals.RankInput, cfgDir string) (usageSources, error) {
+	var src usageSources
+	paths := evalsUsagePaths()
+	explicit := len(paths) > 0
 	if !explicit {
-		usagePath = filepath.Join(cfgDir, "local", "usage.jsonl")
+		paths = []string{filepath.Join(cfgDir, "local", "usage.jsonl")}
 	}
-	if _, err := os.Stat(usagePath); err == nil || explicit {
-		entries, _, err := usage.ReadLog(usagePath)
-		if err != nil {
-			return err
+	var logs [][]usage.Entry
+	for _, path := range paths {
+		if _, err := os.Stat(path); err != nil && !explicit {
+			continue // the default log is optional
 		}
+		entries, err := readUsageEvidence(path, reportEvalsFlags.fromOTLP)
+		if err != nil {
+			return src, err
+		}
+		logs = append(logs, entries)
+		src.logs++
+	}
+	if src.logs > 0 {
+		merged, duplicates := usage.MergeEntries(logs...)
+		src.events, src.duplicates = len(merged), duplicates
 		in.Uses, in.UseDigests = map[string]int{}, map[string]map[string]int{}
-		for i := range entries {
-			id := entries[i].ID
+		for i := range merged {
+			if merged[i].Resource {
+				continue // a supporting file of a skill is not a further use of it
+			}
+			id := merged[i].ID
 			in.Uses[id]++
 			if in.UseDigests[id] == nil {
 				in.UseDigests[id] = map[string]int{}
@@ -149,8 +193,8 @@ func joinRankUsage(in *evals.RankInput, cfgDir string) error {
 			// Only a digest in the canonical scheme can join with an eval record's
 			// lock_digest; a v2 line, or a served digest, joins by id only.
 			digest := ""
-			if entries[i].DigestScheme == usage.DigestSchemeSkill {
-				digest = entries[i].Digest
+			if merged[i].DigestScheme == usage.DigestSchemeSkill {
+				digest = merged[i].Digest
 			}
 			in.UseDigests[id][digest]++
 		}
@@ -158,22 +202,33 @@ func joinRankUsage(in *evals.RankInput, cfgDir string) error {
 	feedbackPath := reportEvalsFlags.feedback
 	explicitFeedback := feedbackPath != ""
 	if !explicitFeedback {
-		feedbackPath = filepath.Join(filepath.Dir(usagePath), usage.FeedbackFileName)
+		feedbackPath = filepath.Join(filepath.Dir(paths[0]), usage.FeedbackFileName)
 	}
 	if _, err := os.Stat(feedbackPath); err == nil || explicitFeedback {
 		entries, _, err := usage.ReadFeedback(feedbackPath)
 		if err != nil {
-			return err
+			return src, err
 		}
 		in.Feedback = usage.FeedbackCounts(entries)
 	}
-	return nil
+	return src, nil
+}
+
+// readUsageEvidence reads one usage input: a native usage log, or with fromOTLP
+// an OTLP JSON file.
+func readUsageEvidence(path string, fromOTLP bool) ([]usage.Entry, error) {
+	if fromOTLP {
+		read, err := telemetry.ReadOTLPFile(path)
+		return read.Entries, err
+	}
+	entries, _, err := usage.ReadLog(path)
+	return entries, err
 }
 
 func writeEvalsReport(w reportWriter, rows []evals.RankRow, haveUsage bool) {
 	w.printf("Skill evals joined with usage: %s\n", evals.SummaryLine(rows))
 	if !haveUsage {
-		w.printf("No usage log found: nothing is concluded about use (pass --usage-log).\n")
+		w.printf("No usage log found: nothing is concluded about use (pass --usage).\n")
 	}
 	current := ""
 	for i := range rows {

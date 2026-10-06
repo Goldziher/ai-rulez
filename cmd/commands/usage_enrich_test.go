@@ -22,7 +22,7 @@ func resetEnrichFlags(t *testing.T) {
 	clear := func() {
 		usageHarness, usageOutcome, usageRole, usageServed, usageSalt = "", "", "", false, ""
 		feedbackKind, feedbackNote, reportFeedback, reportEvals = "", "", "", ""
-		reportEvalsFlags.usageLog, reportEvalsFlags.feedback, reportEvalsFlags.results = "", "", ""
+		reportEvalsFlags.usageLogs, reportEvalsFlags.usageLogsAlias, reportEvalsFlags.fromOTLP, reportEvalsFlags.feedback, reportEvalsFlags.results = nil, nil, false, "", ""
 		reportEvalsFlags.minPass, reportEvalsFlags.minTrigger, reportEvalsFlags.json = evals.DefaultMinPassRate, evals.DefaultMinTrigger, false
 	}
 	clear()
