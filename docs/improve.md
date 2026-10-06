@@ -187,12 +187,17 @@ of `internal/sandbox`: macOS `sandbox-exec`, Linux bubblewrap (or `unshare`, net
 run's workspace, home and tmp directories, and the network is denied unless `--egress` declares a host. `require`
 refuses to run when no backend can confine the process (`AR9J7`); `auto` confines when it can and says so when it cannot;
 the default `none` keeps the optimizer unconfined, so existing optimizers keep working. The report records the mode, the
-backend and what the backend enforces. Reads are not restricted: the sandbox does not hide the repository.
+backend and what the backend enforces, and the consent summary states the same before anything runs: `unshare` (Linux
+without bubblewrap) confines the network only, and `--egress` lifts the network denial. Reads are not restricted on any
+backend: the sandbox does not hide the repository, the held-out cases or the per-user report key.
 
 The held-out gate guards against an honest-but-overfitting optimizer, not a hostile one. The held-out cases are
 files in the authored skill's `evals/` directory, readable by absolute path by a process running as you, and the
 optimizer is such a process. A hostile optimizer can read them, forge a run, or read the per-user key described
-below. Run `improve run` in a container (or CI job) with no access to the repository checkout beyond the run
+below. The key is a per-user file outside the repository, but it is readable by that same process, and `improve apply`
+and `improve pr` re-check the diff policy against the live skill, not the held-out gate: a run forged by an optimizer
+that read the key looks signed. Isolation `none` does not stop this; a sandbox does not either, because reads stay open.
+Run `improve run` in a container (or CI job) with no access to the repository checkout beyond the run
 workspace and an egress policy if the optimizer is not code you trust.
 
 **A repository must not choose what runs.** `[improve] optimizer` and `env_pass` in a repository config (including
