@@ -43,6 +43,28 @@ content someone else controls:
   without asking the network. Past `max_stale`, or with no cached copy, the run fails with `AR742`. There is no
   "skip the policy because it is unreachable". `validate --show-policy` marks a layer served from the cache.
 
+### `extends`
+
+A policy may extend others, so a team policy can build on the organization's:
+
+```toml
+policy_version = 1
+name = "payments team"
+extends = ["org.toml", "https://policy.example.org/base.toml@sha256:<hex>"]   # relative to this file, or pinned URLs
+```
+
+Each parent is a layer of its own (origin `extends`, listed after the policy that names it) and everything folds
+tighten-only, so an extending policy can only add restrictions. Each hop must itself tighten its parent: a value the
+child states that is weaker than what it extends (a lower severity floor, an allowlist entry the parent does not cover,
+a higher budget, a shorter release age, a weaker scan level, ...) is `AR743`, because the fold would ignore it and the
+author would believe it took effect. A switch left off cannot be told from one never written, so booleans are not
+compared. A key the child does not mention is not a loosening.
+
+Limits: at most 8 entries per `extends`, 5 hops deep, 32 policies in one load, no cycles (the cycle is named in the
+error). A URL parent needs its `@sha256:<hex>` pin (no trust-on-first-use inside a chain); a policy fetched from a URL
+cannot extend a local file. A parent that cannot be loaded fails the whole load closed (`AR742`). A policy reached
+twice (a diamond, or an anchor that is also a parent) is one layer.
+
 Policy is never read from the repository or from `config.local.*`. Set `AI_RULEZ_POLICY` from the trusted side
 (organization secrets and variables, a required workflow), not from a repository-level workflow file that a fork pull
 request can edit.
@@ -275,6 +297,9 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 
 ## Design decisions
 
+- **`extends` is checked, not just folded.** Merging already makes the chain at least as strict as each parent, so a
+  looser child value would be silently dropped. Reporting it (`AR743`) is the safer choice: a team lead who writes a
+  weaker value learns it does nothing.
 - **URL policies.** `AR741` is a missing or mismatched digest; a stale or absent cache after a failed fetch is `AR742`.
   Trust-on-first-use is terminal-only so that nobody can script past the review of a digest.
 - **Fail closed everywhere.** A demanded policy that cannot be read is `AR742`, and an unusable policy locks

@@ -20,9 +20,14 @@
         "required": ["origin", "source", "digest"],
         "additionalProperties": false,
         "properties": {
-          "origin": { "enum": ["flag", "env", "managed"] },
+          "origin": { "enum": ["flag", "env", "managed", "extends"] },
           "source": { "type": "string", "description": "The file the layer was read from." },
           "name": { "type": "string", "description": "The policy's own name." },
+          "extends": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The policies this layer extends; they follow it as layers of origin extends."
+          },
           "note": {
             "type": "string",
             "description": "How the layer was obtained when that is not plain, for example a cached copy standing in for an unreachable URL."

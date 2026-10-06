@@ -9,6 +9,12 @@
   "properties": {
     "policy_version": { "const": 1, "description": "The policy format version this ai-rulez reads." },
     "name": { "type": "string", "description": "A label for the policy, shown by validate --show-policy." },
+    "extends": {
+      "type": "array",
+      "maxItems": 8,
+      "description": "Policies this one extends: file paths (relative to this file; not allowed in a policy fetched from a URL) or https URLs pinned with @sha256:<hex>. At most 5 hops deep, no cycles. Each hop may only add restrictions: a value weaker than the parent's is an error (AR743).",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "sources": {
       "type": "object",
       "additionalProperties": false,

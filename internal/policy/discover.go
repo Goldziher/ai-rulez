@@ -166,6 +166,7 @@ type loader struct {
 	maxStale time.Duration
 	layers   []Layer
 	seen     map[string]bool
+	loaded   int
 
 	cacheOnce bool
 	cache     *cache
@@ -217,21 +218,41 @@ func (l *loader) add(origin, raw, pin string, required bool) error {
 	if l.seen[key] {
 		return nil
 	}
-	var layer Layer
-	if ref.Remote {
-		layer, err = l.loadRemote(origin, ref)
-	} else {
-		layer, err = loadLayer(origin, ref)
-	}
+	layer, err := l.loadOne(origin, ref)
 	if err != nil {
 		if !required && !ref.Remote && os.IsNotExist(unwrapPathError(err)) {
 			return nil
 		}
 		return err
 	}
-	l.seen[key] = true
-	l.layers = append(l.layers, layer)
+	chain, _, err := l.expand(layer, ref, nil)
+	if err != nil {
+		return err
+	}
+	for _, c := range chain {
+		if !l.seen[c.key] {
+			l.seen[c.key] = true
+			l.layers = append(l.layers, c)
+		}
+	}
 	return nil
+}
+
+// loadOne loads one policy (file or URL) without its extends. The number of
+// layers one load may pull in is bounded.
+func (l *loader) loadOne(origin string, ref Ref) (Layer, error) {
+	if l.loaded++; l.loaded > maxLayers {
+		return Layer{}, &ParseError{Path: ref.Display(), Msg: fmt.Sprintf("more than %d policies are pulled in by extends", maxLayers)}
+	}
+	var layer Layer
+	var err error
+	if ref.Remote {
+		layer, err = l.loadRemote(origin, ref)
+	} else {
+		layer, err = loadLayer(origin, ref)
+	}
+	layer.key = ref.identity()
+	return layer, err
 }
 
 func unwrapPathError(err error) error {
@@ -256,11 +277,11 @@ func buildLayer(origin string, ref Ref, data []byte, note string) (Layer, error)
 	if ref.Digest != "" && got != ref.Digest {
 		return Layer{}, &DigestError{Path: ref.Display(), Want: ref.Digest, Got: got}
 	}
-	name, p, err := Parse(ref.Display(), data)
+	doc, err := parseDoc(ref.Display(), data)
 	if err != nil {
 		return Layer{}, err
 	}
-	return Layer{Origin: origin, Path: ref.Display(), Name: name, Digest: got, Policy: p, Note: note}, nil
+	return Layer{Origin: origin, Path: ref.Display(), Name: doc.name, Digest: got, Policy: doc.policy, Note: note, extendsRaw: doc.extends}, nil
 }
 
 // openCache opens the user cache once; nil when there is none (a policy cache

@@ -157,8 +157,14 @@ type Layer struct {
 	Note string
 	// Digest is "sha256:" and the hex SHA-256 of the file, CRLF normalized.
 	Digest string
-	// Policy is the parsed content.
+	// Policy is the parsed content of this file alone (its extends are separate layers).
 	Policy Policy
+	// Extends lists the policies this one extends, as shown to people.
+	Extends []string
+	// extendsRaw is the extends list as written.
+	extendsRaw []string
+	// key is the identity of the policy (its URL or absolute path).
+	key string
 }
 
 // fileDoc is the TOML form of a policy file. Pointers tell "unset" from the
@@ -233,10 +239,33 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("%s: policy %s: %s", lint.CodePolicyInvalid, e.Path, e.Msg)
 }
 
-// Parse reads one policy file's content. path is only used in messages.
+// Parse reads one policy file's content, for a policy that does not extend
+// another: extends is resolved when policies are loaded (Discover), not here. path
+// is only used in messages.
 func Parse(path string, data []byte) (name string, p Policy, err error) {
-	fail := func(format string, args ...any) (string, Policy, error) {
-		return "", Policy{}, &ParseError{Path: path, Msg: fmt.Sprintf(format, args...)}
+	d, err := parseDoc(path, data)
+	if err != nil {
+		return "", Policy{}, err
+	}
+	if len(d.extends) > 0 {
+		return "", Policy{}, &ParseError{Path: path, Msg: "extends is resolved when the policy is loaded (--policy, AI_RULEZ_POLICY), not by Parse"}
+	}
+	return d.name, d.policy, nil
+}
+
+// parsedDoc is one policy file read: its own content and the extends it names.
+type parsedDoc struct {
+	name    string
+	policy  Policy
+	extends []string
+}
+
+// parseDoc reads one policy file. Unknown keys, a missing or newer
+// policy_version and bad values are *ParseError (AR743).
+func parseDoc(path string, data []byte) (parsedDoc, error) {
+	var p Policy
+	fail := func(format string, args ...any) (parsedDoc, error) {
+		return parsedDoc{}, &ParseError{Path: path, Msg: fmt.Sprintf(format, args...)}
 	}
 	var doc fileDoc
 	dec := toml.NewDecoder(bytes.NewReader(data))
@@ -258,8 +287,13 @@ func Parse(path string, data []byte) (name string, p Policy, err error) {
 	if *doc.PolicyVersion != Version {
 		return fail("policy_version %d is not supported by this build (it reads %d); upgrade ai-rulez", *doc.PolicyVersion, Version)
 	}
-	if len(doc.Extends) > 0 {
-		return fail("extends is not supported yet; merge the layers with --policy, AI_RULEZ_POLICY and the managed path instead")
+	if len(doc.Extends) > maxExtendsPerFile {
+		return fail("extends lists %d policies; at most %d", len(doc.Extends), maxExtendsPerFile)
+	}
+	for _, e := range doc.Extends {
+		if strings.TrimSpace(e) == "" || strings.ContainsAny(e, "\r\n\x00") {
+			return fail("extends: %q is not a policy path or URL", e)
+		}
 	}
 	for _, step := range []func() error{
 		func() error { return p.Sources.fromDoc(doc.Sources) },
@@ -286,7 +320,7 @@ func Parse(path string, data []byte) (name string, p Policy, err error) {
 	if doc.Guard != nil {
 		p.Guard.Generated = doc.Guard.Generated != nil && *doc.Guard.Generated
 	}
-	return doc.Name, p, nil
+	return parsedDoc{name: doc.Name, policy: p, extends: doc.Extends}, nil
 }
 
 func (g *Governance) fromDoc(d *fileGovernance) error {
