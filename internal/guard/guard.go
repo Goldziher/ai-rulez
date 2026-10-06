@@ -68,7 +68,7 @@ func (d Decision) Message() string {
 }
 
 // payload is the union of the hook payloads the supported harnesses send. Claude
-// Code, Codex, Gemini CLI, Cursor and Factory all send a JSON object with the tool
+// Code, Codex, Gemini CLI, Cursor, Factory and Copilot all send a JSON object with the tool
 // name and its input; only the key names differ.
 type payload struct {
 	ToolName  string          `json:"tool_name"`
@@ -206,6 +206,11 @@ func targets(p *payload) (out []string, over bool) {
 	for _, raw := range []json.RawMessage{p.ToolInput, p.ToolArgs} {
 		if len(raw) == 0 {
 			continue
+		}
+		// Some harnesses send the arguments as a JSON document inside a string.
+		var asText string
+		if json.Unmarshal(raw, &asText) == nil {
+			raw = json.RawMessage(asText)
 		}
 		var input map[string]any
 		if json.Unmarshal(raw, &input) != nil {
