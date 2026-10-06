@@ -165,6 +165,14 @@ func (it *Item) computeHash() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// RawFile is a file an importer planned in its final place below the config
+// directory, domain included: the OKF bridge decides its own layout.
+type RawFile struct {
+	Path    string
+	Data    []byte
+	Sources []string
+}
+
 // Plan is what an importer wants to write. Building one reads only. An
 // importer returns it as collected; Finalize (called by Convert) orders it and
 // resolves duplicates.
@@ -179,7 +187,9 @@ type Plan struct {
 	Permissions config.Permissions
 	// Remotes are git sources the input names but does not hold; they are read
 	// only when the caller asks to fetch (see fetch.go).
-	Remotes  []Remote
+	Remotes []Remote
+	// Raw are files already placed below the config directory (the okf importer).
+	Raw      []RawFile
 	Findings []Finding
 	// fetchedText is the text of fetched files that are referenced rather than
 	// copied (installed skills), keyed by display name, for the scan.
@@ -197,7 +207,7 @@ func (p *Plan) add(f Finding) { p.Findings = append(p.Findings, f) }
 
 // empty reports whether the plan carries nothing to write.
 func (p *Plan) empty() bool {
-	return len(p.Items) == 0 && len(p.MCPServers) == 0 && len(p.InstalledSkills) == 0 &&
+	return len(p.Items) == 0 && len(p.Raw) == 0 && len(p.MCPServers) == 0 && len(p.InstalledSkills) == 0 &&
 		len(p.Hooks) == 0 && p.Permissions.IsEmpty()
 }
 
@@ -216,6 +226,9 @@ type Options struct {
 	// replaces the default git fetcher (tests).
 	Fetch   bool
 	Fetcher Fetcher
+	// Domain is the domain the import goes into; only an importer that lays out
+	// its own files (okf) needs it, the others leave it to convert.
+	Domain string
 }
 
 // Format reads one foreign format. Plan must not write, run commands or use
@@ -230,7 +243,7 @@ type Format interface {
 
 // Registry returns every format importer, sorted by name.
 func Registry() []Format {
-	return []Format{apmImporter{}, nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}, tesslImporter{}}
+	return []Format{apmImporter{}, nativeImporter{}, okfImporter{}, rulesyncImporter{}, skillsLockImporter{}, tesslImporter{}}
 }
 
 // Lookup returns the importer with the given name.
@@ -256,6 +269,7 @@ func (p *Plan) merge(other *Plan) {
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
 	p.Hooks = append(p.Hooks, other.Hooks...)
 	p.Remotes = append(p.Remotes, other.Remotes...)
+	p.Raw = append(p.Raw, other.Raw...)
 	for k, v := range other.fetchedText {
 		if p.fetchedText == nil {
 			p.fetchedText = map[string]string{}
