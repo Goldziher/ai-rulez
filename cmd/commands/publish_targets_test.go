@@ -182,6 +182,20 @@ func TestPublish_EmitSubcommandWritesOnlyTheEmitterFiles(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(root, "dist"), "no release directory is written")
 }
 
+func TestPublish_EmitSubcommandIgnoresTheSignaturePolicy(t *testing.T) {
+	root := publishProject(t)
+	reconfigure(t, root, publishProjectConfig+"\n[publish]\nrequire_signature = true\n")
+	publishEmit, publishExperimental = []string{"kiro-steering"}, true
+	publishEmitOut = filepath.Join(t.TempDir(), "kiro")
+	var out strings.Builder
+
+	var err error
+	_, _ = capture(t, func() { err = runPublishEmit(context.Background(), &out, "kiro-steering") })
+
+	require.NoError(t, err, "emit writes review files and produces no release to sign")
+	assert.Contains(t, readDist(t, publishEmitOut), "distribution.json")
+}
+
 func TestPublish_EmittersFromTheConfigTable(t *testing.T) {
 	root := publishProject(t)
 	writeFile(t, filepath.Join(root, "tools", "entity.json.tmpl"), `{"name": {{json .Name}}}`)
