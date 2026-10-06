@@ -316,6 +316,22 @@ func TestAnItemWithAnErroredDimensionMakesTheRunIncomplete(t *testing.T) {
 	assert.True(t, out.Incomplete, "an item the judge could not answer cannot vouch for the gate")
 }
 
+func TestAnItemTheJudgeSawOnlyInPartIsListedAsTruncated(t *testing.T) {
+	// Arrange
+	rb := builtin(t)
+	big := skill("a", "Deploy the service to staging")
+	big.Body = strings.Repeat("Run the deploy script and check the logs.\n", 1500)
+	small := skill("b", "Summarise a pull request for the changelog")
+	res := Run(Input{Rubric: rb, Items: []Item{big, small}})
+	client, _ := newClient(t, &scriptedJudge{}, llm.Config{})
+
+	// Act
+	out := mustRun(t, SemanticInput{Rubric: rb, Results: res, Options: SemanticOptions{Client: client, K: 1, Content: config.ReviewContentFull}})
+
+	// Assert
+	assert.Equal(t, []string{"skill:a"}, out.Truncated, "the middle of a long body is never seen, so it cannot vouch for a gate")
+}
+
 func TestDescriptionsModeJudgesOnlyWhatDescriptionsCanAnswer(t *testing.T) {
 	// Arrange
 	rb, res := twoSkills(t)
