@@ -102,6 +102,10 @@ func PrepareLockCheck(cfg *config.Config, o VerifyOptions) (*LockCheck, error) {
 			Errorf("no trusted signer is configured: a valid signature alone does not say who may sign the lock")
 	}
 	check := &LockCheck{Lock: lock, BundlePath: bundlePathFor(cfg, o)}
+	if len(o.PublicKeys) == 0 && o.Identity == "" {
+		check.Warnings = append(check.Warnings, "the trusted signers come from this repository's own [signing] configuration: whoever can change the repository can change who may sign. "+
+			"Pass --public-key or --identity with --issuer from CI configuration outside the repository to pin them")
+	}
 	check.Policy = LockPolicy{Trust: trust, Now: o.Now}
 	check.Policy.ScopeRel, check.Policy.ScopeAbs = stateScope(cfg.ConfigDir)
 	check.Policy.Verifier = Verifier{Keys: trust.Keys(SubjectLock), TLog: effectiveTLog(s, trust)}

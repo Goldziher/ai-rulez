@@ -75,8 +75,9 @@ func ParseStatement(payload []byte) (*Statement, error) {
 }
 
 // RequireSubject fails with AR724 unless the statement has a subject whose alg
-// digest equals hexDigest. The statement may name several subjects; one match is
-// enough, but every digest of that subject must be well formed.
+// digest equals hexDigest (case-insensitively). The statement may name several
+// subjects; one match is enough. The digest is compared as given: its format is
+// the caller's, who recomputes it.
 func (s *Statement) RequireSubject(alg, hexDigest string) error {
 	for _, sub := range s.Subject {
 		if strings.EqualFold(sub.Digest[alg], hexDigest) && hexDigest != "" {
