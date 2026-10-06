@@ -630,11 +630,16 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 
 	var raw tomlConfig
 	if err := toml.Unmarshal(data, &raw); err != nil {
+		if swapped := swappedLintTablesTOML(path, data); swapped != nil {
+			return nil, swapped
+		}
 		return nil, oops.
 			With("path", path).
 			Hint("Check the TOML syntax - ensure proper formatting\nCommon issues: missing quotes around strings, incorrect table syntax").
 			Wrapf(err, "parse TOML config")
 	}
+
+	warnDeprecatedLintBudget(path, raw.Lint)
 
 	presets, err := presetsFromTOML(raw.Presets)
 	if err != nil {

@@ -121,12 +121,12 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 	return nil
 }
 
-// budgetsFor resolves one root's [lint.budget].
+// budgetsFor resolves one root's [lint.tolerate] (or its deprecated [lint.budget]).
 func budgetsFor(cfg *config.Config) lint.Budgets {
 	if cfg == nil || cfg.Lint == nil {
 		return nil
 	}
-	return lint.ResolveBudgets(cfg.Lint.Budget)
+	return lint.ResolveBudgets(cfg.Lint.Tolerated())
 }
 
 // baselineBlocks reports whether --strict-baseline turns stale or expired

@@ -130,6 +130,9 @@ func decodeConfigDoc(path string, data []byte) (map[string]any, error) {
 	if doc == nil {
 		doc = map[string]any{}
 	}
+	if swapped := swappedLintTables(path, doc); swapped != nil {
+		return nil, swapped
+	}
 	return doc, nil
 }
 
