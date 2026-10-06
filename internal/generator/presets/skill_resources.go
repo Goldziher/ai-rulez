@@ -3,6 +3,7 @@ package presets
 import (
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -145,7 +146,13 @@ func SkillResourceOutputs(skill *config.ContentFile, skillDir string) []config.O
 			dirSet[curr] = true
 		}
 	}
+	// Sorted so the plan (and the dry-run listing built from it) is stable.
+	dirs := make([]string, 0, len(dirSet))
 	for d := range dirSet {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+	for _, d := range dirs {
 		outputs = append(outputs, config.OutputFile{
 			Path:  filepath.Join(skillDir, d),
 			IsDir: true,
