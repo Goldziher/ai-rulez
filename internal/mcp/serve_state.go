@@ -1,11 +1,15 @@
 package mcp
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Default limits of the dynamic-loading tools.
@@ -117,10 +121,13 @@ type serveState struct {
 	mu   sync.Mutex
 	used map[string]int // bytes returned per session
 	seen []string       // sessions in first-use order, for eviction
+
+	// ids holds the generated id of each connection whose transport has none.
+	ids map[*sdkmcp.ServerSession]string
 }
 
 func newServeState(opts ServeOptions) *serveState {
-	return &serveState{opts: opts, used: map[string]int{}}
+	return &serveState{opts: opts, used: map[string]int{}, ids: map[*sdkmcp.ServerSession]string{}}
 }
 
 // charge adds n bytes to the session's usage. It fails without charging when the
@@ -152,6 +159,34 @@ func (st *serveState) add(session string, n int) {
 		}
 	}
 	st.used[session] += n
+}
+
+// sessionID names a connection. A transport that has its own session id (HTTP)
+// keeps it. One without (stdio) gets a random id the first time the connection
+// is seen, so a usage line carries a session and the byte budget is per
+// connection: a new connection starts a new budget, the same pipe keeps its own.
+func (st *serveState) sessionID(sess *sdkmcp.ServerSession) string {
+	if sess == nil {
+		return ""
+	}
+	if id := sess.ID(); id != "" {
+		return id
+	}
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if id, ok := st.ids[sess]; ok {
+		return id
+	}
+	raw := make([]byte, 16)
+	if _, err := rand.Read(raw); err != nil {
+		return ""
+	}
+	id := "conn-" + hex.EncodeToString(raw)
+	if len(st.ids) >= maxTrackedSessions {
+		clear(st.ids) // a long-lived server forgets old connections, as it does their budgets
+	}
+	st.ids[sess] = id
+	return id
 }
 
 // chargeRead charges n bytes of skill content read outside load_skill
