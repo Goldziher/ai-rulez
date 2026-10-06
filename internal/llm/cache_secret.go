@@ -92,6 +92,13 @@ func UserSecretPathIn(env ambient.Env, name string) string {
 // is the helper behind the cache secret and the eval-result MAC key.
 func LoadSecretFile(path string) ([]byte, error) { return loadOrCreateSecret(path) }
 
+// secretDirTooOpen reports whether the secret directory is writable by group or
+// others. Windows reports 0777 for every directory, so the mode says nothing
+// there and the check is skipped (the file check at readSecret does the same).
+func secretDirTooOpen(mode os.FileMode, goos string) bool {
+	return goos != "windows" && mode.Perm()&0o022 != 0
+}
+
 // loadOrCreateSecret reads the secret, creating it (mode 0600, parent 0700) on
 // first use. A missing, truncated, group/world-accessible or symlinked secret
 // file is replaced or refused rather than trusted: a replaced secret simply
@@ -107,7 +114,7 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 	}
 	if info, err := os.Stat(filepath.Dir(path)); err != nil {
 		return nil, err
-	} else if info.Mode().Perm()&0o022 != 0 {
+	} else if secretDirTooOpen(info.Mode(), runtime.GOOS) {
 		return nil, errors.New("cache secret directory is writable by group or others")
 	}
 	existed := false
