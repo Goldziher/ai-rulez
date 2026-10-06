@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -253,8 +253,7 @@ func detectRepo(ctx context.Context, dir string, env ambient.Env) (repo, ref str
 func gitOutput(ctx context.Context, dir string, args ...string) string {
 	ctx, cancel := context.WithTimeout(ctx, gitProbeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...) //nolint:gosec // fixed git arguments
-	out, err := cmd.Output()
+	out, err := gitutil.Command(ctx, dir, args...).Output()
 	if err != nil {
 		return ""
 	}
