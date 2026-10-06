@@ -146,7 +146,7 @@ dist/plugins/<name>/        a complete dist directory per plugin (publish verify
 dist/aggregate/             marketplace/ and emit/ for all plugins, with SHA256SUMS and a plan
 ```
 
-`--only NAME` limits the plugins. `--to` runs per plugin: GitHub tags are `<name>-v<version>`, the npm package is
+`--only NAME` limits the plugins. Two plugins with one name (case-insensitively) are refused (`AR9N6`), because their dist directories and release files would overwrite each other. `--to` runs per plugin: GitHub tags are `<name>-v<version>`, the npm package is
 `<scope>/<name>`, the OCI repository is `<ref>/<name>`. `--tag` does not apply; a pinned index needs a ref from
 `[publish.marketplace] channels` or `--tag`. `--runtime` applies to domain plugins; members are separate projects with their
 own configuration and cannot be filtered. `publish verify dist` verifies every plugin and the aggregate checksums.
