@@ -59,11 +59,13 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	}
 
 	// Process each include
-	var violations []error
+	var violations, failures []error
 	for i := range cfg.Includes {
 		if err := r.processInclude(ctx, &mergedContent, &cfg.Includes[i]); err != nil {
 			if errors.Is(err, config.ErrLockViolation) {
 				violations = append(violations, err)
+			} else {
+				failures = append(failures, oops.Wrapf(err, "include %q", cfg.Includes[i].Name))
 			}
 			logger.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
 			// Continue processing other includes despite errors
@@ -75,6 +77,11 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 
 	if len(violations) > 0 {
 		return nil, errors.Join(violations...)
+	}
+	// Under a strict lock a missing include is not a warning: generating without
+	// it would silently produce outputs the lock never saw.
+	if len(failures) > 0 && strictLock(cfg) {
+		return nil, errors.Join(failures...)
 	}
 	return mergedContent, nil
 }
