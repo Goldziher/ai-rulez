@@ -473,9 +473,12 @@ func Wants(sources []config.SkillSourceConfig) []lockfile.Want {
 // CheckLock compares the lock with the configured sources without the network:
 // a source must be covered, and a source already in the cache must match its
 // digest. Lock entries of sources that are no longer configured are reported.
-func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir string) []Problem {
+func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir string, alsoKnown ...string) []Problem {
 	var problems []Problem
 	configured := map[string]bool{}
+	for _, name := range alsoKnown {
+		configured[name] = true // a source named by a pinned view (--source), not by the config
+	}
 	for i := range sources {
 		spec := FromConfig(&sources[i])
 		configured[spec.Name] = true
