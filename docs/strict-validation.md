@@ -187,10 +187,10 @@ stdout.
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
-| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
-| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands only) |
-| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run` and `test` only) |
-| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld or `--estimate` (`verifiers run` only; shown as skipped, never as a pass) |
+| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
+| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
+| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --strict --verifiers`) |
+| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld, unreadable or `--estimate` (`verifiers run` and `validate --strict --verifiers`; shown as skipped, never as a pass) |
 | AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` or `[verifiers_settings] warn_dead`) |
 | AR9H6 | `verifier-no-examples` | warning | A spec verifier has no `[[verifiers.examples]]` (`verifiers run` with `[verifiers_settings] require_examples`) |
 | AR9J1 | `improve-run-stale` | info | A saved `improve` run's original digest no longer matches the skill; `improve apply` refuses (see [Improve](improve.md)) |
@@ -2698,61 +2698,61 @@ a rubric (`.ai-rulez/rubrics/<id>/rubric.toml`) or one of its golden or calibrat
 
 ### AR9H1 verifier-failed
 
-a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (verifiers report only)
+a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --strict --verifiers`)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). Only `ai-rulez verifiers run` reports it.
+- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
 - Bad: A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one
 - Good: Apply the verifier's `fix`: add the section, or change the verifier if the rule changed
 
 ### AR9H2 verifier-invalid
 
-a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (verifiers report only)
+a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --strict --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. Only `ai-rulez verifiers run`, `list` and `test` report it.
+- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. `ai-rulez verifiers run`, `list`, `test` and `validate --strict --verifiers` report it.
 - Bad: `rule = "ghost"` naming a rule that does not exist, or `regex = "("`
 - Good: Name an existing rule, skill, agent or command and a valid RE2 regex
 
 ### AR9H3 verifier-command-failed-to-run
 
-a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (verifiers report only)
+a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --strict --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. Only `ai-rulez verifiers run` and `test` report it.
+- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. `ai-rulez verifiers run`, `test` and `validate --strict --verifiers` report it.
 - Bad: `argv = ["make", "check-lock"]` run in CI without `--allow-exec`, or a program that is not installed
 - Good: Pass `--allow-exec` for trusted refs only, install the program, or raise `timeout_s` (capped by `max_timeout_s`)
 
 ### AR9H4 verifier-llm-skipped
 
-an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld, or --estimate was given; never counted as a pass (verifiers report only)
+an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or --estimate was given; never counted as a pass (reported by `verifiers run` and `validate --strict --verifiers`)
 
 - Default severity: `info`
 - Analyzer: `verifiers` (scope `item`)
-- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters), the verifier is skipped and shown as skipped, never as passed. Only `ai-rulez verifiers run` reports it.
+- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters) or every changed file was binary or too large, the verifier is skipped and shown as skipped, never as passed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
 - Bad: An `llm` verifier in CI without `--allow-llm`, which silently looks green
 - Good: Pass `--allow-llm` where model use is allowed, or read the skipped line as 'not checked'
 
 ### AR9H5 verifier-dead-scope
 
-a verifier's when_changed matches no file in the repository, so it can never apply (verifiers report only, with --strict-applicability)
+a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --strict --verifiers`, with --strict-applicability)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A `when_changed` glob that matches no file of the repository means the verifier silently stopped working. Only `ai-rulez verifiers run --strict-applicability` reports it.
+- Why: A `when_changed` glob that matches no file of the repository means the verifier silently stopped working. `ai-rulez verifiers run --strict-applicability` (or `[verifiers_settings] warn_dead`) reports it.
 - Bad: `when_changed = ["src/handlres/**"]` after a typo or a directory rename
 - Good: Fix the glob, or delete the verifier
 
 ### AR9H6 verifier-no-examples
 
-a verifier has no self-test examples (verifiers report only, with [verifiers_settings] require_examples)
+a verifier has no self-test examples (reported by `verifiers run` and `validate --strict --verifiers`, with [verifiers_settings] require_examples)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. Only `ai-rulez verifiers run` reports it.
+- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
 - Bad: A spec verifier with a `forbid` regex and no examples
 - Good: Add a passing and a failing example and run `ai-rulez verifiers test`
 
