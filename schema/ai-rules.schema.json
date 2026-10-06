@@ -512,6 +512,11 @@
             "type": "boolean",
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version."
           },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md."
+          },
           "local_override": {
             "type": "string",
             "description": "Local path override for development (used instead of source when present)"
@@ -569,6 +574,11 @@
           "include_prerelease": {
             "type": "boolean",
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md."
           },
           "install_to": {
             "type": "string",
@@ -920,6 +930,19 @@
         "scope": {
           "enum": ["all", "skills"],
           "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only."
+        },
+        "min_release_age": {
+          "type": "string",
+          "pattern": "^(0|[0-9]+[hdw])$",
+          "description": "Default minimum release age (7d, 12h, 2w) for sources that use a version constraint and set no min_release_age of their own. Holds back tags younger than this (AR733). See docs/lockfile.md."
+        },
+        "min_release_age_source": {
+          "enum": ["auto", "forge", "first-seen", "commit"],
+          "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push."
+        },
+        "verify_tags": {
+          "type": "boolean",
+          "description": "Make generate and lock --check ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735). Needs the network; default false. The --verify-tags flag turns it on for one run."
         }
       },
       "additionalProperties": false
@@ -1131,6 +1154,11 @@
           "include_prerelease": {
             "type": "boolean",
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version."
+          },
+          "min_release_age": {
+            "type": "string",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md."
           },
           "path": {
             "type": "string",

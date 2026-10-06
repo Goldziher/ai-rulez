@@ -1211,6 +1211,8 @@ type IncludeConfig struct {
 	TagPrefix string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"` //nolint:tagliatelle
 	// IncludePrerelease admits prerelease tags the constraint does not name.
 	IncludePrerelease bool `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
+	// MinReleaseAge holds back a tag younger than this ("7d", "12h", "2w"); needs Version.
+	MinReleaseAge string `yaml:"min_release_age,omitempty" json:"min_release_age,omitempty" toml:"min_release_age,omitempty"` //nolint:tagliatelle
 }
 
 // IncludeFormatOKF reads an include as an OKF bundle (see docs/okf.md).
@@ -1228,6 +1230,7 @@ type InstalledSkillConfig struct {
 	Version           string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
 	TagPrefix         string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"`                         //nolint:tagliatelle
 	IncludePrerelease bool   `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
+	MinReleaseAge     string `yaml:"min_release_age,omitempty" json:"min_release_age,omitempty" toml:"min_release_age,omitempty"`          //nolint:tagliatelle
 }
 
 // GetPath returns the path within the repo, defaulting to "skills/<name>"

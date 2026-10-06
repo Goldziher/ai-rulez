@@ -69,6 +69,7 @@ type SkillSourceConfig struct {
 	Version           string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
 	TagPrefix         string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"`                         //nolint:tagliatelle
 	IncludePrerelease bool   `yaml:"include_prerelease,omitempty" json:"include_prerelease,omitempty" toml:"include_prerelease,omitempty"` //nolint:tagliatelle
+	MinReleaseAge     string `yaml:"min_release_age,omitempty" json:"min_release_age,omitempty" toml:"min_release_age,omitempty"`          //nolint:tagliatelle
 	// Path is the subdirectory of the repository that holds skill directories.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
 	// Include keeps only skills whose directory name matches one of these globs.

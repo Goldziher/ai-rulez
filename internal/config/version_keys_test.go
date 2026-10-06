@@ -84,7 +84,7 @@ func TestValidateVersionKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateVersionKeys("includes", "shared", tt.ref, tt.version, tt.prefix, tt.pre)
+			err := validateVersionKeys("includes", "shared", tt.ref, tt.version, tt.prefix, tt.pre, "")
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 				return
