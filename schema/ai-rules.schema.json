@@ -1212,15 +1212,27 @@
       "description": "Deterministic repo checks run by `ai-rulez verifiers run`.",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": ["name"],
         "additionalProperties": false,
+        "oneOf": [
+          { "required": ["type"] },
+          {
+            "required": ["require"],
+            "oneOf": [
+              { "required": ["rule"] },
+              { "required": ["skill"] },
+              { "required": ["agent"] },
+              { "required": ["command"] }
+            ]
+          }
+        ],
         "properties": {
           "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "description": "Unique verifier name." },
           "description": { "type": "string" },
           "type": {
             "type": "string",
             "enum": ["file_exists", "file_absent", "glob_count", "regex", "forbid", "key_equals", "generated_in_sync"],
-            "description": "Predicate type."
+            "description": "Predicate type of the flat form. Omit it to declare a spec (rule, skill, agent or command plus require)."
           },
           "severity": { "type": "string", "enum": ["error", "warning", "info"], "description": "Defaults to error." },
           "path": { "type": "string", "description": "Repo-relative file (file_exists, file_absent, key_equals)." },
@@ -1235,7 +1247,24 @@
           "max": { "type": "integer", "minimum": 0, "description": "Maximum match count (glob_count)." },
           "key": { "type": "string", "description": "Dotted key path into a JSON, YAML or TOML file (key_equals)." },
           "equals": { "type": "string", "description": "Expected scalar value, compared as text (key_equals)." },
-          "profile": { "type": "string", "description": "Generate profile to render (generated_in_sync)." }
+          "profile": { "type": "string", "description": "Generate profile to render (generated_in_sync)." },
+          "rule": { "type": "string", "description": "Spec form: the rule this verifier enforces (id or domain/id)." },
+          "skill": { "type": "string", "description": "Spec form: the skill this verifier enforces." },
+          "agent": { "type": "string", "description": "Spec form: the agent this verifier enforces." },
+          "command": { "type": "string", "description": "Spec form: the command this verifier enforces." },
+          "anchor": {
+            "type": "string",
+            "description": "Spec form: a heading line of the enforced file; findings point at it."
+          },
+          "message": { "type": "string", "description": "Spec form: text shown with a failure." },
+          "fix": { "type": "string", "description": "Spec form: how to fix a failure." },
+          "when_changed": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Spec form: globs; the verifier checks the changed files that match."
+          },
+          "require": { "$ref": "#/$defs/verifierRequire" },
+          "examples": { "type": "array", "items": { "$ref": "#/$defs/verifierExample" } }
         }
       }
     },
@@ -2195,6 +2224,146 @@
     }
   },
   "$defs": {
+    "verifierRequire": {
+      "type": "object",
+      "description": "Exactly one predicate or combinator.",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "regex": {
+          "$ref": "#/$defs/verifierRegex"
+        },
+        "forbid": {
+          "$ref": "#/$defs/verifierRegex"
+        },
+        "file_exists": {
+          "type": "object",
+          "required": ["path"],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "May use {path}, {dir}, {stem}, {ext}, {rel} of each scoped file."
+            },
+            "exists": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "paired": {
+          "type": "object",
+          "required": ["for_each"],
+          "additionalProperties": false,
+          "oneOf": [
+            {
+              "required": ["requires_changed"]
+            },
+            {
+              "required": ["requires_exists"]
+            }
+          ],
+          "properties": {
+            "for_each": {
+              "type": "string",
+              "description": "A literal path with {rel}, or a glob."
+            },
+            "requires_changed": {
+              "type": "string"
+            },
+            "requires_exists": {
+              "type": "string"
+            }
+          }
+        },
+        "glob_count": {
+          "type": "object",
+          "required": ["files"],
+          "additionalProperties": false,
+          "properties": {
+            "files": {
+              "type": "string"
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "all": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          }
+        },
+        "any": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/verifierRequire"
+        }
+      }
+    },
+    "verifierRegex": {
+      "type": "object",
+      "required": ["regex"],
+      "additionalProperties": false,
+      "properties": {
+        "regex": {
+          "type": "string",
+          "description": "An RE2 expression."
+        },
+        "in": {
+          "enum": ["same-file", "diff-added", "any-file"],
+          "default": "same-file"
+        },
+        "files": {
+          "type": "string",
+          "description": "Glob selecting the files of an any-file predicate."
+        }
+      }
+    },
+    "verifierExample": {
+      "type": "object",
+      "required": ["name", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expect": {
+          "enum": ["pass", "fail", "not_applicable"]
+        }
+      }
+    },
     "delivery": {
       "type": "string",
       "enum": ["static", "served", "both"]

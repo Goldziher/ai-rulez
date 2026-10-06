@@ -165,3 +165,69 @@ func TestValidateVerifiers_GeneratedInSyncProfile(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifiers_SpecFormInline(t *testing.T) {
+	const spec = verifiersHead + `
+[[verifiers]]
+name = "no-todo"
+rule = "style"
+severity = "warning"
+fix = "Remove the TODO."
+when_changed = ["src/**/*.go"]
+exclude = ["src/gen/**"]
+
+[verifiers.require.all]
+[[verifiers.require.all]]
+[verifiers.require.all.forbid]
+regex = "TODO"
+`
+	tests := []struct {
+		name    string
+		body    string
+		wantErr string
+	}{
+		{"spec form loads", strings.Replace(spec, "[verifiers.require.all]\n[[verifiers.require.all]]", "[[verifiers.require.all]]", 1), ""},
+		{"flat form still loads", verifiersHead + "\n[[verifiers]]\nname = \"r\"\ntype = \"file_exists\"\npath = \"README.md\"\n", ""},
+		{"no type and no target", verifiersHead + "\n[[verifiers]]\nname = \"r\"\n[verifiers.require.regex]\nregex = \"x\"\n", "exactly one of rule, skill, agent or command"},
+		{"no predicate", verifiersHead + "\n[[verifiers]]\nname = \"r\"\nrule = \"style\"\n", "needs a require predicate"},
+		{"flat field without type", verifiersHead + "\n[[verifiers]]\nname = \"r\"\nrule = \"style\"\npath = \"x\"\n[verifiers.require.regex]\nregex = \"x\"\n", "does not apply without a type"},
+		{"spec field with type", verifiersHead + "\n[[verifiers]]\nname = \"r\"\ntype = \"file_exists\"\npath = \"x\"\nfix = \"y\"\n", "fix, which does not apply to type"},
+		{"bad glob", verifiersHead + "\n[[verifiers]]\nname = \"r\"\nrule = \"s\"\nwhen_changed = [\"{a,b}{c,d}{e,f}{g,h}{i,j}{k,l}{m,n}\"]\n[verifiers.require.regex]\nregex = \"x\"\n", "invalid verifier"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
+			path := filepath.Join(dir, ".ai-rulez", "config.toml")
+			require.NoError(t, os.WriteFile(path, []byte(tt.body), 0o644))
+
+			// Act
+			cfg, err := LoadConfigFromFile(context.Background(), path)
+			if err == nil {
+				err = cfg.validateVerifiers()
+			}
+
+			// Assert
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			if strings.Contains(tt.body, "no-todo") {
+				v := cfg.Verifiers[0]
+				assert.True(t, v.IsSpec())
+				assert.Equal(t, "style", v.Rule)
+				assert.Equal(t, []string{"src/**/*.go"}, v.WhenChanged)
+				require.NotNil(t, v.Require)
+				require.Len(t, v.Require.All, 1)
+				require.NotNil(t, v.Require.All[0].Forbid)
+				out, err := MarshalTOML(cfg)
+				require.NoError(t, err)
+				assert.NotContains(t, string(out), `type = ""`)
+				assert.Contains(t, string(out), "forbid")
+			}
+		})
+	}
+}
