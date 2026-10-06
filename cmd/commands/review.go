@@ -270,7 +270,8 @@ func planReviewEstimate(cmd *cobra.Command, cfg *config.Config, rb *rv.Rubric, r
 	}
 	return rv.Plan(rv.EstimateInput{
 		Rubric: rb, Results: res, Content: content, Model: model, Host: host, NetworkAllowed: lc.AllowNetwork, IgnoredLLMKeys: resolved.Ignored,
-		Prices: prices, MaxCostUSD: maxCost, MaxCalls: maxCalls, ShowPrompt: reviewFlags.showPrompt,
+		PolicyForbidsLLM: config.PolicyLocks("llm"),
+		Prices:           prices, MaxCostUSD: maxCost, MaxCalls: maxCalls, ShowPrompt: reviewFlags.showPrompt,
 	}), nil
 }
 

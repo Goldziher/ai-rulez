@@ -34,7 +34,9 @@ type Item struct {
 	Description string   `json:"-"`
 	Keys        []string `json:"-"`
 	Body        string   `json:"-"`
-	ReadError   string   `json:"-"`
+	// Raw is the whole item file, which the withholding checks read.
+	Raw       string `json:"-"`
+	ReadError string `json:"-"`
 }
 
 // Collect lists the skills, agents, commands and rules of cfg. rel maps an
@@ -102,7 +104,8 @@ func newItem(kind, domain string, cf config.ContentFile, configDir string, rel f
 	}
 	sum := sha256.Sum256(data)
 	it.Digest = "sha256:" + hex.EncodeToString(sum[:])
-	fm, body := splitFrontmatter(string(data))
+	it.Raw = string(data)
+	fm, body := splitFrontmatter(it.Raw)
 	it.Body = body
 	if n, ok := fm["name"].(string); ok && strings.TrimSpace(n) != "" {
 		it.Name = strings.TrimSpace(n)
