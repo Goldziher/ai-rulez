@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/update.schema.json",
+  "title": "ai-rulez update",
+  "description": "Output of `ai-rulez update --format json`: the pins that move (or would, with --dry-run), the sources that were refused and the ones left alone.",
+  "type": "object",
+  "required": ["schema_version", "dry_run", "updates"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "dry_run": { "type": "boolean" },
+    "updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "name", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["include", "skill", "source"] },
+          "name": { "type": "string" },
+          "from": { "$ref": "lock-outdated.schema.json#/definitions/tagRef" },
+          "to": { "$ref": "lock-outdated.schema.json#/definitions/tagRef" },
+          "digest_old": { "type": "string" },
+          "digest_new": { "type": "string" },
+          "files": {
+            "type": "array",
+            "description": "Files that differ between the old and the new tree; absent when the old tree is not cached.",
+            "items": {
+              "type": "object",
+              "required": ["path", "change"],
+              "additionalProperties": false,
+              "properties": {
+                "path": { "type": "string" },
+                "change": { "enum": ["A", "M", "D"] }
+              }
+            }
+          },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "blocked": {
+      "type": "array",
+      "description": "Sources refused (AR730, AR731, AR732); when any is present nothing is written.",
+      "items": { "$ref": "lock-outdated.schema.json#/properties/sources/items" }
+    },
+    "unchanged": {
+      "type": "array",
+      "description": "Sources left alone, for example a downgrade that needs --allow-downgrade.",
+      "items": { "$ref": "lock-outdated.schema.json#/properties/sources/items" }
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

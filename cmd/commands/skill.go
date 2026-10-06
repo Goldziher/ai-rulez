@@ -74,7 +74,12 @@ var skillUpdateCmd = &cobra.Command{
 	Short: "Re-pin installed skills in ai-rulez.lock to their current remote commit",
 	Long: `Resolve the named installed skills (all of them without names) from their
 remote and record the commit and content digest in .ai-rulez/ai-rulez.lock.
-Includes and skills not named keep their pins. See "ai-rulez lock".`,
+Includes and skills not named keep their pins. See "ai-rulez lock".
+
+A skill that uses a version range (version = ^1.2) keeps a pin that
+still satisfies the range: this command re-resolves plain refs (a branch
+follows its tip) and never upgrades a range pin. Use "ai-rulez update --kind
+skill [name...]" to move range pins to the newest allowed tag.`,
 	Run: func(_ *cobra.Command, args []string) {
 		lockCheck = false
 		if code := runLockFor("skill", args); code != 0 {
