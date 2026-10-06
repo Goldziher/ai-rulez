@@ -216,6 +216,7 @@ func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, pro
 	if cfg.VerifiersSettings != nil {
 		settings = *cfg.VerifiersSettings
 	}
+	pins := &includePins{cfg: cfg}
 	for _, f := range cfg.Content.ImportedVerifiers {
 		src := "include:" + f.Include + "/" + VerifiersDirName + "/" + f.Name
 		parsed, err := parseSpecs([]byte(f.Data))
@@ -230,7 +231,7 @@ func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, pro
 				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
 				continue
 			}
-			if msg := importRefusal(cfg, settings, &sp); msg != "" {
+			if msg := importRefusal(pins, settings, &sp); msg != "" {
 				problems = append(problems, Problem{ID: sp.ID, File: src, Message: msg})
 				continue
 			}
@@ -246,7 +247,7 @@ func loadImported(cfg *config.Config, seen map[string]string) (specs []Spec, pro
 }
 
 // importRefusal returns why an imported verifier may not be used, or "".
-func importRefusal(cfg *config.Config, s config.VerifiersSettings, sp *Spec) string {
+func importRefusal(pins *includePins, s config.VerifiersSettings, sp *Spec) string {
 	if !usesCommand(sp.Require) {
 		return ""
 	}
@@ -254,7 +255,7 @@ func importRefusal(cfg *config.Config, s config.VerifiersSettings, sp *Spec) str
 		return "uses the command predicate, which a verifier imported from include " + quote(sp.origin) +
 			" may not: list the include in [verifiers_settings] trust_exec_from (it must also be pinned in ai-rulez.lock)"
 	}
-	if !includePinned(cfg, sp.origin) {
+	if !pins.pinned(sp.origin) {
 		return "include " + quote(sp.origin) + " is trusted to run commands but is not pinned in ai-rulez.lock: run `ai-rulez lock`"
 	}
 	return ""
@@ -278,17 +279,30 @@ func usesCommand(r *Require) bool {
 	return usesCommand(r.Not)
 }
 
-// includePinned reports whether the lock pins the include: a commit and digest
-// for a remote one, a tree digest (kind local-include) for a local path.
-func includePinned(cfg *config.Config, name string) bool {
-	lock, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil || lock == nil {
+// includePins answers includePinned questions from one read of the lock.
+type includePins struct {
+	cfg    *config.Config
+	loaded bool
+	lock   *lockfile.File
+}
+
+// pinned reports whether the lock pins the include: a commit and digest for a
+// remote one, a tree digest (kind local-include) for a local path. A missing or
+// unreadable lock pins nothing.
+func (p *includePins) pinned(name string) bool {
+	if !p.loaded {
+		p.loaded = true
+		if lock, err := lockfile.Load(p.cfg.ConfigDir); err == nil {
+			p.lock = lock
+		}
+	}
+	if p.lock == nil {
 		return false
 	}
-	if lock.Find(lockfile.KindInclude, name) != nil {
+	if p.lock.Find(lockfile.KindInclude, name) != nil {
 		return true
 	}
-	for _, it := range lock.Item {
+	for _, it := range p.lock.Item {
 		if it.Kind == localIncludeKind && it.ID == name {
 			return true
 		}
