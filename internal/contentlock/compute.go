@@ -327,6 +327,9 @@ func (c *collector) collectDeclared() error {
 	if err := c.collectVerifiers(); err != nil {
 		return err
 	}
+	if err := c.collectRubrics(); err != nil {
+		return err
+	}
 	return c.collectSettings()
 }
 

@@ -58,6 +58,7 @@ how to do it with `cosign`.
 | `role` | the role name | the `[[roles]]` entry as declared |
 | `settings` | `permissions`, `claude-managed`, `mcp-servers`, `verifiers-settings` | the `[permissions]`, `[claude.settings.managed]`, `[[mcp_servers]]` and `[verifiers_settings]` sources (MCP servers as written, placeholders unresolved) |
 | `verifier` | the verifier id (`name` of a flat or inline entry) | the declaration as written: a `[[verifiers]]` entry of `config.toml`, or one table of `.ai-rulez/verifiers/*.toml` (`path` names the file). Lowering a `severity`, widening an `exclude` or deleting a verifier changes the pin. Verifiers imported through an include are covered by the include's own pin |
+| `rubric` | the rubric directory name | every file under `.ai-rulez/rubrics/<id>/` (`rubric.toml`, `system.md`, golden cases and fixtures, `calibration.json`); `path` is `rubrics/<id>`. Editing a rubric, its prompt or its labels, or re-calibrating, changes the pin ([Review](review.md#rubrics)). A symlink in the directory is a lock problem |
 
 Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
 configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
@@ -462,7 +463,7 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
   (`.gitattributes`: `*.sh text eol=lf`).
 
 **Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
-`verifier`, `settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
+`verifier`, `rubric`, `settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
 
 ```text
 digest = SHA256( lp("ai-rulez/<kind>/v1") || u64(n) || leaf_1 || … || leaf_n )
