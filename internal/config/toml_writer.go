@@ -117,14 +117,9 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		}
 	}
 
-	// Prefer the raw MCP server slice (preserves author order and inline-only
-	// fields); fall back to the resolved map merged from legacy mcp.yaml.
-	mcpServers := cfg.MCPServersRaw
-	if len(mcpServers) == 0 && len(cfg.MCPServers) > 0 {
-		for _, server := range cfg.MCPServers {
-			mcpServers = append(mcpServers, *server)
-		}
-	}
+	// The as-written servers (author order) followed by the servers merged from a
+	// legacy mcp.yaml, sorted: dropping the latter would lose them on migration.
+	mcpServers := cfg.EffectiveMCPServers()
 
 	return tomlOutput{
 		Schema:          cfg.Schema,

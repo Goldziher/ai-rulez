@@ -98,3 +98,64 @@ func TestMigrateLocalOverlay_MapsSchemaKey(t *testing.T) {
 	assert.Contains(t, string(data), `schema = 'https://example.com/s.json'`)
 	assert.NotContains(t, string(data), "$schema")
 }
+
+func TestMigrateV4_KeepsLegacyMCPServers(t *testing.T) {
+	tests := []struct {
+		name        string
+		files       map[string]string
+		wantServers []string
+		wantRemoved []string
+		wantKept    []string
+	}{
+		{
+			name: "inline servers and mcp.yaml are both written",
+			files: map[string]string{
+				"config.yaml": "version: \"3.0\"\nname: p\npresets: [claude]\nmcp_servers:\n  - name: zeta\n    command: z\n  - name: alpha\n    command: a\n",
+				"mcp.yaml":    "mcp_servers:\n  - name: legacy-b\n    command: b\n  - name: legacy-a\n    command: a\n  - name: alpha\n    command: dup\n",
+			},
+			wantServers: []string{"zeta", "alpha", "legacy-a", "legacy-b"},
+			wantRemoved: []string{"mcp.yaml", "config.yaml"},
+		},
+		{
+			name: "a second legacy file that was never loaded is kept",
+			files: map[string]string{
+				"config.yaml": "version: \"3.0\"\nname: p\npresets: [claude]\n",
+				"mcp.toml":    "[[mcp_servers]]\nname = \"first\"\ncommand = \"f\"\n",
+				"mcp.json":    `{"mcp_servers":[{"name":"second","command":"s"}]}`,
+			},
+			wantServers: []string{"first"},
+			wantRemoved: []string{"mcp.toml"},
+			wantKept:    []string{"mcp.json"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			project := t.TempDir()
+			dir := filepath.Join(project, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+			for name, body := range tt.files {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
+			}
+			t.Chdir(project)
+
+			// Act
+			runMigrateV4()
+
+			// Assert
+			cfg, err := config.LoadConfig(context.Background(), project)
+			require.NoError(t, err)
+			var names []string
+			for _, s := range cfg.MCPServersRaw {
+				names = append(names, s.Name)
+			}
+			assert.Equal(t, tt.wantServers, names)
+			for _, f := range tt.wantRemoved {
+				assert.NoFileExists(t, filepath.Join(dir, f))
+			}
+			for _, f := range tt.wantKept {
+				assert.FileExists(t, filepath.Join(dir, f))
+			}
+		})
+	}
+}

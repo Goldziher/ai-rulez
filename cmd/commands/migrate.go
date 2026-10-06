@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -66,7 +67,11 @@ func runMigrateV4() {
 	}
 
 	logger.Success("Created config.toml")
-	removeOldConfigFiles(configDir)
+	written := map[string]bool{}
+	for _, s := range cfg.EffectiveMCPServers() {
+		written[s.Name] = true
+	}
+	removeOldConfigFiles(configDir, written)
 
 	fmt.Println("\n✅ Migration complete!")
 	fmt.Println("   Config: .ai-rulez/config.toml")
@@ -88,15 +93,43 @@ func migrateLocalOverlay(configDir string) {
 	}
 }
 
-func removeOldConfigFiles(configDir string) {
+// removeOldConfigFiles deletes the V3 files the migration replaced. A legacy MCP
+// file goes only when every server it declares is in config.toml (written holds
+// their names): the loader reads just the first of mcp.toml, mcp.yaml and
+// mcp.json, so a later one can hold servers that were never carried over.
+func removeOldConfigFiles(configDir string, written map[string]bool) {
 	for _, old := range []string{configFileYAML, configFileJSON, "mcp.yaml", "mcp.toml", "mcp.json"} {
 		oldPath := filepath.Join(configDir, old)
-		if _, err := os.Stat(oldPath); err == nil {
-			if err := os.Remove(oldPath); err != nil {
-				logger.Warn("Failed to remove old file", "path", oldPath, "error", err)
-			} else {
-				logger.Info("Removed", "file", old)
+		if _, err := os.Stat(oldPath); err != nil {
+			continue
+		}
+		if strings.HasPrefix(old, "mcp.") {
+			if missing := legacyServersNotWritten(oldPath, written); len(missing) > 0 {
+				logger.Warn("Kept a legacy MCP file: some of its servers are not in config.toml",
+					"file", old, "servers", strings.Join(missing, ", "))
+				continue
 			}
 		}
+		if err := os.Remove(oldPath); err != nil {
+			logger.Warn("Failed to remove old file", "path", oldPath, "error", err)
+		} else {
+			logger.Info("Removed", "file", old)
+		}
 	}
+}
+
+// legacyServersNotWritten lists the servers of a legacy MCP file that are not in
+// written. A file that cannot be read counts as holding an unknown server.
+func legacyServersNotWritten(path string, written map[string]bool) []string {
+	servers, err := config.DecodeLegacyMCPFile(path)
+	if err != nil {
+		return []string{"(unreadable: " + err.Error() + ")"}
+	}
+	var missing []string
+	for _, s := range servers {
+		if !written[s.Name] {
+			missing = append(missing, s.Name)
+		}
+	}
+	return missing
 }
