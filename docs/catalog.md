@@ -190,6 +190,18 @@ Flags: `--role R` (items role `R` keeps), `--include-excerpt` (default on), `--i
 A published catalog exposes names, descriptions, owners, token costs and lint findings: treat it like the
 configuration directory it describes.
 
+## Browser tests
+
+`go test ./internal/catalogsite` also runs the site in a real headless Chrome or Chromium when one is installed
+(`AI_RULEZ_CHROME` names the executable; `-short` skips them; they skip on their own when no browser is found or it
+does not start). The harness speaks the DevTools protocol over `--remote-debugging-pipe`, so it needs no module and no
+WebSocket. It opens every page of a rich and of a hostile fixture site from `file://` and requires zero
+Content-Security-Policy violations (recorded by a `securitypolicyviolation` listener the protocol injects), no console
+error or warning, no uncaught exception, no JavaScript dialog, no inline script or style, and no request outside the
+file system. It then filters, pages and navigates (overview, item, graph, MCP pages), and a control test injects an
+inline script to prove the policy blocks it, so a zero count is not vacuous. The client itself is also tested against a
+fake browser on every machine.
+
 ## Design decisions
 
 - **Builder stays in `internal/govview`.** The issue names `internal/catalog`; the builder already lives in
