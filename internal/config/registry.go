@@ -4,6 +4,8 @@ import (
 	"sort"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // Registry maps preset names to their generators and holds the factories custom
@@ -18,8 +20,10 @@ type Registry struct {
 	// Custom builds the generator of a custom preset declared in the config.
 	Custom func(Preset) PresetGenerator
 	// Provider builds the generator of a provider-backed custom preset from its spec
-	// file, resolved against baseDir (the project root).
-	Provider func(preset Preset, baseDir string) (PresetGenerator, error)
+	// file, resolved against baseDir (the project root) and read through view, so a
+	// project held in memory or in a snapshot, and the symlink policy of the
+	// workspace, apply to the spec as to any other source.
+	Provider func(preset Preset, baseDir string, view workspace.View) (PresetGenerator, error)
 }
 
 // NewRegistry returns an empty Registry.

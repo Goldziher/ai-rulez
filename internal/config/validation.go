@@ -525,7 +525,7 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 				Errorf("custom preset %q sets both 'provider' and 'type'/'path'", preset.Name)
 		}
 		if c.Registry != nil && c.Registry.Provider != nil {
-			gen, err := c.Registry.Provider(*preset, c.BaseDir)
+			gen, err := c.Registry.Provider(*preset, c.BaseDir, c.View())
 			if err != nil {
 				return oops.
 					With("field", fmt.Sprintf("presets[%d].provider", index)).
