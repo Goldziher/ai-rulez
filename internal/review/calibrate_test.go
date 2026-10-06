@@ -373,6 +373,8 @@ func TestMatchCalibration(t *testing.T) {
 		{"another content mode", func(_ *CalibrationRecord, k *CalKey) { k.Content = "descriptions" }, CalStale, "--content"},
 		{"another vote count", func(_ *CalibrationRecord, k *CalKey) { k.K = 1 }, CalStale, "k=3"},
 		{"too old", func(r *CalibrationRecord, _ *CalKey) { r.Date = "2026-05-01" }, CalStale, "days old"},
+		{"dated in the future", func(r *CalibrationRecord, _ *CalKey) { r.Date = "2027-01-01" }, CalStale, "in the future"},
+		{"dated today", func(r *CalibrationRecord, _ *CalKey) { r.Date = "2026-10-06" }, CalMatched, ""},
 		{"a record that failed its thresholds", func(r *CalibrationRecord, _ *CalKey) { r.Status = "fail" }, CalFailedRecord, "did not meet"},
 		{"golden unknown to the caller is not compared", func(_ *CalibrationRecord, k *CalKey) { k.GoldenDigest = "" }, CalMatched, ""},
 	}
