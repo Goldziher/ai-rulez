@@ -104,12 +104,13 @@ func TestSeenStoreBadFiles(t *testing.T) {
 
 func TestSeenStoreIsBounded(t *testing.T) {
 	store, path := storeIn(t)
-	var tags []tagresolve.RawTag
-	for i := 0; i < maxSeenEntries+25; i++ {
-		tags = append(tags, tagresolve.RawTag{Name: fmt.Sprintf("v0.0.%d", i), Commit: commit})
+	for src := 0; src < maxSeenEntries/maxObservePerSource+3; src++ {
+		var tags []tagresolve.RawTag
+		for i := 0; i < maxObservePerSource; i++ {
+			tags = append(tags, tagresolve.RawTag{Name: fmt.Sprintf("v0.0.%d", i), Commit: commit})
+		}
+		require.NoError(t, store.Observe(fmt.Sprintf("%s%d", gh, src), tags, now.Add(time.Duration(src)*time.Hour)))
 	}
-
-	require.NoError(t, store.Observe(gh, tags, now))
 
 	raw, err := os.ReadFile(path)
 	require.NoError(t, err)
@@ -117,7 +118,10 @@ func TestSeenStoreIsBounded(t *testing.T) {
 }
 
 func forgeWith(published time.Time) *forge.Fake {
-	return &forge.Fake{ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published}}}}
+	return &forge.Fake{
+		ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published}}},
+		Tags:       map[string]forge.TagInfo{"github.com/o/r@v1.2.3": {Name: "v1.2.3", Commit: commit}},
+	}
 }
 
 func TestTimerModes(t *testing.T) {
@@ -157,7 +161,8 @@ func TestTimerModes(t *testing.T) {
 		{"auto without a forge client uses first-seen", "auto", gh, nil, prior, commitFn, tagresolve.SourceFirstSeen, now.Add(-30 * 24 * time.Hour), ""},
 		{"auto on a non-forge source skips the forge (and records a new source as seen now)", "auto", "file:///srv/x.git", forgeWith(published), prior, commitFn, tagresolve.SourceFirstSeen, now, ""},
 		{"auto offline forge degrades to first-seen", "auto", gh, &forge.Fake{Err: forge.ErrOffline}, prior, commitFn, tagresolve.SourceFirstSeen, now.Add(-30 * 24 * time.Hour), ""},
-		{"auto uses the commit date only when the record cannot be kept", "auto", gh, &forge.Fake{}, brokenStore, commitFn, tagresolve.SourceCommit, commitDate, ""},
+		{"auto never uses the forgeable commit date, even when the record cannot be kept", "auto", gh, &forge.Fake{}, brokenStore, commitFn, "", time.Time{}, "no release time for v1.2.3"},
+		{"auto without a first-seen record fails closed", "auto", gh, &forge.Fake{}, nil, commitFn, "", time.Time{}, "no release time for v1.2.3"},
 		{"auto with nothing available fails closed", "auto", gh, &forge.Fake{}, brokenStore, failCommit, "", time.Time{}, "no release time for v1.2.3"},
 		{"forge only: no release is an error", "forge", gh, &forge.Fake{}, prior, commitFn, "", time.Time{}, "forge release time"},
 		{"forge only", "forge", gh, forgeWith(published), nil, nil, tagresolve.SourceForge, published, ""},
@@ -199,7 +204,7 @@ func TestTimerMemoizesPerTag(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	assert.Len(t, f.Calls(), 1, "one forge call per tag per run")
+	assert.Len(t, f.Calls(), 2, "one release and one tag call per tag per run")
 }
 
 func TestTimerUsesTheConfigModeNames(t *testing.T) {
@@ -218,4 +223,82 @@ func TestTimerObserveFeedsFirstSeen(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, got.At.Equal(now), "the earlier observation is the release time")
+}
+
+func TestTimerForgeRefusesAMovedTag(t *testing.T) {
+	// Arrange: the release was published long ago, then the tag moved to a new commit.
+	published := now.Add(-90 * 24 * time.Hour)
+	moved := forgeWith(published)
+	moved.Tags["github.com/o/r@v1.2.3"] = forge.TagInfo{Name: "v1.2.3", Commit: other}
+	tests := []struct {
+		name string
+		mode string
+		want string
+	}{
+		{"forge only holds a moved tag back", "forge", "moved"},
+		{"auto falls to first-seen: the new commit is seen now", "auto", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store, _ := storeIn(t)
+			timer := New(Options{Mode: tt.mode, Source: gh, Forge: moved, Seen: store, Clock: ambient.Fixed(now)})
+
+			// Act
+			got, err := timer.ReleaseTime(context.Background(), tag)
+
+			// Assert
+			if tt.want != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.want)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tagresolve.SourceFirstSeen, got.From)
+			assert.True(t, got.At.Equal(now), "a moved tag is new, never as old as the release")
+		})
+	}
+}
+
+func TestTimerForgeFailsClosedWhenTheTagCannotBeChecked(t *testing.T) {
+	f := &forge.Fake{ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: now.Add(-90 * 24 * time.Hour)}}}}
+	timer := New(Options{Mode: "forge", Source: gh, Forge: f, Clock: ambient.Fixed(now)})
+
+	_, err := timer.ReleaseTime(context.Background(), tag)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "tag")
+}
+
+func TestSeenStoreStaysUnderTheReadCap(t *testing.T) {
+	// Arrange: more long junk tags than fit in the 1 MiB a reader accepts.
+	store, path := storeIn(t)
+	pad := strings.Repeat("x", 200)
+
+	// Act
+	for src := 0; src < 6; src++ {
+		var tags []tagresolve.RawTag
+		for i := 0; i < maxObservePerSource; i++ {
+			tags = append(tags, tagresolve.RawTag{Name: fmt.Sprintf("junk-%06d-%s", i, pad), Commit: commit})
+		}
+		require.NoError(t, store.Observe(fmt.Sprintf("%s%d", gh, src), tags, now.Add(time.Duration(src)*time.Hour)))
+	}
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	_, _, reopenErr := OpenSeenStore(path).FirstSeen(gh, "v1.2.3", commit, now)
+
+	// Assert
+	assert.LessOrEqual(t, len(raw), maxSeenBytes, "the file stays readable by safefs.ReadRegular")
+	assert.NoError(t, reopenErr, "a flood of tags never makes the record unreadable")
+}
+
+func TestSeenStoreObserveCapsTagsPerSource(t *testing.T) {
+	store, _ := storeIn(t)
+	var tags []tagresolve.RawTag
+	for i := 0; i < maxObservePerSource+50; i++ {
+		tags = append(tags, tagresolve.RawTag{Name: fmt.Sprintf("v0.0.%d", i), Commit: commit})
+	}
+
+	require.NoError(t, store.Observe(gh, tags, now))
+
+	assert.Len(t, store.by, maxObservePerSource)
 }
