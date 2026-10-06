@@ -441,7 +441,14 @@ func newEventID(salt string, entry *Entry, options RecordOptions) string {
 // at the file or at any directory below the project root: a repository can
 // commit .ai-rulez, .ai-rulez/local or usage.jsonl as a symlink, and a recorder
 // it launches would otherwise append JSON to whatever the link points at.
+//
+// It holds the shared log lock while it writes, so a prune never replaces the file between the write and its
+// own re-read. The lock is best effort: when it cannot be had in appendLockWait (a prune of a huge log, a
+// refused lock path) the line is appended anyway, because a hook must never stall or drop its event.
 func appendLine(path string, line []byte) error {
+	if release, err := lockLog(path, false, appendLockWait); err == nil {
+		defer release()
+	}
 	return safefs.AppendLine(path, line) //nolint:wrapcheck // safefs errors carry the path
 }
 
