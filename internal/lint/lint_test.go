@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 func writeFiles(t *testing.T, root string, files map[string]string) {
@@ -31,7 +32,9 @@ func gitAdd(t *testing.T, root string) {
 		t.Skip("git not available")
 	}
 	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}} {
-		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		// gitutil drops GIT_INDEX_FILE and friends, which a hook (or a shell
+		// exporting them) would otherwise point at another repository.
+		cmd := gitutil.CommandNoContext(root, args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
