@@ -1142,10 +1142,10 @@ ai-rulez generate --emit-plan plan.json --profile backend
 
 The document follows [`schema/plan.schema.json`](schema.md):
 
-- `files`: every output sorted by path, with `action` (`write`, `merge` into a document the consumer owns, `mkdir`), `mode`, and the `size` and `sha256` of the rendered content before the header's `Generated:` stamp and hash lines.
+- `files`: every output sorted by path, with `action` (`write`, `merge` into a document the consumer owns, `mkdir`), `mode`, and the `size` and `sha256` of the content `generate` writes, minus the header's `Generated:` stamp and hash lines (so with `[header] hashes = "none"` and no timestamp the digest is that of the file on disk).
 - `removals`: files an earlier run recorded and this one no longer renders (`stale`), and documents ai-rulez takes its earlier entries out of (`unmerge`, `delete`).
 
-The plan is deterministic and holds no secret: MCP placeholders such as `${TOKEN}` stay as written, and an output that may carry a secret (`sensitive`) has no digest. It is conservative about that flag, so a plan may call a document sensitive that a real run finds clean. It reads the project the way a run does (the previous manifest, merged documents) and honours `--profile`, `--role` and `--no-local`; it skips the command preflight. A run with `--yes` after `--emit-plan` is unaffected.
+The plan is deterministic and holds no secret: MCP placeholders such as `${TOKEN}` stay as written, and an output that may carry a secret (`sensitive`), or whose content holds a credential the security scan detects, has no digest. It is conservative about that flag, so a plan may call a document sensitive that a real run finds clean. It reads the project the way a run does (the previous manifest, merged documents) and honours `--profile`, `--role` and `--no-local`; it runs the read-only part of the generate preflight (the schema check, `--strict`, and the role selection warnings) and records nothing, so a later run still warns about new commands. `--emit-plan` is refused with `--watch`, `--check`, `--user`, `--recursive` and `--plugin`, which never reach the plan or render something else. The plan lists neither the `.gitignore` update nor the `.ai-rulez-generated.json` manifest `generate` writes: it covers rendered outputs and removals only.
 
 Design decisions:
 
