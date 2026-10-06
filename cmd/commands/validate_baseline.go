@@ -146,10 +146,10 @@ func baselineBlocks(reports []*lint.Report) bool {
 // addBaselineFlags registers the baseline flags on validate and scan.
 func addBaselineFlags(cmd *cobra.Command) {
 	f := cmd.Flags()
-	f.StringVar(&validateBaseline, "baseline", "", "With --strict, accept the findings recorded in this baseline file (default: <config dir>/"+lint.BaselineFile+" when it exists); only new findings count toward the exit code")
-	f.BoolVar(&validateUpdateBaseline, "update-baseline", false, "With --strict, record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0")
+	f.StringVar(&validateBaseline, "baseline", "", strictOnly(cmd, "accept the findings recorded in this baseline file (default: <config dir>/")+lint.BaselineFile+" when it exists); only new findings count toward the exit code")
+	f.BoolVar(&validateUpdateBaseline, "update-baseline", false, strictOnly(cmd, "record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0"))
 	f.StringVar(&validateBaselineReason, "baseline-reason", "", "With --update-baseline, the reason stored on new entries (required for security findings)")
-	f.BoolVar(&validateStrictBaseline, "strict-baseline", false, "With --strict, also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it")
+	f.BoolVar(&validateStrictBaseline, "strict-baseline", false, strictOnly(cmd, "also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it"))
 	f.StringVar(&validateToday, "today", "", "Date (YYYY-MM-DD) baseline expiry is judged against; default is today's date (or $"+todayEnv+")")
 	_ = f.MarkHidden("today") //nolint:errcheck // the flag was just registered
 }
