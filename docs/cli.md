@@ -1802,6 +1802,7 @@ Runs an external optimizer on a throwaway copy of an authored skill and accepts 
 | `--adapter-model M` / `--adapter-judge-model M` / `--allow-same-model` | | `builtin:review-fix`: fixer and judge models; they must differ unless allowed |
 | `--isolation none\|auto\|require` | `none` | confine the optimizer with the process sandbox (`AR9J7`) |
 | `--require-ci-above-zero` | off | also require the 95% bootstrap interval of the gain to exclude zero |
+| `--sibling-native` / `--sibling-runs N` | off / `3` | also run the sibling trigger guard on the harness's model (costs money, counted against `--max-cost`); `N` repetitions per prompt |
 | `--trust-repo-optimizer` | off | use `[improve] optimizer` and `env_pass` from a repository config (`AR9J6`) |
 | `--runner-command`, `--harness`, `--model`, ... | | the eval runner, as for `eval run` |
 | `--yes`, `--dry-run`, `--format json`, `--stop-at-first-accept` | | skip the prompt, plan only, JSON report |
@@ -1819,7 +1820,7 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 - `improve show <run-id>`: the report of a saved run (rounds, held-out comparison with its bootstrap interval, sibling guard, costs) and the diff; `--format json` prints `improve-show/1`.
 - `improve clean [<run-id>|--all]`: delete saved runs (`--dry-run`, `--yes`).
 - `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--yes`); refusals carry `AR9J8`.
-- `improve adapters [name]`: list the bundled optimizers, or print a template.
+- `improve adapters [name]`: list the bundled optimizers, or print a template (`shell`, `research`, and `repair-workflow`, a scheduled GitHub Actions workflow that repairs skills after a model change).
 
 ### `ai-rulez search --eval <cases.yaml>`
 

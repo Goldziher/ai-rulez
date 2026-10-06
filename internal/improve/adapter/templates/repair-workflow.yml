@@ -1,0 +1,97 @@
+# Scheduled "model upgrade repair" for skills: a GitHub Actions template for `ai-rulez improve`
+# (print it with `ai-rulez improve adapters repair-workflow`, docs/improve.md).
+#
+# A model upgrade can make a skill that passed its evals start failing. Each week this job re-runs the eval
+# suites against the model you name, asks the optimizer to repair every skill that now fails, and opens a DRAFT
+# pull request for each candidate that clears the held-out gate. Nothing is merged, approved or applied for you:
+# a person reviews every pull request, and a run with no acceptable candidate opens nothing.
+#
+# It spends money: --max-cost bounds each skill and EVAL_BUDGET the whole job. Adjust the secrets, the models and
+# the optimizer to your setup. The workflow has no pull_request trigger, so a fork's pull request never runs it.
+name: ai-rulez skill repair
+
+on:
+  schedule:
+    - cron: "23 5 * * 1" # Mondays
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model the evals run with (default sonnet)
+        required: false
+
+permissions:
+  contents: write # the branch ai-rulez/improve/<skill>-<digest>
+  pull-requests: write # gh pr create
+
+concurrency:
+  group: ai-rulez-skill-repair
+  cancel-in-progress: false
+
+env:
+  EVAL_MODEL: ${{ inputs.model || 'sonnet' }}
+  EVAL_BUDGET: "20" # USD for the whole eval pass
+  REPAIR_BUDGET: "5" # USD per skill, evals plus optimizer
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install
+        run: npm install -g ai-rulez @anthropic-ai/claude-code
+
+      - name: Configure the optimizer's model (user scope)
+        # builtin:review-fix needs [llm] in the USER config; delete this step for an optimizer of your own.
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          mkdir -p "$HOME/.config/ai-rulez"
+          cat > "$HOME/.config/ai-rulez/config.toml" <<'EOF'
+          [llm]
+          provider = "gemini"
+          model = "gemini-2.5-flash"
+          api_key_env = "GEMINI_API_KEY"
+          allow_network = true
+          max_cost_usd = 2
+          EOF
+
+      - name: Find the skills whose evals fail with the current model
+        id: failing
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          ai-rulez eval run --model "$EVAL_MODEL" --max-cost "$EVAL_BUDGET" --format json --no-write > eval.json
+          status=$?
+          set -e
+          if [ "$status" -eq 1 ]; then echo "the eval run could not start" >&2; exit 1; fi
+          jq -r '.skills[] | select((.status == "ran" or .status == "cached") and (.passing | not)) | .id' eval.json > failing.txt
+          echo "failing skills: $(tr '\n' ' ' < failing.txt)"
+
+      - name: Repair each failing skill and open a draft pull request
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "ai-rulez[bot]"
+          git config user.email "ai-rulez@users.noreply.github.com"
+          while read -r skill; do
+            [ -n "$skill" ] || continue
+            set +e
+            # --adapter review-fix is the bundled optimizer; use --with 'your optimizer command' for another
+            ai-rulez improve run "$skill" --adapter review-fix --model "$EVAL_MODEL" \
+              --max-cost "$REPAIR_BUDGET" --isolation auto --sibling-native --yes --format json > "run-$skill.json"
+            status=$?
+            set -e
+            # 0: accepted, 2: no acceptable candidate (nothing to open), 1: refused or could not run
+            if [ "$status" -eq 0 ]; then
+              ai-rulez improve pr "$(jq -r .run_id "run-$skill.json")" --draft --yes
+            else
+              echo "$skill: no pull request (improve run exited $status)"
+            fi
+          done < failing.txt

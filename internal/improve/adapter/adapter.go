@@ -29,6 +29,8 @@ const (
 	Shell = "shell"
 	// Research is a documented recipe for an external research optimizer, not a runnable adapter.
 	Research = "research"
+	// RepairWorkflow is a GitHub Actions template for scheduled model-upgrade repair, not a runnable adapter.
+	RepairWorkflow = "repair-workflow"
 )
 
 // maxRequestBytes bounds the request an adapter reads from standard input.
@@ -49,6 +51,7 @@ func List() []Info {
 		{ReviewFix, "judges SKILL.md with the review rubric and applies a verified fix (needs [llm] model, allow_network and a fixer model different from the judge)", true},
 		{Shell, "a shell template that calls any tool on the workspace copy of the skill", false},
 		{Research, "a recipe for wiring a research optimizer; its interface is unverified, so it is not shipped as supported", false},
+		{RepairWorkflow, "a scheduled GitHub Actions workflow that re-runs the evals after a model change and opens draft pull requests for repaired skills", false},
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
