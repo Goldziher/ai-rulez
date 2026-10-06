@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -495,6 +496,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Signing         *SigningConfig         `toml:"signing"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
 		Review          *ReviewConfig          `toml:"review"`
+		Search          *skillsearch.Config    `toml:"search"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
@@ -580,6 +582,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Telemetry:       raw.Telemetry,
 		Signing:         raw.Signing,
 		Review:          raw.Review,
+		Search:          raw.Search,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,

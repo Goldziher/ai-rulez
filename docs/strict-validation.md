@@ -182,7 +182,10 @@ stdout.
 | AR9G6 | `instruction-conflict` | warning | An item contradicts another item (`review`; needs the judge, no offline evidence) |
 | AR9G7 | `body-structure` | info | A body is bloated or badly structured (`review`; offline evidence is `AR805`, `AR806`, `AR901`, `AR902`) |
 | AR9G8 | `rubric-invalid` | error | A `.ai-rulez/rubrics/<id>/rubric.toml`, golden file or `calibration.json` is malformed (`ai-rulez rubric lint`) |
+| AR9D0 | `search-config-invalid` | error | The `[search]` table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number, or an `index_dir` outside the config directory |
+| AR9D1 | `search-index-stale` | warning | A committed search index (an `index_dir` outside `local/`) no longer matches the skills or the embedding model. See [Skill search](search.md) |
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
+| AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
 | AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` only, severity is the verifier's own) |
 | AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands only) |
@@ -227,7 +230,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9A0`-`AR9A9` | Eval results file and activation (`AR9A0`-`AR9A2` used; [#228](https://github.com/Goldziher/ai-rulez/issues/228) proposes `AR9A3`-`AR9A5` for later phases) | allocated |
 | `AR9B0`-`AR9B9` | OKF bundles | allocated |
 | `AR9C0`-`AR9CA` | Harness traps (`AR9C0`-`AR9CA` used; see [Harness traps](harness-traps.md)) | allocated |
-| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D2`, `AR9D4` used by `search --eval`) | allocated |
+| `AR9D0`-`AR9D9` | Search ([#222](https://github.com/Goldziher/ai-rulez/issues/222); `AR9D0`-`AR9D4` used, `AR9D5`-`AR9D9` free) | allocated |
 | `AR9E0`-`AR9E9` | External scanners (`AR9E0`-`AR9E7` used) | allocated |
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G8` used by `review` and `rubric lint`, `AR9G9` is for the calibration phase) | allocated |
@@ -2403,6 +2406,36 @@ a skill search metric is below its minimum, or more cases regressed against the 
 - Bad: A skill description rewrite that drops recall@5 under the configured minimum
 - Good: Restore the discoverability of the skill, or lower the minimum deliberately
 
+### AR9CA project-trap
+
+a trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: A project can record its own traps as rows in `.ai-rulez/traps/*.toml`, with the same closed predicate vocabulary as the built-in table; this code reports a row's match or a row that cannot be used.
+- Bad: A row whose predicate kind is not in the vocabulary, or a file that matches the row
+- Good: Fix the file the row names, or correct the row
+
+### AR9D0 search-config-invalid
+
+the [search] table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number or an index_dir that leaves the config directory
+
+- Default severity: `error`
+- Analyzer: `search` (scope `bundle`)
+- Why: A bad [search] table would silently change how find_skill ranks, so it is reported with the key at fault. An index_dir outside the config directory is refused so a committed config cannot make the tool read or write elsewhere.
+- Bad: `mode = "semantic"` or `index_dir = "../shared"`
+- Good: `mode = "hybrid"` and an index_dir under the config directory
+
+### AR9D1 search-index-stale
+
+a committed skill search index no longer matches the skills or the embedding model: a changed description, an added or removed skill, another model or text template
+
+- Default severity: `warning`
+- Analyzer: `search` (scope `bundle`)
+- Why: A committed index is only useful while its vectors describe the skills as they are: after a description edit, an added or removed skill or a model change, hybrid ranking quietly falls back to lexical for the affected skills. Run `ai-rulez search index` and commit the result. Only an index_dir outside local/ is checked; the machine-local index is never a finding.
+- Bad: `index_dir = "search-index"` committed, then a skill's description edited without rebuilding
+- Good: Re-run `ai-rulez search index` and commit the changed manifest.json and vectors.bin
+
 ### AR9E0 scanner-config-invalid
 
 a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
@@ -2412,6 +2445,16 @@ a [[lint.external]] entry has an invalid timeout or an env_pass name an egress =
 - Why: An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.
 - Bad: `egress = false` with `env_pass = ["HTTPS_PROXY"]`
 - Good: Remove the variable or declare `egress = true`
+
+### AR9D3 search-text-withheld
+
+a skill was not embedded because its text looks like it holds a secret; it ranks lexically only (search index only)
+
+- Default severity: `warning`
+- Analyzer: `search` (scope `item`)
+- Why: The text sent to an embedding endpoint is name, description, triggers and keywords (and the body start with index_body). If it looks like it holds a credential, `search index` skips that skill instead of sending a masked string; it still ranks lexically. Only `ai-rulez search index` reports it.
+- Bad: A skill description that contains an API key
+- Good: Remove the secret from the description; `search index` then embeds the skill
 
 ### AR9E1 scanner-egress-undeclared
 

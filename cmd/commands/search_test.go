@@ -31,14 +31,17 @@ func searchProject(t *testing.T) string {
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
 	}
 	t.Chdir(root)
+	t.Setenv("HOME", t.TempDir()) // the user config and cache must not leak in
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	return root
 }
 
 // resetSearch clears the command's flag state so tests do not leak into each other.
 func resetSearch(t *testing.T) {
 	t.Helper()
-	reset := func() {
-		SearchCmd.Flags().VisitAll(func(f *pflag.Flag) {
+	resetSet := func(fs *pflag.FlagSet) {
+		fs.VisitAll(func(f *pflag.Flag) {
 			if sv, ok := f.Value.(pflag.SliceValue); ok {
 				_ = sv.Replace(nil)
 			} else {
@@ -47,13 +50,21 @@ func resetSearch(t *testing.T) {
 			f.Changed = false
 		})
 	}
+	reset := func() {
+		resetSet(SearchCmd.Flags())
+		resetSet(SearchCmd.PersistentFlags())
+	}
 	reset()
 	t.Cleanup(reset)
 }
 
 func setSearchFlag(t *testing.T, name, value string) {
 	t.Helper()
-	require.NoError(t, SearchCmd.Flags().Set(name, value))
+	fs := SearchCmd.Flags()
+	if fs.Lookup(name) == nil {
+		fs = SearchCmd.PersistentFlags()
+	}
+	require.NoError(t, fs.Set(name, value))
 }
 
 func execSearch(t *testing.T, args ...string) (code int, stdout, stderr string) {
@@ -258,8 +269,9 @@ func TestSearchCmd_Registered(t *testing.T) {
 	cmd, _, err := RootCmd.Find([]string{"search"})
 	require.NoError(t, err)
 	assert.Equal(t, SearchCmd, cmd)
-	for _, name := range []string{"role", "profile", "source", "include-static", "eval", "min", "baseline", "max-flips", "out", "k", "format", "limit"} {
-		assert.NotNil(t, cmd.Flags().Lookup(name), "--%s", name)
+	for _, name := range []string{"role", "profile", "source", "include-static", "eval", "min", "baseline", "max-flips", "out", "k", "format", "limit", "mode", "explain", "from-evals", "allow-exec"} {
+		found := cmd.Flags().Lookup(name) != nil || cmd.PersistentFlags().Lookup(name) != nil
+		assert.True(t, found, "--%s", name)
 	}
 }
 
