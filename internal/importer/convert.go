@@ -675,6 +675,12 @@ func configSummary(p *Plan) string {
 	if n := len(p.InstalledSkills); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d [[installed_skills]]", n))
 	}
+	if n := len(p.Hooks); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d [[hooks]] (review each command first)", n))
+	}
+	if n := len(p.Permissions.Allow) + len(p.Permissions.Ask) + len(p.Permissions.Deny); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d [permissions] rule(s)", n))
+	}
 	if len(parts) == 0 {
 		return "nothing"
 	}
