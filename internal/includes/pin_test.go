@@ -242,3 +242,34 @@ func TestLockable_SkipsLocalSources(t *testing.T) {
 	assert.Equal(t, "b", wants[0].Name)
 	assert.NotContains(t, wants[0].Source, "tok", "credentials never reach the committed lock")
 }
+
+func TestCheckLock_ReportsUndigestableCache(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("file permissions do not restrict root")
+	}
+	// Arrange
+	f := newLockFixture(t)
+	cfg, err := config.LoadConfig(context.Background(), f.project, config.WithoutLocal(), config.WithoutRemote())
+	require.NoError(t, err)
+	f.writeLock(t)
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	require.NoError(t, err)
+	var skill lockfile.Want
+	for _, w := range Lockable(cfg) {
+		if w.Kind == lockfile.KindSkill {
+			skill = w
+		}
+	}
+	dir, _, _ := cachedTree(cfg, skill)
+	require.NotEmpty(t, dir)
+	marker := filepath.Join(dir, skillMarkerFile)
+	require.NoError(t, os.Chmod(marker, 0))
+	t.Cleanup(func() { _ = os.Chmod(marker, 0o644) })
+
+	// Act
+	problems, _ := CheckLock(cfg, lock)
+
+	// Assert
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, "cannot digest")
+}
