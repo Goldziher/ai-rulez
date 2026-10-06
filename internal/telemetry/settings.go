@@ -41,6 +41,7 @@ const (
 	ScopeRepo    = "repo"
 	ScopeUser    = "user"
 	ScopeEnv     = "env"
+	ScopePolicy  = "policy"
 )
 
 // Settings is the effective telemetry configuration after the trust rule.
@@ -133,6 +134,11 @@ func Resolve(layers Layers) Settings {
 		ServiceName: s.ServiceName, Sample: &s.Sample, SaltFile: s.SaltFile, Resource: s.Resource,
 	}
 	s.addBlocking(effective.Validate()...)
+	if config.PolicyLocks("telemetry") {
+		// An organization policy switches export off whatever the user scope says.
+		s.AllowNetwork = false
+		set("allow_network", ScopePolicy)
+	}
 	return s
 }
 

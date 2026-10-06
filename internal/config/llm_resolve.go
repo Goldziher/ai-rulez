@@ -66,6 +66,10 @@ func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 		out.UserFile = path
 	}
 	out.Config, err = merged.WithEnv(getenv)
+	if PolicyLocks("llm") {
+		// An organization policy switches network use off whatever the user scope says.
+		out.Config.AllowNetwork = false
+	}
 	return out, err
 }
 

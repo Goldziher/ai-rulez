@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/policy-effective.schema.json",
+  "title": "ai-rulez effective policy",
+  "description": "Output of `ai-rulez validate --show-policy --format json`: the policy layers in force, the folded effective policy, the layer that decides each key, and what the repository tried to loosen.",
+  "type": "object",
+  "required": ["schema_version", "layers", "effective", "provenance", "overrides", "violations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "layers": {
+      "type": "array",
+      "description": "Strongest anchor first: flag, env, managed.",
+      "items": {
+        "type": "object",
+        "required": ["origin", "source", "digest"],
+        "additionalProperties": false,
+        "properties": {
+          "origin": { "enum": ["flag", "env", "managed"] },
+          "source": { "type": "string", "description": "The file the layer was read from." },
+          "name": { "type": "string", "description": "The policy's own name." },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "SHA-256 of the file, CRLF normalized."
+          }
+        }
+      }
+    },
+    "effective": {
+      "type": "object",
+      "description": "The folded policy in the shape of a policy file; only constrained keys appear.",
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_hosts": { "type": "array", "items": { "type": "string" } },
+            "deny_hosts": { "type": "array", "items": { "type": "string" } },
+            "require_pinned": { "const": true }
+          }
+        },
+        "lint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required_codes": { "type": "array", "items": { "type": "string" } },
+            "severity_floor": { "type": "object", "additionalProperties": { "enum": ["info", "warning", "error"] } },
+            "security": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "allowed_hosts": { "type": "array", "items": { "type": "string" } },
+                "scan_imports": { "enum": ["warn", "error"] }
+              }
+            }
+          }
+        },
+        "lock": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "enforce": { "const": true }, "include_outputs": { "const": true } }
+        },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "allow_network": { "const": false } }
+        },
+        "llm": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "allow_network": { "const": false } }
+        },
+        "guard": { "type": "object", "additionalProperties": false, "properties": { "generated": { "const": true } } }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Dotted key to the layer origin that decides it; several origins joined with + for a set that more than one layer contributes to.",
+      "additionalProperties": { "type": "string", "pattern": "^(flag|env|managed)(\\+(flag|env|managed))*$" }
+    },
+    "overrides": {
+      "type": "object",
+      "required": ["accepted", "rejected"],
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Repository overrides the policy allowed (a narrowing)."
+        },
+        "rejected": { "type": "integer", "minimum": 0, "description": "Number of violations." }
+      }
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "key", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "code": { "enum": ["AR740", "AR741", "AR742", "AR743", "AR744", "AR745"] },
+          "key": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "message": { "type": "string" },
+          "origin": { "type": "string" }
+        }
+      }
+    }
+  }
+}
