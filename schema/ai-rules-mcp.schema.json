@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-mcp.schema.json",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json",
   "title": "AI Rules MCP Server Configuration",
   "description": "Schema for MCP (Model Context Protocol) server configuration in ai-rulez",
   "type": "object",
@@ -92,7 +92,7 @@
   "additionalProperties": false,
   "examples": [
     {
-      "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-mcp.schema.json",
+      "$schema": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json",
       "version": "4.0",
       "mcp_servers": [
         {
