@@ -1,0 +1,559 @@
+# scenario merged-documents-clean
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=44
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 295 23ceaf0c32336962c58d46ff4ff76a189846a66bf46231ab1286901fd3d2eee3
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 3c2e1bd4ccadfae5613dab7e17470c2db563f96c6e7480eb0d559bc1b660d575
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 e5ca744a84d018147d034e09cc5a2b6e932f11a328b14e680b9702447ea70be0
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 271 dabb21dd54e23dc4bfd3836f3599ca3341d0b5181508644a7c29c99cec76cf19
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1631 9ad5a1dd58565f443216ecf21f4f3d4b5942537482bb1a965d012b942f3f3be1
+.ai-rulez/.generated-manifest.local.json file 0644 7567 1e82272c7f91fcfcf2df9f22be68c6a7e91120b0fab3ff554eb46950f300c3a2
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 722 2cc05c02ab69823505cc6c34cab934ccc459fe2d967020e878ff363ce3c33973
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 80224a42a36af79f83b16952f0532433474050c122a9843935e18a1c5622fb7a
+.claude/agents/tester.md file 0644 258 d13205754117ceeaac7aef817849cb5c868e9c2ce09239b34844d0dadfcc9136
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 822d4fb1454410d6212af1d363fa9dd6d03e6d42480207948f19bbc886130004
+.claude/rules/auto.md file 0644 302 8563645abbefb2f24b011631721aadd81ea508dff2a89dea9a2f1dbf740e76a9
+.claude/rules/manual.md file 0644 313 8c24ced23993fc3269e4791949c8822ff480586d925fcedf6e440b6bfd06b4bd
+.claude/rules/targeted.md file 0644 309 71d5cb4f1d84394887a667f96a0ecc9ca24e9c03aaf8ff35f63d2fd3f5438687
+.claude/rules/typescript.md file 0644 376 cbcad973152cc9eb784aa6e1a734d8bee6a71965f3449ab1c6b8eebfdcf8e24f
+.claude/settings.json file 0644 955 5b012aa98d93a01ab9e35e2e371d285248093d9e07f92caebc91a96231d0f1da
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 0b705856455d8f4c2180a2311bb46556cfc93af3b2216b2447425e7b57a9eafa
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 e1ade4595a3ceb3fa7438b9e1a7e1d91a083d81189466c4c7a4c59854d36dfed
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 d2d1e97c84a293c83fd6cb372a40542caf74f8cc0d785426b8b6a6f48e448017
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 68b467146526f46ca3381916e4ddf148731cd7075a49ac7e23ad9a6eeb6f7b64
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/config.toml file 0644 172 8694fed0985cfcd41339e2ff5b5adedff98d9ed787c20f4b3baf00e881691d63
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 542e4ffb00abd7b5fc8db03ff81c40971c9d12b0767251b55c88fb8900963ad7
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 3b0b35a5c229d07224760fe8ba35d70d706a1305e1786a57db55ca56f73c62a1
+.gemini/agents/tester.md file 0644 245 aa2069ebf60572c329bd673a327d1c1e2f780db748d2950f7500dac37df52710
+.gemini/settings.json file 0644 1254 3131805941dbd2899345d317fd9e153d003454ffcc05a69028d8e7fd40f7e167
+.gitignore file 0644 575 ded5b926598b8fb57938cdbb87212553be9c7377e7b608006306a52604d31bae
+.mcp.json file 0644 284 3787ef010d1b74fe9b445d3f86bac33847d72e904bb1e01df0dc09c3a64cef6b
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 f733ceea029be52216c04d3105ab047c3ad4bb0b59805c39bc2dc28bbec09778
+.opencode/agents/tester.md file 0644 256 c223f04da120e14512f6c4c712c2b4147279229b0fa93e3c25b7325a1509bb8c
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 28c20242fd7bb0ee2d49ee90051febb701743c9dcd4250667179efba022d858e
+.opencode/commands/ship.md file 0644 227 063389142184ab475702ba978f59ca1057602962f4bf13fa6bce93e8a1d10dcb
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+.opencode/skills/ dir 0755
+.opencode/skills/deployer/ dir 0755
+.opencode/skills/deployer/SKILL.md file 0644 261 3c2e1bd4ccadfae5613dab7e17470c2db563f96c6e7480eb0d559bc1b660d575
+.opencode/skills/reviewer/ dir 0755
+.opencode/skills/reviewer/SKILL.md file 0644 508 e5ca744a84d018147d034e09cc5a2b6e932f11a328b14e680b9702447ea70be0
+.opencode/skills/reviewer/references/ dir 0755
+.opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.opencode/skills/reviewer/scripts/ dir 0755
+.opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+AGENTS.md file 0644 874 4844f1e5dcb61c7adb7bbe8864f0513a17ba0df4dbd28df185b10564dcdd9b05
+CLAUDE.md file 0644 575 0e3ec11b3d8edc5f6e68e9d6d6b7e9cb669b04b5b2816862b25ae52a59519fc0
+GEMINI.md file 0644 874 4844f1e5dcb61c7adb7bbe8864f0513a17ba0df4dbd28df185b10564dcdd9b05
+opencode.json file 0644 627 67223e5c641a7fa93f7c5a6ff56f6621b1515ef3d96b1a87dc6e874605d23c93
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez clean --dry-run
+exit: 0
+--- stdout
+--- stderr
+INFO    remove ai-rulez keys from: .claude/settings.json
+INFO    remove ai-rulez keys from: .codex/config.toml
+INFO    remove ai-rulez keys from: opencode.json
+INFO    remove dir (if empty): .agents
+INFO    remove dir (if empty): .agents/skills
+INFO    remove dir (if empty): .agents/skills/build
+INFO    remove dir (if empty): .agents/skills/build/agents
+INFO    remove dir (if empty): .agents/skills/deployer
+INFO    remove dir (if empty): .agents/skills/reviewer
+INFO    remove dir (if empty): .agents/skills/reviewer/references
+INFO    remove dir (if empty): .agents/skills/reviewer/scripts
+INFO    remove dir (if empty): .agents/skills/ship
+INFO    remove dir (if empty): .agents/skills/ship/agents
+INFO    remove dir (if empty): .claude
+INFO    remove dir (if empty): .claude/agents
+INFO    remove dir (if empty): .claude/rules
+INFO    remove dir (if empty): .claude/skills
+INFO    remove dir (if empty): .claude/skills/build
+INFO    remove dir (if empty): .claude/skills/deployer
+INFO    remove dir (if empty): .claude/skills/reviewer
+INFO    remove dir (if empty): .claude/skills/reviewer/references
+INFO    remove dir (if empty): .claude/skills/reviewer/scripts
+INFO    remove dir (if empty): .claude/skills/ship
+INFO    remove dir (if empty): .codex
+INFO    remove dir (if empty): .codex/agents
+INFO    remove dir (if empty): .codex/rules
+INFO    remove dir (if empty): .gemini
+INFO    remove dir (if empty): .gemini/agents
+INFO    remove dir (if empty): .opencode
+INFO    remove dir (if empty): .opencode/agents
+INFO    remove dir (if empty): .opencode/commands
+INFO    remove dir (if empty): .opencode/plugins
+INFO    remove dir (if empty): .opencode/skills
+INFO    remove dir (if empty): .opencode/skills/deployer
+INFO    remove dir (if empty): .opencode/skills/reviewer
+INFO    remove dir (if empty): .opencode/skills/reviewer/references
+INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
+INFO    remove file: .agents/skills/build/SKILL.md
+INFO    remove file: .agents/skills/build/agents/openai.yaml
+INFO    remove file: .agents/skills/deployer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/references/checklist.md
+INFO    remove file: .agents/skills/reviewer/scripts/run.sh
+INFO    remove file: .agents/skills/ship/SKILL.md
+INFO    remove file: .agents/skills/ship/agents/openai.yaml
+INFO    remove file: .claude/agents/architect.md
+INFO    remove file: .claude/agents/tester.md
+INFO    remove file: .claude/rules/always.md
+INFO    remove file: .claude/rules/auto.md
+INFO    remove file: .claude/rules/manual.md
+INFO    remove file: .claude/rules/targeted.md
+INFO    remove file: .claude/rules/typescript.md
+INFO    remove file: .claude/skills/build/SKILL.md
+INFO    remove file: .claude/skills/deployer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/references/checklist.md
+INFO    remove file: .claude/skills/reviewer/scripts/run.sh
+INFO    remove file: .claude/skills/ship/SKILL.md
+INFO    remove file: .codex/agents/architect.toml
+INFO    remove file: .codex/agents/tester.toml
+INFO    remove file: .codex/hooks.json
+INFO    remove file: .codex/rules/ai-rulez.rules
+INFO    remove file: .gemini/agents/architect.md
+INFO    remove file: .gemini/agents/tester.md
+INFO    remove file: .gemini/settings.json
+INFO    remove file: .mcp.json
+INFO    remove file: .opencode/agents/architect.md
+INFO    remove file: .opencode/agents/tester.md
+INFO    remove file: .opencode/commands/build.md
+INFO    remove file: .opencode/commands/ship.md
+INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
+INFO    remove file: .opencode/skills/deployer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/references/checklist.md
+INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
+INFO    remove file: AGENTS.md
+INFO    remove file: CLAUDE.md
+INFO    remove file: GEMINI.md
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Clean plan profile=default
+INFO  Dry run — no files were removed
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+INFO  Clean plan profile=default
+INFO    remove file: .agents/skills/build/SKILL.md
+INFO    remove file: .agents/skills/build/agents/openai.yaml
+INFO    remove file: .agents/skills/deployer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/references/checklist.md
+INFO    remove file: .agents/skills/reviewer/scripts/run.sh
+INFO    remove file: .agents/skills/ship/SKILL.md
+INFO    remove file: .agents/skills/ship/agents/openai.yaml
+INFO    remove file: .claude/agents/architect.md
+INFO    remove file: .claude/agents/tester.md
+INFO    remove file: .claude/rules/always.md
+INFO    remove file: .claude/rules/auto.md
+INFO    remove file: .claude/rules/manual.md
+INFO    remove file: .claude/rules/targeted.md
+INFO    remove file: .claude/rules/typescript.md
+INFO    remove file: .claude/skills/build/SKILL.md
+INFO    remove file: .claude/skills/deployer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/references/checklist.md
+INFO    remove file: .claude/skills/reviewer/scripts/run.sh
+INFO    remove file: .claude/skills/ship/SKILL.md
+INFO    remove file: .codex/agents/architect.toml
+INFO    remove file: .codex/agents/tester.toml
+INFO    remove file: .codex/hooks.json
+INFO    remove file: .codex/rules/ai-rulez.rules
+INFO    remove file: .gemini/agents/architect.md
+INFO    remove file: .gemini/agents/tester.md
+INFO    remove file: .gemini/settings.json
+INFO    remove file: .mcp.json
+INFO    remove file: .opencode/agents/architect.md
+INFO    remove file: .opencode/agents/tester.md
+INFO    remove file: .opencode/commands/build.md
+INFO    remove file: .opencode/commands/ship.md
+INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
+INFO    remove file: .opencode/skills/deployer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/references/checklist.md
+INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
+INFO    remove file: AGENTS.md
+INFO    remove file: CLAUDE.md
+INFO    remove file: GEMINI.md
+INFO    remove ai-rulez keys from: .claude/settings.json
+INFO    remove ai-rulez keys from: .codex/config.toml
+INFO    remove ai-rulez keys from: opencode.json
+INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
+INFO    remove dir (if empty): .opencode/skills/reviewer/references
+INFO    remove dir (if empty): .opencode/skills/reviewer
+INFO    remove dir (if empty): .opencode/skills/deployer
+INFO    remove dir (if empty): .opencode/skills
+INFO    remove dir (if empty): .opencode/plugins
+INFO    remove dir (if empty): .opencode/commands
+INFO    remove dir (if empty): .opencode/agents
+INFO    remove dir (if empty): .opencode
+INFO    remove dir (if empty): .gemini/agents
+INFO    remove dir (if empty): .gemini
+INFO    remove dir (if empty): .codex/rules
+INFO    remove dir (if empty): .codex/agents
+INFO    remove dir (if empty): .codex
+INFO    remove dir (if empty): .claude/skills/ship
+INFO    remove dir (if empty): .claude/skills/reviewer/scripts
+INFO    remove dir (if empty): .claude/skills/reviewer/references
+INFO    remove dir (if empty): .claude/skills/reviewer
+INFO    remove dir (if empty): .claude/skills/deployer
+INFO    remove dir (if empty): .claude/skills/build
+INFO    remove dir (if empty): .claude/skills
+INFO    remove dir (if empty): .claude/rules
+INFO    remove dir (if empty): .claude/agents
+INFO    remove dir (if empty): .claude
+INFO    remove dir (if empty): .agents/skills/ship/agents
+INFO    remove dir (if empty): .agents/skills/ship
+INFO    remove dir (if empty): .agents/skills/reviewer/scripts
+INFO    remove dir (if empty): .agents/skills/reviewer/references
+INFO    remove dir (if empty): .agents/skills/reviewer
+INFO    remove dir (if empty): .agents/skills/deployer
+INFO    remove dir (if empty): .agents/skills/build/agents
+INFO    remove dir (if empty): .agents/skills/build
+INFO    remove dir (if empty): .agents/skills
+INFO    remove dir (if empty): .agents
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+INFO  Removed generated files files=41 directories=34
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+>>>>
+---
+name: architect
+description: Designs systems
+model: sonnet
+---
+# Architect
+
+Think in layers.
+<<<<
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+>>>>
+---
+name: tester
+description: Writes tests
+effort: high
+---
+# Tester
+
+Test first.
+<<<<
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+>>>>
+---
+description: Flags common security issues
+severity: high
+tools: [Read, Grep]
+---
+
+Review the diff for injection and secrets.
+<<<<
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+>>>>
+---
+description: Style consistency
+severity: low
+---
+
+Keep the style consistent.
+<<<<
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+>>>>
+---
+name: build
+description: Build the project
+---
+Run the build and report failures.
+<<<<
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+>>>>
+---
+name: ship
+description: Ship a release
+---
+Cut a release.
+<<<<
+.ai-rulez/config.toml file 0644 722 2cc05c02ab69823505cc6c34cab934ccc459fe2d967020e878ff363ce3c33973
+>>>>
+version = "4.0"
+name = "golden"
+description = "Golden fixture project"
+presets = ["claude", "opencode", "codex", "gemini"]
+gitignore = true
+
+[guard]
+generated = true
+
+[[mcp_servers]]
+name = "public-tool"
+command = "npx"
+args = ["-y", "public-mcp"]
+
+[[mcp_servers]]
+name = "public-remote"
+transport = "http"
+url = "https://mcp.example.com/public"
+
+[permissions]
+allow = ["Bash(npm run test:*)", "Read(./src/**)", "WebFetch(domain:example.com)"]
+ask = ["Bash(git push:*)"]
+deny = ["Bash(rm -rf:*)", "Read(./.env)"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"
+timeout = 10
+
+[[hooks]]
+event = "SessionStart"
+[[hooks.hooks]]
+command = "echo started"
+status_message = "Starting"
+<<<<
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+>>>>
+# Architecture
+
+Layers and boundaries.
+<<<<
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+>>>>
+---
+priority: high
+---
+# Overview
+
+The project overview.
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+>>>>
+---
+priority: critical
+---
+# Always
+
+Always apply this rule.
+<<<<
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+>>>>
+---
+activation: auto
+description: Database migrations
+---
+# Migrations
+
+Write reversible migrations.
+<<<<
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+>>>>
+---
+activation: manual
+priority: low
+---
+# Manual
+
+Only when asked.
+<<<<
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+>>>>
+---
+targets:
+  - claude
+  - cursor
+---
+# Targeted
+
+For claude and cursor only.
+<<<<
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+>>>>
+---
+priority: high
+paths:
+  - "src/**/*.{ts,tsx}"
+  - "tests/**"
+activation: glob
+---
+# TypeScript
+
+Use strict mode.
+<<<<
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+>>>>
+---
+name: deployer
+description: Deploys the service
+---
+# Deployer
+
+Deploy safely.
+<<<<
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+>>>>
+---
+name: reviewer
+description: Reviews pull requests
+---
+# Reviewer
+
+Review carefully.
+<<<<
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/ dir 0755
+.claude/settings.json file 0644 111 6eda2523f59149260eba1ebc7c4dfaf61722fd0201c1784fbab4cd4a5ee652f8
+>>>>
+// my settings
+{
+  "theme": "dark", // keep
+  "permissions": {"allow": ["Bash(ls)"]},
+  "env": {"MINE": "1"}
+}
+<<<<
+.codex/ dir 0755
+.codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
+>>>>
+# my codex config
+model = "mine"
+<<<<
+opencode.json file 0644 32 9a2d757fc515f0b85b7c96eefabeb37a7d91ae1b119e77bc6260141020e1a520
+>>>>
+{
+  // mine
+  "model": "mine"
+}
+<<<<
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+>>>>
+#!/bin/sh
+exit 0
+<<<<
+--- home tree
+(no change)

@@ -1,0 +1,109 @@
+# scenario all-presets-mcp-conflict
+
+## step 1: ai-rulez generate --yes
+exit: 1
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for aiassistant, baz, codebuff, codewhale, dsh, muse, omp, openclaw, replit, rovodev, takt, trae, warp, xum, zed, zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for aiassistant, amp, antigravity, baz, bob, cline, codebuff, codewhale, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, junie, kiro, muse, openclaw, pi, reasonix, replit, rovodev, takt, trae, warp, xum, zcode: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [permissions] are generated for hermes, kimi, zed with --user only: they read their permission settings from a user-level file, so this project run enforces none of the rules, deny rules included
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  [[hooks]] not generated for augment: a PreToolUse handler uses script "scripts/guard.sh", but augment documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for augment: it has no ask list and prompts for whatever is not allowed
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by augment: Augment cannot scope a rule to a path or a domain severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [[hooks]] not generated for bob: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.bob to the bob equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for cline: Cline hooks have no matcher, so the PreToolUse group would run on every occurrence hint=remove the matcher or set targets to leave this harness out
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by zoocode: Zoo Code only has command allow and deny lists severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] not generated for goose: a PreToolUse handler uses script "scripts/guard.sh", but goose documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for grok: the WebFetch domain syntax is not documented for Grok
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for hermes: hermes ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for kimi: kimi ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for letta: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "Read(./src/**)" not generated for mimocode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for poolside: a PreToolUse handler uses script "scripts/guard.sh", but poolside documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for poolside: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for poolside: the harness has no documented equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for qoder: the harness has no equivalent of WebFetch rules
+WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so they are only generated with --user
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
+WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
+Error: presets write different content to the same path: $ROOT/.mcp.json (qoder differs from codebuddy)
+
+Hint: Presets that write the same file must render identical content; drop one of the presets or report the divergence
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 1334 cbfa9f7a1df9a83c435b78aef192c5ec16869cc4e99e9761334c1cd29590ef1e
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

@@ -1,0 +1,2595 @@
+# scenario all-presets
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for aiassistant, baz, codebuff, codewhale, dsh, muse, omp, openclaw, replit, rovodev, takt, trae, warp, xum, zed, zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for aiassistant, amp, antigravity, baz, bob, cline, codebuff, codewhale, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, junie, kiro, muse, openclaw, pi, reasonix, replit, rovodev, takt, trae, warp, xum, zcode: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [permissions] are generated for hermes, kimi, zed with --user only: they read their permission settings from a user-level file, so this project run enforces none of the rules, deny rules included
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  [[hooks]] not generated for augment: a PreToolUse handler uses script "scripts/guard.sh", but augment documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for augment: it has no ask list and prompts for whatever is not allowed
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by augment: Augment cannot scope a rule to a path or a domain severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [[hooks]] not generated for bob: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.bob to the bob equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for cline: Cline hooks have no matcher, so the PreToolUse group would run on every occurrence hint=remove the matcher or set targets to leave this harness out
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by zoocode: Zoo Code only has command allow and deny lists severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] not generated for goose: a PreToolUse handler uses script "scripts/guard.sh", but goose documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for grok: the WebFetch domain syntax is not documented for Grok
+WARN  [[hooks]] not generated for hermes: hermes ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for kimi: kimi ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for letta: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "Read(./src/**)" not generated for mimocode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for poolside: a PreToolUse handler uses script "scripts/guard.sh", but poolside documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for poolside: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for poolside: the harness has no documented equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for qoder: the harness has no equivalent of WebFetch rules
+WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so they are only generated with --user
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=414
+WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
+--- project tree
+.agents/ dir 0755
+.agents/agents/ dir 0755
+.agents/agents/architect.md file 0644 270 4b3ddeae4a58a6e9f49db24e5b0a69724e2f06bce73d28f9b07492089a30772a
+.agents/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.agents/checks/ dir 0755
+.agents/checks/security.md file 0644 336 cbbeafa75660787db002b474c74a3b88200fc4976f82b8904acb6c2541a9e6d6
+.agents/checks/style.md file 0644 276 3df1860b3aa8b73160e3a7c1e4ce9852461393a30c7e66a61252f9b8e1db96e3
+.agents/commands/ dir 0755
+.agents/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.agents/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.agents/hooks.json file 0644 259 e87190d141b1e0a8c1c651170ff503c064f20c50682db87c47ad11f7c19832e3
+.agents/plugins/ dir 0755
+.agents/plugins/ai-rulez/ dir 0755
+.agents/plugins/ai-rulez/hooks/ dir 0755
+.agents/plugins/ai-rulez/hooks/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
+.agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 295 7c9574f66d94a3e4c5eac66ab14fb4bac9a9a3574ebe5711b4640b2fc2f31712
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 271 42289de908999da6165440ce5d4e0ba2466f5c5c8ddb84ab571c5c2dc14e91f2
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 16693 64096ad39a80bf7f6c6ad86eaac62dae5b65abbe541c84d60af2880f7c3f74f7
+.ai-rulez/.generated-manifest.local.json file 0644 41375 cd92e75ae6f2ce89c9aade5abf236aade8c296b0fe4239aaf8e35364ba43c3e6
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 1018 047446e6c2c2894895ad62b078b15a2ed9f07544d138d8b106e31d142341a9fd
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.aiassistant/ dir 0755
+.aiassistant/rules/ dir 0755
+.aiassistant/rules/always.md file 0644 347 c00f677e3d33afaadb71b225bbad3c58025b05b0bee69bbf94eff4f335a8e535
+.aiassistant/rules/auto.md file 0644 369 3f470f2cc00c89367ef05ac704eb53f4ffc11af468c4231a810a66391efbbad6
+.aiassistant/rules/context-architecture.md file 0644 336 1dd45b069cc940b325fd0ed23f353e093dfa8d85c9ba9b4d55e67937c69092fd
+.aiassistant/rules/context-overview.md file 0644 347 2670bd4761367d1f915b7755d97e74cbd75f24bd900ece4f2d7a4d57d05f4560
+.aiassistant/rules/manual.md file 0644 337 f51142eb500bf94a0bc50ef01aa6b53cb808cfefcb85abfb6199a9fbb37a5f22
+.aiassistant/rules/typescript.md file 0644 392 6ca7726b5fb96d53f6d56214e8e2bf1fdcc477d187a33abd42e1185bd4776f02
+.amp/ dir 0755
+.amp/plugins/ dir 0755
+.amp/plugins/ai-rulez-hooks.ts file 0644 8243 c14ddcd6244acd28ff9cc61ff97fd77a829c57850268ad0d2060eafdd731ec52
+.augment/ dir 0755
+.augment/agents/ dir 0755
+.augment/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.augment/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.augment/code_review_guidelines.yaml file 0644 375 47e43af38313b3f1a322bf40d6c04365e9f8c1696947778a994e0fc50e4fa217
+.augment/commands/ dir 0755
+.augment/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.augment/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.augment/rules/ dir 0755
+.augment/rules/always.md file 0644 352 aa2b943ade443c758e8d93d9caca3d3d421780e5f552acee9607cecbd719e30d
+.augment/rules/auto.md file 0644 365 9e5cdb4ef44ac4ffb1ebf37aaad5778439c657451e6ed010fd9401977a186564
+.augment/rules/manual.md file 0644 334 58a302cd46733949a284260769c06ef269500e501b4829d310e41213343653ff
+.augment/rules/typescript.md file 0644 349 0fddbb54cca57de1dfaac8ebbbae6b1c78486a97debba8ecd51d28306710a8e4
+.augment/settings.json file 0644 566 d0519e2db5332d30e7ea475baabc6ebe435b571c9daf46df01cc525813242d17
+.augment/skills/ dir 0755
+.augment/skills/deployer/ dir 0755
+.augment/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.augment/skills/reviewer/ dir 0755
+.augment/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.augment/skills/reviewer/references/ dir 0755
+.augment/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.augment/skills/reviewer/scripts/ dir 0755
+.augment/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.bob/ dir 0755
+.bob/commands/ dir 0755
+.bob/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.bob/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.bob/rules/ dir 0755
+.bob/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.bob/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.bob/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.bob/rules/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.bob/settings.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
+.bob/skills/ dir 0755
+.bob/skills/deployer/ dir 0755
+.bob/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.bob/skills/reviewer/ dir 0755
+.bob/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.bob/skills/reviewer/references/ dir 0755
+.bob/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.bob/skills/reviewer/scripts/ dir 0755
+.bob/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.claude/agents/tester.md file 0644 258 fb8cbf1a8f1a29f3db883a67f87d276e7189834aa7c8a0a02fe2ea712c74f030
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.claude/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.claude/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.claude/rules/targeted.md file 0644 309 32b9cc689353ff40ee19d94f724cda4a9f3eba0bdf070801e674e4fff7f42267
+.claude/rules/typescript.md file 0644 376 a88a5a65af365b1ed1cd3712cb1683191179878a5ddcc894019adabf58e13e36
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 7b3c995d979447359b99b614dea465ac38f21147e89e663c28562ff8fa9ff4f7
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 302943b6f8bf4b26c649f0722e869f05fa14ce7ab97b3c56b2aaa735d78f8374
+.cline/ dir 0755
+.cline/agents/ dir 0755
+.cline/agents/architect.yaml file 0644 259 4ede1e2fddeeefeba93da0f04b6ccad648c640682adaa7f1cc38005a42c19fa8
+.cline/agents/tester.yaml file 0644 245 3b0ab16c9c55d3cf57b41ef729975fdfacfc3ef119e7cb15b0f6f2b47ed6bc1a
+.cline/skills/ dir 0755
+.cline/skills/deployer/ dir 0755
+.cline/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.cline/skills/reviewer/ dir 0755
+.cline/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.cline/skills/reviewer/references/ dir 0755
+.cline/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.cline/skills/reviewer/scripts/ dir 0755
+.cline/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.clinerules/ dir 0755
+.clinerules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.clinerules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.clinerules/context-architecture.md file 0644 314 7109b2ed5c4eb3253709ae52398761d386005695433b357d7d22faec42b4959f
+.clinerules/context-overview.md file 0644 325 55776499f509c5b58cc6cbfa5994067f2395c184bb04095615ecd8cefb2e9410
+.clinerules/hooks/ dir 0755
+.clinerules/hooks/TaskStart file 0755 321 2298456c55e8b48542534ff79b2ea770dd581d6062cef880212798e0b00ba564
+.clinerules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.clinerules/typescript.md file 0644 376 a88a5a65af365b1ed1cd3712cb1683191179878a5ddcc894019adabf58e13e36
+.clinerules/workflows/ dir 0755
+.clinerules/workflows/build.md file 0644 271 cf29a8104c82d95178a13f543d072ec3e53cf700781724f86343897151696126
+.clinerules/workflows/ship.md file 0644 251 4c214bdecffbbf5ea1e9633e47abdd273ab9d70939142dda6322eb8eb03ea27e
+.codebuddy/ dir 0755
+.codebuddy/agents/ dir 0755
+.codebuddy/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.codebuddy/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.codebuddy/commands/ dir 0755
+.codebuddy/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.codebuddy/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.codebuddy/rules/ dir 0755
+.codebuddy/rules/always.md file 0644 351 81efaa4d46bf44fac3e13f05e377204ec92ae35c7c382a61a634d503a94fcfa3
+.codebuddy/rules/auto.md file 0644 328 31587c010bbe1288f6aab68be6781693f926790b1b5946ba096cfaa33155bfdb
+.codebuddy/rules/manual.md file 0644 339 9bcbc7614c9595b96d6efa5b36974785290e9dd23170d1118e7234127f92af5c
+.codebuddy/rules/typescript.md file 0644 383 69e5162ac5e70717a7fc626312aa7f3e791e597f52da6e4007e06f44b4cd6990
+.codebuddy/settings.json file 0644 686 d2cdb544ed0ab1b1cd4c741e0ffcd9a82ba3b0f44486a85d8a2e86ac466b8d1f
+.codebuddy/skills/ dir 0755
+.codebuddy/skills/deployer/ dir 0755
+.codebuddy/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.codebuddy/skills/reviewer/ dir 0755
+.codebuddy/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.codebuddy/skills/reviewer/references/ dir 0755
+.codebuddy/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.codebuddy/skills/reviewer/scripts/ dir 0755
+.codebuddy/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.codewhale/ dir 0755
+.codewhale/commands/ dir 0755
+.codewhale/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.codewhale/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.codewhale/rules/ dir 0755
+.codewhale/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.codewhale/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.codewhale/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.codewhale/rules/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.codewhale/skills/ dir 0755
+.codewhale/skills/deployer/ dir 0755
+.codewhale/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.codewhale/skills/reviewer/ dir 0755
+.codewhale/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.codewhale/skills/reviewer/references/ dir 0755
+.codewhale/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.codewhale/skills/reviewer/scripts/ dir 0755
+.codewhale/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 fd22eafef0b5f7f5b0101155211f66ed4d06a0edc5bbf14a100747d6dc647bf8
+.commandcode/ dir 0755
+.commandcode/agents/ dir 0755
+.commandcode/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.commandcode/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.commandcode/commands/ dir 0755
+.commandcode/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.commandcode/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.commandcode/settings.json file 0644 435 a9a600bf22d336389434bcc3ab76a0db51fa4baec734846e1b011b6ec565091f
+.commandcode/skills/ dir 0755
+.commandcode/skills/deployer/ dir 0755
+.commandcode/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.commandcode/skills/reviewer/ dir 0755
+.commandcode/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.commandcode/skills/reviewer/references/ dir 0755
+.commandcode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.commandcode/skills/reviewer/scripts/ dir 0755
+.commandcode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.commands/ dir 0755
+.commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.cortex/ dir 0755
+.cortex/agents/ dir 0755
+.cortex/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.cortex/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.cortex/settings.json file 0644 479 47cc96d1c8135ddd849f304622e902dc03f144119c07a07217e27af88681d4c5
+.cortex/skills/ dir 0755
+.cortex/skills/deployer/ dir 0755
+.cortex/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.cortex/skills/reviewer/ dir 0755
+.cortex/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.cortex/skills/reviewer/references/ dir 0755
+.cortex/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.cortex/skills/reviewer/scripts/ dir 0755
+.cortex/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.crush/ dir 0755
+.crush/skills/ dir 0755
+.crush/skills/deployer/ dir 0755
+.crush/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.crush/skills/reviewer/ dir 0755
+.crush/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.crush/skills/reviewer/references/ dir 0755
+.crush/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.crush/skills/reviewer/scripts/ dir 0755
+.crush/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.cursor/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 81efaa4d46bf44fac3e13f05e377204ec92ae35c7c382a61a634d503a94fcfa3
+.cursor/rules/auto.mdc file 0644 362 83c0dd9b02f2f177ef44930863d5e6f48d447cc110f47c86a9f125a0d0bc1d8a
+.cursor/rules/context-architecture.mdc file 0644 340 03eff32388488f024658a0ac0fa4d953ee0fe9ba878cc70875b69469a3134879
+.cursor/rules/context-overview.mdc file 0644 351 2d2f59027779706b64ddce7590429a4cd7c4d0b26eec26fdf50545084a976e29
+.cursor/rules/manual.mdc file 0644 340 369fdfac2f5e0bcf00314fe371991624b0f2c69e264772bdef2beabad9f67db5
+.cursor/rules/targeted.mdc file 0644 335 a122b816f6397b2531ca5494e4f86235a5f60d0ee95da69fd8119f83147e17f1
+.cursor/rules/typescript.mdc file 0644 390 1f18119cab73a2e6093a7b3bb9c9f228dde2306918ae0a93e969e04245a2a7c8
+.deepagents/ dir 0755
+.deepagents/agents/ dir 0755
+.deepagents/agents/architect/ dir 0755
+.deepagents/agents/architect/AGENTS.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.deepagents/agents/tester/ dir 0755
+.deepagents/agents/tester/AGENTS.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.deepagents/hooks.json file 0644 479 e6b50b5711832c24b19140af44d714b3f95586e663d2d17d5d6b7ef06cc28be6
+.deepagents/skills/ dir 0755
+.deepagents/skills/deployer/ dir 0755
+.deepagents/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.deepagents/skills/reviewer/ dir 0755
+.deepagents/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.deepagents/skills/reviewer/references/ dir 0755
+.deepagents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.deepagents/skills/reviewer/scripts/ dir 0755
+.deepagents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.devin/ dir 0755
+.devin/agents/ dir 0755
+.devin/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.devin/agents/tester.md file 0644 268 177422d6fe2e808bab9b0add8467133beee0b4271a8301808969c49fa73d1705
+.devin/config.json file 0644 237 bc2afde2e8fe0bbccd3875196a2eb5ff9b24682b1445e7b7aa1f4155f0284dfb
+.devin/hooks.v1.json file 0644 376 cd48b1f3ebc1741b685095fccf0ca599fd4c7562295f650ff11eb8c85a598423
+.devin/rules/ dir 0755
+.devin/rules/always.md file 0644 352 eb7eddd1dea0f89b1c214952d2db43b5552dcd09d0858f110dd56043b12c2e16
+.devin/rules/auto.md file 0644 367 e02370eef1c9a3ff1e215be9445cd28b8dc1e4dcc9b2f40402165d2d47e0d71d
+.devin/rules/context-architecture.md file 0644 341 1ca8fe3602f1db20bd570a603fac4a248fb80ee048a8f9cb6f1444bf9f6d26f3
+.devin/rules/context-overview.md file 0644 352 3168108e9e2ec4e70b0503a150a8e6533e88409137918931d5549064c58ae579
+.devin/rules/manual.md file 0644 337 07d207aeaf40c99d74e1ead3131832912511f92c818699806f9f92068b7f233e
+.devin/rules/typescript.md file 0644 385 1c8c2b9c680748aeab6dd08042306f9231be0045bf0faa67fd70253e362a90d4
+.devin/skills/ dir 0755
+.devin/skills/build/ dir 0755
+.devin/skills/build/SKILL.md file 0644 283 714fba9e2ef15fcf44940bd8d087b3d571bec605cf115f4ac7d5d1b1bf87a67e
+.devin/skills/deployer/ dir 0755
+.devin/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.devin/skills/reviewer/ dir 0755
+.devin/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.devin/skills/reviewer/references/ dir 0755
+.devin/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.devin/skills/reviewer/scripts/ dir 0755
+.devin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.devin/skills/ship/ dir 0755
+.devin/skills/ship/SKILL.md file 0644 259 5784cf2ea7f3c96da349718ed7727ff8f5019d68ff2522b2e52bf73e2e21e7e3
+.dsh/ dir 0755
+.dsh/skills/ dir 0755
+.dsh/skills/deployer/ dir 0755
+.dsh/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.dsh/skills/reviewer/ dir 0755
+.dsh/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.dsh/skills/reviewer/references/ dir 0755
+.dsh/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.dsh/skills/reviewer/scripts/ dir 0755
+.dsh/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.factory/ dir 0755
+.factory/commands/ dir 0755
+.factory/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.factory/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.factory/droids/ dir 0755
+.factory/droids/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.factory/droids/tester.md file 0644 267 78976a7d9e8dbd35492cf285e632b94f016b4dc6462b419997c17bafc8d78583
+.factory/hooks.json file 0644 590 d518b9a57f90b3e55dcf9461671cad126ba15f78eafbea34397818fc4bf3641b
+.factory/skills/ dir 0755
+.factory/skills/deployer/ dir 0755
+.factory/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.factory/skills/review-guidelines/ dir 0755
+.factory/skills/review-guidelines/SKILL.md file 0644 309 490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc
+.factory/skills/reviewer/ dir 0755
+.factory/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.factory/skills/reviewer/references/ dir 0755
+.factory/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.factory/skills/reviewer/scripts/ dir 0755
+.factory/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.gemini/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.gemini/settings.json file 0644 913 14550c64e73b3ad52aaa08c222ebff1eaaa5d1b46e8654182eb61446afde9c8b
+.github/ dir 0755
+.github/agents/ dir 0755
+.github/agents/architect.agent.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.github/agents/tester.agent.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.github/copilot/ dir 0755
+.github/copilot-instructions.md file 0644 712 52e4bb73b194579a1c4505546c19032a927271eb45fa7ac1b2502e60e40ed58a
+.github/copilot/settings.json file 0644 45 8f922c87b4ec0ff563d36bb76c848e6d4b40c4f26ff6d53cf76592eb85110532
+.github/hooks/ dir 0755
+.github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
+.github/instructions/ dir 0755
+.github/instructions/always.instructions.md file 0644 347 f0c874764eab8110a255367b1de16841986be16070412dc6f66b982d6b8e4d55
+.github/instructions/typescript.instructions.md file 0644 373 cf9415296749cb77e08414f65bccc432dfcf7398d758acbe9ac342923e8b516f
+.github/prompts/ dir 0755
+.github/prompts/build.prompt.md file 0644 250 f6ae14faa3033192eaa525ce68733b2f018c207cefebfd2a96068ad466335bf7
+.github/prompts/ship.prompt.md file 0644 227 5dc9ec1c635f2cc9e444aa0ecfbadef98883ce81de17d5a69b88dfa1dd81bcf5
+.github/skills/ dir 0755
+.github/skills/deployer/ dir 0755
+.github/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.github/skills/reviewer/ dir 0755
+.github/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.github/skills/reviewer/references/ dir 0755
+.github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.github/skills/reviewer/scripts/ dir 0755
+.github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 5428 54797031037d69b827e6e64c5dda9f7dda546e3143a81b3544a8cc6d86c8442b
+.gitlab/ dir 0755
+.gitlab/duo/ dir 0755
+.gitlab/duo/chat-rules.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+.gitlab/duo/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
+.gitlab/duo/mr-review-instructions.yaml file 0644 155 dcb98b6b78eb935ccd09ffb91a4f54775cbfc9a67b175432b6f1320cba7417d5
+.goose/ dir 0755
+.goose/agents/ dir 0755
+.goose/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.goose/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.goosehints file 0644 887 e272d1bfdc6ed07ea93a3c1203b38dc0698bf7807ccb7e4fb2844d67e40063c0
+.grok/ dir 0755
+.grok/agents/ dir 0755
+.grok/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.grok/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.grok/commands/ dir 0755
+.grok/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.grok/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.grok/config.toml file 0644 185 b0210516fd9e14d1740258e7c8241bae6834b5369a96cd30d739632c56f260cb
+.grok/hooks/ dir 0755
+.grok/hooks/ai-rulez.json file 0644 437 a47ea6ae441896a2cae71153e94e5d030151667195f068925f14bc8f5362fc83
+.grok/rules/ dir 0755
+.grok/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.grok/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.grok/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.grok/rules/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.grok/skills/ dir 0755
+.grok/skills/deployer/ dir 0755
+.grok/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.grok/skills/reviewer/ dir 0755
+.grok/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.grok/skills/reviewer/references/ dir 0755
+.grok/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.grok/skills/reviewer/scripts/ dir 0755
+.grok/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.hermes.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+.junie/ dir 0755
+.junie/agents/ dir 0755
+.junie/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.junie/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.junie/commands/ dir 0755
+.junie/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.junie/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.junie/rules/ dir 0755
+.junie/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.junie/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.junie/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.junie/rules/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.junie/skills/ dir 0755
+.junie/skills/deployer/ dir 0755
+.junie/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.junie/skills/reviewer/ dir 0755
+.junie/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.junie/skills/reviewer/references/ dir 0755
+.junie/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.junie/skills/reviewer/scripts/ dir 0755
+.junie/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.kilo/ dir 0755
+.kilo/agents/ dir 0755
+.kilo/agents/architect.md file 0644 258 73686042fc44c8b8f6fbae95d7eef7f2526bbc659989f6489cf610d27659b08a
+.kilo/agents/tester.md file 0644 247 0408488e421a2d83f0ac430d2e498fa415d13aa152a6d3c383dba1950abb03f3
+.kilo/commands/ dir 0755
+.kilo/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.kilo/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.kilo/plugins/ dir 0755
+.kilo/plugins/ai-rulez-hooks.js file 0644 8796 bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c
+.kilo/rules/ dir 0755
+.kilo/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.kilo/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.kilo/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.kilo/rules/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.kilo/skills/ dir 0755
+.kilo/skills/deployer/ dir 0755
+.kilo/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.kilo/skills/reviewer/ dir 0755
+.kilo/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.kilo/skills/reviewer/references/ dir 0755
+.kilo/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.kilo/skills/reviewer/scripts/ dir 0755
+.kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.kimi-code/ dir 0755
+.kimi-code/agents/ dir 0755
+.kimi-code/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.kimi-code/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.kimi-code/skills/ dir 0755
+.kimi-code/skills/deployer/ dir 0755
+.kimi-code/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.kimi-code/skills/reviewer/ dir 0755
+.kimi-code/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.kimi-code/skills/reviewer/references/ dir 0755
+.kimi-code/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.kimi-code/skills/reviewer/scripts/ dir 0755
+.kimi-code/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.kiro/ dir 0755
+.kiro/agents/ dir 0755
+.kiro/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.kiro/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.kiro/hooks/ dir 0755
+.kiro/hooks/ai-rulez.json file 0644 438 d98985a2780bc0e55e5f3029e00eaee80ab575a887c8bd71feee692dba6de73c
+.kiro/prompts/ dir 0755
+.kiro/prompts/build.md file 0644 35 1cc4ebd2dd0b3f6f1faadc3e68c50a5252c9176ff06312c73f9a305158b302e2
+.kiro/prompts/ship.md file 0644 15 d198f3c9f90a86e6383d3c6b5f2227ae11e4b92efb59be076bd153dd2f028ab2
+.kiro/skills/ dir 0755
+.kiro/skills/deployer/ dir 0755
+.kiro/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.kiro/skills/reviewer/ dir 0755
+.kiro/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.kiro/skills/reviewer/references/ dir 0755
+.kiro/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.kiro/skills/reviewer/scripts/ dir 0755
+.kiro/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.kiro/steering/ dir 0755
+.kiro/steering/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.kiro/steering/auto.md file 0644 370 564a5e920ebee49fc5a210fd16bb72d3a9af7fbf4a9827bfc11720d194c8b87b
+.kiro/steering/manual.md file 0644 339 26712fcaddd19c33030de913ef0d0e1ef8f807141932dd1df82cf0dae6eab39b
+.kiro/steering/typescript.md file 0644 408 fb19a08fa418d2772629870f1e772d7ca7a4c04368cb73dcac922f2306e77765
+.letta/ dir 0755
+.letta/agents/ dir 0755
+.letta/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.letta/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.letta/settings.json file 0644 632 f3137a7ad411777ec91c9fcaf8d4fc362b74a9470e63501aa2f319758ce0a7c1
+.mimocode/ dir 0755
+.mimocode/agents/ dir 0755
+.mimocode/agents/architect.md file 0644 258 73686042fc44c8b8f6fbae95d7eef7f2526bbc659989f6489cf610d27659b08a
+.mimocode/agents/tester.md file 0644 247 0408488e421a2d83f0ac430d2e498fa415d13aa152a6d3c383dba1950abb03f3
+.mimocode/commands/ dir 0755
+.mimocode/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.mimocode/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.mimocode/mimocode.jsonc file 0644 262 6233b499b9f59ae45ef889572c67a616474eb4d7b81e3ffe584910b11906e241
+.mimocode/plugins/ dir 0755
+.mimocode/plugins/ai-rulez-hooks.js file 0644 8804 4912a8b1b93e2de10f4b91d404ffd4517dd2f68dc914e24d0f2b3e89478dce9c
+.mimocode/skills/ dir 0755
+.mimocode/skills/deployer/ dir 0755
+.mimocode/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.mimocode/skills/reviewer/ dir 0755
+.mimocode/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.mimocode/skills/reviewer/references/ dir 0755
+.mimocode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.mimocode/skills/reviewer/scripts/ dir 0755
+.mimocode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.omp/ dir 0755
+.omp/agents/ dir 0755
+.omp/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.omp/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.omp/commands/ dir 0755
+.omp/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.omp/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.omp/config.yml file 0644 292 371273510b1cdf74f59d02c72cc3149e01c734d8603ade068e57d84529aafe4e
+.omp/rules/ dir 0755
+.omp/rules/always.md file 0644 351 81efaa4d46bf44fac3e13f05e377204ec92ae35c7c382a61a634d503a94fcfa3
+.omp/rules/auto.md file 0644 343 c0766cd671d6871679ae8c33a6dd9789fecefc922aa6fff45084d54ca33a5be4
+.omp/rules/manual.md file 0644 341 cb7faf239c98acbd4f4e2232922922c9f7633ed9b12fbc2f838dc30124289b78
+.omp/rules/typescript.md file 0644 427 721096249e5f68bf8d86cea0da4ee1db221a7efcd505ae5ceee9cb8968315f29
+.omp/skills/ dir 0755
+.omp/skills/deployer/ dir 0755
+.omp/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.omp/skills/reviewer/ dir 0755
+.omp/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.omp/skills/reviewer/references/ dir 0755
+.omp/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.omp/skills/reviewer/scripts/ dir 0755
+.omp/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 a26b79941c3184e737efa95d528f44f372f893303fe4b3fcb829e784190886aa
+.opencode/agents/tester.md file 0644 256 0c9a8ab93533dce5cfa84e55ca4bc8a830a4869495c5b53d49c78c264a0f78e5
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 f6ae14faa3033192eaa525ce68733b2f018c207cefebfd2a96068ad466335bf7
+.opencode/commands/ship.md file 0644 227 5dc9ec1c635f2cc9e444aa0ecfbadef98883ce81de17d5a69b88dfa1dd81bcf5
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+.opencode/skills/ dir 0755
+.opencode/skills/deployer/ dir 0755
+.opencode/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.opencode/skills/reviewer/ dir 0755
+.opencode/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.opencode/skills/reviewer/references/ dir 0755
+.opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.opencode/skills/reviewer/scripts/ dir 0755
+.opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.pi/ dir 0755
+.pi/agents/ dir 0755
+.pi/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.pi/agents/tester.md file 0644 260 2387350135194068eac9aaad588f53e5bf2e384c304238554ad2c84f03e4fdca
+.pi/extensions/ dir 0755
+.pi/extensions/ai-rulez-hooks.ts file 0644 8372 164958fa0aad157319010a2c0b26aed69607058b63a35eb0f95cd457f89eb562
+.pi/prompts/ dir 0755
+.pi/prompts/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.pi/prompts/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.poolside/ dir 0755
+.poolside/settings.yaml file 0644 243 e694b4416df12709ad25d3f97bde09272e15551ca955ff55c23785ce05b25eb9
+.poolside/skills/ dir 0755
+.poolside/skills/deployer/ dir 0755
+.poolside/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.poolside/skills/reviewer/ dir 0755
+.poolside/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.poolside/skills/reviewer/references/ dir 0755
+.poolside/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.poolside/skills/reviewer/scripts/ dir 0755
+.poolside/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.qoder/ dir 0755
+.qoder/agents/ dir 0755
+.qoder/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.qoder/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.qoder/commands/ dir 0755
+.qoder/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.qoder/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.qoder/rules/ dir 0755
+.qoder/rules/always.md file 0644 352 eb7eddd1dea0f89b1c214952d2db43b5552dcd09d0858f110dd56043b12c2e16
+.qoder/rules/auto.md file 0644 367 e02370eef1c9a3ff1e215be9445cd28b8dc1e4dcc9b2f40402165d2d47e0d71d
+.qoder/rules/manual.md file 0644 337 07d207aeaf40c99d74e1ead3131832912511f92c818699806f9f92068b7f233e
+.qoder/rules/typescript.md file 0644 389 e21554e42ee494da5756a9d8166508301006b8f80230ca653236d5d73f65ba20
+.qoder/settings.json file 0644 642 284282c4b3d649c588534d622f4f0bf957d579797ad14b0d3ac2bdb277d65ccf
+.qoder/skills/ dir 0755
+.qoder/skills/deployer/ dir 0755
+.qoder/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.qoder/skills/reviewer/ dir 0755
+.qoder/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.qoder/skills/reviewer/references/ dir 0755
+.qoder/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.qoder/skills/reviewer/scripts/ dir 0755
+.qoder/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.qwen/ dir 0755
+.qwen/agents/ dir 0755
+.qwen/agents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.qwen/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.qwen/commands/ dir 0755
+.qwen/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.qwen/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.qwen/review-rules.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.qwen/rules/ dir 0755
+.qwen/rules/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.qwen/rules/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.qwen/rules/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.qwen/rules/typescript.md file 0644 376 a88a5a65af365b1ed1cd3712cb1683191179878a5ddcc894019adabf58e13e36
+.qwen/settings.json file 0644 722 ee456c26e061da9648eec848c66962eaf726ac36ee2bf829df1bb661de496020
+.qwen/skills/ dir 0755
+.qwen/skills/deployer/ dir 0755
+.qwen/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.qwen/skills/reviewer/ dir 0755
+.qwen/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.qwen/skills/reviewer/references/ dir 0755
+.qwen/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.qwen/skills/reviewer/scripts/ dir 0755
+.qwen/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.reasonix/ dir 0755
+.reasonix/commands/ dir 0755
+.reasonix/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.reasonix/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.reasonix/settings.json file 0644 99 0101e92db4f04bc46eb72867609eefb880618da16072f510d82ef96cc2f2dbf2
+.reasonix/skills/ dir 0755
+.reasonix/skills/architect/ dir 0755
+.reasonix/skills/architect/SKILL.md file 0644 294 9dffa981b1d69bd5d72859357507ea5f0c3c546f2fdb00c5056a687c0c7a3ba7
+.reasonix/skills/deployer/ dir 0755
+.reasonix/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.reasonix/skills/reviewer/ dir 0755
+.reasonix/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.reasonix/skills/reviewer/references/ dir 0755
+.reasonix/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.reasonix/skills/reviewer/scripts/ dir 0755
+.reasonix/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.reasonix/skills/tester/ dir 0755
+.reasonix/skills/tester/SKILL.md file 0644 293 9a9a50dfac1d909bbb6b9c1685e1e0c904b608803d8699889f219bdf5c1ded0f
+.roo/ dir 0755
+.roo/commands/ dir 0755
+.roo/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.roo/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.roo/skills/ dir 0755
+.roo/skills/deployer/ dir 0755
+.roo/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.roo/skills/reviewer/ dir 0755
+.roo/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.roo/skills/reviewer/references/ dir 0755
+.roo/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.roo/skills/reviewer/scripts/ dir 0755
+.roo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.rovodev/ dir 0755
+.rovodev/.review-agent.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.rovodev/skills/ dir 0755
+.rovodev/skills/deployer/ dir 0755
+.rovodev/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.rovodev/skills/reviewer/ dir 0755
+.rovodev/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.rovodev/skills/reviewer/references/ dir 0755
+.rovodev/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.rovodev/skills/reviewer/scripts/ dir 0755
+.rovodev/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.rovodev/subagents/ dir 0755
+.rovodev/subagents/architect.md file 0644 259 ebd423fb94890cafc540901fcca8af18e659c0014e8170f5b13453ad6f26f202
+.rovodev/subagents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.rules file 0644 887 e272d1bfdc6ed07ea93a3c1203b38dc0698bf7807ccb7e4fb2844d67e40063c0
+.takt/ dir 0755
+.takt/facets/ dir 0755
+.takt/facets/instructions/ dir 0755
+.takt/facets/instructions/build.md file 0644 35 1cc4ebd2dd0b3f6f1faadc3e68c50a5252c9176ff06312c73f9a305158b302e2
+.takt/facets/instructions/ship.md file 0644 15 d198f3c9f90a86e6383d3c6b5f2227ae11e4b92efb59be076bd153dd2f028ab2
+.takt/facets/knowledge/ dir 0755
+.takt/facets/knowledge/deployer.md file 0644 27 3f6f27279a4dfd4e75b49555b8c986c5c8ffef02c8c9933b9921589cb35084c1
+.takt/facets/knowledge/reviewer.md file 0644 30 76526c2851825b981e2a1800415d1142392671636a1be914a06781a00ce3272c
+.takt/facets/personas/ dir 0755
+.takt/facets/personas/architect.md file 0644 30 f9636f9d8bcd09740615da88b7863fc6bd4d05263fad085c658fe78134d0d729
+.takt/facets/personas/tester.md file 0644 22 f952423a1993cf58602aceda35eae67def5d5dfd6fbd1c5bed3d7be0688dc5e1
+.takt/facets/policies/ dir 0755
+.takt/facets/policies/always.md file 0644 325 59cd03225d9c898bd5f5143299a813c2005ad2917baa821575f8489739b9358f
+.takt/facets/policies/auto.md file 0644 302 66bb4ced0bc80b675ad8bde3a8067ce046711aa6c02aca2e73853ad86f2ac034
+.takt/facets/policies/context-architecture.md file 0644 314 7109b2ed5c4eb3253709ae52398761d386005695433b357d7d22faec42b4959f
+.takt/facets/policies/context-overview.md file 0644 325 55776499f509c5b58cc6cbfa5994067f2395c184bb04095615ecd8cefb2e9410
+.takt/facets/policies/manual.md file 0644 313 2298fbd7a5661907afdb3585a18b3220cc89685523815dd4109ba126518329ef
+.takt/facets/policies/typescript.md file 0644 369 20d417748b4e6d64c85890562228481b9f77378590dad203c030954622b3af26
+.trae/ dir 0755
+.trae/rules/ dir 0755
+.trae/rules/always.md file 0644 351 81efaa4d46bf44fac3e13f05e377204ec92ae35c7c382a61a634d503a94fcfa3
+.trae/rules/auto.md file 0644 362 83c0dd9b02f2f177ef44930863d5e6f48d447cc110f47c86a9f125a0d0bc1d8a
+.trae/rules/context-architecture.md file 0644 340 03eff32388488f024658a0ac0fa4d953ee0fe9ba878cc70875b69469a3134879
+.trae/rules/context-overview.md file 0644 351 2d2f59027779706b64ddce7590429a4cd7c4d0b26eec26fdf50545084a976e29
+.trae/rules/manual.md file 0644 340 369fdfac2f5e0bcf00314fe371991624b0f2c69e264772bdef2beabad9f67db5
+.trae/rules/typescript.md file 0644 383 a441c1b7fd4a6d331b1a69caa232fbdae472042c184cea0b5a5332fd65258b44
+.trae/skills/ dir 0755
+.trae/skills/deployer/ dir 0755
+.trae/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.trae/skills/reviewer/ dir 0755
+.trae/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.trae/skills/reviewer/references/ dir 0755
+.trae/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.trae/skills/reviewer/scripts/ dir 0755
+.trae/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.vibe/ dir 0755
+.vibe/config.toml file 0644 105 ea5cbde88bc6fed2bf14caaa06f888e01e05740ef2827e171c9e6e0cb53508a8
+.vibe/hooks.toml file 0644 118 1195d1e717dd778350667879a765c24623d4d7937c988b32e7db1d4728435e40
+.vibe/skills/ dir 0755
+.vibe/skills/deployer/ dir 0755
+.vibe/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.vibe/skills/reviewer/ dir 0755
+.vibe/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.vibe/skills/reviewer/references/ dir 0755
+.vibe/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.vibe/skills/reviewer/scripts/ dir 0755
+.vibe/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.vscode/ dir 0755
+.vscode/settings.json file 0644 339 a0f6f8fb3481dcdc78a69b3e02eb1cb3c6e5c605249f3c185215d9ab1f7264f9
+.warp/ dir 0755
+.warp/skills/ dir 0755
+.warp/skills/build/ dir 0755
+.warp/skills/build/SKILL.md file 0644 262 fc360425aa05a91a315ffd3847aeafceb05825266c83e4d47ea78d7a3160bea6
+.warp/skills/deployer/ dir 0755
+.warp/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.warp/skills/reviewer/ dir 0755
+.warp/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.warp/skills/reviewer/references/ dir 0755
+.warp/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.warp/skills/reviewer/scripts/ dir 0755
+.warp/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.warp/skills/ship/ dir 0755
+.warp/skills/ship/SKILL.md file 0644 238 f042a5482d3de3b17e5ea3ee471e35e98b0cacb6a463b919bfcc26f98ba761ef
+.xum/ dir 0755
+.xum/agents/ dir 0755
+.xum/agents/architect.md file 0644 310 31c7beee02158cbf4c981163e0fa9aa3ee05f75548536c69280d96d942af4b93
+.xum/agents/tester.md file 0644 302 fade4f3c3ed5a76c448f3fcd8965cc8f1a105731fcaef9c2eeaad36fa7e5d9c5
+.xum/skills/ dir 0755
+.xum/skills/deployer/ dir 0755
+.xum/skills/deployer/SKILL.md file 0644 261 2f22c48a097e4dbad88444cda737d3ec1e38bb8ca21f6ff301590b5bd7976476
+.xum/skills/reviewer/ dir 0755
+.xum/skills/reviewer/SKILL.md file 0644 508 1b64c73017df5de6d6be2c0feecdefd8f8eb66f6be528d249822fa50ddad4746
+.xum/skills/reviewer/references/ dir 0755
+.xum/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.xum/skills/reviewer/scripts/ dir 0755
+.xum/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.zcode/ dir 0755
+.zcode/agents/ dir 0755
+.zcode/agents/architect.md file 0644 273 1c5a92c6b5af0054079c3e854a01978b7bcfc3ce3a3f37933b8a4eb2f9dec792
+.zcode/agents/tester.md file 0644 245 a1f238c61e3414df67d9b358d79ed64614d75e4c21307e8d5f2b387c95d6ca26
+.zcode/commands/ dir 0755
+.zcode/commands/build.md file 0644 250 91c038547cef171d7a7b9d766692d3a858c35e1c5b4d728e65edfe42ff3c5bb5
+.zcode/commands/ship.md file 0644 227 1b38a79c2576d1e77b2c7b9cf5b7394d74bae82ea67e73f1fb4c6ae46a508186
+.zcode/skills/ dir 0755
+.zcode/skills/deployer/ dir 0755
+.zcode/skills/deployer/SKILL.md file 0644 259 4d26fbad3e0be06c78cd04aeb223aab89daff48496e0c833414e426092b625ca
+.zcode/skills/reviewer/ dir 0755
+.zcode/skills/reviewer/SKILL.md file 0644 506 a04034c17731f1ad96d28016f5a5b236e335f4fe2b86c4f90b22e8b277e0dd10
+.zcode/skills/reviewer/references/ dir 0755
+.zcode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.zcode/skills/reviewer/scripts/ dir 0755
+.zcode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.zed/ dir 0755
+AGENTS.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+CLAUDE.md file 0644 575 17e69795a4ef8cab4b157461c339701534123d2f945c2bb56996c8392e1c0737
+CODEBUDDY.md file 0644 575 17e69795a4ef8cab4b157461c339701534123d2f945c2bb56996c8392e1c0737
+CRUSH.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+GEMINI.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+QWEN.md file 0644 575 17e69795a4ef8cab4b157461c339701534123d2f945c2bb56996c8392e1c0737
+REASONIX.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+crush.json file 0644 178 46c3b80aab553b4cf7da8a9adacbde933fc98a88551cecd3befe4f2fafd532e8
+kilo.jsonc file 0644 310 c37de660f9f9f4f87a29064fff35e9a9a93423e073fbebd60fcda934e91cba5b
+opencode.json file 0644 357 202d549b5b91dfdf34d4a10d6ee1bcae5411e53bd9ac165e5dec02281ef2f19b
+replit.md file 0644 874 ebefe6a75240ffecf3d27da0426fb00a34d39e929ae0eef4e0951c05d0ed8569
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for aiassistant, baz, codebuff, codewhale, dsh, muse, omp, openclaw, replit, rovodev, takt, trae, warp, xum, zed, zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for aiassistant, amp, antigravity, baz, bob, cline, codebuff, codewhale, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, junie, kiro, muse, openclaw, pi, reasonix, replit, rovodev, takt, trae, warp, xum, zcode: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [permissions] are generated for hermes, kimi, zed with --user only: they read their permission settings from a user-level file, so this project run enforces none of the rules, deny rules included
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  [[hooks]] not generated for augment: a PreToolUse handler uses script "scripts/guard.sh", but augment documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for augment: it has no ask list and prompts for whatever is not allowed
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by augment: Augment cannot scope a rule to a path or a domain severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [[hooks]] not generated for bob: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.bob to the bob equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for cline: Cline hooks have no matcher, so the PreToolUse group would run on every occurrence hint=remove the matcher or set targets to leave this harness out
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by zoocode: Zoo Code only has command allow and deny lists severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] not generated for goose: a PreToolUse handler uses script "scripts/guard.sh", but goose documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for grok: the WebFetch domain syntax is not documented for Grok
+WARN  [[hooks]] not generated for hermes: hermes ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for kimi: kimi ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for letta: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "Read(./src/**)" not generated for mimocode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for poolside: a PreToolUse handler uses script "scripts/guard.sh", but poolside documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for poolside: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for poolside: the harness has no documented equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for qoder: the harness has no equivalent of WebFetch rules
+WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so they are only generated with --user
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=414
+WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for aiassistant, baz, codebuff, codewhale, dsh, muse, omp, openclaw, replit, rovodev, takt, trae, warp, xum, zed, zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for aiassistant, amp, antigravity, baz, bob, cline, codebuff, codewhale, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, junie, kiro, muse, openclaw, pi, reasonix, replit, rovodev, takt, trae, warp, xum, zcode: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [permissions] are generated for hermes, kimi, zed with --user only: they read their permission settings from a user-level file, so this project run enforces none of the rules, deny rules included
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  [[hooks]] not generated for augment: a PreToolUse handler uses script "scripts/guard.sh", but augment documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for augment: it has no ask list and prompts for whatever is not allowed
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by augment: Augment cannot scope a rule to a path or a domain severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [[hooks]] not generated for bob: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.bob to the bob equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for cline: Cline hooks have no matcher, so the PreToolUse group would run on every occurrence hint=remove the matcher or set targets to leave this harness out
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by zoocode: Zoo Code only has command allow and deny lists severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] not generated for goose: a PreToolUse handler uses script "scripts/guard.sh", but goose documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for grok: the WebFetch domain syntax is not documented for Grok
+WARN  [[hooks]] not generated for hermes: hermes ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for kimi: kimi ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for letta: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "Read(./src/**)" not generated for mimocode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [[hooks]] not generated for poolside: a PreToolUse handler uses script "scripts/guard.sh", but poolside documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [permissions] ask rules are not generated for poolside: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for poolside: the harness has no documented equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for qoder: the harness has no equivalent of WebFetch rules
+WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so they are only generated with --user
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez generate --dry-run
+exit: 0
+--- stdout
+create-dir: .agents
+create-dir: .agents/agents
+create-dir: .agents/checks
+create-dir: .agents/commands
+create-dir: .agents/skills
+create-dir: .agents/skills/build
+create-dir: .agents/skills/build/agents
+create-dir: .agents/skills/deployer
+create-dir: .agents/skills/reviewer
+create-dir: .agents/skills/reviewer/references
+create-dir: .agents/skills/reviewer/scripts
+create-dir: .agents/skills/ship
+create-dir: .agents/skills/ship/agents
+create-dir: .aiassistant
+create-dir: .aiassistant/rules
+create-dir: .augment
+create-dir: .augment/agents
+create-dir: .augment/commands
+create-dir: .augment/rules
+create-dir: .augment/skills
+create-dir: .augment/skills/deployer
+create-dir: .augment/skills/reviewer
+create-dir: .augment/skills/reviewer/references
+create-dir: .augment/skills/reviewer/scripts
+create-dir: .bob
+create-dir: .bob/commands
+create-dir: .bob/rules
+create-dir: .bob/skills
+create-dir: .bob/skills/deployer
+create-dir: .bob/skills/reviewer
+create-dir: .bob/skills/reviewer/references
+create-dir: .bob/skills/reviewer/scripts
+create-dir: .claude
+create-dir: .claude/agents
+create-dir: .claude/rules
+create-dir: .claude/skills
+create-dir: .claude/skills/build
+create-dir: .claude/skills/deployer
+create-dir: .claude/skills/reviewer
+create-dir: .claude/skills/reviewer/references
+create-dir: .claude/skills/reviewer/scripts
+create-dir: .claude/skills/ship
+create-dir: .cline
+create-dir: .cline/agents
+create-dir: .cline/skills
+create-dir: .cline/skills/deployer
+create-dir: .cline/skills/reviewer
+create-dir: .cline/skills/reviewer/references
+create-dir: .cline/skills/reviewer/scripts
+create-dir: .clinerules
+create-dir: .clinerules/workflows
+create-dir: .codebuddy
+create-dir: .codebuddy/agents
+create-dir: .codebuddy/commands
+create-dir: .codebuddy/rules
+create-dir: .codebuddy/skills
+create-dir: .codebuddy/skills/deployer
+create-dir: .codebuddy/skills/reviewer
+create-dir: .codebuddy/skills/reviewer/references
+create-dir: .codebuddy/skills/reviewer/scripts
+create-dir: .codewhale
+create-dir: .codewhale/commands
+create-dir: .codewhale/rules
+create-dir: .codewhale/skills
+create-dir: .codewhale/skills/deployer
+create-dir: .codewhale/skills/reviewer
+create-dir: .codewhale/skills/reviewer/references
+create-dir: .codewhale/skills/reviewer/scripts
+create-dir: .codex
+create-dir: .codex/agents
+create-dir: .commandcode
+create-dir: .commandcode/agents
+create-dir: .commandcode/commands
+create-dir: .commandcode/skills
+create-dir: .commandcode/skills/deployer
+create-dir: .commandcode/skills/reviewer
+create-dir: .commandcode/skills/reviewer/references
+create-dir: .commandcode/skills/reviewer/scripts
+create-dir: .commands
+create-dir: .cortex
+create-dir: .cortex/agents
+create-dir: .cortex/skills
+create-dir: .cortex/skills/deployer
+create-dir: .cortex/skills/reviewer
+create-dir: .cortex/skills/reviewer/references
+create-dir: .cortex/skills/reviewer/scripts
+create-dir: .crush
+create-dir: .crush/skills
+create-dir: .crush/skills/deployer
+create-dir: .crush/skills/reviewer
+create-dir: .crush/skills/reviewer/references
+create-dir: .crush/skills/reviewer/scripts
+create-dir: .cursor
+create-dir: .cursor/agents
+create-dir: .cursor/commands
+create-dir: .cursor/rules
+create-dir: .deepagents
+create-dir: .deepagents/agents
+create-dir: .deepagents/agents/architect
+create-dir: .deepagents/agents/tester
+create-dir: .deepagents/skills
+create-dir: .deepagents/skills/deployer
+create-dir: .deepagents/skills/reviewer
+create-dir: .deepagents/skills/reviewer/references
+create-dir: .deepagents/skills/reviewer/scripts
+create-dir: .devin
+create-dir: .devin/agents
+create-dir: .devin/rules
+create-dir: .devin/skills
+create-dir: .devin/skills/build
+create-dir: .devin/skills/deployer
+create-dir: .devin/skills/reviewer
+create-dir: .devin/skills/reviewer/references
+create-dir: .devin/skills/reviewer/scripts
+create-dir: .devin/skills/ship
+create-dir: .dsh
+create-dir: .dsh/skills
+create-dir: .dsh/skills/deployer
+create-dir: .dsh/skills/reviewer
+create-dir: .dsh/skills/reviewer/references
+create-dir: .dsh/skills/reviewer/scripts
+create-dir: .factory
+create-dir: .factory/commands
+create-dir: .factory/droids
+create-dir: .factory/skills
+create-dir: .factory/skills/deployer
+create-dir: .factory/skills/reviewer
+create-dir: .factory/skills/reviewer/references
+create-dir: .factory/skills/reviewer/scripts
+create-dir: .gemini
+create-dir: .gemini/agents
+create-dir: .github
+create-dir: .github/agents
+create-dir: .github/instructions
+create-dir: .github/prompts
+create-dir: .github/skills
+create-dir: .github/skills/deployer
+create-dir: .github/skills/reviewer
+create-dir: .github/skills/reviewer/references
+create-dir: .github/skills/reviewer/scripts
+create-dir: .gitlab/duo
+create-dir: .goose
+create-dir: .goose/agents
+create-dir: .grok
+create-dir: .grok/agents
+create-dir: .grok/commands
+create-dir: .grok/rules
+create-dir: .grok/skills
+create-dir: .grok/skills/deployer
+create-dir: .grok/skills/reviewer
+create-dir: .grok/skills/reviewer/references
+create-dir: .grok/skills/reviewer/scripts
+create-dir: .junie
+create-dir: .junie/agents
+create-dir: .junie/commands
+create-dir: .junie/rules
+create-dir: .junie/skills
+create-dir: .junie/skills/deployer
+create-dir: .junie/skills/reviewer
+create-dir: .junie/skills/reviewer/references
+create-dir: .junie/skills/reviewer/scripts
+create-dir: .kilo
+create-dir: .kilo/agents
+create-dir: .kilo/commands
+create-dir: .kilo/rules
+create-dir: .kilo/skills
+create-dir: .kilo/skills/deployer
+create-dir: .kilo/skills/reviewer
+create-dir: .kilo/skills/reviewer/references
+create-dir: .kilo/skills/reviewer/scripts
+create-dir: .kimi-code
+create-dir: .kimi-code/agents
+create-dir: .kimi-code/skills
+create-dir: .kimi-code/skills/deployer
+create-dir: .kimi-code/skills/reviewer
+create-dir: .kimi-code/skills/reviewer/references
+create-dir: .kimi-code/skills/reviewer/scripts
+create-dir: .kiro
+create-dir: .kiro/agents
+create-dir: .kiro/prompts
+create-dir: .kiro/skills
+create-dir: .kiro/skills/deployer
+create-dir: .kiro/skills/reviewer
+create-dir: .kiro/skills/reviewer/references
+create-dir: .kiro/skills/reviewer/scripts
+create-dir: .kiro/steering
+create-dir: .letta
+create-dir: .letta/agents
+create-dir: .mimocode
+create-dir: .mimocode/agents
+create-dir: .mimocode/commands
+create-dir: .mimocode/skills
+create-dir: .mimocode/skills/deployer
+create-dir: .mimocode/skills/reviewer
+create-dir: .mimocode/skills/reviewer/references
+create-dir: .mimocode/skills/reviewer/scripts
+create-dir: .omp
+create-dir: .omp/agents
+create-dir: .omp/commands
+create-dir: .omp/rules
+create-dir: .omp/skills
+create-dir: .omp/skills/deployer
+create-dir: .omp/skills/reviewer
+create-dir: .omp/skills/reviewer/references
+create-dir: .omp/skills/reviewer/scripts
+create-dir: .opencode
+create-dir: .opencode/agents
+create-dir: .opencode/commands
+create-dir: .opencode/skills
+create-dir: .opencode/skills/deployer
+create-dir: .opencode/skills/reviewer
+create-dir: .opencode/skills/reviewer/references
+create-dir: .opencode/skills/reviewer/scripts
+create-dir: .pi
+create-dir: .pi/agents
+create-dir: .pi/prompts
+create-dir: .poolside
+create-dir: .poolside/skills
+create-dir: .poolside/skills/deployer
+create-dir: .poolside/skills/reviewer
+create-dir: .poolside/skills/reviewer/references
+create-dir: .poolside/skills/reviewer/scripts
+create-dir: .qoder
+create-dir: .qoder/agents
+create-dir: .qoder/commands
+create-dir: .qoder/rules
+create-dir: .qoder/skills
+create-dir: .qoder/skills/deployer
+create-dir: .qoder/skills/reviewer
+create-dir: .qoder/skills/reviewer/references
+create-dir: .qoder/skills/reviewer/scripts
+create-dir: .qwen
+create-dir: .qwen/agents
+create-dir: .qwen/commands
+create-dir: .qwen/rules
+create-dir: .qwen/skills
+create-dir: .qwen/skills/deployer
+create-dir: .qwen/skills/reviewer
+create-dir: .qwen/skills/reviewer/references
+create-dir: .qwen/skills/reviewer/scripts
+create-dir: .reasonix
+create-dir: .reasonix/commands
+create-dir: .reasonix/skills
+create-dir: .reasonix/skills/architect
+create-dir: .reasonix/skills/deployer
+create-dir: .reasonix/skills/reviewer
+create-dir: .reasonix/skills/reviewer/references
+create-dir: .reasonix/skills/reviewer/scripts
+create-dir: .reasonix/skills/tester
+create-dir: .roo
+create-dir: .roo/commands
+create-dir: .roo/skills
+create-dir: .roo/skills/deployer
+create-dir: .roo/skills/reviewer
+create-dir: .roo/skills/reviewer/references
+create-dir: .roo/skills/reviewer/scripts
+create-dir: .rovodev
+create-dir: .rovodev/skills
+create-dir: .rovodev/skills/deployer
+create-dir: .rovodev/skills/reviewer
+create-dir: .rovodev/skills/reviewer/references
+create-dir: .rovodev/skills/reviewer/scripts
+create-dir: .rovodev/subagents
+create-dir: .takt/facets/instructions
+create-dir: .takt/facets/knowledge
+create-dir: .takt/facets/personas
+create-dir: .takt/facets/policies
+create-dir: .trae
+create-dir: .trae/rules
+create-dir: .trae/skills
+create-dir: .trae/skills/deployer
+create-dir: .trae/skills/reviewer
+create-dir: .trae/skills/reviewer/references
+create-dir: .trae/skills/reviewer/scripts
+create-dir: .vibe
+create-dir: .vibe/skills
+create-dir: .vibe/skills/deployer
+create-dir: .vibe/skills/reviewer
+create-dir: .vibe/skills/reviewer/references
+create-dir: .vibe/skills/reviewer/scripts
+create-dir: .warp
+create-dir: .warp/skills
+create-dir: .warp/skills/build
+create-dir: .warp/skills/deployer
+create-dir: .warp/skills/reviewer
+create-dir: .warp/skills/reviewer/references
+create-dir: .warp/skills/reviewer/scripts
+create-dir: .warp/skills/ship
+create-dir: .xum
+create-dir: .xum/agents
+create-dir: .xum/skills
+create-dir: .xum/skills/deployer
+create-dir: .xum/skills/reviewer
+create-dir: .xum/skills/reviewer/references
+create-dir: .xum/skills/reviewer/scripts
+create-dir: .zcode
+create-dir: .zcode/agents
+create-dir: .zcode/commands
+create-dir: .zcode/skills
+create-dir: .zcode/skills/deployer
+create-dir: .zcode/skills/reviewer
+create-dir: .zcode/skills/reviewer/references
+create-dir: .zcode/skills/reviewer/scripts
+create-dir: .zed
+profile: default
+unchanged: .agents/agents/architect.md
+unchanged: .agents/agents/tester.md
+unchanged: .agents/checks/security.md
+unchanged: .agents/checks/style.md
+unchanged: .agents/commands/build.md
+unchanged: .agents/commands/ship.md
+unchanged: .agents/hooks.json
+unchanged: .agents/plugins/ai-rulez/hooks/hooks.json
+unchanged: .agents/skills/build/SKILL.md
+unchanged: .agents/skills/build/agents/openai.yaml
+unchanged: .agents/skills/deployer/SKILL.md
+unchanged: .agents/skills/reviewer/SKILL.md
+unchanged: .agents/skills/reviewer/references/checklist.md
+unchanged: .agents/skills/reviewer/scripts/run.sh
+unchanged: .agents/skills/ship/SKILL.md
+unchanged: .agents/skills/ship/agents/openai.yaml
+unchanged: .aiassistant/rules/always.md
+unchanged: .aiassistant/rules/auto.md
+unchanged: .aiassistant/rules/context-architecture.md
+unchanged: .aiassistant/rules/context-overview.md
+unchanged: .aiassistant/rules/manual.md
+unchanged: .aiassistant/rules/typescript.md
+unchanged: .amp/plugins/ai-rulez-hooks.ts
+unchanged: .augment/agents/architect.md
+unchanged: .augment/agents/tester.md
+unchanged: .augment/code_review_guidelines.yaml
+unchanged: .augment/commands/build.md
+unchanged: .augment/commands/ship.md
+unchanged: .augment/rules/always.md
+unchanged: .augment/rules/auto.md
+unchanged: .augment/rules/manual.md
+unchanged: .augment/rules/typescript.md
+unchanged: .augment/settings.json
+unchanged: .augment/skills/deployer/SKILL.md
+unchanged: .augment/skills/reviewer/SKILL.md
+unchanged: .augment/skills/reviewer/references/checklist.md
+unchanged: .augment/skills/reviewer/scripts/run.sh
+unchanged: .bob/commands/build.md
+unchanged: .bob/commands/ship.md
+unchanged: .bob/rules/always.md
+unchanged: .bob/rules/auto.md
+unchanged: .bob/rules/manual.md
+unchanged: .bob/rules/typescript.md
+unchanged: .bob/settings.json
+unchanged: .bob/skills/deployer/SKILL.md
+unchanged: .bob/skills/reviewer/SKILL.md
+unchanged: .bob/skills/reviewer/references/checklist.md
+unchanged: .bob/skills/reviewer/scripts/run.sh
+unchanged: .claude/agents/architect.md
+unchanged: .claude/agents/tester.md
+unchanged: .claude/rules/always.md
+unchanged: .claude/rules/auto.md
+unchanged: .claude/rules/manual.md
+unchanged: .claude/rules/targeted.md
+unchanged: .claude/rules/typescript.md
+unchanged: .claude/settings.json
+unchanged: .claude/skills/build/SKILL.md
+unchanged: .claude/skills/deployer/SKILL.md
+unchanged: .claude/skills/reviewer/SKILL.md
+unchanged: .claude/skills/reviewer/references/checklist.md
+unchanged: .claude/skills/reviewer/scripts/run.sh
+unchanged: .claude/skills/ship/SKILL.md
+unchanged: .cline/agents/architect.yaml
+unchanged: .cline/agents/tester.yaml
+unchanged: .cline/skills/deployer/SKILL.md
+unchanged: .cline/skills/reviewer/SKILL.md
+unchanged: .cline/skills/reviewer/references/checklist.md
+unchanged: .cline/skills/reviewer/scripts/run.sh
+unchanged: .clinerules/always.md
+unchanged: .clinerules/auto.md
+unchanged: .clinerules/context-architecture.md
+unchanged: .clinerules/context-overview.md
+unchanged: .clinerules/hooks/TaskStart
+unchanged: .clinerules/manual.md
+unchanged: .clinerules/typescript.md
+unchanged: .clinerules/workflows/build.md
+unchanged: .clinerules/workflows/ship.md
+unchanged: .codebuddy/agents/architect.md
+unchanged: .codebuddy/agents/tester.md
+unchanged: .codebuddy/commands/build.md
+unchanged: .codebuddy/commands/ship.md
+unchanged: .codebuddy/rules/always.md
+unchanged: .codebuddy/rules/auto.md
+unchanged: .codebuddy/rules/manual.md
+unchanged: .codebuddy/rules/typescript.md
+unchanged: .codebuddy/settings.json
+unchanged: .codebuddy/skills/deployer/SKILL.md
+unchanged: .codebuddy/skills/reviewer/SKILL.md
+unchanged: .codebuddy/skills/reviewer/references/checklist.md
+unchanged: .codebuddy/skills/reviewer/scripts/run.sh
+unchanged: .codewhale/commands/build.md
+unchanged: .codewhale/commands/ship.md
+unchanged: .codewhale/rules/always.md
+unchanged: .codewhale/rules/auto.md
+unchanged: .codewhale/rules/manual.md
+unchanged: .codewhale/rules/typescript.md
+unchanged: .codewhale/skills/deployer/SKILL.md
+unchanged: .codewhale/skills/reviewer/SKILL.md
+unchanged: .codewhale/skills/reviewer/references/checklist.md
+unchanged: .codewhale/skills/reviewer/scripts/run.sh
+unchanged: .codex/agents/architect.toml
+unchanged: .codex/agents/tester.toml
+unchanged: .codex/hooks.json
+unchanged: .codex/rules/ai-rulez.rules
+unchanged: .commandcode/agents/architect.md
+unchanged: .commandcode/agents/tester.md
+unchanged: .commandcode/commands/build.md
+unchanged: .commandcode/commands/ship.md
+unchanged: .commandcode/settings.json
+unchanged: .commandcode/skills/deployer/SKILL.md
+unchanged: .commandcode/skills/reviewer/SKILL.md
+unchanged: .commandcode/skills/reviewer/references/checklist.md
+unchanged: .commandcode/skills/reviewer/scripts/run.sh
+unchanged: .commands/build.md
+unchanged: .commands/ship.md
+unchanged: .cortex/agents/architect.md
+unchanged: .cortex/agents/tester.md
+unchanged: .cortex/settings.json
+unchanged: .cortex/skills/deployer/SKILL.md
+unchanged: .cortex/skills/reviewer/SKILL.md
+unchanged: .cortex/skills/reviewer/references/checklist.md
+unchanged: .cortex/skills/reviewer/scripts/run.sh
+unchanged: .crush/skills/deployer/SKILL.md
+unchanged: .crush/skills/reviewer/SKILL.md
+unchanged: .crush/skills/reviewer/references/checklist.md
+unchanged: .crush/skills/reviewer/scripts/run.sh
+unchanged: .cursor/BUGBOT.md
+unchanged: .cursor/agents/architect.md
+unchanged: .cursor/agents/tester.md
+unchanged: .cursor/cli.json
+unchanged: .cursor/commands/build.md
+unchanged: .cursor/commands/ship.md
+unchanged: .cursor/hooks.json
+unchanged: .cursor/rules/always.mdc
+unchanged: .cursor/rules/auto.mdc
+unchanged: .cursor/rules/context-architecture.mdc
+unchanged: .cursor/rules/context-overview.mdc
+unchanged: .cursor/rules/manual.mdc
+unchanged: .cursor/rules/targeted.mdc
+unchanged: .cursor/rules/typescript.mdc
+unchanged: .deepagents/agents/architect/AGENTS.md
+unchanged: .deepagents/agents/tester/AGENTS.md
+unchanged: .deepagents/hooks.json
+unchanged: .deepagents/skills/deployer/SKILL.md
+unchanged: .deepagents/skills/reviewer/SKILL.md
+unchanged: .deepagents/skills/reviewer/references/checklist.md
+unchanged: .deepagents/skills/reviewer/scripts/run.sh
+unchanged: .devin/agents/architect.md
+unchanged: .devin/agents/tester.md
+unchanged: .devin/config.json
+unchanged: .devin/hooks.v1.json
+unchanged: .devin/rules/always.md
+unchanged: .devin/rules/auto.md
+unchanged: .devin/rules/context-architecture.md
+unchanged: .devin/rules/context-overview.md
+unchanged: .devin/rules/manual.md
+unchanged: .devin/rules/typescript.md
+unchanged: .devin/skills/build/SKILL.md
+unchanged: .devin/skills/deployer/SKILL.md
+unchanged: .devin/skills/reviewer/SKILL.md
+unchanged: .devin/skills/reviewer/references/checklist.md
+unchanged: .devin/skills/reviewer/scripts/run.sh
+unchanged: .devin/skills/ship/SKILL.md
+unchanged: .dsh/skills/deployer/SKILL.md
+unchanged: .dsh/skills/reviewer/SKILL.md
+unchanged: .dsh/skills/reviewer/references/checklist.md
+unchanged: .dsh/skills/reviewer/scripts/run.sh
+unchanged: .factory/commands/build.md
+unchanged: .factory/commands/ship.md
+unchanged: .factory/droids/architect.md
+unchanged: .factory/droids/tester.md
+unchanged: .factory/hooks.json
+unchanged: .factory/skills/deployer/SKILL.md
+unchanged: .factory/skills/review-guidelines/SKILL.md
+unchanged: .factory/skills/reviewer/SKILL.md
+unchanged: .factory/skills/reviewer/references/checklist.md
+unchanged: .factory/skills/reviewer/scripts/run.sh
+unchanged: .gemini/agents/architect.md
+unchanged: .gemini/agents/tester.md
+unchanged: .gemini/settings.json
+unchanged: .github/agents/architect.agent.md
+unchanged: .github/agents/tester.agent.md
+unchanged: .github/copilot-instructions.md
+unchanged: .github/copilot/settings.json
+unchanged: .github/hooks/ai-rulez.json
+unchanged: .github/instructions/always.instructions.md
+unchanged: .github/instructions/typescript.instructions.md
+unchanged: .github/prompts/build.prompt.md
+unchanged: .github/prompts/ship.prompt.md
+unchanged: .github/skills/deployer/SKILL.md
+unchanged: .github/skills/reviewer/SKILL.md
+unchanged: .github/skills/reviewer/references/checklist.md
+unchanged: .github/skills/reviewer/scripts/run.sh
+unchanged: .gitlab/duo/chat-rules.md
+unchanged: .gitlab/duo/hooks.json
+unchanged: .gitlab/duo/mr-review-instructions.yaml
+unchanged: .goose/agents/architect.md
+unchanged: .goose/agents/tester.md
+unchanged: .goosehints
+unchanged: .grok/agents/architect.md
+unchanged: .grok/agents/tester.md
+unchanged: .grok/commands/build.md
+unchanged: .grok/commands/ship.md
+unchanged: .grok/config.toml
+unchanged: .grok/hooks/ai-rulez.json
+unchanged: .grok/rules/always.md
+unchanged: .grok/rules/auto.md
+unchanged: .grok/rules/manual.md
+unchanged: .grok/rules/typescript.md
+unchanged: .grok/skills/deployer/SKILL.md
+unchanged: .grok/skills/reviewer/SKILL.md
+unchanged: .grok/skills/reviewer/references/checklist.md
+unchanged: .grok/skills/reviewer/scripts/run.sh
+unchanged: .hermes.md
+unchanged: .junie/agents/architect.md
+unchanged: .junie/agents/tester.md
+unchanged: .junie/commands/build.md
+unchanged: .junie/commands/ship.md
+unchanged: .junie/rules/always.md
+unchanged: .junie/rules/auto.md
+unchanged: .junie/rules/manual.md
+unchanged: .junie/rules/typescript.md
+unchanged: .junie/skills/deployer/SKILL.md
+unchanged: .junie/skills/reviewer/SKILL.md
+unchanged: .junie/skills/reviewer/references/checklist.md
+unchanged: .junie/skills/reviewer/scripts/run.sh
+unchanged: .kilo/agents/architect.md
+unchanged: .kilo/agents/tester.md
+unchanged: .kilo/commands/build.md
+unchanged: .kilo/commands/ship.md
+unchanged: .kilo/plugins/ai-rulez-hooks.js
+unchanged: .kilo/rules/always.md
+unchanged: .kilo/rules/auto.md
+unchanged: .kilo/rules/manual.md
+unchanged: .kilo/rules/typescript.md
+unchanged: .kilo/skills/deployer/SKILL.md
+unchanged: .kilo/skills/reviewer/SKILL.md
+unchanged: .kilo/skills/reviewer/references/checklist.md
+unchanged: .kilo/skills/reviewer/scripts/run.sh
+unchanged: .kimi-code/agents/architect.md
+unchanged: .kimi-code/agents/tester.md
+unchanged: .kimi-code/skills/deployer/SKILL.md
+unchanged: .kimi-code/skills/reviewer/SKILL.md
+unchanged: .kimi-code/skills/reviewer/references/checklist.md
+unchanged: .kimi-code/skills/reviewer/scripts/run.sh
+unchanged: .kiro/agents/architect.md
+unchanged: .kiro/agents/tester.md
+unchanged: .kiro/hooks/ai-rulez.json
+unchanged: .kiro/prompts/build.md
+unchanged: .kiro/prompts/ship.md
+unchanged: .kiro/skills/deployer/SKILL.md
+unchanged: .kiro/skills/reviewer/SKILL.md
+unchanged: .kiro/skills/reviewer/references/checklist.md
+unchanged: .kiro/skills/reviewer/scripts/run.sh
+unchanged: .kiro/steering/always.md
+unchanged: .kiro/steering/auto.md
+unchanged: .kiro/steering/manual.md
+unchanged: .kiro/steering/typescript.md
+unchanged: .letta/agents/architect.md
+unchanged: .letta/agents/tester.md
+unchanged: .letta/settings.json
+unchanged: .mimocode/agents/architect.md
+unchanged: .mimocode/agents/tester.md
+unchanged: .mimocode/commands/build.md
+unchanged: .mimocode/commands/ship.md
+unchanged: .mimocode/mimocode.jsonc
+unchanged: .mimocode/plugins/ai-rulez-hooks.js
+unchanged: .mimocode/skills/deployer/SKILL.md
+unchanged: .mimocode/skills/reviewer/SKILL.md
+unchanged: .mimocode/skills/reviewer/references/checklist.md
+unchanged: .mimocode/skills/reviewer/scripts/run.sh
+unchanged: .omp/agents/architect.md
+unchanged: .omp/agents/tester.md
+unchanged: .omp/commands/build.md
+unchanged: .omp/commands/ship.md
+unchanged: .omp/config.yml
+unchanged: .omp/rules/always.md
+unchanged: .omp/rules/auto.md
+unchanged: .omp/rules/manual.md
+unchanged: .omp/rules/typescript.md
+unchanged: .omp/skills/deployer/SKILL.md
+unchanged: .omp/skills/reviewer/SKILL.md
+unchanged: .omp/skills/reviewer/references/checklist.md
+unchanged: .omp/skills/reviewer/scripts/run.sh
+unchanged: .opencode/agents/architect.md
+unchanged: .opencode/agents/tester.md
+unchanged: .opencode/commands/build.md
+unchanged: .opencode/commands/ship.md
+unchanged: .opencode/plugins/ai-rulez-hooks.js
+unchanged: .opencode/skills/deployer/SKILL.md
+unchanged: .opencode/skills/reviewer/SKILL.md
+unchanged: .opencode/skills/reviewer/references/checklist.md
+unchanged: .opencode/skills/reviewer/scripts/run.sh
+unchanged: .pi/agents/architect.md
+unchanged: .pi/agents/tester.md
+unchanged: .pi/extensions/ai-rulez-hooks.ts
+unchanged: .pi/prompts/build.md
+unchanged: .pi/prompts/ship.md
+unchanged: .poolside/settings.yaml
+unchanged: .poolside/skills/deployer/SKILL.md
+unchanged: .poolside/skills/reviewer/SKILL.md
+unchanged: .poolside/skills/reviewer/references/checklist.md
+unchanged: .poolside/skills/reviewer/scripts/run.sh
+unchanged: .qoder/agents/architect.md
+unchanged: .qoder/agents/tester.md
+unchanged: .qoder/commands/build.md
+unchanged: .qoder/commands/ship.md
+unchanged: .qoder/rules/always.md
+unchanged: .qoder/rules/auto.md
+unchanged: .qoder/rules/manual.md
+unchanged: .qoder/rules/typescript.md
+unchanged: .qoder/settings.json
+unchanged: .qoder/skills/deployer/SKILL.md
+unchanged: .qoder/skills/reviewer/SKILL.md
+unchanged: .qoder/skills/reviewer/references/checklist.md
+unchanged: .qoder/skills/reviewer/scripts/run.sh
+unchanged: .qwen/agents/architect.md
+unchanged: .qwen/agents/tester.md
+unchanged: .qwen/commands/build.md
+unchanged: .qwen/commands/ship.md
+unchanged: .qwen/review-rules.md
+unchanged: .qwen/rules/always.md
+unchanged: .qwen/rules/auto.md
+unchanged: .qwen/rules/manual.md
+unchanged: .qwen/rules/typescript.md
+unchanged: .qwen/settings.json
+unchanged: .qwen/skills/deployer/SKILL.md
+unchanged: .qwen/skills/reviewer/SKILL.md
+unchanged: .qwen/skills/reviewer/references/checklist.md
+unchanged: .qwen/skills/reviewer/scripts/run.sh
+unchanged: .reasonix/commands/build.md
+unchanged: .reasonix/commands/ship.md
+unchanged: .reasonix/settings.json
+unchanged: .reasonix/skills/architect/SKILL.md
+unchanged: .reasonix/skills/deployer/SKILL.md
+unchanged: .reasonix/skills/reviewer/SKILL.md
+unchanged: .reasonix/skills/reviewer/references/checklist.md
+unchanged: .reasonix/skills/reviewer/scripts/run.sh
+unchanged: .reasonix/skills/tester/SKILL.md
+unchanged: .roo/commands/build.md
+unchanged: .roo/commands/ship.md
+unchanged: .roo/skills/deployer/SKILL.md
+unchanged: .roo/skills/reviewer/SKILL.md
+unchanged: .roo/skills/reviewer/references/checklist.md
+unchanged: .roo/skills/reviewer/scripts/run.sh
+unchanged: .rovodev/.review-agent.md
+unchanged: .rovodev/skills/deployer/SKILL.md
+unchanged: .rovodev/skills/reviewer/SKILL.md
+unchanged: .rovodev/skills/reviewer/references/checklist.md
+unchanged: .rovodev/skills/reviewer/scripts/run.sh
+unchanged: .rovodev/subagents/architect.md
+unchanged: .rovodev/subagents/tester.md
+unchanged: .rules
+unchanged: .takt/facets/instructions/build.md
+unchanged: .takt/facets/instructions/ship.md
+unchanged: .takt/facets/knowledge/deployer.md
+unchanged: .takt/facets/knowledge/reviewer.md
+unchanged: .takt/facets/personas/architect.md
+unchanged: .takt/facets/personas/tester.md
+unchanged: .takt/facets/policies/always.md
+unchanged: .takt/facets/policies/auto.md
+unchanged: .takt/facets/policies/context-architecture.md
+unchanged: .takt/facets/policies/context-overview.md
+unchanged: .takt/facets/policies/manual.md
+unchanged: .takt/facets/policies/typescript.md
+unchanged: .trae/rules/always.md
+unchanged: .trae/rules/auto.md
+unchanged: .trae/rules/context-architecture.md
+unchanged: .trae/rules/context-overview.md
+unchanged: .trae/rules/manual.md
+unchanged: .trae/rules/typescript.md
+unchanged: .trae/skills/deployer/SKILL.md
+unchanged: .trae/skills/reviewer/SKILL.md
+unchanged: .trae/skills/reviewer/references/checklist.md
+unchanged: .trae/skills/reviewer/scripts/run.sh
+unchanged: .vibe/config.toml
+unchanged: .vibe/hooks.toml
+unchanged: .vibe/skills/deployer/SKILL.md
+unchanged: .vibe/skills/reviewer/SKILL.md
+unchanged: .vibe/skills/reviewer/references/checklist.md
+unchanged: .vibe/skills/reviewer/scripts/run.sh
+unchanged: .vscode/settings.json
+unchanged: .warp/skills/build/SKILL.md
+unchanged: .warp/skills/deployer/SKILL.md
+unchanged: .warp/skills/reviewer/SKILL.md
+unchanged: .warp/skills/reviewer/references/checklist.md
+unchanged: .warp/skills/reviewer/scripts/run.sh
+unchanged: .warp/skills/ship/SKILL.md
+unchanged: .xum/agents/architect.md
+unchanged: .xum/agents/tester.md
+unchanged: .xum/skills/deployer/SKILL.md
+unchanged: .xum/skills/reviewer/SKILL.md
+unchanged: .xum/skills/reviewer/references/checklist.md
+unchanged: .xum/skills/reviewer/scripts/run.sh
+unchanged: .zcode/agents/architect.md
+unchanged: .zcode/agents/tester.md
+unchanged: .zcode/commands/build.md
+unchanged: .zcode/commands/ship.md
+unchanged: .zcode/skills/deployer/SKILL.md
+unchanged: .zcode/skills/reviewer/SKILL.md
+unchanged: .zcode/skills/reviewer/references/checklist.md
+unchanged: .zcode/skills/reviewer/scripts/run.sh
+unchanged: AGENTS.md
+unchanged: CLAUDE.md
+unchanged: CODEBUDDY.md
+unchanged: CRUSH.md
+unchanged: GEMINI.md
+unchanged: QWEN.md
+unchanged: REASONIX.md
+unchanged: REVIEW.md
+unchanged: crush.json
+unchanged: kilo.jsonc
+unchanged: opencode.json
+unchanged: replit.md
+--- stderr
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by augment: Augment cannot scope a rule to a path or a domain severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by copilot: VS Code has no setting for Read rules severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by zoocode: Zoo Code only has command allow and deny lists severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] are not generated for aiassistant, baz, codebuff, codewhale, dsh, muse, omp, openclaw, replit, rovodev, takt, trae, warp, xum, zed, zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for augment: a PreToolUse handler uses script "scripts/guard.sh", but augment documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] not generated for bob: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.bob to the bob equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for cline: Cline hooks have no matcher, so the PreToolUse group would run on every occurrence hint=remove the matcher or set targets to leave this harness out
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for goose: a PreToolUse handler uses script "scripts/guard.sh", but goose documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] not generated for hermes: hermes ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for kimi: kimi ignores project-level hooks, so they are only generated with --user
+WARN  [[hooks]] not generated for poolside: a PreToolUse handler uses script "scripts/guard.sh", but poolside documents no way to address a project file hint=use 'command' with a path the harness resolves, or set targets to leave this harness out
+WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so they are only generated with --user
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Read rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Read(./src/**)" not generated for copilot: VS Code has no setting for Read rules
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "Read(./src/**)" not generated for kilo: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for mimocode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  [permissions] allow rule "Read(./src/**)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for augment: Augment cannot scope a rule to a path or a domain
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for grok: the WebFetch domain syntax is not documented for Grok
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for letta: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for poolside: the harness has no documented equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for qoder: the harness has no equivalent of WebFetch rules
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for vibe: Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for zoocode: Zoo Code only has command allow and deny lists
+WARN  [permissions] are generated for hermes, kimi, zed with --user only: they read their permission settings from a user-level file, so this project run enforces none of the rules, deny rules included
+WARN  [permissions] are not generated for aiassistant, amp, antigravity, baz, bob, cline, codebuff, codewhale, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, junie, kiro, muse, openclaw, pi, reasonix, replit, rovodev, takt, trae, warp, xum, zcode: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [permissions] ask rules are not generated for augment: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for copilot-cli: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for poolside: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for vibe: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez verify
+exit: 0
+--- stdout
+verified 284 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 6: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+INFO  Clean plan profile=default
+INFO    remove file: .agents/agents/architect.md
+INFO    remove file: .agents/agents/tester.md
+INFO    remove file: .agents/checks/security.md
+INFO    remove file: .agents/checks/style.md
+INFO    remove file: .agents/commands/build.md
+INFO    remove file: .agents/commands/ship.md
+INFO    remove file: .agents/hooks.json
+INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+INFO    remove file: .agents/skills/build/SKILL.md
+INFO    remove file: .agents/skills/build/agents/openai.yaml
+INFO    remove file: .agents/skills/deployer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/SKILL.md
+INFO    remove file: .agents/skills/reviewer/references/checklist.md
+INFO    remove file: .agents/skills/reviewer/scripts/run.sh
+INFO    remove file: .agents/skills/ship/SKILL.md
+INFO    remove file: .agents/skills/ship/agents/openai.yaml
+INFO    remove file: .aiassistant/rules/always.md
+INFO    remove file: .aiassistant/rules/auto.md
+INFO    remove file: .aiassistant/rules/context-architecture.md
+INFO    remove file: .aiassistant/rules/context-overview.md
+INFO    remove file: .aiassistant/rules/manual.md
+INFO    remove file: .aiassistant/rules/typescript.md
+INFO    remove file: .amp/plugins/ai-rulez-hooks.ts
+INFO    remove file: .augment/agents/architect.md
+INFO    remove file: .augment/agents/tester.md
+INFO    remove file: .augment/code_review_guidelines.yaml
+INFO    remove file: .augment/commands/build.md
+INFO    remove file: .augment/commands/ship.md
+INFO    remove file: .augment/rules/always.md
+INFO    remove file: .augment/rules/auto.md
+INFO    remove file: .augment/rules/manual.md
+INFO    remove file: .augment/rules/typescript.md
+INFO    remove file: .augment/settings.json
+INFO    remove file: .augment/skills/deployer/SKILL.md
+INFO    remove file: .augment/skills/reviewer/SKILL.md
+INFO    remove file: .augment/skills/reviewer/references/checklist.md
+INFO    remove file: .augment/skills/reviewer/scripts/run.sh
+INFO    remove file: .bob/commands/build.md
+INFO    remove file: .bob/commands/ship.md
+INFO    remove file: .bob/rules/always.md
+INFO    remove file: .bob/rules/auto.md
+INFO    remove file: .bob/rules/manual.md
+INFO    remove file: .bob/rules/typescript.md
+INFO    remove file: .bob/settings.json
+INFO    remove file: .bob/skills/deployer/SKILL.md
+INFO    remove file: .bob/skills/reviewer/SKILL.md
+INFO    remove file: .bob/skills/reviewer/references/checklist.md
+INFO    remove file: .bob/skills/reviewer/scripts/run.sh
+INFO    remove file: .claude/agents/architect.md
+INFO    remove file: .claude/agents/tester.md
+INFO    remove file: .claude/rules/always.md
+INFO    remove file: .claude/rules/auto.md
+INFO    remove file: .claude/rules/manual.md
+INFO    remove file: .claude/rules/targeted.md
+INFO    remove file: .claude/rules/typescript.md
+INFO    remove file: .claude/settings.json
+INFO    remove file: .claude/skills/build/SKILL.md
+INFO    remove file: .claude/skills/deployer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/SKILL.md
+INFO    remove file: .claude/skills/reviewer/references/checklist.md
+INFO    remove file: .claude/skills/reviewer/scripts/run.sh
+INFO    remove file: .claude/skills/ship/SKILL.md
+INFO    remove file: .cline/agents/architect.yaml
+INFO    remove file: .cline/agents/tester.yaml
+INFO    remove file: .cline/skills/deployer/SKILL.md
+INFO    remove file: .cline/skills/reviewer/SKILL.md
+INFO    remove file: .cline/skills/reviewer/references/checklist.md
+INFO    remove file: .cline/skills/reviewer/scripts/run.sh
+INFO    remove file: .clinerules/always.md
+INFO    remove file: .clinerules/auto.md
+INFO    remove file: .clinerules/context-architecture.md
+INFO    remove file: .clinerules/context-overview.md
+INFO    remove file: .clinerules/hooks/TaskStart
+INFO    remove file: .clinerules/manual.md
+INFO    remove file: .clinerules/typescript.md
+INFO    remove file: .clinerules/workflows/build.md
+INFO    remove file: .clinerules/workflows/ship.md
+INFO    remove file: .codebuddy/agents/architect.md
+INFO    remove file: .codebuddy/agents/tester.md
+INFO    remove file: .codebuddy/commands/build.md
+INFO    remove file: .codebuddy/commands/ship.md
+INFO    remove file: .codebuddy/rules/always.md
+INFO    remove file: .codebuddy/rules/auto.md
+INFO    remove file: .codebuddy/rules/manual.md
+INFO    remove file: .codebuddy/rules/typescript.md
+INFO    remove file: .codebuddy/settings.json
+INFO    remove file: .codebuddy/skills/deployer/SKILL.md
+INFO    remove file: .codebuddy/skills/reviewer/SKILL.md
+INFO    remove file: .codebuddy/skills/reviewer/references/checklist.md
+INFO    remove file: .codebuddy/skills/reviewer/scripts/run.sh
+INFO    remove file: .codewhale/commands/build.md
+INFO    remove file: .codewhale/commands/ship.md
+INFO    remove file: .codewhale/rules/always.md
+INFO    remove file: .codewhale/rules/auto.md
+INFO    remove file: .codewhale/rules/manual.md
+INFO    remove file: .codewhale/rules/typescript.md
+INFO    remove file: .codewhale/skills/deployer/SKILL.md
+INFO    remove file: .codewhale/skills/reviewer/SKILL.md
+INFO    remove file: .codewhale/skills/reviewer/references/checklist.md
+INFO    remove file: .codewhale/skills/reviewer/scripts/run.sh
+INFO    remove file: .codex/agents/architect.toml
+INFO    remove file: .codex/agents/tester.toml
+INFO    remove file: .codex/hooks.json
+INFO    remove file: .codex/rules/ai-rulez.rules
+INFO    remove file: .commandcode/agents/architect.md
+INFO    remove file: .commandcode/agents/tester.md
+INFO    remove file: .commandcode/commands/build.md
+INFO    remove file: .commandcode/commands/ship.md
+INFO    remove file: .commandcode/settings.json
+INFO    remove file: .commandcode/skills/deployer/SKILL.md
+INFO    remove file: .commandcode/skills/reviewer/SKILL.md
+INFO    remove file: .commandcode/skills/reviewer/references/checklist.md
+INFO    remove file: .commandcode/skills/reviewer/scripts/run.sh
+INFO    remove file: .commands/build.md
+INFO    remove file: .commands/ship.md
+INFO    remove file: .cortex/agents/architect.md
+INFO    remove file: .cortex/agents/tester.md
+INFO    remove file: .cortex/settings.json
+INFO    remove file: .cortex/skills/deployer/SKILL.md
+INFO    remove file: .cortex/skills/reviewer/SKILL.md
+INFO    remove file: .cortex/skills/reviewer/references/checklist.md
+INFO    remove file: .cortex/skills/reviewer/scripts/run.sh
+INFO    remove file: .crush/skills/deployer/SKILL.md
+INFO    remove file: .crush/skills/reviewer/SKILL.md
+INFO    remove file: .crush/skills/reviewer/references/checklist.md
+INFO    remove file: .crush/skills/reviewer/scripts/run.sh
+INFO    remove file: .cursor/BUGBOT.md
+INFO    remove file: .cursor/agents/architect.md
+INFO    remove file: .cursor/agents/tester.md
+INFO    remove file: .cursor/cli.json
+INFO    remove file: .cursor/commands/build.md
+INFO    remove file: .cursor/commands/ship.md
+INFO    remove file: .cursor/hooks.json
+INFO    remove file: .cursor/rules/always.mdc
+INFO    remove file: .cursor/rules/auto.mdc
+INFO    remove file: .cursor/rules/context-architecture.mdc
+INFO    remove file: .cursor/rules/context-overview.mdc
+INFO    remove file: .cursor/rules/manual.mdc
+INFO    remove file: .cursor/rules/targeted.mdc
+INFO    remove file: .cursor/rules/typescript.mdc
+INFO    remove file: .deepagents/agents/architect/AGENTS.md
+INFO    remove file: .deepagents/agents/tester/AGENTS.md
+INFO    remove file: .deepagents/hooks.json
+INFO    remove file: .deepagents/skills/deployer/SKILL.md
+INFO    remove file: .deepagents/skills/reviewer/SKILL.md
+INFO    remove file: .deepagents/skills/reviewer/references/checklist.md
+INFO    remove file: .deepagents/skills/reviewer/scripts/run.sh
+INFO    remove file: .devin/agents/architect.md
+INFO    remove file: .devin/agents/tester.md
+INFO    remove file: .devin/config.json
+INFO    remove file: .devin/hooks.v1.json
+INFO    remove file: .devin/rules/always.md
+INFO    remove file: .devin/rules/auto.md
+INFO    remove file: .devin/rules/context-architecture.md
+INFO    remove file: .devin/rules/context-overview.md
+INFO    remove file: .devin/rules/manual.md
+INFO    remove file: .devin/rules/typescript.md
+INFO    remove file: .devin/skills/build/SKILL.md
+INFO    remove file: .devin/skills/deployer/SKILL.md
+INFO    remove file: .devin/skills/reviewer/SKILL.md
+INFO    remove file: .devin/skills/reviewer/references/checklist.md
+INFO    remove file: .devin/skills/reviewer/scripts/run.sh
+INFO    remove file: .devin/skills/ship/SKILL.md
+INFO    remove file: .dsh/skills/deployer/SKILL.md
+INFO    remove file: .dsh/skills/reviewer/SKILL.md
+INFO    remove file: .dsh/skills/reviewer/references/checklist.md
+INFO    remove file: .dsh/skills/reviewer/scripts/run.sh
+INFO    remove file: .factory/commands/build.md
+INFO    remove file: .factory/commands/ship.md
+INFO    remove file: .factory/droids/architect.md
+INFO    remove file: .factory/droids/tester.md
+INFO    remove file: .factory/hooks.json
+INFO    remove file: .factory/skills/deployer/SKILL.md
+INFO    remove file: .factory/skills/review-guidelines/SKILL.md
+INFO    remove file: .factory/skills/reviewer/SKILL.md
+INFO    remove file: .factory/skills/reviewer/references/checklist.md
+INFO    remove file: .factory/skills/reviewer/scripts/run.sh
+INFO    remove file: .gemini/agents/architect.md
+INFO    remove file: .gemini/agents/tester.md
+INFO    remove file: .gemini/settings.json
+INFO    remove file: .github/agents/architect.agent.md
+INFO    remove file: .github/agents/tester.agent.md
+INFO    remove file: .github/copilot-instructions.md
+INFO    remove file: .github/copilot/settings.json
+INFO    remove file: .github/hooks/ai-rulez.json
+INFO    remove file: .github/instructions/always.instructions.md
+INFO    remove file: .github/instructions/typescript.instructions.md
+INFO    remove file: .github/prompts/build.prompt.md
+INFO    remove file: .github/prompts/ship.prompt.md
+INFO    remove file: .github/skills/deployer/SKILL.md
+INFO    remove file: .github/skills/reviewer/SKILL.md
+INFO    remove file: .github/skills/reviewer/references/checklist.md
+INFO    remove file: .github/skills/reviewer/scripts/run.sh
+INFO    remove file: .gitlab/duo/chat-rules.md
+INFO    remove file: .gitlab/duo/hooks.json
+INFO    remove file: .gitlab/duo/mr-review-instructions.yaml
+INFO    remove file: .goose/agents/architect.md
+INFO    remove file: .goose/agents/tester.md
+INFO    remove file: .goosehints
+INFO    remove file: .grok/agents/architect.md
+INFO    remove file: .grok/agents/tester.md
+INFO    remove file: .grok/commands/build.md
+INFO    remove file: .grok/commands/ship.md
+INFO    remove file: .grok/config.toml
+INFO    remove file: .grok/hooks/ai-rulez.json
+INFO    remove file: .grok/rules/always.md
+INFO    remove file: .grok/rules/auto.md
+INFO    remove file: .grok/rules/manual.md
+INFO    remove file: .grok/rules/typescript.md
+INFO    remove file: .grok/skills/deployer/SKILL.md
+INFO    remove file: .grok/skills/reviewer/SKILL.md
+INFO    remove file: .grok/skills/reviewer/references/checklist.md
+INFO    remove file: .grok/skills/reviewer/scripts/run.sh
+INFO    remove file: .hermes.md
+INFO    remove file: .junie/agents/architect.md
+INFO    remove file: .junie/agents/tester.md
+INFO    remove file: .junie/commands/build.md
+INFO    remove file: .junie/commands/ship.md
+INFO    remove file: .junie/rules/always.md
+INFO    remove file: .junie/rules/auto.md
+INFO    remove file: .junie/rules/manual.md
+INFO    remove file: .junie/rules/typescript.md
+INFO    remove file: .junie/skills/deployer/SKILL.md
+INFO    remove file: .junie/skills/reviewer/SKILL.md
+INFO    remove file: .junie/skills/reviewer/references/checklist.md
+INFO    remove file: .junie/skills/reviewer/scripts/run.sh
+INFO    remove file: .kilo/agents/architect.md
+INFO    remove file: .kilo/agents/tester.md
+INFO    remove file: .kilo/commands/build.md
+INFO    remove file: .kilo/commands/ship.md
+INFO    remove file: .kilo/plugins/ai-rulez-hooks.js
+INFO    remove file: .kilo/rules/always.md
+INFO    remove file: .kilo/rules/auto.md
+INFO    remove file: .kilo/rules/manual.md
+INFO    remove file: .kilo/rules/typescript.md
+INFO    remove file: .kilo/skills/deployer/SKILL.md
+INFO    remove file: .kilo/skills/reviewer/SKILL.md
+INFO    remove file: .kilo/skills/reviewer/references/checklist.md
+INFO    remove file: .kilo/skills/reviewer/scripts/run.sh
+INFO    remove file: .kimi-code/agents/architect.md
+INFO    remove file: .kimi-code/agents/tester.md
+INFO    remove file: .kimi-code/skills/deployer/SKILL.md
+INFO    remove file: .kimi-code/skills/reviewer/SKILL.md
+INFO    remove file: .kimi-code/skills/reviewer/references/checklist.md
+INFO    remove file: .kimi-code/skills/reviewer/scripts/run.sh
+INFO    remove file: .kiro/agents/architect.md
+INFO    remove file: .kiro/agents/tester.md
+INFO    remove file: .kiro/hooks/ai-rulez.json
+INFO    remove file: .kiro/prompts/build.md
+INFO    remove file: .kiro/prompts/ship.md
+INFO    remove file: .kiro/skills/deployer/SKILL.md
+INFO    remove file: .kiro/skills/reviewer/SKILL.md
+INFO    remove file: .kiro/skills/reviewer/references/checklist.md
+INFO    remove file: .kiro/skills/reviewer/scripts/run.sh
+INFO    remove file: .kiro/steering/always.md
+INFO    remove file: .kiro/steering/auto.md
+INFO    remove file: .kiro/steering/manual.md
+INFO    remove file: .kiro/steering/typescript.md
+INFO    remove file: .letta/agents/architect.md
+INFO    remove file: .letta/agents/tester.md
+INFO    remove file: .letta/settings.json
+INFO    remove file: .mimocode/agents/architect.md
+INFO    remove file: .mimocode/agents/tester.md
+INFO    remove file: .mimocode/commands/build.md
+INFO    remove file: .mimocode/commands/ship.md
+INFO    remove file: .mimocode/mimocode.jsonc
+INFO    remove file: .mimocode/plugins/ai-rulez-hooks.js
+INFO    remove file: .mimocode/skills/deployer/SKILL.md
+INFO    remove file: .mimocode/skills/reviewer/SKILL.md
+INFO    remove file: .mimocode/skills/reviewer/references/checklist.md
+INFO    remove file: .mimocode/skills/reviewer/scripts/run.sh
+INFO    remove file: .omp/agents/architect.md
+INFO    remove file: .omp/agents/tester.md
+INFO    remove file: .omp/commands/build.md
+INFO    remove file: .omp/commands/ship.md
+INFO    remove file: .omp/config.yml
+INFO    remove file: .omp/rules/always.md
+INFO    remove file: .omp/rules/auto.md
+INFO    remove file: .omp/rules/manual.md
+INFO    remove file: .omp/rules/typescript.md
+INFO    remove file: .omp/skills/deployer/SKILL.md
+INFO    remove file: .omp/skills/reviewer/SKILL.md
+INFO    remove file: .omp/skills/reviewer/references/checklist.md
+INFO    remove file: .omp/skills/reviewer/scripts/run.sh
+INFO    remove file: .opencode/agents/architect.md
+INFO    remove file: .opencode/agents/tester.md
+INFO    remove file: .opencode/commands/build.md
+INFO    remove file: .opencode/commands/ship.md
+INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
+INFO    remove file: .opencode/skills/deployer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/SKILL.md
+INFO    remove file: .opencode/skills/reviewer/references/checklist.md
+INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
+INFO    remove file: .pi/agents/architect.md
+INFO    remove file: .pi/agents/tester.md
+INFO    remove file: .pi/extensions/ai-rulez-hooks.ts
+INFO    remove file: .pi/prompts/build.md
+INFO    remove file: .pi/prompts/ship.md
+INFO    remove file: .poolside/settings.yaml
+INFO    remove file: .poolside/skills/deployer/SKILL.md
+INFO    remove file: .poolside/skills/reviewer/SKILL.md
+INFO    remove file: .poolside/skills/reviewer/references/checklist.md
+INFO    remove file: .poolside/skills/reviewer/scripts/run.sh
+INFO    remove file: .qoder/agents/architect.md
+INFO    remove file: .qoder/agents/tester.md
+INFO    remove file: .qoder/commands/build.md
+INFO    remove file: .qoder/commands/ship.md
+INFO    remove file: .qoder/rules/always.md
+INFO    remove file: .qoder/rules/auto.md
+INFO    remove file: .qoder/rules/manual.md
+INFO    remove file: .qoder/rules/typescript.md
+INFO    remove file: .qoder/settings.json
+INFO    remove file: .qoder/skills/deployer/SKILL.md
+INFO    remove file: .qoder/skills/reviewer/SKILL.md
+INFO    remove file: .qoder/skills/reviewer/references/checklist.md
+INFO    remove file: .qoder/skills/reviewer/scripts/run.sh
+INFO    remove file: .qwen/agents/architect.md
+INFO    remove file: .qwen/agents/tester.md
+INFO    remove file: .qwen/commands/build.md
+INFO    remove file: .qwen/commands/ship.md
+INFO    remove file: .qwen/review-rules.md
+INFO    remove file: .qwen/rules/always.md
+INFO    remove file: .qwen/rules/auto.md
+INFO    remove file: .qwen/rules/manual.md
+INFO    remove file: .qwen/rules/typescript.md
+INFO    remove file: .qwen/settings.json
+INFO    remove file: .qwen/skills/deployer/SKILL.md
+INFO    remove file: .qwen/skills/reviewer/SKILL.md
+INFO    remove file: .qwen/skills/reviewer/references/checklist.md
+INFO    remove file: .qwen/skills/reviewer/scripts/run.sh
+INFO    remove file: .reasonix/commands/build.md
+INFO    remove file: .reasonix/commands/ship.md
+INFO    remove file: .reasonix/settings.json
+INFO    remove file: .reasonix/skills/architect/SKILL.md
+INFO    remove file: .reasonix/skills/deployer/SKILL.md
+INFO    remove file: .reasonix/skills/reviewer/SKILL.md
+INFO    remove file: .reasonix/skills/reviewer/references/checklist.md
+INFO    remove file: .reasonix/skills/reviewer/scripts/run.sh
+INFO    remove file: .reasonix/skills/tester/SKILL.md
+INFO    remove file: .roo/commands/build.md
+INFO    remove file: .roo/commands/ship.md
+INFO    remove file: .roo/skills/deployer/SKILL.md
+INFO    remove file: .roo/skills/reviewer/SKILL.md
+INFO    remove file: .roo/skills/reviewer/references/checklist.md
+INFO    remove file: .roo/skills/reviewer/scripts/run.sh
+INFO    remove file: .rovodev/.review-agent.md
+INFO    remove file: .rovodev/skills/deployer/SKILL.md
+INFO    remove file: .rovodev/skills/reviewer/SKILL.md
+INFO    remove file: .rovodev/skills/reviewer/references/checklist.md
+INFO    remove file: .rovodev/skills/reviewer/scripts/run.sh
+INFO    remove file: .rovodev/subagents/architect.md
+INFO    remove file: .rovodev/subagents/tester.md
+INFO    remove file: .rules
+INFO    remove file: .takt/facets/instructions/build.md
+INFO    remove file: .takt/facets/instructions/ship.md
+INFO    remove file: .takt/facets/knowledge/deployer.md
+INFO    remove file: .takt/facets/knowledge/reviewer.md
+INFO    remove file: .takt/facets/personas/architect.md
+INFO    remove file: .takt/facets/personas/tester.md
+INFO    remove file: .takt/facets/policies/always.md
+INFO    remove file: .takt/facets/policies/auto.md
+INFO    remove file: .takt/facets/policies/context-architecture.md
+INFO    remove file: .takt/facets/policies/context-overview.md
+INFO    remove file: .takt/facets/policies/manual.md
+INFO    remove file: .takt/facets/policies/typescript.md
+INFO    remove file: .trae/rules/always.md
+INFO    remove file: .trae/rules/auto.md
+INFO    remove file: .trae/rules/context-architecture.md
+INFO    remove file: .trae/rules/context-overview.md
+INFO    remove file: .trae/rules/manual.md
+INFO    remove file: .trae/rules/typescript.md
+INFO    remove file: .trae/skills/deployer/SKILL.md
+INFO    remove file: .trae/skills/reviewer/SKILL.md
+INFO    remove file: .trae/skills/reviewer/references/checklist.md
+INFO    remove file: .trae/skills/reviewer/scripts/run.sh
+INFO    remove file: .vibe/config.toml
+INFO    remove file: .vibe/hooks.toml
+INFO    remove file: .vibe/skills/deployer/SKILL.md
+INFO    remove file: .vibe/skills/reviewer/SKILL.md
+INFO    remove file: .vibe/skills/reviewer/references/checklist.md
+INFO    remove file: .vibe/skills/reviewer/scripts/run.sh
+INFO    remove file: .vscode/settings.json
+INFO    remove file: .warp/skills/build/SKILL.md
+INFO    remove file: .warp/skills/deployer/SKILL.md
+INFO    remove file: .warp/skills/reviewer/SKILL.md
+INFO    remove file: .warp/skills/reviewer/references/checklist.md
+INFO    remove file: .warp/skills/reviewer/scripts/run.sh
+INFO    remove file: .warp/skills/ship/SKILL.md
+INFO    remove file: .xum/agents/architect.md
+INFO    remove file: .xum/agents/tester.md
+INFO    remove file: .xum/skills/deployer/SKILL.md
+INFO    remove file: .xum/skills/reviewer/SKILL.md
+INFO    remove file: .xum/skills/reviewer/references/checklist.md
+INFO    remove file: .xum/skills/reviewer/scripts/run.sh
+INFO    remove file: .zcode/agents/architect.md
+INFO    remove file: .zcode/agents/tester.md
+INFO    remove file: .zcode/commands/build.md
+INFO    remove file: .zcode/commands/ship.md
+INFO    remove file: .zcode/skills/deployer/SKILL.md
+INFO    remove file: .zcode/skills/reviewer/SKILL.md
+INFO    remove file: .zcode/skills/reviewer/references/checklist.md
+INFO    remove file: .zcode/skills/reviewer/scripts/run.sh
+INFO    remove file: AGENTS.md
+INFO    remove file: CLAUDE.md
+INFO    remove file: CODEBUDDY.md
+INFO    remove file: CRUSH.md
+INFO    remove file: GEMINI.md
+INFO    remove file: QWEN.md
+INFO    remove file: REASONIX.md
+INFO    remove file: REVIEW.md
+INFO    remove file: crush.json
+INFO    remove file: kilo.jsonc
+INFO    remove file: opencode.json
+INFO    remove file: replit.md
+INFO    remove dir (if empty): .zed
+INFO    remove dir (if empty): .zcode/skills/reviewer/scripts
+INFO    remove dir (if empty): .zcode/skills/reviewer/references
+INFO    remove dir (if empty): .zcode/skills/reviewer
+INFO    remove dir (if empty): .zcode/skills/deployer
+INFO    remove dir (if empty): .zcode/skills
+INFO    remove dir (if empty): .zcode/commands
+INFO    remove dir (if empty): .zcode/agents
+INFO    remove dir (if empty): .zcode
+INFO    remove dir (if empty): .xum/skills/reviewer/scripts
+INFO    remove dir (if empty): .xum/skills/reviewer/references
+INFO    remove dir (if empty): .xum/skills/reviewer
+INFO    remove dir (if empty): .xum/skills/deployer
+INFO    remove dir (if empty): .xum/skills
+INFO    remove dir (if empty): .xum/agents
+INFO    remove dir (if empty): .xum
+INFO    remove dir (if empty): .warp/skills/ship
+INFO    remove dir (if empty): .warp/skills/reviewer/scripts
+INFO    remove dir (if empty): .warp/skills/reviewer/references
+INFO    remove dir (if empty): .warp/skills/reviewer
+INFO    remove dir (if empty): .warp/skills/deployer
+INFO    remove dir (if empty): .warp/skills/build
+INFO    remove dir (if empty): .warp/skills
+INFO    remove dir (if empty): .warp
+INFO    remove dir (if empty): .vscode
+INFO    remove dir (if empty): .vibe/skills/reviewer/scripts
+INFO    remove dir (if empty): .vibe/skills/reviewer/references
+INFO    remove dir (if empty): .vibe/skills/reviewer
+INFO    remove dir (if empty): .vibe/skills/deployer
+INFO    remove dir (if empty): .vibe/skills
+INFO    remove dir (if empty): .vibe
+INFO    remove dir (if empty): .trae/skills/reviewer/scripts
+INFO    remove dir (if empty): .trae/skills/reviewer/references
+INFO    remove dir (if empty): .trae/skills/reviewer
+INFO    remove dir (if empty): .trae/skills/deployer
+INFO    remove dir (if empty): .trae/skills
+INFO    remove dir (if empty): .trae/rules
+INFO    remove dir (if empty): .trae
+INFO    remove dir (if empty): .takt/facets/policies
+INFO    remove dir (if empty): .takt/facets/personas
+INFO    remove dir (if empty): .takt/facets/knowledge
+INFO    remove dir (if empty): .takt/facets/instructions
+INFO    remove dir (if empty): .takt/facets
+INFO    remove dir (if empty): .takt
+INFO    remove dir (if empty): .rovodev/subagents
+INFO    remove dir (if empty): .rovodev/skills/reviewer/scripts
+INFO    remove dir (if empty): .rovodev/skills/reviewer/references
+INFO    remove dir (if empty): .rovodev/skills/reviewer
+INFO    remove dir (if empty): .rovodev/skills/deployer
+INFO    remove dir (if empty): .rovodev/skills
+INFO    remove dir (if empty): .rovodev
+INFO    remove dir (if empty): .roo/skills/reviewer/scripts
+INFO    remove dir (if empty): .roo/skills/reviewer/references
+INFO    remove dir (if empty): .roo/skills/reviewer
+INFO    remove dir (if empty): .roo/skills/deployer
+INFO    remove dir (if empty): .roo/skills
+INFO    remove dir (if empty): .roo/commands
+INFO    remove dir (if empty): .roo
+INFO    remove dir (if empty): .reasonix/skills/tester
+INFO    remove dir (if empty): .reasonix/skills/reviewer/scripts
+INFO    remove dir (if empty): .reasonix/skills/reviewer/references
+INFO    remove dir (if empty): .reasonix/skills/reviewer
+INFO    remove dir (if empty): .reasonix/skills/deployer
+INFO    remove dir (if empty): .reasonix/skills/architect
+INFO    remove dir (if empty): .reasonix/skills
+INFO    remove dir (if empty): .reasonix/commands
+INFO    remove dir (if empty): .reasonix
+INFO    remove dir (if empty): .qwen/skills/reviewer/scripts
+INFO    remove dir (if empty): .qwen/skills/reviewer/references
+INFO    remove dir (if empty): .qwen/skills/reviewer
+INFO    remove dir (if empty): .qwen/skills/deployer
+INFO    remove dir (if empty): .qwen/skills
+INFO    remove dir (if empty): .qwen/rules
+INFO    remove dir (if empty): .qwen/commands
+INFO    remove dir (if empty): .qwen/agents
+INFO    remove dir (if empty): .qwen
+INFO    remove dir (if empty): .qoder/skills/reviewer/scripts
+INFO    remove dir (if empty): .qoder/skills/reviewer/references
+INFO    remove dir (if empty): .qoder/skills/reviewer
+INFO    remove dir (if empty): .qoder/skills/deployer
+INFO    remove dir (if empty): .qoder/skills
+INFO    remove dir (if empty): .qoder/rules
+INFO    remove dir (if empty): .qoder/commands
+INFO    remove dir (if empty): .qoder/agents
+INFO    remove dir (if empty): .qoder
+INFO    remove dir (if empty): .poolside/skills/reviewer/scripts
+INFO    remove dir (if empty): .poolside/skills/reviewer/references
+INFO    remove dir (if empty): .poolside/skills/reviewer
+INFO    remove dir (if empty): .poolside/skills/deployer
+INFO    remove dir (if empty): .poolside/skills
+INFO    remove dir (if empty): .poolside
+INFO    remove dir (if empty): .pi/prompts
+INFO    remove dir (if empty): .pi/extensions
+INFO    remove dir (if empty): .pi/agents
+INFO    remove dir (if empty): .pi
+INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
+INFO    remove dir (if empty): .opencode/skills/reviewer/references
+INFO    remove dir (if empty): .opencode/skills/reviewer
+INFO    remove dir (if empty): .opencode/skills/deployer
+INFO    remove dir (if empty): .opencode/skills
+INFO    remove dir (if empty): .opencode/plugins
+INFO    remove dir (if empty): .opencode/commands
+INFO    remove dir (if empty): .opencode/agents
+INFO    remove dir (if empty): .opencode
+INFO    remove dir (if empty): .omp/skills/reviewer/scripts
+INFO    remove dir (if empty): .omp/skills/reviewer/references
+INFO    remove dir (if empty): .omp/skills/reviewer
+INFO    remove dir (if empty): .omp/skills/deployer
+INFO    remove dir (if empty): .omp/skills
+INFO    remove dir (if empty): .omp/rules
+INFO    remove dir (if empty): .omp/commands
+INFO    remove dir (if empty): .omp/agents
+INFO    remove dir (if empty): .omp
+INFO    remove dir (if empty): .mimocode/skills/reviewer/scripts
+INFO    remove dir (if empty): .mimocode/skills/reviewer/references
+INFO    remove dir (if empty): .mimocode/skills/reviewer
+INFO    remove dir (if empty): .mimocode/skills/deployer
+INFO    remove dir (if empty): .mimocode/skills
+INFO    remove dir (if empty): .mimocode/plugins
+INFO    remove dir (if empty): .mimocode/commands
+INFO    remove dir (if empty): .mimocode/agents
+INFO    remove dir (if empty): .mimocode
+INFO    remove dir (if empty): .letta/agents
+INFO    remove dir (if empty): .letta
+INFO    remove dir (if empty): .kiro/steering
+INFO    remove dir (if empty): .kiro/skills/reviewer/scripts
+INFO    remove dir (if empty): .kiro/skills/reviewer/references
+INFO    remove dir (if empty): .kiro/skills/reviewer
+INFO    remove dir (if empty): .kiro/skills/deployer
+INFO    remove dir (if empty): .kiro/skills
+INFO    remove dir (if empty): .kiro/prompts
+INFO    remove dir (if empty): .kiro/hooks
+INFO    remove dir (if empty): .kiro/agents
+INFO    remove dir (if empty): .kiro
+INFO    remove dir (if empty): .kimi-code/skills/reviewer/scripts
+INFO    remove dir (if empty): .kimi-code/skills/reviewer/references
+INFO    remove dir (if empty): .kimi-code/skills/reviewer
+INFO    remove dir (if empty): .kimi-code/skills/deployer
+INFO    remove dir (if empty): .kimi-code/skills
+INFO    remove dir (if empty): .kimi-code/agents
+INFO    remove dir (if empty): .kimi-code
+INFO    remove dir (if empty): .kilo/skills/reviewer/scripts
+INFO    remove dir (if empty): .kilo/skills/reviewer/references
+INFO    remove dir (if empty): .kilo/skills/reviewer
+INFO    remove dir (if empty): .kilo/skills/deployer
+INFO    remove dir (if empty): .kilo/skills
+INFO    remove dir (if empty): .kilo/rules
+INFO    remove dir (if empty): .kilo/plugins
+INFO    remove dir (if empty): .kilo/commands
+INFO    remove dir (if empty): .kilo/agents
+INFO    remove dir (if empty): .kilo
+INFO    remove dir (if empty): .junie/skills/reviewer/scripts
+INFO    remove dir (if empty): .junie/skills/reviewer/references
+INFO    remove dir (if empty): .junie/skills/reviewer
+INFO    remove dir (if empty): .junie/skills/deployer
+INFO    remove dir (if empty): .junie/skills
+INFO    remove dir (if empty): .junie/rules
+INFO    remove dir (if empty): .junie/commands
+INFO    remove dir (if empty): .junie/agents
+INFO    remove dir (if empty): .junie
+INFO    remove dir (if empty): .grok/skills/reviewer/scripts
+INFO    remove dir (if empty): .grok/skills/reviewer/references
+INFO    remove dir (if empty): .grok/skills/reviewer
+INFO    remove dir (if empty): .grok/skills/deployer
+INFO    remove dir (if empty): .grok/skills
+INFO    remove dir (if empty): .grok/rules
+INFO    remove dir (if empty): .grok/hooks
+INFO    remove dir (if empty): .grok/commands
+INFO    remove dir (if empty): .grok/agents
+INFO    remove dir (if empty): .grok
+INFO    remove dir (if empty): .goose/agents
+INFO    remove dir (if empty): .goose
+INFO    remove dir (if empty): .gitlab/duo
+INFO    remove dir (if empty): .gitlab
+INFO    remove dir (if empty): .github/skills/reviewer/scripts
+INFO    remove dir (if empty): .github/skills/reviewer/references
+INFO    remove dir (if empty): .github/skills/reviewer
+INFO    remove dir (if empty): .github/skills/deployer
+INFO    remove dir (if empty): .github/skills
+INFO    remove dir (if empty): .github/prompts
+INFO    remove dir (if empty): .github/instructions
+INFO    remove dir (if empty): .github/hooks
+INFO    remove dir (if empty): .github/copilot
+INFO    remove dir (if empty): .github/agents
+INFO    remove dir (if empty): .github
+INFO    remove dir (if empty): .gemini/agents
+INFO    remove dir (if empty): .gemini
+INFO    remove dir (if empty): .factory/skills/reviewer/scripts
+INFO    remove dir (if empty): .factory/skills/reviewer/references
+INFO    remove dir (if empty): .factory/skills/reviewer
+INFO    remove dir (if empty): .factory/skills/review-guidelines
+INFO    remove dir (if empty): .factory/skills/deployer
+INFO    remove dir (if empty): .factory/skills
+INFO    remove dir (if empty): .factory/droids
+INFO    remove dir (if empty): .factory/commands
+INFO    remove dir (if empty): .factory
+INFO    remove dir (if empty): .dsh/skills/reviewer/scripts
+INFO    remove dir (if empty): .dsh/skills/reviewer/references
+INFO    remove dir (if empty): .dsh/skills/reviewer
+INFO    remove dir (if empty): .dsh/skills/deployer
+INFO    remove dir (if empty): .dsh/skills
+INFO    remove dir (if empty): .dsh
+INFO    remove dir (if empty): .devin/skills/ship
+INFO    remove dir (if empty): .devin/skills/reviewer/scripts
+INFO    remove dir (if empty): .devin/skills/reviewer/references
+INFO    remove dir (if empty): .devin/skills/reviewer
+INFO    remove dir (if empty): .devin/skills/deployer
+INFO    remove dir (if empty): .devin/skills/build
+INFO    remove dir (if empty): .devin/skills
+INFO    remove dir (if empty): .devin/rules
+INFO    remove dir (if empty): .devin/agents
+INFO    remove dir (if empty): .devin
+INFO    remove dir (if empty): .deepagents/skills/reviewer/scripts
+INFO    remove dir (if empty): .deepagents/skills/reviewer/references
+INFO    remove dir (if empty): .deepagents/skills/reviewer
+INFO    remove dir (if empty): .deepagents/skills/deployer
+INFO    remove dir (if empty): .deepagents/skills
+INFO    remove dir (if empty): .deepagents/agents/tester
+INFO    remove dir (if empty): .deepagents/agents/architect
+INFO    remove dir (if empty): .deepagents/agents
+INFO    remove dir (if empty): .deepagents
+INFO    remove dir (if empty): .cursor/rules
+INFO    remove dir (if empty): .cursor/commands
+INFO    remove dir (if empty): .cursor/agents
+INFO    remove dir (if empty): .cursor
+INFO    remove dir (if empty): .crush/skills/reviewer/scripts
+INFO    remove dir (if empty): .crush/skills/reviewer/references
+INFO    remove dir (if empty): .crush/skills/reviewer
+INFO    remove dir (if empty): .crush/skills/deployer
+INFO    remove dir (if empty): .crush/skills
+INFO    remove dir (if empty): .crush
+INFO    remove dir (if empty): .cortex/skills/reviewer/scripts
+INFO    remove dir (if empty): .cortex/skills/reviewer/references
+INFO    remove dir (if empty): .cortex/skills/reviewer
+INFO    remove dir (if empty): .cortex/skills/deployer
+INFO    remove dir (if empty): .cortex/skills
+INFO    remove dir (if empty): .cortex/agents
+INFO    remove dir (if empty): .cortex
+INFO    remove dir (if empty): .commands
+INFO    remove dir (if empty): .commandcode/skills/reviewer/scripts
+INFO    remove dir (if empty): .commandcode/skills/reviewer/references
+INFO    remove dir (if empty): .commandcode/skills/reviewer
+INFO    remove dir (if empty): .commandcode/skills/deployer
+INFO    remove dir (if empty): .commandcode/skills
+INFO    remove dir (if empty): .commandcode/commands
+INFO    remove dir (if empty): .commandcode/agents
+INFO    remove dir (if empty): .commandcode
+INFO    remove dir (if empty): .codex/rules
+INFO    remove dir (if empty): .codex/agents
+INFO    remove dir (if empty): .codex
+INFO    remove dir (if empty): .codewhale/skills/reviewer/scripts
+INFO    remove dir (if empty): .codewhale/skills/reviewer/references
+INFO    remove dir (if empty): .codewhale/skills/reviewer
+INFO    remove dir (if empty): .codewhale/skills/deployer
+INFO    remove dir (if empty): .codewhale/skills
+INFO    remove dir (if empty): .codewhale/rules
+INFO    remove dir (if empty): .codewhale/commands
+INFO    remove dir (if empty): .codewhale
+INFO    remove dir (if empty): .codebuddy/skills/reviewer/scripts
+INFO    remove dir (if empty): .codebuddy/skills/reviewer/references
+INFO    remove dir (if empty): .codebuddy/skills/reviewer
+INFO    remove dir (if empty): .codebuddy/skills/deployer
+INFO    remove dir (if empty): .codebuddy/skills
+INFO    remove dir (if empty): .codebuddy/rules
+INFO    remove dir (if empty): .codebuddy/commands
+INFO    remove dir (if empty): .codebuddy/agents
+INFO    remove dir (if empty): .codebuddy
+INFO    remove dir (if empty): .clinerules/workflows
+INFO    remove dir (if empty): .clinerules/hooks
+INFO    remove dir (if empty): .clinerules
+INFO    remove dir (if empty): .cline/skills/reviewer/scripts
+INFO    remove dir (if empty): .cline/skills/reviewer/references
+INFO    remove dir (if empty): .cline/skills/reviewer
+INFO    remove dir (if empty): .cline/skills/deployer
+INFO    remove dir (if empty): .cline/skills
+INFO    remove dir (if empty): .cline/agents
+INFO    remove dir (if empty): .cline
+INFO    remove dir (if empty): .claude/skills/ship
+INFO    remove dir (if empty): .claude/skills/reviewer/scripts
+INFO    remove dir (if empty): .claude/skills/reviewer/references
+INFO    remove dir (if empty): .claude/skills/reviewer
+INFO    remove dir (if empty): .claude/skills/deployer
+INFO    remove dir (if empty): .claude/skills/build
+INFO    remove dir (if empty): .claude/skills
+INFO    remove dir (if empty): .claude/rules
+INFO    remove dir (if empty): .claude/agents
+INFO    remove dir (if empty): .claude
+INFO    remove dir (if empty): .bob/skills/reviewer/scripts
+INFO    remove dir (if empty): .bob/skills/reviewer/references
+INFO    remove dir (if empty): .bob/skills/reviewer
+INFO    remove dir (if empty): .bob/skills/deployer
+INFO    remove dir (if empty): .bob/skills
+INFO    remove dir (if empty): .bob/rules
+INFO    remove dir (if empty): .bob/commands
+INFO    remove dir (if empty): .bob
+INFO    remove dir (if empty): .augment/skills/reviewer/scripts
+INFO    remove dir (if empty): .augment/skills/reviewer/references
+INFO    remove dir (if empty): .augment/skills/reviewer
+INFO    remove dir (if empty): .augment/skills/deployer
+INFO    remove dir (if empty): .augment/skills
+INFO    remove dir (if empty): .augment/rules
+INFO    remove dir (if empty): .augment/commands
+INFO    remove dir (if empty): .augment/agents
+INFO    remove dir (if empty): .augment
+INFO    remove dir (if empty): .amp/plugins
+INFO    remove dir (if empty): .amp
+INFO    remove dir (if empty): .aiassistant/rules
+INFO    remove dir (if empty): .aiassistant
+INFO    remove dir (if empty): .agents/skills/ship/agents
+INFO    remove dir (if empty): .agents/skills/ship
+INFO    remove dir (if empty): .agents/skills/reviewer/scripts
+INFO    remove dir (if empty): .agents/skills/reviewer/references
+INFO    remove dir (if empty): .agents/skills/reviewer
+INFO    remove dir (if empty): .agents/skills/deployer
+INFO    remove dir (if empty): .agents/skills/build/agents
+INFO    remove dir (if empty): .agents/skills/build
+INFO    remove dir (if empty): .agents/skills
+INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
+INFO    remove dir (if empty): .agents/plugins/ai-rulez
+INFO    remove dir (if empty): .agents/plugins
+INFO    remove dir (if empty): .agents/commands
+INFO    remove dir (if empty): .agents/checks
+INFO    remove dir (if empty): .agents/agents
+INFO    remove dir (if empty): .agents
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+INFO  Removed generated files files=414 directories=324
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 1018 047446e6c2c2894895ad62b078b15a2ed9f07544d138d8b106e31d142341a9fd
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

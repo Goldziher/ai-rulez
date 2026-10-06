@@ -1,0 +1,2272 @@
+# scenario agents-md-shared
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=44
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 bff9504863310601d5acb5f933576c5f5e6f371baa5bb4641006e658fc5b6981
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 5caeec1ecf552fdcb62a8cd4d6e1008be36a8674edd315b1b76538c3df96af3a
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1773 8fb9068bf089eeaf151db53a8dc8d920c5c8bcf583c799b52398c462741090bc
+.ai-rulez/.generated-manifest.local.json file 0644 9968 ef9eb9ad3c53a6badf147d25fabaf5becee0034ee0cb8102305ea35d3496b5e3
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 884 fbacee27d64c83f1c661a9a735909ae5d7d689ec85d2fe6ce5feedb891900cff
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 e1391345d3d708b65d9aaa2ce5b38592f8c8a2d6922639c908143a8b4dcc7139
+.claude/agents/tester.md file 0644 258 d8b5496a1387479d9dd7e4142cd6e5d2424fef11728768e60eb8c8fb1cb4652f
+.claude/rules/ dir 0755
+.claude/rules/auto.md file 0644 302 ce6ce1a10e290a8c3eee489190e0e046fd154546892ca1fafc89eec5bab30835
+.claude/rules/manual.md file 0644 313 98a2187dae330dd94af9836e272bb99252aa52640914a4ad28f7a13f4ba84f65
+.claude/rules/typescript.md file 0644 376 6f88bc9287b9d61babb426a2190bbee5832fd607901f80026c22aaba7c8a0cb8
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 6345c09fbf5d047046ee41e9fd9a596a6db4cca15541250f822eba770e33fb0d
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 bb33b32256778198dfc5826048ef242d7a32dd0241bcd2214df350a92badcd16
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 b545c1ce3e2643750d91580c79c116214c4b036e1f174f2d62ece5e29c98e189
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 fb33c4928ea3c83a16a63e3cd8d20bf9e3d9a0ae9fb975bf2cb7d6af66f8248d
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 b2a807a8e1aa63e6be6d9cf77ee59ee89e697309348ed7529b0ab3e5952cd0af
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 e1391345d3d708b65d9aaa2ce5b38592f8c8a2d6922639c908143a8b4dcc7139
+.cursor/agents/tester.md file 0644 245 216a966091ebed88fc061b5e4e5ee527d999319fd6b39f0f1d50899623436deb
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+.cursor/rules/ dir 0755
+.cursor/rules/auto.mdc file 0644 362 e84a810afd56f10f33e9779c73c3a1b63402a9336fbf7c39fad7c507ff98954d
+.cursor/rules/manual.mdc file 0644 340 b7bd4340141b422b0ab367795e7ac05029c5e065426f585f36f5e00fbd38ff9e
+.cursor/rules/typescript.mdc file 0644 390 d8a489be10d7af3ecad18b006f376e2d5422285fd0849b59213252c27b7cc36f
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 8b70cbfa36a5f31224af2cc877333e0643be89a8b8c6f14c6df8197019228023
+.gemini/agents/tester.md file 0644 245 216a966091ebed88fc061b5e4e5ee527d999319fd6b39f0f1d50899623436deb
+.gemini/settings.json file 0644 1389 a8976a9ca2d5045d4f36f46d7a275f5de5d705dd36e159471aafb5b9df38fe54
+.gitignore file 0644 716 a85b1986bda00faf1a97d98a358a62d20360a31a4a88f513e6d30c3147041729
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 d1f759f5e8154289b25ed1ee67e15ff39983979cd2daacf8bceb9302536be367
+.opencode/agents/tester.md file 0644 256 cb15ef009489558c98f28cfeb018cbd69f0fdb71b410378c22dff5ac7cf4845f
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 87d449a3f453b7f3fcaaa6c88d672481f1b1a8b1bfa2df5ea390c8651d45658c
+.opencode/commands/ship.md file 0644 227 2b6d04b7c15762ec12921e242892b8aa2685352bceb06d0382b88f9a36d48ea3
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+AGENTS.md file 0644 917 2eaaed543a757f99c45e00c3190654a9da00f52ec0ac0288db4a333be7cdcc01
+CLAUDE.md file 0644 462 63e603f77cce4ec7c5d709e755e08b5a80b1d95b5c6436deb7eb55c9b55f6d3b
+opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: write .ai-rulez/config.toml
+--- project tree
+~ .ai-rulez/config.toml file 0644 868 e6ff49ea6785e6b04fd21c19081227cdfbcaca144dc7c0ebb3472c59a28cae53
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] ask rules are not generated for gemini: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Read(./src/**)" not generated for gemini: settings.json can only allow or block a whole tool, not ./src/**
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for gemini: settings.json can only allow or block a whole tool, not domain:example.com
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by gemini: settings.json can only allow or block a whole tool, not ./.env severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
+WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=59
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/build/ dir 0755
+.agents/skills/build/SKILL.md file 0644 295 f6a01ecdb2de45b34318dbf88a1b56be5580d05b33b424fda36f0d38cebd71e3
+>>>>
+---
+name: build
+description: "Build the project"
+disable-model-invocation: true
+# Content-Hash: blake3:c27c65635f5481b638239b55b5000ae1e0fa91bf65cdd1650db88a06cd8f5c8b
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Run the build and report failures.
+<<<<
+.agents/skills/build/agents/ dir 0755
+.agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+>>>>
+policy:
+  allow_implicit_invocation: false
+<<<<
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 420d4845cb5c4db24a44190f881ea5d5e1c34d6868f9d5828fcb4f1cede2cd73
+>>>>
+---
+name: deployer
+description: "Deploys the service"
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 ef7967865d57158cf29ae577247025aaa4f447bcff5e8f7afa4d460674d44d42
+>>>>
+---
+name: reviewer
+description: "Reviews pull requests"
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.agents/skills/ship/ dir 0755
+.agents/skills/ship/SKILL.md file 0644 271 d7fdd7c209b632a67c04558e4ab9a2cde9bcd26f3ba6401342a4dc45bbdb3c78
+>>>>
+---
+name: ship
+description: "Ship a release"
+disable-model-invocation: true
+# Content-Hash: blake3:0c74fdcf01fb95c9a178276be941d8de3ab479704ee5b9e093b5acc89ed48eff
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Cut a release.
+<<<<
+.agents/skills/ship/agents/ dir 0755
+.agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
+>>>>
+policy:
+  allow_implicit_invocation: false
+<<<<
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 2363 6ab964d853f9f2dc5b77ff3ee0b395e2d81479e8644fe4fe67d025d6c4cd35f2
+>>>>
+{
+  "version": "1",
+  "files": [
+    ".agents/skills/build/SKILL.md",
+    ".agents/skills/build/agents/openai.yaml",
+    ".agents/skills/deployer/SKILL.md",
+    ".agents/skills/reviewer/SKILL.md",
+    ".agents/skills/reviewer/references/checklist.md",
+    ".agents/skills/reviewer/scripts/run.sh",
+    ".agents/skills/ship/SKILL.md",
+    ".agents/skills/ship/agents/openai.yaml",
+    ".claude/agents/architect.md",
+    ".claude/agents/tester.md",
+    ".claude/rules/always.md",
+    ".claude/rules/auto.md",
+    ".claude/rules/manual.md",
+    ".claude/rules/targeted.md",
+    ".claude/rules/typescript.md",
+    ".claude/settings.json",
+    ".claude/skills/build/SKILL.md",
+    ".claude/skills/deployer/SKILL.md",
+    ".claude/skills/reviewer/SKILL.md",
+    ".claude/skills/reviewer/references/checklist.md",
+    ".claude/skills/reviewer/scripts/run.sh",
+    ".claude/skills/ship/SKILL.md",
+    ".codex/agents/architect.toml",
+    ".codex/agents/tester.toml",
+    ".codex/config.toml",
+    ".codex/hooks.json",
+    ".codex/rules/ai-rulez.rules",
+    ".cursor/BUGBOT.md",
+    ".cursor/agents/architect.md",
+    ".cursor/agents/tester.md",
+    ".cursor/cli.json",
+    ".cursor/commands/build.md",
+    ".cursor/commands/ship.md",
+    ".cursor/hooks.json",
+    ".cursor/mcp.json",
+    ".cursor/rules/always.mdc",
+    ".cursor/rules/auto.mdc",
+    ".cursor/rules/context-architecture.mdc",
+    ".cursor/rules/context-overview.mdc",
+    ".cursor/rules/manual.mdc",
+    ".cursor/rules/targeted.mdc",
+    ".cursor/rules/typescript.mdc",
+    ".gemini/agents/architect.md",
+    ".gemini/agents/tester.md",
+    ".gemini/settings.json",
+    ".mcp.json",
+    ".opencode/agents/architect.md",
+    ".opencode/agents/tester.md",
+    ".opencode/commands/build.md",
+    ".opencode/commands/ship.md",
+    ".opencode/plugins/ai-rulez-hooks.js",
+    ".opencode/skills/deployer/SKILL.md",
+    ".opencode/skills/reviewer/SKILL.md",
+    ".opencode/skills/reviewer/references/checklist.md",
+    ".opencode/skills/reviewer/scripts/run.sh",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "opencode.json"
+  ],
+  "merged": {
+    ".claude/settings.json": [],
+    ".codex/hooks.json": [],
+    ".cursor/BUGBOT.md": [],
+    ".cursor/cli.json": [],
+    ".cursor/hooks.json": [],
+    ".cursor/mcp.json": [],
+    ".gemini/settings.json": [],
+    ".mcp.json": [],
+    "opencode.json": []
+  }
+}
+<<<<
+.ai-rulez/.generated-manifest.local.json file 0644 10438 26c12cf1b36e0238eb996135bc2dfd609eaa61042b998aa67cfe5f62bf357be3
+>>>>
+{
+  "version": "1",
+  "files": [],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "hooks",
+          "PreToolUse"
+        ],
+        "elementSums": [
+          "54635121d8f6e71ad7bc18abf9f1ff33a3dc95673c6c6a75a639d654832c8081",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "allow"
+        ],
+        "elementSums": [
+          "4b79ff9e0bd4048e1a7d0b993b2bba4336ad7f2dd385ca312d04d46ee518d2d6",
+          "51ab4feb934e42152b9e06978628e6478131dcd20ed3dc3247b44f3c3e378083",
+          "7980f3870c01e194db9c1e8874a073687d09e6b182a0b27596ffce30a6f80f51"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "ask"
+        ],
+        "elementSums": [
+          "9361f4e2cabb52e2a1f986dd57aa9aa77b64cdd7df81feb7ebd095b9a34ecd06"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "deny"
+        ],
+        "elementSums": [
+          "8dd3b1a58515b0c193982a408b39ffa017372a95e8a2d4a4c44636f35c6eedf6",
+          "d32001d08b7e0990e2ef5732ac51425f931e5ceedaff77f3c92d7d13db4ec72b"
+        ]
+      }
+    ],
+    ".codex/config.toml": [
+      {
+        "path": [
+          "mcp_servers",
+          "local-tool"
+        ],
+        "sum": "63f27588bcef062945d641da2109c583b19eaf735aa823fa2f28ae96832eba62",
+        "local": true
+      },
+      {
+        "path": [
+          "mcp_servers",
+          "remote-tool"
+        ],
+        "sum": "05a0294df484b9f3e6ec77523304ebc1e0208553f0d91b4309856bdc4bbe4378",
+        "local": true
+      }
+    ],
+    ".codex/hooks.json": [
+      {
+        "path": [
+          "hooks",
+          "PreToolUse"
+        ],
+        "elementSums": [
+          "01788894210a35cc20fc03653780df09da1154521cb2b7a291a78aba6df4a8e6",
+          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+        ]
+      }
+    ],
+    ".cursor/BUGBOT.md": [
+      {
+        "path": [
+          "checks"
+        ],
+        "sum": "b8d45607bc85aa7eba0cbfbde863e12695740709e00cf77da477e24982d9748e"
+      }
+    ],
+    ".cursor/cli.json": [
+      {
+        "path": [
+          "permissions",
+          "allow"
+        ],
+        "elementSums": [
+          "30d135f29982fbee6e27cb63f669816775304604f249a9c4a12b15dcd2035537",
+          "612daece2e7b6a3484711ddb8ae945e50b4c33679c5e4fc2e6d010fdd1c42306"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "deny"
+        ],
+        "elementSums": [
+          "3918fbac8c6a27c8b72de74e470f274f3dc06a4dc3f200b1ef42df864a943445",
+          "83f88620f77bc5bd4043548104dec9acd05b4e7c0c0bd171ea886fd4add93433"
+        ]
+      }
+    ],
+    ".cursor/hooks.json": [
+      {
+        "path": [
+          "version"
+        ],
+        "sum": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "alone": true
+      },
+      {
+        "path": [
+          "hooks",
+          "preToolUse"
+        ],
+        "elementSums": [
+          "7646211ce8b2731f0537a597e8303d80306ee364768369f3bd32b3af5724a193",
+          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "sessionStart"
+        ],
+        "elementSums": [
+          "cba94814625d652ef4f8af0b70e8be159ae66d411fc1240b30344cbc9d4bdda2"
+        ]
+      }
+    ],
+    ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "local-tool"
+        ],
+        "sum": "dd1933f59f7087301c038495a516fed4e56298eb98acf2e6672b13c49242260d"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "remote-tool"
+        ],
+        "sum": "72aed2ef780eab3510b3283f49354a2c9e0412cc4a039d8e1ed4510f58d153cb"
+      }
+    ],
+    ".gemini/settings.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "local-tool"
+        ],
+        "sum": "7734a50a80bf6549167fcde480aadb7ceba5d3c90b966a5be0efa48c603d027f"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "remote-tool"
+        ],
+        "sum": "88fcad5d9aaaa474dfb3cdc3dda7520992ef1ece4337c92c97d383b7e3a597ea"
+      },
+      {
+        "path": [
+          "context",
+          "fileName"
+        ],
+        "sum": "55ab5777c53b526e4a7b799b58efe649d68307c37391bc0aec5c05065d6df870"
+      },
+      {
+        "path": [
+          "hooks",
+          "BeforeTool"
+        ],
+        "elementSums": [
+          "2b4b8b962341e55fae7263e8eb0cfe85ffdeb0131443f89b5a540b1d9231a136",
+          "7a939da0431ad0994dae53640188cb1d2b79a6d5dfab2c0f5e2ec6536199e480"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "9f3a7fdf46215c1fd0dadb5c848747cc1a224fbaa1fdb8c512d22a17aec5204c"
+        ]
+      },
+      {
+        "path": [
+          "tools",
+          "allowed"
+        ],
+        "elementSums": [
+          "86c2048c25d9d4f2efe4e7bd9d07728e6964517333f463fe777fb78686808be6"
+        ]
+      },
+      {
+        "path": [
+          "tools",
+          "exclude"
+        ],
+        "elementSums": [
+          "a8ba772e51e1ec18125f7a40df646b2c94036a3fc616f9601e7e8dbd124ba437"
+        ]
+      }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "local-tool"
+        ],
+        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "remote-tool"
+        ],
+        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26"
+      }
+    ],
+    "opencode.json": [
+      {
+        "path": [
+          "$schema"
+        ],
+        "sum": "5b44767d48bb2a2ba170d7412d260e9c0d31fcdc2e7cbd38225464a63880d42e"
+      },
+      {
+        "path": [
+          "instructions"
+        ],
+        "elementSums": [
+          "59744dbf84a2973dbb56fbcd87da54df692a39176f2935c18835ed8e6daa1d9a"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "local-tool"
+        ],
+        "sum": "e987f37c1855bccf1413c5453c1d41713530bf6e306df18ecabc90a9e70d5c78"
+      },
+      {
+        "path": [
+          "mcp",
+          "remote-tool"
+        ],
+        "sum": "e8858da17589ff167046a9a1c263c2bdc0dcf350506b675c9018c9d5335510b6"
+      },
+      {
+        "path": [
+          "permission",
+          "bash",
+          "git push *"
+        ],
+        "sum": "e43a5493c180fde1ca0c3b266b7781876016f68d2caaa937e049f3c050b87a66"
+      },
+      {
+        "path": [
+          "permission",
+          "bash",
+          "npm run test *"
+        ],
+        "sum": "58d46b625a55ee18af5cfc1b8f4c237f3523a9ac5184cfe64460c6e17810828a"
+      },
+      {
+        "path": [
+          "permission",
+          "bash",
+          "rm -rf *"
+        ],
+        "sum": "d2a00b488ac374247aa72cf83ed3a7637985deb3f6f282a4c420af0cc45c5277"
+      },
+      {
+        "path": [
+          "permission",
+          "read",
+          "**/.env"
+        ],
+        "sum": "d2a00b488ac374247aa72cf83ed3a7637985deb3f6f282a4c420af0cc45c5277"
+      },
+      {
+        "path": [
+          "permission",
+          "read",
+          ".env"
+        ],
+        "sum": "d2a00b488ac374247aa72cf83ed3a7637985deb3f6f282a4c420af0cc45c5277"
+      },
+      {
+        "path": [
+          "permission",
+          "webfetch",
+          "https://example.com/*"
+        ],
+        "sum": "58d46b625a55ee18af5cfc1b8f4c237f3523a9ac5184cfe64460c6e17810828a"
+      }
+    ]
+  },
+  "digests": {
+    ".agents/skills/build/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+    ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+    ".claude/settings.json": "0e293c7ca1d8c791d15dab4cebee34c2f5400d0bef14dec1304ce335f83447fe",
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
+    ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
+    ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
+    ".codex/hooks.json": "0cab5be0cfcc4840144fa8b9f5ab2f4e62fd6d55867c2b8baed618f8a0e35361",
+    ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
+    ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
+    ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
+    ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
+    ".cursor/hooks.json": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7",
+    ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
+    ".gemini/settings.json": "2ea86027e79bde7ca66e400b769db6d7ca05018ef22b2f1952c35593a5bd33d4",
+    ".mcp.json": "893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4",
+    ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
+    ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    "opencode.json": "d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da"
+  }
+}
+<<<<
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+>>>>
+---
+name: architect
+description: Designs systems
+model: sonnet
+---
+# Architect
+
+Think in layers.
+<<<<
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+>>>>
+---
+name: tester
+description: Writes tests
+effort: high
+---
+# Tester
+
+Test first.
+<<<<
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+>>>>
+---
+description: Flags common security issues
+severity: high
+tools: [Read, Grep]
+---
+
+Review the diff for injection and secrets.
+<<<<
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+>>>>
+---
+description: Style consistency
+severity: low
+---
+
+Keep the style consistent.
+<<<<
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+>>>>
+---
+name: build
+description: Build the project
+---
+Run the build and report failures.
+<<<<
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+>>>>
+---
+name: ship
+description: Ship a release
+---
+Cut a release.
+<<<<
+.ai-rulez/config.toml file 0644 868 e6ff49ea6785e6b04fd21c19081227cdfbcaca144dc7c0ebb3472c59a28cae53
+>>>>
+version = "4.0"
+name = "golden"
+description = "Golden fixture project"
+presets = ["codex", "claude", "gemini", "cursor", "opencode"]
+gitignore = true
+
+[guard]
+generated = true
+
+[[mcp_servers]]
+name = "local-tool"
+description = "A stdio server"
+command = "npx"
+args = ["-y", "golden-mcp"]
+[mcp_servers.env]
+API_TOKEN = "${GOLDEN_TOKEN}"
+
+[[mcp_servers]]
+name = "remote-tool"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+[mcp_servers.headers]
+Authorization = "Bearer ${GOLDEN_TOKEN}"
+
+[permissions]
+allow = ["Bash(npm run test:*)", "Read(./src/**)", "WebFetch(domain:example.com)"]
+ask = ["Bash(git push:*)"]
+deny = ["Bash(rm -rf:*)", "Read(./.env)"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"
+timeout = 10
+
+[[hooks]]
+event = "SessionStart"
+[[hooks.hooks]]
+command = "echo started"
+status_message = "Starting"
+<<<<
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+>>>>
+# Architecture
+
+Layers and boundaries.
+<<<<
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+>>>>
+---
+priority: high
+---
+# Overview
+
+The project overview.
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+>>>>
+---
+priority: critical
+---
+# Always
+
+Always apply this rule.
+<<<<
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+>>>>
+---
+activation: auto
+description: Database migrations
+---
+# Migrations
+
+Write reversible migrations.
+<<<<
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+>>>>
+---
+activation: manual
+priority: low
+---
+# Manual
+
+Only when asked.
+<<<<
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+>>>>
+---
+targets:
+  - claude
+  - cursor
+---
+# Targeted
+
+For claude and cursor only.
+<<<<
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+>>>>
+---
+priority: high
+paths:
+  - "src/**/*.{ts,tsx}"
+  - "tests/**"
+activation: glob
+---
+# TypeScript
+
+Use strict mode.
+<<<<
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+>>>>
+---
+name: deployer
+description: Deploys the service
+---
+# Deployer
+
+Deploy safely.
+<<<<
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+>>>>
+---
+name: reviewer
+description: Reviews pull requests
+---
+# Reviewer
+
+Review carefully.
+<<<<
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 e1391345d3d708b65d9aaa2ce5b38592f8c8a2d6922639c908143a8b4dcc7139
+>>>>
+---
+description: Designs systems
+model: sonnet
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.claude/agents/tester.md file 0644 258 d8b5496a1387479d9dd7e4142cd6e5d2424fef11728768e60eb8c8fb1cb4652f
+>>>>
+---
+description: Writes tests
+effort: high
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Tester
+
+Test first.
+<<<<
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 0abcb29426b8c4cfe711615655d2231d23ae8507bc6c874fdf6fcbe2fd4c0fd9
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
+Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# always
+
+**Priority:** critical
+
+Always apply this rule.
+<<<<
+.claude/rules/auto.md file 0644 302 ce6ce1a10e290a8c3eee489190e0e046fd154546892ca1fafc89eec5bab30835
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
+Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# auto
+
+Write reversible migrations.
+<<<<
+.claude/rules/manual.md file 0644 313 98a2187dae330dd94af9836e272bb99252aa52640914a4ad28f7a13f4ba84f65
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
+Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# manual
+
+**Priority:** low
+
+Only when asked.
+<<<<
+.claude/rules/targeted.md file 0644 309 7e7666b7da849250a13521668f52a70a32ca119d4fe9b049982ca24551756708
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
+Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# targeted
+
+For claude and cursor only.
+<<<<
+.claude/rules/typescript.md file 0644 376 6f88bc9287b9d61babb426a2190bbee5832fd607901f80026c22aaba7c8a0cb8
+>>>>
+---
+paths:
+    - src/**/*.{ts,tsx}
+    - tests/**
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
+Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# typescript
+
+**Priority:** high
+
+Use strict mode.
+<<<<
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+>>>>
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/'scripts/guard.sh'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y ai-rulez@$VERSION guard",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo started",
+            "statusMessage": "Starting"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Read(./src/**)",
+      "WebFetch(domain:example.com)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Read(./.env)"
+    ]
+  }
+}
+<<<<
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 6345c09fbf5d047046ee41e9fd9a596a6db4cca15541250f822eba770e33fb0d
+>>>>
+---
+description: Build the project
+name: build
+user-invocable: true
+# Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Run the build and report failures.
+<<<<
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 bb33b32256778198dfc5826048ef242d7a32dd0241bcd2214df350a92badcd16
+>>>>
+---
+description: Deploys the service
+name: deployer
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 b545c1ce3e2643750d91580c79c116214c4b036e1f174f2d62ece5e29c98e189
+>>>>
+---
+description: Reviews pull requests
+name: reviewer
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 fb33c4928ea3c83a16a63e3cd8d20bf9e3d9a0ae9fb975bf2cb7d6af66f8248d
+>>>>
+---
+description: Ship a release
+name: ship
+user-invocable: true
+# Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Cut a release.
+<<<<
+.codex/ dir 0755
+.codex/agents/ dir 0755
+.codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
+>>>>
+name = "architect"
+description = "Designs systems"
+developer_instructions = """
+# Architect
+
+Think in layers.
+
+"""
+<<<<
+.codex/agents/tester.toml file 0644 133 220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c
+>>>>
+name = "tester"
+description = "Writes tests"
+model_reasoning_effort = "high"
+developer_instructions = """
+# Tester
+
+Test first.
+
+"""
+<<<<
+.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
+>>>>
+[mcp_servers.local-tool]
+args = ["-y", "golden-mcp"]
+command = "npx"
+
+[mcp_servers.local-tool.env]
+API_TOKEN = "golden-secret-value"
+
+[mcp_servers.remote-tool]
+bearer_token_env_var = "GOLDEN_TOKEN"
+url = "https://mcp.example.com/mcp"
+<<<<
+.codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
+>>>>
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)\"/'scripts/guard.sh'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y ai-rulez@$VERSION guard",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo started",
+            "statusMessage": "Starting"
+          }
+        ]
+      }
+    ]
+  }
+}
+<<<<
+.codex/rules/ dir 0755
+.codex/rules/ai-rulez.rules file 0644 496 b2a807a8e1aa63e6be6d9cf77ee59ee89e697309348ed7529b0ab3e5952cd0af
+>>>>
+# Generated by ai-rulez from [permissions]. Do not edit; change .ai-rulez/config.toml and regenerate.
+# Content-Hash: blake3:2753a7a1649e070d1f61b3aac159f96557b7430cb87fbfba86b9a2d6a0e75f2d
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+
+prefix_rule(
+    pattern = ["npm","run","test"],
+    decision = "allow",
+)
+
+prefix_rule(
+    pattern = ["git","push"],
+    decision = "prompt",
+)
+
+prefix_rule(
+    pattern = ["rm","-rf"],
+    decision = "forbidden",
+)
+<<<<
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+>>>>
+<!-- ai-rulez:checks:begin -->
+<!-- ai-rulez:check:security -->
+
+## security
+
+Review the diff for injection and secrets.
+
+<!-- ai-rulez:check:style -->
+
+## style
+
+Keep the style consistent.
+<!-- ai-rulez:checks:end -->
+<<<<
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 e1391345d3d708b65d9aaa2ce5b38592f8c8a2d6922639c908143a8b4dcc7139
+>>>>
+---
+description: Designs systems
+model: sonnet
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.cursor/agents/tester.md file 0644 245 216a966091ebed88fc061b5e4e5ee527d999319fd6b39f0f1d50899623436deb
+>>>>
+---
+description: Writes tests
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Tester
+
+Test first.
+<<<<
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+>>>>
+{
+  "permissions": {
+    "allow": [
+      "Read(src/**)",
+      "WebFetch(example.com)"
+    ],
+    "deny": [
+      "Shell(rm:-rf*)",
+      "Read(.env)"
+    ]
+  }
+}
+<<<<
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+>>>>
+# /build
+
+**Description:** Build the project
+
+Run the build and report failures.
+<<<<
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+>>>>
+# /ship
+
+**Description:** Ship a release
+
+Cut a release.
+<<<<
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+>>>>
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "'./scripts/guard.sh'",
+        "timeout": 10,
+        "matcher": "^Shell$"
+      },
+      {
+        "command": "npx -y ai-rulez@$VERSION guard",
+        "timeout": 10,
+        "matcher": "^Write$"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "echo started"
+      }
+    ]
+  },
+  "version": 1
+}
+<<<<
+.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+>>>>
+{
+  "mcpServers": {
+    "local-tool": {
+      "args": [
+        "-y",
+        "golden-mcp"
+      ],
+      "command": "npx",
+      "env": {
+        "API_TOKEN": "${env:GOLDEN_TOKEN}"
+      }
+    },
+    "remote-tool": {
+      "headers": {
+        "Authorization": "Bearer ${env:GOLDEN_TOKEN}"
+      },
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}
+<<<<
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 272a5eda20d565155327f6fcd1891d674443c22137b92a0813ec47bdc2455f00
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
+Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# always
+
+**Priority:** critical
+
+Always apply this rule.
+<<<<
+.cursor/rules/auto.mdc file 0644 362 e84a810afd56f10f33e9779c73c3a1b63402a9336fbf7c39fad7c507ff98954d
+>>>>
+---
+alwaysApply: false
+description: Database migrations
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
+Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# auto
+
+Write reversible migrations.
+<<<<
+.cursor/rules/context-architecture.mdc file 0644 340 0634456ff3148e616b440193dd00f1445f07f9fedb65b02e29e1e8b7d0449131
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/context/architecture.md. Edit the source, not this file.
+Content-Hash: blake3:8f77c7d3494e658fa2e3d3b3d503cdd74e4316ab9a9076f9a506566dd2c10f34
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# architecture
+
+Layers and boundaries.
+<<<<
+.cursor/rules/context-overview.mdc file 0644 351 407ea394a3a91b8c49ccb59c0c1dd08bb84cbfc62ed1774b3df97382f33a9365
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/context/overview.md. Edit the source, not this file.
+Content-Hash: blake3:52911f95f682a11e5036a423c56f3be58f5b93fe8ab603133b0aef49dfe24234
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# overview
+
+**Priority:** high
+
+The project overview.
+<<<<
+.cursor/rules/manual.mdc file 0644 340 b7bd4340141b422b0ab367795e7ac05029c5e065426f585f36f5e00fbd38ff9e
+>>>>
+---
+alwaysApply: false
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
+Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# manual
+
+**Priority:** low
+
+Only when asked.
+<<<<
+.cursor/rules/targeted.mdc file 0644 335 ca0c98a46eddb9df07a2c69ec42559a3b2894caea470db1add6eabe6dc337b32
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
+Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# targeted
+
+For claude and cursor only.
+<<<<
+.cursor/rules/typescript.mdc file 0644 390 d8a489be10d7af3ecad18b006f376e2d5422285fd0849b59213252c27b7cc36f
+>>>>
+---
+alwaysApply: false
+globs: src/**/*.ts,src/**/*.tsx,tests/**
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
+Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# typescript
+
+**Priority:** high
+
+Use strict mode.
+<<<<
+.gemini/ dir 0755
+.gemini/agents/ dir 0755
+.gemini/agents/architect.md file 0644 259 8b70cbfa36a5f31224af2cc877333e0643be89a8b8c6f14c6df8197019228023
+>>>>
+---
+description: Designs systems
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.gemini/agents/tester.md file 0644 245 216a966091ebed88fc061b5e4e5ee527d999319fd6b39f0f1d50899623436deb
+>>>>
+---
+description: Writes tests
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Tester
+
+Test first.
+<<<<
+.gemini/settings.json file 0644 1389 659f0f934bccba7146d22b21eab16153f7e229a9f00308a2e3476d75d9adf691
+>>>>
+{
+  "context": {
+    "fileName": [
+      "GEMINI.md",
+      "GEMINI.local.md"
+    ]
+  },
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "^run_shell_command$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$GEMINI_PROJECT_DIR\"/'scripts/guard.sh'",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "^replace$|^write_file$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y ai-rulez@$VERSION guard",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo started"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@latest",
+        "mcp"
+      ],
+      "command": "npx"
+    },
+    "local-tool": {
+      "args": [
+        "-y",
+        "golden-mcp"
+      ],
+      "command": "npx",
+      "env": {
+        "API_TOKEN": "${GOLDEN_TOKEN}"
+      }
+    },
+    "remote-tool": {
+      "headers": {
+        "Authorization": "Bearer ${GOLDEN_TOKEN}"
+      },
+      "httpUrl": "https://mcp.example.com/mcp"
+    }
+  },
+  "tools": {
+    "allowed": [
+      "run_shell_command(npm run test )"
+    ],
+    "exclude": [
+      "run_shell_command(rm -rf)"
+    ]
+  }
+}
+<<<<
+.gitignore file 0644 920 80681c82ba61ed51d51eeb86ee672dbbb6d95470d584d73900342d96ef7c8736
+>>>>
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.agents/skills/
+.ai-rulez/.generated-manifest.json
+.ai-rulez/.generated-manifest.local.json
+.ai-rulez/config.local.*
+.ai-rulez/local/
+.claude/agents/
+.claude/rules/always.md
+.claude/rules/auto.md
+.claude/rules/manual.md
+.claude/rules/targeted.md
+.claude/rules/typescript.md
+.claude/settings.json
+.claude/skills/
+.codex/agents/
+.codex/config.toml
+.codex/hooks.json
+.codex/rules/
+.cursor/agents/
+.cursor/cli.json
+.cursor/commands/
+.cursor/hooks.json
+.cursor/mcp.json
+.cursor/rules/always.mdc
+.cursor/rules/auto.mdc
+.cursor/rules/context-architecture.mdc
+.cursor/rules/context-overview.mdc
+.cursor/rules/manual.mdc
+.cursor/rules/targeted.mdc
+.cursor/rules/typescript.mdc
+.gemini/agents/
+.gemini/settings.json
+.mcp.json
+.opencode/agents/
+.opencode/commands/
+.opencode/plugins/ai-rulez-hooks.js
+.opencode/skills/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+opencode.json
+# END ai-rulez
+<<<<
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+>>>>
+{
+  "mcpServers": {
+    "local-tool": {
+      "args": [
+        "-y",
+        "golden-mcp"
+      ],
+      "command": "npx",
+      "disabled": false,
+      "env": {
+        "API_TOKEN": "${GOLDEN_TOKEN}"
+      }
+    },
+    "remote-tool": {
+      "disabled": false,
+      "headers": {
+        "Authorization": "Bearer ${GOLDEN_TOKEN}"
+      },
+      "type": "http",
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}
+<<<<
+.opencode/ dir 0755
+.opencode/agents/ dir 0755
+.opencode/agents/architect.md file 0644 253 d1f759f5e8154289b25ed1ee67e15ff39983979cd2daacf8bceb9302536be367
+>>>>
+---
+description: Designs systems
+mode: all
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.opencode/agents/tester.md file 0644 256 cb15ef009489558c98f28cfeb018cbd69f0fdb71b410378c22dff5ac7cf4845f
+>>>>
+---
+description: Writes tests
+mode: all
+variant: high
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Tester
+
+Test first.
+<<<<
+.opencode/commands/ dir 0755
+.opencode/commands/build.md file 0644 250 87d449a3f453b7f3fcaaa6c88d672481f1b1a8b1bfa2df5ea390c8651d45658c
+>>>>
+---
+description: Build the project
+# Content-Hash: blake3:c27c65635f5481b638239b55b5000ae1e0fa91bf65cdd1650db88a06cd8f5c8b
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Run the build and report failures.
+<<<<
+.opencode/commands/ship.md file 0644 227 2b6d04b7c15762ec12921e242892b8aa2685352bceb06d0382b88f9a36d48ea3
+>>>>
+---
+description: Ship a release
+# Content-Hash: blake3:0c74fdcf01fb95c9a178276be941d8de3ab479704ee5b9e093b5acc89ed48eff
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+Cut a release.
+<<<<
+.opencode/plugins/ dir 0755
+.opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
+>>>>
+// Generated by ai-rulez from the [[hooks]] of .ai-rulez/config.toml. Do not edit: the next
+// `ai-rulez generate` overwrites this file and `ai-rulez clean` removes it.
+//
+// Each hook command runs in a shell from the project directory and receives a JSON document on
+// stdin shaped like Claude Code's hook input: session_id, cwd, hook_event_name and the fields of
+// the event (tool_name, tool_input, tool_response, prompt, source, ...). tool_name is the Claude
+// Code name of the tool where one exists and harness_tool_name is opencode's own.
+// Exit code 2 from a pre-tool hook blocks the call and its stderr becomes the reason; any other
+// non-zero exit, a timeout or a spawn failure is logged to stderr and does not block.
+import { spawn } from "node:child_process";
+
+const HOOK_CONFIG = {
+  "harness": "opencode",
+  "blocking": [
+    "PreToolUse"
+  ],
+  "tools": {
+    "apply_patch": [
+      "Edit",
+      "MultiEdit",
+      "Write"
+    ],
+    "bash": [
+      "Bash"
+    ],
+    "edit": [
+      "Edit",
+      "MultiEdit"
+    ],
+    "glob": [
+      "Glob"
+    ],
+    "grep": [
+      "Grep"
+    ],
+    "read": [
+      "Read"
+    ],
+    "skill": [
+      "Skill"
+    ],
+    "task": [
+      "Task",
+      "Agent"
+    ],
+    "todowrite": [
+      "TodoWrite"
+    ],
+    "webfetch": [
+      "WebFetch"
+    ],
+    "websearch": [
+      "WebSearch"
+    ],
+    "write": [
+      "Write"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "'./scripts/guard.sh'",
+        "timeout": 10000
+      }
+    ],
+    "SessionStart": [
+      {
+        "command": "echo started"
+      }
+    ]
+  }
+};
+
+const DEFAULT_TIMEOUT_MS = 600000;
+const MAX_OUTPUT_LENGTH = 1048576;
+const MAX_REASON_LENGTH = 2000;
+const matchers = new Map();
+
+function log(message) {
+  console.error(`[ai-rulez hooks] ${message}`);
+}
+
+// The names a tool answers to: its own and the Claude Code names mapped onto it.
+function toolNames(native) {
+  const aliases = Object.prototype.hasOwnProperty.call(HOOK_CONFIG.tools, native) ? HOOK_CONFIG.tools[native] : [];
+  return [native, ...aliases];
+}
+
+// A matcher is a regular expression that must match a whole subject, as in Claude Code.
+function matches(matcher, subjects) {
+  if (!matcher) return true;
+  let pattern = matchers.get(matcher);
+  if (pattern === undefined) {
+    try {
+      pattern = new RegExp(`^(?:${matcher})$`);
+    } catch (error) {
+      log(`ignoring the invalid matcher ${JSON.stringify(matcher)}: ${error.message}`);
+      pattern = null;
+    }
+    matchers.set(matcher, pattern);
+  }
+  return pattern !== null && subjects.some((subject) => pattern.test(subject));
+}
+
+// Claude Code names the command and the path of a tool call command and file_path.
+function normalizeInput(input) {
+  if (input === null || typeof input !== "object") return {};
+  const out = { ...input };
+  if (out.command === undefined && typeof out.cmd === "string") out.command = out.cmd;
+  if (out.file_path === undefined) {
+    const file = out.filePath ?? out.path ?? out.file;
+    if (typeof file === "string") out.file_path = file;
+  }
+  return out;
+}
+
+function clean(text) {
+  const reason = String(text)
+    .replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g, "")
+    .trim();
+  if (reason === "") return "Blocked by an ai-rulez hook.";
+  return reason.length > MAX_REASON_LENGTH ? `${reason.slice(0, MAX_REASON_LENGTH)}...` : reason;
+}
+
+function runCommand(hook, stdin, dir, event) {
+  return new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    let settled = false;
+    let timer = null;
+    const finish = (code) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) clearTimeout(timer);
+      resolve({ code, stdout, stderr, timedOut });
+    };
+    let child;
+    try {
+      child = spawn(hook.command, {
+        shell: true,
+        cwd: dir,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: dir, AI_RULEZ_PROJECT_DIR: dir, AI_RULEZ_HOOK_EVENT: event },
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+      });
+    } catch (error) {
+      stderr = String(error?.message ?? error);
+      finish(null);
+      return;
+    }
+    timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, hook.timeout > 0 ? hook.timeout : DEFAULT_TIMEOUT_MS);
+    child.stdout.on("data", (chunk) => {
+      if (stdout.length < MAX_OUTPUT_LENGTH) stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      if (stderr.length < MAX_OUTPUT_LENGTH) stderr += chunk;
+    });
+    child.on("error", (error) => {
+      stderr = stderr || String(error.message);
+      finish(null);
+    });
+    child.on("close", (code) => finish(code));
+    child.stdin.on("error", () => {});
+    child.stdin.end(stdin);
+  });
+}
+
+// Exit code 2, or a JSON decision of block or deny on stdout, blocks a blocking event.
+function blockReason(event, result) {
+  if (!HOOK_CONFIG.blocking.includes(event) || result.timedOut) return null;
+  if (result.code === 2) return clean(result.stderr.trim() || result.stdout.trim());
+  const text = result.stdout.trim();
+  if (result.code !== 0 || !text.startsWith("{")) return null;
+  try {
+    const decision = JSON.parse(text);
+    const specific = decision.hookSpecificOutput ?? {};
+    if (decision.decision === "block" || decision.decision === "deny") return clean(decision.reason ?? "");
+    if (specific.permissionDecision === "deny") return clean(specific.permissionDecisionReason ?? "");
+  } catch {
+    // Plain output is not a decision.
+  }
+  return null;
+}
+
+function report(event, index, result) {
+  if (result.timedOut) {
+    log(`${event} hook ${index} timed out`);
+  } else if (result.code !== 0) {
+    const detail = result.stderr.trim().split("\n")[0];
+    log(`${event} hook ${index} failed (${result.code === null ? "not run" : `exit ${result.code}`})${detail ? `: ${detail}` : ""}`);
+  }
+}
+
+// Runs the hooks of an event in order and returns the reason of the first one that blocks, or null.
+// target is { tool } for a tool event, { subject } for an event matched on a string, or absent.
+async function dispatch(event, dir, fields, target) {
+  const hooks = HOOK_CONFIG.hooks[event] ?? [];
+  const subjects = target === undefined ? null : target.tool !== undefined ? toolNames(target.tool) : [target.subject];
+  const input = { session_id: "", cwd: dir, hook_event_name: event };
+  if (target !== undefined && target.tool !== undefined) {
+    input.tool_name = toolNames(target.tool)[1] ?? target.tool;
+    input.harness_tool_name = target.tool;
+  }
+  Object.assign(input, fields);
+  if (input.session_id === undefined) input.session_id = "";
+  if (target !== undefined && target.tool !== undefined) input.tool_input = normalizeInput(fields.tool_input);
+  let stdin;
+  try {
+    stdin = JSON.stringify(input);
+  } catch (error) {
+    log(`cannot encode the input of the ${event} hooks: ${error.message}`);
+    return null;
+  }
+  for (let index = 0; index < hooks.length; index += 1) {
+    const hook = hooks[index];
+    if (subjects !== null && !matches(hook.matcher, subjects)) continue;
+    if (hook.async) {
+      void runCommand(hook, stdin, dir, event).then((result) => report(event, index, result));
+      continue;
+    }
+    const result = await runCommand(hook, stdin, dir, event);
+    const reason = blockReason(event, result);
+    if (reason !== null) return reason;
+    report(event, index, result);
+  }
+  return null;
+}
+
+// Session events: the v1 plugin API delivers them to the event hook, v2 through ctx.event.subscribe.
+async function handleEvent(event, dir) {
+  const sessionId = event?.properties?.sessionID ?? event?.properties?.info?.id ?? event?.sessionID ?? "";
+  try {
+    await handleSessionEvent(event, dir, sessionId);
+  } catch (error) {
+    log(`the ${event?.type} hooks failed: ${error?.message ?? error}`);
+  }
+}
+
+async function handleSessionEvent(event, dir, sessionId) {
+  switch (event?.type) {
+    case "session.created":
+      await dispatch("SessionStart", dir, { session_id: sessionId, source: "startup" }, { subject: "startup" });
+      break;
+    default:
+      break;
+  }
+}
+
+// OpenCode v1 (and its forks): the hooks object the server function returns.
+async function server(ctx) {
+  const dir = ctx?.directory ?? process.cwd();
+  return {
+    event: async ({ event }) => {
+      await handleEvent(event, dir);
+    },
+    "tool.execute.before": async (input, output) => {
+      const reason = await dispatch(
+        "PreToolUse",
+        dir,
+        { session_id: input.sessionID, tool_use_id: input.callID, tool_input: output?.args },
+        { tool: input.tool },
+      );
+      if (reason !== null) throw new Error(reason);
+    },
+  };
+}
+
+// OpenCode v2: registers the same hooks on the plugin context. v2 ignores server and v1 ignores setup.
+async function setup(ctx) {
+  const dir = ctx?.location?.directory ?? process.cwd();
+  await ctx.tool.hook("execute.before", async (event) => {
+    const reason = await dispatch(
+      "PreToolUse",
+      dir,
+      { session_id: event.sessionID, tool_input: event.input },
+      { tool: event.tool },
+    );
+    if (reason !== null) throw new Error(reason);
+  });
+  const controller = new AbortController();
+  void (async () => {
+    try {
+      for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
+        await handleEvent(event, dir);
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) log(`the event stream ended: ${error?.message ?? error}`);
+    }
+  })();
+}
+
+export default {
+  id: "ai-rulez-hooks",
+  setup,
+  server,
+};
+<<<<
+.opencode/skills/ dir 0755
+.opencode/skills/deployer/ dir 0755
+.opencode/skills/deployer/SKILL.md file 0644 261 420d4845cb5c4db24a44190f881ea5d5e1c34d6868f9d5828fcb4f1cede2cd73
+>>>>
+---
+name: deployer
+description: "Deploys the service"
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.opencode/skills/reviewer/ dir 0755
+.opencode/skills/reviewer/SKILL.md file 0644 508 ef7967865d57158cf29ae577247025aaa4f447bcff5e8f7afa4d460674d44d42
+>>>>
+---
+name: reviewer
+description: "Reviews pull requests"
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+# Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.opencode/skills/reviewer/references/ dir 0755
+.opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.opencode/skills/reviewer/scripts/ dir 0755
+.opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+AGENTS.md file 0644 874 056f4ec82f25dc785e9e0167ae6e5fccdd9df303220bdad73b912cab446c20e2
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:e92a7daaf71ae710480b9051bb7366cd8977f369e0ad3ddf052ac75a967a2abd
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# golden
+
+Golden fixture project
+
+## Rules
+
+### always
+
+**Priority:** critical
+
+Always apply this rule.
+
+### typescript
+
+_Applies to: `src/**/*.{ts,tsx}`, `tests/**`_
+
+**Priority:** high
+
+Use strict mode.
+
+### auto
+
+_When relevant: Database migrations_
+
+Write reversible migrations.
+
+### manual
+
+**Priority:** low
+
+Only when asked.
+
+## Context
+
+### overview
+
+The project overview.
+
+### architecture
+
+Layers and boundaries.
+<<<<
+CLAUDE.md file 0644 575 39b02de6d182546490f5802986b8bc38701b3509ea024c2d0de482bd5de2dc53
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:2d7c528e752b413fa5da736b24437ed1bbd61eaaa88cbc4aa3a61fb8306bff6e
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# golden
+
+Golden fixture project
+
+## Context
+
+### overview
+
+The project overview.
+
+### architecture
+
+Layers and boundaries.
+<<<<
+GEMINI.md file 0644 874 056f4ec82f25dc785e9e0167ae6e5fccdd9df303220bdad73b912cab446c20e2
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:e92a7daaf71ae710480b9051bb7366cd8977f369e0ad3ddf052ac75a967a2abd
+Source-Hash: blake3:e481a6a6766bd48f85a6de53cbe0c2a579a2b24c2299ae9d49a2116ecfa68ff9
+-->
+
+# golden
+
+Golden fixture project
+
+## Rules
+
+### always
+
+**Priority:** critical
+
+Always apply this rule.
+
+### typescript
+
+_Applies to: `src/**/*.{ts,tsx}`, `tests/**`_
+
+**Priority:** high
+
+Use strict mode.
+
+### auto
+
+_When relevant: Database migrations_
+
+Write reversible migrations.
+
+### manual
+
+**Priority:** low
+
+Only when asked.
+
+## Context
+
+### overview
+
+The project overview.
+
+### architecture
+
+Layers and boundaries.
+<<<<
+opencode.json file 0644 795 d9612d86974d902424704fc99c96a90dd8ee04aa5cef5ad80ea905a11043e2da
+>>>>
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.local.md"
+  ],
+  "mcp": {
+    "local-tool": {
+      "command": [
+        "npx",
+        "-y",
+        "golden-mcp"
+      ],
+      "enabled": true,
+      "environment": {
+        "API_TOKEN": "{env:GOLDEN_TOKEN}"
+      },
+      "type": "local"
+    },
+    "remote-tool": {
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:GOLDEN_TOKEN}"
+      },
+      "type": "remote",
+      "url": "https://mcp.example.com/mcp"
+    }
+  },
+  "permission": {
+    "bash": {
+      "git push *": "ask",
+      "npm run test *": "allow",
+      "rm -rf *": "deny"
+    },
+    "read": {
+      "**/.env": "deny",
+      ".env": "deny"
+    },
+    "webfetch": {
+      "https://example.com/*": "allow"
+    }
+  }
+}
+<<<<
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+>>>>
+#!/bin/sh
+exit 0
+<<<<
+--- home tree
+(no change)

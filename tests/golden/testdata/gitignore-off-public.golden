@@ -1,0 +1,103 @@
+# scenario gitignore-off-public
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=35
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 87b46bea70836b5809a4eeb676cbb3c343158714521729dcca6f7c7881127f43
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 80d93ac98724664a0567f8d6a732573852391def65c314de8161f2b2fe3b0308
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
+.ai-rulez/.generated-manifest.local.json file 0644 4871 13f4e3d8b2a674c3f696053af619c1119de5752fd9b0d6c142ff3f248147400a
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 701 ca9f52cb17cd07ab094418a81b942cb5f2c84838dd115f3717681baaf61297ab
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 fded3756c38e9f0cc06960fb74a0cf06332e9089169b9067467cb48195ede843
+.claude/agents/tester.md file 0644 258 e7adda08d9877a1f8c37ff4147d20f175ebae1ca1e5348521d40986d4f0f69dc
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 45189b9492efe0085aa47d5b927502ece0928c3869676172ed062b8ade5ba050
+.claude/rules/auto.md file 0644 302 c25123201d93cc451a12898bcf90bab40846c12dc1d2e6d6a07f509029171ba1
+.claude/rules/manual.md file 0644 313 6cfef6e9ebf4f18bca0788bccda3296ada923aaf8caedb2a03e17e9b7c736d21
+.claude/rules/targeted.md file 0644 309 60ed161ec4d124d8f89174bf4331fce2b300e397f86abdaa4544e641cf8a4f23
+.claude/rules/typescript.md file 0644 376 6afcf57718406a48fbd77acbc7fa7b64ccf1d7cbd89c0074218ce72c9bd3101e
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 396ca85ad4c6b1eac452e89c9c1e2336fee48ba9b2339cff5ce61ca344479d21
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 b4bec33b34a0478d5d4aeac6a183dab841d3efc3c4f6e2564544dcacf422a7ad
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 afb8ea55a149e54ad8d727c7061d9fb725b97d17cf15b43745d2925a550a2943
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 2cccd3f053fe6065460148c1f4ba3a6375e003043fc8191d651ab0eda1f8cfb4
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 fded3756c38e9f0cc06960fb74a0cf06332e9089169b9067467cb48195ede843
+.cursor/agents/tester.md file 0644 245 85bc08cbb2246d39d791a2feba32820995ff6020f0e434c25c2471e4cad40ce6
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+.cursor/mcp.json file 0644 212 8ebb7bb62f1ec2047fca1ccf2d603072ac8ef5fa3c70b6d1c830f07e316fd2d6
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 c785b00bea0d7011a01479efee9102ffc89546c60e7fdf7fb233ec8cfb8f5f0e
+.cursor/rules/auto.mdc file 0644 362 51e9adfbc1f09cb100b81684c7ade5a8c19a9325a191c022101fabc2c96c31e7
+.cursor/rules/context-architecture.mdc file 0644 340 4f9f40c82d3de294f212fdacf32910314e56e072399f3ad48100b65708e0a87a
+.cursor/rules/context-overview.mdc file 0644 351 c4e0775f97d2444f227a6c318079528c78690be3e51155fa3db3635d7757f75c
+.cursor/rules/manual.mdc file 0644 340 7c4cbae6b85750f00c4bbe68c6b16f5bd2b7c7481fb807483894c437a32ddce0
+.cursor/rules/targeted.mdc file 0644 335 79589b97ed6a716eacda6d1d952ec2025b624a9fcc2131daa8f6c7c12350652e
+.cursor/rules/typescript.mdc file 0644 390 6ff010982862ac6db91d459f021223d8edf84a0a38ea7740856a1b5ab40d89f4
+.mcp.json file 0644 284 3787ef010d1b74fe9b445d3f86bac33847d72e904bb1e01df0dc09c3a64cef6b
+CLAUDE.md file 0644 575 3693bad32db2bb3735f94864b40b36f98b56f48c0b7d83581e3eb896f494b1d9
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

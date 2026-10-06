@@ -1,0 +1,2486 @@
+# scenario user-all
+
+## step 1: ai-rulez generate --user --dry-run
+exit: 0
+--- stdout
+  15 project-shaped output(s) have no documented user-level location and are not written
+  merge:   $HOME/.agents/plugins/ai-rulez/hooks/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.augment/settings.json (ai-rulez keys only)
+  merge:   $HOME/.bob/settings/settings.json (ai-rulez keys only)
+  merge:   $HOME/.claude/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
+  merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
+  merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/mimocode/mimocode.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/opencode/opencode.json (ai-rulez keys only)
+  merge:   $HOME/.config/poolside/settings.yaml (ai-rulez keys only)
+  merge:   $HOME/.config/zed/settings.json (ai-rulez keys only)
+  merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
+  merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.grok/config.toml (ai-rulez keys only)
+  merge:   $HOME/.grok/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.hermes/config.yaml (ai-rulez keys only)
+  merge:   $HOME/.junie/config.json (ai-rulez keys only)
+  merge:   $HOME/.kimi-code/config.toml (ai-rulez keys only)
+  merge:   $HOME/.kiro/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.letta/settings.json (ai-rulez keys only)
+  merge:   $HOME/.omp/agent/config.yml (ai-rulez keys only)
+  merge:   $HOME/.qoder/settings.json (ai-rulez keys only)
+  merge:   $HOME/.qwen/settings.json (ai-rulez keys only)
+  merge:   $HOME/.reasonix/settings.json (ai-rulez keys only)
+  merge:   $HOME/.snowflake/cortex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
+  merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
+  skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
+  write:   $HOME/.agents/AGENTS.md
+  write:   $HOME/.agents/skills/helper/SKILL.md
+  write:   $HOME/.augment/agents/buddy.md
+  write:   $HOME/.augment/rules/mine.md
+  write:   $HOME/.augment/skills/helper/SKILL.md
+  write:   $HOME/.bob/AGENTS.md
+  write:   $HOME/.bob/rules/mine.md
+  write:   $HOME/.bob/skills/helper/SKILL.md
+  write:   $HOME/.claude/agents/buddy.md
+  write:   $HOME/.claude/rules/mine.md
+  write:   $HOME/.claude/skills/helper/SKILL.md
+  write:   $HOME/.cline/agents/buddy.yaml
+  write:   $HOME/.cline/skills/helper/SKILL.md
+  write:   $HOME/.codebuddy/CODEBUDDY.md
+  write:   $HOME/.codebuddy/agents/buddy.md
+  write:   $HOME/.codebuddy/rules/mine.md
+  write:   $HOME/.codebuddy/skills/helper/SKILL.md
+  write:   $HOME/.codewhale/AGENTS.md
+  write:   $HOME/.codewhale/skills/helper/SKILL.md
+  write:   $HOME/.codex/AGENTS.md
+  write:   $HOME/.codex/agents/buddy.toml
+  write:   $HOME/.codex/rules/ai-rulez.rules
+  write:   $HOME/.commandcode/AGENTS.md
+  write:   $HOME/.commandcode/agents/buddy.md
+  write:   $HOME/.commandcode/skills/helper/SKILL.md
+  write:   $HOME/.config/agents/skills/helper/SKILL.md
+  write:   $HOME/.config/amp/AGENTS.md
+  write:   $HOME/.config/amp/plugins/ai-rulez-hooks.ts
+  write:   $HOME/.config/crush/CRUSH.md
+  write:   $HOME/.config/crush/skills/helper/SKILL.md
+  write:   $HOME/.config/devin/agents/buddy.md
+  write:   $HOME/.config/devin/skills/helper/SKILL.md
+  write:   $HOME/.config/goose/.goosehints
+  write:   $HOME/.config/goose/agents/buddy.md
+  write:   $HOME/.config/kilo/AGENTS.md
+  write:   $HOME/.config/kilo/agents/buddy.md
+  write:   $HOME/.config/kilo/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/AGENTS.md
+  write:   $HOME/.config/mimocode/agents/buddy.md
+  write:   $HOME/.config/mimocode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/skills/helper/SKILL.md
+  write:   $HOME/.config/muse/skills/helper/SKILL.md
+  write:   $HOME/.config/opencode/AGENTS.md
+  write:   $HOME/.config/opencode/agents/buddy.md
+  write:   $HOME/.config/opencode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/opencode/skills/helper/SKILL.md
+  write:   $HOME/.config/poolside/AGENTS.md
+  write:   $HOME/.config/poolside/skills/helper/SKILL.md
+  write:   $HOME/.config/zed/AGENTS.md
+  write:   $HOME/.copilot/agents/buddy.agent.md
+  write:   $HOME/.copilot/copilot-instructions.md
+  write:   $HOME/.copilot/hooks/ai-rulez.json
+  write:   $HOME/.copilot/instructions/mine.instructions.md
+  write:   $HOME/.copilot/skills/helper/SKILL.md
+  write:   $HOME/.cursor/agents/buddy.md
+  write:   $HOME/.deepagents/agent/AGENTS.md
+  write:   $HOME/.deepagents/agent/agents/buddy/AGENTS.md
+  write:   $HOME/.deepagents/agent/skills/helper/SKILL.md
+  write:   $HOME/.dsh/AGENTS.md
+  write:   $HOME/.dsh/skills/helper/SKILL.md
+  write:   $HOME/.factory/AGENTS.md
+  write:   $HOME/.factory/droids/buddy.md
+  write:   $HOME/.factory/skills/helper/SKILL.md
+  write:   $HOME/.gemini/GEMINI.md
+  write:   $HOME/.gemini/agents/buddy.md
+  write:   $HOME/.gemini/config/agents/buddy.md
+  write:   $HOME/.gemini/config/skills/helper/SKILL.md
+  write:   $HOME/.gitlab/duo/chat-rules.md
+  write:   $HOME/.grok/AGENTS.md
+  write:   $HOME/.grok/agents/buddy.md
+  write:   $HOME/.grok/rules/mine.md
+  write:   $HOME/.grok/skills/helper/SKILL.md
+  write:   $HOME/.hermes/skills/helper/SKILL.md
+  write:   $HOME/.junie/AGENTS.md
+  write:   $HOME/.junie/agents/buddy.md
+  write:   $HOME/.junie/skills/helper/SKILL.md
+  write:   $HOME/.kilo/rules/mine.md
+  write:   $HOME/.kilo/skills/helper/SKILL.md
+  write:   $HOME/.kimi-code/AGENTS.md
+  write:   $HOME/.kimi-code/agents/buddy.md
+  write:   $HOME/.kimi-code/skills/helper/SKILL.md
+  write:   $HOME/.kiro/agents/buddy.md
+  write:   $HOME/.kiro/skills/helper/SKILL.md
+  write:   $HOME/.kiro/steering/AGENTS.md
+  write:   $HOME/.kiro/steering/mine.md
+  write:   $HOME/.letta/agents/buddy.md
+  write:   $HOME/.letta/skills/helper/SKILL.md
+  write:   $HOME/.omp/agent/AGENTS.md
+  write:   $HOME/.omp/agent/agents/buddy.md
+  write:   $HOME/.omp/agent/rules/mine.md
+  write:   $HOME/.omp/agent/skills/helper/SKILL.md
+  write:   $HOME/.openclaw/workspace/AGENTS.md
+  write:   $HOME/.pi/agent/AGENTS.md
+  write:   $HOME/.pi/agent/agents/buddy.md
+  write:   $HOME/.pi/agent/extensions/ai-rulez-hooks.ts
+  write:   $HOME/.pi/agent/skills/helper/SKILL.md
+  write:   $HOME/.qoder/AGENTS.md
+  write:   $HOME/.qoder/agents/buddy.md
+  write:   $HOME/.qoder/rules/mine.md
+  write:   $HOME/.qoder/skills/helper/SKILL.md
+  write:   $HOME/.qwen/QWEN.md
+  write:   $HOME/.qwen/agents/buddy.md
+  write:   $HOME/.qwen/rules/mine.md
+  write:   $HOME/.qwen/skills/helper/SKILL.md
+  write:   $HOME/.reasonix/REASONIX.md
+  write:   $HOME/.reasonix/skills/buddy/SKILL.md
+  write:   $HOME/.reasonix/skills/helper/SKILL.md
+  write:   $HOME/.roo/rules/AGENTS.md
+  write:   $HOME/.roo/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/AGENTS.md
+  write:   $HOME/.rovodev/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/subagents/buddy.md
+  write:   $HOME/.snowflake/cortex/agents/buddy.md
+  write:   $HOME/.snowflake/cortex/skills/helper/SKILL.md
+  write:   $HOME/.takt/facets/knowledge/helper.md
+  write:   $HOME/.takt/facets/personas/buddy.md
+  write:   $HOME/.takt/facets/policies/context-me.md
+  write:   $HOME/.takt/facets/policies/mine.md
+  write:   $HOME/.trae/skills/helper/SKILL.md
+  write:   $HOME/.vibe/AGENTS.md
+  write:   $HOME/.vibe/skills/helper/SKILL.md
+  write:   $HOME/.warp/skills/helper/SKILL.md
+  write:   $HOME/.zcode/AGENTS.md
+  write:   $HOME/.zcode/agents/buddy.md
+  write:   $HOME/.zcode/skills/helper/SKILL.md
+  write:   $HOME/Documents/Cline/Hooks/TaskStart
+  write:   $HOME/Documents/Cline/Rules/context-me.md
+  write:   $HOME/Documents/Cline/Rules/mine.md
+user-level plan (profile default, home $HOME)
+--- stderr
+INFO  Dry run: nothing was written
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: helper
+WARN  opencode reads ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+--- project tree
+(no change)
+--- home tree
+.claude/ dir 0755
+.claude/CLAUDE.md file 0644 14 53ed8bfe89e8eb1bc9e2f2872473da4319dd89c83ea1c148537ed05e2722811e
+.claude/settings.json file 0644 12 eac3ca535fd52d7f965d196670b6365641ff6610e23b19cf6de6f4b6a6a39436
+.config/ dir 0755
+.config/ai-rulez/ dir 0755
+.config/ai-rulez/agents/ dir 0755
+.config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
+.config/ai-rulez/config.toml file 0644 780 c4b51c9e569bebdee77dc0f20faeb3d1723ae8cbaa0a2e06279a3c49aa34d31a
+.config/ai-rulez/context/ dir 0755
+.config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
+.config/ai-rulez/domains/ dir 0755
+.config/ai-rulez/domains/backend/ dir 0755
+.config/ai-rulez/domains/backend/rules/ dir 0755
+.config/ai-rulez/domains/backend/rules/be.md file 0644 25 4b5ad1b999c87d43266641f0ffa62d5bd920fe944096ffa55a04c6290e83e092
+.config/ai-rulez/domains/backend/skills/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/SKILL.md file 0644 38 d2e0a3be655780a4d027124d30c08feb27d4b1e008f5247db8cfeb2aaed28ac9
+.config/ai-rulez/rules/ dir 0755
+.config/ai-rulez/rules/mine.md file 0644 46 0186ce6aeaef9fcec8de13c48797055087574df8c368dd9ba29c136cbed50134
+.config/ai-rulez/skills/ dir 0755
+.config/ai-rulez/skills/helper/ dir 0755
+.config/ai-rulez/skills/helper/SKILL.md file 0644 49 6b7435a4fcbe0e1b1c9be84bf3c7cde3916532f00fc0c75cd3a44a8b81349438
+
+## step 2: ai-rulez generate --user --yes
+exit: 0
+--- stdout
+user-level plan (profile default, home $HOME)
+  write:   $HOME/.agents/AGENTS.md
+  write:   $HOME/.agents/skills/helper/SKILL.md
+  write:   $HOME/.augment/agents/buddy.md
+  write:   $HOME/.augment/rules/mine.md
+  write:   $HOME/.augment/skills/helper/SKILL.md
+  write:   $HOME/.bob/AGENTS.md
+  write:   $HOME/.bob/rules/mine.md
+  write:   $HOME/.bob/skills/helper/SKILL.md
+  write:   $HOME/.claude/agents/buddy.md
+  write:   $HOME/.claude/rules/mine.md
+  write:   $HOME/.claude/skills/helper/SKILL.md
+  write:   $HOME/.cline/agents/buddy.yaml
+  write:   $HOME/.cline/skills/helper/SKILL.md
+  write:   $HOME/.codebuddy/CODEBUDDY.md
+  write:   $HOME/.codebuddy/agents/buddy.md
+  write:   $HOME/.codebuddy/rules/mine.md
+  write:   $HOME/.codebuddy/skills/helper/SKILL.md
+  write:   $HOME/.codewhale/AGENTS.md
+  write:   $HOME/.codewhale/skills/helper/SKILL.md
+  write:   $HOME/.codex/AGENTS.md
+  write:   $HOME/.codex/agents/buddy.toml
+  write:   $HOME/.codex/rules/ai-rulez.rules
+  write:   $HOME/.commandcode/AGENTS.md
+  write:   $HOME/.commandcode/agents/buddy.md
+  write:   $HOME/.commandcode/skills/helper/SKILL.md
+  write:   $HOME/.config/agents/skills/helper/SKILL.md
+  write:   $HOME/.config/amp/AGENTS.md
+  write:   $HOME/.config/amp/plugins/ai-rulez-hooks.ts
+  write:   $HOME/.config/crush/CRUSH.md
+  write:   $HOME/.config/crush/skills/helper/SKILL.md
+  write:   $HOME/.config/devin/agents/buddy.md
+  write:   $HOME/.config/devin/skills/helper/SKILL.md
+  write:   $HOME/.config/goose/.goosehints
+  write:   $HOME/.config/goose/agents/buddy.md
+  write:   $HOME/.config/kilo/AGENTS.md
+  write:   $HOME/.config/kilo/agents/buddy.md
+  write:   $HOME/.config/kilo/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/AGENTS.md
+  write:   $HOME/.config/mimocode/agents/buddy.md
+  write:   $HOME/.config/mimocode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/skills/helper/SKILL.md
+  write:   $HOME/.config/muse/skills/helper/SKILL.md
+  write:   $HOME/.config/opencode/AGENTS.md
+  write:   $HOME/.config/opencode/agents/buddy.md
+  write:   $HOME/.config/opencode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/opencode/skills/helper/SKILL.md
+  write:   $HOME/.config/poolside/AGENTS.md
+  write:   $HOME/.config/poolside/skills/helper/SKILL.md
+  write:   $HOME/.config/zed/AGENTS.md
+  write:   $HOME/.copilot/agents/buddy.agent.md
+  write:   $HOME/.copilot/copilot-instructions.md
+  write:   $HOME/.copilot/hooks/ai-rulez.json
+  write:   $HOME/.copilot/instructions/mine.instructions.md
+  write:   $HOME/.copilot/skills/helper/SKILL.md
+  write:   $HOME/.cursor/agents/buddy.md
+  write:   $HOME/.deepagents/agent/AGENTS.md
+  write:   $HOME/.deepagents/agent/agents/buddy/AGENTS.md
+  write:   $HOME/.deepagents/agent/skills/helper/SKILL.md
+  write:   $HOME/.dsh/AGENTS.md
+  write:   $HOME/.dsh/skills/helper/SKILL.md
+  write:   $HOME/.factory/AGENTS.md
+  write:   $HOME/.factory/droids/buddy.md
+  write:   $HOME/.factory/skills/helper/SKILL.md
+  write:   $HOME/.gemini/GEMINI.md
+  write:   $HOME/.gemini/agents/buddy.md
+  write:   $HOME/.gemini/config/agents/buddy.md
+  write:   $HOME/.gemini/config/skills/helper/SKILL.md
+  write:   $HOME/.gitlab/duo/chat-rules.md
+  write:   $HOME/.grok/AGENTS.md
+  write:   $HOME/.grok/agents/buddy.md
+  write:   $HOME/.grok/rules/mine.md
+  write:   $HOME/.grok/skills/helper/SKILL.md
+  write:   $HOME/.hermes/skills/helper/SKILL.md
+  write:   $HOME/.junie/AGENTS.md
+  write:   $HOME/.junie/agents/buddy.md
+  write:   $HOME/.junie/skills/helper/SKILL.md
+  write:   $HOME/.kilo/rules/mine.md
+  write:   $HOME/.kilo/skills/helper/SKILL.md
+  write:   $HOME/.kimi-code/AGENTS.md
+  write:   $HOME/.kimi-code/agents/buddy.md
+  write:   $HOME/.kimi-code/skills/helper/SKILL.md
+  write:   $HOME/.kiro/agents/buddy.md
+  write:   $HOME/.kiro/skills/helper/SKILL.md
+  write:   $HOME/.kiro/steering/AGENTS.md
+  write:   $HOME/.kiro/steering/mine.md
+  write:   $HOME/.letta/agents/buddy.md
+  write:   $HOME/.letta/skills/helper/SKILL.md
+  write:   $HOME/.omp/agent/AGENTS.md
+  write:   $HOME/.omp/agent/agents/buddy.md
+  write:   $HOME/.omp/agent/rules/mine.md
+  write:   $HOME/.omp/agent/skills/helper/SKILL.md
+  write:   $HOME/.openclaw/workspace/AGENTS.md
+  write:   $HOME/.pi/agent/AGENTS.md
+  write:   $HOME/.pi/agent/agents/buddy.md
+  write:   $HOME/.pi/agent/extensions/ai-rulez-hooks.ts
+  write:   $HOME/.pi/agent/skills/helper/SKILL.md
+  write:   $HOME/.qoder/AGENTS.md
+  write:   $HOME/.qoder/agents/buddy.md
+  write:   $HOME/.qoder/rules/mine.md
+  write:   $HOME/.qoder/skills/helper/SKILL.md
+  write:   $HOME/.qwen/QWEN.md
+  write:   $HOME/.qwen/agents/buddy.md
+  write:   $HOME/.qwen/rules/mine.md
+  write:   $HOME/.qwen/skills/helper/SKILL.md
+  write:   $HOME/.reasonix/REASONIX.md
+  write:   $HOME/.reasonix/skills/buddy/SKILL.md
+  write:   $HOME/.reasonix/skills/helper/SKILL.md
+  write:   $HOME/.roo/rules/AGENTS.md
+  write:   $HOME/.roo/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/AGENTS.md
+  write:   $HOME/.rovodev/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/subagents/buddy.md
+  write:   $HOME/.snowflake/cortex/agents/buddy.md
+  write:   $HOME/.snowflake/cortex/skills/helper/SKILL.md
+  write:   $HOME/.takt/facets/knowledge/helper.md
+  write:   $HOME/.takt/facets/personas/buddy.md
+  write:   $HOME/.takt/facets/policies/context-me.md
+  write:   $HOME/.takt/facets/policies/mine.md
+  write:   $HOME/.trae/skills/helper/SKILL.md
+  write:   $HOME/.vibe/AGENTS.md
+  write:   $HOME/.vibe/skills/helper/SKILL.md
+  write:   $HOME/.warp/skills/helper/SKILL.md
+  write:   $HOME/.zcode/AGENTS.md
+  write:   $HOME/.zcode/agents/buddy.md
+  write:   $HOME/.zcode/skills/helper/SKILL.md
+  write:   $HOME/Documents/Cline/Hooks/TaskStart
+  write:   $HOME/Documents/Cline/Rules/context-me.md
+  write:   $HOME/Documents/Cline/Rules/mine.md
+  merge:   $HOME/.agents/plugins/ai-rulez/hooks/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.augment/settings.json (ai-rulez keys only)
+  merge:   $HOME/.bob/settings/settings.json (ai-rulez keys only)
+  merge:   $HOME/.claude/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
+  merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
+  merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/mimocode/mimocode.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/opencode/opencode.json (ai-rulez keys only)
+  merge:   $HOME/.config/poolside/settings.yaml (ai-rulez keys only)
+  merge:   $HOME/.config/zed/settings.json (ai-rulez keys only)
+  merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
+  merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.grok/config.toml (ai-rulez keys only)
+  merge:   $HOME/.grok/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.hermes/config.yaml (ai-rulez keys only)
+  merge:   $HOME/.junie/config.json (ai-rulez keys only)
+  merge:   $HOME/.kimi-code/config.toml (ai-rulez keys only)
+  merge:   $HOME/.kiro/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.letta/settings.json (ai-rulez keys only)
+  merge:   $HOME/.omp/agent/config.yml (ai-rulez keys only)
+  merge:   $HOME/.qoder/settings.json (ai-rulez keys only)
+  merge:   $HOME/.qwen/settings.json (ai-rulez keys only)
+  merge:   $HOME/.reasonix/settings.json (ai-rulez keys only)
+  merge:   $HOME/.snowflake/cortex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
+  merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
+  skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
+  15 project-shaped output(s) have no documented user-level location and are not written
+--- stderr
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: helper
+WARN  opencode reads ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generating user-level configuration profile=default home=$HOME
+INFO  User-level generation complete files=160
+--- project tree
+(no change)
+--- home tree
++ .agents/ dir 0755
++ .agents/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .agents/plugins/ dir 0755
++ .agents/plugins/ai-rulez/ dir 0755
++ .agents/plugins/ai-rulez/hooks/ dir 0755
++ .agents/plugins/ai-rulez/hooks/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .agents/skills/ dir 0755
++ .agents/skills/helper/ dir 0755
++ .agents/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .augment/ dir 0755
++ .augment/agents/ dir 0755
++ .augment/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .augment/commands/ dir 0755
++ .augment/rules/ dir 0755
++ .augment/rules/mine.md file 0644 342 ead677f614902bba4219fd2f895d091d8babb4778800371e3bef70c1c57f974f
++ .augment/settings.json file 0644 561 0365dfacad70f38e1ffeec207c8d438816fcfe7b24419ab4a6f4040bd8885292
++ .augment/skills/ dir 0755
++ .augment/skills/helper/ dir 0755
++ .augment/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .bob/ dir 0755
++ .bob/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .bob/commands/ dir 0755
++ .bob/rules/ dir 0755
++ .bob/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .bob/settings/ dir 0755
++ .bob/settings/settings.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .bob/skills/ dir 0755
++ .bob/skills/helper/ dir 0755
++ .bob/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .claude/agents/ dir 0755
++ .claude/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .claude/rules/ dir 0755
++ .claude/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
+~ .claude/settings.json file 0644 303 514ca2b250aa4c0ca59774f6091c9eee6cddbd070495f5f5dbb54bbed4224675
++ .claude/skills/ dir 0755
++ .claude/skills/helper/ dir 0755
++ .claude/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .cline/ dir 0755
++ .cline/agents/ dir 0755
++ .cline/agents/buddy.yaml file 0644 223 21e666868c797b20f97e961e425bd2628d366682b3d5e3d4d8d5b6c84f010f1f
++ .cline/skills/ dir 0755
++ .cline/skills/helper/ dir 0755
++ .cline/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .codebuddy/ dir 0755
++ .codebuddy/CODEBUDDY.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .codebuddy/agents/ dir 0755
++ .codebuddy/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .codebuddy/commands/ dir 0755
++ .codebuddy/rules/ dir 0755
++ .codebuddy/rules/mine.md file 0644 341 b9a9df77cde473edde39f1a2165fe386bb4fa599b10b2127b7e66cf50106449b
++ .codebuddy/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
++ .codebuddy/skills/ dir 0755
++ .codebuddy/skills/helper/ dir 0755
++ .codebuddy/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .codewhale/ dir 0755
++ .codewhale/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .codewhale/commands/ dir 0755
++ .codewhale/skills/ dir 0755
++ .codewhale/skills/helper/ dir 0755
++ .codewhale/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .codex/ dir 0755
++ .codex/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .codex/agents/ dir 0755
++ .codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
++ .codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .codex/rules/ dir 0755
++ .codex/rules/ai-rulez.rules file 0644 425 190011027c9ce04e0d64e52748b137b2c43b771fda090b97dd3e4be9b94a8367
++ .commandcode/ dir 0755
++ .commandcode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .commandcode/agents/ dir 0755
++ .commandcode/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .commandcode/commands/ dir 0755
++ .commandcode/settings.json file 0644 302 7a25e2ebf831ac932802e34cf13ef4e0c62f4ff1d6a237a549d0f006713dc2fc
++ .commandcode/skills/ dir 0755
++ .commandcode/skills/helper/ dir 0755
++ .commandcode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/agents/ dir 0755
++ .config/agents/skills/ dir 0755
++ .config/agents/skills/helper/ dir 0755
++ .config/agents/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/ai-rulez/.generated-manifest.json file 0644 11820 8bcd5fe40cc06f432c43d528a9ae6e10eb34bb24bcfd75125082f77d5c207ee4
++ .config/ai-rulez/.generated-manifest.local.json file 0644 19430 871fcf0cf9e8e9f5041cb96aa62ada0dfeb5a589d65ddcaea94e67a21b56e18b
++ .config/amp/ dir 0755
++ .config/amp/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/amp/plugins/ dir 0755
++ .config/amp/plugins/ai-rulez-hooks.ts file 0644 7355 3eb89e87c0f874a9e41f8f6d616fc7ed3615a6aa550496cb09be306240ef3f78
++ .config/crush/ dir 0755
++ .config/crush/CRUSH.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/crush/skills/ dir 0755
++ .config/crush/skills/helper/ dir 0755
++ .config/crush/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/devin/ dir 0755
++ .config/devin/agents/ dir 0755
++ .config/devin/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .config/devin/config.json file 0644 296 d7a95904a7143dd68dfedfb25beaa5d7a6b23875f1ae7a0c1646a6f5f79a5869
++ .config/devin/skills/ dir 0755
++ .config/devin/skills/helper/ dir 0755
++ .config/devin/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/goose/ dir 0755
++ .config/goose/.goosehints file 0644 574 d487b28418adf817ef730f90eb3efd6e91551273ae39f28c5ead0b12cdd0b30d
++ .config/goose/agents/ dir 0755
++ .config/goose/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .config/kilo/ dir 0755
++ .config/kilo/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .config/kilo/agents/ dir 0755
++ .config/kilo/agents/buddy.md file 0644 226 1cf11196df5a1e1c6269088fb651ed43c62f4aa6459d00341a1ec3b263f3f595
++ .config/kilo/commands/ dir 0755
++ .config/kilo/kilo.jsonc file 0644 117 5c792fd5f36121e8add38e5fc7da94b1028b75c545e2e2a92805abcc32dea80b
++ .config/kilo/plugins/ dir 0755
++ .config/kilo/plugins/ai-rulez-hooks.js file 0644 8335 9d4f85a750e3181f1cda99170ff12192a5d19f18bb65aa179fe79986b3fc40fd
++ .config/mimocode/ dir 0755
++ .config/mimocode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/mimocode/agents/ dir 0755
++ .config/mimocode/agents/buddy.md file 0644 226 1cf11196df5a1e1c6269088fb651ed43c62f4aa6459d00341a1ec3b263f3f595
++ .config/mimocode/commands/ dir 0755
++ .config/mimocode/mimocode.jsonc file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
++ .config/mimocode/plugins/ dir 0755
++ .config/mimocode/plugins/ai-rulez-hooks.js file 0644 8343 0c12d22a6c48443e2b37b4eee66a9ba33f330ab51f8627d0449a17cb36bca110
++ .config/mimocode/skills/ dir 0755
++ .config/mimocode/skills/helper/ dir 0755
++ .config/mimocode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/muse/ dir 0755
++ .config/muse/skills/ dir 0755
++ .config/muse/skills/helper/ dir 0755
++ .config/muse/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/opencode/ dir 0755
++ .config/opencode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/opencode/agents/ dir 0755
++ .config/opencode/agents/buddy.md file 0644 221 22b0890b5c271994a6e71a864e3d58ed83d10e87a0399df84cf58cd8950eea1b
++ .config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
++ .config/opencode/plugins/ dir 0755
++ .config/opencode/plugins/ai-rulez-hooks.js file 0644 8886 56b4f64d52bcede8715bd13582db3cc6571f06f44d21eebcf9badb7a5c8b1fbd
++ .config/opencode/skills/ dir 0755
++ .config/opencode/skills/helper/ dir 0755
++ .config/opencode/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/poolside/ dir 0755
++ .config/poolside/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/poolside/settings.yaml file 0644 178 83dc335d3a4207b149f527fe30ef3caf547fb4f4f3e29d22a9aefd37d45f6b8d
++ .config/poolside/skills/ dir 0755
++ .config/poolside/skills/helper/ dir 0755
++ .config/poolside/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/zed/ dir 0755
++ .config/zed/AGENTS.md file 0644 399 f2922fe67d62cc42465ade34e8e2e62ebbc7b55726e1c3a6829015a40630e5e9
++ .config/zed/settings.json file 0644 423 5aae152603d0e7e7f70efc9da9fb4ab98a6f7a2ed075bdd9d25f4ad6cc232139
++ .copilot/ dir 0755
++ .copilot/agents/ dir 0755
++ .copilot/agents/buddy.agent.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .copilot/copilot-instructions.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .copilot/hooks/ dir 0755
++ .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
++ .copilot/instructions/ dir 0755
++ .copilot/instructions/mine.instructions.md file 0644 341 89a631dc294ed68a023453133efe1f47e8e879f9bf9f0d10d6eb7ddc0edefd9a
++ .copilot/skills/ dir 0755
++ .copilot/skills/helper/ dir 0755
++ .copilot/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .cursor/ dir 0755
++ .cursor/agents/ dir 0755
++ .cursor/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .cursor/commands/ dir 0755
++ .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
++ .deepagents/ dir 0755
++ .deepagents/agent/ dir 0755
++ .deepagents/agent/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .deepagents/agent/agents/ dir 0755
++ .deepagents/agent/agents/buddy/ dir 0755
++ .deepagents/agent/agents/buddy/AGENTS.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .deepagents/agent/skills/ dir 0755
++ .deepagents/agent/skills/helper/ dir 0755
++ .deepagents/agent/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .deepagents/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .dsh/ dir 0755
++ .dsh/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .dsh/skills/ dir 0755
++ .dsh/skills/helper/ dir 0755
++ .dsh/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .factory/ dir 0755
++ .factory/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .factory/commands/ dir 0755
++ .factory/droids/ dir 0755
++ .factory/droids/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .factory/hooks.json file 0644 145 9961ee7e1de0d4605e8a4ad3426687c28a17336ee36b6acc04050df5bdc5fa6e
++ .factory/skills/ dir 0755
++ .factory/skills/helper/ dir 0755
++ .factory/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .gemini/ dir 0755
++ .gemini/GEMINI.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .gemini/agents/ dir 0755
++ .gemini/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .gemini/config/ dir 0755
++ .gemini/config/agents/ dir 0755
++ .gemini/config/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .gemini/config/skills/ dir 0755
++ .gemini/config/skills/helper/ dir 0755
++ .gemini/config/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
++ .gitlab/ dir 0755
++ .gitlab/duo/ dir 0755
++ .gitlab/duo/chat-rules.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .gitlab/duo/commands/ dir 0755
++ .gitlab/duo/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .grok/ dir 0755
++ .grok/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .grok/agents/ dir 0755
++ .grok/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .grok/commands/ dir 0755
++ .grok/config.toml file 0644 110 568bcc840b23193cde397827caa35d7c320b8ba9b22b5e9ecfc1c82eb126b7da
++ .grok/hooks/ dir 0755
++ .grok/hooks/ai-rulez.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .grok/rules/ dir 0755
++ .grok/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .grok/skills/ dir 0755
++ .grok/skills/helper/ dir 0755
++ .grok/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .hermes/ dir 0755
++ .hermes/config.yaml file 0644 152 32c3b9ed9c4970f678c8c4ea520d99607ce1021eebe3f768bab8840aeeed78ba
++ .hermes/skills/ dir 0755
++ .hermes/skills/helper/ dir 0755
++ .hermes/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .junie/ dir 0755
++ .junie/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .junie/agents/ dir 0755
++ .junie/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .junie/commands/ dir 0755
++ .junie/config.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .junie/skills/ dir 0755
++ .junie/skills/helper/ dir 0755
++ .junie/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kilo/ dir 0755
++ .kilo/rules/ dir 0755
++ .kilo/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .kilo/skills/ dir 0755
++ .kilo/skills/helper/ dir 0755
++ .kilo/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kimi-code/ dir 0755
++ .kimi-code/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .kimi-code/agents/ dir 0755
++ .kimi-code/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .kimi-code/config.toml file 0644 331 176792a187f98dba4a39b9b3add5d2580b725359b83fd69670bb36b661302448
++ .kimi-code/skills/ dir 0755
++ .kimi-code/skills/helper/ dir 0755
++ .kimi-code/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kiro/ dir 0755
++ .kiro/agents/ dir 0755
++ .kiro/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .kiro/hooks/ dir 0755
++ .kiro/hooks/ai-rulez.json file 0644 208 11eb544c03951b1e960f159872deb200b73f99ca4efed6bbbc749f66bcf639a2
++ .kiro/prompts/ dir 0755
++ .kiro/skills/ dir 0755
++ .kiro/skills/helper/ dir 0755
++ .kiro/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kiro/steering/ dir 0755
++ .kiro/steering/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .kiro/steering/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .letta/ dir 0755
++ .letta/agents/ dir 0755
++ .letta/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .letta/commands/ dir 0755
++ .letta/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
++ .letta/skills/ dir 0755
++ .letta/skills/helper/ dir 0755
++ .letta/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .omp/ dir 0755
++ .omp/agent/ dir 0755
++ .omp/agent/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .omp/agent/agents/ dir 0755
++ .omp/agent/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .omp/agent/commands/ dir 0755
++ .omp/agent/config.yml file 0644 200 7fc55085fa9dd87cd60b15b5cb70722dcc7d5f0e1a86e2c3400aee0e44863306
++ .omp/agent/rules/ dir 0755
++ .omp/agent/rules/mine.md file 0644 345 d2e04ad283e7a9e09065b3cdc326eebf6f492355c37404f4a3af4b3840545349
++ .omp/agent/skills/ dir 0755
++ .omp/agent/skills/helper/ dir 0755
++ .omp/agent/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .openclaw/ dir 0755
++ .openclaw/workspace/ dir 0755
++ .openclaw/workspace/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .pi/ dir 0755
++ .pi/agent/ dir 0755
++ .pi/agent/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .pi/agent/agents/ dir 0755
++ .pi/agent/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .pi/agent/extensions/ dir 0755
++ .pi/agent/extensions/ai-rulez-hooks.ts file 0644 7925 5812828fe79fc856c8f372bbea25c620d39d6337e357990a3a7d64c52c6b2073
++ .pi/agent/prompts/ dir 0755
++ .pi/agent/skills/ dir 0755
++ .pi/agent/skills/helper/ dir 0755
++ .pi/agent/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .qoder/ dir 0755
++ .qoder/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .qoder/agents/ dir 0755
++ .qoder/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .qoder/commands/ dir 0755
++ .qoder/rules/ dir 0755
++ .qoder/rules/mine.md file 0644 342 462af47766e9355ab56e9d68fd7871cf7387ec879a4ffba8583d5036819bdcda
++ .qoder/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
++ .qoder/skills/ dir 0755
++ .qoder/skills/helper/ dir 0755
++ .qoder/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .qwen/ dir 0755
++ .qwen/QWEN.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .qwen/agents/ dir 0755
++ .qwen/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .qwen/commands/ dir 0755
++ .qwen/rules/ dir 0755
++ .qwen/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .qwen/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
++ .qwen/skills/ dir 0755
++ .qwen/skills/helper/ dir 0755
++ .qwen/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .reasonix/ dir 0755
++ .reasonix/REASONIX.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .reasonix/commands/ dir 0755
++ .reasonix/settings.json file 0644 94 9a1c39720a52146fbdaa7eb199514dcfec58f172aaa582a89e366753e9cdc4ea
++ .reasonix/skills/ dir 0755
++ .reasonix/skills/buddy/ dir 0755
++ .reasonix/skills/buddy/SKILL.md file 0644 258 454abb26ea85d3a1704c47951e2332fa8deac142d1eb1a210b83259877742faf
++ .reasonix/skills/helper/ dir 0755
++ .reasonix/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .roo/ dir 0755
++ .roo/commands/ dir 0755
++ .roo/rules/ dir 0755
++ .roo/rules/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .roo/skills/ dir 0755
++ .roo/skills/helper/ dir 0755
++ .roo/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .rovodev/ dir 0755
++ .rovodev/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .rovodev/skills/ dir 0755
++ .rovodev/skills/helper/ dir 0755
++ .rovodev/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .rovodev/subagents/ dir 0755
++ .rovodev/subagents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .snowflake/ dir 0755
++ .snowflake/cortex/ dir 0755
++ .snowflake/cortex/agents/ dir 0755
++ .snowflake/cortex/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .snowflake/cortex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
++ .snowflake/cortex/skills/ dir 0755
++ .snowflake/cortex/skills/helper/ dir 0755
++ .snowflake/cortex/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .takt/ dir 0755
++ .takt/facets/ dir 0755
++ .takt/facets/instructions/ dir 0755
++ .takt/facets/knowledge/ dir 0755
++ .takt/facets/knowledge/helper.md file 0644 9 9a384ec3eb055c11ba3d55833aa4d9e90b1fdcdcee10eee66f3d3c6516a94371
++ .takt/facets/personas/ dir 0755
++ .takt/facets/personas/buddy.md file 0644 8 3031677d46e9f37a351585f00edb071905ffab733fae99a30b3bcbf8677dfbc7
++ .takt/facets/policies/ dir 0755
++ .takt/facets/policies/context-me.md file 0644 296 f15b68d4fff345807f46d3caf06924aad56494d1df20c9e36b783fce7f873cfc
++ .takt/facets/policies/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .trae/ dir 0755
++ .trae/skills/ dir 0755
++ .trae/skills/helper/ dir 0755
++ .trae/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .vibe/ dir 0755
++ .vibe/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .vibe/config.toml file 0644 64 4410c95e96dcbb0d498d046a1bee08942e66267174c97cfc127e960680c16109
++ .vibe/skills/ dir 0755
++ .vibe/skills/helper/ dir 0755
++ .vibe/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .warp/ dir 0755
++ .warp/skills/ dir 0755
++ .warp/skills/helper/ dir 0755
++ .warp/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .zcode/ dir 0755
++ .zcode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .zcode/agents/ dir 0755
++ .zcode/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .zcode/cli/ dir 0755
++ .zcode/cli/config.json file 0644 245 8fe1f632687ca113ba17ebbdb1209d8b773782d4d7a845eed98d16a90872287e
++ .zcode/commands/ dir 0755
++ .zcode/skills/ dir 0755
++ .zcode/skills/helper/ dir 0755
++ .zcode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ Documents/ dir 0755
++ Documents/Cline/ dir 0755
++ Documents/Cline/Hooks/ dir 0755
++ Documents/Cline/Hooks/TaskStart file 0755 316 8ad7f953648e89258b629cd88326ec23fe23a4a82b80e1dc9afbe80a467838d2
++ Documents/Cline/Rules/ dir 0755
++ Documents/Cline/Rules/context-me.md file 0644 296 f15b68d4fff345807f46d3caf06924aad56494d1df20c9e36b783fce7f873cfc
++ Documents/Cline/Rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
+
+## step 3: ai-rulez generate --user --yes
+exit: 0
+--- stdout
+user-level plan (profile default, home $HOME)
+  write:   $HOME/.agents/AGENTS.md
+  write:   $HOME/.agents/skills/helper/SKILL.md
+  write:   $HOME/.augment/agents/buddy.md
+  write:   $HOME/.augment/rules/mine.md
+  write:   $HOME/.augment/skills/helper/SKILL.md
+  write:   $HOME/.bob/AGENTS.md
+  write:   $HOME/.bob/rules/mine.md
+  write:   $HOME/.bob/skills/helper/SKILL.md
+  write:   $HOME/.claude/agents/buddy.md
+  write:   $HOME/.claude/rules/mine.md
+  write:   $HOME/.claude/skills/helper/SKILL.md
+  write:   $HOME/.cline/agents/buddy.yaml
+  write:   $HOME/.cline/skills/helper/SKILL.md
+  write:   $HOME/.codebuddy/CODEBUDDY.md
+  write:   $HOME/.codebuddy/agents/buddy.md
+  write:   $HOME/.codebuddy/rules/mine.md
+  write:   $HOME/.codebuddy/skills/helper/SKILL.md
+  write:   $HOME/.codewhale/AGENTS.md
+  write:   $HOME/.codewhale/skills/helper/SKILL.md
+  write:   $HOME/.codex/AGENTS.md
+  write:   $HOME/.codex/agents/buddy.toml
+  write:   $HOME/.codex/rules/ai-rulez.rules
+  write:   $HOME/.commandcode/AGENTS.md
+  write:   $HOME/.commandcode/agents/buddy.md
+  write:   $HOME/.commandcode/skills/helper/SKILL.md
+  write:   $HOME/.config/agents/skills/helper/SKILL.md
+  write:   $HOME/.config/amp/AGENTS.md
+  write:   $HOME/.config/amp/plugins/ai-rulez-hooks.ts
+  write:   $HOME/.config/crush/CRUSH.md
+  write:   $HOME/.config/crush/skills/helper/SKILL.md
+  write:   $HOME/.config/devin/agents/buddy.md
+  write:   $HOME/.config/devin/skills/helper/SKILL.md
+  write:   $HOME/.config/goose/.goosehints
+  write:   $HOME/.config/goose/agents/buddy.md
+  write:   $HOME/.config/kilo/AGENTS.md
+  write:   $HOME/.config/kilo/agents/buddy.md
+  write:   $HOME/.config/kilo/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/AGENTS.md
+  write:   $HOME/.config/mimocode/agents/buddy.md
+  write:   $HOME/.config/mimocode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/skills/helper/SKILL.md
+  write:   $HOME/.config/muse/skills/helper/SKILL.md
+  write:   $HOME/.config/opencode/AGENTS.md
+  write:   $HOME/.config/opencode/agents/buddy.md
+  write:   $HOME/.config/opencode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/opencode/skills/helper/SKILL.md
+  write:   $HOME/.config/poolside/AGENTS.md
+  write:   $HOME/.config/poolside/skills/helper/SKILL.md
+  write:   $HOME/.config/zed/AGENTS.md
+  write:   $HOME/.copilot/agents/buddy.agent.md
+  write:   $HOME/.copilot/copilot-instructions.md
+  write:   $HOME/.copilot/hooks/ai-rulez.json
+  write:   $HOME/.copilot/instructions/mine.instructions.md
+  write:   $HOME/.copilot/skills/helper/SKILL.md
+  write:   $HOME/.cursor/agents/buddy.md
+  write:   $HOME/.deepagents/agent/AGENTS.md
+  write:   $HOME/.deepagents/agent/agents/buddy/AGENTS.md
+  write:   $HOME/.deepagents/agent/skills/helper/SKILL.md
+  write:   $HOME/.dsh/AGENTS.md
+  write:   $HOME/.dsh/skills/helper/SKILL.md
+  write:   $HOME/.factory/AGENTS.md
+  write:   $HOME/.factory/droids/buddy.md
+  write:   $HOME/.factory/skills/helper/SKILL.md
+  write:   $HOME/.gemini/GEMINI.md
+  write:   $HOME/.gemini/agents/buddy.md
+  write:   $HOME/.gemini/config/agents/buddy.md
+  write:   $HOME/.gemini/config/skills/helper/SKILL.md
+  write:   $HOME/.gitlab/duo/chat-rules.md
+  write:   $HOME/.grok/AGENTS.md
+  write:   $HOME/.grok/agents/buddy.md
+  write:   $HOME/.grok/rules/mine.md
+  write:   $HOME/.grok/skills/helper/SKILL.md
+  write:   $HOME/.hermes/skills/helper/SKILL.md
+  write:   $HOME/.junie/AGENTS.md
+  write:   $HOME/.junie/agents/buddy.md
+  write:   $HOME/.junie/skills/helper/SKILL.md
+  write:   $HOME/.kilo/rules/mine.md
+  write:   $HOME/.kilo/skills/helper/SKILL.md
+  write:   $HOME/.kimi-code/AGENTS.md
+  write:   $HOME/.kimi-code/agents/buddy.md
+  write:   $HOME/.kimi-code/skills/helper/SKILL.md
+  write:   $HOME/.kiro/agents/buddy.md
+  write:   $HOME/.kiro/skills/helper/SKILL.md
+  write:   $HOME/.kiro/steering/AGENTS.md
+  write:   $HOME/.kiro/steering/mine.md
+  write:   $HOME/.letta/agents/buddy.md
+  write:   $HOME/.letta/skills/helper/SKILL.md
+  write:   $HOME/.omp/agent/AGENTS.md
+  write:   $HOME/.omp/agent/agents/buddy.md
+  write:   $HOME/.omp/agent/rules/mine.md
+  write:   $HOME/.omp/agent/skills/helper/SKILL.md
+  write:   $HOME/.openclaw/workspace/AGENTS.md
+  write:   $HOME/.pi/agent/AGENTS.md
+  write:   $HOME/.pi/agent/agents/buddy.md
+  write:   $HOME/.pi/agent/extensions/ai-rulez-hooks.ts
+  write:   $HOME/.pi/agent/skills/helper/SKILL.md
+  write:   $HOME/.qoder/AGENTS.md
+  write:   $HOME/.qoder/agents/buddy.md
+  write:   $HOME/.qoder/rules/mine.md
+  write:   $HOME/.qoder/skills/helper/SKILL.md
+  write:   $HOME/.qwen/QWEN.md
+  write:   $HOME/.qwen/agents/buddy.md
+  write:   $HOME/.qwen/rules/mine.md
+  write:   $HOME/.qwen/skills/helper/SKILL.md
+  write:   $HOME/.reasonix/REASONIX.md
+  write:   $HOME/.reasonix/skills/buddy/SKILL.md
+  write:   $HOME/.reasonix/skills/helper/SKILL.md
+  write:   $HOME/.roo/rules/AGENTS.md
+  write:   $HOME/.roo/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/AGENTS.md
+  write:   $HOME/.rovodev/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/subagents/buddy.md
+  write:   $HOME/.snowflake/cortex/agents/buddy.md
+  write:   $HOME/.snowflake/cortex/skills/helper/SKILL.md
+  write:   $HOME/.takt/facets/knowledge/helper.md
+  write:   $HOME/.takt/facets/personas/buddy.md
+  write:   $HOME/.takt/facets/policies/context-me.md
+  write:   $HOME/.takt/facets/policies/mine.md
+  write:   $HOME/.trae/skills/helper/SKILL.md
+  write:   $HOME/.vibe/AGENTS.md
+  write:   $HOME/.vibe/skills/helper/SKILL.md
+  write:   $HOME/.warp/skills/helper/SKILL.md
+  write:   $HOME/.zcode/AGENTS.md
+  write:   $HOME/.zcode/agents/buddy.md
+  write:   $HOME/.zcode/skills/helper/SKILL.md
+  write:   $HOME/Documents/Cline/Hooks/TaskStart
+  write:   $HOME/Documents/Cline/Rules/context-me.md
+  write:   $HOME/Documents/Cline/Rules/mine.md
+  merge:   $HOME/.agents/plugins/ai-rulez/hooks/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.augment/settings.json (ai-rulez keys only)
+  merge:   $HOME/.bob/settings/settings.json (ai-rulez keys only)
+  merge:   $HOME/.claude/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
+  merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
+  merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/mimocode/mimocode.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/opencode/opencode.json (ai-rulez keys only)
+  merge:   $HOME/.config/poolside/settings.yaml (ai-rulez keys only)
+  merge:   $HOME/.config/zed/settings.json (ai-rulez keys only)
+  merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
+  merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.grok/config.toml (ai-rulez keys only)
+  merge:   $HOME/.grok/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.hermes/config.yaml (ai-rulez keys only)
+  merge:   $HOME/.junie/config.json (ai-rulez keys only)
+  merge:   $HOME/.kimi-code/config.toml (ai-rulez keys only)
+  merge:   $HOME/.kiro/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.letta/settings.json (ai-rulez keys only)
+  merge:   $HOME/.omp/agent/config.yml (ai-rulez keys only)
+  merge:   $HOME/.qoder/settings.json (ai-rulez keys only)
+  merge:   $HOME/.qwen/settings.json (ai-rulez keys only)
+  merge:   $HOME/.reasonix/settings.json (ai-rulez keys only)
+  merge:   $HOME/.snowflake/cortex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
+  merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
+  skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
+  15 project-shaped output(s) have no documented user-level location and are not written
+--- stderr
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: helper
+WARN  opencode reads ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generating user-level configuration profile=default home=$HOME
+INFO  User-level generation complete files=160
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez generate --user --yes --profile backend
+exit: 0
+--- stdout
+user-level plan (profile backend, home $HOME)
+  write:   $HOME/.agents/AGENTS.md
+  write:   $HOME/.agents/skills/db/SKILL.md
+  write:   $HOME/.agents/skills/helper/SKILL.md
+  write:   $HOME/.augment/agents/buddy.md
+  write:   $HOME/.augment/rules/be.md
+  write:   $HOME/.augment/rules/mine.md
+  write:   $HOME/.augment/skills/db/SKILL.md
+  write:   $HOME/.augment/skills/helper/SKILL.md
+  write:   $HOME/.bob/AGENTS.md
+  write:   $HOME/.bob/rules/be.md
+  write:   $HOME/.bob/rules/mine.md
+  write:   $HOME/.bob/skills/db/SKILL.md
+  write:   $HOME/.bob/skills/helper/SKILL.md
+  write:   $HOME/.claude/agents/buddy.md
+  write:   $HOME/.claude/rules/be.md
+  write:   $HOME/.claude/rules/mine.md
+  write:   $HOME/.claude/skills/db/SKILL.md
+  write:   $HOME/.claude/skills/helper/SKILL.md
+  write:   $HOME/.cline/agents/buddy.yaml
+  write:   $HOME/.cline/skills/db/SKILL.md
+  write:   $HOME/.cline/skills/helper/SKILL.md
+  write:   $HOME/.codebuddy/CODEBUDDY.md
+  write:   $HOME/.codebuddy/agents/buddy.md
+  write:   $HOME/.codebuddy/rules/be.md
+  write:   $HOME/.codebuddy/rules/mine.md
+  write:   $HOME/.codebuddy/skills/db/SKILL.md
+  write:   $HOME/.codebuddy/skills/helper/SKILL.md
+  write:   $HOME/.codewhale/AGENTS.md
+  write:   $HOME/.codewhale/skills/db/SKILL.md
+  write:   $HOME/.codewhale/skills/helper/SKILL.md
+  write:   $HOME/.codex/AGENTS.md
+  write:   $HOME/.codex/agents/buddy.toml
+  write:   $HOME/.codex/rules/ai-rulez.rules
+  write:   $HOME/.commandcode/AGENTS.md
+  write:   $HOME/.commandcode/agents/buddy.md
+  write:   $HOME/.commandcode/skills/db/SKILL.md
+  write:   $HOME/.commandcode/skills/helper/SKILL.md
+  write:   $HOME/.config/agents/skills/db/SKILL.md
+  write:   $HOME/.config/agents/skills/helper/SKILL.md
+  write:   $HOME/.config/amp/AGENTS.md
+  write:   $HOME/.config/amp/plugins/ai-rulez-hooks.ts
+  write:   $HOME/.config/crush/CRUSH.md
+  write:   $HOME/.config/crush/skills/db/SKILL.md
+  write:   $HOME/.config/crush/skills/helper/SKILL.md
+  write:   $HOME/.config/devin/agents/buddy.md
+  write:   $HOME/.config/devin/skills/db/SKILL.md
+  write:   $HOME/.config/devin/skills/helper/SKILL.md
+  write:   $HOME/.config/goose/.goosehints
+  write:   $HOME/.config/goose/agents/buddy.md
+  write:   $HOME/.config/kilo/AGENTS.md
+  write:   $HOME/.config/kilo/agents/buddy.md
+  write:   $HOME/.config/kilo/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/AGENTS.md
+  write:   $HOME/.config/mimocode/agents/buddy.md
+  write:   $HOME/.config/mimocode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/mimocode/skills/db/SKILL.md
+  write:   $HOME/.config/mimocode/skills/helper/SKILL.md
+  write:   $HOME/.config/muse/skills/db/SKILL.md
+  write:   $HOME/.config/muse/skills/helper/SKILL.md
+  write:   $HOME/.config/opencode/AGENTS.md
+  write:   $HOME/.config/opencode/agents/buddy.md
+  write:   $HOME/.config/opencode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/opencode/skills/db/SKILL.md
+  write:   $HOME/.config/opencode/skills/helper/SKILL.md
+  write:   $HOME/.config/poolside/AGENTS.md
+  write:   $HOME/.config/poolside/skills/db/SKILL.md
+  write:   $HOME/.config/poolside/skills/helper/SKILL.md
+  write:   $HOME/.config/zed/AGENTS.md
+  write:   $HOME/.copilot/agents/buddy.agent.md
+  write:   $HOME/.copilot/copilot-instructions.md
+  write:   $HOME/.copilot/hooks/ai-rulez.json
+  write:   $HOME/.copilot/instructions/be.instructions.md
+  write:   $HOME/.copilot/instructions/mine.instructions.md
+  write:   $HOME/.copilot/skills/db/SKILL.md
+  write:   $HOME/.copilot/skills/helper/SKILL.md
+  write:   $HOME/.cursor/agents/buddy.md
+  write:   $HOME/.deepagents/agent/AGENTS.md
+  write:   $HOME/.deepagents/agent/agents/buddy/AGENTS.md
+  write:   $HOME/.deepagents/agent/skills/db/SKILL.md
+  write:   $HOME/.deepagents/agent/skills/helper/SKILL.md
+  write:   $HOME/.dsh/AGENTS.md
+  write:   $HOME/.dsh/skills/db/SKILL.md
+  write:   $HOME/.dsh/skills/helper/SKILL.md
+  write:   $HOME/.factory/AGENTS.md
+  write:   $HOME/.factory/droids/buddy.md
+  write:   $HOME/.factory/skills/db/SKILL.md
+  write:   $HOME/.factory/skills/helper/SKILL.md
+  write:   $HOME/.gemini/GEMINI.md
+  write:   $HOME/.gemini/agents/buddy.md
+  write:   $HOME/.gemini/config/agents/buddy.md
+  write:   $HOME/.gemini/config/skills/db/SKILL.md
+  write:   $HOME/.gemini/config/skills/helper/SKILL.md
+  write:   $HOME/.gitlab/duo/chat-rules.md
+  write:   $HOME/.grok/AGENTS.md
+  write:   $HOME/.grok/agents/buddy.md
+  write:   $HOME/.grok/rules/be.md
+  write:   $HOME/.grok/rules/mine.md
+  write:   $HOME/.grok/skills/db/SKILL.md
+  write:   $HOME/.grok/skills/helper/SKILL.md
+  write:   $HOME/.hermes/skills/db/SKILL.md
+  write:   $HOME/.hermes/skills/helper/SKILL.md
+  write:   $HOME/.junie/AGENTS.md
+  write:   $HOME/.junie/agents/buddy.md
+  write:   $HOME/.junie/skills/db/SKILL.md
+  write:   $HOME/.junie/skills/helper/SKILL.md
+  write:   $HOME/.kilo/rules/be.md
+  write:   $HOME/.kilo/rules/mine.md
+  write:   $HOME/.kilo/skills/db/SKILL.md
+  write:   $HOME/.kilo/skills/helper/SKILL.md
+  write:   $HOME/.kimi-code/AGENTS.md
+  write:   $HOME/.kimi-code/agents/buddy.md
+  write:   $HOME/.kimi-code/skills/db/SKILL.md
+  write:   $HOME/.kimi-code/skills/helper/SKILL.md
+  write:   $HOME/.kiro/agents/buddy.md
+  write:   $HOME/.kiro/skills/db/SKILL.md
+  write:   $HOME/.kiro/skills/helper/SKILL.md
+  write:   $HOME/.kiro/steering/AGENTS.md
+  write:   $HOME/.kiro/steering/be.md
+  write:   $HOME/.kiro/steering/mine.md
+  write:   $HOME/.letta/agents/buddy.md
+  write:   $HOME/.letta/skills/db/SKILL.md
+  write:   $HOME/.letta/skills/helper/SKILL.md
+  write:   $HOME/.omp/agent/AGENTS.md
+  write:   $HOME/.omp/agent/agents/buddy.md
+  write:   $HOME/.omp/agent/rules/be.md
+  write:   $HOME/.omp/agent/rules/mine.md
+  write:   $HOME/.omp/agent/skills/db/SKILL.md
+  write:   $HOME/.omp/agent/skills/helper/SKILL.md
+  write:   $HOME/.openclaw/workspace/AGENTS.md
+  write:   $HOME/.pi/agent/AGENTS.md
+  write:   $HOME/.pi/agent/agents/buddy.md
+  write:   $HOME/.pi/agent/extensions/ai-rulez-hooks.ts
+  write:   $HOME/.pi/agent/skills/db/SKILL.md
+  write:   $HOME/.pi/agent/skills/helper/SKILL.md
+  write:   $HOME/.qoder/AGENTS.md
+  write:   $HOME/.qoder/agents/buddy.md
+  write:   $HOME/.qoder/rules/be.md
+  write:   $HOME/.qoder/rules/mine.md
+  write:   $HOME/.qoder/skills/db/SKILL.md
+  write:   $HOME/.qoder/skills/helper/SKILL.md
+  write:   $HOME/.qwen/QWEN.md
+  write:   $HOME/.qwen/agents/buddy.md
+  write:   $HOME/.qwen/rules/be.md
+  write:   $HOME/.qwen/rules/mine.md
+  write:   $HOME/.qwen/skills/db/SKILL.md
+  write:   $HOME/.qwen/skills/helper/SKILL.md
+  write:   $HOME/.reasonix/REASONIX.md
+  write:   $HOME/.reasonix/skills/buddy/SKILL.md
+  write:   $HOME/.reasonix/skills/db/SKILL.md
+  write:   $HOME/.reasonix/skills/helper/SKILL.md
+  write:   $HOME/.roo/rules/AGENTS.md
+  write:   $HOME/.roo/skills/db/SKILL.md
+  write:   $HOME/.roo/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/AGENTS.md
+  write:   $HOME/.rovodev/skills/db/SKILL.md
+  write:   $HOME/.rovodev/skills/helper/SKILL.md
+  write:   $HOME/.rovodev/subagents/buddy.md
+  write:   $HOME/.snowflake/cortex/agents/buddy.md
+  write:   $HOME/.snowflake/cortex/skills/db/SKILL.md
+  write:   $HOME/.snowflake/cortex/skills/helper/SKILL.md
+  write:   $HOME/.takt/facets/knowledge/db.md
+  write:   $HOME/.takt/facets/knowledge/helper.md
+  write:   $HOME/.takt/facets/personas/buddy.md
+  write:   $HOME/.takt/facets/policies/be.md
+  write:   $HOME/.takt/facets/policies/context-me.md
+  write:   $HOME/.takt/facets/policies/mine.md
+  write:   $HOME/.trae/skills/db/SKILL.md
+  write:   $HOME/.trae/skills/helper/SKILL.md
+  write:   $HOME/.vibe/AGENTS.md
+  write:   $HOME/.vibe/skills/db/SKILL.md
+  write:   $HOME/.vibe/skills/helper/SKILL.md
+  write:   $HOME/.warp/skills/db/SKILL.md
+  write:   $HOME/.warp/skills/helper/SKILL.md
+  write:   $HOME/.zcode/AGENTS.md
+  write:   $HOME/.zcode/agents/buddy.md
+  write:   $HOME/.zcode/skills/db/SKILL.md
+  write:   $HOME/.zcode/skills/helper/SKILL.md
+  write:   $HOME/Documents/Cline/Hooks/TaskStart
+  write:   $HOME/Documents/Cline/Rules/be.md
+  write:   $HOME/Documents/Cline/Rules/context-me.md
+  write:   $HOME/Documents/Cline/Rules/mine.md
+  merge:   $HOME/.agents/plugins/ai-rulez/hooks/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.augment/settings.json (ai-rulez keys only)
+  merge:   $HOME/.bob/settings/settings.json (ai-rulez keys only)
+  merge:   $HOME/.claude/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
+  merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
+  merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
+  merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/mimocode/mimocode.jsonc (ai-rulez keys only)
+  merge:   $HOME/.config/opencode/opencode.json (ai-rulez keys only)
+  merge:   $HOME/.config/poolside/settings.yaml (ai-rulez keys only)
+  merge:   $HOME/.config/zed/settings.json (ai-rulez keys only)
+  merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
+  merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.grok/config.toml (ai-rulez keys only)
+  merge:   $HOME/.grok/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.hermes/config.yaml (ai-rulez keys only)
+  merge:   $HOME/.junie/config.json (ai-rulez keys only)
+  merge:   $HOME/.kimi-code/config.toml (ai-rulez keys only)
+  merge:   $HOME/.kiro/hooks/ai-rulez.json (ai-rulez keys only)
+  merge:   $HOME/.letta/settings.json (ai-rulez keys only)
+  merge:   $HOME/.omp/agent/config.yml (ai-rulez keys only)
+  merge:   $HOME/.qoder/settings.json (ai-rulez keys only)
+  merge:   $HOME/.qwen/settings.json (ai-rulez keys only)
+  merge:   $HOME/.reasonix/settings.json (ai-rulez keys only)
+  merge:   $HOME/.snowflake/cortex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
+  merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
+  skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
+  20 project-shaped output(s) have no documented user-level location and are not written
+--- stderr
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: db, helper
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: db, helper
+WARN  opencode reads ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills, so these skills load twice: db, helper
+WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset codebuff has no documented user-level location, so --user writes nothing for it (none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset replit has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  preset xum has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
+WARN  [[hooks]] not generated for antigravity: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags)
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot-cli: the Copilot CLI has no repository-level setting for Bash rules (tool permissions are per-session flags) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [[hooks]] not generated for crush: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  [[hooks]] for deepagents: Deep Agents asks you to trust a project's hooks.json before it runs them
+WARN  [[hooks]] for devin: Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
+WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
+INFO  Generating user-level configuration profile=backend home=$HOME
+INFO  User-level generation complete files=213
+--- project tree
+(no change)
+--- home tree
+~ .agents/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .agents/skills/db/ dir 0755
++ .agents/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .agents/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .augment/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .augment/rules/be.md file 0644 333 3325dd27295df5cc727b8d5730aff3c6e968fc86ca75bc9b7efa20937be395d0
+~ .augment/rules/mine.md file 0644 342 d3812bb85e5f2250f74c3dc4e712bfa59b387ba881b381e53f266b869f00de1d
++ .augment/skills/db/ dir 0755
++ .augment/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .augment/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .bob/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
++ .bob/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .bob/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .bob/skills/db/ dir 0755
++ .bob/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .bob/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .claude/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .claude/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .claude/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .claude/skills/db/ dir 0755
++ .claude/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .claude/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .cline/agents/buddy.yaml file 0644 223 be7e03ea96d5f3ad4a32675cd52dd98d6d62a77da61cdc899c75ac36fc937567
++ .cline/skills/db/ dir 0755
++ .cline/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .cline/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .codebuddy/CODEBUDDY.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .codebuddy/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .codebuddy/rules/be.md file 0644 332 79afa3873308ab798dd376aa08b78b073b7ec6878b1157ad64d4bb7b8c006348
+~ .codebuddy/rules/mine.md file 0644 341 ebf10ccd052fc300955ae2136495875e38eecfefbbbd5e1196626b2ca496c04c
++ .codebuddy/skills/db/ dir 0755
++ .codebuddy/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .codebuddy/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .codewhale/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
++ .codewhale/skills/db/ dir 0755
++ .codewhale/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .codewhale/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .codex/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .codex/rules/ai-rulez.rules file 0644 425 f90f51a23de7d98484953b3b39bfa0c8b7ff65b31c8e9ffc25a1676fe840c0ea
+~ .commandcode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .commandcode/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .commandcode/skills/db/ dir 0755
++ .commandcode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .commandcode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .config/agents/skills/db/ dir 0755
++ .config/agents/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .config/agents/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .config/ai-rulez/.generated-manifest.json file 0644 14693 6ea29bfde73bffb5ebc04d21f52c2cea05e3ea013680e439231dccafc28f92d2
+~ .config/ai-rulez/.generated-manifest.local.json file 0644 19534 9f1d6a109f74058947e3ed7a925c2adf42ab407008e8b0656f0a00fafaa108e7
+~ .config/amp/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .config/crush/CRUSH.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .config/crush/skills/db/ dir 0755
++ .config/crush/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .config/crush/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .config/devin/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .config/devin/skills/db/ dir 0755
++ .config/devin/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .config/devin/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .config/goose/.goosehints file 0644 597 5ade376410986469788dc305d49f657d9daf1df6aa201ff2d3605adf102e91fa
+~ .config/goose/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
+~ .config/kilo/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .config/kilo/agents/buddy.md file 0644 226 f821198deb5a5247a0f8d0c2b0a2509cc5e67a046a1665328f1bfebc1cb70667
+~ .config/mimocode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .config/mimocode/agents/buddy.md file 0644 226 f821198deb5a5247a0f8d0c2b0a2509cc5e67a046a1665328f1bfebc1cb70667
++ .config/mimocode/skills/db/ dir 0755
++ .config/mimocode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .config/mimocode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .config/muse/skills/db/ dir 0755
++ .config/muse/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .config/muse/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .config/opencode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .config/opencode/agents/buddy.md file 0644 221 991b6208143452cedf14046b5f708c4cf83820a600827f1d38f0b10da811632c
++ .config/opencode/skills/db/ dir 0755
++ .config/opencode/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .config/opencode/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .config/poolside/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .config/poolside/skills/db/ dir 0755
++ .config/poolside/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .config/poolside/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .config/zed/AGENTS.md file 0644 422 7143aa5f97219ca1ca6007e3f1282d89a8f0fb403db044c392275376ceaee4a1
+~ .copilot/agents/buddy.agent.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
+~ .copilot/copilot-instructions.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
++ .copilot/instructions/be.instructions.md file 0644 332 3f441391f2d73088fa033393863dbf782374d892eb88f296274e4eac5b03f71c
+~ .copilot/instructions/mine.instructions.md file 0644 341 f544b499c6873141d41edfe3f3c4b38fb83930c4bbbd10b008bb3fdd7522cfa5
++ .copilot/skills/db/ dir 0755
++ .copilot/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .copilot/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .cursor/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
+~ .deepagents/agent/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .deepagents/agent/agents/buddy/AGENTS.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .deepagents/agent/skills/db/ dir 0755
++ .deepagents/agent/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .deepagents/agent/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .dsh/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .dsh/skills/db/ dir 0755
++ .dsh/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .dsh/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .factory/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .factory/droids/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .factory/skills/db/ dir 0755
++ .factory/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .factory/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .gemini/GEMINI.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .gemini/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
+~ .gemini/config/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .gemini/config/skills/db/ dir 0755
++ .gemini/config/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .gemini/config/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .gitlab/duo/chat-rules.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .grok/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .grok/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .grok/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .grok/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .grok/skills/db/ dir 0755
++ .grok/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .grok/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .hermes/skills/db/ dir 0755
++ .hermes/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .hermes/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .junie/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .junie/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .junie/skills/db/ dir 0755
++ .junie/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .junie/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .kilo/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .kilo/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .kilo/skills/db/ dir 0755
++ .kilo/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .kilo/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .kimi-code/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .kimi-code/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .kimi-code/skills/db/ dir 0755
++ .kimi-code/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .kimi-code/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .kiro/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .kiro/skills/db/ dir 0755
++ .kiro/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .kiro/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .kiro/steering/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
++ .kiro/steering/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .kiro/steering/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
+~ .letta/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .letta/skills/db/ dir 0755
++ .letta/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .letta/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .omp/agent/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .omp/agent/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .omp/agent/rules/be.md file 0644 336 3c2b5b098be61fd5decbd58cd0eb0542906a58fc964d8eca92863b74c3143e2a
+~ .omp/agent/rules/mine.md file 0644 345 ecbd43ef303c96d404e28153bb19a8e93796a2695f39a207ec877cf34551ef8f
++ .omp/agent/skills/db/ dir 0755
++ .omp/agent/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .omp/agent/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .openclaw/workspace/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .pi/agent/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .pi/agent/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .pi/agent/skills/db/ dir 0755
++ .pi/agent/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
+~ .pi/agent/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
+~ .qoder/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .qoder/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .qoder/rules/be.md file 0644 333 a69302b03c1d45be09606897ecff4d6b58a3a5ad3df07f01e031d0e5a0deab0d
+~ .qoder/rules/mine.md file 0644 342 bfc9a8d41f8c41f964d852cfb316894b5001cf927fde66b4f91a8feb4636e77a
++ .qoder/skills/db/ dir 0755
++ .qoder/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .qoder/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .qwen/QWEN.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
+~ .qwen/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .qwen/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .qwen/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .qwen/skills/db/ dir 0755
++ .qwen/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .qwen/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .reasonix/REASONIX.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .reasonix/skills/buddy/SKILL.md file 0644 258 8007babacb3fcb6d36373318db87e6233e2bffc3ffac395f2e4e461f838d75c7
++ .reasonix/skills/db/ dir 0755
++ .reasonix/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .reasonix/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .roo/rules/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .roo/skills/db/ dir 0755
++ .roo/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .roo/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .rovodev/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .rovodev/skills/db/ dir 0755
++ .rovodev/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .rovodev/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .rovodev/subagents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
+~ .snowflake/cortex/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .snowflake/cortex/skills/db/ dir 0755
++ .snowflake/cortex/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .snowflake/cortex/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .takt/facets/knowledge/db.md file 0644 5 9e911773a38a300f2ca5a7287acf421682fcdf99584d5226132b2dc15cbdbdd9
++ .takt/facets/policies/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ .takt/facets/policies/context-me.md file 0644 296 46ce98997dcd1cfe49140fdbda41d16198694a0f3e833e707603167d7a7f6326
+~ .takt/facets/policies/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .trae/skills/db/ dir 0755
++ .trae/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .trae/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .vibe/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .vibe/skills/db/ dir 0755
++ .vibe/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .vibe/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .warp/skills/db/ dir 0755
++ .warp/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .warp/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
+~ .zcode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .zcode/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .zcode/skills/db/ dir 0755
++ .zcode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
+~ .zcode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ Documents/Cline/Rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
+~ Documents/Cline/Rules/context-me.md file 0644 296 46ce98997dcd1cfe49140fdbda41d16198694a0f3e833e707603167d7a7f6326
+~ Documents/Cline/Rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
+
+## step 5: ai-rulez clean --user --dry-run
+exit: 0
+--- stdout
+--- stderr
+INFO    remove ai-rulez keys from: .claude/settings.json
+INFO    remove dir (if empty): .agents
+INFO    remove dir (if empty): .agents/plugins
+INFO    remove dir (if empty): .agents/plugins/ai-rulez
+INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
+INFO    remove dir (if empty): .agents/skills
+INFO    remove dir (if empty): .agents/skills/db
+INFO    remove dir (if empty): .agents/skills/helper
+INFO    remove dir (if empty): .augment
+INFO    remove dir (if empty): .augment/agents
+INFO    remove dir (if empty): .augment/commands
+INFO    remove dir (if empty): .augment/rules
+INFO    remove dir (if empty): .augment/skills
+INFO    remove dir (if empty): .augment/skills/db
+INFO    remove dir (if empty): .augment/skills/helper
+INFO    remove dir (if empty): .bob
+INFO    remove dir (if empty): .bob/commands
+INFO    remove dir (if empty): .bob/rules
+INFO    remove dir (if empty): .bob/settings
+INFO    remove dir (if empty): .bob/skills
+INFO    remove dir (if empty): .bob/skills/db
+INFO    remove dir (if empty): .bob/skills/helper
+INFO    remove dir (if empty): .claude/agents
+INFO    remove dir (if empty): .claude/rules
+INFO    remove dir (if empty): .claude/skills
+INFO    remove dir (if empty): .claude/skills/db
+INFO    remove dir (if empty): .claude/skills/helper
+INFO    remove dir (if empty): .cline
+INFO    remove dir (if empty): .cline/agents
+INFO    remove dir (if empty): .cline/skills
+INFO    remove dir (if empty): .cline/skills/db
+INFO    remove dir (if empty): .cline/skills/helper
+INFO    remove dir (if empty): .codebuddy
+INFO    remove dir (if empty): .codebuddy/agents
+INFO    remove dir (if empty): .codebuddy/commands
+INFO    remove dir (if empty): .codebuddy/rules
+INFO    remove dir (if empty): .codebuddy/skills
+INFO    remove dir (if empty): .codebuddy/skills/db
+INFO    remove dir (if empty): .codebuddy/skills/helper
+INFO    remove dir (if empty): .codewhale
+INFO    remove dir (if empty): .codewhale/commands
+INFO    remove dir (if empty): .codewhale/skills
+INFO    remove dir (if empty): .codewhale/skills/db
+INFO    remove dir (if empty): .codewhale/skills/helper
+INFO    remove dir (if empty): .codex
+INFO    remove dir (if empty): .codex/agents
+INFO    remove dir (if empty): .codex/rules
+INFO    remove dir (if empty): .commandcode
+INFO    remove dir (if empty): .commandcode/agents
+INFO    remove dir (if empty): .commandcode/commands
+INFO    remove dir (if empty): .commandcode/skills
+INFO    remove dir (if empty): .commandcode/skills/db
+INFO    remove dir (if empty): .commandcode/skills/helper
+INFO    remove dir (if empty): .config/agents
+INFO    remove dir (if empty): .config/agents/skills
+INFO    remove dir (if empty): .config/agents/skills/db
+INFO    remove dir (if empty): .config/agents/skills/helper
+INFO    remove dir (if empty): .config/amp
+INFO    remove dir (if empty): .config/amp/plugins
+INFO    remove dir (if empty): .config/crush
+INFO    remove dir (if empty): .config/crush/skills
+INFO    remove dir (if empty): .config/crush/skills/db
+INFO    remove dir (if empty): .config/crush/skills/helper
+INFO    remove dir (if empty): .config/devin
+INFO    remove dir (if empty): .config/devin/agents
+INFO    remove dir (if empty): .config/devin/skills
+INFO    remove dir (if empty): .config/devin/skills/db
+INFO    remove dir (if empty): .config/devin/skills/helper
+INFO    remove dir (if empty): .config/goose
+INFO    remove dir (if empty): .config/goose/agents
+INFO    remove dir (if empty): .config/kilo
+INFO    remove dir (if empty): .config/kilo/agents
+INFO    remove dir (if empty): .config/kilo/commands
+INFO    remove dir (if empty): .config/kilo/plugins
+INFO    remove dir (if empty): .config/mimocode
+INFO    remove dir (if empty): .config/mimocode/agents
+INFO    remove dir (if empty): .config/mimocode/commands
+INFO    remove dir (if empty): .config/mimocode/plugins
+INFO    remove dir (if empty): .config/mimocode/skills
+INFO    remove dir (if empty): .config/mimocode/skills/db
+INFO    remove dir (if empty): .config/mimocode/skills/helper
+INFO    remove dir (if empty): .config/muse
+INFO    remove dir (if empty): .config/muse/skills
+INFO    remove dir (if empty): .config/muse/skills/db
+INFO    remove dir (if empty): .config/muse/skills/helper
+INFO    remove dir (if empty): .config/opencode
+INFO    remove dir (if empty): .config/opencode/agents
+INFO    remove dir (if empty): .config/opencode/plugins
+INFO    remove dir (if empty): .config/opencode/skills
+INFO    remove dir (if empty): .config/opencode/skills/db
+INFO    remove dir (if empty): .config/opencode/skills/helper
+INFO    remove dir (if empty): .config/poolside
+INFO    remove dir (if empty): .config/poolside/skills
+INFO    remove dir (if empty): .config/poolside/skills/db
+INFO    remove dir (if empty): .config/poolside/skills/helper
+INFO    remove dir (if empty): .config/zed
+INFO    remove dir (if empty): .copilot
+INFO    remove dir (if empty): .copilot/agents
+INFO    remove dir (if empty): .copilot/hooks
+INFO    remove dir (if empty): .copilot/instructions
+INFO    remove dir (if empty): .copilot/skills
+INFO    remove dir (if empty): .copilot/skills/db
+INFO    remove dir (if empty): .copilot/skills/helper
+INFO    remove dir (if empty): .cursor
+INFO    remove dir (if empty): .cursor/agents
+INFO    remove dir (if empty): .cursor/commands
+INFO    remove dir (if empty): .deepagents
+INFO    remove dir (if empty): .deepagents/agent
+INFO    remove dir (if empty): .deepagents/agent/agents
+INFO    remove dir (if empty): .deepagents/agent/agents/buddy
+INFO    remove dir (if empty): .deepagents/agent/skills
+INFO    remove dir (if empty): .deepagents/agent/skills/db
+INFO    remove dir (if empty): .deepagents/agent/skills/helper
+INFO    remove dir (if empty): .dsh
+INFO    remove dir (if empty): .dsh/skills
+INFO    remove dir (if empty): .dsh/skills/db
+INFO    remove dir (if empty): .dsh/skills/helper
+INFO    remove dir (if empty): .factory
+INFO    remove dir (if empty): .factory/commands
+INFO    remove dir (if empty): .factory/droids
+INFO    remove dir (if empty): .factory/skills
+INFO    remove dir (if empty): .factory/skills/db
+INFO    remove dir (if empty): .factory/skills/helper
+INFO    remove dir (if empty): .gemini
+INFO    remove dir (if empty): .gemini/agents
+INFO    remove dir (if empty): .gemini/config
+INFO    remove dir (if empty): .gemini/config/agents
+INFO    remove dir (if empty): .gemini/config/skills
+INFO    remove dir (if empty): .gemini/config/skills/db
+INFO    remove dir (if empty): .gemini/config/skills/helper
+INFO    remove dir (if empty): .gitlab
+INFO    remove dir (if empty): .gitlab/duo
+INFO    remove dir (if empty): .gitlab/duo/commands
+INFO    remove dir (if empty): .grok
+INFO    remove dir (if empty): .grok/agents
+INFO    remove dir (if empty): .grok/commands
+INFO    remove dir (if empty): .grok/hooks
+INFO    remove dir (if empty): .grok/rules
+INFO    remove dir (if empty): .grok/skills
+INFO    remove dir (if empty): .grok/skills/db
+INFO    remove dir (if empty): .grok/skills/helper
+INFO    remove dir (if empty): .hermes
+INFO    remove dir (if empty): .hermes/skills
+INFO    remove dir (if empty): .hermes/skills/db
+INFO    remove dir (if empty): .hermes/skills/helper
+INFO    remove dir (if empty): .junie
+INFO    remove dir (if empty): .junie/agents
+INFO    remove dir (if empty): .junie/commands
+INFO    remove dir (if empty): .junie/skills
+INFO    remove dir (if empty): .junie/skills/db
+INFO    remove dir (if empty): .junie/skills/helper
+INFO    remove dir (if empty): .kilo
+INFO    remove dir (if empty): .kilo/rules
+INFO    remove dir (if empty): .kilo/skills
+INFO    remove dir (if empty): .kilo/skills/db
+INFO    remove dir (if empty): .kilo/skills/helper
+INFO    remove dir (if empty): .kimi-code
+INFO    remove dir (if empty): .kimi-code/agents
+INFO    remove dir (if empty): .kimi-code/skills
+INFO    remove dir (if empty): .kimi-code/skills/db
+INFO    remove dir (if empty): .kimi-code/skills/helper
+INFO    remove dir (if empty): .kiro
+INFO    remove dir (if empty): .kiro/agents
+INFO    remove dir (if empty): .kiro/hooks
+INFO    remove dir (if empty): .kiro/prompts
+INFO    remove dir (if empty): .kiro/skills
+INFO    remove dir (if empty): .kiro/skills/db
+INFO    remove dir (if empty): .kiro/skills/helper
+INFO    remove dir (if empty): .kiro/steering
+INFO    remove dir (if empty): .letta
+INFO    remove dir (if empty): .letta/agents
+INFO    remove dir (if empty): .letta/commands
+INFO    remove dir (if empty): .letta/skills
+INFO    remove dir (if empty): .letta/skills/db
+INFO    remove dir (if empty): .letta/skills/helper
+INFO    remove dir (if empty): .omp
+INFO    remove dir (if empty): .omp/agent
+INFO    remove dir (if empty): .omp/agent/agents
+INFO    remove dir (if empty): .omp/agent/commands
+INFO    remove dir (if empty): .omp/agent/rules
+INFO    remove dir (if empty): .omp/agent/skills
+INFO    remove dir (if empty): .omp/agent/skills/db
+INFO    remove dir (if empty): .omp/agent/skills/helper
+INFO    remove dir (if empty): .openclaw
+INFO    remove dir (if empty): .openclaw/workspace
+INFO    remove dir (if empty): .pi
+INFO    remove dir (if empty): .pi/agent
+INFO    remove dir (if empty): .pi/agent/agents
+INFO    remove dir (if empty): .pi/agent/extensions
+INFO    remove dir (if empty): .pi/agent/prompts
+INFO    remove dir (if empty): .pi/agent/skills
+INFO    remove dir (if empty): .pi/agent/skills/db
+INFO    remove dir (if empty): .pi/agent/skills/helper
+INFO    remove dir (if empty): .qoder
+INFO    remove dir (if empty): .qoder/agents
+INFO    remove dir (if empty): .qoder/commands
+INFO    remove dir (if empty): .qoder/rules
+INFO    remove dir (if empty): .qoder/skills
+INFO    remove dir (if empty): .qoder/skills/db
+INFO    remove dir (if empty): .qoder/skills/helper
+INFO    remove dir (if empty): .qwen
+INFO    remove dir (if empty): .qwen/agents
+INFO    remove dir (if empty): .qwen/commands
+INFO    remove dir (if empty): .qwen/rules
+INFO    remove dir (if empty): .qwen/skills
+INFO    remove dir (if empty): .qwen/skills/db
+INFO    remove dir (if empty): .qwen/skills/helper
+INFO    remove dir (if empty): .reasonix
+INFO    remove dir (if empty): .reasonix/commands
+INFO    remove dir (if empty): .reasonix/skills
+INFO    remove dir (if empty): .reasonix/skills/buddy
+INFO    remove dir (if empty): .reasonix/skills/db
+INFO    remove dir (if empty): .reasonix/skills/helper
+INFO    remove dir (if empty): .roo
+INFO    remove dir (if empty): .roo/commands
+INFO    remove dir (if empty): .roo/rules
+INFO    remove dir (if empty): .roo/skills
+INFO    remove dir (if empty): .roo/skills/db
+INFO    remove dir (if empty): .roo/skills/helper
+INFO    remove dir (if empty): .rovodev
+INFO    remove dir (if empty): .rovodev/skills
+INFO    remove dir (if empty): .rovodev/skills/db
+INFO    remove dir (if empty): .rovodev/skills/helper
+INFO    remove dir (if empty): .rovodev/subagents
+INFO    remove dir (if empty): .snowflake
+INFO    remove dir (if empty): .snowflake/cortex
+INFO    remove dir (if empty): .snowflake/cortex/agents
+INFO    remove dir (if empty): .snowflake/cortex/skills
+INFO    remove dir (if empty): .snowflake/cortex/skills/db
+INFO    remove dir (if empty): .snowflake/cortex/skills/helper
+INFO    remove dir (if empty): .takt
+INFO    remove dir (if empty): .takt/facets
+INFO    remove dir (if empty): .takt/facets/instructions
+INFO    remove dir (if empty): .takt/facets/knowledge
+INFO    remove dir (if empty): .takt/facets/personas
+INFO    remove dir (if empty): .takt/facets/policies
+INFO    remove dir (if empty): .trae
+INFO    remove dir (if empty): .trae/skills
+INFO    remove dir (if empty): .trae/skills/db
+INFO    remove dir (if empty): .trae/skills/helper
+INFO    remove dir (if empty): .vibe
+INFO    remove dir (if empty): .vibe/skills
+INFO    remove dir (if empty): .vibe/skills/db
+INFO    remove dir (if empty): .vibe/skills/helper
+INFO    remove dir (if empty): .warp
+INFO    remove dir (if empty): .warp/skills
+INFO    remove dir (if empty): .warp/skills/db
+INFO    remove dir (if empty): .warp/skills/helper
+INFO    remove dir (if empty): .zcode
+INFO    remove dir (if empty): .zcode/agents
+INFO    remove dir (if empty): .zcode/cli
+INFO    remove dir (if empty): .zcode/commands
+INFO    remove dir (if empty): .zcode/skills
+INFO    remove dir (if empty): .zcode/skills/db
+INFO    remove dir (if empty): .zcode/skills/helper
+INFO    remove dir (if empty): Documents
+INFO    remove dir (if empty): Documents/Cline
+INFO    remove dir (if empty): Documents/Cline/Hooks
+INFO    remove dir (if empty): Documents/Cline/Rules
+INFO    remove file: .agents/AGENTS.md
+INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+INFO    remove file: .agents/skills/db/SKILL.md
+INFO    remove file: .agents/skills/helper/SKILL.md
+INFO    remove file: .augment/agents/buddy.md
+INFO    remove file: .augment/rules/be.md
+INFO    remove file: .augment/rules/mine.md
+INFO    remove file: .augment/settings.json
+INFO    remove file: .augment/skills/db/SKILL.md
+INFO    remove file: .augment/skills/helper/SKILL.md
+INFO    remove file: .bob/AGENTS.md
+INFO    remove file: .bob/rules/be.md
+INFO    remove file: .bob/rules/mine.md
+INFO    remove file: .bob/settings/settings.json
+INFO    remove file: .bob/skills/db/SKILL.md
+INFO    remove file: .bob/skills/helper/SKILL.md
+INFO    remove file: .claude/agents/buddy.md
+INFO    remove file: .claude/rules/be.md
+INFO    remove file: .claude/rules/mine.md
+INFO    remove file: .claude/skills/db/SKILL.md
+INFO    remove file: .claude/skills/helper/SKILL.md
+INFO    remove file: .cline/agents/buddy.yaml
+INFO    remove file: .cline/skills/db/SKILL.md
+INFO    remove file: .cline/skills/helper/SKILL.md
+INFO    remove file: .codebuddy/CODEBUDDY.md
+INFO    remove file: .codebuddy/agents/buddy.md
+INFO    remove file: .codebuddy/rules/be.md
+INFO    remove file: .codebuddy/rules/mine.md
+INFO    remove file: .codebuddy/settings.json
+INFO    remove file: .codebuddy/skills/db/SKILL.md
+INFO    remove file: .codebuddy/skills/helper/SKILL.md
+INFO    remove file: .codewhale/AGENTS.md
+INFO    remove file: .codewhale/skills/db/SKILL.md
+INFO    remove file: .codewhale/skills/helper/SKILL.md
+INFO    remove file: .codex/AGENTS.md
+INFO    remove file: .codex/agents/buddy.toml
+INFO    remove file: .codex/hooks.json
+INFO    remove file: .codex/rules/ai-rulez.rules
+INFO    remove file: .commandcode/AGENTS.md
+INFO    remove file: .commandcode/agents/buddy.md
+INFO    remove file: .commandcode/settings.json
+INFO    remove file: .commandcode/skills/db/SKILL.md
+INFO    remove file: .commandcode/skills/helper/SKILL.md
+INFO    remove file: .config/agents/skills/db/SKILL.md
+INFO    remove file: .config/agents/skills/helper/SKILL.md
+INFO    remove file: .config/amp/AGENTS.md
+INFO    remove file: .config/amp/plugins/ai-rulez-hooks.ts
+INFO    remove file: .config/crush/CRUSH.md
+INFO    remove file: .config/crush/skills/db/SKILL.md
+INFO    remove file: .config/crush/skills/helper/SKILL.md
+INFO    remove file: .config/devin/agents/buddy.md
+INFO    remove file: .config/devin/config.json
+INFO    remove file: .config/devin/skills/db/SKILL.md
+INFO    remove file: .config/devin/skills/helper/SKILL.md
+INFO    remove file: .config/goose/.goosehints
+INFO    remove file: .config/goose/agents/buddy.md
+INFO    remove file: .config/kilo/AGENTS.md
+INFO    remove file: .config/kilo/agents/buddy.md
+INFO    remove file: .config/kilo/kilo.jsonc
+INFO    remove file: .config/kilo/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/mimocode/AGENTS.md
+INFO    remove file: .config/mimocode/agents/buddy.md
+INFO    remove file: .config/mimocode/mimocode.jsonc
+INFO    remove file: .config/mimocode/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/mimocode/skills/db/SKILL.md
+INFO    remove file: .config/mimocode/skills/helper/SKILL.md
+INFO    remove file: .config/muse/skills/db/SKILL.md
+INFO    remove file: .config/muse/skills/helper/SKILL.md
+INFO    remove file: .config/opencode/AGENTS.md
+INFO    remove file: .config/opencode/agents/buddy.md
+INFO    remove file: .config/opencode/opencode.json
+INFO    remove file: .config/opencode/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/opencode/skills/db/SKILL.md
+INFO    remove file: .config/opencode/skills/helper/SKILL.md
+INFO    remove file: .config/poolside/AGENTS.md
+INFO    remove file: .config/poolside/settings.yaml
+INFO    remove file: .config/poolside/skills/db/SKILL.md
+INFO    remove file: .config/poolside/skills/helper/SKILL.md
+INFO    remove file: .config/zed/AGENTS.md
+INFO    remove file: .config/zed/settings.json
+INFO    remove file: .copilot/agents/buddy.agent.md
+INFO    remove file: .copilot/copilot-instructions.md
+INFO    remove file: .copilot/hooks/ai-rulez.json
+INFO    remove file: .copilot/instructions/be.instructions.md
+INFO    remove file: .copilot/instructions/mine.instructions.md
+INFO    remove file: .copilot/skills/db/SKILL.md
+INFO    remove file: .copilot/skills/helper/SKILL.md
+INFO    remove file: .cursor/agents/buddy.md
+INFO    remove file: .cursor/hooks.json
+INFO    remove file: .deepagents/agent/AGENTS.md
+INFO    remove file: .deepagents/agent/agents/buddy/AGENTS.md
+INFO    remove file: .deepagents/agent/skills/db/SKILL.md
+INFO    remove file: .deepagents/agent/skills/helper/SKILL.md
+INFO    remove file: .deepagents/hooks.json
+INFO    remove file: .dsh/AGENTS.md
+INFO    remove file: .dsh/skills/db/SKILL.md
+INFO    remove file: .dsh/skills/helper/SKILL.md
+INFO    remove file: .factory/AGENTS.md
+INFO    remove file: .factory/droids/buddy.md
+INFO    remove file: .factory/hooks.json
+INFO    remove file: .factory/skills/db/SKILL.md
+INFO    remove file: .factory/skills/helper/SKILL.md
+INFO    remove file: .gemini/GEMINI.md
+INFO    remove file: .gemini/agents/buddy.md
+INFO    remove file: .gemini/config/agents/buddy.md
+INFO    remove file: .gemini/config/skills/db/SKILL.md
+INFO    remove file: .gemini/config/skills/helper/SKILL.md
+INFO    remove file: .gemini/settings.json
+INFO    remove file: .gitlab/duo/chat-rules.md
+INFO    remove file: .gitlab/duo/hooks.json
+INFO    remove file: .grok/AGENTS.md
+INFO    remove file: .grok/agents/buddy.md
+INFO    remove file: .grok/config.toml
+INFO    remove file: .grok/hooks/ai-rulez.json
+INFO    remove file: .grok/rules/be.md
+INFO    remove file: .grok/rules/mine.md
+INFO    remove file: .grok/skills/db/SKILL.md
+INFO    remove file: .grok/skills/helper/SKILL.md
+INFO    remove file: .hermes/config.yaml
+INFO    remove file: .hermes/skills/db/SKILL.md
+INFO    remove file: .hermes/skills/helper/SKILL.md
+INFO    remove file: .junie/AGENTS.md
+INFO    remove file: .junie/agents/buddy.md
+INFO    remove file: .junie/config.json
+INFO    remove file: .junie/skills/db/SKILL.md
+INFO    remove file: .junie/skills/helper/SKILL.md
+INFO    remove file: .kilo/rules/be.md
+INFO    remove file: .kilo/rules/mine.md
+INFO    remove file: .kilo/skills/db/SKILL.md
+INFO    remove file: .kilo/skills/helper/SKILL.md
+INFO    remove file: .kimi-code/AGENTS.md
+INFO    remove file: .kimi-code/agents/buddy.md
+INFO    remove file: .kimi-code/config.toml
+INFO    remove file: .kimi-code/skills/db/SKILL.md
+INFO    remove file: .kimi-code/skills/helper/SKILL.md
+INFO    remove file: .kiro/agents/buddy.md
+INFO    remove file: .kiro/hooks/ai-rulez.json
+INFO    remove file: .kiro/skills/db/SKILL.md
+INFO    remove file: .kiro/skills/helper/SKILL.md
+INFO    remove file: .kiro/steering/AGENTS.md
+INFO    remove file: .kiro/steering/be.md
+INFO    remove file: .kiro/steering/mine.md
+INFO    remove file: .letta/agents/buddy.md
+INFO    remove file: .letta/settings.json
+INFO    remove file: .letta/skills/db/SKILL.md
+INFO    remove file: .letta/skills/helper/SKILL.md
+INFO    remove file: .omp/agent/AGENTS.md
+INFO    remove file: .omp/agent/agents/buddy.md
+INFO    remove file: .omp/agent/config.yml
+INFO    remove file: .omp/agent/rules/be.md
+INFO    remove file: .omp/agent/rules/mine.md
+INFO    remove file: .omp/agent/skills/db/SKILL.md
+INFO    remove file: .omp/agent/skills/helper/SKILL.md
+INFO    remove file: .openclaw/workspace/AGENTS.md
+INFO    remove file: .pi/agent/AGENTS.md
+INFO    remove file: .pi/agent/agents/buddy.md
+INFO    remove file: .pi/agent/extensions/ai-rulez-hooks.ts
+INFO    remove file: .pi/agent/skills/db/SKILL.md
+INFO    remove file: .pi/agent/skills/helper/SKILL.md
+INFO    remove file: .qoder/AGENTS.md
+INFO    remove file: .qoder/agents/buddy.md
+INFO    remove file: .qoder/rules/be.md
+INFO    remove file: .qoder/rules/mine.md
+INFO    remove file: .qoder/settings.json
+INFO    remove file: .qoder/skills/db/SKILL.md
+INFO    remove file: .qoder/skills/helper/SKILL.md
+INFO    remove file: .qwen/QWEN.md
+INFO    remove file: .qwen/agents/buddy.md
+INFO    remove file: .qwen/rules/be.md
+INFO    remove file: .qwen/rules/mine.md
+INFO    remove file: .qwen/settings.json
+INFO    remove file: .qwen/skills/db/SKILL.md
+INFO    remove file: .qwen/skills/helper/SKILL.md
+INFO    remove file: .reasonix/REASONIX.md
+INFO    remove file: .reasonix/settings.json
+INFO    remove file: .reasonix/skills/buddy/SKILL.md
+INFO    remove file: .reasonix/skills/db/SKILL.md
+INFO    remove file: .reasonix/skills/helper/SKILL.md
+INFO    remove file: .roo/rules/AGENTS.md
+INFO    remove file: .roo/skills/db/SKILL.md
+INFO    remove file: .roo/skills/helper/SKILL.md
+INFO    remove file: .rovodev/AGENTS.md
+INFO    remove file: .rovodev/skills/db/SKILL.md
+INFO    remove file: .rovodev/skills/helper/SKILL.md
+INFO    remove file: .rovodev/subagents/buddy.md
+INFO    remove file: .snowflake/cortex/agents/buddy.md
+INFO    remove file: .snowflake/cortex/hooks.json
+INFO    remove file: .snowflake/cortex/skills/db/SKILL.md
+INFO    remove file: .snowflake/cortex/skills/helper/SKILL.md
+INFO    remove file: .takt/facets/knowledge/helper.md
+INFO    remove file: .takt/facets/personas/buddy.md
+INFO    remove file: .takt/facets/policies/be.md
+INFO    remove file: .takt/facets/policies/context-me.md
+INFO    remove file: .takt/facets/policies/mine.md
+INFO    remove file: .trae/skills/db/SKILL.md
+INFO    remove file: .trae/skills/helper/SKILL.md
+INFO    remove file: .vibe/AGENTS.md
+INFO    remove file: .vibe/config.toml
+INFO    remove file: .vibe/skills/db/SKILL.md
+INFO    remove file: .vibe/skills/helper/SKILL.md
+INFO    remove file: .warp/skills/db/SKILL.md
+INFO    remove file: .warp/skills/helper/SKILL.md
+INFO    remove file: .zcode/AGENTS.md
+INFO    remove file: .zcode/agents/buddy.md
+INFO    remove file: .zcode/cli/config.json
+INFO    remove file: .zcode/skills/db/SKILL.md
+INFO    remove file: .zcode/skills/helper/SKILL.md
+INFO    remove file: Documents/Cline/Hooks/TaskStart
+INFO    remove file: Documents/Cline/Rules/be.md
+INFO    remove file: Documents/Cline/Rules/context-me.md
+INFO    remove file: Documents/Cline/Rules/mine.md
+INFO    remove local manifest: .config/ai-rulez/.generated-manifest.local.json
+INFO    remove manifest: .config/ai-rulez/.generated-manifest.json
+INFO  Clean plan profile=default
+INFO  Dry run: no files were removed
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 6: ai-rulez clean --user --force
+exit: 0
+--- stdout
+--- stderr
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+INFO  Clean plan profile=default
+INFO    remove file: .agents/AGENTS.md
+INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+INFO    remove file: .agents/skills/db/SKILL.md
+INFO    remove file: .agents/skills/helper/SKILL.md
+INFO    remove file: .augment/agents/buddy.md
+INFO    remove file: .augment/rules/be.md
+INFO    remove file: .augment/rules/mine.md
+INFO    remove file: .augment/settings.json
+INFO    remove file: .augment/skills/db/SKILL.md
+INFO    remove file: .augment/skills/helper/SKILL.md
+INFO    remove file: .bob/AGENTS.md
+INFO    remove file: .bob/rules/be.md
+INFO    remove file: .bob/rules/mine.md
+INFO    remove file: .bob/settings/settings.json
+INFO    remove file: .bob/skills/db/SKILL.md
+INFO    remove file: .bob/skills/helper/SKILL.md
+INFO    remove file: .claude/agents/buddy.md
+INFO    remove file: .claude/rules/be.md
+INFO    remove file: .claude/rules/mine.md
+INFO    remove file: .claude/skills/db/SKILL.md
+INFO    remove file: .claude/skills/helper/SKILL.md
+INFO    remove file: .cline/agents/buddy.yaml
+INFO    remove file: .cline/skills/db/SKILL.md
+INFO    remove file: .cline/skills/helper/SKILL.md
+INFO    remove file: .codebuddy/CODEBUDDY.md
+INFO    remove file: .codebuddy/agents/buddy.md
+INFO    remove file: .codebuddy/rules/be.md
+INFO    remove file: .codebuddy/rules/mine.md
+INFO    remove file: .codebuddy/settings.json
+INFO    remove file: .codebuddy/skills/db/SKILL.md
+INFO    remove file: .codebuddy/skills/helper/SKILL.md
+INFO    remove file: .codewhale/AGENTS.md
+INFO    remove file: .codewhale/skills/db/SKILL.md
+INFO    remove file: .codewhale/skills/helper/SKILL.md
+INFO    remove file: .codex/AGENTS.md
+INFO    remove file: .codex/agents/buddy.toml
+INFO    remove file: .codex/hooks.json
+INFO    remove file: .codex/rules/ai-rulez.rules
+INFO    remove file: .commandcode/AGENTS.md
+INFO    remove file: .commandcode/agents/buddy.md
+INFO    remove file: .commandcode/settings.json
+INFO    remove file: .commandcode/skills/db/SKILL.md
+INFO    remove file: .commandcode/skills/helper/SKILL.md
+INFO    remove file: .config/agents/skills/db/SKILL.md
+INFO    remove file: .config/agents/skills/helper/SKILL.md
+INFO    remove file: .config/amp/AGENTS.md
+INFO    remove file: .config/amp/plugins/ai-rulez-hooks.ts
+INFO    remove file: .config/crush/CRUSH.md
+INFO    remove file: .config/crush/skills/db/SKILL.md
+INFO    remove file: .config/crush/skills/helper/SKILL.md
+INFO    remove file: .config/devin/agents/buddy.md
+INFO    remove file: .config/devin/config.json
+INFO    remove file: .config/devin/skills/db/SKILL.md
+INFO    remove file: .config/devin/skills/helper/SKILL.md
+INFO    remove file: .config/goose/.goosehints
+INFO    remove file: .config/goose/agents/buddy.md
+INFO    remove file: .config/kilo/AGENTS.md
+INFO    remove file: .config/kilo/agents/buddy.md
+INFO    remove file: .config/kilo/kilo.jsonc
+INFO    remove file: .config/kilo/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/mimocode/AGENTS.md
+INFO    remove file: .config/mimocode/agents/buddy.md
+INFO    remove file: .config/mimocode/mimocode.jsonc
+INFO    remove file: .config/mimocode/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/mimocode/skills/db/SKILL.md
+INFO    remove file: .config/mimocode/skills/helper/SKILL.md
+INFO    remove file: .config/muse/skills/db/SKILL.md
+INFO    remove file: .config/muse/skills/helper/SKILL.md
+INFO    remove file: .config/opencode/AGENTS.md
+INFO    remove file: .config/opencode/agents/buddy.md
+INFO    remove file: .config/opencode/opencode.json
+INFO    remove file: .config/opencode/plugins/ai-rulez-hooks.js
+INFO    remove file: .config/opencode/skills/db/SKILL.md
+INFO    remove file: .config/opencode/skills/helper/SKILL.md
+INFO    remove file: .config/poolside/AGENTS.md
+INFO    remove file: .config/poolside/settings.yaml
+INFO    remove file: .config/poolside/skills/db/SKILL.md
+INFO    remove file: .config/poolside/skills/helper/SKILL.md
+INFO    remove file: .config/zed/AGENTS.md
+INFO    remove file: .config/zed/settings.json
+INFO    remove file: .copilot/agents/buddy.agent.md
+INFO    remove file: .copilot/copilot-instructions.md
+INFO    remove file: .copilot/hooks/ai-rulez.json
+INFO    remove file: .copilot/instructions/be.instructions.md
+INFO    remove file: .copilot/instructions/mine.instructions.md
+INFO    remove file: .copilot/skills/db/SKILL.md
+INFO    remove file: .copilot/skills/helper/SKILL.md
+INFO    remove file: .cursor/agents/buddy.md
+INFO    remove file: .cursor/hooks.json
+INFO    remove file: .deepagents/agent/AGENTS.md
+INFO    remove file: .deepagents/agent/agents/buddy/AGENTS.md
+INFO    remove file: .deepagents/agent/skills/db/SKILL.md
+INFO    remove file: .deepagents/agent/skills/helper/SKILL.md
+INFO    remove file: .deepagents/hooks.json
+INFO    remove file: .dsh/AGENTS.md
+INFO    remove file: .dsh/skills/db/SKILL.md
+INFO    remove file: .dsh/skills/helper/SKILL.md
+INFO    remove file: .factory/AGENTS.md
+INFO    remove file: .factory/droids/buddy.md
+INFO    remove file: .factory/hooks.json
+INFO    remove file: .factory/skills/db/SKILL.md
+INFO    remove file: .factory/skills/helper/SKILL.md
+INFO    remove file: .gemini/GEMINI.md
+INFO    remove file: .gemini/agents/buddy.md
+INFO    remove file: .gemini/config/agents/buddy.md
+INFO    remove file: .gemini/config/skills/db/SKILL.md
+INFO    remove file: .gemini/config/skills/helper/SKILL.md
+INFO    remove file: .gemini/settings.json
+INFO    remove file: .gitlab/duo/chat-rules.md
+INFO    remove file: .gitlab/duo/hooks.json
+INFO    remove file: .grok/AGENTS.md
+INFO    remove file: .grok/agents/buddy.md
+INFO    remove file: .grok/config.toml
+INFO    remove file: .grok/hooks/ai-rulez.json
+INFO    remove file: .grok/rules/be.md
+INFO    remove file: .grok/rules/mine.md
+INFO    remove file: .grok/skills/db/SKILL.md
+INFO    remove file: .grok/skills/helper/SKILL.md
+INFO    remove file: .hermes/config.yaml
+INFO    remove file: .hermes/skills/db/SKILL.md
+INFO    remove file: .hermes/skills/helper/SKILL.md
+INFO    remove file: .junie/AGENTS.md
+INFO    remove file: .junie/agents/buddy.md
+INFO    remove file: .junie/config.json
+INFO    remove file: .junie/skills/db/SKILL.md
+INFO    remove file: .junie/skills/helper/SKILL.md
+INFO    remove file: .kilo/rules/be.md
+INFO    remove file: .kilo/rules/mine.md
+INFO    remove file: .kilo/skills/db/SKILL.md
+INFO    remove file: .kilo/skills/helper/SKILL.md
+INFO    remove file: .kimi-code/AGENTS.md
+INFO    remove file: .kimi-code/agents/buddy.md
+INFO    remove file: .kimi-code/config.toml
+INFO    remove file: .kimi-code/skills/db/SKILL.md
+INFO    remove file: .kimi-code/skills/helper/SKILL.md
+INFO    remove file: .kiro/agents/buddy.md
+INFO    remove file: .kiro/hooks/ai-rulez.json
+INFO    remove file: .kiro/skills/db/SKILL.md
+INFO    remove file: .kiro/skills/helper/SKILL.md
+INFO    remove file: .kiro/steering/AGENTS.md
+INFO    remove file: .kiro/steering/be.md
+INFO    remove file: .kiro/steering/mine.md
+INFO    remove file: .letta/agents/buddy.md
+INFO    remove file: .letta/settings.json
+INFO    remove file: .letta/skills/db/SKILL.md
+INFO    remove file: .letta/skills/helper/SKILL.md
+INFO    remove file: .omp/agent/AGENTS.md
+INFO    remove file: .omp/agent/agents/buddy.md
+INFO    remove file: .omp/agent/config.yml
+INFO    remove file: .omp/agent/rules/be.md
+INFO    remove file: .omp/agent/rules/mine.md
+INFO    remove file: .omp/agent/skills/db/SKILL.md
+INFO    remove file: .omp/agent/skills/helper/SKILL.md
+INFO    remove file: .openclaw/workspace/AGENTS.md
+INFO    remove file: .pi/agent/AGENTS.md
+INFO    remove file: .pi/agent/agents/buddy.md
+INFO    remove file: .pi/agent/extensions/ai-rulez-hooks.ts
+INFO    remove file: .pi/agent/skills/db/SKILL.md
+INFO    remove file: .pi/agent/skills/helper/SKILL.md
+INFO    remove file: .qoder/AGENTS.md
+INFO    remove file: .qoder/agents/buddy.md
+INFO    remove file: .qoder/rules/be.md
+INFO    remove file: .qoder/rules/mine.md
+INFO    remove file: .qoder/settings.json
+INFO    remove file: .qoder/skills/db/SKILL.md
+INFO    remove file: .qoder/skills/helper/SKILL.md
+INFO    remove file: .qwen/QWEN.md
+INFO    remove file: .qwen/agents/buddy.md
+INFO    remove file: .qwen/rules/be.md
+INFO    remove file: .qwen/rules/mine.md
+INFO    remove file: .qwen/settings.json
+INFO    remove file: .qwen/skills/db/SKILL.md
+INFO    remove file: .qwen/skills/helper/SKILL.md
+INFO    remove file: .reasonix/REASONIX.md
+INFO    remove file: .reasonix/settings.json
+INFO    remove file: .reasonix/skills/buddy/SKILL.md
+INFO    remove file: .reasonix/skills/db/SKILL.md
+INFO    remove file: .reasonix/skills/helper/SKILL.md
+INFO    remove file: .roo/rules/AGENTS.md
+INFO    remove file: .roo/skills/db/SKILL.md
+INFO    remove file: .roo/skills/helper/SKILL.md
+INFO    remove file: .rovodev/AGENTS.md
+INFO    remove file: .rovodev/skills/db/SKILL.md
+INFO    remove file: .rovodev/skills/helper/SKILL.md
+INFO    remove file: .rovodev/subagents/buddy.md
+INFO    remove file: .snowflake/cortex/agents/buddy.md
+INFO    remove file: .snowflake/cortex/hooks.json
+INFO    remove file: .snowflake/cortex/skills/db/SKILL.md
+INFO    remove file: .snowflake/cortex/skills/helper/SKILL.md
+INFO    remove file: .takt/facets/knowledge/helper.md
+INFO    remove file: .takt/facets/personas/buddy.md
+INFO    remove file: .takt/facets/policies/be.md
+INFO    remove file: .takt/facets/policies/context-me.md
+INFO    remove file: .takt/facets/policies/mine.md
+INFO    remove file: .trae/skills/db/SKILL.md
+INFO    remove file: .trae/skills/helper/SKILL.md
+INFO    remove file: .vibe/AGENTS.md
+INFO    remove file: .vibe/config.toml
+INFO    remove file: .vibe/skills/db/SKILL.md
+INFO    remove file: .vibe/skills/helper/SKILL.md
+INFO    remove file: .warp/skills/db/SKILL.md
+INFO    remove file: .warp/skills/helper/SKILL.md
+INFO    remove file: .zcode/AGENTS.md
+INFO    remove file: .zcode/agents/buddy.md
+INFO    remove file: .zcode/cli/config.json
+INFO    remove file: .zcode/skills/db/SKILL.md
+INFO    remove file: .zcode/skills/helper/SKILL.md
+INFO    remove file: Documents/Cline/Hooks/TaskStart
+INFO    remove file: Documents/Cline/Rules/be.md
+INFO    remove file: Documents/Cline/Rules/context-me.md
+INFO    remove file: Documents/Cline/Rules/mine.md
+INFO    remove ai-rulez keys from: .claude/settings.json
+INFO    remove dir (if empty): Documents/Cline/Rules
+INFO    remove dir (if empty): Documents/Cline/Hooks
+INFO    remove dir (if empty): Documents/Cline
+INFO    remove dir (if empty): Documents
+INFO    remove dir (if empty): .zcode/skills/helper
+INFO    remove dir (if empty): .zcode/skills/db
+INFO    remove dir (if empty): .zcode/skills
+INFO    remove dir (if empty): .zcode/commands
+INFO    remove dir (if empty): .zcode/cli
+INFO    remove dir (if empty): .zcode/agents
+INFO    remove dir (if empty): .zcode
+INFO    remove dir (if empty): .warp/skills/helper
+INFO    remove dir (if empty): .warp/skills/db
+INFO    remove dir (if empty): .warp/skills
+INFO    remove dir (if empty): .warp
+INFO    remove dir (if empty): .vibe/skills/helper
+INFO    remove dir (if empty): .vibe/skills/db
+INFO    remove dir (if empty): .vibe/skills
+INFO    remove dir (if empty): .vibe
+INFO    remove dir (if empty): .trae/skills/helper
+INFO    remove dir (if empty): .trae/skills/db
+INFO    remove dir (if empty): .trae/skills
+INFO    remove dir (if empty): .trae
+INFO    remove dir (if empty): .takt/facets/policies
+INFO    remove dir (if empty): .takt/facets/personas
+INFO    remove dir (if empty): .takt/facets/knowledge
+INFO    remove dir (if empty): .takt/facets/instructions
+INFO    remove dir (if empty): .takt/facets
+INFO    remove dir (if empty): .takt
+INFO    remove dir (if empty): .snowflake/cortex/skills/helper
+INFO    remove dir (if empty): .snowflake/cortex/skills/db
+INFO    remove dir (if empty): .snowflake/cortex/skills
+INFO    remove dir (if empty): .snowflake/cortex/agents
+INFO    remove dir (if empty): .snowflake/cortex
+INFO    remove dir (if empty): .snowflake
+INFO    remove dir (if empty): .rovodev/subagents
+INFO    remove dir (if empty): .rovodev/skills/helper
+INFO    remove dir (if empty): .rovodev/skills/db
+INFO    remove dir (if empty): .rovodev/skills
+INFO    remove dir (if empty): .rovodev
+INFO    remove dir (if empty): .roo/skills/helper
+INFO    remove dir (if empty): .roo/skills/db
+INFO    remove dir (if empty): .roo/skills
+INFO    remove dir (if empty): .roo/rules
+INFO    remove dir (if empty): .roo/commands
+INFO    remove dir (if empty): .roo
+INFO    remove dir (if empty): .reasonix/skills/helper
+INFO    remove dir (if empty): .reasonix/skills/db
+INFO    remove dir (if empty): .reasonix/skills/buddy
+INFO    remove dir (if empty): .reasonix/skills
+INFO    remove dir (if empty): .reasonix/commands
+INFO    remove dir (if empty): .reasonix
+INFO    remove dir (if empty): .qwen/skills/helper
+INFO    remove dir (if empty): .qwen/skills/db
+INFO    remove dir (if empty): .qwen/skills
+INFO    remove dir (if empty): .qwen/rules
+INFO    remove dir (if empty): .qwen/commands
+INFO    remove dir (if empty): .qwen/agents
+INFO    remove dir (if empty): .qwen
+INFO    remove dir (if empty): .qoder/skills/helper
+INFO    remove dir (if empty): .qoder/skills/db
+INFO    remove dir (if empty): .qoder/skills
+INFO    remove dir (if empty): .qoder/rules
+INFO    remove dir (if empty): .qoder/commands
+INFO    remove dir (if empty): .qoder/agents
+INFO    remove dir (if empty): .qoder
+INFO    remove dir (if empty): .pi/agent/skills/helper
+INFO    remove dir (if empty): .pi/agent/skills/db
+INFO    remove dir (if empty): .pi/agent/skills
+INFO    remove dir (if empty): .pi/agent/prompts
+INFO    remove dir (if empty): .pi/agent/extensions
+INFO    remove dir (if empty): .pi/agent/agents
+INFO    remove dir (if empty): .pi/agent
+INFO    remove dir (if empty): .pi
+INFO    remove dir (if empty): .openclaw/workspace
+INFO    remove dir (if empty): .openclaw
+INFO    remove dir (if empty): .omp/agent/skills/helper
+INFO    remove dir (if empty): .omp/agent/skills/db
+INFO    remove dir (if empty): .omp/agent/skills
+INFO    remove dir (if empty): .omp/agent/rules
+INFO    remove dir (if empty): .omp/agent/commands
+INFO    remove dir (if empty): .omp/agent/agents
+INFO    remove dir (if empty): .omp/agent
+INFO    remove dir (if empty): .omp
+INFO    remove dir (if empty): .letta/skills/helper
+INFO    remove dir (if empty): .letta/skills/db
+INFO    remove dir (if empty): .letta/skills
+INFO    remove dir (if empty): .letta/commands
+INFO    remove dir (if empty): .letta/agents
+INFO    remove dir (if empty): .letta
+INFO    remove dir (if empty): .kiro/steering
+INFO    remove dir (if empty): .kiro/skills/helper
+INFO    remove dir (if empty): .kiro/skills/db
+INFO    remove dir (if empty): .kiro/skills
+INFO    remove dir (if empty): .kiro/prompts
+INFO    remove dir (if empty): .kiro/hooks
+INFO    remove dir (if empty): .kiro/agents
+INFO    remove dir (if empty): .kiro
+INFO    remove dir (if empty): .kimi-code/skills/helper
+INFO    remove dir (if empty): .kimi-code/skills/db
+INFO    remove dir (if empty): .kimi-code/skills
+INFO    remove dir (if empty): .kimi-code/agents
+INFO    remove dir (if empty): .kimi-code
+INFO    remove dir (if empty): .kilo/skills/helper
+INFO    remove dir (if empty): .kilo/skills/db
+INFO    remove dir (if empty): .kilo/skills
+INFO    remove dir (if empty): .kilo/rules
+INFO    remove dir (if empty): .kilo
+INFO    remove dir (if empty): .junie/skills/helper
+INFO    remove dir (if empty): .junie/skills/db
+INFO    remove dir (if empty): .junie/skills
+INFO    remove dir (if empty): .junie/commands
+INFO    remove dir (if empty): .junie/agents
+INFO    remove dir (if empty): .junie
+INFO    remove dir (if empty): .hermes/skills/helper
+INFO    remove dir (if empty): .hermes/skills/db
+INFO    remove dir (if empty): .hermes/skills
+INFO    remove dir (if empty): .hermes
+INFO    remove dir (if empty): .grok/skills/helper
+INFO    remove dir (if empty): .grok/skills/db
+INFO    remove dir (if empty): .grok/skills
+INFO    remove dir (if empty): .grok/rules
+INFO    remove dir (if empty): .grok/hooks
+INFO    remove dir (if empty): .grok/commands
+INFO    remove dir (if empty): .grok/agents
+INFO    remove dir (if empty): .grok
+INFO    remove dir (if empty): .gitlab/duo/commands
+INFO    remove dir (if empty): .gitlab/duo
+INFO    remove dir (if empty): .gitlab
+INFO    remove dir (if empty): .gemini/config/skills/helper
+INFO    remove dir (if empty): .gemini/config/skills/db
+INFO    remove dir (if empty): .gemini/config/skills
+INFO    remove dir (if empty): .gemini/config/agents
+INFO    remove dir (if empty): .gemini/config
+INFO    remove dir (if empty): .gemini/agents
+INFO    remove dir (if empty): .gemini
+INFO    remove dir (if empty): .factory/skills/helper
+INFO    remove dir (if empty): .factory/skills/db
+INFO    remove dir (if empty): .factory/skills
+INFO    remove dir (if empty): .factory/droids
+INFO    remove dir (if empty): .factory/commands
+INFO    remove dir (if empty): .factory
+INFO    remove dir (if empty): .dsh/skills/helper
+INFO    remove dir (if empty): .dsh/skills/db
+INFO    remove dir (if empty): .dsh/skills
+INFO    remove dir (if empty): .dsh
+INFO    remove dir (if empty): .deepagents/agent/skills/helper
+INFO    remove dir (if empty): .deepagents/agent/skills/db
+INFO    remove dir (if empty): .deepagents/agent/skills
+INFO    remove dir (if empty): .deepagents/agent/agents/buddy
+INFO    remove dir (if empty): .deepagents/agent/agents
+INFO    remove dir (if empty): .deepagents/agent
+INFO    remove dir (if empty): .deepagents
+INFO    remove dir (if empty): .cursor/commands
+INFO    remove dir (if empty): .cursor/agents
+INFO    remove dir (if empty): .cursor
+INFO    remove dir (if empty): .copilot/skills/helper
+INFO    remove dir (if empty): .copilot/skills/db
+INFO    remove dir (if empty): .copilot/skills
+INFO    remove dir (if empty): .copilot/instructions
+INFO    remove dir (if empty): .copilot/hooks
+INFO    remove dir (if empty): .copilot/agents
+INFO    remove dir (if empty): .copilot
+INFO    remove dir (if empty): .config/zed
+INFO    remove dir (if empty): .config/poolside/skills/helper
+INFO    remove dir (if empty): .config/poolside/skills/db
+INFO    remove dir (if empty): .config/poolside/skills
+INFO    remove dir (if empty): .config/poolside
+INFO    remove dir (if empty): .config/opencode/skills/helper
+INFO    remove dir (if empty): .config/opencode/skills/db
+INFO    remove dir (if empty): .config/opencode/skills
+INFO    remove dir (if empty): .config/opencode/plugins
+INFO    remove dir (if empty): .config/opencode/agents
+INFO    remove dir (if empty): .config/opencode
+INFO    remove dir (if empty): .config/muse/skills/helper
+INFO    remove dir (if empty): .config/muse/skills/db
+INFO    remove dir (if empty): .config/muse/skills
+INFO    remove dir (if empty): .config/muse
+INFO    remove dir (if empty): .config/mimocode/skills/helper
+INFO    remove dir (if empty): .config/mimocode/skills/db
+INFO    remove dir (if empty): .config/mimocode/skills
+INFO    remove dir (if empty): .config/mimocode/plugins
+INFO    remove dir (if empty): .config/mimocode/commands
+INFO    remove dir (if empty): .config/mimocode/agents
+INFO    remove dir (if empty): .config/mimocode
+INFO    remove dir (if empty): .config/kilo/plugins
+INFO    remove dir (if empty): .config/kilo/commands
+INFO    remove dir (if empty): .config/kilo/agents
+INFO    remove dir (if empty): .config/kilo
+INFO    remove dir (if empty): .config/goose/agents
+INFO    remove dir (if empty): .config/goose
+INFO    remove dir (if empty): .config/devin/skills/helper
+INFO    remove dir (if empty): .config/devin/skills/db
+INFO    remove dir (if empty): .config/devin/skills
+INFO    remove dir (if empty): .config/devin/agents
+INFO    remove dir (if empty): .config/devin
+INFO    remove dir (if empty): .config/crush/skills/helper
+INFO    remove dir (if empty): .config/crush/skills/db
+INFO    remove dir (if empty): .config/crush/skills
+INFO    remove dir (if empty): .config/crush
+INFO    remove dir (if empty): .config/amp/plugins
+INFO    remove dir (if empty): .config/amp
+INFO    remove dir (if empty): .config/agents/skills/helper
+INFO    remove dir (if empty): .config/agents/skills/db
+INFO    remove dir (if empty): .config/agents/skills
+INFO    remove dir (if empty): .config/agents
+INFO    remove dir (if empty): .commandcode/skills/helper
+INFO    remove dir (if empty): .commandcode/skills/db
+INFO    remove dir (if empty): .commandcode/skills
+INFO    remove dir (if empty): .commandcode/commands
+INFO    remove dir (if empty): .commandcode/agents
+INFO    remove dir (if empty): .commandcode
+INFO    remove dir (if empty): .codex/rules
+INFO    remove dir (if empty): .codex/agents
+INFO    remove dir (if empty): .codex
+INFO    remove dir (if empty): .codewhale/skills/helper
+INFO    remove dir (if empty): .codewhale/skills/db
+INFO    remove dir (if empty): .codewhale/skills
+INFO    remove dir (if empty): .codewhale/commands
+INFO    remove dir (if empty): .codewhale
+INFO    remove dir (if empty): .codebuddy/skills/helper
+INFO    remove dir (if empty): .codebuddy/skills/db
+INFO    remove dir (if empty): .codebuddy/skills
+INFO    remove dir (if empty): .codebuddy/rules
+INFO    remove dir (if empty): .codebuddy/commands
+INFO    remove dir (if empty): .codebuddy/agents
+INFO    remove dir (if empty): .codebuddy
+INFO    remove dir (if empty): .cline/skills/helper
+INFO    remove dir (if empty): .cline/skills/db
+INFO    remove dir (if empty): .cline/skills
+INFO    remove dir (if empty): .cline/agents
+INFO    remove dir (if empty): .cline
+INFO    remove dir (if empty): .claude/skills/helper
+INFO    remove dir (if empty): .claude/skills/db
+INFO    remove dir (if empty): .claude/skills
+INFO    remove dir (if empty): .claude/rules
+INFO    remove dir (if empty): .claude/agents
+INFO    remove dir (if empty): .bob/skills/helper
+INFO    remove dir (if empty): .bob/skills/db
+INFO    remove dir (if empty): .bob/skills
+INFO    remove dir (if empty): .bob/settings
+INFO    remove dir (if empty): .bob/rules
+INFO    remove dir (if empty): .bob/commands
+INFO    remove dir (if empty): .bob
+INFO    remove dir (if empty): .augment/skills/helper
+INFO    remove dir (if empty): .augment/skills/db
+INFO    remove dir (if empty): .augment/skills
+INFO    remove dir (if empty): .augment/rules
+INFO    remove dir (if empty): .augment/commands
+INFO    remove dir (if empty): .augment/agents
+INFO    remove dir (if empty): .augment
+INFO    remove dir (if empty): .agents/skills/helper
+INFO    remove dir (if empty): .agents/skills/db
+INFO    remove dir (if empty): .agents/skills
+INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
+INFO    remove dir (if empty): .agents/plugins/ai-rulez
+INFO    remove dir (if empty): .agents/plugins
+INFO    remove dir (if empty): .agents
+INFO    remove manifest: .config/ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .config/ai-rulez/.generated-manifest.local.json
+INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
+INFO  Removed user-level generated files files=211 directories=258
+--- project tree
+(no change)
+--- home tree
+.claude/ dir 0755
+.claude/CLAUDE.md file 0644 14 53ed8bfe89e8eb1bc9e2f2872473da4319dd89c83ea1c148537ed05e2722811e
+.claude/settings.json file 0644 12 eac3ca535fd52d7f965d196670b6365641ff6610e23b19cf6de6f4b6a6a39436
+.config/ dir 0755
+.config/ai-rulez/ dir 0755
+.config/ai-rulez/agents/ dir 0755
+.config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
+.config/ai-rulez/config.toml file 0644 780 c4b51c9e569bebdee77dc0f20faeb3d1723ae8cbaa0a2e06279a3c49aa34d31a
+.config/ai-rulez/context/ dir 0755
+.config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
+.config/ai-rulez/domains/ dir 0755
+.config/ai-rulez/domains/backend/ dir 0755
+.config/ai-rulez/domains/backend/rules/ dir 0755
+.config/ai-rulez/domains/backend/rules/be.md file 0644 25 4b5ad1b999c87d43266641f0ffa62d5bd920fe944096ffa55a04c6290e83e092
+.config/ai-rulez/domains/backend/skills/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/SKILL.md file 0644 38 d2e0a3be655780a4d027124d30c08feb27d4b1e008f5247db8cfeb2aaed28ac9
+.config/ai-rulez/rules/ dir 0755
+.config/ai-rulez/rules/mine.md file 0644 46 0186ce6aeaef9fcec8de13c48797055087574df8c368dd9ba29c136cbed50134
+.config/ai-rulez/skills/ dir 0755
+.config/ai-rulez/skills/helper/ dir 0755
+.config/ai-rulez/skills/helper/SKILL.md file 0644 49 6b7435a4fcbe0e1b1c9be84bf3c7cde3916532f00fc0c75cd3a44a8b81349438
+.takt/ dir 0755
+.takt/facets/ dir 0755
+.takt/facets/knowledge/ dir 0755
+.takt/facets/knowledge/db.md file 0644 5 9e911773a38a300f2ca5a7287acf421682fcdf99584d5226132b2dc15cbdbdd9

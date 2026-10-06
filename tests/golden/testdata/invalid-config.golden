@@ -1,0 +1,54 @@
+# scenario invalid-config
+
+## step 1: ai-rulez generate --yes
+exit: 1
+--- stdout
+--- stderr
+Error: unknown built-in preset: "not-a-preset"
+
+Hint: Use a valid built-in preset name
+Available presets: [aiassistant amp antigravity augment baz bob claude cline codebuddy codebuff codewhale codex commandcode copilot copilot-cli cortex crush cursor deepagents devin dsh factory gemini gitlab-duo goose grok hermes junie kilo kimi kiro letta mcp mimocode muse okf omp openclaw opencode pi poolside qoder qwen reasonix replit rovodev takt trae vibe warp xum zcode zed zoocode]
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/config.toml file 0644 66 dedeba0cf3f55cd49b80411bf40845b6114ef9b83b7af2864d4587f6a35ca52c
+--- home tree
+(no change)
+
+## step 2: ai-rulez validate
+exit: 1
+--- stdout
+--- stderr
+ERROR Configuration failed schema validation path=$ROOT/.ai-rulez/config.toml
+Error: configuration has 4 unknown or invalid key(s) in $ROOT/.ai-rulez/config.toml
+
+Validation errors:
+  - $ROOT/.ai-rulez/config.toml: presets.1.oneOf: Value does not match the oneOf schema
+  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf
+  - $ROOT/.ai-rulez/config.toml: presets.1.type: Value is string but should be object
+  - $ROOT/.ai-rulez/config.toml: presets.1.not: Value should not match the not schema
+
+Hint: Fix the keys above; a "did you mean" names the closest known key
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez validate --strict
+exit: 1
+--- stdout
+--- stderr
+ERROR Configuration failed schema validation path=$ROOT/.ai-rulez/config.toml
+Error: configuration has 4 unknown or invalid key(s) in $ROOT/.ai-rulez/config.toml
+
+Validation errors:
+  - $ROOT/.ai-rulez/config.toml: presets.1.oneOf: Value does not match the oneOf schema
+  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf
+  - $ROOT/.ai-rulez/config.toml: presets.1.type: Value is string but should be object
+  - $ROOT/.ai-rulez/config.toml: presets.1.not: Value should not match the not schema
+
+Hint: Fix the keys above; a "did you mean" names the closest known key
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/config.toml file 0644 66 dedeba0cf3f55cd49b80411bf40845b6114ef9b83b7af2864d4587f6a35ca52c
+--- home tree
+(no change)
