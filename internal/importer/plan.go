@@ -226,6 +226,8 @@ type Options struct {
 	// replaces the default git fetcher (tests).
 	Fetch   bool
 	Fetcher Fetcher
+	// NativePaths limits the native importer to these project paths.
+	NativePaths []string
 	// Domain is the domain the import goes into; only an importer that lays out
 	// its own files (okf) needs it, the others leave it to convert.
 	Domain string

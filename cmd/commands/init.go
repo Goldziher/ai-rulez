@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
-	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/spf13/cobra"
@@ -35,7 +34,7 @@ rules, context, and skills for your selected AI assistants.`,
 func init() {
 	InitCmd.Flags().StringVarP(&domainsFlag, "domains", "d", "", "Comma-separated list of domain directories to create")
 	InitCmd.Flags().BoolVarP(&skipContentFlag, "skip-content", "s", false, "Skip creating example content files")
-	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
+	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
 	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
 	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
@@ -53,6 +52,21 @@ func initConfigDir() string {
 func runInit(cmd *cobra.Command, args []string) {
 	projectName := getProjectName(args)
 	configDir := initConfigDir()
+
+	// --from is convert: check the sources first, so a failure leaves an existing
+	// configuration directory alone
+	workingDir := ""
+	if fromFlag != "" {
+		var err error
+		if workingDir, err = os.Getwd(); err != nil {
+			logger.Error("Failed to get working directory", "error", err)
+			os.Exit(1)
+		}
+		if err := previewInitImport(cmd.Context(), workingDir); err != nil {
+			logger.Error("Failed to import from sources", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	// Check if the configuration directory already exists
 	if _, err := os.Stat(configDir); err == nil {
@@ -72,21 +86,10 @@ func runInit(cmd *cobra.Command, args []string) {
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
-		workingDir, err := os.Getwd()
-		if err != nil {
-			logger.Error("Failed to get working directory", "error", err)
-			os.Exit(1)
-		}
-
-		aiRulezDir := filepath.Join(workingDir, filepath.FromSlash(configDir))
-
-		imp := importer.NewImporter(workingDir, aiRulezDir)
-		if err := imp.Import(fromFlag); err != nil {
+		if err := runInitImport(cmd.Context(), workingDir, configDir); err != nil {
 			logger.Error("Failed to import from sources", "error", err)
 			os.Exit(1)
 		}
-
-		displayImportSuccessMessage(fromFlag, configDir)
 		return
 	}
 
@@ -371,24 +374,6 @@ func displaySuccessMessage(projectName, configDir string) {
 	if setupHooks {
 		handleHooksSetup()
 	}
-}
-
-// displayImportSuccessMessage displays a success message after import
-func displayImportSuccessMessage(sources, configDir string) {
-	logger.Info("✅ Successfully imported content to " + configDir + "/")
-	logger.Info(fmt.Sprintf("   Sources: %s", sources))
-
-	logger.Info("\nImported structure:")
-	logger.Info("  " + configDir + "/")
-	logger.Info("  ├── config.toml")
-	logger.Info("  ├── rules/         # Imported rules")
-	logger.Info("  ├── context/       # Imported context")
-	logger.Info("  └── skills/        # Imported skills")
-
-	logger.Info("\nNext steps:")
-	logger.Info("  1. Review imported content in " + configDir + "/")
-	logger.Info("  2. Edit " + configDir + "/config.toml to customize presets")
-	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 }
 
 func getProjectName(args []string) string {
