@@ -22,6 +22,8 @@ type Fake struct {
 	Commits map[string]time.Time
 	// PRs by "repo@sha".
 	PRs map[string][]PullRequest
+	// PRByNumber by "repo#number".
+	PRByNumber map[string]PullRequest
 	// Reviews by "repo#number".
 	ReviewsBy map[string][]Review
 	// Owners by "repo@ref" ("" ref is the default branch).
@@ -98,6 +100,17 @@ func (f *Fake) PullRequestsForCommit(_ context.Context, repo Repo, sha string) (
 		return nil, err
 	}
 	return append([]PullRequest(nil), f.PRs[repo.String()+"@"+sha]...), nil
+}
+
+// PullRequest implements Client.
+func (f *Fake) PullRequest(_ context.Context, repo Repo, number int) (PullRequest, error) {
+	if err := f.record("PullRequest %s %d", repo, number); err != nil {
+		return PullRequest{}, err
+	}
+	if pr, ok := f.PRByNumber[fmt.Sprintf("%s#%d", repo, number)]; ok {
+		return pr, nil
+	}
+	return PullRequest{}, ErrNotFound
 }
 
 // Reviews implements Client.

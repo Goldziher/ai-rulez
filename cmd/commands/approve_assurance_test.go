@@ -337,8 +337,8 @@ func reviewedProject(t *testing.T, extra string, reviews ...forge.Review) (root,
 	t.Setenv("GITHUB_REPOSITORY", "acme/config")
 	repo := "github.com/acme/config"
 	fake = &forge.Fake{
-		PRs:       map[string][]forge.PullRequest{repo + "@" + head: {{Number: 7, Author: "dave", HeadSHA: head}}},
-		ReviewsBy: map[string][]forge.Review{repo + "#7": reviews},
+		PRByNumber: map[string]forge.PullRequest{repo + "#7": {Number: 7, Author: "dave", HeadSHA: head}},
+		ReviewsBy:  map[string][]forge.Review{repo + "#7": reviews},
 	}
 	approveForge = func() forge.Client { return fake }
 	return root, head, fake
