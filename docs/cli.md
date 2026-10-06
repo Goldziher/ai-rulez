@@ -25,7 +25,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
-| `ai-rulez verifiers run/list/explain/test` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
+| `ai-rulez verifiers run/list/explain/test/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
@@ -1355,15 +1355,16 @@ Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be l
 
 ## Verifiers Command
 
-### `ai-rulez verifiers run|list|explain|test`
+### `ai-rulez verifiers run|list|explain|test|suggest`
 
-Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync) and as rule-linked specs under `.ai-rulez/verifiers/*.toml` (paired files, `all`/`any`/`not`, changed-only scope; a failure names the rule or skill it enforces). Verifiers never use the network, never start a process and never write. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
+Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync) and as rule-linked specs under `.ai-rulez/verifiers/*.toml` (paired files, `all`/`any`/`not`, changed-only scope; a failure names the rule or skill it enforces). Verifiers never write. Two predicates of a rule-linked verifier are opt-in per run: `command` starts a program (`--allow-exec`) and `llm` sends the changed lines to a model (`--allow-llm`); without the flags nothing runs and nothing leaves the machine. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
 
 ```bash
-ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--no-local] [--config-dir <name>]
+ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--role <name>] [--allow-exec] [--allow-llm] [--max-cost <usd>] [--estimate] [--no-local] [--config-dir <name>]
 ai-rulez verifiers list [config-file] [--format json] [--no-local] [--config-dir <name>]
 ai-rulez verifiers explain <name> [config-file]
-ai-rulez verifiers test [name...]
+ai-rulez verifiers test [name...] [--allow-exec]
+ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposals <n>] [--write] [--allow-llm] [--max-cost <usd>] [--estimate] [--format json]
 ```
 
 | Flag | Description |
@@ -1379,11 +1380,16 @@ ai-rulez verifiers test [name...]
 | `--strict` | Same as `--fail-on warning` |
 | `--strict-applicability` | Report a verifier whose `when_changed` matches no file of the repository (`AR9H5`) |
 | `--name` | Run only the named verifier (repeatable) |
-| `--profile` / `-p` | Profile for `generated_in_sync` verifiers that name none |
+| `--profile` / `-p` | Active profile: the profile of `generated_in_sync` verifiers that name none, and which rules count as active (a verifier whose rule is outside it is `inactive`) |
+| `--role` | Active role, same meaning |
+| `--allow-exec` | Let `command` predicates run a program (env `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1` in CI). Without it a command verifier is `AR9H3`, exit `1`. Never implied by another flag |
+| `--allow-llm` | Evaluate `llm` verifiers: sends the changed lines to the configured model. Needs `allow_network = true` in the user config; otherwise the verifier is `skipped` (`AR9H4`) |
+| `--max-cost <usd>` | Most an `llm` run may cost (default `0.50`, `0` removes the cap; `[llm]` limits still apply) |
+| `--estimate` | Print which files and how many bytes the `llm` verifiers would send and the cost bound; calls nothing |
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`.
+`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
 
 Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 

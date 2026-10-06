@@ -2,13 +2,12 @@
 // [[verifiers]] in the project configuration. Each verifier is one predicate
 // (a file exists, a glob matches a bounded number of files, a regex is present
 // or absent, a JSON/YAML/TOML key has a value, generated output is in sync)
-// evaluated read-only against the project root. Run never writes, never uses
-// the network and never starts a process.
+// evaluated read-only against the project root. Run never writes and never uses
+// the network (the llm predicate calls a model only with Options.LLM).
 //
-// Extension point: a predicate is a function registered under its config
-// type name with Register. Phase 2 adds a "command" predicate that way, on top
-// of the hardened command runner; it is not implemented here and the config
-// validator rejects the type until it is.
+// Only the spec-form "command" predicate starts a process, and only with
+// Options.AllowExec; it runs through internal/runner. A predicate of the flat
+// form is a function registered under its config type name with Register.
 package verifiers
 
 import (
@@ -19,6 +18,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
 
@@ -34,6 +34,13 @@ const (
 	// StatusNotApplicable means when_changed selected no changed file, so the
 	// verifier had nothing to check. It never fails a run.
 	StatusNotApplicable Status = "not_applicable"
+	// StatusSkipped means a verifier that needs a model (the llm predicate) was
+	// not evaluated: LLM use is off, the budget would be exceeded, or --estimate
+	// was given. It is shown, never counted as a pass, and never fails a run (AR9H4).
+	StatusSkipped Status = "skipped"
+	// StatusInactive means the rule or skill the verifier enforces is not part
+	// of the active profile or role, so the verifier does not apply.
+	StatusInactive Status = "inactive"
 )
 
 const (
@@ -50,14 +57,18 @@ type Result struct {
 	Description string `json:"description,omitempty"`
 	Message     string `json:"message,omitempty"`
 	// Code is the rule code of a failure: AR9H1 (a predicate did not hold),
-	// AR9H2 (the declaration is invalid) or AR9H5 (dead scope).
+	// AR9H2 (the declaration is invalid), AR9H3 (a command was refused or did
+	// not run), AR9H4 (an LLM verifier was skipped), AR9H5 (dead scope) or
+	// AR9H6 (no self-test examples).
 	Code string `json:"code,omitempty"`
 	// Target is the rule, skill, agent or command the verifier enforces.
 	Target *Target `json:"target,omitempty"`
 	// Fix says how to make the verifier pass.
 	Fix string `json:"fix,omitempty"`
 	// Source is the declaration file of a verifier declared under verifiers/.
-	Source   string    `json:"source,omitempty"`
+	Source string `json:"source,omitempty"`
+	// Advisory marks a verdict a model produced: its severity is at most warning.
+	Advisory bool      `json:"advisory,omitempty"`
 	Findings []Finding `json:"findings,omitempty"`
 	// Notes list files skipped (binary, oversized) and similar.
 	Notes []string `json:"notes,omitempty"`
@@ -78,6 +89,8 @@ type Report struct {
 	// Mode says which files counted as changed: "all", "since <rev>" or "staged".
 	Mode    string   `json:"mode,omitempty"`
 	Results []Result `json:"results"`
+	// LLM totals the model use of the run; nil when no model was called.
+	LLM *LLMUsage `json:"llm,omitempty"`
 	// Err is set when the run could not start (for example an unknown name was
 	// requested); no verifier ran.
 	Err error `json:"-"`
@@ -170,6 +183,21 @@ type Options struct {
 	// StrictApplicability reports a verifier whose when_changed matches no
 	// file of the repository (AR9H5).
 	StrictApplicability bool
+	// Profile and Role select which rules and skills are active: a verifier whose
+	// target lies outside them is reported inactive and never fails the run.
+	// Empty means the configured default profile, as for `generate`.
+	Profile string
+	Role    string
+	// AllowExec lets command predicates run (--allow-exec). Without it each
+	// one is status error with AR9H3; nothing is ever started.
+	AllowExec bool
+	// Runner starts command predicates; nil runs real processes.
+	Runner runner.Runner
+	// LLM enables llm predicates (see LLMOptions); nil skips them.
+	LLM *LLMOptions
+	// Environ is the parent environment of commands (KEY=VALUE); nil is the
+	// process environment. Only the allowlist survives into the child.
+	Environ []string
 }
 
 // Env is what predicates share for one run.
@@ -187,18 +215,56 @@ type Env struct {
 	rootReal string
 	rootErr  error
 	rootDone bool
+	// llm is the model accounting of the run, created on first use.
+	llm *llmRun
 }
 
 // Run evaluates the configured verifiers: the [[verifiers]] of config.toml in
 // declaration order (flat entries, then spec-form ones), then those of
-// .ai-rulez/verifiers/*.toml.
+// .ai-rulez/verifiers/*.toml and of includes.
 func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	rep := &Report{Root: cfg.BaseDir, Results: []Result{}}
 	if opts.Since != "" && opts.Staged {
 		rep.Err = oops.New("--since and --staged cannot be combined")
 		return rep
 	}
+	if cfg.VerifiersSettings != nil && cfg.VerifiersSettings.WarnDead {
+		opts.StrictApplicability = true
+	}
 	specs, problems := LoadSpecs(cfg)
+	selected, err := selectEntries(declaredEntries(cfg, specs), opts, len(problems) > 0)
+	if err != nil {
+		rep.Err = err
+		return rep
+	}
+	active, err := activeContent(cfg, opts.Profile, opts.Role)
+	if err != nil {
+		rep.Err = err
+		return rep
+	}
+	env := &Env{Cfg: cfg, Root: cfg.BaseDir, opts: opts}
+	if needsScope(opts, selected) {
+		if err := env.prepareScope(ctx); err != nil {
+			rep.Err = err
+			return rep
+		}
+		rep.Mode = env.scope.describe()
+	}
+	for _, e := range selected {
+		rep.Results = append(rep.Results, evaluateEntry(ctx, env, active, e)...)
+	}
+	if len(opts.Names) == 0 && opts.Rule == "" {
+		rep.Results = append(rep.Results, problemResults(problems)...)
+	}
+	if env.llm != nil && (env.llm.usage.Calls > 0 || env.llm.opts.Estimate) {
+		u := env.llm.usage
+		rep.LLM = &u
+	}
+	return rep
+}
+
+// declaredEntries lists the flat verifiers of config.toml, then the specs.
+func declaredEntries(cfg *config.Config, specs []Spec) []entry {
 	entries := make([]entry, 0, len(cfg.Verifiers)+len(specs))
 	for i := range cfg.Verifiers {
 		if !cfg.Verifiers[i].IsSpec() {
@@ -208,34 +274,37 @@ func Run(ctx context.Context, cfg *config.Config, opts Options) *Report {
 	for i := range specs {
 		entries = append(entries, entry{id: specs[i].ID, spec: &specs[i]})
 	}
-	selected, err := selectEntries(entries, opts, len(problems) > 0)
-	if err != nil {
-		rep.Err = err
-		return rep
-	}
-	env := &Env{Cfg: cfg, Root: cfg.BaseDir, opts: opts}
-	needScope := opts.Since != "" || opts.Staged
-	for _, e := range selected {
-		needScope = needScope || e.spec != nil
-	}
-	if needScope {
-		if err := env.prepareScope(ctx); err != nil {
-			rep.Err = err
-			return rep
-		}
-		rep.Mode = env.scope.describe()
+	return entries
+}
+
+// needsScope reports whether the run must resolve the file set and changes.
+func needsScope(opts Options, selected []entry) bool {
+	if opts.Since != "" || opts.Staged {
+		return true
 	}
 	for _, e := range selected {
 		if e.spec != nil {
-			rep.Results = append(rep.Results, evaluateSpec(ctx, env, e.spec))
-			continue
+			return true
 		}
-		rep.Results = append(rep.Results, evaluate(ctx, env, *e.legacy))
 	}
-	if len(opts.Names) == 0 && opts.Rule == "" {
-		rep.Results = append(rep.Results, problemResults(problems)...)
+	return false
+}
+
+// evaluateEntry runs one declared verifier: a flat one, or a spec that is
+// inactive (outside the active profile or role), evaluated, and optionally
+// followed by its missing-examples finding.
+func evaluateEntry(ctx context.Context, env *Env, active activeSet, e entry) []Result {
+	if e.spec == nil {
+		return []Result{evaluate(ctx, env, *e.legacy)}
 	}
-	return rep
+	if why, off := active.inactive(env.Cfg, e.spec); off {
+		return []Result{inactiveResult(env, e.spec, why)}
+	}
+	out := []Result{evaluateSpec(ctx, env, e.spec)}
+	if res, missing := missingExamples(env, e.spec); missing {
+		out = append(out, res)
+	}
+	return out
 }
 
 // entry is one declared verifier: a flat config.toml one or a spec.

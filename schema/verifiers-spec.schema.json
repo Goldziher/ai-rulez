@@ -83,6 +83,42 @@
             "max": { "type": "integer", "minimum": 0 }
           }
         },
+        "command": {
+          "type": "object",
+          "required": ["argv"],
+          "additionalProperties": false,
+          "description": "Runs a program (no shell) in the project root with a scrubbed environment; only with --allow-exec.",
+          "properties": {
+            "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "pass_files": {
+              "enum": ["args", "stdin0"],
+              "description": "Hand the scoped files to the program as arguments or NUL-separated on stdin."
+            },
+            "timeout_s": { "type": "integer", "minimum": 1, "maximum": 900 },
+            "expect_exit": { "type": "integer", "minimum": 0, "maximum": 255, "default": 0 }
+          }
+        },
+        "llm": {
+          "type": "object",
+          "required": ["checklist"],
+          "additionalProperties": false,
+          "description": "Asks a model whether the changed lines satisfy a checklist. Advisory (never above warning), only with --allow-llm; allowed only as the root predicate or directly under `all`.",
+          "properties": {
+            "checklist": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": { "type": "string", "maxLength": 500 }
+            },
+            "model": { "type": "string", "description": "Overrides the configured [llm] model." },
+            "max_diff_bytes": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 200000,
+              "description": "Changed text per call; default 24000."
+            }
+          }
+        },
         "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/require" } },
         "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/require" } },
         "not": { "$ref": "#/$defs/require" }

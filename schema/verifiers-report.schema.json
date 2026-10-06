@@ -19,11 +19,35 @@
         "pass": { "type": "integer", "minimum": 0 },
         "fail": { "type": "integer", "minimum": 0 },
         "error": { "type": "integer", "minimum": 0 },
-        "not_applicable": { "type": "integer", "minimum": 0 }
+        "not_applicable": { "type": "integer", "minimum": 0 },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "llm verifiers that were not evaluated (AR9H4); present only when non-zero."
+        },
+        "inactive": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Verifiers whose rule or skill is outside the active profile or role; present only when non-zero."
+        }
       },
       "additionalProperties": false
     },
-    "results": { "type": "array", "items": { "$ref": "#/$defs/result" } }
+    "results": { "type": "array", "items": { "$ref": "#/$defs/result" } },
+    "llm": {
+      "type": "object",
+      "description": "Model use of the run; present when an llm verifier called a model or --estimate ran.",
+      "required": ["calls", "prompt_tokens", "completion_tokens", "cost_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "calls": { "type": "integer", "minimum": 0 },
+        "cached": { "type": "integer", "minimum": 0, "description": "Calls answered from the response cache." },
+        "prompt_tokens": { "type": "integer", "minimum": 0 },
+        "completion_tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "max_cost_usd": { "type": "number", "minimum": 0 }
+      }
+    }
   },
   "$defs": {
     "result": {
@@ -34,19 +58,26 @@
         "name": { "type": "string", "description": "The verifier id (or the declaration file of an invalid one)." },
         "type": {
           "type": "string",
-          "description": "The root predicate: file_exists, file_absent, glob_count, regex, forbid, key_equals, generated_in_sync, paired, all, any, not, or invalid."
+          "description": "The root predicate: file_exists, file_absent, glob_count, regex, forbid, key_equals, generated_in_sync, paired, command, llm, all, any, not, examples (AR9H6), or invalid."
         },
         "severity": { "enum": ["error", "warning", "info"] },
-        "status": { "enum": ["pass", "fail", "error", "not_applicable"] },
+        "status": { "enum": ["pass", "fail", "error", "not_applicable", "skipped", "inactive"] },
         "description": { "type": "string" },
         "message": { "type": "string" },
         "code": {
-          "enum": ["AR9H1", "AR9H2", "AR9H5"],
-          "description": "AR9H1 predicate did not hold, AR9H2 invalid declaration, AR9H5 dead when_changed scope."
+          "enum": ["AR9H1", "AR9H2", "AR9H3", "AR9H4", "AR9H5", "AR9H6"],
+          "description": "AR9H1 predicate did not hold, AR9H2 invalid declaration, AR9H3 command refused or did not run, AR9H4 llm verifier skipped, AR9H5 dead when_changed scope, AR9H6 no self-test examples."
         },
         "target": { "$ref": "#/$defs/target" },
         "fix": { "type": "string" },
-        "source": { "type": "string", "description": "The declaration file under .ai-rulez/verifiers/." },
+        "source": {
+          "type": "string",
+          "description": "The declaration file under .ai-rulez/verifiers/, or include:<name>/verifiers/<file> for an imported one."
+        },
+        "advisory": {
+          "type": "boolean",
+          "description": "A model produced the verdict: the severity is at most warning."
+        },
         "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
         "notes": { "type": "array", "items": { "type": "string" }, "description": "Files skipped (binary, oversized)." }
       }

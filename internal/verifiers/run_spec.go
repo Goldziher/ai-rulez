@@ -2,6 +2,7 @@ package verifiers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,7 +18,13 @@ func evaluateSpec(ctx context.Context, env *Env, sp *Spec) (res Result) {
 	if res.Severity == "" {
 		res.Severity = severityWarning
 	}
-	defer func() { res.Message = sanitize(res.Message) }()
+	advisory := usesLLM(sp.Require)
+	defer func() {
+		res.Message = sanitize(res.Message)
+		if advisory {
+			capAdvisory(&res)
+		}
+	}()
 	if err := ctx.Err(); err != nil {
 		res.Status, res.Message = StatusError, "not run: "+err.Error()
 		return res
@@ -36,6 +43,10 @@ func evaluateSpec(ctx context.Context, env *Env, sp *Spec) (res Result) {
 	switch {
 	case err != nil:
 		res.Status, res.Message = StatusError, err.Error()
+		var ce *codedError
+		if errors.As(err, &ce) {
+			res.Status, res.Code = ce.status, ce.code
+		}
 	case out.pass:
 		res.Status = StatusPass
 		if len(sp.WhenChanged) > 0 {
@@ -93,6 +104,10 @@ func predicateKind(r *Require) string {
 		return "paired"
 	case r.GlobCount != nil:
 		return config.VerifierGlobCount
+	case r.Command != nil:
+		return "command"
+	case r.LLM != nil:
+		return "llm"
 	case len(r.All) > 0:
 		return "all"
 	case len(r.Any) > 0:
@@ -117,4 +132,44 @@ func resolveTarget(cfg *config.Config, sp *Spec) *Target {
 		t.Line = anchorLine(cf.Content, sp.Anchor)
 	}
 	return t
+}
+
+// inactiveResult is a verifier whose target is outside the active profile or role.
+func inactiveResult(env *Env, sp *Spec, why string) Result {
+	res := Result{
+		Name: sp.ID, Type: predicateKind(sp.Require), Severity: sp.Severity, Description: sp.Description,
+		Source: sp.source, Target: resolveTarget(env.Cfg, sp), Status: StatusInactive, Message: why,
+	}
+	if res.Severity == "" {
+		res.Severity = severityWarning
+	}
+	return res
+}
+
+// missingExamples reports a spec without self-test examples when
+// [verifiers_settings] require_examples is set (AR9H6).
+func missingExamples(env *Env, sp *Spec) (Result, bool) {
+	if s := env.settings(); !s.RequireExamples || len(sp.Examples) > 0 {
+		return Result{}, false
+	}
+	return Result{
+		Name: sp.ID, Type: "examples", Severity: severityWarning, Status: StatusFail, Code: CodeVerifierNoExamples,
+		Message: "no self-test examples", Source: sp.source, Target: resolveTarget(env.Cfg, sp),
+		Fix:      "Add [[verifiers.examples]] with a passing and a failing case, then run `ai-rulez verifiers test " + sp.ID + "`.",
+		Findings: []Finding{{Message: "verifier " + sp.ID + " has no examples"}},
+	}, true
+}
+
+// capAdvisory marks the result of a verifier that asks a model: its severity
+// never exceeds warning (a model's verdict is advisory), and a skipped one is
+// info (AR9H4).
+func capAdvisory(res *Result) {
+	res.Advisory = true
+	switch {
+	case res.Status == StatusSkipped:
+		res.Severity = "info"
+	case res.Severity == severityError:
+		res.Severity = severityWarning
+		res.Notes = append(res.Notes, "advisory: the severity of an llm verifier is capped at warning")
+	}
 }
