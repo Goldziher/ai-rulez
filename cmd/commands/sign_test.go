@@ -303,6 +303,25 @@ func TestLockCheckWithAnUnbuildablePolicyCouldNotRun(t *testing.T) {
 	assert.NotContains(t, stderr, "AR720")
 }
 
+func TestValidateSignFlagsAcceptsSigstoreURLs(t *testing.T) {
+	tests := []struct {
+		name string
+		set  func()
+	}{
+		{"https rekor with a key and tlog", func() { signLock, signKey, signTLog, signRekorURL = true, "k", true, "https://rekor.example.com" }},
+		{"loopback http for a local stack", func() { signLock, signKeyless, signFulcioURL = true, true, "http://127.0.0.1:5555" }},
+		{"localhost http rekor with keyless", func() { signLock, signKeyless, signRekorURL = true, true, "http://localhost:3000" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetSigningFlags(t)
+			tt.set()
+
+			assert.NoError(t, validateSignFlags())
+		})
+	}
+}
+
 func TestReadKeyFileRefusesAnOversizedFile(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -342,6 +361,10 @@ func TestSignFlagValidation(t *testing.T) {
 		{"no mode", func() { signLock = true }, "choose how to sign"},
 		{"both modes", func() { signLock, signKey, signKeyless = true, "k", true }, "mutually exclusive"},
 		{"tlog with keyless", func() { signLock, signKeyless, signTLog = true, true, true }, "always logged"},
+		{"rekor url without a log", func() { signLock, signKey, signRekorURL = true, "k", "https://rekor.example.com" }, "--rekor-url applies"},
+		{"plain http fulcio", func() { signLock, signKeyless, signFulcioURL = true, true, "http://fulcio.example.com" }, "must be https"},
+		{"plain http rekor", func() { signLock, signKey, signTLog, signRekorURL = true, "k", true, "http://rekor.example.com" }, "must be https"},
+		{"rekor url without a host", func() { signLock, signKey, signTLog, signRekorURL = true, "k", true, "rekor" }, "not a URL with a host"},
 		{"token env with a key", func() { signLock, signKey, signTokenEnv = true, "k", "T" }, "apply to --keyless"},
 	}
 	for _, tt := range tests {

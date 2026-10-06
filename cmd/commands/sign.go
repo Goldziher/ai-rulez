@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -112,8 +113,33 @@ func validateSignFlags() error {
 		return oops.Errorf("--identity-token-env, --interactive and --fulcio-url apply to --keyless")
 	case signKeyless && signKeyPassEnv != "":
 		return oops.Errorf("--key-password-env applies to --key")
+	case signRekorURL != "" && !signKeyless && !signTLog:
+		return oops.Errorf("--rekor-url applies to --keyless or --tlog: without a log the signature is never sent anywhere")
 	}
-	return nil
+	if err := checkSigstoreURL("--fulcio-url", signFulcioURL); err != nil {
+		return err
+	}
+	return checkSigstoreURL("--rekor-url", signRekorURL)
+}
+
+// checkSigstoreURL accepts an https URL, or http only to a loopback host (a local
+// Sigstore stack): the OIDC token and the signature must not cross the network
+// in clear text.
+func checkSigstoreURL(flag, raw string) error {
+	if raw == "" {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Hostname() == "" {
+		return oops.Errorf("%s %q is not a URL with a host", flag, raw)
+	}
+	if u.Scheme == "https" {
+		return nil
+	}
+	if ip := net.ParseIP(u.Hostname()); u.Scheme == "http" && (u.Hostname() == "localhost" || (ip != nil && ip.IsLoopback())) {
+		return nil
+	}
+	return oops.Hint("use an https:// URL").Errorf("%s %q must be https (plain http is allowed only for localhost)", flag, raw)
 }
 
 // runSign signs the lock of the project at args[0] (or the current directory)
