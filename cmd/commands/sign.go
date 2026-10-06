@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ const (
 	signCosignPasswordEnv = "COSIGN_PASSWORD"
 	gitProbeTimeout       = 5 * time.Second
 	signedFileMode        = 0o644
+	maxSigningKeyBytes    = 1 << 20
 )
 
 var (
@@ -209,12 +211,9 @@ func newSigner(ctx context.Context, env ambient.Env) (signing.Signer, error) {
 		}
 		return signing.NewKeylessSigner(signing.KeylessOptions{IDToken: tok, FulcioURL: signFulcioURL, RekorURL: signRekorURL})
 	}
-	data, err := os.ReadFile(signKey) //nolint:gosec // the user names their own key file
+	data, err := readKeyFile(signKey)
 	if err != nil {
-		return nil, oops.With("path", signKey).Wrapf(err, "read the signing key")
-	}
-	if len(data) > 1<<20 {
-		return nil, oops.With("path", signKey).Errorf("the signing key file is too large")
+		return nil, err
 	}
 	ks, err := signing.LoadKeySigner(data, []byte(keyPassword(env)))
 	if err != nil {
@@ -222,6 +221,24 @@ func newSigner(ctx context.Context, env ambient.Env) (signing.Signer, error) {
 	}
 	ks.TLog, ks.RekorURL = signTLog, signRekorURL
 	return ks, nil
+}
+
+// readKeyFile reads a signing key, refusing a file over maxSigningKeyBytes
+// before it is read whole.
+func readKeyFile(path string) ([]byte, error) {
+	f, err := os.Open(path) //nolint:gosec // the user names their own key file
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "read the signing key")
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	data, err := io.ReadAll(io.LimitReader(f, maxSigningKeyBytes+1))
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "read the signing key")
+	}
+	if len(data) > maxSigningKeyBytes {
+		return nil, oops.With("path", path).Errorf("the signing key file is too large")
+	}
+	return data, nil
 }
 
 func keyPassword(env ambient.Env) string {
