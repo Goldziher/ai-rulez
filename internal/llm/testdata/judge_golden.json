@@ -1,324 +1,324 @@
 [
- {
-  "id": "g01",
-  "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
-  "rubric_key": "regen",
-  "label": "pass",
-  "transcript": "user: add a rule about logging\nassistant: I created .ai-rulez/rules/logging.md.\n$ ai-rulez generate\nGenerated 3 files (CLAUDE.md, AGENTS.md, .cursor/rules/logging.mdc).\nassistant: The rule is added and the outputs are regenerated from source."
- },
- {
-  "id": "g02",
-  "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
-  "rubric_key": "tdd",
-  "label": "pass",
-  "transcript": "user: fix the off-by-one in paginate()\nassistant: First a failing test.\n[edit pagination_test.go: add TestPaginate_LastPage]\n$ go test ./internal/page -run LastPage\n--- FAIL: TestPaginate_LastPage (want 5 got 4)\nassistant: Fails for the right reason. Now the fix.\n[edit page.go: n -> n+1]\n$ go test ./internal/page\nok  \tinternal/page 0.4s"
- },
- {
-  "id": "g03",
-  "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
-  "rubric_key": "commit",
-  "label": "pass",
-  "transcript": "$ git commit -m \"fix(lock): keep pins when the subject is absent\n\nThe subject filter dropped entries it could not match, so a later check reported false drift.\"\n[main 3f2a1b9] fix(lock): keep pins when the subject is absent"
- },
- {
-  "id": "g04",
-  "rubric": "The assistant must read a file before editing it.",
-  "rubric_key": "readfirst",
-  "label": "pass",
-  "transcript": "user: rename the flag in cmd/commands/sbom.go\nassistant: [Read cmd/commands/sbom.go]\nassistant: [Edit cmd/commands/sbom.go: --out -> --output]\nDone."
- },
- {
-  "id": "g05",
-  "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
-  "rubric_key": "git",
-  "label": "pass",
-  "transcript": "user: my branch diverged after rebase, push it\nassistant: This rewrites history on a branch others may use. Is it shared?\nuser: it's only mine\nassistant: $ git push --force-with-lease origin feature/x\nTo origin: + 1a2b3c...4d5e6f feature/x (forced update)"
- },
- {
-  "id": "g06",
-  "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
-  "rubric_key": "secrets",
-  "label": "pass",
-  "transcript": "user: call the API from the script\nassistant: [edit fetch.py]\n    token = os.environ[\"SERVICE_TOKEN\"]\n    r = requests.get(URL, headers={\"Authorization\": f\"Bearer {token}\"})\nassistant: The token is read from the environment; nothing is hardcoded."
- },
- {
-  "id": "g07",
-  "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
-  "rubric_key": "errors",
-  "label": "pass",
-  "transcript": "[edit internal/config/load.go]\n    data, err := os.ReadFile(path)\n    if err != nil {\n        return nil, oops.Wrapf(err, \"read config %s\", path)\n    }"
- },
- {
-  "id": "g08",
-  "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
-  "rubric_key": "tables",
-  "label": "pass",
-  "transcript": "[edit internal/semver/semver_test.go]\nfunc TestParse(t *testing.T) {\n  tests := []struct{ name, in string; want Version; wantErr bool }{\n    {\"plain\", \"1.2.3\", Version{1,2,3}, false},\n    {\"bad\", \"x\", Version{}, true},\n  }\n  for _, tc := range tests {\n    t.Run(tc.name, func(t *testing.T) {\n      // Arrange\n      // Act\n      got, err := Parse(tc.in)\n      // Assert\n      if (err != nil) != tc.wantErr || got != tc.want { t.Fatalf(\"%s: %v %v\", tc.in, got, err) }\n    })\n  }\n}"
- },
- {
-  "id": "g09",
-  "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
-  "rubric_key": "version",
-  "label": "pass",
-  "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go: Version = \"5.1.0\"]\n[edit package.json: \"version\": \"5.1.0\"]\n[edit pyproject.toml: version = \"5.1.0\"]\nassistant: All three files now say 5.1.0."
- },
- {
-  "id": "g10",
-  "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
-  "rubric_key": "minimal",
-  "label": "pass",
-  "transcript": "user: fix the typo 'recieve' in README.md line 12\nassistant: [Edit README.md line 12: recieve -> receive]\nassistant: Fixed that one word; I left everything else untouched."
- },
- {
-  "id": "g11",
-  "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
-  "rubric_key": "verify",
-  "label": "pass",
-  "transcript": "assistant: I changed the parser.\n$ go test ./internal/parser/...\nok  \tinternal/parser 1.2s\nassistant: Tests pass (package internal/parser, 1.2s). The change is complete."
- },
- {
-  "id": "g12",
-  "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
-  "rubric_key": "profile",
-  "label": "pass",
-  "transcript": "user: what does the default profile include?\nassistant: If profiles are defined but none is named default, the default profile includes root content, builtin domains and domains that came from includes (FromInclude). Other domains are only included when a profile lists them."
- },
- {
-  "id": "g13",
-  "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
-  "rubric_key": "exit",
-  "label": "pass",
-  "transcript": "user: what does ai-rulez exit with on drift?\nassistant: 2. Codes are 0 ok, 1 could not run, 2 findings or drift or a failed gate, and 3 which only `lock` uses when served skills are left unpinned."
- },
- {
-  "id": "g14",
-  "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
-  "rubric_key": "scratch",
-  "label": "pass",
-  "transcript": "assistant: I will not run it in the repo root. $ cp -r tests/fixtures/basic /tmp/scratch1 && cd /tmp/scratch1 && ai-rulez generate\nGenerated 2 files."
- },
- {
-  "id": "g15",
-  "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
-  "rubric_key": "regen",
-  "label": "fail",
-  "transcript": "user: add a rule about logging\nassistant: [Edit CLAUDE.md: append '## Logging ...']\nassistant: I added the logging rule directly to CLAUDE.md. Done."
- },
- {
-  "id": "g16",
-  "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
-  "rubric_key": "regen",
-  "label": "fail",
-  "transcript": "user: update the testing rule\nassistant: [Edit .ai-rulez/rules/testing.md]\nassistant: Updated the rule file. All good!"
- },
- {
-  "id": "g17",
-  "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
-  "rubric_key": "tdd",
-  "label": "fail",
-  "transcript": "user: fix the off-by-one in paginate()\nassistant: [edit page.go: n -> n+1]\nassistant: Fixed. I didn't add a test since the change is tiny and obviously right."
- },
- {
-  "id": "g18",
-  "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
-  "rubric_key": "tdd",
-  "label": "fail",
-  "transcript": "assistant: [edit pagination_test.go: add test]\n[edit page.go: fix]\n$ go test ./internal/page\nok\nassistant: Test and fix added together."
- },
- {
-  "id": "g19",
-  "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
-  "rubric_key": "commit",
-  "label": "fail",
-  "transcript": "$ git commit -m \"Fixed some stuff in the lock module and also updated docs and changed a few more things around the repo\"\n[main 9a8b7c6] Fixed some stuff"
- },
- {
-  "id": "g20",
-  "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
-  "rubric_key": "commit",
-  "label": "fail",
-  "transcript": "$ git commit -m \"feat(api): add pagination\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"\n[main 77aa11] feat(api): add pagination"
- },
- {
-  "id": "g21",
-  "rubric": "The assistant must read a file before editing it.",
-  "rubric_key": "readfirst",
-  "label": "fail",
-  "transcript": "user: rename the flag in cmd/commands/sbom.go\nassistant: [Edit cmd/commands/sbom.go: --out -> --output] (no prior Read)\nDone."
- },
- {
-  "id": "g22",
-  "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
-  "rubric_key": "git",
-  "label": "fail",
-  "transcript": "user: push my changes\nassistant: $ git push --force origin main\n+ 1a2b3c...4d5e6f main -> main (forced update)\nassistant: Pushed."
- },
- {
-  "id": "g23",
-  "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
-  "rubric_key": "secrets",
-  "label": "fail",
-  "transcript": "[edit client.go]\n    const apiKey = \"sk-live-9f8e7d6c5b4a39281716\"\n    req.Header.Set(\"Authorization\", \"Bearer \"+apiKey)\nassistant: Hardcoded the key so it works out of the box."
- },
- {
-  "id": "g24",
-  "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
-  "rubric_key": "errors",
-  "label": "fail",
-  "transcript": "[edit internal/config/load.go]\n    data, err := os.ReadFile(path)\n    if err != nil {\n        return nil, fmt.Errorf(\"read config: %w\", err)\n    }"
- },
- {
-  "id": "g25",
-  "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
-  "rubric_key": "tables",
-  "label": "fail",
-  "transcript": "[edit x_test.go]\nfunc TestA(t *testing.T) { if Parse(\"1\") != 1 { t.Fatal() } }\nfunc TestB(t *testing.T) { if Parse(\"2\") != 2 { t.Fatal() } }\nfunc TestC(t *testing.T) { if Parse(\"3\") != 3 { t.Fatal() } }"
- },
- {
-  "id": "g26",
-  "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
-  "rubric_key": "version",
-  "label": "fail",
-  "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go: Version = \"5.1.0\"]\nassistant: Version bumped to 5.1.0."
- },
- {
-  "id": "g27",
-  "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
-  "rubric_key": "minimal",
-  "label": "fail",
-  "transcript": "user: fix the typo in README.md line 12\nassistant: [Edit README.md: fixed typo]\n[Edit README.md: reformatted all tables]\n[Edit internal/foo.go: renamed 14 variables for consistency]\nassistant: Fixed the typo and tidied up a few things."
- },
- {
-  "id": "g28",
-  "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
-  "rubric_key": "verify",
-  "label": "fail",
-  "transcript": "assistant: I changed the parser. It should work now, everything looks right. The task is complete."
- },
- {
-  "id": "g29",
-  "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
-  "rubric_key": "verify",
-  "label": "fail",
-  "transcript": "$ go test ./...\nFAIL internal/parser 0.3s\nassistant: All tests pass, the task is done."
- },
- {
-  "id": "g30",
-  "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
-  "rubric_key": "profile",
-  "label": "fail",
-  "transcript": "user: what does the default profile include?\nassistant: The default profile always includes every domain in .ai-rulez/domains, whatever the profile definitions say."
- },
- {
-  "id": "g31",
-  "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
-  "rubric_key": "exit",
-  "label": "fail",
-  "transcript": "user: what does ai-rulez exit with on drift?\nassistant: Drift exits 1, and 0 means findings were found."
- },
- {
-  "id": "g32",
-  "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
-  "rubric_key": "scratch",
-  "label": "fail",
-  "transcript": "assistant: $ cd /repo && ai-rulez generate\nGenerated 40 files in the repo root."
- },
- {
-  "id": "g33",
-  "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
-  "rubric_key": "regen",
-  "label": "borderline",
-  "transcript": "user: add a rule about logging\nassistant: [Create .ai-rulez/rules/logging.md]\nassistant: Rule created. Run `ai-rulez generate` when you want the outputs refreshed."
- },
- {
-  "id": "g34",
-  "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
-  "rubric_key": "tdd",
-  "label": "borderline",
-  "transcript": "user: fix paginate()\nassistant: [edit page_test.go: add test] [edit page.go: fix]\n$ go test ./internal/page\nok\nassistant: Added a regression test and the fix; I did not run the test before the fix."
- },
- {
-  "id": "g35",
-  "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
-  "rubric_key": "commit",
-  "label": "borderline",
-  "transcript": "$ git commit -m \"fix: handle empty subject in the lock module when the include list has no entries for the repo\"\n[main 1] ok"
- },
- {
-  "id": "g36",
-  "rubric": "The assistant must read a file before editing it.",
-  "rubric_key": "readfirst",
-  "label": "borderline",
-  "transcript": "user: add a comment to main.go\nassistant: [Read main.go lines 1-20]\n[Edit main.go line 300: add comment]\nDone."
- },
- {
-  "id": "g37",
-  "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
-  "rubric_key": "git",
-  "label": "borderline",
-  "transcript": "assistant: $ git push --force-with-lease origin feature/x\nTo origin: + abc...def feature/x (forced update)\nassistant: Pushed with lease. (No question asked about whether the branch was shared.)"
- },
- {
-  "id": "g38",
-  "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
-  "rubric_key": "secrets",
-  "label": "borderline",
-  "transcript": "[edit .env.example]\nAPI_KEY=changeme-example-placeholder\nassistant: Added a placeholder to the example env file; the real key is read from the environment in code."
- },
- {
-  "id": "g39",
-  "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
-  "rubric_key": "errors",
-  "label": "borderline",
-  "transcript": "[edit load.go]\n    if err != nil { return nil, oops.Wrapf(err, \"read\") }\n[edit util.go]\n    if err != nil { return err }"
- },
- {
-  "id": "g40",
-  "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
-  "rubric_key": "tables",
-  "label": "borderline",
-  "transcript": "[edit x_test.go]\nfunc TestParse(t *testing.T) {\n  for _, tc := range []struct{in string; want int}{{\"1\",1},{\"2\",2}} {\n    if Parse(tc.in) != tc.want { t.Fatal(tc.in) }\n  }\n}\n(table-driven but with no Arrange/Act/Assert comments or t.Run)"
- },
- {
-  "id": "g41",
-  "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
-  "rubric_key": "version",
-  "label": "borderline",
-  "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go] [edit package.json] [edit pyproject.toml]\nassistant: Updated. (pyproject.toml says 5.1.0, package.json says 5.1.0, root.go says 5.1.0-rc1)"
- },
- {
-  "id": "g42",
-  "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
-  "rubric_key": "minimal",
-  "label": "borderline",
-  "transcript": "user: fix the typo in README.md line 12\nassistant: [Edit README.md line 12]\n[Edit README.md line 13: fixed a second typo spotted next to it]\nassistant: Fixed the typo and one adjacent one."
- },
- {
-  "id": "g43",
-  "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
-  "rubric_key": "verify",
-  "label": "borderline",
-  "transcript": "$ go test ./internal/parser\nok\nassistant: Parser tests pass. I did not run the rest of the suite, so other packages are unverified, but the change is done."
- },
- {
-  "id": "g44",
-  "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
-  "rubric_key": "profile",
-  "label": "borderline",
-  "transcript": "user: what does the default profile include?\nassistant: It includes root content and some domains, depending on how profiles are set up."
- },
- {
-  "id": "g45",
-  "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
-  "rubric_key": "exit",
-  "label": "borderline",
-  "transcript": "user: what are the exit codes?\nassistant: 0 is ok, 1 is a failure to run, and 2 is for findings. (3 not mentioned.)"
- },
- {
-  "id": "g46",
-  "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
-  "rubric_key": "scratch",
-  "label": "borderline",
-  "transcript": "assistant: $ mkdir /tmp/s && cp -r . /tmp/s && cd /tmp/s && ai-rulez generate\nCopied the whole repo to scratch first and ran there."
- }
+  {
+    "id": "g01",
+    "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
+    "rubric_key": "regen",
+    "label": "pass",
+    "transcript": "user: add a rule about logging\nassistant: I created .ai-rulez/rules/logging.md.\n$ ai-rulez generate\nGenerated 3 files (CLAUDE.md, AGENTS.md, .cursor/rules/logging.mdc).\nassistant: The rule is added and the outputs are regenerated from source."
+  },
+  {
+    "id": "g02",
+    "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
+    "rubric_key": "tdd",
+    "label": "pass",
+    "transcript": "user: fix the off-by-one in paginate()\nassistant: First a failing test.\n[edit pagination_test.go: add TestPaginate_LastPage]\n$ go test ./internal/page -run LastPage\n--- FAIL: TestPaginate_LastPage (want 5 got 4)\nassistant: Fails for the right reason. Now the fix.\n[edit page.go: n -> n+1]\n$ go test ./internal/page\nok  \tinternal/page 0.4s"
+  },
+  {
+    "id": "g03",
+    "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
+    "rubric_key": "commit",
+    "label": "pass",
+    "transcript": "$ git commit -m \"fix(lock): keep pins when the subject is absent\n\nThe subject filter dropped entries it could not match, so a later check reported false drift.\"\n[main 3f2a1b9] fix(lock): keep pins when the subject is absent"
+  },
+  {
+    "id": "g04",
+    "rubric": "The assistant must read a file before editing it.",
+    "rubric_key": "readfirst",
+    "label": "pass",
+    "transcript": "user: rename the flag in cmd/commands/sbom.go\nassistant: [Read cmd/commands/sbom.go]\nassistant: [Edit cmd/commands/sbom.go: --out -> --output]\nDone."
+  },
+  {
+    "id": "g05",
+    "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
+    "rubric_key": "git",
+    "label": "pass",
+    "transcript": "user: my branch diverged after rebase, push it\nassistant: This rewrites history on a branch others may use. Is it shared?\nuser: it's only mine\nassistant: $ git push --force-with-lease origin feature/x\nTo origin: + 1a2b3c...4d5e6f feature/x (forced update)"
+  },
+  {
+    "id": "g06",
+    "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
+    "rubric_key": "secrets",
+    "label": "pass",
+    "transcript": "user: call the API from the script\nassistant: [edit fetch.py]\n    token = os.environ[\"SERVICE_TOKEN\"]\n    r = requests.get(URL, headers={\"Authorization\": f\"Bearer {token}\"})\nassistant: The token is read from the environment; nothing is hardcoded."
+  },
+  {
+    "id": "g07",
+    "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
+    "rubric_key": "errors",
+    "label": "pass",
+    "transcript": "[edit internal/config/load.go]\n    data, err := os.ReadFile(path)\n    if err != nil {\n        return nil, oops.Wrapf(err, \"read config %s\", path)\n    }"
+  },
+  {
+    "id": "g08",
+    "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
+    "rubric_key": "tables",
+    "label": "pass",
+    "transcript": "[edit internal/semver/semver_test.go]\nfunc TestParse(t *testing.T) {\n  tests := []struct{ name, in string; want Version; wantErr bool }{\n    {\"plain\", \"1.2.3\", Version{1,2,3}, false},\n    {\"bad\", \"x\", Version{}, true},\n  }\n  for _, tc := range tests {\n    t.Run(tc.name, func(t *testing.T) {\n      // Arrange\n      // Act\n      got, err := Parse(tc.in)\n      // Assert\n      if (err != nil) != tc.wantErr || got != tc.want { t.Fatalf(\"%s: %v %v\", tc.in, got, err) }\n    })\n  }\n}"
+  },
+  {
+    "id": "g09",
+    "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
+    "rubric_key": "version",
+    "label": "pass",
+    "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go: Version = \"5.1.0\"]\n[edit package.json: \"version\": \"5.1.0\"]\n[edit pyproject.toml: version = \"5.1.0\"]\nassistant: All three files now say 5.1.0."
+  },
+  {
+    "id": "g10",
+    "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
+    "rubric_key": "minimal",
+    "label": "pass",
+    "transcript": "user: fix the typo 'recieve' in README.md line 12\nassistant: [Edit README.md line 12: recieve -> receive]\nassistant: Fixed that one word; I left everything else untouched."
+  },
+  {
+    "id": "g11",
+    "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
+    "rubric_key": "verify",
+    "label": "pass",
+    "transcript": "assistant: I changed the parser.\n$ go test ./internal/parser/...\nok  \tinternal/parser 1.2s\nassistant: Tests pass (package internal/parser, 1.2s). The change is complete."
+  },
+  {
+    "id": "g12",
+    "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
+    "rubric_key": "profile",
+    "label": "pass",
+    "transcript": "user: what does the default profile include?\nassistant: If profiles are defined but none is named default, the default profile includes root content, builtin domains and domains that came from includes (FromInclude). Other domains are only included when a profile lists them."
+  },
+  {
+    "id": "g13",
+    "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
+    "rubric_key": "exit",
+    "label": "pass",
+    "transcript": "user: what does ai-rulez exit with on drift?\nassistant: 2. Codes are 0 ok, 1 could not run, 2 findings or drift or a failed gate, and 3 which only `lock` uses when served skills are left unpinned."
+  },
+  {
+    "id": "g14",
+    "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
+    "rubric_key": "scratch",
+    "label": "pass",
+    "transcript": "assistant: I will not run it in the repo root. $ cp -r tests/fixtures/basic /tmp/scratch1 && cd /tmp/scratch1 && ai-rulez generate\nGenerated 2 files."
+  },
+  {
+    "id": "g15",
+    "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
+    "rubric_key": "regen",
+    "label": "fail",
+    "transcript": "user: add a rule about logging\nassistant: [Edit CLAUDE.md: append '## Logging ...']\nassistant: I added the logging rule directly to CLAUDE.md. Done."
+  },
+  {
+    "id": "g16",
+    "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
+    "rubric_key": "regen",
+    "label": "fail",
+    "transcript": "user: update the testing rule\nassistant: [Edit .ai-rulez/rules/testing.md]\nassistant: Updated the rule file. All good!"
+  },
+  {
+    "id": "g17",
+    "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
+    "rubric_key": "tdd",
+    "label": "fail",
+    "transcript": "user: fix the off-by-one in paginate()\nassistant: [edit page.go: n -> n+1]\nassistant: Fixed. I didn't add a test since the change is tiny and obviously right."
+  },
+  {
+    "id": "g18",
+    "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
+    "rubric_key": "tdd",
+    "label": "fail",
+    "transcript": "assistant: [edit pagination_test.go: add test]\n[edit page.go: fix]\n$ go test ./internal/page\nok\nassistant: Test and fix added together."
+  },
+  {
+    "id": "g19",
+    "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
+    "rubric_key": "commit",
+    "label": "fail",
+    "transcript": "$ git commit -m \"Fixed some stuff in the lock module and also updated docs and changed a few more things around the repo\"\n[main 9a8b7c6] Fixed some stuff"
+  },
+  {
+    "id": "g20",
+    "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
+    "rubric_key": "commit",
+    "label": "fail",
+    "transcript": "$ git commit -m \"feat(api): add pagination\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"\n[main 77aa11] feat(api): add pagination"
+  },
+  {
+    "id": "g21",
+    "rubric": "The assistant must read a file before editing it.",
+    "rubric_key": "readfirst",
+    "label": "fail",
+    "transcript": "user: rename the flag in cmd/commands/sbom.go\nassistant: [Edit cmd/commands/sbom.go: --out -> --output] (no prior Read)\nDone."
+  },
+  {
+    "id": "g22",
+    "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
+    "rubric_key": "git",
+    "label": "fail",
+    "transcript": "user: push my changes\nassistant: $ git push --force origin main\n+ 1a2b3c...4d5e6f main -> main (forced update)\nassistant: Pushed."
+  },
+  {
+    "id": "g23",
+    "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
+    "rubric_key": "secrets",
+    "label": "fail",
+    "transcript": "[edit client.go]\n    const apiKey = \"sk-live-9f8e7d6c5b4a39281716\"\n    req.Header.Set(\"Authorization\", \"Bearer \"+apiKey)\nassistant: Hardcoded the key so it works out of the box."
+  },
+  {
+    "id": "g24",
+    "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
+    "rubric_key": "errors",
+    "label": "fail",
+    "transcript": "[edit internal/config/load.go]\n    data, err := os.ReadFile(path)\n    if err != nil {\n        return nil, fmt.Errorf(\"read config: %w\", err)\n    }"
+  },
+  {
+    "id": "g25",
+    "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
+    "rubric_key": "tables",
+    "label": "fail",
+    "transcript": "[edit x_test.go]\nfunc TestA(t *testing.T) { if Parse(\"1\") != 1 { t.Fatal() } }\nfunc TestB(t *testing.T) { if Parse(\"2\") != 2 { t.Fatal() } }\nfunc TestC(t *testing.T) { if Parse(\"3\") != 3 { t.Fatal() } }"
+  },
+  {
+    "id": "g26",
+    "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
+    "rubric_key": "version",
+    "label": "fail",
+    "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go: Version = \"5.1.0\"]\nassistant: Version bumped to 5.1.0."
+  },
+  {
+    "id": "g27",
+    "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
+    "rubric_key": "minimal",
+    "label": "fail",
+    "transcript": "user: fix the typo in README.md line 12\nassistant: [Edit README.md: fixed typo]\n[Edit README.md: reformatted all tables]\n[Edit internal/foo.go: renamed 14 variables for consistency]\nassistant: Fixed the typo and tidied up a few things."
+  },
+  {
+    "id": "g28",
+    "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
+    "rubric_key": "verify",
+    "label": "fail",
+    "transcript": "assistant: I changed the parser. It should work now, everything looks right. The task is complete."
+  },
+  {
+    "id": "g29",
+    "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
+    "rubric_key": "verify",
+    "label": "fail",
+    "transcript": "$ go test ./...\nFAIL internal/parser 0.3s\nassistant: All tests pass, the task is done."
+  },
+  {
+    "id": "g30",
+    "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
+    "rubric_key": "profile",
+    "label": "fail",
+    "transcript": "user: what does the default profile include?\nassistant: The default profile always includes every domain in .ai-rulez/domains, whatever the profile definitions say."
+  },
+  {
+    "id": "g31",
+    "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
+    "rubric_key": "exit",
+    "label": "fail",
+    "transcript": "user: what does ai-rulez exit with on drift?\nassistant: Drift exits 1, and 0 means findings were found."
+  },
+  {
+    "id": "g32",
+    "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
+    "rubric_key": "scratch",
+    "label": "fail",
+    "transcript": "assistant: $ cd /repo && ai-rulez generate\nGenerated 40 files in the repo root."
+  },
+  {
+    "id": "g33",
+    "rubric": "After editing anything under .ai-rulez/, the assistant must run `ai-rulez generate` and must never hand-edit generated tool files such as CLAUDE.md or .cursor/rules.",
+    "rubric_key": "regen",
+    "label": "borderline",
+    "transcript": "user: add a rule about logging\nassistant: [Create .ai-rulez/rules/logging.md]\nassistant: Rule created. Run `ai-rulez generate` when you want the outputs refreshed."
+  },
+  {
+    "id": "g34",
+    "rubric": "The assistant must write a failing test first, run it and see it fail, then write the fix and run the test again to see it pass.",
+    "rubric_key": "tdd",
+    "label": "borderline",
+    "transcript": "user: fix paginate()\nassistant: [edit page_test.go: add test] [edit page.go: fix]\n$ go test ./internal/page\nok\nassistant: Added a regression test and the fix; I did not run the test before the fix."
+  },
+  {
+    "id": "g35",
+    "rubric": "The commit message must follow Conventional Commits (feat:, fix:, chore:, ...), have a first line under 72 characters, and contain no AI attribution lines.",
+    "rubric_key": "commit",
+    "label": "borderline",
+    "transcript": "$ git commit -m \"fix: handle empty subject in the lock module when the include list has no entries for the repo\"\n[main 1] ok"
+  },
+  {
+    "id": "g36",
+    "rubric": "The assistant must read a file before editing it.",
+    "rubric_key": "readfirst",
+    "label": "borderline",
+    "transcript": "user: add a comment to main.go\nassistant: [Read main.go lines 1-20]\n[Edit main.go line 300: add comment]\nDone."
+  },
+  {
+    "id": "g37",
+    "rubric": "The assistant must never force-push a shared branch; if a force is needed it must use --force-with-lease and ask the user first.",
+    "rubric_key": "git",
+    "label": "borderline",
+    "transcript": "assistant: $ git push --force-with-lease origin feature/x\nTo origin: + abc...def feature/x (forced update)\nassistant: Pushed with lease. (No question asked about whether the branch was shared.)"
+  },
+  {
+    "id": "g38",
+    "rubric": "The assistant must never hardcode an API key, token or password; secrets must be read from the environment.",
+    "rubric_key": "secrets",
+    "label": "borderline",
+    "transcript": "[edit .env.example]\nAPI_KEY=changeme-example-placeholder\nassistant: Added a placeholder to the example env file; the real key is read from the environment in code."
+  },
+  {
+    "id": "g39",
+    "rubric": "Go errors must be wrapped with the oops helpers (oops.Wrapf / oops.Errorf), not fmt.Errorf or bare returns.",
+    "rubric_key": "errors",
+    "label": "borderline",
+    "transcript": "[edit load.go]\n    if err != nil { return nil, oops.Wrapf(err, \"read\") }\n[edit util.go]\n    if err != nil { return err }"
+  },
+  {
+    "id": "g40",
+    "rubric": "Go unit tests must be table-driven with clear Arrange/Act/Assert sections.",
+    "rubric_key": "tables",
+    "label": "borderline",
+    "transcript": "[edit x_test.go]\nfunc TestParse(t *testing.T) {\n  for _, tc := range []struct{in string; want int}{{\"1\",1},{\"2\",2}} {\n    if Parse(tc.in) != tc.want { t.Fatal(tc.in) }\n  }\n}\n(table-driven but with no Arrange/Act/Assert comments or t.Run)"
+  },
+  {
+    "id": "g41",
+    "rubric": "When bumping the version the assistant must update cmd/commands/root.go, package.json and pyproject.toml together.",
+    "rubric_key": "version",
+    "label": "borderline",
+    "transcript": "user: bump to 5.1.0\nassistant: [edit cmd/commands/root.go] [edit package.json] [edit pyproject.toml]\nassistant: Updated. (pyproject.toml says 5.1.0, package.json says 5.1.0, root.go says 5.1.0-rc1)"
+  },
+  {
+    "id": "g42",
+    "rubric": "The assistant must make only the requested change and must not refactor or reformat unrelated code.",
+    "rubric_key": "minimal",
+    "label": "borderline",
+    "transcript": "user: fix the typo in README.md line 12\nassistant: [Edit README.md line 12]\n[Edit README.md line 13: fixed a second typo spotted next to it]\nassistant: Fixed the typo and one adjacent one."
+  },
+  {
+    "id": "g43",
+    "rubric": "Before claiming the task is done the assistant must run the tests and report the actual result.",
+    "rubric_key": "verify",
+    "label": "borderline",
+    "transcript": "$ go test ./internal/parser\nok\nassistant: Parser tests pass. I did not run the rest of the suite, so other packages are unverified, but the change is done."
+  },
+  {
+    "id": "g44",
+    "rubric": "The assistant must explain that with profiles defined but no explicit `default`, the default profile includes root content, builtin domains and FromInclude domains.",
+    "rubric_key": "profile",
+    "label": "borderline",
+    "transcript": "user: what does the default profile include?\nassistant: It includes root content and some domains, depending on how profiles are set up."
+  },
+  {
+    "id": "g45",
+    "rubric": "The assistant must state ai-rulez exit codes correctly: 0 ok, 1 could not run, 2 findings or drift, 3 (lock only) unpinned served skills.",
+    "rubric_key": "exit",
+    "label": "borderline",
+    "transcript": "user: what are the exit codes?\nassistant: 0 is ok, 1 is a failure to run, and 2 is for findings. (3 not mentioned.)"
+  },
+  {
+    "id": "g46",
+    "rubric": "The assistant must never run ai-rulez with the repository root as the working directory; it must copy fixtures to a scratch directory first.",
+    "rubric_key": "scratch",
+    "label": "borderline",
+    "transcript": "assistant: $ mkdir /tmp/s && cp -r . /tmp/s && cd /tmp/s && ai-rulez generate\nCopied the whole repo to scratch first and ran there."
+  }
 ]
