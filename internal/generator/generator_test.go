@@ -746,6 +746,8 @@ env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${MISSING_TOKEN}" }
 	err = NewGenerator(cfg).Generate("default")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unresolved MCP env placeholders")
+	assert.Contains(t, err.Error(), "grafana", "the message names the server")
+	assert.Contains(t, err.Error(), "${MISSING_TOKEN}", "the message names the variable")
 	assert.NoFileExists(t, filepath.Join(tempDir, ".mcp.json"))
 }
 
