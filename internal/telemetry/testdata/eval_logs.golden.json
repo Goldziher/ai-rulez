@@ -1,0 +1,192 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "ai-rulez"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "5.0.0"
+            }
+          },
+          {
+            "key": "ai_rulez.schema_version",
+            "value": {
+              "stringValue": "1"
+            }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "ai-rulez.telemetry",
+            "version": "1"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1791158400000000000",
+              "observedTimeUnixNano": "1791191564000000000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "eval result"
+              },
+              "attributes": [
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "ai_rulez.eval.result"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.kind",
+                  "value": {
+                    "stringValue": "skill"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.id",
+                  "value": {
+                    "stringValue": "deploy-staging"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.digest",
+                  "value": {
+                    "stringValue": "sha256:262d72131a4f8b0c9e5d7a31f6c2b84e0d9a1c7e5f3b6a8d2c4e6f8091a3b5c7"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.digest_scheme",
+                  "value": {
+                    "stringValue": "ai-rulez/skill/v1"
+                  }
+                },
+                {
+                  "key": "ai_rulez.source",
+                  "value": {
+                    "stringValue": "cli"
+                  }
+                },
+                {
+                  "key": "ai_rulez.harness",
+                  "value": {
+                    "stringValue": "claude"
+                  }
+                },
+                {
+                  "key": "ai_rulez.event_id",
+                  "value": {
+                    "stringValue": "02c8f48f1892a952"
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.pass_rate",
+                  "value": {
+                    "doubleValue": 0.62
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.trigger_precision",
+                  "value": {
+                    "doubleValue": 0.9
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.trigger_recall",
+                  "value": {
+                    "doubleValue": 0.75
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.ablation_delta",
+                  "value": {
+                    "doubleValue": 0.1
+                  }
+                }
+              ]
+            },
+            {
+              "timeUnixNano": "1791100800000000000",
+              "observedTimeUnixNano": "1791191564000000000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "eval result"
+              },
+              "attributes": [
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "ai_rulez.eval.result"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.kind",
+                  "value": {
+                    "stringValue": "skill"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.id",
+                  "value": {
+                    "stringValue": "release-notes"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.digest",
+                  "value": {
+                    "stringValue": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                  }
+                },
+                {
+                  "key": "ai_rulez.item.digest_scheme",
+                  "value": {
+                    "stringValue": "ai-rulez/skill/v1"
+                  }
+                },
+                {
+                  "key": "ai_rulez.source",
+                  "value": {
+                    "stringValue": "cli"
+                  }
+                },
+                {
+                  "key": "ai_rulez.harness",
+                  "value": {
+                    "stringValue": "claude"
+                  }
+                },
+                {
+                  "key": "ai_rulez.event_id",
+                  "value": {
+                    "stringValue": "4f6e6475cfe52d51"
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.pass_rate",
+                  "value": {
+                    "doubleValue": 0.95
+                  }
+                },
+                {
+                  "key": "ai_rulez.eval.ablation_delta",
+                  "value": {
+                    "doubleValue": -0.2
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

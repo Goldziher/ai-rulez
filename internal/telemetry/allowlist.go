@@ -18,6 +18,12 @@ const (
 	fieldMemoryType = "memory_type"
 	fieldDuration   = "duration_ms"
 	fieldEventID    = "event_id"
+
+	fieldDigestScheme = "digest_scheme"
+	fieldPassRate     = "pass_rate"
+	fieldPrecision    = "trigger_precision"
+	fieldRecall       = "trigger_recall"
+	fieldAblation     = "ablation_delta"
 )
 
 // Attr is one row of the export allowlist: the single place that decides which
@@ -47,6 +53,7 @@ var Allowlist = []Attr{
 	{Name: "ai_rulez.item.kind", Field: fieldKind, Metric: fieldKind},
 	{Name: "ai_rulez.item.id", Field: fieldID, Metric: fieldID},
 	{Name: "ai_rulez.item.digest", Field: fieldDigest, Metric: "digest_short"},
+	{Name: "ai_rulez.item.digest_scheme", Field: fieldDigestScheme},
 	{Name: "ai_rulez.item.path", Field: fieldPath, Gate: GatePaths},
 	{Name: "ai_rulez.source", Field: fieldSource},
 	{Name: "ai_rulez.harness", Field: fieldHarness, Metric: fieldHarness},
@@ -58,6 +65,10 @@ var Allowlist = []Attr{
 	{Name: "ai_rulez.memory_type", Field: fieldMemoryType},
 	{Name: "ai_rulez.duration_ms", Field: fieldDuration},
 	{Name: "ai_rulez.event_id", Field: fieldEventID},
+	{Name: "ai_rulez.eval.pass_rate", Field: fieldPassRate},
+	{Name: "ai_rulez.eval.trigger_precision", Field: fieldPrecision},
+	{Name: "ai_rulez.eval.trigger_recall", Field: fieldRecall},
+	{Name: "ai_rulez.eval.ablation_delta", Field: fieldAblation},
 }
 
 // Mapped names the event fields that are exported through the record envelope

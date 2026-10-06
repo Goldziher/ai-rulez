@@ -149,11 +149,13 @@ the file needs no consent: it is a local copy you move yourself.
 
   ai-rulez usage export --to file usage.ndjson
   ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl
+  ai-rulez usage export --to file --with-evals usage.ndjson
 
 --to otlp pushes the log past the export cursor to the collector you consented to (see
 "telemetry enable"): it queues what the outbox does not hold, sends it with retry, and moves the
 cursor. It refuses without consent and exits 1 when delivery fails, so CI notices (the background
 flush stays silent). --all starts at the beginning of the log; --dry-run counts without sending.
+--with-evals adds one eval_result event per verified eval result and the eval gauges.
 
 Only allowlisted, identifier-only fields are written (see "ai-rulez telemetry preview" for the
 list and for the exact bytes): unlisted keys in a log line are dropped, raw version 1 session
@@ -204,9 +206,17 @@ func runUsageExport(out io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
+	events := read.Events
+	if usageExportWithEvals {
+		evalEvents, err := loadEvalEvents(usageExportEvalsFile)
+		if err != nil {
+			return err
+		}
+		events = append(events[:len(events):len(events)], evalEvents...)
+	}
 	settings := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil)
 	encoder := settings.Encoder(Version)
-	file, err := encoder.EncodeFile(read.Events)
+	file, err := encoder.EncodeFile(events)
 	if err != nil {
 		return err
 	}

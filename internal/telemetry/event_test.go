@@ -86,7 +86,9 @@ func (emitterFunc) Close(context.Context) error              { return nil }
 func TestEventFieldsAreAllowlistedOrMapped(t *testing.T) {
 	// Every JSON field of Event must be exported through the allowlist or be a
 	// known envelope field: a new field cannot leave the machine by accident.
-	data, err := json.Marshal(Event{Version: 1, Name: "n", Time: "t", EventID: "e", Kind: "k", ID: "i", Path: "p", Digest: "d", Source: "s", Harness: "h", Role: "r", Served: true, Session: "s", Outcome: "o", LoadReason: "l", MemoryType: "m", DurationMS: 1})
+	score := 0.5
+	data, err := json.Marshal(Event{Version: 1, Name: "n", Time: "t", EventID: "e", Kind: "k", ID: "i", Path: "p", Digest: "d", DigestScheme: "ds", Source: "s", Harness: "h", Role: "r", Served: true, Session: "s", Outcome: "o", LoadReason: "l", MemoryType: "m", DurationMS: 1,
+		PassRate: &score, TriggerPrecision: &score, TriggerRecall: &score, AblationDelta: &score})
 	require.NoError(t, err)
 	var fields map[string]any
 	require.NoError(t, json.Unmarshal(data, &fields))

@@ -1,0 +1,182 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "ai-rulez"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "5.0.0"
+            }
+          },
+          {
+            "key": "ai_rulez.schema_version",
+            "value": {
+              "stringValue": "1"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "ai-rulez.telemetry",
+            "version": "1"
+          },
+          "metrics": [
+            {
+              "name": "ai_rulez.skill.eval.pass_rate",
+              "description": "Share of a skill's eval cases that passed",
+              "unit": "1",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "deploy-staging"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791158400000000000",
+                    "asDouble": 0.62
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "release-notes"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791100800000000000",
+                    "asDouble": 0.95
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ai_rulez.skill.eval.trigger_precision",
+              "description": "How often the skill activated when it should (precision)",
+              "unit": "1",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "deploy-staging"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791158400000000000",
+                    "asDouble": 0.9
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ai_rulez.skill.eval.trigger_recall",
+              "description": "How often the skill activated when it was needed (recall)",
+              "unit": "1",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "deploy-staging"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791158400000000000",
+                    "asDouble": 0.75
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ai_rulez.skill.eval.ablation_delta",
+              "description": "Pass-rate gain with the skill against without it",
+              "unit": "1",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "deploy-staging"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791158400000000000",
+                    "asDouble": 0.1
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "id",
+                        "value": {
+                          "stringValue": "release-notes"
+                        }
+                      },
+                      {
+                        "key": "harness",
+                        "value": {
+                          "stringValue": "claude"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1791100800000000000",
+                    "asDouble": -0.2
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
