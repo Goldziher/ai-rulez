@@ -29,7 +29,7 @@ func sampleInput() Input {
 			{Path: ".claude-plugin/plugin.json", Data: []byte("{}")},
 			{Path: "hooks/run.sh", Data: []byte("#!/bin/sh\n"), Executable: true},
 		},
-		Lock: []byte("version = 2\n"), LockVersion: 2, LockTree: Digest([]byte("tree")),
+		Lock: []byte("version = 2\ntree = \"" + Digest([]byte("tree")) + "\"\n"), LockVersion: 2, LockTree: Digest([]byte("tree")),
 		Source: Source{Repo: "https://github.com/acme/skills", Commit: "0f3e"}, Mtime: 1700000000,
 	}
 }
