@@ -1,0 +1,9 @@
+{
+  "name": "billing-service",
+  "mode": "vendored",
+  "dependencies": {
+    "acme/release-tools": { "version": "1.4.0" },
+    "acme/style-guide": { "version": "2.0.1" },
+    "acme/not-installed": { "version": "0.3.0" }
+  }
+}

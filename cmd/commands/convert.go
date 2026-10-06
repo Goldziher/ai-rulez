@@ -69,8 +69,12 @@ detects something, skills-lock first):
                 primitives (instructions, agents, chatmodes, prompts, skills, context,
                 hooks), installed apm_modules/ and apm.lock.yaml
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
+  tessl         tessl.json and the vendored .tessl/plugins/<workspace>/<plugin>/
+                skills and rules; each eval scenario (task.md and criteria.json) becomes
+                a *.eval.yaml case of the plugin's skill. A plugin that is not on disk is
+                reported: nothing is fetched from the registry
 
-When a rulesync or APM project is detected, auto skips native: the tool files next
+When a rulesync, APM or Tessl project is detected, auto skips native: the tool files next
 to their inputs are generated output. Use --from native,rulesync to read both.
 
 Nothing is written unless --write is given. Without --write or --dry-run, a
@@ -112,7 +116,7 @@ validation, or --fail-on matched.`,
 
 func init() {
 	f := ConvertCmd.Flags()
-	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, skills-lock or auto (every detected importer)")
+	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, tessl, skills-lock or auto (every detected importer)")
 	f.StringVar(&convertSource, "source", ".", "Directory to read")
 	f.StringVar(&convertInto, "into", importer.DefaultConfigDir, "Config directory to write: relative to --source unless absolute; never written through a symlink")
 	f.StringVar(&convertDomain, "domain", "", "Put the imported content in this domain (safe next to an existing tree)")

@@ -230,7 +230,7 @@ type Format interface {
 
 // Registry returns every format importer, sorted by name.
 func Registry() []Format {
-	return []Format{apmImporter{}, nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}}
+	return []Format{apmImporter{}, nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}, tesslImporter{}}
 }
 
 // Lookup returns the importer with the given name.

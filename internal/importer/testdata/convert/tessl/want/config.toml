@@ -1,0 +1,6 @@
+# AI-Rulez Configuration
+# Documentation: https://github.com/Goldziher/ai-rulez
+
+version = '4.0'
+name = 'fixture'
+presets = ['claude']
