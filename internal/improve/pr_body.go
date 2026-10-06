@@ -60,6 +60,9 @@ func writeGuards(b *strings.Builder, rd *RoundReport) {
 			fmt.Fprintf(b, "- Sibling trigger guard (%s ranker): %d sibling skill(s) checked, none lost trigger recall.\n", rd.Siblings.Surface, len(rd.Siblings.Results))
 		}
 	}
+	if rd != nil && rd.SiblingsNative != nil && rd.SiblingsNative.Skipped == "" {
+		fmt.Fprintf(b, "- Sibling trigger guard (native model, %d run(s) per prompt): %d sibling skill(s) checked, none lost trigger recall.\n", rd.SiblingsNative.Runs, len(rd.SiblingsNative.Results))
+	}
 	b.WriteString("\n")
 
 }

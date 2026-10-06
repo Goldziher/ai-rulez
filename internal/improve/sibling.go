@@ -2,6 +2,7 @@ package improve
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -37,6 +38,10 @@ type SiblingResult struct {
 // SiblingReport is the outcome of the sibling trigger guard for one round.
 type SiblingReport struct {
 	Surface string `json:"surface"`
+	// Runs and CostUSD describe a native measurement: how often each trigger prompt repeated and what the
+	// guard spent (the retrieval surface is free).
+	Runs    int     `json:"runs,omitempty"`
+	CostUSD float64 `json:"cost_usd,omitempty"`
 	// Skipped says why the guard measured nothing (the candidate did not change what the
 	// ranker reads, or no sibling has trigger cases).
 	Skipped string          `json:"skipped,omitempty"`
@@ -108,7 +113,26 @@ func rankerFieldsChanged(orig, cand *Tree) bool {
 // the original and with the candidate in the target's place, and reports each
 // sibling whose trigger recall dropped.
 func (p *Plan) checkSiblings(ctx context.Context, cand *Tree) (*SiblingReport, error) {
+	return p.guardSiblings(ctx, cand, nil, 0)
+}
+
+// checkSiblingsNative is the same guard on the native surface: the harness's model decides which
+// skill loads, over repeated runs, so it costs money (budget bounds it) and a baseline measured once is reused
+// by every round. Without Options.SiblingNative it measures nothing and returns nil.
+func (p *Plan) checkSiblingsNative(ctx context.Context, cand *Tree, budget float64) (*SiblingReport, error) {
+	if p.Opts.SiblingNative == nil {
+		return nil, nil
+	}
+	return p.guardSiblings(ctx, cand, p.Opts.SiblingNative, budget)
+}
+
+// guardSiblings measures the siblings on the retrieval surface (native nil) or the native one.
+func (p *Plan) guardSiblings(ctx context.Context, cand *Tree, native *SiblingNative, budget float64) (*SiblingReport, error) {
 	rep := &SiblingReport{Surface: SiblingSurface}
+	if native != nil {
+		rep.Surface = evals.SurfaceNative
+		rep.Runs = native.runs()
+	}
 	if !rankerFieldsChanged(p.orig, cand) {
 		rep.Skipped = "the candidate changed nothing the ranker reads (name, description, triggers, keywords)"
 		return rep, nil
@@ -139,13 +163,23 @@ func (p *Plan) checkSiblings(ctx context.Context, cand *Tree) (*SiblingReport, e
 		return nil, fmt.Errorf("create the sibling scratch directory: %w", err)
 	}
 	defer os.RemoveAll(scratch) //nolint:errcheck // a temp directory
-	base, err := p.siblingActivation(ctx, filepath.Join(scratch, "base"), all, p.orig, siblings)
-	if err != nil {
-		return nil, err
+	base := p.nativeBase
+	if native == nil || base == nil {
+		var cost float64
+		base, cost, err = p.siblingActivation(ctx, filepath.Join(scratch, "base"), all, p.orig, siblings, native, budget)
+		rep.CostUSD += cost
+		if err != nil {
+			return rep, err
+		}
+		if native != nil {
+			p.nativeBase = base
+			budget -= cost
+		}
 	}
-	with, err := p.siblingActivation(ctx, filepath.Join(scratch, "cand"), all, cand, siblings)
+	with, cost, err := p.siblingActivation(ctx, filepath.Join(scratch, "cand"), all, cand, siblings, native, budget)
+	rep.CostUSD = roundUSD(rep.CostUSD + cost)
 	if err != nil {
-		return nil, err
+		return rep, err
 	}
 	rep.Results = compareSiblings(base, with)
 	if len(rep.Results) == 0 {
@@ -157,7 +191,7 @@ func (p *Plan) checkSiblings(ctx context.Context, cand *Tree) (*SiblingReport, e
 // siblingActivation builds a scratch config directory holding the siblings (SKILL.md and
 // eval cases) and the target skill (SKILL.md of tree only, never its eval cases), and
 // runs the retrieval activation on the siblings.
-func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Skill, tree *Tree, siblings []string) (map[string]evals.ActivationSkill, error) {
+func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Skill, tree *Tree, siblings []string, native *SiblingNative, budget float64) (map[string]evals.ActivationSkill, float64, error) {
 	configDir := p.Opts.ConfigDir
 	for i := range all {
 		s := &all[i]
@@ -167,7 +201,7 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 		}
 		if s.ID == p.Skill.ID {
 			if err := writeSiblingFile(filepath.Join(dst, skillFile), tree.Files[skillFile].Data); err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 			continue
 		}
@@ -175,7 +209,7 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 			continue // reported by checkSiblings; the same skills are left out of both arms
 		}
 		if err := copyRegular(filepath.Join(s.Dir, skillFile), filepath.Join(dst, skillFile)); err != nil {
-			return nil, fmt.Errorf("copy %s: %w", s.ID, err)
+			return nil, 0, fmt.Errorf("copy %s: %w", s.ID, err)
 		}
 		for _, ev := range s.EvalDirs {
 			target := filepath.Join(dst, "evals")
@@ -185,13 +219,13 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 				target = filepath.Join(dir, evals.ProjectEvalsDir, rel)
 			}
 			if err := copyRegularTree(ev, target); err != nil {
-				return nil, fmt.Errorf("copy the eval cases of %s: %w", s.ID, err)
+				return nil, 0, fmt.Errorf("copy the eval cases of %s: %w", s.ID, err)
 			}
 		}
 	}
-	report, err := evals.RunActivationRetrieval(ctx, &evals.ActivationOptions{ConfigDir: dir, Skills: siblings, Scope: evals.ScopeDomain})
+	report, err := p.runSiblingActivation(ctx, dir, siblings, native, budget)
 	if err != nil {
-		return nil, fmt.Errorf("sibling activation: %w", err)
+		return nil, 0, fmt.Errorf("sibling activation: %w", err)
 	}
 	out := map[string]evals.ActivationSkill{}
 	for i := range report.Skills {
@@ -199,7 +233,23 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 			out[report.Skills[i].ID] = report.Skills[i]
 		}
 	}
-	return out, nil
+	return out, report.Cost.ActualUSD, nil
+}
+
+// runSiblingActivation measures the siblings on the offline ranker, or, with native set, on the
+// harness's model, bounded by budget.
+func (p *Plan) runSiblingActivation(ctx context.Context, dir string, siblings []string, native *SiblingNative, budget float64) (*evals.ActivationReport, error) {
+	opts := &evals.ActivationOptions{ConfigDir: dir, Skills: siblings, Scope: evals.ScopeDomain}
+	if native == nil {
+		return evals.RunActivationRetrieval(ctx, opts)
+	}
+	if budget <= 0 {
+		return nil, errors.New("no budget is left for the native sibling guard")
+	}
+	o := &p.Opts
+	opts.Surface, opts.Runner, opts.Harness, opts.Model, opts.Runs = evals.SurfaceNative, native.Runner, o.Harness, o.Model, native.runs()
+	opts.Date, opts.ToolVersion, opts.Price, opts.Counter, opts.MaxCostUSD = o.Date, o.ToolVersion, o.Price, o.Counter, budget
+	return evals.RunActivation(ctx, opts) //nolint:wrapcheck // the caller names the guard
 }
 
 // compareSiblings pairs the two measurements. A sibling that stopped being measurable

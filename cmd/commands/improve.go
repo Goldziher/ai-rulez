@@ -66,6 +66,8 @@ var improveFlags struct {
 	adapterModel       string
 	adapterJudgeModel  string
 	allowSameModel     bool
+	siblingNative      bool
+	siblingRuns        int
 }
 
 // ImproveCmd groups the experimental skill improvement commands.
@@ -189,6 +191,8 @@ func init() {
 	f.StringVar(&improveFlags.adapterModel, "adapter-model", "", "builtin:review-fix: model that writes the fix (default [review.fix] model); must differ from the judge")
 	f.StringVar(&improveFlags.adapterJudgeModel, "adapter-judge-model", "", "builtin:review-fix: model that judges and verifies (default [llm] model)")
 	f.BoolVar(&improveFlags.allowSameModel, "allow-same-model", false, "builtin:review-fix: let the fixer and the judge be the same model (self-preference risk)")
+	f.BoolVar(&improveFlags.siblingNative, "sibling-native", false, "Also run the sibling trigger guard on the harness's model (costs money, counted against --max-cost); the free offline guard always runs")
+	f.IntVar(&improveFlags.siblingRuns, "sibling-runs", improve.DefaultSiblingRuns, "With --sibling-native: repetitions of each sibling trigger prompt")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	improveApplyCmd.Flags().BoolVarP(&improveFlags.yes, "yes", "y", false, "Write without the confirmation prompt")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
@@ -373,6 +377,10 @@ func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDi
 	if err != nil {
 		return nil, err
 	}
+	siblingNative, err := buildSiblingNative(errOut)
+	if err != nil {
+		return nil, err
+	}
 	date := improveFlags.date
 	if date == "" {
 		date = os.Getenv(EvalDateEnv)
@@ -387,8 +395,28 @@ func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDi
 		MinHoldoutCases: st.minHoldoutCases, MaxCostUSD: improveFlags.maxCost, StopAtFirstAccept: improveFlags.stopAtFirstAccept, RequireCIAboveZero: st.requireCI,
 		MaxSkillGrowth: st.maxSkillGrowth, Isolation: st.isolation, Adapter: st.adapter,
 		AllowFrontmatter: improveFlags.allowFrontmatter, AllowScripts: improveFlags.allowScripts,
-		Git: evals.ExecGit, Date: date, ToolVersion: Version,
+		Git: evals.ExecGit, Date: date, ToolVersion: Version, SiblingNative: siblingNative,
 	}, nil
+}
+
+// buildSiblingNative configures the opt-in native sibling guard: the runner that asks the harness's model
+// which skill loads, over --sibling-runs repetitions. It is nil without --sibling-native.
+func buildSiblingNative(errOut io.Writer) (*improve.SiblingNative, error) {
+	if !improveFlags.siblingNative {
+		if improveFlags.siblingRuns != improve.DefaultSiblingRuns {
+			return nil, oops.Errorf("--sibling-runs needs --sibling-native")
+		}
+		return nil, nil
+	}
+	if improveFlags.siblingRuns < 1 {
+		return nil, oops.Errorf("--sibling-runs must be at least 1, got %d", improveFlags.siblingRuns)
+	}
+	// buildImproveEvalRunner already refused a harness with neither a runner command nor a built-in runner.
+	var r evals.Runner = &evals.ClaudeNative{Bin: improveFlags.claudeBin, ExtraArgs: improveFlags.runnerArgs, Stderr: errOut, SkillGate: skillSecurityGate}
+	if improveFlags.runnerCommand != "" {
+		r = &evals.CommandRunner{Command: improveFlags.runnerCommand, Timeout: improveFlags.evalTimeout, Stderr: errOut}
+	}
+	return &improve.SiblingNative{Runner: r, Runs: improveFlags.siblingRuns}, nil
 }
 
 // buildImproveEvalRunner picks the eval runner. improve repeats a run itself
