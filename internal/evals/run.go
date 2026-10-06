@@ -390,15 +390,19 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 			}
 		}
 		e.report.CostUSD = round(e.report.CostUSD + charged)
+		reportedCost := score.CostUSD
+		score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
 		if !cacheable(&score) {
 			return run // never store an infrastructure failure: it would mask the last good result
 		}
+		stored := score
+		stored.CostUSD = reportedCost // a cache hit must not replay an assumed spend
 		e.store.Put(SkillRecord{
 			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, LockDigest: run.LockDigest, CacheKey: e.cacheKey(&run),
 			Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,
-			Date: e.opts.Date, Passing: run.Passing, Score: score,
+			Date: e.opts.Date, Passing: run.Passing, Score: stored,
 		})
 	}
 	return run

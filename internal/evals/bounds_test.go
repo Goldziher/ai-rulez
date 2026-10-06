@@ -108,6 +108,8 @@ func TestRun_UnreportedCostIsChargedAtTheBudget(t *testing.T) {
 	assert.Equal(t, RunOverBudget, report.Skills[1].Status)
 	require.NotEmpty(t, report.Skills[0].Warnings)
 	assert.Contains(t, report.Skills[0].Warnings[0], "reported no cost")
+	assert.InDelta(t, 10, report.Skills[0].Score.CostUSD, 0.001, "the run shows what was charged, not $0.00")
+	assert.InDelta(t, 10, report.CostUSD, 0.001)
 
 	// without a cap nothing changes
 	silent.calls = 0
