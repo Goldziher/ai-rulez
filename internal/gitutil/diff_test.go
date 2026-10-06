@@ -143,3 +143,27 @@ func TestListFilesOutsideRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
+
+func TestChangesIgnoreDiffPrefixConfig(t *testing.T) {
+	for _, cfg := range [][]string{{"diff.noprefix", "true"}, {"diff.mnemonicPrefix", "true"}, {"diff.srcPrefix", "x/"}} {
+		t.Run(cfg[0], func(t *testing.T) {
+			// Arrange
+			dir := diffFixture(t)
+			gitIn(t, dir, "config", cfg[0], cfg[1])
+			writeIn(t, dir, "a.txt", "one\ntwo\nthree\nfour\n")
+			gitIn(t, dir, "add", "a.txt")
+
+			// Act
+			staged, err := StagedChanges(dir)
+			require.NoError(t, err)
+			gitIn(t, dir, "commit", "-q", "-m", "x")
+			writeIn(t, dir, "a.txt", "one\ntwo\nthree\nfour\nfive\n")
+			since, err2 := ChangesSince(dir, "main")
+
+			// Assert
+			require.NoError(t, err2)
+			assert.Equal(t, []LineRange{{4, 4}}, byPath(staged)["a.txt"].Added)
+			assert.Equal(t, []LineRange{{4, 5}}, byPath(since)["a.txt"].Added)
+		})
+	}
+}
