@@ -1703,7 +1703,7 @@ a markdown link in an OKF bundle does not resolve to a file in the bundle
 
 ### AR9B3 okf-version-invalid
 
-the root index okf_version is not MAJOR.MINOR, or names a version other than the one ai-rulez implements
+the root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe
 
 - Default severity: `warning`
 - Analyzer: `okf` (scope `item`)
@@ -1733,7 +1733,7 @@ the OKF bundle on disk differs from what export okf would write now
 
 ### AR9B6 okf-reserved-structure
 
-an OKF index.md has frontmatter it may not have, or a log.md heading is not an ISO date
+an OKF index.md has frontmatter its style does not allow (frontmatter in a nested one outside the frontmatter style, keys other than okf_version in a body-style root, other than title, version and entries in a frontmatter-style one), or a log.md heading is not an ISO date
 
 - Default severity: `error`
 - Analyzer: `okf` (scope `item`)
@@ -1763,7 +1763,7 @@ an OKF bundle contains a symlink, a path escaping the bundle, or paths differing
 
 ### AR9B9 okf-lossy-mapping
 
-an OKF concept carries x-ai-rulez data that cannot be mapped and imports as plain context
+import okf met a concept whose x-ai-rulez data cannot be mapped (it imports by its type) or a link to a file that was not imported (left as written)
 
 - Default severity: `info`
 - Analyzer: `okf` (scope `item`)
