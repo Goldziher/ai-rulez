@@ -114,6 +114,10 @@ type SkillOutcome struct {
 	Honoured map[string]string `json:"honoured,omitempty"`
 	// Degraded lists the harnesses that cannot implement it.
 	Degraded []string `json:"degraded,omitempty"`
+	// Overridden lists the harnesses whose mode is written to SKILL.md but that
+	// the skill's own frontmatter contradicts; the author's key wins, so the mode
+	// is not honoured there. They are removed from Honoured.
+	Overridden []string `json:"overridden,omitempty"`
 	// Action is what generate does beyond Claude's settings: ActionFrontmatter,
 	// or the configured fallback (ActionDrop, ActionServe) for an "off" skill a
 	// harness cannot hide. Empty when nothing more is done.
@@ -189,6 +193,9 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 		case viaFile && item.Mode == ModeOff:
 			o.Action, o.Keys = ActionFrontmatter, map[string]bool{"disable-model-invocation": true, "user-invocable": false}
 		}
+		if o.Action == ActionFrontmatter {
+			markOverridden(&o, skillMetadata(cfg, item.Domain, item.ID))
+		}
 		if len(o.Honoured) == 0 {
 			o.Honoured = nil
 		}
@@ -196,4 +203,47 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Key() < out[j].Key() })
 	return out
+}
+
+// markOverridden moves the harnesses that read the invocation keys from SKILL.md
+// out of Honoured when the skill's own frontmatter sets one of them to another
+// value: generate never overwrites a key the author set.
+func markOverridden(o *SkillOutcome, meta *config.Metadata) {
+	conflict := false
+	for key, want := range o.Keys {
+		if have, set := meta.ExtraBool(key); set && have != want {
+			conflict = true
+		}
+	}
+	if !conflict {
+		return
+	}
+	for preset, how := range o.Honoured {
+		if how != viaSettings {
+			o.Overridden = append(o.Overridden, preset)
+			delete(o.Honoured, preset)
+		}
+	}
+	sort.Strings(o.Overridden)
+}
+
+// skillMetadata returns the frontmatter of the skill, or nil when it is unknown.
+func skillMetadata(cfg *config.Config, domain, id string) *config.Metadata {
+	if cfg == nil || cfg.Content == nil {
+		return nil
+	}
+	skills := cfg.Content.Skills
+	if domain != "" {
+		d := cfg.Content.Domains[domain]
+		if d == nil {
+			return nil
+		}
+		skills = d.Skills
+	}
+	for i := range skills {
+		if config.SkillID(skills[i]) == id {
+			return skills[i].Metadata
+		}
+	}
+	return nil
 }
