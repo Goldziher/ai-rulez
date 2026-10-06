@@ -79,6 +79,10 @@ type FixOptions struct {
 	// EditRoot, when set, limits text edits to files below it (the authored
 	// source directory); a chmod is not limited.
 	EditRoot string
+	// DiffRoot is the directory the paths in the unified diff are relative to
+	// (the repository root, so `git apply` works from it). When empty the
+	// absolute path is used without its leading slash.
+	DiffRoot string
 	// Refuse returns a reason when the file must not be modified (a generated
 	// output, a file outside the authored sources), or "".
 	Refuse func(abs string) string
@@ -127,7 +131,7 @@ func ApplyFixes(findings []Finding, o FixOptions) (FixResult, error) {
 	failed := map[string]string{} // file -> reason, for every fix that touches it
 	var diff strings.Builder
 	for _, file := range files {
-		diffText, err := applyEdits(file, plan.edits[file], o.DryRun)
+		diffText, err := applyEdits(file, diffName(o.DiffRoot, file), plan.edits[file], o.DryRun)
 		if err != nil {
 			failed[file] = err.Error()
 			continue
@@ -294,10 +298,21 @@ type diffRow struct {
 	noNL, eolRow bool
 }
 
+// diffName is the path shown in a diff header: file relative to root, slash
+// separated, never starting with a slash.
+func diffName(root, file string) string {
+	if root != "" {
+		if rel, err := filepath.Rel(gitutil.Resolve(root), gitutil.Resolve(file)); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return filepath.ToSlash(rel)
+		}
+	}
+	return strings.TrimLeft(filepath.ToSlash(file), "/")
+}
+
 // applyEdits rewrites the lines of one file. It returns the unified diff of the
 // change, or "" when no edit applied (already fixed). Line endings are kept:
 // an edited line keeps its CR, and a line inserted into a CRLF file gets one.
-func applyEdits(file string, edits []Edit, dry bool) (string, error) {
+func applyEdits(file, name string, edits []Edit, dry bool) (string, error) {
 	data, err := os.ReadFile(file) //nolint:gosec // a source file the lint run read
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", file, err)
@@ -324,7 +339,7 @@ func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 			return "", fmt.Errorf("write %s: %w", file, err)
 		}
 	}
-	return unifiedRowDiff(file, rows), nil
+	return unifiedRowDiff(name, rows), nil
 }
 
 // editRows applies edits to the text of a file and returns the before and after
@@ -353,6 +368,12 @@ func editRows(text string, edits []Edit) (rows []diffRow, applied int, err error
 	lastOriginal := 0
 	for i, old := range oldLines {
 		lastOriginal = len(rows)
+		if i > 0 && i == len(oldLines)-1 && old == "" && len(after[i]) == 0 {
+			// The empty element after the final newline is not a line of the file:
+			// it is written back but takes no part in the diff.
+			rows = append(rows, diffRow{new: newAt[i], eolRow: true})
+			continue
+		}
 		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
 		for _, l := range after[i] {
 			rows = append(rows, diffRow{new: l + eol, hasNew: true})
@@ -461,6 +482,9 @@ func unifiedRowDiff(name string, rows []diffRow) string {
 	const context = 3
 	var changed []int
 	for i, r := range rows {
+		if r.eolRow {
+			continue
+		}
 		if !r.hasOld || !r.hasNew || r.old != r.new || r.noNL {
 			changed = append(changed, i)
 		}

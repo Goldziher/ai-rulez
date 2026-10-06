@@ -260,3 +260,28 @@ func TestHookScriptFixesStageTheExecutableBit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, again.Applied)
 }
+
+func TestDryRunDiffAppliesWithGitApply(t *testing.T) {
+	// Arrange
+	root := fixProject(t)
+	o := fixOptions(root)
+	o.Unsafe, o.DryRun, o.DiffRoot = true, true, gitutil.Resolve(root)
+	res, err := ApplyFixes(lintReport(t, root).Findings, o)
+	require.NoError(t, err)
+	var patch strings.Builder
+	for _, l := range strings.SplitAfter(res.Diff, "\n") {
+		if !strings.HasPrefix(l, "chmod ") {
+			patch.WriteString(l)
+		}
+	}
+	patchFile := filepath.Join(t.TempDir(), "fix.patch")
+	require.NoError(t, os.WriteFile(patchFile, []byte(patch.String()), 0o600))
+
+	// Act
+	out, err := gitutil.CommandNoContext(root, "apply", "--check", patchFile).CombinedOutput()
+
+	// Assert
+	assert.NoError(t, err, string(out)+"\n"+patch.String())
+	assert.Contains(t, patch.String(), "--- a/.ai-rulez/skills/deploy-helper/SKILL.md\n")
+	assert.NotContains(t, patch.String(), "a//")
+}
