@@ -102,7 +102,7 @@ func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File
 		if includes.ReleaseGate != nil {
 			gate = includes.ReleaseGate(s.want)
 		}
-		rows = append(rows, tagresolve.EvaluateGated(ctx, s.kind, s.name, s.want, lock.Find(s.kind, s.name), tags, gate))
+		rows = append(rows, tagresolve.EvaluateGated(ctx, s.want, lock.Find(s.kind, s.name), tags, gate))
 	}
 	return rows, nil
 }
