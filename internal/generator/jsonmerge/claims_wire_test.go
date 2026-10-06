@@ -92,3 +92,42 @@ func TestUnmergeRemovesOnlyAsManyIdenticalElementsAsWereAdded(t *testing.T) {
 		})
 	}
 }
+
+func TestClaimWithAllElementsRemovedStaysAnElementClaim(t *testing.T) {
+	// Arrange: a claim whose every element was taken out is empty but still an
+	// element claim; reading it back as a whole-key claim would let unmerge
+	// delete the consumer's whole array.
+	claim := jsonmerge.Claim{Path: []string{"hooks"}, ElementSums: []string{}}
+
+	// Act
+	written, err := json.Marshal(claim)
+	require.NoError(t, err)
+	var back jsonmerge.Claim
+	require.NoError(t, json.Unmarshal(written, &back))
+
+	// Assert
+	assert.Contains(t, string(written), `"elementSums":[]`)
+	assert.True(t, back.HasElements())
+	assert.Empty(t, back.ElementDigests())
+}
+
+func TestClaimWithoutElementsIsNotMarshalledWithSums(t *testing.T) {
+	written, err := json.Marshal(jsonmerge.Claim{Path: []string{"mcp", "srv"}})
+
+	require.NoError(t, err)
+	assert.NotContains(t, string(written), "elementSums")
+}
+
+func TestDigestKeepsLargeIntegersApart(t *testing.T) {
+	a := jsonmerge.Digest(json.RawMessage(`{"id":9007199254740993}`))
+	b := jsonmerge.Digest(json.RawMessage(`{"id":9007199254740992}`))
+
+	assert.NotEmpty(t, a)
+	assert.NotEqual(t, a, b, "values above 2^53 must not collapse to one float")
+}
+
+func TestDigestIgnoresKeyOrderAndWhitespace(t *testing.T) {
+	assert.Equal(t,
+		jsonmerge.Digest(json.RawMessage(`{"a": 1, "b": [1, 2]}`)),
+		jsonmerge.Digest(map[string]any{"b": []any{1, 2}, "a": 1}))
+}
