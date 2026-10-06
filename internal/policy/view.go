@@ -105,6 +105,9 @@ func (p Policy) Tree() map[string]any {
 	if p.Sources.MinReleaseAge > 0 {
 		table("sources")["min_release_age"] = formatAge(p.Sources.MinReleaseAge)
 	}
+	if p.Sources.MinReleaseAgeSource != "" {
+		table("sources")["min_release_age_source"] = p.Sources.MinReleaseAgeSource
+	}
 	if len(p.Lint.RequiredCodes) > 0 {
 		table("lint")["required_codes"] = p.Lint.RequiredCodes
 	}

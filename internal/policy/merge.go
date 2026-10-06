@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
@@ -20,7 +21,9 @@ func Merge(a, b Policy) Policy {
 			Deny:          union(a.Sources.Deny, b.Sources.Deny),
 			RequirePinned: a.Sources.RequirePinned || b.Sources.RequirePinned,
 			MinReleaseAge: max(a.Sources.MinReleaseAge, b.Sources.MinReleaseAge),
-			DenyDigests:   union(a.Sources.DenyDigests, b.Sources.DenyDigests),
+
+			MinReleaseAgeSource: stricterAgeSource(a.Sources.MinReleaseAgeSource, b.Sources.MinReleaseAgeSource),
+			DenyDigests:         union(a.Sources.DenyDigests, b.Sources.DenyDigests),
 		},
 		Lint: Lint{
 			RequiredCodes: union(a.Lint.RequiredCodes, b.Lint.RequiredCodes),
@@ -176,6 +179,16 @@ var policyScanRank = map[string]int{"": 0, "warn": 1, "error": 2}
 
 func stricterScan(a, b string) string {
 	if policyScanRank[b] > policyScanRank[a] {
+		return b
+	}
+	return a
+}
+
+// ageSourceRank orders the release-time floors a policy may hold: "" is none.
+var ageSourceRank = map[string]int{"": 0, config.AgeSourceFirstSeen: 1, config.AgeSourceForge: 2}
+
+func stricterAgeSource(a, b string) string {
+	if ageSourceRank[b] > ageSourceRank[a] {
 		return b
 	}
 	return a

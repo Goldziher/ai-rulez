@@ -42,6 +42,10 @@
           "type": "string",
           "pattern": "^[0-9]+[hdw]$",
           "description": "The youngest a tag may be to be adopted (7d, 12h, 2w): a floor under [lock] min_release_age and each source's own. Layers take the longest."
+        },
+        "min_release_age_source": {
+          "enum": ["forge", "first-seen"],
+          "description": "The least trustworthy source a tag's release time may come from: forge (the forge's publish time only) or first-seen (the forge, else this machine's first sighting; never a committer's date). A repository's [lock] min_release_age_source below it is raised. Layers take the stronger."
         }
       }
     },
