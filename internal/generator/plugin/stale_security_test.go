@@ -134,4 +134,44 @@ func TestObsoleteFiles_MarksFilesBehindALinkedParentEdited(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.True(t, got[0].Edited, "a file behind a link must be kept")
+	assert.Equal(t, WhyLinkedParent, got[0].Why)
+}
+
+func TestObsoleteFiles_NamesWhyAFileIsKept(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, bundle string)
+		want  string
+	}{
+		{"edited content", func(t *testing.T, bundle string) {
+			require.NoError(t, os.WriteFile(filepath.Join(bundle, "a.md"), []byte("edited"), 0o600))
+		}, WhyEdited},
+		{"symlink", func(t *testing.T, bundle string) {
+			target := filepath.Join(bundle, "real.md")
+			require.NoError(t, os.WriteFile(target, []byte("x"), 0o600))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(bundle, "a.md"))
+		}, WhyNotRegular},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			bundle := t.TempDir()
+			tt.setup(t, bundle)
+			prev, err := json.Marshal(provenanceDocument{SchemaVersion: provenanceSchema, Outputs: map[string]provenanceOutput{
+				"a.md": {ContentHash: hashBytes([]byte("original"))},
+			}})
+			require.NoError(t, err)
+			planned, err := json.Marshal(provenanceDocument{SchemaVersion: provenanceSchema, Outputs: map[string]provenanceOutput{}})
+			require.NoError(t, err)
+
+			// Act
+			got, err := ObsoleteFiles(bundle, prev, planned)
+
+			// Assert
+			require.NoError(t, err)
+			require.Len(t, got, 1)
+			assert.True(t, got[0].Edited)
+			assert.Equal(t, tt.want, got[0].Why)
+		})
+	}
 }
