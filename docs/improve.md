@@ -216,7 +216,7 @@ reported and ignored (`AR9J6`). The same keys in the user config file are used w
 `max_regressions`, `holdout_fraction` and `max_skill_growth` only when the value is at least as strict as the default
 (gain >= 0.05, 0 regressions, held-out share >= 0.3, growth <= 1.25); `require_ci_above_zero = true` and a higher
 `min_holdout_cases` always apply. A looser value is dropped with an `AR9J6` warning unless `--trust-repo-optimizer` is
-given. The user config file may set any value, and so may a flag. The consent summary prints the effective gate:
+given. `validate --strict` reports the repository keys `improve run` will not honour (`AR9J6`, a warning). The user config file may set any value, and so may a flag. The consent summary prints the effective gate:
 minimum gain, regressions, held-out floor and share, growth limit and the interval requirement.
 
 What leaves the machine: the skill text and the train cases, to whatever the optimizer calls. The consent summary

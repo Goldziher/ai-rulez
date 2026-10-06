@@ -2,8 +2,8 @@ package lint
 
 // Codes of the `ai-rulez improve` report (internal/improve, docs/improve.md).
 // They are registered here so `validate --explain AR9J3` works and the
-// allocation of the AR9 blocks is checked in one place; `validate` never emits
-// them. TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the
+// allocation of the AR9 blocks is checked in one place; `validate` emits only
+// AR9J6 (a repository [improve] table `improve run` will not honour). TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the
 // constants in internal/improve.
 const (
 	CodeImproveRunStale             = "AR9J1"
@@ -24,7 +24,7 @@ func init() {
 		RuleInfo{CodeImprovePolicyViolation, "improve-policy-violation", SeverityError, "a candidate round broke the diff policy (improve report only)"},
 		RuleInfo{CodeImproveSiblingRegression, "improve-sibling-regression", SeverityError, "a candidate lowered another skill's trigger recall (improve report only)"},
 		RuleInfo{CodeImproveUnderpowered, "improve-underpowered", SeverityInfo, "the held-out gain of a candidate cannot be told from zero (improve report only)"},
-		RuleInfo{CodeImproveRepoOptimizerIgnored, "improve-repo-optimizer-ignored", SeverityWarning, "an [improve] optimizer or env_pass of the repository config was not used (improve only)"},
+		RuleInfo{CodeImproveRepoOptimizerIgnored, "improve-repo-optimizer-ignored", SeverityWarning, "an [improve] optimizer, env_pass or looser-than-default gate key of the repository config is not used without --trust-repo-optimizer"},
 		RuleInfo{CodeImproveIsolationUnavailable, "improve-isolation-unavailable", SeverityWarning, "the requested optimizer isolation could not be applied (improve only)"},
 		RuleInfo{CodeImprovePRRefused, "improve-pr-refused", SeverityError, "improve pr refused to open a pull request (improve only)"},
 		RuleInfo{CodeImproveAdapterRefused, "improve-adapter-refused", SeverityError, "a bundled optimizer adapter could not run (improve only)"},
@@ -56,7 +56,7 @@ func init() {
 			Good: "Add held-out cases, or review the diff with the interval in mind",
 		},
 		CodeImproveRepoOptimizerIgnored: {
-			Why:  "A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. Without it they are reported and ignored.",
+			Why:  "A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate --strict` and `improve run` report them.",
 			Bad:  "A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`",
 			Good: "Pass `--with`, or review the config and add `--trust-repo-optimizer`",
 		},
