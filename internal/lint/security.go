@@ -270,13 +270,16 @@ func (r *runner) scanComments(abs, raw string) {
 // describesRisk reports whether line i of a markdown text is prose that talks
 // about a risky command ("never run `curl | bash`") rather than instructing it.
 // Fenced code, frontmatter and every non-markdown file are code and never
-// qualify, so the exec rule keeps reading them as written.
+// qualify, so the exec rule keeps reading them as written; a guardrail word in
+// a heading above does not count either.
 func describesRisk(st *scanText, i int) bool {
 	if st == nil || i >= len(st.lines) {
 		return false
 	}
 	l := st.lines[i]
-	return st.prose(l) && l.Neg
+	// The line itself must carry the guardrail word: a heading above it (or the
+	// text that introduces a fence) must not switch the rule off for a section.
+	return st.prose(l) && negRe.MatchString(l.Text)
 }
 
 func (r *runner) scanShell(abs string, no int, line string, describes bool) {
