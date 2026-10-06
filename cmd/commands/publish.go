@@ -574,7 +574,9 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 		verb = "would write"
 	}
 	fmt.Fprintf(out, "preflight   validate --strict ok | lock ok | verify --plugin ok | secrets 0\n")
-	if m := d.Manifest; m.Signature != nil {
+	if m := d.Manifest; m.Signature != nil && publishDryRun {
+		fmt.Fprintf(out, "signature   would sign (%s)\n", publishSignFlagText())
+	} else if m.Signature != nil {
 		fmt.Fprintf(out, "signature   %s (%s)\n", m.Signature.File, publishSignerText(m.Signature.Signer))
 	} else if d.Manifest.Name != "" {
 		fmt.Fprintf(out, "signature   none\n")
@@ -601,6 +603,14 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 		fmt.Fprintf(out, "credentials %s\n", d.Plan.Credentials)
 	}
 	return nil
+}
+
+// publishSignFlagText names the signing flag of a dry run.
+func publishSignFlagText() string {
+	if publishSignKeyless {
+		return "--sign-keyless"
+	}
+	return "--sign-key"
 }
 
 func publishSignerText(s publish.SignerInfo) string {

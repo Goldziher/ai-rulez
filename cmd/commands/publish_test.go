@@ -328,6 +328,34 @@ func TestPublish_DryRunWritesNothing(t *testing.T) {
 	assert.Contains(t, out, "would run   gh release create v1.4.0 --repo acme/skills --title 'acme 1.4.0' --notes-file RELEASE_NOTES.md --verify-tag")
 }
 
+func TestPublish_DryRunNeverSigns(t *testing.T) {
+	// Arrange: a keyless run would need an OIDC token and reach Fulcio and Rekor; a key
+	// run would read the key. Neither may happen in a dry run.
+	root := publishProject(t)
+	t.Setenv("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+	t.Setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+	tests := []struct {
+		name  string
+		setup func()
+		want  string
+	}{
+		{"keyless", func() { publishSignKeyless, publishFulcioURL = true, "https://fulcio.invalid" }, "would sign (--sign-keyless)"},
+		{"key", func() { publishSignKey = filepath.Join(root, "missing.key") }, "would sign (--sign-key)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			publishDryRun, publishSignKeyless, publishSignKey, publishFulcioURL = true, false, "", ""
+			tt.setup()
+
+			out, err := runPublishCapture(t)
+
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.want)
+			assert.NoDirExists(t, filepath.Join(root, "dist"))
+		})
+	}
+}
+
 func TestPublish_JSONFormatPrintsThePlan(t *testing.T) {
 	// Arrange
 	root := publishProject(t)
