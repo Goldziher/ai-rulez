@@ -73,6 +73,47 @@ only add restrictions), but discovery alone does not bind a repository either. E
 `AI_RULEZ_POLICY` or the managed path, and use discovery to add the owner's policy on top. The `telemetry` and `llm`
 network locks read only the anchored layers, since they apply before any repository is known.
 
+### Signed policies
+
+A signature lets an organization publish a policy without every machine pinning its digest. Publish the Sigstore
+bundle next to the policy, as `<policy>.sigstore.json` (for a URL, at the same URL plus the suffix). Two forms verify:
+
+- a DSSE attestation over a policy statement (predicate `https://github.com/Goldziher/ai-rulez/attestations/policy/v1`,
+  subject `policy.toml` with the policy's digest), made with the Go helper `policy.SignPolicy` (there is no `ai-rulez sign --policy` command yet), and
+- a `cosign sign-blob --bundle policy.toml.sigstore.json policy.toml` message signature over the file's exact bytes.
+
+Who may sign comes from outside the repository, like the policy: `--policy-signer-key <pem>` (repeatable),
+`--policy-signer-identity` with `--policy-signer-issuer`, `--policy-trusted-root`, the matching
+`AI_RULEZ_POLICY_SIGNER_*` and `AI_RULEZ_POLICY_TRUSTED_ROOT` variables, or the user config:
+
+```toml
+# ~/.config/ai-rulez/config.toml
+[policy]
+require_signature = true
+tlog = "required"            # required (default with an identity signer), optional or off (default with keys only)
+
+[[policy.signers]]
+identity = "https://github.com/example-org/policy/.github/workflows/sign.yml@refs/heads/main"
+issuer   = "https://token.actions.githubusercontent.com"
+
+[[policy.signers]]
+key_file = "/etc/ai-rulez/policy-signer.pub"
+```
+
+The sources are merged: every one adds trusted signers and any can set the requirement. The signer is checked for the
+subject `policy` with the same machinery as the lock attestation ([Signing](signing.md)): signature, certificate chain
+and log proof, signer allowed, statement covering this policy (`AR724`), and a per-user rollback mark so an older signed
+policy cannot be replayed (`AR727`). Every failure is `AR746` and fails closed.
+
+- With a trusted signer configured, a signature that is present must verify even when a digest pin matches. An
+  unsigned policy loads on its pin alone unless `--policy-require-signed` (or `require_signature`) says otherwise.
+- A **URL policy with a verified signature needs no digest**: the signature vouches for the content. Without a
+  signature the missing pin is the error (`AR741`).
+- The cache keeps the bundle with the body, and a cached copy is verified again on every load. An unreachable
+  signature fails closed when signatures are required or the policy is not pinned; otherwise the pin vouches for it.
+- Policies reached by `extends` and the organization policy are checked the same way, one by one.
+- Signatures are not looked at when no trusted signer is configured and none is required.
+
 ### `extends`
 
 A policy may extend others, so a team policy can build on the organization's:

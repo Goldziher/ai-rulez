@@ -83,6 +83,9 @@ type DiscoverOptions struct {
 	RemoteURL func(dir string) (string, error)
 	// OrgRawBase replaces https://raw.githubusercontent.com (tests).
 	OrgRawBase string
+
+	// Signature configures the check of a policy's signature (see SignatureOptions).
+	Signature SignatureOptions
 }
 
 // context is the context of a load.
@@ -118,7 +121,9 @@ func (o DiscoverOptions) cacheKey() string {
 	return strings.Join([]string{
 		o.Flag, o.FlagDigest, o.envPolicy(), ambient.Getenv(o.Env, EnvPolicyDigest), ambient.Getenv(o.Env, EnvPolicyMaxStale),
 		ambient.Getenv(o.Env, EnvPolicyOffline), o.GOOS, o.Mode, o.MaxStale,
-		fmt.Sprint(o.Offline, o.TrustOnFirstUse, o.Interactive, o.DiscoverOrg), fmt.Sprintf("%p", o.HTTPClient), o.OrgRawBase,
+		fmt.Sprint(o.Offline, o.TrustOnFirstUse, o.Interactive, o.DiscoverOrg), fmt.Sprintf("%p", o.HTTPClient), o.OrgRawBase, fmt.Sprint(o.Signature),
+		ambient.Getenv(o.Env, EnvRequireSigned), ambient.Getenv(o.Env, EnvSignerIdentity), ambient.Getenv(o.Env, EnvSignerIssuer),
+		ambient.Getenv(o.Env, EnvSignerKey), ambient.Getenv(o.Env, EnvTrustedRoot),
 	}, "\x00")
 }
 
@@ -182,6 +187,10 @@ type loader struct {
 	layers   []Layer
 	seen     map[string]bool
 	loaded   int
+
+	verifierDone bool
+	pv           *verifier
+	pvErr        error
 
 	cacheOnce bool
 	cache     *cache
@@ -264,7 +273,7 @@ func (l *loader) loadOne(origin string, ref Ref) (Layer, error) {
 	if ref.Remote {
 		layer, err = l.loadRemote(origin, ref)
 	} else {
-		layer, err = loadLayer(origin, ref)
+		layer, err = l.loadLayer(origin, ref)
 	}
 	layer.key = ref.identity()
 	return layer, err
@@ -277,13 +286,24 @@ func unwrapPathError(err error) error {
 	return err
 }
 
-// loadLayer reads and parses one policy file, checking the digest it is pinned to.
-func loadLayer(origin string, ref Ref) (Layer, error) {
+// loadLayer reads and parses one policy file, checking the digest it is pinned to
+// and, when a trust set is configured, the signature next to it.
+func (l *loader) loadLayer(origin string, ref Ref) (Layer, error) {
 	data, err := readPolicyFile(ref.Location)
 	if err != nil {
 		return Layer{}, &UnavailableError{Origin: origin, Path: ref.Location, Err: err}
 	}
-	return buildLayer(origin, ref, data, "")
+	bundle, err := readSidecarFile(ref.Location)
+	if err != nil {
+		return Layer{}, err
+	}
+	signer, err := l.checkSignature(ref, data, bundle)
+	if err != nil {
+		return Layer{}, err
+	}
+	layer, err := buildLayer(origin, ref, data, "")
+	layer.Signer = signer
+	return layer, err
 }
 
 // buildLayer checks the pin and parses data into a layer.
@@ -314,14 +334,30 @@ func (l *loader) openCache() *cache {
 	return l.cache
 }
 
-// loadRemote fetches an https policy, verifies its digest and keeps the last
-// good copy. See ParseRef and DigestError for the pin rules.
+// remoteMode says how the content of a policy URL is vouched for.
+type remoteMode int
+
+const (
+	// modePinned: the reference carries (or the user cache recorded) a digest.
+	modePinned remoteMode = iota
+	// modeSigned: no digest, but a trusted signer's signature vouches for it.
+	modeSigned
+	// modeFirstUse: no digest; trust-on-first-use records the one fetched.
+	modeFirstUse
+)
+
+// loadRemote fetches an https policy, verifies its digest (or its signature) and
+// keeps the last good copy. See ParseRef and DigestError for the pin rules.
 func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	disp := ref.Display()
 	unavailable := func(err error) (Layer, error) {
 		return Layer{}, &UnavailableError{Origin: origin, Path: disp, Err: err}
 	}
-	first := false
+	pv, err := l.verifier()
+	if err != nil {
+		return Layer{}, err
+	}
+	mode := modePinned
 	if ref.Digest == "" {
 		if c := l.openCache(); c != nil {
 			if d, ok := c.tofuGet(ref.Location); ok {
@@ -331,6 +367,8 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	}
 	if ref.Digest == "" {
 		switch {
+		case pv != nil:
+			mode = modeSigned
 		case !l.opts.TrustOnFirstUse:
 			return Layer{}, &DigestError{Path: disp}
 		case !l.opts.Interactive:
@@ -339,29 +377,27 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 			return unavailable(errors.New("--policy-trust-tofu needs the user cache to record the digest, and there is none"))
 		case l.opts.offline():
 			return unavailable(errors.New("offline: the first use of an unpinned URL needs the network"))
-		}
-		first = true
-	}
-	var data []byte
-	var note string
-	var err error
-	if l.opts.offline() {
-		data, note, err = l.fromCache(ref, errors.New("offline"))
-	} else {
-		data, err = fetch(l.ctx, l.opts.httpClient(), ref)
-		var ne *networkError
-		if errors.As(err, &ne) {
-			data, note, err = l.fromCache(ref, ne)
+		default:
+			mode = modeFirstUse
 		}
 	}
+	data, bundle, note, err := l.obtain(ref, pv, mode)
 	if err != nil {
 		var pe *ParseError
-		if errors.As(err, &pe) {
+		var se *SignatureError
+		if errors.As(err, &pe) || errors.As(err, &se) {
 			return Layer{}, err
 		}
 		return unavailable(err)
 	}
-	if first {
+	signer, err := l.checkSignature(ref, data, bundle)
+	if err != nil {
+		return Layer{}, err
+	}
+	if mode == modeSigned && signer == "" {
+		return Layer{}, &DigestError{Path: disp}
+	}
+	if mode == modeFirstUse {
 		ref.Digest = digest(data)
 		if err := l.openCache().tofuRecord(ref.Location, ref.Digest); err != nil {
 			return unavailable(fmt.Errorf("cannot record the digest: %w", err))
@@ -373,9 +409,10 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	if err != nil {
 		return Layer{}, err
 	}
+	layer.Signer = signer
 	if note == "" {
 		if c := l.openCache(); c != nil {
-			if perr := c.put(ref.Location, ref.Digest, data, l.opts.Clock.Now()); perr != nil {
+			if perr := c.put(ref.Location, ref.Digest, data, bundle, l.opts.Clock.Now()); perr != nil {
 				logger.Debug("cannot cache the policy", "policy", disp, "error", perr)
 			}
 		}
@@ -383,25 +420,53 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	return layer, nil
 }
 
-// fromCache stands in for an unreachable URL with the last good copy of the
-// pinned digest, if it is younger than max_stale; otherwise AR742 (fail closed).
-func (l *loader) fromCache(ref Ref, cause error) (data []byte, note string, err error) {
-	c := l.openCache()
-	if c == nil || ref.Digest == "" {
-		return nil, "", fmt.Errorf("%w, and there is no cached copy", cause)
+// obtain gets the body of a policy URL, and its signature when a trust set is
+// configured: from the network, or from the cache when the URL cannot be reached
+// (or --policy-offline).
+func (l *loader) obtain(ref Ref, pv *verifier, mode remoteMode) (data, bundle []byte, note string, err error) {
+	if l.opts.offline() {
+		return l.fromCache(ref, mode, errors.New("offline"))
 	}
-	body, at, ok := c.get(ref.Location, ref.Digest)
+	client := l.opts.httpClient()
+	data, err = fetch(l.ctx, client, ref)
+	var ne *networkError
+	if errors.As(err, &ne) {
+		return l.fromCache(ref, mode, ne)
+	}
+	if err != nil || pv == nil {
+		return data, nil, "", err
+	}
+	bundle, err = fetchSidecar(l.ctx, client, ref)
+	if errors.As(err, &ne) {
+		if pv.require || mode == modeSigned {
+			return l.fromCache(ref, mode, ne) // a signature is needed, so a stale bundle may stand in
+		}
+		logger.Warn("The policy signature could not be fetched; the digest pin still vouches for the policy", "policy", ref.Display(), "reason", ne.Error())
+		return data, nil, "", nil
+	}
+	return data, bundle, "", err
+}
+
+// fromCache stands in for an unreachable URL with the last good copy of the
+// pinned digest (or of the signed policy), if it is younger than max_stale;
+// otherwise AR742 (fail closed).
+func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle []byte, note string, err error) {
+	c := l.openCache()
+	if c == nil || (ref.Digest == "" && mode != modeSigned) {
+		return nil, nil, "", fmt.Errorf("%w, and there is no cached copy", cause)
+	}
+	body, bun, at, ok := c.get(ref.Location, ref.Digest)
 	if !ok {
-		return nil, "", fmt.Errorf("%w, and there is no cached copy of %s", cause, ref.Digest)
+		return nil, nil, "", fmt.Errorf("%w, and there is no cached copy", cause)
 	}
 	age := l.opts.Clock.Now().Sub(at)
 	if l.maxStale < 0 || age > l.maxStale {
-		return nil, "", fmt.Errorf("%w, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
+		return nil, nil, "", fmt.Errorf("%w, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
 	}
 	note = fmt.Sprintf("cached copy fetched %s (%v)", at.UTC().Format(time.RFC3339), cause)
 	logger.Warn("Using the cached organization policy because the URL cannot be reached",
 		"policy", ref.Display(), "fetched", at.UTC().Format(time.RFC3339), "reason", cause.Error())
-	return body, note, nil
+	return body, bun, note, nil
 }
 
 func staleText(d time.Duration) string {
