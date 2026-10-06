@@ -238,6 +238,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 		mode = c.modes.mode(c.configRoot(), cf.Path, info)
 	}
 	leaves := contentLeaves(c.modes, c.configRoot(), cf, primary, mode)
+	leaves = c.addFrontmatterHookScripts(kind, id, primary, leaves)
 	digest, err := TreeDigest(kind, leaves)
 	if err != nil {
 		return oops.With("path", cf.Path).Wrap(err)
