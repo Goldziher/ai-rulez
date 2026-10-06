@@ -147,13 +147,20 @@ func CheckLockRoles(cfg *config.Config, remoteSkipped bool, profileOverride, too
 func LoadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config, error)) (cfg *config.Config, remoteSkipped bool, err error) {
 	cfg, err = load()
 	if err == nil {
-		return cfg, false, nil
-	}
-	if !errors.Is(err, includes.ErrNotCached) {
+		// With [lock] enforce off the resolver only warns about an uncached include
+		// and the load succeeds; later steps would re-resolve it (warning again and
+		// reporting its outputs as removed), so skip remote content here too.
+		if len(includes.NotCached(cfg)) == 0 {
+			return cfg, false, nil
+		}
+	} else if !errors.Is(err, includes.ErrNotCached) {
 		return nil, false, err
 	}
 	cfg, retryErr := load(config.WithoutRemote())
 	if retryErr != nil {
+		if err == nil {
+			return nil, false, retryErr
+		}
 		// The first error stays the cause; the retry's failure is told, not dropped.
 		return nil, false, fmt.Errorf("%w (retrying without remote includes also failed: %s)", err, retryErr)
 	}
