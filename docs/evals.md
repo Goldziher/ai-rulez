@@ -255,7 +255,7 @@ delete the `mac`.
   output tokens. The multipliers are fixed defaults, pinned by tests; treat the whole range as an order of magnitude.
   Prices come from one built-in table shared with the model layer (`[llm]` price overrides do not apply to evals; use
   `--price-in` and `--price-out`). Haiku, sonnet and opus are listed under their short names too; no `--model` is
-  priced as sonnet. A model the table does not list is priced as sonnet for the estimate (the report says so), and with
+  priced as sonnet, and the report says so (`priced_as`, and a line in the markdown). A model the table does not list is priced as sonnet for the estimate (the report says so), and with
   `--max-cost` it is refused unless `--price-in` and `--price-out` are given.
 - Every run records the estimate next to what the runner reported, in the report (`estimate_vs_actual`) and in the
   skill's record in `eval-results.json` (`estimate`: `low_usd`, `expected_usd`, `high_usd`, `actual_usd`, `error` =
@@ -317,7 +317,7 @@ The JSON follows [`schema/eval-activation.v1.schema.json`](schema.md); markdown 
 refused. Each measured skill's rates and ids (never prompts) are recorded in `eval-results.json` under `activation`,
 signed like the rest of the record, and judged by `AR9A1` and `AR9A2` (off until you set a threshold). A later
 `eval run` keeps the block; an activation run does not touch the case-run result. `--dry-run`/`--estimate` ranks and
-prints but writes nothing.
+prints but writes nothing; it still exits `2` when a skill fails its threshold, as a real run does.
 
 The `native` surface (the model decides, with all competing skills installed in the harness) needs a runner that
 declares the `activation` capability. `--surface native` therefore checks the runner first and refuses one that does

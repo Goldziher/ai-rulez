@@ -57,6 +57,9 @@ func (r *RunReport) writeMarkdown(w io.Writer) error {
 		fmt.Fprintf(&b, "Dry run: %d agent runs, tokens in %s, out %s, estimated cost **$%.2f** (range $%.2f to $%.2f; a rough estimate).\n\n",
 			e.AgentRuns, tokenRange(e.InputTokensLow, e.InputTokens, e.InputTokensHigh), tokenRange(e.OutputTokensLow, e.OutputTokens, e.OutputTokensHigh),
 			e.CostUSD, e.CostLowUSD, e.CostHighUSD)
+		if r.PricedAs != "" {
+			fmt.Fprintf(&b, "No model was set, so the estimate is priced as %s. Pass `--model` (or `--price-in` and `--price-out`) for the model you will run.\n\n", r.PricedAs)
+		}
 		if !r.PriceKnown {
 			b.WriteString("The model has no built-in price: the estimate uses the sonnet tier. Pass `--price-in` and `--price-out` for a real figure.\n\n")
 		}
