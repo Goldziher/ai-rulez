@@ -1,30 +1,18 @@
 package evals
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
-
-// CodexProcess is one codex invocation: the program, its arguments, the directory
-// and environment it runs in, and the prompt on its standard input.
-type CodexProcess struct {
-	Bin   string
-	Args  []string
-	Dir   string
-	Env   []string
-	Stdin []byte
-}
 
 // defaultCodexRunTimeout bounds one run; a run is stopped at its first commands, so
 // this is a ceiling for a stuck process.
@@ -60,9 +48,11 @@ type CodexNative struct {
 	ExtraArgs []string
 	KeepDir   string
 	Stderr    io.Writer
-	// Start runs one codex process and returns its stdout line by line; tests replace
-	// it. Nil starts a real process.
-	Start func(ctx context.Context, proc CodexProcess, onLine func(line []byte) (stop bool)) error
+	// Runner starts the process, which it must be able to stream (runner.LineRunner);
+	// nil runs a real process. Env supplies the environment and the home directory
+	// the adapter reads; nil is the real one.
+	Env    ambient.Env
+	Runner runner.Runner
 }
 
 // Name implements Runner.
@@ -112,25 +102,24 @@ func (r *CodexNative) Run(ctx context.Context, req *Request) (*Response, error) 
 		return nil, err
 	}
 	args := r.args(workDir, req)
-	env := runner.ScrubEnv(os.Environ(), nil, []string{"HOME=" + homeDir, "CODEX_HOME=" + codexHome()})
+	env := runner.ScrubEnv(r.parentEnv(), nil, []string{"HOME=" + homeDir, "CODEX_HOME=" + r.codexHome()})
+	lines, ok := runner.AsLineRunner(r.Runner)
+	if !ok {
+		return nil, fmt.Errorf("the %s runner needs a runner that can stream output (runner.LineRunner)", RunnerCodexNative)
+	}
 	timeout := r.Timeout
 	if timeout <= 0 {
 		timeout = defaultCodexRunTimeout
-	}
-	start := r.Start
-	if start == nil {
-		start = startProcessLines
 	}
 	concurrency := r.Concurrency
 	if concurrency < 1 {
 		concurrency = 2
 	}
 	return runActivationRuns(ctx, req, concurrency, func(ctx context.Context, c *Case) activationOutcome {
-		runCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
 		watch := &codexWatch{ids: ids}
-		err := start(runCtx, CodexProcess{Bin: r.bin(), Args: args, Dir: workDir, Env: env, Stdin: []byte(c.Prompt)}, watch.line)
-		return watch.outcome(err)
+		res := lines.RunLines(ctx, runner.Spec{Argv: append([]string{r.bin()}, args...), Dir: workDir, Env: env,
+			Stdin: []byte(c.Prompt), Timeout: timeout, MaxOutput: maxToolOutputBytes}, watch.line)
+		return watch.outcome(res.Err)
 	})
 }
 
@@ -145,15 +134,30 @@ func (r *CodexNative) args(workDir string, req *Request) []string {
 }
 
 // codexHome is the directory that holds the Codex login.
-func codexHome() string {
-	if v := os.Getenv("CODEX_HOME"); v != "" {
+func (r *CodexNative) codexHome() string {
+	if v := ambient.Getenv(r.Env, "CODEX_HOME"); v != "" {
 		return v
 	}
-	home, err := os.UserHomeDir()
+	home, err := ambient.OrOS(r.Env).UserHomeDir()
 	if err != nil {
 		return ""
 	}
 	return filepath.Join(home, ".codex")
+}
+
+// parentEnvNames are the variables the codex process may inherit: enough to find
+// binaries and a temp directory, and nothing that looks like a credential.
+var parentEnvNames = []string{"PATH", "USER", "TMPDIR", "TZ", "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE"}
+
+// parentEnv is the KEY=VALUE list the scrubbed environment is built from.
+func (r *CodexNative) parentEnv() []string {
+	var out []string
+	for _, name := range parentEnvNames {
+		if v := ambient.Getenv(r.Env, name); v != "" {
+			out = append(out, name+"="+v)
+		}
+	}
+	return out
 }
 
 // buildCodexSkills writes the installed set under <work>/.agents/skills.
@@ -239,34 +243,4 @@ func (w *codexWatch) outcome(runErr error) activationOutcome {
 		out.err = "codex produced no events: " + errText(runErr)
 	}
 	return out
-}
-
-// startProcessLines runs a process, feeds its stdout line by line to onLine and
-// kills its process group as soon as onLine returns true.
-func startProcessLines(ctx context.Context, proc CodexProcess, onLine func([]byte) bool) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	bin := proc.Bin
-	cmd := exec.CommandContext(ctx, bin, proc.Args...) //nolint:gosec // the adapter's own argv; no shell involved
-	cmd.Dir, cmd.Env = proc.Dir, proc.Env
-	cmd.Stdin = bytes.NewReader(proc.Stdin)
-	isolateProcessGroup(cmd)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("pipe codex output: %w", err)
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start %s: %w", bin, err)
-	}
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 0, 64<<10), maxStreamLine)
-	for scanner.Scan() {
-		if onLine(scanner.Bytes()) {
-			cancel() // kills the process group
-			break
-		}
-	}
-	_, _ = io.Copy(io.Discard, stdout) //nolint:errcheck // drain so Wait cannot block on the pipe
-	_ = cmd.Wait()                     //nolint:errcheck // killed on purpose; the events decide
-	return scanner.Err()
 }
