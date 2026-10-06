@@ -237,6 +237,8 @@ func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.
 		switch {
 		case outcome.Incomplete:
 			gate.Refused = "the run is incomplete (" + outcome.StoppedBecause + "), so it cannot vouch for the items it did not judge"
+		case len(outcome.Truncated) > 0:
+			gate.Refused = "the judge saw only part of " + strings.Join(outcome.Truncated, ", ") + " (the body was truncated), so it cannot vouch for them; shorten the item or raise max_item_tokens"
 		case cfg.Review.GateRequiresCalibration() && cal.State != rv.CalMatched:
 			gate.Refused = "calibration " + cal.State + ": " + strings.Join(cal.Reasons, "; ")
 		default:
