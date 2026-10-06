@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -177,9 +178,25 @@ func commandContext(cmd *cobra.Command) context.Context {
 	return context.Background()
 }
 
+// evalResultsKeyFile is the per-user key that signs eval results, beside the LLM
+// cache secret in the user config directory (never in the repository).
+const evalResultsKeyFile = "eval-results.key"
+
+// evalResultsKey returns the per-user MAC key for eval-results.json, or nil when
+// none can be created; without it every stored result counts as unverified and is
+// re-run (never trusted).
+func evalResultsKey() []byte {
+	key, err := llm.LoadSecretFile(llm.UserSecretPath(evalResultsKeyFile))
+	if err != nil {
+		return nil
+	}
+	return key
+}
+
 // attachStore loads the results file into opts.
 func attachStore(opts *evals.RunOptions, path string) (*evals.Store, error) {
-	store, err := evals.LoadStore(path)
+	key := evalResultsKey()
+	store, err := evals.LoadStoreKeyed(path, key)
 	if err != nil {
 		return nil, err
 	}

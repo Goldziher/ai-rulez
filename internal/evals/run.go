@@ -283,7 +283,12 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		// The key is an unkeyed hash a committed file can carry, so also require the
 		// recorded digests to match what is on disk now: an edited skill always re-runs.
 		old.Digest == p.run.Digest && old.CasesDigest == p.run.CasesDigest {
-		p.run.Status = RunCached
+		if old.Verified() {
+			p.run.Status = RunCached
+		} else {
+			// A committed record anyone can forge: re-run instead of trusting it.
+			p.run.Warnings = append(p.run.Warnings, "the stored result is unverified (not recorded and signed on this machine); re-running")
+		}
 	}
 	return p, nil
 }
