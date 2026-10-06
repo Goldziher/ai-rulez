@@ -35,6 +35,7 @@ var forbidden = map[string][]string{
 // exempt are the packages that are allowed to use ambient authority by design:
 // the process runner itself, the CLI-only agent and watch features, and test helpers.
 var exempt = []string{
+	"internal/ambient/",
 	"internal/runner/",
 	"internal/agents/",
 	"internal/watch/",
