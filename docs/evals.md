@@ -391,7 +391,7 @@ also records a digest of the competing set: a sibling's edited description chang
 A skill passes when the share of passing prompts reaches `--threshold` (default 1). Exit status is as for a case
 run: `2` when a skill fails, has invalid cases, or errors.
 
-#### Comparing descriptions
+### Comparing descriptions
 
 `ai-rulez eval run <skill> --mode activation --surface retrieval --description-from candidate.txt` measures a
 candidate description of that one skill on the same prompts: the file's text (at most 16 KiB, UTF-8, no hidden
