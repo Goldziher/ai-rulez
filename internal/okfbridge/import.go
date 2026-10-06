@@ -255,12 +255,15 @@ func (p *planner) skip(src, why string) {
 	p.res.Skipped = append(p.res.Skipped, src+": "+why)
 }
 
-func (p *planner) domainDir(domain string) string {
+func (p *planner) domainDir(domain, src string) string {
 	if p.opts.Domain != "" {
 		domain = p.opts.Domain
 	}
 	if domain != "" && ValidID(domain) {
 		return path.Join(dirDomains, domain)
+	}
+	if domain != "" {
+		p.note(okf.CodeLossyMapping, src, "x-ai-rulez domain %q is not a safe name; imported at the project root", domain)
 	}
 	return ""
 }
@@ -290,13 +293,13 @@ func (p *planner) concept(c *okf.Concept) {
 		kind = p.opts.Into
 	}
 	id := ext.id
-	if !ValidID(id) {
+	if !validImportID(id) {
 		if id != "" {
 			p.note(okf.CodeLossyMapping, c.Path, "x-ai-rulez id %q is not a safe name; derived from the path", id)
 		}
 		id = deriveID(c.Path)
 	}
-	dir := p.domainDir(ext.domain)
+	dir := p.domainDir(ext.domain, c.Path)
 	rel := p.unique(targetPath(path.Join(dir, string(kind)), kind, id, c.Path), c.Path)
 	if kind == KindSkill || path.Base(rel) == fileCommand {
 		p.owners[path.Dir(c.Path)] = ownerDir{kind: kind, id: path.Base(path.Dir(rel)), domain: dir}
@@ -481,7 +484,7 @@ func (p *planner) resource(c *okf.Concept, ext extInfo) {
 		p.skip(c.Path, "unsafe skill resource path")
 		return
 	}
-	dir := p.domainDir(ext.domain)
+	dir := p.domainDir(ext.domain, c.Path)
 	target := path.Join(dir, string(kind), ext.id, rel)
 	p.taken[strings.ToLower(target)] = c.Path
 	p.targets[c.Path] = target

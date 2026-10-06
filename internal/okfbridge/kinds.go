@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Kind is an ai-rulez content kind.
@@ -151,6 +153,26 @@ var (
 // ValidID reports whether s is safe to use as a file or directory name.
 func ValidID(s string) bool {
 	return len(s) <= maxSanitizeID && idOK.MatchString(s) && !strings.Contains(s, "..")
+}
+
+// validImportID reports whether the x-ai-rulez id of a bundle can be the file
+// stem of an imported source: any non-empty UTF-8 name without a path
+// separator, control character, leading dot, ".." or character that is
+// reserved on a common file system. Unlike ValidID it keeps non-ASCII names,
+// so an export and an import give the original file back.
+func validImportID(s string) bool {
+	if s == "" || len(s) > maxSanitizeID || !utf8.ValidString(s) || strings.Contains(s, "..") {
+		return false
+	}
+	if s != strings.TrimSpace(s) || strings.HasPrefix(s, ".") || strings.HasSuffix(s, ".") {
+		return false
+	}
+	for _, r := range s {
+		if unicode.IsControl(r) || strings.ContainsRune(`/\:*?"<>|`, r) || r == utf8.RuneError {
+			return false
+		}
+	}
+	return true
 }
 
 // sanitizeID turns arbitrary text into a safe single path segment.

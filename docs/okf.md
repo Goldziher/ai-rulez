@@ -121,6 +121,14 @@ no NOTICE entry is needed. openknowledge is not used (telemetry, dependencies).
 ai-rulez concepts become OKF concepts. The real identity lives in the `x-ai-rulez`
 extension key, so a round trip is lossless; the OKF `type` is only for OKF readers.
 
+Names round trip through `x-ai-rulez.id`, not through the file name. A name that is not safe in a bundle path (spaces,
+accents, CJK) is written to a transliterated path (`résumé` becomes `r-sum.md`) and restored from the id on import. A
+rule, context or other concept named `index` or `log` is stored as `index_.md` / `log_.md`, because those names are
+reserved; the generated `index.md` is never overwritten. An id containing a path separator, `..`, a control character
+or a leading dot is ignored and the name is derived from the path, with a finding. An `x-ai-rulez.domain` that is not a
+safe name is reported and the concept imports at the project root. Index descriptions are markdown-escaped (`[`, `]`,
+`<`, `>`).
+
 Layout of an exported bundle (`docs/okf/` by default):
 
 ```text
