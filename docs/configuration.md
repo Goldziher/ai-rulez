@@ -29,6 +29,25 @@ When no explicit path is given, the CLI discovers configuration by walking up fr
 
 `.ai-rulez/` wins when both directory layouts exist at the same level. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
 
+## Checks `generate` runs before it writes
+
+`generate` runs the same schema check as `ai-rulez validate` over `config.toml` and the machine-local
+`config.local.toml`. A key the schema does not know (`delivry`, `[lock] enforc`) has no effect, so `generate`
+prints a warning naming the file and the key, with the nearest known key when there is one:
+
+```text
+WARN  Configuration problem: .ai-rulez/config.toml: unknown key "lock.enforc" (did you mean "enforce"?)
+```
+
+`generate --strict`, or `AI_RULEZ_STRICT=1` in CI, fails with exit code 1 instead. `validate` and `generate` report
+the same unknown keys.
+
+`generate` also lists the commands it is about to write that your tools will run: `[[hooks]]` commands, command-based
+`[[mcp_servers]]`, and `[permissions] allow` rules. Only commands that are new or changed since the previous run on this
+machine are listed (every command on a first run in a fresh clone). It only warns, it is printed even with `--quiet`,
+and `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. The previous run is remembered in `~/.cache/ai-rulez/commands/`,
+never in the repository.
+
 ## Basic Structure
 
 The minimal valid V4 configuration:
@@ -1131,6 +1150,7 @@ required frontmatter keys.
 ```toml
 [lint]
 fail_on = "warning"
+analyzers = ["security", "references"]   # run only these analyzers
 ignore = ["AR803"]
 
 [lint.severity]
@@ -1150,7 +1170,6 @@ Every key, the finding codes and the exit codes are in [Strict validation](stric
 Deterministic, read-only repo checks, run by `ai-rulez verifiers run`. One `[[verifiers]]` table per check; the guide with
 semantics and examples is [Verifiers](verifiers.md).
 
-analyzers = ["security", "references"]   # run only these analyzers
 ```toml
 [[verifiers]]
 name = "node-version"
