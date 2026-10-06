@@ -142,6 +142,7 @@ var registry = []RuleInfo{
 	{CodeScannerEgressBlocked, "scanner-egress-blocked", SeverityError, "a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner"},
 	{CodeScannerBaselineExpired, "scanner-baseline-expired", SeverityWarning, "an entry of scanner-baseline.json passed its expires date, so the finding it accepted is reported again"},
 	{CodeScannerOutOfScope, "scanner-out-of-scope-result", SeverityWarning, "a staged [[lint.external]] scanner reported a result for a file that was not staged for it; the result was dropped"},
+	{CodeScannerNoIsolation, "scanner-isolation-degraded", SeverityWarning, "isolation = auto found no process isolation backend, so staged scanners ran without network or write confinement"},
 	{CodeCursorRuleExtension, "cursor-rule-extension-ignored", SeverityWarning, "a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)"},
 	{CodeCursorRuleNotApplied, "cursor-rule-not-applied", SeverityWarning, "a hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned"},
 	{CodeCopilotExcludeAgent, "copilot-exclude-agent-invalid", SeverityWarning, "a Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent"},
@@ -241,11 +242,11 @@ type FindingMeta struct {
 	Accepted bool
 	// AcceptReason is the baseline entry's reason.
 	AcceptReason string
-	// Analyzer and Scope classify the rule that produced the finding.
 	// ScannerFailOn is the [lint.scanner_policy] fail_on threshold of a scanner
 	// finding: one at least this severe fails the run even when it is below the
 	// run's own threshold.
 	ScannerFailOn string
+	// Analyzer and Scope classify the rule that produced the finding.
 	Analyzer, Scope string
 	// Fix is the mechanical correction, when one exists.
 	Fix *Fix

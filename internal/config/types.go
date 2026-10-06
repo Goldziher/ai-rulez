@@ -56,9 +56,9 @@ type Config struct {
 	Lock *LockConfig `yaml:"lock,omitempty" json:"lock,omitempty" toml:"lock,omitempty"`
 	// Governance is the [governance] table: which content needs a reviewer approval (types_governance.go).
 	Governance *GovernanceConfig `yaml:"governance,omitempty" json:"governance,omitempty" toml:"governance,omitempty"`
-
 	// Signing is the [signing] table: who may sign the lock and how fresh the signature must be (types_signing.go).
 	Signing *SigningConfig `yaml:"signing,omitempty" json:"signing,omitempty" toml:"signing,omitempty"`
+
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`

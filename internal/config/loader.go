@@ -483,8 +483,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules           *RulesConfig           `toml:"rules"`
 		Lint            *LintConfig            `toml:"lint"`
 		Verifiers       []VerifierConfig       `toml:"verifiers"`
-		Usage           *UsageConfig           `toml:"usage"`
 		VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings"`
+		Usage           *UsageConfig           `toml:"usage"`
 		Skills          *SkillsConfig          `toml:"skills"`
 		DomainSettings  DomainConfigs          `toml:"domains"`
 		SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
@@ -492,8 +492,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
 		Lock            *LockConfig            `toml:"lock"`
 		Governance      *GovernanceConfig      `toml:"governance"`
-		LLM             *llm.Config            `toml:"llm"`
 		Signing         *SigningConfig         `toml:"signing"`
+		LLM             *llm.Config            `toml:"llm"`
 		Telemetry       *TelemetryConfig       `toml:"telemetry"`
 		Review          *ReviewConfig          `toml:"review"`
 		Search          *skillsearch.Config    `toml:"search"`
@@ -578,9 +578,9 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		RoleManifest:    raw.RoleManifest,
 		Lock:            raw.Lock,
 		Governance:      raw.Governance,
+		Signing:         raw.Signing,
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,
-		Signing:         raw.Signing,
 		Review:          raw.Review,
 		Search:          raw.Search,
 		Plugin:          raw.Plugin,

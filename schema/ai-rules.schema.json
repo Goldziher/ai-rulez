@@ -983,29 +983,6 @@
       },
       "additionalProperties": false
     },
-    "usage": {
-      "type": "object",
-      "description": "Usage-telemetry support (opt-in, no network).",
-      "properties": {
-        "skills_index": {
-          "type": "boolean",
-          "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset)."
-        }
-      },
-      "additionalProperties": false
-    },
-    "skills": {
-      "type": "object",
-      "description": "Defaults for every skill (dynamic skill loading).",
-      "properties": {
-        "delivery": {
-          "$ref": "#/$defs/delivery",
-          "description": "Global default delivery: static (default) writes skills into every harness skill tree, served leaves them out and serves them over MCP on demand (`ai-rulez mcp --serve-skills`), both does both. A skill's own `delivery` frontmatter, a role override and [domains.<name>] delivery take precedence."
-        }
-      },
-      "additionalProperties": false
-    },
-    "okf": {
     "signing": {
       "type": "object",
       "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see docs/signing.md). Nothing is enforced unless require names a subject.",
@@ -1084,6 +1061,29 @@
       },
       "additionalProperties": false
     },
+    "usage": {
+      "type": "object",
+      "description": "Usage-telemetry support (opt-in, no network).",
+      "properties": {
+        "skills_index": {
+          "type": "boolean",
+          "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "skills": {
+      "type": "object",
+      "description": "Defaults for every skill (dynamic skill loading).",
+      "properties": {
+        "delivery": {
+          "$ref": "#/$defs/delivery",
+          "description": "Global default delivery: static (default) writes skills into every harness skill tree, served leaves them out and serves them over MCP on demand (`ai-rulez mcp --serve-skills`), both does both. A skill's own `delivery` frontmatter, a role override and [domains.<name>] delivery take precedence."
+        }
+      },
+      "additionalProperties": false
+    },
+    "okf": {
       "type": "object",
       "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
       "properties": {
@@ -1208,37 +1208,6 @@
         "additionalProperties": false
       }
     },
-    "review": {
-      "type": "object",
-      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
-      "properties": {
-        "rubric": {
-          "type": "string",
-          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics."
-        },
-        "content": {
-          "type": "string",
-          "enum": ["descriptions", "full"],
-          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body."
-        },
-        "exclude": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Name globs of items the review skips."
-        },
-        "max_cost_usd": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset."
-        },
-        "max_calls": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
-        }
-      },
-      "additionalProperties": false
-    },
     "search": {
       "type": "object",
       "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
@@ -1256,12 +1225,6 @@
         "index_body": {
           "type": "boolean",
           "description": "Also embed the first body_chars characters of SKILL.md."
-        },
-        "batch_size": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 2048,
-          "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches."
         },
         "body_chars": {
           "type": "integer",
@@ -1293,6 +1256,12 @@
           "minimum": 0,
           "maximum": 1000,
           "description": "Length of each candidate list before fusion (default 50)."
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Texts per embedding call during `search index` (default 64); lower it for a provider that caps or rate-limits batches."
         },
         "query_timeout_ms": {
           "type": "integer",
@@ -1333,6 +1302,37 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "description": "Settings of `ai-rulez review`: the rubric, what an item would send to a judge, exclusions and spend ceilings. Phase 0 makes no model call. See docs/review.md.",
+      "properties": {
+        "rubric": {
+          "type": "string",
+          "description": "Rubric id: builtin:skill-quality (default) or a directory under .ai-rulez/rubrics."
+        },
+        "content": {
+          "type": "string",
+          "enum": ["descriptions", "full"],
+          "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Name globs of items the review skips."
+        },
+        "max_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Spend ceiling of one run in USD; an estimate above it is refused. 0 means unset."
+        },
+        "max_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Call ceiling of one run; an estimate above it is refused. 0 means unset."
         }
       },
       "additionalProperties": false
@@ -1840,6 +1840,39 @@
             "additionalProperties": false
           }
         },
+        "scanner_policy": {
+          "type": "object",
+          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
+          "properties": {
+            "preset": {
+              "enum": ["off", "baseline", "strict"],
+              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off."
+            },
+            "required": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scanner names whose absence, outdated version or failure is an error."
+            },
+            "fail_on": {
+              "enum": ["error", "warning", "info"],
+              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
+            },
+            "baseline": {
+              "type": "string",
+              "description": "Scanner baseline file, relative to the project root; it must stay inside the project."
+            },
+            "isolation": {
+              "enum": ["auto", "none", "require"],
+              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines."
+            },
+            "allow_egress": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it."
+            }
+          },
+          "additionalProperties": false
+        },
         "traps": {
           "type": "object",
           "description": "Harness trap checks (AR9C1...): files a harness silently ignores.",
@@ -2075,39 +2108,6 @@
                     },
                     "async": {
                       "type": "boolean"
-        "scanner_policy": {
-          "type": "object",
-          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
-          "properties": {
-            "preset": {
-              "enum": ["off", "baseline", "strict"],
-              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off."
-            },
-            "required": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Scanner names whose absence, outdated version or failure is an error."
-            },
-            "fail_on": {
-              "enum": ["error", "warning", "info"],
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning."
-            },
-            "baseline": {
-              "type": "string",
-              "description": "Scanner baseline file, relative to the project root; it must stay inside the project."
-            },
-            "isolation": {
-              "enum": ["auto", "none", "require"],
-              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines."
-            },
-            "allow_egress": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it."
-            }
-          },
-          "additionalProperties": false
-        },
                     },
                     "if": {
                       "type": "string"
@@ -2714,34 +2714,6 @@
             }
           }
         },
-        "all": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/verifierRequire"
-          }
-        },
-        "any": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/verifierRequire"
-          }
-        },
-        "not": {
-          "$ref": "#/$defs/verifierRequire"
-        }
-      }
-    },
-    "verifierRegex": {
-      "type": "object",
-      "required": ["regex"],
-      "additionalProperties": false,
-      "properties": {
-        "regex": {
-          "type": "string",
-          "description": "An RE2 expression."
-        },
         "command": {
           "type": "object",
           "required": ["argv"],
@@ -2777,6 +2749,34 @@
               "description": "Changed text per call; default 24000."
             }
           }
+        },
+        "all": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          }
+        },
+        "any": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verifierRequire"
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/verifierRequire"
+        }
+      }
+    },
+    "verifierRegex": {
+      "type": "object",
+      "required": ["regex"],
+      "additionalProperties": false,
+      "properties": {
+        "regex": {
+          "type": "string",
+          "description": "An RE2 expression."
         },
         "in": {
           "enum": ["same-file", "diff-added", "any-file"],
