@@ -51,6 +51,7 @@ var UsageCmd = &cobra.Command{
   ai-rulez usage record    the command that block runs; appends one identifier-only JSON line
   ai-rulez usage feedback  record that a skill misled you, is stale, wrong or great (notes stay local)
   ai-rulez usage export    write the log as an OTLP JSON file (--to file), or push it to your consented collector (--to otlp)
+  ai-rulez usage prune     delete log lines older than N days that are already exported
   ai-rulez report usage    join a log with the skills index, feedback and eval scores
 
 Set [usage] skills_index = true so generate writes .ai-rulez/skills-index.json, which gives
