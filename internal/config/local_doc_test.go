@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,7 +57,7 @@ func mustJSON(t *testing.T, v any) string {
 
 func newLocalDoc(t *testing.T, doc string) *LocalDoc {
 	t.Helper()
-	return &LocalDoc{Format: "toml", Doc: decodeDoc(t, doc), Path: filepath.Join(t.TempDir(), "config.local.toml")}
+	return &LocalDoc{Doc: decodeDoc(t, doc), Path: filepath.Join(t.TempDir(), "config.local.toml")}
 }
 
 func TestLocalDoc_Edits(t *testing.T) {
@@ -236,26 +235,6 @@ func TestLocalDoc_SaveRollsBackWhenMergedConfigIsInvalid(t *testing.T) {
 			assert.NoError(t, loadErr, "the project must still load after a rejected change")
 		})
 	}
-}
-
-func TestLocalDoc_SaveKeepsFormatOfMainConfig(t *testing.T) {
-	// Arrange
-	base := t.TempDir()
-	configDir := filepath.Join(base, ".ai-rulez")
-	writeProjectFile(t, configDir, "config.yaml", "version: \"4.0\"\nname: x\npresets: [claude]\n")
-	d, err := OpenLocalDoc(configDir, "config.yaml")
-	require.NoError(t, err)
-	t.Cleanup(d.Close)
-	require.NoError(t, d.Set([]string{"description"}, "mine"))
-
-	// Act
-	err = d.Save(t.Context())
-
-	// Assert
-	require.NoError(t, err)
-	data, err := os.ReadFile(filepath.Join(configDir, "config.local.yaml"))
-	require.NoError(t, err)
-	assert.True(t, strings.Contains(string(data), "description: mine"), string(data))
 }
 
 func TestInitLocalOverlay(t *testing.T) {

@@ -27,7 +27,7 @@ func TestUpdateConfigHandler_LocalWritesOnlyTheOverlay(t *testing.T) {
 			dir := t.TempDir()
 			writeMinimalConfig(t, dir)
 			cfgDir := filepath.Join(dir, ".ai-rulez")
-			sharedBefore, err := os.ReadFile(filepath.Join(cfgDir, "config.yaml"))
+			sharedBefore, err := os.ReadFile(filepath.Join(cfgDir, "config.toml"))
 			require.NoError(t, err)
 			args := map[string]any{"working_directory": dir, "local": true}
 			for k, v := range tt.args {
@@ -40,11 +40,11 @@ func TestUpdateConfigHandler_LocalWritesOnlyTheOverlay(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 			require.False(t, res.IsError, textOf(t, res))
-			sharedAfter, err := os.ReadFile(filepath.Join(cfgDir, "config.yaml"))
+			sharedAfter, err := os.ReadFile(filepath.Join(cfgDir, "config.toml"))
 			require.NoError(t, err)
 			assert.Equal(t, string(sharedBefore), string(sharedAfter), "shared config must be untouched")
-			local, err := os.ReadFile(filepath.Join(cfgDir, "config.local.yaml"))
-			require.NoError(t, err, "the overlay follows the main config's format")
+			local, err := os.ReadFile(filepath.Join(cfgDir, "config.local.toml"))
+			require.NoError(t, err)
 			assert.Contains(t, string(local), tt.wantInfo)
 		})
 	}
@@ -65,7 +65,7 @@ func TestUpdateConfigHandler_LocalClearRemovesTheOverride(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	require.False(t, res.IsError, textOf(t, res))
-	local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.yaml"))
+	local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.toml"))
 	require.NoError(t, err)
 	assert.NotContains(t, string(local), "high")
 }
@@ -80,7 +80,7 @@ func TestUpdateConfigHandler_LocalRejectsInvalidValue(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, res.IsError)
-	assert.NoFileExists(t, filepath.Join(dir, ".ai-rulez", "config.local.yaml"), "a rejected change leaves no overlay behind")
+	assert.NoFileExists(t, filepath.Join(dir, ".ai-rulez", "config.local.toml"), "a rejected change leaves no overlay behind")
 }
 
 func TestAddProfileHandler_Local(t *testing.T) {
@@ -88,7 +88,7 @@ func TestAddProfileHandler_Local(t *testing.T) {
 	dir := t.TempDir()
 	writeMinimalConfig(t, dir)
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez", "domains", "backend", "rules"), 0o755))
-	shared, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	shared, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 
 	// Act
@@ -99,10 +99,10 @@ func TestAddProfileHandler_Local(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	require.False(t, res.IsError, textOf(t, res))
-	after, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	after, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 	assert.Equal(t, string(shared), string(after))
-	local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.yaml"))
+	local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.toml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(local), "mine")
 }

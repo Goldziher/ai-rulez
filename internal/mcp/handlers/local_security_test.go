@@ -16,15 +16,15 @@ func TestValidateConfigHandler_NeverEchoesOverlayValues(t *testing.T) {
 		name  string
 		local string
 	}{
-		{"mistyped mcp args", "mcp_servers:\n  - name: x\n    command: c\n    args: \"SECRETY2\"\n"},
-		{"default without profiles", "default: SECRETY6\n"},
+		{"mistyped mcp args", "[[mcp_servers]]\nname = \"x\"\ncommand = \"c\"\nargs = \"SECRETY2\"\n"},
+		{"default without profiles", "default = \"SECRETY6\"\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
 			writeMinimalConfig(t, dir)
-			require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.local.yaml"), []byte(tt.local), 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.local.toml"), []byte(tt.local), 0o600))
 
 			// Act
 			res, err := ValidateConfigHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir}))

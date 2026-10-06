@@ -21,31 +21,21 @@ import (
 )
 
 const (
-	// VersionDir is the config version returned when an .ai-rulez/ directory is detected.
-	VersionDir = "dir"
-
 	aiRulezDirName = ".ai-rulez"
 	// altConfigDirName is the project-level .config/ convention
 	// (https://github.com/pi0/config-dir). It is consulted as a fallback after
 	// .ai-rulez/ when no tool-specific directory exists at a given level.
 	altConfigDirName   = ".config/ai-rulez"
 	configTOMLFilename = "config.toml"
-	configYAMLFilename = "config.yaml"
-	configYMLFilename  = "config.yml"
-	configJSONFilename = "config.json"
-	// configFilenameYAMLV2 is the legacy V2 flat-file YAML config name.
-	configFilenameYAMLV2 = "ai-rulez.yaml"
-	// configFilenameYMLV2 is the legacy V2 flat-file YAML config name with .yml extension.
-	configFilenameYMLV2 = "ai-rulez.yml"
-	rulesDir            = "rules"
-	contextDir          = "context"
-	skillsDir           = "skills"
-	agentsDir           = "agents"
-	commandsDir         = "commands"
-	checksDir           = "checks"
-	domainsDir          = "domains"
-	skillMarkerFile     = "SKILL.md"
-	commandMarkerFile   = "COMMAND.md"
+	rulesDir           = "rules"
+	contextDir         = "context"
+	skillsDir          = "skills"
+	agentsDir          = "agents"
+	commandsDir        = "commands"
+	checksDir          = "checks"
+	domainsDir         = "domains"
+	skillMarkerFile    = "SKILL.md"
+	commandMarkerFile  = "COMMAND.md"
 	// localDir holds machine-local override content under the config dir
 	// (.ai-rulez/local/rules, .ai-rulez/local/context). It is scanned into a
 	// separate tree and never merged into committed output.
@@ -97,39 +87,6 @@ func relConfigDirName(baseDir, configDir string) string {
 	return filepath.ToSlash(rel)
 }
 
-// DetectConfigVersion detects whether a directory contains V2 or directory-based configuration
-// Returns "v2" if ai-rulez.yaml/yml exists, "dir" if .ai-rulez/ (or
-// .config/ai-rulez/) exists, "" otherwise
-func DetectConfigVersion(dir string) (string, error) {
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return "", oops.
-			With("path", dir).
-			Hint("Check if the directory path is valid and accessible").
-			Wrapf(err, "resolve absolute path")
-	}
-
-	// Check for directory-based config (.ai-rulez/ directory, then the
-	// project-level .config/ai-rulez/ convention).
-	for _, dirName := range configDirCandidates {
-		configDir := filepath.Join(absDir, filepath.FromSlash(dirName))
-		if info, err := os.Stat(configDir); err == nil && info.IsDir() {
-			return VersionDir, nil
-		}
-	}
-
-	// Check for V2 (ai-rulez.yaml or ai-rulez.yml)
-	v2Files := []string{configFilenameYAMLV2, configFilenameYMLV2}
-	for _, filename := range v2Files {
-		v2Path := filepath.Join(absDir, filename)
-		if _, err := os.Stat(v2Path); err == nil {
-			return "v2", nil
-		}
-	}
-
-	return "", nil
-}
-
 // ResolveIncludesCallback is a callback function type that resolves includes
 // This avoids circular import issues between config and includes packages
 type ResolveIncludesCallback func(ctx context.Context, cfg *Config) (*ContentTree, error)
@@ -156,7 +113,7 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 
 // LoadConfig loads a configuration from the specified base directory.
 // The baseDir should contain an .ai-rulez/ subdirectory (or, as a fallback,
-// .config/ai-rulez/) with config.toml, config.yaml, or config.json.
+// .config/ai-rulez/) with config.toml.
 func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Config, error) {
 	dirName := ResolveConfigDirName(baseDir)
 	if dirName == "" {
@@ -183,6 +140,9 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 
 	if info, err := os.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
+			if legacy := FindLegacyConfig(absDir); legacy != "" {
+				return nil, newLegacyConfigError(legacy)
+			}
 			return nil, oops.
 				With("path", configDir).
 				With("base_dir", baseDir).
@@ -228,6 +188,9 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	}
 
 	if info.IsDir() {
+		if legacy := legacyConfigIn(absPath); legacy != "" && !hasConfigFile(absPath) {
+			return nil, newLegacyConfigError(legacy)
+		}
 		if hasConfigFile(absPath) {
 			cfg, loadErr := loadConfigFile(absPath, lo)
 			if loadErr != nil {
@@ -238,6 +201,9 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 		return LoadConfig(ctx, absPath, opts...)
 	}
 
+	if isLegacyConfigName(filepath.Base(absPath)) {
+		return nil, newLegacyConfigError(absPath)
+	}
 	if isLocalConfigFilename(filepath.Base(absPath)) {
 		return nil, oops.
 			With("path", absPath).
@@ -269,12 +235,8 @@ func looksLikeProjectRoot(dir string) bool {
 }
 
 func hasConfigFile(dir string) bool {
-	for _, name := range []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename} {
-		if info, err := os.Stat(filepath.Join(dir, name)); err == nil && !info.IsDir() {
-			return true
-		}
-	}
-	return false
+	info, err := os.Stat(filepath.Join(dir, configTOMLFilename))
+	return err == nil && !info.IsDir()
 }
 
 func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
@@ -430,9 +392,9 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 	return nil
 }
 
-// loadConfigFile loads config.toml, config.yaml, or config.json from a config directory.
+// loadConfigFile loads config.toml from a config directory. A directory that
+// holds only a V2/V3 file is reported as such rather than as a missing config.
 func loadConfigFile(configDir string, lo loadOptions) (*Config, error) {
-	// Try TOML first (V4 preferred format)
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
 	if _, err := os.Stat(tomlPath); err == nil {
 		cfg, err := loadConfigTOML(tomlPath)
@@ -443,36 +405,15 @@ func loadConfigFile(configDir string, lo loadOptions) (*Config, error) {
 		return withLocalOverlay(cfg, tomlPath, configDir, lo)
 	}
 
-	// Try YAML (deprecated in V4)
-	yamlPath := filepath.Join(configDir, configYAMLFilename)
-	if _, err := os.Stat(yamlPath); err == nil {
-		logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
-		cfg, err := loadConfigYAML(yamlPath)
-		if err != nil {
-			return nil, err
-		}
-		cfg.ConfigFile = configYAMLFilename
-		return withLocalOverlay(cfg, yamlPath, configDir, lo)
-	}
-
-	// Try JSON
-	jsonPath := filepath.Join(configDir, configJSONFilename)
-	if _, err := os.Stat(jsonPath); err == nil {
-		cfg, err := loadConfigJSON(jsonPath)
-		if err != nil {
-			return nil, err
-		}
-		cfg.ConfigFile = configJSONFilename
-		return withLocalOverlay(cfg, jsonPath, configDir, lo)
+	if legacy := legacyConfigIn(configDir); legacy != "" {
+		return nil, newLegacyConfigError(legacy)
 	}
 
 	return nil, oops.
 		With("config_dir", configDir).
 		With("toml_path", tomlPath).
-		With("yaml_path", yamlPath).
-		With("json_path", jsonPath).
-		Hint(fmt.Sprintf("Create %s, %s, or %s in %s\nRun 'ai-rulez init' to initialize configuration", configTOMLFilename, configYAMLFilename, configJSONFilename, configDir)).
-		Errorf("no config file found (tried %s, %s, and %s)", configTOMLFilename, configYAMLFilename, configJSONFilename)
+		Hint(fmt.Sprintf("Create %s in %s\nRun 'ai-rulez init' to initialize configuration", configTOMLFilename, configDir)).
+		Errorf("no config file found (tried %s)", configTOMLFilename)
 }
 
 func loadConfigFilePath(path string, lo loadOptions) (*Config, error) {
@@ -484,87 +425,18 @@ func loadConfigFilePath(path string, lo loadOptions) (*Config, error) {
 }
 
 func loadConfigFilePathMain(path string) (*Config, error) {
-	switch filepath.Base(path) {
-	case configTOMLFilename:
-		cfg, err := loadConfigTOML(path)
-		if err != nil {
-			return nil, err
-		}
-		cfg.ConfigFile = filepath.Base(path)
-		return cfg, nil
-	case configYAMLFilename, configYMLFilename:
-		if filepath.Base(path) == configYAMLFilename {
-			logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
-		}
-		cfg, err := loadConfigYAML(path)
-		if err != nil {
-			return nil, err
-		}
-		cfg.ConfigFile = filepath.Base(path)
-		return cfg, nil
-	case configJSONFilename:
-		cfg, err := loadConfigJSON(path)
-		if err != nil {
-			return nil, err
-		}
-		cfg.ConfigFile = filepath.Base(path)
-		return cfg, nil
-	default:
+	if filepath.Base(path) != configTOMLFilename {
 		return nil, oops.
 			With("path", path).
-			Hint("Use config.toml, config.yaml, config.yml, or config.json inside a config directory").
+			Hint("Use config.toml inside a config directory").
 			Errorf("unsupported config filename: %s", filepath.Base(path))
 	}
-}
-
-// loadConfigYAML loads a config from YAML
-func loadConfigYAML(path string) (*Config, error) {
-	data, err := readCapped(path)
+	cfg, err := loadConfigTOML(path)
 	if err != nil {
-		return nil, oops.
-			With("path", path).
-			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
-			Wrapf(err, "read config file")
+		return nil, err
 	}
-	return decodeConfigYAML(data, path)
-}
-
-// decodeConfigYAML decodes YAML bytes; path is used for error context only.
-func decodeConfigYAML(data []byte, path string) (*Config, error) {
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, oops.
-			With("path", path).
-			Hint("Check the YAML syntax - ensure proper indentation\nValidate your YAML at: https://www.yamllint.com/\nCommon issues: tabs instead of spaces, missing colons, incorrect indentation").
-			Wrapf(err, "parse YAML config")
-	}
-
-	return &config, nil
-}
-
-// loadConfigJSON loads a config from JSON
-func loadConfigJSON(path string) (*Config, error) {
-	data, err := readCapped(path)
-	if err != nil {
-		return nil, oops.
-			With("path", path).
-			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
-			Wrapf(err, "read config file")
-	}
-	return decodeConfigJSON(data, path)
-}
-
-// decodeConfigJSON decodes JSON bytes; path is used for error context only.
-func decodeConfigJSON(data []byte, path string) (*Config, error) {
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, oops.
-			With("path", path).
-			Hint("Check the JSON syntax - ensure proper formatting\nValidate your JSON at: https://jsonlint.com/\nCommon issues: trailing commas, unquoted keys, missing brackets").
-			Wrapf(err, "parse JSON config")
-	}
-
-	return &config, nil
+	cfg.ConfigFile = filepath.Base(path)
+	return cfg, nil
 }
 
 // loadConfigTOML loads a config from TOML
@@ -1408,12 +1280,8 @@ func serversToMap(servers []MCPServer) map[string]*MCPServer {
 	return result
 }
 
-// SaveConfig writes a configuration back to its original on-disk format.
-// The target format is taken from cfg.ConfigFile when it names a file present in
-// configDir (populated by the loader), falling back to probing config.toml,
-// config.yaml, then config.json. TOML is written with MarshalTOML (comments are
-// not preserved); YAML uses yaml.Node round-tripping to preserve comments,
-// field ordering, and formatting from the original file.
+// SaveConfig writes a configuration back to config.toml in configDir. TOML is
+// written with MarshalTOML (comments are not preserved).
 func SaveConfig(cfg *Config, configDir string) error {
 	if cfg == nil {
 		return oops.
@@ -1426,48 +1294,12 @@ func SaveConfig(cfg *Config, configDir string) error {
 		return errMergedConfigWrite()
 	}
 
-	targetPath := selectConfigWritePath(cfg, configDir)
-
-	switch filepath.Base(targetPath) {
-	case configTOMLFilename:
-		data, err := MarshalTOML(cfg)
-		if err != nil {
-			return oops.With("path", targetPath).Wrapf(err, "marshal config to TOML")
-		}
-		return writeConfigAtomically(targetPath, data)
-	case configJSONFilename:
-		data, err := json.Marshal(cfg)
-		if err != nil {
-			return oops.With("path", targetPath).Wrapf(err, "marshal config to JSON")
-		}
-		return writeConfigAtomically(targetPath, data)
-	default:
-		data, err := marshalYAMLPreserving(cfg, targetPath)
-		if err != nil {
-			return oops.With("path", targetPath).Wrapf(err, "marshal config to YAML")
-		}
-		return writeConfigAtomically(targetPath, data)
+	targetPath := filepath.Join(configDir, configTOMLFilename)
+	data, err := MarshalTOML(cfg)
+	if err != nil {
+		return oops.With("path", targetPath).Wrapf(err, "marshal config to TOML")
 	}
-}
-
-// selectConfigWritePath chooses the file SaveConfig rewrites. An explicit
-// cfg.ConfigFile that exists wins; otherwise the same extension preference the
-// loader uses (TOML, then YAML, then JSON). A TOML-only project must never be
-// handed a freshly created config.yaml, which the loader would then shadow.
-func selectConfigWritePath(cfg *Config, configDir string) string {
-	if cfg != nil && cfg.ConfigFile != "" {
-		candidate := filepath.Join(configDir, cfg.ConfigFile)
-		if fileExists(candidate) {
-			return candidate
-		}
-	}
-	for _, name := range []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename} {
-		candidate := filepath.Join(configDir, name)
-		if fileExists(candidate) {
-			return candidate
-		}
-	}
-	return filepath.Join(configDir, configTOMLFilename)
+	return writeConfigAtomically(targetPath, data)
 }
 
 // writeConfigAtomically writes data to path via a temp file + rename. An
@@ -1485,111 +1317,6 @@ func writeConfigAtomically(targetPath string, data []byte) error {
 // never be reused), then synced and renamed over the target.
 func writeFileAtomic(targetPath string, data []byte, perm os.FileMode) error {
 	return gitutil.WriteFileAtomic(targetPath, data, perm) //nolint:wrapcheck // already contextual
-}
-
-// marshalYAMLPreserving marshals a Config to YAML while preserving
-// the original file's field ordering, comments, and formatting.
-// If the original file doesn't exist, falls back to plain marshal.
-func marshalYAMLPreserving(cfg *Config, existingPath string) ([]byte, error) {
-	// Read existing file
-	existingData, readErr := os.ReadFile(existingPath)
-	if readErr != nil {
-		// File doesn't exist yet — plain marshal
-		return yaml.Marshal(cfg)
-	}
-
-	// Parse existing file into a yaml.Node document tree
-	var origDoc yaml.Node
-	if err := yaml.Unmarshal(existingData, &origDoc); err != nil {
-		// Can't parse original — fall back to plain marshal
-		return yaml.Marshal(cfg)
-	}
-
-	// Marshal the new config into a fresh yaml.Node document tree
-	newData, err := yaml.Marshal(cfg)
-	if err != nil {
-		return nil, err
-	}
-	var newDoc yaml.Node
-	if err := yaml.Unmarshal(newData, &newDoc); err != nil {
-		return nil, err
-	}
-
-	// Both documents should have Kind==DocumentNode with one MappingNode child
-	origMapping := getDocumentMapping(&origDoc)
-	newMapping := getDocumentMapping(&newDoc)
-	if origMapping == nil || newMapping == nil {
-		// Unexpected structure — fall back to plain marshal
-		return yaml.Marshal(cfg)
-	}
-
-	// Merge new values into original tree (preserving order/comments)
-	mergeYAMLMappings(origMapping, newMapping)
-
-	// Encode the preserved document back to YAML
-	var buf strings.Builder
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(&origDoc); err != nil {
-		return nil, err
-	}
-	if err := enc.Close(); err != nil {
-		return nil, err
-	}
-
-	return []byte(buf.String()), nil
-}
-
-// getDocumentMapping returns the top-level MappingNode from a DocumentNode.
-func getDocumentMapping(doc *yaml.Node) *yaml.Node {
-	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 && doc.Content[0].Kind == yaml.MappingNode {
-		return doc.Content[0]
-	}
-	if doc.Kind == yaml.MappingNode {
-		return doc
-	}
-	return nil
-}
-
-// mergeYAMLMappings merges new mapping values into orig, preserving orig's
-// key order and comments. Keys present in new but not orig are appended.
-// Keys present in orig but not new are removed.
-func mergeYAMLMappings(orig, updated *yaml.Node) {
-	// Build index of updated keys → value nodes
-	updatedKeys := make(map[string]*yaml.Node)
-	for i := 0; i+1 < len(updated.Content); i += 2 {
-		updatedKeys[updated.Content[i].Value] = updated.Content[i+1]
-	}
-
-	// Update existing keys in orig (preserve key node with its comments)
-	// and track which orig keys still exist in updated
-	kept := make([]*yaml.Node, 0, len(orig.Content))
-	for i := 0; i+1 < len(orig.Content); i += 2 {
-		keyNode := orig.Content[i]
-		origValNode := orig.Content[i+1]
-
-		if updatedValNode, exists := updatedKeys[keyNode.Value]; exists {
-			// Key exists in both: update value, keep original key node (comments preserved)
-			kept = append(kept, keyNode, updatedValNode)
-			// If both values are mappings, recurse to preserve nested comments
-			if origValNode.Kind == yaml.MappingNode && updatedValNode.Kind == yaml.MappingNode {
-				mergeYAMLMappings(origValNode, updatedValNode)
-				kept[len(kept)-1] = origValNode // use the recursively-merged original
-			}
-			delete(updatedKeys, keyNode.Value)
-		}
-		// else: key removed from updated config — drop it
-	}
-
-	// Append keys that are new (not in orig)
-	for i := 0; i+1 < len(updated.Content); i += 2 {
-		keyNode := updated.Content[i]
-		if valNode, stillNew := updatedKeys[keyNode.Value]; stillNew {
-			kept = append(kept, keyNode, valNode)
-		}
-	}
-
-	orig.Content = kept
 }
 
 // fileExists checks if a file exists (utility function for SaveConfig)

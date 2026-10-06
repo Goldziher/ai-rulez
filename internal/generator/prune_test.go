@@ -26,15 +26,15 @@ func narrowingProject(t *testing.T) string {
 	require.NoError(t, os.MkdirAll(keptSkill, 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(droppedSkill, "references"), 0o755))
 
-	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
-		"version: \"4.0\"\n"+
-			"name: narrowing\n"+
-			"presets:\n  - claude\n"+
-			"default: full\n"+
-			"profiles:\n"+
-			"  full:\n    - keep\n    - drop\n"+
-			"  narrow:\n    - keep\n"+
-			"gitignore: false\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"4.0\"\n"+
+			"name = \"narrowing\"\n"+
+			"presets = [\"claude\"]\n"+
+			"default = \"full\"\n"+
+			"gitignore = false\n\n"+
+			"[profiles]\n"+
+			"full = [\"keep\", \"drop\"]\n"+
+			"narrow = [\"keep\"]\n"), 0o644))
 
 	require.NoError(t, os.WriteFile(filepath.Join(keptSkill, "SKILL.md"),
 		[]byte("---\ndescription: keeper\n---\nkeeper body\n"), 0o644))
@@ -119,8 +119,8 @@ func TestGenerator_PruneStaysInsideProject(t *testing.T) {
 	configDir := filepath.Join(tempDir, ".ai-rulez")
 	skillDir := filepath.Join(configDir, "skills", "solo")
 	require.NoError(t, os.MkdirAll(skillDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
-		"version: \"4.0\"\nname: solo\npresets:\n  - claude\ngitignore: false\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"4.0\"\nname = \"solo\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
 		[]byte("---\ndescription: solo\n---\nbody\n"), 0o644))
 

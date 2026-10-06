@@ -36,7 +36,7 @@ func tokensFixtureWith(t *testing.T, edit func(config string) string) *config.Co
 	dir := t.TempDir()
 	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "config", "tokens"), dir)
 	if edit != nil {
-		path := filepath.Join(dir, ".ai-rulez", "config.yaml")
+		path := filepath.Join(dir, ".ai-rulez", "config.toml")
 		original, err := os.ReadFile(path)
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(path, []byte(edit(string(original))), 0o600))
@@ -64,7 +64,7 @@ func tokensReport(t *testing.T, profile string) *TokenReport {
 func tokensReportInline(t *testing.T, profile string) *TokenReport {
 	t.Helper()
 	cfg := tokensFixtureWith(t, func(original string) string {
-		return original + "rules:\n  mode: inline\n"
+		return original + "\n[rules]\nmode = \"inline\"\n"
 	})
 	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
 		Profile: profile,
@@ -204,7 +204,7 @@ func TestTokenReport_DefaultSplitMovesRulesOutOfRootFile(t *testing.T) {
 // rules and context so its cost can be seen and decided about.
 func TestTokenReport_AgentsRosterIsItsOwnSection(t *testing.T) {
 	cfg := tokensFixtureWith(t, func(original string) string {
-		return original + "builtins:\n  - agent-delegation\n"
+		return strings.Replace(original, "\n[profiles]", "builtins = [\"agent-delegation\"]\n\n[profiles]", 1)
 	})
 	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
 		Profile: "backend",
@@ -237,14 +237,14 @@ func TestAgentsRosterExclusion(t *testing.T) {
 	}{
 		{
 			name:       "roster renders when the builtin is loaded",
-			builtins:   "builtins:\n  - agent-delegation\n",
+			builtins:   "builtins = [\"agent-delegation\"]\n",
 			wantRoster: true,
 		},
 		{
 			// A bare "!name" suppresses an auto-included builtin, so this list loads
 			// the other six auto-includes and no agent-delegation.
 			name:       "roster is gone when the builtin is excluded",
-			builtins:   "builtins:\n  - \"!agent-delegation\"\n",
+			builtins:   "builtins = [\"!agent-delegation\"]\n",
 			wantRoster: false,
 		},
 	}
@@ -252,7 +252,7 @@ func TestAgentsRosterExclusion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tokensFixtureWith(t, func(original string) string {
-				return original + tt.builtins
+				return strings.Replace(original, "\n[profiles]", tt.builtins+"\n[profiles]", 1)
 			})
 			outputs, _, err := NewGenerator(cfg).collectOutputs("backend")
 			require.NoError(t, err)

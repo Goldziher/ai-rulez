@@ -109,14 +109,13 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "agent-test"
-description: "Config with agents"
-presets:
-  - claude
-gitignore: false
+	configYAML := `version = "4.0"
+name = "agent-test"
+description = "Config with agents"
+presets = ["claude"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules and agents directories
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -222,14 +221,13 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "warning-test"
-description: "Config with warnings"
-presets:
-  - claude
-gitignore: false
+	configYAML := `version = "4.0"
+name = "warning-test"
+description = "Config with warnings"
+presets = ["claude"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules directory with a minimal priority rule
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -252,12 +250,11 @@ func (s *ValidateCLITestSuite) TestValidateWarnsWhenSkillDescriptionMissing() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "codex-skill-test"
-presets:
-  - codex
+	configYAML := `version = "4.0"
+name = "codex-skill-test"
+presets = ["codex"]
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	skillsDir := filepath.Join(aiRulesDir, "skills", "core-principles")
 	s.NoError(os.MkdirAll(skillsDir, 0o755))

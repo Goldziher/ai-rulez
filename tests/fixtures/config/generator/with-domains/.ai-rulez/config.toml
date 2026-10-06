@@ -1,0 +1,11 @@
+version = "4.0"
+name = "domains-test"
+description = "Test with multiple domains"
+presets = ["claude"]
+default = "backend"
+gitignore = false
+
+[profiles]
+backend = ["backend"]
+frontend = ["frontend"]
+full = ["backend", "frontend"]

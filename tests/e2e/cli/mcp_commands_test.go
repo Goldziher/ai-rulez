@@ -89,14 +89,13 @@ func (s *MCPCommandsCLITestSuite) TestTemplateCounts() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "count-test-project"
-description: "Test counting"
-presets:
-  - claude
-gitignore: false
+	configYAML := `version = "4.0"
+name = "count-test-project"
+description = "Test counting"
+presets = ["claude"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create multiple rules
 	rulesDir := filepath.Join(aiRulesDir, "rules")

@@ -114,8 +114,8 @@ func SetupBasicConfig(t *testing.T, workingDir string) {
 	err := os.MkdirAll(aiRulesDir, 0o755)
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
-	// Create config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", BasicConfigYAML)
+	// Create config.toml
+	WriteFile(t, aiRulesDir, "config.toml", BasicConfigTOML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -144,8 +144,8 @@ func SetupConfigWithMCPServers(t *testing.T, workingDir string) {
 	err := os.MkdirAll(aiRulesDir, 0o755)
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
-	// Create config.yaml (MCP servers are inlined)
-	WriteFile(t, aiRulesDir, "config.yaml", ConfigWithMCPServersYAML)
+	// Create config.toml (MCP servers are inlined)
+	WriteFile(t, aiRulesDir, "config.toml", ConfigWithMCPServersTOML)
 
 	// Create empty rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -162,8 +162,8 @@ func SetupMultiPresetConfig(t *testing.T, workingDir string) {
 	err := os.MkdirAll(aiRulesDir, 0o755)
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
-	// Create config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", ConfigWithMultiplePresetsYAML)
+	// Create config.toml
+	WriteFile(t, aiRulesDir, "config.toml", ConfigWithMultiplePresetsTOML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -183,6 +183,6 @@ func SetupInvalidConfig(t *testing.T, workingDir string) {
 	err := os.MkdirAll(aiRulesDir, 0o755)
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
-	// Create invalid config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", InvalidConfigYAML)
+	// Create invalid config.toml
+	WriteFile(t, aiRulesDir, "config.toml", InvalidConfigTOML)
 }

@@ -28,34 +28,32 @@ func (s *RecursiveGenerateSuite) TearDownSuite() {
 	testutil.CleanupTestBinary()
 }
 
-// writeMinimalConfig writes a `<dir>/.ai-rulez/config.yaml` that produces
+// writeMinimalConfig writes a `<dir>/.ai-rulez/config.toml` that produces
 // a Claude preset output deterministically.
 func (s *RecursiveGenerateSuite) writeMinimalConfig(dir, name string) {
-	cfg := fmt.Sprintf(`version: "4.0"
-name: "%s"
-description: "%s test config"
-presets:
-  - claude
-gitignore: false
+	cfg := fmt.Sprintf(`version = "4.0"
+name = "%s"
+description = "%s test config"
+presets = ["claude"]
+gitignore = false
 `, name, name)
 	aiRulesDir := filepath.Join(dir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", cfg)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", cfg)
 }
 
-// writeConventionConfig writes a `<dir>/.config/ai-rulez/config.yaml` using the
+// writeConventionConfig writes a `<dir>/.config/ai-rulez/config.toml` using the
 // project-level config-dir convention.
 func (s *RecursiveGenerateSuite) writeConventionConfig(dir, name string) {
-	cfg := fmt.Sprintf(`version: "4.0"
-name: "%s"
-description: "%s convention config"
-presets:
-  - claude
-gitignore: false
+	cfg := fmt.Sprintf(`version = "4.0"
+name = "%s"
+description = "%s convention config"
+presets = ["claude"]
+gitignore = false
 `, name, name)
 	convDir := filepath.Join(dir, ".config", "ai-rulez")
 	s.NoError(os.MkdirAll(convDir, 0o755))
-	testutil.WriteFile(s.T(), convDir, "config.yaml", cfg)
+	testutil.WriteFile(s.T(), convDir, "config.toml", cfg)
 }
 
 func (s *RecursiveGenerateSuite) TestGenerateDiscoversConfigConvention() {

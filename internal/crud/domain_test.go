@@ -23,11 +23,12 @@ func setupTestProject(t *testing.T) string {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "domains"), 0o755))
 
 	// Create minimal config.yaml
-	configPath := filepath.Join(aiRulezDir, "config.yaml")
-	configContent := `version: "3.0"
-name: "test-project"
-includes: []
-profiles: {}
+	configPath := filepath.Join(aiRulezDir, "config.toml")
+	configContent := `version = "4.0"
+name = "test-project"
+includes = []
+
+[profiles]
 `
 	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 

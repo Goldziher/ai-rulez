@@ -73,11 +73,6 @@ func TestWatchTargets(t *testing.T) {
 				{Path: filepath.Join(string(filepath.Separator), "opt", "rules")},
 			},
 		},
-		{
-			name: "single-file config beside the project watches only the file",
-			cfg:  &config.Config{BaseDir: base, ConfigDir: base, ConfigFile: "ai-rulez.yaml"},
-			want: []watch.Target{{Path: filepath.Join(base, "ai-rulez.yaml"), File: true}},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

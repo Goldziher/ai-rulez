@@ -184,7 +184,7 @@ func (s *MCPServerE2ETestSuite) TestSkillCRUD_FullCycle() {
 func (s *MCPServerE2ETestSuite) TestInitProject() {
 	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
 	// Remove existing config
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	os.RemoveAll(filepath.Join(s.workingDir, ".ai-rulez"))
 
 	// Initialize project with configuration

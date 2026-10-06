@@ -332,11 +332,8 @@ func runRecursiveGenerate() int {
 
 // configBaseNames lists, in priority order, the file names that mark a
 // `.ai-rulez/` directory as containing a config we should generate from.
-// TOML is preferred; YAML (.yaml/.yml) and JSON are also supported.
 var configBaseNames = [...]string{
 	configFileTOML,
-	configFileYAML, "config.yml",
-	configFileJSON,
 }
 
 // defaultConfigDirName is the directory base name that may contain a config file.

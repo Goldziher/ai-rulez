@@ -15,7 +15,7 @@ var (
 	ErrFileNotFound      = errors.New("file not found")
 	ErrInvalidInclude    = errors.New("invalid include source")
 	ErrInvalidPriority   = errors.New("invalid priority level")
-	ErrConfigNotFound    = errors.New("config.yaml not found")
+	ErrConfigNotFound    = errors.New("config.toml not found")
 )
 
 // ValidationError wraps validation errors with additional context

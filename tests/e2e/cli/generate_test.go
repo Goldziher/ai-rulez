@@ -39,14 +39,13 @@ func (s *GenerateCLITestSuite) TestGenerateWithCustomConfig() {
 	aiRulesDir := filepath.Join(s.workingDir, "custom", ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "custom-project"
-description: "Custom configuration"
-presets:
-  - claude
-gitignore: false
+	configYAML := `version = "4.0"
+name = "custom-project"
+description = "Custom configuration"
+presets = ["claude"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules directory with a rule
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -245,14 +244,13 @@ func (s *GenerateCLITestSuite) TestGenerateWithAgents() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "agent-test-project"
-description: "Project with agents"
-presets:
-  - claude
-gitignore: false
+	configYAML := `version = "4.0"
+name = "agent-test-project"
+description = "Project with agents"
+presets = ["claude"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -289,15 +287,13 @@ func (s *GenerateCLITestSuite) TestGenerateWithTargets() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "multi-preset-project"
-description: "Project with multiple presets"
-presets:
-  - claude
-  - cursor
-gitignore: false
+	configYAML := `version = "4.0"
+name = "multi-preset-project"
+description = "Project with multiple presets"
+presets = ["claude", "cursor"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -370,14 +366,13 @@ func (s *GenerateCLITestSuite) TestGenerateDirectoryOutputs() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "4.0"
-name: "directory-test-project"
-description: "Test directory outputs"
-presets:
-  - cursor
-gitignore: false
+	configYAML := `version = "4.0"
+name = "directory-test-project"
+description = "Test directory outputs"
+presets = ["cursor"]
+gitignore = false
 `
-	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", configYAML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")

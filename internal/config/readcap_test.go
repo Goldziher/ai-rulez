@@ -48,7 +48,7 @@ func TestReadCapped(t *testing.T) {
 func TestOversizedRepositoryFilesAreRefused(t *testing.T) {
 	dir := t.TempDir()
 	big := bigFile(t, dir, "big.md", maxContentFileBytes+1)
-	loaders := map[string]func(string) (*Config, error){"toml": loadConfigTOML, "yaml": loadConfigYAML, "json": loadConfigJSON}
+	loaders := map[string]func(string) (*Config, error){"toml": loadConfigTOML}
 	for ext, load := range loaders {
 		cfg := bigFile(t, dir, "config."+ext, maxContentFileBytes+1)
 		_, err := load(cfg)

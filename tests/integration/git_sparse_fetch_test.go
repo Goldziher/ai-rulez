@@ -75,15 +75,16 @@ func TestIntegration_SparseIncludeFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version: "3.0"
-name: consumer
-presets: [claude]
-includes:
-  - name: shared-rules
-    source: "` + fileURL(repoDir) + `"
-    include: [rules]
+	configYAML := `version = "4.0"
+name = "consumer"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-rules"
+source = "` + fileURL(repoDir) + `"
+include = ["rules"]
 `
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	cfg, err := config.LoadConfig(context.Background(), consumerDir)
 	require.NoError(t, err)
@@ -112,15 +113,16 @@ func TestIntegration_SparseSkillFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version: "3.0"
-name: consumer
-presets: [claude]
-installed_skills:
-  - name: mything
-    source: "` + fileURL(repoDir) + `"
-    path: skills/mything
+	configYAML := `version = "4.0"
+name = "consumer"
+presets = ["claude"]
+
+[[installed_skills]]
+name = "mything"
+source = "` + fileURL(repoDir) + `"
+path = "skills/mything"
 `
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	cfg, err := config.LoadConfig(context.Background(), consumerDir)
 	require.NoError(t, err)
@@ -146,15 +148,16 @@ func TestIntegration_CacheInvalidation(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version: "3.0"
-name: consumer
-presets: [claude]
-includes:
-  - name: shared-invalidation
-    source: "` + fileURL(repoDir) + `"
-    include: [rules]
+	configYAML := `version = "4.0"
+name = "consumer"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-invalidation"
+source = "` + fileURL(repoDir) + `"
+include = ["rules"]
 `
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	// First load — populates cache.
 	cfg1, err := config.LoadConfig(context.Background(), consumerDir)
@@ -204,15 +207,16 @@ func TestIntegration_SkipFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version: "3.0"
-name: consumer
-presets: [claude]
-includes:
-  - name: shared-skipfetch
-    source: "` + fileURL(repoDir) + `"
-    include: [rules]
+	configYAML := `version = "4.0"
+name = "consumer"
+presets = ["claude"]
+
+[[includes]]
+name = "shared-skipfetch"
+source = "` + fileURL(repoDir) + `"
+include = ["rules"]
 `
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(configYAML), 0o644))
 
 	// First load — populates cache.
 	_, err := config.LoadConfig(context.Background(), consumerDir)
