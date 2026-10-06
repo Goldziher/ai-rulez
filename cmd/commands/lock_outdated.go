@@ -122,7 +122,12 @@ func outdatedAt(path string, kind string, names []string) int {
 	for _, n := range names {
 		wanted[n] = true
 	}
-	rows, err := evaluateSources(context.Background(), versionSources(cfg, kind, wanted), lock)
+	srcs := versionSources(cfg, kind, wanted)
+	if err := checkNamesMatched(srcs, wanted); err != nil {
+		fmtError(err)
+		return 1
+	}
+	rows, err := evaluateSources(context.Background(), srcs, lock)
 	if err != nil {
 		fmtError(err)
 		return 1
