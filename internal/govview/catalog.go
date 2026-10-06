@@ -86,13 +86,21 @@ func addCatalogRoles(doc *CatalogDoc, cfg *config.Config, counter tokens.Counter
 }
 
 func BuildCatalog(cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, error) {
+	doc, _, err := buildCatalogCore(cfg, counter, toolVersion)
+	return doc, err
+}
+
+// buildCatalogCore builds the v1 document and returns, parallel to doc.Items,
+// the content file each item was read from (for the v2 fields).
+func buildCatalogCore(cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, []*config.ContentFile, error) {
 	doc := &CatalogDoc{SchemaVersion: CatalogSchemaVersion, Tokenizer: counter.Name(), Items: []CatalogItem{}, Roles: []CatalogRole{}}
+	var files []*config.ContentFile
 
 	membership, roleDelivery := addCatalogRoles(doc, cfg, counter)
 
 	snap, err := Snapshot(cfg, "", true, toolVersion)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	digests := NewDigestIndex(snap.Items)
 
@@ -116,14 +124,15 @@ func BuildCatalog(cfg *config.Config, counter tokens.Counter, toolVersion string
 			differing = nil
 		}
 		doc.Items = append(doc.Items, CatalogItem{Item: measured, Digest: digests.Lookup(item.Kind, item.Domain, item.ID, item.Path), Roles: members, RoleDelivery: differing})
+		files = append(files, item.File)
 	}
 
 	lockStatus, err := catalogLockStatus(cfg, toolVersion)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	doc.Lock = lockStatus
-	return doc, nil
+	return doc, files, nil
 }
 
 // DigestIndex finds the lock digest of a catalog item. The lock disambiguates a
