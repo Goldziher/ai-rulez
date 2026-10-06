@@ -36,9 +36,9 @@ const PromptError = "error"
 const nativeNote = "native measures which skill the harness's model loaded when every competing skill was installed, " +
 	"over repeated runs; a prompt passes at an activation rate of at least 0.8 (positive) or at most 0.2 (negative)"
 
-// RunActivation runs the activation cases of the selected skills on the surface
+// runActivationSurface runs the activation cases of the selected skills on the surface
 // opts names: the offline ranker (the default) or a runner's native run.
-func RunActivation(ctx context.Context, opts *ActivationOptions) (*ActivationReport, error) {
+func runActivationSurface(ctx context.Context, opts *ActivationOptions) (*ActivationReport, error) {
 	switch opts.Surface {
 	case "", SurfaceRetrieval:
 		return RunActivationRetrieval(ctx, opts)
