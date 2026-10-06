@@ -19,3 +19,21 @@ func TestRootModuleDoesNotMentionLiterLLM(t *testing.T) {
 		assert.NotContains(t, strings.ToLower(string(data)), "liter-llm", name)
 	}
 }
+
+// The literllm bridge is a nested module that the -tags literllm build imports by
+// path. A path outside the /v5 module root cannot be resolved by the go.work file.
+func TestLiterLLMBridgeModulePathMatchesImport(t *testing.T) {
+	const want = "github.com/Goldziher/ai-rulez/v5/internal/llm/literllm"
+
+	mod, err := os.ReadFile(filepath.Join("literllm", "go.mod"))
+	require.NoError(t, err)
+	assert.Contains(t, string(mod), "module "+want+"\n")
+
+	src, err := os.ReadFile("native_literllm.go")
+	require.NoError(t, err)
+	assert.Contains(t, string(src), `"`+want+`"`)
+
+	work, err := os.ReadFile(filepath.Join("..", "..", "literllm.work"))
+	require.NoError(t, err)
+	assert.Contains(t, string(work), "./internal/llm/literllm")
+}

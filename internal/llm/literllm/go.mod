@@ -1,4 +1,4 @@
-module github.com/Goldziher/ai-rulez/internal/llm/literllm
+module github.com/Goldziher/ai-rulez/v5/internal/llm/literllm
 
 go 1.27.0
 

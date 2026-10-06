@@ -135,24 +135,17 @@ How it is linked, and why it is not in the default build:
 ### Building a release with it
 
 1. Download the tarball for the target platform and verify it against the `.sha256` sidecar from the same release. Copy only `lib/libliter_llm_ffi.a` into an otherwise empty directory (if a dynamic library sits next to it, `-l` prefers that one).
-2. Write a throwaway `go.work` outside the repository:
-
-   ```text
-   go 1.27.0
-
-   use (
-       /path/to/ai-rulez
-       /path/to/ai-rulez/internal/llm/literllm
-   )
-   ```
+2. The repository ships `literllm.work`, a workspace file that uses both the root module and `internal/llm/literllm`. It is not named `go.work`, so ordinary builds never pick it up; select it with `GOWORK`. `GOWORK=$PWD/literllm.work go list -tags literllm ./internal/llm` checks that the wiring resolves.
 
 3. Build:
 
    ```sh
-   GOWORK=/path/to/go.work CGO_ENABLED=1 \
+   GOWORK=$PWD/literllm.work CGO_ENABLED=1 \
      CGO_LDFLAGS="-L/path/to/static-lib-dir -framework Security -framework CoreFoundation -framework SystemConfiguration -liconv -lresolv" \
      go build -tags literllm -o ai-rulez ./cmd/ai-rulez
    ```
+
+   Without `GOWORK=...` the bridge module is not part of the build and `-tags literllm` fails to resolve its import.
 
 The bridge module's own tests are compiled only with `-tags literllm` (and cgo), so a plain `go test ./...` inside
 `internal/llm/literllm` finds nothing to build or run when the binding or the static library is not available. To run
