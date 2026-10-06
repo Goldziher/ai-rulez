@@ -89,7 +89,11 @@ The new commands follow one contract: `0` success, `1` the command could not run
 input), `2` findings, drift or a failed gate. This applies to `lock --check`, `generate --check`/`--locked`,
 `validate --strict` (including the new `AR9*` families), `verifiers run`, `eval run`, `cost --budget` and
 `tokens --budget`. Scripts that treated every non-zero status alike are unaffected; scripts that
-matched `1` for a drift result need to match `2`.
+matched `1` for a drift result need to match `2`. `lock` adds `3`: the lock was written but served skills were left
+unpinned because the security scan refuses them. When a command covers several roots (`--recursive`, for both
+`generate --check` and `lock`) the most severe code wins: `1` (a tool error), then `2` (drift), then `3`.
+`generate --check` also verifies authored content against an enforced `ai-rulez.lock` (a lock exists and `[lock]
+enforce` is not `false`), not only under `--locked` or `--frozen`.
 
 ## Hooks, validation and the rule registry
 
