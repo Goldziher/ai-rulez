@@ -61,6 +61,31 @@ The log names a skill by id only, so the use of two skills that share an id is l
 notes say so). The overview table gains an Eval and a Uses column when any skill has the data; each item page gets
 an Eval and a Usage table.
 
+## Comparing catalogs
+
+```bash
+ai-rulez catalog diff main                       # a revision against the current project
+ai-rulez catalog diff v5.0.0 HEAD --format json
+ai-rulez catalog diff before.json after.json --exit-code
+```
+
+Prints what was added, removed or changed between two catalogs: items (matched by `ref`; a change lists the fields
+that differ: digest, description, owner, version, path, source, delivery, listing/body/resource tokens, lint status,
+approval status, roles), MCP servers (transport, command, pin status, env and header names), roles, and the lint
+totals. JSON output validates against `schema/catalog-diff.schema.json`.
+
+Each argument is a catalog JSON file (`catalog --format json --schema-version 2`, or a site's `catalog.json`;
+a `schema_version` other than 2 is refused) or a git revision. A revision is read without touching the working
+tree: `git archive` writes the tracked files of the configuration directory at that commit into a temporary
+directory (bounded in file count and size, extracted through a root so nothing lands outside it, symlinks reported
+and skipped) and a catalog is built from it. With one argument the other side is the current project. Both sides are
+built from the shared configuration only: the machine-local overlay is left out, and remote includes and installed
+skills are not resolved (no network), so compare two `catalog.json` files to cover them. Untracked and ignored files
+are not part of a revision.
+
+Exit code `0` unless the command could not run (`1`); `--exit-code` makes it `2` when the catalogs differ. Text output
+escapes control and bidirectional characters from the (possibly third-party) JSON.
+
 ## Static website
 
 ```bash
