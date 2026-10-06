@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/publish-plan.schema.json",
+  "title": "ai-rulez publish plan",
+  "description": "publish-plan.json written by `ai-rulez publish` (and printed by --format json): the artifacts with their digests and the exact argv --execute would run, with the dist directory as working directory. It holds no timestamps and no local paths.",
+  "type": "object",
+  "required": ["schema_version", "name", "version", "preflight", "artifacts", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string" },
+    "version": { "type": "string" },
+    "target": { "const": "github-release" },
+    "tag": { "type": "string" },
+    "repo": { "type": "string" },
+    "preflight": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "enum": ["validate-strict", "lock-check", "verify-plugin", "secret-scan"] },
+          "status": { "const": "ok" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Every dist file except the plan itself, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": ["path", "role", "digest", "size"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["bundle", "manifest", "lock", "notes", "checksums", "emitted"] },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "size": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "upload": { "type": "array", "items": { "type": "string" }, "description": "The artifacts the github-release command uploads." },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["argv", "cwd"],
+        "additionalProperties": false,
+        "properties": {
+          "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "cwd": { "const": "." }
+        }
+      }
+    },
+    "credentials": { "type": "string" }
+  }
+}
