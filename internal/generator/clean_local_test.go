@@ -18,7 +18,7 @@ Authorization = "Bearer HEADER-SECRET-1"
 `
 
 // localOutputs are the files the overlay above makes the claude preset write.
-var localOutputs = []string{".mcp.json", ".claude/settings.json"}
+var localOutputs = []string{".mcp.json"}
 
 func generateWithSecretOverlay(t *testing.T) *driftProject {
 	t.Helper()

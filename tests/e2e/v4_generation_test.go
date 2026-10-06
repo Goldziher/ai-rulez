@@ -156,9 +156,10 @@ func (s *V4GenerationSuite) TestClaude_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, filepath.Join("agents", "backend-architect.md")),
 		"Should generate domain agent file")
 
-	// MCP servers in settings.json (NEW)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".claude", "settings.json")),
-		"Should generate .claude/settings.json with MCP servers")
+	// MCP servers live in .mcp.json (the MCP generator), the file Claude Code reads
+	// project servers from.
+	s.Require().Nil(s.findFile(outputs, filepath.Join(".claude", "settings.json")),
+		"MCP servers are not written to .claude/settings.json")
 
 	// Plugins (NEW)
 	claudePluginFile := s.findFile(outputs, filepath.Join(".claude", "plugins.json"))
@@ -188,16 +189,6 @@ func (s *V4GenerationSuite) TestClaude_Content() {
 	agentFile := s.requireFile(outputs, filepath.Join("agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "name: security-reviewer")
 	s.assertContentContains(agentFile, "description:")
-
-	// MCP settings.json content (NEW)
-	settingsFile := s.requireFile(outputs, filepath.Join(".claude", "settings.json"))
-	var settingsJSON map[string]interface{}
-	err := json.Unmarshal([]byte(settingsFile.Content), &settingsJSON)
-	s.Require().NoError(err, "settings.json should be valid JSON")
-	mcpServers, ok := settingsJSON["mcpServers"].(map[string]interface{})
-	s.Require().True(ok, "settings.json should have mcpServers key")
-	s.Assert().Contains(mcpServers, "test-mcp-server", "Should include test-mcp-server")
-	s.Assert().Contains(mcpServers, "http-mcp-server", "Should include http-mcp-server")
 
 	// Plugins content (NEW)
 	pluginsFile := s.requireFile(outputs, filepath.Join(".claude", "plugins.json"))
@@ -398,9 +389,9 @@ func (s *V4GenerationSuite) TestGemini_Content() {
 	settingsFile := s.requireFile(outputs, filepath.Join(".gemini", "settings.json"))
 	var settingsJSON map[string]interface{}
 	err := json.Unmarshal([]byte(settingsFile.Content), &settingsJSON)
-	s.Require().NoError(err, "settings.json should be valid JSON")
+	s.Require().NoError(err, ".mcp.json should be valid JSON")
 	mcpServers, ok := settingsJSON["mcpServers"].(map[string]interface{})
-	s.Require().True(ok, "settings.json should have mcpServers key")
+	s.Require().True(ok, ".mcp.json should have mcpServers key")
 	s.Assert().Contains(mcpServers, "test-mcp-server",
 		"Should include user-configured MCP servers, not just hardcoded ai-rulez")
 
@@ -638,9 +629,9 @@ func (s *V4GenerationSuite) TestAntigravity_Content() {
 	settingsFile := s.requireFile(outputs, filepath.Join(".agents", "mcp_config.json"))
 	var settingsJSON map[string]interface{}
 	err := json.Unmarshal([]byte(settingsFile.Content), &settingsJSON)
-	s.Require().NoError(err, "settings.json should be valid JSON")
+	s.Require().NoError(err, ".mcp.json should be valid JSON")
 	mcpServers, ok := settingsJSON["mcpServers"].(map[string]interface{})
-	s.Require().True(ok, "settings.json should have mcpServers key")
+	s.Require().True(ok, ".mcp.json should have mcpServers key")
 	s.Assert().Contains(mcpServers, "test-mcp-server",
 		"Should include user-configured MCP servers, not just hardcoded ai-rulez")
 }

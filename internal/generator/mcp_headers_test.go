@@ -63,7 +63,6 @@ func TestGenerator_MCPHeaders_RenderedForRemoteServers(t *testing.T) {
 		path []string
 	}{
 		{".mcp.json", []string{"mcpServers", "remote", "headers"}},
-		{".claude/settings.json", []string{"mcpServers", "remote", "headers"}},
 		{".gemini/settings.json", []string{"mcpServers", "remote", "headers"}},
 		{".agents/mcp_config.json", []string{"mcpServers", "remote", "headers"}},
 		{"opencode.json", []string{"mcp", "remote", "headers"}},

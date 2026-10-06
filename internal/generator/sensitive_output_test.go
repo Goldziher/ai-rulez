@@ -24,7 +24,7 @@ func TestGenerator_OutputsCarryingMCPSecretsAreOwnerOnly(t *testing.T) {
 		{"fresh files", 0},
 		{"existing world-readable files are tightened", 0o644},
 	}
-	secretFiles := []string{".mcp.json", ".claude/settings.json", ".gemini/settings.json", "opencode.json"}
+	secretFiles := []string{".mcp.json", ".gemini/settings.json", "opencode.json"}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange

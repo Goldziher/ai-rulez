@@ -397,9 +397,10 @@ func TestClaude_CLAUDEMD_InlinesContext(t *testing.T) {
 	assert.NotContains(t, claudeMD.Content, "@context/local-context.md", "local context must inline, not reference")
 }
 
-// TestClaude_SettingsJSON covers the MCP-servers-aware settings.json sidecar
-// (legacy renderSettingsJSON test).
-func TestClaude_SettingsJSON(t *testing.T) {
+// TestClaude_MCPServersAreNotWrittenToSettingsJSON: Claude Code reads project MCP
+// servers from .mcp.json; a mcpServers key in settings.json is not a documented
+// source and would carry resolved env values into a file teams commit.
+func TestClaude_MCPServersAreNotWrittenToSettingsJSON(t *testing.T) {
 	t.Parallel()
 
 	gen := claudeGen(t)
@@ -407,37 +408,14 @@ func TestClaude_SettingsJSON(t *testing.T) {
 		Name: "test",
 		MCPServers: map[string]*config.MCPServer{
 			"test-server": {Command: "npx", Args: []string{"-y", "test-server"}, Env: map[string]string{"KEY": "val"}},
-			"http-server": {Command: "python", Transport: "http", URL: "http://localhost:8080"},
 		},
 	}
 	outputs, err := gen.Generate(&config.ContentTree{}, "/test", cfg)
 	require.NoError(t, err)
 
-	settings := requireFile(t, outputs, filepath.Join(".claude", "settings.json"))
-	assert.Contains(t, settings.Content, "test-server")
-	assert.Contains(t, settings.Content, "http-server")
-	assert.Contains(t, settings.Content, "mcpServers")
-	assert.Contains(t, settings.Content, "npx")
-	assert.Contains(t, settings.Content, "http://localhost:8080")
-
-	var parsed map[string]any
-	require.NoError(t, json.Unmarshal([]byte(settings.Content), &parsed))
-	servers := parsed["mcpServers"].(map[string]any)
-	assert.Len(t, servers, 2)
-
-	// Remote (http/sse) servers must use Claude Code's `type` key, carry no
-	// command, and must not emit the `transport` key. See
-	// https://code.claude.com/docs/en/mcp.
-	httpEntry := servers["http-server"].(map[string]any)
-	assert.Equal(t, "http", httpEntry["type"], "remote server must use the `type` key")
-	assert.Equal(t, "http://localhost:8080", httpEntry["url"])
-	assert.NotContains(t, httpEntry, "transport", "must not emit `transport`; Claude Code keys on `type`")
-	assert.NotContains(t, httpEntry, "command", "remote server must not carry a command")
-
-	// stdio servers are unchanged: command-based, no `type` key.
-	stdioEntry := servers["test-server"].(map[string]any)
-	assert.Equal(t, "npx", stdioEntry["command"], "stdio server keeps its command")
-	assert.NotContains(t, stdioEntry, "type", "stdio server must not emit a `type` key")
+	for _, o := range outputs {
+		assert.False(t, strings.HasSuffix(filepath.ToSlash(o.Path), ".claude/settings.json"), "unexpected %s", o.Path)
+	}
 }
 
 // TestClaude_PluginsJSON covers the plugins-aware plugins.json sidecar

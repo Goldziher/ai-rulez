@@ -350,9 +350,10 @@ const (
 	// PredicateHasResolvedEffortOrMCPServers holds when the config has MCP servers
 	// or a resolved global effort (.amp/settings.json carries both).
 	PredicateHasResolvedEffortOrMCPServers = "has_resolved_effort_or_mcp_servers"
-	// PredicateHasClaudeSettings holds when the config has MCP servers, manages
-	// the plugin keys of .claude/settings.json, or declares [[hooks]],
-	// [permissions] or [claude.settings.managed].
+	// PredicateHasClaudeSettings holds when the config manages the plugin keys of
+	// .claude/settings.json, or declares [[hooks]], [permissions] or
+	// [claude.settings.managed]. MCP servers do not count: Claude Code reads them
+	// from .mcp.json.
 	PredicateHasClaudeSettings = "has_claude_settings"
 
 	// PredicateHasHooks holds when the config declares top-level [[hooks]].
