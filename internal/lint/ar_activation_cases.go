@@ -31,15 +31,15 @@ const (
 
 func init() {
 	registerRules(
-		RuleInfo{CodeActivationPolicyConflict, "activation-policy-conflict", SeverityWarning, "an eval case expects a skill to trigger although the skill's frontmatter stops the model from invoking it (disable-model-invocation: true or allow_implicit_invocation: false)"},
+		RuleInfo{CodeActivationPolicyConflict, "activation-policy-conflict", SeverityWarning, "an eval case contradicts the skill's invocation policy: it expects a trigger although the frontmatter stops the model from invoking the skill, or expects none for a skill only ever started explicitly (disable-model-invocation: true or allow_implicit_invocation: false)"},
 		RuleInfo{CodeActivationPromptNames, "activation-prompt-names-skill", SeverityOff, "a positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill (off by default; enable it in [lint.severity])"},
 		RuleInfo{CodeEvalImportUnmapped, "eval-import-unmapped", SeverityInfo, "fields of an imported eval scenario that have no counterpart in the case format (reported by `ai-rulez eval import`, never by `validate`)"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodeActivationPolicyConflict: {
-			Why:  "A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes.",
-			Bad:  "A case with `expect_trigger: true` for a skill with `disable-model-invocation: true`",
-			Good: "Drop the case (or make it a negative one), or allow model invocation in the skill",
+			Why:  "A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes. A case that expects no trigger for such a skill can never fail, so it pads the pass rate.",
+			Bad:  "A case with `expect_trigger: true`, or `false`, for a skill with `disable-model-invocation: true`",
+			Good: "Drop the case, or allow model invocation in the skill",
 		},
 		CodeActivationPromptNames: {
 			Why:  "A prompt that names the skill (\"use deploy-staging to ...\") fires it by explicit invocation. The activation rate then measures that the model can follow a name, not that the description makes it choose the skill.",
@@ -59,7 +59,8 @@ func init() {
 }
 
 // checkActivationCases reads the skill's authored eval cases against its
-// frontmatter: AR9A3 for a positive case the skill's invocation policy rules out,
+// frontmatter: AR9A3 for a positive case the skill's invocation policy rules out
+// (it can never pass) and for a negative one it makes vacuous (it can never fail),
 // AR9A4 for a positive prompt that names the skill. Cases that do not load are
 // AR996's business.
 func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
@@ -85,11 +86,15 @@ func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
 	names := skillNameMatcher(id, it.cf)
 	for i := range cases {
 		c := &cases[i]
+		if conflictOn && why != "" {
+			if c.Expects() {
+				r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects a trigger (expect_trigger: true), but the skill sets %s, so the model never starts it and the case can never pass", id, c.ID, why)
+			} else {
+				r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects no trigger, but the skill sets %s and is only ever started explicitly, so the case can never fail and measures nothing", id, c.ID, why)
+			}
+		}
 		if !c.Expects() {
 			continue
-		}
-		if conflictOn && why != "" {
-			r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects a trigger (expect_trigger: true), but the skill sets %s, so the model never starts it and the case can never pass", id, c.ID, why)
 		}
 		if namesOn && names != nil && names.MatchString(c.Prompt) {
 			r.add(CodeActivationPromptNames, c.File, c.Line, "skill %q: the prompt of case %q names the skill, so it tests an explicit invocation, not whether the model chooses it", id, c.ID)
