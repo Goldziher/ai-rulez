@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -301,21 +303,21 @@ func TestCodexNative_RunsThroughTheStartHookAndStopsEarly(t *testing.T) {
 	var gotArgs []string
 	var gotEnv []string
 	var skillFile bool
-	adapter := &CodexNative{Concurrency: 1, Start: func(_ context.Context, proc CodexProcess, onLine func([]byte) bool) error {
+	adapter := &CodexNative{Concurrency: 1, Runner: lineFake(func(spec runner.Spec, onLine runner.LineFunc) runner.Result {
 		mu.Lock()
 		defer mu.Unlock()
-		gotArgs, gotEnv = proc.Args, proc.Env
-		_, err := os.Stat(filepath.Join(proc.Dir, ".agents", "skills", "release-notes", "SKILL.md"))
+		gotArgs, gotEnv = spec.Argv[1:], spec.Env
+		_, err := os.Stat(filepath.Join(spec.Dir, ".agents", "skills", "release-notes", "SKILL.md"))
 		skillFile = err == nil
-		assert.Equal(t, "deploy it", string(proc.Stdin))
+		assert.Equal(t, "deploy it", string(spec.Stdin))
 		for _, l := range strings.Split(strings.TrimSpace(codexSkillRead), "\n") {
 			if onLine([]byte(l)) {
 				stoppedEarly++
-				return nil
+				return runner.Result{Status: runner.StatusOK}
 			}
 		}
-		return nil
-	}}
+		return runner.Result{Status: runner.StatusOK}
+	}), Env: ambient.MapEnv{Vars: map[string]string{"PATH": "/usr/bin", "CODEX_HOME": "/codex-login", "AWS_SECRET_ACCESS_KEY": "s3cret", "GITHUB_TOKEN": "t"}, Home: "/users/me"}}
 
 	// Act
 	resp, err := adapter.Run(context.Background(), req)
@@ -340,6 +342,46 @@ func TestCodexNative_RunsThroughTheStartHookAndStopsEarly(t *testing.T) {
 	assert.NotEqual(t, os.Getenv("HOME"), home, "the model's shell does not see the real home")
 	assert.NoError(t, RequireSurface(context.Background(), adapter, CapabilityActivation, SurfaceNative))
 	assert.Equal(t, RunnerCodexNative, adapter.Name())
+	assert.Contains(t, gotEnv, "CODEX_HOME=/codex-login", "the login directory is kept")
+	assert.Contains(t, gotEnv, "PATH=/usr/bin")
+	for _, kv := range gotEnv {
+		assert.NotContains(t, kv, "s3cret", "credentials of the parent environment never reach the harness")
+		assert.NotContains(t, kv, "GITHUB_TOKEN")
+	}
+}
+
+// lineFake is a runner.LineRunner that answers from a function.
+type lineFake func(spec runner.Spec, onLine runner.LineFunc) runner.Result
+
+func (lineFake) Run(_ context.Context, spec runner.Spec) runner.Result {
+	return runner.Result{Status: runner.StatusUnavailable, ExitCode: -1, Err: &runner.DeniedError{Argv: spec.Argv}}
+}
+
+func (f lineFake) RunLines(_ context.Context, spec runner.Spec, onLine runner.LineFunc) runner.Result {
+	return f(spec, onLine)
+}
+
+func TestCodexNative_NeedsARunnerThatCanStream(t *testing.T) {
+	req := activationRequest(t, 1, "x")
+	req.Harness = "codex"
+	buffered := runner.Func(func(context.Context, runner.Spec) runner.Result { return runner.Result{} })
+
+	_, err := (&CodexNative{Runner: buffered}).Run(context.Background(), req)
+
+	assert.ErrorContains(t, err, "can stream output")
+}
+
+func TestCodexNative_ACodexThatDiesWithoutEventsIsAnErrorResult(t *testing.T) {
+	req := activationRequest(t, 1, "x")
+	req.Harness = "codex"
+	dead := lineFake(func(runner.Spec, runner.LineFunc) runner.Result {
+		return runner.Result{Status: runner.StatusUnavailable, Err: assert.AnError}
+	})
+
+	resp, err := (&CodexNative{Runner: dead}).Run(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.Contains(t, resp.Results[0].Error, "codex produced no events")
 }
 
 func TestCodexNative_RefusesAnotherHarness(t *testing.T) {
