@@ -264,6 +264,23 @@ func TestLoadReportsSymlinks(t *testing.T) {
 	assert.Len(t, b.Concepts, 1)
 }
 
+func TestLoadDoesNotFollowSymlinkedDirectories(t *testing.T) {
+	// Arrange
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(outside+"/secret.md", []byte("---\ntype: X\n---\n"), 0o644))
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(dir+"/real.md", []byte("---\ntype: X\n---\n"), 0o644))
+	require.NoError(t, os.Symlink(outside, dir+"/linked"))
+	// Act
+	b, err := Load(os.DirFS(dir))
+	// Assert
+	require.NoError(t, err)
+	assert.Len(t, b.Concepts, 1)
+	assert.NotContains(t, b.Files, "linked/secret.md")
+	require.Len(t, b.Problems, 1)
+	assert.Equal(t, "linked", b.Problems[0].Path)
+}
+
 func FuzzSplitFrontmatter(f *testing.F) {
 	for _, s := range []string{"", "---\n", "---\ntype: a\n---\nx", "---\r\n---\r\n", "\xef\xbb\xbf---\na: b\n---"} {
 		f.Add([]byte(s))
