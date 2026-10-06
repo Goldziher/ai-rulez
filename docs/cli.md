@@ -2231,7 +2231,7 @@ Runs `validate --strict`, `lock --check`, `verify --plugin` and a secret scan, t
 `<name>-<version>.tar.gz`, its manifest, `SHA256SUMS`, a copy of `ai-rulez.lock`, `RELEASE_NOTES.md` and
 `publish-plan.json` to `--dist`. `--dry-run` writes nothing. Only `--execute --yes` leaves the machine, by running the
 `gh` argv shown in the plan. `publish verify` recomputes every digest of a dist directory offline. Exit codes: 0 done,
-1 could not complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N5`. See [Publish](publish.md).
+1 could not complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](publish.md).
 
 ## Scan Command
 
