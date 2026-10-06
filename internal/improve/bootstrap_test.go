@@ -1,11 +1,15 @@
 package improve
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 func pairs(n, wins, losses int) []PairRow {
@@ -131,4 +135,49 @@ func outcomesOf(rows []PairRow) (base, cand []CaseOutcome) {
 		cand = append(cand, CaseOutcome{Case: r.Case, Pass: r.Cand, Triggered: true, Expect: true})
 	}
 	return base, cand
+}
+
+func TestBootstrapGain_UnstableRowsAreNeitherWinsNorLosses(t *testing.T) {
+	// Arrange: ten cases whose only pass-to-fail flips are unstable, so a "gain" there is run-to-run noise.
+	rows := pairs(10, 10, 0)
+	for i := range rows {
+		rows[i].Unstable = true
+	}
+
+	// Act
+	ci := BootstrapGain(rows, 2000)
+
+	// Assert: the interval is exactly zero, as for no change, instead of claiming a clear gain.
+	require.NotNil(t, ci)
+	assert.InDelta(t, 0.0, ci.Low, 1e-9)
+	assert.InDelta(t, 0.0, ci.High, 1e-9)
+}
+
+func TestExecute_UnderpoweredWarningOnlyForAnAcceptedRound(t *testing.T) {
+	// Arrange: a candidate nothing improves (rejected), and one that wins (accepted) on a 3-case held-out set.
+	tests := []struct {
+		name     string
+		appended string
+		warns    bool
+	}{
+		{"rejected round", "\nno effect\n", false},
+		{"accepted round", "\nGOOD advice.\n", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, configDir := project(t)
+			opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) { appendSkill(t, dir, tt.appended) })
+			o := baseOptions(root, configDir, goodEval(), opt)
+			o.MaxRounds = 1
+			plan := mustPrepare(t, &o)
+
+			// Act
+			report, err := plan.Execute(context.Background())
+
+			// Assert
+			require.NoError(t, err)
+			require.Len(t, report.Rounds, 1)
+			assert.Equal(t, tt.warns, strings.Contains(strings.Join(report.Rounds[0].Warnings, ";"), CodeUnderpowered), "%v", report.Rounds[0].Warnings)
+		})
+	}
 }
