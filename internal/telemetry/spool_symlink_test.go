@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,8 +19,8 @@ func TestSpool_SymlinkedFilesAreNotFollowed(t *testing.T) {
 	require.NoError(t, os.WriteFile(target, []byte(`{"event_id":"leak","name":"item"}`+"\n"), 0o600))
 	s := &Spool{Dir: filepath.Join(dir, "local")}
 	require.NoError(t, os.MkdirAll(s.Dir, 0o750))
-	require.NoError(t, os.Symlink(target, s.outbox()))
-	require.NoError(t, os.Symlink(target, s.statePath()))
+	testutil.SymlinkOrSkip(t, target, s.outbox())
+	testutil.SymlinkOrSkip(t, target, s.statePath())
 
 	// Act
 	events, _, pendingErr := s.Pending()

@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const stagedSkill = "---\nname: deploy\ndescription: Use when deploying the service to production.\n---\n# Deploy\n\nRun the script.\n"
@@ -250,9 +252,7 @@ func TestStagedExcludesSymlinkedContent(t *testing.T) {
 	script := `MSG="$(grep -rl TOPSECRET . | wc -l | tr -d ' ') hits"` + "\n" + sarifMessage
 	p := newScannerProject(t, script, "egress = false\ninputs = [\"skills\"]\n", nil)
 	link := filepath.Join(p.root, ".ai-rulez/skills/deploy/references/link.txt")
-	if err := os.Symlink(secret, link); err != nil {
-		t.Skip("symlinks not available")
-	}
+	testutil.SymlinkOrSkip(t, secret, link)
 	// Act
 	got := ofCode(p.run(Options{}), CodeExternalFinding)
 	// Assert

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +16,7 @@ func TestReadLogs_RefuseSymlinks(t *testing.T) {
 	target := filepath.Join(dir, "target.jsonl")
 	require.NoError(t, os.WriteFile(target, []byte("{}\n"), 0o600))
 	link := filepath.Join(dir, "usage.jsonl")
-	require.NoError(t, os.Symlink(target, link))
+	testutil.SymlinkOrSkip(t, target, link)
 
 	// Act
 	_, _, logErr := ReadLog(link)
