@@ -25,7 +25,7 @@ func resetCatalogFlags(t *testing.T) {
 		catalogFormat, catalogSchemaFlag, catalogHTMLDir, catalogRole = "", govview.CatalogSchemaVersion, "", ""
 		catalogExcerpt, catalogExcerptSet, catalogIndexable, catalogClean = true, false, false, false
 		catalogTitle, catalogAllowFindings = "", nil
-		catalogWithEval, catalogWithUsage = "", ""
+		catalogWithEval, catalogWithUsage, catalogCheck = "", "", false
 	})
 	catalogExcerpt = true
 }
