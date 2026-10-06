@@ -64,6 +64,9 @@ func UserScanCache(configDir string) *ScanCache {
 	if err != nil {
 		abs = configDir
 	}
+	if real, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		abs = real // /var and /private/var name one project
+	}
 	sum := sha256.Sum256([]byte(filepath.Clean(abs)))
 	dir, err := config.CacheDir("scan", hex.EncodeToString(sum[:8]))
 	if err != nil {
