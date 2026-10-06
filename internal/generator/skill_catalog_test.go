@@ -132,6 +132,8 @@ func TestApplyIncludeOrigin(t *testing.T) {
 	cfg := &config.Config{BaseDir: base, Includes: []config.IncludeConfig{
 		{Name: "team", Source: "https://github.com/acme/rules.git"},
 		{Name: "local", Source: "../shared"},
+		{Name: "inproj", Source: "./shared"},
+		{Name: "whole", Source: "."},
 	}}
 	tests := []struct {
 		name         string
@@ -139,7 +141,8 @@ func TestApplyIncludeOrigin(t *testing.T) {
 		wantImported bool
 		wantSource   string
 	}{
-		{"authored skill", filepath.Join(base, ".ai-rulez", "skills", "a", "SKILL.md"), false, ""},
+		{"authored skill even with an include rooted at the project", filepath.Join(base, ".ai-rulez", "skills", "a", "SKILL.md"), false, ""},
+		{"local include inside the project", filepath.Join(base, "shared", ".ai-rulez", "skills", "b", "SKILL.md"), true, "include:inproj/skills/b/SKILL.md"},
 		{"git include root skill", filepath.Join(cache, ".ai-rulez", "skills", "a", "SKILL.md"), true, "include:team/skills/a/SKILL.md"},
 		{"git include domain skill", filepath.Join(cache, ".ai-rulez", "domains", "d", "skills", "a", "SKILL.md"), true, "include:team/domains/d/skills/a/SKILL.md"},
 		{"local include outside the project", filepath.Join(filepath.Dir(base), "shared", ".ai-rulez", "skills", "b", "SKILL.md"), true, "include:local/skills/b/SKILL.md"},

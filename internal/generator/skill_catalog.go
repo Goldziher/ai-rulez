@@ -225,19 +225,31 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 	return owners
 }
 
-// applyIncludeOrigin marks a skill whose file lies outside the project root as
-// imported and, when an [[includes]] entry supplied it, records the include and
-// replaces the machine-dependent path with include:<name>/<path in the include>.
+// applyIncludeOrigin marks a skill that an [[includes]] entry supplied as
+// imported, records the include and replaces the machine-dependent path with
+// include:<name>/<path in the include>. Location does not matter: a local
+// include inside the project (source = "./shared") is as foreign as a git
+// clone. A file outside the project that no include claims is still imported.
 func applyIncludeOrigin(cfg *config.Config, lock *lockfile.File, p string, o *skillOwner) {
-	if p == "" || cfg.BaseDir == "" || !filepath.IsAbs(p) || !outsideRoot(cfg.BaseDir, p) {
+	if p == "" || cfg.BaseDir == "" || !filepath.IsAbs(p) {
 		return
 	}
-	o.imported = true
+	inProject := !outsideRoot(cfg.BaseDir, p)
+	authoredDir := cfg.ConfigDir
+	if authoredDir == "" {
+		authoredDir = filepath.Join(cfg.BaseDir, ".ai-rulez")
+	}
 	for i := range cfg.Includes {
 		inc := &cfg.Includes[i]
 		if !inIncludeRoot(cfg.BaseDir, inc, p) {
 			continue
 		}
+		// An include rooted at (or above) the config directory would claim the
+		// project's own skills; that is not an import.
+		if inProject && includeContains(cfg.BaseDir, inc, authoredDir) {
+			continue
+		}
+		o.imported = true
 		o.include = inc.Name
 		o.source = "include:" + inc.Name + "/" + includeRelPath(p)
 		if lock != nil {
@@ -247,6 +259,14 @@ func applyIncludeOrigin(cfg *config.Config, lock *lockfile.File, p string, o *sk
 		}
 		return
 	}
+	if !inProject {
+		o.imported = true
+	}
+}
+
+// includeContains reports whether the directory dir lies inside inc's root.
+func includeContains(baseDir string, inc *config.IncludeConfig, dir string) bool {
+	return inIncludeRoot(baseDir, inc, filepath.Join(dir, "x"))
 }
 
 func outsideRoot(baseDir, p string) bool {
