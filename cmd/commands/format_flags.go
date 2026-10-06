@@ -57,6 +57,12 @@ func addJSONAlias(fs *pflag.FlagSet, asJSON *bool, short string) {
 	_ = fs.MarkDeprecated("json", "use --format json") //nolint:errcheck // the flag was just registered
 }
 
+// addJSONFlagAlias adds the hidden --json alias to a command that already has
+// --format with a json value; normalizeFormatFlags maps it onto --format json.
+func addJSONFlagAlias(fs *pflag.FlagSet) {
+	addJSONAlias(fs, new(bool), "")
+}
+
 // addJSONFormat gives a command that only had --json the standard --format text|json
 // and keeps --json as the alias. The command keeps reading asJSON.
 func addJSONFormat(fs *pflag.FlagSet, asJSON *bool, short string) {

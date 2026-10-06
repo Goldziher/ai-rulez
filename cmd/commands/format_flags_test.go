@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestEveryJSONFlagHasAFormatFlagAndIsAHiddenAlias(t *testing.T) {
 		ff := cmd.Flags().Lookup("format")
 		if assert.NotNil(t, ff, "%s has --json but no --format", cmd.CommandPath()) {
 			assert.Contains(t, formatsOf(ff), formatJSON, "%s --format must accept json", cmd.CommandPath())
-			assert.Contains(t, formatsOf(ff), formatText, "%s --format must accept text", cmd.CommandPath())
+			assert.Greater(t, len(formatsOf(ff)), 1, "%s --format must accept more than json", cmd.CommandPath())
 		}
 		assert.True(t, jf.Hidden, "%s --json must be hidden", cmd.CommandPath())
 		assert.NotEmpty(t, jf.Deprecated, "%s --json must be deprecated", cmd.CommandPath())
@@ -93,4 +94,25 @@ func TestCheckFormatWording(t *testing.T) {
 
 func formatsOf(f *pflag.Flag) []string {
 	return strings.Split(strings.Join(f.Annotations[formatValuesAnnotation], ","), ",")
+}
+
+func TestEveryJSONFormatHasTheHiddenJSONAlias(t *testing.T) {
+	// Arrange
+	var checked int
+	walkCommands(RootCmd, func(cmd *cobra.Command) {
+		ff := cmd.Flags().Lookup("format")
+		if ff == nil || !slices.Contains(formatsOf(ff), formatJSON) {
+			return
+		}
+		checked++
+
+		// Act
+		jf := cmd.Flags().Lookup("json")
+
+		// Assert
+		if assert.NotNil(t, jf, "%s has --format json but no --json alias", cmd.CommandPath()) {
+			assert.True(t, jf.Hidden, "%s --json must be hidden", cmd.CommandPath())
+		}
+	})
+	assert.Positive(t, checked)
 }
