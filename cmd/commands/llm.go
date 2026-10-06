@@ -36,7 +36,7 @@ ai-rulez never calls a model unless [llm] allow_network = true. See docs/llm.md.
 
 var llmDoctorCmd = &cobra.Command{
 	Use:   "doctor [config-file]",
-	Short: "Print the resolved LLM setup; --ping makes one 1-token call",
+	Short: "Print the resolved LLM setup, optionally with one 1-token call",
 	Long: `Print the resolved backend, model, base_url host (never the key), whether the key
 variable is set (never its value), whether network use is allowed, and the cache directory.
 Environment overrides (AI_RULEZ_LLM_*) are applied.

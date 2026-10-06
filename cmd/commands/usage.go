@@ -142,7 +142,7 @@ func runUsageRecord(in io.Reader) error {
 
 var usageExportCmd = &cobra.Command{
 	Use:   "export [path]",
-	Short: "Write the usage log as an OTLP JSON file (--to file)",
+	Short: "Write the usage log as an OTLP JSON file",
 	Long: `Write the events of the usage log to a file, one OTLP logs request per line, the format the
 OpenTelemetry Collector's otlpjsonfile receiver reads. Nothing is sent over a network, and the
 file needs no consent: it is a local copy you move yourself.
