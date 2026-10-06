@@ -37,6 +37,13 @@ type reader struct {
 
 func newReader(fsys fs.FS) *reader { return &reader{fsys: fsys} }
 
+// executable reports whether a source file has an execute bit. A file that
+// cannot be inspected is not executable (and was read, or refused, already).
+func (r *reader) executable(p string) bool {
+	info, err := fs.Stat(r.fsys, p)
+	return err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o111 != 0
+}
+
 // note records why a path was not read. Absence is not recorded.
 func (r *reader) note(p string, err error) {
 	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
