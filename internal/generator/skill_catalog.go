@@ -114,6 +114,9 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 	}
 	sub := NewGenerator(&cfg)
 	sub.role = g.role // g.config already carries the role's delivery and overrides
+	// Served skills never carry MCP settings: an unset ${VAR} of an MCP server
+	// is no reason to refuse to serve (or to pin) a skill.
+	sub.lenientMCP = true
 
 	sub.mu.Lock()
 	defer sub.mu.Unlock()
