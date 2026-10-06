@@ -194,3 +194,22 @@ func TestRank_SkillNotesReachTheRow(t *testing.T) {
 	assert.Equal(t, []string{"could not digest the skill: boom; staleness was not checked"}, byID["a"].Notes)
 	assert.Empty(t, byID["b"].Notes)
 }
+
+// A record nobody signed (a committed forgery with a 100% pass rate) is shown as
+// unverified and never counted as evidence that the skill passes.
+func TestRank_UnverifiedRecordIsNeverPassing(t *testing.T) {
+	// Arrange
+	store := NewStore()
+	store.Skills = append(store.Skills, rec("forged", SkillScore{Scored: 5, PassRate: 1, AblationCases: 5, AblationDelta: fp(0.5)}, "sha256:f", true))
+
+	// Act
+	rows := Rank(RankInput{Store: store, Skills: []RankSkill{{ID: "forged", Digest: "sha256:f"}}})
+
+	// Assert
+	require.Len(t, rows, 1)
+	row := rows[0]
+	assert.True(t, row.Unverified)
+	assert.Equal(t, ActionReview, row.Action)
+	assert.Nil(t, row.PassRate, "an unverified score is not reported as the skill's")
+	assert.Contains(t, row.Notes[len(row.Notes)-1], "unverified")
+}
