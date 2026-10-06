@@ -45,7 +45,7 @@ var namedListKeys = map[string]bool{
 var mapValuedKeys = map[string]bool{
 	docKeyProfiles: true, docKeyHeader: true, docKeyDefaults: true, string(PresetMCP): true,
 	"plugin": true, "marketplace": true, "placement": true, "claude": true, rulesDir: true, "lint": true,
-	"permissions": true, "role_manifest": true, "lock": true, "llm": true,
+	"permissions": true, "guard": true, "role_manifest": true, "lock": true, "llm": true,
 }
 
 // knownConfigDocKeys returns the TOML keys of Config (plus "schema").

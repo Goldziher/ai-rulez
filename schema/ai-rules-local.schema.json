@@ -371,6 +371,31 @@
       "description": "Whether to automatically update .gitignore with generated output patterns (defaults to true)",
       "type": "boolean"
     },
+    "guard": {
+      "additionalProperties": false,
+      "description": "Built-in generated-file guard. With generated = true, generation adds a PreToolUse hook that runs `ai-rulez guard` and blocks an agent's edit to a file ai-rulez generated, telling it to edit the source under .ai-rulez/ instead. Written only for harnesses with a documented blocking PreToolUse hook (claude, codex, gemini, cursor, factory). A separate table because `[hooks]` cannot coexist with the `[[hooks]]` array.",
+      "properties": {
+        "command": {
+          "description": "Replace the whole launch command (executable followed by its arguments, without the trailing \"guard\"), for example [\"ai-rulez\"] for a locally installed binary. Mutually exclusive with version; requires generated = true.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "generated": {
+          "default": false,
+          "description": "Add the guard hook.",
+          "type": "boolean"
+        },
+        "version": {
+          "description": "Pin the ai-rulez version the hook runs through npx. Defaults to the version of the binary that runs generate, or \"latest\" for a dev build. Requires generated = true.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "header": {
       "additionalProperties": false,
       "description": "Header style configuration for generated files",
