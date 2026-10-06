@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
@@ -470,4 +471,40 @@ func TestZooCodeAllowEqualToADenyPrefixIsDropped(t *testing.T) {
 
 	require.Len(t, keys, 1, "the space-terminated allow would be the longer match and override the deny")
 	assert.Equal(t, []any{"git"}, keys[0].Value)
+}
+
+func TestCursorWritesBothRequiredArrays(t *testing.T) {
+	tests := []struct {
+		name      string
+		allow     []string
+		deny      []string
+		wantAllow []any
+		wantDeny  []any
+	}{
+		{"deny only", nil, []string{"Bash(rm -rf:*)"}, []any{}, []any{"Shell(rm:-rf*)"}},
+		{"allow only", []string{"Bash(git:*)"}, nil, []any{"Shell(git)"}, []any{}},
+		{"both", []string{"Bash(git:*)"}, []string{"Bash(rm -rf:*)"}, []any{"Shell(git)"}, []any{"Shell(rm:-rf*)"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			captureWarnings(t)
+			// Arrange
+			dir := t.TempDir()
+			cfg := permConfig(dir, &config.Permissions{Allow: tt.allow, Deny: tt.deny})
+			doc := filepath.Join(dir, ".cursor", "cli.json")
+
+			// Act
+			keys, err := settings.PermissionKeys(cfg, "cursor", doc)
+			require.NoError(t, err)
+
+			// Assert
+			got := map[string]jsonmerge.OwnedKey{}
+			for _, k := range keys {
+				got[k.Path[len(k.Path)-1]] = k
+			}
+			require.Len(t, got, 2)
+			assert.Equal(t, tt.wantAllow, got["allow"].Value)
+			assert.Equal(t, tt.wantDeny, got["deny"].Value)
+		})
+	}
 }

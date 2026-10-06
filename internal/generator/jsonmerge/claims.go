@@ -292,7 +292,7 @@ func claimsFor(owned []OwnedKey) []Claim {
 		}
 		switch {
 		case key.Elements != nil:
-			if len(key.Elements) > 0 {
+			if len(key.Elements) > 0 || key.Created {
 				claims = append(claims, Claim{Path: segs, Elements: key.Elements})
 			}
 		case key.Members:

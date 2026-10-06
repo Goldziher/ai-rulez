@@ -265,7 +265,12 @@ func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 // git subcommand; `command:args` takes an argument glob.
 //
 // Source: https://cursor.com/docs/cli/reference/permissions (read 2026-10-05).
-var _ = registerPermissionDialect(config.HarnessCursor, buildCursor)
+//
+// The documented configuration lists both arrays as required fields of cli.json
+// (https://cursor.com/docs/cli/reference/configuration, read 2026-10-06), so a
+// document with any permission carries both.
+var _ = registerPermissionDialectRequiring(config.HarnessCursor, buildCursor,
+	[]string{"permissions", "allow"}, []string{"permissions", "deny"})
 
 func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
@@ -288,17 +293,14 @@ func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	if len(allow)+len(deny) == 0 {
 		return nil, nil
 	}
-	// An array with nothing to say is not created (and never claimed), so a
-	// deny-only config leaves no empty allow behind; one the document already
-	// holds, or that an earlier run wrote elements to, is still maintained.
+	// An array with nothing to say is left to the dialect's required arrays, which
+	// add it empty or as the document holds it.
 	var keys []jsonmerge.OwnedKey
-	for _, arr := range []struct {
-		name string
-		ours []any
-	}{{"allow", allow}, {"deny", deny}} {
-		if key, ok := docArrayKeyIfNeeded(t.cfg, t.docPath, []string{"permissions", arr.name}, arr.ours); ok {
-			keys = append(keys, key)
-		}
+	if len(allow) > 0 {
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", "allow"}, allow))
+	}
+	if len(deny) > 0 {
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", "deny"}, deny))
 	}
 	return keys, nil
 }

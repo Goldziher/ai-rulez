@@ -203,7 +203,9 @@ func (ed jsoncEditor) unmergeLeaf(obj *hujson.Object, idx int, claim Claim) (cha
 			claimed = append(claimed, i)
 		}
 	}
-	removed := len(claimed) > 0
+	// A claim with no element names an empty array ai-rulez created itself (see
+	// OwnedKey.Created): once it is still empty, it goes.
+	removed := len(claimed) > 0 || (len(arr.Elements) == 0 && len(claim.ElementDigests()) == 0)
 	for n := len(claimed) - 1; n >= 0; n-- {
 		i := claimed[n]
 		removeSlot(elementSlots(arr), i, &arr.AfterExtra)
