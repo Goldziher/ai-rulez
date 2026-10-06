@@ -386,13 +386,16 @@ A finding may carry a mechanical fix. Only deterministic, local corrections exis
 | `AR806` fence-unclosed | Add a closing fence (same character and length as the opening one) after the last line | safe |
 | `AR807` final-newline-missing | Add the final newline | safe |
 | `AR502`, `AR503`, `AR505` not executable | `chmod +x` the hook or script, and stage the bit in the git index (`git update-index --chmod=+x`), because the index mode is what the check reads | safe |
+| `AR9C7` claude-key-spelling, and `AR9CA` project-trap rows of kind `key-misspelt` | Rename the misspelt frontmatter key to the documented spelling (`user_invocable` to `user-invocable`) in a hand-written skill or agent file, which may live outside `.ai-rulez/`; offered only while the documented key is absent, so a key is never written twice | safe |
 | `AR804` skill-name-invalid | Rewrite `name:` to the normalized name (lowercase letters, digits, single hyphens, at most 64 characters) or to the skill's directory name | unsafe: the name is how the skill is invoked and referenced |
 
 Guarantees:
 
-- **Authored sources only.** Text edits apply only to files under the configuration directory, and no fix touches a
-  file recorded as generated in the generate manifest; such a fix is reported as skipped. Fix the source and run
-  `generate`.
+- **Authored sources, plus hand-written harness files for trap fixes.** Text edits apply only to files under the
+  configuration directory, except the harness trap fixes (`AR9C7`, `AR9CA`), which may edit a hand-written harness
+  file elsewhere in the project. No fix touches a file recorded as generated in the generate manifest; such a fix is
+  reported as skipped. Fix the source and run `generate`. The summary counts the edits made outside the configuration
+  directory.
 - **Never security findings.** `AR0xx` findings have no automatic fix and would be refused if one existed.
 - **Idempotent and atomic.** An edit records the line it replaces and is skipped (reported) when the file changed
   since the lint run; files are rewritten atomically with their permissions and line endings (LF or CRLF) kept.
