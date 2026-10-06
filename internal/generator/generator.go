@@ -65,6 +65,9 @@ type Generator struct {
 	allowLocalDrift bool            // write merged output even when it drifts from the shared baseline
 	lenientMCP      bool            // tolerate unresolved MCP placeholders (baseline renders)
 	plan            *localPlan      // baseline comparison for this run; nil without local inputs
+	// memberRuntimes, when not empty, limits every [marketplace] member's bundle to these runtimes
+	// (WithMemberRuntimes).
+	memberRuntimes []string
 	// lockRender renders for ai-rulez.lock: MCP placeholders stay as written, so a
 	// pinned output carries no secret and no checkout path.
 	lockRender bool
@@ -657,6 +660,11 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 			Hint("Each monorepo member must define its own [plugin] block").
 			Errorf("monorepo member %q has no [plugin] block", member)
 	}
+	if len(g.memberRuntimes) > 0 {
+		if err := limitMemberRuntimes(memberCfg, member, g.memberRuntimes); err != nil {
+			return nil, plugin.MemberEntry{}, err
+		}
+	}
 
 	manifest, err := NewGenerator(memberCfg).buildPluginManifest("")
 	if err != nil {
@@ -672,6 +680,43 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 		Source:      "./" + filepath.ToSlash(member),
 		Category:    manifest.Category,
 	}, nil
+}
+
+// MemberRuntimeError is returned when a [marketplace] member ships none of the runtimes a bundle was limited to
+// with WithMemberRuntimes: publishing less than the marketplace index lists must never be silent.
+type MemberRuntimeError struct {
+	Member    string
+	Requested []string
+	Ships     []string
+}
+
+func (e *MemberRuntimeError) Error() string {
+	return fmt.Sprintf("marketplace member %s ships %s, none of the requested runtimes %s", e.Member, strings.Join(e.Ships, ", "), strings.Join(e.Requested, ", "))
+}
+
+// WithMemberRuntimes limits the bundle of every [marketplace] member to the given runtimes (a member keeps only
+// those of its own [plugin] runtimes that are listed; one that keeps none is a *MemberRuntimeError). It returns g.
+func (g *Generator) WithMemberRuntimes(runtimes []string) *Generator {
+	g.memberRuntimes = append([]string(nil), runtimes...)
+	return g
+}
+
+// limitMemberRuntimes narrows the member's [plugin] runtimes to the requested ones.
+func limitMemberRuntimes(memberCfg *config.Config, member string, requested []string) error {
+	ships := memberCfg.Plugin.ResolvedRuntimes()
+	keep := make([]string, 0, len(ships))
+	for _, r := range ships {
+		if slices.Contains(requested, r) {
+			keep = append(keep, r)
+		}
+	}
+	if len(keep) == 0 {
+		return &MemberRuntimeError{Member: member, Requested: requested, Ships: slices.Clone(ships)}
+	}
+	p := *memberCfg.Plugin
+	p.Runtimes = keep
+	memberCfg.Plugin = &p
+	return nil
 }
 
 // collectDomainPluginOutputs renders every planned domain plugin under
