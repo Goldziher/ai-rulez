@@ -22,6 +22,11 @@ type DynamicChanges func(cfg *config.Config, lock *lockfile.File) []contentlock.
 // Snapshot computes the content pins of cfg: the authored items, and the
 // generated outputs when [lock] pins them. sourcesOnly skips rendering.
 func Snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string) (*contentlock.Snapshot, error) {
+	return snapshot(cfg, profileName, sourcesOnly, toolVersion, nil)
+}
+
+// snapshot is Snapshot with a hook that completes the options (role pins).
+func snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, adjust func(*contentlock.Options)) (*contentlock.Snapshot, error) {
 	opts := contentlock.Options{
 		Scope:          cfg.LockScope(),
 		IncludeOutputs: cfg.LockIncludeOutputs(),
@@ -36,6 +41,9 @@ func Snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVers
 		}
 		opts.Outputs = outputs
 	}
+	if adjust != nil {
+		adjust(&opts)
+	}
 	snap, err := contentlock.Compute(cfg, opts)
 	if err != nil {
 		return nil, oops.Wrap(err)
@@ -48,7 +56,15 @@ func Snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVers
 // includes could not be loaded from the cache, so the outputs were not compared.
 // dynamic adds the source and served pin changes; nil leaves them out.
 func LockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool, toolVersion string, dynamic DynamicChanges) (*contentlock.Diff, error) {
-	snap, err := Snapshot(cfg, profileName, remoteSkipped, toolVersion)
+	return LockDiffRoles(cfg, lock, profileName, remoteSkipped, toolVersion, dynamic, RoleSelection{})
+}
+
+// LockDiffRoles is LockDiff that also compares the pinned role outputs: the
+// roles with pin = true and the ones the lock pins, narrowed to sel.Only. sel
+// carries only Only and Files; the rest is filled in here.
+func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
+	sel.Write, sel.Enabled, sel.Lock = false, lock != nil, lock
+	snap, err := SnapshotRoles(cfg, profileName, remoteSkipped, toolVersion, sel)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +122,12 @@ func LockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 // cfg and diffs it with the working tree. profileOverride, when set, replaces the
 // profile the lock recorded. It never writes and never uses the network.
 func CheckLock(cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges) (*contentlock.Diff, error) {
+	return CheckLockRoles(cfg, remoteSkipped, profileOverride, toolVersion, dynamic, RoleSelection{})
+}
+
+// CheckLockRoles is CheckLock limited to the roles in sel.Only (all pinned roles
+// when empty).
+func CheckLockRoles(cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
@@ -114,7 +136,7 @@ func CheckLock(cfg *config.Config, remoteSkipped bool, profileOverride, toolVers
 	if profile == "" && lock != nil {
 		profile = lock.Profile
 	}
-	return LockDiff(cfg, lock, profile, remoteSkipped, toolVersion, dynamic)
+	return LockDiffRoles(cfg, lock, profile, remoteSkipped, toolVersion, dynamic, sel)
 }
 
 // LoadWithCacheFallback loads with remote includes, and retries without them only

@@ -1762,7 +1762,8 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--format text\|json` | Output format of `--check`, `--diff`, `--outdated` and `--subject`; any other mode rejects it. With `--check` the JSON goes to stdout and the exit code still gates |
 | `--output <file>` | With `--subject`: write the JSON statement to this file (not with `--recursive`) |
 | `--profile <name>` | Profile whose outputs are pinned (default: the profile recorded in the lock, else the configured default) |
-| `--role <name>` | Also pin the skills this role serves, as a view of their own (see `mcp --serve-skills --role`) |
+| `--role <name>` | Also pin the skills this role serves, as a view of their own (see `mcp --serve-skills --role`), and the rendered outputs of the role. With `--check` or `--diff`, limits the role-output comparison to that role |
+| `--roles` | Also pin the rendered outputs of every role, as one digest per role; roles with `pin = true` are always pinned. Not with `--check`, `--diff`, `--kind` or names. See [Composing with roles](lockfile.md#composing-with-roles) |
 | `--include-static` | Also pin the view that serves static skills too |
 | `--source <src>` | Also pin the view with this extra skill source (repeatable, as `mcp --serve-skills --source`). A view is recorded next to the default one as `[[served]]` entries with a `view` key, and a plain `lock` re-pins views recorded earlier |
 | `--strict` | Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
