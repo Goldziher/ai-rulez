@@ -222,7 +222,8 @@ policy selecting anything it fails, because there is nothing to approve against.
 
 `--sbom` runs `ai-rulez sbom` on the project and ships the CycloneDX document next to the archive. The manifest's `sbom`
 names the file and its digest, the OCI artifact carries it as a layer, and verify checks it against `SHA256SUMS`. The SBOM is
-deterministic (no timestamp), so it does not disturb a reproducible release.
+deterministic (no timestamp) and leaves out the approval status, so no reviewer identity leaves the repository; it does not
+disturb a reproducible release.
 
 ## Release notes
 
