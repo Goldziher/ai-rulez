@@ -103,7 +103,7 @@ func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version stri
 		if redact {
 			validationErrors = redactSchemaValues(validationErrors)
 		}
-		hint := "Check the YAML/JSON syntax using a validator\nEnsure required fields are present (version: \"3.0\", name)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
+		hint := "Check the keys listed in the errors against the schema (config.toml uses TOML)\nEnsure required fields are present (version = \"4.0\", name)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
 		return oops.
 			With("errors", validationErrors).
 			With("error_count", len(validationErrors)).
