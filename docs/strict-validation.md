@@ -94,6 +94,7 @@ stdout.
 | AR744 | `policy-required-missing` | error | The repository turns off or ignores a rule code the organization policy requires |
 | AR745 | `source-not-allowed` | error | An include, installed skill or skill source comes from a host the organization policy does not allow or denies |
 | AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
+| AR746 | `policy-signature-invalid` | error | A policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed) |
 | AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
@@ -224,7 +225,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR710`-`AR719` | Approvals ([#213](https://github.com/Goldziher/ai-rulez/issues/213); `AR710`-`AR719` used, see [Approvals](approvals.md)) | allocated |
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
-| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR745`, `AR748` and `AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
+| `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR746`, `AR748` and `AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
 | `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `sbom` ships without findings, so no codes are registered yet) | reserved |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
@@ -491,7 +492,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A2` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `traps` | `AR9C0`-`AR9CA` |
-| `config` | `AR731`, `AR740`-`AR745`, `AR748`, `AR749`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, `[telemetry]` and `[llm]` tables) |
+| `config` | `AR731`, `AR740`-`AR746`, `AR748`, `AR749`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
 
 Every registered code is listed in `analyzerGroups` (`internal/lint/analyzer.go`); a test fails for a code that is
@@ -1928,6 +1929,16 @@ an include, installed skill or skill source comes from a host the organization p
 - Why: The policy lists the hosts remote content may come from, so a typosquatted or attacker-controlled include cannot be added by editing the repository. The source is dropped from the run and reported.
 - Bad: An include from `github.com/other-org/rules` under `sources.allowed_hosts = ["github.com/example-org"]`
 - Good: Mirror the content into an allowed organization, or ask the policy owners to allow the host
+
+### AR746 policy-signature-invalid
+
+a policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed)
+
+- Default severity: `error`
+- Analyzer: `config` (scope `bundle`)
+- Why: A signature lets an organization publish a policy without every machine pinning its digest, but only if the signer is one the machine trusts and the signature covers exactly this policy. A bad or missing signature is refused, never skipped, so stripping the signature cannot switch the policy off.
+- Bad: A policy whose `.sigstore.json` was made by an identity the machine does not trust, or by a key that signed a different file, or `--policy-require-signed` with no signature published
+- Good: Sign the policy with the organization's signer (`cosign sign-blob --bundle policy.toml.sigstore.json policy.toml`), and configure the trusted signer outside the repository
 
 ### AR748 capability-not-allowed
 

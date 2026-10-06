@@ -2321,6 +2321,10 @@ These flags work with all commands:
 | `--policy-offline` | boolean | Load a URL policy from the user cache only (also `AI_RULEZ_POLICY_OFFLINE=1`) |
 | `--policy-max-stale` | string | How long a cached URL policy may stand in for an unreachable URL (`7d` default, `0` for none; also `AI_RULEZ_POLICY_MAX_STALE`) |
 | `--discover-org`   | boolean | Also load the organization policy of the repository's GitHub owner (`ai-rulez-policy.toml` in `<owner>/.github`); needs a digest (`[policy.digests]` in the user config, or `--policy-trust-tofu`). Also `[policy] discover = "org"` in the user config |
+| `--policy-require-signed` | boolean | Refuse a [policy](policy.md) with no valid signature (`<policy>.sigstore.json` next to it, `AR746`); needs a trusted signer. Also `AI_RULEZ_POLICY_REQUIRE_SIGNED=1` |
+| `--policy-signer-key` | string list | PEM public key trusted to sign the policy (repeatable; also `AI_RULEZ_POLICY_SIGNER_KEY`) |
+| `--policy-signer-identity`, `--policy-signer-issuer` | string | A certificate identity and its OIDC issuer trusted to sign the policy (keyless) |
+| `--policy-trusted-root` | string | Sigstore trusted root file for keyless policy signatures |
 | `--policy-trust-tofu` | boolean | Record the digest of an unpinned `--policy` URL once, in a terminal only |
 | `--policy-mode`    | string  | `enforce` (default) or `warn`: with `warn` a repository that loosens the [policy](policy.md) is reported as warnings and the run does not fail; the policy values are still enforced |
 | `--verbose` / `-V` | boolean | Enable verbose output                                                           |
