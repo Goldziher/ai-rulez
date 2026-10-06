@@ -37,6 +37,12 @@ func reviewProject(t *testing.T, extraConfig string) {
 	reviewFlags.rubric, reviewFlags.content, reviewFlags.estimate, reviewFlags.showPrompt = "", "", false, false
 	reviewFlags.model, reviewFlags.maxCost, reviewFlags.maxCalls, reviewFlags.includeImports = "", 0, 0, false
 	reviewFlags.format, reviewFlags.out = formatText, ""
+	reviewFlags.semantic, reviewFlags.models, reviewFlags.k, reviewFlags.since, reviewFlags.role, reviewFlags.profile = false, "", 0, "", "", ""
+	reviewFlags.gate, reviewFlags.gateLevel, reviewFlags.baseline, reviewFlags.writeBaseline = false, "", "", ""
+	reviewFlags.noCache, reviewFlags.cacheDir = false, ""
+	for _, name := range []string{"model", "models", "k", "gate", "gate-level", "no-cache", "cache-dir", "max-cost", "max-calls"} {
+		ReviewCmd.Flags().Lookup(name).Changed = false
+	}
 	rubricFormat = formatText
 	configDir, noLocal = "", false
 	t.Cleanup(func() {
@@ -55,11 +61,11 @@ func TestReviewReportsScoresAndWithholdsSecrets(t *testing.T) {
 	var out bytes.Buffer
 
 	// Act
-	refused, err := runReview(ReviewCmd, nil, &out)
+	exit, err := runReview(ReviewCmd, nil, &out)
 
 	// Assert
 	require.NoError(t, err)
-	assert.False(t, refused)
+	assert.Equal(t, 0, exit)
 	validateAgainst(t, "../../schema/review-report.schema.json", out.Bytes())
 	var got struct {
 		Summary struct{ Scored, Withheld int }
@@ -134,11 +140,11 @@ func TestReviewEstimateManifest(t *testing.T) {
 			var out bytes.Buffer
 
 			// Act
-			refused, err := runReview(ReviewCmd, nil, &out)
+			exit, err := runReview(ReviewCmd, nil, &out)
 
 			// Assert
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantRefused, refused)
+			assert.Equal(t, tt.wantRefused, exit == exitReviewRefused)
 			for _, w := range tt.want {
 				assert.Contains(t, out.String(), w)
 			}
@@ -177,7 +183,7 @@ func TestReviewRefusesBadInput(t *testing.T) {
 		{"unknown content", func() { reviewFlags.content = "all" }, nil, "unknown --content"},
 		{"typo in selector", func() {}, []string{"skill:nope"}, "no item matches skill:nope"},
 		{"unknown rubric", func() { reviewFlags.rubric = "ghost" }, nil, "ghost"},
-		{"estimate flag without estimate", func() { reviewFlags.model = "m"; ReviewCmd.Flags().Lookup("model").Changed = true }, nil, "--model applies to --estimate only"},
+		{"estimate flag without estimate", func() { reviewFlags.model = "m"; ReviewCmd.Flags().Lookup("model").Changed = true }, nil, "--model applies to --semantic or --estimate only"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -303,10 +309,10 @@ func TestReviewEstimateRefusedUnderAPolicyLLMLock(t *testing.T) {
 	var out bytes.Buffer
 
 	// Act
-	refused, err := runReview(ReviewCmd, nil, &out)
+	exit, err := runReview(ReviewCmd, nil, &out)
 
 	// Assert
 	require.NoError(t, err)
-	assert.True(t, refused)
+	assert.Equal(t, exitReviewRefused, exit)
 	assert.Contains(t, out.String(), "policy forbids model calls")
 }
