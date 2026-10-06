@@ -90,6 +90,9 @@ func (p Policy) Tree() map[string]any {
 	if p.Sources.RequirePinned {
 		table("sources")["require_pinned"] = true
 	}
+	if p.Sources.MinReleaseAge > 0 {
+		table("sources")["min_release_age"] = formatAge(p.Sources.MinReleaseAge)
+	}
 	if len(p.Lint.RequiredCodes) > 0 {
 		table("lint")["required_codes"] = p.Lint.RequiredCodes
 	}
@@ -106,6 +109,7 @@ func (p Policy) Tree() map[string]any {
 		table("lint", "security")["scan_imports"] = p.Lint.Security.ScanImports
 	}
 	p.Lint.addKnobs(table)
+	addSizeBudgets(p.Lint.SizeBudgets, table)
 	p.Lint.ScannerPolicy.addTo(table)
 	if p.Lock.Enforce {
 		table("lock")["enforce"] = true
