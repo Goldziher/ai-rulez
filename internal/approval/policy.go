@@ -129,6 +129,10 @@ type Policy struct {
 	Owners *OwnerSet
 	// Deny maps a denied digest to its reason (the lock's [[deny]] entries).
 	Deny map[string]string
+	// DenyProblem is why the deny list could not be read ("" when it could). A
+	// policy that cannot read its deny list refuses every digest: it must not
+	// fail open (AR717).
+	DenyProblem string
 	// Signed verifies signed approvals; nil means none can be verified.
 	Signed SignedVerifier
 }
@@ -161,6 +165,8 @@ func PolicyOf(cfg *config.Config) Policy {
 	if cfg.ConfigDir != "" {
 		if lock, err := lockfile.Load(cfg.ConfigDir); err == nil {
 			p.Deny = lock.DenySet()
+		} else {
+			p.DenyProblem = "the deny list cannot be read: " + err.Error()
 		}
 		p.Signed = newConfigVerifier(cfg)
 	}
@@ -170,7 +176,7 @@ func PolicyOf(cfg *config.Config) Policy {
 // WithLock returns the policy with the deny list of lock, for a caller that has
 // the lock in memory and has changed it.
 func (p Policy) WithLock(lock *lockfile.File) Policy {
-	p.Deny = lock.DenySet()
+	p.Deny, p.DenyProblem = lock.DenySet(), ""
 	return p
 }
 
