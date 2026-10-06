@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
 // Codes for the provenance and coverage rules.
@@ -134,24 +136,6 @@ func (r *runner) trustedOrgList() []string {
 	return out
 }
 
-// includeCacheName mirrors how internal/includes names the cache directory of
-// an include: the include name made safe as one path segment, then a hash.
-func includeCacheName(name string) string {
-	var b strings.Builder
-	for _, c := range name {
-		switch {
-		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_', c == '.':
-			b.WriteRune(c)
-		default:
-			b.WriteByte('_')
-		}
-	}
-	if out := strings.Trim(b.String(), "."); out != "" {
-		return out
-	}
-	return "include"
-}
-
 // includeOf names the git include whose cache directory holds abs, or -1.
 func (r *runner) includeOf(abs string) int {
 	segs := strings.Split(filepath.ToSlash(abs), "/")
@@ -160,7 +144,7 @@ func (r *runner) includeOf(abs string) int {
 			continue
 		}
 		for j := range r.cfg.Includes {
-			if strings.HasPrefix(segs[i+1], includeCacheName(r.cfg.Includes[j].Name)+"-") {
+			if includes.CacheDirMatches(segs[i+1], r.cfg.Includes[j].Name) {
 				return j
 			}
 		}

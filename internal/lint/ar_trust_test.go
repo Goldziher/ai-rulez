@@ -9,6 +9,28 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
+func TestIncludeOfDoesNotConfuseIncludesSharingAPrefix(t *testing.T) {
+	// Arrange: "shared" is a name prefix of "shared-extra"; both are remote includes.
+	r := &runner{cfg: &config.Config{Includes: []config.IncludeConfig{{Name: "shared"}, {Name: "shared-extra"}}}}
+	tests := []struct {
+		name string
+		abs  string
+		want int
+	}{
+		{"first include", "/home/u/.cache/ai-rulez/includes/shared-0123456789ab/skills/a/SKILL.md", 0},
+		{"second include", "/home/u/.cache/ai-rulez/includes/shared-extra-0123456789ab/skills/a/SKILL.md", 1},
+		{"neither", "/home/u/.cache/ai-rulez/includes/other-0123456789ab/skills/a/SKILL.md", -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act / Assert
+			if got := r.includeOf(tt.abs); got != tt.want {
+				t.Errorf("includeOf(%q) = %d, want %d", tt.abs, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPublisherParsing(t *testing.T) {
 	tests := []struct {
 		text, source string

@@ -26,7 +26,7 @@ const (
 // different skills under one name never share (or overwrite) a cache.
 func getSkillCacheDir(host ambient.Host, skillName, repoURL string) (string, error) {
 	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
-	dir := safeCacheName(skillName) + "-" + hex.EncodeToString(sum[:])[:12]
+	dir := SafeCacheName(skillName) + "-" + hex.EncodeToString(sum[:])[:cacheHashLen]
 	return config.CacheDirIn(host.Env, skillCachePrefix, dir) //nolint:wrapcheck // already contextual
 }
 
