@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -497,4 +499,36 @@ func TestSearch_SubcommandWordsDispatchOnlyAlone(t *testing.T) {
 	assert.Equal(t, 1, code)
 	code, _, _ = execSearch(t, "a", "query")
 	assert.Equal(t, 1, code, "--dry-run requires 'search index'")
+}
+
+// AR9D1 compares a committed index with the skills read from source, while `search index` builds
+// the index from the rendered catalog. This builds the index the real way and expects `validate`
+// to find it fresh, so the two item builders cannot drift apart unnoticed.
+func TestSearchIndex_CommittedIndexBuiltByTheCommandIsFreshForValidate(t *testing.T) {
+	root := searchProject(t)
+	resetSearch(t)
+	srv := newEmbedServer(t)
+	useEmbeddings(t, srv, true)
+	write := func(rel, body string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750))
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+	}
+	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[llm]\nembedding_model = \"concepts\"\n\n[search]\nindex_dir = \"search-index\"\nindex_body = true\n")
+	write(".ai-rulez/skills/csv-triggers/SKILL.md", "---\nname: csv-triggers\ndescription: Rotate credentials\ntriggers: rotate a key, renew a token\nkeywords: secrets, vault\n---\nRotate them in the vault.\n")
+	write(".ai-rulez/domains/ops/skills/deploy-prod/SKILL.md", "---\nname: deploy-prod\ndescription: Deploy a service to production\nkeywords: [rollout]\n---\nPromote the staging build.\n")
+	code, _, errOut := runIndex(t)
+	require.Equal(t, 0, code, errOut)
+	require.FileExists(t, filepath.Join(root, ".ai-rulez", "search-index", skillsearch.ManifestFile))
+
+	cfg, err := config.LoadConfig(t.Context(), root)
+	require.NoError(t, err)
+	tree, err := lint.LoadTree(root)
+	require.NoError(t, err)
+	rep, err := lint.Run(cfg, tree)
+	require.NoError(t, err)
+
+	for _, f := range rep.Findings {
+		assert.NotEqual(t, lint.CodeSearchIndexStale, f.Code, "validate calls an index the command just wrote stale: %s", f.Message)
+	}
 }
