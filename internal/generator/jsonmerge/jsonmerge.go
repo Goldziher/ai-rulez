@@ -154,15 +154,16 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	return ApplyDocument(path, existing, owned)
 }
 
-// hasCompactContainer reports whether a multi-line document has a non-empty
-// object or array, below the top level, written on one line. The strict engine
+// hasCompactContainer reports whether a one-line document has members, or a
+// multi-line one has a non-empty object or array, below the top level, written
+// on one line. The strict engine
 // re-renders any container it edits in its own multi-line layout, so such a
 // container would come back re-indented and clean could not restore the original
 // bytes; the in-place editor (jsonc.go) patches only what it changes, so those
 // documents go there.
-func hasCompactContainer(doc string, _ []jsonMember) bool {
-	if !strings.Contains(doc, "\n") {
-		return false // a minified document has no layout to keep
+func hasCompactContainer(doc string, members []jsonMember) bool {
+	if len(members) > 0 && !strings.Contains(strings.TrimRight(doc, "\r\n"), "\n") {
+		return true // a one-line document: the editor keeps its single line
 	}
 	var open []int // offset of each container still open
 	inString, escaped := false, false
