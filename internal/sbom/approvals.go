@@ -1,6 +1,7 @@
 package sbom
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"sort"
@@ -18,6 +19,7 @@ type approvalIndex struct {
 	results map[string]approval.Result
 	records []lockfile.Approval
 	salt    string
+	key     string
 	redact  bool
 }
 
@@ -25,13 +27,13 @@ type approvalIndex struct {
 // digests. It returns nil when there is nothing to say: no lock, or neither a
 // [governance] policy nor an approval record. now fixes the clock the expiry of
 // an approval is judged by.
-func newApprovalIndex(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, tree string, redact bool, now time.Time) *approvalIndex {
+func newApprovalIndex(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, tree string, redact bool, key string, now time.Time) *approvalIndex {
 	if lock == nil || (cfg.Governance == nil && len(lock.Approval) == 0) {
 		return nil
 	}
 	policy := approval.PolicyOf(cfg)
 	subjects := approval.SubjectsOf(lock, items)
-	idx := &approvalIndex{results: map[string]approval.Result{}, records: lock.Approval, salt: tree, redact: redact}
+	idx := &approvalIndex{results: map[string]approval.Result{}, records: lock.Approval, salt: tree, key: key, redact: redact}
 	for _, r := range policy.EvaluateAll(lock.Approval, subjects, now) {
 		idx.results[r.Key()] = r
 	}
@@ -53,13 +55,20 @@ func statusOf(r approval.Result) string {
 }
 
 // reviewerName is the reviewer as written into the document: the identity, or a
-// salted hash of it. The salt is the lock tree, so the same reviewer is the same
+// salted hash of it (an HMAC under RedactKey when one is set; without a key the
+// salt is public, so the token only hides identities nobody can guess). The salt is the lock tree, so the same reviewer is the same
 // token within one document and across rebuilds of it, but not across projects.
 func (x *approvalIndex) reviewerName(reviewer string) string {
 	if !x.redact {
 		return reviewer
 	}
-	sum := sha256.Sum256([]byte(x.salt + "\x00" + approval.NormalizeReviewer(reviewer)))
+	msg := []byte(x.salt + "\x00" + approval.NormalizeReviewer(reviewer))
+	if x.key != "" {
+		mac := hmac.New(sha256.New, []byte(x.key))
+		mac.Write(msg)
+		return "reviewer-" + hex.EncodeToString(mac.Sum(nil)[:4])
+	}
+	sum := sha256.Sum256(msg)
 	return "reviewer-" + hex.EncodeToString(sum[:4])
 }
 

@@ -139,6 +139,9 @@ func documentTime(flag string, flagSet bool, env string, now time.Time) (time.Ti
 	return time.Time{}, nil
 }
 
+// sbomRedactKeyEnv names the environment variable that keys --redact-reviewers.
+const sbomRedactKeyEnv = "AI_RULEZ_SBOM_REDACT_KEY"
+
 // sbomNow is the wall clock; tests replace it.
 var sbomNow = time.Now
 
@@ -204,7 +207,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	opts := sbom.Options{
 		Files: f.files, IncludeOutputs: f.includeOutputs, Profile: f.profile, Role: f.role,
-		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, Timestamp: stamp, Now: now,
+		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, RedactKey: os.Getenv(sbomRedactKeyEnv), Timestamp: stamp, Now: now,
 	}
 	if f.verify {
 		if opts.Signature, err = lockSignature(cfg); err != nil {
