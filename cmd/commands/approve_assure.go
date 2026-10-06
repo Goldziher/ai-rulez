@@ -59,11 +59,26 @@ func (a assertedAttester) drafts(_ context.Context, _ approval.Subject, _ draftI
 type signedAttester struct {
 	signer signing.Signer
 	meta   signing.LockMeta
+	// precheck judges the reviewer the signature will carry before anything is
+	// signed: a keyless signature goes to a public transparency log and cannot
+	// be taken back, so a reviewer who is not allowed to approve must be refused
+	// first. who is "" when the signer cannot say (known is false).
+	precheck func(who string, known bool, s approval.Subject) error
 }
 
 func (a signedAttester) label() string { return "the holder of the signing identity" }
 
 func (a signedAttester) drafts(ctx context.Context, s approval.Subject, in draftInput) ([]approvalDraft, error) {
+	if a.precheck != nil {
+		var who string
+		var known bool
+		if h, ok := a.signer.(signing.ReviewerHinter); ok {
+			who, known = h.ExpectedReviewer()
+		}
+		if err := a.precheck(approval.NormalizeReviewer(who), known, s); err != nil {
+			return nil, err
+		}
+	}
 	st, err := signing.ApprovalStatement(signing.ApprovalSubject{Kind: s.Kind, Domain: s.Domain, ID: s.ID, Digest: s.Digest}, signing.ApprovalPredicate{
 		AcceptedFindings: in.accepted, Expires: in.expires, ApprovedAt: in.at.Format(time.RFC3339),
 		Repository: a.meta.Repository, AIRulezVersion: a.meta.Version,
@@ -150,7 +165,7 @@ func (e *approveEnv) newAttester(ctx context.Context) (attester, error) {
 		}
 		meta := signing.LockMeta{Version: Version, Now: e.now}
 		meta.Repository, meta.Ref = detectRepo(ctx, e.cfg.BaseDir, nil)
-		return signedAttester{signer: signer, meta: meta}, nil
+		return signedAttester{signer: signer, meta: meta, precheck: e.precheckSigner}, nil
 	case approveFromReview > 0:
 		return e.reviewAttester(ctx)
 	}
@@ -171,6 +186,25 @@ func (e *approveEnv) reviewAttester(ctx context.Context) (attester, error) {
 		return nil, err
 	}
 	return reviewAttester{client: approveForge(), repo: repo, pr: approveFromReview, git: g, only: approveReviewer, env: e}, nil
+}
+
+// precheckSigner applies authorization to the identity a signature is about to
+// carry, before the signature is made. When an allowlist or CODEOWNERS limits
+// who may approve and the signer cannot say who it is (an ID token of an issuer
+// whose certificate identity is not derivable from its claims), signing is
+// refused rather than logged and judged afterwards.
+func (e *approveEnv) precheckSigner(who string, known bool, s approval.Subject) error {
+	if !known {
+		if len(e.policy.Approvers) == 0 && e.policy.Owners == nil {
+			return nil
+		}
+		return oops.Hint("sign with --key, or with a token whose email or GitHub workflow identity ai-rulez can read, or lift the approvers/approvers_from restriction").
+			Errorf("cannot tell which identity this signature will carry, and [governance] limits who may approve %s: nothing was signed or logged", safeText(s.Ref()))
+	}
+	if err := e.authorize(who, s); err != nil {
+		return oops.Hint("nothing was signed or logged").Wrap(err)
+	}
+	return nil
 }
 
 // namedFor returns who the policy names for s ([governance] approvers or
