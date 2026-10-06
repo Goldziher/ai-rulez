@@ -98,13 +98,14 @@ func TestTrapTableIsWellFormed(t *testing.T) {
 	if len(traps) == 0 {
 		t.Fatal("empty trap table")
 	}
-	vocab := map[string]bool{predExtNotIn: true, predNameSuffixRequired: true, predFrontmatterEnum: true, predFrontmatterMissing: true}
+	vocab := map[string]bool{predExtNotIn: true, predNameSuffixRequired: true, predFrontmatterEnum: true, predFrontmatterMissing: true, predKeyMisspelt: true, predSizeOver: true}
 	seen := map[string]bool{}
 	for _, tr := range traps {
-		if seen[tr.Code] {
-			t.Errorf("duplicate code %s", tr.Code)
+		rowKey := tr.Code + "/" + tr.Harness + "/" + tr.Scope.Dir
+		if seen[rowKey] {
+			t.Errorf("duplicate row %s", rowKey)
 		}
-		seen[tr.Code] = true
+		seen[rowKey] = true
 		rule, ok := lookupRule(tr.Code)
 		switch {
 		case !ok:
@@ -118,7 +119,7 @@ func TestTrapTableIsWellFormed(t *testing.T) {
 		if !vocab[tr.Predicate.Kind] {
 			t.Errorf("%s: unknown predicate kind %q", tr.Code, tr.Predicate.Kind)
 		}
-		for field, v := range map[string]string{"harness": tr.Harness, "message": tr.Message, "hint": tr.Hint, "source": tr.Source, "quote": tr.Quote, "verified_on": tr.VerifiedOn, "scope.dir": tr.Scope.Dir} {
+		for field, v := range map[string]string{"harness": tr.Harness, "message": tr.Message, "hint": tr.Hint, "source": tr.Source, "quote": tr.Quote, "verified_on": tr.VerifiedOn} {
 			if strings.TrimSpace(v) == "" {
 				t.Errorf("%s: %s is empty; a trap needs its provenance", tr.Code, field)
 			}
@@ -141,8 +142,15 @@ func TestTrapDocsAreGenerated(t *testing.T) {
 	if i < 0 || j < i {
 		t.Fatalf("docs/harness-traps.md lacks the %q ... %q markers", begin, end)
 	}
+	if os.Getenv("UPDATE_DOCS") != "" {
+		text = text[:i+len(begin)] + want + text[j:]
+		if err := os.WriteFile("../../docs/harness-traps.md", []byte(text), 0o644); err != nil { //nolint:gosec // docs file
+			t.Fatal(err)
+		}
+		return
+	}
 	if got := text[i+len(begin) : j]; got != want {
-		t.Errorf("docs/harness-traps.md is out of date with traps.toml; regenerate the table between the markers with:\n%s", want)
+		t.Errorf("docs/harness-traps.md is out of date with traps.toml; regenerate it with UPDATE_DOCS=1 go test ./internal/lint -run TestTrapDocsAreGenerated; want:\n%s", want)
 	}
 }
 

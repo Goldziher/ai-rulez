@@ -1441,6 +1441,11 @@
               "type": "array",
               "items": { "type": "string" },
               "description": "Harnesses (cursor, copilot) whose traps run although no preset for them is configured, for hand-written files."
+            },
+            "max_table_age_days": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Report (AR9C0) a trap or harness-limits row whose verified_on date is older than this many days. 0 (default) turns the check off; the maintainer task harness:verify uses 90."
             }
           },
           "additionalProperties": false
