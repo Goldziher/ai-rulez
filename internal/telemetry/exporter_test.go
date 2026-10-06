@@ -169,7 +169,7 @@ func TestExporter_GivesUpAfterRetriesAndKeepsTheSpool(t *testing.T) {
 }
 
 func TestExporter_RejectedBatchIsDroppedAndCounted(t *testing.T) {
-	for _, status := range []int{400, 401, 403, 404, 413} {
+	for _, status := range []int{400, 401, 403, 404, 413, 302, 307, 500, 501, 505} {
 		c := &collector{statuses: []int{status}}
 		srv := httptest.NewServer(c.handler())
 		x, spool, sleeps := newExporter(t, srv.URL)

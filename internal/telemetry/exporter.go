@@ -278,11 +278,10 @@ func (x *Exporter) postOnce(ctx context.Context, path string, body []byte, heade
 		return nil
 	case code == http.StatusTooManyRequests, code == http.StatusBadGateway, code == http.StatusServiceUnavailable, code == http.StatusGatewayTimeout:
 		return &transientError{msg: fmt.Sprintf("collector returned %d", code), retryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
-	case code == http.StatusBadRequest, code == http.StatusUnauthorized, code == http.StatusForbidden, code == http.StatusNotFound, code == http.StatusRequestEntityTooLarge:
-		return fmt.Errorf("%w: status %d", ErrRejected, code)
 	default:
-		// Unknown status (5xx other than the listed, 3xx): retry rather than drop data.
-		return &transientError{msg: fmt.Sprintf("collector returned %d", code)}
+		// Everything else is permanent: a 4xx, a redirect (the collector URL is wrong, and
+		// retrying would keep the events forever) or a 5xx outside 502/503/504.
+		return fmt.Errorf("%w: status %d", ErrRejected, code)
 	}
 }
 
