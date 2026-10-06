@@ -40,6 +40,7 @@ type ImportedContent struct {
 type Importer struct {
 	sourceDir string
 	outputDir string
+	rd        *reader
 }
 
 // NewImporter creates a new importer
@@ -48,6 +49,73 @@ func NewImporter(sourceDir, outputDir string) *Importer {
 		sourceDir: sourceDir,
 		outputDir: outputDir,
 	}
+}
+
+// reader returns the symlink-refusing reader over the source directory: a
+// repository being imported is untrusted, and a link inside it must not pull in
+// a file from outside it.
+func (i *Importer) reader() *reader {
+	if i.rd == nil {
+		i.rd = newReader(os.DirFS(i.sourceDir))
+	}
+	return i.rd
+}
+
+// rel returns p (inside sourceDir) as a slash path relative to it.
+func (i *Importer) rel(p string) string {
+	r, err := filepath.Rel(i.sourceDir, p)
+	if err != nil {
+		return filepath.ToSlash(p)
+	}
+	return filepath.ToSlash(r)
+}
+
+// readFile reads a regular file below sourceDir; a symlink anywhere on its path is refused.
+func (i *Importer) readFile(p string) ([]byte, error) {
+	data, err := i.reader().read(i.rel(p))
+	if err != nil {
+		if reason := skipReason(err); reason != "" {
+			return nil, fmt.Errorf("%s: %s", p, reason)
+		}
+		return nil, err
+	}
+	return data, nil
+}
+
+// readDir lists a directory below sourceDir without its symlink entries.
+func (i *Importer) readDir(p string) ([]os.DirEntry, error) {
+	rel := i.rel(p)
+	r := i.reader()
+	if link, at, err := r.symlinkAt(rel); err != nil {
+		return nil, err
+	} else if link {
+		return nil, fmt.Errorf("%s: symlinks are not followed", at)
+	}
+	entries, err := os.ReadDir(p)
+	if err != nil {
+		return nil, err
+	}
+	out := entries[:0]
+	for _, e := range entries {
+		if e.Type()&os.ModeSymlink != 0 {
+			logger.Warn("Skipping a symlink", "path", filepath.Join(p, e.Name()))
+			continue
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
+// fileExists and dirExists report a regular file or directory below sourceDir,
+// never one reached through a symlink.
+func (i *Importer) fileExists(p string) bool {
+	isDir, ok := i.reader().exists(i.rel(p))
+	return ok && !isDir
+}
+
+func (i *Importer) dirExists(p string) bool {
+	isDir, ok := i.reader().exists(i.rel(p))
+	return ok && isDir
 }
 
 // Import detects and imports content from existing tool files
@@ -140,7 +208,7 @@ func (i *Importer) detectSources() ([]string, error) {
 
 	for _, file := range markdownFiles {
 		path := filepath.Join(i.sourceDir, file)
-		if fileExists(path) {
+		if i.fileExists(path) {
 			sources = append(sources, file)
 		}
 	}
@@ -157,7 +225,7 @@ func (i *Importer) detectSources() ([]string, error) {
 
 	for _, dir := range directories {
 		path := filepath.Join(i.sourceDir, dir)
-		if dirExists(path) {
+		if i.dirExists(path) {
 			sources = append(sources, dir)
 		}
 	}
@@ -170,16 +238,16 @@ func (i *Importer) detectSources() ([]string, error) {
 func (i *Importer) importFromSource(source string) ([]ImportedContent, string, error) {
 	sourcePath := filepath.Join(i.sourceDir, source)
 
-	// Check if source is a file or directory
-	info, err := os.Stat(sourcePath)
-	if err != nil {
+	// Check if source is a file or directory (a symlink is neither)
+	isDir, ok := i.reader().exists(i.rel(sourcePath))
+	if !ok {
 		return nil, "", oops.
 			With("source", source).
 			With("path", sourcePath).
-			Wrapf(err, "stat source")
+			Errorf("source not found, or a symlink (symlinks are not followed)")
 	}
 
-	if info.IsDir() {
+	if isDir {
 		return i.importFromDirectory(source, sourcePath)
 	}
 
@@ -188,7 +256,7 @@ func (i *Importer) importFromSource(source string) ([]ImportedContent, string, e
 
 // importFromFile imports content from a single file
 func (i *Importer) importFromFile(source, path string) ([]ImportedContent, string, error) {
-	data, err := os.ReadFile(path)
+	data, err := i.readFile(path)
 	if err != nil {
 		return nil, "", oops.
 			With("source", source).
@@ -243,7 +311,7 @@ func (i *Importer) importFromDirectory(source, path string) ([]ImportedContent, 
 func (i *Importer) importClaudeSkills(source, path string) ([]ImportedContent, string, error) {
 	var items []ImportedContent
 
-	entries, err := os.ReadDir(path)
+	entries, err := i.readDir(path)
 	if err != nil {
 		return nil, "", oops.
 			With("source", source).
@@ -258,11 +326,11 @@ func (i *Importer) importClaudeSkills(source, path string) ([]ImportedContent, s
 
 		// Look for SKILL.md in each subdirectory
 		skillFile := filepath.Join(path, entry.Name(), "SKILL.md")
-		if !fileExists(skillFile) {
+		if !i.fileExists(skillFile) {
 			continue
 		}
 
-		data, err := os.ReadFile(skillFile)
+		data, err := i.readFile(skillFile)
 		if err != nil {
 			logger.Warn("Failed to read skill file", "path", skillFile, "error", err)
 			continue
@@ -288,7 +356,7 @@ func (i *Importer) importClaudeSkills(source, path string) ([]ImportedContent, s
 func (i *Importer) importClaudeAgents(source, path string) ([]ImportedContent, string, error) {
 	var items []ImportedContent
 
-	entries, err := os.ReadDir(path)
+	entries, err := i.readDir(path)
 	if err != nil {
 		return nil, "", oops.
 			With("source", source).
@@ -306,7 +374,7 @@ func (i *Importer) importClaudeAgents(source, path string) ([]ImportedContent, s
 		}
 
 		filePath := filepath.Join(path, entry.Name())
-		data, err := os.ReadFile(filePath)
+		data, err := i.readFile(filePath)
 		if err != nil {
 			logger.Warn("Failed to read agent file", "path", filePath, "error", err)
 			continue
@@ -347,7 +415,7 @@ func (i *Importer) importClineRules(source, path string) ([]ImportedContent, str
 func (i *Importer) importGenericMarkdownDirectory(source, path string) ([]ImportedContent, string, error) {
 	var items []ImportedContent
 
-	entries, err := os.ReadDir(path)
+	entries, err := i.readDir(path)
 	if err != nil {
 		return nil, "", oops.
 			With("source", source).
@@ -368,7 +436,7 @@ func (i *Importer) importGenericMarkdownDirectory(source, path string) ([]Import
 		}
 
 		filePath := filepath.Join(path, entry.Name())
-		data, err := os.ReadFile(filePath)
+		data, err := i.readFile(filePath)
 		if err != nil {
 			logger.Warn("Failed to read file", "path", filePath, "error", err)
 			continue
@@ -863,16 +931,6 @@ func parseFrontmatterToMetadata(content string) (metadata *config.Metadata, body
 }
 
 // Helper functions
-
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
-func dirExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
 
 func filenameWithoutExt(filename string) string {
 	return strings.TrimSuffix(filename, filepath.Ext(filename))
