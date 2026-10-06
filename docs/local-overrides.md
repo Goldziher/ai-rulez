@@ -120,7 +120,9 @@ instead of the local content. If local content exists but no `AGENTS.md` is prod
 `.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, `.agents/settings.json` and
 `.xum/mcp.jsonc` can hold your own settings beside what ai-rulez writes. ai-rulez records, per document, the MCP
 server entries, array elements and scalar keys it merged in, each with a digest of the value it wrote (never the
-value, which may be a secret). A document it wrote whole is recorded in the committed manifest, a document shared
+value, which may be a secret; a record an older version wrote with the plain value is converted to a digest the next
+time it is read). Array elements are counted per value: if ai-rulez added one `Bash(git status)` rule, `clean` removes
+one, and an identical rule you wrote yourself stays. A document it wrote whole is recorded in the committed manifest, a document shared
 with you or carrying overlay content in the local manifest.
 
 - **`clean`** removes exactly those entries, only while they still hold the value ai-rulez wrote, and keeps every
