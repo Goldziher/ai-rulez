@@ -56,6 +56,13 @@ type Policy struct {
 	MCP        MCP
 	Hooks      Hooks
 	Signing    Signing
+
+	// statedLoose lists the switch keys the document that produced this policy
+	// wrote in the weaker direction (a restriction set to its off value). A bool
+	// field cannot tell that from a key that was never written, and Loosens needs
+	// the difference to report a child that switches off what its parent turned
+	// on. Merge never carries it: the fold only ever turns a switch on.
+	statedLoose []string
 }
 
 // Governance governs [governance] (docs/approvals.md): the approval floor the
@@ -345,7 +352,49 @@ func parseDoc(path string, data []byte) (parsedDoc, error) {
 	if doc.Guard != nil {
 		p.Guard.Generated = doc.Guard.Generated != nil && *doc.Guard.Generated
 	}
+	p.statedLoose = doc.looseSwitches()
 	return parsedDoc{name: doc.Name, policy: p, extends: doc.Extends}, nil
+}
+
+// looseSwitches lists the policy keys of the document that are written as the
+// weaker value of a switch: a restriction explicitly off, or a network feature
+// explicitly allowed.
+func (d *fileDoc) looseSwitches() []string {
+	var out []string
+	off := func(key string, v *bool) {
+		if v != nil && !*v {
+			out = append(out, key)
+		}
+	}
+	on := func(key string, v *bool) {
+		if v != nil && *v {
+			out = append(out, key)
+		}
+	}
+	if d.Sources != nil {
+		off(switchRequirePinned, d.Sources.RequirePinned)
+	}
+	if d.Lock != nil {
+		off(switchLockEnforce, d.Lock.Enforce)
+		off(switchLockIncludeOutputs, d.Lock.IncludeOutputs)
+	}
+	if d.Telemetry != nil {
+		on(switchTelemetryNetwork, d.Telemetry.AllowNetwork)
+	}
+	if d.LLM != nil {
+		on(switchLLMNetwork, d.LLM.AllowNetwork)
+	}
+	if d.Guard != nil {
+		off(switchGuardGenerated, d.Guard.Generated)
+	}
+	if d.Governance != nil {
+		off(switchGovernanceEnforce, d.Governance.Enforce)
+		off(switchForbidSelfApproval, d.Governance.ForbidSelfApproval)
+	}
+	if d.Hooks != nil {
+		on(switchHooksAllow, d.Hooks.Allow)
+	}
+	return out
 }
 
 func (g *Governance) fromDoc(d *fileGovernance) error {
