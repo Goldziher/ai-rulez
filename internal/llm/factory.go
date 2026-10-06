@@ -6,14 +6,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 )
 
 // Options tune New and Wrap. The zero value is correct for production.
 type Options struct {
 	// ConfigDir is the ai-rulez config directory (for example /repo/.ai-rulez).
-	// The response cache lives in <ConfigDir>/local/llm-cache. Empty disables the cache.
+	// It names the project: the response cache lives in the user cache directory
+	// (~/.cache/ai-rulez/llm/<hash of ConfigDir>), outside the repository. Empty disables the cache.
 	ConfigDir string
+	// CacheDir overrides the cache directory (tests, CI with a restored cache).
+	CacheDir string
+	// SecretPath overrides the per-user cache secret file (default
+	// $XDG_CONFIG_HOME/ai-rulez/llm-cache.key or ~/.config/ai-rulez/llm-cache.key).
+	SecretPath string
 	// Getenv resolves api_key_env; nil means os.Getenv.
 	Getenv func(string) string
 	// HTTPClient is used by the openaicompat backend; nil means a default client.
@@ -118,9 +123,16 @@ func Wrap(backend Client, cfg Config, opts Options) *Managed {
 	}
 	c = WithRetry(c, policy)
 	var cache *Cache
-	if cfg.CacheEnabled() && !opts.NoCache && opts.ConfigDir != "" {
-		cache = NewCache(filepath.Join(opts.ConfigDir, filepath.FromSlash(CacheDirRel)), cacheIdentity(cfg))
-		c = WithCache(c, cache, cfg.FullModel(), cfg.EmbeddingModel)
+	if dir := CacheDirFor(opts); cfg.CacheEnabled() && !opts.NoCache && dir != "" {
+		secret, err := loadOrCreateSecret(secretPathFor(opts))
+		if err != nil {
+			if opts.Logger != nil {
+				opts.Logger.Warn("llm response cache disabled: no usable cache secret", "error", err.Error())
+			}
+		} else {
+			cache = NewCache(dir, cacheIdentity(cfg), secret)
+			c = WithCache(c, cache, cfg.FullModel(), cfg.EmbeddingModel)
+		}
 	}
 	c = withGate(c, cfg.AllowNetwork, cfg.Timeout())
 	c = WithLogging(c, opts.Logger)
@@ -136,5 +148,5 @@ func cacheIdentity(cfg Config) string {
 	if u, err := url.Parse(cfg.BaseURL); err == nil && u.Host != "" {
 		id += "@" + u.Scheme + "://" + u.Host + u.Path
 	}
-	return id + "|backend=" + ResolveBackend(cfg.Backend) + "|key=" + cfg.APIKeyEnv
+	return id + "|backend=" + ResolveBackend(cfg.Backend) + "|key=" + cfg.APIKeyEnv + "|prices=" + NewPricing(cfg).identity()
 }

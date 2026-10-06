@@ -1,6 +1,9 @@
 package llm
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // price is USD per million tokens.
 type price struct{ in, out float64 }
@@ -22,6 +25,11 @@ var builtinPrices = map[string]price{
 	"claude-opus":            {15.00, 75.00},
 }
 
+// PriceTableVersion identifies the built-in price table. Bump it whenever a price
+// changes: it is part of the cache identity, so a cost recorded under old prices
+// is never replayed under new ones.
+const PriceTableVersion = "2026-07"
+
 // Pricing resolves prices for a model.
 type Pricing struct {
 	input, output float64
@@ -34,6 +42,14 @@ func NewPricing(cfg Config) Pricing {
 		return Pricing{input: cfg.PriceInputPerMTok, output: cfg.PriceOutputPerMTok, override: true}
 	}
 	return Pricing{}
+}
+
+// identity names the price source for the cache identity.
+func (p Pricing) identity() string {
+	if p.override {
+		return fmt.Sprintf("override:%g:%g", p.input, p.output)
+	}
+	return "builtin:" + PriceTableVersion
 }
 
 func (p Pricing) lookup(model string) (price, bool) {
