@@ -44,6 +44,10 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 			configDir, err := filepath.Abs(cfg.ConfigDir)
 			if err == nil {
 				opts.EditRoot = gitutil.Resolve(configDir)
+				opts.DiffRoot = opts.EditRoot
+				if top := gitutil.TopLevel(configDir); top != "" {
+					opts.DiffRoot = gitutil.Resolve(top)
+				}
 			}
 			generated := map[string]bool{}
 			for _, p := range generator.NewGenerator(cfg).GeneratedPaths() {
