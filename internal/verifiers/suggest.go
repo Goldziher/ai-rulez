@@ -146,7 +146,7 @@ var suggestSchema = map[string]any{
 						"type": "array", "items": map[string]any{"type": "string"},
 					},
 					"regex":            map[string]any{"type": "string"},
-					"in":               map[string]any{"type": "string"}, // same-file, diff-added, any-file or ""; Gemini rejects an empty enum member
+					"in":               map[string]any{"type": "string", "enum": []string{"same-file", "diff-added", "any-file", ""}},
 					"files":            map[string]any{"type": "string"},
 					"path":             map[string]any{"type": "string"},
 					"exists":           map[string]any{"type": "boolean"},
