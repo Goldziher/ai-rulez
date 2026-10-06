@@ -906,6 +906,11 @@
           "items": { "type": "string", "enum": ["rules", "context", "skills", "agents", "commands", "checks"] },
           "description": "Content kinds to export. Defaults to all."
         },
+        "index_style": {
+          "type": "string",
+          "enum": ["body", "frontmatter"],
+          "description": "index.md scheme: body (default, the OKF 0.2 listing in the body) or frontmatter (title, version and entries in the frontmatter). Only index.md files differ."
+        },
         "spec": {
           "type": "string",
           "enum": ["0.2"],
@@ -981,6 +986,11 @@
             "type": "integer",
             "minimum": 0,
             "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached."
+          },
+          "max_clone_files": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Limit on the number of entries (files, directories, links) of the clone of a git source (default 20000; the AI_RULEZ_MAX_CLONE_FILES environment variable sets it for every source). Each entry counts as at least 4096 bytes toward max_clone_bytes. A larger clone is an error and nothing is cached."
           },
           "trust": {
             "type": "string",

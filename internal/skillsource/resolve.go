@@ -222,7 +222,7 @@ func (m *materializer) ensure(ctx context.Context) error {
 			Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", m.spec.Name, m.q.commit)
 	}
 	m.fetched = false
-	return fetchInto(ctx, cloneRequest{url: m.q.url, ref: m.spec.Ref, kind: m.q.kind, commit: m.q.commit, path: m.spec.Path, maxBytes: m.q.maxClone, name: m.spec.Name}, m.treeDir, &m.fetched)
+	return fetchInto(ctx, cloneRequest{url: m.q.url, ref: m.spec.Ref, kind: m.q.kind, commit: m.q.commit, path: m.spec.Path, maxBytes: m.q.maxClone, maxFiles: m.spec.maxCloneFiles(), name: m.spec.Name}, m.treeDir, &m.fetched)
 }
 
 // materialize makes the tree of a commit available in the cache (fetching it

@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -142,4 +143,65 @@ func TestMaxCloneBytes_SourceThenGlobalThenEnvironmentThenDefault(t *testing.T) 
 		})
 	}
 	assert.Equal(t, int64(256<<20), DefaultMaxCloneBytes)
+}
+
+func TestCloneRequest_MeasureChargesTheFloorAndStopsAtTheLimit(t *testing.T) {
+	tests := []struct {
+		name        string
+		files       int
+		maxBytes    int64
+		maxFiles    int
+		wantOver    bool
+		wantEntries int
+	}{
+		{name: "within both limits", files: 5, maxBytes: 1 << 20, maxFiles: 100, wantOver: false, wantEntries: 5},
+		{name: "empty files are charged the floor", files: 5, maxBytes: 4 * cloneEntryFloor, maxFiles: 100, wantOver: true, wantEntries: 5},
+		{name: "entry count passes the limit", files: 50, maxBytes: 1 << 30, maxFiles: 10, wantOver: true, wantEntries: 11},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			for i := 0; i < tt.files; i++ {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "f"+strconv.Itoa(i)), nil, 0o644))
+			}
+			req := cloneRequest{maxBytes: tt.maxBytes, maxFiles: tt.maxFiles}
+
+			// Act
+			u := req.measure(dir)
+
+			// Assert
+			assert.Equal(t, tt.wantOver, req.over(u))
+			assert.Equal(t, tt.wantEntries, u.entries, "the walk stops once a limit is passed")
+		})
+	}
+}
+
+func TestResolve_ManySmallFilesPassTheFileLimit(t *testing.T) {
+	// Arrange: well under the byte limit, far over the entry limit.
+	f := newFixture(t)
+	for i := 0; i < 60; i++ {
+		write(t, f.work, "noise/f"+strconv.Itoa(i)+".txt", "x")
+	}
+	git(t, f.work, "add", "-A")
+	git(t, f.work, "commit", "--quiet", "-m", "many")
+	git(t, f.work, "push", "--quiet", f.bare, "main")
+	spec := Spec{Name: "many", URL: "git+" + f.url, Ref: "main", MaxCloneFiles: 30}
+
+	// Act
+	_, err := Resolve(context.Background(), spec, Options{CacheDir: t.TempDir()})
+
+	// Assert
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCloneTooLarge)
+	assert.Contains(t, err.Error(), "max_clone_files")
+}
+
+func TestMaxCloneFiles_SourceThenEnvironmentThenDefault(t *testing.T) {
+	t.Setenv(EnvMaxCloneFiles, "")
+	assert.Equal(t, DefaultMaxCloneFiles, Spec{}.maxCloneFiles())
+	assert.Equal(t, 7, Spec{MaxCloneFiles: 7}.maxCloneFiles())
+	t.Setenv(EnvMaxCloneFiles, "99")
+	assert.Equal(t, 99, Spec{}.maxCloneFiles())
+	assert.Equal(t, 7, Spec{MaxCloneFiles: 7}.maxCloneFiles())
 }

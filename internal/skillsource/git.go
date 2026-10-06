@@ -132,16 +132,16 @@ func fetchCommit(ctx context.Context, req cloneRequest, dest string) error {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	watch := watchSize(dest, req.maxBytes, cancel)
+	watch := watchSize(dest, req, cancel)
 	err := cloneInto(ctx, req, dest)
 	watch.stop()
-	if grown := watch.exceeded.Load(); grown > 0 {
-		return req.tooLarge(grown)
+	if grown := watch.exceeded.Load(); grown != nil {
+		return req.tooLarge(*grown)
 	}
 	if err != nil {
 		return err
 	}
-	if grown := dirBytes(dest); grown > req.maxBytes {
+	if grown := req.measure(dest); req.over(grown) {
 		return req.tooLarge(grown)
 	}
 	// Dropping .git makes the cached tree immutable and smaller; the digest ignores it anyway.
