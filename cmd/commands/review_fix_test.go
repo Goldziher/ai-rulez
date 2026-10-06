@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	rv "github.com/Goldziher/ai-rulez/v5/internal/review"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -288,4 +289,27 @@ func TestReviewFixPatchOnlyTouchesAuthoredItems(t *testing.T) {
 			assert.Equal(t, string(before), string(after))
 		})
 	}
+}
+
+func TestRequireCleanInGitSeesAnUncommittedChangeThroughASymlinkedPath(t *testing.T) {
+	// Arrange: a repository reached through a link, as /var is /private/var on macOS
+	real := t.TempDir()
+	real, err := filepath.EvalSymlinks(real)
+	require.NoError(t, err)
+	link := filepath.Join(t.TempDir(), "alias")
+	testutil.SymlinkOrSkip(t, real, link)
+	file := filepath.Join(real, "item.md")
+	require.NoError(t, os.WriteFile(file, []byte("one\n"), 0o600))
+	t.Chdir(real)
+	reviewGit(t, "init", "-q")
+	reviewGit(t, "add", "item.md")
+	reviewGit(t, "commit", "-q", "-m", "one")
+	require.NoError(t, os.WriteFile(file, []byte("two\n"), 0o600))
+
+	// Act
+	err = requireCleanInGit(filepath.Join(link, "item.md"))
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "uncommitted changes")
 }

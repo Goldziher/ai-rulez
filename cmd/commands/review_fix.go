@@ -352,6 +352,7 @@ func applyFile(abs, digest, patched string) error {
 // requireCleanInGit refuses a file with uncommitted changes (or one outside a git repository,
 // where a bad edit could not be undone).
 func requireCleanInGit(abs string) error {
+	abs = resolvedPath(abs) // the top level is reported with symlinks resolved (/private/var, not /var)
 	dir := filepath.Dir(abs)
 	top := gitutil.TopLevel(dir)
 	if top == "" {
@@ -361,7 +362,7 @@ func requireCleanInGit(abs string) error {
 	if err != nil {
 		return oops.Wrapf(err, "check %s against git", abs)
 	}
-	rel, err := filepath.Rel(top, abs)
+	rel, err := filepath.Rel(resolvedPath(top), abs)
 	if err != nil {
 		return oops.Wrapf(err, "locate %s in the repository", abs)
 	}
