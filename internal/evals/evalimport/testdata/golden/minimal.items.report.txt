@@ -1,0 +1,5 @@
+wrote add-health-endpoint.eval.yaml, add-health-endpoint.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   3 criteria -> rubric_items (weights kept)
+mapped:   pass_threshold -> rubric_min_score 0.7 (read as a fraction)
+assumed:  expect_trigger: true (the scenario targets a skill)

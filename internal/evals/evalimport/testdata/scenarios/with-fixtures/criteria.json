@@ -1,0 +1,12 @@
+{
+  "name": "Fix the Billing Config!",
+  "criteria": {
+    "reads config": { "description": "Reads the starter config before changing it", "weight": 2 },
+    "keeps comments": "Keeps the comments in the config file"
+  },
+  "fixtures": [
+    { "path": "config.yaml", "content": "env: staging\n" },
+    { "path": "notes/starter.txt", "source": "starter/notes.txt" }
+  ],
+  "pass_threshold": "80%"
+}

@@ -1,0 +1,21 @@
+# imported by ai-rulez eval import (importer 1) from scenario "Fix the Billing Config!"
+# source sha256:23fb1d2fcff8d11efb2082f6a269fe39090e18d46f0706c591cd6c0105217a2e
+schema_version: 1
+cases:
+  - id: fix-the-billing-config
+    description: Imported scenario
+    prompt_file: fix-the-billing-config.task.md
+    expect_trigger: true
+    files:
+      - path: config.yaml
+        content: |
+          env: staging
+      - path: notes/starter.txt
+        source: fixtures/fix-the-billing-config/notes/starter.txt
+    rubric: |-
+      Score the answer against this weighted checklist (total weight 3):
+      1. (weight 1) Keeps the comments in the config file
+      2. (weight 2) Reads the starter config before changing it
+    rubric_min_score: 0.8
+    tags:
+      - imported:tessl

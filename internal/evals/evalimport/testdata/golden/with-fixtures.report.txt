@@ -1,0 +1,6 @@
+wrote fix-the-billing-config.eval.yaml, fix-the-billing-config.task.md, fixtures/fix-the-billing-config/notes/starter.txt (1 case)
+mapped:   task -> prompt_file
+mapped:   2 criteria -> rubric (weights kept as text)
+mapped:   pass_threshold -> rubric_min_score 0.8 (read as a percent)
+mapped:   2 fixture(s) -> files
+assumed:  expect_trigger: true (the scenario targets a skill)

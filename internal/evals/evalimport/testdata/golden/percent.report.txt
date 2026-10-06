@@ -1,0 +1,5 @@
+wrote rename-the-flag.eval.yaml, rename-the-flag.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   2 criteria -> rubric (weights kept as text)
+mapped:   passing_score -> rubric_min_score 0.7 (read as a percent)
+assumed:  expect_trigger: true (the scenario targets a skill)

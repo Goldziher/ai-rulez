@@ -1,0 +1,18 @@
+# imported by ai-rulez eval import (importer 1) from scenario "add-health-endpoint"
+# source sha256:96eab967b4a4c285ccac96dd786ee5dd9a544415b7f883dccbf0f87b9c2039f3
+schema_version: 1
+cases:
+  - id: add-health-endpoint
+    description: Imported scenario
+    prompt_file: add-health-endpoint.task.md
+    expect_trigger: true
+    rubric_items:
+      - text: Registers GET /health on the router
+        weight: 3
+      - text: Handler returns status 200 with a JSON body
+        weight: 2
+      - text: Does not add a dependency
+        weight: 1
+    rubric_min_score: 0.7
+    tags:
+      - imported:tessl
