@@ -172,7 +172,7 @@ func importCursorPermissions(p *Plan, r *reader) {
 			continue
 		}
 		for _, rule := range doc.Permissions[action] {
-			if claude, ok := cursorRule(rule); ok {
+			if claude, ok := cursorRule(rule, action); ok {
 				b.add(action, claude)
 				continue
 			}
@@ -185,7 +185,10 @@ func importCursorPermissions(p *Plan, r *reader) {
 }
 
 // cursorRule rewrites one Cursor rule, Tool(specifier), to Claude Code syntax.
-func cursorRule(rule string) (string, bool) {
+// Cursor's Shell(rm) matches every command that starts with rm, while Claude
+// Code's Bash(rm) matches exactly "rm": a deny rule is widened to Bash(rm:*) so it
+// still blocks "rm -rf x"; an allow rule stays exact, which is the safe direction.
+func cursorRule(rule, action string) (string, bool) {
 	rule = strings.TrimSpace(rule)
 	name, spec, hasSpec := strings.Cut(rule, "(")
 	spec = strings.TrimSuffix(spec, ")")
@@ -205,6 +208,9 @@ func cursorRule(rule string) (string, bool) {
 	}
 	if !hasSpec {
 		return claude, true
+	}
+	if name == "Shell" && action == actionDeny && spec != "" && !strings.Contains(spec, "*") {
+		spec += ":*"
 	}
 	return claude + "(" + spec + ")", true
 }
