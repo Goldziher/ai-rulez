@@ -300,11 +300,42 @@ var (
 	fallbackWarned = map[string]bool{}
 )
 
+// SourceSkillBlindPresets lists the configured presets without MCP support when
+// the project has [[skill_sources]]. Source skills are served only, never written
+// to a harness's skill tree, so these harnesses cannot see them. Sorted.
+func (c *Config) SourceSkillBlindPresets() []string {
+	if len(c.SkillSources) == 0 {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for i := range c.Presets {
+		name := c.Presets[i].GetName()
+		if seen[name] || HarnessSupportsMCP(name) || name == "mcp" {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // WarnDeliveryFallbacks logs, once per project and preset, that a preset without
 // MCP support keeps served skills as static files. Nothing is dropped silently.
 func (c *Config) WarnDeliveryFallbacks() {
 	if c.ServeMode {
 		return
+	}
+	for _, preset := range c.SourceSkillBlindPresets() {
+		key := c.BaseDir + "\x00" + preset + "\x00skill_sources"
+		fallbackWarnMu.Lock()
+		done := fallbackWarned[key]
+		fallbackWarned[key] = true
+		fallbackWarnMu.Unlock()
+		if !done {
+			logger.Warn(fmt.Sprintf("Preset %q has no MCP support: skills from [[skill_sources]] are served only and never reach it (AR992)", preset))
+		}
 	}
 	for _, fb := range c.DeliveryFallbacks(c.Content) {
 		key := c.BaseDir + "\x00" + fb.Preset + "\x00" + strings.Join(fb.Skills, ",")
