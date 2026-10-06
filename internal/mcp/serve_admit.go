@@ -51,14 +51,20 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 	out := &Catalog{
 		Profile: c.Profile, Preset: c.Preset,
 		byName: map[string]*CatalogSkill{}, byURI: map[string]*CatalogSkill{}, byFile: map[string]*CatalogFile{},
-		refused: map[string]Refusal{},
+		refused: map[string]Refusal{}, reports: append([]ScanReport(nil), c.reports...),
 	}
 	for name, r := range c.refused {
 		out.refused[name] = r
 	}
 	for _, skill := range c.skills {
 		cp := *skill
-		if r := a.check(&cp); r != nil {
+		r := a.check(&cp)
+		if len(cp.unscannable) > 0 {
+			out.reports = append(out.reports, ScanReport{
+				Skill: cp.Name, View: a.View, Level: cp.scanLevel, Findings: cp.unscannable, Unserved: cp.Unscanned,
+			})
+		}
+		if r != nil {
 			r.View = a.View
 			out.refused[cp.Name] = *r
 			logger.Warn("Refusing to serve a skill", "skill", cp.Name, "code", r.Code, "reason", r.Reason)
@@ -73,6 +79,24 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 	}
 	return out
 }
+
+// ScanReport lists the files of one skill the security scan could not read
+// (AR989), with the trust level the skill was scanned at and the files the
+// server leaves out because of it.
+type ScanReport struct {
+	Skill string
+	// View is the serve view the skill was scanned in ("" for the default view).
+	View string
+	// Level is the scan level, config.TrustWarn or config.TrustError.
+	Level    string
+	Findings []lint.Finding
+	// Unserved are the files not served (non-empty only at trust=error).
+	Unserved []string
+}
+
+// ScanReports lists the unscannable-file findings of every skill that was
+// scanned, served or refused.
+func (c *Catalog) ScanReports() []ScanReport { return c.reports }
 
 // Refusal reports why a skill was refused, if it was.
 func (c *Catalog) Refusal(name string) (Refusal, bool) {
@@ -151,6 +175,12 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 	for _, f := range findings {
 		if f.Severity == lint.SeverityError {
 			blocking = append(blocking, f)
+		}
+	}
+	s.scanLevel = level
+	for _, f := range findings {
+		if f.Code == lint.CodeServedUnscannable {
+			s.unscannable = append(s.unscannable, f)
 		}
 	}
 	s.ScanFindings = len(findings) - len(blocking)
