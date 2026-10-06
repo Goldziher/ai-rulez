@@ -219,3 +219,57 @@ func TestManifest_Reason(t *testing.T) {
 	x.Manifest.DocTemplateVersion = 99
 	assert.Contains(t, x.Manifest.Reason("test@local", "m", Config{}), "template")
 }
+
+// Known IEEE 754 binary16 encodings, including every rounding boundary of the subnormal range.
+func TestFloat32ToFloat16_MatchesKnownHalfValues(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		in   float32
+		want uint16
+	}{
+		{"zero", 0, 0x0000},
+		{"negative zero", float32(math.Copysign(0, -1)), 0x8000},
+		{"one", 1, 0x3c00},
+		{"minus two", -2, 0xc000},
+		{"one third rounds to nearest", 1.0 / 3, 0x3555},
+		{"largest finite half", 65504, 0x7bff},
+		{"just below the overflow tie", 65519.99, 0x7bff},
+		{"overflow tie rounds to even, which is infinity", 65520, 0x7c00},
+		{"smallest normal", 6.103515625e-05, 0x0400},
+		{"largest subnormal", 6.097555160522461e-05, 0x03ff},
+		{"smallest subnormal", 5.960464477539063e-08, 0x0001},
+		{"2^-25 is a tie and rounds to even zero", 2.9802322387695312e-08, 0x0000},
+		{"just above 2^-25 rounds up to the smallest subnormal", math.Nextafter32(2.9802322387695312e-08, 1), 0x0001},
+		{"just below 2^-25 underflows to zero", math.Nextafter32(2.9802322387695312e-08, 0), 0x0000},
+		{"1.5 * 2^-25", 4.470348358154297e-08, 0x0001},
+		{"negative smallest subnormal", -5.960464477539063e-08, 0x8001},
+		{"far below the half range", 1e-30, 0x0000},
+		{"infinity", float32(math.Inf(1)), 0x7c00},
+		{"negative infinity", float32(math.Inf(-1)), 0xfc00},
+		{"nan", float32(math.NaN()), 0x7e00},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := float32ToFloat16(tt.in)
+
+			// Assert
+			assert.Equal(t, tt.want, got, "float32ToFloat16(%v) = %#04x, want %#04x", tt.in, got, tt.want)
+		})
+	}
+}
+
+// Every finite half decodes and encodes back to itself.
+func TestFloat16_RoundTripsEveryFiniteHalf(t *testing.T) {
+	t.Parallel()
+	for h := uint32(0); h <= 0xffff; h++ {
+		if h&0x7c00 == 0x7c00 { // inf and NaN
+			continue
+		}
+		f := float16ToFloat32(uint16(h))
+		if got := float32ToFloat16(f); got != uint16(h) {
+			t.Fatalf("half %#04x decodes to %v and encodes back to %#04x", h, f, got)
+		}
+	}
+}
