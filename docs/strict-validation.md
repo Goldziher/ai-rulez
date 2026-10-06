@@ -1525,7 +1525,7 @@ a skill's delivery frontmatter is not static, served or both
 
 ### AR996 eval-case-invalid
 
-an eval case file (*.eval.yaml, *.eval.yml, *.eval.json) is malformed: unknown field, missing expect_trigger or prompt, bad assertion, unsafe path
+an eval case file (`*.eval.yaml`, `*.eval.yml`, `*.eval.json`) is malformed: unknown field, missing expect_trigger or prompt, bad assertion, unsafe path
 
 - Default severity: `error`
 - Analyzer: `plugin` (scope `item`)
