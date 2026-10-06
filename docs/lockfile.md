@@ -53,10 +53,11 @@ how to do it with `cosign`.
 | --- | --- | --- |
 | `rule`, `context`, `agent`, `command`, `check` | the item name | the source file (a command with resources also pins them); for an agent, skill or command whose frontmatter declares `hooks`, also each project script those hooks run (a word starting with `./`, `../` or `$CLAUDE_PROJECT_DIR/`) |
 | `skill` | the skill directory name | `SKILL.md`, every loaded resource (`references/`, `scripts/`, `assets/`) and the project scripts its frontmatter `hooks` run |
-| `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`) of an include whose `source` is a local path; an OKF include is pinned whole |
+| `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`, `verifiers`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers`, `verifiers-settings` | the `[permissions]`, `[claude.settings.managed]`, `[[mcp_servers]]` and `[verifiers_settings]` sources (MCP servers as written, placeholders unresolved) |
+| `verifier` | the verifier id (`name` of a flat or inline entry) | the declaration as written: a `[[verifiers]]` entry of `config.toml`, or one table of `.ai-rulez/verifiers/*.toml` (`path` names the file). Lowering a `severity`, widening an `exclude` or deleting a verifier changes the pin. Verifiers imported through an include are covered by the include's own pin |
 
 Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
 configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through
@@ -368,7 +369,7 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
   (`.gitattributes`: `*.sh text eol=lf`).
 
 **Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
-`settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
+`verifier`, `settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
 
 ```text
 digest = SHA256( lp("ai-rulez/<kind>/v1") || u64(n) || leaf_1 || … || leaf_n )

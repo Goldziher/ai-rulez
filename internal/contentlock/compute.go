@@ -324,6 +324,9 @@ func (c *collector) collectDeclared() error {
 		}
 		c.items = append(c.items, lockfile.Item{Kind: KindRole, ID: c.cfg.Roles[i].Name, Digest: digest})
 	}
+	if err := c.collectVerifiers(); err != nil {
+		return err
+	}
 	return c.collectSettings()
 }
 
