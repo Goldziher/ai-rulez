@@ -7,12 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
-	"github.com/samber/oops"
 )
 
 // Encoder returns the encoder the settings configure: the same one the exporter
@@ -42,7 +44,8 @@ type LogRead struct {
 // whose identity fails is left out and counted. Feedback lines, the loads of a
 // served skill's supporting files and lines that are not events are ignored.
 // A line without an event id (log version 2 or older) gets one derived from its
-// text, so exporting the same log twice yields the same ids.
+// text and its line number, so exporting the same log twice yields the same ids
+// and two identical lines (two real loads in one second) stay two events.
 func ReadLogEvents(path string) (LogRead, error) {
 	file, err := safefs.OpenRegular(path)
 	if err != nil {
@@ -54,14 +57,16 @@ func ReadLogEvents(path string) (LogRead, error) {
 	seen := map[string]bool{}
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	lineNo := 0
 	for scanner.Scan() {
+		lineNo++
 		line := bytes.TrimSpace(scanner.Bytes())
 		event, ok := decodeLogLine(line)
 		if !ok {
 			continue
 		}
 		if event.EventID == "" {
-			sum := sha256.Sum256(line)
+			sum := sha256.Sum256(append(append([]byte{}, line...), "\x00"+strconv.Itoa(lineNo)...))
 			event.EventID = hex.EncodeToString(sum[:8])
 		}
 		if err := event.Normalize(); err != nil {
