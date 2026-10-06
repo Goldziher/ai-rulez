@@ -126,3 +126,62 @@ func TestAppendLine_RelativePathUnderConfigDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "one\n", string(data))
 }
+
+func TestWriteFileAtomic_RefusesASymlinkedParent(t *testing.T) {
+	skipIfNoSymlinks(t)
+	tests := []struct {
+		name  string
+		build func(t *testing.T, root string) (path, victimDir string)
+	}{
+		{"immediate directory is a symlink", func(t *testing.T, root string) (string, string) {
+			target := filepath.Join(root, "elsewhere")
+			require.NoError(t, os.MkdirAll(target, 0o750))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(root, "out"))
+			return filepath.Join(root, "out", "export.json"), target
+		}},
+		{"directory below .ai-rulez is a symlink", func(t *testing.T, root string) (string, string) {
+			target := filepath.Join(root, "elsewhere")
+			require.NoError(t, os.MkdirAll(target, 0o750))
+			require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(root, ".ai-rulez", "local"))
+			return filepath.Join(root, ".ai-rulez", "local", "state.json"), target
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, victimDir := tt.build(t, t.TempDir())
+
+			err := WriteFileAtomic(path, []byte("data"))
+
+			require.ErrorContains(t, err, "refusing")
+			entries, readErr := os.ReadDir(victimDir)
+			require.NoError(t, readErr)
+			assert.Empty(t, entries, "nothing is written through the link")
+		})
+	}
+}
+
+func TestWriteFileAtomic_CreatesAMissingParent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".ai-rulez", "local", "state.json")
+
+	require.NoError(t, WriteFileAtomic(path, []byte("data")))
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "data", string(data))
+}
+
+func TestReadRegular_ErrorsInsteadOfTruncating(t *testing.T) {
+	dir := t.TempDir()
+	big := filepath.Join(dir, "big.log")
+	require.NoError(t, os.WriteFile(big, make([]byte, maxReadBytes+1), 0o600))
+	exact := filepath.Join(dir, "exact")
+	require.NoError(t, os.WriteFile(exact, make([]byte, maxReadBytes), 0o600))
+
+	_, err := ReadRegular(big)
+	require.ErrorContains(t, err, "larger than")
+
+	data, err := ReadRegular(exact)
+	require.NoError(t, err)
+	assert.Len(t, data, maxReadBytes)
+}
