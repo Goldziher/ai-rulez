@@ -257,10 +257,53 @@ func unfixable(cfg *config.Config, ir *rv.ItemResult) string {
 	case ir.Abs == "":
 		return "the item has no file of its own"
 	}
-	if rel, err := filepath.Rel(cfg.ConfigDir, ir.Abs); err != nil || strings.HasPrefix(rel, "..") || strings.HasPrefix(filepath.ToSlash(rel), "local/") {
+	if !committedContent(cfg.ConfigDir, ir.Abs) {
 		return "machine-local or outside the configuration directory: it is not committed content"
 	}
 	return ""
+}
+
+// committedContent reports whether abs lies inside the configuration directory, outside its
+// machine-local overlay. Both paths are resolved through symlinks first and the overlay name is
+// matched without regard to case, so neither a linked parent nor a case-folding file system
+// (Local/ is local/ on macOS and Windows) moves a file out of the overlay.
+func committedContent(configDir, abs string) bool {
+	cfgReal, abs := resolvedPath(configDir), resolvedPath(abs)
+	rel, err := filepath.Rel(cfgReal, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(filepath.ToSlash(rel), "../") {
+		return false
+	}
+	return !strings.EqualFold(strings.SplitN(filepath.ToSlash(rel), "/", 2)[0], "local")
+}
+
+// resolvedPath resolves the symlinks of the longest existing prefix of path.
+func resolvedPath(path string) string {
+	path = filepath.Clean(path)
+	rest := ""
+	for cur := path; ; cur = filepath.Dir(cur) {
+		if real, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(real, rest)
+		}
+		if filepath.Dir(cur) == cur {
+			return path
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+	}
+}
+
+// patchTargets maps the resolved file path of every item a fix may edit to its result: authored,
+// committed, not redacted, and a file of its own.
+func patchTargets(rc *reviewContext) map[string]bool {
+	in := rc.in
+	in.Only, in.Selector = nil, nil
+	targets := map[string]bool{}
+	res := rv.Run(in)
+	for i := range res.Items {
+		if ir := &res.Items[i]; unfixable(rc.cfg, ir) == "" {
+			targets[resolvedPath(ir.Abs)] = true
+		}
+	}
+	return targets
 }
 
 // scanDelta is the security scan gate of a fix: the patched text must not have more findings of
@@ -380,18 +423,22 @@ func runFixFromPatch(cmd *cobra.Command, out io.Writer) (int, error) {
 	if err != nil {
 		return 0, err //nolint:wrapcheck // already contextual
 	}
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	rc, err := loadReview(cmd, nil)
 	if err != nil {
 		return 0, err
 	}
+	cfg := rc.cfg
+	targets := patchTargets(rc)
 	growth := cfg.Review.FixMaxGrowthPercent()
 	result := fixOutput{}
 	type staged struct{ abs, digest, text string }
 	var apply []staged
 	for _, pf := range files {
 		abs := filepath.Join(cfg.BaseDir, filepath.FromSlash(pf.Path))
-		if rel, rerr := filepath.Rel(cfg.ConfigDir, abs); rerr != nil || strings.HasPrefix(rel, "..") || strings.HasPrefix(filepath.ToSlash(rel), "local/") {
-			return 0, oops.Errorf("the patch targets %s, which is not committed content inside %s", pf.Path, filepath.Base(cfg.ConfigDir))
+		// A patch is a file anyone can hand over: it may edit only what a fix run could have edited, an
+		// authored item, never the config, the lock, a script or the calibration record beside them.
+		if !targets[resolvedPath(abs)] {
+			return 0, oops.Errorf("the patch targets %s, which is not an authored item of this project (only authored, committed items inside %s can be fixed)", pf.Path, filepath.Base(cfg.ConfigDir))
 		}
 		orig, _, rerr := safefs.ReadRegularKeepMode(abs)
 		if rerr != nil {
