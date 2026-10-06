@@ -148,6 +148,7 @@ type runner struct {
 	drift          []PluginDrift
 	delivery       []DeliveryFinding
 	lockDrift      []LockDrift
+	approvals      []ApprovalFinding
 	okfDir         string
 	okfFindings    []okf.Finding
 	// deps records which file refers to which (both absolute): links, name

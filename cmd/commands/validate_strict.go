@@ -186,6 +186,9 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 		if drift := lockDriftFor(cfg); len(drift) > 0 {
 			opts = append(opts, lint.WithLockDrift(drift))
 		}
+		if findings := approvalFindingsFor(cfg); len(findings) > 0 {
+			opts = append(opts, lint.WithApprovals(findings))
+		}
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
 		if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {

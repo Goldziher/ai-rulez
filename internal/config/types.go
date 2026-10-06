@@ -53,6 +53,8 @@ type Config struct {
 	RoleManifest *RoleManifestConfig `yaml:"role_manifest,omitempty" json:"role_manifest,omitempty" toml:"role_manifest,omitempty"` //nolint:tagliatelle
 	// Lock configures content pinning in ai-rulez.lock (see internal/contentlock).
 	Lock *LockConfig `yaml:"lock,omitempty" json:"lock,omitempty" toml:"lock,omitempty"`
+	// Governance is the [governance] table: which content needs a reviewer approval (types_governance.go).
+	Governance *GovernanceConfig `yaml:"governance,omitempty" json:"governance,omitempty" toml:"governance,omitempty"`
 
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`

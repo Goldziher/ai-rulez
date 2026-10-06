@@ -627,6 +627,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
+		Governance      *GovernanceConfig      `toml:"governance"`
 		Claude          *ClaudeConfig          `toml:"claude"`
 		Codex           *CodexConfig           `toml:"codex"`
 		Hooks           []HookGroup            `toml:"hooks"`
@@ -710,6 +711,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,
+		Governance:      raw.Governance,
 		Claude:          raw.Claude,
 		Codex:           raw.Codex,
 		Hooks:           raw.Hooks,

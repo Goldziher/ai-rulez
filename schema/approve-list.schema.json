@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/approve-list.schema.json",
+  "title": "ai-rulez approve --list",
+  "description": "Output of `ai-rulez approve --list --format json`: the [governance] policy and the approval status of the pinned content.",
+  "type": "object",
+  "required": ["schema_version", "policy", "items", "orphans", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "policy": {
+      "type": "object",
+      "required": ["require_approval", "exempt", "min_approvers", "approvers", "enforce"],
+      "additionalProperties": false,
+      "properties": {
+        "require_approval": { "type": "array", "items": { "type": "string" } },
+        "exempt": { "type": "array", "items": { "type": "string" } },
+        "min_approvers": { "type": "integer", "minimum": 1 },
+        "approvers": { "type": "array", "items": { "type": "string" } },
+        "enforce": { "type": "boolean" }
+      }
+    },
+    "items": {
+      "type": "array",
+      "description": "Content that needs approval, or has an approval record (every pinned item with --all), sorted by ref.",
+      "items": {
+        "type": "object",
+        "required": ["ref", "kind", "id", "digest", "required", "status", "reviewers"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string", "description": "kind:id or kind:domain/id." },
+          "kind": { "type": "string" },
+          "id": { "type": "string" },
+          "domain": { "type": "string" },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "required": { "type": "boolean" },
+          "status": {
+            "enum": ["not_required", "ok", "missing", "stale", "expired", "unauthorized", "insufficient"]
+          },
+          "code": {
+            "enum": ["AR710", "AR711", "AR712", "AR713", "AR714"],
+            "description": "The strict-validation code of a failing status."
+          },
+          "reviewers": { "type": "array", "items": { "type": "string" } },
+          "expires": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+          "approved_digest": {
+            "type": "string",
+            "description": "For a stale item: the digest that was approved."
+          }
+        }
+      }
+    },
+    "orphans": {
+      "type": "array",
+      "description": "Approval records that name content which no longer exists (AR715).",
+      "items": {
+        "type": "object",
+        "required": ["kind", "id", "digest", "reviewer"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string" },
+          "id": { "type": "string" },
+          "domain": { "type": "string" },
+          "digest": { "type": "string" },
+          "reviewer": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "Counts over the content that needs approval: required, and one per status.",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  }
+}

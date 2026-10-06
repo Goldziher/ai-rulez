@@ -284,6 +284,7 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 	if updateDryRun {
 		return nil
 	}
+	carryApprovals(current, next, false) // update moves some pins; the approvals of every item stay
 	if err := lockfile.Save(fresh.ConfigDir, next); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}

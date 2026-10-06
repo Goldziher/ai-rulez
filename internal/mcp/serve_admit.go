@@ -121,7 +121,7 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 	entry := servedPin(a.Lock, a.View, s.Name)
 	s.Locked = entry != nil && entry.Digest == s.LockDigest
 	if !a.Enforce {
-		return nil
+		return a.admitApproval(s)
 	}
 	switch {
 	case entry == nil:
@@ -129,7 +129,7 @@ func (a Admission) check(s *CatalogSkill) *Refusal {
 	case !s.Locked:
 		return &Refusal{Name: s.Name, Code: CodeServedLockMismatch, Reason: fmt.Sprintf("digest %s differs from the lock's %s; the skill changed since it was locked (run `ai-rulez lock` only after reviewing the change)", s.LockDigest, entry.Digest)}
 	}
-	return nil
+	return a.admitApproval(s)
 }
 
 // servedPin finds the lock's pin of a served skill in a view. An entry written
