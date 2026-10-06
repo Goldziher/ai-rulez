@@ -335,7 +335,17 @@ func lockProfileFor(lock *lockfile.File) string {
 	return ""
 }
 
+// checkLockAt is `lock --check`: the content comparison, then the attestation
+// check when [signing] require names the lock.
 func checkLockAt(path string) int {
+	code := checkLockContentAt(path)
+	if code == 1 {
+		return code
+	}
+	return worstExit(code, checkLockSignatureAt(path))
+}
+
+func checkLockContentAt(path string) int {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
 		fmtError(err)
