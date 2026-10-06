@@ -105,6 +105,9 @@ func reportTagFindings(findings []tagFinding) (failing bool) {
 func verifyTagsAt(path string) int {
 	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
+		if errors.Is(err, config.ErrLockViolation) {
+			return exitDrift // the content check reported it already (fetched content disagrees with the lock)
+		}
 		fmtError(err)
 		return 1
 	}
