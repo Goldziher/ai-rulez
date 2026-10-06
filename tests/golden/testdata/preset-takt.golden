@@ -1,0 +1,169 @@
+# scenario preset-takt
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for takt: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for takt: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 602 d0c06932dda2e466fcb22bbf663c4b3f01de29f1988ae73ff1c41ac314a531f3
+.ai-rulez/.generated-manifest.local.json file 0644 1190 d1572dd5ef2b6e94630877f9d74b3d351754529c1430911b639c58e9135b6871
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 825 b6ef33d4692f00bb13152b57f1a639a36560de436e870d1c7e39c9917d2c83b9
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 463 582624384084bd7c6dc78f8b0d84af296ffbd43721c9fc56ccebcb975b440ef0
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.takt/ dir 0755
+.takt/facets/ dir 0755
+.takt/facets/instructions/ dir 0755
+.takt/facets/instructions/build.md file 0644 35 1cc4ebd2dd0b3f6f1faadc3e68c50a5252c9176ff06312c73f9a305158b302e2
+.takt/facets/instructions/ship.md file 0644 15 d198f3c9f90a86e6383d3c6b5f2227ae11e4b92efb59be076bd153dd2f028ab2
+.takt/facets/knowledge/ dir 0755
+.takt/facets/knowledge/deployer.md file 0644 27 3f6f27279a4dfd4e75b49555b8c986c5c8ffef02c8c9933b9921589cb35084c1
+.takt/facets/knowledge/reviewer.md file 0644 30 76526c2851825b981e2a1800415d1142392671636a1be914a06781a00ce3272c
+.takt/facets/personas/ dir 0755
+.takt/facets/personas/architect.md file 0644 30 f9636f9d8bcd09740615da88b7863fc6bd4d05263fad085c658fe78134d0d729
+.takt/facets/personas/tester.md file 0644 22 f952423a1993cf58602aceda35eae67def5d5dfd6fbd1c5bed3d7be0688dc5e1
+.takt/facets/policies/ dir 0755
+.takt/facets/policies/always.md file 0644 325 bc051080386a0a09143adee3084d3c68be22647177053ba23f9ad0ff36d6b1b3
+.takt/facets/policies/auto.md file 0644 302 90315d38300d8e91d204ff2c55e65726428507b9fbccf1a9219c44336f918108
+.takt/facets/policies/context-architecture.md file 0644 314 00799e77a907256dc8c77ba2255c4514e158f6490e07b658ec1dd70ab31a7202
+.takt/facets/policies/context-overview.md file 0644 325 2687a582307bfc2527d4a6c3544cfc9c83848721016dbdc1a1fc7995a2649372
+.takt/facets/policies/manual.md file 0644 313 0d969a750f8f4dfb600d282b536348b8afc858f85895f861c15cb447af36e709
+.takt/facets/policies/typescript.md file 0644 369 135cadaf30d774e21263ddcfadde17dc2ee343c9b51a14b99285aa3e093d0763
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for takt: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for takt: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for takt: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for takt: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 6 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .mcp.json
+INFO    remove file: .takt/facets/instructions/build.md
+INFO    remove file: .takt/facets/instructions/ship.md
+INFO    remove file: .takt/facets/knowledge/deployer.md
+INFO    remove file: .takt/facets/knowledge/reviewer.md
+INFO    remove file: .takt/facets/personas/architect.md
+INFO    remove file: .takt/facets/personas/tester.md
+INFO    remove file: .takt/facets/policies/always.md
+INFO    remove file: .takt/facets/policies/auto.md
+INFO    remove file: .takt/facets/policies/context-architecture.md
+INFO    remove file: .takt/facets/policies/context-overview.md
+INFO    remove file: .takt/facets/policies/manual.md
+INFO    remove file: .takt/facets/policies/typescript.md
+INFO    remove dir (if empty): .takt/facets/policies
+INFO    remove dir (if empty): .takt/facets/personas
+INFO    remove dir (if empty): .takt/facets/knowledge
+INFO    remove dir (if empty): .takt/facets/instructions
+INFO    remove dir (if empty): .takt/facets
+INFO    remove dir (if empty): .takt
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=13 directories=6
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 825 b6ef33d4692f00bb13152b57f1a639a36560de436e870d1c7e39c9917d2c83b9
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

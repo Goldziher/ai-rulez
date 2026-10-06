@@ -1,0 +1,166 @@
+# scenario preset-commandcode
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=11
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 536 288709df67e66eaf0702a9fb8bf2b1a6b385b25f95bd5a10b506f390f1674c78
+.ai-rulez/.generated-manifest.local.json file 0644 1961 e5c65ff714713da103964da04c16ad247c96d19731f47469b8cd837249202cd8
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 832 a5373debd3c7e4eae8226924f4fa5af1b24f7c8ef1f8b9b387cc34ed54aa8c4f
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.commandcode/ dir 0755
+.commandcode/agents/ dir 0755
+.commandcode/agents/architect.md file 0644 273 b53a853ccfe4ffaedd10733e256dadec6f035b107815f4d1e5c34dccb9b91797
+.commandcode/agents/tester.md file 0644 245 d684f26670c00488eeb3b810590fb445bf8ef98116478fbc8a26ab5601ea56c1
+.commandcode/commands/ dir 0755
+.commandcode/commands/build.md file 0644 250 6ac872d2bb50d70351c54aeb3fcccfbc64c04ec6d8ea0475626122b50efc3054
+.commandcode/commands/ship.md file 0644 227 cb0d24fd9948699597733e45cab7cda954ce97bd2f7c082c1b545d615892e337
+.commandcode/settings.json file 0644 435 a9a600bf22d336389434bcc3ab76a0db51fa4baec734846e1b011b6ec565091f
+.commandcode/skills/ dir 0755
+.commandcode/skills/deployer/ dir 0755
+.commandcode/skills/deployer/SKILL.md file 0644 259 f47e23a1c5dbbaa42bf43f0419a2be4426123469cc8640ac6494ab0cae5d4ea7
+.commandcode/skills/reviewer/ dir 0755
+.commandcode/skills/reviewer/SKILL.md file 0644 506 b96f35025740cd035609b135e72cb7f7efef07a3087b8bd13dfab21e23ffaaaa
+.commandcode/skills/reviewer/references/ dir 0755
+.commandcode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.commandcode/skills/reviewer/scripts/ dir 0755
+.commandcode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 273 39031d12f90ecec416a9d01c56562064a820d3e37c6400486f3a5d04c67f3325
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+AGENTS.md file 0644 874 28cefde9770185d56b45b625ce7d41f77d36f039ae816459844cd03087a19403
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=11
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] not generated for commandcode: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.commandcode to the commandcode equivalent, or restrict the group with targets
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 7 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .commandcode/agents/architect.md
+INFO    remove file: .commandcode/agents/tester.md
+INFO    remove file: .commandcode/commands/build.md
+INFO    remove file: .commandcode/commands/ship.md
+INFO    remove file: .commandcode/settings.json
+INFO    remove file: .commandcode/skills/deployer/SKILL.md
+INFO    remove file: .commandcode/skills/reviewer/SKILL.md
+INFO    remove file: .commandcode/skills/reviewer/references/checklist.md
+INFO    remove file: .commandcode/skills/reviewer/scripts/run.sh
+INFO    remove file: .mcp.json
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .commandcode/skills/reviewer/scripts
+INFO    remove dir (if empty): .commandcode/skills/reviewer/references
+INFO    remove dir (if empty): .commandcode/skills/reviewer
+INFO    remove dir (if empty): .commandcode/skills/deployer
+INFO    remove dir (if empty): .commandcode/skills
+INFO    remove dir (if empty): .commandcode/commands
+INFO    remove dir (if empty): .commandcode/agents
+INFO    remove dir (if empty): .commandcode
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=11 directories=8
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 832 a5373debd3c7e4eae8226924f4fa5af1b24f7c8ef1f8b9b387cc34ed54aa8c4f
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

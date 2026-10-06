@@ -1,0 +1,119 @@
+# scenario user-relocated-home
+
+## step 1: ai-rulez generate --user --yes
+exit: 0
+--- stdout
+user-level plan (profile default, home $HOME)
+  write:   $HOME/.agents/skills/helper/SKILL.md
+  write:   $HOME/.claude/CLAUDE.md
+  write:   $HOME/.claude/agents/buddy.md
+  write:   $HOME/.claude/rules/mine.md
+  write:   $HOME/.claude/skills/helper/SKILL.md
+  write:   $HOME/.config/opencode/AGENTS.md
+  write:   $HOME/.config/opencode/agents/buddy.md
+  write:   $HOME/.config/opencode/plugins/ai-rulez-hooks.js
+  write:   $HOME/.config/opencode/skills/helper/SKILL.md
+  write:   $HOME/.copilot/agents/buddy.agent.md
+  write:   $HOME/.copilot/copilot-instructions.md
+  write:   $HOME/.copilot/hooks/ai-rulez.json
+  write:   $HOME/.copilot/instructions/mine.instructions.md
+  write:   $HOME/.copilot/skills/helper/SKILL.md
+  write:   $HOME/.cursor/agents/buddy.md
+  write:   $HOME/.gemini/GEMINI.md
+  write:   $HOME/.gemini/agents/buddy.md
+  write:   $HOME/elsewhere/codex/AGENTS.md
+  write:   $HOME/elsewhere/codex/agents/buddy.toml
+  write:   $HOME/elsewhere/codex/rules/ai-rulez.rules
+  merge:   $HOME/.claude/settings.json (ai-rulez keys only)
+  merge:   $HOME/.config/opencode/opencode.json (ai-rulez keys only)
+  merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
+  merge:   $HOME/elsewhere/codex/hooks.json (ai-rulez keys only)
+  4 project-shaped output(s) have no documented user-level location and are not written
+--- stderr
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  cursor reads ~/.agents/skills, ~/.claude/skills, so these skills load twice: helper
+WARN  opencode reads ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills, so these skills load twice: helper
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+INFO  Generating user-level configuration profile=default home=$HOME
+INFO  User-level generation complete files=25
+--- project tree
+(no change)
+--- home tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/helper/ dir 0755
+.agents/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.claude/ dir 0755
+.claude/CLAUDE.md file 0644 505 ca1a1f5f7c8fcd770046ec9386adddd68b5555c0ab22e7ae34b41972c8fd6ac1
+.claude/agents/ dir 0755
+.claude/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.claude/rules/ dir 0755
+.claude/rules/mine.md file 0644 315 92ca0bb9d1f3560b925832c3f026618c2e58a28e1c0ef98103c32f6410bc01b4
+.claude/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
+.claude/skills/ dir 0755
+.claude/skills/helper/ dir 0755
+.claude/skills/helper/SKILL.md file 0644 225 e737995ff98543a2420592593b1cbe4e823a96a16bc21c0ada994ae43293c4bd
+.config/ dir 0755
+.config/ai-rulez/ dir 0755
+.config/ai-rulez/.generated-manifest.json file 0644 1775 921751973e988834497e74cbfdb68633944ed4f67e77c305cc29a779d92c1054
+.config/ai-rulez/.generated-manifest.local.json file 0644 3258 96d08f4bd1d39549cdc780f2d17f95ea8e344a1ca119e10baaccd79a826332d5
+.config/ai-rulez/agents/ dir 0755
+.config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
+.config/ai-rulez/config.toml file 0644 325 3563eee2eb37cdf23c02ccf8185b39b0e14015ff57be744b4615b62b3adbb1ca
+.config/ai-rulez/context/ dir 0755
+.config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
+.config/ai-rulez/domains/ dir 0755
+.config/ai-rulez/domains/backend/ dir 0755
+.config/ai-rulez/domains/backend/rules/ dir 0755
+.config/ai-rulez/domains/backend/rules/be.md file 0644 25 4b5ad1b999c87d43266641f0ffa62d5bd920fe944096ffa55a04c6290e83e092
+.config/ai-rulez/domains/backend/skills/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/ dir 0755
+.config/ai-rulez/domains/backend/skills/db/SKILL.md file 0644 38 d2e0a3be655780a4d027124d30c08feb27d4b1e008f5247db8cfeb2aaed28ac9
+.config/ai-rulez/rules/ dir 0755
+.config/ai-rulez/rules/mine.md file 0644 46 0186ce6aeaef9fcec8de13c48797055087574df8c368dd9ba29c136cbed50134
+.config/ai-rulez/skills/ dir 0755
+.config/ai-rulez/skills/helper/ dir 0755
+.config/ai-rulez/skills/helper/SKILL.md file 0644 49 6b7435a4fcbe0e1b1c9be84bf3c7cde3916532f00fc0c75cd3a44a8b81349438
+.config/opencode/ dir 0755
+.config/opencode/AGENTS.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+.config/opencode/agents/ dir 0755
+.config/opencode/agents/buddy.md file 0644 221 33e50dc4258ddef567874ca8a37799f207f4a1d0f05b197f1d05a4c0b8495920
+.config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
+.config/opencode/plugins/ dir 0755
+.config/opencode/plugins/ai-rulez-hooks.js file 0644 8886 56b4f64d52bcede8715bd13582db3cc6571f06f44d21eebcf9badb7a5c8b1fbd
+.config/opencode/skills/ dir 0755
+.config/opencode/skills/helper/ dir 0755
+.config/opencode/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.copilot/ dir 0755
+.copilot/agents/ dir 0755
+.copilot/agents/buddy.agent.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.copilot/copilot-instructions.md file 0644 505 ca1a1f5f7c8fcd770046ec9386adddd68b5555c0ab22e7ae34b41972c8fd6ac1
+.copilot/hooks/ dir 0755
+.copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
+.copilot/instructions/ dir 0755
+.copilot/instructions/mine.instructions.md file 0644 341 d825116e9c1919df2cb3cf5f6af49a2adbb416b1be56b6e3ba1a15953db98bfb
+.copilot/skills/ dir 0755
+.copilot/skills/helper/ dir 0755
+.copilot/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.cursor/ dir 0755
+.cursor/agents/ dir 0755
+.cursor/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.cursor/commands/ dir 0755
+.cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
+.gemini/ dir 0755
+.gemini/GEMINI.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+.gemini/agents/ dir 0755
+.gemini/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
+elsewhere/ dir 0755
+elsewhere/codex/ dir 0755
+elsewhere/codex/AGENTS.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+elsewhere/codex/agents/ dir 0755
+elsewhere/codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
+elsewhere/codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
+elsewhere/codex/rules/ dir 0755
+elsewhere/codex/rules/ai-rulez.rules file 0644 425 2605682bc869c20f1932d4b0957af30e660468f48dd979f1478e3317185c7f5c

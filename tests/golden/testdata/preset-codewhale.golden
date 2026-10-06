@@ -1,0 +1,173 @@
+# scenario preset-codewhale
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for codewhale: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for codewhale: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 540 8b37e666c1bf7f75516b3c5c0c0ea272434cbaedd364610bed64faebadcaab95
+.ai-rulez/.generated-manifest.local.json file 0644 1298 a71bf6bd7a66e771016b8d14d879c6fa8f5aef6c17dc5a0e1dfd5774badbf17d
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 830 9c94f2b7b279e474c8439111bb6f8454d89c1677f752e069934acfb2d255aa3d
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.codewhale/ dir 0755
+.codewhale/commands/ dir 0755
+.codewhale/commands/build.md file 0644 250 98f0b356b4f35e480baa6e993e6af9db2ae9348cd72751ad5bd7f10bb6750abb
+.codewhale/commands/ship.md file 0644 227 2889cfbf48f495132880a5faf5d896995f37deccad70166c615be1a4ef6c1ec3
+.codewhale/mcp.json file 0600 352 5b26a6649f08b530a8a5588ccdf1f17ebf3c5c2130201ec7e26b10a52e0093c9
+.codewhale/rules/ dir 0755
+.codewhale/rules/always.md file 0644 325 1027fdfd98840ba83627d6c71064361793f6a6f41209d601ff7dd739ecb92692
+.codewhale/rules/auto.md file 0644 302 d2609d2b354ce1e629424ae50988f5ab5ebc60a6b35e54f53554807e1644d05e
+.codewhale/rules/manual.md file 0644 313 9f6d77510301f8013a5439cd095bbd80c82346a0ad2de0bcbc3287b9e756dfd9
+.codewhale/rules/typescript.md file 0644 369 78961b23bd65b34fd01f48de8dca432d9bab4cffa837e2c8cce3453b1fb93727
+.codewhale/skills/ dir 0755
+.codewhale/skills/deployer/ dir 0755
+.codewhale/skills/deployer/SKILL.md file 0644 259 63ceb9d0633a4c4b9bf4e10117dacae0d8c6a38360c87341e35fa5bb27310226
+.codewhale/skills/reviewer/ dir 0755
+.codewhale/skills/reviewer/SKILL.md file 0644 506 a3e922eb556ead647be96441ea782e4d8fc2381c6022439f99340930927f476d
+.codewhale/skills/reviewer/references/ dir 0755
+.codewhale/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.codewhale/skills/reviewer/scripts/ dir 0755
+.codewhale/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 376 8d047003a1165e5d9501655888138d12a60c44530c94c249732f9507889b7714
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+AGENTS.md file 0644 575 033486f352351a2ddb2f64811ec4d5f80771bf1b377d50e13ad263faac385407
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for codewhale: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for codewhale: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=13
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for codewhale: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  [permissions] are not generated for codewhale: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 9 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .codewhale/commands/build.md
+INFO    remove file: .codewhale/commands/ship.md
+INFO    remove file: .codewhale/mcp.json
+INFO    remove file: .codewhale/rules/always.md
+INFO    remove file: .codewhale/rules/auto.md
+INFO    remove file: .codewhale/rules/manual.md
+INFO    remove file: .codewhale/rules/typescript.md
+INFO    remove file: .codewhale/skills/deployer/SKILL.md
+INFO    remove file: .codewhale/skills/reviewer/SKILL.md
+INFO    remove file: .codewhale/skills/reviewer/references/checklist.md
+INFO    remove file: .codewhale/skills/reviewer/scripts/run.sh
+INFO    remove file: .mcp.json
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .codewhale/skills/reviewer/scripts
+INFO    remove dir (if empty): .codewhale/skills/reviewer/references
+INFO    remove dir (if empty): .codewhale/skills/reviewer
+INFO    remove dir (if empty): .codewhale/skills/deployer
+INFO    remove dir (if empty): .codewhale/skills
+INFO    remove dir (if empty): .codewhale/rules
+INFO    remove dir (if empty): .codewhale/commands
+INFO    remove dir (if empty): .codewhale
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=13 directories=8
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 830 9c94f2b7b279e474c8439111bb6f8454d89c1677f752e069934acfb2d255aa3d
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
