@@ -42,6 +42,9 @@ var evalFlags struct {
 	out           string
 	maxCost       float64
 	maxCostMode   string
+	grader        string
+	allowLLM      bool
+	graderMaxCost float64
 	date          string
 	changedOnly   bool
 	base          string
@@ -94,7 +97,13 @@ activation rates with Wilson intervals, recall@k and a confusion matrix between 
 repeats each prompt --runs times (default 5) and records which skills the model loaded; it needs a runner
 that declares the activation capability and the native surface (claude-native and codex-native do; a command
 runner answers the capabilities probe) and is refused otherwise. The command exits 2 when a skill fails its pass
-threshold, errors, or has invalid cases.`,
+threshold, errors, or has invalid cases.
+
+--grader builtin grades every rubric (and rubric_items checklist) with the configured [llm] model from the
+runner's output instead of trusting the runner's own score. It needs a runner that returns the answer
+(the command runner's "output"; claude-plugin-eval returns what its own grader read), --allow-llm, and
+allow_network plus a model in the user config; --grader-max-cost caps its spend, which also counts towards
+--max-cost.`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		failed, err := runEval(cmd, args)
@@ -131,6 +140,9 @@ func init() {
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
 	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
 	f.StringVar(&evalFlags.maxCostMode, "max-cost-mode", "", "Estimate figure that must fit under --max-cost before a run starts: expected (default for case runs) or high (default for --mode activation)")
+	f.StringVar(&evalFlags.grader, "grader", evals.GraderRunner, "Who grades a case's rubric: runner (whatever the runner provides) or builtin (the configured [llm] model judges the runner's transcript; needs --allow-llm)")
+	f.BoolVar(&evalFlags.allowLLM, "allow-llm", false, "Agree that --grader builtin sends the runner's transcripts to the configured [llm] model (it also needs allow_network and a model in the user config)")
+	f.Float64Var(&evalFlags.graderMaxCost, "grader-max-cost", defaultGraderMaxCost, "Spend cap in USD for --grader builtin (0 keeps only the [llm] limits)")
 	f.StringVar(&evalFlags.date, "date", "", "Date recorded in the results (default $"+EvalDateEnv+"; the clock is never read)")
 	f.BoolVar(&evalFlags.changedOnly, "changed-only", false, "Only skills with files changed against --base (git diff, plus untracked files)")
 	f.StringVar(&evalFlags.base, "base", "HEAD", "Git ref --changed-only compares the working tree against")
@@ -164,6 +176,12 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 		return false, err
 	}
 	opts.Params, opts.Price = estimateParams(cfg), evalPrice(cfg, evalFlags.model)
+	grader, release, err := buildGrader(cmd, cfg)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	opts.Grader = grader
 	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
 		floor := cfg.Lint.Evals.MinPassRate
 		opts.PassThreshold = &floor
@@ -244,6 +262,9 @@ func validateEvalFlags(cmd *cobra.Command) error {
 		return oops.Errorf("--runs must be >= 0, got %d", evalFlags.runs)
 	}
 	if err := validateActivationFlags(); err != nil {
+		return err
+	}
+	if err := validateGraderFlags(); err != nil {
 		return err
 	}
 	if evalFlags.timeout < 0 {
@@ -348,7 +369,8 @@ func buildEvalRunner(cmd *cobra.Command) (evals.Runner, int, error) {
 		// Pass the effective run count: the estimate assumes it, so claude must be told the
 		// same number instead of falling back to a default of its own.
 		return &evals.ClaudePluginEval{Bin: evalFlags.claudeBin, Runs: runs, JudgeModel: evalFlags.judgeModel,
-			ExtraArgs: evalFlags.runnerArgs, Timeout: evalFlags.timeout, Stderr: cmd.ErrOrStderr()}, runs, nil
+			ExtraArgs: evalFlags.runnerArgs, Timeout: evalFlags.timeout, Stderr: cmd.ErrOrStderr(),
+			IgnoreRubricVerdict: evalFlags.grader == evals.GraderBuiltin}, runs, nil
 	case evals.RunnerCommand:
 		if evalFlags.runnerCommand == "" {
 			return nil, 1, oops.Errorf("--runner command needs --runner-command")

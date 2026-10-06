@@ -4,8 +4,8 @@ ai-rulez gives eval cases a supported place to live, keeps them out of the conte
 plugin bundles when you ask, and can report skills that have none. It also defines a harness-neutral case format,
 runs the cases through a pluggable runner (`ai-rulez eval run`), scores each skill (pass rate, trigger precision
 and recall, ablation delta, token cost), records the scores next to the skill's content digest, and gates on them in
-[strict validation](strict-validation.md). It does not implement an agent or a grader of its own: a runner does the
-running, and a model grader is whatever the runner provides.
+[strict validation](strict-validation.md). It does not implement an agent: a runner does the running. A rubric is
+graded by whatever the runner provides, or, with `--grader builtin`, by the [model layer's](llm.md) judge.
 
 - [Case format](#case-format)
 - [Running evals](#running-evals)
@@ -221,6 +221,39 @@ Cases are self-contained: near misses are expanded and `prompt_file` and fixture
   cases with a `rubric` unless `passed` is set.
 - `skipped: true` with a `reason` leaves a case out of the score; `error` counts the case as a failure.
 - Costs and tokens are optional. The protocol version must be `1`; an unknown case or arm is an error.
+
+### The built-in grader
+
+By default a rubric is graded by the runner (`rubric_score`, or its own `passed` verdict). `--grader builtin` grades it
+with `internal/llm`'s judge instead, from the answer the runner returned, so the grade does not depend on each
+runner's own judge:
+
+```bash
+ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --grader-max-cost 0.25
+```
+
+- **Consent.** Sending a transcript to a model is opt-in at every level: `--allow-llm`, and, from the user config or
+  the environment (never the repository), `allow_network = true` and an `[llm]` model; see [LLM access](llm.md) for
+  the trust rule, the key and Gemini through the `literllm` backend. Without all of that the run is refused before any
+  case starts; `--dry-run` builds no client and sends nothing. `--grader-max-cost` (default $0.25) caps the grader's
+  spend with the model layer's fail-closed budget; the spend also counts towards `--max-cost` and is reported as
+  `grader_cost_usd`.
+- **What is graded.** Every case with a `rubric` or `rubric_items`, in both arms (the ablation needs both), from
+  `output`. The judge returns a score in [0,1] with a one-line rationale at temperature 0, which replaces a
+  `rubric_score` the runner gave and is compared with `rubric_min_score` (default 0.7); the rationale is in the
+  report (`rubric_note`). A checklist is graded as one call: the score is the share of the total weight satisfied.
+  A result whose runner gave its own `passed` verdict is left alone (with a warning), and a result with no `output` has
+  nothing to grade and fails the rubric (with a warning). A failed judge call leaves that case ungraded, which scores
+  as a failure.
+- **Treated as data.** The rubric and the transcript go to the judge between markers that carry a token derived from
+  the request, the judge is told to ignore instructions inside them, and its reply must be exactly one JSON object.
+  Secret-looking text in the rubric or transcript makes that case ungraded (nothing is sent); an oversized transcript
+  is cut to its head and tail (64 KiB).
+- **Runners.** The command runner must return `output`. `claude-plugin-eval` returns the answer its own llm grader
+  read; with `--grader builtin` that tool still runs its grader (so the rubric is judged twice and the tool's verdict is
+  ignored) and the built-in grade decides. The claude adapter's results carry no transcript for cases without a rubric.
+- **Caching.** The grader's model and the judge prompt version are part of the cache key, so grading differently
+  re-runs the skill.
 
 ### Caching
 
