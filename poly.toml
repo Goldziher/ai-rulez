@@ -15,6 +15,7 @@ exclude = [
   "**/package-lock.json",
   "**/pnpm-lock.yaml",
   "**/testdata/*.golden.json",
+  "internal/importer/testdata/convert/**",
   "**/testdata/dialects/*.golden.*",
   "**/testdata/*.golden.js",
   "**/testdata/*.golden.ts",
