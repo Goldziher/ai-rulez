@@ -134,6 +134,7 @@ func Run(ctx context.Context, o Options) *Report {
 		checkLock,
 		checkLLM,
 		checkTools,
+		checkRoleModes,
 	}
 	for _, c := range checks {
 		report.Findings = append(report.Findings, c(ctx, s)...)
