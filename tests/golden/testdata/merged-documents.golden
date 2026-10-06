@@ -213,57 +213,57 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 ## step 4: ai-rulez generate --yes --dry-run
 exit: 0
 --- stdout
+profile: default
 create-dir: .claude
+create-dir: .claude/skills
 create-dir: .claude/agents
 create-dir: .claude/rules
-create-dir: .claude/skills
-create-dir: .claude/skills/build
+unchanged: CLAUDE.md
+unchanged: .claude/rules/always.ai-rulez.md
+unchanged: .claude/rules/typescript.md
+unchanged: .claude/rules/auto.md
+unchanged: .claude/rules/targeted.md
+unchanged: .claude/rules/manual.md
 create-dir: .claude/skills/deployer
+unchanged: .claude/skills/deployer/SKILL.md
 create-dir: .claude/skills/reviewer
+unchanged: .claude/skills/reviewer/SKILL.md
 create-dir: .claude/skills/reviewer/references
 create-dir: .claude/skills/reviewer/scripts
-create-dir: .claude/skills/ship
-create-dir: .opencode
-create-dir: .opencode/agents
-create-dir: .opencode/commands
-create-dir: .opencode/skills
-create-dir: .opencode/skills/deployer
-create-dir: .opencode/skills/reviewer
-create-dir: .opencode/skills/reviewer/references
-create-dir: .opencode/skills/reviewer/scripts
-profile: default
-unchanged: .claude/agents/architect.md
-unchanged: .claude/agents/tester.md
-unchanged: .claude/rules/always.ai-rulez.md
-unchanged: .claude/rules/auto.md
-unchanged: .claude/rules/manual.md
-unchanged: .claude/rules/targeted.md
-unchanged: .claude/rules/typescript.md
-unchanged: .claude/settings.json
-unchanged: .claude/skills/build/SKILL.md
-unchanged: .claude/skills/deployer/SKILL.md
-unchanged: .claude/skills/reviewer/SKILL.md
 unchanged: .claude/skills/reviewer/references/checklist.md
 unchanged: .claude/skills/reviewer/scripts/run.sh
+unchanged: .claude/agents/architect.md
+unchanged: .claude/agents/tester.md
+create-dir: .claude/skills/build
+unchanged: .claude/skills/build/SKILL.md
+create-dir: .claude/skills/ship
 unchanged: .claude/skills/ship/SKILL.md
+unchanged: .claude/settings.json
 unchanged: .mcp.json
-unchanged: .opencode/agents/architect.md
-unchanged: .opencode/agents/tester.md
-unchanged: .opencode/commands/build.md
-unchanged: .opencode/commands/ship.md
-unchanged: .opencode/plugins/ai-rulez-hooks.js
+create-dir: .opencode
+create-dir: .opencode/skills
+create-dir: .opencode/agents
+unchanged: AGENTS.md
+create-dir: .opencode/skills/deployer
 unchanged: .opencode/skills/deployer/SKILL.md
+create-dir: .opencode/skills/reviewer
 unchanged: .opencode/skills/reviewer/SKILL.md
+create-dir: .opencode/skills/reviewer/references
+create-dir: .opencode/skills/reviewer/scripts
 unchanged: .opencode/skills/reviewer/references/checklist.md
 unchanged: .opencode/skills/reviewer/scripts/run.sh
-unchanged: AGENTS.md
-unchanged: CLAUDE.md
+create-dir: .opencode/commands
+unchanged: .opencode/commands/build.md
+unchanged: .opencode/commands/ship.md
+unchanged: .opencode/agents/architect.md
+unchanged: .opencode/agents/tester.md
 unchanged: opencode.json
+unchanged: .opencode/plugins/ai-rulez-hooks.js
 --- stderr
-WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
-WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.claude/rules/always.md generated=$ROOT/.claude/rules/always.ai-rulez.md
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
+WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.claude/rules/always.md generated=$ROOT/.claude/rules/always.ai-rulez.md
+WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 933 c05d8d99f02ef679a52a230a054bb2a5c6972c0a886010b106f693ec5dde8a82
