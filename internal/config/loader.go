@@ -1368,49 +1368,50 @@ func serversToMap(servers []MCPServer) map[string]*MCPServer {
 	return result
 }
 
+// legacyMCPFileNames are the deprecated separate MCP files, in load order. Only
+// the first one that exists is loaded.
+var legacyMCPFileNames = []string{"mcp.toml", "mcp.yaml", "mcp.json"}
+
 // loadLegacyMCPFile loads MCP servers from a deprecated separate mcp.toml/mcp.yaml/mcp.json file.
 // Returns nil if no legacy file exists.
 func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
-	for _, filename := range []string{"mcp.toml", "mcp.yaml", "mcp.json"} {
+	for _, filename := range legacyMCPFileNames {
 		path := filepath.Join(configDir, filename)
 		if _, err := os.Stat(path); err != nil {
 			continue
 		}
-
-		data, err := os.ReadFile(path)
+		servers, err := DecodeLegacyMCPFile(path)
 		if err != nil {
-			logger.Warn("Failed to read legacy MCP file", "path", path, "error", err)
+			logger.Warn("Failed to load legacy MCP file", "path", path, "error", err)
 			return nil
 		}
-
-		// Parse the legacy MCP config structure
-		type legacyMCPConfig struct {
-			Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
-		}
-
-		var cfg legacyMCPConfig
-		ext := filepath.Ext(filename)
-		switch ext {
-		case extTOML:
-			if err := toml.Unmarshal(data, &cfg); err != nil {
-				logger.Warn("Failed to parse legacy MCP TOML", "path", path, "error", err)
-				return nil
-			}
-		case extYAML, extYML:
-			if err := yaml.Unmarshal(data, &cfg); err != nil {
-				logger.Warn("Failed to parse legacy MCP YAML", "path", path, "error", err)
-				return nil
-			}
-		case extJSON:
-			if err := json.Unmarshal(data, &cfg); err != nil {
-				logger.Warn("Failed to parse legacy MCP JSON", "path", path, "error", err)
-				return nil
-			}
-		}
-
-		return serversToMap(cfg.Servers)
+		return serversToMap(servers)
 	}
 	return nil
+}
+
+// DecodeLegacyMCPFile reads the servers of one deprecated mcp.toml, mcp.yaml or
+// mcp.json file, as written.
+func DecodeLegacyMCPFile(path string) ([]MCPServer, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "read legacy MCP file")
+	}
+	var cfg struct {
+		Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
+	}
+	switch filepath.Ext(path) {
+	case extTOML:
+		err = toml.Unmarshal(data, &cfg)
+	case extYAML, extYML:
+		err = yaml.Unmarshal(data, &cfg)
+	case extJSON:
+		err = json.Unmarshal(data, &cfg)
+	}
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "parse legacy MCP file")
+	}
+	return cfg.Servers, nil
 }
 
 // SaveConfig writes a configuration back to its original on-disk format.
