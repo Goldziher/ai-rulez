@@ -33,6 +33,7 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | `[lint.budget]` is renamed `[lint.tolerate]` | Rename; the old name still works and warns |
 | `--json` is deprecated for `--format json` | Switch scripts to `--format json` |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
+| The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
 
 ## Go module path and install
 
