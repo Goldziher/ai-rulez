@@ -14,8 +14,10 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/samber/oops"
 )
 
@@ -58,19 +60,29 @@ type Resolved struct {
 	Locked bool
 	// RefKind is "tag", "branch", "head", "commit" or "local".
 	RefKind string
+	// Tag and TagObject record what a version constraint resolved to.
+	Tag, TagObject string
 	// Skills are the discovered skills after include/exclude selection, by name.
 	Skills []Skill
 }
 
 // Want is the lock description of a source.
 func (s Spec) Want() lockfile.Want {
-	return lockfile.Want{Kind: lockfile.KindSource, Name: s.Name, Source: s.Redacted(), Path: s.Path, Ref: s.Ref}
+	w := lockfile.Want{Kind: lockfile.KindSource, Name: s.Name, Source: s.Redacted(), Path: s.Path, Ref: s.Ref}
+	return includes.WithVersion(w, s.versionSpec())
+}
+
+// versionSpec is the version constraint of the source, from the version key or
+// the ref shorthand.
+func (s Spec) versionSpec() config.VersionSpec {
+	c := config.SkillSourceConfig{Ref: s.Ref, Version: s.Version, TagPrefix: s.TagPrefix, IncludePrerelease: s.IncludePrerelease}
+	return c.VersionSpec()
 }
 
 // Entry is the lock entry recording what the source resolved to.
 func (r *Resolved) Entry() lockfile.Entry {
 	w := r.Spec.Want()
-	return lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: r.Commit, Digest: r.Digest}
+	return lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: r.Commit, Digest: r.Digest, Tag: r.Tag, TagObject: r.TagObject}
 }
 
 // Resolve fetches (or finds in the cache) the source and lists its skills.
@@ -179,7 +191,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 		return nil, errLock(spec, "not covered by %s (or the lock is stale); run `ai-rulez lock`", lockfile.FileName)
 	}
 
-	commit, kind, err := pickCommit(ctx, spec, opts, commitSearch{url: url, repoDir: repoDir, entry: entry, covered: covered, offline: offline})
+	commit, kind, tag, err := pickCommit(ctx, spec, opts, commitSearch{url: url, repoDir: repoDir, entry: entry, covered: covered, offline: offline})
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +200,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	if err != nil {
 		return nil, err
 	}
+	res.Tag, res.TagObject = tag.Tag, tag.TagObject
 	if !res.Pinned {
 		logger.Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
 			"source", spec.Name, "ref", refLabel(spec.Ref), "commit", commit)
@@ -290,26 +303,46 @@ type commitSearch struct {
 
 // pickCommit decides which commit of a git source to use: the lock's, a pinned
 // SHA, the one last resolved (offline), or whatever the ref points to now.
-func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (commit, kind string, err error) {
+func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (commit, kind string, tag includes.Resolution, err error) {
+	if w := spec.Want(); w.Constraint != "" {
+		return pickVersion(ctx, spec, opts, q, w)
+	}
 	switch {
 	case q.covered:
 		if fullSHA.MatchString(spec.Ref) && spec.Ref != q.entry.Commit {
-			return "", "", errLock(spec, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", spec.Ref, q.entry.Commit)
+			return "", "", tag, errLock(spec, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", spec.Ref, q.entry.Commit)
 		}
-		return q.entry.Commit, kindFor(spec.Ref), nil
+		return q.entry.Commit, kindFor(spec.Ref), tag, nil
 	case fullSHA.MatchString(spec.Ref):
-		return spec.Ref, kindSHA, nil
+		return spec.Ref, kindSHA, tag, nil
 	case q.offline:
 		if commit = readRef(q.repoDir, spec.Ref); commit == "" {
-			return "", "", oops.With("url", spec.Redacted()).Errorf("skill source %q: offline and %q was never resolved; run once online (or `ai-rulez lock`) first", spec.Name, spec.Ref)
+			return "", "", tag, oops.With("url", spec.Redacted()).Errorf("skill source %q: offline and %q was never resolved; run once online (or `ai-rulez lock`) first", spec.Name, spec.Ref)
 		}
-		return commit, kindFor(spec.Ref), nil
+		return commit, kindFor(spec.Ref), tag, nil
 	}
 	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref); err != nil {
-		return "", "", err
+		return "", "", tag, err
 	}
 	writeRef(q.repoDir, spec.Ref, commit)
-	return commit, kind, nil
+	return commit, kind, tag, nil
+}
+
+// pickVersion picks the commit of a source that asks for a version range. A pin
+// the lock covers is used as it is (no network, no resolution); otherwise the
+// range is resolved against the remote's tags, the way `lock` and `update` do.
+func pickVersion(ctx context.Context, spec Spec, opts Options, q commitSearch, w lockfile.Want) (commit, kind string, tag includes.Resolution, err error) {
+	if q.covered {
+		return q.entry.Commit, kindSHA, includes.Resolution{Commit: q.entry.Commit, Tag: q.entry.Tag, TagObject: q.entry.TagObject}, nil
+	}
+	list := func(ctx context.Context) ([]tagresolve.RawTag, error) {
+		return tagresolve.ListTags(ctx, func(ctx context.Context, args ...string) (string, error) { return runGit(ctx, "", args...) }, q.url)
+	}
+	res, err := includes.ResolveVersion(ctx, opts.Lock, w, opts.Refresh, q.offline, list)
+	if err != nil {
+		return "", "", res, oops.With("url", spec.Redacted()).Wrapf(err, "skill source %q", spec.Name)
+	}
+	return res.Commit, kindSHA, res, nil
 }
 
 var errDigest = errors.New("content digest mismatch")

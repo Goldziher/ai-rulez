@@ -130,38 +130,54 @@ func violationOrPlain(w lockfile.Want, err error) error {
 	return oops.Wrapf(err, "%s %q", w.Kind, w.Name)
 }
 
+// Resolution is the commit and tag a version constraint resolved to.
+type Resolution struct {
+	Commit, Tag, TagObject string
+}
+
 // resolveConstraint picks the commit of a constraint source that has no usable pin.
 func resolveConstraint(ctx context.Context, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
+	res, err := ResolveVersion(ctx, lock, w, refreshing(w.Kind, w.Name), offline(ctx), func(ctx context.Context) ([]tagresolve.RawTag, error) {
+		return ListRemoteTags(ctx, repoURL, token)
+	})
+	return res.Commit, tagInfo{res.Tag, res.TagObject}, err
+}
+
+// ResolveVersion resolves w's constraint against the tags list returns. refresh
+// says the run may move the pin (`lock`, `update`): a pin that still satisfies
+// the constraint is then kept, unless Advance selects the source, after
+// checking that its tag was not moved. Offline, only a kept pin resolves.
+func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, refresh, isOffline bool, list func(context.Context) ([]tagresolve.RawTag, error)) (Resolution, error) {
 	entry := lock.Find(w.Kind, w.Name)
-	covered := entry.Covers(w)
 	advance := Advance != nil && Advance(w.Kind, w.Name)
-	keep := refreshing(w.Kind, w.Name) && covered && !advance
-	if offline(ctx) {
+	keep := refresh && entry.Covers(w) && !advance
+	if isOffline {
 		if keep {
-			return entry.Commit, tagInfo{entry.Tag, entry.TagObject}, nil
+			return Resolution{entry.Commit, entry.Tag, entry.TagObject}, nil
 		}
-		return "", tagInfo{}, oops.Hint("Run `ai-rulez lock` with network access").
+		return Resolution{}, oops.Hint("Run `ai-rulez lock` with network access").
 			Errorf("version constraint %q of %s %q cannot be resolved offline", w.Constraint, w.Kind, w.Name)
 	}
-	tags, err := ListRemoteTags(ctx, repoURL, token)
+	tags, err := list(ctx)
 	if err != nil {
-		return "", tagInfo{}, err
+		return Resolution{}, err
 	}
 	if keep {
-		return keepPin(entry, tags, w)
+		commit, t, err := keepPin(entry, tags, w)
+		return Resolution{commit, t.tag, t.tagObject}, err
 	}
 	sel, err := tagresolve.Select(tags, TagSpec(w))
 	if err != nil {
-		return "", tagInfo{}, err //nolint:wrapcheck // carries the rule code
+		return Resolution{}, err //nolint:wrapcheck // carries the rule code
 	}
 	for _, n := range sel.Notes {
 		logger.Warn("Ambiguous version tags", "source", w.Name, "note", n)
 	}
 	if err := refuseDowngrade(entry, sel.Chosen, w); err != nil {
-		return "", tagInfo{}, err
+		return Resolution{}, err
 	}
 	c := sel.Chosen.Tag
-	return c.Commit, tagInfo{c.Name, c.TagObject()}, nil
+	return Resolution{c.Commit, c.Name, c.TagObject()}, nil
 }
 
 // refuseDowngrade stops an update that would select a tag below the pinned one:
