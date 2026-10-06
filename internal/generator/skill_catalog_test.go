@@ -164,3 +164,25 @@ func TestApplyIncludeOrigin(t *testing.T) {
 		})
 	}
 }
+
+func TestServedSkills_FlagsMalformedFrontmatter(t *testing.T) {
+	// Arrange
+	root := servedSkillsProject(t)
+	broken := filepath.Join(root, ".ai-rulez", "skills", "broken", "SKILL.md")
+	require.NoError(t, os.MkdirAll(filepath.Dir(broken), 0o755))
+	require.NoError(t, os.WriteFile(broken, []byte("---\nname: broken\ndescription: Use when x: y: z\n---\nBODY\n"), 0o644))
+	cfg, err := config.LoadConfig(context.Background(), root)
+	require.NoError(t, err)
+
+	// Act
+	_, served, err := NewGenerator(cfg).ServedSkills("backend", "claude")
+
+	// Assert
+	require.NoError(t, err)
+	flags := map[string]bool{}
+	for _, s := range served {
+		flags[s.ID] = s.MalformedFrontmatter
+	}
+	assert.True(t, flags["broken"])
+	assert.False(t, flags["alpha"])
+}
