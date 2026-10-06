@@ -18,6 +18,7 @@ const formatCycloneDX = "cyclonedx"
 var (
 	sbomFormat string
 	sbomOutput string
+	sbomOnline bool
 )
 
 // SBOMCmd prints the project's AI configuration as a CycloneDX 1.6 bill of materials.
@@ -36,6 +37,11 @@ never in "hashes". Environment and header values are never read, and URLs lose
 their credentials and query. The serial number is derived from the lock tree
 (ai-rulez.lock) or, without a lock, from the tree computed from the sources.
 
+By default sbom does not touch the network: remote includes and skill sources
+come from ai-rulez.lock and the local cache (run "ai-rulez generate" or
+"ai-rulez lock" once to fill it). --online lets it contact the remotes, as
+generate does, to resolve moving refs.
+
 The machine-local overlay (config.local.*, local/) is never included. Nothing is
 rendered and nothing is written unless --output is given.`,
 	Args: cobra.NoArgs,
@@ -46,6 +52,7 @@ rendered and nothing is written unless --output is given.`,
 
 func init() {
 	SBOMCmd.Flags().StringVar(&sbomFormat, "format", formatCycloneDX, "Output format: cyclonedx (CycloneDX 1.6 JSON)")
+	SBOMCmd.Flags().BoolVar(&sbomOnline, "online", false, "Allow contacting remote includes and skill sources (git ls-remote); by default only the lock and the cache are used")
 	SBOMCmd.Flags().StringVarP(&sbomOutput, "output", "o", "", "Write the document to this file instead of stdout")
 	SBOMCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -54,8 +61,15 @@ func runSBOM(out io.Writer) error {
 	if sbomFormat != formatCycloneDX {
 		return oops.Errorf("unknown --format %q (use %s)", sbomFormat, formatCycloneDX)
 	}
-	cfg, err := loadConfigForCommand(context.Background(), nil, config.WithoutLocal())
+	ctx := context.Background()
+	if !sbomOnline {
+		ctx = config.WithOfflineIncludes(ctx)
+	}
+	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
 	if err != nil {
+		if !sbomOnline {
+			return oops.Hint("sbom reads remote sources from the lock and the cache only; run `ai-rulez generate` or `ai-rulez lock` to fill the cache, or pass --online").Wrap(err)
+		}
 		return err
 	}
 	if err := cfg.Validate(); err != nil {
