@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "4.23.1"
+  version: "5.0.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -143,7 +143,7 @@ name: security-reviewer
 description: Reviews code for security regressions
 model: opus # haiku | sonnet | opus | inherit
 effort: high # low | medium | high | xhigh | max | inherit
-permission_mode: default
+permissionMode: default
 tools: # Restrict tool access
   - Read
   - Grep
@@ -223,6 +223,21 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 - Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (frontmatter `description`, `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See `docs/checks.md`.
 - `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`) into the home directories of 47 harnesses; `clean --user` removes what it wrote. See `docs/user-scope.md`.
 - Settings files you also edit (JSON, JSONC, TOML, YAML) are merged key by key, so your own keys and comments survive `generate` and `clean`.
+- `[guard] generated = true` adds a PreToolUse hook (`ai-rulez guard`) that blocks agent edits to generated files and points at the source under `.ai-rulez/`.
+
+## Lock, Updates and Verification
+
+- `ai-rulez lock` writes `ai-rulez.lock`: commits and digests of remote includes, installed skills and skill sources, plus every authored item and generated output. It is enforced whenever the file exists (`[lock] enforce = false` opts out). `lock --check` verifies offline, `--diff` previews, `--subject` prints the digest to sign with cosign, `generate --locked`/`--frozen` are the CI modes. Exit codes: `0` ok, `1` could not run, `2` drift, `3` served skills left unpinned by the security scan. See `docs/lockfile.md`.
+- Sources accept `version = "^1.2"`; `ai-rulez lock --outdated` lists newer tags and `ai-rulez update` moves range pins (codes `AR730`, `AR731`, `AR732`, `AR735`).
+- `ai-rulez validate --strict` runs deep content checks with stable `AR` codes (`--fix`, `--since`, `--baseline`, `--format json|sarif|github|junit|markdown`); `ai-rulez scan` runs only the security checks; `validate --explain AR001` explains a rule. See `docs/strict-validation.md`.
+- `[[verifiers]]` and `.ai-rulez/verifiers/*.toml` declare deterministic repo checks run by `ai-rulez verifiers run` (`--since`, `--staged`, `--format sarif|junit`).
+- `ai-rulez sbom` prints a CycloneDX bill of materials, `ai-rulez catalog` lists every item with owner, version, tokens and lock status (`--html <dir>` writes a static site), `ai-rulez tokens` and `cost` report prompt-token cost, `ai-rulez search <query>` ranks skills.
+- `ai-rulez convert` imports existing tool files, a rulesync project or a `skills-lock.json` into `.ai-rulez/` with a lossiness report.
+
+## Roles and Dynamic Skills
+
+- `[[roles]]` map a job to a slice of the content (`domains`, `include`/`exclude` selectors, `skill_mode`); `generate --role <name>` renders it and `ai-rulez roles list|show|resolve` inspects it. See `docs/roles.md`.
+- `delivery: static|served|both` on a skill (or `[skills] delivery`) serves a skill over MCP on demand instead of writing it to the harness trees: run `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`, `list_skill_resources`). `[[skill_sources]]` serve skills from a git repository or directory. See `docs/mcp-server.md`.
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
