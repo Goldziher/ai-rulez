@@ -141,6 +141,23 @@ func (g *SignatureGate) verifyPublisher(s *CatalogSkill, o skillOrigin) *signing
 	if o.Verbatim {
 		return servedMatchesSigned(s, tree.Tree)
 	}
+	return servedIsSigned(s, tree.Tree)
+}
+
+// servedIsSigned is the check for a rendered skill (an installed one), whose
+// bytes are not the signed bytes: every file about to be served must still be a
+// file the publisher signed, so an extra file dropped into the directory is not
+// served under the publisher's signature.
+func servedIsSigned(s *CatalogSkill, tree *signing.DirTree) *signing.Error {
+	for i := range s.Files {
+		rel := s.Files[i].RelPath
+		if signing.IsSignatureFile(rel) {
+			continue
+		}
+		if tree.Content(rel) == nil {
+			return signing.Errorf(signing.CodeSubjectMismatch, "%s is served but the publisher's signature does not cover it", rel)
+		}
+	}
 	return nil
 }
 
