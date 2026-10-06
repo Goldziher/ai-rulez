@@ -209,7 +209,6 @@ func (e *searchEnv) ranker(wantVectors bool) (*skillsearch.Ranker, func(), error
 	case !errors.Is(err, skillsearch.ErrNoIndex):
 		return nil, release, err //nolint:wrapcheck // already contextual
 	default:
-		r.IndexErr = err
 	}
 	return r, release, nil
 }

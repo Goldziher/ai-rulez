@@ -253,14 +253,14 @@ func TestPlanBuild_CountsWithoutCalling(t *testing.T) {
 func TestLock_SecondRunIsRefused(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	release, err := Lock(dir)
+	release, err := Lock(dir, nil)
 	require.NoError(t, err)
 
-	_, err = Lock(dir)
+	_, err = Lock(dir, nil)
 	require.ErrorIs(t, err, ErrLocked)
 
 	release()
-	release2, err := Lock(dir)
+	release2, err := Lock(dir, nil)
 	require.NoError(t, err)
 	release2()
 }
@@ -273,7 +273,7 @@ func TestLock_StaleLockIsTakenOver(t *testing.T) {
 	old := time.Now().Add(-time.Hour)
 	require.NoError(t, os.Chtimes(p, old, old))
 
-	release, err := Lock(dir)
+	release, err := Lock(dir, nil)
 
 	require.NoError(t, err)
 	release()
@@ -528,4 +528,60 @@ func TestCommandEmbedder_PassesTheWindowsBaseEnvironmentWhenSet(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, fake.Calls(), 1)
 	assert.ElementsMatch(t, []string{"PATH=p", "HOME=h", `SYSTEMROOT=C:\Windows`, "PATHEXT=.EXE", `TEMP=C:\t`, `USERPROFILE=C:\u`}, fake.Calls()[0].Env)
+}
+
+func TestLock_StaleIsJudgedByTheInjectedClock(t *testing.T) {
+	t.Parallel()
+	// Arrange: a lock last touched at noon, and a clock 11 minutes later
+	dir := t.TempDir()
+	p := filepath.Join(dir, lockFile)
+	require.NoError(t, os.WriteFile(p, []byte("1 1\n"), 0o600))
+	noon := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	require.NoError(t, os.Chtimes(p, noon, noon))
+
+	// Act and Assert: fresh under a clock at 12:05, stale at 12:11
+	_, err := Lock(dir, ambient.Fixed(noon.Add(5*time.Minute)))
+	require.ErrorIs(t, err, ErrLocked)
+	release, err := Lock(dir, ambient.Fixed(noon.Add(11*time.Minute)))
+	require.NoError(t, err)
+	release()
+}
+
+func TestLock_HeartbeatKeepsALongRunFromBeingTakenOver(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	dir := t.TempDir()
+	p := filepath.Join(dir, lockFile)
+	release, err := lockWith(dir, nil, 10*time.Millisecond)
+	require.NoError(t, err)
+	defer release()
+	old := time.Now().Add(-time.Hour)
+	require.NoError(t, os.Chtimes(p, old, old))
+
+	// Act and Assert: the held lock refreshes its own modification time
+	require.Eventually(t, func() bool {
+		info, err := os.Stat(p)
+		return err == nil && time.Since(info.ModTime()) < time.Minute
+	}, 5*time.Second, 10*time.Millisecond)
+	_, err = Lock(dir, nil)
+	require.ErrorIs(t, err, ErrLocked)
+}
+
+func TestLock_ReleaseLeavesAnotherRunsLockAlone(t *testing.T) {
+	t.Parallel()
+	// Arrange: our lock was taken over by another run
+	dir := t.TempDir()
+	p := filepath.Join(dir, lockFile)
+	release, err := Lock(dir, nil)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(p, []byte("99999 7\n"), 0o600))
+
+	// Act
+	release()
+	release() // idempotent
+
+	// Assert
+	got, err := os.ReadFile(p)
+	require.NoError(t, err)
+	assert.Equal(t, "99999 7\n", string(got))
 }
