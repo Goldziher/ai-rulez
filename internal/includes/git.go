@@ -147,6 +147,7 @@ type GitSource struct {
 
 // NewGitSource creates a new git source
 func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	repoURL = stripGitPlus(repoURL)
 	// Validate URL format
 	if err := validateGitURL(repoURL); err != nil {
 		return nil, err

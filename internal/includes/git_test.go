@@ -921,3 +921,43 @@ func TestGitSourceFetch_CreatesPrivateCacheDirs(t *testing.T) {
 		assert.Equal(t, os.FileMode(0o700), info.Mode().Perm(), dir)
 	}
 }
+
+func TestNewGitSourceAcceptsGitPlusPrefix(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{"git+https", "git+https://github.com/owner/repo", "https://github.com/owner/repo"},
+		{"git+https uppercase scheme", "GIT+https://github.com/owner/repo", "https://github.com/owner/repo"},
+		{"git+ssh", "git+ssh://git@github.com/owner/repo.git", "https://github.com/owner/repo.git"},
+		{"plain stays", "https://github.com/owner/repo", "https://github.com/owner/repo"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			plain := strings.TrimPrefix(strings.TrimPrefix(tt.url, "git+"), "GIT+")
+
+			// Act
+			source, err := NewGitSource("n", tt.url, "", "", t.TempDir(), nil, "")
+
+			// Assert
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if source.repoURL != tt.want {
+				t.Errorf("repoURL = %q, want %q", source.repoURL, tt.want)
+			}
+			if source.originalURL != plain && source.originalURL != tt.url {
+				t.Errorf("originalURL = %q", source.originalURL)
+			}
+			if strings.HasPrefix(strings.ToLower(source.originalURL), "git+") {
+				t.Errorf("originalURL %q still carries git+, so git cannot clone it", source.originalURL)
+			}
+			wantCache, _ := getIncludeCacheDir("n", plain)
+			if source.cacheDir != wantCache {
+				t.Errorf("a git+ URL must share the cache of the plain one: %q vs %q", source.cacheDir, wantCache)
+			}
+		})
+	}
+}

@@ -81,7 +81,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		if err != nil {
 			return config.ContentFile{}, err
 		}
-		ref, err := versionRef(ctx, lock, w, p, skillConf.Source, accessToken, baseDir)
+		ref, err := versionRef(ctx, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
 		if err != nil {
 			return config.ContentFile{}, err
 		}

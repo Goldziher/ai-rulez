@@ -246,10 +246,10 @@ func VersionSources(cfg *config.Config) []VersionSource {
 	var out []VersionSource
 	urls := map[string]string{}
 	for i := range cfg.Includes {
-		urls[lockfile.KindInclude+"\x00"+cfg.Includes[i].Name] = cfg.Includes[i].Source
+		urls[lockfile.KindInclude+"\x00"+cfg.Includes[i].Name] = stripGitPlus(cfg.Includes[i].Source)
 	}
 	for i := range cfg.InstalledSkills {
-		urls[lockfile.KindSkill+"\x00"+cfg.InstalledSkills[i].Name] = cfg.InstalledSkills[i].Source
+		urls[lockfile.KindSkill+"\x00"+cfg.InstalledSkills[i].Name] = stripGitPlus(cfg.InstalledSkills[i].Source)
 	}
 	for _, w := range Lockable(cfg) {
 		if w.Constraint != "" {

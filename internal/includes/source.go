@@ -62,3 +62,12 @@ func discoverDomainDirs(aiRulezDir string) []string {
 	sort.Strings(names)
 	return names
 }
+
+// stripGitPlus drops a leading, case-insensitive "git+" scheme prefix, the form
+// skill sources accept ("git+https://host/repo"). git itself cannot clone it.
+func stripGitPlus(u string) string {
+	if len(u) >= 4 && strings.EqualFold(u[:4], "git+") {
+		return u[4:]
+	}
+	return u
+}

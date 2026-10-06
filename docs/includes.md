@@ -163,7 +163,7 @@ merge_strategy = "local-override"
 - **SSH:** `git@github.com:owner/repo.git`
 - **SSH protocol:** `ssh://git@github.com/owner/repo.git`
 - **GitLab:** `https://gitlab.com/owner/repo.git`, `git@gitlab.com:owner/repo.git`
-- **`git+` prefix:** not accepted by an include (`git+https://...` is an error); give the plain URL. Skill sources and `--source` accept the prefix.
+- **`git+` prefix:** accepted, as for skill sources and `--source`: `git+https://host/org/repo` is the same include as `https://host/org/repo` and shares its cache. The lock records the source as you wrote it.
 - **Self-hosted GitLab:** `git@git.example.com:owner/repo.git`, `https://git.example.com/owner/repo.git`
 
 ### SSH Cloning for Private Repositories
