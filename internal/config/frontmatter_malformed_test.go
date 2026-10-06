@@ -1,8 +1,13 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestParseFrontmatter_MalformedIsStripped is regression coverage for #156:
@@ -55,5 +60,34 @@ func TestParseFrontmatter_ValidStillParses(t *testing.T) {
 	}
 	if strings.Contains(body, "---") || strings.Contains(body, "description:") {
 		t.Errorf("valid frontmatter was not stripped from body:\n%q", body)
+	}
+}
+
+func TestScanSkills_UnclosedFrontmatterIsMalformed(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"no closing delimiter", "---\nname: x\ndescription: d\n\nBody.\n", true},
+		{"only the opening line", "---\nBody\n", true},
+		{"closed", "---\nname: x\ndescription: d\n---\n\nBody.\n", false},
+		{"no frontmatter", "Body.\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, "x"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "x", "SKILL.md"), []byte(tt.body), 0o644))
+
+			// Act
+			skills, err := (&contentScanner{}).skills(dir, nil)
+
+			// Assert
+			require.NoError(t, err)
+			require.Len(t, skills, 1)
+			assert.Equal(t, tt.want, skills[0].MalformedFrontmatter)
+		})
 	}
 }
