@@ -108,6 +108,9 @@ type LockPolicy struct {
 	// MinHashVersion rejects an attestation of an older hashing scheme; 0 accepts
 	// any version equal to the lock's.
 	MinHashVersion int
+	// Threshold is how many distinct trusted signers must have signed (VerifyLockSet);
+	// below 2 one is enough.
+	Threshold int
 	// State, when set, is consulted for rollback (AR727).
 	State *State
 	// ScopeRel is the config directory relative to the top of its checkout, and
@@ -130,6 +133,35 @@ type LockReport struct {
 	SigningTime time.Time
 	// StateKey is the rollback mark this report is checked and committed under.
 	StateKey string
+	// Cosigners are the reports of the other distinct trusted signers that
+	// VerifyLockSet accepted; the report itself is the first.
+	Cosigners []*LockReport
+}
+
+// VerifyLockSet verifies the attestation files of one lock (the primary and its
+// co-signatures) and accepts the lock when at least p.Threshold distinct trusted
+// signers signed it. With a threshold of one it is VerifyLock over the first
+// bundle that verifies. Failing signatures are ignored while enough others
+// verify; with none verifying, the first failure is returned (so one bad
+// signature reports its own code), and with too few it is AR728.
+func VerifyLockSet(bundles [][]byte, lock *lockfile.File, p LockPolicy) (*LockReport, error) {
+	var reports []*LockReport
+	errs := make([]error, 0, len(bundles))
+	for _, data := range bundles {
+		rep, err := VerifyLock(data, lock, p)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		reports = append(reports, rep)
+	}
+	kept, err := pickSigners(reports, errs, func(r *LockReport) SignerInfo { return r.Result.Signer }, p.Threshold)
+	if err != nil {
+		return nil, err
+	}
+	first := *kept[0]
+	first.Cosigners = kept[1:]
+	return &first, nil
 }
 
 // VerifyLock verifies a lock attestation against lock under policy, offline. It
@@ -219,7 +251,15 @@ func blobCovers(data, artifact []byte) error {
 
 // Commit records the signing time of an accepted report in the rollback state.
 func (r *LockReport) Commit(s *State) error {
-	if s == nil || r.SigningTime.IsZero() {
+	if s == nil {
+		return nil
+	}
+	for _, c := range r.Cosigners {
+		if err := c.Commit(s); err != nil {
+			return err
+		}
+	}
+	if r.SigningTime.IsZero() {
 		return nil
 	}
 	return s.Advance(r.StateKey, r.SigningTime)
@@ -231,14 +271,15 @@ func (r *LockReport) Commit(s *State) error {
 // attestation block another's. The signer and the checkout scope keep marks
 // apart; the repository claim only lets two clones of one repository share one.
 func stateKey(signer SignerInfo, repo string, p LockPolicy) string {
-	who := "key:" + signer.KeyID
-	if signer.Kind == KindKeyless {
-		who = "keyless:" + signer.Identity + "@" + signer.Issuer
+	return scopedStateKey(signer, repo, p.ScopeRel, p.ScopeAbs)
+}
+
+func scopedStateKey(signer SignerInfo, repo, scopeRel, scopeAbs string) string {
+	who := signerID(signer)
+	if repo != "" && scopeRel != "" {
+		return who + "|" + repo + "|" + scopeRel
 	}
-	if repo != "" && p.ScopeRel != "" {
-		return who + "|" + repo + "|" + p.ScopeRel
-	}
-	return who + "|path:" + p.ScopeAbs
+	return who + "|path:" + scopeAbs
 }
 
 func checkLockSubject(res *Result, lock *lockfile.File, minHash int) (LockPredicate, error) {

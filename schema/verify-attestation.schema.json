@@ -2,8 +2,21 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verify-attestation.schema.json",
   "title": "ai-rulez verify --attestation",
-  "description": "Output of `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock (docs/signing.md).",
+  "description": "Output of `ai-rulez verify --attestation --format json`: the outcome of verifying the signed lock, or with --bundle, --skill or --sbom a plugin bundle, a published skill or an SBOM file (docs/signing.md).",
   "type": "object",
+  "definitions": {
+    "signer": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["key", "keyless"] },
+        "key_id": { "type": "string", "description": "sha256:<hex> fingerprint of the signing key (key mode)." },
+        "identity": { "type": "string", "description": "Certificate subject alternative name (keyless)." },
+        "issuer": { "type": "string", "description": "OIDC issuer (keyless)." }
+      }
+    }
+  },
   "required": ["schema_version", "results"],
   "additionalProperties": false,
   "properties": {
@@ -15,7 +28,7 @@
         "required": ["subject", "status"],
         "additionalProperties": false,
         "properties": {
-          "subject": { "enum": ["lock"], "description": "What was verified." },
+          "subject": { "enum": ["lock", "bundle", "skill", "sbom"], "description": "What was verified." },
           "status": { "enum": ["valid", "invalid", "missing"] },
           "code": {
             "type": "string",
@@ -25,17 +38,7 @@
           "name": { "type": "string", "description": "The registry name of code." },
           "reason": { "type": "string", "description": "Why verification failed." },
           "attestation": { "type": "string", "description": "The bundle file that was read." },
-          "signer": {
-            "type": "object",
-            "required": ["kind"],
-            "additionalProperties": false,
-            "properties": {
-              "kind": { "enum": ["key", "keyless"] },
-              "key_id": { "type": "string", "description": "sha256:<hex> fingerprint of the signing key (key mode)." },
-              "identity": { "type": "string", "description": "Certificate subject alternative name (keyless)." },
-              "issuer": { "type": "string", "description": "OIDC issuer (keyless)." }
-            }
-          },
+          "signer": { "$ref": "#/definitions/signer" },
           "signed_at": {
             "type": "string",
             "format": "date-time",
@@ -47,7 +50,29 @@
             "description": "No log or timestamp: freshness rests on the signer's own claim."
           },
           "age_seconds": { "type": "integer", "description": "Seconds since the signature was made." },
-          "hash_version": { "type": "integer", "minimum": 1 }
+          "hash_version": { "type": "integer", "minimum": 1 },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "The digest of the verified bundle, skill directory or file (not set for the lock)."
+          },
+          "signers": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Every distinct trusted signer, when more than one signed ([signing] thresholds).",
+            "items": { "$ref": "#/definitions/signer" }
+          },
+          "provenance": {
+            "type": "object",
+            "required": ["attestation", "builder"],
+            "additionalProperties": false,
+            "description": "The verified SLSA provenance next to a bundle.",
+            "properties": {
+              "attestation": { "type": "string" },
+              "builder": { "type": "string", "description": "The builder id the provenance names." },
+              "signer": { "$ref": "#/definitions/signer" }
+            }
+          }
         }
       }
     }

@@ -32,6 +32,8 @@ func resetSigningFlags(t *testing.T) {
 		signTLog, signEmbedItems, signOutput, signInteractive = false, false, "", false
 		verifyAttestation, verifyAttFile, verifyTrustedRoot, verifyPublicKeys = false, "", "", nil
 		verifyIdentity, verifyIssuer, verifyNoState, verifyFormat = "", "", false, ""
+		signBundle, signSkill, signSBOM, signProvenance, signBuilderID, signAppend, signPublicOut = "", "", "", false, "", false, ""
+		verifyBundleDir, verifySkillDir, verifySBOMFile, verifySource, verifyRequireProvenance = "", "", "", "", false
 	})
 }
 
@@ -366,6 +368,13 @@ func TestSignFlagValidation(t *testing.T) {
 		{"plain http rekor", func() { signLock, signKey, signTLog, signRekorURL = true, "k", true, "http://rekor.example.com" }, "must be https"},
 		{"rekor url without a host", func() { signLock, signKey, signTLog, signRekorURL = true, "k", true, "rekor" }, "not a URL with a host"},
 		{"token env with a key", func() { signLock, signKey, signTokenEnv = true, "k", "T" }, "apply to --keyless"},
+		{"two subjects", func() { signLock, signBundle, signKey = true, "dist", "k" }, "mutually exclusive"},
+		{"bundle and sbom", func() { signBundle, signSBOM, signKey = "dist", "sbom.json", "k" }, "mutually exclusive"},
+		{"provenance for a skill", func() { signSkill, signProvenance, signKey = "skill", true, "k" }, "--provenance applies to --bundle"},
+		{"provenance with append", func() { signBundle, signProvenance, signAppend, signKey = "dist", true, true, "k" }, "do not combine"},
+		{"builder id without provenance", func() { signBundle, signBuilderID, signKey = "dist", "b", "k" }, "applies to --provenance"},
+		{"embed items for a bundle", func() { signBundle, signEmbedItems, signKey = "dist", true, "k" }, "--embed-items applies to --lock"},
+		{"public key out without a key", func() { signSBOM, signPublicOut, signKeyless = "s.json", "p.pem", true }, "--public-key-out applies to --key"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

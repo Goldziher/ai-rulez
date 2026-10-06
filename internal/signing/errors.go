@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Codes of signing findings (docs/strict-validation.md, AR720 to AR727; AR728 and AR729 are reserved). The
+// Codes of signing findings (docs/strict-validation.md, AR720 to AR729). The
 // same codes are registered in internal/lint; a test keeps the two equal.
 const (
 	CodeMissing          = "AR720"
@@ -16,6 +16,8 @@ const (
 	CodeRootUnavailable  = "AR725"
 	CodeTLogMissing      = "AR726"
 	CodeRollback         = "AR727"
+	CodeThreshold        = "AR728"
+	CodeProvenance       = "AR729"
 )
 
 // Names are the registry names of the codes.
@@ -28,6 +30,8 @@ var Names = map[string]string{
 	CodeRootUnavailable:  "trusted-root-unavailable",
 	CodeTLogMissing:      "tlog-proof-missing",
 	CodeRollback:         "signature-rollback",
+	CodeThreshold:        "signature-threshold-not-met",
+	CodeProvenance:       "provenance-invalid",
 }
 
 // Error is a failed verification: the AR code and a reason fit for display.

@@ -994,8 +994,8 @@
       "properties": {
         "require": {
           "type": "array",
-          "items": { "type": "string", "enum": ["lock"] },
-          "description": "Subjects that must carry a valid attestation. lock --check and generate --locked fail without one for lock."
+          "items": { "type": "string", "enum": ["lock", "served", "skill"] },
+          "description": "Subjects that must carry a valid attestation. lock: lock --check and generate --locked fail without one. served: the MCP skill server refuses a skill that the signed lock does not pin. skill: it refuses a remote skill without a trusted publisher attestation."
         },
         "tlog": {
           "type": "string",
@@ -1034,8 +1034,12 @@
             "properties": {
               "subject": {
                 "type": "string",
-                "enum": ["lock"],
+                "enum": ["lock", "bundle", "skill", "sbom"],
                 "description": "What the signer may vouch for. Default lock."
+              },
+              "source": {
+                "type": "string",
+                "description": "With subject = skill: the [[skill_sources]] or [[installed_skills]] name this publisher may sign for."
               },
               "identity": { "type": "string", "description": "Certificate identity, matched exactly." },
               "identity_regexp": {
@@ -1062,6 +1066,21 @@
             },
             "additionalProperties": false
           }
+        },
+        "thresholds": {
+          "type": "object",
+          "description": "Distinct trusted signers required per subject (k of n); default 1. The signatures are separate bundle files (sign --append).",
+          "propertyNames": { "enum": ["lock", "bundle", "skill", "sbom"] },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "require_provenance": {
+          "type": "boolean",
+          "description": "verify --bundle demands a signed SLSA provenance statement next to the bundle."
+        },
+        "builders": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "When set, the only builder ids a bundle's SLSA provenance may name."
         }
       },
       "additionalProperties": false

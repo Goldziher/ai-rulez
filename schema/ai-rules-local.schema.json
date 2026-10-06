@@ -2879,6 +2879,14 @@
           "description": "Lock bundle path relative to the config directory. Default ai-rulez.lock.sigstore.json.",
           "type": "string"
         },
+        "builders": {
+          "description": "When set, the only builder ids a bundle's SLSA provenance may name.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
         "identity": {
           "description": "Shorthand: the one trusted keyless signer (certificate identity, matched exactly). Needs issuer.",
           "type": "string"
@@ -2902,12 +2910,27 @@
           "type": "integer"
         },
         "require": {
-          "description": "Subjects that must carry a valid attestation. lock --check and generate --locked fail without one for lock.",
+          "description": "Subjects that must carry a valid attestation. lock: lock --check and generate --locked fail without one. served: the MCP skill server refuses a skill that the signed lock does not pin. skill: it refuses a remote skill without a trusted publisher attestation.",
           "items": {
-            "enum": ["lock"],
+            "enum": ["lock", "served", "skill"],
             "type": "string"
           },
           "type": "array"
+        },
+        "require_provenance": {
+          "description": "verify --bundle demands a signed SLSA provenance statement next to the bundle.",
+          "type": "boolean"
+        },
+        "thresholds": {
+          "additionalProperties": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "description": "Distinct trusted signers required per subject (k of n); default 1. The signatures are separate bundle files (sign --append).",
+          "propertyNames": {
+            "enum": ["lock", "bundle", "skill", "sbom"]
+          },
+          "type": "object"
         },
         "tlog": {
           "description": "Transparency log policy. Default: required when a certificate identity is trusted, off when only keys are trusted. off needs key mode.",
@@ -2936,9 +2959,13 @@
                 "description": "PEM public key inside the project, instead of an identity.",
                 "type": "string"
               },
+              "source": {
+                "description": "With subject = skill: the [[skill_sources]] or [[installed_skills]] name this publisher may sign for.",
+                "type": "string"
+              },
               "subject": {
                 "description": "What the signer may vouch for. Default lock.",
-                "enum": ["lock"],
+                "enum": ["lock", "bundle", "skill", "sbom"],
                 "type": "string"
               },
               "valid_from": {

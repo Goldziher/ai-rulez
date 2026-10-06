@@ -2,8 +2,10 @@
 
 A digest proves that bytes did not change. A signature says who produced them. `ai-rulez sign --lock` signs the
 [lock](lockfile.md) into a [Sigstore](https://www.sigstore.dev) bundle, and `ai-rulez verify --attestation` checks it
-offline against a policy that names who may sign. Signing is opt-in; nothing is enforced until `[signing] require`
-says so.
+offline against a policy that names who may sign. The same machinery signs [plugin bundles, published skills and SBOM
+files](#bundles-skills-and-sboms), optionally with [SLSA provenance](#slsa-provenance), [KMS keys](#kms-keys) and
+[k-of-n signers](#thresholds),. Signing is opt-in; nothing is
+enforced until `[signing] require` says so.
 
 A valid signature means "produced by X". It does not mean the content is safe: a malicious but validly signed skill
 still needs [approval](approvals.md) and a [scan](strict-validation.md). Rollback to an older validly signed lock is
@@ -55,6 +57,7 @@ Run it after the final `ai-rulez lock`: any change to the lock invalidates the s
 | Mode | Command | Network | Needs |
 | --- | --- | --- | --- |
 | Key | `sign --lock --key <file>` | none (`--tlog` adds a Rekor entry) | an ECDSA P-256/P-384/P-521 or ed25519 PEM key: PKCS#8, or a cosign key |
+| KMS | `sign --lock --key awskms:///alias/release` | the KMS (`--tlog` adds a Rekor entry) | a [KMS key](#kms-keys) and the provider's credentials |
 | Keyless | `sign --lock --keyless` | Fulcio and Rekor | an OIDC token |
 
 A key's password is read from `AI_RULEZ_SIGNING_KEY_PASSWORD`, then `COSIGN_PASSWORD` (`--key-password-env` names
@@ -95,7 +98,7 @@ issuer = "https://token.actions.githubusercontent.com"
 
 # the full form: repeatable, with validity windows
 [[signing.trust]]
-subject = "lock"
+subject = "lock"                # lock (default) | bundle | skill | sbom
 identity_regexp = "^https://github\\.com/example-org/[^/]+/\\.github/workflows/release\\.yml@refs/heads/main$"
 issuer = "https://token.actions.githubusercontent.com"
 valid_from = "2026-01-01"
@@ -109,6 +112,10 @@ key_file = "keys/release.pub"
   `identity_regexp` must be anchored with `^` and `$` and is matched against the whole identity; an unanchored pattern
   is rejected at load time (`AR722`). An identity entry always needs an `issuer`.
 - A key entry trusts a PEM public key (`key_file`), matched by its SHA-256 fingerprint.
+- `subject` scopes an entry to what the signer may vouch for: the `lock` (the default), a plugin `bundle`, a published
+  `skill` or an `sbom`. A release key trusted for the lock does not vouch for a skill. `source` (skill entries only)
+  narrows a publisher to one `[[skill_sources]]` or `[[installed_skills]]` name, so a signer trusted for one source
+  cannot vouch for another.
 - `valid_from` and `valid_until` bound the **signing time** (the log time) the entry accepts, so an expiry is a reviewed
   event. A date bound is inclusive and UTC.
 - `tlog` defaults to `required` when a certificate identity is trusted and to `off` when only keys are. `off` works with
@@ -120,7 +127,7 @@ key_file = "keys/release.pub"
   point at files elsewhere on the machine. A symlink out of the project is refused.
 - A machine-local config overlay cannot add a signer: `[signing]` there is ignored with a warning.
 
-Verification without any trusted signer is an error (exit `1`), not "accept any valid signature": the policy, or
+Verification without any trusted signer for the subject is an error (exit `1`), not "accept any valid signature": the policy, or
 `--public-key` or `--identity` with `--issuer`, must say who may sign.
 
 The repository can edit its own `[signing]` table, so a pull request can weaken it or name its own signer.
@@ -184,6 +191,110 @@ repository.
 - `lock --check`, `generate --locked` and `validate --strict` read the state but never write it; only
   `verify --attestation` advances it.
 
+## Bundles, skills and SBOMs
+
+```console
+$ ai-rulez sign --bundle dist/acme-plugin --key release.key
+Signed bundle path=dist/acme-plugin signer=key sha256:91be... subject=sha256:4f1a... bundle=dist/acme-plugin/.ai-rulez.sigstore.json
+$ ai-rulez verify --bundle dist/acme-plugin --public-key release.pub
+OK  bundle  signer=sha256:91be...
+    issuer=none (key)  logged=no  age=3s
+    digest=sha256:4f1a...
+```
+
+| Subject | Command | Statement subject | Sidecar |
+| --- | --- | --- | --- |
+| Plugin bundle | `sign --bundle <dir>` | tree digest of every file in the directory (`ai-rulez/plugin-bundle/v1`) | `<dir>/.ai-rulez.sigstore.json` |
+| Published skill | `sign --skill <dir>` | tree digest of the skill directory (`ai-rulez/published-skill/v1`) | `<dir>/.ai-rulez.sigstore.json` |
+| SBOM | `sign --sbom <file>` | sha256 of the file's bytes | `<file>.sigstore.json` |
+
+The directory digest uses the same scheme as the lock: sorted paths, text files line-ending normalized, the executable
+bit part of the digest. Adding, removing or editing a file, or flipping the executable bit, invalidates the signature
+(`AR724`). The attestation files (`.ai-rulez.sigstore.json`, numbered co-signatures and the provenance file) at the root
+of the directory are not part of what they sign; the same name deeper in the tree is content. A symlink or any irregular
+file in the directory is refused: a signature over "where the link pointed" would not cover what an agent reads through
+it. The directory's own name is not part of the match, so a bundle checked out under another name verifies.
+
+An SBOM is signed by its bytes, whatever its format (`ai-rulez sbom`, SPDX, CycloneDX): the signature says who produced
+that exact file, not that it is complete. The predicate types are
+`https://github.com/Goldziher/ai-rulez/attestations/{bundle,skill,sbom}/v1`, each carrying the digest, the ai-rulez
+version, the `repository` and `ref` claims and `issued_at`.
+
+`verify --bundle <dir>`, `--skill <dir>` and `--sbom <file>` imply `--attestation` and use the same checks and exit
+codes as the lock (`--attestation-file` names another sidecar). They read `[signing]` from the project when there is
+one; a consumer with no project passes `--public-key`, or `--identity` with `--issuer`, and no config is needed.
+Rollback marks are kept per signer, project and artifact name.
+
+## Thresholds
+
+`[signing.thresholds]` asks for k distinct trusted signers of a subject:
+
+```toml
+[signing.thresholds]
+lock = 2
+
+[[signing.trust]]
+key_file = "keys/alice.pub"
+
+[[signing.trust]]
+key_file = "keys/bob.pub"
+```
+
+Each signer writes their own bundle: `sign --lock --key alice.key`, then `sign --lock --key bob.key --append`, which
+writes `ai-rulez.lock.2.sigstore.json` next to `ai-rulez.lock.sigstore.json` (numbered files are found by name; at most
+16). Verification checks every file and counts distinct accepted signers: a key by fingerprint, a certificate by
+identity and issuer, so two bundles by one signer count once. A file that fails is ignored while enough others verify;
+with none valid the first failure is reported, and with some but too few the result is `AR728`. Each subject has its own
+threshold (`lock`, `bundle`, `skill`, `sbom`; default 1), and a threshold of k needs at least k trust entries for the
+subject, or an `identity_regexp`, which may match many identities. It applies to `lock --check`, `generate --locked`,
+`validate --strict`, `verify --bundle`, `--skill` and `--sbom`. Provenance is signed by the
+builder alone and is not subject to the bundle's threshold.
+
+## SLSA provenance
+
+`sign --bundle <dir> --provenance` also writes `.ai-rulez.provenance.sigstore.json`: an in-toto statement with the
+[SLSA provenance v1](https://slsa.dev/spec/v1.0/provenance) predicate (`https://slsa.dev/provenance/v1`) whose subject is
+the bundle's tree digest. It records the build type
+(`https://github.com/Goldziher/ai-rulez/buildtypes/plugin-bundle/v1`), the repository, ref and commit (from the GitHub
+Actions variables, else the checkout), the invocation (the CI run URL) and a builder id: `--builder-id`, else the
+workflow reference `GITHUB_WORKFLOW_REF` (so the id names the workflow file and ref that ran), else
+`https://github.com/Goldziher/ai-rulez/builders/cli/v1`.
+
+ai-rulez does not run a hermetic build, so this is the signer's own account of where the bundle was generated, not a
+platform's attestation: at most SLSA build level 1. Its value is tying a bundle to a repository, commit and workflow in
+a form standard tools read. Provenance written by a CI builder such as `slsa-github-generator` verifies the same way,
+whatever its build type.
+
+```toml
+[signing]
+require_provenance = true      # verify --bundle demands it (or pass --require-provenance)
+builders = ["https://github.com/example-org/plugin/.github/workflows/release.yml@refs/heads/main"]
+```
+
+A provenance file that exists is always verified, required or not. It is judged like the bundle attestation (the
+`bundle` trust entries, freshness, rollback), must name the bundle's digest (`AR724`), and when `builders` is set its
+builder id must be in the list. A missing file under `require_provenance`, a predicate that is not SLSA provenance v1
+and a builder outside the list are `AR729`.
+
+## KMS keys
+
+`--key` accepts a cosign key URI: `awskms:///alias/release`,
+`gcpkms://projects/p/locations/l/keyRings/r/cryptoKeys/k`, `azurekms://vault.vault.azure.net/key` or
+`hashivault://key`, through sigstore's KMS providers (the ones cosign uses; a `sigstore-kms-<name>` plugin binary adds
+others). The private key never leaves the KMS: ai-rulez sends a digest and gets a signature. Credentials come from the
+provider's usual environment (`AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`, `AZURE_*`, `VAULT_*`), never from a flag, and a
+query string in the URI is removed from error messages. Use ECDSA P-256 (the cosign default) or ed25519 keys; RSA keys
+are not supported.
+
+The bundle names the key by fingerprint, like any key, so verification stays offline. Export the public key once and
+trust it by file: `ai-rulez sign --lock --key awskms:///alias/release --public-key-out keys/release.pub` (or
+`cosign public-key --key awskms:///alias/release`), then `key_file = "keys/release.pub"`.
+
+Binary size: the four providers add about 14 MB to an unstripped build (59.3 MB to 73.6 MB) and about 10 MB to a
+stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so they are in every build rather than
+behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
+and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`.
+
 ## Cosign interoperability
 
 `ai-rulez` writes a standard Sigstore bundle, so cosign can verify it. Because the payload is an in-toto attestation,
@@ -216,8 +327,10 @@ cannot be met and no rollback mark applies.
 | `AR725` | `trusted-root-unavailable` | a certificate bundle and no trusted root |
 | `AR726` | `tlog-proof-missing` | `tlog = "required"` and the bundle has no log entry |
 | `AR727` | `signature-rollback` | older than the newest attestation this machine verified |
+| `AR728` | `signature-threshold-not-met` | fewer distinct trusted signers than `[signing.thresholds]` asks for |
+| `AR729` | `provenance-invalid` | SLSA provenance missing under `require_provenance`, not SLSA v1, or from a builder outside `builders` |
 
-`AR728` and `AR729` are reserved. See [Strict validation](strict-validation.md#ar720-signature-missing) for each code.
+See [Strict validation](strict-validation.md#ar720-signature-missing) for each code.
 
 ## Reusing the signing API
 
@@ -228,6 +341,7 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 ## Not done yet
 
-Signing plugin bundles and gating served skills on signatures, publisher-signed skills, SLSA provenance, KMS keys
-through cosign and multi-party thresholds are tracked in [#263](https://github.com/Goldziher/ai-rulez/issues/263).
-Live keyless tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` and are never part of the default test run.
+- `verify --self` for ai-rulez's own releases.
+
+Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
+part of the default test run.
