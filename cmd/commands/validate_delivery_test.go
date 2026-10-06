@@ -121,3 +121,14 @@ func TestDeliveryFindings_UnscannableServedFilesOfAuthoredSkills(t *testing.T) {
 	assert.Contains(t, got[lint.CodeServedUnscannable], "the server refuses skill \"nulmd\"")
 	assert.Contains(t, got[lint.CodeServedUnscannable], "serves it with this warning")
 }
+
+func TestDeliveryFindings_SkillSourcesNeverReachAHarnessWithoutMCP(t *testing.T) {
+	cfg := deliveryProject(t, `["claude", "rovodev"]`,
+		"\n[[skill_sources]]\nname = \"vendor\"\nurl = \"vendor-skills\"\n", servedSkillFiles)
+
+	got := codesOf(deliveryFindings(cfg))
+
+	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], "skill_sources")
+	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], `"rovodev"`)
+	assert.NotContains(t, got[lint.CodeDeliveryStaticFallback], `preset "claude"`)
+}
