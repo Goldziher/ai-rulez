@@ -218,7 +218,8 @@ Unknown subcommands (`telemetry bogus`) and an unknown `migrate` target exit `1`
 - **Content symlinks follow one policy.** In the project's own `.ai-rulez/` (including domains, skill and command
   resources), a symlinked file or directory is followed only when its fully resolved target is inside the project
   (the git top level, else the directory holding `.ai-rulez`). A parent `.git` widens that root: a project inside a repository such as a `$HOME` dotfiles
-  repo may link to anything in that repository. Any other link used to be dropped silently; it is now
+  repo may link to anything in that repository. A symlinked `config.toml` or `config.local.toml` follows the same
+  boundary: a target outside the root is a load error. Any other link used to be dropped silently; it is now
   refused with a warning that is shown even with `--quiet`, and `ai-rulez validate` reports it as an error. Symlinks
   in includes (git or local), installed skills, skill sources and OKF bundles are never followed and are skipped with
   a warning (an installed skill with a symlinked `SKILL.md` is refused). `init --from` never follows symlinks.

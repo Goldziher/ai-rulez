@@ -101,6 +101,9 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		return cfg, err
 	}
 
+	if err := checkConfigFileInside(v, localPath); err != nil {
+		return nil, err
+	}
 	mainDoc, err := readConfigDoc(v, mainPath)
 	if err != nil {
 		return nil, err
@@ -176,6 +179,9 @@ func ReadLocalOverlay(configDir string) (*LocalOverlay, error) {
 	v := osView(configDir)
 	localPath, err := findLocalConfigFile(v, configDir)
 	if err != nil || localPath == "" {
+		return nil, err
+	}
+	if err := checkConfigFileInside(v, localPath); err != nil {
 		return nil, err
 	}
 	doc, err := readConfigDoc(v, localPath)
