@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/samber/oops"
 )
 
@@ -49,6 +51,12 @@ type ServedSkill struct {
 	// source): none of them is a generated file, so no generated-header
 	// normalization applies to its lock digest.
 	Verbatim bool
+	// Imported marks a skill whose content comes from outside the project: an
+	// [[includes]] entry, or any file outside the project root. It is scanned at
+	// the strict level like an installed skill.
+	Imported bool
+	// Include names the [[includes]] entry that supplied the skill, when known.
+	Include string
 	// Files lists SKILL.md first, then the supporting files in path order.
 	Files []ServedSkillFile
 }
@@ -130,6 +138,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Domain, skill.Source, skill.Ref, skill.Pinned = owner.domain, owner.source, owner.ref, owner.pinned
 			skill.Keywords, skill.Category = owner.keywords, owner.category
 			skill.Triggers, skill.Delivery = owner.triggers, owner.delivery
+			skill.Imported, skill.Include, skill.Commit = owner.imported, owner.include, owner.commit
 		}
 		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
 			skillResourceFiles(outputs, dir)...)
@@ -164,6 +173,10 @@ type skillOwner struct {
 	triggers            []string
 	delivery            config.Delivery
 	category            string
+	// imported, include and commit describe a skill supplied by an include.
+	imported bool
+	include  string
+	commit   string
 }
 
 // skillOwners maps a skill ID to the domain and origin that supplied it. Root
@@ -175,6 +188,10 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 		installed[cfg.InstalledSkills[i].Name] = cfg.InstalledSkills[i]
 	}
 	owners := map[string]skillOwner{}
+	var lock *lockfile.File
+	if cfg.ConfigDir != "" {
+		lock, _ = lockfile.Load(cfg.ConfigDir) //nolint:errcheck // a missing or unreadable lock only leaves the commit empty
+	}
 	add := func(domain string, files []config.ContentFile) {
 		for i := range files {
 			f := files[i]
@@ -190,6 +207,9 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 			if inst, ok := installed[f.Name]; ok {
 				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
 			}
+			if _, isInstalled := installed[f.Name]; !isInstalled {
+				applyIncludeOrigin(cfg, lock, f.Path, &o)
+			}
 			owners[id] = o
 		}
 	}
@@ -203,6 +223,101 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 		add(name, tree.Domains[name].Skills)
 	}
 	return owners
+}
+
+// applyIncludeOrigin marks a skill whose file lies outside the project root as
+// imported and, when an [[includes]] entry supplied it, records the include and
+// replaces the machine-dependent path with include:<name>/<path in the include>.
+func applyIncludeOrigin(cfg *config.Config, lock *lockfile.File, p string, o *skillOwner) {
+	if p == "" || cfg.BaseDir == "" || !filepath.IsAbs(p) || !outsideRoot(cfg.BaseDir, p) {
+		return
+	}
+	o.imported = true
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
+		if !inIncludeRoot(cfg.BaseDir, inc, p) {
+			continue
+		}
+		o.include = inc.Name
+		o.source = "include:" + inc.Name + "/" + includeRelPath(p)
+		if lock != nil {
+			if e := lock.Find(lockfile.KindInclude, inc.Name); e != nil {
+				o.commit = e.Commit
+			}
+		}
+		return
+	}
+}
+
+func outsideRoot(baseDir, p string) bool {
+	rel, err := filepath.Rel(baseDir, p)
+	return err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// inIncludeRoot reports whether p lies in the directory an include resolves to:
+// the local path, or the include's clone in the cache.
+func inIncludeRoot(baseDir string, inc *config.IncludeConfig, p string) bool {
+	if includes.IsGitURL(inc.Source) {
+		segs := strings.Split(filepath.ToSlash(p), "/")
+		for i := 0; i+1 < len(segs); i++ {
+			if segs[i] == "includes" && cacheDirOf(segs[i+1], inc.Name) {
+				return true
+			}
+		}
+		return false
+	}
+	root := inc.Source
+	if !filepath.IsAbs(root) {
+		root = filepath.Join(baseDir, root)
+	}
+	return !outsideRoot(filepath.Clean(root), p)
+}
+
+// cacheDirOf matches the cache directory name of an include: its name, a dash
+// and a 12 character hash.
+func cacheDirOf(seg, name string) bool {
+	prefix := safeCacheName(name) + "-"
+	hash := strings.TrimPrefix(seg, prefix)
+	if hash == seg || len(hash) != 12 {
+		return false
+	}
+	for _, r := range hash {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+// safeCacheName mirrors how the includes package turns an include name into one
+// cache path segment.
+func safeCacheName(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	if out := strings.Trim(b.String(), "."); out != "" {
+		return out
+	}
+	return "include"
+}
+
+// includeRelPath is the part of an include file's path below its .ai-rulez
+// directory (domains/<d>/skills/<id>/SKILL.md or skills/<id>/SKILL.md).
+func includeRelPath(p string) string {
+	slashed := filepath.ToSlash(p)
+	if i := strings.LastIndex(slashed, "/.ai-rulez/"); i >= 0 {
+		return slashed[i+len("/.ai-rulez/"):]
+	}
+	if i := strings.LastIndex(slashed, "/skills/"); i >= 0 {
+		return slashed[i+1:]
+	}
+	return path.Base(slashed)
 }
 
 func relSource(baseDir, p string) string {
