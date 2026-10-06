@@ -122,6 +122,10 @@
         "max_holdout_evals": {
           "type": "integer"
         },
+        "max_skill_growth": {
+          "type": "number",
+          "description": "SKILL.md growth factor the run enforced; apply and pr re-check against it."
+        },
         "require_ci_above_zero": {
           "type": "boolean"
         }
