@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"sort"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // chdir switches the working directory for the duration of the test and
@@ -69,9 +71,7 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 		if err := os.MkdirAll(linkDir, 0o755); err != nil {
 			t.Fatalf("mkdir link dir: %v", err)
 		}
-		if err := os.Symlink(filepath.Join(linkDir, "missing-target.rlib"), filepath.Join(linkDir, "broken.rlib")); err != nil {
-			t.Fatalf("symlink: %v", err)
-		}
+		testutil.SymlinkOrSkip(t, filepath.Join(linkDir, "missing-target.rlib"), filepath.Join(linkDir, "broken.rlib"))
 	}
 
 	chdir(t, root)

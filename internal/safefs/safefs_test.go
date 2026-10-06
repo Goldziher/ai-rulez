@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func skipIfNoSymlinks(t *testing.T) {
@@ -28,27 +30,27 @@ func TestOpenAppend_RefusesSymlinks(t *testing.T) {
 			require.NoError(t, os.WriteFile(victim, []byte("keep\n"), 0o600))
 			local := filepath.Join(root, ".ai-rulez", "local")
 			require.NoError(t, os.MkdirAll(local, 0o750))
-			require.NoError(t, os.Symlink(victim, filepath.Join(local, "usage.jsonl")))
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(local, "usage.jsonl"))
 			return filepath.Join(local, "usage.jsonl"), victim
 		}},
 		{"dangling symlink", func(t *testing.T, root string) (string, string) {
 			local := filepath.Join(root, ".ai-rulez", "local")
 			require.NoError(t, os.MkdirAll(local, 0o750))
 			victim := filepath.Join(root, "created")
-			require.NoError(t, os.Symlink(victim, filepath.Join(local, "usage.jsonl")))
+			testutil.SymlinkOrSkip(t, victim, filepath.Join(local, "usage.jsonl"))
 			return filepath.Join(local, "usage.jsonl"), victim
 		}},
 		{"immediate directory is a symlink", func(t *testing.T, root string) (string, string) {
 			target := filepath.Join(root, "elsewhere")
 			require.NoError(t, os.MkdirAll(target, 0o750))
 			require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
-			require.NoError(t, os.Symlink(target, filepath.Join(root, ".ai-rulez", "local")))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(root, ".ai-rulez", "local"))
 			return filepath.Join(root, ".ai-rulez", "local", "usage.jsonl"), filepath.Join(target, "usage.jsonl")
 		}},
 		{"ancestor .ai-rulez is a symlink", func(t *testing.T, root string) (string, string) {
 			target := filepath.Join(root, "elsewhere")
 			require.NoError(t, os.MkdirAll(filepath.Join(target, "local"), 0o750))
-			require.NoError(t, os.Symlink(target, filepath.Join(root, ".ai-rulez")))
+			testutil.SymlinkOrSkip(t, target, filepath.Join(root, ".ai-rulez"))
 			return filepath.Join(root, ".ai-rulez", "local", "usage.jsonl"), filepath.Join(target, "local", "usage.jsonl")
 		}},
 	}
@@ -88,7 +90,7 @@ func TestWriteFileAtomic_ReplacesASymlinkNotItsTarget(t *testing.T) {
 	victim := filepath.Join(dir, "victim")
 	require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o600))
 	marker := filepath.Join(dir, "marker")
-	require.NoError(t, os.Symlink(victim, marker))
+	testutil.SymlinkOrSkip(t, victim, marker)
 
 	require.NoError(t, WriteFileAtomic(marker, nil))
 
@@ -105,7 +107,7 @@ func TestReadRegular_RefusesSymlink(t *testing.T) {
 	victim := filepath.Join(dir, "victim")
 	require.NoError(t, os.WriteFile(victim, []byte("secret"), 0o644))
 	link := filepath.Join(dir, "link")
-	require.NoError(t, os.Symlink(victim, link))
+	testutil.SymlinkOrSkip(t, victim, link)
 
 	_, err := ReadRegular(link)
 	require.ErrorContains(t, err, "refusing")

@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func writeTreeFile(t *testing.T, dir, rel, body string, mode os.FileMode) {
@@ -85,7 +87,7 @@ func TestDigestDir_RefusesASymlinkedRoot(t *testing.T) {
 	real := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(real, "a.md"), []byte("a"), 0o644))
 	link := filepath.Join(t.TempDir(), "link")
-	require.NoError(t, os.Symlink(real, link))
+	testutil.SymlinkOrSkip(t, real, link)
 
 	_, err := DigestDir(KindInclude, link)
 	require.Error(t, err, "a symlink root would otherwise digest to the empty hash")
@@ -101,14 +103,14 @@ func TestDigestDir_SymlinkLeafVectors(t *testing.T) {
 	// scheme in docs/lockfile.md.
 	dir := t.TempDir()
 	writeTreeFile(t, dir, "rules/a.md", "# A\n", 0o644)
-	require.NoError(t, os.Symlink("rules/a.md", filepath.Join(dir, "README.md")))
+	testutil.SymlinkOrSkip(t, "rules/a.md", filepath.Join(dir, "README.md"))
 
 	got, err := DigestDir(KindInclude, dir)
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:1b842d9b161a3808fb191ac281ba28c2ed27604486a5292d3e2da5d7a70345eb", got)
 
 	require.NoError(t, os.Remove(filepath.Join(dir, "README.md")))
-	require.NoError(t, os.Symlink("other.md", filepath.Join(dir, "README.md")))
+	testutil.SymlinkOrSkip(t, "other.md", filepath.Join(dir, "README.md"))
 	got, err = DigestDir(KindInclude, dir)
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:550880810dde3cc343d893888958939a4263f3d2cc9636193ddeffb337bc989b", got, "retargeting a link changes the digest")
@@ -137,13 +139,13 @@ func TestDigestDir_RecordsSymlinksWithoutFollowingThem(t *testing.T) {
 			writeTreeFile(t, dir, "rules/a.md", "# A\n", 0o644)
 			plain, err := DigestDir(KindInclude, dir)
 			require.NoError(t, err)
-			require.NoError(t, os.Symlink(tt.target, filepath.Join(dir, tt.link)))
+			testutil.SymlinkOrSkip(t, tt.target, filepath.Join(dir, tt.link))
 
 			// Act
 			withLink, err := DigestDir(KindInclude, dir)
 			require.NoError(t, err)
 			require.NoError(t, os.Remove(filepath.Join(dir, tt.link)))
-			require.NoError(t, os.Symlink(tt.target+"-moved", filepath.Join(dir, tt.link)))
+			testutil.SymlinkOrSkip(t, tt.target+"-moved", filepath.Join(dir, tt.link))
 			moved, err := DigestDir(KindInclude, dir)
 			require.NoError(t, err)
 
@@ -161,7 +163,7 @@ func TestDigestDir_TargetContentBehindALinkIsNotPinned(t *testing.T) {
 	target := filepath.Join(t.TempDir(), "t.md")
 	require.NoError(t, os.WriteFile(target, []byte("one"), 0o644))
 	dir := t.TempDir()
-	require.NoError(t, os.Symlink(target, filepath.Join(dir, "link.md")))
+	testutil.SymlinkOrSkip(t, target, filepath.Join(dir, "link.md"))
 	before, err := DigestDir(KindInclude, dir)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(target, []byte("two"), 0o644))

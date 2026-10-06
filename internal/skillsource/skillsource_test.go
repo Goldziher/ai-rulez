@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func git(t *testing.T, dir string, args ...string) string {
@@ -259,7 +261,7 @@ func TestDiscover_IncludeExcludePrefixAndSymlinks(t *testing.T) {
 	write(t, root, "notskill/readme.md", "x")
 	outside := t.TempDir()
 	write(t, outside, "secret.txt", "secret")
-	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(root, "pdf", "leak.txt")))
+	testutil.SymlinkOrSkip(t, filepath.Join(outside, "secret.txt"), filepath.Join(root, "pdf", "leak.txt"))
 
 	all, err := Discover(Spec{Name: "s"}, root)
 	require.NoError(t, err)

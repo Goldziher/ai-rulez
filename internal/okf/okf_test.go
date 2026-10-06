@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func load(t *testing.T, files map[string]string) *Bundle {
@@ -247,7 +249,7 @@ func TestWriteRefusesForeignDirAndTraversal(t *testing.T) {
 func TestWriteDoesNotFollowSymlinkOut(t *testing.T) {
 	out := t.TempDir()
 	dir := t.TempDir()
-	require.NoError(t, os.Symlink(out, dir+"/link"))
+	testutil.SymlinkOrSkip(t, out, dir+"/link")
 	err := WriteFiles(dir, []File{{Path: "link/x.md", Data: []byte("x")}}, false)
 	assert.Error(t, err)
 	_, statErr := os.Stat(out + "/x.md")
@@ -257,7 +259,7 @@ func TestWriteDoesNotFollowSymlinkOut(t *testing.T) {
 func TestLoadReportsSymlinks(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(dir+"/real.md", []byte("---\ntype: X\n---\n"), 0o644))
-	require.NoError(t, os.Symlink(dir+"/real.md", dir+"/link.md"))
+	testutil.SymlinkOrSkip(t, dir+"/real.md", dir+"/link.md")
 	b, err := Load(os.DirFS(dir))
 	require.NoError(t, err)
 	assert.Contains(t, codes(b.Validate()), "AR9B8 link.md")
@@ -270,7 +272,7 @@ func TestLoadDoesNotFollowSymlinkedDirectories(t *testing.T) {
 	require.NoError(t, os.WriteFile(outside+"/secret.md", []byte("---\ntype: X\n---\n"), 0o644))
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(dir+"/real.md", []byte("---\ntype: X\n---\n"), 0o644))
-	require.NoError(t, os.Symlink(outside, dir+"/linked"))
+	testutil.SymlinkOrSkip(t, outside, dir+"/linked")
 	// Act
 	b, err := Load(os.DirFS(dir))
 	// Assert

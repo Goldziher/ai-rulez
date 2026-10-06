@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const userConfigTOML = `version = "4.0"
@@ -315,7 +316,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 		home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
 		dotfiles := filepath.Join(home, "dotfiles", "claude")
 		require.NoError(t, os.MkdirAll(dotfiles, 0o755))
-		require.NoError(t, os.Symlink(dotfiles, filepath.Join(home, ".claude")))
+		testutil.SymlinkOrSkip(t, dotfiles, filepath.Join(home, ".claude"))
 
 		_, err := gen.GenerateUser("")
 		require.NoError(t, err)
@@ -325,7 +326,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 	t.Run("a symlink out of the home directory is refused", func(t *testing.T) {
 		home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
 		outside := t.TempDir()
-		require.NoError(t, os.Symlink(outside, filepath.Join(home, ".claude")))
+		testutil.SymlinkOrSkip(t, outside, filepath.Join(home, ".claude"))
 
 		_, err := gen.GenerateUser("")
 		require.Error(t, err)
@@ -338,7 +339,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 		target := filepath.Join(home, "elsewhere.md")
 		require.NoError(t, os.WriteFile(target, []byte("shared\n"), 0o644))
 		require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "rules"), 0o755))
-		require.NoError(t, os.Symlink(target, filepath.Join(home, ".claude", "rules", "personal.md")))
+		testutil.SymlinkOrSkip(t, target, filepath.Join(home, ".claude", "rules", "personal.md"))
 
 		plan, err := gen.GenerateUser("")
 		require.NoError(t, err)

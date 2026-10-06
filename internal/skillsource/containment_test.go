@@ -2,12 +2,13 @@ package skillsource
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestResolve_LocalSourceOfAProjectConfigMustStayInsideTheProject(t *testing.T) {
@@ -17,7 +18,7 @@ func TestResolve_LocalSourceOfAProjectConfigMustStayInsideTheProject(t *testing.
 	outside := filepath.Join(base, "victim", "skills")
 	write(t, project, "vendor/skills/pdf/SKILL.md", skillMD("pdf", "Work with PDF files"))
 	write(t, outside, "stolen/SKILL.md", skillMD("stolen", "Outside the project"))
-	require.NoError(t, os.Symlink(outside, filepath.Join(project, "vendor", "link")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(project, "vendor", "link"))
 
 	tests := []struct {
 		name    string

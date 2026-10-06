@@ -6,15 +6,16 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -568,29 +569,22 @@ func TestNativePlan_ReportsSymlinkedSources(t *testing.T) {
 
 // --- write safety ---
 
-func skipWithoutSymlinks(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("symlinks need privileges on windows")
-	}
-}
-
 func TestConvert_RefusesSymlinkedTargets(t *testing.T) {
-	skipWithoutSymlinks(t)
+	testutil.RequireSymlink(t)
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, dir, outside string)
 	}{
 		{"config dir is a symlink", func(t *testing.T, dir, outside string) {
-			require.NoError(t, os.Symlink(outside, filepath.Join(dir, ".ai-rulez")))
+			testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, ".ai-rulez"))
 		}},
 		{"content dir is a symlink", func(t *testing.T, dir, outside string) {
 			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
-			require.NoError(t, os.Symlink(outside, filepath.Join(dir, ".ai-rulez", "context")))
+			testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, ".ai-rulez", "context"))
 		}},
 		{"target file is a symlink", func(t *testing.T, dir, outside string) {
 			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez", "context"), 0o755))
-			require.NoError(t, os.Symlink(filepath.Join(outside, "victim"), filepath.Join(dir, ".ai-rulez", "context", "claude.md")))
+			testutil.SymlinkOrSkip(t, filepath.Join(outside, "victim"), filepath.Join(dir, ".ai-rulez", "context", "claude.md"))
 		}},
 	}
 	for _, tt := range tests {
