@@ -110,12 +110,23 @@ func usesDynamicSkills(cfg *config.Config) bool {
 // refuses is such a problem only with --strict; otherwise it is left unpinned
 // (see lockUnpinned) and the other skills are pinned.
 func mergeDynamicLock(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) []string {
-	problems, unpinned := mergeDynamicViews(cfg, current, next, kind, wanted, lockExtraViews(), lockStrict)
+	problems, unpinned := mergeDynamicViews(cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
 	lockUnpinned = append(lockUnpinned, unpinned...)
 	return problems
 }
 
-func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool, extras []mcp.ServeSetup, strict bool) (problems []string, unpinned []mcp.Refusal) {
+// dynamicRun is what one `lock` run refreshes: an entry kind (all when empty),
+// the names to limit it to (all when empty), the extra serve views to pin, and
+// whether a refused skill fails the run.
+type dynamicRun struct {
+	kind   string
+	wanted map[string]bool
+	extras []mcp.ServeSetup
+	strict bool
+}
+
+func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dynamicRun) (problems []string, unpinned []mcp.Refusal) {
+	kind, wanted, extras, strict := run.kind, run.wanted, run.extras, run.strict
 	if current != nil {
 		next.Source, next.Served = append([]lockfile.Entry(nil), current.Source...), append([]lockfile.Entry(nil), current.Served...)
 	}
