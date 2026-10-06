@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/publish-manifest.schema.json",
   "title": "ai-rulez publish manifest",
-  "description": "<name>-<version>.manifest.json written by `ai-rulez publish`: what a published plugin bundle contains and where it came from. approval, signature and sbom are reserved: they are null until those features exist, so a consumer can later refuse unsigned or unapproved bundles.",
+  "description": "<name>-<version>.manifest.json written by `ai-rulez publish`: what a published plugin bundle contains and where it came from. approval, signature and sbom are null when the bundle carries none, so a consumer can refuse an unsigned or unapproved bundle by reading the manifest.",
   "type": "object",
   "required": [
     "schema_version",
@@ -20,17 +20,34 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
-    "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
-    "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z._+-]*$" },
-    "ai_rulez_version": { "type": "string", "description": "The ai-rulez release that built the bundle." },
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z][0-9A-Za-z._+-]*$"
+    },
+    "ai_rulez_version": {
+      "type": "string",
+      "description": "The ai-rulez release that built the bundle."
+    },
     "source": {
       "type": "object",
       "required": ["repo", "commit", "dirty"],
       "additionalProperties": false,
       "properties": {
-        "repo": { "type": "string", "description": "Repository URL without credentials; empty when unknown." },
-        "commit": { "type": "string", "description": "HEAD commit; empty without git." },
+        "repo": {
+          "type": "string",
+          "description": "Repository URL without credentials; empty when unknown."
+        },
+        "commit": {
+          "type": "string",
+          "description": "HEAD commit; empty without git."
+        },
         "dirty": {
           "type": "boolean",
           "description": "True when the tree had uncommitted changes (only possible with --allow-dirty)."
@@ -42,7 +59,10 @@
       "required": ["version", "tree", "file_digest"],
       "additionalProperties": false,
       "properties": {
-        "version": { "type": "integer", "minimum": 1 },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
         "tree": {
           "type": "string",
           "pattern": "^(sha256:[0-9a-f]{64})?$",
@@ -56,7 +76,9 @@
     },
     "runtimes": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Plugin runtimes in the bundle, sorted."
     },
     "files": {
@@ -67,9 +89,17 @@
         "required": ["path", "size", "digest"],
         "additionalProperties": false,
         "properties": {
-          "path": { "type": "string", "minLength": 1 },
-          "size": { "type": "integer", "minimum": 0 },
-          "digest": { "$ref": "#/definitions/digest" }
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "digest": {
+            "$ref": "#/definitions/digest"
+          }
         }
       }
     },
@@ -78,16 +108,117 @@
       "required": ["file", "digest", "size"],
       "additionalProperties": false,
       "properties": {
-        "file": { "type": "string", "pattern": "\\.tar\\.gz$" },
-        "digest": { "$ref": "#/definitions/digest" },
-        "size": { "type": "integer", "minimum": 0 }
+        "file": {
+          "type": "string",
+          "pattern": "\\.tar\\.gz$"
+        },
+        "digest": {
+          "$ref": "#/definitions/digest"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
-    "approval": { "type": "null", "description": "Reserved for approval state." },
-    "signature": { "type": "null", "description": "Reserved for a bundle signature." },
-    "sbom": { "type": "null", "description": "Reserved for an SBOM reference." }
+    "approval": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": ["required", "approved"],
+          "additionalProperties": false,
+          "description": "Approval state of the lock at publish time; present when the [governance] policy selects content.",
+          "properties": {
+            "required": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Items the policy selects."
+            },
+            "approved": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Of those, items with a valid approval."
+            }
+          }
+        }
+      ]
+    },
+    "signature": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": ["type", "file", "signer"],
+          "additionalProperties": false,
+          "description": "A Sigstore bundle holding a message signature over the exact bytes of the archive (the form `cosign sign-blob --bundle` writes). The signer is what the bundle claims; trusting it is the verifier's decision.",
+          "properties": {
+            "type": {
+              "const": "sigstore-bundle"
+            },
+            "file": {
+              "type": "string",
+              "pattern": "\\.tar\\.gz\\.sigstore\\.json$"
+            },
+            "signer": {
+              "type": "object",
+              "required": ["kind"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": ["key", "keyless"]
+                },
+                "key_id": {
+                  "type": "string",
+                  "description": "sha256:<hex> fingerprint of the signing key (key mode)."
+                },
+                "identity": {
+                  "type": "string",
+                  "description": "Certificate identity (keyless)."
+                },
+                "issuer": {
+                  "type": "string",
+                  "description": "OIDC issuer (keyless)."
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sbom": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": ["format", "file", "digest"],
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "const": "cyclonedx"
+            },
+            "file": {
+              "type": "string",
+              "pattern": "\\.sbom\\.cdx\\.json$"
+            },
+            "digest": {
+              "$ref": "#/definitions/digest"
+            }
+          }
+        }
+      ]
+    }
   },
   "definitions": {
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
   }
 }

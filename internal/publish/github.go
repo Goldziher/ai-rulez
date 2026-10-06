@@ -85,5 +85,5 @@ func ghFailure(what string, res runner.Result) error {
 	if detail == "" && res.Err != nil {
 		detail = res.Err.Error()
 	}
-	return newError(CodeTarget, ExitFailed, "", "%s failed (%s): %s", what, res.Status, detail)
+	return newError(CodeTarget, ExitFailed, "", "%s failed (%s): %s", what, res.Status, Redact(detail))
 }
