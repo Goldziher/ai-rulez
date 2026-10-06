@@ -1,10 +1,15 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckStrictFlags(t *testing.T) {
@@ -143,4 +148,37 @@ func TestApplyRepoRoot(t *testing.T) {
 	if err := applyRepoRoot(); err == nil {
 		t.Fatal("a missing --repo-root must be an error")
 	}
+}
+
+// scan always runs the strict checks and has no --strict flag, so none of its
+// flag descriptions may tell the user to pass one.
+func TestScanFlagDescriptionsDoNotMentionStrict(t *testing.T) {
+	require.Nil(t, ScanCmd.Flags().Lookup("strict"))
+	ScanCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		assert.NotContains(t, f.Usage, "--strict", "scan --%s", f.Name)
+	})
+	for _, name := range []string{"baseline", "update-baseline", "strict-baseline", "since", "changed"} {
+		f := ScanCmd.Flags().Lookup(name)
+		require.NotNil(t, f, name)
+		assert.Regexp(t, `^[A-Z]`, f.Usage, "scan --%s starts a sentence", name)
+		v := ValidateCmd.Flags().Lookup(name)
+		require.NotNil(t, v, name)
+		assert.True(t, strings.HasPrefix(v.Usage, "With --strict, "), "validate --%s", name)
+	}
+}
+
+// pflag turns a back-quoted word in a usage string into the value placeholder,
+// so "see `ai-rulez roles list`" would print as "--role ai-rulez roles list".
+// Quote with single quotes instead. Every command is checked, not only validate.
+func TestNoFlagUsageHasBackticks(t *testing.T) {
+	var walk func(c *cobra.Command)
+	walk = func(c *cobra.Command) {
+		c.Flags().VisitAll(func(f *pflag.Flag) {
+			assert.NotContains(t, f.Usage, "`", "%s --%s", c.CommandPath(), f.Name)
+		})
+		for _, sub := range c.Commands() {
+			walk(sub)
+		}
+	}
+	walk(RootCmd)
 }
