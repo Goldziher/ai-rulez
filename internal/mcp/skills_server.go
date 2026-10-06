@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
@@ -15,6 +16,11 @@ import (
 const (
 	methodSkillsList = "skills/list"
 	methodSkillsGet  = "skills/get"
+
+	// methodDirectoryRead is the extension's optional directory listing, gated
+	// by the directoryRead capability setting.
+	methodDirectoryRead = "resources/directory/read"
+	mimeDirectory       = "inode/directory"
 
 	methodResourcesRead = "resources/read"
 
@@ -54,7 +60,7 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 		Tools:     &sdkmcp.ToolCapabilities{},
 		Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
 	}
-	caps.AddExtension(SkillsExtensionID, map[string]any{})
+	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
 	mcpServer := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: "ai-rulez-skills", Title: "AI-Rulez Skills", Version: version},
 		&sdkmcp.ServerOptions{Capabilities: caps, Instructions: skillServerInstructions},
@@ -298,7 +304,7 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 			return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 		}
 		req, ok := msg.(*jsonrpc.Request)
-		if !ok || !req.ID.IsValid() || (req.Method != methodSkillsList && req.Method != methodSkillsGet) {
+		if !ok || !req.ID.IsValid() || (req.Method != methodSkillsList && req.Method != methodSkillsGet && req.Method != methodDirectoryRead) {
 			return msg, nil
 		}
 		resp := &jsonrpc.Response{ID: req.ID}
@@ -338,6 +344,63 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a served skill: %q", p.URI)}
 		}
 		return map[string]any{"resultType": resultTypeComplete, "skill": skillEntry(skill)}, nil
+	case methodDirectoryRead:
+		var p struct {
+			URI string `json:"uri"`
+		}
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &p); err != nil {
+				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "params.uri must be a string"}
+			}
+		}
+		children, ok := c.directoryChildren(p.URI)
+		if !ok {
+			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a directory resource: %q", p.URI)}
+		}
+		return map[string]any{"resultType": resultTypeComplete, "resources": children}, nil
 	}
 	return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
+}
+
+// directoryChildren lists the direct children of a directory inside the served
+// skill tree: the skill root (skill://<name>) or one of its subdirectories.
+// Files carry their resource metadata, subdirectories are inode/directory
+// resources. ok is false for anything that is not such a directory, so the
+// method reads only what resources/read could already return.
+func (c *Catalog) directoryChildren(uri string) (children []map[string]any, ok bool) {
+	rest, found := strings.CutPrefix(uri, SkillURIScheme)
+	if !found || rest == "" || strings.HasSuffix(rest, "/") {
+		return nil, false
+	}
+	name, dir, _ := strings.Cut(rest, "/")
+	skill, found := c.Lookup(name)
+	if !found || skill.Name != name {
+		return nil, false
+	}
+	prefix := ""
+	if dir != "" {
+		prefix = dir + "/"
+	}
+	seenDir := map[string]bool{}
+	for i := range skill.Files {
+		f := &skill.Files[i]
+		rel, inside := strings.CutPrefix(f.RelPath, prefix)
+		if !inside || rel == "" {
+			continue
+		}
+		ok = true
+		first, _, nested := strings.Cut(rel, "/")
+		childURI := SkillURIScheme + skill.Name + "/" + prefix + first
+		switch {
+		case nested && !seenDir[first]:
+			seenDir[first] = true
+			children = append(children, map[string]any{keyURI: childURI, keyName: first, "mimeType": mimeDirectory})
+		case !nested:
+			children = append(children, map[string]any{keyURI: childURI, keyName: first, "mimeType": f.MIME, keySize: f.Size})
+		}
+	}
+	if children == nil {
+		children = []map[string]any{}
+	}
+	return children, ok
 }
