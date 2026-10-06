@@ -232,3 +232,13 @@ func TestCustomPresetPathIsValidated(t *testing.T) {
 		assert.Contains(t, err.Error(), "unsafe 'path'", p)
 	}
 }
+
+func TestOKFDirRejectsControlDirs(t *testing.T) {
+	t.Parallel()
+	for _, dir := range []string{".git/hooks", "a/.GIT/x", "/etc", "../x", ".hg/store"} {
+		cfg := &Config{Version: "4.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, OKF: &OKFConfig{Dir: dir}}
+		err := cfg.Validate()
+		require.Error(t, err, dir)
+		assert.Contains(t, err.Error(), "okf.dir", dir)
+	}
+}
