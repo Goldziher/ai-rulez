@@ -36,6 +36,13 @@ feedback log and recommend an action per skill:
   review   unused but evals show value, or no eval results yet
   keep     everything else
 
+With a usage log each row also says how the uses join with the eval record:
+
+  exact    a use was logged at the skill digest the eval ran on (record lock_digest)
+  stale    uses carry a digest, none the evaluated one: the evidence is about another version
+  legacy   no canonical digest on the record or the uses (older logs, older results): by id only
+  none     the skill has no logged use, or no eval record
+
 Without a usage log nothing is concluded about use. The command reports and exits 0.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -114,9 +121,20 @@ func joinRankUsage(in *evals.RankInput, cfgDir string) error {
 		if err != nil {
 			return err
 		}
-		in.Uses = map[string]int{}
+		in.Uses, in.UseDigests = map[string]int{}, map[string]map[string]int{}
 		for i := range entries {
-			in.Uses[entries[i].ID]++
+			id := entries[i].ID
+			in.Uses[id]++
+			if in.UseDigests[id] == nil {
+				in.UseDigests[id] = map[string]int{}
+			}
+			// Only a digest in the canonical scheme can join with an eval record's
+			// lock_digest; a v2 line, or a served digest, joins by id only.
+			digest := ""
+			if entries[i].DigestScheme == usage.DigestSchemeSkill {
+				digest = entries[i].Digest
+			}
+			in.UseDigests[id][digest]++
 		}
 	}
 	feedbackPath := reportEvalsFlags.feedback
@@ -150,6 +168,9 @@ func writeEvalsReport(w reportWriter, rows []evals.RankRow, haveUsage bool) {
 			evals.Percent(row.PassRate), evals.Percent(row.TriggerPrecision), evals.Percent(row.TriggerRecall), rankDelta(row.AblationDelta))
 		if row.Uses != nil {
 			w.printf(" used %d", *row.Uses)
+			if row.Join != "" {
+				w.printf(" join %s", row.Join)
+			}
 		}
 		w.printf("\n")
 		for _, reason := range row.Reasons {

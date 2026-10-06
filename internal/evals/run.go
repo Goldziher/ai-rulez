@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -74,6 +75,7 @@ type SkillRun struct {
 	Status      string      `json:"status"`
 	Digest      string      `json:"digest,omitempty"`
 	CasesDigest string      `json:"cases_digest,omitempty"`
+	LockDigest  string      `json:"lock_digest,omitempty"`
 	Passing     bool        `json:"passing"`
 	Score       *SkillScore `json:"score,omitempty"`
 	Cases       []CaseScore `json:"cases,omitempty"`
@@ -273,6 +275,8 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 		return p, err
 	}
 	p.run.Digest, p.run.CasesDigest = digest, casesDigest
+	// A skill the lock cannot digest keeps the evals digest and joins by id only.
+	p.run.LockDigest, _ = contentlock.SkillDirDigest(skill.Dir) //nolint:errcheck // an empty digest is the legacy join class
 	p.req = &Request{
 		Version: ProtocolVersion, Harness: e.opts.Harness, Model: e.opts.Model, Ablation: e.opts.Ablation,
 		Skill: SkillRef{ID: skill.ID, Dir: skill.Dir, Digest: digest}, Cases: cases,
@@ -342,6 +346,9 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 		score := old.Score
 		run.Score, run.Passing = &score, score.Scored > 0 && score.PassRate >= e.threshold
 		old.Passing = run.Passing
+		if run.LockDigest != "" {
+			old.LockDigest = run.LockDigest // same skill content: backfill a record that predates lock_digest
+		}
 		if run.Passing {
 			old.LastPass = &PassMark{Digest: old.Digest, Date: old.Date}
 		}
@@ -382,7 +389,7 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 			return run // never store an infrastructure failure: it would mask the last good result
 		}
 		e.store.Put(SkillRecord{
-			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, CacheKey: e.cacheKey(&run),
+			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, LockDigest: run.LockDigest, CacheKey: e.cacheKey(&run),
 			Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,
 			Date: e.opts.Date, Passing: run.Passing, Score: score,
 		})
