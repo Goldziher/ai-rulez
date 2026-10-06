@@ -33,6 +33,17 @@ func provenance(layers []Layer) map[string]string {
 	all("sources.allowed_hosts", func(p Policy) bool { return p.Sources.Allowed.Set })
 	all("sources.deny_hosts", func(p Policy) bool { return len(p.Sources.Deny) > 0 })
 	firstWith("sources.require_pinned", func(p Policy) bool { return p.Sources.RequirePinned })
+	firstWith("sources.min_release_age", func(p Policy) bool {
+		return p.Sources.MinReleaseAge > 0 && p.Sources.MinReleaseAge == eff.Sources.MinReleaseAge
+	})
+	for kind, sb := range eff.Lint.SizeBudgets {
+		if sb.MaxLines > 0 {
+			firstWith("lint.budgets."+kind+".max_lines", func(p Policy) bool { return p.Lint.SizeBudgets[kind].MaxLines == sb.MaxLines })
+		}
+		if sb.MaxTokens > 0 {
+			firstWith("lint.budgets."+kind+".max_tokens", func(p Policy) bool { return p.Lint.SizeBudgets[kind].MaxTokens == sb.MaxTokens })
+		}
+	}
 	all("lint.required_codes", func(p Policy) bool { return len(p.Lint.RequiredCodes) > 0 })
 	for code, sev := range eff.Lint.SeverityFloor {
 		firstWith("lint.severity_floor."+code, func(p Policy) bool { return p.Lint.SeverityFloor[code] == sev })

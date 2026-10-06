@@ -264,3 +264,17 @@ func (r *Report) refuse(route string, codes []string) {
 // RefuseTolerate reports a [lint.tolerate] entry for protected codes, which the
 // caller dropped from the budgets.
 func (r *Report) RefuseTolerate(codes []string) { r.refuse(routeTolerate, codes) }
+
+// SizeBudgetKinds lists the content kinds [lint.budgets] may bound, in a stable order.
+func SizeBudgetKinds() []string {
+	kinds := make([]string, 0, len(defaultBudgets))
+	for k := range defaultBudgets {
+		kinds = append(kinds, k)
+	}
+	sort.Strings(kinds)
+	return kinds
+}
+
+// DefaultSizeBudget is the built-in size budget of a content kind; the zero
+// value for an unknown kind.
+func DefaultSizeBudget(kind string) config.LintBudget { return defaultBudgets[kind] }

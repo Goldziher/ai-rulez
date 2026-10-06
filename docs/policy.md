@@ -38,6 +38,7 @@ name = "example-org baseline"
 allowed_hosts  = ["github.com/example-org", "*.example.org"]   # includes, installed skills, skill sources
 deny_hosts     = ["github.com/example-org/archived"]
 require_pinned = true                                           # the lock is enforced; an unpinned remote is an error
+min_release_age = "7d"                                          # the youngest tag any source may adopt
 
 [lint]
 required_codes = ["AR001", "AR005", "AR008"]                    # may be neither turned off nor ignored
@@ -61,6 +62,9 @@ allow_egress = []                                               # the scanners -
 
 [lint.capability]
 max_network_commands = 3                                        # AR030 limit; the repository may set a lower one
+
+[lint.budgets.skill]
+max_tokens = 4000                                               # AR902 limit per content kind; the repository may set a lower one
 
 [lint.load_budgets]
 claude-skill-listing = 1200                                     # AR964 limit by id; the repository may set a lower one
@@ -145,6 +149,8 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.security.directive_tags` | union of layers, then the repository's own tags | (nothing to report: the repository's list only adds) | none |
 | `lint.security.trusted_orgs` | the repository's entries the list names; the policy list when it sets none or none is left. An empty policy list trusts no organization | an entry the list does not name; the entry is dropped | `AR740` |
 | `lint.capability.max_network_commands` | the lower value; an unset repository value is the lower of the policy bound and the built-in 5 | a higher explicit value | `AR740` |
+| `sources.min_release_age` | the longer age; an unset `[lock]` or per-source age takes it | a younger `[lock] min_release_age` or per-source age, including `"0"` | `AR740` |
+| `lint.budgets.<kind>.max_lines`, `.max_tokens` | the lower value per kind and field; an unset one is the lower of the policy bound and the built-in budget | a higher explicit `[lint.budgets.<kind>]` value | `AR740` |
 | `lint.load_budgets.<id>` | the lower value per id; an unset one is the lower of the policy bound and the built-in limit | a higher explicit value | `AR740` |
 | `lint.scanner_policy.preset` | the stronger preset (`off` < `baseline` < `strict`) | a weaker explicit preset (an unset one takes the policy's) | `AR740` |
 | `lint.scanner_policy.required` | union with the repository's list | (nothing to report: the repository's list only adds) | none |
