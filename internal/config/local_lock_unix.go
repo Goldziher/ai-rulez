@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // lockLocalConfig takes an exclusive advisory lock on path (created owner-only)
@@ -20,7 +22,7 @@ func lockLocalConfig(path string) (func(), error) {
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "open local config lock")
 	}
-	deadline := time.Now().Add(localLockTimeout)
+	deadline := ambient.Clock(nil).Now().Add(localLockTimeout)
 	for {
 		err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) //nolint:gosec // fd fits in int
 		if err == nil {
@@ -30,7 +32,7 @@ func lockLocalConfig(path string) (func(), error) {
 			_ = f.Close() //nolint:errcheck // already failing
 			return nil, oops.With("path", path).Wrapf(err, "lock local config")
 		}
-		if time.Now().After(deadline) {
+		if ambient.Clock(nil).Now().After(deadline) {
 			_ = f.Close() //nolint:errcheck // already failing
 			return nil, oops.
 				With("path", path).

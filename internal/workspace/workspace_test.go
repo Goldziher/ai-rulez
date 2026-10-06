@@ -64,7 +64,7 @@ func TestResolve(t *testing.T) {
 		{name: "absolute link inside", in: "dir/abs", want: "a.txt"},
 		{name: "link out of the root", in: "dir/escape", wantErr: workspace.ErrOutside},
 		{name: "root", in: ".", want: "."},
-		{name: "link cycle", in: "loop1", wantErr: fs.ErrInvalid},
+		{name: "link cycle", in: "loop1", wantErr: workspace.ErrTooManyLinks},
 		{name: "missing", in: "dir/none", wantErr: fs.ErrNotExist},
 	}
 	for kind, ws := range build(t) {
@@ -75,7 +75,7 @@ func TestResolve(t *testing.T) {
 					if err == nil {
 						t.Fatalf("Resolve(%q) = %q, want error %v", tc.in, got, tc.wantErr)
 					}
-					if tc.wantErr != fs.ErrInvalid && !errors.Is(err, tc.wantErr) {
+					if !errors.Is(err, tc.wantErr) {
 						t.Fatalf("Resolve(%q) error = %v, want %v", tc.in, err, tc.wantErr)
 					}
 					return
