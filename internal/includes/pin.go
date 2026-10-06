@@ -239,7 +239,11 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 			problems = append(problems, Problem{w.Kind, w.Name, "lock is stale: source, path or ref changed since it was written"})
 			continue
 		}
-		digest, commit, ok := cachedState(cfg, w)
+		digest, commit, ok, err := cachedState(cfg, w)
+		if err != nil {
+			problems = append(problems, Problem{w.Kind, w.Name, "cannot digest the cached content: " + err.Error()})
+			continue
+		}
 		if !ok {
 			continue
 		}
@@ -301,17 +305,19 @@ func cachedCommit(cacheDir string) string {
 	return ""
 }
 
-// cachedState reads the cached tree of a source without fetching.
-func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok bool) {
+// cachedState reads the cached tree of a source without fetching. ok is false
+// when nothing is cached; a tree that is cached but cannot be digested is an
+// error, not "not cached".
+func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok bool, err error) {
 	dir, cacheDir, treeKind := cachedTree(cfg, w)
 	if dir == "" {
-		return "", "", false
+		return "", "", false, nil
 	}
 	d, err := contentlock.DigestDir(treeKind, dir)
 	if err != nil {
-		return "", "", false
+		return "", "", false, oops.With("dir", dir).Wrapf(err, "digest cached %s %s", w.Kind, w.Name)
 	}
-	return d, cachedCommit(cacheDir), true
+	return d, cachedCommit(cacheDir), true, nil
 }
 
 // FormatProblems renders problems one per line.
