@@ -102,7 +102,7 @@ func recordCommand(options *HookTemplateOptions, harness string) string {
 		// to the hook's working directory for the others.
 		logPath = DefaultLogPath
 	}
-	parts := []string{executable, "usage", "record"}
+	parts := []string{ShellWord(executable), "usage", "record"}
 	if harness != HarnessClaude {
 		parts = append(parts, "--harness", harness)
 	}
@@ -128,14 +128,50 @@ func matcherHandler(matcher, command string) []map[string]any {
 	}}
 }
 
-// shellQuote double-quotes a value for the shell while leaving ${VAR}
-// expansion (such as CLAUDE_PROJECT_DIR) to the shell.
+// projectDirVar is the one variable a generated hook command leaves for the
+// shell to expand: Claude Code sets it to the project root.
+const projectDirVar = "${CLAUDE_PROJECT_DIR}"
+
+// shellQuote quotes a path for the shell. A value with nothing the shell
+// interprets is double-quoted as is. The project-directory variable is the only
+// expansion kept: it is left live (inside double quotes when the rest is plain,
+// else closed out of single quotes). Anything else a double-quoted string would
+// still interpret ("$(...)", "$VAR", a backtick, a backslash) makes the whole
+// value single-quoted, so it stays literal.
 func shellQuote(value string) string {
-	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "`", "\\`").Replace(value)
-	return `"` + escaped + `"`
+	rest := strings.ReplaceAll(value, projectDirVar, "")
+	if !strings.ContainsAny(rest, "$`\\\"!") {
+		return `"` + value + `"`
+	}
+	if !strings.Contains(value, projectDirVar) {
+		return singleQuote(value)
+	}
+	pieces := strings.Split(value, projectDirVar)
+	var b strings.Builder
+	for i, piece := range pieces {
+		if i > 0 {
+			b.WriteString(`"` + projectDirVar + `"`)
+		}
+		if piece != "" {
+			b.WriteString(singleQuote(piece))
+		}
+	}
+	return b.String()
 }
 
 // singleQuote quotes a value so the shell passes it through untouched.
 func singleQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+}
+
+// ShellWord quotes an executable or other word for the shell only when it holds a
+// character the shell would interpret (a space, a quote, "$", a backtick, ...).
+// Plain names and paths stay as they are, so the common "ai-rulez" is unchanged.
+func ShellWord(value string) string {
+	if value != "" && strings.IndexFunc(value, func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("_-./:@%+=,", r))
+	}) < 0 {
+		return value
+	}
+	return singleQuote(value)
 }
