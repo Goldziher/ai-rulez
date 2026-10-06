@@ -139,17 +139,17 @@ func subtractClaims(prev, cur []jsonmerge.Claim) []jsonmerge.Claim {
 			if !isPathPrefix(now.Path, claim.Path) {
 				continue
 			}
-			if now.Elements == nil || len(now.Path) < len(claim.Path) {
+			if !now.HasElements() || len(now.Path) < len(claim.Path) {
 				covered = true
 				break
 			}
-			if claim.Elements == nil {
+			if !claim.HasElements() {
 				covered = true
 				break
 			}
-			remaining.Elements = elementsWithout(remaining.Elements, now.Elements)
+			remaining = remaining.WithoutElements(now)
 		}
-		if covered || (claim.Elements != nil && len(remaining.Elements) == 0) {
+		if covered || (claim.HasElements() && len(remaining.ElementDigests()) == 0) {
 			continue
 		}
 		gone = append(gone, remaining)
@@ -161,31 +161,13 @@ func isPathPrefix(prefix, path []string) bool {
 	return len(prefix) <= len(path) && slices.Equal(prefix, path[:len(prefix)])
 }
 
-func elementsWithout(elements, drop []any) []any {
-	kept := []any{}
-	for _, element := range elements {
-		if !slices.ContainsFunc(drop, func(d any) bool { return jsonValuesEqual(d, element) }) {
-			kept = append(kept, element)
-		}
-	}
-	return kept
-}
-
-// jsonValuesEqual compares two values as JSON. The previous run's claims come
-// back from the manifest as []any and map[string]any, while this run's are built
-// from typed values ([]string args); reflect.DeepEqual calls those different, so a
-// claim still held would be taken back and its element deleted from the document.
-func jsonValuesEqual(a, b any) bool {
-	return jsonmerge.ElementsContain(a, []any{b})
-}
-
 // guardClaims holds the claims of an older record, which carry no guard, to the
 // value the current claims record for the same path; one with no current
 // counterpart is dropped, so what it addresses stays.
 func guardClaims(claims, current []jsonmerge.Claim) []jsonmerge.Claim {
 	guarded := make([]jsonmerge.Claim, 0, len(claims))
 	for _, claim := range claims {
-		if claim.Guarded() || claim.Elements != nil {
+		if claim.Guarded() || claim.HasElements() {
 			guarded = append(guarded, claim)
 			continue
 		}

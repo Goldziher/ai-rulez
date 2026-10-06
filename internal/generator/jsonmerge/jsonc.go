@@ -185,7 +185,7 @@ func (ed jsoncEditor) unmergeLeaf(obj *hujson.Object, idx int, claim Claim) (cha
 	if !claim.Matches(standardRaw(*value)) {
 		return false, true
 	}
-	if claim.Elements == nil {
+	if !claim.HasElements() {
 		ed.removeAt(obj, idx)
 		return true, false
 	}
@@ -195,7 +195,7 @@ func (ed jsoncEditor) unmergeLeaf(obj *hujson.Object, idx int, claim Claim) (cha
 	}
 	removed := false
 	for i := len(arr.Elements) - 1; i >= 0; i-- {
-		if anyEquals(standardRaw(arr.Elements[i]), claim.Elements) {
+		if claim.ownsRaw(standardRaw(arr.Elements[i])) {
 			removeSlot(elementSlots(arr), i, &arr.AfterExtra)
 			arr.Elements = slices.Delete(arr.Elements, i, i+1)
 			removed = true
