@@ -14,6 +14,25 @@ func TestEveryRegisteredRuleHasAnAnalyzerAndScope(t *testing.T) {
 	}
 }
 
+// A registered code that falls back on its family would silently land in the
+// wrong analyzer (every AR9xx letter-family code used to become "budgets").
+func TestEveryRegisteredCodeHasAnExplicitAnalyzer(t *testing.T) {
+	for _, r := range Rules() {
+		_, ok := analyzerOverrides[r.Code]
+		assert.True(t, ok, "%s (%s) has no entry in analyzerGroups", r.Code, r.Name)
+	}
+	listed := map[string]string{}
+	for _, g := range analyzerGroups {
+		for _, code := range g.codes {
+			prev, dup := listed[code]
+			assert.False(t, dup, "%s is listed under %s and %s", code, prev, g.name)
+			listed[code] = g.name
+			_, registered := lookupRule(code)
+			assert.True(t, registered, "%s is classified but not registered", code)
+		}
+	}
+}
+
 func TestAnalyzerClassification(t *testing.T) {
 	tests := []struct {
 		code, name, scope string
@@ -32,14 +51,24 @@ func TestAnalyzerClassification(t *testing.T) {
 		{"AR403", AnalyzerReferences, ScopeItem},
 		{"AR964", AnalyzerPlugin, ScopeItem},
 		{"AR805", AnalyzerDescriptions, ScopeItem},
+		{"AR9E1", AnalyzerSecurity, ScopeBundle},
+		{"AR9L1", AnalyzerSecurity, ScopeBundle},
+		{"AR9K1", AnalyzerSecurity, ScopeBundle},
+		{"AR9K0", AnalyzerConfig, ScopeBundle},
+		{"AR9C2", AnalyzerTraps, ScopeFile},
+		{"AR995", AnalyzerLock, ScopeBundle},
+		{"AR981", AnalyzerLock, ScopeBundle},
+		{"AR9B4", AnalyzerOKF, ScopeItem},
+		{"AR9A0", AnalyzerEvals, ScopeItem},
+		{"AR9F1", AnalyzerConvert, ScopeItem},
 	}
 	for _, tt := range tests {
 		got := AnalyzerFor(tt.code)
 		assert.Equal(t, AnalyzerInfo{tt.name, tt.scope}, got, tt.code)
 	}
-	SetAnalyzer("AR990", "custom", ScopeBundle)
-	t.Cleanup(func() { delete(analyzerOverrides, "AR990") })
-	assert.Equal(t, AnalyzerInfo{"custom", ScopeBundle}, AnalyzerFor("AR990"))
+	SetAnalyzer("AR999", "custom", ScopeBundle)
+	t.Cleanup(func() { delete(analyzerOverrides, "AR999") })
+	assert.Equal(t, AnalyzerInfo{"custom", ScopeBundle}, AnalyzerFor("AR999"))
 }
 
 func TestFilterAnalyzersAndFindingAnnotations(t *testing.T) {
