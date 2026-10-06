@@ -125,6 +125,21 @@ func PrepareApprovalCheck(cfg *config.Config, env ambient.Env) (*ApprovalCheck, 
 	return check, nil
 }
 
+// KeyReviewers maps the reviewer string of each trusted approval key
+// ("key:<fingerprint>") to the person its [[signing.trust]] entry names.
+func (c *ApprovalCheck) KeyReviewers() map[string]string {
+	out := map[string]string{}
+	for _, e := range c.Trust.Entries {
+		if e.Key == nil || e.Reviewer == "" {
+			continue
+		}
+		if fp, err := Fingerprint(e.Key); err == nil {
+			out["key:"+fp] = e.Reviewer
+		}
+	}
+	return out
+}
+
 // Verify checks a bundle: the signature, the signer's trust for approvals, that
 // the statement is an approval attestation of exactly sub, and returns the
 // decoded predicate. Failures are *Error values (AR721 to AR726).

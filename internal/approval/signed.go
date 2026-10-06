@@ -25,6 +25,13 @@ type SignedVerifier interface {
 	Verify(a lockfile.Approval, s Subject, now time.Time) (reviewer string, err error)
 }
 
+// IdentityMapper is a SignedVerifier that knows whom a signing key belongs to.
+type IdentityMapper interface {
+	// IdentityOf returns the person the [[signing.trust]] entry of the key
+	// "key:<fingerprint>" names, "" when it names nobody.
+	IdentityOf(reviewer string) string
+}
+
 var attestationPattern = regexp.MustCompile(`^sha256:([0-9a-f]{64})$`)
 
 // AttestationFile is the path of the bundle a record's Attestation digest names,
@@ -54,6 +61,15 @@ type configVerifier struct {
 }
 
 func newConfigVerifier(cfg *config.Config) SignedVerifier { return &configVerifier{cfg: cfg} }
+
+// IdentityOf implements IdentityMapper.
+func (v *configVerifier) IdentityOf(reviewer string) string {
+	v.once.Do(func() { v.check, v.err = signing.PrepareApprovalCheck(v.cfg, nil) })
+	if v.err != nil {
+		return ""
+	}
+	return v.check.KeyReviewers()[reviewer]
+}
 
 // maxBundleFileBytes bounds an attestation file; signing.MaxBundleBytes is the same limit.
 const maxBundleFileBytes = signing.MaxBundleBytes

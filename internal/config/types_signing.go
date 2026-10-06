@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/samber/oops"
 )
@@ -95,6 +96,10 @@ type SigningTrust struct {
 	Issuer string `yaml:"issuer,omitempty" json:"issuer,omitempty" toml:"issuer,omitempty"`
 	// KeyFile is a PEM public key inside the project.
 	KeyFile string `yaml:"key_file,omitempty" json:"key_file,omitempty" toml:"key_file,omitempty"` //nolint:tagliatelle
+	// Reviewer names the person a key_file belongs to (an email, "github:login" or
+	// "@login"), so [governance] forbid_self_approval can tell whether the signer
+	// wrote the change: a key has no identity of its own.
+	Reviewer string `yaml:"reviewer,omitempty" json:"reviewer,omitempty" toml:"reviewer,omitempty"`
 	// ValidFrom and ValidUntil ("2026-01-01" or RFC 3339) bound the signing time
 	// the entry accepts; an expiry forces a reviewed renewal.
 	ValidFrom  string `yaml:"valid_from,omitempty" json:"valid_from,omitempty" toml:"valid_from,omitempty"`    //nolint:tagliatelle
@@ -326,6 +331,10 @@ func validateSigningTrust(t SigningTrust) error {
 		return fmt.Errorf("an identity entry needs an issuer")
 	case t.KeyFile != "" && t.Issuer != "":
 		return fmt.Errorf("a key_file entry has no issuer")
+	case t.Reviewer != "" && t.KeyFile == "":
+		return fmt.Errorf("reviewer names the owner of a key_file; an identity entry already is one")
+	case t.Reviewer != "" && (strings.TrimSpace(t.Reviewer) != t.Reviewer || strings.ContainsFunc(t.Reviewer, unicode.IsControl)):
+		return fmt.Errorf("reviewer must be an email or a github login without surrounding space or control characters")
 	}
 	if t.IdentityRegexp != "" {
 		if err := ValidateIdentityRegexp(t.IdentityRegexp); err != nil {
