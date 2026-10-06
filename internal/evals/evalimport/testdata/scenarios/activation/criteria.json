@@ -1,0 +1,8 @@
+{
+  "scenario": "deploy-to-staging",
+  "criteria": [{ "name": "deploys", "description": "Deploys the billing service to staging", "weight": 1 }],
+  "activation": {
+    "should_trigger": true,
+    "should_not_trigger": ["Explain how staging differs from production", "  Roll back the last production deploy  "]
+  }
+}

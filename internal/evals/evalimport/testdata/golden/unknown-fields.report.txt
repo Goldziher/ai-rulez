@@ -1,0 +1,12 @@
+wrote tune-the-cache.eval.yaml, tune-the-cache.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   2 criteria -> rubric (weights kept as text)
+assumed:  no pass threshold; the eval default 0.70 applies
+assumed:  expect_trigger: true (the scenario targets a skill)
+unmapped (6), AR9A5:
+  $.agent                      value "2 item(s)"  -> use `eval run --harness` and `--model`
+  $.baseline                   value "2 item(s)"  -> use `eval run --ablation`
+  $.criteria[0].category       value "behaviour"
+  $.labels                     value "2 item(s)"
+  $.owner                      value "platform-team"
+  $.repeats                    value "3"  -> use `eval run --runs N`

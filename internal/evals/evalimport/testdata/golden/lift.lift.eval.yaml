@@ -1,0 +1,32 @@
+# imported by ai-rulez eval import (importer 1) from scenario "write-the-changelog"
+# source sha256:1d2c2867a2a4a6882bca2f5a7d191e5adb7733af0abd6e17afd6c2999760f5b6
+schema_version: 1
+cases:
+  - id: write-the-changelog
+    description: Imported scenario
+    prompt_file: write-the-changelog.task.md
+    expect_trigger: true
+    assertions:
+      - # lifted from criterion "file exists"
+        type: file_exists
+        path: CHANGELOG.md
+      - # lifted from criterion "mentions version"
+        type: contains
+        value: 2.0.0
+      - # lifted from criterion "no draft marker"
+        type: not_contains
+        value: DRAFT
+      - # lifted from criterion "no tmp file"
+        type: file_exists
+        path: notes.tmp
+        exists: false
+    rubric: |-
+      Score the answer against this weighted checklist (total weight 9):
+      1. (weight 2) The file 'CHANGELOG.md' exists
+      2. (weight 1) The output contains "2.0.0"
+      3. (weight 1) The answer does not contain `DRAFT`
+      4. (weight 1) The file "notes.tmp" does not exist
+      5. (weight 3) The changelog is clear and well organised
+      6. (weight 1) The file "../outside" exists
+    tags:
+      - imported:tessl

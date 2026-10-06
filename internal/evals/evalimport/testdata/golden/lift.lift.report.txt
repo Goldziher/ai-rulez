@@ -1,0 +1,9 @@
+wrote write-the-changelog.eval.yaml, write-the-changelog.task.md (1 case)
+mapped:   task -> prompt_file
+mapped:   6 criteria -> rubric (weights kept as text)
+assumed:  no pass threshold; the eval default 0.70 applies
+assumed:  expect_trigger: true (the scenario targets a skill)
+lifted:   criterion "file exists" -> file_exists "CHANGELOG.md"
+lifted:   criterion "mentions version" -> contains "2.0.0"
+lifted:   criterion "no draft marker" -> not_contains "DRAFT"
+lifted:   criterion "no tmp file" -> file_exists "notes.tmp" (absent)

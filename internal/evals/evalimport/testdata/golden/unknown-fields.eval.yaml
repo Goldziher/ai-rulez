@@ -1,0 +1,14 @@
+# imported by ai-rulez eval import (importer 1) from scenario "tune-the-cache"
+# source sha256:284d5fa383e5d1092327f62bd5403465e38fe8159bf2c5c02b10626df2441d3c
+schema_version: 1
+cases:
+  - id: tune-the-cache
+    description: Imported scenario
+    prompt_file: tune-the-cache.task.md
+    expect_trigger: true
+    rubric: |-
+      Score the answer against this weighted checklist (total weight 2):
+      1. (weight 1) Sets a TTL on the cache entries
+      2. (weight 1) Explains the TTL choice
+    tags:
+      - imported:tessl
