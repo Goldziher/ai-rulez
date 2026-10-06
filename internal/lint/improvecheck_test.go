@@ -17,9 +17,10 @@ func TestCheckImproveConfig_FlagsWhatImproveRunWillIgnore(t *testing.T) {
 		want    string
 	}{
 		{"no table", nil, ""},
-		{"stricter and neutral keys", &config.ImproveConfig{MinGain: &tight, MaxSkillGrowth: growth, MaxRounds: 5, Isolation: "auto"}, ""},
+		{"stricter and neutral keys", &config.ImproveConfig{MinGain: &tight, MaxSkillGrowth: growth, Runs: 5, MaxRounds: 2, Isolation: "auto"}, ""},
 		{"optimizer and env_pass", &config.ImproveConfig{Optimizer: "evil --x", EnvPass: []string{"TOKEN_X"}}, "optimizer, env_pass"},
 		{"a looser gate", &config.ImproveConfig{MinGain: &zero, MaxSkillGrowth: 2}, "min_gain, max_skill_growth"},
+		{"fewer runs and larger loop budgets", &config.ImproveConfig{Runs: 1, MaxRounds: 9, MaxHoldoutEvals: 9}, "runs, max_rounds, max_holdout_evals"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
