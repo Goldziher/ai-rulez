@@ -26,7 +26,6 @@ func resetEvalFlags(t *testing.T) {
 		evalFlags.changedOnly, evalFlags.base, evalFlags.force = false, "HEAD", false
 		evalFlags.threshold, evalFlags.allowExec, evalFlags.noWrite = 1, false, false
 		evalFlags.timeout = 30 * time.Minute
-		evalFlags.estimate = false
 		if f := evalRunCmd.Flags().Lookup("threshold"); f != nil {
 			f.Changed = false
 		}
@@ -287,21 +286,4 @@ func TestEvalRun_ClaudeRunnerGetsTheEffectiveRunsAndTimeout(t *testing.T) {
 			assert.Equal(t, 7*time.Minute, claude.Timeout)
 		})
 	}
-}
-
-func TestEvalRun_EstimateIsAnAliasOfDryRun(t *testing.T) {
-	resetEvalFlags(t)
-	root := evalProject(t)
-	evalFlags.estimate = true
-	evalFlags.runnerCommand = "exit 9"
-	var out bytes.Buffer
-	evalRunCmd.SetOut(&out)
-
-	failed, err := runEval(evalRunCmd, nil)
-
-	require.NoError(t, err)
-	assert.False(t, failed)
-	assert.Contains(t, out.String(), "Dry run")
-	assert.Contains(t, out.String(), "range $")
-	assert.NoFileExists(t, filepath.Join(root, ".ai-rulez", evals.StoreFileName))
 }
