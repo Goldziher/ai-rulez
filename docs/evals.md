@@ -250,7 +250,7 @@ delete the `mac`.
   runs per case (3 for `claude-plugin-eval` unless `--runs`; the same number is passed to claude with `--runs`, so the estimate and the run agree), times two arms with `--ablation`. Prices come from a
   model tier (haiku, sonnet, opus; sonnet for anything else) and go stale: override with `--price-in` and `--price-out`.
   Treat it as an order of magnitude.
-- `--max-cost USD` is an advisory per-skill cap, not a hard limit. It refuses to start when the estimate exceeds it, hands each runner the remaining budget
+- `--max-cost USD` is an advisory budget for the whole run (all skills together), not a per-skill cap and not a hard limit. It refuses to start when the estimate exceeds it, hands each runner the remaining budget
   (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
   reported spend reaches it (status `skipped-over-budget`, exit 2). It is checked between skills; inside one skill only the runner can enforce it, and `--timeout` bounds the time. When a runner reports more than the budget it was given, the report carries a warning. A runner that reports no cost and no tokens at all is assumed to have spent the whole remaining budget (with a warning), so the run stops instead of continuing on an unknown spend. Spend is counted conservatively: the larger of
   the sum of per-case costs and the runner's own total, tokens priced with `--price-in`/`--price-out` when no cost is
