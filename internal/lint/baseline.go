@@ -221,7 +221,7 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	return out, nil
 }
 
-// Budgets caps how many findings of a rule are tolerated: up to max findings
+// Budgets is the [lint.tolerate] table: it caps how many findings of a rule are tolerated: up to max findings
 // of a code that are not accepted by a baseline do not count toward the exit
 // code; one more and every finding of that code counts again. Lower the number
 // over time to ratchet a rule down.
@@ -238,7 +238,7 @@ func ResolveBudgets(raw map[string]int) Budgets {
 	return out
 }
 
-// BudgetExcess describes a rule over its budget.
+// BudgetExcess describes a rule over its tolerated finding count.
 type BudgetExcess struct {
 	Code  string `json:"code"`
 	Count int    `json:"count"`
