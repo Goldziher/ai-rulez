@@ -111,7 +111,7 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 		}
 		return jsonmerge.Apply(outputPath, owned)
 	case SidecarMCPJSON:
-		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
+		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg, g.Spec != nil && presets.IsLiteralMCPJSONWriter(g.Spec.Name)))
 	case SidecarAmpSettingsJSON:
 		return jsonmerge.Apply(outputPath, g.ampSettingsOwnedKeys(cfg))
 	case SidecarPiMCPJSON:
@@ -202,7 +202,7 @@ func (g *Generator) resolveGlobalEffort(cfg *config.Config) string {
 // the legacy MCPPresetGenerator.Generate body so the output is byte-identical.
 // `disabled` is emitted unconditionally (true or false), not only when the
 // server is disabled.
-func mcpJSONServerEntries(cfg *config.Config) map[string]any {
+func mcpJSONServerEntries(cfg *config.Config, literal bool) map[string]any {
 	mcpServers := make(map[string]any)
 	if cfg == nil {
 		return mcpServers
@@ -212,7 +212,9 @@ func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 			"disabled": !server.IsEnabled(),
 		}
 		applyMCPTransport(entry, server)
-		presets.ApplySharedMCPJSONRefs(entry, server, cfg)
+		if !literal {
+			presets.ApplySharedMCPJSONRefs(entry, server, cfg)
+		}
 		mcpServers[name] = entry
 	}
 	return mcpServers
@@ -224,9 +226,9 @@ func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 // always has, and the self-server entry (when enabled and not declared by name)
 // is one more member of it. With only [mcp] self_server it owns just the single
 // mcpServers.ai-rulez entry, so servers already in the file survive.
-func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
+func mcpJSONOwnedKeys(cfg *config.Config, literal bool) []jsonmerge.OwnedKey {
 	if cfg == nil || !cfg.HasSelfServer() {
-		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg), Members: true}}
+		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg, literal), Members: true}}
 	}
 	self := cfg.SelfMCPServerEntry(schema.Version)
 	if len(cfg.MCPServers) == 0 {
@@ -235,7 +237,7 @@ func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 			Value: self,
 		}}
 	}
-	servers := mcpJSONServerEntries(cfg)
+	servers := mcpJSONServerEntries(cfg, literal)
 	if _, declared := servers[config.SelfMCPServerName]; !declared {
 		servers[config.SelfMCPServerName] = self
 	}
@@ -498,7 +500,7 @@ func serverLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 			owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyMCPServers, Value: legacyClaudeMCPServerEntries(cfg), Members: true})
 		}
 	case presets.MergedDocMCPJSON:
-		owned = mcpJSONOwnedKeys(cfg)
+		owned = mcpJSONOwnedKeys(cfg, false)
 	case presets.MergedDocPiMCP:
 		owned = []jsonmerge.OwnedKey{{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true}}
 	default:

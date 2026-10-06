@@ -2,6 +2,7 @@ package presets
 
 import (
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -233,20 +234,40 @@ func BracedMCPEntry(entry map[string]any, server *config.MCPServer) map[string]a
 func opencodeEnvRef(name string) string { return "{env:" + name + "}" }
 
 // sharedMCPJSONLiteralWriters are the presets writing the root .mcp.json whose tool
-// documents no environment expansion. The file is one copy every writer must
-// render identically, so one of them keeps every value resolved.
+// documents no environment expansion. They always render the resolved value (the
+// file is owner-only); see SharedMCPJSONRefs for what that means for the others.
 var sharedMCPJSONLiteralWriters = []string{"qoder"}
+
+// sharedMCPJSONExpandingPresets are the presets whose tool reads the root
+// .mcp.json and expands ${VAR} references in it.
+var sharedMCPJSONExpandingPresets = []string{"claude", "codebuddy", "commandcode", "reasonix", "cursor", "copilot"}
 
 var upperEnvName = regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
 
-// SharedMCPJSONRefs reports whether the root .mcp.json may carry ${VAR} references:
-// Claude Code, CodeBuddy, Command Code and Reasonix expand them, so they are
-// written unless a writer of the file does not.
+// IsLiteralMCPJSONWriter reports whether the preset writes the root .mcp.json
+// with every value resolved because its tool documents no ${VAR} expansion.
+func IsLiteralMCPJSONWriter(preset string) bool {
+	return slices.Contains(sharedMCPJSONLiteralWriters, preset)
+}
+
+// SharedMCPJSONRefs reports whether a writer that expands references writes the
+// root .mcp.json with ${VAR} references. It does, except when a literal writer
+// (qoder) is the only reader: then the whole file stays resolved, as qoder alone
+// could not read a reference. Once a tool that expands references is also active
+// it is true again, the literal writer renders differently, and generation fails
+// naming both presets instead of putting a resolved secret into a file a
+// reference-reading tool shares.
 func SharedMCPJSONRefs(cfg *config.Config) bool {
 	for _, name := range sharedMCPJSONLiteralWriters {
-		if cfg.HasBuiltInPreset(name) {
-			return false
+		if !cfg.HasBuiltInPreset(name) {
+			continue
 		}
+		for _, other := range sharedMCPJSONExpandingPresets {
+			if cfg.HasBuiltInPreset(other) {
+				return true
+			}
+		}
+		return false
 	}
 	return true
 }

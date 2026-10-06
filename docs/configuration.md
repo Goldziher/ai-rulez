@@ -725,8 +725,11 @@ A reference with a delimiter (`${VAR}`, `${env:VAR}`, `{env:VAR}`) may sit insid
 read another variable.
 
 The root `.mcp.json` is one file shared by several presets, so every writer renders the same bytes. It carries
-`${VAR}` references only for upper-case names (CodeBuddy expands no others) and only while no `qoder` preset is
-active (Qoder documents no expansion); otherwise it keeps the resolved values. Tools whose documentation
+`${VAR}` references only for upper-case names (CodeBuddy expands no others). `qoder` documents no expansion, so it
+writes the resolved value (owner-only). Alone, or with presets that do not read `.mcp.json`, the whole file stays
+resolved. Together with a preset that expands references (`claude`, `cursor`, `copilot`, `codebuddy`, `commandcode`,
+`reasonix`), the two renderings differ and `generate` fails naming both presets, rather than putting a resolved secret
+into a file a reference-reading tool shares; supply the secret with `--env` or `.env` to use both. Tools whose documentation
 promises no expansion (`junie`, `antigravity`, `zed`, `trae`, `cline`, `xum`, Claude Desktop, VS Code's `.vscode/mcp.json`)
 and tools that expand only after an opt-in (`kiro`: "Mcp Approved Env Vars") keep the resolved value.
 
