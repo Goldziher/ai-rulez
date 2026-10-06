@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -99,15 +100,82 @@ func TestLock_StaleLockIsTakenOver(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, nil, 0o600))
 	old := time.Now().Add(-time.Minute)
 	require.NoError(t, os.Chtimes(path, old, old))
-	release, err := lock(path, 0)
+	release, err := lock(path, 0, staleLock)
 	require.NoError(t, err)
 	release()
 
-	held, err := lock(path, 0)
+	held, err := lock(path, 0, staleLock)
 	require.NoError(t, err)
 	defer held()
-	_, err = lock(path, 0)
+	_, err = lock(path, 0, staleLock)
 	assert.ErrorIs(t, err, ErrBusy)
+}
+
+func TestLock_ReleaseRemovesOnlyItsOwnLock(t *testing.T) {
+	// Arrange: holder A's lock goes stale and B takes it over
+	path := filepath.Join(t.TempDir(), "l")
+	releaseA, err := lock(path, 0, time.Hour)
+	require.NoError(t, err)
+	old := time.Now().Add(-time.Minute)
+	require.NoError(t, os.Chtimes(path, old, old))
+	releaseB, err := lock(path, 0, time.Second)
+	require.NoError(t, err)
+
+	// Act: A, which outlived its lock, releases
+	releaseA()
+
+	// Assert: B's lock survives and still excludes others
+	_, err = lock(path, 0, time.Second)
+	require.ErrorIs(t, err, ErrBusy, "A's release must not delete B's lock")
+	releaseB()
+	releaseC, err := lock(path, 0, time.Second)
+	require.NoError(t, err)
+	releaseC()
+}
+
+func TestLock_ConcurrentTakeoverOfAStaleLockIsExclusive(t *testing.T) {
+	for round := 0; round < 20; round++ {
+		path := filepath.Join(t.TempDir(), "l")
+		require.NoError(t, os.WriteFile(path, []byte("crashed"), 0o600))
+		old := time.Now().Add(-time.Minute)
+		require.NoError(t, os.Chtimes(path, old, old))
+
+		var holders, maxHolders, acquired atomic.Int32
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		for range 12 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				release, err := lock(path, 10*time.Second, time.Second)
+				if err != nil {
+					t.Errorf("lock: %v", err)
+					return
+				}
+				acquired.Add(1)
+				n := holders.Add(1)
+				for {
+					m := maxHolders.Load()
+					if n <= m || maxHolders.CompareAndSwap(m, n) {
+						break
+					}
+				}
+				time.Sleep(time.Millisecond)
+				holders.Add(-1)
+				release()
+			}()
+		}
+		close(start)
+		wg.Wait()
+		require.EqualValues(t, 12, acquired.Load())
+		require.EqualValues(t, 1, maxHolders.Load(), "two processes held the lock at once (round %d)", round)
+	}
+}
+
+func TestFlushLockOutlastsTheLongestFlush(t *testing.T) {
+	assert.Greater(t, staleFlushLock, MaxFlushTimeout, "a running flush must never look stale")
+	assert.Less(t, FlushTimeout, MaxFlushTimeout)
 }
 
 func TestSpawnDue(t *testing.T) {

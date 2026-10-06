@@ -972,6 +972,11 @@
             "minimum": 0,
             "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error."
           },
+          "max_clone_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached."
+          },
           "trust": {
             "type": "string",
             "enum": ["error", "warn"],
@@ -1013,7 +1018,7 @@
         "service_name": {
           "type": "string",
           "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
-          "description": "service.name resource attribute. Default ai-rulez."
+          "description": "service.name resource attribute. Default ai-rulez. User scope only (a repository value is ignored)."
         },
         "sample": {
           "type": "number",
@@ -1182,6 +1187,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Globs of repo paths that may be referenced without existing in the tracked tree."
+        },
+        "analyzers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allow-list of lint analyzers (security, references, hooks, ...): only these run. `validate --analyzer` replaces it for one run. Empty runs every analyzer."
         },
         "known_names": {
           "type": "array",

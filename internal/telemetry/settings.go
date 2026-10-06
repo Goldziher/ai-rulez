@@ -93,7 +93,7 @@ type Layers struct {
 
 // Resolve applies the layers in precedence order (kill switches, environment,
 // user config, repository config, defaults) and the trust rule: from the
-// repository only enabled, service_name and sample are honored.
+// repository only enabled and sample are honored (service_name lands on the user's collector data, so it is user scope only).
 func Resolve(layers Layers) Settings {
 	getenv := layers.Getenv
 	if getenv == nil {
@@ -110,10 +110,6 @@ func Resolve(layers Layers) Settings {
 		if repo.Enabled {
 			s.Enabled = true
 			set("enabled", ScopeRepo)
-		}
-		if repo.ServiceName != "" {
-			s.ServiceName = repo.ServiceName
-			set("service_name", ScopeRepo)
 		}
 		if repo.Sample != nil {
 			s.Sample = *repo.Sample
@@ -162,6 +158,7 @@ func PrivilegedKeys(repo *config.TelemetryConfig) []string {
 	add(repo.IncludePaths, "include_paths")
 	add(repo.IncludeSession, "include_session")
 	add(repo.SaltFile != "", "salt_file")
+	add(repo.ServiceName != "", "service_name")
 	return out
 }
 

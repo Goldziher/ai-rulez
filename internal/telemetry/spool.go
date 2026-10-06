@@ -3,10 +3,13 @@ package telemetry
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/samber/oops"
@@ -31,6 +34,9 @@ const (
 	appendLockWait  = 25 * time.Millisecond
 	rewriteLockWait = 2 * time.Second
 	staleLock       = 10 * time.Second
+	// staleFlushLock is the stale time of the single-flusher lock. A flush holds it
+	// for its whole run, so it must outlast MaxFlushTimeout with a wide margin.
+	staleFlushLock = 2 * MaxFlushTimeout
 )
 
 // ErrBusy means the spool lock could not be taken in time. The recorder treats it
@@ -75,7 +81,7 @@ func (s *Spool) Append(event *Event) error {
 	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return oops.With("path", s.Dir).Wrapf(err, "create telemetry directory")
 	}
-	release, err := lock(filepath.Join(s.Dir, lockFileName), appendLockWait)
+	release, err := lock(filepath.Join(s.Dir, lockFileName), appendLockWait, staleLock)
 	if err != nil {
 		return err
 	}
@@ -137,7 +143,7 @@ func (s *Spool) Size() int64 {
 // unreadable line. Matching by id, not by position, makes it safe when a trim or
 // another append ran since the events were read.
 func (s *Spool) Remove(ids map[string]bool) error {
-	release, err := lock(filepath.Join(s.Dir, lockFileName), rewriteLockWait)
+	release, err := lock(filepath.Join(s.Dir, lockFileName), rewriteLockWait, staleLock)
 	if err != nil {
 		return err
 	}
@@ -171,7 +177,7 @@ func (s *Spool) UpdateState(fn func(*State)) error {
 	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return oops.With("path", s.Dir).Wrapf(err, "create telemetry directory")
 	}
-	release, err := lock(filepath.Join(s.Dir, lockFileName), rewriteLockWait)
+	release, err := lock(filepath.Join(s.Dir, lockFileName), rewriteLockWait, staleLock)
 	if err != nil {
 		return err
 	}
@@ -195,7 +201,7 @@ func (s *Spool) TryFlushLock() (release func(), ok bool) {
 	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return nil, false
 	}
-	release, err := lock(filepath.Join(s.Dir, flushLockName), 0)
+	release, err := lock(filepath.Join(s.Dir, flushLockName), 0, staleFlushLock)
 	if err != nil {
 		return nil, false
 	}
@@ -278,20 +284,26 @@ func writeFileAtomic(path string, data []byte) error {
 }
 
 // lock takes an exclusive lock file, waiting up to wait. A lock older than
-// staleLock is treated as left by a crashed process and taken over.
-func lock(path string, wait time.Duration) (release func(), err error) {
+// stale is treated as left by a crashed process and taken over.
+//
+// The lock file holds a random token. Release removes the file only while it
+// still holds this holder's token, so a holder whose lock was taken over (it ran
+// past stale) never deletes the new owner's lock. A takeover runs under a short
+// guard file (path + ".takeover"): two processes that both found the same stale
+// lock cannot each remove the other's fresh one.
+func lock(path string, wait, stale time.Duration) (release func(), err error) {
+	token := newLockToken()
 	deadline := time.Now().Add(wait)
 	for {
-		file, openErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // machine-local lock file
-		if openErr == nil {
-			_ = file.Close()                           //nolint:errcheck // an empty marker file
-			return func() { _ = os.Remove(path) }, nil //nolint:errcheck // best-effort unlock
+		if created, createErr := createLock(path, token); createErr != nil {
+			return nil, oops.With("path", path).Wrapf(createErr, "take telemetry lock")
+		} else if created {
+			return func() { releaseLock(path, token) }, nil
 		}
-		if !os.IsExist(openErr) {
-			return nil, oops.With("path", path).Wrapf(openErr, "take telemetry lock")
-		}
-		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > staleLock {
-			_ = os.Remove(path) //nolint:errcheck // another process may have removed it first
+		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > stale {
+			if takeOver(path, token, info.ModTime(), stale) {
+				return func() { releaseLock(path, token) }, nil
+			}
 			continue
 		}
 		if !time.Now().Before(deadline) {
@@ -299,4 +311,57 @@ func lock(path string, wait time.Duration) (release func(), err error) {
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func newLockToken() string {
+	var raw [16]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return strconv.Itoa(os.Getpid()) + "-" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	}
+	return hex.EncodeToString(raw[:])
+}
+
+// createLock creates path exclusively holding token. created is false when it exists.
+func createLock(path, token string) (created bool, err error) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // machine-local lock file
+	if err != nil {
+		if os.IsExist(err) {
+			return false, nil
+		}
+		return false, err //nolint:wrapcheck // the caller adds the path
+	}
+	_, writeErr := file.WriteString(token)
+	if err := errors.Join(writeErr, file.Close()); err != nil {
+		_ = os.Remove(path) //nolint:errcheck // do not leave a lock without an owner token
+		return false, err   //nolint:wrapcheck // the caller adds the path
+	}
+	return true, nil
+}
+
+// releaseLock removes path only while it still holds token.
+func releaseLock(path, token string) {
+	if data, err := os.ReadFile(path); err == nil && string(data) == token { //nolint:gosec // machine-local lock file
+		_ = os.Remove(path) //nolint:errcheck // best-effort unlock
+	}
+}
+
+// takeOver replaces the stale lock (last modified at seen) with one holding
+// token, serialised by the guard file. It reports whether the lock is now ours.
+func takeOver(path, token string, seen time.Time, stale time.Duration) bool {
+	guard := path + ".takeover"
+	if created, err := createLock(guard, token); err != nil || !created {
+		if info, statErr := os.Stat(guard); statErr == nil && time.Since(info.ModTime()) > stale {
+			_ = os.Remove(guard) //nolint:errcheck // a guard left by a crash; the next round retries
+		}
+		return false
+	}
+	defer releaseLock(guard, token)
+	// Re-check under the guard: another process may already have replaced the lock.
+	info, err := os.Stat(path)
+	if err != nil || !info.ModTime().Equal(seen) {
+		return false
+	}
+	_ = os.Remove(path) //nolint:errcheck // checked just above, under the guard
+	created, err := createLock(path, token)
+	return err == nil && created
 }

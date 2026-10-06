@@ -816,6 +816,11 @@
           },
           "type": "array"
         },
+        "analyzers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allow-list of lint analyzers (security, references, hooks, ...): only these run. `validate --analyzer` replaces it for one run. Empty runs every analyzer."
+        },
         "known_names": {
           "description": "Skill, agent, rule or command names provided outside this tree.",
           "items": {
@@ -2289,6 +2294,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "max_clone_bytes": {
+            "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "max_skills": {
             "description": "Number of skills this source may load (default 200); a larger source is an error.",
             "minimum": 0,
@@ -2385,7 +2395,7 @@
           "type": "number"
         },
         "service_name": {
-          "description": "service.name resource attribute. Default ai-rulez.",
+          "description": "service.name resource attribute. Default ai-rulez. User scope only (a repository value is ignored).",
           "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
           "type": "string"
         }

@@ -78,3 +78,17 @@ func TestHookTemplate_OtherHarnessesAndErrors(t *testing.T) {
 	_, err = HookTemplate(TemplateOptions{Format: "yaml"})
 	assert.Error(t, err)
 }
+
+func TestRecordCommand_QuotesTheExecutable(t *testing.T) {
+	tests := []struct{ name, exe, want string }{
+		{"plain name unchanged", "ai-rulez", "ai-rulez telemetry record"},
+		{"plain path unchanged", "/opt/bin/ai-rulez", "/opt/bin/ai-rulez telemetry record"},
+		{"space quoted", "/opt/my tools/ai-rulez", "'/opt/my tools/ai-rulez' telemetry record"},
+		{"substitution stays literal", "/x/$(id)/ai-rulez", "'/x/$(id)/ai-rulez' telemetry record"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, recordCommand(tt.exe, ""))
+		})
+	}
+}

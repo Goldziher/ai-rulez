@@ -141,8 +141,13 @@ func (p *Pipeline) spawnFlush() error {
 	return cmd.Process.Release()
 }
 
-// FlushTimeout bounds a background flush; it stays under the lock's stale time.
+// FlushTimeout bounds a background flush; it stays well under the flush lock's stale time.
 const FlushTimeout = 8 * time.Second
+
+// MaxFlushTimeout is the longest flush deadline `telemetry flush --timeout` may
+// request. The flush lock goes stale at twice this, so a running flush is never
+// mistaken for a crashed one and taken over.
+const MaxFlushTimeout = 30 * time.Second
 
 // Start begins background flushing for a long-lived process (the MCP server). A
 // hook process does not call it: it spawns a detached flush instead.
