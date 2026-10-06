@@ -217,6 +217,18 @@
           "type": "array",
           "description": "The only reviewers that count (compared lower-cased and trimmed). An empty list means nobody may approve. Layers intersect.",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "min_assurance": {
+          "enum": ["asserted", "review-linked", "signed"],
+          "description": "The weakest assurance level of an approval that counts. The repository may demand a stronger one. Layers take the strongest."
+        },
+        "forbid_self_approval": {
+          "type": "boolean",
+          "description": "true makes an approval by an author of the content not count. false constrains nothing."
+        },
+        "approvers_from": {
+          "const": "CODEOWNERS",
+          "description": "Approvers must come from a CODEOWNERS file; the repository chooses which one (default: the one the forge finds)."
         }
       }
     },

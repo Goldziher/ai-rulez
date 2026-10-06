@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // noHostSentinel stands for "no host is allowed" in lint.security.allowed_hosts,
@@ -554,7 +555,8 @@ func (a *applier) guardTablePresent() bool {
 // the table is forced silently.
 func (a *applier) governance() {
 	pol := a.res.Policy.Governance
-	if !pol.Enforce && len(pol.RequireApproval) == 0 && pol.MinApprovers == 0 && !pol.Approvers.Set {
+	if !pol.Enforce && len(pol.RequireApproval) == 0 && pol.MinApprovers == 0 && !pol.Approvers.Set &&
+		pol.MinAssurance == "" && !pol.ForbidSelfApproval && pol.ApproversFrom == "" {
 		return
 	}
 	repoHas := a.cfg.Governance != nil
@@ -579,6 +581,35 @@ func (a *applier) governance() {
 	}
 	if pol.Approvers.Set {
 		a.governanceApprovers(g, pol.Approvers)
+	}
+	a.governanceAssurance(g, pol, repoHas)
+}
+
+// governanceAssurance applies min_assurance, forbid_self_approval and
+// approvers_from. The first two only tighten; approvers_from only has to be
+// set, because the repository picks which CODEOWNERS file (a policy cannot name
+// a path in a repository it has not seen).
+func (a *applier) governanceAssurance(g *config.GovernanceConfig, pol Governance, repoHas bool) {
+	if pol.MinAssurance != "" && lockfile.AssuranceRank(g.MinAssurance) < lockfile.AssuranceRank(pol.MinAssurance) {
+		if g.MinAssurance != "" {
+			a.violate(lint.CodePolicyLoosened, "governance.min_assurance", "min_assurance",
+				"[governance] min_assurance = %q is weaker than the policy level %q (origin: %s); %q is enforced", g.MinAssurance, pol.MinAssurance, a.origin("governance.min_assurance"), pol.MinAssurance)
+		}
+		g.MinAssurance = pol.MinAssurance
+	}
+	if pol.ForbidSelfApproval && !g.ForbidSelfApproval {
+		if repoHas {
+			a.violate(lint.CodePolicyLoosened, "governance.forbid_self_approval", "[governance]",
+				"[governance] does not set forbid_self_approval, which the policy requires (origin: %s); it is enforced", a.origin("governance.forbid_self_approval"))
+		}
+		g.ForbidSelfApproval = true
+	}
+	if pol.ApproversFrom != "" && g.ApproversFrom == "" {
+		if repoHas {
+			a.violate(lint.CodePolicyLoosened, "governance.approvers_from", "[governance]",
+				"[governance] has no approvers_from, which the policy requires (origin: %s); %q is enforced", a.origin("governance.approvers_from"), pol.ApproversFrom)
+		}
+		g.ApproversFrom = pol.ApproversFrom
 	}
 }
 

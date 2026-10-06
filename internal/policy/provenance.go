@@ -87,6 +87,11 @@ func provenance(layers []Layer) map[string]string {
 		return p.Governance.MinApprovers > 0 && p.Governance.MinApprovers == eff.Governance.MinApprovers
 	})
 	all("governance.approvers", func(p Policy) bool { return p.Governance.Approvers.Set })
+	firstWith("governance.min_assurance", func(p Policy) bool {
+		return p.Governance.MinAssurance != "" && p.Governance.MinAssurance == eff.Governance.MinAssurance
+	})
+	firstWith("governance.forbid_self_approval", func(p Policy) bool { return p.Governance.ForbidSelfApproval })
+	firstWith("governance.approvers_from", func(p Policy) bool { return p.Governance.ApproversFrom != "" })
 	all("signing.require_verified", func(p Policy) bool { return len(p.Signing.RequireVerified) > 0 })
 	firstWith("signing.tlog", func(p Policy) bool { return p.Signing.TLog != "" && p.Signing.TLog == eff.Signing.TLog })
 	firstWith("signing.max_age", func(p Policy) bool { return p.Signing.MaxAge > 0 && p.Signing.MaxAge == eff.Signing.MaxAge })
