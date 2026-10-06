@@ -193,27 +193,13 @@ func streamFile(abs string, text bool, emit func([]byte)) error {
 	pendingCR := false
 	for {
 		n, rerr := f.Read(buf)
-		if n > 0 {
-			if !text {
-				emit(buf[:n])
-			} else {
-				out = out[:0]
-				for _, c := range buf[:n] {
-					if pendingCR {
-						pendingCR = false
-						if c != '\n' {
-							out = append(out, '\r')
-						}
-					}
-					if c == '\r' {
-						pendingCR = true
-						continue
-					}
-					out = append(out, c)
-				}
-				if len(out) > 0 {
-					emit(out)
-				}
+		switch {
+		case n > 0 && !text:
+			emit(buf[:n])
+		case n > 0:
+			out, pendingCR = normalizeChunk(out[:0], buf[:n], pendingCR)
+			if len(out) > 0 {
+				emit(out)
 			}
 		}
 		if rerr == io.EOF {
@@ -227,4 +213,24 @@ func streamFile(abs string, text bool, emit func([]byte)) error {
 		emit([]byte{'\r'})
 	}
 	return nil
+}
+
+// normalizeChunk appends chunk to out with CRLF turned into LF. pendingCR says
+// the previous chunk ended in a CR that is not yet written; the returned flag is
+// the same for this chunk.
+func normalizeChunk(out, chunk []byte, pendingCR bool) ([]byte, bool) {
+	for _, c := range chunk {
+		if pendingCR {
+			pendingCR = false
+			if c != '\n' {
+				out = append(out, '\r')
+			}
+		}
+		if c == '\r' {
+			pendingCR = true
+			continue
+		}
+		out = append(out, c)
+	}
+	return out, pendingCR
 }
