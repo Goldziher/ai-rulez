@@ -11,7 +11,7 @@ import (
 func TestMigrateCommand(t *testing.T) {
 	assert.NotNil(t, commands.MigrateCmd)
 	assert.Equal(t, "migrate [version]", commands.MigrateCmd.Use)
-	assert.NotNil(t, commands.MigrateCmd.Run)
+	assert.NotNil(t, commands.MigrateCmd.RunE)
 }
 
 func TestMigrateCommand_RequiresVersionArg(t *testing.T) {
