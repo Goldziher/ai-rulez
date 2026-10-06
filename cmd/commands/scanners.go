@@ -102,7 +102,7 @@ func loadScanners(ctx context.Context, args []string) ([]lint.ScannerInfo, error
 		return nil, err
 	}
 	base, _ := filepath.Abs(cfg.BaseDir) //nolint:errcheck // falls back to the empty path
-	return lint.InspectScanners(cfg.Lint, base), nil
+	return lint.InspectScanners(cfg, base), nil
 }
 
 func scannerStatus(s lint.ScannerInfo) string {
@@ -125,7 +125,7 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 		return
 	}
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tEGRESS\tINPUTS\tSTATUS")
+	fmt.Fprintln(w, "NAME\tEGRESS\tINPUTS\tPRESET\tSTATUS")
 	for _, s := range infos {
 		inputs := "-"
 		if len(s.Inputs) > 0 {
@@ -135,9 +135,17 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 		if egress == "true" {
 			egress = "YES"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Name, egress, inputs, scannerStatus(s))
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(s), scannerStatus(s))
 	}
 	_ = w.Flush() //nolint:errcheck // a closed stdout has no better handling
+}
+
+// presetColumn names the presets that include a scanner's profile ("-" for none).
+func presetColumn(s lint.ScannerInfo) string {
+	if len(s.Presets) == 0 {
+		return "-"
+	}
+	return strings.Join(s.Presets, ",")
 }
 
 // runScannersDoctor checks the named scanners and returns the exit code.
@@ -234,9 +242,24 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 	} else {
 		row("binary", s.Command+": not found on PATH (or only through a relative PATH entry)")
 	}
+	if s.Profile != "" {
+		row("profile", s.Profile+" (embedded; presets: "+presetColumn(s)+")")
+	}
+	if s.FromPreset {
+		row("preset", "added by [lint.scanner_policy] preset; runs with --external")
+	}
+	if s.Required {
+		row("required", "yes: missing, outdated or failing is an error")
+	}
+	if s.Version != "" {
+		row("range", s.Version+" (checked against --version before every run)")
+	}
 	switch s.Egress {
 	case "true":
 		row("egress", "true: content may leave the machine; runs only with --allow-egress="+s.Name)
+		if len(s.DataSent) > 0 {
+			row("", "the vendor documents receiving: "+strings.Join(s.DataSent, "; "))
+		}
 	case "false":
 		row("egress", "false: scrubbed environment; network flags are rejected")
 	default:
@@ -255,6 +278,7 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 	} else {
 		row("inputs", "none: runs in the project root with the scanned file paths appended")
 	}
+	row("isolation", isolationText(s))
 	row("format", s.Format)
 	row("timeout", s.Timeout.String())
 	for _, p := range s.Problems {
@@ -266,6 +290,23 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 	}
 	row("result", verdict)
 	return s.Healthy()
+}
+
+// isolationText says how this system would confine the scanner.
+func isolationText(s lint.ScannerInfo) string {
+	switch {
+	case s.Isolation == "none":
+		return "none (isolation = \"none\")"
+	case len(s.Inputs) == 0 && s.Isolation == "require":
+		return "require: refused, a scanner without inputs runs in the project root and cannot be confined"
+	case len(s.Inputs) == 0:
+		return "none: a scanner without inputs runs in the project root"
+	case s.Backend == "" && s.Isolation == "require":
+		return "require: refused, this system has no isolation backend"
+	case s.Backend == "":
+		return "unavailable on this system (isolation = \"" + s.Isolation + "\"): runs with a scrubbed environment only (AR9E7)"
+	}
+	return s.Backend + " (isolation = \"" + s.Isolation + "\"): no network unless egress = true, writes only in the scratch directory"
 }
 
 func checkScannersFormat(_ *cobra.Command, _ []string) error {
@@ -290,6 +331,16 @@ type scannerJSON struct {
 	EgressFlag string   `json:"egress_flag,omitempty"`
 	Status     string   `json:"status"`
 	Healthy    bool     `json:"healthy"`
+	Profile    string   `json:"profile,omitempty"`
+	Presets    []string `json:"presets"`
+	FromPreset bool     `json:"from_preset"`
+	Required   bool     `json:"required"`
+	// VersionRange is the version range the scanner must satisfy ("" for none).
+	VersionRange string   `json:"version_range,omitempty"`
+	DataSent     []string `json:"data_sent,omitempty"`
+	Isolation    string   `json:"isolation"`
+	// IsolationBackend is the confinement tool this system would use ("" for none).
+	IsolationBackend string `json:"isolation_backend,omitempty"`
 	// Version is set by doctor for an installed scanner ("" when it printed nothing usable).
 	Version string `json:"version,omitempty"`
 }
@@ -302,6 +353,8 @@ func writeScannersJSON(out io.Writer, infos []lint.ScannerInfo, doctor bool, ver
 			Name: s.Name, Command: s.Command, Path: s.Path, Found: s.Found(), Egress: s.Egress, Format: s.Format,
 			Inputs: nonNil(s.Inputs), EnvPass: nonNil(s.EnvPass), TimeoutSec: s.Timeout.Seconds(), Problems: nonNil(s.Problems),
 			EgressFlag: s.EgressFlag, Status: scannerStatus(s), Healthy: s.Healthy(),
+			Profile: s.Profile, Presets: nonNil(s.Presets), FromPreset: s.FromPreset, Required: s.Required,
+			VersionRange: s.Version, DataSent: s.DataSent, Isolation: s.Isolation, IsolationBackend: s.Backend,
 		}
 		if doctor {
 			row.Version = versions[s.Name]
