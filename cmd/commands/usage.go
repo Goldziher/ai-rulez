@@ -206,9 +206,6 @@ func runUsageExport(out io.Writer, args []string) error {
 	if usageExportDryRun {
 		w.printf("would write %d events in %d batches to %s (nothing written)\n", file.Events, file.Batches, dest)
 	} else {
-		if err := safefs.EnsureParent(dest); err != nil {
-			return oops.Wrapf(err, "prepare destination")
-		}
 		if err := safefs.WriteFileAtomic(dest, file.Data); err != nil {
 			return oops.Wrapf(err, "write %s", dest)
 		}

@@ -17,7 +17,7 @@ import (
 // root: everything below it is checked for symlinks.
 const configDirName = ".ai-rulez"
 
-// maxReadBytes bounds ReadRegular.
+// maxReadBytes bounds ReadRegular; a larger file is an error, never a silent truncation.
 const maxReadBytes = 1 << 20
 
 // splitRoot returns the trusted base directory for path and the slash-free
@@ -156,8 +156,13 @@ func AppendLine(path string, line []byte) error {
 }
 
 // WriteFileAtomic writes data (mode 0600) to a temp file beside path and renames
-// it over path. A symlink at path is replaced, never written through.
+// it over path. A symlink at path is replaced, never written through. The
+// directories above path get the symlink checks of EnsureParent (and are created
+// when missing), so the temp file is never created through a planted link.
 func WriteFileAtomic(path string, data []byte) error {
+	if err := EnsureParent(path); err != nil {
+		return err
+	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp*")
 	if err != nil {
 		return oops.With("path", path).Wrapf(err, "create temp file")
@@ -202,8 +207,14 @@ func ReadRegular(path string) ([]byte, error) {
 	if info.Mode().Perm()&0o077 != 0 {
 		_ = file.Chmod(0o600) //nolint:errcheck // best effort: the content is still usable
 	}
-	data, err := io.ReadAll(io.LimitReader(file, maxReadBytes))
-	return data, oops.With("path", path).Wrapf(err, "read file")
+	data, err := io.ReadAll(io.LimitReader(file, maxReadBytes+1))
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "read file")
+	}
+	if len(data) > maxReadBytes {
+		return nil, oops.With("path", path).Errorf("%s is larger than %d bytes; use OpenRegular to stream it", path, maxReadBytes)
+	}
+	return data, nil
 }
 
 // OpenRegular opens a regular file for streaming, refusing a symlink or anything
