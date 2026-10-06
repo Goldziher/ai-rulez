@@ -32,7 +32,7 @@ func init() {
 		RuleInfo{CodeHarnessTableStale, "harness-table-stale", SeverityWarning, "a row of the harness trap or limits table was last verified more than [lint.traps] max_table_age_days ago (off unless the setting is above 0)"},
 		RuleInfo{CodeClaudeKeySpelling, "claude-frontmatter-key-spelling", SeverityWarning, "a Claude Code skill or subagent file spells a frontmatter key in a variant (underscore for hyphen, wrong case) that Claude Code silently ignores"},
 		RuleInfo{CodeClaudeListingTruncated, "claude-listing-truncated", SeverityWarning, "a generated Claude Code skill has description plus when_to_use past the skill listing cap, so the rest is cut off"},
-		RuleInfo{CodeHarnessLimitExceeded, "harness-limit-exceeded", SeverityWarning, "a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files), so the rest is not loaded"},
+		RuleInfo{CodeHarnessLimitExceeded, "harness-limit-exceeded", SeverityWarning, "a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files, Kilo REVIEW.md), so the rest is not loaded"},
 	)
 	registerRuleDocs(map[string]RuleDoc{
 		CodeHarnessTableStale: {
@@ -51,7 +51,7 @@ func init() {
 			Good: "Put the key use case first and keep the pair under 1,536 characters",
 		},
 		CodeHarnessLimitExceeded: {
-			Why:  "Codex stops reading AGENTS.md files past project_doc_max_bytes, and Devin and Antigravity truncate a rule file past their per-file limit, so the content past it is never loaded.",
+			Why:  "Codex stops reading AGENTS.md files past project_doc_max_bytes, Devin and Antigravity truncate a rule file past their per-file limit, and Kilo truncates REVIEW.md past 10,000 characters, so the content past it is never loaded.",
 			Bad:  "A generated `.devin/rules/style.md` of 15,000 characters",
 			Good: "Split the rule, shorten it, or move detail into a skill",
 		},
@@ -93,12 +93,27 @@ func (p TrapPredicate) evalMisspelt(content []byte) []trapHit {
 		}
 		for _, c := range p.Canonical {
 			if normalizeKey(k.Name) == normalizeKey(c) {
-				hits = append(hits, trapHit{line: k.Line, detail: fmt.Sprintf("%q is not a key; the key is %q", sanitizeScannerText(k.Name), c)})
+				hits = append(hits, trapHit{line: k.Line, detail: fmt.Sprintf("%q is not a key; the key is %q", sanitizeScannerText(k.Name), c), fix: keyRenameFix(content, k.Line, k.Name, c)})
 				break
 			}
 		}
 	}
 	return hits
+}
+
+// keyRenameFix is the fix of a misspelt top-level key: the line with the key
+// spelled as documented. It is nil unless the line starts with name and a colon.
+func keyRenameFix(content []byte, line int, name, canonical string) *lineFix {
+	lines := strings.Split(string(content), "\n")
+	if line < 1 || line > len(lines) {
+		return nil
+	}
+	old := strings.TrimSuffix(lines[line-1], "\r")
+	rest, ok := strings.CutPrefix(old, name+":")
+	if !ok {
+		return nil
+	}
+	return &lineFix{old: old, new: canonical + ":" + rest, description: fmt.Sprintf("rename frontmatter key %q to %q", name, canonical)}
 }
 
 func (p TrapPredicate) evalSize(content []byte) []trapHit {

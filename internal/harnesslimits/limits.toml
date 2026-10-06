@@ -50,3 +50,14 @@ behavior = "truncated"
 source = "https://antigravity.google/docs/rules"
 quote = "24 KB (24,000 bytes) per-file limit"
 verified_on = "2026-10-06"
+
+[[limit]]
+id = "kilo.review_md_chars"
+harness = "kilo"
+subject = "REVIEW.md at the repository root, read by Kilo Code Reviews"
+unit = "chars"
+value = 10000
+behavior = "truncated"
+source = "https://kilo.ai/docs/automate/code-reviews/overview"
+quote = "If it is longer than 10,000 characters, Kilo truncates it and notes that in the review summary footer."
+verified_on = "2026-10-06"
