@@ -419,3 +419,18 @@ func TestValidateFileConcurrentUseOfTheCachedSchema(t *testing.T) {
 		}
 	}
 }
+
+// Every schema file shipped in schema/ must be listed in docs/schema.md.
+func TestDocsListEveryShippedSchema(t *testing.T) {
+	// Arrange
+	doc, err := os.ReadFile(filepath.Join("..", "docs", "schema.md"))
+	require.NoError(t, err)
+	files, err := filepath.Glob("*.schema.json")
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
+
+	// Act / Assert
+	for _, f := range files {
+		assert.Contains(t, string(doc), "schema/"+f, "docs/schema.md does not list schema/%s", f)
+	}
+}
