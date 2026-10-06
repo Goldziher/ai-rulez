@@ -226,6 +226,10 @@ func writeLockAt(path, kind string, names []string) int {
 		return 1
 	}
 	carryApprovals(current, next, len(wanted) == 0 && kind == "")
+	if err := deniedPinsError(next); err != nil {
+		fmtError(err)
+		return 1
+	}
 	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
 		fmtError(err)

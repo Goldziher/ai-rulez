@@ -53,6 +53,8 @@ func subjectFiles(cfg *config.Config, s approval.Subject) (files []approvedFile,
 		return nil, "the fetched tree is not in the local cache: only the digest is shown (run `ai-rulez generate` to fetch it)"
 	case approval.KindSource, approval.KindServed:
 		return nil, "only the digest is shown for this kind"
+	case approval.KindRoleOutput:
+		return roleOutputFiles(cfg, s.ID)
 	}
 	if s.Path == "" {
 		return nil, "declared in config.toml: no files to list"

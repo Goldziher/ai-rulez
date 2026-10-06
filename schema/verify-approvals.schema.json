@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verify-approvals.schema.json",
+  "title": "ai-rulez verify --approvals",
+  "description": "Output of `ai-rulez verify --approvals --format json`: the re-check of the signed and review-linked approvals that apply to the current content (docs/approvals.md).",
+  "type": "object",
+  "required": ["schema_version", "online", "results"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "online": { "type": "boolean", "description": "Whether review-linked approvals were checked against the forge." },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "reviewer", "assurance", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string", "description": "kind:id or kind:domain/id of the approved content." },
+          "reviewer": { "type": "string" },
+          "assurance": { "enum": ["review-linked", "signed"] },
+          "status": {
+            "enum": ["valid", "invalid", "unchecked"],
+            "description": "unchecked: a review-linked approval that was not looked up because --online was not given."
+          },
+          "code": { "const": "AR718", "description": "The strict-validation code of an invalid approval." },
+          "reason": { "type": "string", "description": "Why the approval did not verify, or why it was not checked." }
+        }
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -39,7 +40,13 @@ func approveProject(t *testing.T, extra string) string {
 func resetApproveFlags() {
 	approveList, approveAll, approveRevoke, approveDiff, approvePrune, approveYes = false, false, false, false, false, false
 	approveAccept, approveReviewer, approveNote, approveExpires, approveAt, approveFormat = nil, "", "", "", "", ""
-	approveVerifyBase = ""
+	approveVerifyBase, approveBase, approveReason = "", "", ""
+	approveFromReview = 0
+	approveResolveTeams, approveSign, approveDeny = false, false, false
+	signKey, signKeyPassEnv, signTokenEnv, signFulcioURL, signRekorURL = "", "", "", "", ""
+	signKeyless, signTLog, signInteractive = false, false, false
+	verifyApprovals, verifyOnline, verifyFormat = false, false, ""
+	approveForge = func() forge.Client { return forge.NewClient(forge.Options{}) }
 }
 
 func runApproveCmd(t *testing.T, args ...string) (code int, stdout, stderr string) {
