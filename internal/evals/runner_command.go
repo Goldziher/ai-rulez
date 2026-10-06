@@ -1,14 +1,12 @@
 package evals
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -59,45 +57,17 @@ func (r *CommandRunner) Run(ctx context.Context, req *Request) (*Response, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	if r.Runner != nil {
-		return r.runThrough(ctx, req, body, timeout)
-	}
-
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", r.Command) //nolint:gosec // the user configured this command
-	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", r.Command) //nolint:gosec // the user configured this command
-	}
-	killTreeOnCancel(cmd)
-	cmd.Stdin = bytes.NewReader(body)
-	var stdout bytes.Buffer
-	cmd.Stdout = &limitedWriter{w: &stdout, n: maxResponseBytes}
-	cmd.Stderr = r.Stderr
-	cmd.Env = append(cmd.Environ(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID)
-	if err := runTree(cmd); err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return nil, fmt.Errorf("runner command timed out after %s (raise --timeout)", timeout)
-		}
-		return nil, fmt.Errorf("runner command failed: %w", err)
-	}
-	var resp Response
-	if err := json.Unmarshal(stdout.Bytes(), &resp); err != nil {
-		return nil, fmt.Errorf("runner command printed invalid JSON: %w", err)
-	}
-	if err := resp.Validate(req); err != nil {
-		return nil, err
-	}
-	return &resp, nil
+	return r.runThrough(ctx, req, body, timeout)
 }
 
-// runThrough is Run with the command started by r.Runner.
+// runThrough starts the command through r.Runner (the real process runner when nil):
+// one place owns process groups, output caps and the timeout kill.
 func (r *CommandRunner) runThrough(ctx context.Context, req *Request, body []byte, timeout time.Duration) (*Response, error) {
 	argv := []string{"sh", "-c", r.Command}
 	if runtime.GOOS == "windows" {
 		argv = []string{"cmd", "/C", r.Command}
 	}
-	res := r.Runner.Run(ctx, runner.Spec{
+	res := runner.Or(r.Runner).Run(ctx, runner.Spec{
 		Argv: argv, Stdin: body, Timeout: timeout, MaxOutput: maxResponseBytes,
 		Env: append(runner.HostEnv(), fmt.Sprintf("AI_RULEZ_EVAL_PROTOCOL=%d", ProtocolVersion), "AI_RULEZ_EVAL_SKILL="+req.Skill.ID),
 	})
@@ -120,19 +90,6 @@ func (r *CommandRunner) runThrough(ctx context.Context, req *Request, body []byt
 		return nil, err
 	}
 	return &resp, nil
-}
-
-type limitedWriter struct {
-	w io.Writer
-	n int
-}
-
-func (l *limitedWriter) Write(p []byte) (int, error) {
-	if len(p) > l.n {
-		return 0, fmt.Errorf("runner output exceeds %d bytes", maxResponseBytes)
-	}
-	l.n -= len(p)
-	return l.w.Write(p)
 }
 
 // Runner names.
