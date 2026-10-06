@@ -4,8 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // The lock gives the second item with the same kind, domain and id the key
@@ -38,4 +41,17 @@ func TestDigestIndexFindsDisambiguatedDuplicates(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestAddCatalogRolesNotesARoleItCannotBuild(t *testing.T) {
+	cfg := &config.Config{Roles: []config.RoleConfig{{Name: "broken", Extends: "missing"}}}
+	counter, err := tokens.New("")
+	require.NoError(t, err)
+	doc := &CatalogDoc{}
+
+	addCatalogRoles(doc, cfg, counter)
+
+	assert.Empty(t, doc.Roles)
+	require.Len(t, doc.notes, 1)
+	assert.Contains(t, doc.notes[0], "broken")
 }

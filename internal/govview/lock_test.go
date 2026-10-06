@@ -1,12 +1,15 @@
 package govview
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
 func TestFilterChanges(t *testing.T) {
@@ -49,4 +52,24 @@ func TestFilterChanges(t *testing.T) {
 			assert.Len(t, diff.Changes, tt.want)
 		})
 	}
+}
+
+func TestLoadWithCacheFallback_NamesTheRetryFailure(t *testing.T) {
+	calls := 0
+	load := func(opts ...config.LoadOption) (*config.Config, error) {
+		calls++
+		if len(opts) == 0 {
+			return nil, includes.ErrNotCached
+		}
+		return nil, errors.New("config.toml: bad syntax")
+	}
+
+	cfg, skipped, err := LoadWithCacheFallback(load)
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.False(t, skipped)
+	assert.Equal(t, 2, calls)
+	assert.ErrorIs(t, err, includes.ErrNotCached, "the first error stays the cause")
+	assert.Contains(t, err.Error(), "bad syntax", "the retry failure is not hidden")
 }
