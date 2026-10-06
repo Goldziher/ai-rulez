@@ -53,12 +53,22 @@ type RevisionSnapshot struct {
 // through an os.Root (the export-ignore and export-subst attributes are not applied),
 // and bounded in count and size. A file committed executable stays executable.
 func ExtractRevision(ctx context.Context, dir, rev, relPath, dest string) (*RevisionSnapshot, error) {
-	if err := gitutil.CheckArg("revision", rev); err != nil {
-		return nil, oops.Wrap(err)
-	}
 	rel := path.Clean(filepath.ToSlash(relPath))
 	if rel == "." || !fs.ValidPath(rel) {
 		return nil, oops.Errorf("invalid path %q for a revision snapshot", relPath)
+	}
+	return extractRevision(ctx, dir, rev, rel, dest)
+}
+
+// ExtractRevisionAll is ExtractRevision for the whole repository: every tracked
+// file as it was at rev, under dest, with the same limits.
+func ExtractRevisionAll(ctx context.Context, dir, rev, dest string) (*RevisionSnapshot, error) {
+	return extractRevision(ctx, dir, rev, ".", dest)
+}
+
+func extractRevision(ctx context.Context, dir, rev, rel, dest string) (*RevisionSnapshot, error) {
+	if err := gitutil.CheckArg("revision", rev); err != nil {
+		return nil, oops.Wrap(err)
 	}
 	top := gitutil.Git{}.TopLevel(dir)
 	if top == "" {
@@ -129,7 +139,11 @@ type treeEntry struct {
 // export-ignore and export-subst attributes of the very revision it reads: a
 // committed .gitattributes could hide or rewrite files of the snapshot.
 func extractTree(ctx context.Context, top, commit, rel string, root *os.Root, snap *RevisionSnapshot) error {
-	ls := gitutil.Command(ctx, top, "ls-tree", "-r", "-z", "--long", commit, "--", rel)
+	args := []string{"ls-tree", "-r", "-z", "--long", commit}
+	if rel != "." {
+		args = append(args, "--", rel)
+	}
+	ls := gitutil.Command(ctx, top, args...)
 	var lsErr bytes.Buffer
 	ls.Stderr = &limitedWriter{w: &lsErr, left: maxGitStderr}
 	out, err := ls.Output()
@@ -156,7 +170,7 @@ func extractTree(ctx context.Context, top, commit, rel string, root *os.Root, sn
 			snap.Symlinks = append(snap.Symlinks, name)
 			continue
 		}
-		if !fs.ValidPath(name) || (name != rel && !strings.HasPrefix(name, rel+"/")) {
+		if !fs.ValidPath(name) || (rel != "." && name != rel && !strings.HasPrefix(name, rel+"/")) {
 			return oops.With("path", name).Errorf("git produced %q outside %s", name, rel)
 		}
 		size, convErr := strconv.ParseInt(sizeText, 10, 64)
