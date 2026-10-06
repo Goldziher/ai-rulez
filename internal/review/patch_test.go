@@ -26,7 +26,7 @@ func TestUnifiedDiffRoundTrips(t *testing.T) {
 		{"deletion", "a\nb\nc\n", "a\nc\n"},
 		{"change at the start", "a\nb\nc\n", "A\nb\nc\n"},
 		{"change at the end", "a\nb\nc\n", "a\nb\nC\n"},
-		{"two distant hunks", base, strings.Replace(strings.Replace(base, "line xx\n", "CHANGED\n", 1), "line xxxx\n", "OTHER\n", -1)},
+		{"two distant hunks", base, strings.ReplaceAll(strings.Replace(base, "line xx\n", "CHANGED\n", 1), "line xxxx\n", "OTHER\n")},
 		{"missing final newline added", "a\nb", "a\nb\n"},
 		{"final newline removed", "a\nb\n", "a\nb"},
 		{"last line changed without a final newline", "a\nb", "a\nB"},
