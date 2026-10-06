@@ -235,9 +235,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
 	if bo.admit {
-		adm := Admission{Config: cfg, Enforce: cfg.LockEnforced() && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
+		adm := Admission{Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
 		if !bo.ignoreLock {
-			adm.Lock = lock
+			adm.Lock, adm.Signatures = lock, newSignatureGate(cfg, skillOrigins(cfg, b.sources), approvalNow())
 		}
 		catalog = catalog.Admit(adm)
 	}

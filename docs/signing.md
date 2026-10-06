@@ -4,8 +4,8 @@ A digest proves that bytes did not change. A signature says who produced them. `
 [lock](lockfile.md) into a [Sigstore](https://www.sigstore.dev) bundle, and `ai-rulez verify --attestation` checks it
 offline against a policy that names who may sign. The same machinery signs [plugin bundles, published skills and SBOM
 files](#bundles-skills-and-sboms), optionally with [SLSA provenance](#slsa-provenance), [KMS keys](#kms-keys) and
-[k-of-n signers](#thresholds),. Signing is opt-in; nothing is
-enforced until `[signing] require` says so.
+[k-of-n signers](#thresholds), and can [gate served skills](#served-skills-and-publisher-signed-skills). Signing is
+opt-in; nothing is enforced until `[signing] require` says so.
 
 A valid signature means "produced by X". It does not mean the content is safe: a malicious but validly signed skill
 still needs [approval](approvals.md) and a [scan](strict-validation.md). Rollback to an older validly signed lock is
@@ -84,7 +84,7 @@ steps:
 
 ```toml
 [signing]
-require = ["lock"]              # lock --check and generate --locked fail without a valid attestation
+require = ["lock"]              # lock | served | skill; lock --check and generate --locked fail without a valid attestation
 max_age = "180d"                # signature older than this fails (AR723)
 tlog = "required"               # required | optional | off
 trusted_root = "keys/trusted_root.json"   # keyless verification; inside the project
@@ -247,7 +247,7 @@ identity and issuer, so two bundles by one signer count once. A file that fails 
 with none valid the first failure is reported, and with some but too few the result is `AR728`. Each subject has its own
 threshold (`lock`, `bundle`, `skill`, `sbom`; default 1), and a threshold of k needs at least k trust entries for the
 subject, or an `identity_regexp`, which may match many identities. It applies to `lock --check`, `generate --locked`,
-`validate --strict`, `verify --bundle`, `--skill` and `--sbom`. Provenance is signed by the
+`validate --strict`, `verify --bundle`, `--skill` and `--sbom` and the served-skill gates. Provenance is signed by the
 builder alone and is not subject to the bundle's threshold.
 
 ## SLSA provenance
@@ -295,6 +295,40 @@ stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so 
 behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
 and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`.
 
+## Served skills and publisher-signed skills
+
+`ai-rulez mcp --serve-skills` refuses skills the policy does not vouch for. It uses the refusal path of the security
+scan and the lock, so `load_skill` says why:
+
+```toml
+[signing]
+require = ["served", "skill"]
+
+[[signing.trust]]              # the lock's signers, for "served"
+key_file = "keys/release.pub"
+
+[[signing.trust]]              # a publisher, for one skill source
+subject = "skill"
+source = "shared"
+key_file = "keys/publisher.pub"
+```
+
+- **`served`** (consumer-signed, the recommended default): the lock must carry a valid attestation (the lock's trust
+  entries and thresholds; otherwise every skill is refused with `AR720` to `AR728`), and it implies the lock
+  enforcement of `[lock] enforce`: a skill the signed lock does not pin with exactly its served digest is refused with
+  `AR995`. The consumer's release workflow signs the lock, which pins the served digests.
+- **`skill`** (publisher-signed): every skill that came from a `[[skill_sources]]` or `[[installed_skills]]` entry must
+  carry `.ai-rulez.sigstore.json` in its directory (`ai-rulez sign --skill`), signed by a `subject = "skill"` trust
+  entry for that source. A skill authored in the project is not remote and is not checked. A remote skill from another
+  origin (an include) has nowhere to carry an attestation and is refused; cover includes with `served`. The server reads
+  the rollback state per signer and skill and never writes it.
+
+The server recomputes the skill's digest from the files on disk and, for a skill source, compares each served file with
+the bytes that were signed, so a file that changes between being read and being verified, or a file the signature does
+not cover, is `AR724`. Only the `name:` line of `SKILL.md` may differ, because a source serves it with the served name.
+Verdicts are computed when the catalog is built and again on every reload, which swaps the catalog whole. Attestation
+files are never served, scanned or part of the served digest.
+
 ## Cosign interoperability
 
 `ai-rulez` writes a standard Sigstore bundle, so cosign can verify it. Because the payload is an in-toto attestation,
@@ -341,6 +375,8 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 ## Not done yet
 
+- Static delivery: `generate` does not check the publisher attestations of installed skills it writes into harness
+  trees; `require = ["skill"]` gates `mcp --serve-skills` only.
 - `verify --self` for ai-rulez's own releases.
 
 Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
