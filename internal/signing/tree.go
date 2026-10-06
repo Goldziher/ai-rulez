@@ -73,8 +73,9 @@ type DirTree struct {
 // ReadDirTree reads dir into leaves: regular files only, with the executable bit
 // as their mode. A symlink or any other irregular entry is refused: a signature
 // that covered "where the link pointed" would not cover what an agent reads
-// through it. VCS metadata (.git) and the directory root's signature files are
-// skipped.
+// through it. The directory root's own .git directory and signature files are
+// skipped; a .git anywhere deeper is refused, since an agent could read it and no
+// signature would cover it.
 func ReadDirTree(dir string) (*DirTree, error) {
 	info, err := os.Lstat(dir)
 	if err != nil {
@@ -96,9 +97,15 @@ func ReadDirTree(dir string) (*DirTree, error) {
 		rel = filepath.ToSlash(rel)
 		if d.IsDir() {
 			if d.Name() == ".git" && rel != "." {
+				if rel != ".git" {
+					return oops.With("path", rel).Errorf("%s is nested version-control metadata: it would be read by an agent but covered by no signature", rel)
+				}
 				return filepath.SkipDir
 			}
 			return nil
+		}
+		if d.Name() == ".git" && rel != "." {
+			return oops.With("path", rel).Errorf("%s is a .git file (a worktree or submodule pointer): it is not covered by the signature", rel)
 		}
 		if IsSignatureFile(rel) {
 			return nil
@@ -116,7 +123,7 @@ func ReadDirTree(dir string) (*DirTree, error) {
 		if total += int(fi.Size()); total > maxTreeBytes {
 			return oops.Errorf("%s holds more than %d bytes", dir, maxTreeBytes)
 		}
-		data, err := readRegular(path)
+		data, err := readRegular(path, fi.Size())
 		if err != nil {
 			return err
 		}
@@ -132,15 +139,20 @@ func ReadDirTree(dir string) (*DirTree, error) {
 	return &DirTree{Leaves: leaves}, nil
 }
 
-func readRegular(path string) ([]byte, error) {
+// readRegular reads a file that was size bytes when it was listed; a file that
+// has grown since is an error rather than an unbounded read.
+func readRegular(path string, size int64) ([]byte, error) {
 	f, err := os.Open(path) //nolint:gosec // path comes from the walk below the directory the user named
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped by the caller
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	data, err := io.ReadAll(f)
+	data, err := io.ReadAll(io.LimitReader(f, size+1))
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped by the caller
+	}
+	if int64(len(data)) > size {
+		return nil, oops.With("path", path).Errorf("%s changed while it was being read", path)
 	}
 	return data, nil
 }

@@ -215,7 +215,8 @@ bit part of the digest. Adding, removing or editing a file, or flipping the exec
 (`AR724`). The attestation files (`.ai-rulez.sigstore.json`, numbered co-signatures and the provenance file) at the root
 of the directory are not part of what they sign; the same name deeper in the tree is content. A symlink or any irregular
 file in the directory is refused: a signature over "where the link pointed" would not cover what an agent reads through
-it. The directory's own name is not part of the match, so a bundle checked out under another name verifies.
+it. The root `.git` directory is skipped; a `.git` directory or file anywhere deeper is refused, since an agent could
+read it and no signature would cover it. The directory's own name is not part of the match, so a bundle checked out under another name verifies.
 
 An SBOM is signed by its bytes, whatever its format (`ai-rulez sbom`, SPDX, CycloneDX): the signature says who produced
 that exact file, not that it is complete. The predicate types are
@@ -327,7 +328,8 @@ key_file = "keys/publisher.pub"
 
 The server recomputes the skill's digest from the files on disk and, for a skill source, compares each served file with
 the bytes that were signed, so a file that changes between being read and being verified, or a file the signature does
-not cover, is `AR724`. Only the `name:` line of `SKILL.md` may differ, because a source serves it with the served name.
+not cover, is `AR724`; an installed skill, which is rendered, is checked for coverage only (every served file must be a
+signed file). Only the `name:` line of `SKILL.md` may differ, because a source serves it with the served name.
 Verdicts are computed when the catalog is built and again on every reload, which swaps the catalog whole. Attestation
 files are never served, scanned or part of the served digest.
 
