@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -324,66 +324,11 @@ func lookupHash(indexPath, cwd, id string) string {
 }
 
 // appendLine appends one line to the log. It refuses to write through a symlink
-// (the log file, or the directory that holds it): a repository can commit
-// .ai-rulez/local or usage.jsonl as a symlink, and a recorder it launches would
-// otherwise append JSON to whatever the link points at.
+// at the file or at any directory below the project root: a repository can
+// commit .ai-rulez, .ai-rulez/local or usage.jsonl as a symlink, and a recorder
+// it launches would otherwise append JSON to whatever the link points at.
 func appendLine(path string, line []byte) error {
-	dir := filepath.Dir(path)
-	if info, err := os.Lstat(dir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return oops.With("path", path).Errorf("refusing to write the usage log through a symlinked directory %s", dir)
-	}
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return oops.With("path", path).Wrapf(err, "create usage log directory")
-	}
-	file, err := openLogForAppend(path)
-	if err != nil {
-		return err
-	}
-	// One write of a whole line keeps concurrent sessions from interleaving.
-	if _, err := file.Write(line); err != nil {
-		_ = file.Close() //nolint:errcheck // the write error is the one to report
-		return oops.With("path", path).Wrapf(err, "write usage log")
-	}
-	return oops.Wrapf(file.Close(), "close usage log")
-}
-
-// openLogForAppend opens path for appending without following a symlink. An
-// existing file is opened without O_CREATE and checked against a fresh Lstat; a
-// missing one is created with O_EXCL, which never follows a link.
-func openLogForAppend(path string) (*os.File, error) {
-	fail := func(err error, what string) (*os.File, error) {
-		return nil, oops.With("path", path).Wrapf(err, "%s", what)
-	}
-	for attempt := 0; attempt < 2; attempt++ {
-		info, err := os.Lstat(path)
-		switch {
-		case err == nil:
-			if !info.Mode().IsRegular() {
-				return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s is a symlink or not a regular file", path)
-			}
-			file, openErr := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600) //nolint:gosec // user-chosen log path, symlinks refused above
-			if openErr != nil {
-				return fail(openErr, "open usage log")
-			}
-			if opened, statErr := file.Stat(); statErr != nil || !os.SameFile(info, opened) {
-				_ = file.Close() //nolint:errcheck // the file was swapped under us
-				return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s changed while it was opened", path)
-			}
-			return file, nil
-		case errors.Is(err, os.ErrNotExist):
-			file, openErr := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) //nolint:gosec // user-chosen log path
-			if openErr == nil {
-				return file, nil
-			}
-			if !errors.Is(openErr, os.ErrExist) {
-				return fail(openErr, "open usage log")
-			}
-			// created concurrently (or planted): look again
-		default:
-			return fail(err, "open usage log")
-		}
-	}
-	return nil, oops.With("path", path).Errorf("refusing to write the usage log: %s keeps changing", path)
+	return safefs.AppendLine(path, line) //nolint:wrapcheck // safefs errors carry the path
 }
 
 // Limits of the sink command: it is a convenience hook that must not stall the
