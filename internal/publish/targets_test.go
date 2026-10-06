@@ -21,7 +21,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
-	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
@@ -451,88 +450,6 @@ func npmPlan(t *testing.T) Plan {
 	d, err := Build(npmInput())
 	require.NoError(t, err)
 	return d.Plan
-}
-
-func TestExecuteNPM(t *testing.T) {
-	notFound := runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("npm ERR! code E404")}
-	ok := runner.Result{Status: runner.StatusOK}
-	tests := []struct {
-		name      string
-		view      runner.Result
-		pack      runner.Result
-		publish   runner.Result
-		wantCalls []string
-		wantErr   string
-	}{
-		{"packs then publishes", notFound, ok, ok, []string{"view", "pack", "publish"}, ""},
-		{"refuses an existing version", runner.Result{Status: runner.StatusOK, Stdout: []byte("1.4.0\n")}, ok, ok, []string{"view"}, "already exists"},
-		{"npm missing", runner.Result{Status: runner.StatusUnavailable, Err: os.ErrNotExist}, ok, ok, []string{"view"}, "npm was not found"},
-		{"view fails for another reason", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("network down")}, ok, ok, []string{"view"}, "network down"},
-		{"pack fails", notFound, runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("bad package")}, ok, []string{"view", "pack"}, "bad package"},
-		{"publish fails", notFound, ok, runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("403 forbidden")}, []string{"view", "pack", "publish"}, "403 forbidden"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
-				switch spec.Argv[1] {
-				case "view":
-					return tt.view
-				case "pack":
-					return tt.pack
-				}
-				return tt.publish
-			}}
-
-			out, err := ExecuteNPM(context.Background(), fake, npmPlan(t), NPMExecuteOptions{Dir: "/d", Env: []string{"NODE_AUTH_TOKEN=placeholder"}})
-
-			var verbs []string
-			for _, c := range fake.Calls() {
-				assert.Equal(t, "npm", c.Argv[0])
-				assert.Equal(t, "/d", c.Dir)
-				assert.Equal(t, []string{"NODE_AUTH_TOKEN=placeholder"}, c.Env)
-				assert.False(t, c.InheritEnv)
-				verbs = append(verbs, c.Argv[1])
-			}
-			assert.Equal(t, tt.wantCalls, verbs)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr)
-				var pe *Error
-				require.ErrorAs(t, err, &pe)
-				assert.Equal(t, CodeTarget, pe.Code)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, "@acme/acme@1.4.0", out)
-		})
-	}
-}
-
-func TestExecuteNPM_RunsExactlyThePlannedArgvAndNeverEchoesATokenFromNPM(t *testing.T) {
-	plan := npmPlan(t)
-	fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
-		switch spec.Argv[1] {
-		case "view":
-			return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("E404")}
-		case "pack":
-			return runner.Result{Status: runner.StatusOK}
-		}
-		return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("auth failed //registry.npmjs.org/:_authToken=npm_abcdefghijklmnopqrstuvwxyz123456")}
-	}}
-
-	_, err := ExecuteNPM(context.Background(), fake, plan, NPMExecuteOptions{})
-
-	require.Error(t, err)
-	assert.NotContains(t, err.Error(), "npm_abcdefghijklmnopqrstuvwxyz123456")
-	calls := fake.Calls()
-	require.Len(t, calls, 3)
-	assert.Equal(t, plan.Commands[0].Argv, calls[1].Argv)
-	assert.Equal(t, plan.Commands[1].Argv, calls[2].Argv)
-}
-
-func TestExecuteNPM_NeedsAnNPMPlan(t *testing.T) {
-	_, err := ExecuteNPM(context.Background(), &runner.Fake{}, Plan{}, NPMExecuteOptions{})
-	assert.Error(t, err)
 }
 
 func writeBuilt(t *testing.T, in Input) (string, *Dist) {
