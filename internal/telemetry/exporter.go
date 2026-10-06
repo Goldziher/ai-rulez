@@ -131,6 +131,7 @@ func (x *Exporter) Flush(ctx context.Context) (FlushResult, error) {
 	}
 
 	var flushErr error
+	var settled []string // delivered or permanently rejected: the cursor must not queue them again
 	for start := 0; start < len(events) && flushErr == nil; start += batchMax {
 		batch := events[start:min(start+batchMax, len(events))]
 		ids := make(map[string]bool, len(batch))
@@ -142,16 +143,19 @@ func (x *Exporter) Flush(ctx context.Context) (FlushResult, error) {
 		case err == nil:
 			result.Sent += len(batch)
 			result.Batches++
+			settled = appendIDs(settled, batch)
 		case errors.Is(err, ErrRejected):
 			// Dropped, not retried: the collector will never accept this body.
 			result.Rejected += len(batch)
 			flushErr = err
+			settled = appendIDs(settled, batch)
 		default:
 			flushErr = err
 			continue // keep the batch in the spool for the next flush
 		}
 		flushErr = errors.Join(flushErr, x.Spool.Remove(ids))
 	}
+	_ = x.Spool.MarkSent(settled, FormatTime(x.now())) //nolint:errcheck // the ring only avoids a duplicate; delivery is at-least-once anyway
 	status := "ok"
 	switch {
 	case errors.Is(flushErr, ErrRejected):
@@ -168,6 +172,12 @@ func (x *Exporter) record(cause error, status string, result FlushResult) error 
 	now := FormatTime(x.now())
 	return x.Spool.UpdateState(func(st *State) {
 		st.LastAttempt, st.LastStatus = now, status
+		if cause == nil {
+			st.ConsecutiveFailures = 0
+		} else {
+			st.Failures++
+			st.ConsecutiveFailures++
+		}
 		st.Sent += int64(result.Sent)
 		st.Rejected += int64(result.Rejected)
 		if cause == nil {
@@ -393,4 +403,11 @@ func (x *Exporter) HeaderNamesSet() (set, unset []string) {
 		}
 	}
 	return set, unset
+}
+
+func appendIDs(ids []string, batch []Event) []string {
+	for i := range batch {
+		ids = append(ids, batch[i].EventID)
+	}
+	return ids
 }

@@ -16,7 +16,10 @@ import (
 
 func resetExportFlags(t *testing.T) {
 	t.Helper()
-	clear := func() { usageExportTo, usageExportFile, usageExportDryRun, usageLog = "", "", false, "" }
+	clear := func() {
+		usageExportTo, usageExportFile, usageExportDryRun, usageLog = "", "", false, ""
+		usageExportAll, usageExportMaxBatches = false, 10
+	}
 	clear()
 	t.Cleanup(clear)
 }
@@ -117,7 +120,8 @@ func TestUsageExport(t *testing.T) {
 			want string
 		}{
 			{"no destination kind", func(telemetryEnv) {}, []string{"x"}, "--to must be file"},
-			{"otlp is not an export target here", func(telemetryEnv) { usageExportTo = "otlp" }, []string{"x"}, "not available"},
+			{"otlp takes no destination path", func(telemetryEnv) { usageExportTo = "otlp" }, []string{"x"}, "destination path belongs to --to file"},
+			{"otlp needs consent", func(telemetryEnv) { usageExportTo = "otlp" }, nil, "OTLP export is not active"},
 			{"no path", func(telemetryEnv) { usageExportTo = "file" }, nil, "destination path is required"},
 			{"two different paths", func(telemetryEnv) { usageExportTo, usageExportFile = "file", "a" }, []string{"b"}, "not both"},
 			{"destination is the log", func(env telemetryEnv) { usageExportTo = "file"; usageLog = env.log }, []string{"LOG"}, "is the usage log"},
