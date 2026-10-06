@@ -116,3 +116,11 @@ func TestReadRegular_RefusesSymlink(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "secret", string(data))
 }
+
+func TestAppendLine_RelativePathUnderConfigDir(t *testing.T) {
+	t.Chdir(t.TempDir())
+	require.NoError(t, AppendLine(filepath.Join(".ai-rulez", "local", "usage.jsonl"), []byte("one\n")))
+	data, err := os.ReadFile(filepath.Join(".ai-rulez", "local", "usage.jsonl"))
+	require.NoError(t, err)
+	assert.Equal(t, "one\n", string(data))
+}

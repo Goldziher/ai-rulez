@@ -31,7 +31,10 @@ func splitRoot(path string) (base, rel string) {
 		if parts[i] == configDirName {
 			base = strings.Join(parts[:i], string(filepath.Separator))
 			if base == "" {
-				base = string(filepath.Separator)
+				base = "."
+				if filepath.IsAbs(clean) {
+					base = string(filepath.Separator)
+				}
 			}
 			return base, filepath.Join(parts[i:]...)
 		}
@@ -201,4 +204,15 @@ func ReadRegular(path string) ([]byte, error) {
 	}
 	data, err := io.ReadAll(io.LimitReader(file, maxReadBytes))
 	return data, oops.With("path", path).Wrapf(err, "read file")
+}
+
+// EnsureParent creates the directories above path with the same symlink checks
+// as OpenAppend, so a caller that writes beside path (a temp file) does not
+// create files through a planted link.
+func EnsureParent(path string) error {
+	root, _, err := openBase(path)
+	if err != nil {
+		return err
+	}
+	return oops.Wrapf(root.Close(), "close directory")
 }
