@@ -137,7 +137,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if out == nil {
 		out = io.Discard
 	}
-	fmt.Fprintf(out, "Run %s: %s, round %d accepted\n", report.RunID, report.Skill, report.AcceptedRound)
+	fmt.Fprintf(out, "Run %s: %s, round %d accepted\n", report.RunID, Sanitize(report.Skill, 120), report.AcceptedRound)
 	if round := acceptedRound(report); round != nil && round.Held != nil {
 		fmt.Fprintf(out, "Held-out pass rate %.0f%% -> %.0f%% (%+.1f points), %d win(s), %d loss(es)\n",
 			round.Held.Base.PassRate*100, round.Held.Cand.PassRate*100, round.Held.Gain*100, len(round.Held.Wins), len(round.Held.Losses))
@@ -146,7 +146,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 		}
 	}
 	fmt.Fprintf(out, "\n%s\n", SanitizeMultiline(patch)) // the candidate is untrusted text: no terminal escapes
-	if !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Write this change into %s?", report.SkillPath))) {
+	if !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Write this change into %s?", Sanitize(report.SkillPath, 200)))) {
 		return nil, refuse("", "not confirmed: nothing was written (use --yes to skip the prompt)")
 	}
 	res := &ApplyResult{Skill: report.Skill}
@@ -155,7 +155,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if err != nil {
 		return res, err
 	}
-	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), report.Skill)
+	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120))
 	return res, nil
 }
 

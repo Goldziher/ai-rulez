@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
@@ -18,6 +19,22 @@ const (
 	maxTreeFileBytes = 1 << 20
 	maxTreeBytes     = 32 << 20
 )
+
+// Suffixes Tree.Odd entries carry after the path, so a caller can recover the path (OddPath).
+const (
+	oddLargeSuffix   = " (too large)"
+	oddControlSuffix = " (control characters in the name)"
+)
+
+// OddPath returns the slash-separated path of a Tree.Odd entry.
+func OddPath(odd string) string {
+	for _, suffix := range []string{oddLargeSuffix, oddControlSuffix} {
+		if p, ok := strings.CutSuffix(odd, suffix); ok {
+			return p
+		}
+	}
+	return odd
+}
 
 // Entry is one file of a skill tree.
 type Entry struct {
@@ -70,13 +87,20 @@ func ReadTree(dir string) (*Tree, error) {
 			return err //nolint:wrapcheck // contextual below
 		}
 		switch {
+		case hasControlRune(slash):
+			// A name with terminal escapes is never a skill file: refuse it like any other odd entry.
+			t.Odd = append(t.Odd, slash+oddControlSuffix)
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		case d.IsDir():
 			return nil
 		case !info.Mode().IsRegular() || hardLinked(info):
 			t.Odd = append(t.Odd, slash)
 			return nil
 		case info.Size() > maxTreeFileBytes || len(t.Files) >= maxTreeFiles || total+info.Size() > maxTreeBytes:
-			t.Odd = append(t.Odd, slash+" (too large)")
+			t.Odd = append(t.Odd, slash+oddLargeSuffix)
 			return nil
 		}
 		data, err := os.ReadFile(path) //nolint:gosec // Lstat-checked regular file below the skill directory
@@ -92,6 +116,11 @@ func ReadTree(dir string) (*Tree, error) {
 	}
 	sort.Strings(t.Odd)
 	return t, nil
+}
+
+// hasControlRune reports a control or format character (terminal escapes, bidi overrides) in s.
+func hasControlRune(s string) bool {
+	return strings.IndexFunc(s, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) }) >= 0
 }
 
 // WriteTree writes tree below dir (created if missing) through safefs, so no

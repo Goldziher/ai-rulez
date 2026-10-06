@@ -72,11 +72,14 @@ type Violation struct {
 	Detail string `json:"detail"`
 }
 
+// String renders the violation for a terminal. The path and the detail can carry text an
+// optimizer chose (a file name, a frontmatter value), so both are sanitized.
 func (v Violation) String() string {
+	detail := Sanitize(v.Detail, 400)
 	if v.Path == "" {
-		return fmt.Sprintf("%s %s: %s", v.Code, v.Rule, v.Detail)
+		return fmt.Sprintf("%s %s: %s", v.Code, Sanitize(v.Rule, 80), detail)
 	}
-	return fmt.Sprintf("%s %s: %s (%s)", v.Code, v.Rule, v.Detail, v.Path)
+	return fmt.Sprintf("%s %s: %s (%s)", v.Code, Sanitize(v.Rule, 80), detail, Sanitize(v.Path, 200))
 }
 
 func violation(rule, path, format string, args ...any) Violation {
@@ -254,7 +257,7 @@ func leakWarnings(orig, cand *Tree, values []string) []string {
 		}
 		for _, p := range cand.Paths() {
 			if bytes.Contains(cand.Files[p].Data, []byte(v)) && !bytes.Contains(orig.Files[p].Data, []byte(v)) {
-				warns = append(warns, fmt.Sprintf("%s contains a held-out assertion string that the original did not (possible leak)", p))
+				warns = append(warns, fmt.Sprintf("%s contains a held-out assertion string that the original did not (possible leak)", Sanitize(p, 200)))
 				break
 			}
 		}

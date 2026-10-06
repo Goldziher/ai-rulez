@@ -686,7 +686,7 @@ func (x *execution) restoreAuthored() error {
 		return err
 	}
 	for _, odd := range cur.Odd {
-		if err := os.RemoveAll(filepath.Join(dir, filepath.FromSlash(strings.Fields(odd)[0]))); err != nil {
+		if err := os.RemoveAll(filepath.Join(dir, filepath.FromSlash(OddPath(odd)))); err != nil {
 			return fmt.Errorf("remove %s: %w", odd, err)
 		}
 	}

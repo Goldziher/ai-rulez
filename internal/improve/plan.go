@@ -54,8 +54,10 @@ func (r *Refusal) Error() string {
 	return r.Reason
 }
 
+// refuse builds a Refusal. The reason often names optimizer- or repository-chosen text (file names,
+// skill ids), so control characters are replaced before it can reach a terminal.
 func refuse(code, format string, args ...any) error {
-	return &Refusal{Code: code, Reason: fmt.Sprintf(format, args...)}
+	return &Refusal{Code: code, Reason: SanitizeMultiline(fmt.Sprintf(format, args...))}
 }
 
 // Options configure Prepare. Library code reads no environment and no clock:
@@ -421,7 +423,7 @@ func (p *Plan) runID() string {
 func (p *Plan) Summary() string {
 	o := &p.Opts
 	var b strings.Builder
-	fmt.Fprintf(&b, "improve %s (experimental)\n", p.Skill.ID)
+	fmt.Fprintf(&b, "improve %s (experimental)\n", Sanitize(p.Skill.ID, 120))
 	optimizer := Sanitize(strings.Join(o.OptimizerArgv, " "), 300)
 	if o.Adapter != "" {
 		optimizer = o.Adapter + " (bundled adapter, a child process of this binary)"
@@ -444,7 +446,7 @@ func (p *Plan) Summary() string {
 	b.WriteString(p.isolationLine())
 	fmt.Fprintf(&b, "  run:         .ai-rulez/%s/%s (nothing outside it changes until `improve apply`)\n", filepath.ToSlash(LocalDir), p.RunID)
 	for _, w := range p.Warnings {
-		fmt.Fprintf(&b, "  warning:     %s\n", w)
+		fmt.Fprintf(&b, "  warning:     %s\n", Sanitize(w, 400))
 	}
 	return b.String()
 }
