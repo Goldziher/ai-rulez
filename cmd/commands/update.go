@@ -190,7 +190,8 @@ func checkNamesMatched(srcs []versionSrc, wanted map[string]bool) error {
 func planUpdates(rep *updateReport, srcs []versionSrc, rows []tagresolve.Row) {
 	for i, row := range rows {
 		src := srcs[i]
-		if row.Downgrade && !updateAllowDowngrade {
+		// A moved tag is a finding before it is a downgrade: it must never land in Unchanged.
+		if row.Downgrade && !updateAllowDowngrade && row.Status != tagresolve.StatusTagMoved {
 			rep.Unchanged = append(rep.Unchanged, row)
 			continue
 		}
@@ -198,11 +199,21 @@ func planUpdates(rep *updateReport, srcs []versionSrc, rows []tagresolve.Row) {
 		case tagresolve.StatusUpdatable, tagresolve.StatusNotLocked, tagresolve.StatusTagMissing:
 			rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
 		case tagresolve.StatusTagMoved:
-			if updateAcceptMoved {
+			switch {
+			case !updateAcceptMoved:
+				rep.Blocked = append(rep.Blocked, row)
+			case row.Downgrade && !updateAllowDowngrade:
+				rep.Unchanged = append(rep.Unchanged, row)
+			default:
 				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
 				rep.Notes = append(rep.Notes, fmt.Sprintf("%s %s: accepted the moved tag %s", row.Kind, row.Name, row.Locked.Tag))
+			}
+		case tagresolve.StatusLockedNonVersion:
+			// Moving off a pin that is not a version has no ordering to protect: ask for the same consent as a downgrade.
+			if updateAllowDowngrade {
+				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
 			} else {
-				rep.Blocked = append(rep.Blocked, row)
+				rep.Unchanged = append(rep.Unchanged, row)
 			}
 		case tagresolve.StatusUnsatisfied, tagresolve.StatusInvalid:
 			rep.Blocked = append(rep.Blocked, row)
