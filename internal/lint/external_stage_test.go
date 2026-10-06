@@ -553,3 +553,26 @@ printf '{"version":"2.1.0","runs":[{"results":[{"ruleId":"L","message":{"text":"
 		t.Fatalf("want the line of the real file (7), got %+v", got)
 	}
 }
+
+func TestStagedMCPRedactsArgumentsAndURLs(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"flag with value", []string{"--api-key", "abc12345xyz", "--port", "80"}, []string{"--api-key", "[REDACTED]", "--port", "80"}},
+		{"flag with equals", []string{"--token=abc12345xyz", "-y"}, []string{"--token=[REDACTED]", "-y"}},
+		{"key-looking text", []string{"Authorization: Bearer abcdefghijkl"}, []string{"Authorization: [REDACTED]"}},
+		{"plain arguments are kept", []string{"-y", "@scope/pkg"}, []string{"-y", "@scope/pkg"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := redactStageArgs(tt.in); strings.Join(got, "|") != strings.Join(tt.want, "|") {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+	if got := redactStageURL("https://user:pw@host.example/mcp?key=abc#frag"); got != "https://host.example/mcp" {
+		t.Fatalf("url = %q", got)
+	}
+}
