@@ -1,0 +1,7 @@
+schema_version: 1
+cases:
+  - id: no-criteria
+    description: Imported from the Tessl scenario no-criteria of acme/release-tools@1.4.0
+    prompt: Prepare release notes for the next version.
+    expect_trigger: true
+    tags: [tessl]

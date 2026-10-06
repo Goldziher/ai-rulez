@@ -304,7 +304,7 @@ func importerNames(importers []Format) []string {
 }
 
 // generatorRoots name the input trees whose tool files are generated output.
-var generatorRoots = map[string]string{rulesyncName: ".rulesync/", apmName: ".apm/ and apm_modules/"}
+var generatorRoots = map[string]string{rulesyncName: ".rulesync/", apmName: ".apm/ and apm_modules/", tesslName: ".tessl/"}
 
 // preferSources drops the native importer from an automatic run that also
 // detects a project of a tool that generates the tool files (rulesync, APM): the
