@@ -269,3 +269,14 @@ func TestPlanUpdates_MovedTagIsNeverHiddenByDowngrade(t *testing.T) {
 		})
 	}
 }
+
+func TestLockOutdated_UnknownNameIsAnError(t *testing.T) {
+	newUpdateFixture(t, `version = "^1"`)
+	lockOutdated, lockFormat = true, ""
+
+	var code int
+	_, stderr := capture(t, func() { code = outdatedAt("", "", []string{"nope"}) })
+
+	assert.Equal(t, 1, code)
+	assert.Contains(t, stderr, "not a remote include")
+}
