@@ -403,6 +403,9 @@ func TestNormalizeRemote(t *testing.T) {
 		{"ssh://git@git.example.com:2222/team/repo.git", "https://git.example.com/team/repo"},
 		{"", ""},
 		{"not-a-remote", ""},
+		{`C:/repos/x.git`, ""},
+		{`C:\repos\x.git`, ""},
+		{"/srv/git/x.git", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
