@@ -217,11 +217,13 @@ func (b *rulesyncPlanner) importProjectFiles() {
 		b.p.add(newFinding(StatusNeedsAction, rulesyncLocalFile, "", "",
 			"machine-local rulesync overrides are not imported; put personal settings in .ai-rulez/config.local.toml"))
 	}
-	for _, lock := range []string{rulesyncLockFile, rulesyncNPMLock} {
-		if _, ok := b.r.exists(lock); ok {
-			b.p.add(newFinding(StatusNeedsAction, lock, "", "",
-				"pins remote sources by commit; not carried because remote sources are not fetched. After adding them as [[includes]] or [[installed_skills]], run `ai-rulez lock`"))
-		}
+	if _, ok := b.r.exists(rulesyncLockFile); ok {
+		b.p.add(newFinding(StatusNeedsAction, rulesyncLockFile, "", "",
+			"its pinned commits are the ref --fetch reads each remote source at; the integrity hashes are not carried. Run `ai-rulez lock` after converting (or pass --lock)"))
+	}
+	if _, ok := b.r.exists(rulesyncNPMLock); ok {
+		b.p.add(newFinding(StatusUnsupported, rulesyncNPMLock, "", "",
+			"pins npm sources, which are not git repositories and are not imported"))
 	}
 }
 

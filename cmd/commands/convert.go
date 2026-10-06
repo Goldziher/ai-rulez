@@ -44,6 +44,7 @@ var (
 	convertKeepNames     bool
 	convertLock          bool
 	convertDelivery      string
+	convertFetch         bool
 )
 
 // ConvertCmd converts another tool's configuration into an .ai-rulez/ tree.
@@ -79,7 +80,7 @@ An existing config.toml is never replaced, not even with --force: new presets,
 [[mcp_servers]] and [[installed_skills]] are merged into it (existing entries
 win). --into is relative to --source unless absolute, and nothing is written
 through a symlink at or below it. Source files are never modified, and nothing
-is fetched or executed. Imported hooks never run on their own: they are written
+is fetched (unless --fetch is given) or executed. Imported hooks never run on their own: they are written
 to config.toml as a commented block, enabled by --enable-hooks (an imported allow
 rule likewise needs --enable-permissions; ask and deny rules are live because they
 only narrow). The converted tree is validated and security-scanned in
@@ -91,7 +92,11 @@ parentheses); --allow-findings CODE lets a code through.
 whose file exists with other content is imported as NAME-imported. --keep-names
 never renames to settle a collision; it is reported instead. --delivery
 static|served|both sets how the imported skills reach the agent ([skills]
-delivery, or the domain's with --domain). --lock runs ` + "`ai-rulez lock`" + ` after the write
+delivery, or the domain's with --domain). --fetch reads the remote git sources of
+the input (https only, through the skill-source fetcher): rulesync sources become
+[[installed_skills]] pinned to the commit that was read, their rules and APM
+packages are copied, and everything fetched is scanned before the write; a
+failed fetch writes nothing. --lock runs ` + "`ai-rulez lock`" + ` after the write
 to pin remote sources, authored content and outputs; convert never imports a
 foreign lock hash.
 
@@ -124,6 +129,7 @@ func init() {
 	f.BoolVar(&convertMerge, "merge", false, "Add beside an existing tree without touching a file of it: an item whose file exists with other content is imported as NAME-imported (excludes --force)")
 	f.BoolVar(&convertKeepNames, "keep-names", false, "Never rename to resolve a name collision (between imported items, or with an existing file under --merge): report it instead")
 	f.StringVar(&convertDelivery, "delivery", "", "How the imported skills reach the agent: static, served or both ([skills] delivery, or the domain's with --domain)")
+	f.BoolVar(&convertFetch, "fetch", false, "Read the remote git sources the input names (rulesync sources, APM dependencies that are not installed) over the network: https only, scanned before anything is written, skills pinned to the commit that was read. Without it nothing is fetched and each source is reported")
 	f.BoolVar(&convertLock, "lock", false, "After writing, run `ai-rulez lock` on the converted config to pin remote sources, authored content and outputs (needs --write)")
 	f.BoolVar(&convertEnableHooks, "enable-hooks", false, "Write imported hooks as live [[hooks]]; without it they are a commented block you review first (a hook runs a command on your machine)")
 	f.BoolVar(&convertEnablePerms, "enable-permissions", false, "Write imported allow rules as live [permissions]; without it they are commented (an allow applies to every harness). Ask and deny rules are always live")
@@ -169,7 +175,7 @@ func convertOptions(write bool) importer.ConvertOptions {
 		Source: convertSource, Into: convertInto, From: convertFrom, Domain: convertDomain,
 		Write: write, Force: convertForce, SplitHeadings: convertSplitHeadings, BestEffort: convertBestEffort,
 		AllowFindings: convertAllowFindings, EnableHooks: convertEnableHooks, EnablePermissions: convertEnablePerms,
-		Merge: convertMerge, KeepNames: convertKeepNames, Delivery: convertDelivery,
+		Merge: convertMerge, KeepNames: convertKeepNames, Delivery: convertDelivery, Fetch: convertFetch,
 	}
 }
 
