@@ -59,3 +59,14 @@ func askYesNo(prompt string) bool {
 	response = strings.ToLower(strings.TrimSpace(response))
 	return response == "y" || response == "yes"
 }
+
+// workingDir is the process working directory, "" when it cannot be read. The
+// CLI resolves it once here and passes it to library code that shows paths
+// relative to it, so no library package reads the working directory itself.
+func workingDir() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return wd
+}

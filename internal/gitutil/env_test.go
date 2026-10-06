@@ -154,7 +154,7 @@ func TestStageExecutable(t *testing.T) {
 	changed, err := StageExecutable(path)
 	require.NoError(t, err)
 	assert.True(t, changed)
-	_, _, err = run(dir, nil, "diff", "--cached", "--quiet")
+	_, _, err = Git{}.run(dir, nil, "diff", "--cached", "--quiet")
 	assert.Error(t, err, "the mode change is staged")
 
 	again, err := StageExecutable(path)

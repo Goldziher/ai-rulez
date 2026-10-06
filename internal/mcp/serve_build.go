@@ -130,10 +130,7 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 	if st.NoWatch {
 		return "", nil
 	}
-	wd := st.WorkDir
-	if wd == "" {
-		wd, _ = os.Getwd() //nolint:errcheck // an empty root fingerprints nothing
-	}
+	wd := st.workDir()
 	var roots []string
 	if name := config.ResolveConfigDirName(wd); name != "" {
 		abs, _ := filepath.Abs(filepath.Join(wd, filepath.FromSlash(name))) //nolint:errcheck // falls back to the given dir
@@ -288,14 +285,18 @@ func (st *ServeSetup) selectRole(cfg *config.Config, gen *generator.Generator) (
 	return func(name string) bool { return resolved.Flat().Keeps(config.RoleKindSkill, "", name) }, nil
 }
 
-func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
-	wd := st.WorkDir
-	if wd == "" {
-		var err error
-		if wd, err = os.Getwd(); err != nil {
-			return nil, oops.Wrapf(err, "working directory")
-		}
+// workDir is the project directory to serve: WorkDir, or the current directory
+// (".") when the caller named none. The CLI sets WorkDir from its own working
+// directory; the library never reads it.
+func (st *ServeSetup) workDir() string {
+	if st.WorkDir == "" {
+		return "."
 	}
+	return st.WorkDir
+}
+
+func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
+	wd := st.workDir()
 	if config.ResolveConfigDirName(wd) == "" && len(st.Sources) > 0 {
 		// Serving only --source skills needs no project.
 		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir

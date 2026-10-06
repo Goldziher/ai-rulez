@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -107,10 +107,10 @@ const cacheDirMode = 0o700
 // short hash of the normalized URL, so two includes that share a name but point
 // at different repositories (in different projects) never share a cache, and one
 // project's fetch cannot seed another's.
-func getIncludeCacheDir(sourceName, repoURL string) (string, error) {
+func getIncludeCacheDir(host ambient.Host, sourceName, repoURL string) (string, error) {
 	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
 	dir := safeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:12]
-	return config.CacheDir("includes", dir) //nolint:wrapcheck // already contextual
+	return config.CacheDirIn(host.Env, "includes", dir) //nolint:wrapcheck // already contextual
 }
 
 // safeCacheName keeps a source name usable as one path segment.
@@ -147,6 +147,12 @@ type GitSource struct {
 
 // NewGitSource creates a new git source
 func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	return NewGitSourceIn(ambient.Host{}, name, repoURL, path, ref, baseDir, include, accessToken)
+}
+
+// NewGitSourceIn is NewGitSource with the environment (the cache location) taken
+// from host instead of the process.
+func NewGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
 	repoURL = stripGitPlus(repoURL)
 	// Validate URL format
 	if err := validateGitURL(repoURL); err != nil {
@@ -154,7 +160,7 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 	}
 
 	// Create cache directory in system cache location
-	cacheDir, err := getIncludeCacheDir(name, repoURL)
+	cacheDir, err := getIncludeCacheDir(host, name, repoURL)
 	if err != nil {
 		return nil, oops.
 			With("source_name", name).
@@ -181,12 +187,17 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 // and digested like any other git include, fetched with hardened git options,
 // and converted to content on each use.
 func NewOKFGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	return NewOKFGitSourceIn(ambient.Host{}, name, repoURL, path, ref, baseDir, include, accessToken)
+}
+
+// NewOKFGitSourceIn is NewOKFGitSource with the environment taken from host.
+func NewOKFGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
 	for _, seg := range strings.Split(path, "/") {
 		if seg == ".." {
 			return nil, oops.With("include", name).Errorf("invalid OKF bundle path %q", path)
 		}
 	}
-	s, err := NewGitSource(name, repoURL, path, ref, baseDir, include, accessToken)
+	s, err := NewGitSourceIn(host, name, repoURL, path, ref, baseDir, include, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +298,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 				Wrapf(ErrNotCached, "--no-fetch specified but no cached content found for include '%s'", s.name)
 		}
 		logger.Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
-		return s.scanCachedContent()
+		return s.scanCachedContent(ctx)
 	}
 
 	scrubLegacyCredentials(ctx, s.cacheDir, s.originalURL)
@@ -300,7 +311,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	if err != nil {
 		if errors.Is(err, errRefLookupUnavailable) {
 			logger.Warn("ls-remote failed, using cached content", "name", s.name, "error", err)
-			return s.scanCachedContent()
+			return s.scanCachedContent(ctx)
 		}
 		return nil, err
 	}
@@ -309,10 +320,10 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	if isCacheHit(s.cacheDir, currentSHA) {
 		meta, _ := readCacheMeta(s.cacheDir) //nolint:errcheck // best-effort; cache hit already confirmed
 		if meta != nil {
-			meta.FetchedAt = time.Now()
+			meta.FetchedAt = ambient.FromContext(ctx).Now()
 			_ = writeCacheMeta(s.cacheDir, meta) //nolint:errcheck // best-effort timestamp update
 		}
-		return s.scanCachedContent()
+		return s.scanCachedContent(ctx)
 	}
 
 	// Slow path: cache is stale or missing. Serialize the refresh per cache directory.
@@ -322,7 +333,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 
 	// Double-check under the lock — another goroutine may have refreshed while we waited.
 	if isCacheHit(s.cacheDir, currentSHA) {
-		return s.scanCachedContent()
+		return s.scanCachedContent(ctx)
 	}
 
 	return s.refreshCache(ctx, ref, currentSHA, isSHA)
@@ -375,21 +386,21 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
 	_ = writeCacheMeta(s.cacheDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
 		RemoteHEADSHA: currentSHA,
-		FetchedAt:     time.Now(),
+		FetchedAt:     ambient.FromContext(ctx).Now(),
 		FileHashes:    hashes,
 	})
 
-	return s.scanCachedContent()
+	return s.scanCachedContent(ctx)
 }
 
 // scanCachedContent locates the .ai-rulez directory in the cache and returns its content tree.
-func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
+func (s *GitSource) scanCachedContent(ctx context.Context) (*config.ContentTree, error) {
 	if s.okf {
 		dir := s.findAIRulezDir()
 		if dir == "" {
 			return nil, oops.With("repo", RedactURL(s.repoURL)).With("path", s.path).Errorf("no OKF bundle found in repository")
 		}
-		return convertOKFBundle(dir, s.name, s.include)
+		return convertOKFBundle(ctx, dir, s.name, s.include)
 	}
 	// Find the .ai-rulez directory in the extracted content
 	aiRulezDir := s.findAIRulezDir()
@@ -410,7 +421,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 	if contentTree == nil {
 		// Scan the .ai-rulez directory structure using the config loader's scanner which keeps
 		// root content and domain content separate (avoids duplication in generated output)
-		scanned, err := config.ScanContentTree(aiRulezDir)
+		scanned, err := config.ScanContentTreeContext(ctx, aiRulezDir)
 		if err != nil {
 			return nil, oops.
 				With("repo", RedactURL(s.repoURL)).

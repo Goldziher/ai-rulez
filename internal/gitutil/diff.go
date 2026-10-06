@@ -34,11 +34,11 @@ type Change struct {
 // sorted. ok is false outside a repository, where callers walk the file system.
 // A tracked file deleted from the working tree is still listed; callers check
 // that it exists before reading it.
-func ListFiles(dir string) (files []string, ok bool, err error) {
-	if !IsRepo(dir) {
+func (g Git) ListFiles(dir string) (files []string, ok bool, err error) {
+	if !g.IsRepo(dir) {
 		return nil, false, nil
 	}
-	out, _, err := run(dir, nil, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
+	out, _, err := g.run(dir, nil, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
 	if err != nil {
 		return nil, true, oops.Wrapf(err, "list repository files")
 	}
@@ -57,19 +57,19 @@ func ListFiles(dir string) (files []string, ok bool, err error) {
 // `rev...HEAD` comparison. An unknown rev, a repository without a HEAD, and a
 // history too shallow to contain the common ancestor are all errors, so a
 // caller never compares against nothing and passes vacuously.
-func MergeBase(dir, rev string) (string, error) {
+func (g Git) MergeBase(dir, rev string) (string, error) {
 	rev = strings.TrimSpace(rev)
 	if rev == "" || strings.HasPrefix(rev, "-") {
 		return "", oops.Errorf("invalid git revision %q", rev)
 	}
-	if !IsRepo(dir) {
+	if !g.IsRepo(dir) {
 		return "", oops.Errorf("%s is not inside a git repository", dir)
 	}
 	hint := "Fetch the base ref (for example `git fetch origin <branch>` or a full-depth checkout) and check `git rev-parse --verify " + rev + "`."
-	if _, _, err := run(dir, nil, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}"); err != nil {
+	if _, _, err := g.run(dir, nil, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}"); err != nil {
 		return "", oops.Hint(hint).Errorf("base revision %q does not exist in this repository", rev)
 	}
-	out, _, err := run(dir, nil, "merge-base", "--end-of-options", rev, "HEAD")
+	out, _, err := g.run(dir, nil, "merge-base", "--end-of-options", rev, "HEAD")
 	if err != nil {
 		return "", oops.Hint(hint).Errorf("no common ancestor between %q and HEAD (shallow clone or unrelated history)", rev)
 	}
@@ -80,16 +80,16 @@ func MergeBase(dir, rev string) (string, error) {
 // the working tree: committed, staged and unstaged changes plus untracked
 // files that are not ignored, with renames detected. Paths are relative to dir,
 // which may be any directory inside the repository; files outside it are left out.
-func ChangesSince(dir, rev string) ([]Change, error) {
-	base, err := MergeBase(dir, rev)
+func (g Git) ChangesSince(dir, rev string) ([]Change, error) {
+	base, err := g.MergeBase(dir, rev)
 	if err != nil {
 		return nil, err
 	}
-	changes, err := diffChanges(dir, base)
+	changes, err := g.diffChanges(dir, base)
 	if err != nil {
 		return nil, err
 	}
-	others, _, err := run(dir, nil, "ls-files", "--others", "--exclude-standard", "-z")
+	others, _, err := g.run(dir, nil, "ls-files", "--others", "--exclude-standard", "-z")
 	if err != nil {
 		return nil, oops.Wrapf(err, "list untracked files")
 	}
@@ -107,14 +107,14 @@ func ChangesSince(dir, rev string) ([]Change, error) {
 }
 
 // StagedChanges lists what is staged: the difference between HEAD and the index.
-func StagedChanges(dir string) ([]Change, error) {
-	if !IsRepo(dir) {
+func (g Git) StagedChanges(dir string) ([]Change, error) {
+	if !g.IsRepo(dir) {
 		return nil, oops.Errorf("%s is not inside a git repository", dir)
 	}
-	if _, _, err := run(dir, nil, "rev-parse", "--verify", "--quiet", "HEAD^{commit}"); err != nil {
+	if _, _, err := g.run(dir, nil, "rev-parse", "--verify", "--quiet", "HEAD^{commit}"); err != nil {
 		return nil, oops.Hint("Make an initial commit, or run with --all.").Errorf("the repository has no commits to compare the index with")
 	}
-	changes, err := diffChanges(dir, "--cached")
+	changes, err := g.diffChanges(dir, "--cached")
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func StagedChanges(dir string) ([]Change, error) {
 
 // diffChanges runs the name-status and the zero-context patch diff against
 // target (a revision or --cached) and joins them on the new path.
-func diffChanges(dir, target string) ([]Change, error) {
+func (g Git) diffChanges(dir, target string) ([]Change, error) {
 	// Explicit prefixes and config overrides keep the +++ header parseable
 	// whatever diff.noprefix, diff.mnemonicPrefix or diff.src/dstPrefix say.
 	common := []string{
@@ -136,12 +136,12 @@ func diffChanges(dir, target string) ([]Change, error) {
 		targetArgs = []string{"--cached", "HEAD", "--"}
 	}
 	nameArgs := append(append(append([]string{}, common...), "--name-status", "-z"), targetArgs...)
-	names, _, err := run(dir, nil, nameArgs...)
+	names, _, err := g.run(dir, nil, nameArgs...)
 	if err != nil {
 		return nil, oops.Wrapf(err, "list changed files")
 	}
 	patchArgs := append(append(append([]string{}, common...), "-U0"), targetArgs...)
-	patch, _, err := run(dir, nil, patchArgs...)
+	patch, _, err := g.run(dir, nil, patchArgs...)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read the diff")
 	}

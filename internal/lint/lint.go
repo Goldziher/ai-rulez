@@ -10,8 +10,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
@@ -123,6 +125,7 @@ type runner struct {
 	tree         *Tree
 	baseRel      string
 	cwd          string
+	host         ambient.Host
 	sev          map[string]Severity
 	ignore       map[string]bool
 	ignorePaths  []globMatcher
@@ -180,6 +183,9 @@ type Options struct {
 	// Analyzers runs only these analyzers (--analyzer). Empty uses the
 	// [lint] analyzers setting, and then every analyzer.
 	Analyzers []string
+	// Cwd is the directory finding paths are shown relative to (the caller's
+	// working directory); empty shows them as given.
+	Cwd string
 	// NeedDeps keeps the checks that build the reference graph running although
 	// their analyzer is not selected: changed-only reporting (--since) needs it.
 	NeedDeps bool
@@ -201,6 +207,22 @@ type PluginDrift struct {
 // Option adds inputs the runner cannot compute from the repository tree alone.
 type Option func(*runner)
 
+// WithHost injects the environment, clock and process runner the run may use
+// (nil fields keep the real ones).
+func WithHost(h ambient.Host) Option { return func(r *runner) { r.host = h } }
+
+// WithCwd sets the directory finding paths are shown relative to; without it
+// they are shown as given.
+func WithCwd(dir string) Option { return func(r *runner) { r.cwd = dir } }
+
+// clock is the run's time: the injected clock, else the package clock.
+func (r *runner) clock() time.Time {
+	if r.host.Clock != nil {
+		return r.host.Clock.Now()
+	}
+	return now()
+}
+
 // WithPluginDrift supplies the plugin version drift to report as AR961.
 func WithPluginDrift(drift []PluginDrift) Option {
 	return func(r *runner) { r.drift = drift }
@@ -217,7 +239,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so,
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
 		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}
 	for _, opt := range opts {
 		opt(r)
@@ -225,7 +247,6 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
-	r.cwd, _ = os.Getwd()                   //nolint:errcheck // display paths fall back to absolute
 	baseAbs, _ := filepath.Abs(cfg.BaseDir) //nolint:errcheck // falls back to the given dir
 	r.baseRel = tree.Rel(baseAbs)
 	if r.baseRel == "." {

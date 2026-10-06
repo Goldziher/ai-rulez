@@ -1,8 +1,6 @@
 package lint
 
 import (
-	"os"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
@@ -10,9 +8,11 @@ import (
 // that is not part of a loaded project, for example a file staged by `convert`.
 // Inline ai-rulez-lint-ignore comments in the text are not honoured: the text
 // is not trusted to silence its own findings.
-func ScanText(file, text string) []Finding {
+func ScanText(file, text string, opts ...Option) []Finding {
 	r := &runner{cfg: &config.Config{}, docs: map[string]doc{file: {}}}
-	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
+	for _, opt := range opts {
+		opt(r)
+	}
 	r.resolveSettings()
 	r.securityScan(file, text)
 	return securityOnly(r.findings)

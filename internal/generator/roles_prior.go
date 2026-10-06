@@ -10,7 +10,6 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -125,7 +124,7 @@ func (g *Generator) ReconcileRoleSkillOverrides() error {
 			continue
 		}
 		role := g.Role()
-		logger.Warn("Role "+role+" sets skillOverrides."+skill+" = "+want[skill]+" over the value you wrote in "+settingsRel+
+		g.log().Warn("Role "+role+" sets skillOverrides."+skill+" = "+want[skill]+" over the value you wrote in "+settingsRel+
 			" ("+string(had)+"); it is put back when the role no longer sets this skill", "role", role, "skill", skill)
 		if _, kept := ledger.Prior[skill]; !kept {
 			ledger.Prior[skill] = had
@@ -177,7 +176,7 @@ func (g *Generator) restoreSkillOverride(settingsPath string, doc map[string]jso
 	if err := writeFileAtomic(settingsPath, []byte(result.Body)); err != nil {
 		return oops.Wrapf(err, "write %s", settingsRel)
 	}
-	logger.Info("Restored skillOverrides." + skill + " in " + settingsRel + " to the value you wrote")
+	g.log().Info("Restored skillOverrides." + skill + " in " + settingsRel + " to the value you wrote")
 	return g.dropSkillClaim(skill)
 }
 

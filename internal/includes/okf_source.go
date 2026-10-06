@@ -55,7 +55,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		if err != nil {
 			return nil, err
 		}
-		src, err := NewOKFGitSource(c.Name, source, c.Path, ref, r.baseDir, c.Include, r.accessToken)
+		src, err := NewOKFGitSourceIn(r.host(), c.Name, source, c.Path, ref, r.baseDir, c.Include, r.accessToken)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
 		}
@@ -79,13 +79,13 @@ func (s *OKFSource) GetType() SourceType { return SourceTypeLocal }
 func (s *OKFSource) GetName() string { return s.name }
 
 // Fetch converts the bundle and loads the result.
-func (s *OKFSource) Fetch(_ context.Context) (*config.ContentTree, error) {
-	return convertOKFBundle(s.dir, s.name, s.include)
+func (s *OKFSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
+	return convertOKFBundle(ctx, s.dir, s.name, s.include)
 }
 
 // convertOKFBundle reads the OKF bundle in dir and converts it to a content
 // tree through a temporary .ai-rulez directory, applying the include filter.
-func convertOKFBundle(dir, name string, include []string) (*config.ContentTree, error) {
+func convertOKFBundle(ctx context.Context, dir, name string, include []string) (*config.ContentTree, error) {
 	b, err := okf.Load(os.DirFS(dir))
 	if err != nil {
 		return nil, oops.With("include", name).Wrapf(err, "read OKF bundle")
@@ -106,7 +106,7 @@ func convertOKFBundle(dir, name string, include []string) (*config.ContentTree, 
 	for _, p := range b.Problems {
 		logger.Warn("OKF include skipped an unsafe bundle path", "include", name, "path", p.Path, "reason", p.Message)
 	}
-	tree, err := config.ScanContentTree(target)
+	tree, err := config.ScanContentTreeContext(ctx, target)
 	if err != nil {
 		return nil, oops.With("include", name).Wrapf(err, "scan converted OKF bundle")
 	}

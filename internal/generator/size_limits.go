@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // agentsMDFile is the instruction file Codex concatenates from the project root
@@ -212,6 +211,6 @@ func (g *Generator) warnInstructionSizes(outputs []config.OutputFile) {
 		for i, c := range f.Contributors {
 			parts[i] = fmt.Sprintf("%s (%d bytes)", c.Label, c.Bytes)
 		}
-		logger.Warn(f.message(), "largest", strings.Join(parts, "; "), "hint", f.Hint)
+		g.log().Warn(f.message(), "largest", strings.Join(parts, "; "), "hint", f.Hint)
 	}
 }

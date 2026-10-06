@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // GradeOptions configures local grading of assertions.
@@ -20,6 +21,8 @@ type GradeOptions struct {
 	AllowExec bool
 	// CommandTimeout bounds one command_exit command. Default 60s.
 	CommandTimeout time.Duration
+	// Runner starts the command; nil runs a real process (runner.Exec).
+	Runner runner.Runner
 }
 
 // OutcomeGrade is the verdict on a case's outcome checks (assertions and rubric).
@@ -177,35 +180,26 @@ func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	var cmd *exec.Cmd
+	argv := []string{"sh", "-c", a.Command}
 	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
-	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
+		argv = []string{"cmd", "/C", a.Command}
 	}
-	cmd.Dir = workDir
-	killTreeOnCancel(cmd)
-	err := runTree(cmd)
-	if cmd.Process == nil {
-		return fmt.Sprintf("command did not run: %v", err)
-	}
-	killTree(cmd) // stragglers left behind by a command that exited
+	// The assertion's command is authored content gated by --allow-exec; it runs
+	// with the caller's full environment, as it always did, in its own process tree.
+	res := runner.Or(opts.Runner).Run(context.Background(), runner.Spec{
+		Argv: argv, Dir: workDir, InheritEnv: true, Timeout: timeout,
+	})
 	want := 0
 	if a.ExitCode != nil {
 		want = *a.ExitCode
 	}
-	got := 0
-	if err != nil {
-		exitErr, ok := err.(*exec.ExitError) //nolint:errorlint // ExitError is returned unwrapped by Run
-		if !ok {
-			return fmt.Sprintf("command did not run: %v", err)
+	switch res.Status {
+	case runner.StatusOK, runner.StatusExit:
+		if res.ExitCode != want {
+			return fmt.Sprintf("exit status %d, want %d", res.ExitCode, want)
 		}
-		got = exitErr.ExitCode()
+		return ""
+	default:
+		return fmt.Sprintf("command did not run: %v", res.Err)
 	}
-	if got != want {
-		return fmt.Sprintf("exit status %d, want %d", got, want)
-	}
-	return ""
 }

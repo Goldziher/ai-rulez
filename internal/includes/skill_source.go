@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -24,10 +24,10 @@ const (
 // getSkillCacheDir returns the cache directory for an installed skill: its name
 // plus a short hash of the normalized URL, so two projects that install
 // different skills under one name never share (or overwrite) a cache.
-func getSkillCacheDir(skillName, repoURL string) (string, error) {
+func getSkillCacheDir(host ambient.Host, skillName, repoURL string) (string, error) {
 	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
 	dir := safeCacheName(skillName) + "-" + hex.EncodeToString(sum[:])[:12]
-	return config.CacheDir(skillCachePrefix, dir) //nolint:wrapcheck // already contextual
+	return config.CacheDirIn(host.Env, skillCachePrefix, dir) //nolint:wrapcheck // already contextual
 }
 
 // SkillGitSource fetches a skill from a git repository.
@@ -47,12 +47,18 @@ type SkillGitSource struct {
 
 // NewSkillGitSource creates a new SkillGitSource for fetching a skill from a git repo
 func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitSource, error) {
+	return NewSkillGitSourceIn(ambient.Host{}, name, repoURL, path, ref, accessToken)
+}
+
+// NewSkillGitSourceIn is NewSkillGitSource with the environment (the cache
+// location) taken from host instead of the process.
+func NewSkillGitSourceIn(host ambient.Host, name, repoURL, path, ref, accessToken string) (*SkillGitSource, error) {
 	repoURL = stripGitPlus(repoURL)
 	if err := validateGitURL(repoURL); err != nil {
 		return nil, err
 	}
 
-	cacheDir, err := getSkillCacheDir(name, repoURL)
+	cacheDir, err := getSkillCacheDir(host, name, repoURL)
 	if err != nil {
 		return nil, oops.With("skill_name", name).Wrapf(err, "failed to determine cache directory")
 	}
@@ -192,7 +198,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 	hashes, _ := computeFileHashes(tmpDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
 	_ = writeCacheMeta(tmpDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
 		RemoteHEADSHA: currentSHA,
-		FetchedAt:     time.Now(),
+		FetchedAt:     ambient.FromContext(ctx).Now(),
 		FileHashes:    hashes,
 	})
 	if err := swapDir(tmpDir, s.cacheDir); err != nil {

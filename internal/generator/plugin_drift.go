@@ -38,7 +38,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	if g.config.Plugin == nil && g.config.Marketplace == nil {
 		return nil, nil
 	}
-	top := gitutil.TopLevel(g.config.BaseDir)
+	top := g.git().TopLevel(g.config.BaseDir)
 	if top == "" {
 		return nil, nil
 	}
@@ -59,7 +59,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 			continue
 		}
 		bundle := filepath.Dir(path)
-		found, ok := driftFor(top, bundle, sidecar, byPath)
+		found, ok := driftFor(g.git(), top, bundle, sidecar, byPath)
 		if ok {
 			drift = append(drift, found)
 		}
@@ -68,8 +68,8 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	return drift, nil
 }
 
-func driftFor(top, bundle string, sidecar config.OutputFile, byPath map[string]config.OutputFile) (lint.PluginDrift, bool) {
-	baseline, ok := gitutil.ShowFile(top, driftRef, gitutil.RepoRelative(top, filepath.Join(bundle, plugin.ProvenanceFileName)))
+func driftFor(git gitutil.Git, top, bundle string, sidecar config.OutputFile, byPath map[string]config.OutputFile) (lint.PluginDrift, bool) {
+	baseline, ok := git.ShowFile(top, driftRef, gitutil.RepoRelative(top, filepath.Join(bundle, plugin.ProvenanceFileName)))
 	if !ok {
 		return lint.PluginDrift{}, false
 	}
@@ -91,7 +91,7 @@ func driftFor(top, bundle string, sidecar config.OutputFile, byPath map[string]c
 		if now.version == "" {
 			return lint.PluginDrift{}, false
 		}
-		before, had := gitutil.ShowFile(top, driftRef, gitutil.RepoRelative(top, manifest.Path))
+		before, had := git.ShowFile(top, driftRef, gitutil.RepoRelative(top, manifest.Path))
 		if !had || manifestFields(before).version != now.version {
 			return lint.PluginDrift{}, false
 		}

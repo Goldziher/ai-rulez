@@ -49,7 +49,7 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 // the optional usage log and the source cache.
 func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
 	flags := cmd.Flags()
-	setup := &mcp.ServeSetup{Version: Version}
+	setup := &mcp.ServeSetup{Version: Version, WorkDir: workingDir()}
 	var err error
 	read := func(name string, f func() error) {
 		if err == nil {

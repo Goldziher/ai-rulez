@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 const kindSkill = "skill"
@@ -249,7 +248,7 @@ func sharedLocalSkills(cfg *config.Config, items *config.ContentTree) []config.O
 // team shares, so they are not written at all.
 func (g *Generator) warnDroppedItems(cfg *config.Config, items *config.ContentTree, known, builtin map[string]bool) {
 	for name, dropped := range g.droppedItems(cfg, items, known, builtin) {
-		logger.Warn("Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written",
+		g.log().Warn("Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written",
 			"preset", name, "items", strings.Join(dropped, ", "))
 	}
 }

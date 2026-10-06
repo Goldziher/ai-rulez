@@ -9,6 +9,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -32,6 +33,9 @@ var contentWarnWriter io.Writer = os.Stderr
 type contentScanner struct {
 	root     string
 	problems []ContentProblem
+	// git answers which files a work tree ignores (bundle filtering); the zero
+	// value runs real git.
+	git gitutil.Git
 }
 
 // newProjectScanner returns a scanner for the project's own content. root is

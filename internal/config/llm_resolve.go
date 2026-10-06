@@ -6,6 +6,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
@@ -48,7 +49,7 @@ func loadUserLLM(path string) (*llm.Config, error) {
 // from the user config file or the environment. getenv may be nil (os.Getenv).
 func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 	if getenv == nil {
-		getenv = os.Getenv
+		getenv = func(name string) string { return ambient.Getenv(nil, name) }
 	}
 	var repo *llm.Config
 	if c != nil {

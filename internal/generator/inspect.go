@@ -1,14 +1,12 @@
 package generator
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 )
 
@@ -34,7 +32,7 @@ func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
 	}
 	sort.Strings(patterns)
 	probes, ranges := flattenProbes(patterns)
-	ignored, err := gitutil.IgnoredAmong(g.config.BaseDir, probes)
+	ignored, err := g.git().IgnoredAmong(g.config.BaseDir, probes)
 	if err != nil || ignored == nil {
 		return nil, nil //nolint:nilerr // git cannot answer: report nothing rather than guess
 	}
@@ -150,7 +148,7 @@ func (g *Generator) MissingMCPEnv(profile string) ([]MissingMCPEnv, error) {
 				if _, ok := g.config.MCPEnvOverrides[name]; ok {
 					continue
 				}
-				if _, ok := os.LookupEnv(name); ok {
+				if _, ok := g.host().LookupEnv(name); ok {
 					continue
 				}
 				if _, ok := dotenv[name]; ok {

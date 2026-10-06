@@ -14,12 +14,14 @@ import (
 //
 // Severities set in [lint] (severity, ignore, ignore_paths) still apply, so a
 // config that silences a rule for strict runs silences it here too.
-func FrontmatterWarnings(cfg *config.Config, tree *Tree) []Finding {
+func FrontmatterWarnings(cfg *config.Config, tree *Tree, opts ...Option) []Finding {
 	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}}
+	for _, opt := range opts {
+		opt(r)
+	}
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
-	r.cwd, _ = os.Getwd() //nolint:errcheck // display paths fall back to absolute
 	r.baseRel = tree.Rel(r.rootAbs())
 	if r.baseRel == "." {
 		r.baseRel = ""

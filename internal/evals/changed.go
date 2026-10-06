@@ -1,24 +1,31 @@
 package evals
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // GitFunc runs git in dir and returns its standard output. Tests replace it.
 type GitFunc func(dir string, args ...string) (string, error)
 
 // ExecGit is the GitFunc that runs the git binary.
-func ExecGit(dir string, args ...string) (string, error) {
-	cmd := gitutil.CommandNoContext(dir, args...)
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
+func ExecGit(dir string, args ...string) (string, error) { return NewGitFunc(nil)(dir, args...) }
+
+// NewGitFunc is the GitFunc that runs git through r (nil: real git).
+func NewGitFunc(r runner.Runner) GitFunc {
+	git := gitutil.New(r)
+	return func(dir string, args ...string) (string, error) {
+		res := git.Exec(context.Background(), dir, nil, args...)
+		if err := gitutil.ResultErr(res); err != nil {
+			return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
+		}
+		return string(res.Stdout), nil
 	}
-	return string(out), nil
 }
 
 // ChangedSkills returns the ids of skills with a changed file below the skill

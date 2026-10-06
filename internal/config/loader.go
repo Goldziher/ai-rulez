@@ -9,10 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -278,6 +280,7 @@ func hasConfigFile(dir string) bool {
 func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
+	config.Host = lo.host
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 
 	// Convert inline MCP servers to map
@@ -285,7 +288,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 
 	// Backward compat: load legacy separate mcp.yaml/mcp.toml if present
 	if legacyServers := loadLegacyMCPFile(configDir); len(legacyServers) > 0 {
-		logger.Warn("Separate mcp.yaml/mcp.toml is deprecated — add mcp_servers to your config file instead")
+		loadHost(lo).Logger().Warn("Separate mcp.yaml/mcp.toml is deprecated — add mcp_servers to your config file instead")
 		for name, server := range legacyServers {
 			if _, exists := config.MCPServers[name]; !exists {
 				config.MCPServers[name] = server
@@ -295,6 +298,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 
 	// Scan content directories
 	scanner := newProjectScanner(baseDir)
+	scanner.git = gitutil.New(loadHost(lo).Runner)
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
@@ -326,6 +330,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 		return config, nil
 	}
 
+	ctx = ambient.WithContext(ctx, loadHost(lo))
 	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
 		return nil, err
 	}
@@ -338,6 +343,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 }
 
 func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Config) error {
+	log := logger.FromContext(ctx)
 	if len(config.Includes) == 0 {
 		return nil
 	}
@@ -349,21 +355,21 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 			Errorf("includes configured but includes resolver is unavailable")
 	}
 
-	logger.Debug("Resolving includes", "count", len(config.Includes))
+	log.Debug("Resolving includes", "count", len(config.Includes))
 
 	mergedContent, err := resolveIncludesFunc(ctx, config)
 	if err != nil {
 		if errors.Is(err, ErrLockViolation) || errors.Is(err, ErrIncludeOutsideProject) {
 			return err
 		}
-		logger.Warn("Failed to resolve includes", "error", err)
+		log.Warn("Failed to resolve includes", "error", err)
 		// Continue with local content only (non-fatal)
 		return nil
 	}
 
 	// Replace content with merged version
 	config.Content = mergedContent
-	logger.Debug("Successfully resolved includes",
+	log.Debug("Successfully resolved includes",
 		"rules", len(mergedContent.Rules),
 		"context", len(mergedContent.Context),
 		"skills", len(mergedContent.Skills),
@@ -373,6 +379,7 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 }
 
 func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
+	log := logger.FromContext(ctx)
 	if len(config.InstalledSkills) == 0 {
 		return nil
 	}
@@ -383,14 +390,14 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 			Errorf("installed skills configured but resolver is unavailable")
 	}
 
-	logger.Debug("Resolving installed skills", "count", len(config.InstalledSkills))
+	log.Debug("Resolving installed skills", "count", len(config.InstalledSkills))
 
 	skills, err := resolveInstalledSkillsFunc(ctx, config)
 	if err != nil {
 		if errors.Is(err, ErrLockViolation) {
 			return err
 		}
-		logger.Warn("Failed to resolve installed skills", "error", err)
+		log.Warn("Failed to resolve installed skills", "error", err)
 		return nil
 	}
 
@@ -416,7 +423,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 	// Merge: local skills win over installed skills
 	for _, s := range skills {
 		if existingNames[s.Name] {
-			logger.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
+			log.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
 			continue
 		}
 		s.Profiles = profilesByName[s.Name]
@@ -424,7 +431,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 		existingNames[s.Name] = true
 	}
 
-	logger.Debug("Successfully resolved installed skills", "count", len(skills))
+	log.Debug("Successfully resolved installed skills", "count", len(skills))
 	return nil
 }
 
@@ -754,6 +761,13 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 // applied to the resources of every skill and command.
 func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
 	return scanContentTree(&contentScanner{}, configDir, bundleExclude)
+}
+
+// ScanContentTreeContext is ScanContentTree whose git questions (which files a
+// work tree ignores) run through the runner ctx carries (runner.WithContext);
+// without one it runs real git.
+func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree, error) {
+	return scanContentTree(&contentScanner{git: gitutil.New(runner.FromContext(ctx))}, configDir, nil)
 }
 
 // scanContentTree scans configDir under the symlink policy held by s.
@@ -1762,4 +1776,14 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 			"commands", len(domain.Commands),
 		)
 	}
+}
+
+// loadHost is the host the load runs under: the one given by WithHost, with the
+// runner of WithRunner when the host names none.
+func loadHost(lo loadOptions) ambient.Host {
+	h := lo.host
+	if h.Runner == nil {
+		h.Runner = lo.runner
+	}
+	return h
 }

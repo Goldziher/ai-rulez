@@ -4,11 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -39,8 +39,8 @@ type ScannerOptions struct {
 	ShowSuppressed bool
 }
 
-func (o ScannerOptions) today() string {
-	for _, candidate := range []struct{ source, value string }{{"--today", o.Today}, {TodayEnv, os.Getenv(TodayEnv)}} {
+func (o ScannerOptions) today(host ambient.Host) string {
+	for _, candidate := range []struct{ source, value string }{{"--today", o.Today}, {TodayEnv, host.GetEnv(TodayEnv)}} {
 		if candidate.value == "" {
 			continue
 		}
@@ -50,7 +50,7 @@ func (o ScannerOptions) today() string {
 		}
 		return candidate.value
 	}
-	return time.Now().UTC().Format(dateLayout)
+	return host.Now().UTC().Format(dateLayout)
 }
 
 func (r *runner) scannerBaselinePath() string {
@@ -131,7 +131,7 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 		if err != nil {
 			r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
 		} else if b != nil {
-			res = ApplyBaseline(rep, b, path, r.opts.Scanner.today())
+			res = ApplyBaseline(rep, b, path, r.opts.Scanner.today(r.host))
 		}
 	}
 	for _, e := range res.Expired {

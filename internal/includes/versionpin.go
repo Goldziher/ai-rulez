@@ -1,7 +1,6 @@
 package includes
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -81,14 +81,11 @@ func TagSpec(w lockfile.Want) tagresolve.Spec {
 
 // runGit runs git for tag listing the way an include fetch does, with env.
 func runGit(ctx context.Context, env []string, args ...string) (string, error) {
-	cmd := gitCmd(ctx, "", args...)
-	cmd.Env = env
-	var out, errOut bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errOut
-	if err := cmd.Run(); err != nil {
-		return "", oops.With("output", RedactURL(strings.TrimSpace(errOut.String()))).Wrapf(err, "git %s", args[0])
+	res := gitRun(ctx, "", env, args...)
+	if err := gitutil.ResultErr(res); err != nil {
+		return "", oops.With("output", RedactURL(strings.TrimSpace(string(res.Stderr)))).Wrapf(err, "git %s", args[0])
 	}
-	return out.String(), nil
+	return string(res.Stdout), nil
 }
 
 // ListRemoteTags lists the tags of a git source (the token goes in a scoped header, never the URL).
@@ -100,7 +97,7 @@ func ListRemoteTags(ctx context.Context, repoURL, token string) ([]tagresolve.Ra
 		return nil, err
 	}
 	runner := func(ctx context.Context, args ...string) (string, error) {
-		return runGit(ctx, withAuth(gitEnvFor(ctx), repoURL, token), args...)
+		return runGit(ctx, withAuth(ctx, gitEnvFor(ctx), repoURL, token), args...)
 	}
 	tags, err := tagresolve.ListTags(ctx, runner, repoURL)
 	if err != nil {

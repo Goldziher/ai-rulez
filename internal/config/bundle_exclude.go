@@ -2,7 +2,7 @@ package config
 
 import (
 	"bytes"
-	"os/exec"
+	"context"
 	"path"
 	"path/filepath"
 	"slices"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // gitDirName is the name of a git metadata directory.
@@ -34,7 +35,7 @@ type bundleFilter struct {
 
 // newBundleFilter builds the filter for one skill or command root. marker is the
 // item's entry file (SKILL.md, COMMAND.md).
-func newBundleFilter(root, marker string, extra []string) *bundleFilter {
+func newBundleFilter(git gitutil.Git, root, marker string, extra []string) *bundleFilter {
 	patterns := make([]string, 0, len(DefaultBundleExcludes)+len(extra))
 	patterns = append(patterns, DefaultBundleExcludes...)
 	for _, p := range extra {
@@ -42,24 +43,26 @@ func newBundleFilter(root, marker string, extra []string) *bundleFilter {
 			patterns = append(patterns, p)
 		}
 	}
-	return &bundleFilter{patterns: patterns, visible: gitVisibleFiles(root, marker)}
+	return &bundleFilter{patterns: patterns, visible: gitVisibleFiles(git, root, marker)}
 }
 
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
 // when that cannot be determined.
-func gitVisibleFiles(root, marker string) map[string]bool {
-	if _, err := exec.LookPath("git"); err != nil {
+func gitVisibleFiles(git gitutil.Git, root, marker string) map[string]bool {
+	ctx := context.Background()
+	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo;
+	// an unavailable git is not an answer either (the ls-files call below fails).
+	if res := git.Exec(ctx, root, nil, "check-ignore", "-q", "--no-index", "--", marker); res.Status == runner.StatusOK {
 		return nil
 	}
-	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo.
-	if err := gitutil.CommandNoContext(root, "check-ignore", "-q", "--no-index", "--", marker).Run(); err == nil {
+	res := git.Exec(ctx, root, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
+	if err := gitutil.ResultErr(res); err != nil {
+		if res.Status != runner.StatusUnavailable {
+			logger.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)
+		}
 		return nil
 	}
-	out, err := gitutil.CommandNoContext(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".").Output()
-	if err != nil {
-		logger.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)
-		return nil
-	}
+	out := res.Stdout
 	visible := make(map[string]bool)
 	for _, name := range bytes.Split(out, []byte{0}) {
 		if len(name) > 0 {
