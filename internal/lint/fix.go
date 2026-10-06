@@ -32,11 +32,16 @@ const (
 
 // Edit replaces one whole line. Old is the line as the lint run saw it (without
 // its line ending); the edit is skipped when the file no longer has it there.
+// After inserts lines (joined by "\n") below the edited line unless they are
+// already there, and FinalNewline makes the file end with a newline; an edit
+// that only inserts has Old == New.
 type Edit struct {
-	File string // absolute
-	Line int    // 1-based
-	Old  string
-	New  string
+	File         string // absolute
+	Line         int    // 1-based
+	Old          string
+	New          string
+	After        string
+	FinalNewline bool
 }
 
 // Chmod adds the executable bit (where the read bit is set) to a file.
@@ -279,8 +284,15 @@ func failedReason(p *plannedFix, failed map[string]string) string {
 
 var errStale = errors.New("the file changed since the lint run; nothing was rewritten")
 
+// diffRow is one line of the before and after of an edited file.
+type diffRow struct {
+	old, new       string
+	hasOld, hasNew bool
+}
+
 // applyEdits rewrites the lines of one file. It returns the unified diff of the
-// change, or "" when no edit applied (already fixed).
+// change, or "" when no edit applied (already fixed). Line endings are kept:
+// an edited line keeps its CR, and a line inserted into a CRLF file gets one.
 func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 	data, err := os.ReadFile(file) //nolint:gosec // a source file the lint run read
 	if err != nil {
@@ -291,37 +303,84 @@ func applyEdits(file string, edits []Edit, dry bool) (string, error) {
 		return "", fmt.Errorf("stat %s: %w", file, err)
 	}
 	oldLines := strings.Split(string(data), "\n")
-	newLines := append([]string(nil), oldLines...)
+	crlf := strings.Contains(string(data), "\r\n")
+	newAt := append([]string(nil), oldLines...)
+	after := make([][]string, len(oldLines))
 	sort.Slice(edits, func(i, j int) bool { return edits[i].Line < edits[j].Line })
-	applied := 0
+	applied, wantEOL := 0, false
 	for _, e := range edits {
-		if e.Line < 1 || e.Line > len(newLines) {
+		if e.Line < 1 || e.Line > len(newAt) {
 			return "", errStale
 		}
-		cur := newLines[e.Line-1]
-		cr := ""
-		if strings.HasSuffix(cur, "\r") {
-			cur, cr = strings.TrimSuffix(cur, "\r"), "\r"
+		idx := e.Line - 1
+		cur, cr := strings.TrimSuffix(newAt[idx], "\r"), ""
+		if strings.HasSuffix(newAt[idx], "\r") {
+			cr = "\r"
 		}
-		switch cur {
-		case e.New:
-			continue // already fixed
-		case e.Old:
-			newLines[e.Line-1] = e.New + cr
-			applied++
-		default:
+		switch {
+		case cur == e.Old:
+			if e.New != e.Old {
+				newAt[idx] = e.New + cr
+				applied++
+			}
+		case cur != e.New:
 			return "", errStale
 		}
+		if e.After != "" {
+			lines := strings.Split(e.After, "\n")
+			if !followedBy(oldLines, idx, lines) {
+				after[idx] = lines
+				applied++
+			}
+		}
+		wantEOL = wantEOL || e.FinalNewline
+	}
+	rows := make([]diffRow, 0, len(oldLines)+1)
+	eol := ""
+	if crlf {
+		eol = "\r"
+	}
+	for i, old := range oldLines {
+		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
+		for _, l := range after[i] {
+			rows = append(rows, diffRow{new: l + eol, hasNew: true})
+		}
+	}
+	if last := rows[len(rows)-1]; wantEOL && last.new != "" {
+		if !strings.HasSuffix(last.new, "\r") {
+			rows[len(rows)-1].new += eol
+		}
+		rows = append(rows, diffRow{hasNew: true})
+		applied++
 	}
 	if applied == 0 {
 		return "", nil
+	}
+	newLines := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if row.hasNew {
+			newLines = append(newLines, row.new)
+		}
 	}
 	if !dry {
 		if err := gitutil.WriteFileAtomic(file, []byte(strings.Join(newLines, "\n")), info.Mode().Perm()); err != nil {
 			return "", fmt.Errorf("write %s: %w", file, err)
 		}
 	}
-	return unifiedDiff(file, oldLines, newLines), nil
+	return unifiedRowDiff(file, rows), nil
+}
+
+// followedBy reports whether the lines right after index idx are lines (CRs ignored).
+func followedBy(file []string, idx int, lines []string) bool {
+	if idx+len(lines) >= len(file) {
+		return false
+	}
+	for i, l := range lines {
+		if strings.TrimSuffix(file[idx+1+i], "\r") != l {
+			return false
+		}
+	}
+	return true
 }
 
 // applyChmod adds the executable bit. did is false when it was already set.
@@ -356,36 +415,64 @@ func applyChmod(file string, dry bool) (line string, did bool, err error) {
 	return sb.String(), did, nil
 }
 
-// unifiedDiff renders a diff of two equally long line slices (every fix rewrites
-// lines in place) with three lines of context.
+// unifiedDiff renders a diff of two equally long line slices (a fix that
+// rewrites lines in place) with three lines of context.
 func unifiedDiff(name string, oldLines, newLines []string) string {
+	rows := make([]diffRow, len(oldLines))
+	for i := range oldLines {
+		rows[i] = diffRow{old: oldLines[i], new: newLines[i], hasOld: true, hasNew: true}
+	}
+	return unifiedRowDiff(name, rows)
+}
+
+// unifiedRowDiff renders rows as a unified diff with three lines of context. A
+// row with only a new side is an inserted line.
+func unifiedRowDiff(name string, rows []diffRow) string {
 	const context = 3
 	var changed []int
-	for i := range oldLines {
-		if oldLines[i] != newLines[i] {
+	for i, r := range rows {
+		if !r.hasOld || !r.hasNew || r.old != r.new {
 			changed = append(changed, i)
 		}
 	}
 	if len(changed) == 0 {
 		return ""
 	}
+	// oldBefore[i] and newBefore[i] count the lines of each side before row i.
+	oldBefore, newBefore := make([]int, len(rows)+1), make([]int, len(rows)+1)
+	for i, r := range rows {
+		oldBefore[i+1], newBefore[i+1] = oldBefore[i], newBefore[i]
+		if r.hasOld {
+			oldBefore[i+1]++
+		}
+		if r.hasNew {
+			newBefore[i+1]++
+		}
+	}
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "--- a/%s\n+++ b/%s\n", filepath.ToSlash(name), filepath.ToSlash(name))
 	for i := 0; i < len(changed); {
 		start := max(changed[i]-context, 0)
-		end := min(changed[i]+context, len(oldLines)-1)
+		end := min(changed[i]+context, len(rows)-1)
 		j := i + 1
 		for j < len(changed) && changed[j]-context <= end+1 {
-			end = min(changed[j]+context, len(oldLines)-1)
+			end = min(changed[j]+context, len(rows)-1)
 			j++
 		}
-		fmt.Fprintf(&sb, "@@ -%d,%d +%d,%d @@\n", start+1, end-start+1, start+1, end-start+1)
+		fmt.Fprintf(&sb, "@@ -%d,%d +%d,%d @@\n", oldBefore[start]+1, oldBefore[end+1]-oldBefore[start], newBefore[start]+1, newBefore[end+1]-newBefore[start])
 		for l := start; l <= end; l++ {
-			if oldLines[l] == newLines[l] {
-				fmt.Fprintf(&sb, " %s\n", oldLines[l])
-				continue
+			r := rows[l]
+			switch {
+			case r.hasOld && r.hasNew && r.old == r.new:
+				fmt.Fprintf(&sb, " %s\n", r.old)
+			default:
+				if r.hasOld {
+					fmt.Fprintf(&sb, "-%s\n", r.old)
+				}
+				if r.hasNew {
+					fmt.Fprintf(&sb, "+%s\n", r.new)
+				}
 			}
-			fmt.Fprintf(&sb, "-%s\n+%s\n", oldLines[l], newLines[l])
 		}
 		i = j
 	}
