@@ -24,7 +24,7 @@ const (
 const maxTranscriptBytes = 64 << 10
 
 // DefaultJudgeCompletionTokens is the least completion budget of a built-in judge call.
-const DefaultJudgeCompletionTokens = 2048
+const DefaultJudgeCompletionTokens = llm.DefaultJudgeCompletionTokens
 
 // completionFloor raises the completion budget of every request to at least min.
 type completionFloor struct {
