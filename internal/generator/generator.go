@@ -98,6 +98,11 @@ type generatedManifest struct {
 
 // NewGenerator creates a new generator
 func NewGenerator(cfg *config.Config) *Generator {
+	if cfg != nil {
+		// [guard] generated = true adds the built-in PreToolUse hook to Hooks, so
+		// every hook renderer treats it as any other group.
+		cfg.EnableGuardHooks(schema.Version)
+	}
 	return &Generator{
 		config: cfg,
 	}
@@ -140,6 +145,10 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	}
 
 	logger.Info("Generating with configuration", "profile", activeProfile)
+	if g.config.HasGuard() {
+		logger.Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
+			"harnesses", config.GuardHarnesses)
+	}
 
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
 		return 0, err
