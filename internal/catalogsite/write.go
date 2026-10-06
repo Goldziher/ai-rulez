@@ -1,14 +1,19 @@
 package catalogsite
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -17,7 +22,9 @@ const (
 	dirMode  = 0o755
 	// maxMarkerBytes bounds the marker read; a real one lists a few thousand paths.
 	maxMarkerBytes = 8 << 20
-	markerHeader   = "# ai-rulez catalog output. Files below were written by `ai-rulez catalog --html`;\n" +
+	// maxSiteFileBytes bounds the read that verifies a file before removing it.
+	maxSiteFileBytes = 256 << 20
+	markerHeader     = "# ai-rulez catalog output. Files below were written by `ai-rulez catalog --html`;\n" +
 		"# `--clean` removes only these. Delete this file to stop ai-rulez touching the directory.\n"
 )
 
@@ -29,8 +36,16 @@ type WriteResult struct {
 
 // Write writes site into dir. The directory must be new, empty or marked with
 // MarkerFile; anything else is refused so `--html .` can never overwrite a
-// project. With clean, files a previous run wrote (listed in the marker) that
-// the new site no longer has are removed; nothing else is ever removed.
+// project, and a directory holding a .git or .ai-rulez folder (a project root) is
+// refused outright. With clean, files a previous run wrote (listed in the marker
+// with their digest) that the new site no longer has are removed; nothing else is
+// ever removed: a listed path must have the shape of a site file and still hold
+// the bytes this command wrote, so a hand-edited marker cannot point it at a
+// project file.
+//
+// The marker is written before the files, listing both the new and the previously
+// listed paths, so an interrupted run never leaves unmarked files behind, and
+// rewritten with the final set afterwards.
 //
 // All access goes through an os.Root, so a symlink inside dir cannot lead a
 // write or a removal outside it.
@@ -49,42 +64,80 @@ func Write(dir string, site *Site, clean bool) (*WriteResult, error) {
 	defer root.Close() //nolint:errcheck // nothing buffered
 
 	paths := site.Paths()
+	next := make(map[string]string, len(paths))
+	for _, p := range paths {
+		next[p] = digestOf(site.Files[p])
+	}
+	// Interim marker: everything this run may write plus everything an earlier run listed.
+	interim := maps.Clone(next)
+	for old, sum := range previous {
+		if _, ok := interim[old]; !ok {
+			interim[old] = sum
+		}
+	}
+	if err := writeMarker(root, interim); err != nil {
+		return nil, err
+	}
 	for _, p := range paths {
 		if err := writeOne(root, p, site.Files[p]); err != nil {
 			return nil, err
 		}
 	}
 	res := &WriteResult{Written: len(paths)}
-	keep := map[string]bool{}
-	for _, p := range paths {
-		keep[p] = true
-	}
-	var listed []string
-	listed = append(listed, paths...)
-	for _, old := range previous {
-		if keep[old] {
+	final := maps.Clone(next)
+	for _, old := range sortedKeys(previous) {
+		if _, keep := next[old]; keep {
 			continue
 		}
-		if clean {
-			if removeOne(root, old) {
-				res.Removed = append(res.Removed, old)
-			}
-		} else if _, statErr := root.Lstat(old); statErr == nil {
-			listed = append(listed, old) // stays listed so a later --clean can remove it
+		if _, statErr := root.Lstat(old); statErr != nil {
+			continue // already gone
+		}
+		if !clean {
+			final[old] = previous[old] // stays listed so a later --clean can remove it
+			continue
+		}
+		if removeOwned(root, old, previous[old]) {
+			res.Removed = append(res.Removed, old)
+		} else {
+			final[old] = previous[old]
 		}
 	}
 	sort.Strings(res.Removed)
-	sort.Strings(listed)
-	marker := markerHeader + strings.Join(listed, "\n") + "\n"
-	if err := writeOne(root, MarkerFile, []byte(marker)); err != nil {
+	if err := writeMarker(root, final); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func digestOf(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func writeMarker(root *os.Root, entries map[string]string) error {
+	var b strings.Builder
+	b.WriteString(markerHeader)
+	for _, p := range sortedKeys(entries) {
+		if sum := entries[p]; sum != "" {
+			b.WriteString(sum + " ")
+		}
+		b.WriteString(p + "\n")
+	}
+	return writeOne(root, MarkerFile, []byte(b.String()))
+}
+
 // prepare creates dir if needed, enforces the marker rule and returns the files
 // the previous run listed.
-func prepare(dir string, clean bool) ([]string, error) {
+func prepare(dir string, clean bool) (map[string]string, error) {
 	info, err := os.Lstat(dir)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -100,6 +153,12 @@ func prepare(dir string, clean bool) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, oops.With("dir", dir).Wrapf(err, "read output directory")
+	}
+	for _, name := range []string{".git", ".ai-rulez"} {
+		if _, statErr := os.Lstat(filepath.Join(dir, name)); statErr == nil {
+			return nil, oops.With("dir", dir).Hint("write the site into its own directory, such as ./site").
+				Errorf("%s holds a %s folder: it is a project root, refusing to write a catalog site into it", dir, name)
+		}
 	}
 	marker := filepath.Join(dir, MarkerFile)
 	mInfo, mErr := os.Lstat(marker)
@@ -128,18 +187,56 @@ func cleanNote(clean bool) string {
 	return ""
 }
 
-// parseMarker returns the listed paths, dropping anything that is not a plain
-// relative path below the directory: the marker is data on disk, not trusted.
-func parseMarker(text string) []string {
-	var out []string
+// parseMarker returns the listed paths with the digest recorded for each ("" when
+// the line has none), dropping anything that is not a plain relative path below
+// the directory: the marker is data on disk, not trusted. A path listed twice
+// keeps its last entry.
+func parseMarker(text string) map[string]string {
+	out := map[string]string{}
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || !safeRel(line) || line == MarkerFile {
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		out = append(out, line)
+		sum := ""
+		if head, tail, ok := strings.Cut(line, " "); ok && isHexDigest(head) {
+			sum, line = head, strings.TrimSpace(tail)
+		}
+		if !safeRel(line) || line == MarkerFile {
+			continue
+		}
+		out[line] = sum
 	}
 	return out
+}
+
+func isHexDigest(s string) bool {
+	if len(s) != sha256.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(s)
+	return err == nil
+}
+
+// siteTopLevel are the files the renderer writes at the top of the site.
+var siteTopLevel = map[string]bool{
+	"index.html": true, "about.html": true, "lint.html": true, "lock.html": true,
+	"catalog.json": true, "robots.txt": true,
+}
+
+// isSiteFile reports whether p has the shape of a file Render produces; --clean
+// removes nothing else, whatever the marker lists.
+func isSiteFile(p string) bool {
+	if siteTopLevel[p] {
+		return true
+	}
+	switch {
+	case strings.HasPrefix(p, "items/"), strings.HasPrefix(p, "roles/"):
+		return strings.HasSuffix(p, ".html")
+	case strings.HasPrefix(p, "assets/"):
+		return !strings.Contains(strings.TrimPrefix(p, "assets/"), "/")
+	}
+	return false
 }
 
 func safeRel(p string) bool {
@@ -179,9 +276,24 @@ func writeOne(root *os.Root, name string, data []byte) error {
 	return nil
 }
 
-// removeOne removes a listed file and any directories it leaves empty; it
-// reports whether the file existed.
-func removeOne(root *os.Root, name string) bool {
+// removeOwned removes a listed file that has the shape of a site file and still
+// holds the bytes this command wrote (the digest the marker recorded), and any
+// directories it leaves empty; it reports whether the file was removed.
+func removeOwned(root *os.Root, name, want string) bool {
+	if want == "" || !isSiteFile(name) {
+		logger.Warn("Not removing a file the catalog marker lists: it is not a verifiable catalog output", "path", name)
+		return false
+	}
+	f, err := root.Open(name)
+	if err != nil {
+		return false
+	}
+	data, readErr := io.ReadAll(io.LimitReader(f, maxSiteFileBytes))
+	_ = f.Close() //nolint:errcheck // read-only
+	if readErr != nil || digestOf(data) != want {
+		logger.Warn("Not removing a catalog file that changed since it was written", "path", name)
+		return false
+	}
 	if err := root.Remove(name); err != nil {
 		return false
 	}
