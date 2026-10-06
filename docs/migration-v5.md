@@ -2,7 +2,8 @@
 
 This page lists every breaking change of v5 with the action it needs. The [changelog](CHANGELOG.md#unreleased) has
 the complete list of additions and fixes. The config format `version` stays `"4.0"`: a v4 `config.toml` loads
-unchanged, and `ai-rulez migrate v4` is still the only config migration.
+unchanged. V2 and V3 configs are no longer read, and `ai-rulez migrate` is gone; see
+[V2 and V3 configs](#v2-and-v3-configs).
 
 Run `ai-rulez doctor` first. It reports removed presets with a replacement, drifted outputs and generated paths
 git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rulez lock` once if you use a lock
@@ -12,6 +13,7 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 
 | Change | Action |
 | ------ | ------ |
+| V2/V3 configs are no longer read: `config.yaml`, `config.yml`, `config.json`, `config.local.yaml`/`.yml`/`.json`, `mcp.yaml`/`.toml`/`.json` and the flat `ai-rulez.yaml`; `migrate` and `init --format` are removed; `version = "3.0"` is rejected | Migrate with ai-rulez 4.x first (`npx ai-rulez@4 migrate v4`), then upgrade; see [V2 and V3 configs](#v2-and-v3-configs) |
 | Go module is `github.com/Goldziher/ai-rulez/v5` and the entry point is `cmd/ai-rulez` | `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`; update Go imports |
 | `windsurf` is renamed `devin`; `continue-dev` is removed | Rename or remove the preset, delete old outputs |
 | `[lock] enforce` is on whenever `ai-rulez.lock` exists | Commit a current lock, or set `enforce = false` |
@@ -34,6 +36,30 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | `--json` is deprecated for `--format json` | Switch scripts to `--format json` |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
+
+## V2 and V3 configs
+
+v5 reads one config format: `.ai-rulez/config.toml` (or `.config/ai-rulez/config.toml`) with its content tree,
+`config.local.toml` and the user `config.toml`. A project that holds only an older file stops with an error that names
+the file and exits `1`; `ai-rulez doctor` reports the same file. Nothing is converted for you in v5, so migrate before
+you upgrade:
+
+```bash
+# V3: .ai-rulez/config.yaml (or .yml / .json), config.local.*, mcp.yaml|toml|json
+npx ai-rulez@4 migrate v4
+
+# V2: a flat ai-rulez.yaml (also .ai-rulez.yaml, ai_rulez.yaml and the .yml forms)
+# move it to .ai-rulez/config.yaml first, then run the command above
+```
+
+Then upgrade to v5, run `ai-rulez generate` and commit `config.toml` with the outputs. The 4.x command writes
+`config.toml`, converts a `config.local.*` overlay to `config.local.toml` and folds a separate MCP file into
+`[[mcp_servers]]`. `version = "3.0"` is rejected with `version = "4.0"` as the fix. `ai-rulez init` always writes
+`config.toml`, so its `--format` flag is gone, and `init --from` writes TOML too. `convert` leaves a `config.yaml` it finds
+alone and reports it as `manual`.
+
+A V3 file nested in a subdirectory is skipped by `generate --recursive` rather than reported: that walk lists only
+`config.toml` files.
 
 ## Go module path and install
 

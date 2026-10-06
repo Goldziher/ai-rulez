@@ -56,7 +56,7 @@ how to do it with `cosign`.
 | `local-include` | the include name | the content directories (`rules`, `context`, `skills`, `agents`, `commands`, `checks`, `domains`) of an include whose `source` is a local path; an OKF include is pinned whole |
 | `hook` | `<event>:<matcher or *>:<n>` | the `[[hooks]]` group as declared and each `script` file |
 | `role` | the role name | the `[[roles]]` entry as declared |
-| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved, including those of a legacy `mcp.yaml`/`mcp.toml`/`mcp.json`) |
+| `settings` | `permissions`, `claude-managed`, `mcp-servers` | the `[permissions]`, `[claude.settings.managed]` and `[[mcp_servers]]` sources (MCP servers as written, placeholders unresolved) |
 
 Declared configuration that is **not** pinned at the source: profiles, `include` configuration, scoped (monorepo)
 configuration, plugin and marketplace authoring, and the machine-local overlay. A change there is caught only through

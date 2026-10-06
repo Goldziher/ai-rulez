@@ -12,7 +12,7 @@ targets:
 # MCP Server and Integrations
 
 - MCP server configuration lives inline in `.ai-rulez/config.toml` as `[[mcp_servers]]` entries.
-- Legacy `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files are loaded for backward compatibility during migration and config loading.
+- Separate `.ai-rulez/mcp.yaml`, `mcp.toml` and `mcp.json` files are no longer read; declare servers as `[[mcp_servers]]`.
 - MCP server definitions are project-level config entries. Domain content does not currently define or override MCP servers.
 - The MCP server exposes read, CRUD, generate, and validate operations for assistants.
 

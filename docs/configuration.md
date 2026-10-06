@@ -14,8 +14,8 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Checks**: Add/edit `.ai-rulez/checks/{name}.md` code-review guidelines (frontmatter `description`, `severity`, `tools`, `targets`) or use `ai-rulez add check`; see [Checks](checks.md)
 - **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent` (`add command` likewise creates commands). The `claude` preset passes the documented Claude Code subagent keys (`disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`) through with their YAML types; other presets ignore them. `validate` and `generate` warn about an agent key no tool reads (with a suggestion) and about a `skills:` entry that names no skill; `validate --strict` reports the same findings as `AR303` and `AR302`
 - **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands,checks}/*.md` files or use `ai-rulez domain add`
-- **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
-- **Machine-local configuration**: Personal content under `.ai-rulez/local/` and a `config.local.*` overlay, both gitignored. See [Local overlay](#local-overlay)
+- **MCP Servers**: Inline in `.ai-rulez/config.toml`
+- **Machine-local configuration**: Personal content under `.ai-rulez/local/` and a `config.local.toml` overlay, both gitignored. See [Local overlay](#local-overlay)
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
@@ -23,9 +23,13 @@ You can either directly edit files with your editor or use CRUD commands for pro
 
 When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
 
-1. `.ai-rulez/config.{toml,yaml,yml,json}` — the tool-specific directory (default)
-2. `.config/ai-rulez/config.{toml,yaml,yml,json}` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
-3. Legacy V2 flat files: `ai-rulez.yaml`, `.ai-rulez.yaml`, and their `.yml` / underscore variants
+1. `.ai-rulez/config.toml` — the tool-specific directory (default)
+2. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
+
+`config.toml` is the only config format read. A project that has only a V3 `config.yaml`, `config.yml` or `config.json`
+(or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`,
+`ai_rulez.yaml` and their `.yml` forms), fails with an error that names the file; migrate it with ai-rulez 4.x
+(`npx ai-rulez@4 migrate v4`), then upgrade. See [Migrating to v5](migration-v5.md).
 
 `.ai-rulez/` wins when both directory layouts exist at the same level. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
 
@@ -105,7 +109,7 @@ args = ["-y", "ai-rulez@latest", "mcp"]
 
 ### `version`
 
-The V4 schema version. Must be `"4.0"` (V3 `"3.0"` is still accepted for backward compatibility).
+The config schema version. Must be `"4.0"`; `"3.0"` is rejected.
 
 ```toml
 version = "4.0"
@@ -290,8 +294,7 @@ emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort
 ```
 
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
-provider-backed presets use the inline-table form shown above. TOML, YAML, and
-JSON configs all accept both.
+provider-backed presets use the inline-table form shown above.
 
 ##### Output path rules
 
@@ -620,7 +623,7 @@ Behavior:
 
 ### `mcp_servers`
 
-Inline MCP (Model Context Protocol) server definitions. No separate `mcp.yaml` file needed.
+Inline MCP (Model Context Protocol) server definitions. A separate `mcp.yaml`, `mcp.toml` or `mcp.json` is no longer read.
 
 ```toml
 [[mcp_servers]]
@@ -1518,7 +1521,7 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 
 ## Local overlay
 
-A `config.local.{toml,yaml,yml,json}` file beside `config.toml` is a machine-local, gitignored overlay
+A `config.local.toml` file beside `config.toml` is a machine-local, gitignored overlay
 that is merged onto this configuration in memory at load time. Use it for personal presets, profiles,
 MCP servers and secrets. It accepts the same keys as `config.toml` (it is validated against
 `schema/ai-rules-local.schema.json`; see [Schema Reference](schema.md)) and merges as follows: scalars
@@ -2047,11 +2050,10 @@ production = ["production-guidelines", "security-hardened"]
 
 ## Validation
 
-For V4 configurations `ai-rulez validate` checks the raw config file against the JSON schema
+`ai-rulez validate` checks the raw config file against the JSON schema
 (`schema/ai-rules.schema.json`) — so an unknown key or a value outside an enum is reported rather
 than silently dropped — and then runs the structural checks below. TOML is converted to JSON for
-the schema check. V3 configurations are still accepted (`version = "3.0"`) and get the structural
-checks only, since the schema is V4-shaped.
+the schema check.
 
 ```bash
 ai-rulez validate
