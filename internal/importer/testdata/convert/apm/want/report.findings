@@ -1,0 +1,26 @@
+needs-action | (hooks) | hooks | config.toml | 1 hook group(s) were written as a commented block, not enabled: each runs a command on your machine. Review them, then uncomment or rerun with --enable-hooks
+dropped | (native files) |  |  | CLAUDE.md, AGENTS.md, .cursor/rules and the other tool files are generated from .apm/ and apm_modules/ and were not imported; use --from native,apm to import both
+mapped | .apm/agents/reviewer.agent.md | agent | agents/reviewer.md | 
+mapped | .apm/context/architecture.context.md | context | context/architecture.md | 
+mapped | .apm/hooks/format.json | hooks.PostToolUse | hooks.PostToolUse | 
+mapped | .apm/instructions/general.instructions.md | rule | rules/general.md | 
+mapped | .apm/instructions/python.instructions.md | rule | rules/python.md | 
+mapped | .apm/prompts/release.prompt.md | command | commands/release.md | 
+approximated | .apm/prompts/release.prompt.md | mode |  | tool-specific key kept verbatim; ai-rulez has no field for it, so only presets that copy unknown keys render it
+mapped | .apm/skills/lint | skill | skills/lint/SKILL.md | 
+needs-action | apm.lock.yaml | dependencies.content_hash |  | 2 content hash(es) not carried: the scheme differs from the ai-rulez lock; run `ai-rulez lock` after converting
+dropped | apm.yml | author, description, name, version |  | package metadata of the APM package is not carried; ai-rulez names the project after its directory
+approximated | apm.yml | dependencies.apm[0] | apm_modules/acme/shared-standards | installed copy imported as local files; the dependency link to https://github.com/acme/shared-standards is not kept, so it no longer updates
+needs-action | apm.yml | dependencies.apm[1] |  | https://github.com/acme/not-installed at main is not fetched: convert uses the network only with --fetch; rerun with --fetch, or add the source by hand (the input's lock file pins it to fedcba987654)
+approximated | apm.yml | dependencies.apm[2] | packages/local-pack | local package imported as local files; the dependency link is not kept
+unsupported | apm.yml | dependencies.apm[3] |  | SSH dependencies are not imported; use an https URL
+needs-action | apm.yml | dependencies.apm[4] |  | https://github.com/anthropics/skills (skills/frontend-design) is not fetched: convert uses the network only with --fetch; rerun with --fetch, or add the source by hand
+unsupported | apm.yml | dependencies.mcp[0] |  | "io.github.github/github-mcp-server" is an MCP registry reference; convert never queries a registry. Add the server to [[mcp_servers]] by hand
+mapped | apm.yml | dependencies.mcp[1] | mcp_servers.docs | 
+mapped | apm.yml | dependencies.mcp[2] | mcp_servers.local-tools | 
+needs-action | apm.yml | mcpServers.local-tools.env.EXAMPLE_API_KEY |  | literal credential replaced by a ${EXAMPLE_API_KEY} reference; export the variable before generating
+dropped | apm.yml | scripts |  | apm scripts run commands of the apm runtime; ai-rulez has no equivalent and imports none
+mapped | apm.yml | target.claude | presets.claude | 
+mapped | apm.yml | target.copilot | presets.copilot | 
+mapped | apm_modules/acme/shared-standards/.apm/instructions/security.instructions.md | rule | rules/security.md | 
+mapped | packages/local-pack/.apm/prompts/hello.prompt.md | command | commands/hello.md | 

@@ -1,0 +1,27 @@
+name: team-standards
+version: 1.0.0
+description: Team coding standards and agent skills
+author: Platform Team
+target: [claude, copilot]
+
+dependencies:
+  apm:
+    - acme/shared-standards#v1.2.0
+    - acme/not-installed#main
+    - ./packages/local-pack
+    - git@github.com:acme/private-standards.git
+    - anthropics/skills/skills/frontend-design
+  mcp:
+    - io.github.github/github-mcp-server
+    - name: docs
+      transport: http
+      url: https://docs.example.com/mcp
+    - name: local-tools
+      transport: stdio
+      command: npx
+      args: ["-y", "@example/tools-mcp"]
+      env:
+        EXAMPLE_API_KEY: ghp_abcdefghijklmnopqrstuvwxyz0123456789
+
+scripts:
+  start: "echo start"

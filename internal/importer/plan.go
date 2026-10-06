@@ -177,7 +177,10 @@ type Plan struct {
 	// disabled unless the caller opts in (see hooks.go).
 	Hooks       []config.HookGroup
 	Permissions config.Permissions
-	Findings    []Finding
+	// Remotes are git sources the input names but does not hold; they are read
+	// only when the caller asks to fetch (see fetch.go).
+	Remotes  []Remote
+	Findings []Finding
 
 	// presetDefaulted is set when no preset was inferred and claude was chosen.
 	presetDefaulted bool
@@ -220,7 +223,7 @@ type Format interface {
 
 // Registry returns every format importer, sorted by name.
 func Registry() []Format {
-	return []Format{nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}}
+	return []Format{apmImporter{}, nativeImporter{}, rulesyncImporter{}, skillsLockImporter{}}
 }
 
 // Lookup returns the importer with the given name.
@@ -245,6 +248,7 @@ func (p *Plan) merge(other *Plan) {
 	p.MCPServers = append(p.MCPServers, other.MCPServers...)
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
 	p.Hooks = append(p.Hooks, other.Hooks...)
+	p.Remotes = append(p.Remotes, other.Remotes...)
 	p.Permissions.Allow = append(p.Permissions.Allow, other.Permissions.Allow...)
 	p.Permissions.Ask = append(p.Permissions.Ask, other.Permissions.Ask...)
 	p.Permissions.Deny = append(p.Permissions.Deny, other.Permissions.Deny...)
