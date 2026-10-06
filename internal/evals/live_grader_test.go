@@ -73,8 +73,7 @@ func TestLiveBuiltinGraderAgainstClaudeOwnGrading(t *testing.T) {
 	if configDir == "" || os.Getenv(liveGraderKey) == "" {
 		t.Skipf("set AI_RULEZ_LIVE_EVALS_PROJECT and %s", liveGraderKey)
 	}
-	runs := envInt("AI_RULEZ_LIVE_RUNS", 2)
-	budget := envFloat("AI_RULEZ_LIVE_CLAUDE_BUDGET", 0.60)
+	runs, budget := envInt("AI_RULEZ_LIVE_RUNS", 2), envFloat("AI_RULEZ_LIVE_CLAUDE_BUDGET", 0.60)
 	want := map[string]bool{}
 	for _, id := range strings.Split(os.Getenv("AI_RULEZ_LIVE_SKILLS"), ",") {
 		if id = strings.TrimSpace(id); id != "" {
