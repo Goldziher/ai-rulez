@@ -165,8 +165,8 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 	wg.Wait()
 
 	usage := j.Usage()
-	usage.add(pj.Usage())
-	usage.add(rj.Usage())
+	usage.Add(pj.Usage())
+	usage.Add(rj.Usage())
 	rep := &CalibrationReport{Usage: usage, Cases: results}
 	if fatal != nil {
 		rep.Incomplete, rep.StoppedBecause = true, strings.TrimPrefix(fatal.Error(), ErrFatal.Error()+": ")

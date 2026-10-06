@@ -91,7 +91,8 @@ type RunUsage struct {
 	Models       map[string]int `json:"models,omitempty"`
 }
 
-func (u *RunUsage) add(o RunUsage) {
+// Add sums another run into u.
+func (u *RunUsage) Add(o RunUsage) {
 	u.Calls += o.Calls
 	u.Cached += o.Cached
 	u.Tokens += o.Tokens
