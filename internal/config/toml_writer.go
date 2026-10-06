@@ -50,6 +50,7 @@ type tomlOutput struct {
 	OKF             *OKFConfig             `toml:"okf,omitempty"`
 	Verifiers       []VerifierConfig       `toml:"verifiers,omitempty"`
 	Usage           *UsageConfig           `toml:"usage,omitempty"`
+	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings,omitempty"`
 	Skills          *SkillsConfig          `toml:"skills,omitempty"`
 	DomainSettings  DomainConfigs          `toml:"domains,omitempty"`
 	SkillSources    []SkillSourceConfig    `toml:"skill_sources,omitempty"`
@@ -147,6 +148,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Usage:           cfg.Usage,
 		Skills:          cfg.Skills,
 		DomainSettings:  cfg.DomainSettings,
+		VerifiersSet:    cfg.VerifiersSettings,
 		SkillSources:    cfg.SkillSources,
 		Roles:           cfg.Roles,
 		RoleManifest:    cfg.RoleManifest,

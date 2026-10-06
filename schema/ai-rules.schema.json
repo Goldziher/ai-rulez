@@ -1537,6 +1537,43 @@
           },
           "additionalProperties": false
         },
+    "verifiers_settings": {
+      "type": "object",
+      "description": "Limits and policy of `ai-rulez verifiers run`.",
+      "additionalProperties": false,
+      "properties": {
+        "max_timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900,
+          "description": "Cap on a command predicate's timeout_s. Default 300."
+        },
+        "max_file_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864,
+          "description": "Largest file a content predicate reads. Default 5 MiB."
+        },
+        "require_examples": {
+          "type": "boolean",
+          "description": "Report a verifier without self-test examples (AR9H6)."
+        },
+        "warn_dead": {
+          "type": "boolean",
+          "description": "Report a verifier whose when_changed matches no file (AR9H5) on every run."
+        },
+        "trust_exec_from": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Includes whose verifiers may use the command predicate; the include must be pinned in ai-rulez.lock."
+        },
+        "command_env": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra environment variable names passed to command predicates. Credential-looking names are refused."
+        }
+      }
+    },
         "load_budgets": {
           "type": "object",
           "description": "Overrides the harness load limits AR964 checks, keyed by the limit id (for example `claude-skill-listing`, `codex-agents-chain`, `cursor-rule-lines`); the value is in the limit's own unit. Not to be confused with `budgets`, the size limits per content kind.",

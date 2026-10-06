@@ -2974,3 +2974,44 @@
   "title": "AI Rules Local Overlay Configuration",
   "type": "object"
 }
+    "verifiers_settings": {
+      "additionalProperties": false,
+      "description": "Limits and policy of `ai-rulez verifiers run`.",
+      "properties": {
+        "command_env": {
+          "description": "Extra environment variable names passed to command predicates. Credential-looking names are refused.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_file_bytes": {
+          "description": "Largest file a content predicate reads. Default 5 MiB.",
+          "maximum": 67108864,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_timeout_s": {
+          "description": "Cap on a command predicate's timeout_s. Default 300.",
+          "maximum": 900,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "require_examples": {
+          "description": "Report a verifier without self-test examples (AR9H6).",
+          "type": "boolean"
+        },
+        "trust_exec_from": {
+          "description": "Includes whose verifiers may use the command predicate; the include must be pinned in ai-rulez.lock.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "warn_dead": {
+          "description": "Report a verifier whose when_changed matches no file (AR9H5) on every run.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },

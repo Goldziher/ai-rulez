@@ -82,6 +82,8 @@ type Config struct {
 	// distributable plugin bundle and its marketplace index. Distinct from the
 	// consumer Plugins/Marketplaces fields above.
 	Plugin      *PluginAuthoring      `yaml:"plugin,omitempty" json:"plugin,omitempty" toml:"plugin,omitempty"`
+	// VerifiersSettings holds the limits and policy of `verifiers run` ([verifiers_settings]).
+	VerifiersSettings *VerifiersSettings `yaml:"verifiers_settings,omitempty" json:"verifiers_settings,omitempty" toml:"verifiers_settings,omitempty"`
 	Marketplace *MarketplaceAuthoring `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
 
 	// Placement decides whether skills and commands are generated into
@@ -703,6 +705,9 @@ type ContentTree struct {
 // Domain represents content from a specific domain directory
 type Domain struct {
 	Name          string        `yaml:"name" json:"name"`
+	// ImportedVerifiers are the verifier declaration files of includes; the
+	// project's own are read from its configuration directory.
+	ImportedVerifiers []ImportedVerifierFile `yaml:"-" json:"-"`
 	Rules         []ContentFile `yaml:"rules,omitempty" json:"rules,omitempty"`
 	Context       []ContentFile `yaml:"context,omitempty" json:"context,omitempty"`
 	Skills        []ContentFile `yaml:"skills,omitempty" json:"skills,omitempty"`

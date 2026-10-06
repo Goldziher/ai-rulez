@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/samber/oops"
 )
@@ -16,6 +17,9 @@ var verifierNameRe = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 // validateVerifiers checks every [[verifiers]] entry: unique safe names, a
 // known type, the fields that type needs, and patterns that compile.
 func (c *Config) validateVerifiers() error {
+	if err := c.validateVerifiersSettings(); err != nil {
+		return err
+	}
 	seen := map[string]bool{}
 	for i := range c.Verifiers {
 		v := &c.Verifiers[i]
@@ -56,6 +60,10 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 		known = known || t == v.Type
 	}
 	if !known {
+		if v.Type == "command" {
+			return oops.Hint("The command predicate is spec-form only: declare [verifiers.require.command] under a rule-linked verifier (see docs/verifiers.md).").
+				Errorf("unknown verifier type %q at %s.type", v.Type, field)
+		}
 		return oops.Hint("Use one of: "+strings.Join(VerifierTypes, ", ")).
 			Errorf("unknown verifier type %q at %s.type", v.Type, field)
 	}
@@ -266,6 +274,53 @@ func validateVerifierSpecForm(v *VerifierConfig, field string) error {
 	for i, g := range append(append([]string{}, v.WhenChanged...), v.Exclude...) {
 		if _, err := vspec.CompileGlob(g); err != nil {
 			return oops.Wrapf(err, "invalid verifier %s glob #%d %q", field, i, g)
+		}
+	}
+	return nil
+}
+
+// Bounds of [verifiers_settings].
+const (
+	maxVerifierTimeoutS = 900
+	maxVerifierFileMiB  = 64
+)
+
+// validateVerifiersSettings checks [verifiers_settings]: sane limits, command_env
+// names that are real variable names and not credentials, and trust_exec_from
+// entries that name a declared include.
+func (c *Config) validateVerifiersSettings() error {
+	s := c.VerifiersSettings
+	if s == nil {
+		return nil
+	}
+	if s.MaxTimeoutS < 0 || s.MaxTimeoutS > maxVerifierTimeoutS {
+		return oops.With("field", "verifiers_settings.max_timeout_s").
+			Errorf("verifiers_settings.max_timeout_s must be between 1 and %d seconds", maxVerifierTimeoutS)
+	}
+	if s.MaxFileBytes < 0 || s.MaxFileBytes > maxVerifierFileMiB<<20 {
+		return oops.With("field", "verifiers_settings.max_file_bytes").
+			Errorf("verifiers_settings.max_file_bytes must be between 1 and %d bytes", maxVerifierFileMiB<<20)
+	}
+	for _, name := range s.CommandEnv {
+		if !runner.ValidEnvName(name) {
+			return oops.With("field", "verifiers_settings.command_env").
+				Errorf("verifiers_settings.command_env entry %q is not an environment variable name", name)
+		}
+		if runner.Sensitive(name) {
+			return oops.With("field", "verifiers_settings.command_env").
+				Hint("A verifier command has no network sandbox, so credentials and proxy settings are never passed to it.").
+				Errorf("verifiers_settings.command_env entry %q looks like a credential or proxy setting", name)
+		}
+	}
+	declared := map[string]bool{}
+	for i := range c.Includes {
+		declared[c.Includes[i].Name] = true
+	}
+	for _, name := range s.TrustExecFrom {
+		if !declared[name] {
+			return oops.With("field", "verifiers_settings.trust_exec_from").
+				Hint("Name an entry of [[includes]].").
+				Errorf("verifiers_settings.trust_exec_from entry %q is not a declared include", name)
 		}
 	}
 	return nil

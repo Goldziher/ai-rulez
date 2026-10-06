@@ -1258,6 +1258,23 @@ A field that does not apply to the type is a configuration error, as is a glob t
 that is not `.json`, `.yaml`, `.yml` or `.toml`, and a `profile` that is not defined. `config.local.toml` may declare
 `[[verifiers]]` too; entries merge by `name`.
 
+### `verifiers_settings`
+
+Limits and policy of `ai-rulez verifiers run` (the name differs from the array because TOML cannot use one key as both).
+
+```toml
+[verifiers_settings]
+max_timeout_s = 300           # cap on a command predicate's timeout_s (1 to 900)
+max_file_bytes = 5242880      # largest file a content predicate reads (default 5 MiB)
+require_examples = false      # AR9H6 for a spec verifier without examples
+warn_dead = false             # AR9H5 for a when_changed that matches no file, on every run
+trust_exec_from = []          # includes whose verifiers may use the command predicate (also pin them in the lock)
+command_env = []              # extra environment variable names passed to command predicates
+```
+
+Credential-looking and proxy names in `command_env` and unknown includes in `trust_exec_from` are configuration errors.
+The table is pinned in the lock. See [Verifiers](verifiers.md#settings).
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
