@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/samber/oops"
@@ -127,7 +128,10 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 		if res.Status != StatusFail && res.Code != CodeVerifierInvalid {
 			continue
 		}
-		ruleID := res.Code + "/" + res.Name
+		ruleID := res.Name
+		if res.Code != "" {
+			ruleID = res.Code + "/" + res.Name
+		}
 		idx, ok := index[ruleID]
 		if !ok {
 			idx = len(rules)
@@ -154,8 +158,11 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 
 func sarifRuleFor(ruleID string, res Result) sarifRule {
 	desc := res.Description
-	if desc == "" {
+	if desc == "" && res.Target != nil {
 		desc = res.Message
+	}
+	if desc == "" {
+		desc = "verifier " + res.Name + " (" + res.Type + ")"
 	}
 	rule := sarifRule{
 		ID: ruleID, Name: res.Name, ShortDescription: sarifText{Text: sanitize(desc)},
@@ -180,14 +187,15 @@ func sarifResultsFor(res Result, ruleID string, idx int) []sarifResult {
 		findings = []Finding{{Message: res.Message}}
 	}
 	out := make([]sarifResult, 0, len(findings))
+	seen := map[string]int{}
 	for _, f := range findings {
 		msg := f.Message
-		if res.Message != "" && res.Message != summarize(res.Findings) && len(res.Findings) > 0 {
+		if res.Target != nil && res.Message != "" && res.Message != summarize(res.Findings) && len(res.Findings) > 0 {
 			msg = res.Message + " (" + f.Message + ")"
 		}
 		sr := sarifResult{
 			RuleID: ruleID, RuleIndex: idx, Level: level, Message: sarifText{Text: sanitize(msg)},
-			PartialFingerprints: map[string]string{fingerprintKey: fingerprint(res.Name, f)},
+			PartialFingerprints: map[string]string{fingerprintKey: occurrenceFingerprint(seen, res.Name, f)},
 			Properties:          sarifResultExt{Verifier: res.Name, Code: res.Code, Fix: sanitize(res.Fix)},
 		}
 		if res.Target != nil {
@@ -217,6 +225,18 @@ func physical(p string, line int) sarifPhysical {
 		ph.Region = &sarifRegion{StartLine: line}
 	}
 	return ph
+}
+
+// occurrenceFingerprint is fingerprint with a counter for findings that hash the
+// same (two matches of one pattern in a file), so each result stays distinct and
+// the numbering does not depend on line numbers.
+func occurrenceFingerprint(seen map[string]int, verifier string, f Finding) string {
+	fp := fingerprint(verifier, f)
+	seen[fp]++
+	if n := seen[fp]; n > 1 {
+		return fingerprint(verifier+"#"+strconv.Itoa(n), f)
+	}
+	return fp
 }
 
 // fingerprint hashes the verifier id, the subject path and the normalized

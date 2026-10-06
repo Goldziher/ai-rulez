@@ -319,3 +319,35 @@ func TestRunVerifiers_JSONFollowsTheSchema(t *testing.T) {
 
 	validateAgainst(t, "../../schema/verifiers-report.schema.json", out.Bytes())
 }
+
+func TestVerifierRunOptionsJSONFlagConflict(t *testing.T) {
+	tests := []struct {
+		name       string
+		json       bool
+		format     string
+		wantFormat string
+		wantErr    bool
+	}{
+		{"json alone", true, "", "json", false},
+		{"json with json", true, "json", "json", false},
+		{"json with text", true, "text", "", true},
+		{"json with sarif", true, "sarif", "", true},
+		{"format alone", false, "junit", "junit", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldJ, oldF := verifiersJSON, verifiersFormat
+			t.Cleanup(func() { verifiersJSON, verifiersFormat = oldJ, oldF })
+			verifiersJSON, verifiersFormat = tt.json, tt.format
+
+			_, format, _, err := verifierRunOptions()
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if format != tt.wantFormat {
+				t.Fatalf("format = %q, want %q", format, tt.wantFormat)
+			}
+		})
+	}
+}

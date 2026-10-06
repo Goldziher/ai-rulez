@@ -192,7 +192,7 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 	case "sarif":
 		err = verifiers.WriteSARIF(&buf, report, Version)
 	case "junit":
-		err = verifiers.WriteJUnit(&buf, report)
+		err = verifiers.WriteJUnit(&buf, report, failOn)
 	default:
 		err = verifiers.WriteText(&buf, report)
 	}
@@ -226,7 +226,10 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 		return opts, "", "", oops.New("use only one of --since, --staged and --all")
 	}
 	format = verifiersFormat
-	if format == "" && verifiersJSON {
+	if verifiersJSON {
+		if format != "" && format != "json" {
+			return opts, "", "", oops.Hint("Drop --json, or use --format json.").Errorf("--json conflicts with --format %s", format)
+		}
 		format = "json"
 	}
 	switch format {

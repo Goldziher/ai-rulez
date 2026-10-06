@@ -37,7 +37,7 @@ func predFileExists(ctx context.Context, env *Env, v config.VerifierConfig) (Out
 		return Outcome{}, err
 	}
 	if !exists {
-		return Outcome{Message: v.Path + " does not exist"}, nil
+		return Outcome{Message: v.Path + " does not exist", Findings: []Finding{{File: v.Path, Message: "file does not exist"}}}, nil
 	}
 	return Outcome{Pass: true}, nil
 }
@@ -48,7 +48,7 @@ func predFileAbsent(ctx context.Context, env *Env, v config.VerifierConfig) (Out
 		return Outcome{}, err
 	}
 	if exists {
-		return Outcome{Message: v.Path + " exists"}, nil
+		return Outcome{Message: v.Path + " exists", Findings: []Finding{{File: v.Path, Message: "file exists but must not"}}}, nil
 	}
 	return Outcome{Pass: true}, nil
 }
@@ -66,7 +66,8 @@ func predGlobCount(ctx context.Context, env *Env, v config.VerifierConfig) (Outc
 		return Outcome{Message: fmt.Sprintf("%d file(s) match %s, expected at least %d", n, v.Glob, *v.Min)}, nil
 	}
 	if v.Max != nil && n > *v.Max {
-		return Outcome{Message: fmt.Sprintf("%d file(s) match %s, expected at most %d: %s", n, v.Glob, *v.Max, listFirst(matched))}, nil
+		return Outcome{Message: fmt.Sprintf("%d file(s) match %s, expected at most %d: %s", n, v.Glob, *v.Max, listFirst(matched)),
+			Findings: fileFindings(matched, "matches "+v.Glob+" but more files match than allowed")}, nil
 	}
 	return Outcome{Pass: true, Message: fmt.Sprintf("%d file(s)", n)}, nil
 }
@@ -117,7 +118,8 @@ func predRegex(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome,
 		}
 	}
 	if len(missing) > 0 {
-		return Outcome{Message: fmt.Sprintf("pattern %q not found in %s", v.Pattern, listFirst(missing))}, nil
+		return Outcome{Message: fmt.Sprintf("pattern %q not found in %s", v.Pattern, listFirst(missing)),
+			Findings: fileFindings(missing, fmt.Sprintf("pattern %q not found", v.Pattern))}, nil
 	}
 	if len(skipped) > 0 {
 		return Outcome{}, unchecked(skipped)
@@ -141,6 +143,7 @@ func predForbid(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome
 	// without counting every match, and stop as soon as that many are found.
 	const hitCap = maxReported + 1
 	var hits, skipped []string
+	var hitFindings []Finding
 	checked := 0
 scan:
 	for _, f := range files {
@@ -160,6 +163,8 @@ scan:
 			line += bytes.Count(data[prev:loc[0]], []byte{'\n'})
 			prev = loc[0]
 			hits = append(hits, fmt.Sprintf("%s:%d", f, line))
+			hitFindings = append(hitFindings, Finding{File: f, Line: line, Message: fmt.Sprintf("forbidden pattern %q", v.Pattern),
+				Match: excerpt(data, loc[0], loc[1])})
 		}
 		if len(hits) >= hitCap {
 			break scan
@@ -175,12 +180,21 @@ scan:
 		if len(skipped) > 0 {
 			msg += fmt.Sprintf("; %d file(s) were not fully checked (binary or over %d MiB)", len(skipped), maxFileBytes>>20)
 		}
-		return Outcome{Message: msg}, nil
+		return Outcome{Message: msg, Findings: hitFindings[:min(len(hitFindings), maxReported)]}, nil
 	}
 	if len(skipped) > 0 {
 		return Outcome{}, unchecked(skipped)
 	}
 	return Outcome{Pass: true, Message: fmt.Sprintf("%d file(s)", checked)}, nil
+}
+
+// fileFindings makes one finding per file, up to the reporting cap.
+func fileFindings(files []string, msg string) []Finding {
+	out := make([]Finding, 0, min(len(files), maxReported))
+	for _, f := range files[:min(len(files), maxReported)] {
+		out = append(out, Finding{File: f, Message: msg})
+	}
+	return out
 }
 
 func isBinary(data []byte) bool { return bytes.IndexByte(data, 0) >= 0 }
@@ -195,7 +209,7 @@ func predKeyEquals(ctx context.Context, env *Env, v config.VerifierConfig) (Outc
 	case ".toml":
 		decode = toml.Unmarshal
 	default:
-		return Outcome{Message: fmt.Sprintf("%s: unsupported format (use .json, .yaml, .yml or .toml)", v.Path)}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s: unsupported format (use .json, .yaml, .yml or .toml)", v.Path)), nil
 	}
 	segs, err := vspec.ParseKey(v.Key)
 	if err != nil {
@@ -217,21 +231,21 @@ func predKeyEquals(ctx context.Context, env *Env, v config.VerifierConfig) (Outc
 	}
 	var doc any
 	if err := decode(data, &doc); err != nil {
-		return Outcome{Message: fmt.Sprintf("%s does not parse: %v", v.Path, err)}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s does not parse: %v", v.Path, err)), nil
 	}
 	val, found := lookupKey(doc, segs)
 	if !found {
-		return Outcome{Message: fmt.Sprintf("%s has no key %s", v.Path, v.Key)}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s has no key %s", v.Path, v.Key)), nil
 	}
 	if val == nil {
-		return Outcome{Message: fmt.Sprintf("%s: %s is null, expected %q", v.Path, v.Key, derefString(v.Equals))}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s: %s is null, expected %q", v.Path, v.Key, derefString(v.Equals))), nil
 	}
 	got, scalar := scalarString(val)
 	if !scalar {
-		return Outcome{Message: fmt.Sprintf("%s: %s is not a scalar value", v.Path, v.Key)}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s: %s is not a scalar value", v.Path, v.Key)), nil
 	}
 	if want := derefString(v.Equals); got != want {
-		return Outcome{Message: fmt.Sprintf("%s: %s is %q, expected %q", v.Path, v.Key, got, want)}, nil
+		return keyFail(v.Path, fmt.Sprintf("%s: %s is %q, expected %q", v.Path, v.Key, got, want)), nil
 	}
 	return Outcome{Pass: true}, nil
 }
@@ -272,7 +286,15 @@ func predGeneratedInSync(_ context.Context, env *Env, v config.VerifierConfig) (
 		return Outcome{}, oops.Wrapf(err, "render generated outputs")
 	}
 	if len(files) > 0 {
-		return Outcome{Message: "generated files differ from their sources: " + listFirst(files) + " (run `ai-rulez generate`)"}, nil
+		findings := make([]Finding, 0, len(files))
+		for _, f := range files[:min(len(files), maxReported)] {
+			_, p, ok := strings.Cut(f, ": ")
+			if !ok {
+				p = f
+			}
+			findings = append(findings, Finding{File: p, Message: "generated file differs from its sources"})
+		}
+		return Outcome{Message: "generated files differ from their sources: " + listFirst(files) + " (run `ai-rulez generate`)", Findings: findings}, nil
 	}
 	return Outcome{Pass: true}, nil
 }
@@ -291,4 +313,9 @@ func listCapped(items []string) string {
 		return strings.Join(items, ", ")
 	}
 	return strings.Join(items[:maxReported], ", ") + " and more"
+}
+
+// keyFail is a failed key_equals outcome located at the file.
+func keyFail(path, msg string) Outcome {
+	return Outcome{Message: msg, Findings: []Finding{{File: path, Message: "key check failed"}}}
 }

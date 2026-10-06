@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 
+	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -551,7 +552,7 @@ func TestWriteSARIF_FingerprintSurvivesLineShift(t *testing.T) {
 func TestWriteJUnit_OneSuitePerRule(t *testing.T) {
 	var buf bytes.Buffer
 
-	require.NoError(t, WriteJUnit(&buf, failingReport(t)))
+	require.NoError(t, WriteJUnit(&buf, failingReport(t), "error"))
 
 	var doc junitSuites
 	require.NoError(t, xml.Unmarshal(buf.Bytes(), &doc))
@@ -666,4 +667,109 @@ func TestWriteSARIF_ReportsARunLevelError(t *testing.T) {
 	notes := inv["toolExecutionNotifications"].([]any)
 	require.Len(t, notes, 1)
 	assert.Contains(t, notes[0].(map[string]any)["message"].(map[string]any)["text"], "cannot be combined")
+}
+
+func flatReport(t *testing.T, severity string) *Report {
+	t.Helper()
+	root := writeFiles(t, map[string]string{"src/a.go": "package a\n// TODO(x)\n\n// TODO(y)\n"})
+	cfg := &config.Config{BaseDir: root, Verifiers: []config.VerifierConfig{
+		{Name: "no-todo", Type: "forbid", Glob: "src/*.go", Pattern: "TODO", Severity: severity},
+		{Name: "need-license", Type: "file_exists", Path: "LICENSE", Severity: severity},
+	}}
+	return Run(context.Background(), cfg, Options{})
+}
+
+func TestWriteSARIF_FlatVerifiersAreLocatedAndNamed(t *testing.T) {
+	// Arrange
+	var buf bytes.Buffer
+
+	// Act
+	require.NoError(t, WriteSARIF(&buf, flatReport(t, "error"), "1.2.3"))
+
+	// Assert
+	var doc struct {
+		Runs []struct {
+			Tool struct {
+				Driver struct {
+					Rules []struct {
+						ID               string `json:"id"`
+						ShortDescription struct {
+							Text string `json:"text"`
+						} `json:"shortDescription"`
+					} `json:"rules"`
+				} `json:"driver"`
+			} `json:"tool"`
+			Results []struct {
+				RuleID    string `json:"ruleId"`
+				Locations []struct {
+					PhysicalLocation struct {
+						ArtifactLocation struct {
+							URI string `json:"uri"`
+						} `json:"artifactLocation"`
+						Region struct {
+							StartLine int `json:"startLine"`
+						} `json:"region"`
+					} `json:"physicalLocation"`
+				} `json:"locations"`
+				PartialFingerprints map[string]string `json:"partialFingerprints"`
+			} `json:"results"`
+		} `json:"runs"`
+	}
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &doc))
+	results := doc.Runs[0].Results
+	require.Len(t, results, 3)
+	seen := map[string]bool{}
+	for _, r := range results {
+		assert.Contains(t, []string{"no-todo", "need-license"}, r.RuleID, "rule id is the verifier name when there is no code")
+		require.Len(t, r.Locations, 1)
+		fp := r.PartialFingerprints[fingerprintKey]
+		assert.False(t, seen[fp], "fingerprints are unique")
+		seen[fp] = true
+	}
+	assert.Equal(t, "src/a.go", results[0].Locations[0].PhysicalLocation.ArtifactLocation.URI)
+	assert.Equal(t, 2, results[0].Locations[0].PhysicalLocation.Region.StartLine)
+	for _, rule := range doc.Runs[0].Tool.Driver.Rules {
+		assert.NotContains(t, rule.ShortDescription.Text, "forbidden pattern", "the rule text describes the verifier, not its first failure")
+	}
+	validateSARIFSchema(t, buf.Bytes())
+}
+
+func validateSARIFSchema(t *testing.T, doc []byte) {
+	t.Helper()
+	schemaBytes, err := os.ReadFile(filepath.Join("..", "lint", "testdata", "sarif-schema-2.1.0.json"))
+	require.NoError(t, err)
+	compiled, err := jsonschema.NewCompiler().Compile(schemaBytes)
+	require.NoError(t, err)
+	var v any
+	require.NoError(t, json.Unmarshal(doc, &v))
+	res := compiled.Validate(v)
+	if !res.IsValid() {
+		for field, e := range res.Errors {
+			t.Errorf("SARIF schema violation at %s: %v", field, e)
+		}
+		t.Fatalf("not valid SARIF 2.1.0:\n%s", doc)
+	}
+}
+
+func TestWriteJUnit_FailuresBelowTheThresholdPass(t *testing.T) {
+	tests := []struct {
+		name, severity, failOn string
+		wantFailures           int
+	}{
+		{"warning with default threshold passes", "warning", "error", 0},
+		{"warning with strict fails", "warning", "warning", 3},
+		{"error fails", "error", "error", 3},
+		{"none never fails", "error", "none", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			require.NoError(t, WriteJUnit(&buf, flatReport(t, tt.severity), tt.failOn))
+
+			var doc junitSuites
+			require.NoError(t, xml.Unmarshal(buf.Bytes(), &doc))
+			assert.Equal(t, tt.wantFailures, doc.Failed)
+		})
+	}
 }
