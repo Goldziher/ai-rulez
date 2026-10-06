@@ -289,7 +289,7 @@ func inIncludeRoot(baseDir string, inc *config.IncludeConfig, p string) bool {
 	if includes.IsGitURL(inc.Source) {
 		segs := strings.Split(filepath.ToSlash(p), "/")
 		for i := 0; i+1 < len(segs); i++ {
-			if segs[i] == "includes" && cacheDirOf(segs[i+1], inc.Name) {
+			if segs[i] == "includes" && includes.CacheDirMatches(segs[i+1], inc.Name) {
 				return true
 			}
 		}
@@ -300,40 +300,6 @@ func inIncludeRoot(baseDir string, inc *config.IncludeConfig, p string) bool {
 		root = filepath.Join(baseDir, root)
 	}
 	return !outsideRoot(filepath.Clean(root), p)
-}
-
-// cacheDirOf matches the cache directory name of an include: its name, a dash
-// and a 12 character hash.
-func cacheDirOf(seg, name string) bool {
-	prefix := safeCacheName(name) + "-"
-	hash := strings.TrimPrefix(seg, prefix)
-	if hash == seg || len(hash) != 12 {
-		return false
-	}
-	for _, r := range hash {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return false
-		}
-	}
-	return true
-}
-
-// safeCacheName mirrors how the includes package turns an include name into one
-// cache path segment.
-func safeCacheName(name string) string {
-	var b strings.Builder
-	for _, r := range name {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
-			b.WriteRune(r)
-		default:
-			b.WriteByte('_')
-		}
-	}
-	if out := strings.Trim(b.String(), "."); out != "" {
-		return out
-	}
-	return "include"
 }
 
 // includeRelPath is the part of an include file's path below its .ai-rulez
