@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -292,8 +294,8 @@ func TestPlanEstimate(t *testing.T) {
 		in.ShowPrompt = true
 		est := Plan(in)
 		require.NotEmpty(t, est.Prompts)
-		assert.Contains(t, est.Prompts[0].User, "<<<DATA-<nonce> item=skill:a>>>")
-		assert.Contains(t, est.Prompts[0].User, "<<<END-DATA-<nonce>>>>")
+		assert.Regexp(t, `<<<DATA-<nonce:0{24}> item=skill:a>>>`, est.Prompts[0].User)
+		assert.Regexp(t, `<<<END-DATA-<nonce:0{24}>>>>`, est.Prompts[0].User)
 	})
 }
 
@@ -444,4 +446,89 @@ func TestCollectReadsOwnedItemsOnly(t *testing.T) {
 	ext := byID["skill:ext"]
 	assert.False(t, ext.Owned)
 	assert.Empty(t, ext.Description, "imported content is never read")
+}
+
+func TestRunWithholdsWhatHoldsASecretOrHiddenTextWithoutLintFindings(t *testing.T) {
+	// Arrange: no lint finding at all, as when [lint] ignore, severity or an inline ignore removed them
+	secret := skill("secret", "Use when rotating keys")
+	secret.Body = "token = ghp_" + strings.Repeat("a1B2c3D4e5", 4) + "\n"
+	hiddenDesc := skill("hidden-desc", "Use when asked\u200bto do things")
+	hiddenRaw := skill("hidden-raw", "Use when asked to do things")
+	hiddenRaw.Raw = "---\nname: x\nnote: a\u202eb\n---\nbody\n"
+	clean := skill("clean", "Use when asked to be fine")
+	clean.Raw = "---\nname: clean\n---\nbody of clean\n"
+
+	// Act
+	res := Run(Input{Rubric: builtin(t), Items: []Item{secret, hiddenDesc, hiddenRaw, clean}})
+
+	// Assert
+	got := map[string]ItemResult{}
+	for _, r := range res.Items {
+		got[r.ID] = r
+	}
+	for _, id := range []string{"skill:secret", "skill:hidden-desc", "skill:hidden-raw"} {
+		assert.Equal(t, StatusWithheld, got[id].Status, id)
+		assert.Nil(t, got[id].Score, id)
+	}
+	assert.Equal(t, StatusScored, got["skill:clean"].Status)
+	assert.Contains(t, got["skill:secret"].Reason, "secret")
+}
+
+func TestPlanHashesTheDataOfEveryCall(t *testing.T) {
+	// Arrange: two pools that differ only in a sibling description, which only the contextual call sends
+	rb := builtin(t)
+	it := skill("me", "Deploy the service to production")
+	planFor := func(sibling string) *Estimate {
+		res := Run(Input{Rubric: rb, Items: []Item{it, skill("sib", sibling)}})
+		return Plan(EstimateInput{Rubric: rb, Results: res, Content: config.ReviewContentDescriptions, MaxCalls: 10})
+	}
+
+	// Act
+	a, b := planFor("Deploy the service to staging"), planFor("Roll back the service in staging")
+
+	// Assert
+	require.NotEmpty(t, a.Items)
+	require.Len(t, a.Items[0].Calls, 2)
+	assert.NotEqual(t, a.Items[0].SHA256, b.Items[0].SHA256)
+}
+
+func TestPlanRefusesWhenThePolicyForbidsModelCalls(t *testing.T) {
+	// Arrange
+	rb := builtin(t)
+	res := Run(Input{Rubric: rb, Items: []Item{skill("a", "Deploy the service to staging"), skill("b", "Deploy it to production")}})
+
+	// Act
+	est := Plan(EstimateInput{Rubric: rb, Results: res, Content: config.ReviewContentDescriptions, MaxCalls: 100, PolicyForbidsLLM: true})
+
+	// Assert
+	require.NotEmpty(t, est.Refused)
+	assert.Contains(t, strings.Join(est.Refused, " "), "policy")
+}
+
+func TestTruncateBodyIsLinearOnInvalidUTF8(t *testing.T) {
+	// Arrange
+	const maxTokens = 1 << 19
+	body := strings.Repeat("\xff", 8<<20)
+	start := time.Now()
+
+	// Act
+	got, cut := truncateBody(body, maxTokens)
+
+	// Assert
+	assert.True(t, cut)
+	assert.True(t, utf8.ValidString(got))
+	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestTruncateBodyKeepsWholeRunesAtTheCut(t *testing.T) {
+	// Arrange
+	body := strings.Repeat("\u00e9", 40000)
+
+	// Act
+	got, cut := truncateBody(body, 100)
+
+	// Assert
+	assert.True(t, cut)
+	assert.True(t, utf8.ValidString(got))
+	assert.NotContains(t, got, "\ufffd")
 }
