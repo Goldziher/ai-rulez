@@ -20,7 +20,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez update`               | Move pins of sources that use a `version` range to the newest allowed tag ([details](#update-command)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site ([Catalog](catalog.md)) |
-| `ai-rulez sbom`                 | CycloneDX 1.6 bill of materials of the AI configuration ([SBOM](sbom.md)) |
+| `ai-rulez sbom`                 | CycloneDX 1.6 or SPDX 2.3 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle; `--to github-release --execute --yes` uploads through `gh` ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
@@ -2027,12 +2027,18 @@ See [Catalog](catalog.md).
 ### `ai-rulez sbom`
 
 ```bash
-ai-rulez sbom [--format cyclonedx] [--online] [-o file] [-n config-dir]
+ai-rulez sbom [--format cyclonedx|spdx-json] [-o file] [--files none|skills|all] [--profile P] [--role R]
+              [--include-outputs] [--no-approvals] [--redact-reviewers] [--verify] [--require-lock]
+              [--strict-pins] [--check] [--timestamp [RFC3339|now]] [--online] [-n config-dir]
 ```
 
-Print a CycloneDX 1.6 JSON bill of materials: authored items, remote sources, MCP servers. Remote sources come from the lock and the cache; `--online` also allows `git ls-remote`. No timestamp, no secrets,
-byte-identical across runs, operating systems and line endings. The machine-local overlay is never included. Nothing is
-rendered; the only file written is `-o`. See [SBOM](sbom.md).
+Print a CycloneDX 1.6 or SPDX 2.3 JSON bill of materials: authored items (with licenses, optionally their files with
+plain SHA-256), remote sources, MCP servers (purl from the `package` key or a launcher heuristic), approval status and,
+with `--verify`, the lock attestation. Remote sources come from the lock and the cache; `--online` also allows
+`git ls-remote`. No timestamp unless asked, no secrets, byte-identical across runs, operating systems and line endings.
+The machine-local overlay is never included. Nothing is rendered; the only file written is `-o`. `--require-lock`,
+`--strict-pins` and `--check` (compare the committed `-o` file, which is never rewritten) exit 2 on failure (`AR752`,
+`AR750`/`AR751`, `AR753`). Sign the document with `ai-rulez sign --sbom`. See [SBOM](sbom.md).
 
 ## Publish Command
 

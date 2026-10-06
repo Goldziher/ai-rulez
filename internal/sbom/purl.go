@@ -74,6 +74,12 @@ func sourcePURL(loc gitLocation, name, version, subpath string) string {
 // launcher is what a heuristic recognises in an MCP server command.
 type launcher struct {
 	purl, name, version string
+	// requested is the version or tag the command line asked for ("" for none);
+	// pinned reports that it names one release (exactVersion), in which case it
+	// is also in the purl. An unpinned package has no version in its purl: a
+	// scanner would match "latest" or a range against the wrong release.
+	requested string
+	pinned    bool
 }
 
 // detectLauncher guesses the package an MCP server command runs from the
@@ -164,7 +170,8 @@ func npmTarget(args []string) (launcher, bool) {
 	if base == "" || strings.Contains(base, "/") {
 		return launcher{}, false
 	}
-	return launcher{purl: purl("npm", ns, base, version, nil, ""), name: name, version: version}, true
+	pinned := exactVersion("npm", version)
+	return launcher{purl: purl("npm", ns, base, pinnedVersion(version, pinned), nil, ""), name: name, version: pinnedVersion(version, pinned), requested: version, pinned: pinned}, true
 }
 
 func pypiTarget(args []string) (launcher, bool) {
@@ -186,7 +193,8 @@ func pypiTarget(args []string) (launcher, bool) {
 		return launcher{}, false
 	}
 	norm := strings.ToLower(strings.NewReplacer("_", "-", ".", "-").Replace(name))
-	return launcher{purl: purl("pypi", "", norm, version, nil, ""), name: norm, version: version}, true
+	pinned := exactVersion("pypi", version)
+	return launcher{purl: purl("pypi", "", norm, pinnedVersion(version, pinned), nil, ""), name: norm, version: pinnedVersion(version, pinned), requested: version, pinned: pinned}, true
 }
 
 // dockerValueFlags are the docker run options that take a separate value.
@@ -231,7 +239,7 @@ func ociTarget(args []string) (launcher, bool) {
 		version = tag
 	}
 	p := purl("oci", "", name, digest, map[string]string{"repository_url": repo, "tag": tag}, "")
-	return launcher{purl: p, name: name, version: version}, true
+	return launcher{purl: p, name: name, version: version, requested: version, pinned: digest != ""}, true
 }
 
 // ociDigest reports whether d looks like algo:value with no path or userinfo.
@@ -250,7 +258,8 @@ func goTarget(args []string) (launcher, bool) {
 	if i := strings.LastIndex(mod, "/"); i >= 0 {
 		ns, base = mod[:i], mod[i+1:]
 	}
-	return launcher{purl: purl("golang", ns, base, version, nil, ""), name: mod, version: version}, true
+	pinned := exactVersion("golang", version)
+	return launcher{purl: purl("golang", ns, base, pinnedVersion(version, pinned), nil, ""), name: mod, version: pinnedVersion(version, pinned), requested: version, pinned: pinned}, true
 }
 
 func contains(list []string, s string) bool {
@@ -266,4 +275,12 @@ func contains(list []string, s string) bool {
 // purl specification does.
 func qualifierValue(v string) string {
 	return strings.NewReplacer("%2F", "/", "%3A", ":").Replace(url.QueryEscape(v))
+}
+
+// pinnedVersion is v when pinned, else "".
+func pinnedVersion(v string, pinned bool) string {
+	if pinned {
+		return v
+	}
+	return ""
 }
