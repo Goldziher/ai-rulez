@@ -185,3 +185,25 @@ func TestReadRegular_ErrorsInsteadOfTruncating(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, data, maxReadBytes)
 }
+
+func TestKeepModeRoundTrip(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on windows")
+	}
+	// Arrange
+	path := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(path, []byte("a = 1\n"), 0o600))
+	require.NoError(t, os.Chmod(path, 0o644))
+
+	// Act
+	data, mode, err := ReadRegularKeepMode(path)
+	require.NoError(t, err)
+	require.NoError(t, WriteFileAtomicMode(path, []byte("a = 2\n"), mode))
+
+	// Assert
+	assert.Equal(t, "a = 1\n", string(data))
+	assert.Equal(t, os.FileMode(0o644), mode)
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "neither the read nor the write tightens the file")
+}

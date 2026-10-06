@@ -433,13 +433,13 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	if len(report.Major) == 0 || !updateWriteConfig || updateDryRun {
 		return finishUpdate(report, 0)
 	}
-	original, err := patchMajor(cfg, report.Major)
+	original, mode, err := patchMajor(cfg, report.Major)
 	if err != nil {
 		fmtError(err)
 		return 1
 	}
 	rollback := func() {
-		if rerr := safefs.WriteFileAtomic(filepath.Join(cfg.ConfigDir, configFileTOML), original); rerr != nil {
+		if rerr := safefs.WriteFileAtomicMode(filepath.Join(cfg.ConfigDir, configFileTOML), original, mode); rerr != nil {
 			fmtError(oops.Wrapf(rerr, "restore config.toml; it still holds the new version constraints"))
 		}
 		for i := range report.Major {
@@ -490,28 +490,29 @@ func majorConstraint(tag, prefix string) (string, bool) {
 }
 
 // patchMajor rewrites the version line of every item in config.toml (only that
-// value changes) and returns the original bytes for a rollback.
-func patchMajor(cfg *config.Config, items []majorItem) (original []byte, err error) {
+// value changes) and returns the original bytes and mode for a rollback. The
+// file keeps its permission bits: it is the project's file, not a private one.
+func patchMajor(cfg *config.Config, items []majorItem) (original []byte, mode os.FileMode, err error) {
 	file := filepath.Join(cfg.ConfigDir, configFileTOML)
-	original, err = safefs.ReadRegular(file)
+	original, mode, err = safefs.ReadRegularKeepMode(file)
 	if err != nil {
-		return nil, oops.With("path", file).Wrapf(err, "read config.toml")
+		return nil, 0, oops.With("path", file).Wrapf(err, "read config.toml")
 	}
 	patched := original
 	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources"}
 	for _, it := range items {
 		patched, err = versionpatch.SetConstraint(patched, tables[it.Kind], it.Name, it.To)
 		if err != nil {
-			return nil, oops.With("source", it.Name).Wrapf(err, "cannot update the constraint of %s %q", it.Kind, it.Name)
+			return nil, 0, oops.With("source", it.Name).Wrapf(err, "cannot update the constraint of %s %q", it.Kind, it.Name)
 		}
 	}
-	if err := safefs.WriteFileAtomic(file, patched); err != nil {
-		return nil, oops.With("path", file).Wrapf(err, "write config.toml")
+	if err := safefs.WriteFileAtomicMode(file, patched, mode); err != nil {
+		return nil, 0, oops.With("path", file).Wrapf(err, "write config.toml")
 	}
 	for i := range items {
 		items[i].Written = true
 	}
-	return original, nil
+	return original, mode, nil
 }
 
 func entryCommit(lock *lockfile.File, row tagresolve.Row) string {
