@@ -104,11 +104,17 @@ digest = "sha256:…"
 ```
 
 The file is written deterministically: entries sorted, no timestamps, nothing that depends on map order or on the
-machine. Digests are the same on every operating system when the repository records the executable bit (see
+machine, as far as the content is: the `source` recorded for a skill that comes from an `[[includes]]` entry is
+`include:<name>/<path inside the include>`, never a path in your home directory or cache. A lock written before
+this recorded an absolute path for such skills; `lock --check` compares digests, not that field, so it still
+passes, and the next `ai-rulez lock` rewrites the entry once. Digests are the same on every operating system when the repository records the executable bit (see
 [File modes](#hashing-scheme)); a script that is executable on disk but not recorded in git digests differently
 on Windows.
 
 ## Served skills and skill sources
+
+Served skill files are always digested at mode `100644`: the executable bit of a served file is not part of its
+digest and is not preserved over MCP (unlike a tracked script, see [File modes](#hashing-scheme)).
 
 The same file carries the entries of [dynamic skill loading](mcp-server.md#dynamic-skill-loading), so one `lock`
 pins everything and one `lock --check` verifies everything:
@@ -208,8 +214,9 @@ version = ">=1.4.0 <2.0.0"
   wins; `1.2.3` and `v1.2.3` naming one version is reported and the tag that sorts first is used.
 - **Prereleases** follow npm: `1.3.0-rc.1` is skipped unless the constraint names a prerelease of the same
   `major.minor.patch` (`^1.3.0-rc.1`) or `include_prerelease = true`. Build metadata is ignored.
-- **Nothing resolves a range implicitly.** `generate` fetches the pinned commit and never resolves a range;
-  `generate --locked`/`--frozen` fail on a range the lock does not cover. `ai-rulez lock` resolves a range for a source
+- **Nothing resolves a range implicitly.** With a lock, `generate` fetches the pinned commit and never resolves a
+  range. Without a lock covering the source, `generate` resolves the range once (as it resolves a branch), so pin it
+  with `ai-rulez lock`. `generate --locked`/`--frozen` fail on a range the lock does not cover. `ai-rulez lock` resolves a range for a source
   the lock does not cover and **keeps** a pin that still satisfies its constraint (no silent upgrade).
   `ai-rulez update` is the only command that moves a range pin.
 

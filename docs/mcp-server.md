@@ -281,7 +281,8 @@ ai-rulez mcp --serve-skills --source git+https://github.com/acme/skills@v1.2.0#s
 ai-rulez mcp --serve-skills --frozen              # lock required, no network
 ```
 
-Register it in `config.toml` so every MCP-capable harness launches it:
+Register it in `config.toml` so every MCP-capable harness launches it. The generated `dynamic-skills` stub names
+the `[[mcp_servers]]` entry whose `args` include `--serve-skills` (`ai-rulez-skills` when none does):
 
 ```toml
 [[mcp_servers]]
@@ -300,7 +301,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
-| `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); `-1` removes the cap. |
+| `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
 | `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
 
@@ -416,6 +417,8 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
   skill is served under its directory name (with `name_prefix`), whatever its `name:` says (SKILL.md is
   rewritten), and a skill whose name collides with one already served is skipped (set `name_prefix`); the
   project's skill wins.
+- **Symlinked skills.** A skill directory that is a symlink out of the project is dropped by the server with a
+  warning, while `validate` fails on it: fix the link rather than relying on the warning.
 
 ### Security scan
 
@@ -436,6 +439,10 @@ The level is `trust` for a source skill:
 | ----- | ------ |
 | `error` | Any finding (every finding counts as an error). Default for source skills and for skills installed from a git repository (`lint.security.scan_imports = "warn"` lowers installed skills to `warn`). |
 | `warn` | Findings that are errors by their own severity (secrets, hidden characters, risky shell). Default for skills authored in the project. |
+
+Skills that come from an `[[includes]]` entry are remote content: they are scanned at `error` like installed skills
+(`scan_imports = "warn"` lowers them to `warn`), as is any skill file outside the project root. Their lock `source`
+is `include:<name>/<path>`, identical on every machine.
 
 ### Lock enforcement
 
@@ -500,8 +507,9 @@ The server checks the configuration directory (and local source directories) eve
 changes it rebuilds the catalog and swaps it in. `notifications/resources/list_changed` is sent only when the
 catalog changed (a skill added, removed or edited); an edit that leaves every served skill identical sends nothing. A rebuild that
 fails keeps the previous catalog serving and is retried with a growing pause (up to a minute) until it works or
-the files change again. Usage logs (`.jsonl` files in a `local/` directory, or `--usage-log`) do not count as
-changes. Polling keeps the dependency set unchanged; git sources are immutable
+a new edit changes the files (a new edit ends the pause at once). The usage log and its salt file (`--usage-log`
+and `usage.salt` beside it, compared by absolute path) and any `.jsonl` file directly inside a `local/` directory,
+at any depth, do not count as changes. Polling keeps the dependency set unchanged; git sources are immutable
 per commit and are not re-fetched.
 
 ### Strict validation
