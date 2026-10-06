@@ -3,9 +3,8 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -39,16 +38,5 @@ func (j JSONL) Emit(_ context.Context, event *Event) error {
 func (JSONL) Close(context.Context) error { return nil }
 
 func appendLine(path string, line []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return oops.With("path", path).Wrapf(err, "create telemetry directory")
-	}
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // machine-local log chosen by the user
-	if err != nil {
-		return oops.With("path", path).Wrapf(err, "open telemetry log")
-	}
-	if _, err := file.Write(line); err != nil {
-		_ = file.Close() //nolint:errcheck // the write error is the one to report
-		return oops.With("path", path).Wrapf(err, "write telemetry log")
-	}
-	return oops.Wrapf(file.Close(), "close telemetry log")
+	return safefs.AppendLine(path, line) //nolint:wrapcheck // safefs errors carry the path
 }
