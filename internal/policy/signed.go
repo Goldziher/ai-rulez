@@ -75,6 +75,17 @@ func SignPolicy(ctx context.Context, signer signing.Signer, data []byte, now tim
 	return signing.SignStatement(ctx, signer, st) //nolint:wrapcheck // the signing package contextualizes
 }
 
+// SignPolicyFile reads the policy at path, checks that the loader accepts it, and
+// signs it (see SignPolicy). A file that is not a valid policy is *ParseError
+// (AR743): nothing is signed that would be rejected on load.
+func SignPolicyFile(ctx context.Context, signer signing.Signer, path string, now time.Time) ([]byte, error) {
+	data, err := readPolicyFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read the policy %s: %w", path, err)
+	}
+	return SignPolicy(ctx, signer, data, now)
+}
+
 // SignatureError is a policy whose signature is missing where one is required, or
 // does not verify (AR746).
 type SignatureError struct {
