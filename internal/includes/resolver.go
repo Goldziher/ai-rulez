@@ -98,7 +98,7 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 	defer delete(r.visited, includeConf.Name) // Allow re-use in different branches
 
 	// Create appropriate source
-	source, err := r.createSource(includeConf)
+	source, err := r.createSource(ctx, includeConf)
 	if err != nil {
 		return oops.Wrapf(err, "failed to create source for include '%s'", includeConf.Name)
 	}
@@ -136,9 +136,9 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 // When local_override is set and the path exists, it is used instead of the
 // configured source. If the local_override path does not exist, it returns
 // (nil, nil) so the caller can skip this include silently.
-func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, error) {
+func (r *Resolver) createSource(ctx context.Context, includeConf *config.IncludeConfig) (Source, error) {
 	if includeConf.Format == config.IncludeFormatOKF {
-		return r.createOKFSource(includeConf)
+		return r.createOKFSource(ctx, includeConf)
 	}
 	// Check for local override: use a local path instead of git
 	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
@@ -175,10 +175,15 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 			includeConf.Include,
 		), nil
 	case SourceTypeGit:
-		p, err := pinFor(r.cfg, r.lock, lockfile.Want{
+		w := withVersion(lockfile.Want{
 			Kind: lockfile.KindInclude, Name: includeConf.Name, Source: RedactURL(includeConf.Source),
 			Path: includeConf.Path, Ref: includeConf.Ref,
-		})
+		}, includeConf.VersionSpec())
+		p, err := pinFor(r.cfg, r.lock, w)
+		if err != nil {
+			return nil, err
+		}
+		ref, err := versionRef(ctx, r.lock, w, p, includeConf.Source, r.accessToken, r.baseDir)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +191,7 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 			includeConf.Name,
 			includeConf.Source,
 			includeConf.Path,
-			p.effectiveRef(includeConf.Ref),
+			ref,
 			r.baseDir,
 			includeConf.Include,
 			r.accessToken,
