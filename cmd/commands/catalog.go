@@ -171,10 +171,7 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 	if err != nil {
 		return nil, err
 	}
-	digests := map[string]string{}
-	for _, it := range snap.Items {
-		digests[it.Key()] = it.Digest
-	}
+	digests := newDigestIndex(snap.Items)
 
 	for _, item := range allCatalogItems(cfg) {
 		if item.Kind == config.RoleKindSkill && item.File != nil {
@@ -195,7 +192,7 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 		if len(differing) == 0 {
 			differing = nil
 		}
-		doc.Items = append(doc.Items, catalogItem{Item: measured, Digest: digests[key], Roles: members, RoleDelivery: differing})
+		doc.Items = append(doc.Items, catalogItem{Item: measured, Digest: digests.lookup(item.Kind, item.Domain, item.ID, item.Path), Roles: members, RoleDelivery: differing})
 	}
 
 	lockStatus, err := catalogLockStatus(cfg)
@@ -204,6 +201,31 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 	}
 	doc.Lock = lockStatus
 	return doc, nil
+}
+
+// digestIndex finds the lock digest of a catalog item. The lock disambiguates a
+// second item with the same kind, domain and id as "<id>#2", so an item is looked
+// up by its source path first (unique per file) and by its key second.
+type digestIndex struct{ byPath, byKey map[string]string }
+
+func newDigestIndex(items []lockfile.Item) digestIndex {
+	d := digestIndex{byPath: map[string]string{}, byKey: map[string]string{}}
+	for _, it := range items {
+		d.byKey[it.Key()] = it.Digest
+		if it.Path != "" {
+			d.byPath[it.Kind+"\x00"+it.Domain+"\x00"+it.Path] = it.Digest
+		}
+	}
+	return d
+}
+
+func (d digestIndex) lookup(kind, domain, id, path string) string {
+	if path != "" {
+		if digest, ok := d.byPath[kind+"\x00"+domain+"\x00"+path]; ok {
+			return digest
+		}
+	}
+	return d.byKey[kind+"\x00"+domain+"\x00"+id]
 }
 
 // catalogLockStatus reports whether a lock exists, whether it pins content and
