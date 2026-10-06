@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -82,16 +83,45 @@ func Lockable(cfg *config.Config) []lockfile.Want {
 	for i := range cfg.Includes {
 		inc := &cfg.Includes[i]
 		if DetectSourceType(inc.Source) == SourceTypeGit {
-			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindInclude, Name: inc.Name, Source: RedactURL(inc.Source), Path: inc.Path, Ref: inc.Ref}, inc.VersionSpec()))
+			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindInclude, Name: inc.Name, Source: lockSource(cfg.BaseDir, inc.Source), Path: inc.Path, Ref: inc.Ref}, inc.VersionSpec()))
 		}
 	}
 	for i := range cfg.InstalledSkills {
 		sk := &cfg.InstalledSkills[i]
 		if DetectSourceType(sk.Source) == SourceTypeGit {
-			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: RedactURL(sk.Source), Path: sk.GetPath(), Ref: sk.Ref}, sk.VersionSpec()))
+			wants = append(wants, withVersion(lockfile.Want{Kind: lockfile.KindSkill, Name: sk.Name, Source: lockSource(cfg.BaseDir, sk.Source), Path: sk.GetPath(), Ref: sk.Ref}, sk.VersionSpec()))
 		}
 	}
 	return wants
+}
+
+// lockSource is the source as the lock records it: credentials redacted, and a
+// file:// URL written relative to the project (file://./vendor/x, file://../x)
+// so the lock does not carry a machine-specific absolute path.
+func lockSource(baseDir, source string) string {
+	redacted := RedactURL(source)
+	prefix := ""
+	rest := redacted
+	if after, ok := strings.CutPrefix(rest, "git+"); ok {
+		prefix, rest = "git+", after
+	}
+	path, ok := strings.CutPrefix(rest, "file://")
+	if !ok || !filepath.IsAbs(path) || baseDir == "" {
+		return redacted
+	}
+	base, err := filepath.Abs(baseDir)
+	if err != nil {
+		return redacted
+	}
+	rel, err := filepath.Rel(base, filepath.Clean(path))
+	if err != nil {
+		return redacted
+	}
+	rel = filepath.ToSlash(rel)
+	if rel != "." && !strings.HasPrefix(rel, "../") {
+		rel = "./" + rel
+	}
+	return prefix + "file://" + rel
 }
 
 // withVersion turns a want into a version-constraint want: the constraint takes

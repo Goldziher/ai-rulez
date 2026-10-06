@@ -182,7 +182,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		), nil
 	case SourceTypeGit:
 		w := withVersion(lockfile.Want{
-			Kind: lockfile.KindInclude, Name: includeConf.Name, Source: RedactURL(includeConf.Source),
+			Kind: lockfile.KindInclude, Name: includeConf.Name, Source: lockSource(r.baseDir, includeConf.Source),
 			Path: includeConf.Path, Ref: includeConf.Ref,
 		}, includeConf.VersionSpec())
 		p, err := pinFor(r.cfg, r.lock, w)
