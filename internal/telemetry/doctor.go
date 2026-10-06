@@ -109,13 +109,21 @@ func settingValue(s *Settings, host, key string) string {
 }
 
 func consentText(s *Settings) string {
-	switch {
-	case !s.AllowNetwork:
-		return "network export not consented (allow_network is false)"
-	case s.Sources["allow_network"] == ScopeEnv:
+	switch s.ConsentState {
+	case ConsentRecord:
+		return "granted by the consent record (" + s.Consent.GrantedAt + ") for " + endpointHost(s.Endpoint)
+	case ConsentEnv:
 		return "granted by " + EnvAllowNetwork
+	case ConsentConfig:
+		return "granted by user config (allow_network)"
+	case ConsentStale:
+		return "stale: " + s.ConsentDetail + "; run `ai-rulez telemetry enable` again"
+	case ConsentInvalid:
+		return "consent record unusable: " + s.ConsentDetail
+	case ConsentDenied, ConsentPolicy:
+		return "refused: " + s.ConsentDetail
 	}
-	return "granted by user config"
+	return "no consent: network export is off (run `ai-rulez telemetry enable --endpoint URL`)"
 }
 
 // exportBlockers lists, in order, why export is off; nil when it is on.
@@ -131,15 +139,28 @@ func exportBlockers(s *Settings) []string {
 		out = append(out, "telemetry is not enabled")
 	}
 	if !s.AllowNetwork {
-		out = append(out, "allow_network is not set in user scope")
+		out = append(out, noConsentBlocker(s))
 	}
 	if s.Endpoint == "" {
-		out = append(out, "no otlp_endpoint in user scope")
+		out = append(out, "no endpoint (pass --endpoint to `ai-rulez telemetry enable`, or set otlp_endpoint in the user config)")
 	}
 	for _, problem := range s.blocking {
 		out = append(out, "invalid: "+problem)
 	}
 	return out
+}
+
+// noConsentBlocker explains the missing consent in one clause.
+func noConsentBlocker(s *Settings) string {
+	switch s.ConsentState {
+	case ConsentStale:
+		return "consent is stale (" + s.ConsentDetail + "): run `ai-rulez telemetry enable` again"
+	case ConsentInvalid:
+		return "the consent record is unusable (" + s.ConsentDetail + ")"
+	case ConsentDenied, ConsentPolicy:
+		return s.ConsentDetail
+	}
+	return "no consent (run `ai-rulez telemetry enable`, or set allow_network in the user config)"
 }
 
 // Diagnose builds the report for the spool in dir.

@@ -141,6 +141,20 @@ func (p *Pipeline) spawnFlush() error {
 	return cmd.Process.Release()
 }
 
+// Flush ships what is due: it first queues the usage-log events past the cursor
+// that the outbox does not hold (see Spool.CatchUp), then sends the outbox. The
+// catch-up is best effort, so a busy or unreadable log never keeps the outbox from
+// being sent; the flush is bounded by ctx and by MaxFlushTimeout.
+func (p *Pipeline) Flush(ctx context.Context) (FlushResult, error) {
+	if p.Exporter == nil || p.Spool == nil {
+		return FlushResult{}, nil
+	}
+	if p.LogPath != "" {
+		_, _ = p.Spool.CatchUp(p.LogPath, CatchUpOptions{Sample: p.Settings.Sample}) //nolint:errcheck // best effort: the outbox still ships
+	}
+	return p.Exporter.Flush(ctx)
+}
+
 // FlushTimeout bounds a background flush; it stays well under the flush lock's stale time.
 const FlushTimeout = 8 * time.Second
 

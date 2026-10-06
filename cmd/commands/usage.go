@@ -50,7 +50,7 @@ var UsageCmd = &cobra.Command{
   ai-rulez usage hook      print a Claude Code hooks block that records skill invocations
   ai-rulez usage record    the command that block runs; appends one identifier-only JSON line
   ai-rulez usage feedback  record that a skill misled you, is stale, wrong or great (notes stay local)
-  ai-rulez usage export    write the log as an OTLP JSON file for an air-gapped collector or your own tooling
+  ai-rulez usage export    write the log as an OTLP JSON file (--to file), or push it to your consented collector (--to otlp)
   ai-rulez report usage    join a log with the skills index, feedback and eval scores
 
 Set [usage] skills_index = true so generate writes .ai-rulez/skills-index.json, which gives
@@ -142,13 +142,18 @@ func runUsageRecord(in io.Reader) error {
 
 var usageExportCmd = &cobra.Command{
 	Use:   "export [path]",
-	Short: "Write the usage log as an OTLP JSON file",
-	Long: `Write the events of the usage log to a file, one OTLP logs request per line, the format the
-OpenTelemetry Collector's otlpjsonfile receiver reads. Nothing is sent over a network, and the
-file needs no consent: it is a local copy you move yourself.
+	Short: "Write the usage log as an OTLP JSON file, or push it to the collector",
+	Long: `--to file writes the events of the usage log to a file, one OTLP logs request per line, the
+format the OpenTelemetry Collector's otlpjsonfile receiver reads. Nothing is sent over a network, and
+the file needs no consent: it is a local copy you move yourself.
 
   ai-rulez usage export --to file usage.ndjson
   ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl
+
+--to otlp pushes the log past the export cursor to the collector you consented to (see
+"telemetry enable"): it queues what the outbox does not hold, sends it with retry, and moves the
+cursor. It refuses without consent and exits 1 when delivery fails, so CI notices (the background
+flush stays silent). --all starts at the beginning of the log; --dry-run counts without sending.
 
 Only allowlisted, identifier-only fields are written (see "ai-rulez telemetry preview" for the
 list and for the exact bytes): unlisted keys in a log line are dropped, raw version 1 session
@@ -169,9 +174,12 @@ func runUsageExport(out io.Writer, args []string) error {
 	switch usageExportTo {
 	case "file":
 	case "otlp":
-		return oops.Hint("Use `ai-rulez telemetry flush` to send the outbox to a collector.").Errorf("--to otlp is not available in `usage export`")
+		if len(args) > 0 || usageExportFile != "" {
+			return oops.Errorf("--to otlp sends to the consented collector; a destination path belongs to --to file")
+		}
+		return runUsageExportOTLP(out)
 	default:
-		return oops.Hint("Use --to file and a destination path.").Errorf("--to must be file, got %q", usageExportTo)
+		return oops.Hint("Use --to file and a destination path, or --to otlp.").Errorf("--to must be file or otlp, got %q", usageExportTo)
 	}
 	dest := usageExportFile
 	if len(args) == 1 {
@@ -417,10 +425,11 @@ func usageExtras(row usage.SkillUsage) string {
 
 func init() {
 	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd, usageExportCmd)
-	usageExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file (required)")
+	usageExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file or otlp (required)")
+	addUsageExportOTLPFlags(usageExportCmd)
 	usageExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")
 	usageExportCmd.Flags().StringVar(&usageLog, "log", "", "Usage log to export (default <config dir>/local/usage.jsonl)")
-	usageExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file")
+	usageExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file (--to otlp: without queueing or sending)")
 	usageExportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	if err := usageExportCmd.MarkFlagRequired("to"); err != nil {
 		panic(err)

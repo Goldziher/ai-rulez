@@ -43,6 +43,28 @@ const (
 	ScopeUser    = "user"
 	ScopeEnv     = "env"
 	ScopePolicy  = "policy"
+	// ScopeConsent marks a value that came from the stored consent record
+	// (`telemetry enable`), which only the user can write.
+	ScopeConsent = "consent"
+)
+
+// Consent states, as `telemetry status` reports them.
+const (
+	// ConsentNone: nothing grants network export.
+	ConsentNone = "none"
+	// ConsentRecord: a stored consent record matches the endpoint, protocol and fields.
+	ConsentRecord = "record"
+	// ConsentConfig and ConsentEnv: allow_network in the user config or the environment.
+	ConsentConfig = "config"
+	ConsentEnv    = "env"
+	// ConsentStale: a record exists but no longer covers the effective settings.
+	ConsentStale = "stale"
+	// ConsentInvalid: the record could not be trusted or read.
+	ConsentInvalid = "invalid"
+	// ConsentDenied: the environment explicitly refuses network export.
+	ConsentDenied = "denied"
+	// ConsentPolicy: an organization policy forbids export.
+	ConsentPolicy = "policy"
 )
 
 // Settings is the effective telemetry configuration after the trust rule.
@@ -63,6 +85,12 @@ type Settings struct {
 	Resource map[string]string
 	// Sample is the fraction of sessions exported, 0..1.
 	Sample float64
+	// ConsentState is one of the Consent* constants; ConsentDetail says why for
+	// the states that need a reason (stale, invalid).
+	ConsentState  string
+	ConsentDetail string
+	// Consent is the stored record when one was read, whatever its state.
+	Consent *Consent
 	// Killed names the kill switch in force ("AI_RULEZ_TELEMETRY=off",
 	// "DO_NOT_TRACK"); when set nothing is recorded or exported.
 	Killed string
@@ -93,6 +121,11 @@ func (s Settings) ExportActive() bool {
 type Layers struct {
 	Repo *config.TelemetryConfig
 	User *config.TelemetryConfig
+	// Consent is the stored consent record of the user (nil for none) and
+	// ConsentErr the reason a present record could not be trusted. Neither can come
+	// from a repository: the record is read only from the user config directory.
+	Consent    *Consent
+	ConsentErr error
 	// Getenv reads the environment; nil means the real environment.
 	Getenv func(string) string
 }
@@ -128,6 +161,7 @@ func Resolve(layers Layers) Settings {
 		applyUser(&s, user, ScopeUser)
 	}
 	applyEnv(&s, getenv)
+	applyConsent(&s, layers)
 
 	// Validate the effective result too: an invalid env override must not export.
 	effective := config.TelemetryConfig{
@@ -139,8 +173,76 @@ func Resolve(layers Layers) Settings {
 		// An organization policy switches export off whatever the user scope says.
 		s.AllowNetwork = false
 		set("allow_network", ScopePolicy)
+		s.ConsentState, s.ConsentDetail = ConsentPolicy, "an organization policy forbids network export"
 	}
 	return s
+}
+
+// applyConsent folds the stored consent record into the settings. The record is a
+// user-scope opt-in: it turns recording on and supplies the endpoint, protocol and
+// opt-in gates the user left unset, and it grants network export only while it
+// still matches the effective endpoint, protocol and exported field set. A
+// stricter explicit setting wins: an environment that refuses network export is
+// never overridden by a record.
+func applyConsent(s *Settings, layers Layers) {
+	switch {
+	case s.Sources["allow_network"] == ScopeEnv && !s.AllowNetwork:
+		s.ConsentState = ConsentDenied
+		s.ConsentDetail = EnvAllowNetwork + " refuses network export"
+	case s.AllowNetwork && s.Sources["allow_network"] == ScopeEnv:
+		s.ConsentState = ConsentEnv
+	case s.AllowNetwork:
+		s.ConsentState = ConsentConfig
+	default:
+		s.ConsentState = ConsentNone
+	}
+	if layers.ConsentErr != nil {
+		if s.ConsentState == ConsentNone {
+			s.ConsentState = ConsentInvalid
+		}
+		s.ConsentDetail = firstLine(layers.ConsentErr.Error())
+		s.Problems = append(s.Problems, "consent record: "+s.ConsentDetail)
+		return
+	}
+	c := layers.Consent
+	if c == nil {
+		return
+	}
+	s.Consent = c
+	if !s.Enabled {
+		s.Enabled = true
+		s.Sources["enabled"] = ScopeConsent
+	}
+	if s.Endpoint == "" {
+		s.Endpoint = strings.TrimRight(c.Endpoint, "/")
+		s.Sources["otlp_endpoint"] = ScopeConsent
+	}
+	if s.Sources["otlp_protocol"] == "" && c.Protocol != "" {
+		s.Protocol = c.Protocol
+		s.Sources["otlp_protocol"] = ScopeConsent
+	}
+	if c.Scope.IncludePaths && !s.IncludePaths {
+		s.IncludePaths = true
+		s.Sources["include_paths"] = ScopeConsent
+	}
+	if c.Scope.IncludeSession && !s.IncludeSession {
+		s.IncludeSession = true
+		s.Sources["include_session"] = ScopeConsent
+	}
+	reason := c.Check(s.Endpoint, s.Protocol, s.IncludePaths, s.IncludeSession)
+	switch {
+	case s.ConsentState == ConsentDenied:
+		// An explicit refusal in the environment stays.
+	case reason != "":
+		if s.ConsentState == ConsentNone {
+			s.ConsentState = ConsentStale
+		}
+		s.ConsentDetail = reason
+	case s.ConsentState == ConsentNone:
+		s.AllowNetwork = true
+		s.Sources["allow_network"] = ScopeConsent
+		s.ConsentState = ConsentRecord
+	}
 }
 
 func (s *Settings) addBlocking(problems ...string) {
@@ -413,7 +515,8 @@ func loadTable(paths []string) (*config.TelemetryConfig, error) {
 func ResolveFor(root, configDirName string, getenv func(string) string) Settings {
 	user, _, userErr := LoadUser(getenv)
 	repo, repoErr := LoadRepo(root, configDirName)
-	s := Resolve(Layers{Repo: repo, User: user, Getenv: getenv})
+	consent, consentErr := LoadConsent(ConsentPath(getenv))
+	s := Resolve(Layers{Repo: repo, User: user, Consent: consent, ConsentErr: consentErr, Getenv: getenv})
 	if userErr != nil {
 		s.addBlocking("user config: " + firstLine(userErr.Error()))
 	}
