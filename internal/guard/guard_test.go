@@ -184,7 +184,11 @@ func TestCheck_LargePatches(t *testing.T) {
 			got := Check(strings.NewReader(payload), root)
 
 			// Assert
-			assert.Less(t, time.Since(start), time.Second, "a large patch must not outlast the harness timeout")
+			budget := time.Second
+			if raceEnabled {
+				budget = 10 * time.Second
+			}
+			assert.Less(t, time.Since(start), budget, "a large patch must not outlast the harness timeout")
 			assert.Equal(t, tt.wantBlock, got.Block)
 			assert.Equal(t, tt.wantPath, got.Path)
 			assert.Contains(t, got.Message(), tt.wantMsg)
