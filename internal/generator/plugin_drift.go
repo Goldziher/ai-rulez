@@ -43,12 +43,6 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	if top == "" {
 		return nil, nil
 	}
-	// The committed side is read from a snapshot of HEAD, not from the work tree.
-	// A repository without a commit has no baseline, so nothing drifts.
-	snap, err := workspace.GitSnapshot(g.context(), top, driftRef, g.host().Runner)
-	if err != nil {
-		return nil, nil //nolint:nilerr // no baseline is not an error
-	}
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
@@ -58,6 +52,28 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 		if !o.IsDir {
 			byPath[filepath.Clean(o.Path)] = o
 		}
+	}
+	// The committed side is read from a snapshot of HEAD, not from the work tree,
+	// listing only the files the comparison reads: a large repository is not walked.
+	// A repository without a commit has no baseline, so nothing drifts.
+	var wanted []string
+	for path := range byPath {
+		if filepath.Base(path) != plugin.ProvenanceFileName {
+			continue
+		}
+		bundle := filepath.Dir(path)
+		wanted = append(wanted, gitutil.RepoRelative(top, path))
+		for _, rel := range manifestCandidates {
+			wanted = append(wanted, gitutil.RepoRelative(top, filepath.Join(bundle, filepath.FromSlash(rel))))
+		}
+	}
+	if len(wanted) == 0 {
+		return nil, nil
+	}
+	sort.Strings(wanted)
+	snap, err := workspace.GitSnapshot(g.context(), top, driftRef, g.host().Runner, wanted...)
+	if err != nil {
+		return nil, nil //nolint:nilerr // no baseline is not an error
 	}
 
 	var drift []lint.PluginDrift
