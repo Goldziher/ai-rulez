@@ -55,6 +55,9 @@ type Result struct {
 	Status   string
 	// Reviewers are the distinct reviewers whose approval of the current digest applies.
 	Reviewers []string
+	// Recorded are the distinct reviewers of every record of the current digest,
+	// valid or not, so a listing can say who approved an expired or unauthorized item.
+	Recorded []string
 	// Expires is the earliest expiry among the applying approvals ("" for none).
 	Expires string
 	// ApprovedDigest is the digest the newest record approved, for a stale subject.
@@ -114,7 +117,9 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 	}
 	var forKey, current []lockfile.Approval
 	for _, a := range recs {
-		if a.ItemKey() != s.Key() {
+		// Only "asserted" is defined; a record claiming a stronger assurance
+		// (signed, review-linked) that nothing here can verify must not count.
+		if a.ItemKey() != s.Key() || a.Assurance != lockfile.AssuranceAsserted {
 			continue
 		}
 		forKey = append(forKey, a)
@@ -131,6 +136,7 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 		res.ApprovedDigest = newest(forKey).Digest
 		return res
 	}
+	res.Recorded, _ = reviewersOf(current)
 	var valid []lockfile.Approval
 	expired, unauthorized := false, false
 	for _, a := range current {
@@ -163,7 +169,7 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 func (p Policy) currentReviewers(recs []lockfile.Approval, s Subject, now time.Time) []string {
 	var valid []lockfile.Approval
 	for _, a := range recs {
-		if a.ItemKey() == s.Key() && a.Digest == s.Digest && !ExpiredAt(a.Expires, now) {
+		if a.ItemKey() == s.Key() && a.Digest == s.Digest && a.Assurance == lockfile.AssuranceAsserted && !ExpiredAt(a.Expires, now) {
 			valid = append(valid, a)
 		}
 	}
