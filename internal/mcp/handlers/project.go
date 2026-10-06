@@ -757,6 +757,14 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	baseDir := workingDir(request)
 	projectName := request.GetString("project_name", "")
+	if strings.TrimSpace(projectName) == "" {
+		// name is required and non-empty; Base of "." would be "." so resolve it first.
+		abs, err := filepath.Abs(baseDir)
+		if err != nil {
+			abs = baseDir
+		}
+		projectName = filepath.Base(abs)
+	}
 	providersInterface := request.GetArguments()["providers"]
 	allProviders := request.GetBool("all_providers", false)
 	popularProviders := request.GetBool("popular_providers", false)
