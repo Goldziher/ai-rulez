@@ -654,10 +654,13 @@ Generated MCP config files contain resolved values. If any resolved MCP env or h
 from a placeholder, or if an env key or header name looks sensitive (`TOKEN`, `SECRET`, `PASSWORD`,
 `KEY`, `CREDENTIAL`, or the `Authorization`, `Proxy-Authorization` and `Cookie` headers), generation
 fails before writing unless the generated MCP config path is covered by `.gitignore` or by the
-patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
-`.claude/settings.json`, `.gemini/settings.json`, `.agents/mcp_config.json`, and `opencode.json`,
-including scoped variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
-source-hash calculation, but generated MCP config files contain the actual resolved values.
+patterns `ai-rulez` is about to add. The check looks at what is rendered: an MCP config file
+(`.mcp.json`, `.gemini/settings.json`, `.agents/mcp_config.json`, `opencode.json`, a scoped variant such as
+`packages/web/.mcp.json`, ...) is protected only when it holds a resolved secret value. A file that only refers to the
+variable (`${env:TOKEN}`) and a merged document that is not an MCP config (a review check file) need no ignore entry.
+Resolved secret values are redacted before source-hash calculation, but generated MCP config files contain the actual
+resolved values. Claude Code reads project servers from `.mcp.json`, which references `${VAR}`; `.claude/settings.json`
+carries no `mcpServers`, and a `mcpServers` entry an earlier version wrote there is removed on the next `generate`.
 
 **Environment references.** Where a tool expands environment references in its own MCP config, a value that
 came from a `${VAR}` placeholder resolved from the process environment is written as that tool's reference
@@ -692,7 +695,9 @@ Files such as `.claude/settings.json`, `.mcp.json`, `.amp/settings.json`, `.gemi
 `.agents/mcp_config.json` and `.pi/mcp.json` are **shared documents**: ai-rulez owns specific top-level keys
 (`mcpServers` for MCP config, `amp.anthropic.effort` for Amp) and the consumer owns everything else.
 Generation replaces only the owned keys and preserves every other member byte-for-byte, including
-the document's original indentation.
+the document's original indentation. A hand-formatted document (a one-line nested object, for example) is edited in
+place, so `clean` restores its original bytes. The manifest records what ai-rulez merged as digests, never as values,
+so a resolved secret in a merged server entry is not copied into `.generated-manifest.local.json`.
 
 **Important implications**:
 
