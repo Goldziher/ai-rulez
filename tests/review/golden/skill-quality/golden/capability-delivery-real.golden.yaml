@@ -1,0 +1,15 @@
+schema_version: 1
+id: capability-delivery-real
+kind: skill
+item:
+  path: fixtures/cases/capability-delivery-real/capability-delivery-checklist/SKILL.md
+siblings:
+  - fixtures/shared/skills/config-schema-maintainer/SKILL.md
+  - fixtures/shared/skills/release-and-distribution/SKILL.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+probes: [pad, canary]

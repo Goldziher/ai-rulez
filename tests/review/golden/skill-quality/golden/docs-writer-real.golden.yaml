@@ -1,0 +1,14 @@
+schema_version: 1
+id: docs-writer-real
+kind: agent
+item:
+  path: fixtures/cases/docs-writer-real/docs-writer.md
+siblings:
+  - fixtures/shared/agents/release-engineer.md
+  - fixtures/shared/agents/code-reviewer.md
+labelers:
+  - id: author
+    labels: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+  - id: blind
+    labels: {trigger-quality: warn, overlap: pass, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
+adjudicated: {trigger-quality: warn, overlap: warn, body-accuracy: pass, injection-intent: pass, scope-creep: pass, instruction-conflict: pass, body-structure: pass}
