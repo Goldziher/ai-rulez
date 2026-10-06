@@ -204,7 +204,7 @@ are listed with their own digests.
   cannot be parsed, or whose name is not a valid `skill://` path segment, is skipped with a warning; the
   rest are unaffected. A skill whose frontmatter is not valid YAML (`validate` fails on it) is refused:
   `load_skill` and `get_skill` answer `malformed-frontmatter` with the reason, and `generate` fails the same way.
-- Semantic (embedding) search is not implemented; the ranking is lexical.
+- Semantic ranking is opt-in: with `[search] mode = "hybrid"` and an index built by `ai-rulez search index`, `find_skill` fuses BM25F with embedding similarity (see [Skill search](search.md)). By default the ranking is lexical.
 
 ## Dynamic skill loading
 
@@ -332,9 +332,20 @@ working as described above. All tools are annotated read-only.
 
 - **Ranking.** `find_skill` scores BM25 over four fields with weights name 3, triggers 2.5, keywords 2 and
   description 1, after lowercasing, dropping stopwords and a light stemmer (`migrations` matches `migration`).
-  It is lexical and deterministic: score descending, then name. The ranker lives in `internal/skillsearch` and
-  is shared with [`ai-rulez search`](search.md), which runs it from the command line and measures it against
-  labelled queries. Embedding search is not implemented.
+  By default it is lexical and deterministic: score descending, then name. With `[search] mode = "hybrid"` (or
+  `vector`) and an index built by [`ai-rulez search index`](search.md), the same ranker used by
+  `ai-rulez search` fuses that list with cosine similarity over the index by reciprocal rank fusion. The
+  server never builds the index and never embeds a skill: it loads the index files (and reloads them when they
+  change) and embeds only the query, bounded by `query_timeout_ms` and an in-memory cache of 256 queries,
+  through the `[llm]` network gate, budget and cache. Any failure (no index, an index of another model, the
+  network disabled, a timeout, the budget) answers lexically and says why: the result gains `"ranking":
+  "lexical"` and `"degraded": "no_index" | "provider_unavailable" | "timeout" | "budget" |
+  "network_disabled"`. A hybrid result also carries `ranking`, and each match `lexical_rank` and
+  `vector_rank` (0: not in that list); a skill edited since it was indexed ranks lexically only and has
+  `stale_vector: true`. A server with the default lexical mode returns exactly the fields listed above.
+  `search_skills` stays lexical: it is the listing and filter tool. With `[search] log_queries = true` the
+  server also records each `find_skill` query and the skill the session loads next (see
+  [Skill search](search.md#query-mining)).
 - **Roles.** `role` is resolved against the project's `[[roles]]` (`mcp.RolesFromConfig`): a skill is in scope
   when the role keeps it (its domains and `skills` include and exclude selectors, `extends` merged in). Matches
   inside the scope come first, then the rest marked `in_role: false`; an unknown role is an error. The `role`

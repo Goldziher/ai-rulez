@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -52,7 +53,7 @@ func (s *Server) registerServeTools() {
 	)
 }
 
-func (s *Server) findSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
+func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
 	task := strings.TrimSpace(req.GetString("task", ""))
 	if task == "" {
 		return handlers.ToolError(fmt.Errorf("task is required: describe what you are about to do"))
@@ -72,8 +73,23 @@ func (s *Server) findSkillHandler(_ context.Context, req *handlers.ToolRequest) 
 		}
 	}
 
-	results := rankForRole(bm25Rank(s.cat().Skills(), task), role, scope, limit)
+	rk := s.serve.opts.Search.rank(ctx, s.cat(), task)
+	results := rankForRole(rk.hits, role, scope, limit)
 	out := map[string]any{"task": task, "count": len(results), "results": results}
+	if rk.ranking != skillsearch.ModeLexical || rk.degraded != "" {
+		out["ranking"] = rk.ranking
+	}
+	if rk.degraded != "" {
+		out["degraded"] = rk.degraded
+	}
+	if rk.log != nil {
+		session, _ := s.sessionInfo(req)
+		ids := make([]string, 0, len(results))
+		for _, r := range results {
+			ids = append(ids, r[keyName].(string))
+		}
+		rk.log.Query(session, task, rk.ranking, ids)
+	}
 	if role != "" {
 		out["role"] = role
 	}
@@ -133,6 +149,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		return handlers.ToolError(fmt.Errorf("session budget exhausted: loading %d bytes would exceed the %d-byte cap (%d bytes left); pass a smaller budget_bytes or restart the session",
 			len(content), s.serve.opts.budget(), remaining))
 	}
+	s.serve.opts.Search.Log().Loaded(session, skill.Name)
 	if t := s.serve.opts.Telemetry; t != nil {
 		t(SessionTelemetry{Skill: skill.Name, Digest: skill.Digest, Session: session, Client: client, Resource: rel != skillMarkdown, Role: s.serve.opts.Role})
 	}
@@ -256,6 +273,12 @@ func rankForRole(ranked []FindHit, role string, scope RoleScope, limit int) []ma
 		}
 		if role != "" {
 			entry["in_role"] = inRole
+		}
+		if hit.LexRank > 0 || hit.VecRank > 0 {
+			entry["lexical_rank"], entry["vector_rank"] = hit.LexRank, hit.VecRank
+		}
+		if hit.StaleVector {
+			entry["stale_vector"] = true
 		}
 		results = append(results, entry)
 	}

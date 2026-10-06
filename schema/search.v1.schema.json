@@ -2,14 +2,21 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/search.v1.schema.json",
   "title": "ai-rulez search",
-  "description": "Output of `ai-rulez search <query> --format json`: the served skills ranked against the query by the lexical BM25F ranker find_skill uses.",
+  "description": "Output of `ai-rulez search <query> --format json`: the served skills ranked against the query by the ranker find_skill uses (lexical BM25F, or hybrid with an embedding index).",
   "type": "object",
-  "required": ["schema_version", "query", "count", "results"],
+  "required": ["schema_version", "query", "ranking", "degraded", "count", "results"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": 1 },
-    "query": { "type": "string" },
-    "count": { "type": "integer", "minimum": 0 },
+    "schema_version": {
+      "const": 1
+    },
+    "query": {
+      "type": "string"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
     "results": {
       "type": "array",
       "items": {
@@ -17,13 +24,53 @@
         "required": ["name", "description", "score", "domain", "digest"],
         "additionalProperties": false,
         "properties": {
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "score": { "type": "number", "exclusiveMinimum": 0 },
-          "domain": { "type": "string", "description": "The skill's domain, or root." },
-          "digest": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "description": "The fused (RRF), BM25F or cosine score, by ranking."
+          },
+          "domain": {
+            "type": "string",
+            "description": "The skill's domain, or root."
+          },
+          "digest": {
+            "type": "string"
+          },
+          "lexical_rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rank in the lexical candidate list of a hybrid ranking."
+          },
+          "vector_rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rank in the vector candidate list."
+          },
+          "vector_sim": {
+            "type": "number",
+            "description": "Cosine similarity of the query and the skill."
+          },
+          "stale_vector": {
+            "type": "boolean",
+            "description": "The skill changed since it was indexed, so it ranked lexically only."
+          }
         }
       }
+    },
+    "ranking": {
+      "type": "string",
+      "enum": ["lexical", "hybrid", "vector"],
+      "description": "What produced the order; lexical when a requested vector mode degraded."
+    },
+    "degraded": {
+      "type": ["string", "null"],
+      "enum": ["no_index", "provider_unavailable", "timeout", "budget", "network_disabled", null],
+      "description": "Why a hybrid or vector search was answered lexically; null otherwise."
     }
   }
 }
