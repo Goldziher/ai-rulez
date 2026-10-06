@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/policy.schema.json",
+  "title": "ai-rulez organization policy",
+  "description": "An organization policy file (--policy, AI_RULEZ_POLICY, or the managed path). A repository can only add restrictions to it. See docs/policy.md.",
+  "type": "object",
+  "required": ["policy_version"],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": { "const": 1, "description": "The policy format version this ai-rulez reads." },
+    "name": { "type": "string", "description": "A label for the policy, shown by validate --show-policy." },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowed_hosts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/hostPattern" },
+          "description": "Host patterns every include, installed skill and skill source must fall under (a path prefix is allowed: github.com/example-org). An empty list allows no remote source. Lists of several layers intersect."
+        },
+        "deny_hosts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/hostPattern" },
+          "description": "Host patterns that are never allowed. Lists of several layers union."
+        },
+        "require_pinned": {
+          "type": "boolean",
+          "description": "true makes the lock enforced, so an unpinned remote source is an error (AR010)."
+        }
+      }
+    },
+    "lint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_codes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Rule codes or names that may be neither turned off nor ignored."
+        },
+        "severity_floor": {
+          "type": "object",
+          "additionalProperties": { "enum": ["info", "warning", "error"] },
+          "description": "Rule code or name to the lowest severity it may have."
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_hosts": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/hostOnlyPattern" },
+              "description": "Bounds the repository's lint.security.allowed_hosts: only entries this list covers are kept. An empty list allows no host."
+            },
+            "scan_imports": {
+              "enum": ["warn", "error"],
+              "description": "The weakest scan_imports level the repository may use."
+            }
+          }
+        }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enforce": { "type": "boolean", "description": "true forces [lock] enforce on. false constrains nothing." },
+        "include_outputs": {
+          "type": "boolean",
+          "description": "true forces [lock] include_outputs on. false constrains nothing."
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_network": {
+          "type": "boolean",
+          "description": "false switches telemetry export off whatever the user scope says. true constrains nothing."
+        }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_network": {
+          "type": "boolean",
+          "description": "false switches model calls off whatever the user scope says. true constrains nothing."
+        }
+      }
+    },
+    "guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generated": {
+          "type": "boolean",
+          "description": "true forces the generated-file guard hook on. false constrains nothing."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "hostPattern": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s:@\\\\?#]+$",
+      "not": { "pattern": "://" },
+      "description": "host or host/path, case-insensitive. The host may be *.suffix; a path segment may be *, or carry one * at its start or end."
+    },
+    "hostOnlyPattern": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s:@\\\\?#/]+$",
+      "description": "A host, or *.suffix."
+    }
+  }
+}
