@@ -147,6 +147,8 @@ stdout.
 | AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
 | AR9C3 | `copilot-exclude-agent-invalid` | warning | A `.instructions.md` file whose `excludeAgent` is neither `code-review` nor `cloud-agent` (the older `coding-agent` is still accepted) |
 | AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
+| AR9C5 | `kiro-agent-steering-not-loaded` | warning | A `.kiro/agents/*.json` custom agent without `resources` while `.kiro/steering/*.md` exists |
+| AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A `.kiro/steering/*.md` file whose `inclusion` frontmatter follows a blank line or text, so Kiro does not read it |
 | AR9C7 | `claude-frontmatter-key-spelling` | warning | A `.claude/skills/*/SKILL.md` or `.claude/agents/*.md` frontmatter key spelled as a variant of a documented key (`disable_model_invocation`, `max_turns`); Claude Code ignores it silently. Error when ai-rulez generated it |
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
 | AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
@@ -156,10 +158,9 @@ stdout.
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`, or its `--version` is outside `version`; it was not run (a notice, not an error; an error when the scanner is `required`, including one that no entry or preset provides) |
 | AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF or adapter output, or exited non-zero with no results; or `isolation = "require"` and the scanner cannot be confined |
 | AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
-| AR9C5 | `kiro-agent-steering-not-loaded` | warning | A `.kiro/agents/*.json` custom agent without `resources` while `.kiro/steering/*.md` exists |
-| AR9C6 | `kiro-steering-frontmatter-not-first` | warning | A `.kiro/steering/*.md` file whose `inclusion` frontmatter follows a blank line or text, so Kiro does not read it |
 | AR9E5 | `scanner-baseline-expired` | warning | An entry of `scanner-baseline.json` is past its `expires` date, so the scanner finding it accepted is reported again |
 | AR9E6 | `scanner-out-of-scope-result` | warning | A scanner with `inputs` reported a result for a path that was not staged for it; the result was dropped |
+| AR9E7 | `scanner-isolation-degraded` | warning | `isolation = "auto"` found no process isolation backend, so staged scanners ran without network or write confinement (once per run) |
 | AR9F0 | `convert-input-invalid` | error | `ai-rulez convert` cannot parse an input file at all; appears only in the error that stops the run (never emitted by `validate`, see [convert](cli.md#ai-rulez-convert)) |
 | AR9F1 | `convert-approximated` | warning | `convert` kept a construct in the closest equivalent form, for example a skill frontmatter key only some presets render (convert report only) |
 | AR9F2 | `convert-dropped` | warning | `convert` found a construct with no ai-rulez equivalent and did not convert it (convert report only) |
@@ -170,7 +171,6 @@ stdout.
 | AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
 | AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
 | AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
-| AR9E7 | `scanner-isolation-degraded` | warning | `isolation = "auto"` found no process isolation backend, so staged scanners ran without network or write confinement (once per run) |
 | AR9N4 | `publish-target-failed` | error | The upload failed: `gh` is not installed, the release already exists, or `gh` exited non-zero (publish only) |
 | AR9N5 | `publish-verify-mismatch` | error | `publish verify` found a digest, manifest or archive mismatch (publish only) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
@@ -327,6 +327,18 @@ format = "sarif"                   # sarif (default) | json | adapter:snyk-json 
 egress = false                     # required for hardening; see External scanners
 timeout = "120s"                   # default 2m, max 15m
 env_pass = []                      # extra environment variable names for an egress = false scanner
+# inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
+# profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
+# version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
+# required = true                  # a missing, outdated or failing scanner is an error
+
+[lint.scanner_policy]
+preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
+required = ["agnix"]               # names whose absence or failure is an error
+fail_on = "warning"                # lowest scanner finding severity that fails the run (scanner findings only)
+baseline = ".ai-rulez/scanner-baseline.json"   # relative to the project root, must stay inside it
+isolation = "auto"                 # auto (default) | none | require, see Isolation
+allow_egress = []                  # set: --allow-egress=<name> also needs the name here; [] forbids every egress scanner
 
 [lint.traps]
 extra_harnesses = ["cursor"]       # run these harnesses' traps without a preset, see Harness traps
@@ -343,18 +355,6 @@ confusion_threshold = 0.25         # AR9A2: share of a skill's prompts a sibling
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
 command 300 / 3000. The skill figures follow the Agent Skills recommendation (`SKILL.md` under 500 lines and
-# inputs = ["skills"]              # stage a read-only copy and run on it (needed for the result cache and isolation)
-# profile = "cisco-skill-scanner"  # inherit command, format, inputs, egress and deny-list from an embedded profile
-# version = ">=1.0.0, <2"          # checked against `--version` before each run (AR9E2)
-# required = true                  # a missing, outdated or failing scanner is an error
-
-[lint.scanner_policy]
-preset = "strict"                  # off (default) | baseline | strict: embedded profiles that run with --external
-required = ["agnix"]               # names whose absence or failure is an error
-fail_on = "warning"                # lowest scanner finding severity that fails the run (scanner findings only)
-baseline = ".ai-rulez/scanner-baseline.json"   # relative to the project root, must stay inside it
-isolation = "auto"                 # auto (default) | none | require, see Isolation
-allow_egress = []                  # set: --allow-egress=<name> also needs the name here; [] forbids every egress scanner
 5000 tokens). Token counts use the embedded `cl100k_base` tokenizer and are approximate.
 
 An unknown code, severity or content kind in `[lint]` is an error (exit 1) rather than a silently disabled check.
@@ -721,22 +721,6 @@ cannot enable an egress scanner, so a CI job opts in per invocation. Timeout, ca
 environment scrub applies once `egress` is set. The hardened runner is the `internal/runner` package, reused by
 later features that execute commands.
 
-## OKF bundle checks
-
-A project that turns on the [`okf` preset](okf.md) (or sets `[okf] dir`) also has its Open Knowledge Format bundle
-linted by `validate --strict` and `doctor`. The same checks run on any third-party bundle with
-`ai-rulez okf validate <dir>`. Severities below are defaults; the spec says consumers must tolerate most of these
-(broken links, a missing or partial index), so only conformance failures and export drift are errors.
-
-| Code | Name | Default | Finds |
-| --- | --- | --- | --- |
-| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
-| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
-| AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
-| AR9B3 | `okf-version-invalid` | warning | The root `okf_version` is not `MAJOR.MINOR` (info when well formed but not `0.2`) |
-| AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
-| AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
-| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
 ### Policy, presets and profiles
 
 `[lint.scanner_policy]` sets the policy for every scanner at once; all keys are optional.
@@ -829,6 +813,22 @@ current content: `scanner`, `version` (its `--version` line when it ran), `tree`
 counted before the scanner baseline). `lock` starts no program, so run `scan --external` first; a scanner with no
 cached result has no record, and `lock` says so. The records sit outside the tree digest, like approvals.
 
+## OKF bundle checks
+
+A project that turns on the [`okf` preset](okf.md) (or sets `[okf] dir`) also has its Open Knowledge Format bundle
+linted by `validate --strict` and `doctor`. The same checks run on any third-party bundle with
+`ai-rulez okf validate <dir>`. Severities below are defaults; the spec says consumers must tolerate most of these
+(broken links, a missing or partial index), so only conformance failures and export drift are errors.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
+| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
+| AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
+| AR9B3 | `okf-version-invalid` | warning | The root `okf_version` is not `MAJOR.MINOR` (info when well formed but not `0.2`) |
+| AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
+| AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
+| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
 | AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
 | AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
@@ -2356,6 +2356,26 @@ a file in .github/instructions does not end in .instructions.md, so Copilot skip
 - Bad: `.github/instructions/tests.md`
 - Good: `.github/instructions/tests.instructions.md`
 
+### AR9C5 kiro-agent-steering-not-loaded
+
+a Kiro custom agent file has no resources while .kiro/steering holds steering files, so the agent never loads them
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Kiro does not include steering files in a custom agent on its own; the agent must list them in its resources, so the steering context is missing without an error.
+- Bad: `.kiro/agents/review.json` without `resources`, next to `.kiro/steering/style.md`
+- Good: `"resources": ["file://.kiro/steering/**/*.md"]` in the agent
+
+### AR9C6 kiro-steering-frontmatter-not-first
+
+a Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it
+
+- Default severity: `warning`
+- Analyzer: `traps` (scope `file`)
+- Why: Kiro reads the inclusion setting only when it is the first content of the steering file, so a blank line or text before the opening `---` leaves the file on its default inclusion.
+- Bad: A steering file that starts with an empty line, then `---` and `inclusion: manual`
+- Good: Start the file with `---` on the first byte
+
 ### AR9C7 claude-frontmatter-key-spelling
 
 a Claude Code skill or subagent file spells a frontmatter key in a variant (underscore for hyphen, wrong case) that Claude Code silently ignores
@@ -2385,26 +2405,6 @@ a generated instruction file or chain is past the documented size limit of its h
 - Why: Codex stops reading AGENTS.md files past project_doc_max_bytes, Devin and Antigravity truncate a rule file past their per-file limit, and Kilo truncates REVIEW.md past 10,000 characters, so the content past it is never loaded.
 - Bad: A generated `.devin/rules/style.md` of 15,000 characters
 - Good: Split the rule, shorten it, or move detail into a skill
-
-### AR9D2 search-cases-invalid
-
-a skill search cases file cannot be used: not valid JSON, unknown key, unsupported schema version or an invalid case (search --eval only)
-
-- Default severity: `error`
-- Analyzer: `search` (scope `item`)
-- Why: A cases file that does not parse or validate would silently measure nothing, so `search --eval` refuses it and names every problem. Only `ai-rulez search --eval` reports it.
-- Bad: A case without a query, or a file with `schema_version = 2`
-- Good: Fix the listed problems; every case needs a query and the expected skills
-
-### AR9D4 search-eval-regression
-
-a skill search metric is below its minimum, or more cases regressed against the baseline than allowed (search --eval only)
-
-- Default severity: `error`
-- Analyzer: `search` (scope `bundle`)
-- Why: Search quality fell below the minimum the cases file sets, or more cases flipped from hit to miss against the baseline than allowed. Only `ai-rulez search --eval` reports it and exits non-zero.
-- Bad: A skill description rewrite that drops recall@5 under the configured minimum
-- Good: Restore the discoverability of the skill, or lower the minimum deliberately
 
 ### AR9CA project-trap
 
@@ -2436,15 +2436,15 @@ a committed skill search index no longer matches the skills or the embedding mod
 - Bad: `index_dir = "search-index"` committed, then a skill's description edited without rebuilding
 - Good: Re-run `ai-rulez search index` and commit the changed manifest.json and vectors.bin
 
-### AR9E0 scanner-config-invalid
+### AR9D2 search-cases-invalid
 
-a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
+a skill search cases file cannot be used: not valid JSON, unknown key, unsupported schema version or an invalid case (search --eval only)
 
 - Default severity: `error`
-- Analyzer: `security` (scope `bundle`)
-- Why: An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.
-- Bad: `egress = false` with `env_pass = ["HTTPS_PROXY"]`
-- Good: Remove the variable or declare `egress = true`
+- Analyzer: `search` (scope `item`)
+- Why: A cases file that does not parse or validate would silently measure nothing, so `search --eval` refuses it and names every problem. Only `ai-rulez search --eval` reports it.
+- Bad: A case without a query, or a file with `schema_version = 2`
+- Good: Fix the listed problems; every case needs a query and the expected skills
 
 ### AR9D3 search-text-withheld
 
@@ -2455,6 +2455,26 @@ a skill was not embedded because its text looks like it holds a secret; it ranks
 - Why: The text sent to an embedding endpoint is name, description, triggers and keywords (and the body start with index_body). If it looks like it holds a credential, `search index` skips that skill instead of sending a masked string; it still ranks lexically. Only `ai-rulez search index` reports it.
 - Bad: A skill description that contains an API key
 - Good: Remove the secret from the description; `search index` then embeds the skill
+
+### AR9D4 search-eval-regression
+
+a skill search metric is below its minimum, or more cases regressed against the baseline than allowed (search --eval only)
+
+- Default severity: `error`
+- Analyzer: `search` (scope `bundle`)
+- Why: Search quality fell below the minimum the cases file sets, or more cases flipped from hit to miss against the baseline than allowed. Only `ai-rulez search --eval` reports it and exits non-zero.
+- Bad: A skill description rewrite that drops recall@5 under the configured minimum
+- Good: Restore the discoverability of the skill, or lower the minimum deliberately
+
+### AR9E0 scanner-config-invalid
+
+a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
+
+- Default severity: `error`
+- Analyzer: `security` (scope `bundle`)
+- Why: An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.
+- Bad: `egress = false` with `env_pass = ["HTTPS_PROXY"]`
+- Good: Remove the variable or declare `egress = true`
 
 ### AR9E1 scanner-egress-undeclared
 
@@ -2487,26 +2507,6 @@ a [[lint.external]] scanner timed out, exceeded the output cap, or printed unrea
 - Good: Fix the scanner, raise `timeout` within the limit, or narrow its scope
 
 ### AR9E4 scanner-egress-blocked
-### AR9C5 kiro-agent-steering-not-loaded
-
-a Kiro custom agent file has no resources while .kiro/steering holds steering files, so the agent never loads them
-
-- Default severity: `warning`
-- Analyzer: `traps` (scope `file`)
-- Why: Kiro does not include steering files in a custom agent on its own; the agent must list them in its resources, so the steering context is missing without an error.
-- Bad: `.kiro/agents/review.json` without `resources`, next to `.kiro/steering/style.md`
-- Good: `"resources": ["file://.kiro/steering/**/*.md"]` in the agent
-
-### AR9C6 kiro-steering-frontmatter-not-first
-
-a Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it
-
-- Default severity: `warning`
-- Analyzer: `traps` (scope `file`)
-- Why: Kiro reads the inclusion setting only when it is the first content of the steering file, so a blank line or text before the opening `---` leaves the file on its default inclusion.
-- Bad: A steering file that starts with an empty line, then `---` and `inclusion: manual`
-- Good: Start the file with `---` on the first byte
-
 
 a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner
 
@@ -2538,14 +2538,15 @@ a staged [[lint.external]] scanner reported a result for a file that was not sta
 
 ### AR9E7 scanner-isolation-degraded
 
-a trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid
+isolation = auto found no process isolation backend, so staged scanners ran without network or write confinement
 
 - Default severity: `warning`
-- Analyzer: `traps` (scope `file`)
-- Why: A project can record its own traps as rows in `.ai-rulez/traps/*.toml`, with the same closed predicate vocabulary as the built-in table; this code reports a row's match or a row that cannot be used.
-- Bad: A row whose predicate kind is not in the vocabulary, or a file that matches the row
-- Good: Fix the file the row names, or correct the row
+- Analyzer: `security` (scope `bundle`)
+- Why: With isolation = "auto" a staged scanner is confined to no network and no writes outside its scratch directory when the system has sandbox-exec, bubblewrap or unshare; without one it runs with only a scrubbed environment.
+- Bad: A staged scanner run on Windows or in a container with no user namespaces, with isolation unset
+- Good: Install a backend, set `isolation = "none"` to accept running unconfined, or `isolation = "require"` to refuse
 
+### AR9F0 convert-input-invalid
 
 an input file of `convert` cannot be parsed at all (reported by convert, never by validate)
 

@@ -50,8 +50,8 @@ type tomlOutput struct {
 	Lint            *LintConfig            `toml:"lint,omitempty"`
 	OKF             *OKFConfig             `toml:"okf,omitempty"`
 	Verifiers       []VerifierConfig       `toml:"verifiers,omitempty"`
-	Usage           *UsageConfig           `toml:"usage,omitempty"`
 	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings,omitempty"`
+	Usage           *UsageConfig           `toml:"usage,omitempty"`
 	Skills          *SkillsConfig          `toml:"skills,omitempty"`
 	DomainSettings  DomainConfigs          `toml:"domains,omitempty"`
 	SkillSources    []SkillSourceConfig    `toml:"skill_sources,omitempty"`
@@ -59,8 +59,8 @@ type tomlOutput struct {
 	RoleManifest    *RoleManifestConfig    `toml:"role_manifest,omitempty"`
 	Lock            *LockConfig            `toml:"lock,omitempty"`
 	Governance      *GovernanceConfig      `toml:"governance,omitempty"`
-	LLM             *llm.Config            `toml:"llm,omitempty"`
 	Signing         *SigningConfig         `toml:"signing,omitempty"`
+	LLM             *llm.Config            `toml:"llm,omitempty"`
 	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
 	Review          *ReviewConfig          `toml:"review,omitempty"`
 	Search          *skillsearch.Config    `toml:"search,omitempty"`
@@ -157,9 +157,9 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		RoleManifest:    cfg.RoleManifest,
 		Lock:            cfg.Lock,
 		Governance:      cfg.Governance,
+		Signing:         cfg.Signing,
 		LLM:             cfg.LLM,
 		Telemetry:       cfg.Telemetry,
-		Signing:         cfg.Signing,
 		Review:          cfg.Review,
 		Search:          cfg.Search,
 		Scopes:          cfg.Scopes,

@@ -823,11 +823,6 @@
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
             "type": "boolean"
           },
-          "min_release_age": {
-            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
-            "pattern": "^(0|[0-9]+[hdw])$",
-            "type": "string"
-          },
           "install_to": {
             "description": "Import content into a specific domain (defaults to root)",
             "type": "string"
@@ -839,6 +834,11 @@
           "merge_strategy": {
             "description": "How to handle conflicting files: local-override (default, local wins), include-override (include wins), or error (fail on conflict)",
             "enum": ["local-override", "include-override", "error"],
+            "type": "string"
+          },
+          "min_release_age": {
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
+            "pattern": "^(0|[0-9]+[hdw])$",
             "type": "string"
           },
           "name": {
@@ -884,13 +884,13 @@
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
             "type": "boolean"
           },
+          "local_override": {
+            "description": "Local path override for development (used instead of source when present)",
+            "type": "string"
+          },
           "min_release_age": {
             "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
             "pattern": "^(0|[0-9]+[hdw])$",
-            "type": "string"
-          },
-          "local_override": {
-            "description": "Local path override for development (used instead of source when present)",
             "type": "string"
           },
           "name": {
@@ -1085,6 +1085,7 @@
           "description": "External scanners run with `validate --strict --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "additionalProperties": false,
+            "anyOf": [{}, {}],
             "properties": {
               "command": {
                 "items": {
@@ -1122,6 +1123,15 @@
               "name": {
                 "type": "string"
               },
+              "profile": {
+                "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's.",
+                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
+                "type": "string"
+              },
+              "required": {
+                "description": "A missing, outdated or failing scanner is an error instead of a notice.",
+                "type": "boolean"
+              },
               "severity_map": {
                 "additionalProperties": {
                   "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
@@ -1131,6 +1141,10 @@
               },
               "timeout": {
                 "description": "Go duration such as \"90s\". Default 2m, at most 15m.",
+                "type": "string"
+              },
+              "version": {
+                "description": "Version range the scanner's --version output must satisfy (\">=1.0.0, <2\"). A scanner outside it is not run (AR9E2).",
                 "type": "string"
               }
             },
@@ -1188,15 +1202,6 @@
                 "minimum": 0,
                 "type": "integer"
               },
-              "profile": {
-                "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's.",
-                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
-                "type": "string"
-              },
-              "required": {
-                "description": "A missing, outdated or failing scanner is an error instead of a notice.",
-                "type": "boolean"
-              },
               "required": {
                 "description": "Report an item of the configured kinds that lacks the key (AR951).",
                 "type": "boolean"
@@ -1251,6 +1256,43 @@
               "description": "Points per warning finding. Default 8.",
               "minimum": 0,
               "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "scanner_policy": {
+          "additionalProperties": false,
+          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
+          "properties": {
+            "allow_egress": {
+              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "baseline": {
+              "description": "Scanner baseline file, relative to the project root; it must stay inside the project.",
+              "type": "string"
+            },
+            "fail_on": {
+              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
+              "enum": ["error", "warning", "info"]
+            },
+            "isolation": {
+              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
+              "enum": ["auto", "none", "require"]
+            },
+            "preset": {
+              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",
+              "enum": ["off", "baseline", "strict"]
+            },
+            "required": {
+              "description": "Scanner names whose absence, outdated version or failure is an error.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "type": "object"
@@ -1325,43 +1367,6 @@
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
-        "scanner_policy": {
-          "additionalProperties": false,
-          "description": "Policy for the external scanners as a whole: an embedded preset, required scanners, a failure threshold, isolation and which egress scanners may be allowed.",
-          "properties": {
-            "allow_egress": {
-              "description": "Scanners --allow-egress may enable. Unset, the flag alone decides; set (even empty), the name must also be listed. Presets never read it.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "baseline": {
-              "description": "Scanner baseline file, relative to the project root; it must stay inside the project.",
-              "type": "string"
-            },
-            "fail_on": {
-              "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
-              "enum": ["error", "warning", "info"]
-            },
-            "isolation": {
-              "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
-              "enum": ["auto", "none", "require"]
-            },
-            "preset": {
-              "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",
-              "enum": ["off", "baseline", "strict"]
-            },
-            "required": {
-              "description": "Scanner names whose absence, outdated version or failure is an error.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            }
-          },
-          "type": "object"
-        },
           "type": "object"
         },
         "tolerate": {
@@ -1502,13 +1507,13 @@
           "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push.",
           "enum": ["auto", "forge", "first-seen", "commit"]
         },
-        "verify_tags": {
-          "description": "Make generate and lock --check ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735). Needs the network; default false. The --verify-tags flag turns it on for one run.",
-          "type": "boolean"
-        },
         "scope": {
           "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only.",
           "enum": ["all", "skills"]
+        },
+        "verify_tags": {
+          "description": "Make generate and lock --check ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735). Needs the network; default false. The --verify-tags flag turns it on for one run.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -2750,94 +2755,6 @@
       },
       "type": "array"
     },
-    "skill_sources": {
-      "description": "Remote or local skill sources that are served over MCP, never written to the static skill trees. A tag or full commit SHA is resolved to a commit and pinned in ai-rulez.lock (kind source); a branch ref is reported as unpinned (AR010).",
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "exclude": {
-            "description": "Drop skills whose directory name matches one of these globs; wins over include.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "include": {
-            "description": "Keep only skills whose directory name matches one of these globs.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "include_prerelease": {
-            "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
-            "type": "boolean"
-          },
-          "min_release_age": {
-            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
-            "pattern": "^(0|[0-9]+[hdw])$",
-            "type": "string"
-          },
-          "max_bytes": {
-            "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error.",
-            "minimum": 0,
-            "type": "integer"
-          },
-          "max_clone_bytes": {
-            "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached.",
-            "minimum": 0,
-            "type": "integer"
-          },
-          "max_clone_files": {
-            "description": "Limit on the number of entries (files, directories, links) of the clone of a git source (default 20000; the AI_RULEZ_MAX_CLONE_FILES environment variable sets it for every source). Each entry counts as at least 4096 bytes toward max_clone_bytes. A larger clone is an error and nothing is cached.",
-            "minimum": 0,
-            "type": "integer"
-          },
-          "max_skills": {
-            "description": "Number of skills this source may load (default 200); a larger source is an error.",
-            "minimum": 0,
-            "type": "integer"
-          },
-          "name": {
-            "description": "Identifies the source in the lock and in provenance.",
-            "pattern": "^[a-z0-9][a-z0-9._-]*$",
-            "type": "string"
-          },
-          "name_prefix": {
-            "description": "Prepended to every served skill name, so two sources cannot collide.",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
-            "type": "string"
-          },
-          "path": {
-            "description": "Subdirectory of the repository whose child directories are skills.",
-            "type": "string"
-          },
-          "ref": {
-            "description": "A tag or full commit SHA. A branch or no ref follows a moving ref and is reported as unpinned.",
-            "type": "string"
-          },
-          "tag_prefix": {
-            "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
-            "type": "string"
-          },
-          "trust": {
-            "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
-            "enum": ["error", "warn"],
-            "type": "string"
-          },
-          "url": {
-            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory.",
-            "type": "string"
-          },
-          "version": {
-            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "type": "array"
-    },
     "search": {
       "additionalProperties": false,
       "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
@@ -3032,6 +2949,94 @@
         }
       },
       "type": "object"
+    },
+    "skill_sources": {
+      "description": "Remote or local skill sources that are served over MCP, never written to the static skill trees. A tag or full commit SHA is resolved to a commit and pinned in ai-rulez.lock (kind source); a branch ref is reported as unpinned (AR010).",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "exclude": {
+            "description": "Drop skills whose directory name matches one of these globs; wins over include.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include": {
+            "description": "Keep only skills whose directory name matches one of these globs.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include_prerelease": {
+            "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
+            "type": "boolean"
+          },
+          "max_bytes": {
+            "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_clone_bytes": {
+            "description": "Size limit in bytes of the clone of a git source, git data and checkout together (default 268435456, 256 MiB; the AI_RULEZ_MAX_CLONE_BYTES environment variable sets it for every source). A larger clone is an error and nothing is cached.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_clone_files": {
+            "description": "Limit on the number of entries (files, directories, links) of the clone of a git source (default 20000; the AI_RULEZ_MAX_CLONE_FILES environment variable sets it for every source). Each entry counts as at least 4096 bytes toward max_clone_bytes. A larger clone is an error and nothing is cached.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_skills": {
+            "description": "Number of skills this source may load (default 200); a larger source is an error.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_release_age": {
+            "description": "Hold back a tag younger than this age (7d, 12h, 2w; a number with h, d or w; 0 disables) when `ai-rulez lock` or `ai-rulez update` picks the newest allowed tag. Defaults to [lock] min_release_age. Needs version. See docs/lockfile.md.",
+            "pattern": "^(0|[0-9]+[hdw])$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Identifies the source in the lock and in provenance.",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "type": "string"
+          },
+          "name_prefix": {
+            "description": "Prepended to every served skill name, so two sources cannot collide.",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "type": "string"
+          },
+          "path": {
+            "description": "Subdirectory of the repository whose child directories are skills.",
+            "type": "string"
+          },
+          "ref": {
+            "description": "A tag or full commit SHA. A branch or no ref follows a moving ref and is reported as unpinned.",
+            "type": "string"
+          },
+          "tag_prefix": {
+            "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
+            "type": "string"
+          },
+          "trust": {
+            "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
+            "enum": ["error", "warn"],
+            "type": "string"
+          },
+          "url": {
+            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory.",
+            "type": "string"
+          },
+          "version": {
+            "description": "npm-style version constraint resolved against the repository's semantic version tags (^1.2, ~2.1.0, >=1.4.0 <2.0.0, 1.x || 3). `ai-rulez lock` pins the chosen tag, its commit and the tree digest; only `ai-rulez update` moves the pin. Set either `ref` or `version`, not both (AR731). Git sources only. See docs/lockfile.md.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "skills": {
       "additionalProperties": false,

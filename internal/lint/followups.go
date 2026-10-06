@@ -511,8 +511,8 @@ func validateCapabilityAndLoadBudgets(lc *config.LintConfig) []string {
 func validateExternal(list []config.LintExternal) []string {
 	var problems []string
 	for i, ex := range list {
-		if strings.TrimSpace(ex.Name) == "" || len(ex.Command) == 0 {
-			problems = append(problems, fmt.Sprintf("lint.external[%d]: name and command are required", i))
+		if strings.TrimSpace(ex.Name) == "" || (len(ex.Command) == 0 && ex.Profile == "") {
+			problems = append(problems, fmt.Sprintf("lint.external[%d]: name and command (or profile) are required", i))
 		}
 		if !validFormat(ex.Format) {
 			problems = append(problems, fmt.Sprintf("lint.external[%d]: unknown format %q (use sarif, json or adapter:<%s>)", i, ex.Format, strings.Join(knownAdapters, "|")))

@@ -1250,7 +1250,6 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--if-generated`      | boolean | false              | With `--plugin`, succeed without work when the bundle has not been generated yet |
 | `--profile` / `-p`    | string  | configured default | Profile used when the plugin was generated                 |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
-
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
 | `--trusted-root`      | string  | cache of `trust update` | With `--attestation`: Sigstore trusted root file for keyless bundles |
@@ -1265,6 +1264,7 @@ Verify the signed lock (exit `0` verified, `1` cannot run, `2` verification fail
 ai-rulez verify --attestation
 ai-rulez verify --attestation --public-key release.pub --format json
 ```
+
 Verify one producer:
 
 ```bash
@@ -1676,17 +1676,19 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 
 ### `ai-rulez search --eval <cases.yaml>`
 
-Measure the ranking against labelled queries: top-1, recall@k, hit@k and MRR.
+Measure the ranking against labelled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k.
 
 | Flag | Meaning |
 | --- | --- |
-| `--k n` | Cut-off of recall@k and hit@k (default: the file's `k`, then 5) |
-| `--min metric=value,...` | Fail when a metric (`top1`, `recall`, `hit`, `mrr`) is below the floor |
+| `--k n` | Cut-off of recall@k, hit@k and nDCG@k (default: the file's `k`, then 5) |
+| `--mode a,b` | One or more of `lexical`, `vector`, `hybrid`, or `all`; the first is gated. Several modes are compared with paired intervals |
+| `--from-evals` | Also (or only) use cases derived from the skills' eval-runner cases |
+| `--min metric=value,...` | Fail when a metric (`top1`, `recall`, `hit`, `mrr`, `ndcg`) of the primary mode is below the floor |
 | `--baseline result.json` | Compare with an earlier `--out` file; counts cases that went from found to missed |
 | `--max-flips n` | With `--baseline`: allowed regressions (default 0) |
 | `--out result.json` | Also write the result as JSON |
 
-Exit codes: 0 pass, 1 cannot run (bad flags, invalid cases file `AR9D2`, no catalog), 2 a gate failed (`AR9D4`).
+Exit codes: 0 pass, 1 cannot run (bad flags, invalid cases file `AR9D2`, no catalog, a vector mode with no index or with degraded embeddings), 2 a gate failed (`AR9D4`).
 
 ## Validation Command
 
@@ -1877,23 +1879,6 @@ refuses a remote source the lock does not cover, as `--locked` does. Pinning `re
 ai-rulez does not verify signatures itself: the lock proves the bytes did not change since you reviewed them, not
 who published them. To add that, sign `lock --subject` with `cosign` ([recipe](lockfile.md#signing-the-lock)).
 
-## Approve Command
-
-### `ai-rulez approve [item...]`
-
-Records in `ai-rulez.lock` that a reviewer read the content with a given digest and accepted it, and lists, revokes and
-prunes those records. `[governance]` decides what needs one. See [Approvals](approvals.md) for the model, the policy
-keys and the enforcement points.
-
-```bash
-ai-rulez approve --list                         # status of everything that needs approval (--all: every pinned item)
-ai-rulez approve --list --format json           # schema/approve-list.schema.json
-ai-rulez approve --diff include:shared          # files, scan findings and the previous approval; writes nothing
-ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh" --yes
-ai-rulez approve include:shared --accept AR005  # accept a finding you read (stored with the record)
-ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
-ai-rulez approve --prune                        # drop records of removed or changed content
-ai-rulez approve --verify-base origin/main      # CI: approvals added together with the content they approve (AR716)
 ## Sign Command
 
 ### `ai-rulez sign [config-path]`
@@ -1929,6 +1914,23 @@ Exit codes: `0` signed, `1` the command could not run, `2` the lock's tree does 
 Fetches the public-good Sigstore trusted root over TUF and caches it in `~/.cache/ai-rulez/sigstore/trusted_root.json`
 for offline verification of keyless attestations. It is the only command that touches the network for verification.
 
+## Approve Command
+
+### `ai-rulez approve [item...]`
+
+Records in `ai-rulez.lock` that a reviewer read the content with a given digest and accepted it, and lists, revokes and
+prunes those records. `[governance]` decides what needs one. See [Approvals](approvals.md) for the model, the policy
+keys and the enforcement points.
+
+```bash
+ai-rulez approve --list                         # status of everything that needs approval (--all: every pinned item)
+ai-rulez approve --list --format json           # schema/approve-list.schema.json
+ai-rulez approve --diff include:shared          # files, scan findings and the previous approval; writes nothing
+ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh" --yes
+ai-rulez approve include:shared --accept AR005  # accept a finding you read (stored with the record)
+ai-rulez approve --revoke include:shared        # --reviewer limits it to one reviewer's records
+ai-rulez approve --prune                        # drop records of removed or changed content
+ai-rulez approve --verify-base origin/main      # CI: approvals added together with the content they approve (AR716)
 ```
 
 | Flag | Description |
@@ -2062,6 +2064,10 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
 | `--scanner-baseline <file>` | Use another scanner baseline file |
 | `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
+| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-run) |
+| `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
+
+`[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
 
 ### `ai-rulez scanners list|doctor`
 
@@ -2138,10 +2144,6 @@ Starts the Model Context Protocol (MCP) server to allow AI assistants to program
 ```bash
 ai-rulez mcp
 ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--frozen]
-| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-run) |
-| `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
-
-`[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
 ```
 
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
