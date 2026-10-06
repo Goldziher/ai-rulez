@@ -91,6 +91,11 @@ schema compliance, and structural issues.`,
 			fmtError(err)
 			os.Exit(1)
 		}
+		if err := checkLocalIncludes(cfg); err != nil {
+			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
+			fmtError(err)
+			os.Exit(1)
+		}
 
 		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
 		warnWorktreeMarketplace(cfg)
@@ -191,6 +196,9 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 		return nil, err
 	}
 	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if err := checkLocalIncludes(cfg); err != nil {
 		return nil, err
 	}
 	warnWorktreeMarketplace(cfg)
