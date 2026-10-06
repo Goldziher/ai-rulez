@@ -9,22 +9,25 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
 var MigrateCmd = &cobra.Command{
 	Use:   "migrate [version]",
 	Short: "Migrate configuration to a newer format",
-	Long:  "Migrate your ai-rulez configuration to a newer format version.",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		targetVersion := args[0]
-		switch targetVersion {
+	Long: `Migrate your ai-rulez configuration to a newer format version.
+
+Supported targets: v4 (also 4, 4.0). The input is a V3 .ai-rulez/config.yaml;
+-C/--config selects another project's config file or directory.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		switch args[0] {
 		case "v4", "4", "4.0":
 			runMigrateV4()
+			return nil
 		default:
-			logger.Error("Unsupported migration target", "version", targetVersion)
-			fmt.Println("Supported targets: v4")
+			return oops.Hint("supported targets: v4").Errorf("unsupported migration target %q", args[0])
 		}
 	},
 }
