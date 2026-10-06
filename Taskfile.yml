@@ -122,6 +122,13 @@ tasks:
     cmds:
       - go test ./tests/e2e/integration/...
 
+  test:otelcol:
+    desc: "Send telemetry to a pinned real OpenTelemetry Collector (needs docker)"
+    env:
+      AI_RULEZ_E2E_OTELCOL: "1"
+    cmds:
+      - go test ./internal/telemetry -run 'TestCollector' -count=1 -v
+
   test:platform:
     desc: "Run cross-platform specific tests"
     cmds:
