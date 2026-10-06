@@ -1,0 +1,181 @@
+# scenario preset-junie
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for junie: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=15
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 565 dfb96596029a50a7b733428046d884d0cc02dd4e9e50196d19903963a1bb7e39
+.ai-rulez/.generated-manifest.local.json file 0644 1296 b12e148dd601551df2bb82d57b0e71fe7f13dc3f1e4b0137f094387a137c5d3b
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 826 ac5d627786cb68378bb92526355cfec4f51d8ead96fe9636a20a75bc17ebfc87
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 367 974f562287cb63bac2792eff088ba915d6bed7c1fb612a8103a4ebe89cdd4933
+.junie/ dir 0755
+.junie/agents/ dir 0755
+.junie/agents/architect.md file 0644 273 577bac81e8a8ec98b516afec7c3a274b639816224c20529e060a3b870ac7200f
+.junie/agents/tester.md file 0644 245 49f59197c199a15e4a5b7018cf17ccc065e054b36a3d89b8818df43f778a8464
+.junie/commands/ dir 0755
+.junie/commands/build.md file 0644 250 a4bf3bd9cc094fd0d99480b881a14ace235e58ec6735c95f9d08f4dc1ab675d7
+.junie/commands/ship.md file 0644 227 7b94966c06dbb66bf8d4c35c079791a30b8fb73d1d1fb42563de7f7842fef3f6
+.junie/mcp/ dir 0755
+.junie/mcp/mcp.json file 0600 355 aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b
+.junie/rules/ dir 0755
+.junie/rules/always.md file 0644 325 a551987b3a6433c20dc2bfaa418b13d803ec0b6dddc5c6a8e93a55eb4ac4d3ec
+.junie/rules/auto.md file 0644 302 cc1ca4512c464a9a14d99c441980baba816b58fcd025c2ece5c92926ce9d8f8a
+.junie/rules/manual.md file 0644 313 04892a7366218501427838c4ac33436782c84d6ab15afd8b6d0eb99ad7da0db8
+.junie/rules/typescript.md file 0644 369 2c16388d75b060f3d786a2d9ef0a4bc2c59813a9c875ebeb08af74af308ca740
+.junie/skills/ dir 0755
+.junie/skills/deployer/ dir 0755
+.junie/skills/deployer/SKILL.md file 0644 259 2a0c70466409cf02ed4c330d950b5795c1cec99d497d00d9f988a8cc1d771f02
+.junie/skills/reviewer/ dir 0755
+.junie/skills/reviewer/SKILL.md file 0644 506 a0d400f4b8a018afb526b8c65d7a304406a6564dc8082878771c2e66c35c0e58
+.junie/skills/reviewer/references/ dir 0755
+.junie/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.junie/skills/reviewer/scripts/ dir 0755
+.junie/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+AGENTS.md file 0644 575 39902fc9750a3f02f0b9a0a9dd57ec4b31e458ca8e55c040c81bed429338d8ad
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for junie: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=15
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for junie: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for junie: junie ignores project-level hooks, so they are only generated with --user
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 11 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .junie/agents/architect.md
+INFO    remove file: .junie/agents/tester.md
+INFO    remove file: .junie/commands/build.md
+INFO    remove file: .junie/commands/ship.md
+INFO    remove file: .junie/mcp/mcp.json
+INFO    remove file: .junie/rules/always.md
+INFO    remove file: .junie/rules/auto.md
+INFO    remove file: .junie/rules/manual.md
+INFO    remove file: .junie/rules/typescript.md
+INFO    remove file: .junie/skills/deployer/SKILL.md
+INFO    remove file: .junie/skills/reviewer/SKILL.md
+INFO    remove file: .junie/skills/reviewer/references/checklist.md
+INFO    remove file: .junie/skills/reviewer/scripts/run.sh
+INFO    remove file: .mcp.json
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .junie/skills/reviewer/scripts
+INFO    remove dir (if empty): .junie/skills/reviewer/references
+INFO    remove dir (if empty): .junie/skills/reviewer
+INFO    remove dir (if empty): .junie/skills/deployer
+INFO    remove dir (if empty): .junie/skills
+INFO    remove dir (if empty): .junie/rules
+INFO    remove dir (if empty): .junie/mcp
+INFO    remove dir (if empty): .junie/commands
+INFO    remove dir (if empty): .junie/agents
+INFO    remove dir (if empty): .junie
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=15 directories=10
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 826 ac5d627786cb68378bb92526355cfec4f51d8ead96fe9636a20a75bc17ebfc87
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

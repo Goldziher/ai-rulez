@@ -1,0 +1,185 @@
+# scenario preset-omp
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=16
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 585 069ba4bce41aa72c0c0f93dee219faf1def102bb6fdced2252aea821db79d644
+.ai-rulez/.generated-manifest.local.json file 0644 1989 3d782f32989cc7660b86511680ad5c17eed5efc15f6e67862836b6705342dd98
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 824 6c5bdc9600bac77ef2c05f1fd7d78e3bba86ef32f2c8b65d2fb6d9ce7c182b4a
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 363 63bdd343f7bd735c7c40da6f0c218560b13a67da722e9725af78342e06a1a9a6
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.omp/ dir 0755
+.omp/agents/ dir 0755
+.omp/agents/architect.md file 0644 259 f558f4e3ae72fdbb13649e114f9115557eb515cb47e237cd0dcb869cd8673a7f
+.omp/agents/tester.md file 0644 245 89032fa5fac055f3c3585f70d1a6795401fa68b137320a76cf06c3f83a7dab4e
+.omp/commands/ dir 0755
+.omp/commands/build.md file 0644 250 ac14b8b5e9fe2fff0d0cc9e85c05b79286c46bc166fe834af989d6862e5481a0
+.omp/commands/ship.md file 0644 227 4f8d2b1e3b72252617ee36d596b099a906d9420d54002887cdc3f7d9719833a6
+.omp/config.yml file 0644 292 371273510b1cdf74f59d02c72cc3149e01c734d8603ade068e57d84529aafe4e
+.omp/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
+.omp/rules/ dir 0755
+.omp/rules/always.md file 0644 351 f7ea847ff0caa1642fddbce12509b10df90af66dbf7dcfb1cbbee61a3a2fe191
+.omp/rules/auto.md file 0644 343 f7a4fb4cc8b38a198442e64637bdd9447f393f52ea06331cfcb2afb69d3aecd5
+.omp/rules/manual.md file 0644 341 30adc18ea055982c10bcc28ea034049ce297cff14f7e00f5a6d7722ed9f68bdd
+.omp/rules/typescript.md file 0644 427 944249cdd6cb9294b34e07c79f141ddf93e8ee87284a37d8b45e6920e792d6a0
+.omp/skills/ dir 0755
+.omp/skills/deployer/ dir 0755
+.omp/skills/deployer/SKILL.md file 0644 259 fbd5e41fea91c4ee275a7413ec4d517297135e289211e4d7bfa85de846f547c7
+.omp/skills/reviewer/ dir 0755
+.omp/skills/reviewer/SKILL.md file 0644 506 1871c2cd9f7393ad27dcdffa6255811dfa72c273cd56068a56028c3b489b03f3
+.omp/skills/reviewer/references/ dir 0755
+.omp/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.omp/skills/reviewer/scripts/ dir 0755
+.omp/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+AGENTS.md file 0644 575 6319e82e5646eca15333eea07c78187d07bf9637902a4808b3e2dea8b4cc9f7b
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=16
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
+WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
+WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
+WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for omp: the harness has no equivalent of WebFetch rules
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 11 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .mcp.json
+INFO    remove file: .omp/agents/architect.md
+INFO    remove file: .omp/agents/tester.md
+INFO    remove file: .omp/commands/build.md
+INFO    remove file: .omp/commands/ship.md
+INFO    remove file: .omp/config.yml
+INFO    remove file: .omp/mcp.json
+INFO    remove file: .omp/rules/always.md
+INFO    remove file: .omp/rules/auto.md
+INFO    remove file: .omp/rules/manual.md
+INFO    remove file: .omp/rules/typescript.md
+INFO    remove file: .omp/skills/deployer/SKILL.md
+INFO    remove file: .omp/skills/reviewer/SKILL.md
+INFO    remove file: .omp/skills/reviewer/references/checklist.md
+INFO    remove file: .omp/skills/reviewer/scripts/run.sh
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .omp/skills/reviewer/scripts
+INFO    remove dir (if empty): .omp/skills/reviewer/references
+INFO    remove dir (if empty): .omp/skills/reviewer
+INFO    remove dir (if empty): .omp/skills/deployer
+INFO    remove dir (if empty): .omp/skills
+INFO    remove dir (if empty): .omp/rules
+INFO    remove dir (if empty): .omp/commands
+INFO    remove dir (if empty): .omp/agents
+INFO    remove dir (if empty): .omp
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=16 directories=9
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 824 6c5bdc9600bac77ef2c05f1fd7d78e3bba86ef32f2c8b65d2fb6d9ce7c182b4a
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

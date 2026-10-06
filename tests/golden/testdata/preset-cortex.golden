@@ -1,0 +1,160 @@
+# scenario preset-cortex
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for cortex: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=9
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 421 4ee4589fc21017ea2ed6835086674a3db8ca9d07a563323ab09b5972ce0191c1
+.ai-rulez/.generated-manifest.local.json file 0644 1307 e1e306dbe0799ea5a04695e0cfea06eb7c3b8b7a1aa54185067b50773e18243f
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 827 4547c6abbf5c5ef0dc5b0a947cf30d1bcff9c27337f169bc3141b821c92ddb0d
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.cortex/ dir 0755
+.cortex/agents/ dir 0755
+.cortex/agents/architect.md file 0644 259 042a8f94a310568b0ee0239af7bae65ff00556eda4a0cb3abff31ec1c566fb7f
+.cortex/agents/tester.md file 0644 245 0f1121651f7e2576011329b93a8e964379789f13df52d91221345059b1c4270d
+.cortex/settings.json file 0644 479 47cc96d1c8135ddd849f304622e902dc03f144119c07a07217e27af88681d4c5
+.cortex/skills/ dir 0755
+.cortex/skills/deployer/ dir 0755
+.cortex/skills/deployer/SKILL.md file 0644 259 ec47606f24b7f4d8bbde03fa5a30ca529314ec73ab6295227313498c3b20bf26
+.cortex/skills/reviewer/ dir 0755
+.cortex/skills/reviewer/SKILL.md file 0644 506 93663ca7a85ab5851b16bb97dd5fcf9461bec7727f0d9dff86326fb07dac18aa
+.cortex/skills/reviewer/references/ dir 0755
+.cortex/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.cortex/skills/reviewer/scripts/ dir 0755
+.cortex/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 235 43a4b0713fd36c5d59d1c0b75c01e567625e59f6bb686c65e1a4caf3844b9023
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+AGENTS.md file 0644 874 a179132f348df0f166375a3c7952fa3922689399a4796ebd2b1bd9620ea54b33
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for cortex: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=9
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for cortex: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 5 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .cortex/agents/architect.md
+INFO    remove file: .cortex/agents/tester.md
+INFO    remove file: .cortex/settings.json
+INFO    remove file: .cortex/skills/deployer/SKILL.md
+INFO    remove file: .cortex/skills/reviewer/SKILL.md
+INFO    remove file: .cortex/skills/reviewer/references/checklist.md
+INFO    remove file: .cortex/skills/reviewer/scripts/run.sh
+INFO    remove file: .mcp.json
+INFO    remove file: AGENTS.md
+INFO    remove dir (if empty): .cortex/skills/reviewer/scripts
+INFO    remove dir (if empty): .cortex/skills/reviewer/references
+INFO    remove dir (if empty): .cortex/skills/reviewer
+INFO    remove dir (if empty): .cortex/skills/deployer
+INFO    remove dir (if empty): .cortex/skills
+INFO    remove dir (if empty): .cortex/agents
+INFO    remove dir (if empty): .cortex
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=9 directories=7
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 827 4547c6abbf5c5ef0dc5b0a947cf30d1bcff9c27337f169bc3141b821c92ddb0d
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)

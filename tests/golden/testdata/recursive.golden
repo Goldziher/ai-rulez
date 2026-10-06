@@ -1,0 +1,81 @@
+# scenario recursive
+
+## step 1: ai-rulez -q generate --yes --recursive
+exit: 0
+--- stdout
+--- stderr
+--- project tree
+a/ dir 0755
+a/.ai-rulez/ dir 0755
+a/.ai-rulez/.generated-manifest.json file 0644 81 8e123772a43a717b36ca21591c1d91257553532b4cbcd450a929eb0831ee3fdd
+a/.ai-rulez/config.toml file 0644 48 f7627c5e2f4624a9e70272476565933665cc67acc35815828ff31fe3f0d42b11
+a/.ai-rulez/rules/ dir 0755
+a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
+a/.claude/ dir 0755
+a/.claude/agents/ dir 0755
+a/.claude/rules/ dir 0755
+a/.claude/rules/r.md file 0644 266 66017fce513055efbdee64165c0f29da68640433d047edcfdffed864c5988f6a
+a/.claude/skills/ dir 0755
+a/.gitignore file 0644 181 d86b009b1c9b548d59857f4c2d5972994ce767f042bc6963f6c9bdf16ba0429c
+a/CLAUDE.md file 0644 450 b302b67a3b9f7c0e47f6281c1761d8605ab78aaad7a148144f6fe3d9d0e2c956
+b/ dir 0755
+b/c/ dir 0755
+b/c/.agents/ dir 0755
+b/c/.agents/skills/ dir 0755
+b/c/.ai-rulez/ dir 0755
+b/c/.ai-rulez/.generated-manifest.json file 0644 90 c9ab323002bbdccef26e9010c7a7d70a25f393a7c3a5ba259b3a07ded343bd73
+b/c/.ai-rulez/config.toml file 0644 57 d71eaa126fd35922534a37ab895b6bbb21cb10584d504b7d664ad1cffdbc4cbe
+b/c/.ai-rulez/context/ dir 0755
+b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
+b/c/.codex/ dir 0755
+b/c/.codex/agents/ dir 0755
+b/c/.cursor/ dir 0755
+b/c/.cursor/agents/ dir 0755
+b/c/.cursor/commands/ dir 0755
+b/c/.cursor/rules/ dir 0755
+b/c/.cursor/rules/context-c.mdc file 0644 294 84d91580f6dec24b511f80668615e7d146a67db057603c15f76414276655a72a
+b/c/.gitignore file 0644 223 143a6d76e0770453af5e3c28b342be8c0b25435ab2b4ce419bc0fbae0466a932
+b/c/AGENTS.md file 0644 469 35234437280c09e5df8ea5c6800706efbae3087534044ed8d0cee8343ddd0010
+--- home tree
+(no change)
+
+## step 2: ai-rulez -q generate --recursive --check
+exit: 2
+--- stdout
+edited: b/c/AGENTS.md
+--- stderr
+1 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
+--- project tree
+a/ dir 0755
+a/.ai-rulez/ dir 0755
+a/.ai-rulez/.generated-manifest.json file 0644 81 8e123772a43a717b36ca21591c1d91257553532b4cbcd450a929eb0831ee3fdd
+a/.ai-rulez/config.toml file 0644 48 f7627c5e2f4624a9e70272476565933665cc67acc35815828ff31fe3f0d42b11
+a/.ai-rulez/rules/ dir 0755
+a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
+a/.claude/ dir 0755
+a/.claude/agents/ dir 0755
+a/.claude/rules/ dir 0755
+a/.claude/rules/r.md file 0644 266 66017fce513055efbdee64165c0f29da68640433d047edcfdffed864c5988f6a
+a/.claude/skills/ dir 0755
+a/.gitignore file 0644 181 d86b009b1c9b548d59857f4c2d5972994ce767f042bc6963f6c9bdf16ba0429c
+a/CLAUDE.md file 0644 450 b302b67a3b9f7c0e47f6281c1761d8605ab78aaad7a148144f6fe3d9d0e2c956
+b/ dir 0755
+b/c/ dir 0755
+b/c/.agents/ dir 0755
+b/c/.agents/skills/ dir 0755
+b/c/.ai-rulez/ dir 0755
+b/c/.ai-rulez/.generated-manifest.json file 0644 90 c9ab323002bbdccef26e9010c7a7d70a25f393a7c3a5ba259b3a07ded343bd73
+b/c/.ai-rulez/config.toml file 0644 57 d71eaa126fd35922534a37ab895b6bbb21cb10584d504b7d664ad1cffdbc4cbe
+b/c/.ai-rulez/context/ dir 0755
+b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
+b/c/.codex/ dir 0755
+b/c/.codex/agents/ dir 0755
+b/c/.cursor/ dir 0755
+b/c/.cursor/agents/ dir 0755
+b/c/.cursor/commands/ dir 0755
+b/c/.cursor/rules/ dir 0755
+b/c/.cursor/rules/context-c.mdc file 0644 294 84d91580f6dec24b511f80668615e7d146a67db057603c15f76414276655a72a
+b/c/.gitignore file 0644 223 143a6d76e0770453af5e3c28b342be8c0b25435ab2b4ce419bc0fbae0466a932
+b/c/AGENTS.md file 0644 469 35234437280c09e5df8ea5c6800706efbae3087534044ed8d0cee8343ddd0010
+--- home tree
+(no change)

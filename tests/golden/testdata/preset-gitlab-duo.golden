@@ -1,0 +1,156 @@
+# scenario preset-gitlab-duo
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for gitlab-duo: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=7
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+.agents/ dir 0755
+.agents/commands/ dir 0755
+.agents/commands/build.md file 0644 250 8d292fd4a549813e55152da6c9a4e104842b847b33594d5e8e7ab4b328460ffd
+.agents/commands/ship.md file 0644 227 28f7e9d78d835e4c1a75e0dc3c0c401c2ae672f8af75cea8fd205c528d69a34b
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 382 6da4d2e0f160851200b8de3c6d38aba8879f37590d91f6240485a23565c5a62b
+.ai-rulez/.generated-manifest.local.json file 0644 1832 12f06fb4b4e9ff62f11d0f1cf0fb9df5dcabbd9022132482a85fd06854303007
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 831 4c2b6b368300d5e368f0bc5d512d6316d18f4e408397d8906cdee2d51f6c8eca
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.gitignore file 0644 284 ddd5ef2710781f0d3f1331418869f90d8da6db96181e12eb3aa0e43d8cd68814
+.gitlab/ dir 0755
+.gitlab/duo/ dir 0755
+.gitlab/duo/chat-rules.md file 0644 874 bc32a54e079bc9a475f0c2daea19dcad67fcbfc4efac3d6a3a1d908aaccae840
+.gitlab/duo/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
+.gitlab/duo/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
+.gitlab/duo/mr-review-instructions.yaml file 0644 155 dcb98b6b78eb935ccd09ffb91a4f54775cbfc9a67b175432b6f1320cba7417d5
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for gitlab-duo: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=7
+WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] are not generated for gitlab-duo: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
+WARN  [[hooks]] not generated for gitlab-duo: the event PreToolUse has no equivalent hint=restrict the group with targets, or remove it
+WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks or set GITLAB_ENABLE_PROJECT_HOOKS=true
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez verify
+exit: 0
+--- stdout
+verified 3 generated file(s) against their Content-Hash
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 5: ai-rulez clean --force
+exit: 0
+--- stdout
+--- stderr
+INFO  Clean plan profile=default
+INFO    remove file: .agents/commands/build.md
+INFO    remove file: .agents/commands/ship.md
+INFO    remove file: .gitlab/duo/chat-rules.md
+INFO    remove file: .gitlab/duo/hooks.json
+INFO    remove file: .gitlab/duo/mcp.json
+INFO    remove file: .gitlab/duo/mr-review-instructions.yaml
+INFO    remove file: .mcp.json
+INFO    remove dir (if empty): .gitlab/duo
+INFO    remove dir (if empty): .gitlab
+INFO    remove dir (if empty): .agents/commands
+INFO    remove dir (if empty): .agents
+INFO    remove manifest: .ai-rulez/.generated-manifest.json
+INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
+INFO    strip ai-rulez block from .gitignore
+INFO  Removed generated files files=7 directories=4
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 831 4c2b6b368300d5e368f0bc5d512d6316d18f4e408397d8906cdee2d51f6c8eca
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
