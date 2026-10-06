@@ -34,7 +34,7 @@
 
 The interface is shaped for approval checks (`internal/approval`):
 
-- A review counts for a change only when `Review.CommitID` is the commit the change landed at, or the pull request's final head: an approval of an earlier head approved different content. Read `PullRequestsForCommit` first, then `Reviews`.
+- A review counts for content only when the commit it was made on (`Review.CommitID`) belongs to the pull request (`PullRequestsForCommit`) and the content was the same there: approvals compare the digest the lock pinned at that commit with the digest being approved ([review-linked approvals](approvals.md#review-linked-approvals)). Read `Reviews` first, then `PullRequestsForCommit` per reviewed commit.
 - The latest review of each reviewer decides: a later `CHANGES_REQUESTED` or `DISMISSED` replaces an earlier `APPROVED`. `COMMENTED` and `PENDING` never approve.
 - `Reviews`, `PullRequestsForCommit` and `TeamMembers` can return `ErrTruncated` with a partial list. Count approvals only from a complete list; treat a truncated one as no approval.
 - `IsTeamMember` returns `false`, not an error, for a non-member. Team calls need a token with `read:org`; without it they fail with `ErrUnauthorized` or `ErrForbidden`, and an approval check must fail closed.
