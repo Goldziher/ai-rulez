@@ -307,3 +307,31 @@ func TestSourceSkillBlindPresets(t *testing.T) {
 		})
 	}
 }
+
+func TestDynamicSkillsStub_NamesTheServerThatServesSkills(t *testing.T) {
+	tests := []struct {
+		name    string
+		servers []MCPServer
+		want    string
+	}{
+		{"no server configured", nil, "`ai-rulez-skills`"},
+		{"an unrelated server", []MCPServer{{Name: "ai-rulez", Command: "ai-rulez", Args: []string{"mcp"}}}, "`ai-rulez-skills`"},
+		{"the entry running --serve-skills", []MCPServer{
+			{Name: "ai-rulez", Command: "ai-rulez", Args: []string{"mcp"}},
+			{Name: "skills", Command: "ai-rulez", Args: []string{"mcp", "--serve-skills"}},
+		}, "`skills`"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := &Config{MCPServersRaw: tt.servers}
+
+			// Act
+			stub := DynamicSkillsStub(cfg.skillsServerName())
+
+			// Assert
+			assert.Contains(t, stub.Content, "The "+tt.want+" MCP server serves them")
+			assert.NotContains(t, stub.Content, "{{server}}")
+		})
+	}
+}
