@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -170,12 +171,49 @@ func checkSignature(dir string, m Manifest, checks VerifyChecks, res *VerifyResu
 		res.add(m.Signature.File, "%s the signature does not verify: %v", CodeUnsigned, err)
 		return
 	}
+	if !verifyAttestation(dir, m, checks, res) {
+		return
+	}
 	res.Signature = "verified"
 	if out.Signer.Kind == "key" {
 		res.Signer = "key " + out.Signer.KeyID
 	} else {
 		res.Signer = out.Signer.Identity + " (issuer " + out.Signer.Issuer + ")"
 	}
+}
+
+// verifyAttestation checks the signed release statement, which binds the name,
+// version and the archive, lock and SBOM digests the archive signature alone
+// does not. A signed release without one cannot be trusted: its manifest could
+// have been relabelled.
+func verifyAttestation(dir string, m Manifest, checks VerifyChecks, res *VerifyResult) bool {
+	att := m.Signature.Attestation
+	if att == "" {
+		res.add(m.Signature.File, "%s the release has no signed attestation binding its name, version and digests; re-sign it", CodeUnsigned)
+		return false
+	}
+	bundle, err := readRegular(filepath.Join(dir, filepath.FromSlash(att)))
+	if err != nil {
+		res.add(att, "%s unreadable: %v", CodeUnsigned, err)
+		return false
+	}
+	files := ReleaseFiles{}
+	if files.Archive, err = readRegular(filepath.Join(dir, m.Bundle.File)); err != nil {
+		return false // reported by the SHA256SUMS pass
+	}
+	if files.Lock, err = readRegular(filepath.Join(dir, LockFile)); err != nil {
+		return false // reported by the SHA256SUMS pass
+	}
+	if m.SBOM != nil {
+		if files.SBOM, err = readRegular(filepath.Join(dir, filepath.FromSlash(m.SBOM.File))); err != nil {
+			return false // reported by the SHA256SUMS pass
+		}
+	}
+	if _, err := VerifyReleaseAttestation(bundle, m, files, checks.Signature); err != nil {
+		res.add(att, "%s the attestation does not verify: %v", CodeUnsigned, err)
+		return false
+	}
+	return true
 }
 
 // checkUnlisted flags every file below dir that SHA256SUMS does not list. The
@@ -287,11 +325,12 @@ func checkManifest(dir string, m Manifest, recorded map[string]string, res *Veri
 	if len(archive) != m.Bundle.Size {
 		res.add(m.Bundle.File, "size is %d, manifest records %d", len(archive), m.Bundle.Size)
 	}
-	entries, err := readArchive(archive)
+	entries, manifests, err := readArchiveManifests(archive)
 	if err != nil {
 		res.add(m.Bundle.File, "%v", err)
 		return
 	}
+	checkInArchiveIdentity(m, manifests, res)
 	got := map[string]FileEntry{}
 	for _, e := range entries {
 		got[e.Path] = e
@@ -380,6 +419,13 @@ func checkAttachments(m Manifest, recorded map[string]string, res *VerifyResult)
 		default:
 			if _, ok := recorded[s.File]; !ok {
 				res.add(s.File, "the manifest names this signature but %s does not list it", SumsFile)
+			}
+		}
+		if s.Attestation != "" {
+			if s.Attestation != m.Name+"-"+m.Version+".attestation.sigstore.json" {
+				res.add(s.Attestation, "signature.attestation must be %s-%s.attestation.sigstore.json", m.Name, m.Version)
+			} else if _, ok := recorded[s.Attestation]; !ok {
+				res.add(s.Attestation, "the manifest names this attestation but %s does not list it", SumsFile)
 			}
 		}
 	}
@@ -485,39 +531,83 @@ func checkGitHubPlan(plan Plan, m Manifest, res *VerifyResult) {
 	}
 }
 
+// pluginManifestFiles are the runtime manifests that name the plugin (and mostly
+// its version) inside the archive.
+var pluginManifestFiles = []string{
+	".claude-plugin/plugin.json", ".cursor-plugin/plugin.json", ".codex-plugin/plugin.json",
+	".factory-plugin/plugin.json", "gemini-extension.json", "kimi.plugin.json", "plugin.json",
+}
+
+// checkInArchiveIdentity compares the name and version the archive's own
+// runtime manifests carry with the release manifest's: a manifest relabelled
+// after the archive was built (an old archive under a new version, or another
+// plugin's under this name) is a mismatch.
+func checkInArchiveIdentity(m Manifest, manifests map[string][]byte, res *VerifyResult) {
+	for _, path := range pluginManifestFiles {
+		raw, ok := manifests[path]
+		if !ok {
+			continue
+		}
+		var doc struct {
+			Name    string `json:"name"`
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			continue // not this runtime's JSON manifest; the digest pass covers the bytes
+		}
+		if doc.Name != "" && doc.Name != m.Name {
+			res.add(path, "the archive names the plugin %q, the manifest %q", doc.Name, m.Name)
+		}
+		if doc.Version != "" && doc.Version != m.Version {
+			res.add(path, "the archive is version %q, the manifest %q", doc.Version, m.Version)
+		}
+	}
+}
+
 // readArchive reads a bundle archive and checks the determinism rules.
 func readArchive(data []byte) ([]FileEntry, error) {
+	entries, _, err := readArchiveManifests(data)
+	return entries, err
+}
+
+// readArchiveManifests is readArchive that also returns the bodies of the
+// runtime manifests (pluginManifestFiles).
+func readArchiveManifests(data []byte) ([]FileEntry, map[string][]byte, error) {
 	zr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, oops.Wrapf(err, "not a gzip archive")
+		return nil, nil, oops.Wrapf(err, "not a gzip archive")
 	}
 	if zr.Name != "" || zr.Comment != "" || !zr.ModTime.IsZero() && zr.ModTime.Unix() != 0 {
-		return nil, oops.Errorf("gzip header carries a name, comment or time")
+		return nil, nil, oops.Errorf("gzip header carries a name, comment or time")
 	}
 	tr := tar.NewReader(zr)
 	var out []FileEntry
+	manifests := map[string][]byte{}
 	var mtime int64 = -1
 	prev := ""
 	var total int64
 	for {
 		hdr, err := tr.Next()
 		if errors.Is(err, io.EOF) {
-			return out, nil
+			return out, manifests, nil
 		}
 		if err != nil {
-			return nil, oops.Wrapf(err, "read archive")
+			return nil, nil, oops.Wrapf(err, "read archive")
 		}
 		if err := checkHeader(hdr, mtime, prev); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		mtime, prev = hdr.ModTime.Unix(), hdr.Name
 		if hdr.Size < 0 || hdr.Size > maxVerifyBytes-total {
-			return nil, oops.Errorf("archive exceeds the %d byte verification limit", maxVerifyBytes)
+			return nil, nil, oops.Errorf("archive exceeds the %d byte verification limit", maxVerifyBytes)
 		}
 		total += hdr.Size
 		body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
 		if err != nil || int64(len(body)) != hdr.Size {
-			return nil, oops.Errorf("archive entry %q is truncated", hdr.Name)
+			return nil, nil, oops.Errorf("archive entry %q is truncated", hdr.Name)
+		}
+		if slices.Contains(pluginManifestFiles, hdr.Name) {
+			manifests[hdr.Name] = body
 		}
 		out = append(out, FileEntry{Path: hdr.Name, Size: len(body), Digest: Digest(body)})
 	}
