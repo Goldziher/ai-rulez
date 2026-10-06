@@ -36,6 +36,7 @@ const maxDriftFiles = 3
 // no baseline. Outside a git repository, or with no plugin configured, the
 // result is empty.
 func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, error) {
+	g.diagnostics()
 	if g.config.Plugin == nil && g.config.Marketplace == nil {
 		return nil, nil
 	}
