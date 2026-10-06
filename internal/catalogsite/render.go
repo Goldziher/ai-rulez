@@ -309,6 +309,9 @@ func approvalLabels(a *govview.ItemApproval) (short, full string) {
 	if len(a.Reviewers) > 0 {
 		full += " by " + strings.Join(a.Reviewers, ", ")
 	}
+	if a.Assurance != "" {
+		full += "; assurance " + a.Assurance
+	}
 	if a.Expires != "" {
 		full += "; until " + a.Expires
 	}

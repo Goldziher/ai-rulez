@@ -217,7 +217,7 @@ fake browser on every machine.
 - **No `catalog-data.js`.** The pages are server-rendered and the filter reads the table rows, so a second copy of the
   data is not needed; `catalog.json` is the machine contract.
 - **Approval.** The overview has an Approval column (the status, or `not required`); the item page shows the status with
-  `(required)`, the reviewers and the expiry, escaped like every other value.
+  `(required)`, the reviewers, their assurance level and the expiry, escaped like every other value.
 - **Pagination is presentational.** All rows are in `index.html` in groups of `max_items_per_page`; the script pages them. Real per-page files would break filtering across pages and find-in-page.
 
 ## Not yet built

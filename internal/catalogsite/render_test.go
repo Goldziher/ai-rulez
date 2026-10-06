@@ -314,7 +314,7 @@ func TestRender_ShowsApprovalStatusEscaped(t *testing.T) {
 	// Arrange: one item per approval state, one with hostile reviewer names
 	doc := hostileDoc()
 	doc.Items = doc.Items[:3]
-	doc.Items[0].Approval = &govview.ItemApproval{Required: true, Status: "ok", Reviewers: []string{"alice", hostile[0]}, Expires: "2027-01-01"}
+	doc.Items[0].Approval = &govview.ItemApproval{Required: true, Status: "ok", Reviewers: []string{"alice", hostile[0]}, Assurance: "review-linked", Expires: "2027-01-01"}
 	doc.Items[1].Approval = &govview.ItemApproval{Required: true, Status: "missing", Reviewers: []string{}}
 	doc.Items[2].Approval = nil
 
@@ -337,6 +337,7 @@ func TestRender_ShowsApprovalStatusEscaped(t *testing.T) {
 	all := strings.Join(pages, "\n")
 	assert.NotContains(t, all, "not recorded")
 	assert.Contains(t, all, "ok (required) by alice")
+	assert.Contains(t, all, "assurance review-linked")
 	assert.Contains(t, all, "until 2027-01-01")
 	assert.Contains(t, all, "missing (required)")
 	assert.Contains(t, all, "not required")
