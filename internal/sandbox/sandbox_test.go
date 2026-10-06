@@ -186,13 +186,14 @@ func runHelper(t *testing.T, sb *Sandbox, spec Spec, mode string, arg string) (s
 func TestConfinedProcessCannotUseTheNetwork(t *testing.T) {
 	sb := realSandbox(t)
 	dir := t.TempDir()
-	out, err := runHelper(t, sb, Spec{WriteDirs: []string{dir}}, "listen", "")
+	addr := listenHere(t)
+	out, err := runHelper(t, sb, Spec{WriteDirs: []string{dir}}, "dial", addr)
 	require.NoError(t, err, out)
 	assert.Equal(t, "denied", out)
-	// Control: the same helper outside the sandbox can listen.
+	// Control: the same helper outside the sandbox can connect.
 	exe, err := os.Executable()
 	require.NoError(t, err)
-	cmd := exec.Command(exe, "listen", "")
+	cmd := exec.Command(exe, "dial", addr)
 	cmd.Env = append(os.Environ(), helperEnv+"=1")
 	plain, err := cmd.CombinedOutput()
 	require.NoError(t, err)
@@ -231,7 +232,7 @@ func TestAllowNetworkLiftsOnlyTheNetworkDenial(t *testing.T) {
 		t.Skip("unshare without --net is a no-op")
 	}
 	inside, outside := t.TempDir(), t.TempDir()
-	out, err := runHelper(t, sb, Spec{WriteDirs: []string{inside}, AllowNetwork: true}, "listen", "")
+	out, err := runHelper(t, sb, Spec{WriteDirs: []string{inside}, AllowNetwork: true}, "dial", listenHere(t))
 	require.NoError(t, err, out)
 	assert.Equal(t, "allowed", out)
 	out, err = runHelper(t, sb, Spec{WriteDirs: []string{inside}, AllowNetwork: true}, "write", filepath.Join(outside, "no.txt"))
@@ -254,8 +255,8 @@ func helper() int {
 		return 2
 	}
 	switch args[0] {
-	case "listen":
-		fmt.Println(netProbe())
+	case "dial":
+		fmt.Println(netProbe(args[1]))
 	case "write":
 		if err := os.WriteFile(args[1], []byte("x"), 0o600); err != nil {
 			fmt.Println("denied")
