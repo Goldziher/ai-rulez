@@ -1,0 +1,26 @@
+package lockfile
+
+import "strings"
+
+// gitURLSchemes are the URL schemes git can fetch from. Anything else with a
+// scheme-like prefix is a local path.
+var gitURLSchemes = []string{"http://", "https://", "file://", "ssh://", "git://", "git+ssh://", "git+https://", "git+http://"}
+
+// IsGitSource reports whether an include or skill source is a git repository
+// rather than a local path.
+//
+// Git sources are URLs with a git-capable scheme (http, https, file, ssh, git
+// and the git+ forms) and scp-like addresses, "[user@]host:path" with an "@"
+// before the first ":" and no "/" before it ("git@github.com:org/repo.git").
+// Everything else, including Windows drive paths (C:\x, C:/x), is local.
+func IsGitSource(source string) bool {
+	lower := strings.ToLower(source)
+	for _, scheme := range gitURLSchemes {
+		if strings.HasPrefix(lower, scheme) {
+			return true
+		}
+	}
+	colon := strings.Index(source, ":")
+	at := strings.Index(source, "@")
+	return colon > 0 && at > 0 && at < colon && !strings.ContainsAny(source[:colon], `/\`)
+}
