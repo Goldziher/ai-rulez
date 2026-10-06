@@ -58,7 +58,9 @@ func cleanRepoPath(p string) string {
 	return strings.TrimSuffix(p, ".git")
 }
 
-// redactEndpoint returns an MCP server URL without userinfo, query or fragment.
+// redactEndpoint returns the scheme and host (with port) of an MCP server URL.
+// The path is dropped too: servers embed tokens in it (/mcp/<token>), and a
+// hostname identifies the service well enough for an inventory.
 // ok is false when the URL cannot be parsed (for example it is a ${VAR}
 // placeholder), in which case nothing is emitted.
 func redactEndpoint(raw string) (string, bool) {
@@ -66,6 +68,5 @@ func redactEndpoint(raw string) (string, bool) {
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		return "", false
 	}
-	u.User, u.RawQuery, u.ForceQuery, u.Fragment, u.RawFragment = nil, "", false, "", ""
-	return u.String(), true
+	return u.Scheme + "://" + u.Host, true
 }
