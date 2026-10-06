@@ -2,6 +2,8 @@ package includes
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/url"
 	"os"
@@ -97,9 +99,35 @@ func invalidateScan(aiRulezDir string) {
 	scannedTreesMu.Unlock()
 }
 
-// getIncludeCacheDir returns the cache directory for a given include source.
-func getIncludeCacheDir(sourceName string) (string, error) {
-	return config.CacheDir("includes", sourceName) //nolint:wrapcheck // already contextual
+// cacheDirMode is the mode of include cache directories: fetched content is
+// private to the user running ai-rulez.
+const cacheDirMode = 0o700
+
+// getIncludeCacheDir returns the cache directory for an include: its name plus a
+// short hash of the normalized URL, so two includes that share a name but point
+// at different repositories (in different projects) never share a cache, and one
+// project's fetch cannot seed another's.
+func getIncludeCacheDir(sourceName, repoURL string) (string, error) {
+	sum := sha256.Sum256([]byte(normalizeGitURL(repoURL)))
+	dir := safeCacheName(sourceName) + "-" + hex.EncodeToString(sum[:])[:12]
+	return config.CacheDir("includes", dir) //nolint:wrapcheck // already contextual
+}
+
+// safeCacheName keeps a source name usable as one path segment.
+func safeCacheName(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	if out := strings.Trim(b.String(), "."); out != "" {
+		return out
+	}
+	return "include"
 }
 
 // GitSource represents a git repository source
@@ -109,7 +137,7 @@ type GitSource struct {
 	originalURL string // Original URL (may be SSH format)
 	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
 	ref         string // branch, tag, or commit (optional, defaults to main/master)
-	cacheDir    string // ~/.cache/ai-rulez/includes/{name}/
+	cacheDir    string // ~/.cache/ai-rulez/includes/{name}-{url hash}/
 	include     []string
 	accessToken string
 	pin         *pin   // ai-rulez.lock entry this source must match (nil: unpinned)
@@ -125,7 +153,7 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 	}
 
 	// Create cache directory in system cache location
-	cacheDir, err := getIncludeCacheDir(name)
+	cacheDir, err := getIncludeCacheDir(name, repoURL)
 	if err != nil {
 		return nil, oops.
 			With("source_name", name).
@@ -328,7 +356,7 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 	if err := os.RemoveAll(s.cacheDir); err != nil {
 		logger.Warn("Failed to clear include cache", "cache_dir", s.cacheDir, "error", err)
 	}
-	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(s.cacheDir, cacheDirMode); err != nil {
 		return nil, oops.
 			With("cache_dir", s.cacheDir).
 			Wrapf(err, "failed to create cache directory")

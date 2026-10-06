@@ -139,9 +139,7 @@ func TestOKFInclude_LockCheckReportsStaleAndTamperedEntries(t *testing.T) {
 	assert.Empty(t, problems)
 	assert.Equal(t, 1, cached, "the cached bundle is digest-verified")
 
-	home, err := os.UserHomeDir()
-	require.NoError(t, err)
-	cachedFile := filepath.Join(home, ".cache", "ai-rulez", "includes", "kb", "kb", "decisions", "shared.md")
+	cachedFile := okfCachedFile(t, f)
 	require.FileExists(t, cachedFile)
 	require.NoError(t, os.WriteFile(cachedFile, []byte("---\ntype: Decision\n---\ntampered\n"), 0o644))
 	problems, _ = CheckLock(cfg, lock)
@@ -169,13 +167,11 @@ func TestOKFInclude_FrozenNeverFetches(t *testing.T) {
 func TestOKFInclude_FrozenRejectsATamperedCache(t *testing.T) {
 	f := newOKFLockFixture(t, "v1")
 	f.writeLock(t)
-	home, err := os.UserHomeDir()
-	require.NoError(t, err)
-	cachedFile := filepath.Join(home, ".cache", "ai-rulez", "includes", "kb", "kb", "decisions", "shared.md")
+	cachedFile := okfCachedFile(t, f)
 	require.NoError(t, os.WriteFile(cachedFile, []byte("---\ntype: Decision\n---\ntampered\n"), 0o644))
 
 	Mode, SkipFetch = LockFrozen, true
-	_, err = f.load(t)
+	_, err := f.load(t)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, config.ErrLockViolation)
 }
@@ -241,4 +237,12 @@ func TestOKFInclude_GitRunsHardenedAndScrubbed(t *testing.T) {
 	for _, kv := range gitEnvFor(withHardenedGit(context.Background())) {
 		assert.False(t, strings.HasPrefix(kv, "GIT_DIR="), "a hook's GIT_DIR must not reach the fetch")
 	}
+}
+
+// okfCachedFile is the cached copy of the fixture's shared document.
+func okfCachedFile(t *testing.T, f *okfLockFixture) string {
+	t.Helper()
+	dir, err := getIncludeCacheDir("kb", "file://"+filepath.ToSlash(f.remote))
+	require.NoError(t, err)
+	return filepath.Join(dir, "kb", "decisions", "shared.md")
 }
