@@ -209,3 +209,63 @@ func TestCacheDirIsNamespacedPerProjectOutsideRepo(t *testing.T) {
 		t.Fatal("no config dir, no cache")
 	}
 }
+
+func TestLoadOrCreateSecret_ReplacesUnusableFilesAndRefusesSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission and symlink semantics differ on windows")
+	}
+	dir := filepath.Join(t.TempDir(), "cfg")
+	path := filepath.Join(dir, "llm-cache.key")
+	first, err := loadOrCreateSecret(path)
+	if err != nil || len(first) != cacheSecretBytes {
+		t.Fatalf("create: %v", err)
+	}
+	again, err := loadOrCreateSecret(path)
+	if err != nil || string(again) != string(first) {
+		t.Fatalf("a valid secret must be reused: %v", err)
+	}
+	// loose mode: not trusted, replaced
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	replaced, err := loadOrCreateSecret(path)
+	if err != nil || string(replaced) == string(first) {
+		t.Fatalf("a world-readable secret must be replaced: %v", err)
+	}
+	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 { //nolint:errcheck // test
+		t.Fatalf("replacement mode = %v", info.Mode().Perm())
+	}
+	// symlink: refused, target untouched
+	victim := filepath.Join(t.TempDir(), "victim")
+	if err := os.WriteFile(victim, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(victim, path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadOrCreateSecret(path); err == nil {
+		t.Fatal("a symlinked secret must be refused")
+	}
+	if b, _ := os.ReadFile(victim); string(b) != "keep" { //nolint:errcheck,gosec // test
+		t.Fatal("the symlink target was modified")
+	}
+}
+
+func TestLoadOrCreateSecret_RefusesAGroupWritableDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission semantics differ on windows")
+	}
+	dir := filepath.Join(t.TempDir(), "cfg")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o775); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadOrCreateSecret(filepath.Join(dir, "k")); err == nil {
+		t.Fatal("a group-writable secret directory must be refused")
+	}
+}
