@@ -7,14 +7,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/samber/oops"
-	"github.com/spf13/cobra"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 var (
@@ -183,7 +185,7 @@ func runLockFor(kind string, names []string) int {
 
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
 	if path != "" {
-		return config.LoadConfigFromFile(context.Background(), path, opts...)
+		return project.LoadFile(context.Background(), path, opts...)
 	}
 	return loadConfigForCommand(context.Background(), nil, opts...)
 }

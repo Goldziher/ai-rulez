@@ -17,10 +17,6 @@ var clineRulesTarget = rulefiles.Target{
 	Preset: presetNameCline, Dir: ".clinerules", Ext: extMarkdown, Dialect: rulefiles.DialectCline, Banner: true,
 }
 
-func init() {
-	config.RegisterPreset(presetNameCline, &ClinePresetGenerator{alwaysFileLocalRules{target: &clineRulesTarget, routing: rulefiles.RoutingEverything}})
-}
-
 // ClinePresetGenerator generates Cline preset files
 type ClinePresetGenerator struct{ alwaysFileLocalRules }
 

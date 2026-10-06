@@ -9,10 +9,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
+
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/samber/oops"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 // Routing decides which items become rule files.
@@ -66,6 +67,7 @@ type ScopeInfo struct {
 type Registry struct {
 	claims *config.PathClaims
 	root   string // config directory; sources are hashed relative to it so ids do not depend on the checkout
+	diag   *diag.Collector
 }
 
 // NewRegistry returns an empty Registry.
@@ -80,6 +82,7 @@ func NewRegistryFor(cfg *config.Config) *Registry {
 	r := NewRegistry()
 	if cfg != nil {
 		r.root = cfg.ConfigDir
+		r.diag = cfg.Diag
 	}
 	return r
 }
@@ -206,27 +209,10 @@ func (r *Registry) resolve(t Target, items []Item) error {
 				Hint("rename one of the two sources so they map to different file names").
 				Errorf("rule files collide on %q: %s and %s", renamed, prev, owner)
 		}
-		warnCollisionOnce(t.Preset+" "+name+" "+owner, "rule files map to the same file name; "+
+		r.diag.OnceWarn("collision", t.Preset+" "+name+" "+owner, "rule files map to the same file name; "+
 			"the later source was renamed (collide)", "preset", t.Preset, "file", name, "source", owner, "renamed", renamed)
 	}
 	return nil
-}
-
-var (
-	collisionMu     sync.Mutex
-	collisionWarned = map[string]struct{}{}
-)
-
-// warnCollisionOnce emits a warning once per generate run (ResetDowngrades
-// starts a run), however many presets plan the same items.
-func warnCollisionOnce(key, msg string, args ...any) {
-	collisionMu.Lock()
-	_, seen := collisionWarned[key]
-	collisionWarned[key] = struct{}{}
-	collisionMu.Unlock()
-	if !seen {
-		warnSink()(msg, args...)
-	}
 }
 
 // Plan routes already ordered and deduplicated rules and context into rule
@@ -245,7 +231,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	add := func(cf config.ContentFile, kind Kind) error {
-		it, ok, err := planItem(*t, cf, kind, scope)
+		it, ok, err := planItem(reg.diag, *t, cf, kind, scope)
 		if ok {
 			files = append(files, it)
 		}
@@ -257,13 +243,13 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	for _, r := range rules {
-		asFile := ruleIsFile(routing, r) && !keepNegatedInline(*t, scope, routing, r, "rule")
+		asFile := ruleIsFile(routing, r) && !keepNegatedInline(reg.diag, *t, scope, routing, r, "rule")
 		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
 			return nil, nil, nil, err
 		}
 	}
 	for _, c := range context {
-		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(*t, scope, routing, c, "context")
+		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(reg.diag, *t, scope, routing, c, "context")
 		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
 			return nil, nil, nil, err
 		}
@@ -281,7 +267,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 // AGENTS.md (the agents_md flag), which carries it for every reader so the
 // folder must not repeat it; otherwise it becomes an always-on file (see
 // Frontmatter).
-func keepNegatedInline(t Target, scope ScopeInfo, routing Routing, cf config.ContentFile, kind string) bool {
+func keepNegatedInline(d *diag.Collector, t Target, scope ScopeInfo, routing Routing, cf config.ContentFile, kind string) bool {
 	rootFile := t.RootFile
 	if routing == RoutingNonAlways {
 		rootFile = "AGENTS.md"
@@ -289,7 +275,7 @@ func keepNegatedInline(t Target, scope ScopeInfo, routing Routing, cf config.Con
 	if rootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(cf) || !InlineAllowed(cf, t) {
 		return false
 	}
-	WarnOnlyNegated(kind, cf, rootFile)
+	WarnOnlyNegated(d, kind, cf, rootFile)
 	return true
 }
 
@@ -314,10 +300,10 @@ func routeItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, asFi
 
 // planItem builds the file of one item. ok is false, with a nil error, for an
 // item that is skipped because its globs escape the scope.
-func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (it Item, ok bool, err error) {
+func planItem(d *diag.Collector, t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (it Item, ok bool, err error) {
 	it, err = newItem(t, cf, kind, scope)
 	if errors.Is(err, errEscapesScope) {
-		warnSink()("rule file skipped: a glob escapes the scope with \"..\"",
+		d.Raise("rule file skipped: a glob escapes the scope with \"..\"",
 			"scope", scope.Slug, "source", cf.Path, "error", err.Error())
 		return Item{}, false, nil
 	}
@@ -325,8 +311,8 @@ func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (it I
 		return Item{}, false, err
 	}
 	if scope.Prefix != "" && (it.Activation.Mode == config.ActivationAuto || it.Activation.Mode == config.ActivationManual) &&
-		warnScopeOnce(scope.Slug) {
-		warnSink()("auto and manual rules of a scope are written to the root rules folder and are not limited to the scope",
+		d.Once("scope", scope.Slug) {
+		d.Raise("auto and manual rules of a scope are written to the root rules folder and are not limited to the scope",
 			"scope", scope.Slug, "source", cf.Path)
 	}
 	return it, true, nil

@@ -2,8 +2,8 @@ package preflight
 
 import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
 )
 
@@ -21,7 +21,7 @@ func hookLands(cfg *config.Config, presets []string, group, action int) []string
 	probe := saved[group]
 	probe.Hooks = saved[group].Hooks[action : action+1]
 	cfg.Hooks = []config.HookGroup{probe}
-	defer rulefiles.Silence()()
+	defer silenced(cfg)()
 
 	var where []string
 	for _, p := range presets {
@@ -58,7 +58,7 @@ func allowLands(cfg *config.Config, presets []string, rule string) []string {
 	saved := cfg.Permissions
 	defer func() { cfg.Permissions = saved }()
 	cfg.Permissions = &config.Permissions{Allow: []string{rule}}
-	defer rulefiles.Silence()()
+	defer silenced(cfg)()
 
 	var where []string
 	for _, p := range presets {
@@ -83,4 +83,13 @@ func allowWritten(cfg *config.Config, harness string) bool {
 	}
 	keys, err := settings.PermissionKeys(cfg, harness, "")
 	return err == nil && len(keys) > 0
+}
+
+// silenced makes the probe renders of a landing check say nothing and returns the
+// function that puts cfg's collector back. A fresh collector takes the warnings, so
+// the one of the real run neither shows them nor counts them as issued.
+func silenced(cfg *config.Config) (restore func()) {
+	prev := cfg.Diag
+	cfg.Diag = diag.New(func(string, ...any) {})
+	return func() { cfg.Diag = prev }
 }

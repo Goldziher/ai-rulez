@@ -17,8 +17,8 @@ import (
 // is on, machine-local and secret outputs always) that git does not ignore now.
 // Outside a git repository, or when git cannot answer, it returns nil.
 func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	defer g.resetRunState()
 
@@ -53,8 +53,8 @@ func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
 // machine-local manifests. Unlike a render it still works when one of them no
 // longer parses.
 func (g *Generator) MergedDocumentPaths() []string {
-	generateMu.Lock()
-	defer generateMu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.beginRun()
 	defer g.resetRunState()
 
@@ -85,7 +85,7 @@ func (g *Generator) MergedDocumentPaths() []string {
 // documents included. A watcher uses it to tell a generated output from a
 // source, so a source tree that also holds outputs does not retrigger itself.
 func (g *Generator) GeneratedPaths() []string {
-	generateMu.Lock()
+	g.mu.Lock()
 	g.beginRun()
 	var rels []string
 	rels = append(rels, g.previousManifestFiles()...)
@@ -95,7 +95,7 @@ func (g *Generator) GeneratedPaths() []string {
 		}
 	}
 	g.resetRunState()
-	generateMu.Unlock()
+	g.mu.Unlock()
 
 	seen := map[string]bool{}
 	for _, rel := range rels {

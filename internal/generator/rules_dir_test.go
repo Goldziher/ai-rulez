@@ -42,7 +42,7 @@ func TestGitignorePattern_RulesDirPerFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.expect, gitignorePatternForOutput(tt.path, tt.isDir))
+			assert.Equal(t, tt.expect, gitignorePatternForOutput(nil, tt.path, tt.isDir))
 		})
 	}
 }

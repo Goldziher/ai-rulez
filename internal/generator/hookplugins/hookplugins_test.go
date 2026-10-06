@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 )
 
@@ -42,9 +42,9 @@ func extendedHooks() []config.HookGroup {
 
 func captureWarnings(t *testing.T) *[]string {
 	t.Helper()
-	rulefiles.ResetDowngrades()
+	diag.Default().Reset()
 	var warnings []string
-	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
+	restore := diag.SetDefaultSink(func(msg string, _ ...any) { warnings = append(warnings, msg) })
 	t.Cleanup(restore)
 	return &warnings
 }
@@ -624,7 +624,7 @@ func TestMayWriteModuleChecksProvenance(t *testing.T) {
 				require.NoError(t, os.WriteFile(path, []byte(*tt.content), 0o644))
 			}
 
-			got := hookplugins.MayWriteModule(path)
+			got := hookplugins.MayWriteModule(nil, path)
 
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantWarn, len(*warnings) == 1, "%v", *warnings)

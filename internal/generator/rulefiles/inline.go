@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 )
 
@@ -28,6 +29,8 @@ type InlineOpts struct {
 	// ContextSummary emits the "summary" extra of a context entry (unless
 	// Compact) between its heading and body.
 	ContextSummary bool
+	// Diag collects the downgrade notes of the run; nil drops them.
+	Diag *diag.Collector
 }
 
 // WriteInlineRules writes the "## Rules" section. Nothing is written for an
@@ -43,7 +46,7 @@ func WriteInlineRules(b *strings.Builder, rules []config.ContentFile, opts Inlin
 		b.WriteString(rule.Name)
 		b.WriteString("\n\n")
 		if opts.AppliesTo {
-			writeActivation(b, "rules", rule)
+			writeActivation(b, opts.Diag, "rules", rule)
 		}
 		if !opts.Compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
 			b.WriteString("**Priority:** ")
@@ -71,7 +74,7 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 		b.WriteString(ctx.Name)
 		b.WriteString("\n\n")
 		if opts.AppliesTo {
-			writeActivation(b, "context", ctx)
+			writeActivation(b, opts.Diag, "context", ctx)
 		}
 		if opts.ContextSummary && !opts.Compact && ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
 			b.WriteString(ctx.Metadata.Extra["summary"])
@@ -88,7 +91,7 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 // writeActivation writes the scope or trigger hint for f. Manual activation
 // has no inline form, so it is recorded as a downgrade and rendered as
 // always-on.
-func writeActivation(b *strings.Builder, kind string, f config.ContentFile) {
+func writeActivation(b *strings.Builder, d *diag.Collector, kind string, f config.ContentFile) {
 	act := f.Metadata.ResolveActivation()
 	switch act.Mode {
 	case config.ActivationGlob:
@@ -107,7 +110,7 @@ func writeActivation(b *strings.Builder, kind string, f config.ContentFile) {
 		}
 		b.WriteString("_When relevant: " + desc + "_\n\n")
 	case config.ActivationManual:
-		RecordDowngrade(kind, f.Name, string(config.ActivationManual))
+		d.RecordDowngrade(kind, f.Name, string(config.ActivationManual))
 	}
 }
 

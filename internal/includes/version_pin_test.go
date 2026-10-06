@@ -77,7 +77,7 @@ func resetPolicy(t *testing.T) {
 
 func (f *versionFixture) load(t *testing.T) (*config.Config, error) {
 	t.Helper()
-	return config.LoadConfig(context.Background(), f.project, config.WithoutLocal())
+	return loadWithResolvers(context.Background(), f.project, config.WithoutLocal())
 }
 
 // refresh runs `ai-rulez lock` (Mode refresh) and returns the lock and the problems.

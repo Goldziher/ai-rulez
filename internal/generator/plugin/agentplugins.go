@@ -6,10 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func init() {
-	register(config.PluginRuntimeAgentPlugins, renderAgentPlugins)
-}
-
 // Agent Plugins 1.0.0 canonical schema identifiers. The standard shares one
 // version between the plugin manifest and the MCP configuration.
 const (

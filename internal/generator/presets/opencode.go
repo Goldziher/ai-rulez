@@ -11,7 +11,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
@@ -20,8 +24,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/samber/oops"
-	"gopkg.in/yaml.v3"
 )
 
 const opencodePresetName = "opencode"
@@ -32,10 +34,6 @@ const opencodePresetName = "opencode"
 // manifest-tracked), while a hand-authored file that adds further keys — model,
 // mcp.timeout — still counts as the consumer's and is preserved (#185).
 const opencodeSchemaURL = "https://opencode.ai/config.json"
-
-func init() {
-	config.RegisterPreset(opencodePresetName, &OpencodePresetGenerator{})
-}
 
 // OpencodePresetGenerator generates Opencode preset files (AGENTS.md)
 type OpencodePresetGenerator struct{}
@@ -209,7 +207,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", hookplugins.OpencodePath, err)
 	}
-	if pluginPath := filepath.Join(baseDir, filepath.FromSlash(hookplugins.OpencodePath)); ok && hookplugins.MayWriteModule(pluginPath) {
+	if pluginPath := filepath.Join(baseDir, filepath.FromSlash(hookplugins.OpencodePath)); ok && hookplugins.MayWriteModule(cfg.Diag, pluginPath) {
 		outputs = append(outputs, config.OutputFile{Path: pluginPath, Content: plugin})
 	}
 
@@ -240,7 +238,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 	}
 	userEntries := false
 	if !rulefiles.InScope(cfg) {
-		entries, claimed, user, err := opencodeInstructions(mcpPath, g.LocalRootFile(), claimedInstructionsOwner(cfg, mcpPath))
+		entries, claimed, user, err := opencodeInstructions(cfg.Diag, mcpPath, g.LocalRootFile(), claimedInstructionsOwner(cfg, mcpPath))
 		if err != nil {
 			return jsonmerge.Result{}, err
 		}
@@ -389,13 +387,13 @@ func claimedInstructionsOwner(cfg *config.Config, path string) func(any) bool {
 // in order, and an entry identical to a hand-written one is never claimed (see
 // jsonmerge.PlanElements). A nil result means the existing value is not an array,
 // which is the user's to fix: it is warned about and left alone.
-func opencodeInstructions(path, entry string, owns func(any) bool) (entries, claimed []any, userEntries bool, err error) {
+func opencodeInstructions(d *diag.Collector, path, entry string, owns func(any) bool) (entries, claimed []any, userEntries bool, err error) {
 	existing, isArray, err := readOpencodeInstructions(path)
 	if err != nil {
 		return nil, nil, false, err
 	}
 	if !isArray {
-		rulefiles.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
+		d.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
 			"; the value is yours and is left alone", "path", path)
 		return nil, nil, true, nil
 	}
@@ -494,11 +492,11 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	}
 
 	// Add rules section
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
 	allContext := rootContext(content, cfg, opencodePresetName, "AGENTS.md")
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
@@ -556,7 +554,7 @@ func resolveOpencodeModel(agent config.ContentFile, cfg *config.Config) string {
 	if model == "" || IsProviderQualifiedModel(model) {
 		return model
 	}
-	logger.Warn("OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model",
+	cfg.Warn("OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model",
 		"agent", agent.Name, "model", model,
 		"hint", "set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode")
 	return ""

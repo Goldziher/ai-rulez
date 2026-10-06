@@ -129,40 +129,6 @@ type LocalRuleProvider interface {
 	LocalRuleOutputs(rules []ContentFile, baseDir string, cfg *Config) (files []OutputFile, inline []ContentFile, err error)
 }
 
-// PresetRegistry maps preset names to their generators
-// Populated by init() functions in generator/presets/ package
-var PresetRegistry = make(map[string]PresetGenerator)
-
-// RegisterPreset registers a preset generator
-func RegisterPreset(name string, generator PresetGenerator) {
-	PresetRegistry[name] = generator
-}
-
-// GetPresetGenerator retrieves a preset generator by name
-func GetPresetGenerator(name string) (PresetGenerator, error) {
-	generator, exists := PresetRegistry[name]
-	if !exists {
-		return nil, ErrInvalidPreset
-	}
-	return generator, nil
-}
-
-// CustomPresetGeneratorFactory is a function type that creates custom preset generators
-// This is set by the presets package to avoid circular dependencies
-var CustomPresetGeneratorFactory func(Preset) PresetGenerator
-
-// ProviderSpecGeneratorFactory builds a PresetGenerator for a provider-backed
-// custom preset (Preset.Provider). baseDir is the project root used to resolve
-// the spec path. Set by internal/generator/providers to avoid a config →
-// providers import cycle.
-var ProviderSpecGeneratorFactory func(preset Preset, baseDir string) (PresetGenerator, error)
-
-// ProviderSpecValidator validates a provider-backed custom preset (spec exists,
-// parses, and its name matches the preset). It is optional: when nil, config
-// validation only checks the preset's own fields. Set by
-// internal/generator/providers.
-var ProviderSpecValidator func(preset Preset, baseDir string) error
-
 // GeneratePresets generates all configured presets for a config
 func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 	if cfg.Content == nil {
@@ -179,20 +145,23 @@ func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 
 		switch {
 		case preset.IsBuiltIn():
-			generator, err = GetPresetGenerator(preset.BuiltIn)
+			generator, err = cfg.Registry.Generator(preset.BuiltIn)
 		case preset.Provider != "":
-			if ProviderSpecGeneratorFactory == nil {
+			if cfg.Registry == nil || cfg.Registry.Provider == nil {
 				return nil, fmt.Errorf("provider preset generator factory not initialized")
 			}
-			generator, err = ProviderSpecGeneratorFactory(preset, cfg.BaseDir)
+			generator, err = cfg.Registry.Provider(preset, cfg.BaseDir)
 		default:
-			if CustomPresetGeneratorFactory == nil {
+			if cfg.Registry == nil || cfg.Registry.Custom == nil {
 				return nil, fmt.Errorf("custom preset generator factory not initialized")
 			}
-			generator = CustomPresetGeneratorFactory(preset)
+			generator = cfg.Registry.Custom(preset)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("resolve preset %s: %w", preset.GetName(), err)
+		}
+		if owner, ok := generator.(RulesDirOwner); ok && !preset.IsBuiltIn() {
+			cfg.AddRulesDir(owner.SplitRulesDir())
 		}
 
 		outputs, err = generator.Generate(cfg.ContentForPreset(preset.GetName()), cfg.BaseDir, cfg)

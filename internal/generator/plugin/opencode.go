@@ -53,10 +53,6 @@ type openCodeRepository struct {
 	URL  string `json:"url"`
 }
 
-func init() {
-	register(config.PluginRuntimeOpenCode, renderOpenCode)
-}
-
 func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	entrypoint := filepath.Join(".opencode", "plugins", m.Name+".js")
 	hasContent := len(m.Skills)+len(m.Commands)+len(m.Agents)+len(m.MCP) > 0

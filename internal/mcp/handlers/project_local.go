@@ -7,6 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // updateLocalConfig applies update_config fields to the machine-local overlay
@@ -33,6 +34,7 @@ func updateLocalConfig(ctx context.Context, request *ToolRequest, dir string) (*
 	if err != nil {
 		return ToolError(err)
 	}
+	doc.WithResolvers(project.Resolvers())
 	defer doc.Close()
 	if err := setLocalFields(doc, scratch, updated); err != nil {
 		return ToolError(err)

@@ -62,7 +62,6 @@ func LoadProviderSpec(raw []byte, filename string, format LoadFormat) (*Provider
 	if err := validateSpec(spec); err != nil {
 		return nil, oops.With("filename", filename).Wrapf(err, "invalid provider spec")
 	}
-	registerSplitRulesDir(spec)
 
 	return spec, nil
 }
@@ -501,17 +500,6 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 		return err
 	}
 	return validateSplitFilename(typ, out.Filename)
-}
-
-// registerSplitRulesDir marks the folder of a split rules output as a shared
-// rules folder, so it gets the protections the built-in folders have: the
-// overwrite guard for hand-written files, hashes in the banner, and per-file
-// gitignore entries. Registering on load is the one point every spec passes
-// through, built-in or custom, before any path check can run.
-func registerSplitRulesDir(s *ProviderSpec) {
-	if out := s.Outputs[OutputTypeRules]; out != nil && out.Split {
-		config.RegisterRulesDir(out.Dir)
-	}
 }
 
 // driveLetter matches a Windows drive prefix such as "C:".

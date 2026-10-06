@@ -19,10 +19,6 @@ const (
 	codexKeyMCPServers      = "mcp_servers"
 )
 
-func init() {
-	config.RegisterPreset(codexPresetName, &CodexPresetGenerator{})
-}
-
 // CodexPresetGenerator generates Codex preset files (AGENTS.md)
 type CodexPresetGenerator struct{}
 
@@ -93,7 +89,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	// Combine all skills from root and domains. Codex reads custom
 	// prompts from no folder (project or user scope), but it runs a
 	// skill on an explicit $name, so a command is written as a skill.
-	allSkills := append(allSkills(content), commandAsSkills(content, codexPresetName)...)
+	allSkills := append(allSkills(content), commandAsSkills(cfg.Diag, content, codexPresetName)...)
 
 	// Generate skill files to the skills root (.agents/skills by default)
 	for _, skill := range allSkills {
@@ -266,11 +262,11 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	}
 
 	// Add rules section
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
 	allContext := withoutBazNested(inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), shared, true), cfg)
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)

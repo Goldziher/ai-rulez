@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 )
 
 func item(name string, mode config.ActivationMode, desc string, globs ...string) Item {
@@ -449,12 +451,10 @@ func TestPlan_OnlyNegatedGlobs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var warned []string
-			t.Cleanup(SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+			d, warned := collector()
 
-			ResetDowngrades()
-			files, inl, _, err := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, nil)
-			_, _, _, err2 := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, nil) // another preset
+			files, inl, _, err := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, registryWith(d))
+			_, _, _, err2 := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, registryWith(d)) // another preset
 
 			require.NoError(t, err)
 			require.NoError(t, err2)
@@ -465,8 +465,8 @@ func TestPlan_OnlyNegatedGlobs(t *testing.T) {
 			assert.Equal(t, tt.wantFiles, names)
 			assert.Equal(t, tt.wantInl, contentNames(inl))
 			if tt.target.RootFile != "" || tt.routing == RoutingNonAlways {
-				require.Len(t, warned, 1)
-				assert.Contains(t, warned[0], "only negated globs")
+				require.Len(t, *warned, 1)
+				assert.Contains(t, (*warned)[0], "only negated globs")
 			}
 		})
 	}
@@ -559,7 +559,14 @@ func TestExpandBraces_Cap(t *testing.T) {
 
 func planNames(t *testing.T, rules, ctx []config.ContentFile, tg *Target, routing Routing) []string {
 	t.Helper()
-	files, _, _, err := Plan(rules, ctx, tg, routing, ScopeInfo{}, nil)
+	d, _ := collector()
+	return planNamesWith(t, d, rules, ctx, tg, routing)
+}
+
+// planNamesWith is planNames reporting through d.
+func planNamesWith(t *testing.T, d *diag.Collector, rules, ctx []config.ContentFile, tg *Target, routing Routing) []string {
+	t.Helper()
+	files, _, _, err := Plan(rules, ctx, tg, routing, ScopeInfo{}, registryWith(d))
 	require.NoError(t, err)
 	names := make([]string, 0, len(files))
 	for _, f := range files {
@@ -591,39 +598,37 @@ func TestPlan_CollisionsDisambiguate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var warned []string
-			defer SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })()
+			d, warned := collector()
 
-			got := planNames(t, tt.rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll)
+			got := planNamesWith(t, d, tt.rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll)
 
 			assert.Equal(t, tt.want, got)
-			require.Len(t, warned, 1)
-			assert.Contains(t, warned[0], "collide")
+			require.Len(t, *warned, 1)
+			assert.Contains(t, (*warned)[0], "collide")
 		})
 	}
 }
 
 func TestPlan_CollisionContextAndRule(t *testing.T) {
-	var warned int
-	defer SetWarnSink(func(string, ...any) { warned++ })()
+	d, warned := collector()
 
-	got := planNames(t, []config.ContentFile{cf("context-x", "r.md")}, []config.ContentFile{cf("x", "c.md")},
+	got := planNamesWith(t, d, []config.ContentFile{cf("context-x", "r.md")}, []config.ContentFile{cf("x", "c.md")},
 		&Target{Preset: "cline", Ext: ".md"}, RoutingEverything)
 
 	require.Len(t, got, 2)
 	assert.Regexp(t, `^context-x-[0-9a-f]{6}\.md$`, got[0], "the rule's source r.md sorts after c.md")
 	assert.Equal(t, "context-x.md", got[1])
-	assert.Equal(t, 1, warned)
+	assert.Len(t, *warned, 1)
 }
 
 func TestPlan_CollisionStillCollidingIsError(t *testing.T) {
 	// A third rule is named exactly like the disambiguated id of the second.
 	sum := sha1.Sum([]byte("b.md")) //nolint:gosec // test mirrors the implementation
 	taken := "foo-" + hex.EncodeToString(sum[:])[:6]
-	defer SetWarnSink(func(string, ...any) {})()
+	d, _ := collector()
 	rules := []config.ContentFile{cf("foo", "a.md"), cf("Foo", "b.md"), cf(taken, "0.md")}
 
-	_, _, _, err := Plan(rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll, ScopeInfo{}, nil)
+	_, _, _, err := Plan(rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll, ScopeInfo{}, registryWith(d))
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "collide")
@@ -648,8 +653,8 @@ func TestPlan_RegistryCollisions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer SetWarnSink(func(string, ...any) {})()
-			reg := NewRegistry()
+			d, _ := collector()
+			reg := registryWith(d)
 			_, _, _, err := Plan(tt.first, nil, tg, RoutingAll, tt.scope, reg)
 			require.NoError(t, err)
 
@@ -742,25 +747,23 @@ func TestPlan_ScopeGlobEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			var warned []string
-			restore := SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })
-			defer restore()
+			d, warned := collector()
 
 			// Act
-			files, inline, _, err := Plan([]config.ContentFile{tt.rule}, nil, &Target{Ext: ".md"}, RoutingScopedOnly, scope, nil)
+			files, inline, _, err := Plan([]config.ContentFile{tt.rule}, nil, &Target{Ext: ".md"}, RoutingScopedOnly, scope, registryWith(d))
 
 			// Assert
 			require.NoError(t, err)
 			if tt.wantSkip {
 				assert.Empty(t, files)
 				assert.Empty(t, inline, "a skipped item is not inlined either")
-				assert.Len(t, warned, 1)
+				assert.Len(t, *warned, 1)
 				return
 			}
 			require.Len(t, files, 1)
 			assert.Equal(t, tt.wantMode, files[0].Activation.Mode)
 			assert.Equal(t, tt.wantGlobs, files[0].Activation.Globs)
-			assert.Empty(t, warned)
+			assert.Empty(t, *warned)
 		})
 	}
 }
@@ -771,9 +774,9 @@ func withActivation(c config.ContentFile, mode string) config.ContentFile {
 }
 
 func TestRegistry_SameSourceClaimingAgainIsNotACollision(t *testing.T) {
-	defer SetWarnSink(func(string, ...any) {})()
 	// Arrange
-	reg := NewRegistry()
+	d, _ := collector()
+	reg := registryWith(d)
 	tg := &Target{Dir: "rules", Ext: ".md"}
 	rule := []config.ContentFile{cf("x", "x.md")}
 	other := []config.ContentFile{cf("X", "other.md")}
@@ -858,18 +861,17 @@ func TestReportNotes_DowngradesAggregateAcrossPresets(t *testing.T) {
 		args []any
 	}
 	var calls []call
-	t.Cleanup(SetWarnSink(func(msg string, args ...any) { calls = append(calls, call{msg, args}) }))
-	ResetDowngrades()
+	d := diag.New(func(msg string, args ...any) { calls = append(calls, call{msg, args}) })
 	it := item("shared", config.ActivationManual, "")
 	_, claudeNotes := Frontmatter(DialectClaude, it)
 	_, clineNotes := Frontmatter(DialectCline, it)
 	limit := Note{Kind: KindRule, Name: "big", Text: `rule "big": too long`}
 
 	// Act: the same item downgraded in two presets, plus one soft-limit note.
-	ReportNotes("/p/.claude/rules/shared.md", claudeNotes)
-	ReportNotes("/p/.clinerules/shared.md", clineNotes)
-	ReportNotes("/p/.claude/rules/big.md", []Note{limit})
-	FlushDowngrades()
+	ReportNotes(d, "/p/.claude/rules/shared.md", claudeNotes)
+	ReportNotes(d, "/p/.clinerules/shared.md", clineNotes)
+	ReportNotes(d, "/p/.claude/rules/big.md", []Note{limit})
+	d.Flush()
 
 	// Assert: one aggregated downgrade warning and one per-file warning.
 	require.Len(t, calls, 2)
@@ -904,23 +906,21 @@ func TestFrontmatter_OneNotePerCause(t *testing.T) {
 
 func TestPlan_ScopedAutoManualWarnsOncePerScope(t *testing.T) {
 	// Arrange
-	var warned []string
-	t.Cleanup(SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
-	ResetDowngrades()
+	d, warned := collector()
 	tg := &Target{Ext: ".md"}
 	rules := []config.ContentFile{
 		withActivation(cf("a", "a.md"), "auto"), withActivation(cf("b", "b.md"), "manual"), cf("c", "c.md", "x/**"),
 	}
 
 	// Act
-	_, _, _, err := Plan(rules, nil, tg, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, nil)
-	_, _, _, err2 := Plan(rules, nil, &Target{Ext: ".mdc"}, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, nil)
+	_, _, _, err := Plan(rules, nil, tg, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, registryWith(d))
+	_, _, _, err2 := Plan(rules, nil, &Target{Ext: ".mdc"}, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, registryWith(d))
 
 	// Assert
 	require.NoError(t, err)
 	require.NoError(t, err2)
-	require.Len(t, warned, 1)
-	assert.Contains(t, warned[0], "not limited to the scope")
+	require.Len(t, *warned, 1)
+	assert.Contains(t, (*warned)[0], "not limited to the scope")
 }
 
 func TestLogicalSource(t *testing.T) {
@@ -947,10 +947,10 @@ func TestLogicalSource(t *testing.T) {
 }
 
 func TestPlan_SuffixIsMachineIndependent(t *testing.T) {
-	defer SetWarnSink(func(string, ...any) {})()
+	d, _ := collector()
 	tg := &Target{Preset: "claude", Ext: ".md"}
 	plan := func(root, home string) []string {
-		reg := NewRegistry()
+		reg := registryWith(d)
 		reg.root = root
 		rules := []config.ContentFile{
 			cf("Foo", root+"/rules/foo.md"),
@@ -969,20 +969,4 @@ func TestPlan_SuffixIsMachineIndependent(t *testing.T) {
 	b := plan("/srv/b/.ai-rulez", "/Users/bob")
 
 	assert.Equal(t, a, b)
-}
-
-func TestWarn_RepeatsOnlyAfterAReset(t *testing.T) {
-	// Arrange
-	var warned []string
-	defer SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })()
-
-	// Act
-	Warn("same")
-	Warn("same")
-	Warn("other")
-	ResetDowngrades()
-	Warn("same")
-
-	// Assert
-	assert.Equal(t, []string{"same", "other", "same"}, warned)
 }
