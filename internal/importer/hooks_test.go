@@ -312,6 +312,23 @@ func TestConvert_HookWithASecretBlocksTheWrite(t *testing.T) {
 	assert.False(t, report.Written)
 }
 
+func TestConvert_HooksAreNamedWhenTheConfigIsAV3File(t *testing.T) {
+	// Arrange: config.toml cannot be written next to a V3 config, so the manual step lists what to add.
+	dir := t.TempDir()
+	writeTree(t, dir, map[string]string{
+		".claude/settings.json": hookProject, "CLAUDE.md": "x\n",
+		".ai-rulez/config.yaml": "version: 3\nname: old\n",
+	})
+	// Act
+	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
+	// Assert
+	require.NoError(t, err)
+	f := findingNamed(report, StatusNeedsAction, "config.yaml")
+	require.NotNil(t, f)
+	assert.Contains(t, f.Reason, "[[hooks]]")
+	assert.Contains(t, f.Reason, "[permissions]")
+}
+
 func TestConvert_OnlyHooksIsConvertible(t *testing.T) {
 	// Arrange / Act
 	_, report, cfg := convertHooks(t, ConvertOptions{}, map[string]string{".claude/settings.json": hookProject})
