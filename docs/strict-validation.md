@@ -219,7 +219,7 @@ stdout.
 | AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (report only; the round is rejected before any eval spend) |
 | AR9J4 | `improve-sibling-regression` | error | A candidate lowered another skill's trigger recall under the offline ranker (report only; the round is rejected before any held-out spend) |
 | AR9J5 | `improve-underpowered` | info | The held-out gain of a candidate cannot be told from zero: fewer than eight cases, or the bootstrap interval includes zero (report only) |
-| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer` or `env_pass` of a repository config was not used because `--trust-repo-optimizer` was not given |
+| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer`, `env_pass` or a gate key looser than the defaults in a repository config is not used without `--trust-repo-optimizer` (also emitted by `validate --strict`) |
 | AR9J7 | `improve-isolation-unavailable` | warning | The requested optimizer isolation could not be applied: `require` refuses to run, `auto` runs unconfined |
 | AR9J8 | `improve-pr-refused` | error | `improve pr` refused: unsigned or unaccepted run, a different skill at the base, an existing branch, or unusable git |
 | AR9J9 | `improve-adapter-refused` | error | A bundled adapter (`builtin:review-fix`) could not run: no model, no network opt-in or no declared egress |
@@ -262,7 +262,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9F0`-`AR9F9` | `convert` report (`AR9F0`-`AR9F5` used; never emitted by `validate`) | allocated |
 | `AR9G0`-`AR9G9` | Model-judged review ([#220](https://github.com/Goldziher/ai-rulez/issues/220); `AR9G0`-`AR9G9` are used by `review` and `rubric lint`) | allocated |
 | `AR9H0`-`AR9H9` | Verifiers ([#221](https://github.com/Goldziher/ai-rulez/issues/221); `AR9H1`-`AR9H6` used, never emitted by `validate` unless `--verifiers` is given) | allocated |
-| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J9` used; never emitted by `validate`) | allocated |
+| `AR9J0`-`AR9J9` | Improve ([#227](https://github.com/Goldziher/ai-rulez/issues/227); `AR9J1`-`AR9J9` used; `validate` emits only `AR9J6`, `improve` the rest) | allocated |
 | `AR9K0`-`AR9K9` | Telemetry (`AR9K0`, `AR9K1`) | allocated |
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
@@ -3024,11 +3024,11 @@ the held-out gain of a candidate cannot be told from zero (improve report only)
 
 ### AR9J6 improve-repo-optimizer-ignored
 
-an [improve] optimizer or env_pass of the repository config was not used (improve only)
+an [improve] optimizer, env_pass or looser-than-default gate key of the repository config is not used without --trust-repo-optimizer
 
 - Default severity: `warning`
 - Analyzer: `evals` (scope `item`)
-- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. Without it they are reported and ignored.
+- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate --strict` and `improve run` report them.
 - Bad: A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`
 - Good: Pass `--with`, or review the config and add `--trust-repo-optimizer`
 

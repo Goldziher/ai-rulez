@@ -191,29 +191,46 @@ func (c *Config) ResolveImprove(trustRepo bool, getenv func(string) string) (Imp
 	return out, nil
 }
 
-// dropLooseGateKeys unsets the gate keys of c that are looser than the defaults and returns their names. A
-// repository config may tighten the acceptance gate but must not weaken it: a hostile or careless table could
-// otherwise accept a candidate that gained nothing (min_gain 0), tolerate regressions, shrink the held-out
-// share or allow a much larger skill. require_ci_above_zero and min_holdout_cases only ever tighten.
-func (c *ImproveConfig) dropLooseGateKeys() []string {
-	var dropped []string
+// LooserGateKeys names the gate keys of c that are looser than the defaults. A repository config may tighten the
+// acceptance gate but must not weaken it: a hostile or careless table could otherwise accept a candidate that gained
+// nothing (min_gain 0), tolerate regressions, shrink the held-out share or allow a much larger skill.
+// require_ci_above_zero and min_holdout_cases only ever tighten.
+func (c *ImproveConfig) LooserGateKeys() []string {
+	if c == nil {
+		return nil
+	}
+	var loose []string
 	if g := c.MinGain; g != nil && *g+1e-9 < ImproveDefaultMinGain {
-		c.MinGain = nil
-		dropped = append(dropped, "min_gain")
+		loose = append(loose, "min_gain")
 	}
 	if r := c.MaxRegressions; r != nil && *r > ImproveDefaultMaxRegressions {
-		c.MaxRegressions = nil
-		dropped = append(dropped, "max_regressions")
+		loose = append(loose, "max_regressions")
 	}
 	if f := c.HoldoutFraction; f != nil && *f+1e-9 < ImproveDefaultHoldoutFraction {
-		c.HoldoutFraction = nil
-		dropped = append(dropped, "holdout_fraction")
+		loose = append(loose, "holdout_fraction")
 	}
 	if g := c.MaxSkillGrowth; g > ImproveDefaultMaxSkillGrowth+1e-9 {
-		c.MaxSkillGrowth = 0
-		dropped = append(dropped, "max_skill_growth")
+		loose = append(loose, "max_skill_growth")
 	}
-	return dropped
+	return loose
+}
+
+// dropLooseGateKeys unsets the gate keys LooserGateKeys names and returns them.
+func (c *ImproveConfig) dropLooseGateKeys() []string {
+	loose := c.LooserGateKeys()
+	for _, key := range loose {
+		switch key {
+		case "min_gain":
+			c.MinGain = nil
+		case "max_regressions":
+			c.MaxRegressions = nil
+		case "holdout_fraction":
+			c.HoldoutFraction = nil
+		case "max_skill_growth":
+			c.MaxSkillGrowth = 0
+		}
+	}
+	return loose
 }
 
 // mergeImprove copies the keys user sets over dst.
