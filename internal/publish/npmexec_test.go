@@ -19,6 +19,15 @@ func fakeNPM(t *testing.T, view, publish runner.Result) *runner.Fake {
 	t.Helper()
 	return &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
 		switch spec.Argv[1] {
+		case "config":
+			// Stand-in for `npm config list --json -l`: --registry, else the environment, else the user's npmrc.
+			registry := ""
+			if i := indexOf(spec.Argv, "--registry"); i >= 0 {
+				registry = spec.Argv[i+1]
+			} else {
+				registry = NPMEffectiveRegistry(NPMPlan{Package: "@acme/acme"}, spec.Env)
+			}
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"registry":"` + registry + `"}`)}
 		case "view":
 			return view
 		case "pack":
@@ -49,13 +58,13 @@ func TestExecuteNPM(t *testing.T) {
 		wantCalls []string
 		wantErr   string
 	}{
-		{"packs then publishes", npmNotFoundResult, npmOKResult, []string{"view", "pack", "publish"}, ""},
-		{"refuses an existing version", runner.Result{Status: runner.StatusOK, Stdout: []byte("1.4.0\n")}, npmOKResult, []string{"view"}, "already exists"},
-		{"npm missing", runner.Result{Status: runner.StatusUnavailable, Err: os.ErrNotExist}, npmOKResult, []string{"view"}, "npm was not found"},
-		{"a 404 in other words is not E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("proxy said: 404 page not found")}, npmOKResult, []string{"view"}, "page not found"},
-		{"npm's JSON error is E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stdout: []byte(`{"error":{"code":"E404","summary":"No match found"}}`)}, npmOKResult, []string{"view", "pack", "publish"}, ""},
-		{"view fails for another reason", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("network down")}, npmOKResult, []string{"view"}, "network down"},
-		{"publish fails", npmNotFoundResult, runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("403 forbidden")}, []string{"view", "pack", "publish"}, "403 forbidden"},
+		{"packs then publishes", npmNotFoundResult, npmOKResult, []string{"config", "view", "pack", "publish"}, ""},
+		{"refuses an existing version", runner.Result{Status: runner.StatusOK, Stdout: []byte("1.4.0\n")}, npmOKResult, []string{"config", "view"}, "already exists"},
+		{"npm missing", runner.Result{Status: runner.StatusUnavailable, Err: os.ErrNotExist}, npmOKResult, []string{"config", "view"}, "npm was not found"},
+		{"a 404 in other words is not E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("proxy said: 404 page not found")}, npmOKResult, []string{"config", "view"}, "page not found"},
+		{"npm's JSON error is E404", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stdout: []byte(`{"error":{"code":"E404","summary":"No match found"}}`)}, npmOKResult, []string{"config", "view", "pack", "publish"}, ""},
+		{"view fails for another reason", runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("network down")}, npmOKResult, []string{"config", "view"}, "network down"},
+		{"publish fails", npmNotFoundResult, runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("403 forbidden")}, []string{"config", "view", "pack", "publish"}, "403 forbidden"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,7 +113,7 @@ func TestExecuteNPM_RunsFromAnEmptyDirectoryWithExplicitConfigAndAbsolutePaths(t
 	require.NoError(t, err)
 	assert.Equal(t, []string{"npm registry: https://npm.acme.example/"}, notices)
 	calls := fake.Calls()
-	require.Len(t, calls, 3)
+	require.Len(t, calls, 4)
 	absDist, _ := filepath.Abs(dir) //nolint:errcheck // a temp dir
 	for _, c := range calls {
 		assert.NotEqual(t, absDist, c.Dir, "npm must not run inside the dist directory")
@@ -113,7 +122,7 @@ func TestExecuteNPM_RunsFromAnEmptyDirectoryWithExplicitConfigAndAbsolutePaths(t
 		assert.Contains(t, c.Argv, "--globalconfig")
 		assert.Equal(t, filepath.Join(home, ".npmrc"), c.Argv[indexOf(c.Argv, "--userconfig")+1])
 	}
-	pack, pub := calls[1].Argv, calls[2].Argv
+	pack, pub := calls[2].Argv, calls[3].Argv
 	assert.Equal(t, filepath.Join(absDist, "npm", "package"), pack[len(pack)-1], "the package directory is absolute")
 	assert.True(t, filepath.IsAbs(pub[2]) && strings.HasSuffix(pub[2], "acme-acme-1.4.0.tgz"), "the tarball is absolute: %s", pub[2])
 }
@@ -133,7 +142,7 @@ func TestExecuteNPM_NamesAPlanRegistryAsTheScopesToo(t *testing.T) {
 	dir, d := writeBuilt(t, in)
 	fake := fakeNPM(t, npmNotFoundResult, npmOKResult)
 
-	_, err := ExecuteNPM(context.Background(), fake, d.Plan, NPMExecuteOptions{Dir: dir})
+	_, err := ExecuteNPM(context.Background(), fake, d.Plan, NPMExecuteOptions{Dir: dir, ConfirmRegistry: "https://npm.example.com/"})
 
 	require.NoError(t, err)
 	for _, c := range fake.Calls() {
@@ -165,7 +174,58 @@ func TestExecuteNPM_RefusesAChangedDistDirectoryAndAnInsecureRegistry(t *testing
 
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.want)
-			assert.Empty(t, fake.Calls(), "nothing is run")
+			for _, c := range fake.Calls() {
+				assert.Equal(t, "config", c.Argv[1], "only npm's own config is read before the refusal")
+			}
+		})
+	}
+}
+
+func TestExecuteNPM_GatesOnTheRegistryNPMReports(t *testing.T) {
+	// Arrange: npm reports an http scope registry that no static reading of the npmrc or the environment shows.
+	dir, d := writeBuilt(t, npmInput())
+	fake := &runner.Fake{Handle: func(spec runner.Spec) runner.Result {
+		if spec.Argv[1] == "config" {
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(`{"registry":"https://registry.npmjs.org/","@acme:registry":"http://evil.example/"}`)}
+		}
+		return npmOKResult
+	}}
+
+	// Act
+	_, err := ExecuteNPM(context.Background(), fake, d.Plan, NPMExecuteOptions{Dir: dir})
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not an https:// URL")
+	require.Len(t, fake.Calls(), 1)
+	assert.Equal(t, "config", fake.Calls()[0].Argv[1])
+}
+
+func TestExecuteNPM_ARegistryFromTheCommittedConfigNeedsConfirmation(t *testing.T) {
+	tests := []struct {
+		name, registry, confirm, want string
+	}{
+		{"unconfirmed", "https://npm.example.com", "", "confirm that registry by name"},
+		{"another registry confirmed", "https://npm.example.com", "https://other.example", "confirm that registry by name"},
+		{"confirmed, trailing slash ignored", "https://npm.example.com", "https://npm.example.com/", ""},
+		{"the public registry needs none", "https://registry.npmjs.org/", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := npmInput()
+			in.NPM.Registry = tt.registry
+			dir, d := writeBuilt(t, in)
+			fake := fakeNPM(t, npmNotFoundResult, npmOKResult)
+
+			_, err := ExecuteNPM(context.Background(), fake, d.Plan, NPMExecuteOptions{Dir: dir, ConfirmRegistry: tt.confirm})
+
+			if tt.want == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+			assert.Len(t, fake.Calls(), 1, "nothing but the config read ran")
 		})
 	}
 }

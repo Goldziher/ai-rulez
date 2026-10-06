@@ -103,8 +103,11 @@ packs the planned directory with the real npm when it is installed.
   `--userconfig` (your `NPM_CONFIG_USERCONFIG` or `~/.npmrc`, where `npm login` keeps credentials) and `--globalconfig` (empty
   unless `NPM_CONFIG_GLOBALCONFIG` names one) named explicitly, so a `.npmrc` committed in the repository, which could redirect
   the registry and receive `NODE_AUTH_TOKEN`, never applies. A `[publish.npm] registry` is also set as the scope's registry.
-  The plan output and `--execute` print the effective registry (the plan's, else the scope or default registry from your
-  environment and user npmrc, else `https://registry.npmjs.org/`) and refuse one that is not `https://`. The packed tarball is
+  `--execute` asks npm itself for the effective registry (`npm config list --json -l` under the same isolated flags, so
+  `npm_config_*` variables, scope registries and your user npmrc count the way npm applies them), prints it and refuses one
+  that is not `https://`. The dry-run plan shows an approximation read from the environment and your user npmrc. A registry
+  chosen by the committed `[publish.npm] registry` receives your npm token, so it is refused unless you name it with
+  `--confirm-registry URL` (the public registry needs none; a registry from your own npm configuration needs none either). The packed tarball is
   digested after `npm pack`, checked again before `npm publish` and reported with its digest. npm gets a filtered environment:
   the base set plus `NODE_AUTH_TOKEN`, `NPM_TOKEN`, `NPM_CONFIG_*` for the user config, registry and cache, proxy and
   certificate settings. Its output is redacted before it is shown.
