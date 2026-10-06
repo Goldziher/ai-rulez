@@ -56,6 +56,10 @@ includes or skills; the other pins (and the content pins) are kept.
   ai-rulez lock --check --format json
                                 the same comparison as JSON on stdout (the
                                 MCP lock_status tool returns this document)
+  ai-rulez lock --outdated      list sources whose version constraint allows a
+                                newer tag than the pinned one (network; --format
+                                json, --fail-on-outdated); "ai-rulez update"
+                                moves the pins
   ai-rulez lock --subject       print the lock-subject digest to sign with
                                 cosign (--output <file> writes the statement,
                                 --format json prints it); offline, read-only
@@ -78,6 +82,9 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockCheck, "check", false, "Verify ai-rulez.lock against the configuration and cached content without writing or using the network")
 	LockCmd.Flags().BoolVar(&lockDiffFlag, "diff", false, "Show how the lock differs from the sources and outputs (for pull request review); exits 0")
 	LockCmd.Flags().BoolVar(&lockContentOnly, "content-only", false, "Re-pin authored content and outputs only: no network, remote pins are kept")
+	LockCmd.Flags().BoolVar(&lockOutdated, "outdated", false, "Report sources whose version constraint allows a newer tag than the pinned one (uses the network, writes nothing)")
+	LockCmd.Flags().BoolVar(&lockFailOnOutdated, "fail-on-outdated", false, "With --outdated: exit 2 when any source has an allowed update")
+	LockCmd.Flags().BoolVar(&lockOffline, "offline", false, "With --outdated: refuse to run (it needs the network); use --check to verify the lock offline")
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
 	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --check, --diff and --subject: text (default) or json")
@@ -104,6 +111,14 @@ func runLock(_ *cobra.Command, args []string) {
 		fmtError(oops.Errorf("--output needs --subject"))
 		os.Exit(1)
 	}
+	if (lockFailOnOutdated || lockOffline) && !lockOutdated {
+		fmtError(oops.Errorf("--fail-on-outdated and --offline need --outdated"))
+		os.Exit(1)
+	}
+	if lockOutdated && (lockCheck || lockDiffFlag || lockContentOnly || lockSubject) {
+		fmtError(oops.Errorf("--outdated only reads the remote: it cannot be combined with --check, --diff, --content-only or --subject"))
+		os.Exit(1)
+	}
 	if lockSubject && (lockCheck || lockDiffFlag || lockContentOnly || lockKind != "" || len(args) > 0) {
 		fmtError(oops.Errorf("--subject only reads the lock: it cannot be combined with --check, --diff, --content-only, --kind or names"))
 		os.Exit(1)
@@ -127,6 +142,8 @@ func runLockFor(kind string, names []string) int {
 		switch {
 		case lockSubject:
 			c = lockSubjectAt(path)
+		case lockOutdated:
+			c = outdatedAt(path, kind, names)
 		case lockCheck:
 			c = checkLockAt(path)
 		case lockDiffFlag:

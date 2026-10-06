@@ -3,7 +3,12 @@ package includes
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -241,4 +246,47 @@ func VersionSources(cfg *config.Config) []VersionSource {
 		}
 	}
 	return out
+}
+
+// CachedTreeDir is the directory of the cached tree of a locked source ("" when
+// nothing is cached): what `update` compares before and after a refresh.
+func CachedTreeDir(cfg *config.Config, w lockfile.Want) string {
+	dir, _, _ := cachedTree(cfg, w)
+	return dir
+}
+
+// FileHashes returns path -> content hash of every regular file below dir, with
+// the git metadata and the cache bookkeeping file left out. Paths are relative
+// to dir and "/"-separated.
+func FileHashes(dir string) (map[string]string, error) {
+	out := map[string]string{}
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.Name() == cacheMetaFile || !d.Type().IsRegular() {
+			return nil
+		}
+		data, err := os.ReadFile(p) //nolint:gosec // a file of the cache directory
+		if err != nil {
+			return err //nolint:wrapcheck // wrapped below
+		}
+		rel, err := filepath.Rel(dir, p)
+		if err != nil {
+			return err //nolint:wrapcheck // wrapped below
+		}
+		sum := sha256.Sum256(data)
+		out[filepath.ToSlash(rel)] = hex.EncodeToString(sum[:])
+		return nil
+	})
+	if err != nil {
+		return nil, oops.With("dir", dir).Wrapf(err, "hash the cached tree")
+	}
+	return out, nil
 }
