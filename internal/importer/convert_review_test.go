@@ -114,7 +114,7 @@ func TestConvert_MergeAppendsNewServersAndSkills(t *testing.T) {
 	assert.Contains(t, cfgText, "name = 'alpha'")
 }
 
-func TestConvert_ConfigInAnotherFormatIsLeftAlone(t *testing.T) {
+func TestConvert_V3ConfigIsLeftAlone(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	writeTree(t, dir, sampleProject)
@@ -128,7 +128,7 @@ func TestConvert_ConfigInAnotherFormatIsLeftAlone(t *testing.T) {
 	require.NoError(t, err)
 	after := snapshot(t, dir)
 	assert.Equal(t, yamlCfg, after[".ai-rulez/config.yaml"])
-	assert.NotContains(t, after, ".ai-rulez/config.toml", "a config.toml beside config.yaml would shadow it")
+	assert.NotContains(t, after, ".ai-rulez/config.toml", "a config.toml beside config.yaml would hide the V3 config the user still has to migrate")
 	assert.Contains(t, after, ".ai-rulez/rules/ts.md")
 	assert.NotNil(t, findingFor(&Plan{Findings: report.Findings}, StatusNeedsAction, "config.yaml", ""))
 }

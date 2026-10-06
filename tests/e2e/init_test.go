@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
@@ -63,26 +62,13 @@ require github.com/stretchr/testify v1.8.4`
 				assert.True(t, len(content) > 0, "Config should have content")
 
 				// Check that domains are created under .ai-rulez/domains/
-				// configPath is at .ai-rulez/config.yaml
+				// configPath is at .ai-rulez/config.toml
 				aiRulesDir := filepath.Dir(configPath)
 				domainsDir := filepath.Join(aiRulesDir, "domains")
 				for _, domain := range []string{"backend", "frontend", "infra"} {
 					domainDir := filepath.Join(domainsDir, domain)
 					assert.DirExists(t, domainDir, "Domain directory should exist: %s", domain)
 				}
-			},
-		},
-		{
-			name:        "Init with json format",
-			projectName: "JSONProject",
-			args:        []string{"--format", "json"},
-			setupFiles:  func(t *testing.T, dir string) {},
-			validate: func(t *testing.T, configPath string) {
-				// For JSON format, config might be in a different format
-				// Just verify it's valid and can be read
-				content, err := os.ReadFile(configPath)
-				require.NoError(t, err)
-				assert.True(t, len(content) > 0, "Config file should have content")
 			},
 		},
 	}
@@ -106,11 +92,6 @@ require github.com/stretchr/testify v1.8.4`
 			require.NoError(t, err, "Init command should succeed. Output: %s", output)
 
 			configPath := filepath.Join(dir, ".ai-rulez", "config.toml")
-			if strings.Contains(strings.Join(tt.args, " "), "--format json") {
-				configPath = filepath.Join(dir, ".ai-rulez", "config.json")
-			} else if strings.Contains(strings.Join(tt.args, " "), "--format yaml") {
-				configPath = filepath.Join(dir, ".ai-rulez", "config.yaml")
-			}
 			assert.FileExists(t, configPath, "config file should be created at %s", configPath)
 
 			if tt.validate != nil {
