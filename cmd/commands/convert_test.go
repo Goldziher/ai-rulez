@@ -161,3 +161,11 @@ func TestPrintConvertReport_ReportsAFailureToWriteTheFile(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "write report file")
 }
+
+func TestConvertAllowFindingsCodeFormat(t *testing.T) {
+	for code, ok := range map[string]bool{"AR001": true, "ar001": true, "AR9F5": true, "x": false, "AR": false, "../x": false} {
+		if got := allowCodeRe.MatchString(code); got != ok {
+			t.Errorf("%q matched = %v, want %v", code, got, ok)
+		}
+	}
+}
