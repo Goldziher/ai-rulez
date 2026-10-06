@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +32,9 @@ func validateActivationFlags() error {
 		return oops.Errorf("unknown --max-cost-mode %q (use %s or %s)", evalFlags.maxCostMode, evals.CostModeExpected, evals.CostModeHigh)
 	}
 	if evalFlags.mode != evals.ModeActivation {
+		if evalFlags.descriptionFrom != "" {
+			return oops.Errorf("--description-from needs --mode activation")
+		}
 		if evalFlags.surface != "" {
 			return oops.Errorf("--surface needs --mode activation")
 		}
@@ -142,6 +148,16 @@ func runEvalActivation(ctx context.Context, cmd *cobra.Command, skills []string,
 		date = os.Getenv(EvalDateEnv)
 	}
 	opts := &evals.ActivationOptions{ConfigDir: absDir, Skills: skills, Scope: evalFlags.scope, Date: date, Surface: evalFlags.surface}
+	if evalFlags.descriptionFrom != "" {
+		if len(skills) != 1 {
+			return false, oops.Hint("Name the skill: ai-rulez eval run <skill> --mode activation --description-from FILE").
+				Errorf("--description-from measures a candidate description of exactly one skill, got %d", len(skills))
+		}
+		if opts.Description, err = readDescriptionFile(evalFlags.descriptionFrom); err != nil {
+			return false, err
+		}
+		opts.DescriptionSkill = skills[0]
+	}
 	if thresholdGiven(cmd) {
 		threshold := evalFlags.threshold
 		opts.PassThreshold = &threshold
@@ -180,6 +196,30 @@ func runEvalActivation(ctx context.Context, cmd *cobra.Command, skills []string,
 		}
 	}
 	return report.Failed, errors.Join(writeActivationReport(cmd, report), runErr)
+}
+
+// readDescriptionFile reads a candidate skill description (--description-from):
+// bounded, valid UTF-8, no hidden characters (a description is sent to a model).
+func readDescriptionFile(path string) (string, error) {
+	const limit = 16 << 10
+	data, _, err := safefs.ReadRegularKeepMode(path) // the user's file: its mode is not ours to change
+	if err != nil {
+		return "", oops.With("path", path).Wrapf(err, "read the description file")
+	}
+	if len(data) > limit {
+		return "", oops.With("path", path).Errorf("the description file is over the %d byte limit", limit)
+	}
+	if !utf8.Valid(data) {
+		return "", oops.With("path", path).Errorf("the description file is not valid UTF-8")
+	}
+	text := strings.TrimSpace(string(data))
+	if text == "" {
+		return "", oops.With("path", path).Errorf("the description file is empty")
+	}
+	if found, hidden := lint.DetectHidden(text); hidden {
+		return "", oops.With("path", path).Errorf("the description file holds a hidden character (%s)", found)
+	}
+	return text, nil
 }
 
 // configureNative fills the settings of the native surface.
