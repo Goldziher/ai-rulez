@@ -379,6 +379,21 @@ func TestComputePinsLegacyMCPServersLikeInlineOnes(t *testing.T) {
 	assert.Equal(t, base, only.items()["settings:/mcp-servers"], "projects without a legacy file keep their digest")
 }
 
+func TestComputeMCPPinIgnoresResolvedPlaceholders(t *testing.T) {
+	// Arrange: a server written with a ${VAR} placeholder.
+	f := newFixture(t)
+	f.cfg.MCPServersRaw = []config.MCPServer{{Name: "a", Command: "npx", Env: map[string]string{"TOKEN": "${TOKEN}"}}}
+	before := f.items()["settings:/mcp-servers"]
+	require.NotEmpty(t, before)
+
+	// Act: a render in the same process resolved the placeholder in the working copy.
+	resolved := config.MCPServer{Name: "a", Command: "npx", Env: map[string]string{"TOKEN": "s3cret-value"}}
+	f.cfg.MCPServers = map[string]*config.MCPServer{"a": &resolved}
+
+	// Assert: the pin is still computed from the as-written server.
+	assert.Equal(t, before, f.items()["settings:/mcp-servers"], "the pin must not depend on resolved values")
+}
+
 func TestTreeOfDetectsRelabelledRemoteEntries(t *testing.T) {
 	entry := func(mutate func(*lockfile.Entry)) string {
 		e := lockfile.Entry{Name: "pdf", Source: "https://example.com/a", Ref: "v1", Path: "skills/pdf", Commit: "c1", Digest: "sha256:d1"}
