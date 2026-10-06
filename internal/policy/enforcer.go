@@ -145,6 +145,22 @@ func (e *Enforcer) EnforceContent(_ context.Context, cfg *config.Config) []confi
 // Locks implements config.PolicyEnforcer; an unusable policy locks everything.
 func (e *Enforcer) Locks(feature string) bool {
 	r, err := e.Load()
+	return locked(r, err, feature)
+}
+
+// LocksIn implements config.DirLocker: Locks for the project at dir, whose
+// organization policy (--discover-org) is part of the answer. Without a
+// directory it is Locks. An organization policy that cannot be read locks
+// everything, like any unusable policy.
+func (e *Enforcer) LocksIn(feature, dir string) bool {
+	if dir == "" {
+		return e.Locks(feature)
+	}
+	r, err := e.LoadFor(dir)
+	return locked(r, err, feature)
+}
+
+func locked(r *Resolved, err error, feature string) bool {
 	if err != nil {
 		return true
 	}
