@@ -1,0 +1,146 @@
+package evals
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+)
+
+// Graders of a rubric.
+const (
+	// GraderRunner leaves rubric grading to the runner (the default).
+	GraderRunner = "runner"
+	// GraderBuiltin grades each rubric with the model layer's judge, from the
+	// runner's transcript.
+	GraderBuiltin = "builtin"
+)
+
+// maxTranscriptBytes bounds the transcript sent to a judge: a runner's whole
+// output is untrusted data and its size is not a reason to run up a bill.
+const maxTranscriptBytes = 64 << 10
+
+// RubricGrade is one graded rubric.
+type RubricGrade struct {
+	// Score is in [0,1]: the share of the rubric the transcript satisfies.
+	Score     float64
+	Rationale string
+}
+
+// RubricGrader grades a rubric against a transcript. The transcript is data the
+// grader must never follow as instructions.
+type RubricGrader interface {
+	// Name identifies the grader in reports and in the cache key.
+	Name() string
+	Grade(ctx context.Context, rubric, transcript string) (RubricGrade, error)
+	// SpentUSD is the cumulative cost of the grader's calls.
+	SpentUSD() float64
+}
+
+// JudgeGrader grades with internal/llm's Judge: structured output at temperature
+// 0, the transcript fenced as untrusted data, secret-looking text refused before
+// anything is sent, and the budget, cache and network gate of the model layer.
+type JudgeGrader struct {
+	// Client is the model client (llm.New's managed client, or a fake in tests).
+	Client llm.Client
+	// Model names the model for the report and the cache key.
+	Model string
+	// Spent reports the cumulative cost of Client (llm.Managed.Spent); nil means
+	// the cost is not tracked.
+	Spent func() float64
+	// RedactSecrets sends secret-looking text masked instead of refusing the case.
+	RedactSecrets bool
+
+	mu sync.Mutex
+}
+
+// Name implements RubricGrader: the grader, its model and the judge prompt
+// version, so a change to any of them re-runs a cached result.
+func (g *JudgeGrader) Name() string {
+	return fmt.Sprintf("%s:%s:%s", GraderBuiltin, g.Model, llm.JudgePromptVersion)
+}
+
+// Grade implements RubricGrader.
+func (g *JudgeGrader) Grade(ctx context.Context, rubric, transcript string) (RubricGrade, error) {
+	g.mu.Lock() // one judge call at a time: the budget guard and the cost delta stay simple
+	defer g.mu.Unlock()
+	transcript = boundTranscript(transcript)
+	v, err := llm.JudgeWith(ctx, g.Client, rubric, transcript, llm.JudgeOptions{RedactSecrets: g.RedactSecrets})
+	if err != nil {
+		return RubricGrade{}, err //nolint:wrapcheck // the model layer's typed error is the useful one
+	}
+	return RubricGrade{Score: round(v.Score), Rationale: oneLine(v.Rationale)}, nil
+}
+
+// SpentUSD implements RubricGrader.
+func (g *JudgeGrader) SpentUSD() float64 {
+	if g.Spent == nil {
+		return 0
+	}
+	return g.Spent()
+}
+
+// boundTranscript keeps the head and the tail of an oversized transcript: the
+// answer is usually at the end, the framing at the start.
+func boundTranscript(t string) string {
+	if len(t) <= maxTranscriptBytes {
+		return t
+	}
+	half := maxTranscriptBytes / 2
+	return t[:half] + "\n[... transcript truncated ...]\n" + t[len(t)-half:]
+}
+
+// oneLine collapses a rationale to one bounded line (it ends up in a report).
+func oneLine(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > 300 {
+		s = s[:297] + "..."
+	}
+	return s
+}
+
+// gradeRubrics grades the rubric of every case that has one, from the output the
+// runner returned, and sets Result.RubricScore. It overrides a runner's own rubric
+// score (the point of the built-in grader is not to depend on it), leaves a result
+// whose runner gave its own verdict (Passed) alone, and never grades a result with
+// no output. A call that fails leaves that result ungraded, which scores as a
+// failure, with the reason as a warning. It returns the warnings and whether the
+// model layer refused to run at all (network disabled), which ends the grading.
+func gradeRubrics(ctx context.Context, g RubricGrader, cases []Case, resp *Response) (warnings []string, refused error) {
+	byID := map[string]*Case{}
+	for i := range cases {
+		byID[cases[i].ID] = &cases[i]
+	}
+	for i := range resp.Results {
+		r := &resp.Results[i]
+		c := byID[r.Case]
+		if c == nil || !c.HasRubric() || r.Skipped || r.Error != "" {
+			continue
+		}
+		label := fmt.Sprintf("case %q (%s arm)", r.Case, r.Arm)
+		switch {
+		case r.Passed != nil:
+			warnings = append(warnings, label+": the runner gave its own verdict, so the built-in grader did not grade the rubric")
+			continue
+		case strings.TrimSpace(r.Output) == "":
+			warnings = append(warnings, label+": the runner returned no output, so there is no transcript for the built-in grader")
+			r.RubricScore = nil
+			continue
+		}
+		grade, err := g.Grade(ctx, c.RubricText(), r.Output)
+		switch {
+		case errors.Is(err, llm.ErrNetworkDisabled):
+			return warnings, err
+		case err != nil:
+			warnings = append(warnings, fmt.Sprintf("%s: the built-in grader failed: %v", label, err))
+			r.RubricScore = nil
+			continue
+		}
+		score := grade.Score
+		r.RubricScore, r.RubricRationale = &score, grade.Rationale
+	}
+	return warnings, nil
+}

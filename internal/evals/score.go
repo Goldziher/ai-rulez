@@ -15,18 +15,22 @@ const (
 
 // CaseScore is the scored outcome of one case.
 type CaseScore struct {
-	Case          string   `json:"case"`
-	ExpectTrigger bool     `json:"expect_trigger"`
-	NearMiss      bool     `json:"near_miss,omitempty"`
-	Status        string   `json:"status"`
-	Triggered     *bool    `json:"triggered,omitempty"`
-	OutcomeGraded bool     `json:"outcome_graded"`
-	OutcomePassed *bool    `json:"outcome_passed,omitempty"`
-	WithoutPassed *bool    `json:"without_passed,omitempty"`
-	CostUSD       float64  `json:"cost_usd,omitempty"`
-	Tokens        int      `json:"tokens,omitempty"`
-	Failures      []string `json:"failures,omitempty"`
-	Reason        string   `json:"reason,omitempty"`
+	Case          string `json:"case"`
+	ExpectTrigger bool   `json:"expect_trigger"`
+	NearMiss      bool   `json:"near_miss,omitempty"`
+	Status        string `json:"status"`
+	Triggered     *bool  `json:"triggered,omitempty"`
+	OutcomeGraded bool   `json:"outcome_graded"`
+	OutcomePassed *bool  `json:"outcome_passed,omitempty"`
+	WithoutPassed *bool  `json:"without_passed,omitempty"`
+	// RubricScore and RubricNote are the rubric grade of the "with" run and the
+	// grader's reason, when the case has a rubric and it was graded.
+	RubricScore *float64 `json:"rubric_score,omitempty"`
+	RubricNote  string   `json:"rubric_note,omitempty"`
+	CostUSD     float64  `json:"cost_usd,omitempty"`
+	Tokens      int      `json:"tokens,omitempty"`
+	Failures    []string `json:"failures,omitempty"`
+	Reason      string   `json:"reason,omitempty"`
 }
 
 // SkillScore is the per-skill summary.
@@ -160,6 +164,7 @@ func scoreCase(c *Case, with, without *Result, opts ScoreOptions, t *tally) Case
 	}
 
 	cs.Triggered = with.Triggered
+	cs.RubricScore, cs.RubricNote = with.RubricScore, with.RubricRationale
 	grade := GradeOutcome(c, with, opts.Grade)
 	cs.OutcomeGraded = grade.Graded
 	if grade.Graded {

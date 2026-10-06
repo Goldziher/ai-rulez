@@ -23,6 +23,19 @@ import (
 // the skill fired.
 const claudeTriggerGrader = "trigger"
 
+// claudeRubricGrader is the name of the generated llm grader (rubric.md).
+const claudeRubricGrader = "rubric"
+
+// maxClaudeOutputBytes bounds the answer taken from the tool's evidence.
+const maxClaudeOutputBytes = 256 << 10
+
+func capOutput(s string) string {
+	if len(s) > maxClaudeOutputBytes {
+		return s[:maxClaudeOutputBytes]
+	}
+	return s
+}
+
 // keyType is the frontmatter key that selects a grader type.
 const keyType = "type"
 
@@ -47,6 +60,10 @@ type ClaudePluginEval struct {
 	ExtraArgs []string
 	// KeepDir, when set, is where the throwaway plugin is built and kept.
 	KeepDir string
+	// IgnoreRubricVerdict leaves the tool's own verdict on a rubric out of the
+	// outcome (set with --grader builtin, which grades the rubric itself from the
+	// answer the tool's grader read). The tool still runs its llm grader.
+	IgnoreRubricVerdict bool
 	// Timeout bounds one invocation (one skill); the process tree is killed when it
 	// ends. Default 30 minutes, like the command runner.
 	Timeout time.Duration
@@ -68,7 +85,7 @@ func (r *ClaudePluginEval) Fingerprint() string {
 	if bin == "" {
 		bin = "claude"
 	}
-	return fmt.Sprintf("bin=%s binfile=%s runs=%d judge=%s args=%q", bin, executableStamp(bin), r.Runs, r.JudgeModel, r.ExtraArgs)
+	return fmt.Sprintf("bin=%s binfile=%s runs=%d judge=%s args=%q ignore-rubric=%t", bin, executableStamp(bin), r.Runs, r.JudgeModel, r.ExtraArgs, r.IgnoreRubricVerdict)
 }
 
 // Run implements Runner.
@@ -130,7 +147,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 		}
 		return nil, fmt.Errorf("claude plugin eval wrote no result file: %w", readErr)
 	}
-	resp, err := ParseClaudeResult(data, req, translated)
+	resp, err := ParseClaudeResultWith(data, req, translated, r.IgnoreRubricVerdict)
 	if err != nil {
 		return nil, err
 	}
@@ -388,11 +405,21 @@ type claudeRun struct {
 	Graders      []struct {
 		Name   string `json:"name"`
 		Passed bool   `json:"passed"`
+		// Evidence is what an llm grader read: the run's last message. It is the
+		// transcript the built-in grader grades.
+		Evidence string `json:"evidence"`
 	} `json:"graders"`
 }
 
 // ParseClaudeResult converts the tool's JSON into a Response.
 func ParseClaudeResult(data []byte, req *Request, tr *ClaudeTranslation) (*Response, error) {
+	return ParseClaudeResultWith(data, req, tr, false)
+}
+
+// ParseClaudeResultWith is ParseClaudeResult; with ignoreRubric the tool's own
+// verdict on the rubric is left out of the outcome (the built-in grader grades it),
+// while the answer the tool's grader read is still returned as the output.
+func ParseClaudeResultWith(data []byte, req *Request, tr *ClaudeTranslation, ignoreRubric bool) (*Response, error) {
 	var agg claudeAggregate
 	if err := json.Unmarshal(data, &agg); err != nil {
 		return nil, fmt.Errorf("parse claude plugin eval result: %w", err)
@@ -419,9 +446,9 @@ func ParseClaudeResult(data []byte, req *Request, tr *ClaudeTranslation) (*Respo
 			continue // scored as "no result"
 		}
 		entry := agg.Cases[idx]
-		resp.Results = append(resp.Results, claudeArm(c, ArmWith, entry.Arms.With, tr.Inverted[c.ID]))
+		resp.Results = append(resp.Results, claudeArm(c, ArmWith, entry.Arms.With, tr.Inverted[c.ID], ignoreRubric))
 		if req.Ablation && len(entry.Arms.Without) > 0 {
-			resp.Results = append(resp.Results, claudeArm(c, ArmWithout, entry.Arms.Without, false))
+			resp.Results = append(resp.Results, claudeArm(c, ArmWithout, entry.Arms.Without, false, ignoreRubric))
 		}
 	}
 	if err := resp.Validate(req); err != nil {
@@ -431,7 +458,7 @@ func ParseClaudeResult(data []byte, req *Request, tr *ClaudeTranslation) (*Respo
 }
 
 // claudeArm collapses the runs of one arm by majority vote.
-func claudeArm(c *Case, arm string, runs []claudeRun, inverted bool) Result {
+func claudeArm(c *Case, arm string, runs []claudeRun, inverted, ignoreRubric bool) Result {
 	res := Result{Case: c.ID, Arm: arm}
 	var usable, triggered, outcomePass int
 	var cost float64
@@ -451,6 +478,14 @@ func claudeArm(c *Case, arm string, runs []claudeRun, inverted bool) Result {
 			if g.Name == claudeTriggerGrader {
 				fired = g.Passed != inverted
 				continue
+			}
+			if g.Name == claudeRubricGrader {
+				if res.Output == "" {
+					res.Output = capOutput(g.Evidence)
+				}
+				if ignoreRubric {
+					continue
+				}
 			}
 			graded = true
 			pass = pass && g.Passed

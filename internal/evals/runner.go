@@ -85,11 +85,13 @@ type Result struct {
 	Output string `json:"output,omitempty"`
 	// WorkDir is the directory the case ran in, for file assertions.
 	WorkDir string `json:"work_dir,omitempty"`
-	// RubricScore is the grader's score (0-1) for the case's rubric.
-	RubricScore  *float64 `json:"rubric_score,omitempty"`
-	InputTokens  int      `json:"input_tokens,omitempty"`
-	OutputTokens int      `json:"output_tokens,omitempty"`
-	CostUSD      float64  `json:"cost_usd,omitempty"`
+	// RubricScore is the grader's score (0-1) for the case's rubric, and
+	// RubricRationale the grader's one-line reason (set by the built-in grader).
+	RubricScore     *float64 `json:"rubric_score,omitempty"`
+	RubricRationale string   `json:"rubric_rationale,omitempty"`
+	InputTokens     int      `json:"input_tokens,omitempty"`
+	OutputTokens    int      `json:"output_tokens,omitempty"`
+	CostUSD         float64  `json:"cost_usd,omitempty"`
 	// Fired, FiredCounts and Runs answer an activation request: how often each skill
 	// of the installed set loaded over Runs repetitions of the prompt (a skill that
 	// never loaded is absent). Triggered says whether the case's target loaded in

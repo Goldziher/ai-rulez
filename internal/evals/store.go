@@ -262,12 +262,20 @@ type CacheInputs struct {
 	// AllowExec changes how command_exit assertions grade.
 	AllowExec   bool
 	ToolVersion string
+	// Grader names the built-in rubric grader (its model and judge prompt version);
+	// empty when the runner grades. It joins the key only when set, so a run without
+	// one keeps its key.
+	Grader string
 }
 
 // CacheKey derives the key that decides whether a stored run can be reused.
 func CacheKey(in CacheInputs) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("v%d\n%s\n%s\n%s\n%s\n%s\n%s\n%s\nexec=%s\nversion=%s",
+	text := fmt.Sprintf("v%d\n%s\n%s\n%s\n%s\n%s\n%s\n%s\nexec=%s\nversion=%s",
 		StoreSchemaVersion, in.Digest, in.CasesDigest, in.Runner, in.RunnerFingerprint, in.Harness, in.Model,
-		strconv.FormatBool(in.Ablation), strconv.FormatBool(in.AllowExec), in.ToolVersion)))
+		strconv.FormatBool(in.Ablation), strconv.FormatBool(in.AllowExec), in.ToolVersion)
+	if in.Grader != "" {
+		text += "\ngrader=" + in.Grader
+	}
+	sum := sha256.Sum256([]byte(text))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }

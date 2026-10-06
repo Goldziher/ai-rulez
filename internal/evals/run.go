@@ -66,6 +66,10 @@ type RunOptions struct {
 	// MaxCostMode is the estimate figure that must fit under MaxCostUSD before the
 	// run starts: CostModeExpected (default) or CostModeHigh.
 	MaxCostMode string
+	// Grader, when set, grades every rubric from the runner's output instead of
+	// trusting the runner's own score (--grader builtin). Its cost counts towards
+	// MaxCostUSD.
+	Grader RubricGrader
 	// EstimateRuns is the agent runs per case and arm assumed by the estimate.
 	EstimateRuns int
 	// Store holds earlier results (for the cache) and receives new ones.
@@ -108,8 +112,12 @@ type RunReport struct {
 	DryRun   bool       `json:"dry_run"`
 	Skills   []SkillRun `json:"skills"`
 	Estimate Estimate   `json:"estimate"`
-	// CostUSD is the actual cost the runner reported.
+	// CostUSD is the actual cost the runner reported, plus the built-in grader's.
 	CostUSD float64 `json:"cost_usd"`
+	// Grader names the built-in grader when one graded the rubrics, and GraderCostUSD
+	// is what it cost.
+	Grader        string  `json:"grader,omitempty"`
+	GraderCostUSD float64 `json:"grader_cost_usd,omitempty"`
 	// PriceKnown is false when the model has no entry in the price table, so the
 	// estimate used the sonnet tier as a stand-in (--price-in and --price-out replace it).
 	PriceKnown bool `json:"price_known"`
@@ -184,7 +192,7 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner != nil {
 		e.runnerName = opts.Runner.Name()
 	}
-	e.report = &RunReport{Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown, PricedAs: pricedAs}
+	e.report = &RunReport{Grader: e.graderName(), Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown, PricedAs: pricedAs}
 	return e, nil
 }
 
@@ -368,8 +376,16 @@ func (e *engine) cacheKey(run *SkillRun) string {
 	return CacheKey(CacheInputs{
 		Digest: run.Digest, CasesDigest: run.CasesDigest, Runner: e.runnerName, RunnerFingerprint: fingerprint,
 		Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation, AllowExec: e.opts.Grade.AllowExec,
-		ToolVersion: e.opts.ToolVersion,
+		ToolVersion: e.opts.ToolVersion, Grader: e.graderName(),
 	})
+}
+
+// graderName is the built-in grader's identity for the cache key; empty without one.
+func (e *engine) graderName() string {
+	if e.opts.Grader == nil {
+		return ""
+	}
+	return e.opts.Grader.Name()
 }
 
 // cacheable says whether a score is a real grading result. A run in which a case
@@ -417,6 +433,17 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 				e.report.CostUSD = round(math.Max(e.report.CostUSD, e.opts.MaxCostUSD))
 			}
 			return run
+		}
+		if e.opts.Grader != nil {
+			before := e.opts.Grader.SpentUSD()
+			warnings, refused := gradeRubrics(ctx, e.opts.Grader, p.req.Cases, resp)
+			run.Warnings = append(run.Warnings, warnings...)
+			graded := round(math.Max(0, e.opts.Grader.SpentUSD()-before))
+			e.report.GraderCostUSD, e.report.CostUSD = round(e.report.GraderCostUSD+graded), round(e.report.CostUSD+graded)
+			if refused != nil {
+				run.Status, run.Error = RunError, "the built-in grader is not allowed to run: "+refused.Error()
+				return run
+			}
 		}
 		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price}) //nolint:contextcheck // local grading is bounded by GradeOptions.CommandTimeout
 		charged := score.CostUSD
