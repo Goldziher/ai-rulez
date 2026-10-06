@@ -125,7 +125,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - **`validate --strict` no longer fails open on a lock it cannot verify**: under `[lock] enforce = true` a corrupt lock, a newer `hash_version`, or a source that cannot be snapshotted is an `AR981` finding instead of a logged skip.
-- **A lock without content pins (a downgrade to version 1) no longer disables the content checks**: `lock --check` exits 2 on it whatever `enforce` says, `generate --locked` warns (and fails under `enforce`), and a lock with content pins must carry a `tree` digest. Version 1 locks still load. Proposal: make `[lock] enforce` default to `true` in the next major release; it stays `false` for now so existing projects are not broken.
+- **A lock without content pins (a downgrade to version 1) no longer disables the content checks**: `lock --check` exits 2 on it whatever `enforce` says, `generate --locked` warns (and fails under `enforce`), and a lock with content pins must carry a `tree` digest. Version 1 locks still load.
 - **A hook `script` outside the project** no longer aborts `ai-rulez lock` with "invalid path in a digest tree"; it is reported as a `lock` change that keeps `lock --check` failing until the script is moved inside the project.
 - **File modes in digests no longer depend on the operating system**: on Windows the executable bit is taken from the git index (`100644` when git cannot say), on Linux and macOS from the file. Existing pins stay valid.
 - **`[[mcp_servers]]` are pinned at the source** (`settings` item `mcp-servers`); the docs now list the declared configuration that is covered only by the output pins (profiles, include and scoped configuration, plugin authoring).
@@ -205,9 +205,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **`AGENTS.md` is now shared by `pi` as well** (`codex`, `opencode`, `xum`, `amp`, `pi`): a frontmatter `targets` naming any of them selects the item for all, and the file renders identically whichever preset writes it last.
 - **Dependency updates**: `go.opentelemetry.io/otel` and `otel/trace` `1.46.0` → `1.47.0`, `github.com/dlclark/regexp2/v2` `2.8.0` → `2.8.2`, and the docs lockfile (`zensical`, `markupsafe`).
 - **Shared MCP entry builder**: the stdio/url MCP server shape used by pi and Gemini is now one helper (`presets.MCPServerEntry`), which Xum's `mcp.jsonc` entry builder also builds on.
@@ -222,9 +219,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **MCP servers in shared settings documents are owned one by one.** `.claude/settings.json`, `.gemini/settings.json`, `.mcp.json`, `.agents/settings.json`, `opencode.json` (`mcp.servers`) and `.xum/mcp.jsonc` used to have their whole `mcpServers` object replaced, which deleted servers you wrote by hand. `generate` now writes each configured server into the existing object, so a server whose name is not in `config.toml` survives `generate` and `clean`; a server dropped from the config is removed on the next `generate`. A hand-written server with the same name as a configured one is overwritten by the configured value. A document ai-rulez wrote whole behaves as before.
 - **A plugin `name` must match `^[a-z0-9][a-z0-9._-]*$` and contain no `..` for every runtime**, not only `agent-plugins`: it becomes a directory and file name and, for OpenCode, an identifier in generated source. Scoped (`@scope/x`), uppercase and slash-containing names are rejected by `validate`.
 
@@ -260,9 +254,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **`.gitignore` management adds only what git does not already ignore**: `generate` checks each entry with `git check-ignore` against all ignore sources (with its own block left out, without touching your files) and skips entries you already ignore or have un-ignored with a `!` rule; the managed block is removed when empty. Machine-local and secret outputs you un-ignored stay out of the block with a warning. Outside a git repository every entry is still added. A `.gitignore` that is a symbolic link is never written through (git does not read it): all entries go to a per-project block in `.git/info/exclude` instead, and ignore files are read with a size limit, so a link to a device cannot hang `generate`.
 - **poly hook catalog**: `ai-rulez-validate`, `ai-rulez-generate` and `ai-rulez-recursive` pass `--no-local`, so hooks render the shared view and never fail on, or write, a developer's machine-local configuration.
 - **Config writes keep the file mode** of an existing config instead of resetting it to `0644`.
@@ -320,9 +311,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **BREAKING: rules are split into native rules folders by default**: the default `[rules] mode` is now `split`. Claude writes rules to `.claude/rules/*.md` (CLAUDE.md keeps context), Copilot to `.github/instructions/*.instructions.md` (auto and manual rules stay inline), Junie to `.junie/rules/` and Antigravity to `.agents/rules/` (inline when the gemini preset is also enabled). Set `[rules] mode = "inline"` (or `mode_by_preset`) to keep the previous layout. Stale inline content is removed on the next `generate`.
 - **`ai-rulez tokens` rule-file accounting**: path-scoped rule files count as conditional, manual rules as on-demand, and agent-requested rules split into an always-loaded description and an on-demand body, instead of all counting as always-loaded.
 - **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Rule names that differ only in case or collide after sanitizing (including a context file `x` against a rule `context-x`) now fail generation in every rules-folder preset instead of silently overwriting each other; the custom `directory` preset is not part of this check. Names with no ASCII letters or digits (for example CJK-only) get a stable `rule-<hash>` file name instead of failing.
@@ -399,9 +387,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Generated headers follow the config directory**: banners now name the real source path
   (`.config/ai-rulez/config.toml` and `.config/ai-rulez/rules/…`) instead of a hardcoded
   `.ai-rulez/`. `GeneratorSchemaVersion` is bumped so `Source-Hash` values written by 4.18.0 no
@@ -487,9 +472,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Merged JSON documents can own a nested key path**: `jsonmerge` now supports `OwnedKey.Path`, letting a generator own `mcp.servers` while preserving sibling keys under the same ancestor, and the partially-owned check recurses to match.
 
 ## [4.14.1] - 2026-09-29
@@ -514,9 +496,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - `ai-rulez migrate v4` now shares one TOML serializer with `SaveConfig`. The serializer previously flattened every preset to its name, which would have dropped custom/provider presets; it now emits built-in presets as strings and custom/provider presets as inline tables, and preserves all fields (including `defaults`, `scopes`, `compact`, `plugin`, and `marketplace`).
 
 ## [4.13.0] - 2026-09-27
@@ -529,9 +508,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **The `Generated:` header line is now off by default.** Generated output is byte-reproducible unless a project asks for a per-run value: the same sources generate the same bytes, output can be verified by content hash, and `CLAUDE.md` and `AGENTS.md` — which the minimal header renders identically, since it carries no per-output field — can no longer disagree. They did before, because every preset called `time.Now()` for itself, so the two renders straddling a second boundary produced files differing in exactly that line; downstream completeness checks had to special-case it to compare them at all. `[header] timestamp = true` opts the line back in. **Upgrading**: the source hash already covered `header_timestamp`, so the first `generate` after upgrading rewrites every output once to drop the line, and runs after that are byte-stable; a project that wants the line must now say so. When it is enabled, one run resolves the timestamp once and stamps every file it writes with that value, and `SOURCE_DATE_EPOCH` pins it (an unparsable value is ignored in favour of the wall clock) so an opted-in project can still be reproducible.
 
 - **Builtin rules cut roughly in half, with narrow guidance moved to skills.** Everything in a builtin pack's `rules/` directory is concatenated into the generated root instruction file, so it is re-read on every request of every session; a skill costs its name until it is invoked.
@@ -577,9 +553,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Removed the unused `internal/scanner` package. Nothing imported it — content is scanned through `config.ScanContentTree` and profiles resolve through `Config.GetContentForProfile` — so it was a second, diverging copy of the same walk, and it mishandled the command directory form by dropping both items when a flat and a directory command collided in one source. `validate` reports that collision, which is why nothing depended on the broken path.
 
 ## [4.12.0] - 2026-09-25
@@ -591,9 +564,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Settings documents are now merged, not overwritten** (issue #185): `.claude/settings.json`, `.mcp.json`, `.gemini/settings.json`, `.agents/settings.json` and `.amp/settings.json` are shared documents where ai-rulez owns specific top-level keys (`mcpServers`, or `amp.anthropic.effort`) and the consumer owns the rest. Generation now replaces only the owned keys and preserves every other member byte-for-byte, including the document's original indentation. **Consequence**: an MCP server a user added by hand inside the `mcpServers` object does NOT survive — the owned key is replaced wholesale. **JSONC not supported**: a document containing comments or trailing commas is not valid JSON, and generation now fails loudly with a hint naming the path, rather than silently stripping comments. **Gitignore behavior**: a document still holding keys ai-rulez does not own is treated as the user's file and is NOT added to the managed `.gitignore` block or deleted as stale. A document holding only ai-rulez's own keys is still gitignored (keeping resolved MCP secret values out of git). **Emission gating**: the `gemini` and `antigravity` presets no longer write their settings document on every run purely to self-register the ai-rulez MCP server — it is emitted only when the config declares MCP servers, so a project without `[[mcp_servers]]` keeps whatever is already at `.gemini/settings.json` / `.agents/settings.json` untouched. One consequence of that gating: removing the last `[[mcp_servers]]` entry leaves the previous run's `mcpServers` block on disk, because nothing is rendered to replace it and the file is never deleted. Delete the key by hand if the document should stop advertising those servers. **Upgrading**: a manifest written by 4.11.5 or earlier lists those two paths, because the presets wrote them unconditionally. The stale-output pass now recognizes every merged document — the ones declared by a provider sidecar spec and the ones rendered by a preset — so upgrading with no `[[mcp_servers]]` declared no longer deletes a hand-authored `.gemini/settings.json` or `.agents/settings.json`.
 - `ai-rulez init --setup-hooks` now fills in an empty `pre-commit:`, `commands:`, `repos:` or `hooks:` section rather than refusing the file. A key written with no value is legal YAML and a legal placeholder in both hook configs, but it parses as a null scalar, which the previous kind check rejected outright. A section holding a real value of the wrong type is still an error — and is now reported as one for `repos:` and `hooks:` too, where the value used to be silently overwritten.
 - Dependency sweep: `dustin/go-humanize` 1.0.1 → 1.1.0, `go.opentelemetry.io/otel` and `otel/trace` 1.45.0 → 1.46.0, `golang.org/x/net` 0.58.0 → 0.59.0, `golang.org/x/oauth2` 0.36.0 → 0.37.0, `golang.org/x/sys` 0.47.0 → 0.48.0, `golang.org/x/term` 0.45.0 → 0.46.0, `golang.org/x/time` 0.15.0 → 0.16.0. Every direct dependency was already current. The docs toolchain moves with it (`zensical` 0.0.57 → 0.0.65).
@@ -623,9 +593,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Go toolchain bumped to 1.27 across the module directive, CI `setup-go` versions, and the contribution guide, unblocking jsonschema 0.9.10. (#180)
 - Dependency upgrades: `kaptinlin/jsonschema` 0.9.8 → 0.9.10 (#168), `modelcontextprotocol/go-sdk` 1.7.0 → 1.8.0 (#171), `yuin/goldmark` 1.8.5 → 1.8.6 (#169), `golang.org/x/text` 0.41.0 → 0.42.0 (#172).
 
@@ -640,9 +607,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Workflow actions updated: `xberg-io/actions` reusable-validate v1.11.6 → v1 (now pinned to the `v1` major tag), and `astral-sh/setup-uv` v10.0.1 → v10.1.0. setup-uv stays pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
 
 ## [4.11.3] - 2026-08-24
@@ -658,9 +622,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Dependencies updated: `samber/oops` 1.23.1, `golang.org/x/text` 0.41.0, with indirect bumps to `golang.org/x/net` 0.58.0, `golang.org/x/crypto` 0.55.0, and `go-json-experiment/json`; docs toolchain to zensical 0.0.57. `govulncheck` reports no known vulnerabilities.
 - Workflow actions updated: `golangci-lint-action` v7 → v9, `xberg-io/actions` reusable-validate v1.8.142 → v1.8.145, and `astral-sh/setup-uv` v6 → v10.0.1. setup-uv is pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
 - The JSON schema's `header.style` default now reads `minimal`, matching the code default since 4.9.
@@ -673,9 +634,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Dependencies updated: `kaptinlin/jsonschema` 0.9.8, `oklog/ulid` 2.1.2, OpenTelemetry 1.45.0, `go.yaml.in/yaml` 3.0.5; docs toolchain to zensical 0.0.53. The unused `tool github.com/evilmartians/lefthook` directive was dropped, removing 27 indirect modules from `go.mod` — the repo moved off lefthook to poly hooks and nothing imported it.
 - `task update` now updates the whole Go module graph plus `uv.lock`, and `task lint` runs the poly checks. Both previously invoked `prek` against a `.pre-commit-config.yaml` that no longer exists.
 
@@ -705,9 +663,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Built-in language, binding, OWASP, and dependency-awareness conventions now emit as on-demand Agent Skills (`skills/<name>/SKILL.md`) instead of always-inlined rules/context, shrinking the generated `CLAUDE.md` (and peers) considerably. The agent loads them only when the relevant "Load when…" trigger applies.
 - Default header style is now `minimal` (was `detailed`), trimming ~37 lines of boilerplate from every generated root file while keeping the DO-NOT-EDIT warning plus the Content-Hash / Source-Hash provenance lines. `detailed` and `compact` remain available via `[header] style = "…"`.
 
@@ -715,9 +670,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Built-in language and binding convention rules are now tool-agnostic. They describe idiomatic principles and quality bars rather than mandating one third-party stack: opinionated tools (e.g. `mypy`, `oxlint`, `oxfmt`, `structlog`, `vitest`) are now framed as examples, while canonical/official toolchains (`gofmt`, `cargo fmt`, `dotnet format`, `tsc`, `mix format`, …) are retained.
 
 ### Fixed
@@ -734,9 +686,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Pin Poly catalog npx and uvx execution paths to the catalog release for reproducible hook runs.
 
 ## [4.9.2] - 2026-07-12
@@ -747,9 +696,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Split plugin authoring validation into focused checks to keep complexity within project limits.
 
 ## [4.9.1] - 2026-07-12
@@ -768,9 +714,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Poly consumers declare local or Git sources in `poly.toml` and can select non-mutating validation and plugin verification while keeping generation and auto-fix hooks opt-in.
 
 ## [4.8.0] - 2026-07-12
@@ -813,9 +756,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Built-in agent default models: `docs-writer`, `devops-engineer`, and `release-engineer` now use `sonnet` (was `haiku`); `polyglot-architect` now uses `opus`.
 
 ## [4.5.0] - 2026-07-02
@@ -833,9 +773,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Migrated preset rendering to a declarative DSL provider system (Claude, Amp, Junie, and MCP specs), replacing the hand-written generators for those presets.
 - Migrated lint and format tooling from prek to poly.
 - Updated Go dependencies (`pelletier/go-toml/v2` 2.4.2, `kaptinlin/jsonschema` 0.9.2, `golang.org/x/text` 0.38, `golang.org/x/net` 0.56) and CI actions (`actions/checkout` v7, `actions/cache` v6).
@@ -862,9 +799,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Updated Go dependencies (`agentable/go-intl`, `go-json-experiment/json`, `kaptinlin/go-i18n`, `kaptinlin/jsonpointer`, `kaptinlin/jsonschema`, `kaptinlin/messageformat-go`) and pre-commit hooks (`kreuzberg-dev/pre-commit-hooks` 1.2.3 → 2.1.8, `gh-actions-updater` 0.1.5 → 0.1.6, `Goldziher/ai-rulez` self-reference 4.3.1 → 4.3.2). Go toolchain bumped from 1.26.3 to 1.26.4.
 
 ## [4.3.0] - 2026-05-30
@@ -877,9 +811,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - `.gitignore` generation now writes generated roots and directory patterns instead of per-file assistant output entries, while keeping generated `.github/` paths scoped to Copilot-owned files and directories.
 
 ### Fixed
@@ -900,9 +831,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Updated the TypeScript builtin to recommend `oxfmt` with `oxlint`.
 
 ### Dependencies
@@ -940,9 +868,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - `.gitignore` generation now lists generated files individually instead of ignoring whole assistant directories.
 - MCP generation and validation now share the same config-loading semantics as the CLI.
 - Documentation, schema, and the bundled `ai-rulez` skill now describe custom config directories, scoped outputs, manifest cleanup, and current `[[mcp_servers]]` configuration.
@@ -959,9 +884,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Git fetches now use sparse checkout** — `ai-rulez` no longer downloads entire repository archives to resolve installed skills or remote includes. All git operations now run `git clone --depth 1 --filter=blob:none --sparse` and materialise only the required subtree (e.g. `skills/<name>/` or `.ai-rulez/`). This fixes the `"response body too large"` error that occurred when installing skills from large repositories, and dramatically reduces network and disk usage for all remote sources. **Requires git ≥ 2.25** (released January 2020).
 - **BLAKE3-based cache invalidation** — the time-based TTL (`.fetch_time` marker, 1-hour for includes) is replaced with a content-driven approach. On every `ai-rulez generate`, a fast `git ls-remote` call checks whether the remote HEAD SHA has changed; cached content is reused when the SHA matches and re-fetched only when it differs. Cached file content is hashed with BLAKE3 and stored in `.cache_meta.json` alongside each cached source. Skills always check the remote (no grace period); `--no-fetch` bypasses all network calls as before.
 
@@ -974,9 +896,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Skill resources are no longer concatenated into `SKILL.md`.** A skill's `references/`, `scripts/`, and `assets/` subdirectories are now emitted as separate files under the rendered skill directory, matching the canonical Agent Skills layout used by Claude Code and OpenAI Codex. `SKILL.md` carries a `## Resources` index with relative-path links so the agent can read references on demand (progressive disclosure) instead of paying the full reference cost on every invocation. Reference descriptions are pulled from each file's `description` frontmatter or the first heading.
   - Loader: `internal/includes/skill_source.go::ScanInstalledSkillDir` no longer inlines `references/*.md` (the deleted `readReferences` helper). Local skills under `.ai-rulez/skills/<name>/` now also pick up bundled resources via `internal/config/loader.go::scanSkills` — previously these subdirectories were ignored.
   - Renderer: shared helpers `RenderSkillResourcesIndex`, `SkillResourceOutputs`, `InlineSkillResources` in `internal/generator/presets/skill_resources.go`. Applied across every preset that emits a skill directory (Claude, Codex, Cursor, Cline, Amp, Antigravity, Copilot, Gemini, Junie, Opencode, Windsurf). The single-file `continue.dev` preset keeps the inline-concat behaviour since it has no skill directory to read from.
@@ -1015,9 +934,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **MCP e2e test client rewritten** for correctness:
   - One persistent reader goroutine demuxes stdout into per-request response channels keyed by JSON-RPC id, so notifications cannot be misparsed as responses.
   - Notifications (frames without an `id`) are silently discarded.
@@ -1068,9 +984,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Updated the per-preset effort support matrix in `docs/configuration.md` to reflect Codex per-agent support and Opencode per-agent support.
 
 ## [4.1.1] - 2026-04-30
@@ -1120,9 +1033,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Sort everything alphabetically by name**: scanner's `sortByPriority` replaced with `sortByName`; merged content slices re-sorted in `combineContentFiles`; typed list metadata (`Tools`/`Skills`/`Keywords`) sorted on load. Priority is preserved as metadata in the rule body and rendered next to the rule name. This is a behavior change — projects with mixed-priority rules will see one round of reordered output.
 - **Output normalized to a single trailing newline** at write time, so `end-of-file-fixer` and similar formatters don't modify files post-generation.
 
@@ -1137,9 +1047,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Demoted intentional-behavior warnings to debug**: scanner's `domain X file overrides root file` and `multiple domains have same file` were `WARN`-level on every legitimate domain override (documented design, not user error). Generator's `Output path conflict` likewise fired any time `cursor`+`copilot`+auto-`mcp` shared `.mcp.json` (also expected). All three are now `DEBUG`.
 - **Quieter generation output**: `Processing commands for Claude preset`, per-command `Checking command` / `Including command`, and `Scanned commands directory` are now `DEBUG`. Run with `--debug` to see them again.
 
@@ -1152,9 +1059,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Removed stale V3 naming across codebase**: `ValidateV3()` renamed to `Validate()`, `isV3ConfigFile()` to `isConfigFile()`, `DetectConfigVersion` returns `"dir"` instead of `"v3"`, test fixtures and helpers renamed to version-neutral names.
 - **Added `IsV4()` method** to `Config` for symmetry with `IsV3()`.
 
@@ -1197,9 +1101,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **README redesigned**: value-first structure showing builtin capabilities, agents, and full development workflow.
 - **Package descriptions updated** across npm, PyPI, and GitHub to reflect complete workflow capabilities.
 
@@ -1219,9 +1120,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **`token-efficiency/task-runner`** enriched with standard task naming conventions and lock file requirements.
 
 ## [4.0.0] - 2026-04-23
@@ -1249,9 +1147,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **All V3 types renamed**: `ConfigV3` → `Config`, `ContentTreeV3` → `ContentTree`, `OutputFileV3` → `OutputFile`, etc.
 - **Schema files renamed**: `ai-rules-v3.schema.json` → `ai-rules.schema.json`, `ai-rules-v3-mcp.schema.json` → `ai-rules-mcp.schema.json`.
 - **Schema updated**: Accepts version `"3.0"` or `"4.0"`, adds `plugins` and `marketplaces` fields, removes deprecated `compression`.
@@ -1313,9 +1208,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Rust builtin**: Added Rust API Guidelines (naming conventions, trait implementations, type safety, builder pattern, sealed traits, rustdoc standards) and Rust Design Patterns reference.
 - **MCP atomic updates**: `update_rule`, `update_context`, `update_skill` now use atomic overwrite (temp+rename) instead of delete-then-create, preventing data loss on write failure.
 - **MCP `with_agents` parameter**: `init_project` now creates `.ai-rulez/agents/` directory when `with_agents` is true (previously silently ignored).
@@ -1334,9 +1226,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Module structure**: Restructured shared modules to use `.ai-rulez/` subdirectories, enabling remote includes via GitHub URLs without `local_override`.
 - **mdformat exclusion**: Excluded `.ai-rulez/` directories from mdformat pre-commit hook to prevent YAML frontmatter destruction.
 - **Enriched agents**: Improved devops-engineer, docs-writer, polyglot-architect, and code-reviewer agents with more detailed guidance.
@@ -1359,9 +1248,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Language builtins improved**: All 10 language convention files (Rust, Python, TypeScript, Go, Java, Ruby, PHP, Elixir, C#, R) restored to 11-14 bullets each with security scanning tools, benchmarking frameworks, build system guidance, and key language patterns.
 - **Binding builtins improved**: Fixed accuracy issues in PyO3 (`Py<T>` deprecation wording), Magnus (build tools), and ext-php-rs (error mapping, GC, async guidance).
 - **Universal builtins improved**: Rewrote `output-awareness` with concrete limits, restored `dependency-awareness` per-language tool list, rewrote OWASP context verb-first, sharpened `read-before-write` vs `verify-before-acting` distinction, improved `avoid-duplication` with concrete "three similar lines" guidance.
@@ -1384,9 +1270,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **golangci-lint pinned in CI**: `golangci-lint-action@latest` with `version: v2.11.4` in CI workflow.
 
 ## [3.11.5] - 2026-04-15
@@ -1412,9 +1295,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Profile domain warnings**: `warnMissingDomainReferences` now emits debug-level (not warn-level) messages when includes are configured and a referenced domain is missing, since the domain may exist in an include that failed to resolve.
 
 ## [3.11.3] - 2026-03-29
@@ -1429,9 +1309,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - GolangCI-Lint now tracks the `latest` release in CI and pre-commit instead of a pinned version.
 
 ## [3.11.2] - 2026-03-25
@@ -1457,9 +1334,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Rules rendered as `@` references**: Local project rules in CLAUDE.md now use `@path` lazy-loading references instead of full inlining, matching the existing context rendering pattern. Builtin and included rules remain inlined.
 - **Exported `ScanContentTree`**: `config.ScanContentTree()` is now public for use by include sources and external consumers
 - Context and rules rendering consolidated into shared `renderContentRef` helper
@@ -1473,9 +1347,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Include domain discovery skips hidden directories (e.g. `.git`) in the `domains/` tree
 
 ## [3.9.0] - 2026-03-11
@@ -1487,9 +1358,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Replaced `lefthook.yaml` with the `prek`/pre-commit toolchain across local workflows, CI wiring, and helper scripts
 - Refreshed command-generation, docs-site output, and test fixtures to match the new command docs and hook setup
 - Aligned Go/tooling dependencies and CI lint configuration with the current Go `1.26` toolchain
@@ -1517,9 +1385,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Builtin language conventions**: All 9 language builtins expanded with explicit linting toolchain, SAST tools, coverage tools, benchmark tools, and package manager recommendations
   - Rust: added `cargo-llvm-cov`, `cargo deny`, `cargo-machete`, `criterion`, `cargo-flamegraph`, `Cow`/`Arc`/`memchr`/SIMD guidance
   - Python: added `bandit`, `hypothesis`, `uv` lockfile, `hatchling`/`maturin`, `pytest-benchmark`, `py-spy`/`scalene`
@@ -1537,9 +1402,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **Token reduction**: Replaced simple compression system with kreuzberg-ported token reduction engine
   - 5 reduction levels: `off`, `light`, `moderate`, `aggressive`, `maximum`
   - Markdown-aware processing preserves headers, lists, tables, and code blocks
@@ -1575,9 +1437,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Schema updated: `builtins` field added, preset enum updated with `codex`, `amp`, `junie`, `opencode`
 
 ## [3.7.3] - 2026-02-19
@@ -1588,9 +1447,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Contribution guide now requires Go `1.26+` and references the correct release workflow file (`.github/workflows/publish.yaml`)
 
 ## [3.7.2] - 2026-02-16
@@ -1620,9 +1476,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Bumped Go toolchain target to `1.26` and aligned CI workflows
 - Bumped `golangci-lint` to `v2.9.0` across Taskfile, hooks, and CI
 - Updated Go, Node, and Python/docs dependencies to latest available versions
@@ -1635,9 +1488,7 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ## [3.6.0] - 2026-01-05
 
-### Fixed
-
-#### Preset Generator Skills/Commands Inlining Bug
+### Preset Generator Skills/Commands Inlining Bug
 
 - **Claude**: Removed skills and commands from CLAUDE.md (77% size reduction - 14K lines to 3.2K lines)
   - Skills now only generate to `.claude/skills/{skill-id}/SKILL.md`
@@ -1656,18 +1507,13 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - All preset generators now correctly separate skills into dedicated directories
 - Main preset files (CLAUDE.md, GEMINI.md, etc.) only contain Rules and Context
 - Skills are lazily loaded from separate files, reducing prompt token usage
 
 ## [3.5.0] - 2026-01-04
 
-### Added
-
-#### V3-Native Command System
+### V3-Native Command System
 
 - File-based slash commands in `.ai-rulez/commands/` directory with YAML frontmatter
 - Profile-aware commands (root + domain-specific commands)
@@ -1698,9 +1544,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Remote includes cache moved from `.remote-cache/` to system cache directory
   - macOS: `~/Library/Caches/ai-rulez/includes/`
   - Linux: `~/.cache/ai-rulez/includes/`
@@ -1725,9 +1568,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Git includes now use native SSH cloning when SSH URLs are detected, leveraging existing SSH key configuration
 - Improved git include fetching to skip `.git` directory when copying repository content
 
@@ -1751,9 +1591,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - All 11 presets now include enhanced headers with AI agent instructions
 - Generated markdown files now pass markdownlint validation
 - Headers now explain what ai-rulez is, the .ai-rulez folder structure, and how to use the MCP server
@@ -1793,9 +1630,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Bump actions/cache from 4 to 5
 - Bump actions/upload-artifact from 4 to 6
 
@@ -1812,9 +1646,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Bumped golangci-lint to v2.7.2 in Taskfile and CI
 
 ## 3.2.1 - 2025-12-28
@@ -1848,9 +1679,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - Dependencies updated to latest minor versions (19 packages upgraded)
 - Migration now creates proper directory structure for skills (skills/{id}/SKILL.md)
 
@@ -1881,9 +1709,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **BREAKING**: Configuration format changed from single YAML to directory structure
 - **BREAKING**: Init command no longer uses AI agents for dynamic initialization
 - Documentation simplified and focused on V3 only
@@ -1936,9 +1761,6 @@ No config or schema change. Existing skills regenerate on next `ai-rulez generat
 
 ### Changed
 
-- **BREAKING: plain `http://` remote includes, OKF includes, installed skills and skill sources are rejected**: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses `http://` too.
-- **BREAKING: `[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **BREAKING: `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
 - **BREAKING**: Updated schema to v2 with priority enum system
 - Unified section field naming to use 'name' instead of 'title'
 
