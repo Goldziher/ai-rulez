@@ -744,3 +744,29 @@ func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testi
 		t.Errorf("native calls = %d, want 1 batch + 3 singles", calls)
 	}
 }
+
+func TestRedactSecretsShouldKeepEnvironmentLookupsAndMaskLiterals(t *testing.T) {
+	tests := []struct {
+		name, in string
+		changed  bool
+	}{
+		{"python environ lookup", `token = os.environ["SERVICE_TOKEN"]`, false},
+		{"go getenv", `apiKey := os.Getenv("SERVICE_TOKEN")`, false},
+		{"node env", `const token = process.env.SERVICE_TOKEN`, false},
+		{"shell variable", `API_KEY=$SERVICE_TOKEN_VALUE`, false},
+		{"literal token", `token = "abcdef0123456789"`, true},
+		{"literal key", `api_key: hunter2hunter2`, true},
+		{"literal that starts like a lookup", `secret = osprey-secret-value-123`, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Act
+			got := RedactSecrets(tc.in)
+
+			// Assert
+			if changed := got != tc.in; changed != tc.changed {
+				t.Errorf("RedactSecrets(%q) = %q, changed=%v want %v", tc.in, got, changed, tc.changed)
+			}
+		})
+	}
+}

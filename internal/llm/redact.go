@@ -32,9 +32,22 @@ var secretRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za
 
 // RedactSecrets masks key-looking substrings. Provider error bodies can echo
 // credentials, so every error message built from a response passes through it.
+//
+// An assignment whose value is an environment lookup (os.environ[...],
+// os.Getenv(...), process.env.X, $VAR) names a secret without containing it and
+// is left alone, so a transcript about reading a key from the environment is not
+// refused as if it held one.
 func RedactSecrets(s string) string {
-	return secretRe.ReplaceAllString(s, "[REDACTED]")
+	return secretRe.ReplaceAllStringFunc(s, func(m string) string {
+		if envRefRe.MatchString(m) {
+			return m
+		}
+		return "[REDACTED]"
+	})
 }
+
+// envRefRe matches a secretRe assignment match whose value is an environment lookup.
+var envRefRe = regexp.MustCompile(`(?i)^(?:api[_-]?key|token|secret|authorization)["']?\s*[:=]\s*["']?(?:os\.environ|os\.getenv|process\.env|\$\{?[A-Za-z_]|getenv\(|env\()`)
 
 // Summary describes a chat request without its content: counts, sizes and a
 // short content hash that lets two log lines be correlated.
