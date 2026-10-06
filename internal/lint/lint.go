@@ -157,6 +157,9 @@ type runner struct {
 	sel   map[string]bool
 	units map[string]unitRun
 	cur   *unitSpec
+	// fmMCP caches the inline mcpServers of agent and skill frontmatter.
+	fmMCP     []*mcpServer
+	fmMCPDone bool
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -906,6 +909,7 @@ func (r *runner) configFilePath() string {
 }
 
 func (r *runner) checkMCP() {
+	r.checkFrontmatterMCPCommands()
 	path := r.configFilePath()
 	if path == "" {
 		return
@@ -936,6 +940,17 @@ func (r *runner) checkMCP() {
 			}
 		}
 		r.add(CodeMCPCommandNotFound, path, line, "MCP server %q runs %q, which is not on PATH", n, s.Command)
+	}
+}
+
+// checkFrontmatterMCPCommands reports an inline stdio server of an agent or
+// skill whose command is not on PATH.
+func (r *runner) checkFrontmatterMCPCommands() {
+	for _, s := range r.frontmatterMCPServers() {
+		if s.disabled || effectiveTransport(s) != "stdio" || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
+			continue
+		}
+		r.add(CodeMCPCommandNotFound, s.file, s.line, "MCP server %q runs %q, which is not on PATH", s.name, s.command)
 	}
 }
 
