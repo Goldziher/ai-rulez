@@ -40,6 +40,9 @@ type mcpServer struct {
 	// problems found while decoding (field types), JSON sources only.
 	typeProblems []string
 	disabled     bool
+	// line is the 1-based line of the definition when the source knows it
+	// (frontmatter); 0 means search the file for the name.
+	line int
 }
 
 // mcpJSONFiles are the hand-authored MCP files checked when tracked or present:
@@ -79,7 +82,7 @@ func (r *runner) mcpServers() []*mcpServer {
 			out = append(out, srv)
 		}
 	}
-	return out
+	return append(out, r.frontmatterMCPServers()...)
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
@@ -177,6 +180,9 @@ func checkMCPConfig(r *runner) {
 		}
 		lines := r.fileLines(s.file)
 		at := lineContaining(lines, s.name)
+		if s.line > 0 {
+			at = s.line
+		}
 		r.checkMCPShape(s, at, byName)
 		r.checkMCPPins(s, at)
 		r.checkMCPSecrets(s, lines, at)
