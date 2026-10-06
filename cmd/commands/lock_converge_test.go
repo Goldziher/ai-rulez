@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 )
 
 // TestLock_ConvergesInOneRunWithAGitInclude pins the include before the served
@@ -52,4 +53,16 @@ func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
 	require.NotNil(t, served, "the include's skill is pinned as served")
 	assert.NotEmpty(t, served.Commit)
 	assert.Equal(t, lock.Find(lockfile.KindInclude, "gitinc").Commit, served.Commit)
+}
+
+func TestUpdateText_SaysServedPinsStayStaleUntilLock(t *testing.T) {
+	// Arrange
+	rep := &updateReport{Updates: []updateItem{{Kind: lockfile.KindSource, Name: "vendor", To: &tagresolve.TagRef{Tag: "v2", Commit: "abcdef0123456789"}}}}
+
+	// Act
+	out, _ := capture(t, func() { writeUpdateText(rep) })
+
+	// Assert
+	assert.Contains(t, out, "served-skill pins")
+	assert.Contains(t, out, "ai-rulez lock")
 }
