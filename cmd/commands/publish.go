@@ -16,27 +16,54 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 var (
-	publishTo         string
-	publishDist       string
-	publishTag        string
-	publishRepo       string
-	publishFormat     string
-	publishDryRun     bool
-	publishExecute    bool
-	publishYes        bool
-	publishForce      bool
-	publishAllowDirty bool
-	publishTemplates  []string
-	// publishRunner starts gh and git; nil means a real process. Tests set it.
+	publishTo           string
+	publishDist         string
+	publishTag          string
+	publishRepo         string
+	publishFormat       string
+	publishChannel      string
+	publishDryRun       bool
+	publishExecute      bool
+	publishYes          bool
+	publishForce        bool
+	publishAllowDirty   bool
+	publishMarketplace  bool
+	publishExperimental bool
+	publishWithSBOM     bool
+	publishPublic       bool
+	publishTemplates    []string
+	publishRuntimes     []string
+	publishOnly         []string
+	publishEmit         []string
+	publishSince        string
+	publishOCIRef       string
+	publishNPMScope     string
+
+	publishSignKey         string
+	publishSignKeyPassEnv  string
+	publishSignTokenEnv    string
+	publishFulcioURL       string
+	publishRekorURL        string
+	publishSignKeyless     bool
+	publishSignInteractive bool
+	publishSignTLog        bool
+
+	publishVerifyKeys     []string
+	publishVerifyIdentity string
+	publishVerifyIssuer   string
+	publishVerifyRoot     string
+	publishVerifyRequire  bool
+	publishEmitOut        string
+	// publishRunner starts gh, npm and git; nil means a real process. Tests set it.
 	publishRunner runner.Runner
 )
 
@@ -49,6 +76,16 @@ var ghEnvPass = []string{
 	"SSL_CERT_FILE", "SSL_CERT_DIR",
 }
 
+// npmEnvPass are the variables npm needs to authenticate and reach its
+// registry (an .npmrc may interpolate NODE_AUTH_TOKEN). They are passed to npm
+// untouched; ai-rulez never reads their values.
+var npmEnvPass = []string{
+	"NODE_AUTH_TOKEN", "NPM_TOKEN", "NPM_CONFIG_USERCONFIG", "NPM_CONFIG_GLOBALCONFIG", "NPM_CONFIG_REGISTRY",
+	"NPM_CONFIG_CACHE", "NPM_CONFIG_PREFIX",
+	"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
+	"SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
+}
+
 // PublishCmd packages the verified plugin bundle into release artifacts.
 var PublishCmd = &cobra.Command{
 	Use:   "publish",
@@ -58,21 +95,35 @@ a reproducible tar.gz, <name>-<version>.manifest.json, SHA256SUMS, a copy of
 ai-rulez.lock, RELEASE_NOTES.md and publish-plan.json.
 
 Preflight runs first and stops before anything is written: validate --strict,
-lock --check, verify --plugin and a secret scan of the bundle. The archive is
-byte-identical for the same bundle and commit (sorted entries, fixed mtime,
-uid/gid 0, normalised modes, no gzip name or time). The mtime is
+lock --check, verify --plugin and a secret scan of the bundle, then the policy
+gates of [publish]: require_signature (AR9N7) and require_approved (AR9N8). The
+archive is byte-identical for the same bundle and commit (sorted entries, fixed
+mtime, uid/gid 0, normalised modes, no gzip name or time). The mtime is
 SOURCE_DATE_EPOCH, else the committer time of HEAD, else 0.
 
-Nothing leaves the machine unless --execute --yes is given with --to
-github-release: ai-rulez then runs the argv printed in publish-plan.json
-through the gh CLI. Credentials are gh's own (GH_TOKEN or gh auth login);
-ai-rulez never reads them. --dry-run prints the artifacts and commands and
-writes nothing.
+Nothing leaves the machine unless --execute --yes is given with --to:
+
+  github-release   gh release create (gh authenticates itself)
+  npm              npm pack, then npm publish of the tarball (npm authenticates itself)
+  oci              an OCI artifact pushed with oras-go to --oci-ref or [publish.oci] ref
+                   (credentials come from the Docker credential store)
+
+--dry-run prints the artifacts and commands and writes nothing.
+
+--sign-key FILE or --sign-keyless signs the archive (a Sigstore bundle holding a
+message signature, the form cosign sign-blob --bundle writes). --sbom ships the
+project SBOM. --marketplace writes a Claude marketplace index pinned to the
+release commit under marketplace/, one per --channel. --emit NAME runs an
+emitter (cursor-team-marketplace is verified; port, aws-agent-registry and
+kiro-steering are experimental and need --experimental). --runtime limits the
+bundle to some of the plugin runtimes. The release notes list what changed in the
+lock since the previous tag (--since TAG chooses another). A [marketplace] with
+members or domain plugins publishes one bundle per plugin under plugins/<name>
+(--only limits it) plus an aggregate directory.
 
 --template FILE renders a text/template (fields: Name, Version, Tag, Repo,
 Commit, AIRulezVersion, Runtimes, BundleFile, BundleDigest, BundleSize,
-LockTree, LockDigest, Files; function: json) into <dist>/emit/ for an operator
-to upload to a channel ai-rulez has no native emitter for.
+LockTree, LockDigest, Files; function: json) into <dist>/emit/.
 
 Exit codes: 0 done, 1 the run could not complete, 2 a gate failed.`,
 	Args: cobra.NoArgs,
@@ -86,38 +137,115 @@ Exit codes: 0 done, 1 the run could not complete, 2 a gate failed.`,
 }
 
 var publishVerifyCmd = &cobra.Command{
-	Use:   "verify <dir>",
-	Short: "Recompute the checksums, manifest and archive of a dist directory",
-	Long: `Verify a dist directory (or a downloaded release) offline: every SHA256SUMS entry,
-the manifest against the archive's files, the lock copy against the manifest, and
-the archive's determinism rules (sorted entries, uid/gid 0, normalised modes).
+	Use:   "verify <dir|oci-ref>",
+	Short: "Recompute the checksums, manifest, archive and signature of a release",
+	Long: `Verify a dist directory (or a downloaded release, or an OCI reference) offline:
+every SHA256SUMS entry, the manifest against the archive's files, the lock copy
+against the manifest, the plan against the manifest, and the archive's
+determinism rules (sorted entries, uid/gid 0, normalised modes).
+
+An OCI reference (host/path:tag or host/path@sha256:...) is pulled into a
+temporary directory first; pin by digest. A multi-plugin dist directory verifies
+every plugin and the aggregate checksums.
+
+A signed bundle is reported as unverified unless a trusted signer is named:
+--key PUBLIC_KEY.pem (repeatable), or --identity and --issuer for a keyless
+signature (with --trusted-root, else the root "ai-rulez trust update" cached).
+--require-signature fails an unsigned or unverified bundle (AR9N7).
 
 Exit codes: 0 verified, 1 the directory cannot be read, 2 a mismatch.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		exitPublish(runPublishVerify(cmd.OutOrStdout(), args[0]))
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		exitPublish(runPublishVerify(ctx, cmd.OutOrStdout(), args[0]))
+	},
+}
+
+var publishEmitCmd = &cobra.Command{
+	Use:   "emit <emitter>",
+	Short: "Write only the files of one emitter, without a release",
+	Long: `Run preflight, build the release in memory and write only the files of one
+emitter to --out (default emit/<emitter>). Nothing is uploaded and no dist
+directory is written; use it to review or commit what a channel needs.
+
+Emitters: cursor-team-marketplace (verified), port, aws-agent-registry and
+kiro-steering (experimental: they need --experimental and carry no vendor
+schema to test against).`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		publishEmit = []string{args[0]}
+		exitPublish(runPublishEmit(ctx, cmd.OutOrStdout(), args[0]))
 	},
 }
 
 func init() {
 	f := PublishCmd.Flags()
-	f.StringVar(&publishTo, "to", "", "Upload target: github-release (default: build only)")
+	f.StringVar(&publishTo, "to", "", "Upload target: github-release, npm or oci (default: build only)")
 	f.StringVar(&publishDist, "dist", "dist", "Directory the artifacts are written to")
-	f.StringVar(&publishTag, "tag", "", "Release tag (default: v<[plugin] version>); it must already exist on the remote")
+	f.StringVar(&publishTag, "tag", "", "Release tag (default: v<[plugin] version>); with github-release it must already exist on the remote")
 	f.StringVar(&publishRepo, "repo", "", "OWNER/REPO of the release (default: [plugin] repository, else the origin remote)")
+	f.StringVar(&publishChannel, "channel", "", "Release channel: the pinned index directory (--marketplace) and the npm dist-tag")
+	f.BoolVar(&publishMarketplace, "marketplace", false, "Write a Claude marketplace index pinned to the release commit under marketplace/")
+	f.StringArrayVar(&publishRuntimes, "runtime", nil, "Publish only these plugin runtimes (repeatable; default: [publish] runtimes, else the [plugin] runtimes)")
+	f.StringArrayVar(&publishOnly, "only", nil, "Multi-plugin: publish only the plugin with this name (repeatable)")
+	f.StringArrayVar(&publishEmit, "emit", nil, "Run an emitter (repeatable): cursor-team-marketplace, port, aws-agent-registry, kiro-steering")
+	f.BoolVar(&publishExperimental, "experimental", false, "Allow emitters whose format is not verified against vendor documentation")
+	f.BoolVar(&publishWithSBOM, "sbom", false, "Ship the project SBOM (CycloneDX) with the release")
+	f.StringVar(&publishSince, "since", "", "Tag whose lock the release notes diff against (default: the previous tag)")
+	f.StringVar(&publishOCIRef, "oci-ref", "", "Repository for --to oci, host/path without a tag (default: [publish.oci] ref)")
+	f.StringVar(&publishNPMScope, "npm-scope", "", "npm scope for --to npm, such as @acme (default: [publish.npm] scope)")
+	f.BoolVar(&publishPublic, "public", false, "With --to npm: publish with public access (default restricted)")
 	f.BoolVar(&publishDryRun, "dry-run", false, "Run preflight and print the artifacts and commands without writing or running anything")
-	f.BoolVar(&publishExecute, "execute", false, "Run the upload through gh (needs --to and --yes)")
+	f.BoolVar(&publishExecute, "execute", false, "Run the upload (needs --to and --yes)")
 	f.BoolVar(&publishYes, "yes", false, "Confirm --execute without a prompt")
-	f.BoolVar(&publishForce, "force", false, "With --execute, replace the assets of an existing release instead of refusing")
+	f.BoolVar(&publishForce, "force", false, "With --to github-release --execute, replace the assets of an existing release instead of refusing")
 	f.BoolVar(&publishAllowDirty, "allow-dirty", false, "Publish from a tree with uncommitted changes or no commit")
 	f.StringArrayVar(&publishTemplates, "template", nil, "Render this text/template into <dist>/emit/ (repeatable)")
+	addPublishSignFlags(f)
 	f.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	addFormatFlag(f, &publishFormat, formatText, formatText, formatText, formatJSON)
-	addFormatFlag(publishVerifyCmd.Flags(), &publishFormat, formatText, formatText, formatText, formatJSON)
 	addJSONFlagAlias(f)
-	addJSONFlagAlias(publishVerifyCmd.Flags())
-	PublishCmd.AddCommand(publishVerifyCmd)
+
+	v := publishVerifyCmd.Flags()
+	v.StringArrayVar(&publishVerifyKeys, "key", nil, "Trusted PEM public key for the release signature (repeatable)")
+	v.StringVar(&publishVerifyIdentity, "identity", "", "Trusted certificate identity of a keyless signature (needs --issuer)")
+	v.StringVar(&publishVerifyIssuer, "issuer", "", "OIDC issuer of --identity")
+	v.StringVar(&publishVerifyRoot, "trusted-root", "", "Sigstore trusted root file (default: the one `ai-rulez trust update` cached)")
+	v.BoolVar(&publishVerifyRequire, "require-signature", false, "Fail an unsigned bundle, or one whose signer is not verified")
+	addFormatFlag(v, &publishFormat, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(v)
+
+	e := publishEmitCmd.Flags()
+	e.StringVar(&publishEmitOut, "out", "", "Directory to write the emitter's files to (default emit/<emitter>)")
+	e.BoolVar(&publishExperimental, "experimental", false, "Allow an emitter whose format is not verified against vendor documentation")
+	e.StringArrayVar(&publishRuntimes, "runtime", nil, "Use only these plugin runtimes")
+	e.StringVar(&publishChannel, "channel", "", "Release channel")
+	e.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
+	e.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	e.BoolVar(&publishAllowDirty, "allow-dirty", false, "Run from a tree with uncommitted changes or no commit")
+	PublishCmd.AddCommand(publishVerifyCmd, publishEmitCmd)
+}
+
+func addPublishSignFlags(f interface {
+	StringVar(p *string, name, value, usage string)
+	BoolVar(p *bool, name string, value bool, usage string)
+}) {
+	f.StringVar(&publishSignKey, "sign-key", "", "Sign the archive with this PEM private key (ECDSA or ed25519; cosign keys work)")
+	f.StringVar(&publishSignKeyPassEnv, "sign-key-password-env", "", "Environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD)")
+	f.BoolVar(&publishSignKeyless, "sign-keyless", false, "Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log)")
+	f.StringVar(&publishSignTokenEnv, "sign-token-env", "", "With --sign-keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
+	f.BoolVar(&publishSignInteractive, "sign-interactive", false, "With --sign-keyless: open a browser for the OIDC login when no token is available")
+	f.StringVar(&publishFulcioURL, "fulcio-url", "", "With --sign-keyless: Fulcio URL (default "+signing.DefaultFulcioURL+")")
+	f.StringVar(&publishRekorURL, "rekor-url", "", "Rekor URL for --sign-keyless or --sign-tlog (default "+signing.DefaultRekorURL+")")
+	f.BoolVar(&publishSignTLog, "sign-tlog", false, "With --sign-key: also record the signature in the Rekor transparency log (network; public log)")
 }
 
 // exitPublish prints err and exits with the status it carries.
@@ -141,24 +269,60 @@ func checkPublishFlags() error {
 	if err := checkFormatFlag(publishFormat); err != nil {
 		return err
 	}
+	if err := validatePublishSignFlags(); err != nil {
+		return err
+	}
+	ghOrPin := publishTo == publish.TargetGitHubRelease || publishMarketplace || len(publishEmit) > 0
 	switch {
-	case publishTo != "" && publishTo != publish.TargetGitHubRelease:
-		return oops.Errorf("unknown --to %q (use %s)", publishTo, publish.TargetGitHubRelease)
+	case publishTo != "" && !isPublishTarget(publishTo):
+		return oops.Errorf("unknown --to %q (use %s)", publishTo, strings.Join(publish.Targets, ", "))
 	case publishExecute && publishDryRun:
 		return oops.Errorf("--execute and --dry-run cannot be combined")
 	case publishExecute && publishTo == "":
-		return oops.Errorf("--execute needs --to github-release")
+		return oops.Errorf("--execute needs --to")
 	case publishExecute && !publishYes:
 		return oops.Hint("review the commands with --dry-run, then pass --yes").Errorf("--execute needs --yes")
-	case publishForce && !publishExecute:
-		return oops.Errorf("--force only applies with --execute")
-	case (publishTag != "" || publishRepo != "") && publishTo == "":
-		return oops.Errorf("--tag and --repo need --to github-release")
+	case publishForce && !(publishExecute && publishTo == publish.TargetGitHubRelease):
+		return oops.Errorf("--force only applies with --to github-release --execute")
+	case publishTag != "" && !ghOrPin:
+		return oops.Errorf("--tag needs --to github-release or --marketplace")
+	case publishChannel != "" && !publish.ValidChannel(publishChannel):
+		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "channels are lower-case letters, digits and '-'", "invalid --channel %q", publishChannel)
+	case publishOCIRef != "" && publishTo != publish.TargetOCI:
+		return oops.Errorf("--oci-ref needs --to oci")
+	case (publishNPMScope != "" || publishPublic) && publishTo != publish.TargetNPM:
+		return oops.Errorf("--npm-scope and --public need --to npm")
 	}
 	return nil
 }
 
+func isPublishTarget(name string) bool {
+	for _, t := range publish.Targets {
+		if t == name {
+			return true
+		}
+	}
+	return false
+}
+
+// verifiedBundle is what the gates verified: the generator and the bundle files of
+// every configured runtime, which equal what is on disk.
+type verifiedBundle struct {
+	gen   *generator.Generator
+	files []generator.PluginFile
+}
+
 func runPublish(ctx context.Context, out io.Writer) error {
+	return runPublishWith(ctx, out, "")
+}
+
+// runPublishEmit is `publish emit`: the release is built in memory and only the
+// files of one emitter are written, to --out.
+func runPublishEmit(ctx context.Context, out io.Writer, name string) error {
+	return runPublishWith(ctx, out, name)
+}
+
+func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	if err := checkPublishFlags(); err != nil {
 		return err
 	}
@@ -167,57 +331,124 @@ func runPublish(ctx context.Context, out io.Writer) error {
 		return err
 	}
 	if err := cfg.Validate(); err != nil {
-		return err //nolint:wrapcheck // already contextual
+		return publishConfigError(err)
 	}
-	if cfg.Plugin == nil {
-		return publish.Errorf(publish.CodeSource, publish.ExitGate, "add a [plugin] block with name and version; marketplace-only roots are not published yet", "no [plugin] block is configured")
+	multi := isMultiPlugin(cfg)
+	switch {
+	case multi:
+	case cfg.Plugin == nil:
+		return publish.Errorf(publish.CodeSource, publish.ExitGate, "add a [plugin] block with name and version, or a [marketplace] with members or domain plugins", "no [plugin] block is configured")
+	case len(publishOnly) > 0:
+		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "--only selects plugins of a [marketplace] with members or domain plugins", "--only needs a multi-plugin project")
+	default:
+		if err := publish.ValidateName(cfg.Plugin.Name, cfg.Plugin.Version); err != nil {
+			return err //nolint:wrapcheck // a publish.Error carries the exit status
+		}
 	}
-	if err := publish.ValidateName(cfg.Plugin.Name, cfg.Plugin.Version); err != nil {
-		return err //nolint:wrapcheck // a publish.Error carries the exit status
+	opts, err := resolvePublishOptions(cfg)
+	if err != nil {
+		return err
 	}
 	distAbs, err := filepath.Abs(publishDist)
 	if err != nil {
 		return oops.Wrapf(err, "resolve --dist")
 	}
-	files, err := publishPreflight(cfg)
+	if opts.requireApproved {
+		// Before the strict gate, which would report the same missing approvals as
+		// plain findings: AR9N8 names the items and the way out.
+		if _, err := approvalGate(cfg, true); err != nil {
+			return err
+		}
+	}
+	pre, err := publishPreflight(cfg)
 	if err != nil {
 		return err
 	}
-	in, err := publishInput(ctx, cfg, files, distAbs)
+	pc, err := newPublishContext(ctx, cfg, opts, pre, distAbs, multi)
 	if err != nil {
 		return err
 	}
+	if multi {
+		return runPublishMulti(out, pc, emitOnly)
+	}
+	return runPublishSingle(ctx, out, pc, emitOnly)
+}
+
+func runPublishSingle(ctx context.Context, out io.Writer, pc *publishContext, emitOnly string) error {
+	spec, err := pc.singleSpec()
+	if err != nil {
+		return err
+	}
+	in, err := pc.newInput(spec)
+	if err != nil {
+		return err
+	}
+	pin, err := pc.pinFor(spec.tag)
+	if err != nil {
+		return err
+	}
+	in.Pin = pin
 	dist, err := publish.Build(*in)
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
+	if emitOnly != "" {
+		return pc.writeEmitOnly(out, dist, emitOnly)
+	}
 	if !publishDryRun {
-		if err := dist.Write(distAbs); err != nil {
+		if err := dist.Write(pc.distAbs); err != nil {
 			return err //nolint:wrapcheck // a publish.Error carries the exit status
 		}
 	}
-	if err := printPublish(out, dist, distAbs); err != nil {
+	warnAll(dist.Warnings)
+	if err := printPublish(out, dist, pc.distAbs); err != nil {
 		return err
 	}
 	if !publishExecute {
 		return nil
 	}
-	url, err := publish.Execute(ctx, publishRunner, dist.Plan, publish.ExecuteOptions{
-		Dir: distAbs, Env: runner.ScrubEnv(os.Environ(), ghEnvPass, nil), Force: publishForce,
-	})
+	return executeDist(ctx, dist, pc.distAbs)
+}
+
+// executeDist runs the upload of one written dist directory.
+func executeDist(ctx context.Context, d *publish.Dist, dir string) error {
+	var (
+		result string
+		err    error
+	)
+	switch d.Plan.Target {
+	case publish.TargetGitHubRelease:
+		result, err = publish.Execute(ctx, publishRunner, d.Plan, publish.ExecuteOptions{
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), ghEnvPass, nil), Force: publishForce,
+		})
+	case publish.TargetNPM:
+		result, err = publish.ExecuteNPM(ctx, publishRunner, d.Plan, publish.NPMExecuteOptions{
+			Dir: dir, Env: runner.ScrubEnv(os.Environ(), npmEnvPass, nil),
+		})
+	case publish.TargetOCI:
+		result, err = publish.ExecuteOCI(ctx, d.Plan, publish.OCIExecuteOptions{Dir: dir})
+	default:
+		return oops.Errorf("the plan has no target to execute")
+	}
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
-	if url != "" {
-		logger.Success("Published", "tag", dist.Plan.Tag, "repo", dist.Plan.Repo, "result", url)
-	} else {
-		logger.Success("Published", "tag", dist.Plan.Tag, "repo", dist.Plan.Repo)
+	fields := []any{"name", d.Plan.Name, "target", d.Plan.Target}
+	if result != "" {
+		fields = append(fields, "result", result)
 	}
+	logger.Success("Published", fields...)
 	return nil
 }
 
+func warnAll(warnings []string) {
+	for _, w := range warnings {
+		logger.Warn(w)
+	}
+}
+
 // publishPreflight runs the four gates and returns the verified bundle files.
-func publishPreflight(cfg *config.Config) ([]generator.PluginFile, error) {
+func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 	if err := strictGate(cfg); err != nil {
 		return nil, err
 	}
@@ -249,7 +480,7 @@ func publishPreflight(cfg *config.Config) ([]generator.PluginFile, error) {
 		return nil, err
 	}
 	logger.Info("preflight: secret scan ok", "files", len(files))
-	return files, nil
+	return &verifiedBundle{gen: gen, files: files}, nil
 }
 
 // strictGate is `validate --strict` as a gate: the same lint, baseline and
@@ -291,71 +522,6 @@ func secretGate(files []generator.PluginFile) error {
 	}
 	return publish.Errorf(publish.CodeSecret, publish.ExitGate, "remove the value, rotate the credential and regenerate the bundle",
 		"the bundle contains credentials: %s", strings.Join(hits, ", "))
-}
-
-func publishInput(ctx context.Context, cfg *config.Config, files []generator.PluginFile, distAbs string) (*publish.Input, error) {
-	lockPath := lockfile.Path(cfg.ConfigDir)
-	if err := publish.CheckTree(filepath.Dir(lockPath), []string{filepath.Base(lockPath)}); err != nil {
-		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "no usable %s: %v", lockfile.FileName, err)
-	}
-	lockBytes, err := os.ReadFile(lockPath) //nolint:gosec // the project's own lock file
-	if err != nil {
-		return nil, oops.With("path", lockPath).Wrapf(err, "read lock file")
-	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil || lock == nil {
-		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "cannot read %s", lockfile.FileName)
-	}
-	lockBytes, err = shippedLock(lockBytes, lock)
-	if err != nil {
-		return nil, err
-	}
-	distRel := ""
-	if top := gitutil.New(publishRunner).TopLevel(cfg.BaseDir); top != "" {
-		distRel = gitutil.RepoRelative(top, distAbs)
-	}
-	src := publish.ReadSource(ctx, publishRunner, cfg.BaseDir, distRel)
-	if src.Source.Dirty && !publishAllowDirty {
-		return nil, publish.Errorf(publish.CodeSource, publish.ExitGate, "commit the changes (including the generated bundle), or pass --allow-dirty for a throwaway build",
-			"the source tree is dirty or has no commit")
-	}
-	src.Source.Repo = publish.StripCredentials(cfg.Plugin.Repository)
-	if src.Source.Repo == "" {
-		src.Source.Repo = src.Remote
-	}
-	mtime, err := sourceDateEpoch(src.Mtime)
-	if err != nil {
-		return nil, err
-	}
-	in := &publish.Input{
-		Name: cfg.Plugin.Name, Version: cfg.Plugin.Version, AIRulezVersion: Version,
-		Runtimes: cfg.Plugin.ResolvedRuntimes(), Lock: lockBytes, LockVersion: lock.Version, LockTree: lock.Tree,
-		Source: src.Source, Mtime: mtime, Target: publishTo,
-	}
-	for _, f := range files {
-		in.Files = append(in.Files, publish.File{Path: f.Path, Data: f.Data, Executable: f.Executable})
-	}
-	if publishTo != "" {
-		in.Tag = publishTag
-		if in.Tag == "" {
-			in.Tag = "v" + cfg.Plugin.Version
-		}
-		in.Repo = publishRepo
-		if in.Repo == "" {
-			in.Repo = publish.RepoFromURL(cfg.Plugin.Repository)
-		}
-		if in.Repo == "" {
-			in.Repo = publish.RepoFromURL(src.Remote)
-		}
-	}
-	for _, path := range publishTemplates {
-		body, rerr := os.ReadFile(path) //nolint:gosec // an explicit --template chosen by the user
-		if rerr != nil {
-			return nil, oops.With("path", path).Wrapf(rerr, "read template")
-		}
-		in.Templates = append(in.Templates, publish.Template{Name: filepath.Base(path), Body: string(body)})
-	}
-	return in, nil
 }
 
 // shippedLock returns the lock bytes that go into the dist directory. Reviewer
@@ -408,11 +574,22 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 		verb = "would write"
 	}
 	fmt.Fprintf(out, "preflight   validate --strict ok | lock ok | verify --plugin ok | secrets 0\n")
+	if m := d.Manifest; m.Signature != nil {
+		fmt.Fprintf(out, "signature   %s (%s)\n", m.Signature.File, publishSignerText(m.Signature.Signer))
+	} else if d.Manifest.Name != "" {
+		fmt.Fprintf(out, "signature   none\n")
+	}
+	if a := d.Manifest.Approval; a != nil {
+		fmt.Fprintf(out, "approval    %d of %d selected items approved\n", a.Approved, a.Required)
+	}
 	fmt.Fprintf(out, "artifacts   %s %d files to %s\n", verb, len(d.Files), dir)
 	for _, a := range d.Plan.Artifacts {
 		fmt.Fprintf(out, "            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
 	}
 	fmt.Fprintf(out, "            %-40s %s  %d bytes\n", publish.PlanFile, publish.Digest(d.Files[publish.PlanFile]), len(d.Files[publish.PlanFile]))
+	if d.Plan.Ref != "" {
+		fmt.Fprintf(out, "push        %s (manifest %s)\n", d.Plan.Ref, d.Plan.OCIDigest)
+	}
 	for _, c := range d.Plan.Commands {
 		verb := "would run"
 		if publishExecute {
@@ -424,6 +601,13 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 		fmt.Fprintf(out, "credentials %s\n", d.Plan.Credentials)
 	}
 	return nil
+}
+
+func publishSignerText(s publish.SignerInfo) string {
+	if s.Kind == "key" {
+		return "key " + s.KeyID
+	}
+	return s.Identity + ", issuer " + s.Issuer
 }
 
 // shellJoin renders argv so it can be pasted into a POSIX shell: arguments with
@@ -441,32 +625,135 @@ func shellJoin(argv []string) string {
 	return strings.Join(parts, " ")
 }
 
-func runPublishVerify(out io.Writer, dir string) error {
+func runPublishVerify(ctx context.Context, out io.Writer, target string) error {
 	if err := checkFormatFlag(publishFormat); err != nil {
 		return err
 	}
-	res, err := publish.Verify(dir)
+	trust, err := publishVerifyOptions(nil)
+	if err != nil {
+		return err
+	}
+	checks := publish.VerifyChecks{Signature: trust, RequireSignature: publishVerifyRequire}
+	dir, cleanup, err := resolveVerifyTarget(ctx, target)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	results, err := verifyTree(dir, checks)
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
+	return reportVerify(out, results, target)
+}
+
+// verifyResult is one verified directory of a (possibly multi-plugin) release.
+type verifyResult struct {
+	Dir string `json:"dir,omitempty"`
+	publish.VerifyResult
+}
+
+// verifyTree verifies dir; a multi-plugin directory verifies every plugin and
+// the aggregate checksums.
+func verifyTree(dir string, checks publish.VerifyChecks) ([]verifyResult, error) {
+	plugins, err := os.ReadDir(filepath.Join(dir, "plugins"))
+	if err != nil || fileExists(filepath.Join(dir, publish.SumsFile)) {
+		res, verr := publish.VerifyWith(dir, checks)
+		return []verifyResult{{VerifyResult: res}}, verr
+	}
+	var out []verifyResult
+	for _, e := range plugins {
+		if !e.IsDir() {
+			continue
+		}
+		sub := filepath.Join("plugins", e.Name())
+		res, err := publish.VerifyWith(filepath.Join(dir, sub), checks)
+		if err != nil {
+			return nil, err //nolint:wrapcheck // a publish.Error carries the exit status
+		}
+		out = append(out, verifyResult{Dir: filepath.ToSlash(sub), VerifyResult: res})
+	}
+	if fileExists(filepath.Join(dir, "aggregate", publish.SumsFile)) {
+		res, err := publish.VerifySums(filepath.Join(dir, "aggregate"))
+		if err != nil {
+			return nil, err //nolint:wrapcheck // a publish.Error carries the exit status
+		}
+		out = append(out, verifyResult{Dir: "aggregate", VerifyResult: res})
+	}
+	if len(out) == 0 {
+		return nil, publish.Errorf(publish.CodeVerify, publish.ExitFailed, "run `ai-rulez publish` first", "%s holds no release to verify", dir)
+	}
+	return out, nil
+}
+
+func fileExists(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.Mode().IsRegular()
+}
+
+func reportVerify(out io.Writer, results []verifyResult, target string) error {
+	problems := 0
+	for _, r := range results {
+		problems += len(r.Problems)
+	}
 	if publishFormat == formatJSON {
-		data, merr := json.MarshalIndent(res, "", "  ")
+		var doc any = results[0].VerifyResult
+		if len(results) > 1 || results[0].Dir != "" {
+			doc = map[string]any{"results": results}
+		}
+		data, merr := json.MarshalIndent(doc, "", "  ")
 		if merr != nil {
 			return oops.Wrapf(merr, "encode result")
 		}
 		if _, werr := out.Write(append(data, '\n')); werr != nil {
 			return oops.Wrapf(werr, "write result")
 		}
-	} else if res.OK() {
-		fmt.Fprintf(out, "verified %s %s: %d files match SHA256SUMS, the manifest and the archive\n", res.Name, res.Version, res.Files)
 	}
-	if !res.OK() {
+	for _, r := range results {
+		label := r.Dir
+		if label != "" {
+			label += ": "
+		}
+		if r.OK() && publishFormat != formatJSON {
+			if r.Name == "" {
+				fmt.Fprintf(out, "%sverified: %d files match SHA256SUMS\n", label, r.Files)
+				continue
+			}
+			fmt.Fprintf(out, "%sverified %s %s: %d files match SHA256SUMS, the manifest and the archive (signature: %s)\n", label, r.Name, r.Version, r.Files, verifyOrNone(r.Signature))
+			if r.Signer != "" {
+				fmt.Fprintf(out, "%ssigner: %s\n", label, r.Signer)
+			}
+			continue
+		}
 		if publishFormat != formatJSON {
-			for _, p := range res.Problems {
-				fmt.Fprintf(os.Stderr, "%s: %s\n", p.Path, p.Message)
+			for _, p := range r.Problems {
+				fmt.Fprintf(os.Stderr, "%s%s: %s\n", label, p.Path, p.Message)
 			}
 		}
-		return publish.Errorf(publish.CodeVerify, publish.ExitGate, "", "%d mismatch(es) in %s", len(res.Problems), dir)
+	}
+	if problems > 0 {
+		code := publish.CodeVerify
+		if signatureProblems(results) {
+			code = publish.CodeUnsigned
+		}
+		return publish.Errorf(code, publish.ExitGate, "", "%d mismatch(es) in %s", problems, target)
 	}
 	return nil
+}
+
+func verifyOrNone(s string) string {
+	if s == "" {
+		return "none"
+	}
+	return s
+}
+
+func signatureProblems(results []verifyResult) bool {
+	for _, r := range results {
+		for _, p := range r.Problems {
+			if strings.Contains(p.Message, publish.CodeUnsigned) {
+				return true
+			}
+		}
+	}
+	return false
 }
