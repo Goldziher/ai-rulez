@@ -1,8 +1,11 @@
 package telemetry
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -235,4 +238,48 @@ func TestDiagnose_ShowsResourceAndItsSource(t *testing.T) {
 	}
 	assert.Equal(t, DoctorSetting{Key: "resource", Value: "env=prod,team=platform", Source: ScopeUser}, got)
 	assert.Contains(t, report.IgnoredRepoKeys, "resource")
+}
+
+// A credential pasted into headers_env (instead of a variable name) must not be
+// echoed by doctor, in text, in the settings row or in JSON.
+func TestDiagnose_NeverEchoesAPastedCredentialInHeadersEnv(t *testing.T) {
+	// Arrange
+	const secret = "Bearer sk-live-abcdef0123456789"
+	s := Resolve(Layers{Getenv: env(EnvHeadersEnv, secret+",OTLP_HEADERS")})
+
+	// Act
+	report := Diagnose(&s, t.TempDir(), env("OTLP_HEADERS", "x"))
+	var text bytes.Buffer
+	report.Render(&text)
+	asJSON, err := json.Marshal(report)
+	require.NoError(t, err)
+
+	// Assert
+	assert.NotContains(t, text.String(), "sk-live")
+	assert.NotContains(t, string(asJSON), "sk-live")
+	assert.Contains(t, text.String(), "OTLP_HEADERS")
+	assert.Contains(t, text.String(), "(invalid, hidden)")
+}
+
+func TestRender_AlignsLongSettingValues(t *testing.T) {
+	// Arrange
+	user := &config.TelemetryConfig{Enabled: true, Resource: map[string]string{"deployment.environment": "production-eu-west-1", "team": "platform-engineering"}}
+	s := Resolve(Layers{User: user, Getenv: env()})
+	var text bytes.Buffer
+
+	// Act
+	Diagnose(&s, t.TempDir(), env()).Render(&text)
+
+	// Assert: every settings row has its source in the same column.
+	report := Diagnose(&s, t.TempDir(), env())
+	lines := strings.Split(text.String(), "\n")
+	offsets := map[int]bool{}
+	for _, setting := range report.Settings {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "  "+setting.Key+" ") {
+				offsets[strings.LastIndex(line, setting.Source)] = true
+			}
+		}
+	}
+	assert.Len(t, offsets, 1, text.String())
 }
