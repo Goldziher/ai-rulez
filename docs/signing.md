@@ -123,7 +123,9 @@ key_file = "keys/release.pub"
 Verification without any trusted signer is an error (exit `1`), not "accept any valid signature": the policy, or
 `--public-key` or `--identity` with `--issuer`, must say who may sign.
 
-The repository can edit its own `[signing]` table, so a pull request can weaken it. Protect the table with code review
+The repository can edit its own `[signing]` table, so a pull request can weaken it or name its own signer.
+`verify --attestation` prints a warning when the trusted signers come from the repository alone; `--public-key` or
+`--identity` with `--issuer` from CI configuration outside the repository removes it. Protect the table with code review
 and branch protection, or enforce it from outside the repository with an [organization policy](policy.md).
 
 ## Verify
@@ -137,9 +139,10 @@ $ echo $?
 ```
 
 Verification is offline: it reads the bundle, the lock and a trusted root, and sends nothing. It checks, in order, the
-signature, the certificate chain and log proof (`AR721`, `AR725`, `AR726`), the signer against `[signing]` (`AR722`),
-that the signed digest is the lock's recomputed subject and `hash_version` (`AR724`), `max_age` (`AR723`) and rollback
-(`AR727`). `--format json` prints `schema/verify-attestation.schema.json`. Exit codes: `0` verified, `1` the check
+signature, the certificate chain and log proof (`AR721`, `AR725`, `AR726`), that the signed digest is the lock's
+recomputed subject and `hash_version` (`AR724`), the signer against `[signing]` (`AR722`), `max_age` and a signing
+time in the future (`AR723`) and rollback (`AR727`). A lock edited after signing by an untrusted signer therefore
+reports `AR724`, not `AR722`. `--format json` prints `schema/verify-attestation.schema.json`. Exit codes: `0` verified, `1` the check
 could not run (no trusted signer, no trusted root for a certificate bundle, unreadable lock), `2` verification failed.
 
 The same checks run, without `verify`, wherever `[signing] require = ["lock"]` applies: `lock --check`,
