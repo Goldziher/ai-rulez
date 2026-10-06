@@ -96,11 +96,12 @@ func TestGenerate_NeverTakesBackAHandWrittenServerWithoutARecord(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, userSettingsWithServer, readAgentsMDFile(t, root, ".claude/settings.json"))
-	assert.Equal(t, 1, countContaining(*warned, "mcpServers.s1"), "the kept server is reported once: %v", *warned)
+	assert.Empty(t, *warned, "a document no manifest lists is the user's and is not even examined")
 }
 
-func TestClean_TakesBackAHandWrittenServerOnlyWhenItIsWhatClaudeWouldRender(t *testing.T) {
-	// Arrange: the same server, with exactly the value the claude preset renders.
+func TestClean_KeepsAHandWrittenServerEvenWhenItEqualsWhatClaudeWouldRender(t *testing.T) {
+	// Arrange: the same server, with exactly the value the claude preset renders;
+	// nothing shows ai-rulez wrote it, so it is the user's.
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"cursor"}, "", mcpServerS1))
 	writeAgentsMDFile(t, root, ".claude/settings.json", `{
@@ -115,7 +116,8 @@ func TestClean_TakesBackAHandWrittenServerOnlyWhenItIsWhatClaudeWouldRender(t *t
 
 	// Assert
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"permissions": {"allow": ["Bash"]}}`, readAgentsMDFile(t, root, ".claude/settings.json"))
+	assert.JSONEq(t, `{"permissions": {"allow": ["Bash"]}, "mcpServers": {"s1": {"command": "uvx", "args": ["one"]}}}`,
+		readAgentsMDFile(t, root, ".claude/settings.json"))
 }
 
 func TestGenerate_HandWrittenServersSurviveAndCleanRestoresTheOriginal(t *testing.T) {
@@ -204,8 +206,6 @@ func TestGenerate_RemovedServerLeavesAGeneratedDocumentThatItOwnsWhole(t *testin
 
 	// Assert
 	assert.Equal(t, []string{"s2"}, mcpServerNames(t, readAgentsMDFile(t, root, ".mcp.json"), "mcpServers"))
-	assert.NoFileExists(t, filepath.Join(root, ".ai-rulez", ".generated-manifest.local.json"),
-		"a document ai-rulez wrote whole leaves no machine-local record")
 }
 
 func TestGenerate_ServerOfTheSameNameIsOverwrittenByTheConfig(t *testing.T) {

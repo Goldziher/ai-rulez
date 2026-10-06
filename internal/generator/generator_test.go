@@ -561,6 +561,8 @@ func TestGenerator_Gitignore_IncludesMCPJSON(t *testing.T) {
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-mcp")
 	tempDir := t.TempDir()
 	copyFixture(t, fixtureDir, tempDir)
+	// A .mcp.json that exists before the first run is the user's and is not ignored.
+	require.NoError(t, os.Remove(filepath.Join(tempDir, ".mcp.json")))
 
 	// Load config and add cursor preset (which emits .mcp.json when MCP servers exist)
 	ctx := context.Background()

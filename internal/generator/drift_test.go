@@ -141,7 +141,7 @@ func TestDryRun_ReportsUnchanged(t *testing.T) {
 	appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 	plan, err = loadHashesProject(t, dir).DryRun("default")
 	require.NoError(t, err)
-	assert.Contains(t, strings.Join(plan, "\n"), "edited: CLAUDE.md")
+	assert.Contains(t, strings.Join(plan, "\n"), "write-file: CLAUDE.md", "generate repairs a hand edit")
 }
 
 func TestVerifyPlugin_NotGenerated(t *testing.T) {

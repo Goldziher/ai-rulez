@@ -80,7 +80,7 @@ func applyJSONC(path, existing string, owned []OwnedKey, strictErr error) (Resul
 			Wrapf(err, "merged JSON settings document does not preserve the existing content")
 	}
 	partial := hasUnownedJSONC(obj, ownedPaths(owned)) || jsoncHasComments(&root) || HasUserElements(after, owned)
-	return Result{Body: body, PartiallyOwned: partial, Claims: NoteFinalNewline(claimsFor(owned), existing)}, nil
+	return Result{Body: body, PartiallyOwned: partial, Claims: AnnotateClaims(claimsFor(owned), before, existing)}, nil
 }
 
 // jsoncTrees decodes two JSONC documents into generic Go values.
@@ -174,7 +174,9 @@ func (ed jsoncEditor) unmergeClaim(obj *hujson.Object, path []string, claim Clai
 	if !did {
 		return false, mismatch
 	}
-	if len(child.Members) == 0 && !hasComment(child.AfterExtra) {
+	// path[0] is the member at depth len(claim.Path)-len(path)+1 of the claim's path.
+	if len(child.Members) == 0 && !hasComment(child.AfterExtra) &&
+		!claim.IsPreexisting(claim.Path[:len(claim.Path)-len(path)+1]) {
 		ed.removeAt(obj, idx)
 	}
 	return true, false
@@ -207,7 +209,7 @@ func (ed jsoncEditor) unmergeLeaf(obj *hujson.Object, idx int, claim Claim) (cha
 		removeSlot(elementSlots(arr), i, &arr.AfterExtra)
 		arr.Elements = slices.Delete(arr.Elements, i, i+1)
 	}
-	if removed && len(arr.Elements) == 0 && !hasComment(arr.AfterExtra) {
+	if removed && len(arr.Elements) == 0 && !hasComment(arr.AfterExtra) && !claim.IsPreexisting(claim.Path) {
 		ed.removeAt(obj, idx)
 	}
 	return removed, false

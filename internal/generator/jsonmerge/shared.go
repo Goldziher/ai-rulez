@@ -400,6 +400,17 @@ func AnnotateClaims(claims []Claim, before map[string]any, original string) []Cl
 				continue
 			}
 			claims[i].Preexisting = append(claims[i].Preexisting, slices.Clone(claim.Path[:n]))
+			if _, isMap := value.(map[string]any); isMap {
+				claims[i].EmptyMaps = append(claims[i].EmptyMaps, slices.Clone(claim.Path[:n]))
+			}
+		}
+		// An array the user left empty stays when the claimed elements go.
+		if claim.HasElements() {
+			if value, present := LookupTree(before, claim.Path); present {
+				if array, isArray := value.([]any); isArray && len(array) == 0 {
+					claims[i].Preexisting = append(claims[i].Preexisting, slices.Clone(claim.Path))
+				}
+			}
 		}
 	}
 	return claims
@@ -425,6 +436,11 @@ func RestoreFinalNewline(claims []Claim, result string) string {
 		return trimmed
 	}
 	return strings.TrimSuffix(result, "\n")
+}
+
+// IsEmptyMap reports whether the claim recorded path as an empty map the user wrote.
+func (c Claim) IsEmptyMap(path []string) bool {
+	return slices.ContainsFunc(c.EmptyMaps, func(p []string) bool { return slices.Equal(p, path) })
 }
 
 // IsPreexisting reports whether the claim recorded path as an ancestor that was

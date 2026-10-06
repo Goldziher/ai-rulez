@@ -209,7 +209,7 @@ presets = [
 ```
 
 These are 15 of the 52 built-in presets. The complete list, with the features each supports, is in
-[Supported harnesses](harnesses.md); `ai-rulez init --help` prints the names:
+[Supported harnesses](harnesses.md); the names are:
 
 `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`,
 `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`,

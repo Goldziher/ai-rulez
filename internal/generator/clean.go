@@ -24,6 +24,9 @@ type CleanOptions struct {
 	KeepGitignore bool
 	// KeepManifest leaves the generated manifest (.generated-manifest.json) in place.
 	KeepManifest bool
+	// RemoveEdited also deletes generated files whose body was edited by hand
+	// (their Content-Hash no longer matches); without it they are kept and reported.
+	RemoveEdited bool
 }
 
 // CleanPlan describes what Clean removed (or, in dry-run, would remove).
@@ -76,7 +79,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	g.previousFiles = nil
 	defer func() { g.previousFiles = nil }()
 
-	dirs := g.collectCleanTargets(outputs, plan)
+	dirs := g.collectCleanTargets(outputs, plan, opts)
 
 	// Include files recorded in the manifest from earlier runs that the current
 	// profile no longer emits (e.g. a preset was removed): the exact set generate
@@ -138,7 +141,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 
 // collectCleanTargets adds the generated files of outputs to plan.Files and
 // returns the generated directories.
-func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *CleanPlan) []string {
+func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *CleanPlan, opts CleanOptions) []string {
 	var dirs []string
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
@@ -151,8 +154,23 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		if output.PartiallyOwned {
 			continue
 		}
+		// A merged document is taken apart by claim (planUnmerge) and deleted only
+		// when this machine recorded writing it whole; a hand-written file that
+		// merely equals the rendering is not proof.
+		if !g.userMode && !output.IsDir && (len(output.MergeClaims) > 0 || g.isMergedDocument(abs)) {
+			continue
+		}
 		if output.IsDir {
 			dirs = append(dirs, abs)
+			continue
+		}
+		if !g.removalConfined(abs) {
+			g.warnOnce("Not removing " + output.Path + ": it is behind a symlink that leaves the project")
+			continue
+		}
+		// A generated file someone edited holds work ai-rulez cannot recreate.
+		if !opts.RemoveEdited && output.RawContent == nil && g.editedGenerated(abs) {
+			g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --force to remove it anyway")
 			continue
 		}
 		// A hand-written file in a shared rules folder is not ours to delete.
@@ -166,6 +184,19 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		plan.Files = append(plan.Files, abs)
 	}
 	return dirs
+}
+
+// isMergedDocument reports whether abs is one of the documents ai-rulez merges
+// keys into, however many of them this run still claims.
+func (g *Generator) isMergedDocument(abs string) bool {
+	return isMergedDocumentPath(mergedDocuments(), g.relSlash(abs))
+}
+
+// editedGenerated reports whether the file at abs carries a Content-Hash its body
+// no longer matches.
+func (g *Generator) editedGenerated(abs string) bool {
+	data, err := os.ReadFile(abs)
+	return err == nil && bodyEdited(string(data), abs)
 }
 
 // gitignoreHasManagedBlock reports whether <BaseDir>/.gitignore contains the
@@ -358,6 +389,9 @@ func (g *Generator) isPrunableDir(dir string) bool {
 // directory that resolves outside the home directory (or a relocated tool home).
 func (g *Generator) removeEmptyDir(dir string) {
 	if g.userMode && (!g.userMayTouch(dir) || !g.userMayRemoveDir(dir)) {
+		return
+	}
+	if !g.removalConfined(dir) {
 		return
 	}
 	removeDirIfEmpty(dir)
