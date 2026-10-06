@@ -229,7 +229,7 @@ func TestGeneratedOutputFilter_IgnoresRecordedOutputsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	filter := newGeneratedOutputFilter()
+	filter := newGeneratedOutputFilter("")
 
 	// Before the first refresh nothing is known, so nothing is filtered.
 	if filter.ignore(filepath.Join(cfg.BaseDir, "CLAUDE.md")) {
@@ -373,4 +373,31 @@ func captureStderr(t *testing.T, fn func()) string {
 		}
 	}
 	return sb.String()
+}
+
+func TestGeneratedOutputFilter_KnowsConfigDirOutputsBeforeTheFirstRun(t *testing.T) {
+	// Arrange: no run has finished, so no manifest is read yet; roles.json does
+	// not exist and is created by the first run.
+	resetWatchFlags(t)
+	root := t.TempDir()
+	chdir(t, root)
+	filter := newGeneratedOutputFilter(filepath.Join(root, ".ai-rulez"))
+
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{filepath.Join(root, ".ai-rulez", "roles.json"), true},
+		{filepath.Join(root, ".ai-rulez", ".generated-manifest.json"), true},
+		{filepath.Join(root, ".ai-rulez", ".generated-manifest.local.json"), true},
+		{filepath.Join(root, ".ai-rulez", "config.toml"), false},
+		{filepath.Join(root, ".ai-rulez", "skills", "s", "roles.json"), false},
+		{filepath.Join(root, "roles.json"), false},
+	}
+	for _, tt := range tests {
+		// Act / Assert
+		if got := filter.ignore(tt.path); got != tt.want {
+			t.Errorf("ignore(%q) = %v, want %v", tt.path, got, tt.want)
+		}
+	}
 }
