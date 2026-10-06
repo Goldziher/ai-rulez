@@ -3,6 +3,7 @@ package setup
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -160,13 +161,58 @@ func TestEmbedder_CommandNeedsNoNetwork(t *testing.T) {
 	assert.False(t, r.Describe().Network)
 }
 
+// withEnv layers extra variables over a getenv.
+func withEnv(base func(string) string, extra map[string]string) func(string) string {
+	return func(name string) string {
+		if v, ok := extra[name]; ok {
+			return v
+		}
+		return base(name)
+	}
+}
+
+func TestQueryLog_IsHonouredOnlyFromUserScope(t *testing.T) {
+	t.Parallel()
+	repoOn := projectConfig(&skillsearch.Config{LogQueries: true})
+	tests := []struct {
+		name     string
+		cfg      *config.Config
+		getenv   func(string) string
+		want     bool
+		wantNote bool
+	}{
+		{"repository alone cannot enable it", repoOn, userConfig(t, ""), false, true},
+		{"user config enables it", projectConfig(nil), userConfig(t, "[search]\nlog_queries = true\n"), true, false},
+		{"user config enables it beside the repository", repoOn, userConfig(t, "[search]\nlog_queries = true\n"), true, false},
+		{"environment enables it", projectConfig(nil), withEnv(userConfig(t, ""), map[string]string{LogQueriesEnv: "1"}), true, false},
+		{"environment 0 is off", projectConfig(nil), withEnv(userConfig(t, ""), map[string]string{LogQueriesEnv: "0"}), false, false},
+		{"off by default", projectConfig(nil), userConfig(t, ""), false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange and Act
+			r, err := Resolve(tt.cfg, Options{Getenv: tt.getenv})
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, r.QueryLog(nil) != nil)
+			noted := false
+			for _, n := range r.Notes {
+				noted = noted || strings.Contains(n, "log_queries")
+			}
+			assert.Equal(t, tt.wantNote, noted)
+		})
+	}
+}
+
 func TestQueryLogAndIndexPath(t *testing.T) {
 	t.Parallel()
-	r, err := Resolve(projectConfig(&skillsearch.Config{LogQueries: true, IndexDir: "search-index"}), Options{Getenv: userConfig(t, "")})
+	r, err := Resolve(projectConfig(&skillsearch.Config{IndexDir: "search-index"}), Options{Getenv: withEnv(userConfig(t, ""), map[string]string{LogQueriesEnv: "true"})})
 	require.NoError(t, err)
 	log := r.QueryLog(nil)
 	require.NotNil(t, log)
 	assert.Equal(t, filepath.Join("/proj/.ai-rulez", "local", skillsearch.QueryLogFile), log.Path)
+	assert.Same(t, log, r.QueryLog(nil), "one log per setup, so its full-log warning is given once, not per call")
 	p, err := r.IndexPath()
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join("/proj/.ai-rulez", "search-index"), p)
