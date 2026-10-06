@@ -59,7 +59,6 @@ type tomlOutput struct {
 	LLM             *llm.Config            `toml:"llm,omitempty"`
 	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
-	Review          *ReviewConfig          `toml:"review,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
 	MCPServers      []MCPServer            `toml:"mcp_servers,omitempty"`
@@ -156,7 +155,6 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Telemetry:       cfg.Telemetry,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
-		Review:          cfg.Review,
 		Marketplaces:    cfg.Marketplaces,
 		MCPServers:      mcpServers,
 		MCP:             cfg.MCP,

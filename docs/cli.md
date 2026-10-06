@@ -20,7 +20,6 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`); `--html <dir>` writes a static site ([Catalog](catalog.md)) |
 | `ai-rulez sbom`                 | CycloneDX 1.6 bill of materials of the AI configuration ([SBOM](sbom.md)) |
-| `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle; `--to github-release --execute --yes` uploads through `gh` ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
@@ -1573,7 +1572,7 @@ Documented in [Evals](evals.md).
 
 | Command | Purpose |
 | --- | --- |
-| `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n] [--timeout d] [--claude-bin b] [--runner-arg a] [--judge-model m] [--results f] [--no-write] [--price-in usd] [--price-out usd] [-n dir]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
+| `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run\|--estimate] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n] [--timeout d] [--claude-bin b] [--runner-arg a] [--judge-model m] [--results f] [--no-write] [--price-in usd] [--price-out usd] [-n dir]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. `--dry-run`/`--estimate` prints a cost range. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
 
 ## Search Command
 
@@ -1863,22 +1862,6 @@ ai-rulez sbom [--format cyclonedx] [--online] [-o file] [-n config-dir]
 Print a CycloneDX 1.6 JSON bill of materials: authored items, remote sources, MCP servers. Remote sources come from the lock and the cache; `--online` also allows `git ls-remote`. No timestamp, no secrets,
 byte-identical across runs, operating systems and line endings. The machine-local overlay is never included. Nothing is
 rendered; the only file written is `-o`. See [SBOM](sbom.md).
-
-## Publish Command
-
-### `ai-rulez publish [verify <dir>]`
-
-```bash
-ai-rulez publish [--dist dist] [--to github-release] [--tag v1.4.0] [--repo OWNER/REPO]
-                 [--dry-run | --execute --yes [--force]] [--allow-dirty] [--template file]... [--format text|json]
-ai-rulez publish verify <dir> [--format text|json]
-```
-
-Runs `validate --strict`, `lock --check`, `verify --plugin` and a secret scan, then writes a reproducible
-`<name>-<version>.tar.gz`, its manifest, `SHA256SUMS`, a copy of `ai-rulez.lock`, `RELEASE_NOTES.md` and
-`publish-plan.json` to `--dist`. `--dry-run` writes nothing. Only `--execute --yes` leaves the machine, by running the
-`gh` argv shown in the plan. `publish verify` recomputes every digest of a dist directory offline. Exit codes: 0 done,
-1 could not complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N5`. See [Publish](publish.md).
 
 ## Scan Command
 
