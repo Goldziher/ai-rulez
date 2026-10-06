@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // Live QA of the backends beyond the parity checks in live_test.go: cache
@@ -188,9 +190,7 @@ func TestLiveCacheTamperedPlantedAndSymlinkedEntriesMiss(t *testing.T) {
 			secretTarget := filepath.Join(t.TempDir(), "target.json")
 			_ = os.WriteFile(secretTarget, tampered, 0o600)
 			_ = os.Remove(files[0])
-			if err := os.Symlink(secretTarget, files[0]); err != nil {
-				t.Skipf("symlink: %v", err)
-			}
+			testutil.SymlinkOrSkip(t, secretTarget, files[0])
 			if resp, err := m.Chat(ctx, tinyChat("Reply with the single word: bravo")); err != nil || resp.Cached || resp.Text == "FORGED" {
 				t.Errorf("symlinked entry served: %+v %v", resp, err)
 			}
