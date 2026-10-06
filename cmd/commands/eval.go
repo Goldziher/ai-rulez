@@ -70,9 +70,11 @@ schema/eval-case.schema.json. A runner executes them:
 Results are recorded in .ai-rulez/eval-results.json with the skill's sha256 digest, and a
 skill whose digest, cases, runner settings, harness, model, ablation setting and --allow-exec are
 unchanged is not re-run (--force overrides); runs with errored cases are never cached.
-The results file is an unsigned, committed file: a stored result is replayed only when its
-recorded digests match the skill on disk, but anyone who can edit the file can write a passing
-record. A CI gate must therefore use --force (or verify the file's provenance). Flags are
+Each record in the committed results file is signed with a per-user key, and a stored result
+is replayed only when its signature verifies and its recorded digests match the skill on disk.
+A record that cannot be verified (written on another machine, or edited by hand) is treated as
+unverified and re-run. CI without the user key therefore re-runs committed records instead of
+trusting them; --force also forces a re-run. Flags are
 checked before anything is run, and each skill's result is saved as soon as it finishes. --dry-run lists what would run and an estimated cost without
 calling any runner. The command exits 2 when a skill fails its pass threshold, errors, or has
 invalid cases.`,
@@ -103,6 +105,7 @@ func init() {
 	f.BoolVar(&evalFlags.ablation, "ablation", false, "Also run every case without the skill and report the delta")
 	f.BoolVar(&evalFlags.dryRun, "dry-run", false, "List what would run with an estimated cost; call no runner and write nothing")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
+	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
 	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
 	f.StringVar(&evalFlags.date, "date", "", "Date recorded in the results (default $"+EvalDateEnv+"; the clock is never read)")

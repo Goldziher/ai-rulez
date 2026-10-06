@@ -86,6 +86,7 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
 	addFormatFlag(LockCmd.Flags(), &lockFormat, "", formatText, formatText, formatJSON) // of --check, --diff, --outdated and --subject
+	addJSONFlagAlias(LockCmd.Flags())
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")

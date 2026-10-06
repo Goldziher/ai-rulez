@@ -82,6 +82,7 @@ func init() {
 	f := SearchCmd.Flags()
 	f.IntVar(&searchFlags.limit, "limit", searchDefaultLimit, fmt.Sprintf("Maximum results (max %d)", searchMaxLimit))
 	addFormatFlag(f, &searchFlags.format, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(f)
 	f.StringVar(&searchFlags.profile, "profile", "", "Profile whose skills to search (default: the configured default profile)")
 	f.StringVar(&searchFlags.targets, "targets", "", "Preset whose rendering of the skills to search")
 	f.StringSliceVar(&searchFlags.domains, flagServeDomain, nil, "Only search skills of these domains; 'root' selects skills in no domain")
