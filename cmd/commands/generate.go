@@ -40,6 +40,7 @@ var (
 	generateLocked     bool
 	generateFrozen     bool
 	generateRole       string
+	generateEmitPlan   string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -74,6 +75,8 @@ func init() {
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
+	GenerateCmd.Flags().StringVar(&generateEmitPlan, "emit-plan", "",
+		"Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json")
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
@@ -156,6 +159,13 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// The organization policy clamped the configuration at load; refuse to
+	// generate from one that tried to loosen it.
+	if err := policyGate(cfg); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		fmtError(err)
@@ -174,6 +184,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
 		logger.Info("Skipping plugin generation: no plugin authoring configuration")
+		return
+	}
+
+	if generateEmitPlan != "" {
+		exitOn(emitPlan(ctx, cfg, generateEmitPlan))
 		return
 	}
 
@@ -202,6 +217,27 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmtError(err)
 		os.Exit(1)
 	}
+}
+
+// emitPlan renders the generation plan without writing any output and writes it
+// as JSON to dest ("-" is standard output). Nothing is applied.
+func emitPlan(ctx context.Context, cfg *config.Config, dest string) error {
+	plan, err := generator.PlanOutputs(ctx, cfg, generator.PlanOptions{Profile: profile, Role: generateRole})
+	if err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	data, err := generator.MarshalPlan(plan)
+	if err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	if dest == "-" {
+		_, err = os.Stdout.Write(data)
+		return oops.Wrapf(err, "write the plan")
+	}
+	if err := config.WriteFileAtomic(dest, data, 0o644); err != nil {
+		return oops.With("path", dest).Wrapf(err, "write the plan")
+	}
+	return nil
 }
 
 // printDryRun prints the generation plan and returns an error when the plan

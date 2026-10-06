@@ -1,0 +1,2456 @@
+# scenario emit-plan
+
+## step 1: ai-rulez generate --emit-plan plan-before.json
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 837 c28aa60dd9e966beadcb501a651e98571c8de7f3487e158c1a6e585923ad0901
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+plan-before.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --emit-plan -
+exit: 0
+--- stdout
+{
+  "schema": 1,
+  "renderer": "v8",
+  "profile": "default",
+  "files": [
+    {
+      "path": ".agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 86,
+      "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
+    },
+    {
+      "path": ".agents/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 333,
+      "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
+    },
+    {
+      "path": ".agents/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".claude/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 83,
+      "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
+    },
+    {
+      "path": ".claude/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/rules/always.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 154,
+      "sha256": "5dae6befbd7665150b451950ab3acf5ee53de27d5f6f7bd236d921e4dc17e5f6"
+    },
+    {
+      "path": ".claude/rules/auto.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 131,
+      "sha256": "ff69177be06fe191fc2693dff615ec7eaf6633bc10bef825c27d0b394d2759a7"
+    },
+    {
+      "path": ".claude/rules/manual.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 142,
+      "sha256": "3a3c8154e79628e3af69efcd84847afded58727ed77b5231246a626620e8e372"
+    },
+    {
+      "path": ".claude/rules/targeted.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 138,
+      "sha256": "932c6f57cb04350b0409a54da4a2eb0fd60611bb987b130c3d592434583d21e0"
+    },
+    {
+      "path": ".claude/rules/typescript.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 205,
+      "sha256": "fc10e1d096af635fd18081fad01178d482f1a860096147ecd8f47f31efb136cf"
+    },
+    {
+      "path": ".claude/settings.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".claude/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 108,
+      "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
+    },
+    {
+      "path": ".claude/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
+    },
+    {
+      "path": ".claude/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 331,
+      "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
+    },
+    {
+      "path": ".claude/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/ship",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/ship/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
+    },
+    {
+      "path": ".cursor",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/BUGBOT.md",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true,
+      "raw": true
+    },
+    {
+      "path": ".cursor/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".cursor/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 70,
+      "sha256": "242bfe7a7542e1b0d23437b08b821c9989cc5b16eb4775f4830ef3a82a5dd738"
+    },
+    {
+      "path": ".cursor/cli.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/commands",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/commands/build.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 81,
+      "sha256": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef"
+    },
+    {
+      "path": ".cursor/commands/ship.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 57,
+      "sha256": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff"
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "action": "write",
+      "mode": "0644",
+      "size": 372,
+      "sha256": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7"
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/rules/always.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "846acdb48cbb5f87ffb80a1d4291df9a6a59b06e659467b332a74faf65e37191"
+    },
+    {
+      "path": ".cursor/rules/auto.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 191,
+      "sha256": "fa766acb9c6c4c8dd5ffac48ffc810a4eaa7d63a64a4bb4b651e54d082e23737"
+    },
+    {
+      "path": ".cursor/rules/context-architecture.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "3bd7d52f3510b62a9f430aec3631b67720eb6bc99e52e3c79dad148051521a64"
+    },
+    {
+      "path": ".cursor/rules/context-overview.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "5e2a542b5dab997ecaeb794657feb50a901f0d03ef434dc2893b99e24817cba4"
+    },
+    {
+      "path": ".cursor/rules/manual.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "b445e358bffc781d13e4155727bb149aa737a79947dc648242abc380f44a3ae6"
+    },
+    {
+      "path": ".cursor/rules/targeted.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 164,
+      "sha256": "e9198dc48e5205c315d1c1223e6d84fe9f110487d58c989102b576bbb4274bbe"
+    },
+    {
+      "path": ".cursor/rules/typescript.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 219,
+      "sha256": "c5f5e1451a1eb0062c7d10cd3dc6752a05c7bc1015a60d6a9dc133f654054741"
+    },
+    {
+      "path": ".mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 405,
+      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+    }
+  ],
+  "removals": []
+}
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=35
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
++ .agents/ dir 0755
++ .agents/skills/ dir 0755
++ .agents/skills/deployer/ dir 0755
++ .agents/skills/deployer/SKILL.md file 0644 261 f85dc9b3d93895830b07a4f13224a77882f000eec151ce735c0226288fcaf173
++ .agents/skills/reviewer/ dir 0755
++ .agents/skills/reviewer/SKILL.md file 0644 508 d02ed6ccaa181c8112bc181ed47eeeb49e328082ba0d6e26757fd1db2dc79bc7
++ .agents/skills/reviewer/references/ dir 0755
++ .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
++ .agents/skills/reviewer/scripts/ dir 0755
++ .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
++ .ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
++ .ai-rulez/.generated-manifest.local.json file 0644 4865 dd4135264902552259bfc80e71c46019267f9edfd7a5167d6bd8cc40d7f2bec4
++ .claude/ dir 0755
++ .claude/agents/ dir 0755
++ .claude/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
++ .claude/agents/tester.md file 0644 258 8b2b02006e99e66fcaee446b3b4ae1263ebc3b2827497b3a3df7d9282d5a440e
++ .claude/rules/ dir 0755
++ .claude/rules/always.md file 0644 325 599bca98c247320bd995cf24c904a482931de96e82ff9dfd478f0de84c658839
++ .claude/rules/auto.md file 0644 302 1a5fe5e9a5a47442fc7b53a2528499cdfdb05b84b1fe93c21554733fc98508fe
++ .claude/rules/manual.md file 0644 313 eedc8089df7d226a19db407ddf96c0c7c85d3d7abab5737144fa9647d30cd9a3
++ .claude/rules/targeted.md file 0644 309 9c292b2ac45c9e3604c519430e30d64d768bf3d9bb76a074fc345fe874c0c23f
++ .claude/rules/typescript.md file 0644 376 bd048fe16d8e70ae60a453b6056db1b39296a8638875c86a153da9a09e5d9788
++ .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
++ .claude/skills/ dir 0755
++ .claude/skills/build/ dir 0755
++ .claude/skills/build/SKILL.md file 0644 283 ce24a1dc91ec23ebf84afef63299cc0a92f159c2ec744ecf628f98270e367ea8
++ .claude/skills/deployer/ dir 0755
++ .claude/skills/deployer/SKILL.md file 0644 259 bad875a0f03ba01001405a6cba6d24a5a2b3921a603d833b62cf43ce0e75a268
++ .claude/skills/reviewer/ dir 0755
++ .claude/skills/reviewer/SKILL.md file 0644 506 ec27028f0920cde64108176d9843ad125dd14ff75a1909cb85bb0bca9435cb47
++ .claude/skills/reviewer/references/ dir 0755
++ .claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
++ .claude/skills/reviewer/scripts/ dir 0755
++ .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
++ .claude/skills/ship/ dir 0755
++ .claude/skills/ship/SKILL.md file 0644 259 5be47b18ff8b7617963988274bfd3f581393c7d3e888fd2a6da696b0653bd27e
++ .cursor/ dir 0755
++ .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
++ .cursor/agents/ dir 0755
++ .cursor/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
++ .cursor/agents/tester.md file 0644 245 60a09511b67458b495694ef72bc0548fa996500e3fd223e6df9ad3bd5a0f3559
++ .cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
++ .cursor/commands/ dir 0755
++ .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
++ .cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
++ .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
++ .cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
++ .cursor/rules/ dir 0755
++ .cursor/rules/always.mdc file 0644 351 de5637956bbdad1b8ccf53dba6bfb8bd65927bca25ba8dc2678614462e780243
++ .cursor/rules/auto.mdc file 0644 362 e4de61edd1eb2bd8cceb072392dd94c11344b367d93fadae4366c4fab81b61e4
++ .cursor/rules/context-architecture.mdc file 0644 340 ce60e21e00529915ed2c8603b6a65995089f1b67cb01029c63d3bb6ee28d71a5
++ .cursor/rules/context-overview.mdc file 0644 351 d7df3c5f21a37590838c5b5faa07058df1c2daba5ab1fa8a9b8cee4642404e3d
++ .cursor/rules/manual.mdc file 0644 340 5582514156b4d644712a281bdebb7e216af4e6e723c84409cb9a84b0798ba62e
++ .cursor/rules/targeted.mdc file 0644 335 21eee309af65a4b55e4fd98fba22dee9b1883dc5733a2b64b7c6992ebf30a604
++ .cursor/rules/typescript.mdc file 0644 390 1453e788fdf95e4ccbf5d22c4470a10b6502b1611fcbce0af0ec5b69ad5800f4
++ .gitignore file 0644 665 bfd5c18eab8afa93ed9bcda7f54f51c3d2f16465fad135caf0af97348df88c84
++ .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
++ CLAUDE.md file 0644 575 d73249de49105166a02026b11419078259d7c87f6b204cc91baa84760034ca6a
+--- home tree
+(no change)
+
+## step 4: ai-rulez generate --emit-plan plan-after.json --profile default
+exit: 0
+--- stdout
+--- stderr
+WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
+WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
++ plan-after.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+--- home tree
+(no change)
+
+## step 5: write .ai-rulez/config.toml
+--- project tree
+~ .ai-rulez/config.toml file 0644 827 ea40c715e0e6e7ccdb095db1df0b6a12256dddc4d686447f688b461aeefaca1a
+--- home tree
+(no change)
+
+## step 6: ai-rulez generate --emit-plan plan-stale.json
+exit: 0
+--- stdout
+--- stderr
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.agents/ dir 0755
+.agents/skills/ dir 0755
+.agents/skills/deployer/ dir 0755
+.agents/skills/deployer/SKILL.md file 0644 261 f85dc9b3d93895830b07a4f13224a77882f000eec151ce735c0226288fcaf173
+>>>>
+---
+name: deployer
+description: "Deploys the service"
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.agents/skills/reviewer/ dir 0755
+.agents/skills/reviewer/SKILL.md file 0644 508 d02ed6ccaa181c8112bc181ed47eeeb49e328082ba0d6e26757fd1db2dc79bc7
+>>>>
+---
+name: reviewer
+description: "Reviews pull requests"
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.agents/skills/reviewer/references/ dir 0755
+.agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.agents/skills/reviewer/scripts/ dir 0755
+.agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
+>>>>
+{
+  "version": "1",
+  "files": [
+    ".agents/skills/deployer/SKILL.md",
+    ".agents/skills/reviewer/SKILL.md",
+    ".agents/skills/reviewer/references/checklist.md",
+    ".agents/skills/reviewer/scripts/run.sh",
+    ".claude/agents/architect.md",
+    ".claude/agents/tester.md",
+    ".claude/rules/always.md",
+    ".claude/rules/auto.md",
+    ".claude/rules/manual.md",
+    ".claude/rules/targeted.md",
+    ".claude/rules/typescript.md",
+    ".claude/settings.json",
+    ".claude/skills/build/SKILL.md",
+    ".claude/skills/deployer/SKILL.md",
+    ".claude/skills/reviewer/SKILL.md",
+    ".claude/skills/reviewer/references/checklist.md",
+    ".claude/skills/reviewer/scripts/run.sh",
+    ".claude/skills/ship/SKILL.md",
+    ".cursor/BUGBOT.md",
+    ".cursor/agents/architect.md",
+    ".cursor/agents/tester.md",
+    ".cursor/cli.json",
+    ".cursor/commands/build.md",
+    ".cursor/commands/ship.md",
+    ".cursor/hooks.json",
+    ".cursor/mcp.json",
+    ".cursor/rules/always.mdc",
+    ".cursor/rules/auto.mdc",
+    ".cursor/rules/context-architecture.mdc",
+    ".cursor/rules/context-overview.mdc",
+    ".cursor/rules/manual.mdc",
+    ".cursor/rules/targeted.mdc",
+    ".cursor/rules/typescript.mdc",
+    ".mcp.json",
+    "CLAUDE.md"
+  ],
+  "merged": {
+    ".claude/settings.json": [],
+    ".cursor/BUGBOT.md": [],
+    ".cursor/cli.json": [],
+    ".cursor/hooks.json": [],
+    ".cursor/mcp.json": [],
+    ".mcp.json": []
+  }
+}
+<<<<
+.ai-rulez/.generated-manifest.local.json file 0644 4865 dd4135264902552259bfc80e71c46019267f9edfd7a5167d6bd8cc40d7f2bec4
+>>>>
+{
+  "version": "1",
+  "files": [],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "hooks",
+          "PreToolUse"
+        ],
+        "elementSums": [
+          "54635121d8f6e71ad7bc18abf9f1ff33a3dc95673c6c6a75a639d654832c8081",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "allow"
+        ],
+        "elementSums": [
+          "4b79ff9e0bd4048e1a7d0b993b2bba4336ad7f2dd385ca312d04d46ee518d2d6",
+          "51ab4feb934e42152b9e06978628e6478131dcd20ed3dc3247b44f3c3e378083",
+          "7980f3870c01e194db9c1e8874a073687d09e6b182a0b27596ffce30a6f80f51"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "ask"
+        ],
+        "elementSums": [
+          "9361f4e2cabb52e2a1f986dd57aa9aa77b64cdd7df81feb7ebd095b9a34ecd06"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "deny"
+        ],
+        "elementSums": [
+          "8dd3b1a58515b0c193982a408b39ffa017372a95e8a2d4a4c44636f35c6eedf6",
+          "d32001d08b7e0990e2ef5732ac51425f931e5ceedaff77f3c92d7d13db4ec72b"
+        ]
+      }
+    ],
+    ".cursor/BUGBOT.md": [
+      {
+        "path": [
+          "checks"
+        ],
+        "sum": "b8d45607bc85aa7eba0cbfbde863e12695740709e00cf77da477e24982d9748e"
+      }
+    ],
+    ".cursor/cli.json": [
+      {
+        "path": [
+          "permissions",
+          "allow"
+        ],
+        "elementSums": [
+          "30d135f29982fbee6e27cb63f669816775304604f249a9c4a12b15dcd2035537",
+          "612daece2e7b6a3484711ddb8ae945e50b4c33679c5e4fc2e6d010fdd1c42306"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "deny"
+        ],
+        "elementSums": [
+          "3918fbac8c6a27c8b72de74e470f274f3dc06a4dc3f200b1ef42df864a943445",
+          "83f88620f77bc5bd4043548104dec9acd05b4e7c0c0bd171ea886fd4add93433"
+        ]
+      }
+    ],
+    ".cursor/hooks.json": [
+      {
+        "path": [
+          "version"
+        ],
+        "sum": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "alone": true
+      },
+      {
+        "path": [
+          "hooks",
+          "preToolUse"
+        ],
+        "elementSums": [
+          "7646211ce8b2731f0537a597e8303d80306ee364768369f3bd32b3af5724a193",
+          "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "sessionStart"
+        ],
+        "elementSums": [
+          "cba94814625d652ef4f8af0b70e8be159ae66d411fc1240b30344cbc9d4bdda2"
+        ]
+      }
+    ],
+    ".cursor/mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "local-tool"
+        ],
+        "sum": "dd1933f59f7087301c038495a516fed4e56298eb98acf2e6672b13c49242260d"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "remote-tool"
+        ],
+        "sum": "72aed2ef780eab3510b3283f49354a2c9e0412cc4a039d8e1ed4510f58d153cb"
+      }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "local-tool"
+        ],
+        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
+      },
+      {
+        "path": [
+          "mcpServers",
+          "remote-tool"
+        ],
+        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26"
+      }
+    ]
+  },
+  "digests": {
+    ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".claude/settings.json": "0e293c7ca1d8c791d15dab4cebee34c2f5400d0bef14dec1304ce335f83447fe",
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
+    ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
+    ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
+    ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
+    ".cursor/hooks.json": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7",
+    ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
+    ".mcp.json": "893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4"
+  }
+}
+<<<<
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+>>>>
+---
+name: architect
+description: Designs systems
+model: sonnet
+---
+# Architect
+
+Think in layers.
+<<<<
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+>>>>
+---
+name: tester
+description: Writes tests
+effort: high
+---
+# Tester
+
+Test first.
+<<<<
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+>>>>
+---
+description: Flags common security issues
+severity: high
+tools: [Read, Grep]
+---
+
+Review the diff for injection and secrets.
+<<<<
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+>>>>
+---
+description: Style consistency
+severity: low
+---
+
+Keep the style consistent.
+<<<<
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+>>>>
+---
+name: build
+description: Build the project
+---
+Run the build and report failures.
+<<<<
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+>>>>
+---
+name: ship
+description: Ship a release
+---
+Cut a release.
+<<<<
+.ai-rulez/config.toml file 0644 827 ea40c715e0e6e7ccdb095db1df0b6a12256dddc4d686447f688b461aeefaca1a
+>>>>
+version = "4.0"
+name = "golden"
+description = "Golden fixture project"
+presets = ["claude"]
+gitignore = true
+
+[guard]
+generated = true
+
+[[mcp_servers]]
+name = "local-tool"
+description = "A stdio server"
+command = "npx"
+args = ["-y", "golden-mcp"]
+[mcp_servers.env]
+API_TOKEN = "${GOLDEN_TOKEN}"
+
+[[mcp_servers]]
+name = "remote-tool"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+[mcp_servers.headers]
+Authorization = "Bearer ${GOLDEN_TOKEN}"
+
+[permissions]
+allow = ["Bash(npm run test:*)", "Read(./src/**)", "WebFetch(domain:example.com)"]
+ask = ["Bash(git push:*)"]
+deny = ["Bash(rm -rf:*)", "Read(./.env)"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"
+timeout = 10
+
+[[hooks]]
+event = "SessionStart"
+[[hooks.hooks]]
+command = "echo started"
+status_message = "Starting"
+<<<<
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+>>>>
+# Architecture
+
+Layers and boundaries.
+<<<<
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+>>>>
+---
+priority: high
+---
+# Overview
+
+The project overview.
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+>>>>
+---
+priority: critical
+---
+# Always
+
+Always apply this rule.
+<<<<
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+>>>>
+---
+activation: auto
+description: Database migrations
+---
+# Migrations
+
+Write reversible migrations.
+<<<<
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+>>>>
+---
+activation: manual
+priority: low
+---
+# Manual
+
+Only when asked.
+<<<<
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+>>>>
+---
+targets:
+  - claude
+  - cursor
+---
+# Targeted
+
+For claude and cursor only.
+<<<<
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+>>>>
+---
+priority: high
+paths:
+  - "src/**/*.{ts,tsx}"
+  - "tests/**"
+activation: glob
+---
+# TypeScript
+
+Use strict mode.
+<<<<
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+>>>>
+---
+name: deployer
+description: Deploys the service
+---
+# Deployer
+
+Deploy safely.
+<<<<
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+>>>>
+---
+name: reviewer
+description: Reviews pull requests
+---
+# Reviewer
+
+Review carefully.
+<<<<
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
+>>>>
+---
+description: Designs systems
+model: sonnet
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.claude/agents/tester.md file 0644 258 8b2b02006e99e66fcaee446b3b4ae1263ebc3b2827497b3a3df7d9282d5a440e
+>>>>
+---
+description: Writes tests
+effort: high
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Tester
+
+Test first.
+<<<<
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 325 599bca98c247320bd995cf24c904a482931de96e82ff9dfd478f0de84c658839
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
+Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# always
+
+**Priority:** critical
+
+Always apply this rule.
+<<<<
+.claude/rules/auto.md file 0644 302 1a5fe5e9a5a47442fc7b53a2528499cdfdb05b84b1fe93c21554733fc98508fe
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
+Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# auto
+
+Write reversible migrations.
+<<<<
+.claude/rules/manual.md file 0644 313 eedc8089df7d226a19db407ddf96c0c7c85d3d7abab5737144fa9647d30cd9a3
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
+Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# manual
+
+**Priority:** low
+
+Only when asked.
+<<<<
+.claude/rules/targeted.md file 0644 309 9c292b2ac45c9e3604c519430e30d64d768bf3d9bb76a074fc345fe874c0c23f
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
+Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# targeted
+
+For claude and cursor only.
+<<<<
+.claude/rules/typescript.md file 0644 376 bd048fe16d8e70ae60a453b6056db1b39296a8638875c86a153da9a09e5d9788
+>>>>
+---
+paths:
+    - src/**/*.{ts,tsx}
+    - tests/**
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
+Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# typescript
+
+**Priority:** high
+
+Use strict mode.
+<<<<
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+>>>>
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/'scripts/guard.sh'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y ai-rulez@$VERSION guard",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo started",
+            "statusMessage": "Starting"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Read(./src/**)",
+      "WebFetch(domain:example.com)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Read(./.env)"
+    ]
+  }
+}
+<<<<
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 283 ce24a1dc91ec23ebf84afef63299cc0a92f159c2ec744ecf628f98270e367ea8
+>>>>
+---
+description: Build the project
+name: build
+user-invocable: true
+# Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+Run the build and report failures.
+<<<<
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 259 bad875a0f03ba01001405a6cba6d24a5a2b3921a603d833b62cf43ce0e75a268
+>>>>
+---
+description: Deploys the service
+name: deployer
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 506 ec27028f0920cde64108176d9843ad125dd14ff75a1909cb85bb0bca9435cb47
+>>>>
+---
+description: Reviews pull requests
+name: reviewer
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 259 5be47b18ff8b7617963988274bfd3f581393c7d3e888fd2a6da696b0653bd27e
+>>>>
+---
+description: Ship a release
+name: ship
+user-invocable: true
+# Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+Cut a release.
+<<<<
+.cursor/ dir 0755
+.cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
+>>>>
+<!-- ai-rulez:checks:begin -->
+<!-- ai-rulez:check:security -->
+
+## security
+
+Review the diff for injection and secrets.
+
+<!-- ai-rulez:check:style -->
+
+## style
+
+Keep the style consistent.
+<!-- ai-rulez:checks:end -->
+<<<<
+.cursor/agents/ dir 0755
+.cursor/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
+>>>>
+---
+description: Designs systems
+model: sonnet
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.cursor/agents/tester.md file 0644 245 60a09511b67458b495694ef72bc0548fa996500e3fd223e6df9ad3bd5a0f3559
+>>>>
+---
+description: Writes tests
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+# Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+---
+
+# Tester
+
+Test first.
+<<<<
+.cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
+>>>>
+{
+  "permissions": {
+    "allow": [
+      "Read(src/**)",
+      "WebFetch(example.com)"
+    ],
+    "deny": [
+      "Shell(rm:-rf*)",
+      "Read(.env)"
+    ]
+  }
+}
+<<<<
+.cursor/commands/ dir 0755
+.cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
+>>>>
+# /build
+
+**Description:** Build the project
+
+Run the build and report failures.
+<<<<
+.cursor/commands/ship.md file 0644 57 7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff
+>>>>
+# /ship
+
+**Description:** Ship a release
+
+Cut a release.
+<<<<
+.cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
+>>>>
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "'./scripts/guard.sh'",
+        "timeout": 10,
+        "matcher": "^Shell$"
+      },
+      {
+        "command": "npx -y ai-rulez@$VERSION guard",
+        "timeout": 10,
+        "matcher": "^Write$"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "echo started"
+      }
+    ]
+  },
+  "version": 1
+}
+<<<<
+.cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
+>>>>
+{
+  "mcpServers": {
+    "local-tool": {
+      "args": [
+        "-y",
+        "golden-mcp"
+      ],
+      "command": "npx",
+      "env": {
+        "API_TOKEN": "${env:GOLDEN_TOKEN}"
+      }
+    },
+    "remote-tool": {
+      "headers": {
+        "Authorization": "Bearer ${env:GOLDEN_TOKEN}"
+      },
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}
+<<<<
+.cursor/rules/ dir 0755
+.cursor/rules/always.mdc file 0644 351 de5637956bbdad1b8ccf53dba6bfb8bd65927bca25ba8dc2678614462e780243
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
+Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# always
+
+**Priority:** critical
+
+Always apply this rule.
+<<<<
+.cursor/rules/auto.mdc file 0644 362 e4de61edd1eb2bd8cceb072392dd94c11344b367d93fadae4366c4fab81b61e4
+>>>>
+---
+alwaysApply: false
+description: Database migrations
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
+Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# auto
+
+Write reversible migrations.
+<<<<
+.cursor/rules/context-architecture.mdc file 0644 340 ce60e21e00529915ed2c8603b6a65995089f1b67cb01029c63d3bb6ee28d71a5
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/context/architecture.md. Edit the source, not this file.
+Content-Hash: blake3:8f77c7d3494e658fa2e3d3b3d503cdd74e4316ab9a9076f9a506566dd2c10f34
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# architecture
+
+Layers and boundaries.
+<<<<
+.cursor/rules/context-overview.mdc file 0644 351 d7df3c5f21a37590838c5b5faa07058df1c2daba5ab1fa8a9b8cee4642404e3d
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/context/overview.md. Edit the source, not this file.
+Content-Hash: blake3:52911f95f682a11e5036a423c56f3be58f5b93fe8ab603133b0aef49dfe24234
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# overview
+
+**Priority:** high
+
+The project overview.
+<<<<
+.cursor/rules/manual.mdc file 0644 340 5582514156b4d644712a281bdebb7e216af4e6e723c84409cb9a84b0798ba62e
+>>>>
+---
+alwaysApply: false
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
+Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# manual
+
+**Priority:** low
+
+Only when asked.
+<<<<
+.cursor/rules/targeted.mdc file 0644 335 21eee309af65a4b55e4fd98fba22dee9b1883dc5733a2b64b7c6992ebf30a604
+>>>>
+---
+alwaysApply: true
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
+Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# targeted
+
+For claude and cursor only.
+<<<<
+.cursor/rules/typescript.mdc file 0644 390 1453e788fdf95e4ccbf5d22c4470a10b6502b1611fcbce0af0ec5b69ad5800f4
+>>>>
+---
+alwaysApply: false
+globs: src/**/*.ts,src/**/*.tsx,tests/**
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
+Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# typescript
+
+**Priority:** high
+
+Use strict mode.
+<<<<
+.gitignore file 0644 665 bfd5c18eab8afa93ed9bcda7f54f51c3d2f16465fad135caf0af97348df88c84
+>>>>
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.agents/skills/
+.ai-rulez/.generated-manifest.json
+.ai-rulez/.generated-manifest.local.json
+.ai-rulez/local/
+.claude/agents/
+.claude/rules/always.md
+.claude/rules/auto.md
+.claude/rules/manual.md
+.claude/rules/targeted.md
+.claude/rules/typescript.md
+.claude/settings.json
+.claude/skills/
+.cursor/agents/
+.cursor/cli.json
+.cursor/commands/
+.cursor/hooks.json
+.cursor/mcp.json
+.cursor/rules/always.mdc
+.cursor/rules/auto.mdc
+.cursor/rules/context-architecture.mdc
+.cursor/rules/context-overview.mdc
+.cursor/rules/manual.mdc
+.cursor/rules/targeted.mdc
+.cursor/rules/typescript.mdc
+.mcp.json
+CLAUDE.md
+# END ai-rulez
+<<<<
+.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+>>>>
+{
+  "mcpServers": {
+    "local-tool": {
+      "args": [
+        "-y",
+        "golden-mcp"
+      ],
+      "command": "npx",
+      "disabled": false,
+      "env": {
+        "API_TOKEN": "${GOLDEN_TOKEN}"
+      }
+    },
+    "remote-tool": {
+      "disabled": false,
+      "headers": {
+        "Authorization": "Bearer ${GOLDEN_TOKEN}"
+      },
+      "type": "http",
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}
+<<<<
+CLAUDE.md file 0644 575 d73249de49105166a02026b11419078259d7c87f6b204cc91baa84760034ca6a
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:2d7c528e752b413fa5da736b24437ed1bbd61eaaa88cbc4aa3a61fb8306bff6e
+Source-Hash: blake3:22a17736845a155c3fa271f500b50ce8d05c149673713041f4eaa4b0d5dda7f6
+-->
+
+# golden
+
+Golden fixture project
+
+## Context
+
+### overview
+
+The project overview.
+
+### architecture
+
+Layers and boundaries.
+<<<<
+plan-after.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+>>>>
+{
+  "schema": 1,
+  "renderer": "v8",
+  "profile": "default",
+  "files": [
+    {
+      "path": ".agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 86,
+      "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
+    },
+    {
+      "path": ".agents/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 333,
+      "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
+    },
+    {
+      "path": ".agents/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".claude/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 83,
+      "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
+    },
+    {
+      "path": ".claude/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/rules/always.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 154,
+      "sha256": "5dae6befbd7665150b451950ab3acf5ee53de27d5f6f7bd236d921e4dc17e5f6"
+    },
+    {
+      "path": ".claude/rules/auto.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 131,
+      "sha256": "ff69177be06fe191fc2693dff615ec7eaf6633bc10bef825c27d0b394d2759a7"
+    },
+    {
+      "path": ".claude/rules/manual.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 142,
+      "sha256": "3a3c8154e79628e3af69efcd84847afded58727ed77b5231246a626620e8e372"
+    },
+    {
+      "path": ".claude/rules/targeted.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 138,
+      "sha256": "932c6f57cb04350b0409a54da4a2eb0fd60611bb987b130c3d592434583d21e0"
+    },
+    {
+      "path": ".claude/rules/typescript.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 205,
+      "sha256": "fc10e1d096af635fd18081fad01178d482f1a860096147ecd8f47f31efb136cf"
+    },
+    {
+      "path": ".claude/settings.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".claude/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 108,
+      "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
+    },
+    {
+      "path": ".claude/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
+    },
+    {
+      "path": ".claude/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 331,
+      "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
+    },
+    {
+      "path": ".claude/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/ship",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/ship/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
+    },
+    {
+      "path": ".cursor",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/BUGBOT.md",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true,
+      "raw": true
+    },
+    {
+      "path": ".cursor/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".cursor/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 70,
+      "sha256": "242bfe7a7542e1b0d23437b08b821c9989cc5b16eb4775f4830ef3a82a5dd738"
+    },
+    {
+      "path": ".cursor/cli.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/commands",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/commands/build.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 81,
+      "sha256": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef"
+    },
+    {
+      "path": ".cursor/commands/ship.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 57,
+      "sha256": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff"
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "action": "write",
+      "mode": "0644",
+      "size": 372,
+      "sha256": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7"
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/rules/always.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "846acdb48cbb5f87ffb80a1d4291df9a6a59b06e659467b332a74faf65e37191"
+    },
+    {
+      "path": ".cursor/rules/auto.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 191,
+      "sha256": "fa766acb9c6c4c8dd5ffac48ffc810a4eaa7d63a64a4bb4b651e54d082e23737"
+    },
+    {
+      "path": ".cursor/rules/context-architecture.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "3bd7d52f3510b62a9f430aec3631b67720eb6bc99e52e3c79dad148051521a64"
+    },
+    {
+      "path": ".cursor/rules/context-overview.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "5e2a542b5dab997ecaeb794657feb50a901f0d03ef434dc2893b99e24817cba4"
+    },
+    {
+      "path": ".cursor/rules/manual.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "b445e358bffc781d13e4155727bb149aa737a79947dc648242abc380f44a3ae6"
+    },
+    {
+      "path": ".cursor/rules/targeted.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 164,
+      "sha256": "e9198dc48e5205c315d1c1223e6d84fe9f110487d58c989102b576bbb4274bbe"
+    },
+    {
+      "path": ".cursor/rules/typescript.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 219,
+      "sha256": "c5f5e1451a1eb0062c7d10cd3dc6752a05c7bc1015a60d6a9dc133f654054741"
+    },
+    {
+      "path": ".mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 405,
+      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+    }
+  ],
+  "removals": []
+}
+<<<<
+plan-before.json file 0644 8496 b8a6480db6b78ab4c897523e5aadd13702b5f9b5b00388d11d9370ce7f1d8d45
+>>>>
+{
+  "schema": 1,
+  "renderer": "v8",
+  "profile": "default",
+  "files": [
+    {
+      "path": ".agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 86,
+      "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
+    },
+    {
+      "path": ".agents/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 333,
+      "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
+    },
+    {
+      "path": ".agents/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".claude/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 83,
+      "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
+    },
+    {
+      "path": ".claude/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/rules/always.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 154,
+      "sha256": "5dae6befbd7665150b451950ab3acf5ee53de27d5f6f7bd236d921e4dc17e5f6"
+    },
+    {
+      "path": ".claude/rules/auto.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 131,
+      "sha256": "ff69177be06fe191fc2693dff615ec7eaf6633bc10bef825c27d0b394d2759a7"
+    },
+    {
+      "path": ".claude/rules/manual.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 142,
+      "sha256": "3a3c8154e79628e3af69efcd84847afded58727ed77b5231246a626620e8e372"
+    },
+    {
+      "path": ".claude/rules/targeted.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 138,
+      "sha256": "932c6f57cb04350b0409a54da4a2eb0fd60611bb987b130c3d592434583d21e0"
+    },
+    {
+      "path": ".claude/rules/typescript.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 205,
+      "sha256": "fc10e1d096af635fd18081fad01178d482f1a860096147ecd8f47f31efb136cf"
+    },
+    {
+      "path": ".claude/settings.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".claude/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 108,
+      "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
+    },
+    {
+      "path": ".claude/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
+    },
+    {
+      "path": ".claude/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 331,
+      "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
+    },
+    {
+      "path": ".claude/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/ship",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/ship/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
+    },
+    {
+      "path": ".cursor",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/BUGBOT.md",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true,
+      "raw": true
+    },
+    {
+      "path": ".cursor/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".cursor/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 70,
+      "sha256": "242bfe7a7542e1b0d23437b08b821c9989cc5b16eb4775f4830ef3a82a5dd738"
+    },
+    {
+      "path": ".cursor/cli.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/commands",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/commands/build.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 81,
+      "sha256": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef"
+    },
+    {
+      "path": ".cursor/commands/ship.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 57,
+      "sha256": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff"
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "action": "write",
+      "mode": "0644",
+      "size": 372,
+      "sha256": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7"
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".cursor/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".cursor/rules/always.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "846acdb48cbb5f87ffb80a1d4291df9a6a59b06e659467b332a74faf65e37191"
+    },
+    {
+      "path": ".cursor/rules/auto.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 191,
+      "sha256": "fa766acb9c6c4c8dd5ffac48ffc810a4eaa7d63a64a4bb4b651e54d082e23737"
+    },
+    {
+      "path": ".cursor/rules/context-architecture.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "3bd7d52f3510b62a9f430aec3631b67720eb6bc99e52e3c79dad148051521a64"
+    },
+    {
+      "path": ".cursor/rules/context-overview.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 180,
+      "sha256": "5e2a542b5dab997ecaeb794657feb50a901f0d03ef434dc2893b99e24817cba4"
+    },
+    {
+      "path": ".cursor/rules/manual.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 169,
+      "sha256": "b445e358bffc781d13e4155727bb149aa737a79947dc648242abc380f44a3ae6"
+    },
+    {
+      "path": ".cursor/rules/targeted.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 164,
+      "sha256": "e9198dc48e5205c315d1c1223e6d84fe9f110487d58c989102b576bbb4274bbe"
+    },
+    {
+      "path": ".cursor/rules/typescript.mdc",
+      "action": "write",
+      "mode": "0644",
+      "size": 219,
+      "sha256": "c5f5e1451a1eb0062c7d10cd3dc6752a05c7bc1015a60d6a9dc133f654054741"
+    },
+    {
+      "path": ".mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 405,
+      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+    }
+  ],
+  "removals": []
+}
+<<<<
+plan-stale.json file 0644 5579 a6697d6cc5b8a719710cb898c19e931a5d16bb5a277cadd9476da8911b7d69ce
+>>>>
+{
+  "schema": 1,
+  "renderer": "v8",
+  "profile": "default",
+  "files": [
+    {
+      "path": ".claude",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/agents/architect.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 98,
+      "sha256": "448d68959ae9ff1baef0b6e6ff649a539c836dea301d0e34c151f3c6ae034a3d"
+    },
+    {
+      "path": ".claude/agents/tester.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 83,
+      "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
+    },
+    {
+      "path": ".claude/rules",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/rules/always.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 154,
+      "sha256": "5dae6befbd7665150b451950ab3acf5ee53de27d5f6f7bd236d921e4dc17e5f6"
+    },
+    {
+      "path": ".claude/rules/auto.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 131,
+      "sha256": "ff69177be06fe191fc2693dff615ec7eaf6633bc10bef825c27d0b394d2759a7"
+    },
+    {
+      "path": ".claude/rules/manual.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 142,
+      "sha256": "3a3c8154e79628e3af69efcd84847afded58727ed77b5231246a626620e8e372"
+    },
+    {
+      "path": ".claude/rules/targeted.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 138,
+      "sha256": "932c6f57cb04350b0409a54da4a2eb0fd60611bb987b130c3d592434583d21e0"
+    },
+    {
+      "path": ".claude/rules/typescript.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 205,
+      "sha256": "fc10e1d096af635fd18081fad01178d482f1a860096147ecd8f47f31efb136cf"
+    },
+    {
+      "path": ".claude/settings.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": ".claude/skills",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/build/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 108,
+      "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
+    },
+    {
+      "path": ".claude/skills/deployer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/deployer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
+    },
+    {
+      "path": ".claude/skills/reviewer",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 331,
+      "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
+    },
+    {
+      "path": ".claude/skills/reviewer/references",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/references/checklist.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 28,
+      "sha256": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/reviewer/scripts/run.sh",
+      "action": "write",
+      "mode": "0644",
+      "size": 22,
+      "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+      "raw": true
+    },
+    {
+      "path": ".claude/skills/ship",
+      "action": "mkdir"
+    },
+    {
+      "path": ".claude/skills/ship/SKILL.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 84,
+      "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
+    },
+    {
+      "path": ".mcp.json",
+      "action": "write",
+      "mode": "0600",
+      "sensitive": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "action": "write",
+      "mode": "0644",
+      "size": 405,
+      "sha256": "398e96ef7a0a69c4fb133de1b74bafe0c06a33085a9f814294ce7be33ce3e787"
+    }
+  ],
+  "removals": [
+    {
+      "path": ".agents/skills/deployer/SKILL.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".agents/skills/reviewer/SKILL.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".agents/skills/reviewer/references/checklist.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".agents/skills/reviewer/scripts/run.sh",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/BUGBOT.md",
+      "reason": "delete"
+    },
+    {
+      "path": ".cursor/agents/architect.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/agents/tester.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/cli.json",
+      "reason": "delete"
+    },
+    {
+      "path": ".cursor/commands/build.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/commands/ship.md",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/hooks.json",
+      "reason": "delete"
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "reason": "delete"
+    },
+    {
+      "path": ".cursor/rules/always.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/auto.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/context-architecture.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/context-overview.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/manual.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/targeted.mdc",
+      "reason": "stale"
+    },
+    {
+      "path": ".cursor/rules/typescript.mdc",
+      "reason": "stale"
+    }
+  ]
+}
+<<<<
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+>>>>
+#!/bin/sh
+exit 0
+<<<<
+--- home tree
+(no change)
