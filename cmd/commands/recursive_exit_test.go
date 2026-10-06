@@ -7,6 +7,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -134,5 +136,37 @@ func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
 
 	if !progress.IsQuiet() {
 		t.Error("validate must apply --quiet to progress output")
+	}
+}
+
+// A nested V2/V3 config.yaml is no longer read, but generate --recursive must
+// report it with the ErrLegacyConfig message and fail, not skip it silently.
+func TestRunRecursiveGenerate_ReportsNestedLegacyConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		legacy  string
+		wantErr string
+	}{
+		{name: "config.yaml beside no config.toml", legacy: "config.yaml", wantErr: "V2/V3 configs are no longer read"},
+		{name: "config.json", legacy: "config.json", wantErr: "V2/V3 configs are no longer read"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := twoRoots(t, validRootConfig)
+			require.NoError(t, os.Remove(filepath.Join(root, "b", ".ai-rulez", "config.toml")))
+			writeFile(t, filepath.Join(root, "b", ".ai-rulez", tt.legacy), "name: old\n")
+
+			// Act
+			var code int
+			stdout, stderr := capture(t, func() { code = runRecursiveGenerate() })
+
+			// Assert
+			assert.Equal(t, 1, code)
+			assert.Contains(t, stdout+stderr, tt.wantErr)
+			assert.Contains(t, stdout+stderr, filepath.Join("b", ".ai-rulez", tt.legacy))
+			_, err := os.Stat(filepath.Join(root, "a", "CLAUDE.md"))
+			assert.NoError(t, err, "the healthy root is still generated")
+		})
 	}
 }
