@@ -115,3 +115,79 @@ func TestChangedOnlyUnknownRevisionFails(t *testing.T) {
 	t.Cleanup(func() { validateSince = "" })
 	assert.Equal(t, 1, runStrict(t, root, loadStrictProject(t, root)))
 }
+
+func TestSinceDepthFlag(t *testing.T) {
+	tests := []struct {
+		value   string
+		want    int
+		wantErr bool
+	}{
+		{"", 1, false}, {"1", 1, false}, {"3", 3, false}, {"all", lint.DepthAll, false}, {" ALL ", lint.DepthAll, false},
+		{"0", 0, true}, {"-2", 0, true}, {"deep", 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			old := validateSinceDepth
+			t.Cleanup(func() { validateSinceDepth = old })
+			validateSinceDepth = tt.value
+			got, err := sinceDepth()
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestSinceDepthNeedsSince(t *testing.T) {
+	resetStrictFlags(t)
+	t.Cleanup(func() { validateSinceDepth, validateSinceMax, validateSince = "1", 0, "" })
+	validateSinceDepth = "2"
+	assert.Error(t, checkStrictFlags(), "--since-depth without --since")
+	validateSince = "main"
+	assert.NoError(t, checkStrictFlags())
+	validateSinceDepth, validateSinceMax = "x", 0
+	assert.Error(t, checkStrictFlags(), "an invalid depth")
+	validateSinceDepth, validateSinceMax = "all", -1
+	assert.Error(t, checkStrictFlags(), "a negative cap")
+}
+
+func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
+	resetStrictFlags(t)
+	root := changedRepo(t)
+	// d.md refers to c.md, which refers to the changed b.md: two hops.
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "d.md"), "---\ndescription: d\n---\nSee [c](c.md) and [gone](nope-d.md).\n")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "d")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md")+"\nedited\n")
+	t.Cleanup(func() { validateSinceDepth = "1" })
+	run := func(depth string) lint.Combined {
+		validateSinceDepth = depth
+		strictTreeCache = lint.Loader{}
+		cfg := loadStrictProject(t, root)
+		report := lintProject(t, cfg)
+		require.NoError(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}))
+		return lint.Combine([]*lint.Report{report})
+	}
+	validateChanged = true
+
+	one, two, all := run("1"), run("2"), run("all")
+
+	hops := func(c lint.Combined) map[string]string {
+		out := map[string]string{}
+		for i := range c.Findings {
+			out[c.Findings[i].RepoPath()] = c.Findings[i].Hop()
+		}
+		return out
+	}
+	assert.NotContains(t, hops(one), ".ai-rulez/rules/d.md", "depth 1 keeps today's behaviour")
+	assert.Equal(t, "transitive(2)", hops(two)[".ai-rulez/rules/d.md"])
+	assert.Equal(t, hops(two), hops(all))
+	assert.Equal(t, 2, two.ChangedOnly.Depth)
+	assert.Equal(t, 1, two.ChangedOnly.Transitive)
+	var sb strings.Builder
+	require.NoError(t, lint.Write(&sb, lint.FormatText, two, lint.WriteOptions{}))
+	assert.Contains(t, sb.String(), "changed-only since HEAD (depth 2)")
+}

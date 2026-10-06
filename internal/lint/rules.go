@@ -240,6 +240,9 @@ type FindingMeta struct {
 	Analyzer, Scope string
 	// Fix is the mechanical correction, when one exists.
 	Fix *Fix
+	// Hop says how far the finding's file is from the changed set in a
+	// changed-only report: "changed", "dependent" or "transitive(n)".
+	Hop string
 }
 
 func (f *Finding) meta() *FindingMeta {
@@ -266,6 +269,14 @@ func (f *Finding) Fingerprint() string {
 	return f.Meta.Fingerprint
 }
 
+// Hop returns the changed-only hop of the finding ("" outside changed-only reports).
+func (f *Finding) Hop() string {
+	if f.Meta == nil {
+		return ""
+	}
+	return f.Meta.Hop
+}
+
 // IsAccepted reports whether the baseline accepts the finding.
 func (f *Finding) IsAccepted() bool { return f.Meta != nil && f.Meta.Accepted }
 
@@ -286,6 +297,7 @@ type findingJSON struct {
 	Evidence     string   `json:"evidence,omitempty"`
 	VerifiedOn   string   `json:"verified_on,omitempty"`
 	Hint         string   `json:"hint,omitempty"`
+	Hop          string   `json:"hop,omitempty"`
 }
 
 // MarshalJSON flattens Meta's reportable fields next to the core ones.
@@ -300,6 +312,7 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 	if f.Meta != nil {
 		out.Accepted, out.AcceptReason = f.Meta.Accepted, f.Meta.AcceptReason
 		out.Analyzer, out.Scope = f.Meta.Analyzer, f.Meta.Scope
+		out.Hop = f.Meta.Hop
 	}
 	return json.Marshal(out) //nolint:wrapcheck // plain struct
 }
