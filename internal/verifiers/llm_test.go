@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -203,6 +204,83 @@ func TestLLMVerifier_WithholdsHunksWithSecretsOrHiddenCharacters(t *testing.T) {
 			assert.Contains(t, strings.Join(res.Notes, " "), tt.want)
 			assert.Empty(t, fake.ChatCalls(), "nothing is sent when every hunk is withheld")
 		})
+	}
+}
+
+func TestLLMVerifier_AnUnreadableChangeIsSkippedNotPassed(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  string
+	}{
+		{"binary file", map[string]string{"a.go": "package a\x00\x01\x02"}, "binary"},
+		{"oversized file", map[string]string{"a.go": "package a\n" + strings.Repeat("// x\n", 3<<20)}, "larger than"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fake := fakeReplying(passAll())
+
+			// Act
+			_, res := runLLM(t, tt.files, llmSpecBody, &LLMOptions{Client: fake})
+
+			// Assert
+			assert.Equal(t, StatusSkipped, res.Status, res.Message)
+			assert.Equal(t, CodeVerifierLLMSkipped, res.Code)
+			assert.Contains(t, res.Message, "nothing was sent")
+			assert.Contains(t, strings.Join(res.Notes, " "), tt.want)
+			assert.Empty(t, fake.ChatCalls())
+		})
+	}
+}
+
+func TestLLMVerifier_QuoteMustBeAMeaningfulMatch(t *testing.T) {
+	const src = "package a\n\nfunc f() error {\n\tif x {\n\t}\n\treturn errors.New(\"bad value\")\n}\n"
+	tests := []struct {
+		name  string
+		quote string
+		want  bool
+	}{
+		{"whole line", "return errors.New(\"bad value\")", true},
+		{"token-aligned fragment", "errors.New(\"bad value\")", true},
+		{"a closing brace", "}", false},
+		{"a single letter", "a", false},
+		{"short fragment", "bad", false},
+		{"mid-token fragment", "turn errors.New(\"bad value\")", false},
+		{"cut-off tail", "return errors.New(\"bad val", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fake := fakeReplying(reply([5]any{1, "fail", "a.go", tt.quote, "r"}, [5]any{2, "pass", "", "", ""}))
+
+			// Act
+			_, res := runLLM(t, map[string]string{"a.go": src}, llmSpecBody, &LLMOptions{Client: fake})
+
+			// Assert
+			if tt.want {
+				assert.Equal(t, StatusFail, res.Status, res.Message)
+			} else {
+				assert.Equal(t, StatusPass, res.Status, res.Message)
+				assert.Contains(t, strings.Join(res.Notes, " "), "dropped")
+			}
+		})
+	}
+}
+
+func TestLLMVerifier_TruncatedLongLinesStayValidUTF8(t *testing.T) {
+	// Arrange: a line of 3-byte runes whose 400th byte falls inside one.
+	src := "package a\n// " + strings.Repeat("世", 300) + "\n"
+	fake := fakeReplying(passAll())
+
+	// Act
+	runLLM(t, map[string]string{"a.go": src}, llmSpecBody, &LLMOptions{Client: fake})
+
+	// Assert
+	calls := fake.ChatCalls()
+	require.Len(t, calls, 1)
+	for _, m := range calls[0].Messages {
+		assert.True(t, utf8.ValidString(m.Content), "the prompt must not carry a split rune")
 	}
 }
 
