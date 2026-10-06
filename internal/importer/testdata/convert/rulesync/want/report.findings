@@ -44,7 +44,7 @@ dropped | .rulesync/subagents/planner.md | cursor |  | tool-specific section is 
 dropped | rulesync.jsonc | delete |  | rulesync output cleanup; ai-rulez has no equivalent setting
 dropped | rulesync.jsonc | language |  | ai-rulez has no response-language setting; add the instruction as a rule if you need it
 dropped | rulesync.jsonc | outputRoots |  | rulesync output directories; ai-rulez has no equivalent setting
-needs-action | rulesync.jsonc | sources.acme/shared-skills |  | remote source is not fetched (convert never uses the network); add it as [[includes]] or [[installed_skills]] in config.toml, then run `ai-rulez lock`
+needs-action | rulesync.jsonc | sources.acme/shared-skills |  | https://github.com/acme/shared-skills (skills) is not fetched: convert uses the network only with --fetch; rerun with --fetch, or add the source by hand
 approximated | rulesync.jsonc | targets.agentsmd |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
 unsupported | rulesync.jsonc | targets.agentsmd |  | AGENTS.md is written by several presets (codex, opencode, amp, xum, pi); enable one of them or set agents_md
 approximated | rulesync.jsonc | targets.claudecode |  | per-tool feature selection and options are not carried; the preset writes every kind the tool supports
@@ -58,4 +58,4 @@ mapped | rulesync.jsonc | targets.cursor | presets.cursor |
 mapped | rulesync.jsonc | targets.opencode | presets.opencode | 
 dropped | rulesync.jsonc | verbose |  | rulesync logging; ai-rulez has no equivalent setting
 needs-action | rulesync.local.jsonc |  |  | machine-local rulesync overrides are not imported; put personal settings in .ai-rulez/config.local.toml
-needs-action | rulesync.lock |  |  | pins remote sources by commit; not carried because remote sources are not fetched. After adding them as [[includes]] or [[installed_skills]], run `ai-rulez lock`
+needs-action | rulesync.lock |  |  | its pinned commits are the ref --fetch reads each remote source at; the integrity hashes are not carried. Run `ai-rulez lock` after converting (or pass --lock)
