@@ -416,7 +416,9 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string
 			fields = append(fields, okf.Field{Key: key, Value: ext.metadata.Content[i+1]})
 		}
 	}
-	if kind == KindSkill {
+	// A bundle an export wrote carries x-ai-rulez and already holds every key the
+	// source had; adding name or description would make the next export differ.
+	if kind == KindSkill && !ext.present {
 		if !hasName {
 			fields = append(fields, okf.Field{Key: "name", Value: id})
 		}
