@@ -358,7 +358,7 @@ func (c *Config) SourceSkillBlindPresets() []string {
 // WarnDeliveryFallbacks logs, once per project and preset, that a preset without
 // MCP support keeps served skills as static files. Nothing is dropped silently.
 func (c *Config) WarnDeliveryFallbacks() {
-	if c.ServeMode {
+	if c.ServeMode || c.QuietDeliveryWarnings {
 		return
 	}
 	for _, preset := range c.SourceSkillBlindPresets() {

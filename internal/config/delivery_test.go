@@ -335,3 +335,30 @@ func TestDynamicSkillsStub_NamesTheServerThatServesSkills(t *testing.T) {
 		})
 	}
 }
+
+func TestWarnDeliveryFallbacks_QuietConfigNeitherLogsNorConsumesTheOnce(t *testing.T) {
+	// Arrange: a unique base dir keeps the process-wide once-map out of other tests.
+	base := t.TempDir()
+	build := func(quiet bool) *Config {
+		return &Config{
+			BaseDir: base, QuietDeliveryWarnings: quiet,
+			Presets:      []Preset{{BuiltIn: "cline"}},
+			SkillSources: []SkillSourceConfig{{Name: "s", URL: "u"}},
+		}
+	}
+	key := base + "\x00cline\x00skill_sources"
+
+	// Act
+	build(true).WarnDeliveryFallbacks()
+	fallbackWarnMu.Lock()
+	warnedByQuiet := fallbackWarned[key]
+	fallbackWarnMu.Unlock()
+	build(false).WarnDeliveryFallbacks()
+	fallbackWarnMu.Lock()
+	warnedByLoud := fallbackWarned[key]
+	fallbackWarnMu.Unlock()
+
+	// Assert
+	assert.False(t, warnedByQuiet, "a quiet render must not use up the warning")
+	assert.True(t, warnedByLoud)
+}

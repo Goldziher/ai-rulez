@@ -14,6 +14,13 @@ import (
 // rendered output has none: the stub was excluded, replaced by an unrelated
 // skill. A preset that renders no skills needs none. Nothing is written.
 func (g *Generator) PresetsMissingStub(profile string) ([]string, error) {
+	// Render a copy that does not log the AR992 fallback warnings: the caller
+	// reports the same facts as findings, and logging them here too printed each twice.
+	cfg := *g.config
+	cfg.QuietDeliveryWarnings = true
+	quiet := NewGenerator(&cfg)
+	quiet.role = g.role
+	g = quiet
 	generateMu.Lock()
 	defer generateMu.Unlock()
 	g.beginRun()
