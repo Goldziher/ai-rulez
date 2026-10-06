@@ -33,7 +33,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
 | `ai-rulez eval import`          | Import eval scenarios from another tool as eval cases ([details](evals.md#importing-scenarios)) |
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
-| `ai-rulez review` / `rubric`    | Offline score of skills against a rubric, egress manifest with `--estimate` ([details](#review-commands)) |
+| `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
 | `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
 | `ai-rulez telemetry`            | Item-load telemetry and opt-in OTLP export ([details](#usage-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
@@ -1718,21 +1718,34 @@ Documented in [Review](review.md).
 
 ### `ai-rulez review [id|name|path...]`
 
-Score skills, agents and commands against a rubric from the lint evidence of its dimensions. Offline: no model is called.
+Score skills, agents and commands against a rubric. Offline by default (lint evidence, no model); `--semantic` adds an LLM judge.
 
 | Flag | Meaning |
 | --- | --- |
 | `--rubric id` | `builtin:<id>` or a directory under `.ai-rulez/rubrics` (default `[review] rubric`, else `builtin:skill-quality`) |
-| `--content descriptions\|full` | What a judge would receive (default `[review] content`, else `descriptions`) |
-| `--estimate` | Print the egress manifest and cost range of a judged run; send nothing |
-| `--show-prompt` | With `--estimate`, print the exact planned messages |
-| `--model m` | Model the estimate prices (default `[llm] model`); `--estimate` only |
-| `--max-cost usd`, `--max-calls n` | Caps the estimate is checked against (defaults `[review]`, else 0.50 and 300; `--max-cost 0` is unlimited); `--estimate` only |
+| `--content descriptions\|full` | What a judge receives (default `[review] content`, else `descriptions`); body-only dimensions are judged only with `full` |
+| `--semantic` | Add the judge. Needs `[llm] allow_network = true` in user scope and a model; findings are advisory |
+| `--estimate`, `--show-prompt` | Print the egress manifest and cost range (and the exact messages); send nothing |
+| `--model m`, `--models a,b` | Model to judge with (default `[llm] model`); several models are compared |
+| `--k n` | Most votes for a flagged dimension (default the rubric's `votes.max`) |
+| `--max-cost usd`, `--max-calls n` | Spend caps (defaults `[review]`, else 0.50 and 300; `--max-cost 0` is unlimited) |
+| `--no-cache`, `--cache-dir d` | Bypass or relocate the response cache |
+| `--gate`, `--gate-level info\|warning\|error` | Exit 2 on a stable fail verdict of a calibrated dimension; refused without a matching calibration |
+| `--baseline f`, `--write-baseline f` | Hide the findings in a baseline or earlier report; write a baseline |
+| `--since rev`, `--role r`, `--profile p` | Only items changed since a revision; only the content slice of a role or profile |
 | `--include-imports` | Also review content from includes, installed skills and builtins |
 | `--format text\|json\|sarif`, `--out file` | Output format and destination |
 | `-n dir`, `--no-local` | Config directory name; ignore the machine-local overlay |
 
-Exit codes: 0 reviewed, 1 could not run or `--estimate` shows a real run would be refused. There is no `--semantic` in this build.
+Exit codes: 0 reviewed, 1 could not run or was refused, 2 `--gate` failed.
+
+### `ai-rulez review calibrate|fix|explain`
+
+| Command | Meaning |
+| --- | --- |
+| `review calibrate [--rubric r] [--golden dir] [--model m \| --models a,b] [--k n] [--content full\|descriptions] [--compare f] [--no-probes] [--no-write] [--no-cache] [--out f] [--max-cost usd] [--max-calls n] [--format text\|json]` | Measure the judge against the golden set and write `calibration.json`; `--compare` is the drift check. Exit 2 when it does not pass or drifted |
+| `review fix [id\|name\|path...] [--finding fp] [--model fixer] [--judge-model m] [--out f] [--apply] [--allow-same-model] [--patch f] [--format text\|json]` | Propose a verified patch for stable judged findings; never writes without `--apply`. Exit 2 when a finding has no safe fix |
+| `review explain CODE` | Explain `AR9G0`-`AR9G9` with the rubric's definitions |
 
 ### `ai-rulez rubric list|show|lint`
 
