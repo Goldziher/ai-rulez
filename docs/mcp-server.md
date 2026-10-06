@@ -320,7 +320,9 @@ working as described above. All tools are annotated read-only.
 
 - **Ranking.** `find_skill` scores BM25 over four fields with weights name 3, triggers 2.5, keywords 2 and
   description 1, after lowercasing, dropping stopwords and a light stemmer (`migrations` matches `migration`).
-  It is lexical and deterministic: score descending, then name. Embedding search is not implemented.
+  It is lexical and deterministic: score descending, then name. The ranker lives in `internal/skillsearch` and
+  is shared with [`ai-rulez search`](search.md), which runs it from the command line and measures it against
+  labelled queries. Embedding search is not implemented.
 - **Roles.** `role` is resolved against the project's `[[roles]]` (`mcp.RolesFromConfig`): a skill is in scope
   when the role keeps it (its domains and `skills` include and exclude selectors, `extends` merged in). Matches
   inside the scope come first, then the rest marked `in_role: false`; an unknown role is an error. The `role`

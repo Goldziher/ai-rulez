@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/search.v1.schema.json",
+  "title": "ai-rulez search",
+  "description": "Output of `ai-rulez search <query> --format json`: the served skills ranked against the query by the lexical BM25F ranker find_skill uses.",
+  "type": "object",
+  "required": ["schema_version", "query", "count", "results"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "query": { "type": "string" },
+    "count": { "type": "integer", "minimum": 0 },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "score", "domain", "digest"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "score": { "type": "number", "exclusiveMinimum": 0 },
+          "domain": { "type": "string", "description": "The skill's domain, or root." },
+          "digest": { "type": "string" }
+        }
+      }
+    }
+  }
+}
