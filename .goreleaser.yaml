@@ -13,7 +13,6 @@ builds:
     env:
       - CGO_ENABLED=0
       - GOPROXY=direct
-      - GOSUMDB=off
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
