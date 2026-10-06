@@ -3,8 +3,6 @@
 internal/config/local_lock_unix.go time.Now 2
 internal/doctor/doctor.go exec.LookPath 1
 internal/evals/fingerprint.go exec.LookPath 1
-internal/evals/runner_claude.go exec.CommandContext 1
-internal/evals/runner_command.go exec.CommandContext 2
 internal/gitutil/env.go exec.Command 1
 internal/gitutil/env.go exec.CommandContext 1
 internal/gitutil/env.go os.Environ 1
