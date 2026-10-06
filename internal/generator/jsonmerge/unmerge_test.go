@@ -1,6 +1,7 @@
 package jsonmerge_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -364,4 +365,38 @@ func TestAloneKeyIsTakenBackOnlyWhenNothingElseRemains(t *testing.T) {
 		assert.Contains(t, clean.Body, `"version": 1`)
 		assert.NotContains(t, clean.Body, "ours")
 	})
+}
+
+func TestClaim_ElementsAreRecordedAsDigestsNotValues(t *testing.T) {
+	// Arrange
+	secret := map[string]any{"name": "github", "env": map[string]any{"TOKEN": "s3cret-value"}}
+	claim := jsonmerge.Claim{Path: []string{"mcp_servers"}, Elements: []any{secret}}
+
+	// Act
+	encoded, err := json.Marshal(claim)
+	require.NoError(t, err)
+	var back jsonmerge.Claim
+	require.NoError(t, json.Unmarshal(encoded, &back))
+
+	// Assert
+	assert.NotContains(t, string(encoded), "s3cret-value")
+	assert.True(t, back.OwnsElement(secret), "a digest still recognises the element")
+	assert.False(t, back.OwnsElement(map[string]any{"name": "other"}))
+	assert.Nil(t, back.Elements, "no value survives the round trip")
+}
+
+func TestClaim_LegacyElementValuesAreFoldedIntoDigests(t *testing.T) {
+	// Arrange: a manifest an earlier version wrote.
+	legacy := `{"path":["instructions"],"elements":["AGENTS.local.md"]}`
+
+	// Act
+	var claim jsonmerge.Claim
+	require.NoError(t, json.Unmarshal([]byte(legacy), &claim))
+	rewritten, err := json.Marshal(claim)
+
+	// Assert
+	require.NoError(t, err)
+	assert.True(t, claim.HasElements())
+	assert.True(t, claim.OwnsElement("AGENTS.local.md"))
+	assert.NotContains(t, string(rewritten), "AGENTS.local.md")
 }
