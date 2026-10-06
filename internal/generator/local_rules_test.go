@@ -20,11 +20,11 @@ func localRuleProject(t *testing.T, preset, mode string) string {
 	t.Helper()
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
-	cfg := "version: \"3.0\"\nname: t\npresets:\n  - " + preset + "\ngitignore: true\n"
+	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\n"
 	if mode != "" {
-		cfg += "rules:\n  mode: " + mode + "\n"
+		cfg += "[rules]\nmode = \"" + mode + "\"\n"
 	}
-	seedLocalFile(t, filepath.Join(cfgDir, "config.yaml"), cfg)
+	seedLocalFile(t, filepath.Join(cfgDir, "config.toml"), cfg)
 	seedLocalFile(t, filepath.Join(cfgDir, "rules", "x.md"), "---\npriority: high\n---\n\nShared rule body.\n")
 	seedLocalFile(t, filepath.Join(cfgDir, "local", "rules", "x.md"), "---\npriority: low\n---\n\nPersonal rule body.\n")
 	seedLocalFile(t, filepath.Join(cfgDir, "local", "context", "notes.md"), "Personal context body.\n")
@@ -211,14 +211,14 @@ func TestLocalRuleFiles_CollisionsAreDisambiguated(t *testing.T) {
 
 func setGitignore(t *testing.T, dir string, enabled bool) {
 	t.Helper()
-	cfgPath := filepath.Join(dir, ".ai-rulez", "config.yaml")
+	cfgPath := filepath.Join(dir, ".ai-rulez", "config.toml")
 	data, err := os.ReadFile(cfgPath)
 	require.NoError(t, err)
-	want := "gitignore: false"
+	want := "gitignore = false"
 	if enabled {
-		want = "gitignore: true"
+		want = "gitignore = true"
 	}
-	out := strings.Replace(strings.Replace(string(data), "gitignore: true", want, 1), "gitignore: false", want, 1)
+	out := strings.Replace(strings.Replace(string(data), "gitignore = true", want, 1), "gitignore = false", want, 1)
 	require.NoError(t, os.WriteFile(cfgPath, []byte(out), 0o600))
 }
 
@@ -343,26 +343,23 @@ func TestLocalRuleFiles_RoutingMatchesSharedRules(t *testing.T) {
 	}{
 		{"claude inline scoped becomes file", "claude", "inline", "", scoped, ".claude/rules/y.local.md", ""},
 		{"claude inline unscoped stays inline", "claude", "inline", "", "Plain.\n", "", "Plain."},
-		{"claude mode_by_preset split", "claude", "inline", "  mode_by_preset:\n    claude: split\n", "Plain.\n", ".claude/rules/y.local.md", ""},
+		{"claude mode_by_preset split", "claude", "inline", "[rules.mode_by_preset]\nclaude = \"split\"\n", "Plain.\n", ".claude/rules/y.local.md", ""},
 		{"copilot manual stays inline", "copilot", "split", "", manual, "", ""},
 		{"copilot negated-only stays inline", "copilot", "split", "",
 			"---\nactivation: glob\npaths:\n  - \"!vendor/**\"\n---\n\nNeg.\n", "", ""},
 		{"copilot scoped in inline mode becomes file", "copilot", "inline", "", scoped, ".github/instructions/y.local.instructions.md", ""},
 		{"antigravity split", "antigravity", "split", "", "Plain.\n", ".agents/rules/y.local.md", ""},
 		{"antigravity demoted by gemini", "antigravity,gemini", "split", "", "Plain.\n", "", ""},
-		{"antigravity explicit with gemini", "antigravity,gemini", "split", "  mode_by_preset:\n    antigravity: split\n", "Plain.\n", ".agents/rules/y.local.md", ""},
+		{"antigravity explicit with gemini", "antigravity,gemini", "split", "[rules.mode_by_preset]\nantigravity = \"split\"\n", "Plain.\n", ".agents/rules/y.local.md", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
-			presets := ""
-			for _, p := range strings.Split(tt.preset, ",") {
-				presets += "  - " + p + "\n"
-			}
-			seedLocalFile(t, filepath.Join(cfgDir, "config.yaml"),
-				"version: \"3.0\"\nname: t\npresets:\n"+presets+"gitignore: true\nrules:\n  mode: "+tt.mode+"\n"+tt.byPreset)
+			presets := "[\"" + strings.ReplaceAll(tt.preset, ",", "\", \"") + "\"]"
+			seedLocalFile(t, filepath.Join(cfgDir, "config.toml"),
+				"version = \"4.0\"\nname = \"t\"\npresets = "+presets+"\ngitignore = true\n\n[rules]\nmode = \""+tt.mode+"\"\n"+tt.byPreset)
 			seedLocalFile(t, filepath.Join(cfgDir, "local", "rules", "y.md"), tt.rule)
 
 			// Act

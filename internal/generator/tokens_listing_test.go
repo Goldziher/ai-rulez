@@ -19,10 +19,10 @@ func listingFixtureReport(t *testing.T, presets []string, skills map[string]stri
 	t.Helper()
 	dir := t.TempDir()
 	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "config", "tokens"), dir)
-	configPath := filepath.Join(dir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(dir, ".ai-rulez", "config.toml")
 	original, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	edited := strings.Replace(string(original), "presets:\n  - claude\n", "presets:\n  - "+strings.Join(presets, "\n  - ")+"\n", 1)
+	edited := strings.Replace(string(original), "presets = [\"claude\"]\n", "presets = [\""+strings.Join(presets, "\", \"")+"\"]\n", 1)
 	require.NoError(t, os.WriteFile(configPath, []byte(edited), 0o600))
 	for name, text := range skills {
 		skillDir := filepath.Join(dir, ".ai-rulez", "skills", name)

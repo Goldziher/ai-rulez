@@ -182,7 +182,7 @@ func TestConfig_Validate_ComposedDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{
-				Version:  "3.0",
+				Version:  "4.0",
 				Name:     "composed",
 				Presets:  []config.Preset{{BuiltIn: "claude"}},
 				Default:  tt.defaultName,

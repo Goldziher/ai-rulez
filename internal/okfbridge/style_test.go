@@ -97,7 +97,7 @@ func TestBothStylesRoundTripTheSameSourceTree(t *testing.T) {
 			b, err := okf.Load(os.DirFS(dir))
 			require.NoError(t, err)
 			fresh := t.TempDir()
-			write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: sample\npresets:\n  - claude\n")
+			write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 			// Act
 			res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 			require.NoError(t, err)

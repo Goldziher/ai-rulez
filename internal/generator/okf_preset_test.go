@@ -20,7 +20,7 @@ func okfProject(t *testing.T, cfgExtra string) (string, *Generator) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 		require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
 	}
-	put(".ai-rulez/config.yaml", "version: \"4.0\"\nname: okf-test\npresets:\n  - claude\n  - okf\ngitignore: true\n"+cfgExtra)
+	put(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"okf-test\"\npresets = [\"claude\", \"okf\"]\ngitignore = true\n"+cfgExtra)
 	put(".ai-rulez/rules/style.md", "---\ndescription: Code style\npriority: high\n---\nUse gofmt.\n")
 	put(".ai-rulez/rules/extra.md", "---\ndescription: Extra\n---\nTemp.\n")
 	put(".ai-rulez/context/overview.md", "---\ndescription: Overview\n---\nWhat this is.\n")
@@ -73,7 +73,7 @@ func TestOKFPresetWritesConformantBundleAndTracksDrift(t *testing.T) {
 }
 
 func TestOKFPresetHonorsDirAndInclude(t *testing.T) {
-	dir, gen := okfProject(t, "okf:\n  dir: knowledge/bundle\n  include: [rules]\n")
+	dir, gen := okfProject(t, "[okf]\ndir = \"knowledge/bundle\"\ninclude = [\"rules\"]\n")
 	require.NoError(t, gen.Generate("default"))
 	b, err := okf.Load(os.DirFS(filepath.Join(dir, "knowledge", "bundle")))
 	require.NoError(t, err)
@@ -85,10 +85,10 @@ func TestOKFPresetHonorsDirAndInclude(t *testing.T) {
 }
 
 func TestOKFConfigValidation(t *testing.T) {
-	for _, bad := range []string{"okf:\n  spec: \"0.3\"\n", "okf:\n  dir: ../out\n", "okf:\n  dir: .ai-rulez/okf\n", "okf:\n  include: [things]\n"} {
+	for _, bad := range []string{"[okf]\nspec = \"0.3\"\n", "[okf]\ndir = \"../out\"\n", "[okf]\ndir = \".ai-rulez/okf\"\n", "[okf]\ninclude = [\"things\"]\n"} {
 		dir := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.yaml"), []byte("version: \"4.0\"\nname: x\npresets: [okf]\n"+bad), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte("version = \"4.0\"\nname = \"x\"\npresets = [\"okf\"]\n"+bad), 0o644))
 		cfg, err := config.LoadConfig(context.Background(), dir)
 		if err == nil {
 			err = cfg.Validate()

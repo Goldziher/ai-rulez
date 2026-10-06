@@ -115,13 +115,4 @@ func TestLoadConfig_ConfigConvention(t *testing.T) {
 		assert.Equal(t, filepath.Join(root, ".config", "ai-rulez"), cfg.ConfigDir)
 		assert.Equal(t, altConfigDirName, cfg.ConfigDirName)
 	})
-
-	t.Run("detects the convention as a directory-based config", func(t *testing.T) {
-		root := t.TempDir()
-		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\n")
-
-		version, err := DetectConfigVersion(root)
-		require.NoError(t, err)
-		assert.Equal(t, VersionDir, version)
-	})
 }

@@ -222,22 +222,13 @@ func watchIgnore(path string) bool {
 	return strings.HasPrefix(base, ".generated-manifest") || base == ".gitignore"
 }
 
-// watchTargets lists what to watch: the configuration directory (or, for a
-// single-file config, that file) and the local-path include sources. With no
+// watchTargets lists what to watch: the configuration directory and the local-path include sources. With no
 // loaded configuration it falls back to discovery so a config that is broken at
 // start still gets watched.
 func watchTargets(cfg *config.Config, args []string) []watch.Target {
 	var targets []watch.Target
 	if cfg != nil && cfg.ConfigDir != "" {
-		if filepath.Clean(cfg.ConfigDir) == filepath.Clean(cfg.BaseDir) {
-			// V2-style config beside the project: watch only the file, never
-			// the project root, which holds the generated output.
-			if cfg.ConfigFile != "" {
-				targets = append(targets, watch.Target{Path: filepath.Join(cfg.ConfigDir, cfg.ConfigFile), File: true})
-			}
-		} else {
-			targets = append(targets, watch.Target{Path: cfg.ConfigDir})
-		}
+		targets = append(targets, watch.Target{Path: cfg.ConfigDir})
 		targets = append(targets, includeTargets(cfg)...)
 		return targets
 	}

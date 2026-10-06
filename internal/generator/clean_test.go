@@ -57,7 +57,7 @@ func TestGenerator_Clean_RemovesGeneratedOutputs(t *testing.T) {
 	}
 
 	// The .ai-rulez source tree is untouched.
-	assert.FileExists(t, filepath.Join(tempDir, ".ai-rulez", "config.yaml"))
+	assert.FileExists(t, filepath.Join(tempDir, ".ai-rulez", "config.toml"))
 	assert.FileExists(t, filepath.Join(tempDir, ".ai-rulez", "rules", "coding-style.md"))
 	assert.DirExists(t, filepath.Join(tempDir, ".ai-rulez"))
 }

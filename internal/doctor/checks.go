@@ -53,7 +53,7 @@ func checkConfig(_ context.Context, s *state) []Finding {
 	}
 	cfg := s.cfg
 	var out []Finding
-	if !cfg.IsV3() && cfg.ConfigFile != "" {
+	if cfg.ConfigFile != "" {
 		path := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
 		if err := schema.ValidateFile(path); err != nil {
 			for _, f := range errorFinding(CheckConfig, SeverityError, err, path) {

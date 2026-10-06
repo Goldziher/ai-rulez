@@ -136,7 +136,7 @@ cursor = "inline"
 	assert.Equal(t, cfg.Rules, reloaded.Rules)
 }
 
-func TestLoadConfig_RulesYAMLAndJSON(t *testing.T) {
+func TestLoadConfig_RulesTOML(t *testing.T) {
 	want := &RulesConfig{Mode: "split", ModeByPreset: map[string]string{"cursor": "inline"}}
 	tests := []struct {
 		name string
@@ -144,12 +144,8 @@ func TestLoadConfig_RulesYAMLAndJSON(t *testing.T) {
 		body string
 	}{
 		{
-			"yaml", "config.yaml",
-			"version: \"4.0\"\nname: proj\npresets:\n  - claude\n  - cursor\nrules:\n  mode: split\n  mode_by_preset:\n    cursor: inline\n",
-		},
-		{
-			"json", "config.json",
-			`{"version":"4.0","name":"proj","presets":["claude","cursor"],"rules":{"mode":"split","mode_by_preset":{"cursor":"inline"}}}`,
+			"toml", "config.toml",
+			"version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\", \"cursor\"]\n\n[rules]\nmode = \"split\"\n\n[rules.mode_by_preset]\ncursor = \"inline\"\n",
 		},
 	}
 	for _, tt := range tests {

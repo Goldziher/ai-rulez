@@ -40,7 +40,7 @@ func TestGetPresetGenerator_NotFound(t *testing.T) {
 func TestGeneratePresets_NoContent(t *testing.T) {
 	cfg := &Config{
 		Name:    "test",
-		Version: "3.0",
+		Version: "4.0",
 		Presets: []Preset{
 			{BuiltIn: "claude"},
 		},
@@ -61,7 +61,7 @@ func TestGeneratePresets_BuiltIn(t *testing.T) {
 
 	cfg := &Config{
 		Name:    "test",
-		Version: "3.0",
+		Version: "4.0",
 		BaseDir: "/test",
 		Presets: []Preset{
 			{BuiltIn: "mock"},
@@ -102,7 +102,7 @@ func TestGeneratePresets_CustomPreset(t *testing.T) {
 
 	cfg := &Config{
 		Name:    "test",
-		Version: "3.0",
+		Version: "4.0",
 		BaseDir: "/test",
 		Presets: []Preset{
 			{
@@ -145,7 +145,7 @@ func TestGeneratePresets_CustomPresetFactoryNotSet(t *testing.T) {
 
 	cfg := &Config{
 		Name:    "test",
-		Version: "3.0",
+		Version: "4.0",
 		BaseDir: "/test",
 		Presets: []Preset{
 			{

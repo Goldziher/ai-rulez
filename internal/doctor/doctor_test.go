@@ -611,6 +611,37 @@ func TestRun_UnloadableConfigIsMarked(t *testing.T) {
 	}
 }
 
+func TestRun_LegacyConfigIsReportedAsAnErrorNamingTheFile(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+	}{
+		{"V3 config.yaml", ".ai-rulez/config.yaml"},
+		{"V3 config.json", ".ai-rulez/config.json"},
+		{"V2 ai-rulez.yaml", "ai-rulez.yaml"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := project(t, map[string]string{tt.file: "version: \"3.0\"\nname: t\n"})
+
+			// Act
+			report := run(t, dir)
+
+			// Assert
+			if !report.Unloadable || !report.Failed(false) {
+				t.Fatalf("report = %+v, want an unloadable report with an error", report)
+			}
+			got := byCheck(report, CheckConfig)
+			if len(got) == 0 || got[0].Severity != SeverityError ||
+				!strings.Contains(got[0].Message, filepath.Base(tt.file)) ||
+				!strings.Contains(got[0].Message, "npx ai-rulez@4 migrate v4") {
+				t.Fatalf("config findings = %+v, want an error naming %s and the 4.x migration", got, tt.file)
+			}
+		})
+	}
+}
+
 func TestCheckMCPEnv_OnlyServersActiveInTheProfile(t *testing.T) {
 	cfg := baseConfig + `
 [profiles]

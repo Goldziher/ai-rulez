@@ -30,10 +30,10 @@ func TestUpdateConfigHandler_LocalEmptyNameAndDescriptionClearTheOverride(t *tes
 			// Assert
 			require.NoError(t, err)
 			require.False(t, res.IsError, textOf(t, res))
-			local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.yaml"))
+			local, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.local.toml"))
 			require.NoError(t, err)
 			assert.NotContains(t, string(local), "mine-value")
-			assert.NotContains(t, string(local), field+": \"\"", "an empty override must not be written")
+			assert.NotContains(t, string(local), field+" = ''", "an empty override must not be written")
 		})
 	}
 }

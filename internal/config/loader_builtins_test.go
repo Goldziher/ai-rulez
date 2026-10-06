@@ -16,16 +16,13 @@ func TestLoadConfig_BuiltinsArray(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-builtins
-presets:
-  - claude
-builtins:
-  - rust
-  - security
+		configContent := `version = "4.0"
+name = "test-builtins"
+presets = ["claude"]
+builtins = ["rust", "security"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -44,16 +41,13 @@ builtins:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-builtins-exclude
-presets:
-  - claude
-builtins:
-  - rust
-  - "!ai-governance"
+		configContent := `version = "4.0"
+name = "test-builtins-exclude"
+presets = ["claude"]
+builtins = ["rust", "!ai-governance"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -71,14 +65,13 @@ func TestLoadConfig_BuiltinsBoolean(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-builtins-true
-presets:
-  - claude
-builtins: true
+		configContent := `version = "4.0"
+name = "test-builtins-true"
+presets = ["claude"]
+builtins = true
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -101,14 +94,13 @@ builtins: true
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-builtins-false
-presets:
-  - claude
-builtins: false
+		configContent := `version = "4.0"
+name = "test-builtins-false"
+presets = ["claude"]
+builtins = false
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -125,13 +117,12 @@ func TestLoadConfig_BuiltinsNotSet(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-no-builtins
-presets:
-  - claude
+		configContent := `version = "4.0"
+name = "test-no-builtins"
+presets = ["claude"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -163,15 +154,13 @@ This is a local override.
 			[]byte(localRule), 0o644,
 		))
 
-		configContent := `version: "3.0"
-name: test-local-override
-presets:
-  - claude
-builtins:
-  - rust
+		configContent := `version = "4.0"
+name = "test-local-override"
+presets = ["claude"]
+builtins = ["rust"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -193,16 +182,13 @@ func TestLoadConfig_BuiltinsContent(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-content
-presets:
-  - claude
-builtins:
-  - "!ai-governance"
-  - ai-governance
+		configContent := `version = "4.0"
+name = "test-content"
+presets = ["claude"]
+builtins = ["!ai-governance", "ai-governance"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -218,16 +204,13 @@ builtins:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-security
-presets:
-  - claude
-builtins:
-  - security
-  - "!ai-governance"
+		configContent := `version = "4.0"
+name = "test-security"
+presets = ["claude"]
+builtins = ["security", "!ai-governance"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -246,16 +229,13 @@ builtins:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-commands
-presets:
-  - claude
-builtins:
-  - default-commands
-  - "!ai-governance"
+		configContent := `version = "4.0"
+name = "test-commands"
+presets = ["claude"]
+builtins = ["default-commands", "!ai-governance"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -280,17 +260,13 @@ builtins:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-frontmatter
-presets:
-  - claude
-builtins:
-  - ai-governance
-  - "!ai-governance"
-  - security
+		configContent := `version = "4.0"
+name = "test-frontmatter"
+presets = ["claude"]
+builtins = ["ai-governance", "!ai-governance", "security"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -314,28 +290,6 @@ builtins:
 }
 
 func TestBuiltinsConfig_Marshaling(t *testing.T) {
-	t.Run("unmarshal boolean true from YAML", func(t *testing.T) {
-		var b BuiltinsConfig
-		err := b.UnmarshalYAML(func(v interface{}) error {
-			*(v.(*bool)) = true
-			return nil
-		})
-		require.NoError(t, err)
-		assert.True(t, b.IsAll())
-		assert.False(t, b.IsNone())
-	})
-
-	t.Run("unmarshal boolean false from YAML", func(t *testing.T) {
-		var b BuiltinsConfig
-		err := b.UnmarshalYAML(func(v interface{}) error {
-			*(v.(*bool)) = false
-			return nil
-		})
-		require.NoError(t, err)
-		assert.False(t, b.IsAll())
-		assert.True(t, b.IsNone())
-	})
-
 	t.Run("unmarshal JSON boolean true", func(t *testing.T) {
 		var b BuiltinsConfig
 		err := b.UnmarshalJSON([]byte("true"))
@@ -397,18 +351,16 @@ func TestLoadConfig_ProfileBuiltinRefs(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-profile-builtins
-presets:
-  - claude
-profiles:
-  backend:
-    - builtin:docker
-  frontend:
-    - builtin:typescript
+		configContent := `version = "4.0"
+name = "test-profile-builtins"
+presets = ["claude"]
+
+[profiles]
+backend = ["builtin:docker"]
+frontend = ["builtin:typescript"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -436,17 +388,16 @@ profiles:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-profile-builtins-off
-presets:
-  - claude
-builtins: false
-profiles:
-  backend:
-    - builtin:rust
+		configContent := `version = "4.0"
+name = "test-profile-builtins-off"
+presets = ["claude"]
+builtins = false
+
+[profiles]
+backend = ["builtin:rust"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -466,18 +417,16 @@ profiles:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-profile-builtins-global
-presets:
-  - claude
-builtins:
-  - rust
-profiles:
-  backend:
-    - builtin:rust
+		configContent := `version = "4.0"
+name = "test-profile-builtins-global"
+presets = ["claude"]
+builtins = ["rust"]
+
+[profiles]
+backend = ["builtin:rust"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 
@@ -500,16 +449,15 @@ profiles:
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version: "3.0"
-name: test-profile-builtins-bad
-presets:
-  - claude
-profiles:
-  backend:
-    - builtin:not-a-pack
+		configContent := `version = "4.0"
+name = "test-profile-builtins-bad"
+presets = ["claude"]
+
+[profiles]
+backend = ["builtin:not-a-pack"]
 `
 		require.NoError(t, os.WriteFile(
-			filepath.Join(configDir, configYAMLFilename),
+			filepath.Join(configDir, configTOMLFilename),
 			[]byte(configContent), 0o644,
 		))
 

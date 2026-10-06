@@ -1,0 +1,5 @@
+version = "4.0"
+name = "basic-test"
+description = "Basic test configuration with single preset"
+presets = ["claude"]
+gitignore = false

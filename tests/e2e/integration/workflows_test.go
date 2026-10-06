@@ -142,9 +142,10 @@ func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
 	result.AssertOutputContains(s.T(), "valid")
 
 	// Make config invalid by corrupting it
-	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", `version: "4.0"
-name: "broken"
-presets: not-a-list`)
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.toml", `version = "4.0"
+name = "broken"
+presets = "not-a-list"
+`)
 
 	// Validate should fail
 	result = testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")

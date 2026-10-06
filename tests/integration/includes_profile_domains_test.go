@@ -24,26 +24,28 @@ func TestIncludesProvideProfileDomains(t *testing.T) {
 	must(os.MkdirAll(filepath.Join(includeRoot, "domains", "react", "rules"), 0o755))
 	must(os.WriteFile(filepath.Join(includeRoot, "domains", "react", "rules", "react-standards.md"), []byte("# React Standards"), 0o644))
 
-	must(os.WriteFile(filepath.Join(includeRoot, "config.yaml"), []byte(`version: "3.0"
-name: shared
-presets: [claude]
+	must(os.WriteFile(filepath.Join(includeRoot, "config.toml"), []byte(`version = "4.0"
+name = "shared"
+presets = ["claude"]
 `), 0o644))
 
 	// Consumer project
 	localAIRulez := filepath.Join(baseDir, ".ai-rulez")
 	must(os.MkdirAll(localAIRulez, 0o755))
-	configYAML := `version: "3.0"
-name: consumer
-presets: [claude]
-includes:
-  - name: shared
-    source: ./shared
-    include: [rules, context, skills, agents]
-profiles:
-  full: [golang, react]
-default: full
+	configYAML := `version = "4.0"
+name = "consumer"
+presets = ["claude"]
+default = "full"
+
+[[includes]]
+name = "shared"
+source = "./shared"
+include = ["rules", "context", "skills", "agents"]
+
+[profiles]
+full = ["golang", "react"]
 `
-	must(os.WriteFile(filepath.Join(localAIRulez, "config.yaml"), []byte(configYAML), 0o644))
+	must(os.WriteFile(filepath.Join(localAIRulez, "config.toml"), []byte(configYAML), 0o644))
 
 	cfg, err := config.LoadConfig(context.Background(), baseDir)
 	must(err)

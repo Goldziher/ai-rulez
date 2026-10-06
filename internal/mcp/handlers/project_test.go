@@ -25,13 +25,13 @@ func resultPayload(t *testing.T, res *sdkmcp.CallToolResult) map[string]interfac
 	return out
 }
 
-// writeMinimalConfig writes a minimal valid .ai-rulez/config.yaml inside dir.
+// writeMinimalConfig writes a minimal valid .ai-rulez/config.toml inside dir.
 func writeMinimalConfig(t *testing.T, dir string) {
 	t.Helper()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version: \"4.0\"\nname: test\npresets:\n  - claude\n"
-	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(body), 0o644))
+	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 }
 
 func newRequestWithArgs(args map[string]any) *ToolRequest {
@@ -52,10 +52,10 @@ func TestUpdateConfigHandler_SetsDefaultEffort(t *testing.T) {
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "update should succeed")
 
-	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
-	assert.Contains(t, string(body), "defaults:")
-	assert.Contains(t, string(body), "effort: high")
+	assert.Contains(t, string(body), "[defaults]")
+	assert.Contains(t, string(body), "effort = 'high'")
 }
 
 func TestUpdateConfigHandler_RejectsInvalidEffort(t *testing.T) {
@@ -74,7 +74,7 @@ func TestUpdateConfigHandler_RejectsInvalidEffort(t *testing.T) {
 		assert.True(t, res.IsError, "expected validation failure to produce an error tool result")
 	}
 
-	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 	assert.NotContains(t, string(body), "extreme", "invalid effort must not be persisted")
 }
@@ -99,9 +99,9 @@ func TestUpdateConfigHandler_ClearsDefaultEffortOnEmpty(t *testing.T) {
 	_, err = UpdateConfigHandler(context.Background(), clearReq)
 	require.NoError(t, err)
 
-	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
-	assert.False(t, strings.Contains(string(body), "effort:"),
+	assert.False(t, strings.Contains(string(body), "effort ="),
 		"effort key should be removed when cleared; got config:\n%s", string(body))
 }
 
@@ -161,11 +161,11 @@ func TestUpdateConfigHandler_SetsDefaultEffortByPreset(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res.IsError, "expected success, got error: %+v", res.Content)
 
-	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
-	assert.Contains(t, string(body), "effort_by_preset:")
-	assert.Contains(t, string(body), "codex: high")
-	assert.Contains(t, string(body), "claude: xhigh")
+	assert.Contains(t, string(body), "[defaults.effort_by_preset]")
+	assert.Contains(t, string(body), "codex = 'high'")
+	assert.Contains(t, string(body), "claude = 'xhigh'")
 }
 
 func TestUpdateConfigHandler_RejectsInvalidEffortByPresetValue(t *testing.T) {
@@ -221,7 +221,7 @@ func TestUpdateConfigHandler_ClearsEffortByPresetOnEmptyMap(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res.IsError)
 
-	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 	assert.NotContains(t, string(body), "effort_by_preset",
 		"empty map should clear the field; got config:\n%s", string(body))
@@ -274,8 +274,8 @@ func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".config", "ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version: \"4.0\"\nname: test\npresets:\n  - claude\n"
-	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(body), 0o644))
+	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 	res, err := UpdateConfigHandler(context.Background(), newRequestWithArgs(map[string]any{
 		"working_directory": dir,
@@ -285,9 +285,9 @@ func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
 	require.False(t, res.IsError, "update should succeed")
 
 	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
-	saved, err := os.ReadFile(filepath.Join(cfgDir, "config.yaml"))
+	saved, err := os.ReadFile(filepath.Join(cfgDir, "config.toml"))
 	require.NoError(t, err)
-	assert.Contains(t, string(saved), "effort: high")
+	assert.Contains(t, string(saved), "effort = 'high'")
 }
 
 func TestAgentsMDConfigRoundTrip(t *testing.T) {

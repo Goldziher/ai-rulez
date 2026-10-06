@@ -507,7 +507,7 @@ func TestResolverLocalInclude(t *testing.T) {
 	// Create config with include
 	resolver := NewResolver(tmpDir, "")
 	cfg := &config.Config{
-		Version: "3.0",
+		Version: "4.0",
 		Name:    "test",
 		BaseDir: tmpDir,
 		Includes: []config.IncludeConfig{

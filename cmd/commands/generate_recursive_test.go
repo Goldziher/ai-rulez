@@ -44,26 +44,26 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 
 	// Real configs that should be discovered.
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"root\"\n")
-	writeFile(t, filepath.Join(root, "service-a", ".ai-rulez", "config.yaml"), "version: \"3.0\"\nname: a\n")
-	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.json"), `{"version":"3.0","name":"b"}`)
+	writeFile(t, filepath.Join(root, "service-a", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"a\"\n")
+	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"b\"\n")
 
 	// Pruned dirs: must not be descended into.
-	writeFile(t, filepath.Join(root, "node_modules", "pkg", ".ai-rulez", "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(root, "target", "debug", "deps", ".ai-rulez", "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(root, ".venv", "lib", ".ai-rulez", "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(root, ".cache", ".ai-rulez", "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(root, "build", ".ai-rulez", "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(root, "vendor", ".ai-rulez", "config.yaml"), "x: 1")
+	writeFile(t, filepath.Join(root, "node_modules", "pkg", ".ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, "target", "debug", "deps", ".ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, ".venv", "lib", ".ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, ".cache", ".ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, "build", ".ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, "vendor", ".ai-rulez", "config.toml"), "x = 1")
 
 	// Shared rule library: `ai-rulez/` (no dot) with a root config — its
 	// nested module configs are for inclusion, not generation.
 	writeFile(t, filepath.Join(root, "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"shared-lib\"\n")
-	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "core", ".ai-rulez", "config.yaml"), "name: lib-core")
-	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "extra", ".ai-rulez", "config.yaml"), "name: lib-extra")
+	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "core", ".ai-rulez", "config.toml"), "name = \"lib-core\"")
+	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "extra", ".ai-rulez", "config.toml"), "name = \"lib-extra\"")
 
 	// A directory called `ai-rulez/` without a root config is NOT a library
 	// (e.g. someone happens to name a subproject this) — descend normally.
-	writeFile(t, filepath.Join(root, "namesake", "ai-rulez", "sub", ".ai-rulez", "config.yaml"), "name: namesake")
+	writeFile(t, filepath.Join(root, "namesake", "ai-rulez", "sub", ".ai-rulez", "config.toml"), "name = \"namesake\"")
 
 	// Stale broken symlink simulating Rust target/ artifacts (skip on Windows).
 	if runtime.GOOS != "windows" {
@@ -81,9 +81,9 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 
 	want := []string{
 		filepath.Join(".ai-rulez", "config.toml"),
-		filepath.Join("namesake", "ai-rulez", "sub", ".ai-rulez", "config.yaml"),
-		filepath.Join("service-a", ".ai-rulez", "config.yaml"),
-		filepath.Join("service-b", ".ai-rulez", "config.json"),
+		filepath.Join("namesake", "ai-rulez", "sub", ".ai-rulez", "config.toml"),
+		filepath.Join("service-a", ".ai-rulez", "config.toml"),
+		filepath.Join("service-b", ".ai-rulez", "config.toml"),
 	}
 	sort.Strings(want)
 
@@ -102,7 +102,7 @@ func TestFindConfigFilesRecursively_ConfigConvention(t *testing.T) {
 
 	// Conventional nested layout: <dir>/.config/ai-rulez/.
 	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"root\"\n")
-	writeFile(t, filepath.Join(root, "service-a", ".config", "ai-rulez", "config.yaml"), "version: \"4.0\"\nname: a\n")
+	writeFile(t, filepath.Join(root, "service-a", ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"a\"\n")
 
 	// A different tool's .config subtree must be neither discovered nor descended.
 	writeFile(t, filepath.Join(root, ".config", "other-tool", "config.toml"), "x = 1")
@@ -120,7 +120,7 @@ func TestFindConfigFilesRecursively_ConfigConvention(t *testing.T) {
 
 	want := []string{
 		filepath.Join(".config", "ai-rulez", "config.toml"),
-		filepath.Join("service-a", ".config", "ai-rulez", "config.yaml"),
+		filepath.Join("service-a", ".config", "ai-rulez", "config.toml"),
 		filepath.Join("service-b", ".ai-rulez", "config.toml"),
 	}
 	sort.Strings(want)
@@ -179,24 +179,6 @@ func TestFindConfigFilesRecursively_ExplicitNestedConfigDir(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
 		}
-	}
-}
-
-func TestFindConfigFilesRecursively_ConfigPriority(t *testing.T) {
-	root := t.TempDir()
-	cfgDir := filepath.Join(root, ".ai-rulez")
-	writeFile(t, filepath.Join(cfgDir, "config.toml"), "x = 1")
-	writeFile(t, filepath.Join(cfgDir, "config.yaml"), "x: 1")
-	writeFile(t, filepath.Join(cfgDir, "config.json"), `{"x":1}`)
-
-	chdir(t, root)
-	got := findConfigFilesRecursively()
-
-	if len(got) != 1 {
-		t.Fatalf("expected exactly one config, got %v", got)
-	}
-	if filepath.Base(got[0]) != "config.toml" {
-		t.Errorf("expected toml to win, got %s", got[0])
 	}
 }
 

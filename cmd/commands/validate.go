@@ -71,8 +71,7 @@ schema compliance, and structural issues.`,
 
 		// Validate the raw file against the JSON schema first so a key the
 		// struct would silently drop (and a value outside an enum) is reported.
-		// V3 configs keep the looser Go validation only: the schema is V4-shaped.
-		if !cfg.IsV3() && cfg.ConfigFile != "" {
+		if cfg.ConfigFile != "" {
 			configPath := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
 			if err := schema.ValidateFile(configPath); err != nil {
 				logger.Error("Configuration failed schema validation", "path", configPath)
@@ -206,17 +205,15 @@ func runRecursiveValidate() int {
 	return strictCode
 }
 
-// validateConfigFile applies the same checks as single-root validate (schema for
-// V4 configs, then structural validation) to one config file.
+// validateConfigFile applies the same checks as single-root validate (schema,
+// then structural validation) to one config file.
 func validateConfigFile(configPath string) (*config.Config, error) {
 	cfg, err := config.LoadConfigFromFile(context.Background(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
 		return nil, err
 	}
-	if !cfg.IsV3() {
-		if err := schema.ValidateFile(configPath); err != nil {
-			return nil, schemaFailure(cfg, err)
-		}
+	if err := schema.ValidateFile(configPath); err != nil {
+		return nil, schemaFailure(cfg, err)
 	}
 	if err := validateLocalOverlay(cfg); err != nil {
 		return nil, schemaFailure(cfg, err)

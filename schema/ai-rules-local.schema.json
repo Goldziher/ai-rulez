@@ -175,10 +175,10 @@
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
-  "description": "Schema for config.local.* machine-local overlay files merged onto the shared ai-rulez config",
+  "description": "Schema for config.local.toml machine-local overlay files merged onto the shared ai-rulez config",
   "properties": {
     "$comment": {
-      "description": "Free-form note, ignored by ai-rulez (accepted so a JSON config can carry a comment)",
+      "description": "Free-form note, ignored by ai-rulez (accepted so a config can carry a comment)",
       "type": "string"
     },
     "$schema": {
@@ -2920,8 +2920,8 @@
       "type": "array"
     },
     "version": {
-      "description": "Configuration version (3.0 or 4.0)",
-      "enum": ["3.0", "4.0"],
+      "description": "Configuration version (4.0)",
+      "enum": ["4.0"],
       "type": "string"
     }
   },

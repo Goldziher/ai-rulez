@@ -19,8 +19,6 @@ const (
 // Config file base names supported by the CLI.
 const (
 	configFileTOML = "config.toml"
-	configFileYAML = "config.yaml"
-	configFileJSON = "config.json"
 )
 
 // flagRole is the --role flag of generate, tokens, usage and mcp --serve-skills.

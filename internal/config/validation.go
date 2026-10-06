@@ -406,7 +406,7 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 	return nil
 }
 
-// validateVersion checks that version is "3.0" or "4.0"
+// validateVersion checks that version is "4.0"
 func (c *Config) validateVersion() error {
 	if c.Version == "" {
 		return oops.
@@ -414,12 +414,12 @@ func (c *Config) validateVersion() error {
 			Hint("Add version = \"4.0\" at the top of your config file").
 			Errorf("missing required key: version")
 	}
-	if c.Version != ConfigVersionV3 && c.Version != ConfigVersionV4 {
+	if c.Version != ConfigVersionV4 {
 		return oops.
 			With("field", "version").
 			With("actual_version", c.Version).
-			Hint("Set version to \"3.0\" or \"4.0\" in your config file").
-			Errorf("invalid version: expected \"3.0\" or \"4.0\", got %q", c.Version)
+			Hint("Set version = \"4.0\" in config.toml; a V2/V3 config is migrated with ai-rulez 4.x (`npx ai-rulez@4 migrate v4`)").
+			Errorf("invalid version: expected \"4.0\", got %q", c.Version)
 	}
 	return nil
 }

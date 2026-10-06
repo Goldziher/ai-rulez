@@ -268,15 +268,10 @@ func entryName(m map[string]any, desc string) (string, error) {
 	return s, nil
 }
 
-// asString accepts a string or a YAML scalar kept as source text.
+// asString accepts a string value.
 func asString(v any) (string, bool) {
-	switch t := v.(type) {
-	case string:
-		return t, true
-	case rawScalar:
-		return string(t), true
-	}
-	return "", false
+	s, ok := v.(string)
+	return s, ok
 }
 
 func entryPath(m map[string]any) string {
