@@ -68,8 +68,19 @@ sections = ["frontmatter", "content", "targeted_rules", "targeted_context"]
 # does not model itself; their YAML types (lists, maps, booleans, numbers) pass
 # through unchanged. permission_mode is the legacy snake_case spelling.
 fields = [
-  "description", "permission_mode", "permissionMode", "disallowedTools", "memory", "maxTurns",
-  "mcpServers", "hooks", "background", "isolation", "color", "initialPrompt", "omitClaudeMd",
+  "description",
+  "permission_mode",
+  "permissionMode",
+  "disallowedTools",
+  "memory",
+  "maxTurns",
+  "mcpServers",
+  "hooks",
+  "background",
+  "isolation",
+  "color",
+  "initialPrompt",
+  "omitClaudeMd",
 ]
 tools = true
 skills = true

@@ -61,8 +61,16 @@
             "items": { "type": "integer", "minimum": 0 },
             "bytes": { "type": "integer", "minimum": 0 },
             "tokens": { "type": "integer", "minimum": 0 },
-            "served_skills": { "type": "integer", "minimum": 0, "description": "Skills the role gets through the skills server only (not listed in context)." },
-            "served_tokens": { "type": "integer", "minimum": 0, "description": "Share of tokens held by those skills." },
+            "served_skills": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Skills the role gets through the skills server only (not listed in context)."
+            },
+            "served_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Share of tokens held by those skills."
+            },
             "by_kind": {
               "type": "object",
               "additionalProperties": { "type": "integer", "minimum": 0 }
@@ -84,10 +92,17 @@
           "enum": ["on", "name-only", "user-invocable-only", "off"],
           "description": "skill_mode the role sets for this skill."
         },
-        "delivery": { "enum": ["static", "served", "both"], "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both." },
+        "delivery": {
+          "enum": ["static", "served", "both"],
+          "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both."
+        },
         "owner": { "type": "string" },
         "version": { "type": "string" },
-        "bytes": { "type": "integer", "minimum": 0, "description": "Source size on disk; a skill counts its resources." },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source size on disk; a skill counts its resources."
+        },
         "tokens": { "type": "integer", "minimum": 0, "description": "Estimate for the primary file." }
       }
     }

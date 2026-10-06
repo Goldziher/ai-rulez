@@ -18,8 +18,8 @@ Research was done on 2026-10-05.
 | Normative spec | `GoogleCloudPlatform/knowledge-catalog`, `okf/SPEC.md` | Read in full. Pinned at repo commit `58e16bdb7a34430f055ea57e84655cff37000c03`; the file last changed in `62432a095456147ee71e70ac6e4dc0d2dea3ac30` (2026-08-21, "every timestamp is an ISO 8601 datetime with an explicit offset") |
 | Spec, new home | `GoogleCloudPlatform/open-knowledge-format`, `SPEC.md` | Byte-identical to the above at commit `ad30107c31c06aec8a7d5636e0d1058118604e6f`; the ecosystem map says the older `knowledge-catalog/okf` copy is frozen |
 | Reference bundles | `open-knowledge-format/bundles/{acme_retail,ga4,stackoverflow,crypto_bitcoin}` | Read `acme_retail`; a trimmed copy is vendored as a test fixture (see [Fixtures](#fixtures-and-licences)) |
-| Third-party site | https://okf.md/ (`/`, `/spec/`, `/quickstart/`, `/validator/`, `/tools/`, `/ecosystem-map/`, `/skill/`, `/faq/`) | Read. It is a guide around the spec, not the spec |
-| Skill repo | https://github.com/fabricioctelles/skills (`skills/okf-open-knowledge-format`) | Read the listing; its `validate.sh` (E1-E4, W1-W7) is the only "validator" with exit codes |
+| Third-party site | <https://okf.md/> (`/`, `/spec/`, `/quickstart/`, `/validator/`, `/tools/`, `/ecosystem-map/`, `/skill/`, `/faq/`) | Read. It is a guide around the spec, not the spec |
+| Skill repo | <https://github.com/fabricioctelles/skills> (`skills/okf-open-knowledge-format`) | Read the listing; its `validate.sh` (E1-E4, W1-W7) is the only "validator" with exit codes |
 | Candidate Go implementations | `cwest/okfctl`, `openknowledge-sh/openknowledge` | Evaluated, see [Build or borrow](#build-or-borrow) |
 
 ### Spec facts (verified against SPEC.md v0.2)
@@ -122,7 +122,7 @@ extension key, so a round trip is lossless; the OKF `type` is only for OKF reade
 
 Layout of an exported bundle (`docs/okf/` by default):
 
-```
+```text
 index.md                        okf_version + one section per kind
 rules/index.md  rules/<id>.md
 context/<id>.md
@@ -202,7 +202,7 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 
 What an export writes, so a bundle can be read without ai-rulez.
 
-```
+```text
 docs/okf/
   index.md                      ---\nokf_version: "0.2"\n---  then "# Subdirectories" entries
   rules/index.md                "# Concepts" entries: * [Title](file.md) - description

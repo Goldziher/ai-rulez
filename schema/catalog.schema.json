@@ -21,12 +21,19 @@
           "domain": { "type": "string" },
           "path": { "type": "string", "description": "Source path relative to the configuration directory." },
           "mode": { "type": "string" },
-          "delivery": { "enum": ["static", "served", "both"], "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both." },
+          "delivery": {
+            "enum": ["static", "served", "both"],
+            "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both."
+          },
           "owner": { "type": "string" },
           "version": { "type": "string" },
           "bytes": { "type": "integer", "minimum": 0 },
           "tokens": { "type": "integer", "minimum": 0 },
-          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "The digest ai-rulez.lock pins for this item." },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "The digest ai-rulez.lock pins for this item."
+          },
           "roles": { "type": "array", "items": { "type": "string" }, "description": "Roles that keep the item." },
           "role_delivery": {
             "type": "object",
@@ -78,7 +85,10 @@
         "has_content_pins": { "type": "boolean" },
         "enforce": { "type": "boolean" },
         "tree": { "type": "string" },
-        "sources_in_sync": { "type": ["boolean", "null"], "description": "null when the lock has no content pins to compare with." },
+        "sources_in_sync": {
+          "type": ["boolean", "null"],
+          "description": "null when the lock has no content pins to compare with."
+        },
         "sources_changed": { "type": "integer", "minimum": 0 }
       }
     }
