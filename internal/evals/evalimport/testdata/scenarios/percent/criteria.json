@@ -1,0 +1,8 @@
+{
+  "scenario": "rename-the-flag",
+  "criteria": [
+    { "title": "flag renamed", "criterion": "The --verbose flag is renamed to --debug everywhere", "points": 5 },
+    { "title": "docs updated", "criterion": "The README mentions --debug", "points": 5 }
+  ],
+  "passing_score": 70
+}

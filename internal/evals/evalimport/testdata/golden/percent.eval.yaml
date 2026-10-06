@@ -1,0 +1,15 @@
+# imported by ai-rulez eval import (importer 1) from scenario "rename-the-flag"
+# source sha256:c1353c29e0f24f72492464f92b7df60678dc8afb1b6f529e76843c20f651e354
+schema_version: 1
+cases:
+  - id: rename-the-flag
+    description: Imported scenario
+    prompt_file: rename-the-flag.task.md
+    expect_trigger: true
+    rubric: |-
+      Score the answer against this weighted checklist (total weight 10):
+      1. (weight 5) The --verbose flag is renamed to --debug everywhere
+      2. (weight 5) The README mentions --debug
+    rubric_min_score: 0.7
+    tags:
+      - imported:tessl

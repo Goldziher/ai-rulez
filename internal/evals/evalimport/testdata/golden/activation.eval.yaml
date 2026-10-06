@@ -1,0 +1,16 @@
+# imported by ai-rulez eval import (importer 1) from scenario "deploy-to-staging"
+# source sha256:2284748a966b2a0ccbc2ee7f3151295b742a3fbbd2be55b7cfa754a0a700eb59
+schema_version: 1
+cases:
+  - id: deploy-to-staging
+    description: Imported scenario
+    prompt_file: deploy-to-staging.task.md
+    expect_trigger: true
+    near_miss:
+      - Explain how staging differs from production
+      - Roll back the last production deploy
+    rubric: |-
+      Score the answer against this weighted checklist (total weight 1):
+      1. (weight 1) Deploys the billing service to staging
+    tags:
+      - imported:tessl

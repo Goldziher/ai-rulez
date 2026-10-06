@@ -1,0 +1,12 @@
+{
+  "scenario": "tune-the-cache",
+  "criteria": [
+    { "name": "sets ttl", "description": "Sets a TTL on the cache entries", "weight": 1, "category": "behaviour" },
+    { "name": "explains", "description": "Explains the TTL choice", "weight": 1 }
+  ],
+  "baseline": { "arm": "no-context", "enabled": true },
+  "repeats": 3,
+  "agent": { "model": "some-model", "temperature": 0 },
+  "owner": "platform-team",
+  "labels": ["cache", "ttl"]
+}
