@@ -202,6 +202,11 @@ func ociTarget(args []string) (launcher, bool) {
 	}
 	ref, digest := image, ""
 	if r, d, ok := strings.Cut(image, "@"); ok {
+		// Only "@algo:hex" is a digest; "user:pass@host/img" carries credentials,
+		// which must never reach the purl.
+		if !ociDigest(d) {
+			return launcher{}, false
+		}
 		ref, digest = r, d
 	}
 	tag := ""
@@ -227,6 +232,12 @@ func ociTarget(args []string) (launcher, bool) {
 	}
 	p := purl("oci", "", name, digest, map[string]string{"repository_url": repo, "tag": tag}, "")
 	return launcher{purl: p, name: name, version: version}, true
+}
+
+// ociDigest reports whether d looks like algo:value with no path or userinfo.
+func ociDigest(d string) bool {
+	algo, value, ok := strings.Cut(d, ":")
+	return ok && algo != "" && value != "" && !strings.ContainsAny(d, "/@")
 }
 
 func goTarget(args []string) (launcher, bool) {
