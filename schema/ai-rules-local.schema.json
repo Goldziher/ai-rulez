@@ -2755,6 +2755,201 @@
       },
       "type": "array"
     },
+    "search": {
+      "additionalProperties": false,
+      "description": "Settings of `ai-rulez search` and the find_skill tool of `mcp --serve-skills`: lexical (default, offline), hybrid or vector ranking with bring-your-own embeddings. See docs/search.md.",
+      "properties": {
+        "body_chars": {
+          "description": "Characters of the body embedded with index_body (default 1200).",
+          "maximum": 20000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "candidates": {
+          "description": "Length of each candidate list before fusion (default 50).",
+          "maximum": 1000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dtype": {
+          "description": "Stored vector type (default float32; float16 halves the file).",
+          "enum": ["float32", "float16"],
+          "type": "string"
+        },
+        "embeddings": {
+          "additionalProperties": false,
+          "description": "A per-feature embedding model and the command provider. The command runs a program, so it is honoured only from the user config file or with --allow-exec.",
+          "properties": {
+            "command": {
+              "description": "argv of the command provider (no shell). It reads {\"input\": [...]} on stdin and prints {\"vectors\": [[...]]}.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "model": {
+              "description": "Embedding model for search only; overrides [llm] embedding_model.",
+              "type": "string"
+            },
+            "pass_env": {
+              "description": "Environment variables handed to the command (PATH and HOME are always passed).",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "fields": {
+          "description": "Skill fields sent to the embedder (default: all four).",
+          "items": {
+            "enum": ["name", "triggers", "keywords", "description"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fusion": {
+          "description": "rrf (default, reciprocal rank fusion) or weighted (min-max normalised convex mix).",
+          "enum": ["rrf", "weighted"],
+          "type": "string"
+        },
+        "index_body": {
+          "description": "Also embed the first body_chars characters of SKILL.md.",
+          "type": "boolean"
+        },
+        "index_dir": {
+          "description": "Index directory under the config directory. Default local/search (machine-local); any directory outside local/ is meant to be committed and is checked by validate (AR9D1). Must stay inside the config directory.",
+          "type": "string"
+        },
+        "log_queries": {
+          "description": "Record find_skill and search query text, and the skill loaded after each, in <config dir>/local/search-queries.jsonl for `search mine`. Off by default: queries can hold user data.",
+          "type": "boolean"
+        },
+        "mode": {
+          "description": "lexical (default) never calls a network; hybrid fuses BM25F with cosine similarity over an embedding index; vector ranks by cosine alone. Overridden by AI_RULEZ_SEARCH_MODE and `search --mode`.",
+          "enum": ["lexical", "hybrid", "vector"],
+          "type": "string"
+        },
+        "query_timeout_ms": {
+          "description": "Bound on the query embedding of one search; on timeout the ranking is lexical and says so (default 800).",
+          "maximum": 60000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rrf_k": {
+          "description": "The k of reciprocal rank fusion (default 60).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "weights": {
+          "additionalProperties": false,
+          "description": "List weights of rrf, or the convex mix of weighted fusion (default 1 and 1).",
+          "properties": {
+            "lexical": {
+              "minimum": 0,
+              "type": "number"
+            },
+            "vector": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "signing": {
+      "additionalProperties": false,
+      "description": "Who may sign ai-rulez.lock and how fresh the signature must be (see docs/signing.md). Nothing is enforced unless require names a subject.",
+      "properties": {
+        "attestation": {
+          "description": "Lock bundle path relative to the config directory. Default ai-rulez.lock.sigstore.json.",
+          "type": "string"
+        },
+        "identity": {
+          "description": "Shorthand: the one trusted keyless signer (certificate identity, matched exactly). Needs issuer.",
+          "type": "string"
+        },
+        "issuer": {
+          "description": "Shorthand: the OIDC issuer of identity, matched exactly.",
+          "type": "string"
+        },
+        "key_file": {
+          "description": "Shorthand: one trusted PEM public key inside the project.",
+          "type": "string"
+        },
+        "max_age": {
+          "description": "Oldest acceptable signature, such as 180d or 720h. Empty means no limit.",
+          "pattern": "^([0-9]+d|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "min_hash_version": {
+          "description": "Reject an attestation of an older lock hash scheme.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "require": {
+          "description": "Subjects that must carry a valid attestation. lock --check and generate --locked fail without one for lock.",
+          "items": {
+            "enum": ["lock"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tlog": {
+          "description": "Transparency log policy. Default: required when a certificate identity is trusted, off when only keys are trusted. off needs key mode.",
+          "enum": ["required", "optional", "off"],
+          "type": "string"
+        },
+        "trust": {
+          "description": "Trusted signers, scoped by subject.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "identity": {
+                "description": "Certificate identity, matched exactly.",
+                "type": "string"
+              },
+              "identity_regexp": {
+                "description": "Identity pattern, matched against the whole identity; must start with ^ and end with $ (AR722).",
+                "pattern": "^\\^.*\\$$",
+                "type": "string"
+              },
+              "issuer": {
+                "description": "OIDC issuer, matched exactly. Required with identity or identity_regexp.",
+                "type": "string"
+              },
+              "key_file": {
+                "description": "PEM public key inside the project, instead of an identity.",
+                "type": "string"
+              },
+              "subject": {
+                "description": "What the signer may vouch for. Default lock.",
+                "enum": ["lock"],
+                "type": "string"
+              },
+              "valid_from": {
+                "description": "Earliest signing time accepted: 2026-01-01 or an RFC 3339 time.",
+                "type": "string"
+              },
+              "valid_until": {
+                "description": "Latest signing time accepted (inclusive); forces a reviewed renewal.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "trusted_root": {
+          "description": "Sigstore trusted root file inside the project, for keyless verification. Default: the root `ai-rulez trust update` cached for the user.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "skills": {
       "additionalProperties": false,
       "description": "Defaults for every skill (dynamic skill loading).",
