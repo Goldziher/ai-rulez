@@ -343,3 +343,38 @@ func TestLoadWithCacheFallback(t *testing.T) {
 		require.ErrorIs(t, err, includes.ErrNotCached)
 	})
 }
+
+func TestValidateLockFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		set     func()
+		args    []string
+		wantErr string
+	}{
+		{"plain lock", func() {}, nil, ""},
+		{"format without a mode", func() { lockFormat = formatJSON }, nil, "--format applies to"},
+		{"format with check", func() { lockFormat, lockCheck = formatJSON, true }, nil, ""},
+		{"format with outdated", func() { lockFormat, lockOutdated = formatJSON, true }, nil, ""},
+		{"bad format", func() { lockFormat, lockCheck = "yaml", true }, nil, "unknown --format"},
+		{"output with recursive", func() { lockSubject, lockSubjectOutput, lockRecursive = true, "s.json", true }, nil, "--recursive"},
+		{"output alone", func() { lockSubject, lockSubjectOutput = true, "s.json" }, nil, ""},
+		{"output without subject", func() { lockSubjectOutput = "s.json" }, nil, "--output needs --subject"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				lockFormat, lockCheck, lockOutdated, lockSubject, lockSubjectOutput, lockRecursive = "", false, false, false, "", false
+			})
+			tt.set()
+
+			err := validateLockFlags(tt.args)
+
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
