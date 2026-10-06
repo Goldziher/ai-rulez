@@ -30,7 +30,7 @@ func resetSigningFlags(t *testing.T) {
 	t.Cleanup(func() {
 		signLock, signKey, signKeyPassEnv, signKeyless, signTokenEnv, signFulcioURL, signRekorURL = false, "", "", false, "", "", ""
 		signTLog, signEmbedItems, signOutput, signInteractive = false, false, "", false
-		verifyAttestation, verifyAttLock, verifyAttFile, verifyTrustedRoot, verifyPublicKeys = false, false, "", "", nil
+		verifyAttestation, verifyAttFile, verifyTrustedRoot, verifyPublicKeys = false, "", "", nil
 		verifyIdentity, verifyIssuer, verifyNoState, verifyFormat = "", "", false, ""
 	})
 }
@@ -301,6 +301,35 @@ func TestLockCheckWithAnUnbuildablePolicyCouldNotRun(t *testing.T) {
 	assert.Equal(t, 1, code, "verify --attestation exits 1 for the same policy; lock --check agrees")
 	assert.Contains(t, stderr, "public key")
 	assert.NotContains(t, stderr, "AR720")
+}
+
+func TestReadKeyFileRefusesAnOversizedFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		size    int
+		wantErr string
+	}{
+		{"at the limit", maxSigningKeyBytes, ""},
+		{"one byte over", maxSigningKeyBytes + 1, "too large"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "k.pem")
+			require.NoError(t, os.WriteFile(path, make([]byte, tt.size), 0o600))
+
+			data, err := readKeyFile(path)
+
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				assert.Len(t, data, tt.size)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+	_, err := readKeyFile(filepath.Join(t.TempDir(), "missing"))
+	assert.ErrorContains(t, err, "read the signing key")
 }
 
 func TestSignFlagValidation(t *testing.T) {

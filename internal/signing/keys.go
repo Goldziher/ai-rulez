@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
-	"os"
 
 	"github.com/samber/oops"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -109,19 +108,6 @@ func ParsePrivateKey(pemBytes, password []byte) (*KeyPair, error) {
 		return nil, oops.Wrapf(err, "read the signing key")
 	}
 	return NewKeyPair(priv)
-}
-
-// LoadPrivateKey is ParsePrivateKey for a key file.
-func LoadPrivateKey(path string, password []byte) (*KeyPair, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // the user names their own key file
-	if err != nil {
-		return nil, oops.With("path", path).Wrapf(err, "read the signing key")
-	}
-	kp, err := ParsePrivateKey(data, password)
-	if err != nil {
-		return nil, oops.With("path", path).Wrap(err)
-	}
-	return kp, nil
 }
 
 // GenerateKeyPair returns a new ECDSA P-256 key and its PEM encodings: the PKCS#8
