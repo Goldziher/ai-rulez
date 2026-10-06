@@ -206,12 +206,20 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 			}
 		}
 	}
-	var releaseLLM func()
-	if opts.LLM, releaseLLM, err = verifierLLMOptions(ctx, cfg); err != nil {
-		fmtError(err)
+	if verifiersMaxCost < 0 {
+		fmtError(oops.Errorf("--max-cost must not be negative"))
 		return exitVerifiersCannotRun
 	}
-	defer releaseLLM()
+	// The user's [llm] settings are read only when an llm verifier will run, so a
+	// broken one cannot break a project that has none.
+	if verifiers.UsesLLM(cfg, opts) {
+		var releaseLLM func()
+		if opts.LLM, releaseLLM, err = verifierLLMOptions(ctx, cfg); err != nil {
+			fmtError(err)
+			return exitVerifiersCannotRun
+		}
+		defer releaseLLM()
+	}
 	report := verifiers.Run(ctx, cfg, opts)
 	if report.Err != nil {
 		fmtError(report.Err)
