@@ -88,8 +88,14 @@ type Rubric struct {
 	Digest string `toml:"-" json:"digest"`
 	// Dir is the rubric directory; empty for a built-in rubric.
 	Dir string `toml:"-" json:"-"`
+	// CoreDigest is the digest of the files a calibration record is bound to: rubric.toml,
+	// system.md and the golden cases. It leaves calibration.json out, because the record
+	// names this digest and cannot contain itself.
+	CoreDigest string `toml:"-" json:"-"`
 	// SystemPrompt is the contents of system.md, when present.
 	SystemPrompt string `toml:"-" json:"-"`
+	// Raw is the bytes of rubric.toml.
+	Raw []byte `toml:"-" json:"-"`
 }
 
 // Limits bound the size of what one item sends.
@@ -122,6 +128,10 @@ type Calibration struct {
 	MinHumanKappa    float64            `toml:"min_human_kappa" json:"min_human_kappa"`
 	MaxAgeDays       int                `toml:"max_age_days" json:"max_age_days"`
 	MinRecall        map[string]float64 `toml:"min_recall" json:"min_recall,omitempty"`
+	// MinPrecision is the lowest precision of the "flagged" call a dimension may have (0 = unchecked).
+	MinPrecision float64 `toml:"min_precision" json:"min_precision,omitempty"`
+	// MinProbe is the lowest share of metamorphic probes a dimension must pass (0 = unchecked).
+	MinProbe float64 `toml:"min_probe" json:"min_probe,omitempty"`
 }
 
 // Dimension is one scored question.
@@ -135,10 +145,13 @@ type Dimension struct {
 	Severity     string   `toml:"severity" json:"severity"`
 	Twins        []string `toml:"twins" json:"twins,omitempty"`
 	AllowAbsence bool     `toml:"allow_absence" json:"allow_absence,omitempty"`
-	Question     string   `toml:"question" json:"question"`
-	Pass         string   `toml:"pass" json:"pass"`
-	Warn         string   `toml:"warn" json:"warn"`
-	Fail         string   `toml:"fail" json:"fail"`
+	// NeedsBody marks a dimension a judge can only answer from the body: it is left unjudged
+	// (not guessed) unless the review sends the body (--content full).
+	NeedsBody bool   `toml:"needs_body" json:"needs_body,omitempty"`
+	Question  string `toml:"question" json:"question"`
+	Pass      string `toml:"pass" json:"pass"`
+	Warn      string `toml:"warn" json:"warn"`
+	Fail      string `toml:"fail" json:"fail"`
 }
 
 var (
@@ -174,7 +187,9 @@ func LoadBuiltin(id string) (*Rubric, error) {
 		return nil, oops.Wrapf(err, "built-in rubric %q", id)
 	}
 	r.Ref = config.BuiltinRubricPrefix + id
+	r.Raw = data
 	r.Digest = digestOf([]fileBytes{{RubricFile, data}})
+	r.CoreDigest = r.Digest
 	return r, nil
 }
 
@@ -254,7 +269,7 @@ func ListIDs(configDir string) ([]string, error) {
 
 // readRegular reads a file that must not be a symlink.
 func readRegular(path string) ([]byte, error) {
-	data, err := safefs.ReadRegular(path)
+	data, _, err := safefs.ReadRegularKeepMode(path)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read %s", path)
 	}
