@@ -458,6 +458,9 @@ func loadConfigFilePathMain(v workspace.View, path string) (*Config, error) {
 
 // loadConfigTOML loads a config from TOML
 func loadConfigTOML(v workspace.View, path string) (*Config, error) {
+	if err := checkConfigFileInside(v, path); err != nil {
+		return nil, err
+	}
 	data, err := readCapped(v, path)
 	if err != nil {
 		return nil, oops.

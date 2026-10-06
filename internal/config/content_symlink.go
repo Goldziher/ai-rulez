@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/samber/oops"
@@ -95,6 +96,25 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 		return nil, false
 	}
 	return tinfo, true
+}
+
+// checkConfigFileInside refuses a config file (config.toml, config.local.toml)
+// that is a symlink whose fully resolved target is outside the repository root,
+// the same boundary content symlinks get. A committed config must not read a
+// file the repository does not hold.
+func checkConfigFileInside(v workspace.View, path string) error {
+	info, err := v.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return nil //nolint:nilerr // a missing file is reported by the read
+	}
+	_, err = v.EvalSymlinks(path)
+	var outside *workspace.OutsideError
+	if errors.As(err, &outside) {
+		return oops.With("path", path, "target", outside.Target).
+			Hint("Link to a file inside the repository, or copy the file").
+			Errorf("refusing symlinked config %s: target %s is outside the repository root %s", filepath.Base(path), outside.Target, v.Root())
+	}
+	return nil
 }
 
 // admitTreeRoot clears a content tree root (.ai-rulez/ itself or its local/
