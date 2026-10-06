@@ -50,6 +50,17 @@ func provenance(layers []Layer) map[string]string {
 	for id, limit := range eff.Lint.LoadBudgets {
 		firstWith("lint.load_budgets."+id, func(p Policy) bool { v, ok := p.Lint.LoadBudgets[id]; return ok && v == limit })
 	}
+	firstWith("lint.scanner_policy.preset", func(p Policy) bool {
+		return p.Lint.ScannerPolicy.Preset != "" && p.Lint.ScannerPolicy.Preset == eff.Lint.ScannerPolicy.Preset
+	})
+	all("lint.scanner_policy.required", func(p Policy) bool { return len(p.Lint.ScannerPolicy.Required) > 0 })
+	firstWith("lint.scanner_policy.fail_on", func(p Policy) bool {
+		return p.Lint.ScannerPolicy.FailOn != "" && p.Lint.ScannerPolicy.FailOn == eff.Lint.ScannerPolicy.FailOn
+	})
+	firstWith("lint.scanner_policy.isolation", func(p Policy) bool {
+		return p.Lint.ScannerPolicy.Isolation != "" && p.Lint.ScannerPolicy.Isolation == eff.Lint.ScannerPolicy.Isolation
+	})
+	all("lint.scanner_policy.allow_egress", func(p Policy) bool { return p.Lint.ScannerPolicy.AllowEgress.Set })
 	firstWith("lock.enforce", func(p Policy) bool { return p.Lock.Enforce })
 	firstWith("lock.include_outputs", func(p Policy) bool { return p.Lock.IncludeOutputs })
 	firstWith("telemetry.allow_network", func(p Policy) bool { return p.Telemetry.Disabled })

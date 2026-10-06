@@ -106,6 +106,7 @@ func (p Policy) Tree() map[string]any {
 		table("lint", "security")["scan_imports"] = p.Lint.Security.ScanImports
 	}
 	p.Lint.addKnobs(table)
+	p.Lint.ScannerPolicy.addTo(table)
 	if p.Lock.Enforce {
 		table("lock")["enforce"] = true
 	}
