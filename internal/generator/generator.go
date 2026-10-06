@@ -2586,7 +2586,10 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
 	defer func() { g.manifests = nil }()
-	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, manifestDigests(g.config.BaseDir, shared)); err != nil {
+	whole := g.wholeMergedDocuments(outputs)
+	sharedDigests := manifestDigests(g.config.BaseDir, shared)
+	g.addMergedDigests(&sharedDigests, committedMerged, whole)
+	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, sharedDigests); err != nil {
 		return err
 	}
 	if g.localSkipped {
@@ -2600,7 +2603,9 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		}
 		return nil
 	}
-	return g.writeManifest(g.localManifestPath(), local, localMerged, manifestDigests(g.config.BaseDir, local))
+	localDigests := manifestDigests(g.config.BaseDir, local)
+	g.addMergedDigests(&localDigests, localMerged, whole)
+	return g.writeManifest(g.localManifestPath(), local, localMerged, localDigests)
 }
 
 // writeManifest writes a manifest after refusing a symlink that leaves the project.

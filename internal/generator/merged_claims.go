@@ -53,14 +53,50 @@ type mergedEdit struct {
 func (g *Generator) previousMergedClaims() map[string][]jsonmerge.Claim {
 	previous := map[string][]jsonmerge.Claim{}
 	for rel, claims := range g.readManifest(g.manifestPath()).Merged {
-		previous[rel] = claims
-	}
-	if !g.localSkipped {
-		for rel, claims := range g.readManifest(g.localManifestPath()).Merged {
+		if g.trustedMergedPath(rel) {
 			previous[rel] = claims
 		}
 	}
+	if !g.localSkipped {
+		for rel, claims := range g.readManifest(g.localManifestPath()).Merged {
+			if g.trustedMergedPath(rel) {
+				previous[rel] = claims
+			}
+		}
+	}
 	return previous
+}
+
+// trustedMergedPath reports whether a manifest may claim keys in rel. The manifest
+// is a committed file anyone can edit, so a claim on a document no preset merges
+// into (package.json, only.json) or one that leaves the project is ignored.
+func (g *Generator) trustedMergedPath(rel string) bool {
+	if g.userMode {
+		// The user manifest records destinations in relocated tool homes; user scope
+		// vets every entry against its layouts (userMayTouch) instead.
+		return true
+	}
+	slashed := filepath.ToSlash(rel)
+	if slashed == "" || strings.HasPrefix(slashed, "/") || slices.Contains(strings.Split(slashed, "/"), "..") ||
+		!isMergedDocumentPath(mergedDocuments(), slashed) {
+		g.warnOnce("Ignoring a generated-manifest claim on " + rel + ": no preset merges into that file")
+		return false
+	}
+	return true
+}
+
+// mergedDocDeletable reports whether ai-rulez may delete the merged document at
+// abs once nothing user-authored is left in it: only when the manifest recorded
+// the digest of the document as ai-rulez wrote it whole and the file still has
+// exactly those bytes. A forged or older manifest has no such digest, and the
+// document is then left (emptied of ai-rulez's keys) instead of deleted.
+func (g *Generator) mergedDocDeletable(rel, abs string) bool {
+	want, ok := g.manifestDigestSet()[rel]
+	if !ok {
+		return false
+	}
+	data, err := os.ReadFile(abs)
+	return err == nil && fileDigest(data) == want
 }
 
 // currentMergedClaims collects the claims of this run's outputs by manifest path.
@@ -245,7 +281,12 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 				"so it is treated as yours", "hint", "remove it by hand if you do not want it")
 		}
 		if result.Changed {
-			edits = append(edits, mergedEdit{rel: rel, abs: abs, body: result.Body, delete: result.Empty})
+			remove := result.Empty
+			if remove && !g.mergedDocDeletable(rel, abs) {
+				g.warnOnce("Keeping " + rel + ": it is empty of ai-rulez content but ai-rulez cannot show it created the file")
+				remove = false
+			}
+			edits = append(edits, mergedEdit{rel: rel, abs: abs, body: result.Body, delete: remove})
 		}
 	}
 	return edits

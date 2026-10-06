@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -178,4 +179,63 @@ func TestGenerate_HeaderlessGeneratedFileNeedsRecordedDigest(t *testing.T) {
 func hashedFixture(rel, content string) string {
 	body := strings.TrimRight(stripHeader(content, rel), "\n")
 	return injectContentHash(content, rel, templates.HashContent(body+"\n"))
+}
+
+// forgeMerged sets the committed manifest's merged claims.
+func forgeMerged(t *testing.T, dir string, merged map[string][]map[string]any) {
+	t.Helper()
+	path := filepath.Join(dir, ".ai-rulez", generatedManifestName)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(data, &raw))
+	raw["merged"] = merged
+	out, err := json.MarshalIndent(raw, "", "  ")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, out, 0o644))
+}
+
+func TestGenerate_ForgedMergedClaimsDoNotTouchUserDocuments(t *testing.T) {
+	t.Parallel()
+
+	guard := func(v any) map[string]any {
+		return map[string]any{"path": []string{"a"}, "equals": v, "sum": jsonmerge.Digest(v)}
+	}
+	tests := []struct {
+		name   string
+		rel    string
+		body   string
+		claims []map[string]any
+	}{
+		{name: "document no preset merges into", rel: "only.json", body: "{\"a\":1}\n", claims: []map[string]any{guard(1)}},
+		{name: "package manifest", rel: "package.json", body: "{\"a\":1}\n", claims: []map[string]any{guard(1)}},
+		{name: "known document, claim empties it", rel: ".claude/settings.json", body: "{\"a\":1}\n", claims: []map[string]any{guard(1)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Arrange
+			dir := narrowingProject(t)
+			generateProfile(t, dir, "full")
+			abs := filepath.Join(dir, filepath.FromSlash(tt.rel))
+			require.NoError(t, os.MkdirAll(filepath.Dir(abs), 0o755))
+			require.NoError(t, os.WriteFile(abs, []byte(tt.body), 0o644))
+			forgeMerged(t, dir, map[string][]map[string]any{tt.rel: tt.claims})
+
+			// Act
+			generateProfile(t, dir, "full")
+			cfg, err := config.LoadConfig(context.Background(), dir)
+			require.NoError(t, err)
+			_, cleanErr := NewGenerator(cfg).Clean("full", CleanOptions{})
+			require.NoError(t, cleanErr)
+
+			// Assert
+			require.FileExists(t, abs, "a forged claim must never delete a document")
+			if tt.rel != ".claude/settings.json" {
+				data, readErr := os.ReadFile(abs)
+				require.NoError(t, readErr)
+				assert.Equal(t, tt.body, string(data))
+			}
+		})
+	}
 }
