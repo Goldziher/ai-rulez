@@ -123,30 +123,48 @@ func (c *Config) validatePublish() error {
 	if p.OCI != nil && p.OCI.Ref != "" && !ValidOCIRepository(p.OCI.Ref) {
 		return fail("oci.ref", "%q is not a repository reference (host/path, lower-case, no tag or digest)", p.OCI.Ref)
 	}
-	if n := p.NPM; n != nil {
-		if n.Scope != "" && !publishScopePattern.MatchString(n.Scope) {
-			return fail("npm.scope", "%q is not an npm scope such as @acme", n.Scope)
-		}
-		if !slices.Contains([]string{"", PublishAccessRestricted, PublishAccessPublic}, n.Access) {
-			return fail("npm.access", "invalid access %q (use restricted or public)", n.Access)
-		}
-		if n.Registry != "" && !strings.HasPrefix(n.Registry, "https://") {
-			return fail("npm.registry", "the registry must be an https:// URL")
-		}
+	if err := validatePublishNPM(p.NPM, fail); err != nil {
+		return err
 	}
-	if m := p.Marketplace; m != nil {
-		for name, ref := range m.Channels {
-			if !ValidChannel(name) {
-				return fail("marketplace.channels", "invalid channel name %q", name)
-			}
-			if !publishRefPattern.MatchString(ref) || strings.Contains(ref, "..") || strings.HasSuffix(ref, "/") {
-				return fail("marketplace.channels", "channel %q has an invalid git ref %q", name, ref)
-			}
-		}
+	if err := validatePublishChannels(p.Marketplace, fail); err != nil {
+		return err
 	}
 	for i, e := range p.Emitters {
 		if err := validatePublishEmitter(e); err != nil {
 			return oops.With("field", fmt.Sprintf("publish.emitters[%d]", i)).Wrap(err)
+		}
+	}
+	return nil
+}
+
+type publishFailFunc func(field, format string, args ...any) error
+
+func validatePublishNPM(n *PublishNPM, fail publishFailFunc) error {
+	if n == nil {
+		return nil
+	}
+	if n.Scope != "" && !publishScopePattern.MatchString(n.Scope) {
+		return fail("npm.scope", "%q is not an npm scope such as @acme", n.Scope)
+	}
+	if !slices.Contains([]string{"", PublishAccessRestricted, PublishAccessPublic}, n.Access) {
+		return fail("npm.access", "invalid access %q (use restricted or public)", n.Access)
+	}
+	if n.Registry != "" && !strings.HasPrefix(n.Registry, "https://") {
+		return fail("npm.registry", "the registry must be an https:// URL")
+	}
+	return nil
+}
+
+func validatePublishChannels(m *PublishMarketplace, fail publishFailFunc) error {
+	if m == nil {
+		return nil
+	}
+	for name, ref := range m.Channels {
+		if !ValidChannel(name) {
+			return fail("marketplace.channels", "invalid channel name %q", name)
+		}
+		if !publishRefPattern.MatchString(ref) || strings.Contains(ref, "..") || strings.HasSuffix(ref, "/") {
+			return fail("marketplace.channels", "channel %q has an invalid git ref %q", name, ref)
 		}
 	}
 	return nil
