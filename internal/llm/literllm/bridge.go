@@ -6,7 +6,7 @@
 // the request and response mapping lives in the parent llm package, where it is
 // tested without cgo.
 //
-// Release builds enable it with a go.work that uses both modules and
+// Release builds enable it with GOWORK=literllm.work (both modules) and
 // -tags literllm; see docs/llm.md. Status: experimental.
 package literllm
 
