@@ -101,10 +101,6 @@ func TestUnmerge_KeepsUserParents(t *testing.T) {
 			applied, restored := roundTrip(t, tt.doc, genServer())
 
 			assert.NotEqual(t, tt.doc, applied)
-			if strings.Contains(tt.doc, "{}") {
-				assert.Equal(t, decode(t, "mcp:\n  servers:\nother: 1\n"), decode(t, restored))
-				return
-			}
 			assert.Equal(t, tt.doc, restored)
 		})
 	}

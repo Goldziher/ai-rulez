@@ -243,3 +243,18 @@ func unsupported(format Format) error {
 		Hint("supported formats are json, jsonc, toml and yaml").
 		Errorf("unsupported document format %q", string(format))
 }
+
+// DecodeTree decodes a document of the given format into generic Go values, for
+// reading what it already holds. Markdown has no key tree and is an error.
+func DecodeTree(format Format, doc string) (map[string]any, error) {
+	switch format {
+	case FormatJSON, FormatJSONC:
+		return jsonmerge.DecodeTolerantTree(doc)
+	case FormatTOML:
+		return tomlmerge.DecodeTree(doc)
+	case FormatYAML:
+		return yamlmerge.DecodeTree(doc)
+	default:
+		return nil, unsupported(format)
+	}
+}

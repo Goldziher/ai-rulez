@@ -21,7 +21,10 @@ import (
 //  1. the path is one some preset could write (outputMatcher), so a forged entry
 //     cannot reach secret.txt or a source file, and
 //  2. the file proves ai-rulez wrote it: its Content-Hash matches its own body,
-//     or (formats with no header) its digest equals the one the manifest recorded.
+//     or (formats with no header) its digest equals the one this machine recorded
+//     in the gitignored local manifest. A digest in the committed manifest proves
+//     nothing, so a teammate's fresh clone removes header-less stale files never,
+//     only warns.
 //
 // Anything else is left alone and reported.
 
@@ -52,16 +55,13 @@ func manifestDigests(base string, files []string) map[string]string {
 	return digests
 }
 
-// manifestDigestSet is the digests of the committed and the machine-local manifest.
+// manifestDigestSet is the digests this machine recorded in the machine-local
+// manifest. The committed manifest's digests are never proof: whoever edits that
+// file can pick the digest of any file.
 func (g *Generator) manifestDigestSet() map[string]string {
 	set := map[string]string{}
-	for rel, sum := range g.readManifest(g.manifestPath()).Digests {
+	for rel, sum := range g.readManifest(g.localManifestPath()).Digests {
 		set[rel] = sum
-	}
-	if !g.localSkipped {
-		for rel, sum := range g.readManifest(g.localManifestPath()).Digests {
-			set[rel] = sum
-		}
 	}
 	return set
 }
