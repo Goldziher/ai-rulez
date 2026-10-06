@@ -1,0 +1,52 @@
+# Harness limits table: documented size limits of the harnesses ai-rulez
+# generates for. This is the single source of the numbers; the generator, the
+# lint traps (AR9C8, AR9C9) and the config defaults read it. Every row carries
+# the vendor page, a verbatim quote and the date a maintainer last compared it
+# with the page (`task harness:verify` lists them and fails when they are stale).
+# A row must not ship without a quote and a date.
+schema = 1
+
+[[limit]]
+id = "claude.skill_listing_chars"
+harness = "claude"
+subject = "description plus when_to_use of one skill in the skill listing"
+unit = "chars"
+value = 1536
+behavior = "truncated"
+source = "https://code.claude.com/docs/en/skills"
+quote = "the combined description and when_to_use text is truncated at 1,536 characters in the skill listing"
+verified_on = "2026-10-06"
+
+[[limit]]
+id = "codex.agents_md_chain_bytes"
+harness = "codex"
+subject = "combined size of the AGENTS.md files Codex reads from the repository root down"
+unit = "bytes"
+value = 32768
+behavior = "truncated"
+source = "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+quote = "stops adding files once the combined size reaches the limit defined by project_doc_max_bytes (32 KiB by default)"
+verified_on = "2026-10-06"
+configurable = "[codex] project_doc_max_bytes"
+
+[[limit]]
+id = "devin.rule_file_chars"
+harness = "devin"
+subject = "one workspace rule file"
+unit = "chars"
+value = 12000
+behavior = "truncated"
+source = "https://docs.devin.ai/desktop/cascade/memories"
+quote = "Workspace rule files are limited to 12,000 characters each."
+verified_on = "2026-10-06"
+
+[[limit]]
+id = "antigravity.rule_file_bytes"
+harness = "antigravity"
+subject = "one workspace rule file, measured after @[label](path) includes are expanded"
+unit = "bytes"
+value = 24000
+behavior = "truncated"
+source = "https://antigravity.google/docs/rules"
+quote = "24 KB (24,000 bytes) per-file limit"
+verified_on = "2026-10-06"
