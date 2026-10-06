@@ -36,7 +36,7 @@ One event per load. The model is closed: these are all the fields, versioned by 
 | `memory_type` | Claude Code's `User`, `Project`, `Local` or `Managed` | `Project` |
 | `duration_ms` | subagent run time, from the paired Start and Stop events | `2500` |
 
-Skill events are written to the usage log in the existing v2 line format, so `usage` readers are unaffected. The
+Skill events are written to the usage log in the existing v3 line format, so `usage` readers are unaffected. The
 other kinds are new `item_event` lines in the same file; `report usage` ignores them in its skill sections and never
 counts them as unreadable.
 
@@ -188,8 +188,8 @@ Hooks are short-lived processes, so the recorder never touches the network:
    `ai-rulez telemetry flush --background` (at most one start a minute, no inherited descriptors, 8 second deadline).
 3. The flush sends batches of 200 events to `/v1/logs` and `/v1/metrics` as gzipped OTLP/HTTP JSON, retrying 429, 502,
    503, 504 and network errors with exponential backoff (1 s, 2 s, 4 s, plus jitter; `Retry-After` honored up to
-   30 s) and giving up until the next flush, which leaves the events in the outbox. 400, 401, 403, 404 and 413 are
-   permanent: the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time, guarded by a lock file that holds the owner's token (release removes only its own lock; a lock left by a crash is taken over after 60 s, serialised so two processes cannot both take it). A flush is capped at 30 seconds whatever the caller asks, and `telemetry flush --timeout` above 30s is refused, so a running flush is never mistaken for a crashed one.
+   30 s) and giving up until the next flush, which leaves the events in the outbox. Every other status is
+   permanent (400, 401, 403, 404, 413, a 3xx redirect, 500 and the rest): the batch is dropped and counted as rejected. Redirects are never followed. One flusher runs at a time, guarded by a lock file that holds the owner's token (release removes only its own lock; a lock left by a crash is taken over after 60 s, serialised so two processes cannot both take it). A flush is capped at 30 seconds whatever the caller asks, and `telemetry flush --timeout` above 30s is refused, so a running flush is never mistaken for a crashed one.
 4. Delivery is at-least-once; backends de-duplicate on `ai_rulez.event_id`.
 5. A long-lived `ai-rulez mcp` server flushes from a timer and once more on exit.
 
@@ -260,7 +260,7 @@ Nothing was sent.
   stamps its own clock. `--limit` also trims the batch, so a flush of more events sends larger requests.
 - `--limit N` previews the first N events (default 5, `0` for all). Sampling applies to a log as it would on recording.
 - The destination shows the scheme, host and path of the endpoint only: user info and query are dropped, headers
-  (`headers_env`) are never shown. Without an endpoint it says `<no endpoint configured>`.
+  (`headers_env`) are never shown; `telemetry doctor` prints a `headers_env` entry only when it is shaped like a variable name, and shows `(invalid, hidden)` for anything else. Without an endpoint it says `<no endpoint configured>`.
 - `fields withheld` lists the allowlist attributes whose opt-in (`include_paths`, `include_session`) is closed.
 
 ## Example collector and queries
