@@ -61,9 +61,12 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
 
 ## Supply-chain defaults
 
-- **Plain `http://` remotes are rejected.** A remote include, OKF include, installed skill or skill source must use
+- **Plain `http://` and `git://` remotes are rejected.** `git://` is unauthenticated and can be rewritten in transit. A remote include, OKF include, installed skill or skill source must use
   `https://`, `ssh://` / `git@host:path`, or a local `file://` URL or path. The error names the source and says to
-  switch to `https://`; `include add` refuses `http://` too.
+  switch to `https://`; `include add` refuses them too.
+- **The git token goes only to allowlisted hosts.** `AI_RULEZ_GIT_TOKEN` / `--token` is sent to `github.com` by default, or to
+  the hosts in `AI_RULEZ_GIT_TOKEN_HOSTS`, as a scoped header rather than inside the URL. Set the variable to keep
+  using a token with GitLab, Bitbucket or a self-hosted host.
 - **Imported content is scanned by default.** `[lint.security] scan_imports` is on when unset: `generate` scans
   includes and installed skills before writing anything and stops at an error-level finding. Set
   `scan_imports = "off"` to opt out, or `"warn"` to log only.

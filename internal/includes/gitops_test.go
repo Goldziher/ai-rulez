@@ -67,60 +67,6 @@ func TestCheckVersion225(t *testing.T) {
 	}
 }
 
-func TestInjectToken(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name  string
-		url   string
-		token string
-		want  string
-	}{
-		{
-			name:  "HTTPS with token",
-			url:   "https://github.com/owner/repo",
-			token: "mytoken",
-			want:  "https://mytoken:x-oauth-basic@github.com/owner/repo",
-		},
-		{
-			name:  "HTTP with token",
-			url:   "http://example.com/repo",
-			token: "abc123",
-			want:  "http://abc123:x-oauth-basic@example.com/repo",
-		},
-		{
-			name:  "SSH git@ with token unchanged",
-			url:   "git@github.com:owner/repo.git",
-			token: "mytoken",
-			want:  "git@github.com:owner/repo.git",
-		},
-		{
-			name:  "SSH ssh:// with token unchanged",
-			url:   "ssh://git@github.com/owner/repo.git",
-			token: "mytoken",
-			want:  "ssh://git@github.com/owner/repo.git",
-		},
-		{
-			name:  "file:// with token unchanged",
-			url:   "file:///tmp/repo",
-			token: "mytoken",
-			want:  "file:///tmp/repo",
-		},
-		{
-			name:  "HTTPS empty token unchanged",
-			url:   "https://github.com/owner/repo",
-			token: "",
-			want:  "https://github.com/owner/repo",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := injectToken(tt.url, tt.token)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestReadWriteCacheMeta(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

@@ -75,25 +75,6 @@ func checkVersion225(versionLine string) error {
 		Errorf("git >= 2.25 required for sparse checkout; found %d.%d", major, minor)
 }
 
-// injectToken rewrites an HTTPS URL to embed credentials.
-// https://host/path → https://token:x-oauth-basic@host/path
-// No-op for SSH URLs (git@, ssh://) and file:// URLs and empty token.
-func injectToken(rawURL, token string) string {
-	if token == "" {
-		return rawURL
-	}
-	if strings.HasPrefix(rawURL, "git@") || strings.HasPrefix(rawURL, "ssh://") || strings.HasPrefix(rawURL, "file://") {
-		return rawURL
-	}
-	for _, scheme := range []string{"https://", "http://"} {
-		if strings.HasPrefix(rawURL, scheme) {
-			host := strings.TrimPrefix(rawURL, scheme)
-			return scheme + token + ":x-oauth-basic@" + host
-		}
-	}
-	return rawURL
-}
-
 // checkRemoteArgs refuses a repository URL or ref that git would read as an
 // option (`--upload-pack=<command>` runs a program); it runs before any git
 // command is built from them.
@@ -111,12 +92,11 @@ func checkRemoteArgs(repoURL, ref string) error {
 // ref may be "main", "HEAD", a tag, etc.
 // For branches, queries refs/heads/<ref>; for HEAD, queries HEAD directly.
 // If the branch lookup returns nothing, falls back to refs/tags/<ref>.
-// Token is injected into HTTPS URLs before running git ls-remote.
+// The token is passed as a per-command credential (see withAuth), never in the URL.
 func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, error) {
 	if err := checkRemoteArgs(repoURL, ref); err != nil {
 		return "", err
 	}
-	url := injectToken(repoURL, token)
 
 	var refspecs []string
 	if ref == "" || ref == refHead {
@@ -125,11 +105,11 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 		refspecs = []string{"refs/heads/" + ref, "refs/tags/" + ref}
 	}
 
-	env := gitEnvFor(ctx)
+	env := withAuth(gitEnvFor(ctx), repoURL, token)
 
 	for i, refspec := range refspecs {
 		// nolint: gosec
-		cmd := gitCmd(ctx, "", "ls-remote", "--", url, refspec)
+		cmd := gitCmd(ctx, "", "ls-remote", "--", repoURL, refspec)
 		cmd.Env = env
 		out, err := cmd.Output()
 		if err != nil {
@@ -170,14 +150,13 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 //
 // destDir must not exist when this is called (caller does RemoveAll+MkdirAll first
 // so the dir exists but is empty — that is fine; git clone into an empty dir works).
-// Token is injected into HTTPS URLs.
+// The token is passed as a per-command credential (see withAuth), never in the URL.
 // On any error, destDir is cleaned up before returning.
 func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token string) error {
 	if err := checkRemoteArgs(repoURL, ref); err != nil {
 		return err
 	}
-	url := injectToken(repoURL, token)
-	env := gitEnvFor(ctx)
+	env := withAuth(gitEnvFor(ctx), repoURL, token)
 
 	cloneArgs := []string{"clone", "--depth", "1", "--filter=blob:none"}
 	if pathSpec != "" {
@@ -186,7 +165,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	if ref != "" && ref != refHead {
 		cloneArgs = append(cloneArgs, "--branch", ref)
 	}
-	cloneArgs = append(cloneArgs, "--", url, destDir)
+	cloneArgs = append(cloneArgs, "--", repoURL, destDir)
 
 	// nolint: gosec
 	cloneCmd := gitCmd(ctx, "", cloneArgs...)
@@ -229,8 +208,8 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 //	git -C <destDir> checkout --detach <commitSHA>
 //	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == ""; --sparse too: the whole repository is checked out)
 //
-// destDir must not exist when this is called. Token is injected into HTTPS
-// URLs. On any error, destDir is cleaned up before returning. Callers rely on
+// destDir must not exist when this is called. The token is passed as a
+// per-command credential, never in the URL. On any error, destDir is cleaned up before returning. Callers rely on
 // this failing closed — a commit that the remote cannot serve is an error,
 // never a silent fallback to cached content (#167).
 // cloneFor picks the clone strategy for a ref. A pinned commit SHA needs
@@ -247,15 +226,14 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	if err := checkRemoteArgs(repoURL, commitSHA); err != nil {
 		return err
 	}
-	url := injectToken(repoURL, token)
-	env := gitEnvFor(ctx)
+	env := withAuth(gitEnvFor(ctx), repoURL, token)
 
 	// nolint: gosec
 	cloneArgs := []string{"clone", "--depth", "1", "--no-checkout", "--filter=blob:none"}
 	if pathSpec != "" {
 		cloneArgs = append(cloneArgs, "--sparse")
 	}
-	cloneCmd := gitCmd(ctx, "", append(cloneArgs, "--", url, destDir)...)
+	cloneCmd := gitCmd(ctx, "", append(cloneArgs, "--", repoURL, destDir)...)
 	cloneCmd.Env = env
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure

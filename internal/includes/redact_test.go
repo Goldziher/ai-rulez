@@ -37,14 +37,6 @@ func TestRedactURL(t *testing.T) {
 	}
 }
 
-func TestInjectTokenIsRedactedForDisplay(t *testing.T) {
-	// The credential-bearing form git receives must never survive redaction.
-	injected := injectToken("https://github.com/o/r.git", "ghp_secret")
-
-	assert.Contains(t, injected, "ghp_secret")
-	assert.NotContains(t, RedactURL(injected), "ghp_secret")
-}
-
 func TestValidateGitURL_ErrorDoesNotLeakUserinfo(t *testing.T) {
 	err := validateGitURL("ftp://user:pw@host/repo")
 
