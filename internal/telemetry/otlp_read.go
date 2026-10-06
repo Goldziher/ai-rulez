@@ -61,6 +61,10 @@ type readRequest struct {
 // is not an OTLP logs request is counted and skipped, never an error, so a file
 // that mixes signals still reads.
 func ReadOTLPFile(path string) (OTLPRead, error) {
+	return readOTLPFile(path, maxOTLPLine)
+}
+
+func readOTLPFile(path string, maxLine int) (OTLPRead, error) {
 	file, err := safefs.OpenRegular(path)
 	if err != nil {
 		return OTLPRead{}, oops.With("path", path).Wrapf(err, "open OTLP file")
@@ -69,9 +73,9 @@ func ReadOTLPFile(path string) (OTLPRead, error) {
 	var out OTLPRead
 	reader := bufio.NewReaderSize(file, 256*1024)
 	for {
-		line, readErr := reader.ReadBytes('\n')
-		if len(line) > maxOTLPLine {
-			return out, oops.With("path", path).Errorf("an OTLP line exceeds %d bytes", maxOTLPLine)
+		line, readErr := readBoundedLine(reader, maxLine)
+		if errors.Is(readErr, errLineTooLong) {
+			return out, oops.With("path", path).Errorf("an OTLP line exceeds %d bytes", maxLine)
 		}
 		if line = bytes.TrimSpace(line); len(line) > 0 {
 			out.readLine(line)
@@ -81,6 +85,24 @@ func ReadOTLPFile(path string) (OTLPRead, error) {
 		}
 		if readErr != nil {
 			return out, oops.With("path", path).Wrapf(readErr, "read OTLP file")
+		}
+	}
+}
+
+var errLineTooLong = errors.New("line too long")
+
+// readBoundedLine reads one line, failing with errLineTooLong as soon as it passes
+// maxLine bytes instead of buffering the rest of an unterminated line.
+func readBoundedLine(reader *bufio.Reader, maxLine int) ([]byte, error) {
+	var line []byte
+	for {
+		chunk, err := reader.ReadSlice('\n')
+		if len(line)+len(chunk) > maxLine {
+			return nil, errLineTooLong
+		}
+		line = append(line, chunk...)
+		if !errors.Is(err, bufio.ErrBufferFull) {
+			return line, err //nolint:wrapcheck // io.EOF is the caller's end-of-file signal
 		}
 	}
 }
