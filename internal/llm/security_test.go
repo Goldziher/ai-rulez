@@ -264,7 +264,7 @@ func TestBudgetAmbiguousFailuresChargeTheWorstCase(t *testing.T) {
 }
 
 func TestJudgeRejectsIncompleteVerdictsAndDoesNotCacheThem(t *testing.T) {
-	for _, bad := range []string{`{}`, `{"rationale":"x"}`, `{"score":0.5}`, `{"score":1,"rationale":"x"} {"score":0}`, `{"score":1,"rationale":"x"} trailing`, `{"score":-0.1,"rationale":"x"}`, `{"score":null,"rationale":"x"}`, ``} {
+	for _, bad := range []string{`{}`, `{"rationale":"x"}`, `{"score":0.5}`, `{"score":1,"rationale":"x"} {"score":0}`, `{"score":1,"rationale":"x"} trailing`, `{"score":-0.1,"rationale":"x"}`, `{"score":null,"rationale":"x"}`, `{"score":1,"rationale":"x","extra":true}`, ``} {
 		f := NewFake()
 		f.ChatFunc = func(ChatRequest) (string, error) { return bad, nil }
 		if v, err := Judge(context.Background(), f, "r", "t"); err == nil {
