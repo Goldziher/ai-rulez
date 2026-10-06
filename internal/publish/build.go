@@ -178,6 +178,12 @@ func ValidateName(name, version string) error {
 	return nil
 }
 
+// ValidSince reports whether --since is a plain tag name: it is passed to git as
+// part of a revision, so an option, a range or a revision expression is refused.
+func ValidSince(tag string) bool {
+	return tagPattern.MatchString(tag) && !strings.Contains(tag, "..") && !strings.HasSuffix(tag, "/")
+}
+
 // ValidateTarget checks --tag and --repo before they reach an argv.
 func ValidateTarget(tag, repo string) error {
 	if !tagPattern.MatchString(tag) || strings.Contains(tag, "..") || strings.HasSuffix(tag, "/") {

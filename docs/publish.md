@@ -265,7 +265,7 @@ disturb a reproducible release.
 `RELEASE_NOTES.md` lists what changed in the lock since the previous release: added, changed and removed authored items
 (kind, id, domain, first 12 hex of the digest) and remote pins, never content. The previous release is the closest tag
 reachable from `HEAD` other than the release tag (in a multi-plugin release, the closest earlier `<name>-v*` tag of that
-plugin); `--since TAG` names another and is an error when that tag holds no lock.
+plugin); `--since TAG` names another (a plain tag name; options, ranges and expressions are refused) and is an error when that tag holds no lock.
 Without a previous tag, or one without a lock, the section is omitted; so is it (with a warning) when the lock at the previous tag
 cannot be parsed. A `--since` lock that cannot be read is an error.
 
