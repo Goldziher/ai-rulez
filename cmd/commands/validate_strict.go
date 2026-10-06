@@ -198,6 +198,10 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			opts = append(opts, lint.WithSigning(findings))
 		}
 	}
+	if lint.AnalyzerSelected(sel, lint.AnalyzerTraps) {
+		// The traps judge the files a run would write, whether or not generate has run.
+		opts = append(opts, lint.WithPlanned(generator.NewPlannedFiles(cfg)))
+	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
 		if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
 			logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
