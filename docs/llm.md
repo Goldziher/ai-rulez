@@ -165,10 +165,10 @@ Not verified: Linux, Windows and macOS x86_64 builds; providers other than Gemin
 ### Limitations
 
 - **Binary size.** Linking it adds about 39 MB to a 42 MB CLI (81 MB total, macOS arm64). The release asset has no slim feature set (upstream #250 and #252 only changed the documentation).
-- **Provider schema dialects.** liter-llm translates `response_format` into the provider's native form. Gemini's native API rejects `additionalProperties` in a schema (HTTP 400), and the built-in judge sends `additionalProperties: false`, so judge calls through `literllm` to Gemini fail; use `openaicompat` with Gemini's OpenAI-compatible endpoint, or another provider, until that is handled.
+- **Provider schema dialects.** liter-llm translates `response_format` into the provider's native form, and Gemini's native API rejects `additionalProperties` in a schema (HTTP 400). ai-rulez's own schemas therefore leave it out and refuse extra fields when decoding the reply; a schema you pass through the library yourself must do the same for Gemini.
 - **Model prefix.** With a `base_url`, liter-llm strips only the `provider/` prefix named by the model hint (now the configured `provider`), so `provider = "openai"`, `model = "gpt-4o-mini"` reaches a strict server as `gpt-4o-mini`. Without a configured provider the model is sent verbatim.
 - **Platforms.** Release assets exist for macOS (arm64, x86_64), Linux glibc (x86_64, aarch64) and Windows (x86_64, aarch64); none for musl.
-- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because 2.1.3 is unreleased (the pin is still 2.1.2 and a build needs a local `replace`), only macOS arm64 and only one provider have been exercised, and the Gemini schema gap above exists.
+- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because 2.1.3 is unreleased (the pin is still 2.1.2 and a build needs a local `replace`), only macOS arm64 and only one provider have been exercised.
 
 ### Licensing
 
