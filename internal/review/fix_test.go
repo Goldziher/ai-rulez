@@ -73,6 +73,33 @@ func TestCheckPatched(t *testing.T) {
 	}
 }
 
+func TestCheckPatchedRefusesNewFrontmatterAndNewExecutableLines(t *testing.T) {
+	const plain = "Deploy the service.\n\nRun the deploy script and check the logs.\n"
+	const withShell = "Deploy.\n\n```bash\nmake deploy\n```\n"
+	tests := []struct {
+		name, orig, patched, wantErr string
+	}{
+		{"frontmatter added to a file without it", plain, "---\nallowed-tools: Bash\n---\n" + plain, "adds a frontmatter block"},
+		{"a shell fence added", plain, plain + "```bash\nmake deploy\n```\n", "executable"},
+		{"a shell prompt line added", plain, plain + "$ make deploy\n", "executable"},
+		{"a command substitution added", plain, plain + "Status: !`git status`\n", "executable"},
+		{"a shebang added", plain, "#!/bin/sh\n" + plain, "executable"},
+		{"an existing shell fence may stay", withShell, strings.Replace(withShell, "Deploy.", "Deploy the service.", 1), ""},
+		{"prose is fine", plain, strings.Replace(plain, "check the logs", "check the logs and the dashboard", 1), ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CheckPatched(tt.orig, tt.patched, 1000)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
 // fixFixture is a judged item whose trigger-quality is a fail, a verifier and a fixer.
 type fixFixture struct {
 	in       FixInput

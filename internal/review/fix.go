@@ -118,6 +118,9 @@ func CheckPatched(orig, patched string, maxGrowthPercent int) error {
 	if ohad && !phad {
 		return oops.Errorf("the frontmatter no longer parses")
 	}
+	if !ohad && phad {
+		return oops.Errorf("the edit adds a frontmatter block; a fix may change only the description and the body")
+	}
 	if ohad {
 		for k, ov := range ofm {
 			if k == "description" {
@@ -150,6 +153,9 @@ func CheckPatched(orig, patched string, maxGrowthPercent int) error {
 			return oops.Errorf("the edit adds hidden characters (%s)", name)
 		}
 	}
+	if line, ok := newExecutableLine(orig, patched); ok {
+		return oops.Errorf("the edit adds an executable line (%s)", line)
+	}
 	origURLs := map[string]bool{}
 	for _, u := range urlRe.FindAllString(orig, -1) {
 		origURLs[u] = true
@@ -160,6 +166,32 @@ func CheckPatched(orig, patched string, maxGrowthPercent int) error {
 		}
 	}
 	return nil
+}
+
+// execLineRe matches a line an agent may run: a shebang, a shell prompt, a command substitution
+// (!`cmd`), or the opening of a shell code fence.
+var execLineRe = regexp.MustCompile("(?i)^(#!|\\$ |sudo |.*!`|```\\s*(bash|sh|zsh|shell|console|powershell|pwsh|fish)\\b)")
+
+// newExecutableLine returns the first line of patched that looks executable and is not a line of orig.
+func newExecutableLine(orig, patched string) (string, bool) {
+	had := map[string]int{}
+	for _, l := range strings.Split(orig, "\n") {
+		had[strings.TrimSpace(l)]++
+	}
+	for _, l := range strings.Split(patched, "\n") {
+		t := strings.TrimSpace(l)
+		if had[t] > 0 {
+			had[t]--
+			continue
+		}
+		if execLineRe.MatchString(t) {
+			if len(t) > 40 {
+				t = t[:40] + "..."
+			}
+			return t, true
+		}
+	}
+	return "", false
 }
 
 // FixInput configures ProposeFix for one item.
