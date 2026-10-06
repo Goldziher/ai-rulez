@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
@@ -133,6 +134,9 @@ type Policy struct {
 	// policy that cannot read its deny list refuses every digest: it must not
 	// fail open (AR717).
 	DenyProblem string
+	// Origin reports the forge repository of the project (its origin remote); nil
+	// or false when unknown. A review-linked approval must name a review of it.
+	Origin func() (forge.Repo, bool)
 	// Signed verifies signed approvals; nil means none can be verified.
 	Signed SignedVerifier
 }
@@ -169,6 +173,7 @@ func PolicyOf(cfg *config.Config) Policy {
 			p.DenyProblem = "the deny list cannot be read: " + err.Error()
 		}
 		p.Signed = newConfigVerifier(cfg)
+		p.Origin = originOf(cfg.BaseDir)
 	}
 	return p
 }
