@@ -48,6 +48,12 @@ func (r *runner) evalSettings() {
 	if r.lc.Evals.MinPassRate > 0 {
 		r.sev[CodeEvalScoreLow] = SeverityError
 	}
+	if r.lc.Evals.MinActivationRecall > 0 || r.lc.Evals.MinActivationPrecision > 0 {
+		r.sev[CodeActivationLow] = SeverityError
+	}
+	if r.lc.Evals.ConfusionThreshold > 0 {
+		r.sev[CodeSkillConfusable] = SeverityWarning
+	}
 }
 
 // validateEvalSettings reports invalid [lint.evals] values.
@@ -63,6 +69,17 @@ func validateEvalSettings(lc *config.LintConfig) []string {
 	}
 	if lc.Evals.MinPassRate < 0 || lc.Evals.MinPassRate > 1 {
 		problems = append(problems, "lint.evals.min_pass_rate: must be between 0 and 1")
+	}
+	for _, f := range []struct {
+		name string
+		v    float64
+	}{
+		{"min_activation_recall", lc.Evals.MinActivationRecall}, {"min_activation_precision", lc.Evals.MinActivationPrecision},
+		{"confusion_threshold", lc.Evals.ConfusionThreshold},
+	} {
+		if f.v < 0 || f.v > 1 {
+			problems = append(problems, "lint.evals."+f.name+": must be between 0 and 1")
+		}
 	}
 	return problems
 }
@@ -112,6 +129,10 @@ func (r *runner) checkEvalRecord(it *item, store *evals.Store, id string) {
 	record, ok := store.Get(id)
 	if !ok {
 		return
+	}
+	r.checkActivationRecord(it, record, id)
+	if !record.HasRun() {
+		return // only an activation measurement: no case run to judge
 	}
 	if !record.Verified() {
 		// A record not signed with this user's key (committed from another

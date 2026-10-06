@@ -167,6 +167,14 @@ type LintEvals struct {
 	// RequireFresh turns the eval-stale check (AR997) on: "warn" or "error" report a
 	// skill edited after its last recorded passing eval; "off" or empty disables it.
 	RequireFresh string `yaml:"require_fresh,omitempty" json:"require_fresh,omitempty" toml:"require_fresh,omitempty"` //nolint:tagliatelle
+	// MinActivationRecall and MinActivationPrecision turn the activation-low check
+	// (AR9A1) on: a skill whose recorded activation recall or precision
+	// ("ai-rulez eval run --mode activation") is below it is reported. Range 0-1.
+	MinActivationRecall    float64 `yaml:"min_activation_recall,omitempty" json:"min_activation_recall,omitempty" toml:"min_activation_recall,omitempty"`          //nolint:tagliatelle
+	MinActivationPrecision float64 `yaml:"min_activation_precision,omitempty" json:"min_activation_precision,omitempty" toml:"min_activation_precision,omitempty"` //nolint:tagliatelle
+	// ConfusionThreshold turns the skill-confusable check (AR9A2) on: a sibling that
+	// won at least this share (0-1) of a skill's positive activation prompts is reported.
+	ConfusionThreshold float64 `yaml:"confusion_threshold,omitempty" json:"confusion_threshold,omitempty" toml:"confusion_threshold,omitempty"` //nolint:tagliatelle
 }
 
 // LintDescription tunes description quality checks.
