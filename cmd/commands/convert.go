@@ -93,6 +93,7 @@ func init() {
 	f.BoolVar(&convertForce, "force", false, "Overwrite existing content files that differ (config.toml is always merged, never replaced)")
 	f.StringVar(&convertReport, "report", "", "Also write the report (in --format) to this file")
 	addFormatFlag(f, &convertFormat, formatText, formatText, formatText, formatJSON)
+	addJSONFlagAlias(f)
 	f.StringSliceVar(&convertFailOn, "fail-on", nil, "Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported")
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
