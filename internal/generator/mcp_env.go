@@ -39,7 +39,7 @@ func (g *Generator) resolveMCPEnvForPlugin() error {
 }
 
 func (g *Generator) resolveMCPPlaceholders(withHeaders bool) error {
-	if len(g.config.MCPServers) == 0 {
+	if len(g.config.MCPServers) == 0 || g.lockRender {
 		return nil
 	}
 
