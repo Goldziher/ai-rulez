@@ -379,8 +379,11 @@ func fetchInto(ctx context.Context, req cloneRequest, treeDir string, fetched *b
 		return oops.Wrapf(err, "create a checkout directory in the skill source cache")
 	}
 	if err := fetchCommit(ctx, req, tmp); err != nil {
-		_ = os.RemoveAll(tmp)    //nolint:errcheck // best-effort cleanup
-		_ = os.Remove(commitDir) //nolint:errcheck // best-effort: only removes the directory when nothing else is in it
+		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
+		// Best-effort: these only remove a directory that nothing else is in.
+		if os.Remove(commitDir) == nil {
+			_ = os.Remove(filepath.Dir(commitDir)) //nolint:errcheck // see above
+		}
 		return err
 	}
 	if err := os.Rename(tmp, treeDir); err != nil {
