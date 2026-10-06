@@ -218,7 +218,10 @@ host allowlist ([forge client](forge.md#safety-properties)). A review counts whe
 - **the commit the reviewer saw is the pull request's final head** (read with `GET /pulls/{n}`). A review of an earlier
   head approves nothing, even when the content looks the same: push, then ask for a new review (or have the branch
   protection dismiss stale reviews);
-- the content at that head has the digest being approved. The head must be in the local clone
+- the content at that head has the digest being approved. Authored content is **recomputed from the files of that
+  commit**, never read from the lock committed there, so a lock edited to claim the new digest cannot vouch for content
+  the reviewer did not see. Content only the lock describes (remote includes, installed skills, role outputs) cannot be
+  recomputed offline: the lock at that commit stands in for it. The head must be in the local clone
   (`git fetch origin pull/42/head`);
 - the reviewer passes `approvers` and, with `approvers_from`, owns the path, and with `forbid_self_approval` is not the
   pull request author. A reviewer who fails these is skipped with a note while another remains.
