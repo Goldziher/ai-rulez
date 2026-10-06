@@ -202,6 +202,10 @@ func Select(tags []RawTag, spec Spec) (*Selection, error) {
 	if !foundChosen {
 		return nil, errorf(CodeUnsatisfiable, "%s", unsatisfiableMessage(spec, cands, nonSemver))
 	}
+	if !foundLatest {
+		// Every tag is a prerelease and the spec excludes them, yet the constraint chose one.
+		sel.Latest = sel.Chosen
+	}
 	return sel, nil
 }
 

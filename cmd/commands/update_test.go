@@ -238,3 +238,34 @@ func TestUpdate_AllowDowngradeMovesToTheLowerTag(t *testing.T) {
 	require.Equal(t, 0, code)
 	assert.Equal(t, "v1.0.0", f.lock().Find(lockfile.KindInclude, "shared").Tag)
 }
+
+func TestPlanUpdates_MovedTagIsNeverHiddenByDowngrade(t *testing.T) {
+	tests := []struct {
+		name          string
+		row           tagresolve.Row
+		acceptMoved   bool
+		allowDowngrde bool
+		wantBlocked   bool
+		wantMove      bool
+		wantUnchanged bool
+	}{
+		{"moved and downgrading is blocked", tagresolve.Row{Kind: "include", Name: "a", Status: tagresolve.StatusTagMoved, Downgrade: true, Locked: &tagresolve.TagRef{Tag: "v1.2.0"}}, false, false, true, false, false},
+		{"moved and downgrading moves only with both flags", tagresolve.Row{Kind: "include", Name: "a", Status: tagresolve.StatusTagMoved, Downgrade: true, Locked: &tagresolve.TagRef{Tag: "v1.2.0"}}, true, true, false, true, false},
+		{"moved and downgrading with only accept-moved stays unchanged", tagresolve.Row{Kind: "include", Name: "a", Status: tagresolve.StatusTagMoved, Downgrade: true, Locked: &tagresolve.TagRef{Tag: "v1.2.0"}}, true, false, false, false, true},
+		{"a non-version pin needs consent", tagresolve.Row{Kind: "include", Name: "a", Status: tagresolve.StatusLockedNonVersion}, false, false, false, false, true},
+		{"a non-version pin moves with consent", tagresolve.Row{Kind: "include", Name: "a", Status: tagresolve.StatusLockedNonVersion}, false, true, false, true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updateAcceptMoved, updateAllowDowngrade = tt.acceptMoved, tt.allowDowngrde
+			t.Cleanup(func() { updateAcceptMoved, updateAllowDowngrade = false, false })
+			rep := &updateReport{moves: map[string]*moveTo{}}
+
+			planUpdates(rep, []versionSrc{{}}, []tagresolve.Row{tt.row})
+
+			assert.Equal(t, tt.wantBlocked, len(rep.Blocked) == 1)
+			assert.Equal(t, tt.wantMove, len(rep.moves) == 1)
+			assert.Equal(t, tt.wantUnchanged, len(rep.Unchanged) == 1)
+		})
+	}
+}

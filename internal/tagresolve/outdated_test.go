@@ -100,3 +100,34 @@ func TestEmptyReport(t *testing.T) {
 	require.NoError(t, NewReport(nil).WriteText(&out))
 	assert.Contains(t, out.String(), "no source uses a version constraint")
 }
+
+func TestEvaluateLockedNonVersionTag(t *testing.T) {
+	a, b := strings.Repeat("a", 40), strings.Repeat("b", 40)
+	want := lockfile.Want{Kind: "include", Name: "s", Source: "x", Ref: "^1.0", Constraint: "^1.0"}
+	entry := &lockfile.Entry{Ref: "^1.0", Source: "x", Tag: "release-candidate", Commit: a}
+
+	row := Evaluate("include", "s", want, entry, tagsAt(map[string]string{"release-candidate": a, "v1.0.0": b}))
+
+	assert.Equal(t, StatusLockedNonVersion, row.Status)
+	assert.Contains(t, row.Note, "release-candidate")
+	assert.Contains(t, row.Note, "--allow-downgrade")
+}
+
+func TestSelectLatestFallsBackToChosenWhenOnlyPrereleasesExist(t *testing.T) {
+	a := strings.Repeat("a", 40)
+
+	sel, err := Select(tagsAt(map[string]string{"v1.0.0-rc.1": a}), Spec{Constraint: "=1.0.0-rc.1"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "v1.0.0-rc.1", sel.Chosen.Tag.Name)
+	assert.Equal(t, "v1.0.0-rc.1", sel.Latest.Tag.Name)
+	row := Evaluate("include", "s", lockfile.Want{Kind: "include", Name: "s", Source: "x", Constraint: "=1.0.0-rc.1"}, nil, tagsAt(map[string]string{"v1.0.0-rc.1": a}))
+	assert.Equal(t, "v1.0.0-rc.1", row.Latest.Tag)
+}
+
+func TestTagMissingCountsAsAnError(t *testing.T) {
+	rep := NewReport([]Row{{Kind: "include", Name: "s", Status: StatusTagMissing, Code: "AR735"}})
+
+	assert.Equal(t, 1, rep.Summary.Errors)
+	assert.True(t, rep.Failing())
+}
