@@ -109,7 +109,11 @@ another generated file).
   `settings.json` are used. They match command prefixes and whole tools, never a path or a domain.
 - **cursor**: <https://cursor.com/docs/cli/reference/permissions>. `Shell(git)` covers every `git`
   command, so only single-word prefixes can be allowed; a multi-word deny uses `Shell(git:push*)`.
-  `ask` has no equivalent and prompts for whatever is not allowed.
+  `ask` has no equivalent and prompts for whatever is not allowed. `permissions.allow` and
+  `permissions.deny` are both required fields of `cli.json`
+  (<https://cursor.com/docs/cli/reference/configuration>, checked 2026-10-06), so a deny-only config still
+  writes `"allow": []`. ai-rulez owns an empty array it created and `clean` removes it with the file; an
+  `allow: []` you wrote stays.
 - **copilot**: <https://code.visualstudio.com/docs/agents/run/approvals>,
   <https://code.visualstudio.com/docs/chat/review-code-edits>. `true` auto-approves and `false` always
   asks. VS Code has no hard deny, so a deny rule is written as `false` and reported as not enforced. Read and MCP

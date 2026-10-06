@@ -198,6 +198,13 @@ func (g *Generator) carryClaimAnnotations(outputs []config.OutputFile) {
 				if !slices.Equal(prev[k].Path, claims[j].Path) {
 					continue
 				}
+				if claims[j].HasElements() && !prev[k].IsPreexisting(claims[j].Path) {
+					// An array that was empty when this run read it was ai-rulez's own
+					// (an earlier run created it): only the first run can tell the user's
+					// empty array from the one it made.
+					claims[j].Preexisting = slices.DeleteFunc(slices.Clone(claims[j].Preexisting),
+						func(p []string) bool { return slices.Equal(p, claims[j].Path) })
+				}
 				for _, empty := range prev[k].EmptyMaps {
 					if !claims[j].IsEmptyMap(empty) {
 						claims[j].EmptyMaps = append(claims[j].EmptyMaps, empty)
@@ -269,7 +276,10 @@ func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []js
 				})
 			}
 			claim = claim.WithoutElements(jsonmerge.Claim{Elements: held})
-			if len(claim.ElementDigests()) > 0 {
+			// An empty claim on an array an earlier run created stays: the array is
+			// ai-rulez's (Cursor requires it) and leaves with the document.
+			createdEmpty := len(array) == 0 && index >= 0 && !prev[index].IsPreexisting(claim.Path)
+			if len(claim.ElementDigests()) > 0 || createdEmpty {
 				kept = append(kept, claim)
 			}
 			continue
