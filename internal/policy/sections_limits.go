@@ -149,6 +149,45 @@ func sortedBudgetKinds(m map[string]SizeBudget) []string {
 	return kinds
 }
 
+// releaseSourceSatisfies reports whether the repository's [lock] min_release_age_source
+// meets the policy floor. "auto" tries the forge, then the machine's first
+// sighting, and never a committer's date, so it meets "first-seen" but not "forge".
+func releaseSourceSatisfies(have, floor string) bool {
+	switch floor {
+	case config.AgeSourceForge:
+		return have == config.AgeSourceForge
+	case config.AgeSourceFirstSeen:
+		return have == "" || have == config.AgeSourceAuto || have == config.AgeSourceFirstSeen || have == config.AgeSourceForge
+	}
+	return true
+}
+
+// minReleaseAgeSource raises [lock] min_release_age_source to the policy floor.
+// A source left unset takes the floor silently (forge) or keeps "auto"
+// (first-seen); an explicit weaker one is reported.
+func (a *applier) minReleaseAgeSource() {
+	floor := a.res.Policy.Sources.MinReleaseAgeSource
+	if floor == "" {
+		return
+	}
+	if a.cfg.Lock == nil {
+		a.cfg.Lock = &config.LockConfig{}
+	}
+	have := strings.ToLower(strings.TrimSpace(a.cfg.Lock.MinReleaseAgeSource))
+	if have == "" {
+		if floor == config.AgeSourceForge {
+			a.cfg.Lock.MinReleaseAgeSource = floor
+		}
+		return
+	}
+	if releaseSourceSatisfies(have, floor) {
+		return
+	}
+	a.violate(lint.CodePolicyLoosened, "lock.min_release_age_source", "min_release_age_source",
+		"[lock] min_release_age_source = %q is weaker than the policy floor %q (origin: %s); %q is enforced", have, floor, a.origin("sources.min_release_age_source"), floor)
+	a.cfg.Lock.MinReleaseAgeSource = floor
+}
+
 // parseMinReleaseAge reads sources.min_release_age with the parser the lock uses.
 func parseMinReleaseAge(raw string) (time.Duration, error) {
 	age, err := semver.ParseAge(raw)

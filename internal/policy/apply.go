@@ -93,6 +93,7 @@ func (r *Resolved) Apply(cfg *config.Config) Result {
 	a.scannerPolicy()
 	a.lock()
 	a.minReleaseAge()
+	a.minReleaseAgeSource()
 	a.networks()
 	a.guard()
 	a.governance()
@@ -143,6 +144,8 @@ func policyKeyOf(key string) string {
 		return "lock.enforce"
 	case strings.HasSuffix(key, ".min_release_age"):
 		return "sources.min_release_age"
+	case key == "lock.min_release_age_source":
+		return "sources.min_release_age_source"
 	}
 	return key
 }
