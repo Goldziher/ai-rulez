@@ -45,6 +45,10 @@ type translation struct {
 type permissionDialect struct {
 	// build returns the owned keys of the target document.
 	build func(t *translation) ([]jsonmerge.OwnedKey, error)
+	// required lists arrays the harness's schema requires whenever it writes any
+	// permission (Cursor: permissions.allow and permissions.deny). One build left
+	// out is added empty, owned like any array ai-rulez created.
+	required [][]string
 }
 
 // permissionDialects is one map literal so every dialect exists before any
@@ -55,6 +59,29 @@ var permissionDialects = map[string]permissionDialect{}
 func registerPermissionDialect(name string, build func(t *translation) ([]jsonmerge.OwnedKey, error)) struct{} {
 	permissionDialects[name] = permissionDialect{build: build}
 	return struct{}{}
+}
+
+// registerPermissionDialectRequiring is registerPermissionDialect for a harness
+// whose document must hold the given array paths whenever it holds any permission.
+func registerPermissionDialectRequiring(name string, build func(t *translation) ([]jsonmerge.OwnedKey, error), required ...[]string) struct{} {
+	permissionDialects[name] = permissionDialect{build: build, required: required}
+	return struct{}{}
+}
+
+// withRequiredArrays adds, for every required path no key addresses, the array
+// empty (or as the document and earlier runs hold it), when any key is written.
+func (d permissionDialect) withRequiredArrays(t *translation, keys []jsonmerge.OwnedKey) []jsonmerge.OwnedKey {
+	if len(keys) == 0 {
+		return keys
+	}
+	for _, path := range d.required {
+		if !slices.ContainsFunc(keys, func(k jsonmerge.OwnedKey) bool { return equalPath(k.Path, path) }) {
+			key := docArrayKey(t.cfg, t.docPath, path, nil)
+			key.Created = true
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 // IsPermissionDialect reports whether name is a known permission dialect.
@@ -87,7 +114,12 @@ func PermissionKeys(cfg *config.Config, dialect, docPath string) ([]jsonmerge.Ow
 	if !ok {
 		return nil, fmt.Errorf("unknown permissions dialect %q (known: %s)", dialect, strings.Join(PermissionDialectNames(), ", "))
 	}
-	return d.build(newTranslation(cfg, dialect, docPath))
+	t := newTranslation(cfg, dialect, docPath)
+	keys, err := d.build(t)
+	if err != nil {
+		return nil, err
+	}
+	return d.withRequiredArrays(t, keys), nil
 }
 
 // newTranslation parses cfg.Permissions for a harness.
@@ -240,19 +272,6 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 		claimed = []any{}
 	}
 	return jsonmerge.OwnedKey{Path: path, Value: value, Elements: claimed}
-}
-
-// docArrayKeyIfNeeded is docArrayKey that yields nothing for an array ai-rulez has
-// no element for and that neither the document nor an earlier run holds, so no
-// empty array is created or claimed.
-func docArrayKeyIfNeeded(cfg *config.Config, docPath string, path []string, ours []any) (jsonmerge.OwnedKey, bool) {
-	if len(ours) == 0 {
-		_, present := jsonmerge.LookupTree(docTree(docPath), path)
-		if !present && len(previousElementClaims(cfg, docPath, path)) == 0 {
-			return jsonmerge.OwnedKey{}, false
-		}
-	}
-	return docArrayKey(cfg, docPath, path, ours), true
 }
 
 // docMembersKey owns the given entries of the map at path one by one. An entry

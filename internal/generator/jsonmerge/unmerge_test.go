@@ -54,6 +54,13 @@ func TestApplyClaims(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "a created empty array is claimed",
+			owned: []jsonmerge.OwnedKey{{
+				Path: []string{"permissions", "allow"}, Value: []any{}, Elements: []any{}, Created: true,
+			}},
+			want: []jsonmerge.Claim{{Path: []string{"permissions", "allow"}, Elements: []any{}}},
+		},
+		{
 			name:  "removal claims nothing",
 			owned: []jsonmerge.OwnedKey{{Name: "x", Remove: true}},
 			want:  nil,

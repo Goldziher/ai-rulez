@@ -83,6 +83,13 @@ type OwnedKey struct {
 	// nothing. See Claim.
 	Elements []any
 
+	// Created marks an Elements array with no element that ai-rulez adds only
+	// because the harness requires it (Cursor's permissions.allow). The record
+	// then names the empty array, so a document ai-rulez created is taken back
+	// whole; an empty array the user already had is dropped from it on the next
+	// generation (see Generator.dropUserHeldClaims) and stays theirs.
+	Created bool
+
 	// Alone marks a scalar ai-rulez added only so that the rest of the document is
 	// valid (Cursor's hooks.json `version`): clean takes it back only when no other
 	// top-level key remains.

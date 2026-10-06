@@ -2,8 +2,10 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -172,15 +174,60 @@ func TestGenerate_UserOnlyHarnessesWriteNothingIntoTheProject(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, ".kimi-code", "config.toml"))
 }
 
-// TestGenerate_CursorDenyOnlyClaimsNoEmptyAllow pins that a deny-only [permissions]
-// writes no empty allow array, and that clean removes the document ai-rulez created.
-func TestGenerate_CursorDenyOnlyClaimsNoEmptyAllow(t *testing.T) {
+const cursorDenyOnlyConfig = "version = \"4.0\"\nname = \"p\"\npresets = [\"cursor\"]\ngitignore = false\n\n[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n"
+
+// TestGenerate_CursorDenyOnlyWritesBothRequiredArrays pins that Cursor's cli.json
+// always carries permissions.allow and permissions.deny (both are required by its
+// schema), and that ai-rulez owns the empty array it created: repeated runs and
+// clean leave nothing behind.
+func TestGenerate_CursorDenyOnlyWritesBothRequiredArrays(t *testing.T) {
 	quietWarnings(t)
 	// Arrange
-	cfg := "version = \"4.0\"\nname = \"p\"\npresets = [\"cursor\"]\ngitignore = false\n\n[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n"
-	root := writeProject(t, cfg, nil)
+	root := writeProject(t, cursorDenyOnlyConfig, nil)
 
 	// Act
+	generateProject(t, root)
+	generateProject(t, root)
+	gen := generateProject(t, root)
+	body := readProjectFile(t, root, ".cursor/cli.json")
+	var doc struct {
+		Permissions struct {
+			Allow []string `json:"allow"`
+			Deny  []string `json:"deny"`
+		} `json:"permissions"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &doc))
+	claims := gen.readManifest(gen.localManifestPath()).Merged[".cursor/cli.json"]
+	_, err := gen.Clean("default", CleanOptions{RemoveEdited: true})
+	require.NoError(t, err)
+
+	// Assert
+	assert.Contains(t, body, `"allow": []`)
+	assert.Equal(t, []string{"Shell(rm:-rf*)"}, doc.Permissions.Deny)
+	for _, claim := range claims {
+		assert.Empty(t, claim.Preexisting, "%v: a created array is not recorded as the user's", claim.Path)
+	}
+	var allowClaim bool
+	for _, claim := range claims {
+		if slices.Equal(claim.Path, []string{"permissions", "allow"}) {
+			allowClaim = true
+			assert.True(t, claim.HasElements(), "the created empty array is claimed")
+		}
+	}
+	assert.True(t, allowClaim, "the allow array is recorded in the local manifest")
+	assert.NoFileExists(t, filepath.Join(root, ".cursor", "cli.json"), "a document ai-rulez created is removed")
+}
+
+// TestGenerate_CursorKeepsAHandWrittenEmptyAllow pins that an empty allow array the
+// user wrote is theirs: clean restores the file byte for byte.
+func TestGenerate_CursorKeepsAHandWrittenEmptyAllow(t *testing.T) {
+	quietWarnings(t)
+	// Arrange
+	original := "{\n  \"permissions\": {\n    \"allow\": []\n  }\n}\n"
+	root := writeProject(t, cursorDenyOnlyConfig, map[string]string{".cursor/cli.json": original})
+
+	// Act
+	generateProject(t, root)
 	generateProject(t, root)
 	gen := generateProject(t, root)
 	body := readProjectFile(t, root, ".cursor/cli.json")
@@ -188,7 +235,6 @@ func TestGenerate_CursorDenyOnlyClaimsNoEmptyAllow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Contains(t, body, "deny")
-	assert.NotContains(t, body, `"allow"`, "no empty array is written")
-	assert.NoFileExists(t, filepath.Join(root, ".cursor", "cli.json"), "an emptied document ai-rulez created is removed")
+	assert.Contains(t, body, "Shell(rm:-rf*)")
+	assert.Equal(t, original, readProjectFile(t, root, ".cursor/cli.json"))
 }
