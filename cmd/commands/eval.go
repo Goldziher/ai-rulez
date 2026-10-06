@@ -22,39 +22,40 @@ const EvalDateEnv = "AI_RULEZ_EVAL_DATE"
 const exitEvalFailed = 2
 
 var evalFlags struct {
-	harness       string
-	runner        string
-	runnerCommand string
-	claudeBin     string
-	codexBin      string
-	runnerArgs    []string
-	runs          int
-	judgeModel    string
-	timeout       time.Duration
-	model         string
-	ablation      bool
-	dryRun        bool
-	estimate      bool
-	mode          string
-	surface       string
-	scope         string
-	format        string
-	out           string
-	maxCost       float64
-	maxCostMode   string
-	grader        string
-	allowLLM      bool
-	graderMaxCost float64
-	date          string
-	changedOnly   bool
-	base          string
-	force         bool
-	threshold     float64
-	allowExec     bool
-	noWrite       bool
-	results       string
-	priceIn       float64
-	priceOut      float64
+	harness         string
+	runner          string
+	runnerCommand   string
+	claudeBin       string
+	codexBin        string
+	runnerArgs      []string
+	runs            int
+	judgeModel      string
+	timeout         time.Duration
+	model           string
+	ablation        bool
+	dryRun          bool
+	estimate        bool
+	mode            string
+	surface         string
+	scope           string
+	descriptionFrom string
+	format          string
+	out             string
+	maxCost         float64
+	maxCostMode     string
+	grader          string
+	allowLLM        bool
+	graderMaxCost   float64
+	date            string
+	changedOnly     bool
+	base            string
+	force           bool
+	threshold       float64
+	allowExec       bool
+	noWrite         bool
+	results         string
+	priceIn         float64
+	priceOut        float64
 }
 
 // EvalCmd groups the skill eval commands.
@@ -135,6 +136,7 @@ func init() {
 	f.StringVar(&evalFlags.mode, "mode", evals.ModeCases, "What to measure: cases (full eval cases through a runner) or activation (only whether the right skill is chosen)")
 	f.StringVar(&evalFlags.surface, "surface", "", "With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner that declares the activation capability and the native surface)")
 	f.StringVar(&evalFlags.scope, "scope", evals.ScopeDomain, "With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all")
+	f.StringVar(&evalFlags.descriptionFrom, "description-from", "", "With --mode activation and one skill: measure the description in this file instead of the skill's own, for this run only (nothing is recorded, the source is not edited)")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
 	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")

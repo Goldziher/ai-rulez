@@ -139,7 +139,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--model` | Model for the cases. |
 | `--ablation` | Also run every case without the skill and report the delta. |
 | `--dry-run`, `--estimate` | List what would run with an estimated cost range (low, expected, high). Calls no runner, writes nothing. `--estimate` is an alias. |
-| `--mode`, `--surface`, `--scope` | `--mode activation` measures only whether the right skill is chosen; see [Activation mode](#activation-mode). |
+| `--mode`, `--surface`, `--scope`, `--description-from` | `--mode activation` measures only whether the right skill is chosen; see [Activation mode](#activation-mode). |
 | `--format`, `--out dir` | `json`, `markdown` (default) or `junit`; with `--out` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
 | `--max-cost USD` | Cost control, see [below](#cost-controls). |
 | `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
@@ -390,6 +390,14 @@ with every skill. A skill alone in its scope gets a warning, since a stolen trig
 also records a digest of the competing set: a sibling's edited description changes the competition and so the digest.
 A skill passes when the share of passing prompts reaches `--threshold` (default 1). Exit status is as for a case
 run: `2` when a skill fails, has invalid cases, or errors.
+
+#### Comparing descriptions
+
+`ai-rulez eval run <skill> --mode activation --surface retrieval --description-from candidate.txt` measures a
+candidate description of that one skill on the same prompts: the file's text (at most 16 KiB, UTF-8, no hidden
+characters) replaces the `description` in a scratch copy of the skill, on either surface, and the report carries a
+warning saying so. The source is not edited and nothing is recorded in `eval-results.json`, so the run can be repeated
+with another file and the two reports compared. It needs exactly one skill.
 
 ```json
 {

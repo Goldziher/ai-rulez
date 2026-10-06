@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ func resetEvalFlags(t *testing.T) {
 		evalFlags.threshold, evalFlags.allowExec, evalFlags.noWrite = 1, false, false
 		evalFlags.timeout = 30 * time.Minute
 		evalFlags.estimate, evalFlags.mode, evalFlags.surface, evalFlags.scope = false, evals.ModeCases, "", evals.ScopeDomain
+		evalFlags.descriptionFrom = ""
 		if f := evalRunCmd.Flags().Lookup("threshold"); f != nil {
 			f.Changed = false
 		}
@@ -387,6 +389,10 @@ func TestEvalRun_ActivationFlagValidation(t *testing.T) {
 			evalFlags.mode, evalFlags.surface = evals.ModeActivation, evals.SurfaceNative
 			evalFlags.runnerCommand = `printf '{"version":1,"capabilities":["activation"],"surfaces":["other"]}'`
 		}, "does not support the native surface"},
+		{"description-from without activation", func() { evalFlags.descriptionFrom = "d.txt" }, "--description-from needs --mode activation"},
+		{"description-from needs exactly one skill", func() {
+			evalFlags.mode, evalFlags.surface, evalFlags.descriptionFrom = evals.ModeActivation, evals.SurfaceRetrieval, "d.txt"
+		}, "exactly one skill"},
 		{"unknown max-cost-mode", func() { evalFlags.maxCostMode = "wild" }, "unknown --max-cost-mode"},
 		{"an unknown runner", func() {
 			evalFlags.mode, evalFlags.surface, evalFlags.runner = evals.ModeActivation, evals.SurfaceNative, "magic"
@@ -499,4 +505,70 @@ func TestEvalRun_EstimateIsAnAliasOfDryRun(t *testing.T) {
 	assert.Contains(t, out.String(), "Dry run")
 	assert.Contains(t, out.String(), "range $")
 	assert.NoFileExists(t, filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+}
+
+func TestEvalRun_DescriptionFromMeasuresACandidateAndRecordsNothing(t *testing.T) {
+	// Arrange
+	resetEvalFlags(t)
+	root := activationProject(t)
+	file := filepath.Join(t.TempDir(), "candidate.txt")
+	require.NoError(t, os.WriteFile(file, []byte("Deploy a service to the staging environment\n"), 0o600))
+	evalFlags.mode, evalFlags.surface, evalFlags.descriptionFrom = evals.ModeActivation, evals.SurfaceRetrieval, file
+	evalFlags.format, evalFlags.date = evals.FormatJSON, "2026-10-06"
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+	source, err := os.ReadFile(filepath.Join(root, ".ai-rulez", "skills", "deploy", "SKILL.md"))
+	require.NoError(t, err)
+
+	// Act
+	_, err = runEval(evalRunCmd, []string{"deploy"})
+
+	// Assert
+	require.NoError(t, err)
+	var report evals.ActivationReport
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	require.Len(t, report.Skills, 1)
+	assert.Contains(t, report.Skills[0].Warnings[0], "description replaced")
+	after, err := os.ReadFile(filepath.Join(root, ".ai-rulez", "skills", "deploy", "SKILL.md"))
+	require.NoError(t, err)
+	assert.Equal(t, string(source), string(after))
+	store, err := evals.LoadStore(filepath.Join(root, ".ai-rulez", evals.StoreFileName))
+	require.NoError(t, err)
+	_, recorded := store.Get("deploy")
+	assert.False(t, recorded)
+}
+
+func TestReadDescriptionFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		missing bool
+		want    string
+		wantErr string
+	}{
+		{name: "trimmed text", content: "  Use when deploying.\n", want: "Use when deploying."},
+		{name: "empty", content: " \n", wantErr: "is empty"},
+		{name: "hidden characters", content: "Use when\u200b deploying", wantErr: "hidden"},
+		{name: "not utf-8", content: "bad \xff bytes", wantErr: "UTF-8"},
+		{name: "too large", content: strings.Repeat("a", 20<<10), wantErr: "limit"},
+		{name: "missing", missing: true, wantErr: "read"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "d.txt")
+			if !tt.missing {
+				require.NoError(t, os.WriteFile(file, []byte(tt.content), 0o600))
+			}
+
+			got, err := readDescriptionFile(file)
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

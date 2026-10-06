@@ -33,6 +33,12 @@ type ActivationOptions struct {
 	PassThreshold *float64
 	// Store, when non-nil, receives each measured skill's activation record.
 	Store *Store
+	// Description, with DescriptionSkill, replaces that skill's description for
+	// this run only (--description-from). Nothing is recorded in the store.
+	Description      string
+	DescriptionSkill string
+	// dirOverride maps a skill id to the directory the run reads it from.
+	dirOverride map[string]string
 
 	// Surface is SurfaceRetrieval (default) or SurfaceNative. The settings below
 	// belong to the native surface.
@@ -117,6 +123,11 @@ func activationSetup(opts *ActivationOptions) (scope string, threshold float64, 
 	}
 	if all, err = FindSkills(opts.ConfigDir); err != nil {
 		return "", 0, nil, nil, err
+	}
+	for i := range all {
+		if dir, ok := opts.dirOverride[all[i].ID]; ok {
+			all[i].Dir = dir
+		}
 	}
 	if selected, err = selectSkills(all, opts.Skills); err != nil {
 		return "", 0, nil, nil, err
