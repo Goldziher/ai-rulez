@@ -60,13 +60,13 @@ func Rules() []Rule {
 		{CodeIndexMismatch, "okf-index-mismatch", SeverityWarning, "an OKF index.md lists a file that does not exist, or omits a concept or subdirectory of its directory"},
 		{CodeTypeInvalid, "okf-type-invalid", SeverityError, "an OKF concept has unparseable frontmatter or a missing or empty type"},
 		{CodeLinkBroken, "okf-link-broken", SeverityWarning, "a markdown link in an OKF bundle does not resolve to a file in the bundle"},
-		{CodeVersionInvalid, "okf-version-invalid", SeverityWarning, "the root index okf_version is not MAJOR.MINOR, or names a version other than the one ai-rulez implements"},
+		{CodeVersionInvalid, "okf-version-invalid", SeverityWarning, "the root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe"},
 		{CodeOrphan, "okf-orphan", SeverityInfo, "an OKF concept is reachable from no index entry and no link"},
 		{CodeExportDrift, "okf-export-drift", SeverityError, "the OKF bundle on disk differs from what export okf would write now"},
-		{CodeReservedStructure, "okf-reserved-structure", SeverityError, "an OKF index.md has frontmatter it may not have, or a log.md heading is not an ISO date"},
+		{CodeReservedStructure, "okf-reserved-structure", SeverityError, "an OKF index.md has frontmatter its style does not allow (frontmatter in a nested one outside the frontmatter style, keys other than okf_version in a body-style root, other than title, version and entries in a frontmatter-style one), or a log.md heading is not an ISO date"},
 		{CodeTitleDuplicate, "okf-title-duplicate", SeverityInfo, "two OKF concepts in one directory share a title"},
 		{CodePathUnsafe, "okf-path-unsafe", SeverityError, "an OKF bundle contains a symlink, a path escaping the bundle, or paths differing only in case"},
-		{CodeLossyMapping, "okf-lossy-mapping", SeverityInfo, "an OKF concept carries x-ai-rulez data that cannot be mapped and imports as plain context"},
+		{CodeLossyMapping, "okf-lossy-mapping", SeverityInfo, "import okf met a concept whose x-ai-rulez data cannot be mapped (it imports by its type) or a link to a file that was not imported (left as written)"},
 	}
 }
 
