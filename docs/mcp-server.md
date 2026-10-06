@@ -1272,7 +1272,7 @@ All four take the common parameters `config_file`, `config_dir`, `no_local` and 
 | --- | --- | --- |
 | `list_roles` | `roles list --format json` | common only |
 | `resolve_role` | `roles resolve <role> --format json` | `role` (required), `limit` |
-| `lock_status` | `lock --check --format json` | `kind` |
+| `lock_status` | `lock --check --format json` | `kind`, `profile`, `role`, `include_static`, `sources` |
 | `catalog` | `catalog --format json` | `kind`, `role`, `limit` |
 
 **Output limits.** `resolve_role` and `catalog` list at most `limit` items (default 200, maximum 1000; a smaller
@@ -1298,6 +1298,10 @@ sync unless `[lock] enforce = true`.
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `kind` | string | List only the changes of one kind: `include`, `skill`, `source`, `served`, or `content` (authored items and generated outputs). `in_sync` still covers the whole lock |
+| `profile` | string | Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view |
+| `role` | string | Compare only this role's outputs and check the skills it serves as a view of their own (`lock --role`) |
+| `include_static` | boolean | Also check the view that serves static skills too (`lock --include-static`) |
+| `sources` | string[] | Also check the view with these extra skill sources (`lock --source`) |
 
 #### `catalog`
 
