@@ -140,8 +140,11 @@ Each parent is a layer of its own (origin `extends`, listed after the policy tha
 tighten-only, so an extending policy can only add restrictions. Each hop must itself tighten its parent: a value the
 child states that is weaker than what it extends (a lower severity floor, an allowlist entry the parent does not cover,
 a higher budget, a shorter release age, a weaker scan level, ...) is `AR743`, because the fold would ignore it and the
-author would believe it took effect. A switch left off cannot be told from one never written, so booleans are not
-compared. A key the child does not mention is not a loosening.
+author would believe it took effect. Switches are compared by what the child wrote: `require_pinned = false`,
+`[lock] enforce = false`, `include_outputs = false`, `[guard] generated = false`, `[governance] enforce = false` or
+`forbid_self_approval = false`, `[hooks] allow = true`, and `allow_network = true` under `[telemetry]` or `[llm]` are
+loosenings when the parent turns the restriction on; `false` next to a parent that left it off is not. A key the child
+does not mention is not a loosening.
 
 Limits: at most 8 entries per `extends`, 5 hops deep, 32 policies in one load, no cycles (the cycle is named in the
 error). A URL parent needs its `@sha256:<hex>` pin (no trust-on-first-use inside a chain); a policy fetched from a URL
@@ -441,6 +444,6 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   inside a local include's directory) is imported. A violation unloads the key and is `AR748`, reported against the
   imported file. Builtin packs are not bounded (they ship with the binary).
 - **Known gaps.** A policy value is not checked against the secret scanner yet. `deny_digests`
-  bounds what the repository's own `ai-rulez.lock` says. Booleans are not compared when a child extends a parent. The `telemetry` and `llm` locks ignore
+  bounds what the repository's own `ai-rulez.lock` says. The `telemetry` and `llm` locks ignore
   organization discovery, which needs a repository.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).
