@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -1095,4 +1096,42 @@ func namedEntryNames(list []any) ([]string, bool) {
 		}
 	}
 	return names, true
+}
+
+// tomlSafeValue prepares a decoded document for TOML encoding: YAML numbers
+// kept as source text become numbers again and nulls (which TOML cannot hold)
+// are dropped.
+func tomlSafeValue(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, e := range t {
+			if e != nil {
+				out[k] = tomlSafeValue(e)
+			}
+		}
+		return out
+	case []any:
+		out := make([]any, 0, len(t))
+		for _, e := range t {
+			if e != nil {
+				out = append(out, tomlSafeValue(e))
+			}
+		}
+		return out
+	case float64:
+		if t == math.Trunc(t) && math.Abs(t) < 1<<53 {
+			return int64(t)
+		}
+		return t
+	case rawScalar:
+		if i, err := strconv.ParseInt(string(t), 0, 64); err == nil {
+			return i
+		}
+		if f, err := strconv.ParseFloat(string(t), 64); err == nil {
+			return f
+		}
+		return string(t)
+	}
+	return v
 }
