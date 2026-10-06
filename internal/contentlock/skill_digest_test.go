@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // goldenSkillDigest is the vector of docs/lockfile.md for the fixture skill below.
@@ -94,4 +96,25 @@ func TestSkillDirDigest(t *testing.T) {
 
 func TestSkillDigestSchemeIsTheLockLabel(t *testing.T) {
 	assert.Equal(t, label(KindSkill), SkillDigestScheme)
+}
+
+func TestSkillDigest_ReadErrorIsNotHiddenByTheInMemoryContent(t *testing.T) {
+	dir := t.TempDir()
+	// A SKILL.md that exists but cannot be read as a file: a directory stands in
+	// for a permission or I/O failure on every platform.
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "SKILL.md"), 0o750))
+	skill := &config.ContentFile{Path: filepath.Join(dir, "SKILL.md"), Content: "# in memory\n"}
+
+	_, err := SkillDigest(skill, dir)
+
+	require.Error(t, err, "a digest of stale in-memory content would be silently wrong")
+}
+
+func TestSkillDigest_MissingFileFallsBackToInMemoryContent(t *testing.T) {
+	skill := &config.ContentFile{Path: filepath.Join(t.TempDir(), "absent", "SKILL.md"), Content: "# builtin\n"}
+
+	digest, err := SkillDigest(skill, t.TempDir())
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, digest)
 }
