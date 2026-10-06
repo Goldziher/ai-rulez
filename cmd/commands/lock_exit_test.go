@@ -145,3 +145,19 @@ func TestCheckLocalIncludes(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckLockAt_NoLockFileIsAnError(t *testing.T) {
+	// Arrange: a project that was never locked.
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), validRootConfig)
+	chdir(t, root)
+
+	// Act
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+
+	// Assert
+	assert.Equal(t, 1, code)
+	assert.Contains(t, stderr, "no ai-rulez.lock")
+	assert.NotContains(t, stderr, "up to date")
+}

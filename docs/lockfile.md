@@ -254,7 +254,8 @@ Each source has a `status`: `up-to-date`, `updatable`, `not-locked`, `tag-moved`
 `unsatisfiable` (`AR730`), `invalid` (`AR731`), `downgrade-only`, or `locked-non-version` (the pinned tag is not a
 version, e.g. a constraint was added to a source pinned by an arbitrary ref; `update` moves it only with
 `--allow-downgrade`). Names and `--kind include|skill|source` limit
-the report. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
+the report; a name that matches no source with a version constraint is an error (exit `1`), as with `update`. Tags that differ only
+in build metadata (`v1.2.3+a`, `v1.2.3+b`) have equal precedence: the first by name is used and a note says so. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
 update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
 network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
 scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
@@ -516,6 +517,8 @@ revision), and that is worth a look too. Exit codes: `0` in sync, `1` the comman
 and for `lock` itself `3` when the lock was written but served skills were left unpinned because the security scan
 refuses them (`--strict` fails with `1` instead). Over several roots (`--recursive`) the most severe code wins:
 `1`, then `2`, then `3`.
+
+With no `ai-rulez.lock` at all, `--check` exits `1` ("no ai-rulez.lock": there is nothing to verify, which is not the same as in sync), and under `[lock] enforce = true` it exits `2` as a drift. Run `ai-rulez lock` first.
 
 A change of the ai-rulez version is a note, not a failure: output digests can differ between releases, and the
 output lines then tell you which.

@@ -108,6 +108,15 @@ func TestSelectReportsTwoTagsForOneVersion(t *testing.T) {
 	assert.Contains(t, sel.Notes[0], `"1.2.3" and "v1.2.3"`)
 }
 
+func TestSelectReportsTagsThatDifferOnlyInBuildMetadata(t *testing.T) {
+	sel, err := Select(rawTags("v1.2.3+a", "v1.2.3+b"), Spec{Constraint: "^1"})
+
+	require.NoError(t, err)
+	require.Len(t, sel.Notes, 1)
+	assert.Contains(t, sel.Notes[0], `"v1.2.3+a" and "v1.2.3+b"`)
+	assert.Contains(t, sel.Notes[0], "build metadata")
+}
+
 func TestSelectIsMonotone(t *testing.T) {
 	// Adding a tag below the chosen one never changes the result.
 	base := rawTags("v1.2.0", "v1.4.0", "v1.3.0")
