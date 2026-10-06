@@ -19,6 +19,7 @@ const (
 	CodePolicyRequiredMissing = "AR744"
 	CodeSourceNotAllowed      = "AR745"
 	// AR746 to AR749 are in their own block so each lands with its feature.
+	CodePolicySignature      = "AR746"
 	CodeCapabilityNotAllowed = "AR748"
 	CodePolicyBudgetExceeded = "AR749"
 )
@@ -26,7 +27,7 @@ const (
 var policyCodes = []string{
 	CodePolicyLoosened, CodePolicyDigestMismatch, CodePolicyUnavailable,
 	CodePolicyInvalid, CodePolicyRequiredMissing, CodeSourceNotAllowed,
-	CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
+	CodePolicySignature, CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
 }
 
 func init() {
@@ -37,6 +38,7 @@ func init() {
 		RuleInfo{CodePolicyInvalid, "policy-invalid", SeverityError, "a policy file is unusable: not TOML, an unknown key, a bad pattern, or newer than this ai-rulez"},
 		RuleInfo{CodePolicyRequiredMissing, "policy-required-missing", SeverityError, "the repository turns off or ignores a rule code the organization policy requires"},
 		RuleInfo{CodeSourceNotAllowed, "source-not-allowed", SeverityError, "an include, installed skill or skill source comes from a host the organization policy does not allow, or one it denies"},
+		RuleInfo{CodePolicySignature, "policy-signature-invalid", SeverityError, "a policy is unsigned where signatures are required, or its signature does not verify: not a trusted signer, not covering the policy, or older than one already seen (fails closed)"},
 		RuleInfo{CodePolicyBudgetExceeded, "policy-budget-exceeded", SeverityError, "a rule has more findings than the organization policy's lint.max_findings ceiling allows (0 allows none); always an error"},
 		RuleInfo{CodeCapabilityNotAllowed, "capability-not-allowed", SeverityError, "an MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded"},
 	)
@@ -70,6 +72,11 @@ func init() {
 			Why:  "The policy lists the hosts remote content may come from, so a typosquatted or attacker-controlled include cannot be added by editing the repository. The source is dropped from the run and reported.",
 			Bad:  "An include from `github.com/other-org/rules` under `sources.allowed_hosts = [\"github.com/example-org\"]`",
 			Good: "Mirror the content into an allowed organization, or ask the policy owners to allow the host",
+		},
+		CodePolicySignature: {
+			Why:  "A signature lets an organization publish a policy without every machine pinning its digest, but only if the signer is one the machine trusts and the signature covers exactly this policy. A bad or missing signature is refused, never skipped, so stripping the signature cannot switch the policy off.",
+			Bad:  "A policy whose `.sigstore.json` was made by an identity the machine does not trust, or by a key that signed a different file, or `--policy-require-signed` with no signature published",
+			Good: "Sign the policy with the organization's signer (`cosign sign-blob --bundle policy.toml.sigstore.json policy.toml`), and configure the trusted signer outside the repository",
 		},
 		CodePolicyBudgetExceeded: {
 			Why:  "A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.",
