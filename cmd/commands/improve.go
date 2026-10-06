@@ -11,9 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/improve"
+	"github.com/Goldziher/ai-rulez/v5/internal/improve/adapter"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -55,6 +58,14 @@ var improveFlags struct {
 	date              string
 	priceIn           float64
 	priceOut          float64
+
+	adapter            string
+	trustRepoOptimizer bool
+	requireCIAboveZero bool
+	isolation          string
+	adapterModel       string
+	adapterJudgeModel  string
+	allowSameModel     bool
 }
 
 // ImproveCmd groups the experimental skill improvement commands.
@@ -171,6 +182,13 @@ func init() {
 	f.StringVar(&improveFlags.date, "date", "", "Date recorded in the report (default $"+EvalDateEnv+"; the clock is never read)")
 	f.Float64Var(&improveFlags.priceIn, "price-in", 0, "USD per million input tokens for the estimate (default by model tier)")
 	f.Float64Var(&improveFlags.priceOut, "price-out", 0, "USD per million output tokens for the estimate (default by model tier)")
+	f.StringVar(&improveFlags.adapter, "adapter", "", "Bundled optimizer adapter, the same as --with builtin:NAME (see `improve adapters`)")
+	f.BoolVar(&improveFlags.trustRepoOptimizer, "trust-repo-optimizer", false, "Use [improve] optimizer and env_pass from a repository config (they choose a command that runs on your machine)")
+	f.BoolVar(&improveFlags.requireCIAboveZero, "require-ci-above-zero", false, "Also require the 95% bootstrap interval of the held-out gain to exclude zero")
+	f.StringVar(&improveFlags.isolation, "isolation", "", "Confine the optimizer: none (default), auto (when a sandbox backend works) or require (refuse without one)")
+	f.StringVar(&improveFlags.adapterModel, "adapter-model", "", "builtin:review-fix: model that writes the fix (default [review.fix] model); must differ from the judge")
+	f.StringVar(&improveFlags.adapterJudgeModel, "adapter-judge-model", "", "builtin:review-fix: model that judges and verifies (default [llm] model)")
+	f.BoolVar(&improveFlags.allowSameModel, "allow-same-model", false, "builtin:review-fix: let the fixer and the judge be the same model (self-preference risk)")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	improveApplyCmd.Flags().BoolVarP(&improveFlags.yes, "yes", "y", false, "Write without the confirmation prompt")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
@@ -188,13 +206,24 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	if err := checkFormatFlag(improveFlags.format); err != nil {
 		return false, err
 	}
-	argv, err := improve.ParseArgv(improveFlags.with)
-	if err != nil {
-		return false, oops.Hint("Pass the optimizer with --with, for example --with 'python optimize.py'").Wrap(err)
-	}
 	cfg, err := loadConfigForCommand(ctx, nil)
 	if err != nil {
 		return false, err
+	}
+	st, err := resolveImproveSettings(cmd, cfg, errOut)
+	if err != nil {
+		return false, err
+	}
+	choice, err := resolveOptimizer(cmd, cfg, st.optimizer)
+	if err != nil {
+		if len(st.ignored) > 0 && st.optimizer == "" {
+			return false, oops.Hint("The repository config sets [improve] optimizer; pass --trust-repo-optimizer to use it, or --with").Wrap(err)
+		}
+		return false, err
+	}
+	st.adapter, st.envPass = choice.adapter, append(st.envPass, choice.envPass...)
+	if len(st.egress) == 0 {
+		st.egress = choice.egress // a bundled adapter's own host, shown in the consent summary
 	}
 	configDirAbs, err := filepath.Abs(cfg.ConfigDir)
 	if err != nil {
@@ -204,7 +233,7 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	if err != nil {
 		return false, oops.Wrapf(err, "resolve project directory")
 	}
-	opts, err := buildImproveOptions(errOut, skill, argv, configDirAbs, repo)
+	opts, err := buildImproveOptions(errOut, skill, choice.argv, configDirAbs, repo, st)
 	if err != nil {
 		return false, err
 	}
@@ -229,7 +258,95 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	return !report.Accepted(), nil
 }
 
-func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDirAbs, repo string) (*improve.Options, error) {
+// improveSettings are the effective settings of one run: a flag wins over the user config, which wins
+// over the repository config, which wins over the default.
+type improveSettings struct {
+	optimizer       string
+	holdoutTag      string
+	holdoutFraction float64
+	minGain         float64
+	maxRegressions  int
+	maxRounds       int
+	maxHoldoutEvals int
+	runs            int
+	maxSkillGrowth  float64
+	requireCI       bool
+	isolation       sandbox.Mode
+	envPass         []string
+	egress          []string
+	adapter         string
+	// ignored are the repository keys that were not used (AR9J6).
+	ignored []string
+}
+
+// resolveImproveSettings merges the flags with [improve] and validates the table.
+func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Writer) (*improveSettings, error) {
+	if problems := cfg.Improve.Validate(); len(problems) > 0 {
+		return nil, oops.Hint("Fix the [improve] table in config.toml").Errorf("%s", strings.Join(problems, "; "))
+	}
+	res, err := cfg.ResolveImprove(improveFlags.trustRepoOptimizer, nil)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	if len(res.IgnoredRepoKeys) > 0 {
+		fmt.Fprintf(errOut, "warning: %s the repository config sets [improve] %s, which choose what runs on your machine and with which environment: ignored without --trust-repo-optimizer\n",
+			improve.CodeRepoOptimizerIgnored, strings.Join(res.IgnoredRepoKeys, " and "))
+	}
+	e := &res.Effective
+	changed := cmd.Flags().Changed
+	st := &improveSettings{
+		optimizer: strings.TrimSpace(e.Optimizer), holdoutTag: improveFlags.holdoutTag,
+		holdoutFraction: improveFlags.holdoutFraction, minGain: improveFlags.minGain, maxRegressions: improveFlags.maxRegressions,
+		maxRounds: improveFlags.maxRounds, maxHoldoutEvals: improveFlags.maxHoldoutEvals, runs: improveFlags.runs,
+		maxSkillGrowth: e.MaxSkillGrowth, requireCI: improveFlags.requireCIAboveZero || e.RequireCIAboveZero,
+		envPass: improveFlags.envPass, egress: improveFlags.egress, ignored: res.IgnoredRepoKeys,
+	}
+	if !changed("holdout-tag") && e.HoldoutTag != "" {
+		st.holdoutTag = e.HoldoutTag
+	}
+	if !changed("holdout-fraction") && e.HoldoutFraction != nil {
+		st.holdoutFraction = *e.HoldoutFraction
+	}
+	if !changed("min-gain") && e.MinGain != nil {
+		st.minGain = *e.MinGain
+	}
+	if !changed("max-regressions") && e.MaxRegressions != nil {
+		st.maxRegressions = *e.MaxRegressions
+	}
+	for _, n := range []struct {
+		flag   string
+		cfgVal int
+		dst    *int
+	}{{"max-rounds", e.MaxRounds, &st.maxRounds}, {"max-holdout-evals", e.MaxHoldoutEvals, &st.maxHoldoutEvals}, {"runs", e.Runs, &st.runs}} {
+		if !changed(n.flag) && n.cfgVal != 0 {
+			*n.dst = n.cfgVal
+		}
+	}
+	if !changed("env-pass") && len(e.EnvPass) > 0 {
+		st.envPass = e.EnvPass
+	}
+	mode := improveFlags.isolation
+	if !changed("isolation") && e.Isolation != "" {
+		mode = e.Isolation
+	}
+	st.isolation = sandbox.ModeNone
+	if mode != "" {
+		if st.isolation, err = sandbox.ParseMode(mode); err != nil {
+			return nil, oops.Wrap(err)
+		}
+	}
+	switch {
+	case improveFlags.with != "" && improveFlags.adapter != "":
+		return nil, oops.Errorf("pass --with or --adapter, not both")
+	case improveFlags.with != "":
+		st.optimizer = improveFlags.with
+	case improveFlags.adapter != "":
+		st.optimizer = adapter.Prefix + improveFlags.adapter
+	}
+	return st, nil
+}
+
+func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDirAbs, repo string, st *improveSettings) (*improve.Options, error) {
 	for name, value := range map[string]float64{"--max-cost": improveFlags.maxCost, "--price-in": improveFlags.priceIn, "--price-out": improveFlags.priceOut} {
 		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
 			return nil, oops.Errorf("%s must be a finite number >= 0, got %v", name, value)
@@ -252,12 +369,13 @@ func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDi
 	}
 	return &improve.Options{
 		ConfigDir: configDirAbs, RepoDir: repo, SkillID: skill, OptimizerArgv: argv, Exec: runner.Exec{}, HostEnv: runner.HostEnv(),
-		EnvPass: improveFlags.envPass, Egress: improveFlags.egress, Timeout: improveFlags.timeout, Stderr: errOut,
-		Eval: evalRunner, Harness: improveFlags.harness, Model: improveFlags.model, Runs: improveFlags.runs,
+		EnvPass: st.envPass, Egress: st.egress, Timeout: improveFlags.timeout, Stderr: errOut,
+		Eval: evalRunner, Harness: improveFlags.harness, Model: improveFlags.model, Runs: st.runs,
 		Grade: evals.GradeOptions{AllowExec: improveFlags.allowExec}, Price: price,
-		HoldoutTag: improveFlags.holdoutTag, HoldoutFraction: improveFlags.holdoutFraction, MinGain: improveFlags.minGain,
-		MaxRegressions: improveFlags.maxRegressions, MaxRounds: improveFlags.maxRounds, MaxHoldoutEvals: improveFlags.maxHoldoutEvals,
-		MaxCostUSD: improveFlags.maxCost, StopAtFirstAccept: improveFlags.stopAtFirstAccept,
+		HoldoutTag: st.holdoutTag, HoldoutFraction: st.holdoutFraction, MinGain: st.minGain,
+		MaxRegressions: st.maxRegressions, MaxRounds: st.maxRounds, MaxHoldoutEvals: st.maxHoldoutEvals,
+		MaxCostUSD: improveFlags.maxCost, StopAtFirstAccept: improveFlags.stopAtFirstAccept, RequireCIAboveZero: st.requireCI,
+		MaxSkillGrowth: st.maxSkillGrowth, Isolation: st.isolation, Adapter: st.adapter,
 		AllowFrontmatter: improveFlags.allowFrontmatter, AllowScripts: improveFlags.allowScripts,
 		Git: evals.ExecGit, Date: date, ToolVersion: Version,
 	}, nil
@@ -300,42 +418,6 @@ func printImproveReport(w io.Writer, r *improve.Report) error {
 	if improveFlags.format == formatJSON {
 		return writeImproveJSON(w, r)
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "Run %s for %s: %s\n", r.RunID, r.Skill, r.Status)
-	if r.Baseline != nil {
-		fmt.Fprintf(&b, "Baseline held-out pass rate %.0f%% (%d case(s))\n", r.Baseline.PassRate*100, r.Baseline.Scored)
-	}
-	for i := range r.Rounds {
-		rd := &r.Rounds[i]
-		fmt.Fprintf(&b, "Round %d: %s", rd.Round, rd.Decision)
-		if rd.Held != nil {
-			fmt.Fprintf(&b, " (held-out %.0f%% -> %.0f%%, %+.1f points, %d win(s), %d loss(es))", rd.Held.Base.PassRate*100, rd.Held.Cand.PassRate*100, rd.Held.Gain*100, len(rd.Held.Wins), len(rd.Held.Losses))
-		}
-		b.WriteString("\n")
-		for _, v := range rd.Violations {
-			fmt.Fprintf(&b, "  %s\n", v.String())
-		}
-		for _, reason := range rd.Reasons {
-			fmt.Fprintf(&b, "  %s\n", reason)
-		}
-		for _, warn := range rd.Warnings {
-			fmt.Fprintf(&b, "  warning: %s\n", warn)
-		}
-		if rd.Description != nil {
-			fmt.Fprintf(&b, "  description: %q -> %q\n", rd.Description.Before, rd.Description.After)
-		}
-	}
-	if r.Reason != "" {
-		fmt.Fprintf(&b, "%s\n", r.Reason)
-	}
-	fmt.Fprintf(&b, "Spent $%.2f of $%.2f (evals $%.2f, optimizer-reported $%.2f)\n", r.Costs.TotalUSD, r.Costs.MaxUSD, r.Costs.EvalUSD, r.Costs.OptimizerUSD)
-	if r.Costs.OptimizerReportedNoCost {
-		b.WriteString("warning: the optimizer reported no cost; its own spend is bounded only by its credentials\n")
-	}
-	fmt.Fprintf(&b, "Report: .ai-rulez/local/improve/%s/report.json\n", r.RunID)
-	if r.Accepted() {
-		fmt.Fprintf(&b, "Diff:   .ai-rulez/local/improve/%s/diff.patch\nReview it, then: ai-rulez improve apply %s\n", r.RunID, r.RunID)
-	}
-	_, err := io.WriteString(w, b.String())
+	_, err := io.WriteString(w, improve.FormatReport(r))
 	return oops.Wrap(err)
 }

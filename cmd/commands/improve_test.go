@@ -3,6 +3,8 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,6 +28,14 @@ const (
 // runner re-execute the test binary through it.
 func TestImproveHelperProcess(t *testing.T) {
 	switch {
+	case os.Getenv(helperOptimizerEnv) != "" && len(flag.Args()) > 0 && flag.Args()[0] == "improve":
+		// A bundled adapter child: run this binary's own command tree on the arguments after "--".
+		RootCmd.SetArgs(flag.Args())
+		if err := RootCmd.Execute(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	case os.Getenv(helperOptimizerEnv) != "":
 		var req improve.OptimizerRequest
 		if err := json.NewDecoder(os.Stdin).Decode(&req); err != nil {
@@ -62,7 +72,7 @@ func TestImproveHelperProcess(t *testing.T) {
 
 func resetImproveFlags(t *testing.T) {
 	t.Helper()
-	prevDir := configDir
+	prevDir, prevSelf := configDir, improveSelf
 	reset := func() {
 		improveFlags.with, improveFlags.holdoutTag, improveFlags.holdoutFraction = "", improve.DefaultHoldoutTag, improve.DefaultHoldoutFraction
 		improveFlags.minGain, improveFlags.maxRegressions = improve.DefaultMinGain, 0
@@ -72,6 +82,10 @@ func resetImproveFlags(t *testing.T) {
 		improveFlags.allowFrontmatter, improveFlags.allowScripts, improveFlags.envPass, improveFlags.egress = false, false, nil, nil
 		improveFlags.yes, improveFlags.dryRun, improveFlags.stopAtFirstAccept, improveFlags.format = false, false, false, formatText
 		improveFlags.date, improveFlags.priceIn, improveFlags.priceOut = "", 0, 0
+		improveFlags.adapter, improveFlags.trustRepoOptimizer, improveFlags.requireCIAboveZero, improveFlags.isolation = "", false, false, ""
+		improveFlags.adapterModel, improveFlags.adapterJudgeModel, improveFlags.allowSameModel = "", "", false
+		improveCleanFlags.all, improveCleanFlags.dryRun = false, false
+		improveSelf, improveAdapterClientFactory = prevSelf, nil
 		configDir = prevDir
 	}
 	reset()
