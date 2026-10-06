@@ -12,6 +12,7 @@
 package guard
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -85,7 +86,7 @@ var pathKeys = []string{"file_path", "filePath", "path", "target_file", "noteboo
 // patchKeys are the keys that carry an apply_patch style patch body.
 var patchKeys = []string{"command", "input", "patch", "cmd"}
 
-var patchFile = regexp.MustCompile(`(?m)^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+?)\s*$`)
+var patchFile = regexp.MustCompile(`(?m)^\s*\*\*\* (?:Add File|Update File|Delete File|Move to): (.+?)\s*$`)
 
 // editTools are the tools that write a file, lowercased, across the supported
 // harnesses. Any other named tool (Read, Grep, Bash, view...) is never blocked even
@@ -105,6 +106,10 @@ func Check(stdin io.Reader, cwd string) Decision {
 		return Decision{}
 	}
 	if len(data) > maxPayload {
+		// Only an edit tool is blocked for its size: an oversized Read is harmless.
+		if name := topLevelTool(data); name != "" && !editTools[strings.ToLower(name)] {
+			return Decision{}
+		}
 		return Decision{Block: true, Reason: fmt.Sprintf("the tool call payload is larger than %d MiB, which the ai-rulez guard does not analyse; make smaller edits", maxPayload>>20)}
 	}
 	var p payload
@@ -127,23 +132,61 @@ func Check(stdin io.Reader, cwd string) Decision {
 	}
 	c := newCache()
 	for _, target := range paths {
-		// Without a working directory an absolute path still says where its project is.
-		base := cwd
-		if base == "" && filepath.IsAbs(target) {
-			base = filepath.Dir(target)
+		// The project is located from the working directory and from the target's
+		// own directory: a payload whose cwd lies outside the project (or names
+		// none) must not hide a generated file inside it.
+		var bases []string
+		if cwd != "" {
+			bases = append(bases, cwd)
 		}
-		if base == "" {
-			continue
+		abs := target
+		if !filepath.IsAbs(abs) && cwd != "" {
+			abs = filepath.Join(cwd, abs)
 		}
-		proj, ok := c.project(base)
-		if !ok {
-			continue
+		if filepath.IsAbs(abs) {
+			if dir := filepath.Dir(filepath.Clean(abs)); dir != cwd {
+				bases = append(bases, dir)
+			}
 		}
-		if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target); hit {
-			return Decision{Block: true, Path: rel, Source: sourceOf(filepath.Join(proj.root, filepath.FromSlash(rel)))}
+		for _, base := range bases {
+			proj, ok := c.project(base)
+			if !ok {
+				continue
+			}
+			if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target); hit {
+				return Decision{Block: true, Path: rel, Source: sourceOf(filepath.Join(proj.root, filepath.FromSlash(rel)))}
+			}
 		}
 	}
 	return Decision{}
+}
+
+// topLevelTool reads the tool name from a payload that is too large to parse,
+// walking only its top-level keys. It returns "" when the name is not found
+// before the data ends.
+func topLevelTool(data []byte) string {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return ""
+	}
+	for dec.More() {
+		keyTok, err := dec.Token()
+		if err != nil {
+			return ""
+		}
+		key, _ := keyTok.(string)
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return ""
+		}
+		if key == "tool_name" || key == "toolName" {
+			var name string
+			if json.Unmarshal(raw, &name) == nil && name != "" {
+				return name
+			}
+		}
+	}
+	return ""
 }
 
 // project is a located project with its manifests read once.
@@ -222,18 +265,32 @@ func targets(p *payload) (out []string, over bool) {
 			}
 		}
 		for _, key := range patchKeys {
-			s, ok := input[key].(string)
-			if !ok {
-				continue
-			}
-			for _, m := range patchFile.FindAllStringSubmatch(s, -1) {
-				if !add(m[1]) {
-					return out, true
+			for _, s := range stringsIn(input[key]) {
+				for _, m := range patchFile.FindAllStringSubmatch(s, -1) {
+					if !add(m[1]) {
+						return out, true
+					}
 				}
 			}
 		}
 	}
 	return out, false
+}
+
+// stringsIn lists the strings of a patch value: the string itself, or every string
+// element of an array (Codex sends the patch as ["apply_patch", "<patch>"]).
+func stringsIn(v any) []string {
+	switch t := v.(type) {
+	case string:
+		return []string{t}
+	case []any:
+		var out []string
+		for _, e := range t {
+			out = append(out, stringsIn(e)...)
+		}
+		return out
+	}
+	return nil
 }
 
 // findProject walks up from dir to the nearest directory with a generated manifest.
@@ -262,8 +319,9 @@ type manifestFile struct {
 }
 
 // owned is the set of wholly owned outputs, keyed by slash path relative to the
-// project root (lowercased where the file system is case-insensitive).
-type owned map[string]bool
+// project root (lowercased where the file system is case-insensitive) and
+// mapping to the path as the manifest spells it.
+type owned map[string]string
 
 // loadManifest reads the committed and machine-local manifests. A path listed under
 // "merged" is a document ai-rulez only contributes keys to, so it is never owned.
@@ -281,7 +339,7 @@ func loadManifest(root string) owned {
 		}
 		for _, f := range m.Files {
 			if f = cleanRel(f); f != "" {
-				set[fold(f)] = true
+				set[fold(f)] = f
 			}
 		}
 		for f := range m.Merged {
@@ -320,7 +378,9 @@ func (o owned) lookup(root, realRoot, cwd, target string) (string, bool) {
 	}
 	abs = filepath.Clean(abs)
 	for _, c := range []struct{ base, path string }{{root, abs}, {realRoot, resolve(abs)}} {
-		rel, err := filepath.Rel(c.base, c.path)
+		// Both sides are folded on a case-insensitive file system: a path that
+		// differs from the root only in case is the same path there.
+		rel, err := filepath.Rel(fold(c.base), fold(c.path))
 		if err != nil {
 			continue
 		}
@@ -328,8 +388,8 @@ func (o owned) lookup(root, realRoot, cwd, target string) (string, bool) {
 		if rel == ".." || strings.HasPrefix(rel, "../") {
 			continue
 		}
-		if o[fold(rel)] {
-			return rel, true
+		if orig, ok := o[fold(rel)]; ok {
+			return orig, true
 		}
 	}
 	return "", false
