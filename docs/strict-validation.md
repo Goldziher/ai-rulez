@@ -36,7 +36,8 @@ stdout.
 - **Repository root.** The root defaults to the git toplevel of the configuration, else the directory that holds
   it. For a configuration checked out away from its repository (a scratch copy, a CI artifact) pass
   `--repo-root <dir>` or set `AI_RULEZ_REPO_ROOT`: paths, globs (`git ls-files`) and hook files then resolve
-  against that directory instead of reporting paths that exist in the real repository as missing. `AR402`
+  against that directory instead of reporting paths that exist in the real repository as missing. The root must
+  be inside a git work tree: a directory outside git is refused with an error instead of being walked. `AR402`
   names both bases it tried: the skill directory and the repo root.
 - **Nested roots.** A root's globs and paths resolve from the repository top or from the root's own directory,
   whichever matches. A root may name skills, agents, commands and rules defined by an ancestor root or in a
