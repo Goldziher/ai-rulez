@@ -19,6 +19,7 @@ type LayerView struct {
 	Source string `json:"source"`
 	Name   string `json:"name,omitempty"`
 	Digest string `json:"digest"`
+	Note   string `json:"note,omitempty"`
 }
 
 // Overrides summarizes what the repository did to the policy.
@@ -56,7 +57,7 @@ func BuildReport(r *Resolved, res *Result) Report {
 		rep.Mode = ModeWarn
 	}
 	for _, l := range r.Layers {
-		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest})
+		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest, Note: l.Note})
 	}
 	rep.Effective = r.Policy.Tree()
 	for k, v := range r.Provenance {
@@ -211,6 +212,9 @@ func (rep Report) WriteText(w io.Writer) {
 		name := ""
 		if l.Name != "" {
 			name = "  (" + l.Name + ")"
+		}
+		if l.Note != "" {
+			name += "  [" + l.Note + "]"
 		}
 		fmt.Fprintf(w, "  %-8s  %-*s  %s%s\n", l.Origin, width, l.Source, shortDigest(l.Digest), name)
 	}
