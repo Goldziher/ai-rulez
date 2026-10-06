@@ -45,6 +45,12 @@ func resetPublishFlags(t *testing.T) {
 		publishTo, publishDist, publishTag, publishRepo, publishFormat = "", "dist", "", "", ""
 		publishDryRun, publishExecute, publishYes, publishForce, publishAllowDirty = false, false, false, false, false
 		publishTemplates, publishRunner, profile = nil, nil, ""
+		publishChannel, publishSince, publishOCIRef, publishNPMScope, publishEmitOut = "", "", "", "", ""
+		publishMarketplace, publishExperimental, publishWithSBOM, publishPublic = false, false, false, false
+		publishRuntimes, publishOnly, publishEmit, publishVerifyKeys = nil, nil, nil, nil
+		publishSignKey, publishSignKeyPassEnv, publishSignTokenEnv, publishFulcioURL, publishRekorURL = "", "", "", "", ""
+		publishSignKeyless, publishSignInteractive, publishSignTLog, publishVerifyRequire = false, false, false, false
+		publishVerifyIdentity, publishVerifyIssuer, publishVerifyRoot = "", "", ""
 	}
 	reset()
 	t.Cleanup(reset)
@@ -138,7 +144,7 @@ func TestPublish_WritesAVerifiableDist(t *testing.T) {
 
 	var verifyOut bytes.Buffer
 	publishFormat = ""
-	_, _ = capture(t, func() { err = runPublishVerify(&verifyOut, filepath.Join(root, "dist")) })
+	_, _ = capture(t, func() { err = runPublishVerify(context.Background(), &verifyOut, filepath.Join(root, "dist")) })
 	require.NoError(t, err)
 	assert.Contains(t, verifyOut.String(), "verified acme 1.4.0")
 }
@@ -465,12 +471,20 @@ func TestPublish_FlagValidation(t *testing.T) {
 		setup func()
 		want  string
 	}{
-		{"unknown target", func() { publishTo = "npm" }, "unknown --to"},
+		{"unknown target", func() { publishTo = "ftp" }, "unknown --to"},
 		{"execute without target", func() { publishExecute, publishYes = true, true }, "needs --to"},
 		{"execute without yes", func() { publishExecute, publishTo = true, "github-release" }, "needs --yes"},
 		{"execute with dry-run", func() { publishExecute, publishDryRun, publishYes, publishTo = true, true, true, "github-release" }, "cannot be combined"},
 		{"force without execute", func() { publishForce = true }, "--force only applies"},
-		{"tag without target", func() { publishTag = "v1" }, "need --to"},
+		{"tag without target", func() { publishTag = "v1" }, "--tag needs"},
+		{"force with another target", func() { publishExecute, publishYes, publishTo, publishForce = true, true, "npm", true }, "--force only applies"},
+		{"bad channel", func() { publishChannel = "Bad Channel" }, "invalid --channel"},
+		{"oci ref without oci", func() { publishOCIRef = "ghcr.io/a/b" }, "--oci-ref needs"},
+		{"npm scope without npm", func() { publishNPMScope = "@a" }, "need --to npm"},
+		{"both signing modes", func() { publishSignKey, publishSignKeyless = "k.pem", true }, "mutually exclusive"},
+		{"keyless flag without keyless", func() { publishSignTokenEnv = "TOK" }, "apply to --sign-keyless"},
+		{"rekor without a log", func() { publishRekorURL = "https://rekor.example.com" }, "never sent anywhere"},
+		{"plain http fulcio", func() { publishSignKeyless, publishFulcioURL = true, "http://fulcio.example.com" }, "https"},
 		{"bad format", func() { publishFormat = "xml" }, "format"},
 	}
 	for _, tt := range tests {
@@ -635,7 +649,7 @@ func TestPublishVerify_ReportsATamperedDist(t *testing.T) {
 
 	// Act
 	var out bytes.Buffer
-	_, _ = capture(t, func() { err = runPublishVerify(&out, filepath.Join(root, "dist")) })
+	_, _ = capture(t, func() { err = runPublishVerify(context.Background(), &out, filepath.Join(root, "dist")) })
 
 	// Assert
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
@@ -648,7 +662,7 @@ func TestPublishVerify_ReportsATamperedDist(t *testing.T) {
 func TestPublishVerify_MissingDistIsExit1(t *testing.T) {
 	resetPublishFlags(t)
 
-	err := runPublishVerify(&bytes.Buffer{}, t.TempDir())
+	err := runPublishVerify(context.Background(), &bytes.Buffer{}, t.TempDir())
 
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitFailed)
 }
