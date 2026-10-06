@@ -49,7 +49,12 @@ type LLMEmbedder struct {
 	// (including the provider prefix of the literllm backend) untouched.
 	RequestModel string
 	Provider     string
+	// Batch caps the texts of one call (0: no cap); see Batcher.
+	Batch int
 }
+
+// MaxBatch implements Batcher.
+func (e *LLMEmbedder) MaxBatch() int { return e.Batch }
 
 // Embed implements Embedder.
 func (e *LLMEmbedder) Embed(ctx context.Context, texts []string) (Embedding, error) {
