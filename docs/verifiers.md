@@ -424,7 +424,7 @@ Each candidate is checked without the model: it must pass the same validation as
 globs, templates, scope), the pass and fail example the model supplied must behave as claimed when run offline
 (otherwise it is rejected), and it is run against the repository to count its findings today. A candidate that fails
 widely is a ratchet candidate (`in = "diff-added"`) or too broad; a rule that cannot be checked mechanically gets
-`No verifier proposed` with the model's reason. In a live run against Gemini (`gemini-2.5-flash-lite`) on this repository's architecture rule, one of five candidates survived; the others were rejected because their own examples did not behave as claimed. Exit `0` even with no proposal, `1` when it could not run.
+`No verifier proposed` with the model's reason. Exit `0` even with no proposal, `1` when it could not run.
 
 ## Settings
 

@@ -119,14 +119,13 @@ func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bo
 		b.WriteString("\n" + res.Estimate + "\n")
 		return b.String()
 	}
-	rejected, shown := 0, 0
-	for _, p := range res.Proposals {
+	rejected := 0
+	for i, p := range res.Proposals {
 		if p.Rejected != "" {
 			rejected++
 			continue
 		}
-		shown++
-		fmt.Fprintf(&b, "\n# %d. %s\n# %s\n# findings in the repository today: %d", shown, p.ID, p.Rationale, p.Hits)
+		fmt.Fprintf(&b, "\n# %d. %s\n# %s\n# findings in the repository today: %d", i+1, p.ID, p.Rationale, p.Hits)
 		if len(p.HitFiles) > 0 {
 			fmt.Fprintf(&b, " (%s)", strings.Join(p.HitFiles, ", "))
 		}
