@@ -65,7 +65,9 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 			if errors.Is(err, config.ErrLockViolation) {
 				violations = append(violations, err)
 			} else {
-				failures = append(failures, oops.Wrapf(err, "include %q", cfg.Includes[i].Name))
+				// ErrLockViolation also makes the config loader propagate it
+				// instead of continuing with local content only.
+				failures = append(failures, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "include %q", cfg.Includes[i].Name))
 			}
 			logger.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
 			// Continue processing other includes despite errors

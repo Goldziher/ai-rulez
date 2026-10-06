@@ -161,9 +161,9 @@ func TestOKFInclude_FrozenNeverFetches(t *testing.T) {
 
 	// A cold cache cannot be filled while frozen.
 	t.Setenv("HOME", t.TempDir())
-	cfg, err = f.load(t)
-	require.NoError(t, err, "a failing include is skipped with a warning")
-	assert.Empty(t, f.body(cfg), "nothing was fetched to fill the cold cache")
+	_, err = f.load(t)
+	require.Error(t, err, "a failing include is an error while frozen")
+	assert.Contains(t, err.Error(), "not in the local cache", "nothing was fetched to fill the cold cache")
 }
 
 func TestOKFInclude_FrozenRejectsATamperedCache(t *testing.T) {
