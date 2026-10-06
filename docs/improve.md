@@ -143,7 +143,8 @@ outcome per case. A candidate is accepted only if all hold:
 - at least one held-out case was scored by both arms, and the candidate was scored on every case the baseline was
   (a case the candidate could not be scored on counts as a loss, never as a pass; a gain of 0 with `--min-gain 0`
   is not evidence);
-- held-out pass rate gain >= `--min-gain`;
+- held-out pass rate gain >= `--min-gain` and at least one stable win (so `--min-gain 0` never accepts a candidate
+  that gained nothing; unstable cases are not wins);
 - held-out cases flipping pass to fail <= `--max-regressions`;
 - trigger precision and recall do not drop, and near-miss false positives do not rise;
 - no sibling lost trigger recall (above);
