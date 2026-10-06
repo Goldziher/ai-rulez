@@ -69,6 +69,8 @@ func TestExtendsRejectsAChildThatLoosensItsParent(t *testing.T) {
 		{"a weaker scan level", "[lint.security]\nscan_imports = \"error\"\n", "[lint.security]\nscan_imports = \"warn\"\n", "lint.security.scan_imports"},
 		{"a shorter release age", "[sources]\nmin_release_age = \"7d\"\n", "[sources]\nmin_release_age = \"1d\"\n", "sources.min_release_age"},
 		{"fewer approvers", "[governance]\nmin_approvers = 2\n", "[governance]\nmin_approvers = 1\n", "governance.min_approvers"},
+		{"a weaker assurance", "[governance]\nmin_assurance = \"signed\"\n", "[governance]\nmin_assurance = \"asserted\"\n", "governance.min_assurance"},
+		{"a lower signer threshold", "[signing.thresholds]\nlock = 2\n", "[signing.thresholds]\nlock = 1\n", "signing.thresholds.lock"},
 		{"a higher ceiling", "[lint.max_findings]\nAR001 = 1\n", "[lint.max_findings]\nAR001 = 5\n", "lint.max_findings.AR001"},
 		{"a reviewer the parent did not name", "[governance]\napprovers = [\"a@x.org\"]\n", "[governance]\napprovers = [\"a@x.org\", \"b@x.org\"]\n", "governance.approvers"},
 		{"an MCP command the parent forbids", "[mcp]\nallowed_commands = [\"npx\"]\n", "[mcp]\nallowed_commands = [\"npx\", \"bash\"]\n", "mcp.allowed_commands"},

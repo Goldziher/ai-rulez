@@ -20,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // Version is the policy file format this build reads.
@@ -69,6 +70,13 @@ type Governance struct {
 	MinApprovers int
 	// Approvers, when set, is the only list of reviewers that count (lower-cased).
 	Approvers List
+	// MinAssurance is the weakest assurance level that counts ("" for no floor).
+	MinAssurance string
+	// ForbidSelfApproval rejects an approval by an author of the content.
+	ForbidSelfApproval bool
+	// ApproversFrom is "CODEOWNERS" when approvers must come from a CODEOWNERS
+	// file; the repository chooses which one.
+	ApproversFrom string
 }
 
 // Sources governs where remote content may come from.
@@ -200,6 +208,10 @@ type fileGovernance struct {
 	RequireApproval []string  `toml:"require_approval"`
 	MinApprovers    *int      `toml:"min_approvers"`
 	Approvers       *[]string `toml:"approvers"`
+
+	MinAssurance       string `toml:"min_assurance"`
+	ForbidSelfApproval *bool  `toml:"forbid_self_approval"`
+	ApproversFrom      string `toml:"approvers_from"`
 }
 
 type fileSources struct {
@@ -354,6 +366,19 @@ func (g *Governance) fromDoc(d *fileGovernance) error {
 			}
 		}
 		g.Approvers = List{Set: true, Items: sortedUnique(items)}
+	}
+	if level := strings.ToLower(strings.TrimSpace(d.MinAssurance)); level != "" {
+		if lockfile.AssuranceRank(level) == 0 {
+			return fmt.Errorf("governance.min_assurance: %q is not an assurance level (use %s, %s or %s)", d.MinAssurance, lockfile.AssuranceAsserted, lockfile.AssuranceReviewLinked, lockfile.AssuranceSigned)
+		}
+		g.MinAssurance = level
+	}
+	g.ForbidSelfApproval = d.ForbidSelfApproval != nil && *d.ForbidSelfApproval
+	if from := strings.TrimSpace(d.ApproversFrom); from != "" {
+		if from != config.ApproversFromCodeowners {
+			return fmt.Errorf("governance.approvers_from: %q is not supported in a policy (use %q; the repository picks the file)", from, config.ApproversFromCodeowners)
+		}
+		g.ApproversFrom = from
 	}
 	return nil
 }

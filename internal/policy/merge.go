@@ -1,8 +1,11 @@
 package policy
 
 import (
+	"cmp"
 	"slices"
 	"sort"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 // Merge combines two policies into the tighter of the two, key by key:
@@ -47,6 +50,10 @@ func Merge(a, b Policy) Policy {
 			RequireApproval: union(a.Governance.RequireApproval, b.Governance.RequireApproval),
 			MinApprovers:    max(a.Governance.MinApprovers, b.Governance.MinApprovers),
 			Approvers:       intersectExact(a.Governance.Approvers, b.Governance.Approvers),
+
+			MinAssurance:       strongerAssurance(a.Governance.MinAssurance, b.Governance.MinAssurance),
+			ForbidSelfApproval: a.Governance.ForbidSelfApproval || b.Governance.ForbidSelfApproval,
+			ApproversFrom:      cmp.Or(a.Governance.ApproversFrom, b.Governance.ApproversFrom),
 		},
 		MCP:     mergeMCP(a.MCP, b.MCP),
 		Signing: mergeSigning(a.Signing, b.Signing),
@@ -175,6 +182,14 @@ func stricterScan(a, b string) string {
 }
 
 // sortedKeys returns the keys of m in order.
+// strongerAssurance is the higher of two assurance floors; "" is none.
+func strongerAssurance(a, b string) string {
+	if lockfile.AssuranceRank(b) > lockfile.AssuranceRank(a) {
+		return b
+	}
+	return a
+}
+
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

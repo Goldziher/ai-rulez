@@ -2,9 +2,12 @@ package policy
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
 const (
@@ -183,6 +186,14 @@ func Loosens(parent, child Policy) []string {
 	child.Lint.ScannerPolicy.loosens(parent.Lint.ScannerPolicy, add)
 	if c, p := child.Governance.MinApprovers, parent.Governance.MinApprovers; c > 0 && c < p {
 		add("governance.min_approvers", "%d is below the parent's %d", c, p)
+	}
+	if c, p := child.Governance.MinAssurance, parent.Governance.MinAssurance; c != "" && lockfile.AssuranceRank(c) < lockfile.AssuranceRank(p) {
+		add("governance.min_assurance", "%q is weaker than the parent's %q", c, p)
+	}
+	for _, key := range slices.Sorted(maps.Keys(parent.Signing.Thresholds)) {
+		if c, ok := child.Signing.Thresholds[key]; ok && c < parent.Signing.Thresholds[key] {
+			add("signing.thresholds."+key, "%d is below the parent's %d", c, parent.Signing.Thresholds[key])
+		}
 	}
 	if c, p := child.Signing.TLog, parent.Signing.TLog; c != "" && tlogRank[c] < tlogRank[p] {
 		add("signing.tlog", "%q is weaker than the parent's %q", c, p)

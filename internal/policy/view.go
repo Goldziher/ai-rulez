@@ -160,6 +160,15 @@ func (p Policy) Tree() map[string]any {
 	if g.Approvers.Set {
 		table("governance")["approvers"] = nonNil(g.Approvers.Items)
 	}
+	if g.MinAssurance != "" {
+		table("governance")["min_assurance"] = g.MinAssurance
+	}
+	if g.ForbidSelfApproval {
+		table("governance")["forbid_self_approval"] = true
+	}
+	if g.ApproversFrom != "" {
+		table("governance")["approvers_from"] = g.ApproversFrom
+	}
 	p.MCP.addTo(table)
 	p.Signing.addTo(table)
 	if p.Hooks.Forbidden {

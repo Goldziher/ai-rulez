@@ -220,6 +220,9 @@ enforce          = true                                         # approvals are 
 require_approval = ["remote", "kind:hook"]                      # always required; the repository's exempt cannot narrow it
 min_approvers    = 2
 approvers        = ["alice@example.org", "bob@example.org"]     # only these reviewers count
+min_assurance    = "review-linked"                              # an asserted approval does not count
+forbid_self_approval = true                                     # an author cannot approve their own change
+approvers_from   = "CODEOWNERS"                                 # approvers must also own the item's path (the repository picks the file)
 
 [signing]
 require_verified = ["lock"]                                     # the lock must carry a verified attestation
@@ -276,7 +279,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | --- | --- | --- | --- |
 | `sources.allowed_hosts` | sources the list covers | a source from a host the list does not cover; the source is not loaded | `AR745` |
 | `sources.deny_hosts` | union of layers | a source from a denied host; the source is not loaded | `AR745` |
-| `sources.deny_digests` | union of layers | a include, installed skill or skill source whose pinned digest is listed is not loaded; a listed authored item is reported (`ai-rulez.lock` names the digests, so keep the lock enforced) | `AR747` |
+| `sources.deny_digests` | union of layers; the organization's deny list, the counterpart of the lock's `[[deny]]` ([Approvals](approvals.md#deny-list)); both block, so a digest on either is denied | a include, installed skill or skill source whose pinned digest is listed is not loaded; a listed authored item is reported (`ai-rulez.lock` names the digests, so keep the lock enforced) | `AR747` |
 | `sources.require_pinned`, `lock.enforce` | the lock is enforced | `[lock] enforce = false` | `AR740` |
 | `lock.include_outputs` | output digests are pinned | `[lock] include_outputs = false` | `AR740` |
 | `lint.required_codes` | union of layers | `[lint.severity] CODE = "off"` or `[lint] ignore` | `AR744` |
@@ -301,6 +304,9 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `governance.enforce` | `true` | a `[governance]` table without `enforce = true` | `AR740` |
 | `governance.require_approval` | union with the repository's selectors; the policy's are not narrowed by `exempt` | (nothing to report: `exempt` is simply not applied to them) | none |
 | `governance.min_approvers` | the larger value | a lower explicit `min_approvers` | `AR740` |
+| `governance.min_assurance` | the stronger level (`asserted` < `review-linked` < `signed`) | a weaker explicit `min_assurance` | `AR740` |
+| `governance.forbid_self_approval` | `true` | a `[governance]` table without `forbid_self_approval = true` | `AR740` |
+| `governance.approvers_from` | the repository's own value, or `"CODEOWNERS"` when it has none; a policy cannot name a path | a `[governance]` table without `approvers_from` | `AR740` |
 | `signing.require_verified` | union with the repository's `[signing] require` | (nothing to report: the repository's list only adds) | none |
 | `signing.tlog` | the stricter mode (`off` < `optional` < `required`) | a weaker explicit `[signing] tlog` | `AR740` |
 | `signing.max_age` | the shorter age; an unset one takes the policy's | a longer explicit `[signing] max_age` | `AR740` |
@@ -389,9 +395,20 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 - **Discovery reads the owner from `origin`.** A repository can change its own remote, so the org layer is additive
   only. The design asked whether discovering from the git remote is acceptable at all (it is an implicit fetch):
   it is opt-in per user or per invocation, pinned by digest, and fails closed once demanded.
-- **`deny_digests` reports `AR747`.** The design shared one code (`AR717`) with an approvals deny list. That list is
-  not implemented (see [Approvals](approvals.md)), so the policy owns its code for now; the lock is the source of the
-  digests, which is why a repository without a lock has nothing to check.
+- **`deny_digests` reports `AR747`, the lock's `[[deny]]` reports `AR717`.** They are two lists with one effect: the
+  content is blocked. `AR717` is the repository's own list in `ai-rulez.lock` (`approve --revoke --deny`); `AR747` is the
+  organization's list, which the repository cannot edit or remove an entry from. The codes stay apart so a finding says
+  whose list it came from. The policy list is checked wherever the policy is applied (`generate`, `validate`, `lock
+  --check`), not by `approve`: approving a digest the policy denies is possible but changes nothing, because
+  generation still refuses it. The lock is the source of the digests, which is why a repository without a lock has
+  nothing to check.
+- **Governance floors.** `min_assurance`, `forbid_self_approval` and `approvers_from` are floors like `min_approvers`.
+  Without them a repository could lower its own assurance in the pull request that needs the approval. They are
+  assertions about the lock and CODEOWNERS the repository itself carries, so pair them with branch protection (see
+  [Approvals](approvals.md)); the policy cannot name a CODEOWNERS path, only demand that one is used.
+- **Signing trust is per subject.** `[[signing.trust]]` rows may name any trust subject. The list clamps only the
+  subjects it names (all of them when empty), so a policy that lists lock signers does not silently drop the
+  repository's skill, bundle, sbom or approval signers. `[signing.thresholds]` is a per-subject floor on k of n.
 - **`extends` is checked, not just folded.** Merging already makes the chain at least as strict as each parent, so a
   looser child value would be silently dropped. Reporting it (`AR743`) is the safer choice: a team lead who writes a
   weaker value learns it does nothing.
