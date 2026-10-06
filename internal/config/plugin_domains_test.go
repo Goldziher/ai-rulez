@@ -71,6 +71,8 @@ func TestValidateDomainPluginConfig(t *testing.T) {
 	}{
 		{name: "valid minimal", mutate: func(*Config) {}},
 		{name: "unsafe output_dir", mutate: func(c *Config) { c.Marketplace.OutputDir = "../x" }, wantErr: "unsafe output_dir"},
+		{name: "output_dir in .git", mutate: func(c *Config) { c.Marketplace.OutputDir = ".git/hooks" }, wantErr: "unsafe output_dir"},
+		{name: "output_dir in .ai-rulez", mutate: func(c *Config) { c.Marketplace.OutputDir = ".ai-rulez/x" }, wantErr: "unsafe output_dir"},
 		{name: "members with output_dir", mutate: func(c *Config) {
 			c.Marketplace.Members = []string{"a"}
 			c.Marketplace.OutputDir = "out"

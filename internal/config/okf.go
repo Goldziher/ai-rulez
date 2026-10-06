@@ -107,6 +107,12 @@ func (c *Config) validateOKF() error {
 				Hint("Use a relative directory inside the project, such as docs/okf.").
 				Wrapf(err, "invalid okf.dir %q", dir)
 		}
+		if err := ValidateOutputPath("okf.dir", dir); err != nil {
+			return oops.
+				With("field", "okf.dir").
+				Hint("Use a relative directory inside the project, such as docs/okf.").
+				Wrapf(err, "invalid okf.dir %q", dir)
+		}
 	}
 	if top := strings.SplitN(filepath.ToSlash(filepath.Clean(c.OKF.Dir)), "/", 2)[0]; top == ".git" || strings.HasPrefix(top, ".ai-rulez") {
 		return oops.

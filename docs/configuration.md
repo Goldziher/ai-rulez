@@ -293,6 +293,19 @@ Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
 provider-backed presets use the inline-table form shown above. TOML, YAML, and
 JSON configs all accept both.
 
+##### Output path rules
+
+A configuration comes from the repository, so every output path it names (a
+custom preset `path`, a provider spec's `root.file`, `outputs.*.dir`,
+`sidecars[].path` and `directories`, `okf.dir`, `marketplace.output_dir`,
+`codex_skills_dir`) must be a relative path inside the project. `validate` and
+`generate` reject an absolute path, a `..` segment, a drive or UNC prefix, any
+`.git` segment (any case), and a path under `.ai-rulez/`, `.config/ai-rulez`,
+`.hg` or `.svn`. A custom preset that writes a file CI or a developer tool runs
+(`.github/workflows/`, `Makefile`, `.vscode/tasks.json`, ...) is allowed, and the
+`generate` command summary lists it as `exec-file` before writing. Generation
+also refuses any write that resolves outside the project or inside `.git`.
+
 ##### Native tool and model names in a provider spec
 
 A tool with its own tool and model vocabulary can be given a translation instead of Claude's names.
