@@ -11,9 +11,11 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
 
 // CatalogSchemaVersionV2 versions the JSON of `ai-rulez catalog --format json
@@ -110,6 +112,10 @@ type CatalogItemV2 struct {
 	// Approval is null unless [governance] requires approval of the item or the
 	// lock records an approval of it (see ItemApproval).
 	Approval *ItemApproval `json:"approval"`
+	// Eval and Usage are set for skills when the build was given eval results or
+	// a usage log (see CatalogOptions); absent otherwise, never invented.
+	Eval  *ItemEval  `json:"eval,omitempty"`
+	Usage *ItemUsage `json:"usage,omitempty"`
 	// Excerpt is absent when excerpts were switched off.
 	Excerpt      *Excerpt          `json:"excerpt,omitempty"`
 	Roles        []string          `json:"roles"`
@@ -179,6 +185,17 @@ type CatalogOptions struct {
 	LintReason string
 	// NoExcerpt leaves the body excerpt out.
 	NoExcerpt bool
+	// WithEval adds the recorded eval result of each skill from Eval. A nil Eval
+	// says the results were not found (EvalNote says why).
+	WithEval bool
+	Eval     *evals.Store
+	EvalNote string
+	// WithUsage adds the use count of each skill from Usage; UsageLoaded false
+	// says the log was not found (UsageNote says why).
+	WithUsage   bool
+	Usage       []usage.Entry
+	UsageLoaded bool
+	UsageNote   string
 }
 
 // BuildCatalogV2 builds the version 2 catalog. It shares every v1 field with
@@ -226,6 +243,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		}
 		doc.Items = append(doc.Items, out)
 	}
+	attachSignals(doc, &opts)
 	doc.Lint = attrib.overview(opts.LintReason)
 	if opts.NoExcerpt {
 		doc.Notes = append(doc.Notes, "excerpts were switched off: item excerpts are omitted")

@@ -73,6 +73,7 @@ type row struct {
 	Roles                            int
 	DigestShort                      string
 	Approval, ApprovalFull           string
+	EvalCell, UsageCell              string
 	Href                             string
 	Search                           string
 	Hidden                           bool
@@ -97,6 +98,8 @@ type itemPage struct {
 	RoleDelivery                                           []kv
 	HasExcerpt, ExcerptTruncated                           bool
 	Excerpt                                                string
+	Eval                                                   []kv
+	Usage                                                  []kv
 }
 
 type rolePage struct {
@@ -138,6 +141,7 @@ type page struct {
 	MCP                                                           []mcpRow
 	LockInSync                                                    string
 	SchemaVersion                                                 int
+	HasEval, HasUsage                                             bool
 }
 
 var funcs = template.FuncMap{"s": display}
@@ -305,6 +309,16 @@ func (b *builder) rowOf(i int, prefix string) row {
 		Listing: it.LoadCost.ListingTokens, Status: class, StatusLabel: label, Roles: len(it.Roles),
 		DigestShort: shortDigest(it.Digest), Href: prefix + b.itemHref[i],
 		Search: strings.ToLower(display(strings.Join([]string{it.Kind, it.Domain, it.ID, it.Owner, it.Description}, " ")))}
+	r.EvalCell, r.UsageCell = "-", "-"
+	if e := it.Eval; e != nil {
+		r.EvalCell = percent(e.PassRate)
+		if e.Stale {
+			r.EvalCell += " (stale)"
+		}
+	}
+	if u := it.Usage; u != nil {
+		r.UsageCell = strconv.Itoa(u.Invocations)
+	}
 	r.Hidden = hasHidden(it.ID) || hasHidden(it.Domain) || hasHidden(it.Owner) || hasHidden(it.Version) ||
 		hasHidden(it.Description) || (it.Excerpt != nil && hasHidden(it.Excerpt.Text))
 	return r
@@ -319,6 +333,10 @@ func (b *builder) renderIndex() error {
 	}
 	for k := range kinds {
 		p.Kinds = append(p.Kinds, k)
+	}
+	for i := range b.doc.Items {
+		p.HasEval = p.HasEval || b.doc.Items[i].Eval != nil
+		p.HasUsage = p.HasUsage || b.doc.Items[i].Usage != nil
 	}
 	sort.Strings(p.Kinds)
 	for i := range b.doc.Roles {
@@ -353,6 +371,7 @@ func (b *builder) renderItems() error {
 		if it.Excerpt != nil {
 			ip.HasExcerpt, ip.ExcerptTruncated, ip.Excerpt = true, it.Excerpt.Truncated, it.Excerpt.Text
 		}
+		ip.Eval, ip.Usage = evalRows(it.Eval), usageRows(it.Usage)
 		p := b.base(it.ID, root, "items")
 		p.Item = ip
 		if err := b.emit(path, "item", p); err != nil {
@@ -508,4 +527,50 @@ func (b *builder) renderMCP() error {
 			Hidden: hasHidden(m.Name) || hasHidden(m.Description) || hasHidden(m.CommandBasename)})
 	}
 	return b.emit("mcp.html", "mcp", p)
+}
+
+// percent formats a 0..1 rate with fixed precision, so output never depends on
+// the Go version's float formatting.
+func percent(rate float64) string { return strconv.FormatFloat(rate*100, 'f', 0, 64) + "%" }
+
+func optPercent(rate *float64) string {
+	if rate == nil {
+		return "n/a"
+	}
+	return percent(*rate)
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
+
+func evalRows(e *govview.ItemEval) []kv {
+	if e == nil {
+		return nil
+	}
+	rows := []kv{{"Pass rate", percent(e.PassRate) + " over " + strconv.Itoa(e.Cases) + " scored case(s)"},
+		{"Met the pass threshold", yesNo(e.Passing)},
+		{"Ablation delta", optPercent(e.AblationDelta)},
+		{"Trigger precision", optPercent(e.TriggerPrecision)},
+		{"Trigger recall", optPercent(e.TriggerRecall)},
+		{"Stale", yesNo(e.Stale)},
+		{"Verified on this machine", yesNo(e.Verified)}}
+	if e.Date != "" {
+		rows = append(rows, kv{"Date", e.Date})
+	}
+	return rows
+}
+
+func usageRows(u *govview.ItemUsage) []kv {
+	if u == nil {
+		return nil
+	}
+	rows := []kv{{"Invocations", strconv.Itoa(u.Invocations)}}
+	if u.LastSeen != "" {
+		rows = append(rows, kv{"Last seen", u.LastSeen})
+	}
+	return rows
 }
