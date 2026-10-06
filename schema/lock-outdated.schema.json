@@ -35,7 +35,16 @@
               "locked-non-version"
             ]
           },
-          "code": { "enum": ["AR730", "AR731", "AR732", "AR735"] },
+          "code": { "enum": ["AR730", "AR731", "AR732", "AR734", "AR735"] },
+          "severity": {
+            "enum": ["error", "warning", "info"],
+            "description": "Severity of an AR734 (source-outdated) finding, set when [lint.severity] enables it."
+          },
+          "held_back": {
+            "type": "array",
+            "description": "Newer tags the constraint allows that min_release_age holds back (AR733).",
+            "items": { "$ref": "#/definitions/held" }
+          },
           "note": { "type": "string" },
           "downgrade": {
             "type": "boolean",
@@ -47,18 +56,33 @@
     },
     "summary": {
       "type": "object",
-      "required": ["total", "updatable", "major_available", "tag_moved", "errors"],
+      "required": ["total", "updatable", "major_available", "held_back", "tag_moved", "errors"],
       "additionalProperties": false,
       "properties": {
         "total": { "type": "integer" },
         "updatable": { "type": "integer" },
         "major_available": { "type": "integer" },
+        "held_back": { "type": "integer", "description": "Sources with at least one tag held back by min_release_age." },
         "tag_moved": { "type": "integer" },
         "errors": { "type": "integer" }
       }
     }
   },
   "definitions": {
+    "held": {
+      "type": "object",
+      "required": ["tag", "age_days"],
+      "additionalProperties": false,
+      "properties": {
+        "tag": { "type": "string" },
+        "commit": { "type": "string" },
+        "released": { "type": "string", "format": "date-time" },
+        "released_from": { "enum": ["forge", "first-seen", "commit"] },
+        "age_days": { "type": "integer", "description": "Whole days since the release; 0 when the time is unknown." },
+        "eligible_at": { "type": "string", "format": "date-time", "description": "When the tag passes min_release_age." },
+        "reason": { "type": "string", "description": "Set when the release time could not be found: the tag is held back (fail closed)." }
+      }
+    },
     "tagRef": {
       "type": "object",
       "required": ["tag"],

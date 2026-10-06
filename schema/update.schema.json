@@ -18,8 +18,8 @@
         "properties": {
           "kind": { "enum": ["include", "skill", "source"] },
           "name": { "type": "string" },
-          "from": { "$ref": "lock-outdated.schema.json#/definitions/tagRef" },
-          "to": { "$ref": "lock-outdated.schema.json#/definitions/tagRef" },
+          "from": { "$ref": "#/definitions/tagRef" },
+          "to": { "$ref": "#/definitions/tagRef" },
           "digest_old": { "type": "string" },
           "digest_new": { "type": "string" },
           "files": {
@@ -35,20 +35,216 @@
               }
             }
           },
-          "reason": { "type": "string" }
+          "reason": { "type": "string" },
+          "held_back": {
+            "type": "array",
+            "description": "Newer tags min_release_age held back (AR733).",
+            "items": { "$ref": "#/definitions/held" }
+          },
+          "released": { "type": "string", "format": "date-time", "description": "Recorded release time of the new tag." },
+          "released_from": { "enum": ["forge", "first-seen", "commit"] },
+          "scan": {
+            "type": "object",
+            "description": "The security scan (AR001-AR009) of the new tree, run before the pin is written.",
+            "required": ["errors", "warnings"],
+            "additionalProperties": false,
+            "properties": {
+              "errors": { "type": "integer" },
+              "warnings": { "type": "integer" },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["code", "severity", "file", "message"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": { "type": "string" },
+                    "severity": { "type": "string" },
+                    "file": { "type": "string" },
+                    "line": { "type": "integer" },
+                    "message": { "type": "string" }
+                  }
+                }
+              },
+              "refused": { "type": "boolean", "description": "Error findings refuse the pin; nothing is written." },
+              "accepted": { "type": "boolean", "description": "--accept-findings let the pin through." },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "major": {
+      "type": "array",
+      "description": "Sources with a newer major version than their constraint allows (update --major).",
+      "items": {
+        "type": "object",
+        "required": ["kind", "name", "from", "to", "latest"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["include", "skill", "source"] },
+          "name": { "type": "string" },
+          "from": { "type": "string", "description": "The constraint now in config.toml." },
+          "to": { "type": "string", "description": "The constraint that takes the newest major." },
+          "latest": { "type": "string", "description": "The newest version tag." },
+          "written": { "type": "boolean", "description": "--write-config rewrote the version line." }
         }
       }
     },
     "blocked": {
       "type": "array",
-      "description": "Sources refused (AR730, AR731, AR732); when any is present nothing is written.",
-      "items": { "$ref": "lock-outdated.schema.json#/properties/sources/items" }
+      "description": "Sources refused (AR730, AR731, AR732); when any is present nothing is written. A refused scan is on the update (scan.refused).",
+      "items": { "$ref": "#/definitions/row" }
     },
     "unchanged": {
       "type": "array",
       "description": "Sources left alone, for example a downgrade that needs --allow-downgrade.",
-      "items": { "$ref": "lock-outdated.schema.json#/properties/sources/items" }
+      "items": { "$ref": "#/definitions/row" }
     },
     "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "definitions": {
+    "row": {
+      "type": "object",
+      "required": [
+        "kind",
+        "name",
+        "source",
+        "constraint",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "include",
+            "skill",
+            "source"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "description": "The source URL, credentials redacted."
+        },
+        "constraint": {
+          "type": "string"
+        },
+        "locked": {
+          "$ref": "#/definitions/tagRef"
+        },
+        "allowed": {
+          "$ref": "#/definitions/tagRef"
+        },
+        "latest": {
+          "$ref": "#/definitions/tagRef"
+        },
+        "status": {
+          "enum": [
+            "up-to-date",
+            "updatable",
+            "not-locked",
+            "tag-moved",
+            "tag-missing",
+            "unsatisfiable",
+            "invalid",
+            "downgrade-only",
+            "locked-non-version"
+          ]
+        },
+        "code": {
+          "enum": [
+            "AR730",
+            "AR731",
+            "AR732",
+            "AR734",
+            "AR735"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ],
+          "description": "Severity of an AR734 (source-outdated) finding, set when [lint.severity] enables it."
+        },
+        "held_back": {
+          "type": "array",
+          "description": "Newer tags the constraint allows that min_release_age holds back (AR733).",
+          "items": {
+            "$ref": "#/definitions/held"
+          }
+        },
+        "note": {
+          "type": "string"
+        },
+        "downgrade": {
+          "type": "boolean",
+          "description": "The newest allowed tag is below the pinned one; update needs --allow-downgrade."
+        },
+        "major_available": {
+          "type": "boolean",
+          "description": "A newer major version than the allowed one exists."
+        }
+      }
+    },
+    "tagRef": {
+      "type": "object",
+      "required": [
+        "tag"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tag": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        }
+      }
+    },
+    "held": {
+      "type": "object",
+      "required": [
+        "tag",
+        "age_days"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tag": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "released": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "released_from": {
+          "enum": [
+            "forge",
+            "first-seen",
+            "commit"
+          ]
+        },
+        "age_days": {
+          "type": "integer",
+          "description": "Whole days since the release; 0 when the time is unknown."
+        },
+        "eligible_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the tag passes min_release_age."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Set when the release time could not be found: the tag is held back (fail closed)."
+        }
+      }
+    }
   }
 }
