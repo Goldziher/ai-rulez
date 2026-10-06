@@ -129,6 +129,9 @@ func validateLockFlags(args []string) error {
 	if lockSubjectOutput != "" && lockRecursive {
 		return oops.Errorf("--output cannot be combined with --recursive: every root would overwrite the same file")
 	}
+	if lockVerifyTags && !lockCheck {
+		return oops.Errorf("--verify-tags only applies to --check")
+	}
 	if (lockFailOnOutdated || lockOffline) && !lockOutdated {
 		return oops.Errorf("--fail-on-outdated and --offline need --outdated")
 	}
@@ -344,6 +347,13 @@ func checkLockAt(path string) int {
 	code := checkLockContentAt(path)
 	if code == 1 {
 		return code
+	}
+	if lockVerifyTags {
+		c := verifyTagsAt(path)
+		if c == 1 {
+			return c
+		}
+		code = worstExit(code, c)
 	}
 	return worstExit(code, checkLockSignatureAt(path))
 }
