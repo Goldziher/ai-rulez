@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -311,6 +312,19 @@ func (ed jsoncEditor) setMember(obj *hujson.Object, name string, value any, dept
 	if idx < 0 {
 		return ed.insertMember(obj, name, value, depth)
 	}
+	// An array the document already holds keeps its elements, spacing and
+	// comments: new elements are added after them, and an array that already says
+	// what ai-rulez wants is left alone.
+	if arr, ok := obj.Members[idx].Value.Value.(*hujson.Array); ok {
+		if done, err := ed.extendArray(arr, value, depth); err != nil {
+			return fmt.Errorf("marshal owned key %q: %w", name, err)
+		} else if done {
+			for dup := jsoncFindFrom(obj, name, idx+1); dup >= 0; dup = jsoncFindFrom(obj, name, idx+1) {
+				ed.removeAt(obj, dup)
+			}
+			return nil
+		}
+	}
 	rendered, err := ed.renderValue(value, depth, !jsoncMultiline(obj))
 	if err != nil {
 		return fmt.Errorf("marshal owned key %q: %w", name, err)
@@ -323,6 +337,40 @@ func (ed jsoncEditor) setMember(obj *hujson.Object, name string, value any, dept
 		ed.removeAt(obj, dup)
 	}
 	return nil
+}
+
+// extendArray edits arr in place when value is arr's own elements followed by
+// new ones (or exactly arr's elements), reporting whether it did. Anything else,
+// such as an element dropped or reordered, is left to the caller to replace.
+func (ed jsoncEditor) extendArray(arr *hujson.Array, value any, depth int) (bool, error) {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return false, err //nolint:wrapcheck // the caller names the key
+	}
+	var want []any
+	if json.Unmarshal(encoded, &want) != nil || len(arr.Elements) == 0 || len(want) < len(arr.Elements) {
+		return false, nil
+	}
+	for i := range arr.Elements {
+		var have any
+		if json.Unmarshal(standardRaw(arr.Elements[i]), &have) != nil || !reflect.DeepEqual(have, want[i]) {
+			return false, nil
+		}
+	}
+	last := arr.Elements[len(arr.Elements)-1]
+	for _, element := range want[len(arr.Elements):] {
+		rendered, err := ed.renderValue(element, depth+1, true)
+		if err != nil {
+			return false, err
+		}
+		rendered.BeforeExtra = wsOnly(last.BeforeExtra)
+		if last.AfterExtra != nil {
+			// The array ends in a trailing comma: the new last element keeps one.
+			rendered.AfterExtra = hujson.Extra{}
+		}
+		arr.Elements = append(arr.Elements, rendered)
+	}
+	return true, nil
 }
 
 // insertMember appends a member at the end of obj, matching the layout of the

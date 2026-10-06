@@ -278,7 +278,7 @@ func Unmerge(path string, claims []Claim) (Unmerged, error) {
 func UnmergeDocument(path, existing string, claims []Claim) (Unmerged, error) {
 	bom, existing := SplitBOM(existing)
 	members, err := decodeObjectMembers([]byte(existing))
-	if err != nil {
+	if err != nil || hasCompactContainer(existing, members) {
 		result, err := unmergeJSONC(path, existing, claims, err)
 		if result.Changed && !result.Empty {
 			result.Body = bom + result.Body

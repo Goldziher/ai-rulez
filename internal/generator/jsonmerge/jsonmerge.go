@@ -154,12 +154,57 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	return ApplyDocument(path, existing, owned)
 }
 
+// hasCompactContainer reports whether a multi-line document has a non-empty
+// object or array, below the top level, written on one line. The strict engine
+// re-renders any container it edits in its own multi-line layout, so such a
+// container would come back re-indented and clean could not restore the original
+// bytes; the in-place editor (jsonc.go) patches only what it changes, so those
+// documents go there.
+func hasCompactContainer(doc string, _ []jsonMember) bool {
+	if !strings.Contains(doc, "\n") {
+		return false // a minified document has no layout to keep
+	}
+	var open []int // offset of each container still open
+	inString, escaped := false, false
+	for i := 0; i < len(doc); i++ {
+		c := doc[i]
+		if inString {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{', '[':
+			open = append(open, i)
+		case '}', ']':
+			if len(open) == 0 {
+				return false
+			}
+			start := open[len(open)-1]
+			open = open[:len(open)-1]
+			inner := doc[start+1 : i]
+			if len(open) > 0 && strings.TrimSpace(inner) != "" && !strings.ContainsAny(inner, "\r\n") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ApplyDocument is Apply for a document already read, which must not be empty;
 // path only names it in errors.
 func ApplyDocument(path, existing string, owned []OwnedKey) (Result, error) {
 	bom, existing := SplitBOM(existing)
 	members, err := decodeObjectMembers([]byte(existing))
-	if err != nil {
+	if err != nil || hasCompactContainer(existing, members) {
 		// Not strict JSON: it may be JSONC, which is edited in place so its
 		// comments survive (see jsonc.go).
 		result, err := applyJSONC(path, existing, owned, err)
