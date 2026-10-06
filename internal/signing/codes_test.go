@@ -15,6 +15,7 @@ func TestCodesMatchTheLintRegistry(t *testing.T) {
 		lint.CodeSignatureMissing: CodeMissing, lint.CodeSignatureInvalid: CodeInvalid, lint.CodeSignerNotTrusted: CodeSignerNotTrusted,
 		lint.CodeSignatureStale: CodeStale, lint.CodeAttestationSubject: CodeSubjectMismatch, lint.CodeTrustedRootMissing: CodeRootUnavailable,
 		lint.CodeTLogProofMissing: CodeTLogMissing, lint.CodeSignatureRollback: CodeRollback,
+		lint.CodeSignatureThreshold: CodeThreshold, lint.CodeProvenanceInvalid: CodeProvenance,
 	}
 	registered := map[string]string{}
 	for _, r := range lint.Rules() {

@@ -1252,6 +1252,10 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
+| `--bundle`, `--skill` | string  | none               | Verify the attestation of this plugin bundle or published skill directory (implies `--attestation`) |
+| `--sbom`              | string  | none               | Verify the attestation of this SBOM file (implies `--attestation`) |
+| `--source`            | string  | none               | With `--skill`: apply `[[signing.trust]]` entries scoped to this skill source or installed skill |
+| `--require-provenance` | boolean | false             | With `--bundle`: require verified SLSA provenance next to the attestation |
 | `--trusted-root`      | string  | cache of `trust update` | With `--attestation`: Sigstore trusted root file for keyless bundles |
 | `--public-key`        | string  | none               | With `--attestation`: also trust this PEM public key (repeatable) |
 | `--identity` / `--issuer` | string | none            | With `--attestation`: also trust this certificate identity and its OIDC issuer |
@@ -1883,27 +1887,40 @@ who published them. To add that, sign `lock --subject` with `cosign` ([recipe](l
 
 ### `ai-rulez sign [config-path]`
 
-Signs the lock-subject statement of `ai-rulez.lock` into a Sigstore bundle (a DSSE envelope over an in-toto statement)
-written next to the lock. Verify it with [`verify --attestation`](#ai-rulez-verify-config-path). See [Signing](signing.md)
-for the policy, keyless mode and cosign interoperability.
+Signs one subject into a Sigstore bundle (a DSSE envelope over an in-toto statement): the lock-subject statement of
+`ai-rulez.lock` (written next to the lock), a plugin bundle, a skill directory or an SBOM file. Verify it with
+[`verify --attestation`](#ai-rulez-verify-config-path). See [Signing](signing.md) for the policy, keyless and KMS
+signing, thresholds, SLSA provenance and cosign interoperability.
 
 ```bash
 ai-rulez sign --lock --key cosign.key        # key mode, offline
 ai-rulez sign --lock --keyless               # Fulcio + Rekor; the identity and digest go to a public log
+ai-rulez sign --lock --key awskms:///alias/release   # a key held in a KMS
+ai-rulez sign --bundle dist/acme-plugin --key cosign.key --provenance
+ai-rulez sign --skill skills/deploy --key cosign.key
+ai-rulez sign --sbom sbom.cdx.json --key cosign.key
+ai-rulez sign --lock --key second.key --append       # a second signer, for [signing] thresholds
 ```
 
 | Flag | Description |
 | --- | --- |
-| `--lock` | Sign the lock-subject statement (required: the only subject so far) |
-| `--key <file>` | PEM private key (ECDSA P-256/P-384/P-521 or ed25519; PKCS#8 or a cosign key). The password comes from `AI_RULEZ_SIGNING_KEY_PASSWORD` or `COSIGN_PASSWORD` |
+| `--lock` | Sign the lock-subject statement |
+| `--bundle <dir>` | Sign a plugin bundle: the tree digest of its files, to `<dir>/.ai-rulez.sigstore.json` |
+| `--skill <dir>` | Sign a skill directory a publisher ships, to `<dir>/.ai-rulez.sigstore.json` |
+| `--sbom <file>` | Sign any SBOM file, to `<file>.sigstore.json` |
+| `--provenance` | With `--bundle`: also write SLSA v1 provenance (`.ai-rulez.provenance.sigstore.json`) |
+| `--builder-id <id>` | With `--provenance`: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own) |
+| `--append` | Write a numbered co-signature file (`X.2.sigstore.json`) beside the existing attestation, for `[signing] thresholds` |
+| `--key <file or URI>` | PEM private key (ECDSA P-256/P-384/P-521 or ed25519; PKCS#8 or a cosign key), or a KMS key URI (`awskms://`, `gcpkms://`, `azurekms://`, `hashivault://`). The password comes from `AI_RULEZ_SIGNING_KEY_PASSWORD` or `COSIGN_PASSWORD` |
+| `--public-key-out <file>` | With `--key`: write the key's PEM public key, to name it in `[signing]` |
 | `--key-password-env <VAR>` | Read the key password from this variable instead |
 | `--keyless` | Sign with a short-lived Fulcio certificate and a Rekor log entry (network) |
 | `--identity-token-env <VAR>` | With `--keyless`: variable holding the OIDC token (default: the GitHub Actions runtime token) |
 | `--interactive` | With `--keyless`: open a browser for the OIDC login when no token is available |
 | `--fulcio-url`, `--rekor-url` | Use another Sigstore deployment (default: the public-good instances) |
 | `--tlog` | With `--key`: also record the signature in Rekor |
-| `--embed-items` | Put the pinned item ids and digests in the statement |
-| `--output <file>` | Write the bundle here instead of `.ai-rulez/ai-rulez.lock.sigstore.json` |
+| `--embed-items` | With `--lock`: put the pinned item ids and digests in the statement |
+| `--output <file>` | Write the bundle here instead of the default sidecar |
 
 Exit codes: `0` signed, `1` the command could not run, `2` the lock's tree does not match its entries.
 

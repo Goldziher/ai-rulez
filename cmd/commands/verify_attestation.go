@@ -29,7 +29,7 @@ var (
 	verifyIssuer          string
 	verifyNoState         bool
 	verifyFormat          string
-	verifyAttestationOnly = []string{"lock", "attestation-file", "trusted-root", "public-key", "identity", "issuer", "no-state"}
+	verifyAttestationOnly = []string{"lock", "attestation-file", "trusted-root", "public-key", "identity", "issuer", "no-state", "source", "require-provenance"}
 )
 
 // attestationReportVersion versions the JSON of `verify --attestation --format json`.
@@ -54,6 +54,18 @@ type attestationResult struct {
 	Weak        *bool               `json:"weak,omitempty"`
 	AgeSeconds  *int64              `json:"age_seconds,omitempty"`
 	HashVersion int                 `json:"hash_version,omitempty"`
+	// Digest is the sha256 of the verified bundle, skill or file (not the lock).
+	Digest string `json:"digest,omitempty"`
+	// Signers lists every distinct trusted signer when more than one signed.
+	Signers    []signing.SignerInfo   `json:"signers,omitempty"`
+	Provenance *attestationProvenance `json:"provenance,omitempty"`
+}
+
+// attestationProvenance is the verified SLSA provenance of a bundle.
+type attestationProvenance struct {
+	Attestation string              `json:"attestation"`
+	Builder     string              `json:"builder"`
+	Signer      *signing.SignerInfo `json:"signer,omitempty"`
 }
 
 // Statuses of a result.
@@ -94,6 +106,9 @@ func validateVerifyAttestationFlags() error {
 // not run (unreadable lock, no trusted signer, no trusted root), 2 verification
 // failed.
 func runVerifyAttestation(args []string, env ambient.Env, out io.Writer) int {
+	if verifyArtifactMode() {
+		return runVerifyArtifact(args, env, out)
+	}
 	if err := validateVerifyAttestationFlags(); err != nil {
 		fmtError(err)
 		return 1
@@ -156,6 +171,9 @@ func validResult(check *signing.LockCheck, rep *signing.LockReport, now time.Tim
 		Subject: signing.SubjectLock, Status: attestationValid, Attestation: check.BundlePath, Signer: &rep.Result.Signer,
 		Logged: &logged, Weak: &weak, HashVersion: rep.Predicate.HashVersion,
 	}
+	if len(rep.Cosigners) > 0 {
+		r.Signers = append([]signing.SignerInfo{rep.Result.Signer}, cosignerInfos(rep)...)
+	}
 	if !rep.SigningTime.IsZero() {
 		age := int64(now.Sub(rep.SigningTime).Seconds())
 		r.AgeSeconds = &age
@@ -185,7 +203,14 @@ func reportAttestation(out io.Writer, r attestationResult, _ time.Time) int {
 		return code
 	}
 	if r.Status == attestationValid {
-		fmt.Fprintf(out, "OK  %s  signer=%s\n    issuer=%s  logged=%s  age=%s  hash_version=%d%s\n", r.Subject, signerText(r.Signer), issuerText(r.Signer), loggedText(r), ageText(r.AgeSeconds), r.HashVersion, weakText(r))
+		detail := ""
+		if r.HashVersion > 0 {
+			detail = fmt.Sprintf("  hash_version=%d", r.HashVersion)
+		}
+		fmt.Fprintf(out, "OK  %s  signer=%s\n    issuer=%s  logged=%s  age=%s%s%s\n", r.Subject, signerText(r.Signer), issuerText(r.Signer), loggedText(r), ageText(r.AgeSeconds), detail, weakText(r))
+		for _, line := range extraLines(r) {
+			fmt.Fprintln(out, "    "+line)
+		}
 		return code
 	}
 	fmt.Fprintf(os.Stderr, "FAIL  %s  %s %s: %s\n", r.Subject, r.Code, r.Name, r.Reason)
@@ -277,4 +302,32 @@ func signingFindingsFor(cfg *config.Config) []lint.ApprovalFinding {
 		out = append(out, lint.ApprovalFinding{Code: e.Code, Path: lockRel, Message: e.Reason})
 	}
 	return out
+}
+
+func cosignerInfos(rep *signing.LockReport) []signing.SignerInfo {
+	out := make([]signing.SignerInfo, 0, len(rep.Cosigners))
+	for _, c := range rep.Cosigners {
+		out = append(out, c.Result.Signer)
+	}
+	return out
+}
+
+// extraLines are the lines after an OK result: the artifact digest, the further
+// signers of a threshold and the provenance builder.
+func extraLines(r attestationResult) []string {
+	var lines []string
+	if r.Digest != "" {
+		lines = append(lines, "digest="+r.Digest)
+	}
+	if len(r.Signers) > 1 {
+		ids := make([]string, 0, len(r.Signers))
+		for i := range r.Signers {
+			ids = append(ids, signerText(&r.Signers[i]))
+		}
+		lines = append(lines, fmt.Sprintf("%d signers: %s", len(r.Signers), strings.Join(ids, ", ")))
+	}
+	if r.Provenance != nil {
+		lines = append(lines, "provenance builder="+r.Provenance.Builder)
+	}
+	return lines
 }
