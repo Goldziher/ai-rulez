@@ -105,11 +105,16 @@ type Entry struct {
 	// DigestScheme names how Digest was computed (DigestSchemeSkill or
 	// DigestSchemeServed); empty on lines written before version 3.
 	DigestScheme string `json:"digest_scheme,omitempty"`
-	// EventID de-duplicates replays and merged logs: 16 hex digits of a salted
-	// hash, so it does not link events across machines. Empty before version 3.
+	// EventID de-duplicates a line that appears twice (a replayed spool, two merged
+	// copies of one log): the id is derived once, when the line is written, and
+	// travels with the line. It is not a function of the event content: two real
+	// loads of one skill in one second differ by a random nonce, so re-firing a hook
+	// is not deduplicated. 16 hex digits of a salted hash, so it does not link
+	// events across machines. Empty before version 3.
 	EventID string `json:"event_id,omitempty"`
 	// Resource marks the load of a supporting file, not the skill's SKILL.md;
-	// reports do not count it as a further use of the skill.
+	// reports do not count it as a further use of the skill. Only RecordServed
+	// sets it: Record sees harness hooks and logs SKILL.md reads alone.
 	Resource bool `json:"resource,omitempty"`
 }
 
@@ -286,10 +291,46 @@ var shellTools = map[string]bool{"bash": true, "shell": true, "local_shell": tru
 // ("<<EOF") are left alone.
 var redirection = regexp.MustCompile(`(?:\d*|&)>>?\s*\S+`)
 
-var shellSeparators = regexp.MustCompile(`&&|\|\||[;|\n]`)
+// splitShell splits a command line at ;, |, && and newlines that are outside
+// quotes (a lone & is a redirect like 2>&1 or a background marker, not a separator), so text inside a quoted argument (a commit message) never
+// starts a command of its own.
+func splitShell(command string) []string {
+	var (
+		segments []string
+		cur      strings.Builder
+		quote    rune
+		escaped  bool
+	)
+	flush := func() {
+		segments = append(segments, cur.String())
+		cur.Reset()
+	}
+	runes := []rune(command)
+	for i, r := range runes {
+		isAnd := r == '&' && ((i+1 < len(runes) && runes[i+1] == '&') || (i > 0 && runes[i-1] == '&'))
+		switch {
+		case escaped:
+			escaped = false
+		case r == '\\' && quote != '\'':
+			escaped = true
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+		case r == '\'' || r == '"':
+			quote = r
+		case r == ';' || r == '|' || r == '\n' || isAnd:
+			flush()
+			continue
+		}
+		cur.WriteRune(r)
+	}
+	flush()
+	return segments
+}
 
 func skillFromReadingCommand(command string) string {
-	for _, segment := range shellSeparators.Split(command, -1) {
+	for _, segment := range splitShell(command) {
 		fields := strings.Fields(segment)
 		for len(fields) > 0 && strings.Contains(fields[0], "=") && !strings.ContainsAny(fields[0], "/") {
 			fields = fields[1:] // leading VAR=value assignments
@@ -316,7 +357,8 @@ func sedEditsInPlace(args []string) bool {
 	return false
 }
 
-var skillPathPattern = regexp.MustCompile(`(?:^|[\s/'"=:])skills/([a-z0-9][a-z0-9._-]*)/SKILL\.md`)
+// skillPathPattern accepts / and \ as separators: Codex and Cursor on Windows pass backslash paths.
+var skillPathPattern = regexp.MustCompile(`(?:^|[\s/\\'"=:])skills[/\\]([a-z0-9][a-z0-9._-]*)[/\\]SKILL\.md`)
 
 // skillFromPath returns the skill id of the first skills/<id>/SKILL.md found in
 // the candidates, or "".
@@ -376,8 +418,9 @@ func randomNonce() string {
 }
 
 // newEventID derives the event id: the first 16 hex digits of
-// sha256(salt, ts, id, invocation, session, nonce). The salt is the machine's,
-// so the id is stable for a replayed line and links nothing across machines.
+// sha256(salt, ts, id, invocation, session, nonce). The nonce is random, so the id
+// is unique per recorded load; a copy of the written line keeps it. The salt is
+// the machine's, so the id links nothing across machines.
 func newEventID(salt string, entry *Entry, options RecordOptions) string {
 	nonce := randomNonce
 	if options.Nonce != nil {
