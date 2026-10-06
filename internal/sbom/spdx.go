@@ -282,7 +282,7 @@ func (b *BOM) spdxPackage(c *Component, id string, lics *licenseTable) SPDXPacka
 	for _, r := range c.info.reviews {
 		pkg.Annotations = append(pkg.Annotations, Annotation{
 			Annotator: "Person: " + r.reviewer, Date: spdxTime(r.at), Type: "REVIEW",
-			Comment: "approved " + r.digest + " (assurance asserted)",
+			Comment: "approved " + r.digest + " (assurance " + r.assurance + ")",
 		})
 	}
 	sort.SliceStable(pkg.Annotations, func(i, j int) bool {
