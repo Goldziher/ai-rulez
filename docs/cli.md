@@ -1794,14 +1794,28 @@ Runs an external optimizer on a throwaway copy of an authored skill and accepts 
 | `--timeout D` | `20m` | per optimizer invocation |
 | `--env-pass A,B` / `--egress H,I` | | forwarded environment names / declared hosts (credential-like names need `--egress`) |
 | `--allow-frontmatter` / `--allow-scripts` | off | widen the diff policy |
+| `--adapter NAME` | | a bundled optimizer, the same as `--with builtin:NAME` (`improve adapters`) |
+| `--adapter-model M` / `--adapter-judge-model M` / `--allow-same-model` | | `builtin:review-fix`: fixer and judge models; they must differ unless allowed |
+| `--isolation none\|auto\|require` | `none` | confine the optimizer with the process sandbox (`AR9J7`) |
+| `--require-ci-above-zero` | off | also require the 95% bootstrap interval of the gain to exclude zero |
+| `--trust-repo-optimizer` | off | use `[improve] optimizer` and `env_pass` from a repository config (`AR9J6`) |
 | `--runner-command`, `--harness`, `--model`, ... | | the eval runner, as for `eval run` |
 | `--yes`, `--dry-run`, `--format json`, `--stop-at-first-accept` | | skip the prompt, plan only, JSON report |
+
+Defaults can come from the `[improve]` table; a flag wins.
 
 Exit 0: candidate accepted. Exit 2: no acceptable candidate (report written). Exit 1: refused or could not run. See [Improve](improve.md).
 
 ### `ai-rulez improve apply <run-id>` (experimental)
 
 Shows the diff of an accepted run and writes it into the skill after confirmation (`--yes` skips it). Refuses with `AR9J1` when the skill changed since the run.
+
+### `ai-rulez improve show|clean|pr|adapters` (experimental)
+
+- `improve show <run-id>`: the report of a saved run (rounds, held-out comparison with its bootstrap interval, sibling guard, costs) and the diff; `--format json` prints `improve-show/1`.
+- `improve clean [<run-id>|--all]`: delete saved runs (`--dry-run`, `--yes`).
+- `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--yes`); refusals carry `AR9J8`.
+- `improve adapters [name]`: list the bundled optimizers, or print a template.
 
 ### `ai-rulez search --eval <cases.yaml>`
 
