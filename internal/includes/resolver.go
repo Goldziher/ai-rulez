@@ -142,6 +142,9 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 	}
 	// Check for local override: use a local path instead of git
 	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
+		if err := checkLocalOverride(r.cfg, "includes", includeConf.Name); err != nil {
+			return nil, err
+		}
 		localPath := r.resolveLocalOverride(includeConf)
 		if localPath == "" {
 			// Local override path does not exist — skip silently

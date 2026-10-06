@@ -33,6 +33,9 @@ type OKFSource struct {
 func (r *Resolver) createOKFSource(c *config.IncludeConfig) (Source, error) {
 	source := c.Source
 	if c.LocalOverride != "" && !refreshing(lockfile.KindInclude, c.Name) {
+		if err := checkLocalOverride(r.cfg, "includes", c.Name); err != nil {
+			return nil, err
+		}
 		p := r.resolveLocalOverride(c)
 		if p == "" {
 			logger.Info("Skipping include (local_override path not found)", "name", c.Name, "local_override", c.LocalOverride)
