@@ -203,7 +203,7 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		return nil, err
 	}
 
-	staleFiles := g.staleManifestFiles(flatOutputs)
+	staleFiles := g.retiredFiles(flatOutputs)
 	g.removeStaleManifestFiles(staleFiles)
 
 	// Write all output files
@@ -260,7 +260,7 @@ func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		lines = append(lines, local.dryRunLines()...)
 	}
 	lines = append(lines, g.planLines(flatOutputs)...)
-	for _, stale := range g.staleManifestFiles(flatOutputs) {
+	for _, stale := range g.retiredFiles(flatOutputs) {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
 	}
 	for _, edit := range g.planUnmerge(flatOutputs, false) {
@@ -315,7 +315,7 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	for rel := range blocked {
 		drift = append(drift, Drift{Path: rel, Kind: DriftBlocked})
 	}
-	for _, stale := range g.staleManifestFiles(outputs) {
+	for _, stale := range g.retiredFiles(outputs) {
 		drift = append(drift, Drift{Path: g.relSlash(stale), Kind: DriftOrphan})
 	}
 	// A merged document that still holds what an earlier run wrote and this one
@@ -353,7 +353,7 @@ func (describeApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	}
 	sort.Slice(doc.Files, func(i, j int) bool { return doc.Files[i].Path < doc.Files[j].Path })
 
-	for _, stale := range g.staleManifestFiles(outputs) {
+	for _, stale := range g.retiredFiles(outputs) {
 		doc.Removals = append(doc.Removals, PlanRemoval{Path: g.relSlash(stale), Reason: RemoveStale})
 	}
 	for _, edit := range g.planUnmerge(outputs, false) {
