@@ -247,6 +247,9 @@ func writeLockAt(path, kind string, names []string) int {
 	next, err := nextLock(cfg, current, kind, wanted, remoteRefresh)
 	if err != nil {
 		fmtError(err)
+		if errors.Is(err, errScanRefused) {
+			return exitDrift // findings, like a refused pre-pin scan
+		}
 		return 1
 	}
 	if err := pinContent(cfg, current, next, kind, wanted); err != nil {
@@ -307,6 +310,10 @@ func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (re
 	return func() { cliLockPolicy = prev }
 }
 
+// errScanRefused marks a lock refused only because the security scan refuses
+// served skills under --strict: findings (exit 2), not a failure to run.
+var errScanRefused = errors.New("the security scan refuses served skills (--strict)")
+
 // nextLock builds the remote, source and served entries of the new lock. The
 // content pins are added by pinContent.
 func nextLock(cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
@@ -327,7 +334,10 @@ func nextLock(cfg *config.Config, current *lockfile.File, kind string, wanted ma
 	if !remoteRefresh {
 		dynamicKind = lockfile.KindServed
 	}
-	if problems := mergeDynamicLock(cfg, current, next, dynamicKind, wanted); len(problems) > 0 {
+	if problems, scanOnly := mergeDynamicLock(cfg, current, next, dynamicKind, wanted); len(problems) > 0 {
+		if scanOnly {
+			return nil, oops.With("config", cfg.ConfigDir).Wrapf(errScanRefused, "cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
+		}
 		if remoteRefresh {
 			return nil, oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
 		}
