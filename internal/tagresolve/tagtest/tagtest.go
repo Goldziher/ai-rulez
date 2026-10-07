@@ -27,12 +27,21 @@ type Repo struct {
 	Date string
 }
 
+// fileURL returns a file URL for an absolute path; on Windows C:\x becomes file:///C:/x.
+func fileURL(p string) string {
+	p = filepath.ToSlash(p)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return "file://" + p
+}
+
 // New creates an empty repository on branch main.
 func New(t *testing.T) *Repo {
 	t.Helper()
 	work := t.TempDir()
 	bare := filepath.Join(t.TempDir(), "remote.git")
-	r := &Repo{t: t, Work: work, Bare: bare, URL: "file://" + bare}
+	r := &Repo{t: t, Work: work, Bare: bare, URL: fileURL(bare)}
 	r.git(work, "init", "--quiet", "--initial-branch=main")
 	r.git("", "init", "--quiet", "--bare", "--initial-branch=main", bare)
 	return r
