@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
 // loadWithResolvers loads a configuration the way the commands do, with the
@@ -23,6 +24,10 @@ func isolateHome(t *testing.T) string {
 // fields it needs and resets it.
 var lockPolicy config.LockPolicy
 
+// testOKFScan is the OKF include scan loadWithResolvers wires; a test sets the
+// fields it needs and resets it.
+var testOKFScan okfbridge.Scanner
+
 func loadWithResolvers(ctx context.Context, baseDir string, opts ...config.LoadOption) (*config.Config, error) {
-	return config.LoadConfig(ctx, baseDir, append([]config.LoadOption{config.WithResolvers(Resolvers("")), config.WithLockPolicy(lockPolicy)}, opts...)...)
+	return config.LoadConfig(ctx, baseDir, append([]config.LoadOption{config.WithResolvers(Resolvers("", testOKFScan)), config.WithLockPolicy(lockPolicy)}, opts...)...)
 }

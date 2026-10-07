@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
 const (
@@ -29,6 +30,16 @@ type Resolver struct {
 	memo        *fetchMemo      // shared fetch cache for this run (see Config.IncludeMemo)
 	cfg         *config.Config
 	lock        *lockfile.File // ai-rulez.lock of the project being resolved (nil: none)
+	// okfScan runs the security scan over the text of an OKF include before it
+	// is converted. The caller supplies it (see Resolvers); nil skips the scan.
+	okfScan okfbridge.Scanner
+}
+
+// WithOKFScan sets the security scan an OKF include runs over its text before
+// conversion. It returns the resolver for chaining.
+func (r *Resolver) WithOKFScan(scan okfbridge.Scanner) *Resolver {
+	r.okfScan = scan
+	return r
 }
 
 // NewResolver creates a new include resolver
