@@ -208,9 +208,9 @@ func linkOf(pages []docPage, source string) Link {
 
 // splitFrontmatter returns the flat string keys of a leading YAML block and the
 // text after it.
-func splitFrontmatter(src string) (map[string]string, string) {
+func splitFrontmatter(src string) (meta map[string]string, body string) {
 	src = strings.ReplaceAll(src, "\r\n", "\n")
-	meta := map[string]string{}
+	meta = map[string]string{}
 	if !strings.HasPrefix(src, "---\n") {
 		return meta, src
 	}
