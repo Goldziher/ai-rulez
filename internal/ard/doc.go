@@ -6,6 +6,15 @@
 // ai-rulez configuration: callers map their skills, MCP servers and plugins to
 // a Model. Build is deterministic: it never reads the clock, the environment or
 // the file system, so the same Model always yields the same bytes.
+//
+// Build never emits trustManifest. Section 4.5.1 requires its identity to be a
+// credential whose trust domain is the identifier's publisher, and section
+// 4.5.2 leaves verification to a trust framework the manifest names. ai-rulez
+// signs with Sigstore keyless DSSE bundles, whose identity is a CI workflow or
+// OIDC account, not a credential issued by the publisher domain, and no trust
+// framework has been chosen; an emitted manifest would claim a binding no
+// verifier can check. The pinned schema also spells the term "TrustManifest"
+// while the spec text says "trustManifest", so the term itself is unsettled.
 package ard
 
 // SpecVersion is the ARD spec version this package implements.
