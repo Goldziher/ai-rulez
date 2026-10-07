@@ -584,6 +584,7 @@ func (a *applier) governance() {
 	}
 	if pol.Approvers.Set {
 		a.governanceApprovers(g, pol.Approvers)
+		a.governanceTeams(g)
 	}
 	a.governanceAssurance(g, pol, repoHas)
 }
@@ -613,6 +614,26 @@ func (a *applier) governanceAssurance(g *config.GovernanceConfig, pol Governance
 				"[governance] has no approvers_from, which the policy requires (origin: %s); %q is enforced", a.origin("governance.approvers_from"), pol.ApproversFrom)
 		}
 		g.ApproversFrom = pol.ApproversFrom
+	}
+}
+
+// governanceTeams drops the repository's [governance.teams] members of every
+// team the policy's approvers list pins: the repository must not add people to
+// a team the organization trusts, so such a team is expanded only from the forge
+// (--resolve-teams), never from the repository's own map.
+func (a *applier) governanceTeams(g *config.GovernanceConfig) {
+	keys := make([]string, 0, len(g.Teams))
+	for k := range g.Teams {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if !approval.IsTeam(k) || !slices.Contains(g.Approvers, approval.NormalizeReviewer(k)) {
+			continue
+		}
+		a.violate(lint.CodePolicyLoosened, "governance.approvers", k,
+			"[governance.teams] lists members of %q, a team the policy pins (origin: %s); they are ignored and the team is expanded only from the forge (--resolve-teams)", k, a.origin("governance.approvers"))
+		delete(g.Teams, k)
 	}
 }
 
