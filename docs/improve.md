@@ -326,8 +326,9 @@ even if the run itself used them. Files are written all or nothing.
    own credentials, and `gh` gets a scrubbed environment plus the usual `GH_*`/proxy names.
 
 **Isolation.** `improve pr --isolation auto|require` (or `[improve] isolation`) runs `generate`, `lock` and `eval run` in the
-worktree under the same process sandbox: writable only below the worktree's project directory, the user cache
-(`XDG_CACHE_HOME`, else `~/.cache`), `XDG_DATA_HOME`, `AI_RULEZ_HOME` and the temp directory, where they exist, with the network
+worktree under the same process sandbox: writable only below the worktree's project directory, ai-rulez's own
+subdirectories of the user cache (`~/.cache/ai-rulez`, `$XDG_CACHE_HOME/ai-rulez`) and data (`$XDG_DATA_HOME/ai-rulez`)
+roots, `AI_RULEZ_HOME` and the temp directory, where they exist (the two subdirectories are created), with the network
 left on because `generate` and `lock` fetch remote includes and `eval run` calls a model. The candidate is the
 optimizer's text, and `eval run` lets an agent act on it, so a hostile candidate cannot write outside those
 directories. `require` refuses (`AR9J7`) before the worktree is made when no backend works; `auto` warns and runs

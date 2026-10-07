@@ -82,7 +82,8 @@ func TestPR_ConfinesTheWorktreeCommands(t *testing.T) {
 		require.Positive(t, cut)
 		assert.Equal(t, []string{self}, argv[cut+1:cut+2])
 		binds := bindTargets(argv[:cut])
-		assert.Contains(t, binds, realPath(t, cache))
+		assert.Contains(t, binds, realPath(t, filepath.Join(cache, "ai-rulez")), "only ai-rulez's subdirectory of the cache")
+		assert.NotContains(t, binds, realPath(t, cache))
 		inWorktree := false
 		for _, b := range binds {
 			inWorktree = inWorktree || strings.Contains(b, "ai-rulez-improve-pr-")
