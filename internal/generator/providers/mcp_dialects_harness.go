@@ -32,7 +32,7 @@ func codewhaleMCPEntry(server *config.MCPServer) map[string]any {
 	if entry == nil {
 		return nil
 	}
-	delete(entry, "description")
+	delete(entry, fieldDescription)
 	if server.GetTransport() == config.TransportSSE {
 		entry["transport"] = "sse"
 	}
@@ -46,7 +46,7 @@ func rooMCPEntry(server *config.MCPServer) map[string]any {
 	if entry == nil {
 		return nil
 	}
-	delete(entry, "description")
+	delete(entry, fieldDescription)
 	switch server.GetTransport() {
 	case config.TransportHTTP:
 		entry["type"] = "streamable-http"
@@ -62,7 +62,7 @@ func bobMCPEntry(server *config.MCPServer) map[string]any {
 	if entry == nil {
 		return nil
 	}
-	delete(entry, "description")
+	delete(entry, fieldDescription)
 	if server.GetTransport() == config.TransportHTTP {
 		entry["type"] = "streamable-http"
 	}
@@ -85,7 +85,7 @@ func grokMCPEntry(server *config.MCPServer) map[string]any {
 	if entry == nil {
 		return nil
 	}
-	delete(entry, "description")
+	delete(entry, fieldDescription)
 	delete(entry, "disabled")
 	if !server.IsEnabled() {
 		entry["enabled"] = false

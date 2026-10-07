@@ -14,7 +14,7 @@ type GlobalPaths = presets.GlobalPaths
 // GlobalPaths resolves the spec's [global] block against the user's home
 // directory. getenv looks up home_env (pass os.Getenv). It returns nil when the
 // spec declares no user-scope layout at all or home is not an absolute path;
-// a relative home_env override is ignored (with a warning) in favour of home.
+// a relative home_env override is ignored (with a warning) in favor of home.
 func (s *ProviderSpec) GlobalPaths(home string, getenv func(string) string) *GlobalPaths {
 	if !filepath.IsAbs(home) {
 		return nil

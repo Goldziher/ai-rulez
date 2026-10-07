@@ -129,8 +129,17 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	outputs = append(outputs, g.withheldRulesDirMarker(baseDir, cfg, ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
 
-	// Per-type rendering in a fixed iteration order so output is deterministic
-	// across map iterations. Rules were rendered above from the routing plan.
+	outputs, err = g.appendTypedOutputs(outputs, content, baseDir, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return g.appendSidecarOutputs(outputs, content, baseDir, cfg)
+}
+
+// appendTypedOutputs appends the per-type item files (skills, agents, commands,
+// checks) in a fixed iteration order so output is deterministic across map
+// iterations. Rules were rendered from the routing plan before this.
+func (g *Generator) appendTypedOutputs(outputs []config.OutputFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands, OutputTypeChecks} {
 		spec, ok := g.Spec.Outputs[typ]
 		if !ok || spec == nil {
@@ -156,49 +165,50 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			}
 			continue
 		}
-		for _, item := range items {
-			if !g.itemAllowed(typ, spec, item, content, cfg) {
-				continue
-			}
-			itemOutputs, err := g.renderItem(typ, spec, item, content, baseDir, cfg)
-			if err != nil {
-				return nil, fmt.Errorf("render %s %q: %w", typ, item.Name, err)
-			}
-			if typ == OutputTypeChecks {
-				for i := range itemOutputs {
-					itemOutputs[i].Committed = true
-				}
-			}
-			outputs = append(outputs, itemOutputs...)
+		itemOutputs, err := g.renderTypeItems(typ, spec, items, content, baseDir, cfg)
+		if err != nil {
+			return nil, err
 		}
+		outputs = append(outputs, itemOutputs...)
 	}
+	return outputs, nil
+}
 
+// renderTypeItems renders every allowed item of one per-item output type.
+func (g *Generator) renderTypeItems(typ string, spec *OutputSpec, items []config.ContentFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
+	for idx := range items {
+		item := items[idx]
+		if !g.itemAllowed(typ, spec, item, content, cfg) {
+			continue
+		}
+		itemOutputs, err := g.renderItem(typ, spec, item, content, baseDir, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render %s %q: %w", typ, item.Name, err)
+		}
+		if typ == OutputTypeChecks {
+			for i := range itemOutputs {
+				itemOutputs[i].Committed = true
+			}
+		}
+		outputs = append(outputs, itemOutputs...)
+	}
+	return outputs, nil
+}
+
+// appendSidecarOutputs appends the rendered sidecar documents.
+func (g *Generator) appendSidecarOutputs(outputs []config.OutputFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	for _, sidecar := range g.Spec.Sidecars {
 		if !g.evalPredicate(sidecar.EmitWhen, cfg) || (sidecar.UserOnly && !cfg.UserScope) {
 			continue
 		}
 		outputPath := filepath.Join(baseDir, sidecar.Path)
-		var rendered sidecarRender
-		var err error
-		if sidecar.Kind == SidecarChecks {
-			checks := g.checksSidecarItems(cfg, content)
-			if len(checks) == 0 {
-				continue // no checks, no document
-			}
-			rendered, err = g.renderChecksSidecar(sidecar, checks, cfg, outputPath)
-			if err == nil && rendered.Body == "" {
-				continue // every check clashed with the user's own entry and there is no document
-			}
-		} else if group := g.sharedSidecars(sidecar, cfg); len(group) > 1 {
-			if group[0] != sidecar {
-				continue // rendered with the first sidecar of its document
-			}
-			rendered, err = g.renderSidecarGroup(group, cfg, outputPath)
-		} else {
-			rendered, err = g.renderSidecarSpec(sidecar, cfg, outputPath)
-		}
+		rendered, skip, err := g.renderSidecarFor(sidecar, content, cfg, outputPath)
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
+		}
+		if skip {
+			continue
 		}
 		if (sidecar.Kind == SidecarHooks || sidecar.Kind == SidecarPermissions || sidecar.Kind == SidecarHookPlugin) &&
 			rendered.Body == "" {
@@ -215,8 +225,33 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			Committed:      sidecar.Kind == SidecarChecks,
 		})
 	}
-
 	return outputs, nil
+}
+
+// renderSidecarFor renders one sidecar. skip is true when it writes no document
+// of its own: no checks, a checks document every entry of which clashed with the
+// user's own, or a sidecar rendered with the first sidecar of its shared document.
+func (g *Generator) renderSidecarFor(sidecar *SidecarSpec, content *config.ContentTree, cfg *config.Config, outputPath string) (rendered sidecarRender, skip bool, err error) {
+	if sidecar.Kind == SidecarChecks {
+		checks := g.checksSidecarItems(cfg, content)
+		if len(checks) == 0 {
+			return rendered, true, nil // no checks, no document
+		}
+		rendered, err = g.renderChecksSidecar(sidecar, checks, cfg, outputPath)
+		if err == nil && rendered.Body == "" {
+			return rendered, true, nil // every check clashed with the user's own entry and there is no document
+		}
+		return rendered, false, err
+	}
+	if group := g.sharedSidecars(sidecar, cfg); len(group) > 1 {
+		if group[0] != sidecar {
+			return rendered, true, nil // rendered with the first sidecar of its document
+		}
+		rendered, err = g.renderSidecarGroup(group, cfg, outputPath)
+		return rendered, false, err
+	}
+	rendered, err = g.renderSidecarSpec(sidecar, cfg, outputPath)
+	return rendered, false, err
 }
 
 // collectItemsByType returns the merged root + domain item slice for the given
@@ -298,7 +333,8 @@ func (g *Generator) planRulesRaw(content *config.ContentTree, cfg *config.Config
 
 	if !spec.Split {
 		plan.inlineRules = nil
-		for _, rule := range rules {
+		for idx := range rules {
+			rule := rules[idx]
 			switch {
 			case g.rulesOutputAccepts(spec, rule):
 				plan.legacy = append(plan.legacy, rule)
@@ -474,7 +510,8 @@ func (g *Generator) renderRuleFiles(plan *rulesPlan, content *config.ContentTree
 		return nil, nil
 	}
 	var outputs []config.OutputFile
-	for _, rule := range plan.legacy {
+	for idx := range plan.legacy {
+		rule := plan.legacy[idx]
 		itemOutputs, err := g.renderItem(OutputTypeRules, spec, rule, content, baseDir, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("render %s %q: %w", OutputTypeRules, rule.Name, err)
@@ -625,8 +662,8 @@ func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.Con
 			// frontmatter because a harness loads them on a different schedule
 			// from the block that carries them: the name appears in every skill
 			// listing, the description only in some harness modes.
-			recorder.literal(config.PartKindItemName, "name", item.Path, frontmatterString(frontmatter, "name"))
-			recorder.literal(config.PartKindItemDescription, "description", item.Path, frontmatterString(frontmatter, "description"))
+			recorder.literal(config.PartKindItemName, fieldName, item.Path, frontmatterString(frontmatter, fieldName))
+			recorder.literal(config.PartKindItemDescription, fieldDescription, item.Path, frontmatterString(frontmatter, fieldDescription))
 		case SectionBodyContent:
 			b.WriteString(item.Content)
 			recorder.section(config.PartKindItemBody, "body", item.Path, start, &b)
@@ -662,7 +699,7 @@ func writesSharedSkillTree(spec *OutputSpec) bool {
 // returns the name and description it carries.
 func writeSharedSkillFrontmatter(b *strings.Builder, item config.ContentFile) map[string]any {
 	b.WriteString(presets.RenderAgentSkillFrontmatter(item))
-	return map[string]any{"name": item.Name, "description": config.SkillDescriptionForContent(item)}
+	return map[string]any{fieldName: item.Name, fieldDescription: config.SkillDescriptionForContent(item)}
 }
 
 // writeTargetedSection writes a "## <Heading>" section listing the included
@@ -684,7 +721,8 @@ func writeTargetedSection(b *strings.Builder, heading string, items []config.Con
 		b.WriteString(heading)
 		b.WriteString("\n\n")
 	}
-	for _, item := range items {
+	for idx := range items {
+		item := items[idx]
 		b.WriteString("### ")
 		b.WriteString(item.Name)
 		b.WriteString("\n")
@@ -736,12 +774,12 @@ func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *Front
 // buildFrontmatterMap assembles the frontmatter map. Composition order is
 // documented on the writeFrontmatter docstring above.
 func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) map[string]any {
-	frontmatter := map[string]any{"name": item.Name}
+	frontmatter := map[string]any{fieldName: item.Name}
 	if spec == nil {
 		return frontmatter
 	}
 	if spec.OmitName {
-		delete(frontmatter, "name")
+		delete(frontmatter, fieldName)
 	}
 	for k, v := range spec.Constants {
 		frontmatter[k] = v
@@ -774,17 +812,17 @@ func (g *Generator) finishFrontmatter(frontmatter map[string]any, typ string, sp
 	if cfg.OmitsAgentField("tools") {
 		delete(frontmatter, "tools")
 	}
-	if cfg.OmitsAgentField("description") {
-		delete(frontmatter, "description")
+	if cfg.OmitsAgentField(fieldDescription) {
+		delete(frontmatter, fieldDescription)
 	}
 	// A skill whose frontmatter failed to parse loads with nil Metadata, so
 	// applyOrderedFields/applyExtras never get a chance to write its
 	// description — the generated SKILL.md would ship without one and the
 	// skill becomes invisible to the assistant. Honor the documented name
 	// fallback for any spec that surfaces a description field (#176).
-	if typ == OutputTypeSkills && (slices.Contains(spec.Fields, "description") || spec.IncludeExtras) {
-		if desc, ok := frontmatter["description"].(string); !ok || strings.TrimSpace(desc) == "" {
-			frontmatter["description"] = config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), config.SkillID(item))
+	if typ == OutputTypeSkills && (slices.Contains(spec.Fields, fieldDescription) || spec.IncludeExtras) {
+		if desc, ok := frontmatter[fieldDescription].(string); !ok || strings.TrimSpace(desc) == "" {
+			frontmatter[fieldDescription] = config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), config.SkillID(item))
 		}
 	}
 }
@@ -902,7 +940,7 @@ func buildBlacklistSet(blacklist []string) map[string]bool {
 	// "name" is unconditionally blacklisted from the extras pass — it's
 	// always set explicitly first and re-emitting it from extras would
 	// double the key in the yaml map.
-	set["name"] = true
+	set[fieldName] = true
 	// "delivery" steers ai-rulez (static, served or both), not the harness.
 	set["delivery"] = true
 	return set
@@ -1030,7 +1068,7 @@ func (g *Generator) userOnlyOutput(typ string, cfg *config.Config) *OutputSpec {
 		Filename:    "{id}/SKILL.md",
 		Resources:   true,
 		Body:        &BodySpec{Sections: []string{"frontmatter", "content", "resource_index"}},
-		Frontmatter: &FrontmatterSpec{Fields: []string{"description"}},
+		Frontmatter: &FrontmatterSpec{Fields: []string{fieldDescription}},
 	}
 }
 

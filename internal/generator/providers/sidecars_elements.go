@@ -74,7 +74,9 @@ func elementsOwnedKey(sc *SidecarSpec, cfg *config.Config, outputPath string) (k
 	if cfg != nil && cfg.Run != nil {
 		rel := projectRelativePath(cfg, outputPath)
 		var previous []jsonmerge.Claim
-		for _, claim := range cfg.Run.PreviousClaims(rel) {
+		claimList := cfg.Run.PreviousClaims(rel)
+		for idx := range claimList {
+			claim := claimList[idx]
 			if slices.Equal(claim.Path, e.Key) {
 				previous = append(previous, claim)
 			}
