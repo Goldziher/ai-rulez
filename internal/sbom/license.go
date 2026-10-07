@@ -46,7 +46,7 @@ const (
 // classifyLicense normalises a frontmatter `license` value: an SPDX id is
 // returned in its canonical spelling, an expression of SPDX ids with its
 // operators upper-cased and spaced, anything else as a sanitized name.
-func classifyLicense(raw string) (licenseKind, string) {
+func classifyLicense(raw string) (kind licenseKind, value string) {
 	text := sanitizeText(raw, maxLicenseLen)
 	if text == "" {
 		return licenseNone, ""
