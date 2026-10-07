@@ -10,13 +10,23 @@ import (
 const (
 	CodeFrontmatterValue = "AR304"
 	CodeToolUnknown      = "AR305"
+	CodeFrontmatterBad   = "AR306"
 )
 
 func registerArFrontmatter(s *ruleSet) {
 	s.addRules(
 		RuleInfo{CodeFrontmatterValue, "frontmatter-value-invalid", SeverityWarning, "a frontmatter value is not one the Claude Code skill or subagent reference accepts (effort, context, model, permissionMode, memory, shell, booleans, paths)"},
 		RuleInfo{CodeToolUnknown, "tool-name-unknown", SeverityWarning, "allowed-tools, tools or disallowedTools names a tool Claude Code does not have, or lists a tool as both allowed and denied"},
+		RuleInfo{CodeFrontmatterBad, "frontmatter-malformed", SeverityError, "the frontmatter block cannot be parsed as a YAML mapping (a list, a scalar, a tab indent, invalid UTF-8, an unquoted ': ') or never closes with ---, so the item loses its metadata or the block leaks into the prompt"},
 	)
+	s.addDocs(map[string]RuleDoc{
+		CodeFrontmatterBad: {
+			Why:  "A block that does not parse is dropped, so the item has no name, description or tools; a block that never closes is served to the model as body text.",
+			Bad:  "`description: Use when: deploying` (unquoted colon), or an opening `---` with no closing `---`",
+			Good: "`description: \"Use when: deploying\"` and a closing `---` line",
+		},
+	})
+	s.addItemCheck(checkFrontmatterMalformed, AnalyzerReferences)
 	s.addItemCheck(checkFrontmatterValues, AnalyzerReferences)
 	s.addItemCheck(checkToolNames, AnalyzerReferences)
 }
@@ -48,6 +58,14 @@ var (
 	claudeModelRe = regexp.MustCompile(`^(?:claude-[a-z0-9.@_-]+|(?:[a-z]{2,6}\.)?anthropic\.claude-[a-z0-9.:_-]+|arn:\S+)(?:\[1m\])?$`)
 	vendorModelRe = regexp.MustCompile(`^(?:gpt-|o\d|gemini-|llama|mistral|codestral|grok|deepseek|qwen|kimi|glm-|command-)[a-z0-9.:_/-]*$`)
 )
+
+// checkFrontmatterMalformed reports an item whose frontmatter block the loader
+// could not parse, so one bad file is a finding and not a failed run.
+func checkFrontmatterMalformed(r *runner, it *item, _ doc, _ frontmatter) {
+	if it.cf.MalformedFrontmatter {
+		r.add(CodeFrontmatterBad, it.abs, 1, "%s %q has frontmatter that cannot be parsed as a YAML mapping or never closes with ---", it.kind, itemID(it.kind, it.cf))
+	}
+}
 
 func checkFrontmatterValues(r *runner, it *item, d doc, fm frontmatter) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	bad := func(k fmKey, format string, args ...any) {

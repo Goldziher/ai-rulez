@@ -73,7 +73,7 @@ generate does, to resolve moving refs.
 Sign the document with "ai-rulez sign --sbom". The machine-local overlay
 (config.local.*, local/) is never included. Nothing is written unless
 --output is given. Exit codes: 0 ok, 1 could not run, 2 a gate failed.`,
-	Args: cobra.NoArgs,
+	Args: sbomArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		if code := runSBOM(cmd.OutOrStdout(), cmd.ErrOrStderr(), sbomOpts, cmd.Flags().Changed("timestamp")); code != 0 {
 			os.Exit(code)
@@ -114,6 +114,17 @@ func (f sbomFlags) validate() error {
 		return oops.Hint("pass -o <committed sbom file>").Errorf("--check compares a committed SBOM, so it needs --output")
 	}
 	return nil
+}
+
+// sbomArgs rejects positional arguments. --timestamp takes an optional value, so
+// "--timestamp bogus" leaves "bogus" as an argument; that is a bad value, not an
+// unknown subcommand.
+func sbomArgs(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 && cmd.Flags().Changed("timestamp") {
+		return oops.Hint(`write the value as --timestamp=VALUE (an RFC 3339 time, or "now")`).
+			Errorf("invalid --timestamp: %q is not a flag value", args[0])
+	}
+	return cobra.NoArgs(cmd, args)
 }
 
 // documentTime resolves --timestamp and SOURCE_DATE_EPOCH.
