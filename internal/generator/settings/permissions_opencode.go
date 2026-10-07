@@ -24,12 +24,6 @@ import (
 // wins and the merge writes a map in key order, the translator checks that no
 // weaker rule would land after an overlapping stricter one (its own or one the
 // user wrote) and drops the weaker rule when it would: a rule is never relaxed.
-var (
-	_ = registerPermissionDialect("opencode", buildOpencode)
-	_ = registerPermissionDialect("kilo", buildOpencode)
-	_ = registerPermissionDialect("mimocode", buildOpencode)
-)
-
 const (
 	ocBash      = "bash"
 	ocRead      = "read"

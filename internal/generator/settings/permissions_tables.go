@@ -17,8 +17,6 @@ import (
 //
 // Source: github.com/mistralai/mistral-vibe README and vibe/core/tools (main,
 // read 2026-10-05; no dated docs page exists).
-var _ = registerPermissionDialect("vibe", buildVibe)
-
 var vibeWholeTools = map[string][]string{
 	toolRead:      {nativeReadFile},
 	toolEdit:      {nativeWriteFile, ocEdit},
@@ -131,8 +129,6 @@ func vibeTool(e permEntry, lists map[string][]any, never map[string]bool) string
 //
 // Source: https://docs.poolside.ai/tool-permissions and
 // https://docs.poolside.ai/settings-file-reference (read 2026-10-05).
-var _ = registerPermissionDialect("poolside", buildPoolside)
-
 func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	shell := map[PermAction][]any{}
@@ -229,8 +225,6 @@ func dedupe(in []any) []any {
 //
 // Source: github.com/can1357/oh-my-pi docs/settings.md and docs/approval-mode.md
 // (main, read 2026-10-05).
-var _ = registerPermissionDialect("omp", buildOmp)
-
 var ompApproval = map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: "prompt", ActionDeny: string(ActionDeny)}
 
 var ompTools = map[string]string{toolBash: ocBash, toolRead: ocRead, toolEdit: ocEdit, toolWrite: ocWrite, toolWebSearch: "web_search", "Task": "task"}
@@ -312,8 +306,6 @@ func ompEntry(e permEntry) (patterns []string, tool, why string) {
 // There is no path or domain matcher.
 //
 // Source: https://docs.augmentcode.com/cli/permissions (read 2026-10-05).
-var _ = registerPermissionDialect("augment", buildAugment)
-
 var augmentTools = map[string][]string{
 	toolBash: {keyTerminal}, toolRead: {ocRead}, toolEdit: {ocEdit, ocWrite}, "MultiEdit": {ocEdit},
 	toolWrite: {ocWrite}, toolWebFetch: {"web-fetch"}, toolWebSearch: {"web-search"},
