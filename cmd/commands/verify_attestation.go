@@ -207,9 +207,9 @@ func reportAttestation(out io.Writer, r attestationResult, _ time.Time) int {
 		if r.HashVersion > 0 {
 			detail = fmt.Sprintf("  hash_version=%d", r.HashVersion)
 		}
-		fmt.Fprintf(out, "OK  %s  signer=%s\n    issuer=%s  logged=%s  age=%s%s%s\n", r.Subject, signerText(r.Signer), issuerText(r.Signer), loggedText(r), ageText(r.AgeSeconds), detail, weakText(r))
+		reportWriter{out}.printf("OK  %s  signer=%s\n    issuer=%s  logged=%s  age=%s%s%s\n", r.Subject, signerText(r.Signer), issuerText(r.Signer), loggedText(r), ageText(r.AgeSeconds), detail, weakText(r))
 		for _, line := range extraLines(r) {
-			fmt.Fprintln(out, "    "+line)
+			reportWriter{out}.printf("%s\n", "    "+line)
 		}
 		return code
 	}
