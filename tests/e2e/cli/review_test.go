@@ -55,6 +55,12 @@ func TestReviewCLI(t *testing.T) {
 	refused := testutil.RunCLI(t, dir, "review", "--rubric", "mine")
 	require.Equal(t, 1, refused.ExitCode)
 
+	// generate refuses to write while content holds a credential; with it removed the run succeeds.
+	blocked := testutil.RunCLI(t, dir, "generate")
+	require.NotEqual(t, 0, blocked.ExitCode, "generate must refuse content that holds a secret")
+	require.Contains(t, blocked.Stderr, "AR001")
+	require.NoError(t, os.RemoveAll(filepath.Join(root, "skills", "leak")))
+
 	// The rubrics directory never reaches a generated output.
 	testutil.RunCLIExpectSuccess(t, dir, "generate")
 	_, err := os.Stat(filepath.Join(dir, ".claude", "rubrics"))

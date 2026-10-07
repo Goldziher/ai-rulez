@@ -793,6 +793,9 @@ func importGate(cfg *config.Config) error {
 	if err := skillSignatureGate(cfg); err != nil {
 		return err
 	}
+	if err := authoredSecretGate(cfg); err != nil {
+		return err
+	}
 	return enforceScanImports(cfg)
 }
 

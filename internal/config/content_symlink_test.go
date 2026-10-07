@@ -38,6 +38,30 @@ func TestProjectScanner_SymlinkPolicy(t *testing.T) {
 			wantRules: []string{"shared"},
 		},
 		{
+			name: "file symlink to a dotenv file inside project is refused",
+			setup: func(t *testing.T, project, _ string) {
+				write(t, filepath.Join(project, ".env"), "API_KEY=abc\n")
+				symlinkOrSkip(t, filepath.Join(project, ".env"), filepath.Join(project, ".ai-rulez", "rules", "env.md"))
+			},
+			wantProblems: 1,
+		},
+		{
+			name: "file symlink into .git inside project is refused",
+			setup: func(t *testing.T, project, _ string) {
+				write(t, filepath.Join(project, ".git", "config"), "[core]\n")
+				symlinkOrSkip(t, filepath.Join(project, ".git", "config"), filepath.Join(project, ".ai-rulez", "rules", "gc.md"))
+			},
+			wantProblems: 1,
+		},
+		{
+			name: "file symlink to an example dotenv file inside project is followed",
+			setup: func(t *testing.T, project, _ string) {
+				write(t, filepath.Join(project, ".env.example"), "# example\n")
+				symlinkOrSkip(t, filepath.Join(project, ".env.example"), filepath.Join(project, ".ai-rulez", "rules", "example.md"))
+			},
+			wantRules: []string{"example"},
+		},
+		{
 			name: "file symlink outside project is refused",
 			setup: func(t *testing.T, project, outside string) {
 				write(t, filepath.Join(outside, "hosts.md"), "SECRET")
