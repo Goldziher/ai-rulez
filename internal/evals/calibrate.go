@@ -95,13 +95,7 @@ func Calibrate(store *Store, opts *CalibrateOptions) *Calibration {
 	groups := map[[3]string][]sample{}
 	for i := range store.Skills {
 		rec := &store.Skills[i]
-		var cands []sample
-		if rec.Estimate != nil {
-			cands = append(cands, sample{KindCases, rec.Harness, rec.Model, rec.Estimate})
-		}
-		if rec.Activation != nil && rec.Activation.Estimate != nil {
-			cands = append(cands, sample{KindActivation, rec.Activation.Harness, rec.Activation.Model, rec.Activation.Estimate})
-		}
+		cands := recordSamples(rec)
 		for _, s := range cands {
 			switch {
 			case !rec.Verified():
@@ -116,6 +110,27 @@ func Calibrate(store *Store, opts *CalibrateOptions) *Calibration {
 			}
 		}
 	}
+	keys := sortedGroupKeys(groups)
+	for _, k := range keys {
+		cal.Groups = append(cal.Groups, fitGroup(k[0], k[1], k[2], groups[k], minSamples))
+	}
+	return cal
+}
+
+// recordSamples lists the estimate-versus-actual samples one record holds.
+func recordSamples(rec *SkillRecord) []sample {
+	var cands []sample
+	if rec.Estimate != nil {
+		cands = append(cands, sample{KindCases, rec.Harness, rec.Model, rec.Estimate})
+	}
+	if rec.Activation != nil && rec.Activation.Estimate != nil {
+		cands = append(cands, sample{KindActivation, rec.Activation.Harness, rec.Activation.Model, rec.Activation.Estimate})
+	}
+	return cands
+}
+
+// sortedGroupKeys orders the group keys by kind, harness, then model.
+func sortedGroupKeys(groups map[[3]string][]sample) [][3]string {
 	keys := make([][3]string, 0, len(groups))
 	for k := range groups {
 		keys = append(keys, k)
@@ -129,10 +144,7 @@ func Calibrate(store *Store, opts *CalibrateOptions) *Calibration {
 		}
 		return keys[a][2] < keys[b][2]
 	})
-	for _, k := range keys {
-		cal.Groups = append(cal.Groups, fitGroup(k[0], k[1], k[2], groups[k], minSamples))
-	}
-	return cal
+	return keys
 }
 
 // fitGroup proposes assumptions for one group.
