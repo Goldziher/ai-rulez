@@ -42,7 +42,8 @@ type ReviewFixOptions struct {
 // finds stable problems, asks the fixer for edits that pass the review fix checks (they apply
 // exactly, only the description and body change, no new link or credential, no new security
 // finding, and a different judge model rates the targeted dimensions better and no other worse).
-// A verified fix is written to the workspace; the gate decides whether it is kept.
+// A verified fix is written to the workspace; the gate decides whether it is kept. When it fails after calling the
+// model it returns the error together with a response carrying the cost spent, which Serve prints.
 func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace string, o *ReviewFixOptions) (*improve.OptimizerResponse, error) {
 	if err := o.Check(); err != nil {
 		return nil, err
@@ -81,7 +82,7 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	judge := rv.SemanticOptions{Client: client, Model: o.JudgeModel, K: k, Content: config.ReviewContentFull, Workers: 1, NoCache: true}
 	outcome, err := rv.RunSemantic(ctx, rv.SemanticInput{Rubric: rb, Results: res, Options: judge})
 	if err != nil {
-		return nil, fmt.Errorf("the judged run stopped: %w", err)
+		return spentResponse(client, 0), fmt.Errorf("the judged run stopped: %w", err)
 	}
 	resp := &improve.OptimizerResponse{Version: improve.ProtocolVersion, Changed: []string{}, CostUSD: outcome.Usage.CostUSD}
 	if outcome.Incomplete {
@@ -107,14 +108,14 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 		resp.CostUSD += prop.Usage.CostUSD
 	}
 	if err != nil {
-		return nil, fmt.Errorf("propose a fix: %w", err)
+		return spentResponse(client, resp.CostUSD), fmt.Errorf("propose a fix: %w", err)
 	}
 	if !prop.Verified {
 		resp.Summary = "no safe fix: " + prop.Reason
 		return resp, nil
 	}
 	if err := safefs.WriteFileAtomicMode(skillPath, []byte(prop.Patched), mode); err != nil {
-		return nil, fmt.Errorf("write SKILL.md: %w", err)
+		return spentResponse(client, resp.CostUSD), fmt.Errorf("write SKILL.md: %w", err)
 	}
 	resp.Changed = []string{"SKILL.md"}
 	resp.Summary = "review-fix: " + prop.Note
@@ -181,6 +182,16 @@ func loadRubric(ref string) (*rv.Rubric, error) {
 		return nil, fmt.Errorf("load the rubric: %w", err)
 	}
 	return rb, nil
+}
+
+// spentResponse is the answer of a round that failed after it called the model: no change, and the cost spent so
+// far (the client's own count when it keeps one, else known), so improve charges what the round actually cost.
+func spentResponse(client llm.Client, known float64) *improve.OptimizerResponse {
+	cost := known
+	if s, ok := client.(interface{ Spent() llm.Spent }); ok {
+		cost = max(cost, s.Spent().CostUSD)
+	}
+	return &improve.OptimizerResponse{Version: improve.ProtocolVersion, Changed: []string{}, CostUSD: cost, Summary: "the review-fix adapter failed: no change"}
 }
 
 func newClient(lc llm.Config, o *ReviewFixOptions) (llm.Client, error) {

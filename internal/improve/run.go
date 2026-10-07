@@ -624,12 +624,13 @@ func (x *execution) reset(tree *Tree) error {
 // means the round failed.
 func (x *execution) runOptimizer(round int, scores *trainScores, history []string, rep *RoundReport) (*OptimizerResponse, string) {
 	p, o := x.p, &x.p.Opts
+	budget := roundUSD(x.left())
 	req := OptimizerRequest{
 		Version: ProtocolVersion, RunID: p.RunID, Round: round,
 		Skill:      optimizerSkill{ID: p.Skill.ID, Dir: p.Skill.ID, Digest: digestOfTree(x.prev)},
 		TrainCases: p.trainCases, TrainScores: scores, Constraints: p.Constraints, History: history,
 		Previous: x.previousRound(),
-		Budget:   optimizerBudget{MaxCostUSD: roundUSD(x.left()), TimeoutS: int(runner.EffectiveTimeout(o.Timeout).Seconds())},
+		Budget:   optimizerBudget{MaxCostUSD: budget, TimeoutS: int(runner.EffectiveTimeout(o.Timeout).Seconds())},
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -651,20 +652,40 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 	if o.Stderr != nil && len(res.Stderr) > 0 {
 		_, _ = o.Stderr.Write([]byte(Sanitize(string(res.Stderr), 4000) + "\n")) //nolint:errcheck // diagnostics only
 	}
+	// An optimizer that started and then failed may have spent money: it is charged
+	// what it reported, or else the whole budget it was handed.
+	failed := func(reason string) (*OptimizerResponse, string) {
+		x.chargeFailedRound(budget, res.Stdout, rep)
+		return nil, reason
+	}
 	switch res.Status {
 	case runner.StatusOK:
 	case runner.StatusTimeout:
-		return nil, fmt.Sprintf("the optimizer timed out after %s", res.Timeout)
+		return failed(fmt.Sprintf("the optimizer timed out after %s", res.Timeout))
 	case runner.StatusUnavailable:
 		return nil, "the optimizer is not available: " + Sanitize(fmt.Sprint(res.Err), 300)
 	default:
-		return nil, fmt.Sprintf("the optimizer failed (%s, exit %d)", res.Status, res.ExitCode)
+		return failed(fmt.Sprintf("the optimizer failed (%s, exit %d)", res.Status, res.ExitCode))
 	}
 	if res.StdoutTruncated {
-		return nil, "the optimizer's answer exceeded the size limit"
+		return failed("the optimizer's answer exceeded the size limit")
 	}
+	resp, reason := decodeOptimizerResponse(res.Stdout)
+	if reason != "" {
+		return failed(reason)
+	}
+	x.charge(0, resp.CostUSD)
+	rep.OptCostUSD = resp.CostUSD
+	rep.CostUSD = roundUSD(rep.CostUSD + resp.CostUSD)
+	x.optCost += resp.CostUSD
+	return resp, ""
+}
+
+// decodeOptimizerResponse decodes and checks an optimizer's answer; a non-empty
+// reason says why it is unusable.
+func decodeOptimizerResponse(stdout []byte) (*OptimizerResponse, string) {
 	var resp OptimizerResponse
-	dec := json.NewDecoder(bytes.NewReader(res.Stdout))
+	dec := json.NewDecoder(bytes.NewReader(stdout))
 	if err := dec.Decode(&resp); err != nil {
 		return nil, "the optimizer printed invalid JSON: " + Sanitize(err.Error(), 200)
 	}
@@ -674,11 +695,25 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 	if resp.CostUSD < 0 || math.IsNaN(resp.CostUSD) || math.IsInf(resp.CostUSD, 0) {
 		return nil, "the optimizer reported an invalid cost_usd"
 	}
-	x.charge(0, resp.CostUSD)
-	rep.OptCostUSD = resp.CostUSD
-	rep.CostUSD = roundUSD(rep.CostUSD + resp.CostUSD)
-	x.optCost += resp.CostUSD
 	return &resp, ""
+}
+
+// chargeFailedRound charges an optimizer round that started and failed: the cost
+// it reported in a well-formed answer printed before failing (the bundled
+// adapters print one), else the whole budget it was handed, the rule the eval
+// engine applies to a runner that reports nothing. Charging nothing would hand
+// the next round the same budget again.
+func (x *execution) chargeFailedRound(budget float64, stdout []byte, rep *RoundReport) {
+	cost := budget
+	if resp, reason := decodeOptimizerResponse(stdout); reason == "" && resp.CostUSD > 0 {
+		cost = resp.CostUSD
+		x.optCost += cost
+	} else if budget > 0 {
+		rep.Warnings = append(rep.Warnings, fmt.Sprintf("the optimizer failed without reporting a cost; the whole $%.4f budget it was given was charged", budget))
+	}
+	x.charge(0, cost)
+	rep.OptCostUSD = cost
+	rep.CostUSD = roundUSD(rep.CostUSD + cost)
 }
 
 // previousRound summarises the last finished round for the next optimizer call.
