@@ -64,3 +64,19 @@ func TestLock_StrictModesRefuseLocalOverride(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, ruleBody(cfg), "unpinned override", "outside strict modes the override still applies")
 }
+
+func TestRemoteIncludeSymlinkIsNeverFollowed(t *testing.T) {
+	f := newLockFixture(t)
+	secret := filepath.Join(t.TempDir(), "secret.md")
+	writeTestFile(t, secret, "# Secret\n\nlocal file\n")
+	require.NoError(t, os.Symlink(secret, filepath.Join(f.remote, ".ai-rulez", "rules", "leak.md")))
+	git(t, f.remote, "add", "-A")
+	git(t, f.remote, "commit", "-qm", "add symlink")
+
+	cfg, err := f.load(t)
+	require.NoError(t, err)
+	for _, r := range cfg.Content.Rules {
+		assert.NotEqual(t, "leak", r.Name, "a symlinked file must not be read from a remote include")
+		assert.NotContains(t, r.Content, "local file", "the target of a link in a fetched tree must not be read")
+	}
+}
