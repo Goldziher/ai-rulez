@@ -287,6 +287,24 @@ func TestFlush_QueuesNoEventRecordedBeforeTheConsent(t *testing.T) {
 	assert.Empty(t, pending)
 }
 
+func TestPendingInLog_CountsNoEventRecordedBeforeTheConsent(t *testing.T) {
+	// Arrange: an old cursor and three events recorded an hour before the grant.
+	granted := time.Now().UTC().Truncate(time.Second)
+	spool, log := newCursorFixture(t)
+	appendLogAt(t, log, 0, 3, granted.Add(-time.Hour))
+	id, _, err := LogID(log)
+	require.NoError(t, err)
+	require.NoError(t, spool.UpdateCursor(func(c *Cursor) { c.LogID, c.Offset = id, 0 }))
+	// Act
+	withGrant, err := spool.PendingInLog(log, 100, granted)
+	require.NoError(t, err)
+	without, err := spool.PendingInLog(log, 100, time.Time{})
+	require.NoError(t, err)
+	// Assert: telemetry status shows what a flush would send.
+	assert.Equal(t, 0, withGrant)
+	assert.Equal(t, 3, without)
+}
+
 func TestSettings_ConsentGrantedAtOnlyForARecordGrant(t *testing.T) {
 	at := "2026-10-01T10:00:00Z"
 	tests := []struct {
