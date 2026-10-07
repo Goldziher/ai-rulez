@@ -468,7 +468,8 @@ func nestUnknownKeys(text string, known map[string]bool) (out string, moved []st
 		root.Content = keep
 	} else {
 		meta := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: unknown}
-		root.Content = append(keep, &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: litMetadata}, meta)
+		keep = append(keep, &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: litMetadata}, meta)
+		root.Content = keep
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)

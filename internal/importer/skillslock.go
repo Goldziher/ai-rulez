@@ -105,8 +105,8 @@ func importLockEntry(p *Plan, name, field string, e skillsLockEntry) {
 		p.add(newFinding(StatusUnsupported, skillsLockFile, field, "", "source "+reason))
 		return
 	}
-	for _, have := range p.InstalledSkills {
-		if have.Name == clean {
+	for i := range p.InstalledSkills {
+		if p.InstalledSkills[i].Name == clean {
 			p.add(newFinding(StatusUnsupported, skillsLockFile, field, "",
 				fmt.Sprintf("not imported: its name collides with another entry as %q after sanitizing; rename one in the lock and rerun", clean)))
 			return
@@ -147,7 +147,7 @@ func importLockEntry(p *Plan, name, field string, e skillsLockEntry) {
 // lockSourceURL turns a lock entry into a git URL. The skills CLI documents
 // the source types github, node_modules and local; others are accepted only
 // when their source is already a git URL.
-func lockSourceURL(e skillsLockEntry) (url, reason string) {
+func lockSourceURL(e skillsLockEntry) (gitURL, reason string) {
 	switch e.SourceType {
 	case "node_modules":
 		return "", "npm package skills are not git sources; install the package and copy the skill into skills/"
@@ -169,7 +169,7 @@ func lockSourceURL(e skillsLockEntry) (url, reason string) {
 	return "", "source type " + fmt.Sprintf("%q", e.SourceType) + " is not a documented git source"
 }
 
-var scpSource = regexp.MustCompile(`^git@[A-Za-z0-9][A-Za-z0-9.-]*:[^\s:][^\s]*$`)
+var scpSource = regexp.MustCompile(`^git@[A-Za-z0-9][A-Za-z0-9.-]*:[^\s:]\S*$`)
 
 // gitSourceProblem checks a git source before it goes into installed_skills.
 // Only https://, ssh:// and git@host:path are accepted: not a leading dash or a

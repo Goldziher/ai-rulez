@@ -71,13 +71,14 @@ func (b *rulesyncPlanner) importTargets(raw json.RawMessage) {
 	var names []string
 	perTarget := map[string]json.RawMessage{}
 	var list []string
-	if json.Unmarshal(raw, &list) == nil {
+	switch {
+	case json.Unmarshal(raw, &list) == nil:
 		names = list
-	} else if json.Unmarshal(raw, &perTarget) == nil {
+	case json.Unmarshal(raw, &perTarget) == nil:
 		for n := range perTarget {
 			names = append(names, n)
 		}
-	} else {
+	default:
 		b.p.add(newFinding(StatusUnsupported, src, litTargets, "", "targets is neither a list nor an object"))
 		return
 	}

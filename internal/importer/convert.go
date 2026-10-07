@@ -356,7 +356,7 @@ var generatorRoots = map[string]string{rulesyncName: ".rulesync/", apmName: ".ap
 // files next to its inputs are its output, so importing them as well would
 // duplicate every rule. It returns the sources that made it drop native, "" when
 // it did not. An explicit --from keeps what was asked for.
-func preferSources(importers []Format, from []string) ([]Format, string) {
+func preferSources(importers []Format, from []string) (kept []Format, note string) {
 	for _, f := range from {
 		if n := strings.TrimSpace(f); n != "" && n != autoFrom {
 			return importers, ""
@@ -418,8 +418,8 @@ func runImporters(ctx context.Context, abs string, importers []Format, opt Optio
 		}
 		if imp.Name() == skillsLockName && len(p.InstalledSkills) > 0 {
 			opt.SkipSkills = map[string]bool{}
-			for _, s := range p.InstalledSkills {
-				opt.SkipSkills[s.Name] = true
+			for i := range p.InstalledSkills {
+				opt.SkipSkills[p.InstalledSkills[i].Name] = true
 			}
 		}
 		merged.merge(p)
@@ -469,8 +469,8 @@ func sortFindings(p *Plan) {
 
 func planSummary(p *Plan) string {
 	counts := map[Kind]int{}
-	for _, it := range p.Items {
-		counts[it.Kind]++
+	for i := range p.Items {
+		counts[p.Items[i].Kind]++
 	}
 	var parts []string
 	for _, k := range []struct {
@@ -559,17 +559,17 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 		return "", nil
 	}
 
-	path := filepath.Join(intoAbs, configTOML)
-	data, err := os.ReadFile(path)
+	cfgPath := filepath.Join(intoAbs, configTOML)
+	data, err := os.ReadFile(cfgPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		return ActionCreate, nil
 	}
 	if err != nil {
-		return "", oops.With("path", path).Wrapf(err, "read existing %s", configTOML)
+		return "", oops.With("path", cfgPath).Wrapf(err, "read existing %s", configTOML)
 	}
-	existing, err := config.DecodeTOMLConfig(data, path)
+	existing, err := config.DecodeTOMLConfig(data, cfgPath)
 	if err != nil {
-		return "", oops.With("path", path).
+		return "", oops.With("path", cfgPath).
 			Hint("Fix or move the existing config.toml; convert never replaces it").
 			Wrapf(err, "existing %s cannot be parsed", configTOML)
 	}
@@ -629,10 +629,11 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 		}
 	}
 	servers := map[string]config.MCPServer{}
-	for _, s := range merged.MCPServersRaw {
-		servers[s.Name] = s
+	for i := range merged.MCPServersRaw {
+		servers[merged.MCPServersRaw[i].Name] = merged.MCPServersRaw[i]
 	}
-	for _, s := range add.MCPServersRaw {
+	for i := range add.MCPServersRaw {
+		s := add.MCPServersRaw[i]
 		prev, ok := servers[s.Name]
 		switch {
 		case !ok:
@@ -643,10 +644,11 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 		}
 	}
 	skills := map[string]config.InstalledSkillConfig{}
-	for _, s := range merged.InstalledSkills {
-		skills[s.Name] = s
+	for i := range merged.InstalledSkills {
+		skills[merged.InstalledSkills[i].Name] = merged.InstalledSkills[i]
 	}
-	for _, s := range add.InstalledSkills {
+	for i := range add.InstalledSkills {
+		s := add.InstalledSkills[i]
 		prev, ok := skills[s.Name]
 		switch {
 		case !ok:
@@ -768,11 +770,11 @@ func checkTargets(abs, intoAbs string, files map[string][]byte) error {
 	return nil
 }
 
-func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+func writeFileAtomic(dest string, data []byte, perm os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".convert-*")
+	tmp, err := os.CreateTemp(filepath.Dir(dest), ".convert-*")
 	if err != nil {
 		return err
 	}
@@ -786,7 +788,7 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	if err := os.Chmod(name, perm); err != nil {
 		return discardTemp(nil, name, err)
 	}
-	if err := os.Rename(name, path); err != nil {
+	if err := os.Rename(name, dest); err != nil {
 		return discardTemp(nil, name, err)
 	}
 	return nil
@@ -921,8 +923,8 @@ func recordImported(c *conversion) error {
 			rels = append(rels, rel)
 		}
 	}
-	for _, it := range c.plan.Items {
-		for _, s := range it.Sources {
+	for i := range c.plan.Items {
+		for _, s := range c.plan.Items[i].Sources {
 			add(s)
 		}
 	}

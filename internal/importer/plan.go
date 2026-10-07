@@ -318,7 +318,8 @@ func (p *Plan) Finalize() {
 	byContent := map[string]int{}
 	used := map[string]bool{}
 	firstSource := map[string]string{}
-	for _, it := range p.Items {
+	for i := range p.Items {
+		it := p.Items[i]
 		contentKey := it.root() + string(it.Kind) + "\x00" + it.hash
 		if it.Kind != KindContext {
 			contentKey = it.root() + string(it.Kind) + "\x00" + it.Name + "\x00" + it.hash
@@ -402,11 +403,11 @@ func dedupeStrings(in []string) []string {
 func dedupeServers(in []config.MCPServer) []config.MCPServer {
 	sort.SliceStable(in, func(i, j int) bool { return in[i].Name < in[j].Name })
 	var out []config.MCPServer
-	for _, s := range in {
-		if len(out) > 0 && out[len(out)-1].Name == s.Name {
+	for i := range in {
+		if len(out) > 0 && out[len(out)-1].Name == in[i].Name {
 			continue
 		}
-		out = append(out, s)
+		out = append(out, in[i])
 	}
 	return out
 }
@@ -414,11 +415,11 @@ func dedupeServers(in []config.MCPServer) []config.MCPServer {
 func dedupeInstalled(in []config.InstalledSkillConfig) []config.InstalledSkillConfig {
 	sort.SliceStable(in, func(i, j int) bool { return in[i].Name < in[j].Name })
 	var out []config.InstalledSkillConfig
-	for _, s := range in {
-		if len(out) > 0 && out[len(out)-1].Name == s.Name {
+	for i := range in {
+		if len(out) > 0 && out[len(out)-1].Name == in[i].Name {
 			continue
 		}
-		out = append(out, s)
+		out = append(out, in[i])
 	}
 	return out
 }
