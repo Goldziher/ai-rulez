@@ -193,6 +193,8 @@ type Plan struct {
 	// disabled unless the caller opts in (see hooks.go).
 	Hooks       []config.HookGroup
 	Permissions config.Permissions
+	// Plugin is the [plugin] block an Agent Plugins manifest maps to.
+	Plugin *config.PluginAuthoring
 	// Remotes are git sources the input names but does not hold; they are read
 	// only when the caller asks to fetch (see fetch.go).
 	Remotes []Remote
@@ -215,7 +217,7 @@ func (p *Plan) add(f Finding) { p.Findings = append(p.Findings, f) }
 
 // empty reports whether the plan carries nothing to write.
 func (p *Plan) empty() bool {
-	return len(p.Items) == 0 && len(p.Raw) == 0 && len(p.MCPServers) == 0 && len(p.InstalledSkills) == 0 &&
+	return len(p.Items) == 0 && len(p.Raw) == 0 && p.Plugin == nil && len(p.MCPServers) == 0 && len(p.InstalledSkills) == 0 &&
 		len(p.Hooks) == 0 && p.Permissions.IsEmpty()
 }
 
@@ -253,7 +255,7 @@ type Format interface {
 
 // Registry returns every format importer, sorted by name.
 func Registry() []Format {
-	return []Format{apmImporter{}, nativeImporter{}, okfImporter{}, rulesyncImporter{}, skillsLockImporter{}, tesslImporter{}}
+	return []Format{agentPluginsImporter{}, apmImporter{}, nativeImporter{}, okfImporter{}, rulesyncImporter{}, skillsLockImporter{}, tesslImporter{}}
 }
 
 // Lookup returns the importer with the given name.
@@ -278,6 +280,9 @@ func (p *Plan) merge(other *Plan) {
 	p.MCPServers = append(p.MCPServers, other.MCPServers...)
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
 	p.Hooks = append(p.Hooks, other.Hooks...)
+	if p.Plugin == nil {
+		p.Plugin = other.Plugin
+	}
 	p.Remotes = append(p.Remotes, other.Remotes...)
 	p.Pointers = append(p.Pointers, other.Pointers...)
 	p.Raw = append(p.Raw, other.Raw...)
