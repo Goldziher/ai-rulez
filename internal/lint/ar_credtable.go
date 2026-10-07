@@ -97,6 +97,14 @@ var credentialTable = []credFamily{
 	{id: "auth-log", tier: tierInfo, label: "the authentication log", re: ap(`/var/log/(?:auth\.log|secure)\b`)},
 }
 
+// credentialStems are literals that every credentialTable pattern contains;
+// a line without one cannot match any family, so the table is skipped for it.
+var credentialStems = []string{
+	".ssh", "id_", ".env", ".aws", "/etc/", ".git-credentials", "netrc", ".gnupg", ".kube", ".vault-token", ".terraform", "keyrings",
+	".npmrc", ".pypirc", ".gem/", ".pgpass", ".my.cnf", ".azure", ".config/", ".docker", ".password-store", "Keychains", ".cargo",
+	".op", ".age", "_history", "openvpn", "/var/log",
+}
+
 var (
 	readVerbRe     = regexp.MustCompile(`(?i)(?:^|[\s(])(?:cat|head|tail|less|more|bat|tac|strings|base64|xxd|od|hexdump|grep|egrep|awk|sed|get-content|type)\s`)
 	copyVerbRe     = regexp.MustCompile(`(?:^|[\s(])(?:cp|ln|install|mv)\s`)
@@ -149,6 +157,9 @@ type credHit struct {
 // detectCredentialAccess finds the most severe credential access on a line.
 func detectCredentialAccess(line string) (credHit, bool) {
 	var best credHit
+	if !containsAnyStem(line, false, credentialStems) {
+		return best, false
+	}
 	for _, fam := range credentialTable {
 		for _, loc := range fam.re.FindAllStringSubmatchIndex(line, -1) {
 			m := make([]string, len(loc)/2)

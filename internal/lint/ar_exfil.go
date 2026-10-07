@@ -96,12 +96,26 @@ func dnsCarriesPayload(seg string, backticks bool) bool {
 	return false
 }
 
+// exfilWords are the command names any AR014 shape needs on its line (a
+// network tool, env/printenv as a producer, or a DNS client, or httpie); the PowerShell
+// cmdlets are matched case-insensitively.
+var exfilWords = []string{"curl", "wget", "xh", "nc", "ncat", "netcat", "scp", "rsync", "iwr", "irm", "invoke-webrequest", "invoke-restmethod", "dig", "nslookup", "host"}
+
+func mayExfil(text string) bool {
+	low := strings.ToLower(text)
+	return hasCmdWord(low, exfilWords...) || strings.Contains(low, "http ") || strings.Contains(low, "https ") || strings.Contains(low, "http\t") || strings.Contains(low, "https\t") // httpie
+
+}
+
 func scanExfilCommands(r *runner, t *scanText) {
 	for _, l := range t.logicalLines() {
 		if l.Front {
 			continue
 		}
 		text := l.Text
+		if !mayExfil(text) {
+			continue
+		}
 		network := netCmdRe.MatchString(text) || httpieRe.MatchString(text)
 		switch {
 		case network && len(secretVars(text)) > 0:
@@ -221,7 +235,7 @@ func scanRawIPs(r *runner, t *scanText) {
 }
 
 var (
-	fetchCmdRe = regexp.MustCompile(`(?i)\b(?:curl|wget|git\s+clone|git\s+remote\s+add|pip3?\s+install|npm\s+(?:install|i|config)|iwr|invoke-webrequest|invoke-restmethod)\b`)
+	fetchCmdRe = newGatedRe(`(?i)\b(?:curl|wget|git\s+clone|git\s+remote\s+add|pip3?\s+install|npm\s+(?:install|i|config)|iwr|invoke-webrequest|invoke-restmethod)\b`, true, "curl", "wget", "git ", "pip", "npm", "iwr", "invoke-")
 	httpURLRe  = regexp.MustCompile(`(?i)\bhttp://([^\s/:"'<>)\]$]+)(?::\d+)?`)
 )
 
@@ -293,7 +307,7 @@ func scanEscapes(r *runner, t *scanText) {
 		if l.Front || l.Neg || (l.Fenced && escapeSkipFn[l.Lang]) {
 			continue
 		}
-		if escapeRe.MatchString(l.Text) {
+		if (strings.Contains(l.Text, `\x`) || strings.Contains(l.Text, `\u`)) && escapeRe.MatchString(l.Text) {
 			r.add(CodeEscapeObfuscated, t.abs, l.No, "a run of character escapes spells out text a reviewer cannot read; write the string plainly")
 		}
 	}
