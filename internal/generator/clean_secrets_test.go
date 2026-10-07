@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const cleanMCPShared = `version = "4.0"
+const cleanMCPShared = `version = "5.0"
 name = "clean-secrets"
 presets = ["claude", "poolside"]
 

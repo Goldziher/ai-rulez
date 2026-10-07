@@ -21,7 +21,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const planConfig = `version = "4.0"
+const planConfig = `version = "5.0"
+agents_md = false
 name = "plan"
 presets = ["claude", "cursor", "codex"]
 gitignore = true

@@ -24,7 +24,6 @@ func TestAgentsMD_FlagOffOutputUnchangedWithScopesAndMCP(t *testing.T) {
 	scopeBlock := "\n[profiles]\napi = [\"api\"]\n\n[[scopes]]\npath = \"packages/api\"\nprofile = \"api\"\npresets = [" +
 		quotedList(all) + "]\n"
 	cases := []struct{ name, flag string }{
-		{name: "flag absent", flag: ""},
 		{name: "flag false", flag: "agents_md = false\n"},
 	}
 	for _, tc := range cases {
@@ -36,7 +35,7 @@ func TestAgentsMD_FlagOffOutputUnchangedWithScopesAndMCP(t *testing.T) {
 			runAgentsMDGenerate(t, root)
 			got := agentsMDSnapshot(t, root)
 
-			if os.Getenv("UPDATE_GOLDEN") != "" && tc.flag == "" {
+			if os.Getenv("UPDATE_GOLDEN") != "" {
 				data, err := json.MarshalIndent(got, "", "  ")
 				require.NoError(t, err)
 				require.NoError(t, os.WriteFile(agentsMDScopesMCPGoldenFile, append(data, '\n'), 0o644))

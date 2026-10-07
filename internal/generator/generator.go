@@ -3269,8 +3269,8 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		paths[p] = true
 	}
 	// With managed ignores on, the directory is covered even before it exists:
-	// `usage record` and `telemetry record` create files in it between two
-	// generates, and they must not show up as untracked.
+	// `telemetry record` creates files in it between two generates, and they
+	// must not show up as untracked.
 	if includeCommitted && !g.userMode {
 		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
 	}
