@@ -62,3 +62,39 @@ func TestRunUserGenerateRefusesImportedSecrets(t *testing.T) {
 	assert.Contains(t, err.Error(), "security scan")
 	assert.NoDirExists(t, filepath.Join(home, ".claude"), "nothing was written")
 }
+
+func TestImportGateRefusesASecretInAuthoredContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		dry     bool
+		body    string
+		wantErr bool
+	}{
+		{"secret in a rule", false, "# Style\nkey " + "AKIA" + "IOSFODNN7EXAMPLE\n", true},
+		{"secret in a rule, dry run", true, "# Style\nkey " + "AKIA" + "IOSFODNN7EXAMPLE\n", false},
+		{"clean rule", false, "# Style\nUse tabs.\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := lockProject(t, "")
+			writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), tt.body)
+			cfg, err := loadForLock("")
+			require.NoError(t, err)
+			oldDry := dryRun
+			dryRun = tt.dry
+			t.Cleanup(func() { dryRun = oldDry })
+
+			// Act
+			err = importGate(cfg)
+
+			// Assert
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "AR001")
+		})
+	}
+}
