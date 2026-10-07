@@ -34,8 +34,8 @@ var maxIgnoreFileSize int64 = 100 << 20
 // run executes git in dir through the Git's runner. exitCode distinguishes "no
 // match" (1) from failure (>1) for the commands that use it; err is set when git
 // could not run or exited non-zero.
-func (g Git) run(dir string, stdin []byte, args ...string) (out []byte, exitCode int, err error) {
-	res := g.runner().Run(context.Background(), runner.Spec{
+func (g Git) run(ctx context.Context, dir string, stdin []byte, args ...string) (out []byte, exitCode int, err error) {
+	res := g.runner().Run(ctx, runner.Spec{
 		Argv:    append([]string{gitProgram}, gitArgs(dir, args)...),
 		Env:     Env(nil),
 		Stdin:   stdin,
@@ -51,16 +51,16 @@ func (g Git) run(dir string, stdin []byte, args ...string) (out []byte, exitCode
 	}
 }
 
-// IsRepo reports whether dir is inside a git work tree. A missing git binary or
+// IsRepoContext reports whether dir is inside a git work tree. A missing git binary or
 // a directory outside any repository is simply "no".
-func (g Git) IsRepo(dir string) bool {
-	out, _, err := g.run(dir, nil, "rev-parse", "--is-inside-work-tree")
+func (g Git) IsRepoContext(ctx context.Context, dir string) bool {
+	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--is-inside-work-tree")
 	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
 
-// TopLevel returns the work tree root containing dir, or "" outside a repository.
-func (g Git) TopLevel(dir string) string {
-	out, _, err := g.run(dir, nil, "rev-parse", "--show-toplevel")
+// TopLevelContext returns the work tree root containing dir, or "" outside a repository.
+func (g Git) TopLevelContext(ctx context.Context, dir string) string {
+	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return ""
 	}
@@ -77,19 +77,19 @@ func literalSpecs(paths []string) []string {
 	return specs
 }
 
-// TrackedAmong returns which of paths (slash-separated, relative to dir) git
+// TrackedAmongContext returns which of paths (slash-separated, relative to dir) git
 // tracks. Outside a repository nothing is tracked. When git fails inside a
 // repository the error is returned: callers should treat every candidate as
 // tracked.
-func (g Git) TrackedAmong(dir string, paths []string) (map[string]bool, error) {
+func (g Git) TrackedAmongContext(ctx context.Context, dir string, paths []string) (map[string]bool, error) {
 	tracked := map[string]bool{}
-	if len(paths) == 0 || !g.IsRepo(dir) {
+	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
 		return tracked, nil
 	}
 	for start := 0; start < len(paths); start += pathChunk {
 		end := min(start+pathChunk, len(paths))
 		args := append([]string{"ls-files", "-z", "--"}, literalSpecs(paths[start:end])...)
-		out, _, err := g.run(dir, nil, args...)
+		out, _, err := g.run(ctx, dir, nil, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -102,13 +102,13 @@ func (g Git) TrackedAmong(dir string, paths []string) (map[string]bool, error) {
 	return tracked, nil
 }
 
-// IgnoredAmong returns which of paths (slash-separated, relative to dir) git
+// IgnoredAmongContext returns which of paths (slash-separated, relative to dir) git
 // ignores, per .gitignore files, .git/info/exclude and the global excludes file,
 // in one call. Tracked files are judged by the patterns too (--no-index). It
 // returns (nil, nil) outside a repository so callers can fall back to their own
 // matcher.
-func (g Git) IgnoredAmong(dir string, paths []string) (map[string]bool, error) {
-	if len(paths) == 0 || !g.IsRepo(dir) {
+func (g Git) IgnoredAmongContext(ctx context.Context, dir string, paths []string) (map[string]bool, error) {
+	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
 		return nil, nil
 	}
 	var stdin bytes.Buffer
@@ -116,7 +116,7 @@ func (g Git) IgnoredAmong(dir string, paths []string) (map[string]bool, error) {
 		stdin.WriteString(p)
 		stdin.WriteByte(0)
 	}
-	out, code, err := g.run(dir, stdin.Bytes(), "check-ignore", "--no-index", "--stdin", "-z")
+	out, code, err := g.run(ctx, dir, stdin.Bytes(), "check-ignore", "--no-index", "--stdin", "-z")
 	if err != nil && code != 1 { // exit status 1 means "none of them is ignored"
 		return nil, err
 	}
@@ -145,26 +145,26 @@ func (m IgnoreMatch) Negated() bool { return strings.HasPrefix(m.Pattern, "!") }
 // Ignored reports whether the last matching rule ignores the path.
 func (m IgnoreMatch) Ignored() bool { return m.Matched() && !m.Negated() }
 
-// IgnoreRules returns, for each of paths (slash-separated, relative to dir), the
+// IgnoreRulesContext returns, for each of paths (slash-separated, relative to dir), the
 // last rule git matched across .gitignore files, .git/info/exclude and the global
 // excludes file, negations included. Paths nothing matched map to a zero
 // IgnoreMatch. It returns (nil, nil) outside a repository.
-func (g Git) IgnoreRules(dir string, paths []string) (map[string]IgnoreMatch, error) {
-	if len(paths) == 0 || !g.IsRepo(dir) {
+func (g Git) IgnoreRulesContext(ctx context.Context, dir string, paths []string) (map[string]IgnoreMatch, error) {
+	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
 		return nil, nil
 	}
-	return g.checkIgnore(dir, nil, paths)
+	return g.checkIgnore(ctx, dir, nil, paths)
 }
 
 // checkIgnore runs one batched verbose check-ignore in dir.
-func (g Git) checkIgnore(dir string, gitFlags, paths []string) (map[string]IgnoreMatch, error) {
+func (g Git) checkIgnore(ctx context.Context, dir string, gitFlags, paths []string) (map[string]IgnoreMatch, error) {
 	var stdin bytes.Buffer
 	for _, p := range paths {
 		stdin.WriteString(p)
 		stdin.WriteByte(0)
 	}
 	args := append(append([]string{}, gitFlags...), "check-ignore", "--no-index", "-v", "-n", "--stdin", "-z")
-	out, code, err := g.run(dir, stdin.Bytes(), args...)
+	out, code, err := g.run(ctx, dir, stdin.Bytes(), args...)
 	if err != nil && code != 1 { // exit status 1 means "none of them is ignored"
 		return nil, err
 	}
@@ -181,18 +181,18 @@ func (g Git) checkIgnore(dir string, gitFlags, paths []string) (map[string]Ignor
 	return rules, nil
 }
 
-// IgnoreRulesMirrored is IgnoreRules evaluated against a throwaway copy of the
+// IgnoreRulesMirroredContext is IgnoreRules evaluated against a throwaway copy of the
 // repository's ignore files, so the caller can leave out content of its own
 // without touching the user's files. rewrite receives each ignore file's path
 // (slash-separated, relative to the work tree root, or "info/exclude" for the
 // repository exclude file) and its content, and returns the content to use. The
 // global excludes file is honored as configured. Paths are relative to dir. It
 // returns (nil, nil) outside a repository.
-func (g Git) IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, content string) string) (map[string]IgnoreMatch, error) {
-	if len(paths) == 0 || !g.IsRepo(dir) {
+func (g Git) IgnoreRulesMirroredContext(ctx context.Context, dir string, paths []string, rewrite func(rel, content string) string) (map[string]IgnoreMatch, error) {
+	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
 		return nil, nil
 	}
-	top := g.TopLevel(dir)
+	top := g.TopLevelContext(ctx, dir)
 	prefix := RepoRelative(top, dir)
 	if top == "" || prefix == "" {
 		return nil, oops.Errorf("cannot place %s inside its repository", dir)
@@ -208,12 +208,12 @@ func (g Git) IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, c
 		return nil, oops.Wrapf(err, "create ignore mirror")
 	}
 	defer os.RemoveAll(mirror) //nolint:errcheck // best-effort cleanup of a temp dir
-	if err := g.fillIgnoreMirror(dir, top, mirror, rewrite); err != nil {
+	if err := g.fillIgnoreMirror(ctx, dir, top, mirror, rewrite); err != nil {
 		return nil, err
 	}
 
 	var flags []string
-	if v, _, cfgErr := g.run(dir, nil, "config", "--get", "--type=path", "core.excludesFile"); cfgErr == nil {
+	if v, _, cfgErr := g.run(ctx, dir, nil, "config", "--get", "--type=path", "core.excludesFile"); cfgErr == nil {
 		if path := strings.TrimSpace(string(v)); path != "" {
 			flags = []string{"-c", "core.excludesFile=" + path}
 		}
@@ -222,7 +222,7 @@ func (g Git) IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, c
 	for i, p := range paths {
 		prefixed[i] = prefix + p
 	}
-	rules, err := g.checkIgnore(mirror, flags, prefixed)
+	rules, err := g.checkIgnore(ctx, mirror, flags, prefixed)
 	if err != nil {
 		return nil, err
 	}
@@ -235,14 +235,14 @@ func (g Git) IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, c
 
 // fillIgnoreMirror makes mirror a repository holding copies of top's ignore
 // files (and the exclude file) passed through rewrite.
-func (g Git) fillIgnoreMirror(dir, top, mirror string, rewrite func(rel, content string) string) error {
-	if _, _, err := g.run(mirror, nil, "init", "-q"); err != nil {
+func (g Git) fillIgnoreMirror(ctx context.Context, dir, top, mirror string, rewrite func(rel, content string) string) error {
+	if _, _, err := g.run(ctx, mirror, nil, "init", "-q"); err != nil {
 		return err
 	}
 
 	// Tracked and untracked-but-not-ignored files cover every .gitignore git
 	// would read; one inside an ignored directory is never consulted anyway.
-	out, _, err := g.run(top, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ":(glob)**/.gitignore")
+	out, _, err := g.run(ctx, top, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ":(glob)**/.gitignore")
 	if err != nil {
 		return err
 	}
@@ -257,7 +257,7 @@ func (g Git) fillIgnoreMirror(dir, top, mirror string, rewrite func(rel, content
 			return err
 		}
 	}
-	if exclude := g.InfoExcludePath(dir); exclude != "" {
+	if exclude := g.InfoExcludePathContext(ctx, dir); exclude != "" {
 		if err := copyRewritten(g.Log, exclude, filepath.Join(mirror, ".git", "info", "exclude"), "info/exclude", rewrite); err != nil {
 			return err
 		}
@@ -312,11 +312,11 @@ func copyRewritten(log logger.Logger, src, dst, rel string, rewrite func(rel, co
 	return nil
 }
 
-// InfoExcludePath returns the repository's info/exclude file, resolved through
+// InfoExcludePathContext returns the repository's info/exclude file, resolved through
 // git so linked worktrees (whose .git is a file) get the shared one. It returns
 // "" outside a repository.
-func (g Git) InfoExcludePath(dir string) string {
-	out, _, err := g.run(dir, nil, "rev-parse", "--git-path", "info/exclude")
+func (g Git) InfoExcludePathContext(ctx context.Context, dir string) string {
+	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--git-path", "info/exclude")
 	if err != nil {
 		return ""
 	}
@@ -359,16 +359,16 @@ func Resolve(path string) string {
 	}
 }
 
-// TrackedFiles returns every path in the git index below dir, slash-separated
+// TrackedFilesContext returns every path in the git index below dir, slash-separated
 // and relative to dir, mapped to its git file mode (0o100644, 0o100755,
 // 0o120000 for a symlink, ...). ok is false outside a repository, where
 // callers fall back to walking the file system. The index is the source, so a
 // path listed there counts even when its working-tree file is absent.
-func (g Git) TrackedFiles(dir string) (files map[string]uint32, ok bool, err error) {
-	if !g.IsRepo(dir) {
+func (g Git) TrackedFilesContext(ctx context.Context, dir string) (files map[string]uint32, ok bool, err error) {
+	if !g.IsRepoContext(ctx, dir) {
 		return nil, false, nil
 	}
-	out, _, err := g.run(dir, nil, "ls-files", "-s", "-z")
+	out, _, err := g.run(ctx, dir, nil, "ls-files", "-s", "-z")
 	if err != nil {
 		return nil, true, err
 	}
@@ -391,19 +391,19 @@ func (g Git) TrackedFiles(dir string) (files map[string]uint32, ok bool, err err
 	return files, true, nil
 }
 
-// IsLinkedWorktree reports whether dir is inside a linked git worktree (one made
+// IsLinkedWorktreeContext reports whether dir is inside a linked git worktree (one made
 // with `git worktree add`) rather than the main checkout. Outside a repository,
 // or when git cannot run, it is false.
-func (g Git) IsLinkedWorktree(dir string) bool {
-	gitDir := g.gitPath(dir, "--git-dir")
-	common := g.gitPath(dir, "--git-common-dir")
+func (g Git) IsLinkedWorktreeContext(ctx context.Context, dir string) bool {
+	gitDir := g.gitPath(ctx, dir, "--git-dir")
+	common := g.gitPath(ctx, dir, "--git-common-dir")
 	return gitDir != "" && common != "" && gitDir != common
 }
 
 // gitPath resolves the path `git rev-parse <flag>` prints, which may be
 // relative to dir, to a symlink-free absolute path.
-func (g Git) gitPath(dir, flag string) string {
-	out, _, err := g.run(dir, nil, "rev-parse", flag)
+func (g Git) gitPath(ctx context.Context, dir, flag string) string {
+	out, _, err := g.run(ctx, dir, nil, "rev-parse", flag)
 	if err != nil {
 		return ""
 	}
@@ -417,41 +417,41 @@ func (g Git) gitPath(dir, flag string) string {
 	return Resolve(p)
 }
 
-// ShowFile returns the content of repoRelPath at ref (for example "HEAD"), read
+// ShowFileContext returns the content of repoRelPath at ref (for example "HEAD"), read
 // from the repository containing dir. ok is false when the path does not exist
 // at that ref, the ref is unknown, or git cannot run. A ref that is empty or
 // starts with "-" is refused without running git: "<ref>:<path>" would be read
 // as an option.
-func (g Git) ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
+func (g Git) ShowFileContext(ctx context.Context, dir, ref, repoRelPath string) (content []byte, ok bool) {
 	if strings.TrimSpace(ref) == "" || strings.HasPrefix(ref, "-") {
 		return nil, false
 	}
-	out, _, err := g.run(dir, nil, "show", ref+":"+filepath.ToSlash(repoRelPath))
+	out, _, err := g.run(ctx, dir, nil, "show", ref+":"+filepath.ToSlash(repoRelPath))
 	if err != nil {
 		return nil, false
 	}
 	return out, true
 }
 
-// ChangedSince lists the files that differ between rev and the working tree
+// ChangedSinceContext lists the files that differ between rev and the working tree
 // (committed, staged and unstaged changes, including deletions) plus untracked
 // files that are not ignored, as slash paths relative to the repository root.
 // dir may be any directory inside the repository. An unknown rev, a directory
 // outside a repository, or a rev that looks like an option is an error.
-func (g Git) ChangedSince(dir, rev string) ([]string, error) {
+func (g Git) ChangedSinceContext(ctx context.Context, dir, rev string) ([]string, error) {
 	rev = strings.TrimSpace(rev)
 	if rev == "" || strings.HasPrefix(rev, "-") {
 		return nil, oops.Errorf("invalid git revision %q", rev)
 	}
-	top := g.TopLevel(dir)
+	top := g.TopLevelContext(ctx, dir)
 	if top == "" {
 		return nil, oops.Errorf("%s is not inside a git repository", dir)
 	}
-	diff, _, err := g.run(top, nil, "diff", "--name-only", "-z", "--no-renames", rev, "--")
+	diff, _, err := g.run(ctx, top, nil, "diff", "--name-only", "-z", "--no-renames", rev, "--")
 	if err != nil {
 		return nil, oops.Hint("Check that the revision exists (git rev-parse --verify "+rev+")").Wrapf(err, "list files changed since %s", rev)
 	}
-	others, _, err := g.run(top, nil, "ls-files", "--others", "--exclude-standard", "-z")
+	others, _, err := g.run(ctx, top, nil, "ls-files", "--others", "--exclude-standard", "-z")
 	if err != nil {
 		return nil, oops.Wrapf(err, "list untracked files")
 	}
@@ -468,14 +468,14 @@ func (g Git) ChangedSince(dir, rev string) ([]string, error) {
 	return out, nil
 }
 
-// StageExecutable records the executable bit for a tracked file in the index
+// StageExecutableContext records the executable bit for a tracked file in the index
 // (`git update-index --chmod=+x`), which is what git, and tools that read the
 // index mode, see; the working-tree mode alone does not change it. It reports
 // whether the index changed. An untracked file, a file already executable in
 // the index, and a path outside a repository are not errors: nothing to do.
-func (g Git) StageExecutable(absPath string) (changed bool, err error) {
+func (g Git) StageExecutableContext(ctx context.Context, absPath string) (changed bool, err error) {
 	dir := filepath.Dir(absPath)
-	top := g.TopLevel(dir)
+	top := g.TopLevelContext(ctx, dir)
 	if top == "" {
 		return false, nil
 	}
@@ -484,7 +484,7 @@ func (g Git) StageExecutable(absPath string) (changed bool, err error) {
 		return false, nil //nolint:nilerr // outside this repository: not ours to stage
 	}
 	rel = filepath.ToSlash(rel)
-	out, _, err := g.run(top, nil, "ls-files", "-s", "--", ":(literal)"+rel)
+	out, _, err := g.run(ctx, top, nil, "ls-files", "-s", "--", ":(literal)"+rel)
 	if err != nil {
 		return false, oops.Wrapf(err, "read index mode of %s", rel)
 	}
@@ -492,8 +492,68 @@ func (g Git) StageExecutable(absPath string) (changed bool, err error) {
 	if len(fields) == 0 || fields[0] != "100644" {
 		return false, nil
 	}
-	if _, _, err := g.run(top, nil, "update-index", "--chmod=+x", "--", rel); err != nil {
+	if _, _, err := g.run(ctx, top, nil, "update-index", "--chmod=+x", "--", rel); err != nil {
 		return false, oops.Wrapf(err, "stage executable bit of %s", rel)
 	}
 	return true, nil
+}
+
+// IsRepo is IsRepoContext without a caller's context.
+func (g Git) IsRepo(dir string) bool {
+	return g.IsRepoContext(context.Background(), dir)
+}
+
+// TopLevel is TopLevelContext without a caller's context.
+func (g Git) TopLevel(dir string) string {
+	return g.TopLevelContext(context.Background(), dir)
+}
+
+// TrackedAmong is TrackedAmongContext without a caller's context.
+func (g Git) TrackedAmong(dir string, paths []string) (map[string]bool, error) {
+	return g.TrackedAmongContext(context.Background(), dir, paths)
+}
+
+// IgnoredAmong is IgnoredAmongContext without a caller's context.
+func (g Git) IgnoredAmong(dir string, paths []string) (map[string]bool, error) {
+	return g.IgnoredAmongContext(context.Background(), dir, paths)
+}
+
+// IgnoreRules is IgnoreRulesContext without a caller's context.
+func (g Git) IgnoreRules(dir string, paths []string) (map[string]IgnoreMatch, error) {
+	return g.IgnoreRulesContext(context.Background(), dir, paths)
+}
+
+// IgnoreRulesMirrored is IgnoreRulesMirroredContext without a caller's context.
+func (g Git) IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, content string) string) (map[string]IgnoreMatch, error) {
+	return g.IgnoreRulesMirroredContext(context.Background(), dir, paths, rewrite)
+}
+
+// InfoExcludePath is InfoExcludePathContext without a caller's context.
+func (g Git) InfoExcludePath(dir string) string {
+	return g.InfoExcludePathContext(context.Background(), dir)
+}
+
+// TrackedFiles is TrackedFilesContext without a caller's context.
+func (g Git) TrackedFiles(dir string) (files map[string]uint32, ok bool, err error) {
+	return g.TrackedFilesContext(context.Background(), dir)
+}
+
+// IsLinkedWorktree is IsLinkedWorktreeContext without a caller's context.
+func (g Git) IsLinkedWorktree(dir string) bool {
+	return g.IsLinkedWorktreeContext(context.Background(), dir)
+}
+
+// ShowFile is ShowFileContext without a caller's context.
+func (g Git) ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
+	return g.ShowFileContext(context.Background(), dir, ref, repoRelPath)
+}
+
+// ChangedSince is ChangedSinceContext without a caller's context.
+func (g Git) ChangedSince(dir, rev string) ([]string, error) {
+	return g.ChangedSinceContext(context.Background(), dir, rev)
+}
+
+// StageExecutable is StageExecutableContext without a caller's context.
+func (g Git) StageExecutable(absPath string) (changed bool, err error) {
+	return g.StageExecutableContext(context.Background(), absPath)
 }
