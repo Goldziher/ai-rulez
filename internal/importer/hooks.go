@@ -142,6 +142,9 @@ var hookKeys = map[string]bool{
 	"async": true, "if": true, "statusMessage": true, litMatcher: true,
 }
 
+// hookBuilder collects the groups of one importer.
+type hookBuilder struct{ p *Plan }
+
 // hooksOf reads the event table of a native hooks object: event -> groups. A
 // group is either {matcher, hooks:[handler]} (nested) or a handler itself (flat).
 func (b *hookBuilder) fromEventTable(src hookSource, table map[string]json.RawMessage, where string) {
@@ -304,9 +307,6 @@ func (b *hookBuilder) seconds(src hookSource, field string, n float64, ms bool) 
 func isOwnGuard(command string) bool {
 	return strings.Contains(command, "ai-rulez") && strings.HasSuffix(strings.TrimSpace(command), " guard")
 }
-
-// hookBuilder collects the groups of one importer.
-type hookBuilder struct{ p *Plan }
 
 func (b *hookBuilder) add(src hookSource, g config.HookGroup) {
 	if src.harness != "" {

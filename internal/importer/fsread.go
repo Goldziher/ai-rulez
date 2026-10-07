@@ -254,8 +254,9 @@ func (r *reader) loadGeneratedManifests() {
 // array at keyPath of a merged document. It hands each claimed element out once,
 // so a value the user also wrote by hand is still imported.
 func (r *reader) ownedElements(file string, keyPath ...string) *jsonmerge.ElementMatcher {
-	for _, c := range r.merged[file] {
-		if slices.Equal(c.Path, keyPath) && c.HasElements() {
+	claims := r.merged[file]
+	for i := range claims {
+		if c := &claims[i]; slices.Equal(c.Path, keyPath) && c.HasElements() {
 			return c.NewElementMatcher()
 		}
 	}

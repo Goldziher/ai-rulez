@@ -28,8 +28,7 @@ type rulesyncSource struct {
 
 // parseRulesyncSource reads one `sources` entry. reason is set when it cannot be
 // imported.
-func parseRulesyncSource(e map[string]any) (rulesyncSource, string) {
-	var s rulesyncSource
+func parseRulesyncSource(e map[string]any) (s rulesyncSource, reason string) {
 	source := stringOf(e["source"])
 	if source == "" {
 		return s, "the entry has no source"

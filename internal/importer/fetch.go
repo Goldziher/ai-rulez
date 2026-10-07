@@ -49,7 +49,8 @@ func (r Remote) label(commit string) string {
 // reportUnfetched records a needs-action finding for every remote source: without
 // --fetch convert never uses the network, so the content is not imported.
 func (p *Plan) reportUnfetched() {
-	for _, rm := range p.Remotes {
+	for i := range p.Remotes {
+		rm := p.Remotes[i]
 		reason := fmt.Sprintf("%s is not fetched: convert uses the network only with --fetch; rerun with --fetch, or add the source by hand", rm.describe())
 		if rm.Commit != "" {
 			reason += " (the input's lock file pins it to " + rm.Commit[:12] + ")"
@@ -123,7 +124,8 @@ func (p *Plan) resolveRemotes(ctx context.Context, opt Options) error {
 	if f == nil {
 		f = gitFetcher{}
 	}
-	for _, rm := range p.Remotes {
+	for i := range p.Remotes {
+		rm := p.Remotes[i]
 		if !strings.HasPrefix(strings.ToLower(rm.URL), "https://") {
 			source, field := splitOrigin(rm.Origin)
 			p.add(newFinding(StatusNeedsAction, source, field, "",
@@ -156,8 +158,8 @@ func (p *Plan) resolveRemotes(ctx context.Context, opt Options) error {
 func (p *Plan) addInstalledSkill(rm Remote, f *Fetched, name, skillPath string, files map[string][]byte) {
 	source, field := splitOrigin(rm.Origin)
 	clean, _ := safeName(name)
-	for _, have := range p.InstalledSkills {
-		if have.Name == clean {
+	for i := range p.InstalledSkills {
+		if p.InstalledSkills[i].Name == clean {
 			p.add(newFinding(StatusApproximated, source, field, "installed_skills."+clean,
 				"skill "+clean+" is already provided by an earlier source; the first one wins"))
 			return
