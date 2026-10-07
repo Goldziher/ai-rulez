@@ -187,7 +187,7 @@ func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 		return 1
 	}
 	if report.Overrides.Rejected > 0 && report.Mode != policy.ModeWarn {
-		return 1
+		return exitCodeFor(config.ErrPolicyLoosens)
 	}
 	return 0
 }

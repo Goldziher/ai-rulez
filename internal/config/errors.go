@@ -11,6 +11,9 @@ var (
 	// ErrRoleReference marks a role that names something that does not exist (AR971),
 	// such as a domain; commands exit 2 on it, the code `validate` uses for findings.
 	ErrRoleReference = errors.New("role reference does not resolve")
+	// ErrPolicyLoosens marks a repository configuration that tries to loosen the
+	// organization policy; commands exit 2 on it, the code `validate` uses for findings.
+	ErrPolicyLoosens = errors.New("configuration loosens the organization policy")
 	// ErrLockViolation marks a remote include or installed skill that does not
 	// match ai-rulez.lock. Unlike other resolution failures it is fatal: loading
 	// continues with local content only for a flaky remote, never for a lock mismatch.
@@ -34,3 +37,11 @@ var (
 	// way" from an I/O failure without matching the message.
 	ErrOutputRefused = errors.New("refusing to overwrite a file ai-rulez did not write")
 )
+
+// policyLoosening carries ErrPolicyLoosens without changing the message of the
+// error it wraps.
+type policyLoosening struct{ err error }
+
+func (e policyLoosening) Error() string        { return e.err.Error() }
+func (e policyLoosening) Unwrap() error        { return e.err }
+func (e policyLoosening) Is(target error) bool { return target == ErrPolicyLoosens }

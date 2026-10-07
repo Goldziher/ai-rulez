@@ -236,7 +236,7 @@ itself (it records the signature), so the statement is what ties it to the signe
 certificates and two log entries. `publish verify` with a trusted signer checks the statement's signature and signer, that
 it names the manifest's name, version, source and approval summary, and that the digests equal the files in the directory; a signed release without
 the statement is a mismatch (`AR9N7`). Independently of signing, verify compares the `name` and `version` in the archive's
-own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabelled as another
+own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabeled as another
 plugin or version is flagged.
 
 `publish verify <oci-ref>` prints the digest the reference resolved to and warns when it is a tag (its owner can move it, and
