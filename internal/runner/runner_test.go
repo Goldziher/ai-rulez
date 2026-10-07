@@ -243,12 +243,17 @@ func TestRunRelativeDirAndCommand(t *testing.T) {
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sub, "tool.sh"), []byte("#!/bin/sh\npwd"), 0o755); err != nil {
+	// A batch file is what Windows runs directly; elsewhere a shell script.
+	name, body := "tool.sh", "#!/bin/sh\npwd"
+	if runtime.GOOS == "windows" {
+		name, body = "tool.bat", "@cd\r\n"
+	}
+	if err := os.WriteFile(filepath.Join(sub, name), []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(parent)
 	// Act
-	res := Run(context.Background(), Spec{Argv: []string{"./tool.sh"}, Dir: "sub", Env: ScrubEnv(os.Environ(), nil, nil)})
+	res := Run(context.Background(), Spec{Argv: []string{"./" + name}, Dir: "sub", Env: ScrubEnv(os.Environ(), nil, nil)})
 	// Assert
 	if res.Status != StatusOK || !strings.HasSuffix(strings.TrimSpace(string(res.Stdout)), "sub") {
 		t.Fatalf("got %s %q (%v)", res.Status, res.Stdout, res.Err)
