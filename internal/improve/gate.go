@@ -45,8 +45,11 @@ type Measurement struct {
 	CostUSD float64  `json:"cost_usd"`
 	// NoCost is set when the runner reported no cost in a budgeted run and the
 	// whole remaining budget was charged.
-	NoCost   bool     `json:"no_cost_reported,omitempty"`
-	Warnings []string `json:"warnings,omitempty"`
+	NoCost bool `json:"no_cost_reported,omitempty"`
+	// Truncated is set when the budget ran out before every run finished: the
+	// majority then rests on fewer runs than asked for.
+	Truncated bool     `json:"truncated,omitempty"`
+	Warnings  []string `json:"warnings,omitempty"`
 }
 
 // Evaluator scores a skill directory against cases through an eval runner,
@@ -124,7 +127,8 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 			}
 		}
 		if budget > 0 && left <= 0 && run < runs-1 {
-			m.Warnings = append(m.Warnings, "the budget ran out before every run finished; the majority uses the runs that completed")
+			m.Truncated = true
+			m.Warnings = append(m.Warnings, fmt.Sprintf("the budget ran out after %d of %d runs; the majority uses the runs that completed", run+1, runs))
 			break
 		}
 	}

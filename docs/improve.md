@@ -199,7 +199,8 @@ interval a gate condition, for suites large enough to clear it; the decision is 
 `--max-cost` is required and covers measured eval cost plus optimizer-reported cost. The pre-run estimate (shown by
 `--dry-run`) must not exceed it. During the run the loop stops when spend reaches it (`stopped: over budget`) and
 keeps the best accepted candidate. An eval runner that reports no cost is charged the whole remaining budget, as
-`eval run` does.
+`eval run` does. A candidate whose held-out measurement the budget cut short (fewer runs than `--runs`) is rejected
+(`rejected: over budget`), and every cut-short measurement is named in the report's warnings.
 
 ## Security
 
