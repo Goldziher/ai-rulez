@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
@@ -329,4 +330,22 @@ func TestJoinRankUsage_SkipsResourceLoadsAndListings(t *testing.T) {
 	_, err := joinRankUsage(in, dir)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"alpha": 1}, in.Uses)
+}
+
+func TestUsageRecord_HonorsTelemetrySaltFile(t *testing.T) {
+	resetEnrichFlags(t)
+	dir := t.TempDir()
+	saltPath := filepath.Join(dir, "shared.salt")
+	t.Setenv(telemetry.EnvSaltFile, saltPath)
+	usageLog = filepath.Join(dir, "usage.jsonl")
+	telHarness = "cursor"
+	event := `{"hook_event_name":"preToolUse","session_id":"sess-9","tool_name":"Read","tool_input":{"file_path":"/p/.cursor/skills/beta/SKILL.md"}}`
+	require.NoError(t, runUsageRecord(strings.NewReader(event)))
+
+	entries, _, err := usage.ReadLog(usageLog)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, usage.HashSession(usage.LoadSalt(saltPath), "sess-9"), entries[0].Session)
+	assert.FileExists(t, saltPath)
+	assert.NoFileExists(t, filepath.Join(dir, "salt"), "the default salt beside the log must not be used")
 }
