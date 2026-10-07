@@ -35,7 +35,7 @@ var secretRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za
 // credentials, so every error message built from a response passes through it, and the
 // refuse-to-send checks (llm.Judge, the eval grader, the LLM verifiers) treat any change it makes
 // as a secret. Besides its own patterns it masks every credential shape the security scan (AR001)
-// recognises, from the shared internal/secretpat list.
+// recognizes, from the shared internal/secretpat list.
 //
 // An assignment whose value is, in its entirety, an environment lookup
 // (os.environ["X"], os.Getenv("X"), process.env.X, $X, ${X}) names a secret
