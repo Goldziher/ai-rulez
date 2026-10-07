@@ -40,7 +40,7 @@ func registerPublishcodes(s *ruleSet) {
 	)
 	s.addDocs(map[string]RuleDoc{
 		CodePublishPreflight: {
-			Why:  "A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate --strict`, `lock --check` and `verify --plugin` first and writes nothing when one fails.",
+			Why:  "A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate`, `lock --check` and `verify --plugin` first and writes nothing when one fails.",
 			Bad:  "A skill edited after `ai-rulez lock`, or plugin files hand-edited since `generate --plugin`",
 			Good: "Run `ai-rulez lock` and `ai-rulez generate --plugin`, commit, and publish again",
 		},
