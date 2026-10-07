@@ -35,7 +35,10 @@ func boundList(in []string) []string {
 // boundFrontmatter returns a copy of the frontmatter with every string, list and
 // map bounded.
 func boundFrontmatter(front map[string]any) map[string]any {
-	bounded, _ := boundValue(front, 0).(map[string]any)
+	bounded, ok := boundValue(front, 0).(map[string]any)
+	if !ok {
+		return map[string]any{}
+	}
 	return bounded
 }
 

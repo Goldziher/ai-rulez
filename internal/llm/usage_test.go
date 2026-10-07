@@ -37,7 +37,7 @@ func TestBudgetIgnoresNegativeEmbedUsage(t *testing.T) {
 
 type negEmbed struct{ Fake }
 
-func (negEmbed) Embed(_ context.Context, req EmbedRequest) (EmbedResponse, error) {
+func (*negEmbed) Embed(_ context.Context, req EmbedRequest) (EmbedResponse, error) {
 	return EmbedResponse{Vectors: make([][]float32, len(req.Input)), Usage: Usage{PromptTokens: -500}}, nil
 }
 
