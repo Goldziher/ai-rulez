@@ -25,6 +25,7 @@ func openPTY() (*os.File, string, error) {
 		return nil, "", err
 	}
 	buf := make([]byte, 128)
+	//nolint:staticcheck // x/sys has no ioctl wrapper that hands TIOCPTYGNAME a buffer
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.TIOCPTYGNAME), uintptr(unsafe.Pointer(&buf[0])))
 	if errno != 0 {
 		_ = f.Close() //nolint:errcheck // test helper
