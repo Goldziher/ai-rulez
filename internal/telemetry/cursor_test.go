@@ -172,10 +172,52 @@ func TestCatchUp_SamplingAppliesToTheLog(t *testing.T) {
 	spool, log := newCursorFixture(t)
 	require.NoError(t, spool.PlaceCursor(log, true))
 	appendLog(t, log, 0, 50)
-	res, err := spool.CatchUp(log, CatchUpOptions{Sample: 0.0001})
+	res, err := spool.CatchUp(log, CatchUpOptions{Sample: ptrFloat(0.0001)})
 	require.NoError(t, err)
 	assert.Less(t, res.Queued, 5)
 	assert.Equal(t, 50, res.Queued+res.Skipped)
+}
+
+func TestCatchUp_SampleZeroExportsNothing(t *testing.T) {
+	// RV-LLM-20: sample = 0 records nothing, so catch-up must export nothing
+	// either; only an unset sample (a count, not an export) reads every event.
+	tests := []struct {
+		name       string
+		sample     *float64
+		wantQueued int
+	}{
+		{"sample 0", ptrFloat(0), 0},
+		{"sample 1", ptrFloat(1), 20},
+		{"no sampling", nil, 20},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			spool, log := newCursorFixture(t)
+			require.NoError(t, spool.PlaceCursor(log, true))
+			appendLog(t, log, 0, 20)
+			// Act
+			res, err := spool.CatchUp(log, CatchUpOptions{Sample: tt.sample})
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantQueued, res.Queued)
+			assert.Equal(t, 20, res.Queued+res.Skipped)
+		})
+	}
+}
+
+func TestFlush_SampleZeroSendsNoCatchUpEvents(t *testing.T) {
+	// Arrange: a pipeline whose settings say sample = 0, and logged events past the cursor.
+	spool, log := newCursorFixture(t)
+	require.NoError(t, spool.PlaceCursor(log, true))
+	appendLog(t, log, 0, 5)
+	p := &Pipeline{Spool: spool, LogPath: log, Settings: Settings{Sample: 0}, Exporter: &Exporter{Spool: spool}}
+	// Act
+	_, _ = p.Flush(context.Background()) //nolint:errcheck // the exporter has no endpoint; the outbox is what counts
+	// Assert
+	pending, _, err := spool.Pending()
+	require.NoError(t, err)
+	assert.Empty(t, pending)
 }
 
 func TestCatchUp_MissingLogIsNotAnError(t *testing.T) {
