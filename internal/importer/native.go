@@ -174,6 +174,7 @@ func (n nativeImporter) importRootFile(p *Plan, r *reader, file string, opt Opti
 	text := normalizeText(string(data))
 	if pointerOnly.MatchString(strings.TrimSpace(text)) {
 		p.add(newFinding(StatusDropped, file, "", "", "only points at another file ("+strings.TrimSpace(text)+")"))
+		p.Pointers = append(p.Pointers, file)
 		return
 	}
 	if strings.TrimSpace(text) == "" {

@@ -178,6 +178,10 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 			dirs = append(dirs, abs)
 			continue
 		}
+		if !g.userMode && isSymlink(abs) {
+			g.warnOnce("Keeping " + g.relSlash(abs) + ": it is a symlink, and links are the user's to remove")
+			continue
+		}
 		if !g.removalConfined(abs) {
 			g.warnOnce("Not removing " + output.Path + ": it is behind a symlink that leaves the project")
 			continue

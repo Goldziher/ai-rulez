@@ -93,12 +93,13 @@ func TestWrite_RefusesSymlinkTargetsOutsideTheProject(t *testing.T) {
 	}
 }
 
-func TestWrite_FollowsASymlinkThatStaysInsideTheProject(t *testing.T) {
+func TestWrite_RefusesASymlinkedOutputInsideTheProject(t *testing.T) {
 	quietWarnings(t)
 	// Arrange
 	dir := hashesProject(t, "")
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "docs"), 0o755))
 	target := filepath.Join(dir, "docs", "claude.md")
+	require.NoError(t, os.WriteFile(target, []byte("hand-written\n"), 0o644))
 	link := filepath.Join(dir, "CLAUDE.md")
 	testutil.SymlinkOrSkip(t, "docs/claude.md", link)
 
@@ -106,13 +107,15 @@ func TestWrite_FollowsASymlinkThatStaysInsideTheProject(t *testing.T) {
 	err := generateProjectErr(t, dir)
 
 	// Assert
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CLAUDE.md")
+	assert.Contains(t, err.Error(), "docs/claude.md")
+	data, rerr := os.ReadFile(target)
+	require.NoError(t, rerr)
+	assert.Equal(t, "hand-written\n", string(data), "the link target is untouched")
 	info, lerr := os.Lstat(link)
 	require.NoError(t, lerr)
 	assert.NotZero(t, info.Mode()&os.ModeSymlink, "the link survives")
-	data, rerr := os.ReadFile(target)
-	require.NoError(t, rerr)
-	assert.Contains(t, string(data), "GENERATED FILE")
 }
 
 func TestWriteRaw_NeverChangesTheModeOfAFileItDidNotCreate(t *testing.T) {

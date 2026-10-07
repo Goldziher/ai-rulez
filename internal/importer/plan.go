@@ -182,7 +182,10 @@ type RawFile struct {
 // importer returns it as collected; Finalize (called by Convert) orders it and
 // resolves duplicates.
 type Plan struct {
-	Items           []Item
+	Items []Item
+	// Pointers are source files that only point at another file ("@AGENTS.md"):
+	// nothing of them is imported, and a later generate may replace them.
+	Pointers        []string
 	Presets         []string
 	MCPServers      []config.MCPServer
 	InstalledSkills []config.InstalledSkillConfig
@@ -276,6 +279,7 @@ func (p *Plan) merge(other *Plan) {
 	p.InstalledSkills = append(p.InstalledSkills, other.InstalledSkills...)
 	p.Hooks = append(p.Hooks, other.Hooks...)
 	p.Remotes = append(p.Remotes, other.Remotes...)
+	p.Pointers = append(p.Pointers, other.Pointers...)
 	p.Raw = append(p.Raw, other.Raw...)
 	for k, v := range other.fetchedText {
 		if p.fetchedText == nil {

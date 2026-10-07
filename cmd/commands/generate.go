@@ -36,6 +36,7 @@ var (
 	pluginMode         bool
 	noLocal            bool
 	allowLocalDrift    bool
+	generateForce      bool
 	pluginIfConfigured bool
 	generateCheck      bool
 	generateLocked     bool
@@ -81,6 +82,8 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
+	GenerateCmd.Flags().BoolVar(&generateForce, "force", false,
+		"Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1")
 	GenerateCmd.Flags().BoolVar(&userScope, "user", false,
 		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
 	GenerateCmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
@@ -189,6 +192,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
 	exitOn(applyRole(gen))
 	exitOn(generatePreflight(cfg, gen))
@@ -626,6 +630,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
 	if err := applyRole(gen); err != nil {
 		fileCounter.ErrorFor(configPath, err)
