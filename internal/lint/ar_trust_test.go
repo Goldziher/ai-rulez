@@ -62,9 +62,11 @@ func trustRun(t *testing.T, name, source, desc string) []Finding {
 	t.Helper()
 	dir := t.TempDir()
 	writeFiles(t, dir, map[string]string{".ai-rulez/config.toml": baseConfig + "\n[[installed_skills]]\nname = \"" + name + "\"\nsource = \"" + source + "\"\n"})
-	cfg, err := config.LoadConfig(context.Background(), dir)
+	// WithoutRemote loads the declared installed skills without resolving them, so
+	// the test needs neither network nor cache.
+	cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutRemote())
 	if err != nil {
-		t.Skipf("config with an installed skill does not load offline: %v", err)
+		t.Fatalf("config with an installed skill does not load offline: %v", err)
 	}
 	cfg.InstalledSkills = []config.InstalledSkillConfig{{Name: name, Source: source}}
 	tree, err := LoadTree(dir)
