@@ -60,7 +60,8 @@ func BuildReport(r *Resolved, res *Result) Report {
 	if r.Warn {
 		rep.Mode = ModeWarn
 	}
-	for _, l := range r.Layers {
+	for i := range r.Layers {
+		l := &r.Layers[i]
 		rep.Layers = append(rep.Layers, LayerView{Origin: l.Origin, Source: l.Path, Name: l.Name, Digest: l.Digest, Note: l.Note, Signer: l.Signer, Extends: l.Extends})
 	}
 	rep.Effective = r.Policy.Tree()
@@ -213,15 +214,16 @@ func (rep Report) WriteJSON(w io.Writer) error {
 	return enc.Encode(rep)
 }
 
-// WriteText writes the report for people.
-func (rep Report) WriteText(w io.Writer) {
+// WriteText writes the report for people and returns the first write error.
+func (rep Report) WriteText(w io.Writer) error {
+	out := &textOut{w: w}
 	if len(rep.Layers) == 0 {
-		fmt.Fprintln(w, "policy: none (no --policy, AI_RULEZ_POLICY or managed policy file)")
-		return
+		out.println("policy: none (no --policy, AI_RULEZ_POLICY or managed policy file)")
+		return out.err
 	}
-	fmt.Fprintf(w, "policy: %d layer%s\n", len(rep.Layers), plural(len(rep.Layers)))
+	out.printf("policy: %d layer%s\n", len(rep.Layers), plural(len(rep.Layers)))
 	if rep.Mode == ModeWarn {
-		fmt.Fprintln(w, "mode: warn (violations are reported as warnings; the policy values are still enforced)")
+		out.println("mode: warn (violations are reported as warnings; the policy values are still enforced)")
 	}
 	width := 0
 	for _, l := range rep.Layers {
@@ -241,9 +243,9 @@ func (rep Report) WriteText(w io.Writer) {
 		if l.Note != "" {
 			name += "  [" + l.Note + "]"
 		}
-		fmt.Fprintf(w, "  %-8s  %-*s  %s%s\n", l.Origin, width, l.Source, shortDigest(l.Digest), name)
+		out.printf("  %-8s  %-*s  %s%s\n", l.Origin, width, l.Source, shortDigest(l.Digest), name)
 	}
-	fmt.Fprintln(w, "effective (origin in brackets)")
+	out.println("effective (origin in brackets)")
 	flat := flatten(rep.Effective)
 	keyWidth, valueWidth := 0, 0
 	for _, e := range flat {
@@ -251,17 +253,37 @@ func (rep Report) WriteText(w io.Writer) {
 		valueWidth = max(valueWidth, len(e.value))
 	}
 	for _, e := range flat {
-		fmt.Fprintf(w, "  %-*s = %-*s [%s]\n", keyWidth, e.key, valueWidth, e.value, rep.Provenance[provenanceKey(e.key)])
+		out.printf("  %-*s = %-*s [%s]\n", keyWidth, e.key, valueWidth, e.value, rep.Provenance[provenanceKey(e.key)])
 	}
 	if len(flat) == 0 {
-		fmt.Fprintln(w, "  (the policy constrains nothing)")
+		out.println("  (the policy constrains nothing)")
 	}
 	if len(rep.Overrides.Accepted) > 0 {
-		fmt.Fprintf(w, "repo overrides accepted: %s\n", strings.Join(rep.Overrides.Accepted, "; "))
+		out.printf("repo overrides accepted: %s\n", strings.Join(rep.Overrides.Accepted, "; "))
 	}
-	fmt.Fprintf(w, "repo overrides rejected: %d\n", rep.Overrides.Rejected)
+	out.printf("repo overrides rejected: %d\n", rep.Overrides.Rejected)
 	for _, v := range rep.Violations {
-		fmt.Fprintf(w, "  %s %s:%d  %s\n", v.Code, v.File, max(v.Line, 1), v.Message)
+		out.printf("  %s %s:%d  %s\n", v.Code, v.File, max(v.Line, 1), v.Message)
+	}
+	return out.err
+}
+
+// textOut writes lines and keeps the first error, so a report is written whole
+// or reports why it was not.
+type textOut struct {
+	w   io.Writer
+	err error
+}
+
+func (o *textOut) printf(format string, args ...any) {
+	if o.err == nil {
+		_, o.err = fmt.Fprintf(o.w, format, args...)
+	}
+}
+
+func (o *textOut) println(text string) {
+	if o.err == nil {
+		_, o.err = fmt.Fprintln(o.w, text)
 	}
 }
 

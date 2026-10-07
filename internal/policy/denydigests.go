@@ -30,14 +30,16 @@ func (a *applier) denyDigests() {
 	}
 	dropped := map[string]map[string]bool{lockfile.KindInclude: {}, lockfile.KindSkill: {}, lockfile.KindSource: {}}
 	for kind, entries := range map[string][]lockfile.Entry{lockfile.KindInclude: lock.Include, lockfile.KindSkill: lock.Skill, lockfile.KindSource: lock.Source} {
-		for _, e := range entries {
+		for i := range entries {
+			e := &entries[i]
 			if denied(e.Digest) {
 				report(kind, e.Name, e.Digest)
 				dropped[kind][e.Name] = true
 			}
 		}
 	}
-	for _, e := range lock.Served {
+	for i := range lock.Served {
+		e := &lock.Served[i]
 		if denied(e.Digest) {
 			report("served skill", e.Name, e.Digest)
 		}
