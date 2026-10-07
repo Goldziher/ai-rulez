@@ -47,12 +47,12 @@ func BootstrapGain(rows []PairRow, resamples int) *CI {
 		h.Write([]byte(r.Case))
 		h.Write([]byte{0})
 		switch {
+		case r.Base && !r.Cand:
+			delta[i] = -1 // a loss even when unstable, as the gate counts it
 		case r.Unstable:
-			// shown, never a win or a loss: the interval must agree with the gate
+			// shown, never a win: the interval must agree with the gate
 		case r.Cand && !r.Base:
 			delta[i] = 1
-		case r.Base && !r.Cand:
-			delta[i] = -1
 		}
 		h.Write([]byte{byte(delta[i] + 1)})
 	}
