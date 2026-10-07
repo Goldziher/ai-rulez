@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -10,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
@@ -445,9 +446,7 @@ func printImprovePlan(w io.Writer, plan *improve.Plan) error {
 }
 
 func writeImproveJSON(w io.Writer, doc any) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return oops.Wrapf(enc.Encode(doc), "write report")
+	return oops.Wrapf(jsondoc.Write(w, doc), "write report")
 }
 
 func printImproveReport(w io.Writer, r *improve.Report) error {
