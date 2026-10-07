@@ -438,7 +438,10 @@ func TestLocalMechanisms_CommittedOutputsIgnoreLocalContent(t *testing.T) {
 	for _, flag := range []string{"", "agents_md = true\n"} {
 		t.Run("flag "+strings.TrimSpace(flag), func(t *testing.T) {
 			// Arrange
-			cfgText := flag + strings.Replace(localContentConfig, `"%s"`, presets, 1)
+			cfgText := strings.Replace(localContentConfig, `"%s"`, presets, 1)
+			if flag != "" {
+				cfgText = strings.Replace(cfgText, "agents_md = false", strings.TrimSpace(flag), 1)
+			}
 			withLocal := localContentProject(t, "claude")
 			seedLocalFile(t, filepath.Join(withLocal, ".ai-rulez", "config.toml"), cfgText)
 			without := t.TempDir()
