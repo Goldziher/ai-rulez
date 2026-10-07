@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -36,14 +35,14 @@ func fileDigest(data []byte) string {
 
 // manifestDigests records the digest of every listed file that carries no
 // Content-Hash of its own; base is the directory the entries are relative to.
-func manifestDigests(base string, files []string) map[string]string {
+func (g *Generator) manifestDigests(base string, files []string) map[string]string {
 	var digests map[string]string
 	for _, rel := range files {
 		abs := filepath.Join(base, filepath.FromSlash(rel))
-		if stored, _, _ := scanStoredHashes(abs); stored != "" {
+		if stored, _, _ := g.scanHashes(abs); stored != "" {
 			continue
 		}
-		data, err := os.ReadFile(abs)
+		data, err := g.config.ReadExisting(abs)
 		if err != nil {
 			continue
 		}
@@ -210,7 +209,7 @@ func (g *Generator) addMergedDigests(digests *map[string]string, merged map[stri
 		if !whole[rel] {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
+		data, err := g.config.ReadExisting(filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
 		if err != nil {
 			continue
 		}
