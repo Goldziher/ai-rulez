@@ -462,7 +462,7 @@ globs, templates, scope), the pass and fail example the model supplied must beha
 widely is a ratchet candidate (`in = "diff-added"`) or too broad; a rule that cannot be checked mechanically gets
 `No verifier proposed` with the model's reason.
 
-Each usable candidate is also replayed over the last `--replay N` merged diffs (default 10; 0 turns it off): every
+Each usable candidate is also replayed over the last `--replay N` merged diffs (default 10, at most 100; 0 turns it off): every
 commit of the first-parent history (a merge commit, a squash commit or a direct commit) is evaluated the way a CI run
 on that change would have been, with the changed files against the tree as of that commit. A merged change passed
 review, so a candidate that "would have flagged" many of them is noisy: the line `replay: would have flagged 2 of 8
