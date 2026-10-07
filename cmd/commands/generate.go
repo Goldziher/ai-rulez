@@ -145,7 +145,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 
 	// Load configuration
-	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
+	cfg, err := loadConfigForCommand(ctx, args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		fmtError(err)
 		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
@@ -590,7 +590,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	fileCounter.StartFile(configPath)
 
 	ctx := cmdContext()
-	cfg, err := loadProjectFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
+	cfg, err := loadProjectFile(ctx, configPath, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err

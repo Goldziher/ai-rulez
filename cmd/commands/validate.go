@@ -62,7 +62,7 @@ schema compliance, and structural issues.`,
 			return
 		}
 
-		cfg, err := loadConfigForCommand(ctx, args)
+		cfg, err := loadConfigForCommand(ctx, args, config.WithFrontmatterErrors())
 		if err != nil {
 			logger.Error("Failed to load config")
 			fmtError(err)

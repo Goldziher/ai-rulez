@@ -25,6 +25,9 @@ type loadOptions struct {
 	policy        PolicyEnforcer
 	policyDir     string
 	collector     *diag.Collector
+	// frontmatterErrors: the caller fails on malformed frontmatter itself, so the
+	// load does not warn about the same files first.
+	frontmatterErrors bool
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -36,6 +39,14 @@ type LoadOption func(*loadOptions)
 // teammate without local overrides sees.
 func WithoutLocal() LoadOption {
 	return func(o *loadOptions) { o.withoutLocal = true }
+}
+
+// WithFrontmatterErrors tells the load that the caller reports malformed
+// frontmatter as an error (Config.Validate names the files), so the load does not
+// print a warning for each file just before. Commands that do not validate keep
+// the warning.
+func WithFrontmatterErrors() LoadOption {
+	return func(o *loadOptions) { o.frontmatterErrors = true }
 }
 
 // WithoutRemote skips resolving includes and installed skills: no remote is
