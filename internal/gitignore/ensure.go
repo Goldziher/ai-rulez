@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -62,12 +63,12 @@ func allPatterns(content string) map[string]bool {
 //
 // A .gitignore that is a symbolic link is never written through (git would not
 // read it): the entries go to .git/info/exclude instead, see ReplaceViaExclude.
-func EnsureEntries(baseDir string, patterns []string) error {
+func EnsureEntries(log logger.Logger, baseDir string, patterns []string) error {
 	path := filepath.Join(baseDir, ".gitignore")
 	if IsSymlink(baseDir) {
-		return ensureViaExclude(baseDir, patterns)
+		return ensureViaExclude(log, baseDir, patterns)
 	}
-	data, err := gitutil.ReadIgnoreFileOrEmpty(path)
+	data, err := gitutil.ReadIgnoreFileOrEmpty(log, path)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", path).Wrapf(err, "read .gitignore")
 	}

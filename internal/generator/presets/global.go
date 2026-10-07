@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // GlobalPaths is the user-scope layout of a preset with every path resolved to
@@ -33,6 +32,9 @@ type GlobalPaths struct {
 	// (HomeEnv) points at, when it is set; paths below HomeDir were re-rooted there.
 	// Empty when the tool lives under the user's home.
 	RelocatedHome string
+	// IgnoredHomeEnv and IgnoredHomeValue name a home environment variable that
+	// was set to a relative path and so ignored; the caller reports it.
+	IgnoredHomeEnv, IgnoredHomeValue string
 	// SkillPrecedence says which copy runs when a skill of the same name exists at
 	// user and project level, as the vendor documents it. Empty means the vendor
 	// documents none.
@@ -98,6 +100,9 @@ func (l GlobalLayout) Resolve(home string, getenv func(string) string) *GlobalPa
 
 		SkillPrecedence: l.SkillPrecedence,
 	}
+	if ignored := IgnoredHomeOverride(l.HomeEnv, getenv); ignored != "" {
+		paths.IgnoredHomeEnv, paths.IgnoredHomeValue = l.HomeEnv, ignored
+	}
 	for _, rel := range l.SkillReaders {
 		paths.SkillReaders = append(paths.SkillReaders, resolve(rel))
 	}
@@ -139,10 +144,22 @@ func HomeOverride(homeEnv string, getenv func(string) string) string {
 		return ""
 	}
 	if !filepath.IsAbs(override) {
-		logger.Warn("ignoring relative home override; using the home directory", "env", homeEnv, "value", override)
 		return ""
 	}
 	return filepath.Clean(override)
+}
+
+// IgnoredHomeOverride returns the value homeEnv is set to when HomeOverride
+// ignored it for being a relative path (it would depend on the working
+// directory); "" otherwise.
+func IgnoredHomeOverride(homeEnv string, getenv func(string) string) string {
+	if homeEnv == "" || getenv == nil {
+		return ""
+	}
+	if override := getenv(homeEnv); override != "" && !filepath.IsAbs(override) {
+		return override
+	}
+	return ""
 }
 
 // underDir reports whether p is dir or lies inside it (slash-separated, relative).

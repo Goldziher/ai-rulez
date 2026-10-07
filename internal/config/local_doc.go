@@ -13,6 +13,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
@@ -31,6 +32,13 @@ type LocalDoc struct {
 	configDirName string
 	release       func()
 	resolvers     Resolvers
+	log           logger.Logger
+}
+
+// WithLog makes Save report to log instead of the CLI's logger.
+func (d *LocalDoc) WithLog(log logger.Logger) *LocalDoc {
+	d.log = log
+	return d
 }
 
 // WithResolvers makes the validation load of Save resolve includes and installed
@@ -580,7 +588,7 @@ func (d *LocalDoc) Save(ctx context.Context) error {
 	if err := refuseSymlink(d.Path); err != nil {
 		return err
 	}
-	if err := gitignore.EnsureEntries(d.baseDir, d.gitignorePatterns()); err != nil {
+	if err := gitignore.EnsureEntries(d.log, d.baseDir, d.gitignorePatterns()); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
 	previous, readErr := os.ReadFile(d.Path) //nolint:gosec // overlay path from the config directory
@@ -719,7 +727,7 @@ func initLocalOverlay(configDir, mainFile string) (path string, created bool, er
 	if err := refuseSymlink(d.Path); err != nil {
 		return "", false, err
 	}
-	if err := gitignore.EnsureEntries(d.baseDir, d.gitignorePatterns()); err != nil {
+	if err := gitignore.EnsureEntries(d.log, d.baseDir, d.gitignorePatterns()); err != nil {
 		return "", false, err //nolint:wrapcheck // already contextual
 	}
 	if err := writeFileAtomic(d.Path, []byte(body), 0o600); err != nil {

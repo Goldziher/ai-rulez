@@ -51,9 +51,9 @@ func writeAgentsMDProject(t *testing.T, root string, cfgTOML string) {
 	}
 }
 
-func runAgentsMDGenerate(t *testing.T, root string) {
+func runAgentsMDGenerate(t *testing.T, root string, opts ...config.LoadOption) {
 	t.Helper()
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := config.LoadConfig(context.Background(), root, opts...)
 	require.NoError(t, err)
 	require.NoError(t, NewGenerator(cfg).Generate(""))
 }
@@ -91,7 +91,7 @@ func agentsMDSnapshot(t *testing.T, root string) map[string]string {
 
 func sharedManifestFiles(t *testing.T, root string) []string {
 	t.Helper()
-	return readManifestFile(filepath.Join(root, ".ai-rulez", generatedManifestName)).Files
+	return readManifestFile(nil, filepath.Join(root, ".ai-rulez", generatedManifestName)).Files
 }
 
 // TestAgentsMD_FlagOffOutputUnchanged pins the default: with agents_md absent or

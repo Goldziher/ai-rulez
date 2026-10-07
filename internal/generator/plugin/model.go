@@ -17,6 +17,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Manifest is the resolved, runtime-agnostic plugin model. It is built once
@@ -79,6 +80,10 @@ type Manifest struct {
 	// passthrough asset/script paths.
 	SourceDir string
 }
+
+// log is where the renderers report: the log of the project config the manifest
+// was built from (the CLI's when it has none).
+func (m *Manifest) log() logger.Logger { return m.Config.Log() }
 
 // MarketInfo is the resolved marketplace metadata for the emitted index.
 type MarketInfo struct {

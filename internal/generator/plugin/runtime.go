@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -87,7 +86,7 @@ func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	for _, runtime := range m.Runtimes {
 		renderer, ok := rendererFor(runtime)
 		if !ok {
-			logger.Warn("no plugin renderer for runtime; skipping", "runtime", runtime)
+			m.log().Warn("no plugin renderer for runtime; skipping", "runtime", runtime)
 			continue
 		}
 		outs, err := renderer(m, baseDir)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -14,6 +15,14 @@ import (
 type Git struct {
 	// Runner starts the git processes; nil means runner.Exec.
 	Runner runner.Runner
+	// Log receives the reports of the ignore-file helpers; nil is the CLI's logger.
+	Log logger.Logger
+}
+
+// WithLog returns g reporting to log.
+func (g Git) WithLog(log logger.Logger) Git {
+	g.Log = log
+	return g
 }
 
 // New returns a Git that runs git through r (nil: runner.Exec).

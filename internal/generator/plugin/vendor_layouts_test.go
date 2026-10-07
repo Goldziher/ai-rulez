@@ -158,7 +158,7 @@ func TestCursorSinglePluginMarketplace(t *testing.T) {
 
 func TestRenderCursorMarketplace_Members(t *testing.T) {
 	out, err := RenderCursorMarketplace(
-		MarketInfo{Name: "acme", Owner: &config.Author{Name: "Acme"}},
+		nil, MarketInfo{Name: "acme", Owner: &config.Author{Name: "Acme"}},
 		[]MemberEntry{
 			{Name: "a", Description: "A", Source: "./plugins/a"},
 			{Name: "b", Source: "./plugins/b", Detailed: true, Version: "2.0.0", Category: "x"},

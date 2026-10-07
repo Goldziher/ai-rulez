@@ -30,7 +30,7 @@ func repoWithSymlinkedGitignore(t *testing.T) (dir, target string) {
 func TestEnsureEntries_NeverWritesThroughASymlinkedGitignore(t *testing.T) {
 	dir, target := repoWithSymlinkedGitignore(t)
 
-	require.NoError(t, EnsureEntries(dir, []string{".ai-rulez/config.local.*", ".ai-rulez/local/"}))
+	require.NoError(t, EnsureEntries(nil, dir, []string{".ai-rulez/config.local.*", ".ai-rulez/local/"}))
 
 	data, err := os.ReadFile(target)
 	require.NoError(t, err)
@@ -42,15 +42,15 @@ func TestEnsureEntries_NeverWritesThroughASymlinkedGitignore(t *testing.T) {
 
 func TestReplaceViaExclude_ReplacesTheBlockAndRemovesIt(t *testing.T) {
 	dir, _ := repoWithSymlinkedGitignore(t)
-	require.NoError(t, ReplaceViaExclude(dir, []string{"a.md", "b/"}))
-	require.NoError(t, ReplaceViaExclude(dir, []string{"a.md"}))
+	require.NoError(t, ReplaceViaExclude(nil, dir, []string{"a.md", "b/"}))
+	require.NoError(t, ReplaceViaExclude(nil, dir, []string{"a.md"}))
 
 	exclude, err := os.ReadFile(filepath.Join(dir, ".git", "info", "exclude"))
 	require.NoError(t, err)
 	assert.Contains(t, string(exclude), "a.md")
 	assert.NotContains(t, string(exclude), "b/")
 
-	require.NoError(t, ReplaceViaExclude(dir, nil))
+	require.NoError(t, ReplaceViaExclude(nil, dir, nil))
 	exclude, err = os.ReadFile(filepath.Join(dir, ".git", "info", "exclude"))
 	require.NoError(t, err)
 	assert.False(t, strings.Contains(string(exclude), "a.md"))

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -105,6 +106,8 @@ type ServeOptions struct {
 	PollInterval time.Duration
 	// Search ranks find_skill with the configured mode; nil ranks lexically.
 	Search *SearchRuntime
+	// Log receives the server's reports (live reload); nil is the CLI's logger.
+	Log logger.Logger
 }
 
 func (o ServeOptions) budget() int {

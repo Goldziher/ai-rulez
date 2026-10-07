@@ -41,7 +41,7 @@ func TestCheck(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := filepath.Join(t.TempDir(), "site")
-			_, err := Write(dir, want, false)
+			_, err := Write(nil, dir, want, false)
 			require.NoError(t, err)
 			tt.setup(t, dir)
 
@@ -91,7 +91,7 @@ func TestCheck_SymlinksAreReportedNotFollowed(t *testing.T) {
 	require.NoError(t, os.WriteFile(outside, []byte("<h1>x</h1>"), 0o644))
 	want := site(map[string]string{"index.html": "<h1>x</h1>"})
 	dir := filepath.Join(parent, "site")
-	_, err := Write(dir, want, false)
+	_, err := Write(nil, dir, want, false)
 	require.NoError(t, err)
 	require.NoError(t, os.Remove(filepath.Join(dir, "index.html")))
 	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, "index.html"))

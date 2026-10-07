@@ -50,6 +50,9 @@ func (s *ProviderSpec) GlobalPaths(home string, getenv func(string) string) *Glo
 	}
 	if g != nil {
 		paths.RelocatedHome = presets.HomeOverride(g.HomeEnv, getenv)
+		if ignored := presets.IgnoredHomeOverride(g.HomeEnv, getenv); ignored != "" {
+			paths.IgnoredHomeEnv, paths.IgnoredHomeValue = g.HomeEnv, ignored
+		}
 		paths.SkillPrecedence = g.SkillPrecedence
 		for _, rel := range g.SkillReaders {
 			paths.SkillReaders = append(paths.SkillReaders, g.resolve(rel, home, getenv))

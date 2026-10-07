@@ -104,7 +104,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 
 	// A v1 plugin in this project builds fine but never loads in OpenCode v2,
 	// and OpenCode only logs that to its own server log; surface it here.
-	opencodev1.WarnProject(baseDir)
+	opencodev1.WarnProject(cfg.Collector(), cfg.Log(), baseDir)
 
 	// Create .opencode directory structure
 	outputs = append(outputs,
@@ -615,13 +615,13 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 		return frontmatter
 	}
 
-	if hidden, ok := opencodeHidden(agent); ok {
+	if hidden, ok := opencodeHidden(cfg.Log(), agent); ok {
 		frontmatter["hidden"] = hidden
 	}
 
 	// temperature and top_p are top-level numeric keys; both OpenCode loaders
 	// accept them and v2 migrates them into the request body itself.
-	for field, num := range opencodeSampling(agent) {
+	for field, num := range opencodeSampling(cfg.Log(), agent) {
 		frontmatter[field] = num
 	}
 
@@ -630,14 +630,14 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 
 // opencodeHidden parses the agent's hidden flag. OpenCode types it as a
 // boolean: a quoted string makes it drop the agent.
-func opencodeHidden(agent config.ContentFile) (value, ok bool) {
+func opencodeHidden(log logger.Logger, agent config.ContentFile) (value, ok bool) {
 	raw := agent.Metadata.Extra["hidden"]
 	if raw == "" {
 		return false, false
 	}
 	hidden, err := strconv.ParseBool(raw)
 	if err != nil {
-		logger.Warn("OpenCode agent field hidden must be true or false; omitting it", "agent", agent.Name, "value", raw)
+		log.Warn("OpenCode agent field hidden must be true or false; omitting it", "agent", agent.Name, "value", raw)
 		return false, false
 	}
 	return hidden, true
@@ -645,7 +645,7 @@ func opencodeHidden(agent config.ContentFile) (value, ok bool) {
 
 // opencodeSampling collects the sampling parameters as numbers; a quoted
 // string would reach the provider as one.
-func opencodeSampling(agent config.ContentFile) map[string]float64 {
+func opencodeSampling(log logger.Logger, agent config.ContentFile) map[string]float64 {
 	values := map[string]float64{}
 	for _, field := range []string{keyTemperature, "top_p"} {
 		raw := agent.Metadata.Extra[field]
@@ -654,7 +654,7 @@ func opencodeSampling(agent config.ContentFile) map[string]float64 {
 		}
 		num, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			logger.Warn("OpenCode agent field "+field+" must be a number; omitting it", "agent", agent.Name, "value", raw)
+			log.Warn("OpenCode agent field "+field+" must be a number; omitting it", "agent", agent.Name, "value", raw)
 			continue
 		}
 		values[field] = num
