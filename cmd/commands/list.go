@@ -2,8 +2,8 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"os"
 	"strings"
 
@@ -121,7 +121,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No rules found")
 		return
 	}
@@ -148,7 +148,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No context files found")
 		return
 	}
@@ -175,7 +175,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No skills found")
 		return
 	}
@@ -200,12 +200,12 @@ func outputListJSON(fileType string, files []crud.FileInfo) {
 			"targets":  file.Targets,
 		}
 	}
-	data, err := json.MarshalIndent(output, "", "  ")
+	data, err := jsondoc.Marshal(output)
 	if err != nil {
 		logger.Error("Failed to marshal JSON", "error", err)
 		os.Exit(1)
 	}
-	fmt.Println(string(data))
+	fmt.Print(string(data))
 }
 
 // outputListTable outputs file list as human-readable table
@@ -250,7 +250,7 @@ func runListItems(ftype, title, noun string) {
 		logger.Error("Failed to list "+noun, "error", err)
 		os.Exit(1)
 	}
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No " + noun + " found")
 		return
 	}
@@ -293,8 +293,8 @@ func runListRoot(cmd *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 	if listJSON {
-		data, _ := json.MarshalIndent(report, "", "  ") //nolint:errcheck // plain structs always marshal
-		fmt.Println(string(data))
+		data, _ := jsondoc.Marshal(report) //nolint:errcheck // plain structs always marshal
+		fmt.Print(string(data))
 		return
 	}
 	printPlacementReport(report)

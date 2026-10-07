@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"path/filepath"
@@ -267,9 +267,7 @@ func runReportUsage(out io.Writer, logPath string) error {
 		return err
 	}
 	if reportJSON {
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
-		return oops.Wrapf(encoder.Encode(usageReportJSON{Report: report, Items: items}), "encode usage report")
+		return jsondoc.Write(out, usageReportJSON{Report: report, Items: items})
 	}
 	writeUsageReport(reportWriter{out}, report)
 	if items != nil {

@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"strings"
@@ -340,10 +341,7 @@ func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChan
 		}
 		items = append(items, item)
 	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(map[string]any{keyPath: overlay.Path, "changes": items}); err != nil {
+	if err := jsondoc.Write(os.Stdout, map[string]any{keyPath: overlay.Path, "changes": items}); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}

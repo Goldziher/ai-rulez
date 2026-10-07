@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"sort"
@@ -87,12 +87,7 @@ func loadRolesConfig() (*config.Config, error) {
 }
 
 func writeJSON(out io.Writer, v any) error {
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		return oops.Wrapf(err, "encode json")
-	}
-	return nil
+	return jsondoc.Write(out, v)
 }
 
 func runRolesList(out io.Writer) error {
