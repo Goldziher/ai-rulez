@@ -328,7 +328,7 @@ func (r *runner) checkUnpinned() {
 		line := 1
 		if data, err := os.ReadFile(path); err == nil {
 			for i, l := range strings.Split(string(data), "\n") {
-				if strings.Contains(l, `"`+w.Name+`"`) {
+				if strings.Contains(l, `"`+w.Name+`"`) || strings.Contains(l, `'`+w.Name+`'`) {
 					line = i + 1
 					break
 				}
