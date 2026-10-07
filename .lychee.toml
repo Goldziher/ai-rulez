@@ -30,6 +30,12 @@ exclude = [
 
   # npm (rate-limited)
   "npmjs\\.com/package/",
+
+  # Live pages lychee cannot reach from GitHub runners, on every run since
+  # 2026-10-06: ampcode.com fails lychee's HTTP/2 handshake (curl gets 200)
+  # and codebuddy.ai times out from the runner's network.
+  "^https://ampcode\\.com/?$",
+  "^https://www\\.codebuddy\\.ai/docs/cli",
 ]
 
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
