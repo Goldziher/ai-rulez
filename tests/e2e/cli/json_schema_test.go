@@ -67,7 +67,7 @@ func (s *JSONSchemaSuite) TestDocumentsMatchTheirSchemas() {
 		{"telemetry-doctor.schema.json", []string{"telemetry", "doctor", "--format", "json"}},
 		{"eval-report.schema.json", []string{"eval", "run", "--dry-run", "--format", "json"}},
 		{"okf-validate.schema.json", []string{"okf", "validate", "bundle", "--format", "json"}},
-		{"catalog.schema.json", []string{"catalog", "--format", "json"}},
+		{"catalog.v1.schema.json", []string{"catalog", "--format", "json"}},
 	}
 	for _, tc := range cases {
 		s.validate(tc.schema, s.output(tc.args...))
@@ -91,6 +91,16 @@ func (s *JSONSchemaSuite) TestEveryJSONDocumentIsVersioned() {
 		{"builtins", "list", "--format", "json"},
 		{"telemetry", "doctor", "--format", "json"},
 		{"migrate", "v5", "--check", "--format", "json"},
+		{"scanners", "list", "--format", "json"},
+		{"review", "--format", "json"},
+		{"improve", "adapters", "--format", "json"},
+		{"telemetry", "status", "--format", "json"},
+		{"local", "show", "--format", "json"},
+		{"update", "--format", "json"},
+		{"lock", "--diff", "--format", "json"},
+		{"search", "tabs", "--format", "json"},
+		{"roles", "list", "--format", "json"},
+		{"llm", "doctor", "--format", "json"},
 	} {
 		result := testutil.RunCLI(s.T(), s.dir, args...)
 		var doc map[string]any

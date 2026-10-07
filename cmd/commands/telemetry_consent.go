@@ -1,12 +1,13 @@
 package commands
 
 import (
-	"encoding/json"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
@@ -196,9 +197,7 @@ silent to your harness by design; this is where they show. Nothing is written or
 		settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 		status := telemetry.BuildStatus(&settings, telemetry.LocalDir(root, name), defaultUsageLogPath())
 		if telStatusJSON {
-			encoder := json.NewEncoder(cmd.OutOrStdout())
-			encoder.SetIndent("", "  ")
-			return oops.Wrapf(encoder.Encode(status), "encode status")
+			return oops.Wrapf(jsondoc.Write(cmd.OutOrStdout(), status), "encode status")
 		}
 		status.Render(cmd.OutOrStdout())
 		return nil

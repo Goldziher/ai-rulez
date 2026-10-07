@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals/evalimport"
 	"github.com/samber/oops"
@@ -91,9 +93,7 @@ func runEvalImport(cmd *cobra.Command, paths []string) error {
 		}
 	}
 	if flags.format == formatJSON {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(res); err != nil {
+		if err := jsondoc.Write(cmd.OutOrStdout(), res); err != nil {
 			return oops.Wrapf(err, "write report")
 		}
 	} else if err := res.WriteText(cmd.OutOrStdout()); err != nil {

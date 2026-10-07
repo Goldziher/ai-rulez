@@ -1,12 +1,13 @@
 package commands
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ const (
 	exitReviewGate    = 2
 )
 
-// exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate --strict`.
+// exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate`.
 const exitRubricFindings = 2
 
 // maxConcurrency bounds --concurrency: more parallel calls mostly trip provider rate limits.
@@ -531,9 +532,7 @@ func orDash(s string) string {
 }
 
 func writeIndentedJSON(out io.Writer, v any) error {
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	return oops.Wrapf(enc.Encode(v), "write json")
+	return oops.Wrapf(jsondoc.Write(out, v), "write json")
 }
 
 // runRubricLint lints the named rubrics, or every project rubric. found is true when any finding exists.

@@ -23,6 +23,7 @@
     "costs"
   ],
   "properties": {
+    "schema_version": { "const": 1, "description": "Version of this document layout." },
     "schema": {
       "const": "improve-report/1"
     },
