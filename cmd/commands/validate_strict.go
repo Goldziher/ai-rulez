@@ -277,11 +277,17 @@ func analyzerSelection(cfg *config.Config) []string {
 	return nil
 }
 
-// failOnFor resolves one root's threshold: the flag, else its [lint] fail_on,
-// else error.
+// failOnFor resolves one root's threshold: --fail-on, else the threshold of
+// --lint-profile, else its [lint] fail_on, else its profile's, else error.
 func failOnFor(cfg *config.Config) string {
 	if validateFailOn != "" {
 		return validateFailOn
+	}
+	if validateLintProfile != "" {
+		if f := lint.ProfileFailOn(validateLintProfile); f != "" {
+			return f
+		}
+		return failOnError
 	}
 	if cfg != nil && cfg.Lint != nil {
 		if cfg.Lint.FailOn != "" {
