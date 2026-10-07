@@ -220,6 +220,11 @@ func TestBuildIndexesEncodeAwkwardFileNames(t *testing.T) {
 	assert.Empty(t, load(t, files).Validate())
 }
 
+func TestTitleFromPathKeepsMultiByteRunes(t *testing.T) {
+	assert.Equal(t, "Über Uns", TitleFromPath("über-uns.md"))
+	assert.Equal(t, "日本語 Notes", TitleFromPath("日本語_notes.md"))
+}
+
 func TestMarshalFrontmatterOrder(t *testing.T) {
 	out, err := MarshalFrontmatter([]Field{{"type", "Decision"}, {"title", "T: colon"}, {"x", map[string]any{"b": 1, "a": []string{"z"}}}})
 	require.NoError(t, err)
