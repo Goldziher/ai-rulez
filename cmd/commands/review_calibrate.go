@@ -296,7 +296,9 @@ func resolveCalibrateJudge(cmd *cobra.Command, cfg *config.Config, model string,
 	}
 	if models > 1 {
 		cost /= float64(models)
-		calls = max(calls/models, 1)
+		if calls > 0 { // 0 is unlimited and stays so
+			calls = max(calls/models, 1)
+		}
 	}
 	lc := withModel(resolved.Config, model)
 	lc.MaxCostUSD = tighterFloat(lc.MaxCostUSD, cost)
