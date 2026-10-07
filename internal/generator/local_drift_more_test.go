@@ -18,6 +18,11 @@ import (
 const driftIgnoring = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
+gitignore = true
+agents_md = false
+
+[header]
+hashes = "full"
 `
 
 // subProject creates a drift project rooted at base/sub (sharing base with other projects).

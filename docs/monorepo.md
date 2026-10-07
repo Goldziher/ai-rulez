@@ -58,7 +58,7 @@ Your root `.ai-rulez/` should contain high-level, cross-cutting concerns that ap
 **`.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "My Full-Stack Project"
 description = "Microservices project with React frontend and Go backend"
 
@@ -254,7 +254,7 @@ ai-rulez generate --recursive
 **Root configuration** (`/.ai-rulez/config.toml`):
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Monorepo Platform"
 
 presets = ["claude", "cursor"]
@@ -267,7 +267,7 @@ full = ["shared"]
 **Service-specific** (`/backend/.ai-rulez/config.toml`):
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Backend Service"
 
 presets = ["claude"]
