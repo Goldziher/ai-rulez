@@ -41,6 +41,31 @@ func gitAdd(t *testing.T, root string) {
 	}
 }
 
+// gitSetExec records the executable bit of rel (a path under root, already
+// added) in the git index. Lint reads a tracked file's mode from the index, and
+// a file system with no mode bits (Windows) can only express it there.
+func gitSetExec(t *testing.T, root, rel string) {
+	t.Helper()
+	cmd := gitutil.CommandNoContext(root, "update-index", "--chmod=+x", "--", rel)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git update-index --chmod=+x %s: %v\n%s", rel, err, out)
+	}
+}
+
+// gitIndexMode is the mode git records for rel ("100644", "100755", ...).
+func gitIndexMode(t *testing.T, root, rel string) string {
+	t.Helper()
+	out, err := gitutil.CommandNoContext(root, "ls-files", "--stage", "--", rel).Output()
+	if err != nil {
+		t.Fatalf("git ls-files --stage %s: %v", rel, err)
+	}
+	fields := strings.Fields(string(out))
+	if len(fields) == 0 {
+		t.Fatalf("git does not track %s", rel)
+	}
+	return fields[0]
+}
+
 func lintDir(t *testing.T, base string) []Finding {
 	t.Helper()
 	cfg, err := loadWithResolvers(context.Background(), base)
