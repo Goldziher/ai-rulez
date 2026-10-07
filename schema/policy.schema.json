@@ -66,7 +66,7 @@
         "max_findings": {
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 0 },
-          "description": "Rule code or name to the most findings of it a run may have; one more is AR749. 0 allows none. The lower of the layers wins; baselines, [lint.tolerate] and ignores cannot absorb it."
+          "description": "Rule code or name to the most findings of it a run may have; one more is AR749. 0 allows none. The lower of the layers wins; baselines, [lint.ratchet] and ignores cannot absorb it."
         },
         "severity_floor": {
           "type": "object",

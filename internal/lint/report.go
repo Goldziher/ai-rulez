@@ -36,8 +36,8 @@ type Combined struct {
 	Summary  Summary   `json:"summary"`
 	// Baseline is set when a baseline was applied.
 	Baseline *BaselineSummary `json:"baseline,omitempty"`
-	// Budgets lists rules over their [lint.tolerate] count.
-	Budgets []BudgetExcess `json:"budgets_exceeded,omitempty"`
+	// Ratchet lists rules over their [lint.ratchet] count.
+	Ratchet []RatchetExcess `json:"ratchet_exceeded,omitempty"`
 	// Profile is the lint profile when it is not the default.
 	Profile string `json:"profile,omitempty"`
 	// Risk is the advisory risk score (never affects the exit code).
@@ -173,8 +173,8 @@ func writeBaselineText(sb *strings.Builder, c Combined) {
 		}
 		fmt.Fprintf(sb, "; %d finding(s) in other files not shown\n", s.Dropped)
 	}
-	for _, e := range c.Budgets {
-		fmt.Fprintf(sb, "tolerate: %s has %d finding(s), over its tolerated count of %d\n", e.Code, e.Count, e.Max)
+	for _, e := range c.Ratchet {
+		fmt.Fprintf(sb, "ratchet: %s has %d finding(s), over its ratchet of %d\n", e.Code, e.Count, e.Max)
 	}
 	if c.Baseline == nil {
 		return

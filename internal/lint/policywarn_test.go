@@ -62,7 +62,7 @@ func TestPolicyWarnModeBaselineRefusalIsAWarning(t *testing.T) {
 	// Arrange
 	rep := &Report{ConfigFile: ".ai-rulez/config.toml", Root: "r", PolicyWarn: true}
 	// Act
-	rep.RefuseTolerate([]string{"AR001"})
+	rep.RefuseRatchet([]string{"AR001"})
 	// Assert
 	if len(rep.Findings) != 1 || rep.Findings[0].Severity != SeverityWarning {
 		t.Fatalf("want one warning, got %v", rep.Findings)
