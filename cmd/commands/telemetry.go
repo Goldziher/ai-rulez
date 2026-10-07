@@ -310,9 +310,12 @@ func previewEvents(settings *telemetry.Settings, root, name string) (previewSour
 	return previewSource{label: label + " (usage log)", events: kept, rejected: read.Rejected}, nil
 }
 
+// emptyListText is what an empty list reads as in telemetry output.
+const emptyListText = "none"
+
 func orNone(list []string) string {
 	if len(list) == 0 {
-		return "none"
+		return emptyListText
 	}
 	return strings.Join(list, ", ")
 }
