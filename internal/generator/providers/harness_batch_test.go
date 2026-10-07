@@ -46,7 +46,7 @@ func batchContent() *config.ContentTree {
 
 func batchConfig() *config.Config {
 	return &config.Config{
-		Name: "demo", BaseDir: "/p", ConfigDir: "/p/.ai-rulez", ConfigDirName: ".ai-rulez",
+		Name: "demo", BaseDir: absSlash("/p"), ConfigDir: filepath.Join(absSlash("/p"), ".ai-rulez"), ConfigDirName: ".ai-rulez",
 		MCPServers: map[string]*config.MCPServer{"fs": {Name: "fs", Command: "npx", Args: []string{"x"}}},
 	}
 }
@@ -55,7 +55,7 @@ func batchPaths(outputs []config.OutputFile) []string {
 	var paths []string
 	for _, o := range outputs {
 		if !o.IsDir {
-			rel, _ := filepath.Rel("/p", o.Path)
+			rel, _ := filepath.Rel(absSlash("/p"), o.Path)
 			paths = append(paths, filepath.ToSlash(rel))
 		}
 	}
@@ -182,7 +182,7 @@ func TestHarnessBatch_Outputs(t *testing.T) {
 			require.NoError(t, err)
 
 			// Act
-			outputs, err := gen.Generate(batchContent(), "/p", batchConfig())
+			outputs, err := gen.Generate(batchContent(), absSlash("/p"), batchConfig())
 
 			// Assert
 			require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestHarnessBatch_RootlessRulesEveryModeIsFile(t *testing.T) {
 				cfg.Rules = &config.RulesConfig{ModeByPreset: map[string]string{tc.preset: mode}}
 
 				// Act
-				outputs, err := gen.Generate(batchContent(), "/p", cfg)
+				outputs, err := gen.Generate(batchContent(), absSlash("/p"), cfg)
 
 				// Assert
 				require.NoError(t, err)
@@ -253,7 +253,7 @@ func TestHarnessBatch_MCPDocuments(t *testing.T) {
 			require.NoError(t, err)
 
 			// Act
-			outputs, err := gen.Generate(&config.ContentTree{}, "/p", batchConfig())
+			outputs, err := gen.Generate(&config.ContentTree{}, absSlash("/p"), batchConfig())
 
 			// Assert
 			require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestHarnessBatch_MCPDocuments(t *testing.T) {
 func TestHarnessBatch_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	home := "/home/u"
+	home := absSlash("/home/u")
 	j := func(p string) string { return filepath.Join(home, filepath.FromSlash(p)) }
 	tests := []struct {
 		preset string
