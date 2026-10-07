@@ -10,7 +10,7 @@ import (
 func moreDialectSpecs() map[string]hookSpec {
 	grokEvents := identityEvents([]string{
 		eventSessionStart, eventSessionEnd, eventUserPromptSubmit, eventPreToolUse, eventPostToolUse,
-		eventPostToolUseFailure, "PermissionDenied", eventStop, "StopFailure", eventNotify, eventSubagentStart,
+		eventPostToolUseFailure, eventPermissionDenied, eventStop, eventStopFailure, eventNotify, eventSubagentStart,
 		eventSubagentStop, eventPreCompact, eventPostCompact,
 	})
 	return map[string]hookSpec{
@@ -80,11 +80,11 @@ func moreDialectSpecs() map[string]hookSpec {
 		config.HarnessJunie: {
 			name: config.HarnessJunie,
 			events: identityEvents([]string{
-				eventSessionStart, eventUserPromptSubmit, eventPreToolUse, eventStop, "StopFailure",
+				eventSessionStart, eventUserPromptSubmit, eventPreToolUse, eventStop, eventStopFailure,
 				eventPermissionRequest, eventSessionEnd,
 			}),
 			nested: true, matcherPassthrough: true, async: true, shape: claudeShape, userOnly: true,
-			matcherEvents: set(eventSessionStart, eventPreToolUse, eventPermissionRequest, "StopFailure", eventSessionEnd),
+			matcherEvents: set(eventSessionStart, eventPreToolUse, eventPermissionRequest, eventStopFailure, eventSessionEnd),
 		},
 		// Z.ai ZCode: ~/.zcode/cli/config.json `hooks.events`, which needs
 		// `hooks.enabled`; milliseconds. ZCode ignores project-level hooks.
@@ -96,10 +96,10 @@ func moreDialectSpecs() map[string]hookSpec {
 				eventPostToolUseFailure, eventStop,
 			}),
 			nested: true, matcherPassthrough: true, async: true, status: true,
-			container: []string{"hooks", "events"}, userOnly: true,
+			container: []string{keyHooks, "events"}, userOnly: true,
 			shape:         &handlerShape{typed: true, timeoutField: "timeoutMs", timeoutMS: true},
 			matcherEvents: set(eventSessionStart, eventPreToolUse, eventPermissionRequest, eventPostToolUse, eventPostToolUseFailure),
-			required:      []requiredKey{{path: []string{"hooks", "enabled"}, value: true}},
+			required:      []requiredKey{{path: []string{keyHooks, "enabled"}, value: true}},
 		},
 		// Charm Crush: crush.json `hooks.PreToolUse`, flat entries, seconds, lowercase
 		// tool names. Crush prefers a crushrc script but still reads crush.json.
@@ -125,7 +125,7 @@ func moreDialectSpecs() map[string]hookSpec {
 			name: config.HarnessReasonix,
 			events: identityEvents([]string{
 				eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest, eventUserPromptSubmit,
-				eventStop, "StopFailure", eventSessionStart, eventSessionEnd, eventSubagentStop, eventNotify, eventPreCompact,
+				eventStop, eventStopFailure, eventSessionStart, eventSessionEnd, eventSubagentStop, eventNotify, eventPreCompact,
 			}),
 			shape:         &handlerShape{timeoutMS: true, matcherField: "match"},
 			matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest),
@@ -171,7 +171,7 @@ func moreDialectSpecs() map[string]hookSpec {
 			name: config.HarnessKimi,
 			events: identityEvents([]string{
 				eventSessionStart, eventSessionEnd, eventUserPromptSubmit, eventPreToolUse, eventPostToolUse,
-				eventPostToolUseFailure, eventPermissionRequest, eventStop, "StopFailure", eventNotify,
+				eventPostToolUseFailure, eventPermissionRequest, eventStop, eventStopFailure, eventNotify,
 				eventSubagentStart, eventSubagentStop, eventPreCompact, eventPostCompact,
 			}),
 			flat: kimiEntry, userOnly: true,

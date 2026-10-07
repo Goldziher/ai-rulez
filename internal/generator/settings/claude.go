@@ -49,7 +49,7 @@ func permissionKeys(cfg *config.Config, docPath string) []jsonmerge.OwnedKey {
 	lists := []struct {
 		name  string
 		rules []string
-	}{{"allow", cfg.Permissions.Allow}, {"ask", cfg.Permissions.Ask}, {"deny", cfg.Permissions.Deny}}
+	}{{string(ActionAllow), cfg.Permissions.Allow}, {string(ActionAsk), cfg.Permissions.Ask}, {string(ActionDeny), cfg.Permissions.Deny}}
 	var keys []jsonmerge.OwnedKey
 	for _, list := range lists {
 		if len(list.rules) == 0 {

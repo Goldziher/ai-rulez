@@ -35,23 +35,23 @@ type claudeStyle struct {
 
 var (
 	_ = registerPermissionDialect("codebuddy", claudeStyle{
-		shell: "Bash", askKey: "ask",
+		shell: toolBash, askKey: string(ActionAsk),
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP),
 	}.build)
 	_ = registerPermissionDialect("commandcode", claudeStyle{
-		shell: "Shell", askKey: "ask", projectPaths: true,
+		shell: "Shell", askKey: string(ActionAsk), projectPaths: true,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP),
 	}.build)
 	_ = registerPermissionDialect("qoder", claudeStyle{
-		shell: "Bash", askKey: "ask", projectPaths: true, editOnly: true, agentTool: "Agent",
+		shell: toolBash, askKey: string(ActionAsk), projectPaths: true, editOnly: true, agentTool: toolAgent,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindMCP, KindAgent),
 	}.build)
 	_ = registerPermissionDialect("qwen", claudeStyle{
-		shell: "Bash", askKey: "ask", agentTool: "Agent",
+		shell: toolBash, askKey: string(ActionAsk), agentTool: toolAgent,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP, KindAgent),
 	}.build)
 	_ = registerPermissionDialect("letta", claudeStyle{
-		shell: "Bash", askKey: "alwaysAsk",
+		shell: toolBash, askKey: "alwaysAsk",
 		kinds: kindSet(KindShell, KindRead, KindEdit),
 	}.build)
 )
@@ -74,13 +74,13 @@ func (s claudeStyle) build(t *translation) ([]jsonmerge.OwnedKey, error) {
 		}
 		lists[e.Action] = append(lists[e.Action], out)
 	}
-	keyOf := map[PermAction]string{ActionAllow: "allow", ActionAsk: s.askKey, ActionDeny: "deny"}
+	keyOf := map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: s.askKey, ActionDeny: string(ActionDeny)}
 	var keys []jsonmerge.OwnedKey
 	for _, action := range []PermAction{ActionAllow, ActionAsk, ActionDeny} {
 		if len(lists[action]) == 0 {
 			continue
 		}
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", keyOf[action]}, stringElements(lists[action])))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyPermissions, keyOf[action]}, stringElements(lists[action])))
 	}
 	return keys, nil
 }
@@ -118,11 +118,11 @@ func (s claudeStyle) render(e permEntry) (rule, reason string) {
 func (s claudeStyle) renderPath(e permEntry) (rule, reason string) {
 	r := e.Rule
 	tool := r.Tool
-	if s.editOnly && r.Kind == KindEdit && tool != "Edit" {
+	if s.editOnly && r.Kind == KindEdit && tool != toolEdit {
 		if e.Action == ActionAllow {
 			return "", "Edit rules also cover Write, so a Write allow rule would be widened"
 		}
-		tool = "Edit"
+		tool = toolEdit
 	}
 	if r.Bare {
 		return tool, ""

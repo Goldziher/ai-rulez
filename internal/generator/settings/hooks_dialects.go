@@ -119,7 +119,7 @@ func (s hookSpec) containerPath(cfg *config.Config) []string {
 	case s.container != nil:
 		return s.container
 	}
-	return []string{"hooks"}
+	return []string{keyHooks}
 }
 
 var claudeShape = &handlerShape{typed: true}
@@ -153,22 +153,22 @@ func allBut(all map[string]string, excluded ...string) map[string]bool {
 
 var qwenEvents = identityEvents([]string{
 	eventSessionStart, eventSessionEnd, eventUserPromptSubmit, "UserPromptExpansion", eventPreToolUse,
-	eventPostToolUse, eventPostToolUseFailure, "PostToolBatch", eventPermissionRequest, "PermissionDenied",
-	eventNotify, "MessageDisplay", eventSubagentStart, eventSubagentStop, eventStop, "StopFailure",
-	eventPreCompact, eventPostCompact, "InstructionsLoaded",
+	eventPostToolUse, eventPostToolUseFailure, "PostToolBatch", eventPermissionRequest, eventPermissionDenied,
+	eventNotify, "MessageDisplay", eventSubagentStart, eventSubagentStop, eventStop, eventStopFailure,
+	eventPreCompact, eventPostCompact, eventInstructionsLoaded,
 })
 
 var codebuddyEvents = identityEvents([]string{
 	eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventSessionStart, eventSessionEnd, eventStop,
-	eventSubagentStart, eventSubagentStop, "StopFailure", eventUserPromptSubmit, eventNotify, eventPermissionRequest,
-	"PermissionDenied", "Elicitation", "ElicitationResult", eventPreCompact, eventPostCompact, "InstructionsLoaded",
+	eventSubagentStart, eventSubagentStop, eventStopFailure, eventUserPromptSubmit, eventNotify, eventPermissionRequest,
+	eventPermissionDenied, "Elicitation", "ElicitationResult", eventPreCompact, eventPostCompact, eventInstructionsLoaded,
 	"ConfigChange", "TaskCreated", "TaskCompleted", "FileChanged", "CwdChanged", "WorktreeCreate", "WorktreeRemove",
 })
 
 var qoderEvents = identityEvents([]string{
 	eventSessionStart, eventSessionEnd, eventUserPromptSubmit, eventPreToolUse, eventPostToolUse, eventPostToolUseFailure,
-	eventPermissionRequest, "PermissionDenied", eventStop, "StopFailure", eventSubagentStart, eventSubagentStop,
-	eventPreCompact, eventPostCompact, eventNotify, "InstructionsLoaded", "ConfigChange", "CwdChanged", "FileChanged",
+	eventPermissionRequest, eventPermissionDenied, eventStop, eventStopFailure, eventSubagentStart, eventSubagentStop,
+	eventPreCompact, eventPostCompact, eventNotify, eventInstructionsLoaded, "ConfigChange", "CwdChanged", "FileChanged",
 	"WorktreeCreate", "WorktreeRemove", "Elicitation", "ElicitationResult",
 })
 
@@ -223,7 +223,7 @@ func baseDialectSpecs() map[string]hookSpec {
 		config.HarnessQoder: {
 			name: config.HarnessQoder, events: qoderEvents, nested: true, matcherPassthrough: true,
 			args: true, async: true, condition: true, shape: claudeShape,
-			matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, "StopFailure", "CwdChanged",
+			matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, eventStopFailure, "CwdChanged",
 				"WorktreeCreate", "WorktreeRemove"),
 			scriptVar: "$QODER_PROJECT_DIR",
 		},
@@ -295,7 +295,7 @@ func baseDialectSpecs() map[string]hookSpec {
 				eventPostToolUse, eventPostToolUse, eventPermissionRequest, eventPermissionRequest,
 				eventUserPromptSubmit, eventUserPromptSubmit, eventStop, eventStop, eventPostCompact, "PostCompaction",
 			),
-			nested: true, rootKeyed: true, userContainer: []string{"hooks"}, shape: claudeShape,
+			nested: true, rootKeyed: true, userContainer: []string{keyHooks}, shape: claudeShape,
 			matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPermissionRequest),
 			scriptVar:     "$DEVIN_PROJECT_DIR",
 			note:          "Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice",

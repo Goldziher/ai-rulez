@@ -83,16 +83,16 @@ const (
 
 // toolKinds maps the Claude tool names that have a cross-harness meaning.
 var toolKinds = map[string]ToolKind{
-	"Bash":         KindShell,
-	"Read":         KindRead,
-	"Edit":         KindEdit,
-	"Write":        KindEdit,
+	toolBash:       KindShell,
+	toolRead:       KindRead,
+	toolEdit:       KindEdit,
+	toolWrite:      KindEdit,
 	"MultiEdit":    KindEdit,
 	"NotebookEdit": KindEdit,
-	"WebFetch":     KindFetch,
-	"WebSearch":    KindSearch,
+	toolWebFetch:   KindFetch,
+	toolWebSearch:  KindSearch,
 	"Task":         KindAgent,
-	"Agent":        KindAgent,
+	toolAgent:      KindAgent,
 }
 
 // ParseRule parses a Claude Code permission rule: `Tool`, `Tool(specifier)` or
