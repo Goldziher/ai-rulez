@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -46,6 +47,8 @@ func TestEvalRun_GraderFlagValidation(t *testing.T) {
 	}{
 		{"unknown grader", func() { evalFlags.grader = "oracle" }, "unknown --grader"},
 		{"negative cap", func() { evalFlags.grader, evalFlags.graderMaxCost = evals.GraderBuiltin, -1 }, "--grader-max-cost"},
+		{"NaN cap", func() { evalFlags.grader, evalFlags.graderMaxCost = evals.GraderBuiltin, math.NaN() }, "finite"},
+		{"infinite cap", func() { evalFlags.grader, evalFlags.graderMaxCost = evals.GraderBuiltin, math.Inf(1) }, "finite"},
 		{"builtin needs cases mode", func() {
 			evalFlags.grader, evalFlags.mode, evalFlags.surface = evals.GraderBuiltin, evals.ModeActivation, evals.SurfaceRetrieval
 		}, "--grader needs --mode cases"},
