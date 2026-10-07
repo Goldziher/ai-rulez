@@ -111,10 +111,19 @@ no longer holds).`,
 				return
 			}
 			fmtError(err)
-			os.Exit(1)
+			os.Exit(pluginVerifyExitCode(err))
 		}
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
 	},
+}
+
+// pluginVerifyExitCode is 2 when the bundle differs from its sources and 1 when
+// the check could not run, matching the non-plugin verify.
+func pluginVerifyExitCode(err error) int {
+	if errors.Is(err, generator.ErrPluginDrift) {
+		return exitDrift
+	}
+	return 1
 }
 
 func init() {
