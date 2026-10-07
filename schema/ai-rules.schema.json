@@ -1034,7 +1034,7 @@
         },
         "enforce": {
           "type": "boolean",
-          "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate --strict reports it either way."
+          "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate reports it either way."
         }
       },
       "additionalProperties": false

@@ -131,7 +131,7 @@ func TestMergeConfigDocs_LocalOverlayCannotAddASigner(t *testing.T) {
 }
 
 func TestSigningLoadsFromTOML(t *testing.T) {
-	cfg, err := decodeConfigTOML([]byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n[signing]\nrequire = [\"lock\"]\nmax_age = \"90d\"\n[[signing.trust]]\nidentity = \"me\"\nissuer = \"i\"\n"), "config.toml")
+	cfg, err := decodeConfigTOML([]byte("version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n[signing]\nrequire = [\"lock\"]\nmax_age = \"90d\"\n[[signing.trust]]\nidentity = \"me\"\nissuer = \"i\"\n"), "config.toml")
 
 	require.NoError(t, err)
 	require.NotNil(t, cfg.Signing)

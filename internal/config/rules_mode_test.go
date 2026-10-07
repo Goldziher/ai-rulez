@@ -145,7 +145,7 @@ func TestLoadConfig_RulesTOML(t *testing.T) {
 	}{
 		{
 			"toml", "config.toml",
-			"version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\", \"cursor\"]\n\n[rules]\nmode = \"split\"\n\n[rules.mode_by_preset]\ncursor = \"inline\"\n",
+			"version = \"5.0\"\nname = \"proj\"\npresets = [\"claude\", \"cursor\"]\n\n[rules]\nmode = \"split\"\n\n[rules.mode_by_preset]\ncursor = \"inline\"\n",
 		},
 	}
 	for _, tt := range tests {

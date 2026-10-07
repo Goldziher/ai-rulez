@@ -18,7 +18,7 @@ func TestCheckVersion(t *testing.T) {
 		{version: "3.0", wantErr: "install ai-rulez 4.x"},
 		{version: "2.0", wantErr: "install ai-rulez 4.x"},
 		{version: "6.0", wantErr: "invalid version"},
-		{version: "", wantErr: "invalid version"},
+		{version: "", wantErr: "missing required key: version"},
 		{version: "dev", wantErr: "invalid version"},
 	}
 	for _, tt := range tests {

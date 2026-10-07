@@ -16,7 +16,11 @@
       "type": "object"
     },
     "delivery": {
-      "enum": ["static", "served", "both"],
+      "enum": [
+        "static",
+        "served",
+        "both"
+      ],
       "type": "string"
     },
     "patternList": {
@@ -53,7 +57,11 @@
           "type": "array"
         },
         "expect": {
-          "enum": ["pass", "fail", "not_applicable"]
+          "enum": [
+            "pass",
+            "fail",
+            "not_applicable"
+          ]
         },
         "files": {
           "additionalProperties": {
@@ -76,7 +84,11 @@
         },
         "in": {
           "default": "same-file",
-          "enum": ["same-file", "diff-added", "any-file"]
+          "enum": [
+            "same-file",
+            "diff-added",
+            "any-file"
+          ]
         },
         "regex": {
           "description": "An RE2 expression.",
@@ -124,7 +136,10 @@
             },
             "pass_files": {
               "description": "Hand the scoped files to the program as arguments or NUL-separated on stdin.",
-              "enum": ["args", "stdin0"]
+              "enum": [
+                "args",
+                "stdin0"
+              ]
             },
             "timeout_s": {
               "maximum": 900,
@@ -205,7 +220,10 @@
         },
         "paired": {
           "additionalProperties": false,
-          "oneOf": [{}, {}],
+          "oneOf": [
+            {},
+            {}
+          ],
           "properties": {
             "for_each": {
               "description": "A literal path with {rel}, or a glob.",
@@ -336,7 +354,12 @@
                 },
                 "skill_overrides": {
                   "additionalProperties": {
-                    "enum": ["on", "name-only", "user-invocable-only", "off"]
+                    "enum": [
+                      "on",
+                      "name-only",
+                      "user-invocable-only",
+                      "off"
+                    ]
                   },
                   "description": "Owns skillOverrides.<skill> for every listed skill.",
                   "type": "object"
@@ -358,7 +381,12 @@
                   "type": "string"
                 },
                 "source": {
-                  "enum": ["directory", "github", "git", "url"]
+                  "enum": [
+                    "directory",
+                    "github",
+                    "git",
+                    "url"
+                  ]
                 },
                 "url": {
                   "type": "string"
@@ -418,12 +446,26 @@
       "properties": {
         "effort": {
           "description": "Default reasoning effort applied across providers that support it. Each preset maps the value to its own vocabulary.",
-          "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "inherit"
+          ],
           "type": "string"
         },
         "effort_by_preset": {
           "additionalProperties": {
-            "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "inherit"
+            ],
             "type": "string"
           },
           "description": "Per-preset reasoning effort overrides. Beats `effort` for the matching preset; per-agent metadata still wins where the preset supports it.",
@@ -555,7 +597,12 @@
         "omit_agent_fields": {
           "description": "Agent frontmatter fields to suppress for every preset, so an agent stays loadable where a field is invalid (unconfigured model/provider, unrecognized tool name). Values: model, effort, tools, description.",
           "items": {
-            "enum": ["model", "effort", "tools", "description"],
+            "enum": [
+              "model",
+              "effort",
+              "tools",
+              "description"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -602,7 +649,7 @@
           "type": "string"
         },
         "enforce": {
-          "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate --strict reports it either way.",
+          "description": "Make lock --check, generate --locked and mcp --serve-skills fail on content whose approval is missing, stale, expired or insufficient. validate reports it either way.",
           "type": "boolean"
         },
         "exempt": {
@@ -628,7 +675,11 @@
         },
         "min_assurance": {
           "description": "Weakest assurance an approval may have to count. Default asserted.",
-          "enum": ["asserted", "review-linked", "signed"],
+          "enum": [
+            "asserted",
+            "review-linked",
+            "signed"
+          ],
           "type": "string"
         },
         "require_approval": {
@@ -688,13 +739,21 @@
         "hashes": {
           "default": "content",
           "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash; content (default) keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
-          "enum": ["full", "content", "none"],
+          "enum": [
+            "full",
+            "content",
+            "none"
+          ],
           "type": "string"
         },
         "style": {
           "default": "minimal",
           "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
-          "enum": ["detailed", "compact", "minimal"],
+          "enum": [
+            "detailed",
+            "compact",
+            "minimal"
+          ],
           "type": "string"
         },
         "text": {
@@ -722,7 +781,10 @@
             "items": {
               "additionalProperties": false,
               "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
-              "oneOf": [{}, {}],
+              "oneOf": [
+                {},
+                {}
+              ],
               "properties": {
                 "args": {
                   "items": {
@@ -753,7 +815,9 @@
                   "type": "integer"
                 },
                 "type": {
-                  "enum": ["command"]
+                  "enum": [
+                    "command"
+                  ]
                 }
               },
               "type": "object"
@@ -884,7 +948,11 @@
         },
         "isolation": {
           "description": "How the optimizer is confined: none (default) never confines it, auto confines when a sandbox backend works, require refuses to run without one.",
-          "enum": ["auto", "none", "require"],
+          "enum": [
+            "auto",
+            "none",
+            "require"
+          ],
           "type": "string"
         },
         "max_holdout_evals": {
@@ -942,13 +1010,22 @@
         "properties": {
           "format": {
             "description": "Read the source as an Open Knowledge Format bundle (a directory or git repository; path selects the bundle directory) and convert it to rules, context and skills at load time. See docs/okf.md.",
-            "enum": ["okf"],
+            "enum": [
+              "okf"
+            ],
             "type": "string"
           },
           "include": {
             "description": "What content types to import (defaults to all). MCP servers are not importable from an include.",
             "items": {
-              "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
+              "enum": [
+                "rules",
+                "context",
+                "skills",
+                "agents",
+                "commands",
+                "checks"
+              ],
               "type": "string"
             },
             "type": "array"
@@ -967,7 +1044,11 @@
           },
           "merge_strategy": {
             "description": "How to handle conflicting files: local-override (default, local wins), include-override (include wins), or error (fail on conflict)",
-            "enum": ["local-override", "include-override", "error"],
+            "enum": [
+              "local-override",
+              "include-override",
+              "error"
+            ],
             "type": "string"
           },
           "min_release_age": {
@@ -1004,7 +1085,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1065,7 +1148,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1230,7 +1315,11 @@
             },
             "require_fresh": {
               "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval.",
-              "enum": ["off", "warn", "error"],
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
               "type": "string"
             }
           },
@@ -1247,7 +1336,10 @@
           "description": "External scanners run with `validate --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "additionalProperties": false,
-            "anyOf": [{}, {}],
+            "anyOf": [
+              {},
+              {}
+            ],
             "properties": {
               "command": {
                 "items": {
@@ -1268,26 +1360,54 @@
                 "type": "array"
               },
               "format": {
-                "enum": ["sarif", "json", "adapter:snyk-json", "adapter:claude-validate-json"],
+                "enum": [
+                  "sarif",
+                  "json",
+                  "adapter:snyk-json",
+                  "adapter:claude-validate-json"
+                ],
                 "type": "string"
               },
               "inputs": {
                 "description": "Stage a read-only copy of exactly these kinds of content in a scratch directory and run the scanner there with HOME and TMPDIR inside it. The command's placeholders {stage}, {root}, {files}, {skill_dirs}, {out} and {tmp} are expanded as arguments, and no file path is appended.",
                 "items": {
-                  "enum": ["rules", "context", "skills", "agents", "commands", "checks", "hooks", "mcp", "imports"]
+                  "enum": [
+                    "rules",
+                    "context",
+                    "skills",
+                    "agents",
+                    "commands",
+                    "checks",
+                    "hooks",
+                    "mcp",
+                    "imports"
+                  ]
                 },
                 "type": "array"
               },
               "max_severity": {
                 "description": "Ceiling for this scanner's findings.",
-                "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low",
+                  "info",
+                  "error",
+                  "warning"
+                ]
               },
               "name": {
                 "type": "string"
               },
               "profile": {
                 "description": "An embedded scanner profile: its command, format, inputs, egress declaration, severity map and flag deny-list are the defaults of this entry. egress cannot be declared weaker than the profile's.",
-                "enum": ["agnix", "claude-plugin-validate", "cisco-skill-scanner", "snyk-agent-scan"],
+                "enum": [
+                  "agnix",
+                  "claude-plugin-validate",
+                  "cisco-skill-scanner",
+                  "snyk-agent-scan"
+                ],
                 "type": "string"
               },
               "required": {
@@ -1296,7 +1416,15 @@
               },
               "severity_map": {
                 "additionalProperties": {
-                  "enum": ["critical", "high", "medium", "low", "info", "error", "warning"]
+                  "enum": [
+                    "critical",
+                    "high",
+                    "medium",
+                    "low",
+                    "info",
+                    "error",
+                    "warning"
+                  ]
                 },
                 "description": "Maps a scanner rule id (glob) to a severity. Applied before any other mapping.",
                 "type": "object"
@@ -1316,7 +1444,11 @@
         },
         "fail_on": {
           "description": "Lowest severity that makes strict validation exit non-zero. Defaults to error.",
-          "enum": ["error", "warning", "none"],
+          "enum": [
+            "error",
+            "warning",
+            "none"
+          ],
           "type": "string"
         },
         "ignore": {
@@ -1354,7 +1486,13 @@
             "properties": {
               "kinds": {
                 "items": {
-                  "enum": ["rule", "context", "skill", "agent", "command"],
+                  "enum": [
+                    "rule",
+                    "context",
+                    "skill",
+                    "agent",
+                    "command"
+                  ],
                   "type": "string"
                 },
                 "type": "array"
@@ -1369,7 +1507,11 @@
                 "type": "boolean"
               },
               "type": {
-                "enum": ["string", "date", "enum"],
+                "enum": [
+                  "string",
+                  "date",
+                  "enum"
+                ],
                 "type": "string"
               },
               "values": {
@@ -1386,8 +1528,12 @@
           "type": "object"
         },
         "profile": {
-          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and ratchet settings win over the preset.",
-          "enum": ["default", "strict", "permissive"],
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset.",
+          "enum": [
+            "default",
+            "strict",
+            "permissive"
+          ],
           "type": "string"
         },
         "ratchet": {
@@ -1447,15 +1593,27 @@
             },
             "fail_on": {
               "description": "Lowest severity of a scanner finding that fails the run (scanner findings only). strict implies warning.",
-              "enum": ["error", "warning", "info"]
+              "enum": [
+                "error",
+                "warning",
+                "info"
+              ]
             },
             "isolation": {
               "description": "Process isolation of staged scanners: auto (default) confines when a backend works, require refuses to run unconfined, none never confines.",
-              "enum": ["auto", "none", "require"]
+              "enum": [
+                "auto",
+                "none",
+                "require"
+              ]
             },
             "preset": {
               "description": "Embedded scanner profiles that run with --external without an entry. Presets never contain a scanner that can send content off the machine. Default off.",
-              "enum": ["off", "baseline", "strict"]
+              "enum": [
+                "off",
+                "baseline",
+                "strict"
+              ]
             },
             "required": {
               "description": "Scanner names whose absence, outdated version or failure is an error.",
@@ -1502,7 +1660,11 @@
             },
             "scan_imports": {
               "description": "Content imported through includes and installed skills is scanned by default and `generate` refuses to write it when a finding is an error. Unset keeps each finding's severity; `error` or `warn` replaces the severity of every finding in imports; `off` opts out.",
-              "enum": ["off", "warn", "error"],
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
               "type": "string"
             },
             "secret_patterns": {
@@ -1533,7 +1695,12 @@
         },
         "severity": {
           "additionalProperties": {
-            "enum": ["error", "warning", "info", "off"],
+            "enum": [
+              "error",
+              "warning",
+              "info",
+              "off"
+            ],
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
@@ -1580,7 +1747,11 @@
         },
         "backend": {
           "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat.",
-          "enum": ["auto", "openaicompat", "literllm"],
+          "enum": [
+            "auto",
+            "openaicompat",
+            "literllm"
+          ],
           "type": "string"
         },
         "base_url": {
@@ -1667,11 +1838,19 @@
         },
         "min_release_age_source": {
           "description": "Where a tag's release time comes from: auto (default) tries the forge publish time, then the first time this machine saw the tag, then the commit date; the others use one source only. The commit date can be forged by anyone who can push.",
-          "enum": ["auto", "forge", "first-seen", "commit"]
+          "enum": [
+            "auto",
+            "forge",
+            "first-seen",
+            "commit"
+          ]
         },
         "scope": {
           "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only.",
-          "enum": ["all", "skills"]
+          "enum": [
+            "all",
+            "skills"
+          ]
         },
         "verify_tags": {
           "description": "Make generate and lock --check ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735). Needs the network; default false. The --verify-tags flag turns it on for one run.",
@@ -1907,11 +2086,18 @@
           },
           "type": {
             "description": "Source type.",
-            "enum": ["github", "git", "local", "url"],
+            "enum": [
+              "github",
+              "git",
+              "local",
+              "url"
+            ],
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -2009,7 +2195,11 @@
           "transport": {
             "default": "stdio",
             "description": "Transport protocol for MCP server communication (default: stdio)",
-            "enum": ["stdio", "http", "sse"],
+            "enum": [
+              "stdio",
+              "http",
+              "sse"
+            ],
             "type": "string"
           },
           "url": {
@@ -2018,7 +2208,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -2039,19 +2231,31 @@
         "include": {
           "description": "Content kinds to export. Defaults to all.",
           "items": {
-            "enum": ["rules", "context", "skills", "agents", "commands", "checks"],
+            "enum": [
+              "rules",
+              "context",
+              "skills",
+              "agents",
+              "commands",
+              "checks"
+            ],
             "type": "string"
           },
           "type": "array"
         },
         "index_style": {
           "description": "index.md scheme: body (default, the OKF 0.2 listing in the body) or frontmatter (title, version and entries in the frontmatter). Only index.md files differ.",
-          "enum": ["body", "frontmatter"],
+          "enum": [
+            "body",
+            "frontmatter"
+          ],
           "type": "string"
         },
         "spec": {
           "description": "OKF spec version to write. Only 0.2 is implemented.",
-          "enum": ["0.2"],
+          "enum": [
+            "0.2"
+          ],
           "type": "string"
         }
       },
@@ -2083,7 +2287,10 @@
         },
         "default": {
           "description": "Placement of items no pattern or frontmatter decides. Default core.",
-          "enum": ["core", "plugin"]
+          "enum": [
+            "core",
+            "plugin"
+          ]
         },
         "honor_targets": {
           "description": "Apply frontmatter targets to skills in .claude/skills, as is already done for commands. Default false.",
@@ -2114,7 +2321,11 @@
           "description": "Codex layout. manifest: legacy (default, .codex-plugin/plugin.json), root (Agent Plugins plugin.json with the interface under extensions.com.openai, skills/ and mcp.json) or both. marketplace writes .agents/plugins/marketplace.json for a single-plugin repository.",
           "properties": {
             "manifest": {
-              "enum": ["legacy", "root", "both"],
+              "enum": [
+                "legacy",
+                "root",
+                "both"
+              ],
               "type": "string"
             },
             "marketplace": {
@@ -2186,7 +2397,10 @@
                 "items": {
                   "additionalProperties": false,
                   "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
-                  "oneOf": [{}, {}],
+                  "oneOf": [
+                    {},
+                    {}
+                  ],
                   "properties": {
                     "args": {
                       "items": {
@@ -2353,7 +2567,11 @@
                 "type": "string"
               },
               "transport": {
-                "enum": ["stdio", "http", "sse"],
+                "enum": [
+                  "stdio",
+                  "http",
+                  "sse"
+                ],
                 "type": "string"
               },
               "url": {
@@ -2439,11 +2657,16 @@
           },
           "scope": {
             "description": "Install scope. Defaults to project.",
-            "enum": ["project", "user"],
+            "enum": [
+              "project",
+              "user"
+            ],
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -2522,7 +2745,10 @@
               {
                 "description": "Provider-backed preset",
                 "not": {
-                  "anyOf": [{}, {}]
+                  "anyOf": [
+                    {},
+                    {}
+                  ]
                 }
               }
             ],
@@ -2548,7 +2774,11 @@
               },
               "type": {
                 "description": "Output type (markdown/directory/json presets)",
-                "enum": ["markdown", "directory", "json"],
+                "enum": [
+                  "markdown",
+                  "directory",
+                  "json"
+                ],
                 "type": "string"
               }
             },
@@ -2589,7 +2819,13 @@
             "additionalProperties": false,
             "properties": {
               "name": {
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"],
+                "enum": [
+                  "template",
+                  "cursor-team-marketplace",
+                  "port",
+                  "aws-agent-registry",
+                  "kiro-steering"
+                ],
                 "type": "string"
               },
               "options": {
@@ -2641,7 +2877,10 @@
           "properties": {
             "access": {
               "description": "npm access level. Default restricted.",
-              "enum": ["restricted", "public"],
+              "enum": [
+                "restricted",
+                "public"
+              ],
               "type": "string"
             },
             "registry": {
@@ -2710,7 +2949,10 @@
         },
         "content": {
           "description": "descriptions (default) sends the name, description and frontmatter keys; full also sends the body.",
-          "enum": ["descriptions", "full"],
+          "enum": [
+            "descriptions",
+            "full"
+          ],
           "type": "string"
         },
         "exclude": {
@@ -2747,7 +2989,11 @@
             },
             "level": {
               "description": "Lowest severity ceiling of a dimension whose stable fail verdict fails the gate (default warning). A judge never reports above warning, so error gates no judged verdict.",
-              "enum": ["info", "warning", "error"],
+              "enum": [
+                "info",
+                "warning",
+                "error"
+              ],
               "type": "string"
             },
             "require_calibration": {
@@ -2769,7 +3015,10 @@
         },
         "on_secret": {
           "description": "withhold (default): an item holding a credential is never sent. redact: the credential is masked with [REDACTED:AR001] and the item is sent, marked redacted. An item with hidden characters is always withheld.",
-          "enum": ["withhold", "redact"],
+          "enum": [
+            "withhold",
+            "redact"
+          ],
           "type": "string"
         },
         "rubric": {
@@ -2789,7 +3038,10 @@
         },
         "skill_mode_fallback": {
           "description": "What generate --role does with a skill whose skill_mode is off on a harness with no documented per-skill setting: drop (default) leaves it out, serve moves it to served delivery. Lives here because TOML cannot use roles as both an array and a table.",
-          "enum": ["drop", "serve"],
+          "enum": [
+            "drop",
+            "serve"
+          ],
           "type": "string"
         }
       },
@@ -2865,7 +3117,11 @@
           },
           "delivery": {
             "additionalProperties": {
-              "enum": ["static", "served", "both"]
+              "enum": [
+                "static",
+                "served",
+                "both"
+              ]
             },
             "description": "Skill id or glob (domain/id for one domain) to how the skill reaches this role's agent: static (written to the skill trees), served (fetched over MCP on demand with `ai-rulez mcp --serve-skills --role`, never listed) or both. Same specificity rule as skill_mode; a skill's own `delivery` frontmatter wins, and the entries are inherited through extends with the child winning.",
             "type": "object"
@@ -2934,7 +3190,12 @@
           },
           "skill_mode": {
             "additionalProperties": {
-              "enum": ["on", "name-only", "user-invocable-only", "off"]
+              "enum": [
+                "on",
+                "name-only",
+                "user-invocable-only",
+                "off"
+              ]
             },
             "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",
             "type": "object"
@@ -2961,7 +3222,9 @@
             "type": "object"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -2972,17 +3235,26 @@
       "properties": {
         "baz_scoped": {
           "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
-          "enum": ["nested", "root"],
+          "enum": [
+            "nested",
+            "root"
+          ],
           "type": "string"
         },
         "mode": {
           "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split.",
-          "enum": ["split", "inline"],
+          "enum": [
+            "split",
+            "inline"
+          ],
           "type": "string"
         },
         "mode_by_preset": {
           "additionalProperties": {
-            "enum": ["split", "inline"],
+            "enum": [
+              "split",
+              "inline"
+            ],
             "type": "string"
           },
           "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
@@ -3001,10 +3273,14 @@
         "additionalProperties": false,
         "anyOf": [
           {
-            "required": ["name"]
+            "required": [
+              "name"
+            ]
           },
           {
-            "required": ["path"]
+            "required": [
+              "path"
+            ]
           }
         ],
         "properties": {
@@ -3117,7 +3393,10 @@
         },
         "dtype": {
           "description": "Stored vector type (default float32; float16 halves the file).",
-          "enum": ["float32", "float16"],
+          "enum": [
+            "float32",
+            "float16"
+          ],
           "type": "string"
         },
         "embeddings": {
@@ -3148,14 +3427,23 @@
         "fields": {
           "description": "Skill fields sent to the embedder (default: all four).",
           "items": {
-            "enum": ["name", "triggers", "keywords", "description"],
+            "enum": [
+              "name",
+              "triggers",
+              "keywords",
+              "description"
+            ],
             "type": "string"
           },
           "type": "array"
         },
         "fusion": {
           "description": "auto (default: cosine alone while every skill has a current vector, else rrf), rrf (reciprocal rank fusion) or weighted (min-max normalised convex mix).",
-          "enum": ["auto", "rrf", "weighted"],
+          "enum": [
+            "auto",
+            "rrf",
+            "weighted"
+          ],
           "type": "string"
         },
         "index_body": {
@@ -3172,14 +3460,12 @@
         },
         "mode": {
           "description": "lexical (default) never calls a network; hybrid fuses BM25F with cosine similarity over an embedding index; vector ranks by cosine alone. Overridden by AI_RULEZ_SEARCH_MODE and `search --mode`.",
-          "enum": ["lexical", "hybrid", "vector"],
+          "enum": [
+            "lexical",
+            "hybrid",
+            "vector"
+          ],
           "type": "string"
-        },
-        "vector_min_sim": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Abstention threshold: a skill whose cosine to the query is below it is not a match, and a vector ranking with none above it returns nothing. 0 (default) always lists the nearest skills. Take the value `search --eval` calibrates; cosines differ per model."
         },
         "query_timeout_ms": {
           "description": "Bound on the query embedding of one search; on timeout the ranking is lexical and says so (default 800).",
@@ -3191,6 +3477,12 @@
           "description": "The k of reciprocal rank fusion (default 60).",
           "minimum": 0,
           "type": "integer"
+        },
+        "vector_min_sim": {
+          "description": "Abstention threshold: a skill whose cosine to the query is below it is not a match, and a vector ranking with none above it returns nothing. 0 (default) always lists the nearest skills. Take the value `search --eval` calibrates; cosines differ per model.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
         },
         "weights": {
           "additionalProperties": false,
@@ -3251,7 +3543,11 @@
         "require": {
           "description": "Subjects that must carry a valid attestation. lock: lock --check and generate --locked fail without one. served: the MCP skill server refuses a skill that the signed lock does not pin. skill: it refuses a remote skill without a trusted publisher attestation.",
           "items": {
-            "enum": ["lock", "served", "skill"],
+            "enum": [
+              "lock",
+              "served",
+              "skill"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -3267,13 +3563,22 @@
           },
           "description": "Distinct trusted signers required per subject (k of n); default 1. The signatures are separate bundle files (sign --append).",
           "propertyNames": {
-            "enum": ["lock", "bundle", "skill", "sbom"]
+            "enum": [
+              "lock",
+              "bundle",
+              "skill",
+              "sbom"
+            ]
           },
           "type": "object"
         },
         "tlog": {
           "description": "Transparency log policy. Default: required when a certificate identity is trusted, off when only keys are trusted. off needs key mode.",
-          "enum": ["required", "optional", "off"],
+          "enum": [
+            "required",
+            "optional",
+            "off"
+          ],
           "type": "string"
         },
         "trust": {
@@ -3308,7 +3613,13 @@
               },
               "subject": {
                 "description": "What the signer may vouch for: the lock, a bundle, a skill, an SBOM or signed approvals (docs/approvals.md). Default lock.",
-                "enum": ["lock", "bundle", "skill", "sbom", "approval"],
+                "enum": [
+                  "lock",
+                  "bundle",
+                  "skill",
+                  "sbom",
+                  "approval"
+                ],
                 "type": "string"
               },
               "valid_from": {
@@ -3403,7 +3714,10 @@
           },
           "trust": {
             "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
-            "enum": ["error", "warn"],
+            "enum": [
+              "error",
+              "warn"
+            ],
             "type": "string"
           },
           "url": {
@@ -3464,7 +3778,11 @@
         },
         "otlp_protocol": {
           "description": "OTLP transport: http/json (default), http/protobuf or grpc. Ignored in a repository config.",
-          "enum": ["http/json", "http/protobuf", "grpc"],
+          "enum": [
+            "http/json",
+            "http/protobuf",
+            "grpc"
+          ],
           "type": "string"
         },
         "resource": {
@@ -3517,7 +3835,12 @@
         "oneOf": [
           {},
           {
-            "oneOf": [{}, {}, {}, {}]
+            "oneOf": [
+              {},
+              {},
+              {},
+              {}
+            ]
           }
         ],
         "properties": {
@@ -3618,7 +3941,15 @@
           },
           "type": {
             "description": "Predicate type of the flat form. Omit it to declare a spec (rule, skill, agent or command plus require).",
-            "enum": ["file_exists", "file_absent", "glob_count", "regex", "forbid", "key_equals", "generated_in_sync"],
+            "enum": [
+              "file_exists",
+              "file_absent",
+              "glob_count",
+              "regex",
+              "forbid",
+              "key_equals",
+              "generated_in_sync"
+            ],
             "type": "string"
           },
           "when_changed": {
@@ -3676,7 +4007,9 @@
     },
     "version": {
       "description": "Configuration version (5.0). Older configs are converted by `ai-rulez migrate v5`",
-      "enum": ["5.0"],
+      "enum": [
+        "5.0"
+      ],
       "type": "string"
     }
   },

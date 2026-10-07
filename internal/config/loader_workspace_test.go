@@ -13,7 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
-const memConfigTOML = "version = \"4.0\"\nname = \"mem\"\npresets = [\"claude\"]\n"
+const memConfigTOML = "version = \"5.0\"\nname = \"mem\"\npresets = [\"claude\"]\n"
 
 // memProject is a project that exists only in memory: nothing below the virtual
 // root is on the disk, so a read that bypasses the workspace fails.
