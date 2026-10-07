@@ -341,12 +341,14 @@ type fileWrite struct{ abs, digest, text, label string }
 // made for and be clean in git; all are checked before the first write, and a write that fails
 // puts the files already written back. The writes keep each file's mode and replace it atomically.
 func applyFiles(writes []fileWrite) ([]string, error) {
-	type original struct {
+	// pending pairs a rewrite with the file it replaces, so a rollback restores exactly that file.
+	type pending struct {
+		w    fileWrite
 		data []byte
 		mode os.FileMode
 	}
-	origs := make([]original, len(writes))
-	for i, w := range writes {
+	files := make([]pending, 0, len(writes))
+	for _, w := range writes {
 		data, mode, err := safefs.ReadRegularKeepMode(w.abs)
 		if err != nil {
 			return nil, oops.Wrapf(err, "read %s", w.label)
@@ -357,17 +359,17 @@ func applyFiles(writes []fileWrite) ([]string, error) {
 		if err := requireCleanInGit(w.abs); err != nil {
 			return nil, err
 		}
-		origs[i] = original{data, mode}
+		files = append(files, pending{w: w, data: data, mode: mode})
 	}
 	var applied []string
-	for i, w := range writes {
-		if err := safefs.WriteFileAtomicMode(w.abs, []byte(w.text), origs[i].mode); err != nil {
-			for j := range i {
-				_ = safefs.WriteFileAtomicMode(writes[j].abs, origs[j].data, origs[j].mode) //nolint:errcheck // best-effort rollback; the write error is the one to report
+	for i, f := range files {
+		if err := safefs.WriteFileAtomicMode(f.w.abs, []byte(f.w.text), f.mode); err != nil {
+			for _, done := range files[:i] {
+				_ = safefs.WriteFileAtomicMode(done.w.abs, done.data, done.mode) //nolint:errcheck // best-effort rollback; the write error is the one to report
 			}
-			return nil, oops.Wrapf(err, "write %s", w.label)
+			return nil, oops.Wrapf(err, "write %s", f.w.label)
 		}
-		applied = append(applied, w.label)
+		applied = append(applied, f.w.label)
 	}
 	return applied, nil
 }
