@@ -216,24 +216,45 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		Equals: map[string]any{keyCommand: cmdNPX, keyArgs: []string{"-y", aiRulezLatest, keyMCP}},
 	}
 
+	if claims, ok := settingsLegacyClaims(rel, cfg, selfEntry); ok {
+		return claims
+	}
+	if claims, ok := mcpLegacyClaims(rel, cfg, selfEntry); ok {
+		return claims
+	}
+	return harnessConfigLegacyClaims(rel, cfg)
+}
+
+// settingsLegacyClaims is LegacyMergeClaims for the documents that carry
+// permissions or hooks; ok is false when rel is not one of them.
+func settingsLegacyClaims(rel string, cfg *config.Config, selfEntry jsonmerge.Claim) (claims []jsonmerge.Claim, ok bool) {
 	switch rel {
 	case MergedDocCursorCLI:
-		return permissionsLegacyClaims(cfg, config.HarnessCursor)
+		return permissionsLegacyClaims(cfg, config.HarnessCursor), true
 	case MergedDocVSCodeSettings:
-		return permissionsLegacyClaims(cfg, config.HarnessCopilot)
+		return permissionsLegacyClaims(cfg, config.HarnessCopilot), true
 	case MergedDocDevinConfig:
 		// User scope merges [[hooks]] into the same document (settingsOutputs).
-		return append(permissionsLegacyClaims(cfg, "devin"), hooksLegacyClaims(cfg, config.HarnessDevin)...)
+		return append(permissionsLegacyClaims(cfg, "devin"), hooksLegacyClaims(cfg, config.HarnessDevin)...), true
 	case MergedDocGeminiSettings:
-		return append(geminiLegacyClaims(cfg, selfEntry), permissionsLegacyClaims(cfg, config.HarnessGemini)...)
+		return append(geminiLegacyClaims(cfg, selfEntry), permissionsLegacyClaims(cfg, config.HarnessGemini)...), true
 	case MergedDocCodexHooks:
-		return hooksLegacyClaims(cfg, config.HarnessCodex)
+		return hooksLegacyClaims(cfg, config.HarnessCodex), true
 	case MergedDocCursorHooks:
-		return hooksLegacyClaims(cfg, config.HarnessCursor)
+		return hooksLegacyClaims(cfg, config.HarnessCursor), true
 	case MergedDocAntigravityHooks:
-		return hooksLegacyClaims(cfg, config.HarnessAntigravity)
+		return hooksLegacyClaims(cfg, config.HarnessAntigravity), true
 	case MergedDocDevinHooks:
-		return hooksLegacyClaims(cfg, config.HarnessDevin)
+		return hooksLegacyClaims(cfg, config.HarnessDevin), true
+	}
+	return nil, false
+}
+
+// mcpLegacyClaims is LegacyMergeClaims for the MCP server documents; ok is false
+// when rel is not one of them. A document whose render fails is claimed as ok
+// with no claims, as it always was.
+func mcpLegacyClaims(rel string, cfg *config.Config, selfEntry jsonmerge.Claim) (claims []jsonmerge.Claim, ok bool) {
+	switch rel {
 	case MergedDocAgentsSettings:
 		claims := []jsonmerge.Claim{selfEntry}
 		if len(cfg.MCPServers) > 0 {
@@ -241,33 +262,48 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 				claims = append(claims, result.Claims...)
 			}
 		}
-		return claims
+		return claims, true
 	case MergedDocMCPJSON:
-		if len(cfg.MCPServers) == 0 {
-			return nil
-		}
-		var claims []jsonmerge.Claim
-		if result, err := (&CursorPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
-			claims = append(claims, result.Claims...)
-		}
-		if result, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
-			claims = append(claims, result.Claims...)
-		}
-		return claims
+		return sharedMCPJSONLegacyClaims(cfg), true
 	case MergedDocXumMCP:
-		return memberClaimsOf([]string{keyServers}, xumServers(cfg))
+		return memberClaimsOf([]string{keyServers}, xumServers(cfg)), true
 	case MergedDocPiMCP:
-		return memberClaimsOf([]string{keyMCPServers}, piMCPServers(cfg))
+		return memberClaimsOf([]string{keyMCPServers}, piMCPServers(cfg)), true
 	case MergedDocCursorMCP:
-		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry))
+		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry)), true
 	case MergedDocDevinMCP:
-		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, devinMCPEntry))
+		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, devinMCPEntry)), true
 	case MergedDocVSCodeMCP:
-		return memberClaimsOf([]string{keyServers}, mcpEntries(cfg, VSCodeMCPEntry))
+		return memberClaimsOf([]string{keyServers}, mcpEntries(cfg, VSCodeMCPEntry)), true
 	case MergedDocAgentsMCP:
 		if result, err := (&AntigravityPresetGenerator{}).renderMCPConfigJSON("", cfg); err == nil {
-			return append([]jsonmerge.Claim{selfEntry}, result.Claims...)
+			return append([]jsonmerge.Claim{selfEntry}, result.Claims...), true
 		}
+		return nil, true
+	}
+	return nil, false
+}
+
+// sharedMCPJSONLegacyClaims is the record of the project .mcp.json entries the
+// cursor and copilot presets render.
+func sharedMCPJSONLegacyClaims(cfg *config.Config) []jsonmerge.Claim {
+	if len(cfg.MCPServers) == 0 {
+		return nil
+	}
+	var claims []jsonmerge.Claim
+	if result, err := (&CursorPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+		claims = append(claims, result.Claims...)
+	}
+	if result, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+		claims = append(claims, result.Claims...)
+	}
+	return claims
+}
+
+// harnessConfigLegacyClaims is LegacyMergeClaims for the codex and opencode
+// config documents.
+func harnessConfigLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
+	switch rel {
 	case MergedDocCodexConfig:
 		claims := memberClaimsOf([]string{codexKeyMCPServers}, mcpEntries(cfg, CodexMCPEntry))
 		if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {

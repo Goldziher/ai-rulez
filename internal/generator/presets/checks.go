@@ -66,7 +66,8 @@ func AllChecks(cfg *config.Config, content *config.ContentTree) []config.Content
 	combined := append(append([]config.ContentFile(nil), content.Checks...), getAllDomainChecks(content)...)
 	seen := make(map[string]string, len(combined))
 	kept := make([]config.ContentFile, 0, len(combined))
-	for _, check := range combined {
+	for idx := range combined {
+		check := combined[idx]
 		if !config.IsValidCheckName(check.Name) {
 			warnOnce("Skipping a check with an invalid name; it is rendered into file names and markers, "+
 				"so only letters, digits, '.', '_' and '-' are allowed", "name", check.Name, "path", check.Path)
@@ -91,7 +92,8 @@ func AllChecks(cfg *config.Config, content *config.ContentTree) []config.Content
 // without targets applies to every preset).
 func ChecksForPreset(checks []config.ContentFile, preset string) []config.ContentFile {
 	var out []config.ContentFile
-	for _, check := range checks {
+	for idx := range checks {
+		check := checks[idx]
 		if check.Metadata != nil && !targetmatch.Allow(check.Metadata.Targets, []string{preset}) {
 			continue
 		}
