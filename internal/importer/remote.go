@@ -7,10 +7,10 @@ const (
 	// remoteSkills is a rulesync source: named skills (and rules) of a git
 	// repository. Skills become [[installed_skills]] pinned to the commit that was
 	// fetched; rules are copied.
-	remoteSkills remoteKind = "skills"
+	remoteSkills remoteKind = skillsDir
 	// remoteRules is the rules selection of a rulesync source: direct .md files of
 	// the repository's rules directory, copied into the tree.
-	remoteRules remoteKind = "rules"
+	remoteRules remoteKind = rulesDir
 	// remotePackage is an APM dependency: a package whose .apm/ content is copied
 	// into the tree, or a single skill that becomes an [[installed_skills]] entry.
 	remotePackage remoteKind = "package"

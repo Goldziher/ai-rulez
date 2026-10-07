@@ -72,7 +72,7 @@ func importClaudeSettings(p *Plan, r *reader) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		switch k {
-		case "hooks", "permissions", "$schema":
+		case litHooks, "permissions", litSchema:
 		default:
 			p.add(newFinding(StatusDropped, claudeSettingsFile, k, "", "settings key is not imported; set it by hand (env and skillOverrides can live in [claude.settings.managed])"))
 		}
@@ -128,7 +128,7 @@ func reportUnmappedPermissions(p *Plan, r *reader) {
 				} `json:"tools"`
 			}
 			if json.Unmarshal(stripJSONC(data), &doc) == nil && len(doc.Tools.Allowed)+len(doc.Tools.Exclude) > 0 {
-				p.add(newFinding(StatusUnsupported, geminiFile, "tools", "",
+				p.add(newFinding(StatusUnsupported, geminiFile, litTools, "",
 					"Gemini tool allow and exclude lists are not translated back to permission rules; add them to [permissions] by hand"))
 			}
 		}
@@ -141,7 +141,7 @@ func reportUnmappedPermissions(p *Plan, r *reader) {
 }
 
 // cursorToolNames maps the tool names of Cursor's permission rules to Claude Code's.
-var cursorToolNames = map[string]string{"Shell": "Bash", "Read": "Read", "Write": "Edit", "WebFetch": "WebFetch"}
+var cursorToolNames = map[string]string{litShell: "Bash", litRead: litRead, litWrite: litEdit, litWebFetch: litWebFetch}
 
 // importCursorPermissions reads .cursor/cli.json permissions.
 func importCursorPermissions(p *Plan, r *reader) {
@@ -219,12 +219,12 @@ func cursorRule(rule, action string) (string, bool) {
 	if !hasSpec {
 		return claude, true
 	}
-	if name == "Shell" {
+	if name == litShell {
 		if base, args, ok := strings.Cut(spec, ":"); ok {
 			return cursorShellArgsRule(base, args, action)
 		}
 	}
-	if name == "Shell" && action == actionDeny && spec != "" && !strings.Contains(spec, "*") {
+	if name == litShell && action == actionDeny && spec != "" && !strings.Contains(spec, "*") {
 		spec += ":*"
 	}
 	return claude + "(" + spec + ")", true
@@ -275,13 +275,13 @@ func bashPrefix(base, prefix string) string {
 
 // rulesyncToolNames maps rulesync's permission categories to Claude Code tools.
 var rulesyncToolNames = map[string]string{
-	"bash": "Bash", "read": "Read", "edit": "Edit", "write": "Write", "webfetch": "WebFetch",
-	"websearch": "WebSearch", "grep": "Grep", "glob": "Glob", "notebookedit": "NotebookEdit", "agent": "Agent",
+	"bash": "Bash", "read": litRead, "edit": litEdit, "write": litWrite, "webfetch": litWebFetch,
+	"websearch": "WebSearch", "grep": "Grep", litGlob: "Glob", "notebookedit": "NotebookEdit", "agent": "Agent",
 }
 
 // claudePathAliases are the tools whose path rules Claude Code reads as another
 // tool's: a Write(src/**) rule is an Edit(src/**) rule (rulesync does the same).
-var claudePathAliases = map[string]string{"Write": "Edit", "NotebookEdit": "Edit", "Glob": "Read"}
+var claudePathAliases = map[string]string{litWrite: litEdit, "NotebookEdit": litEdit, "Glob": litRead}
 
 // rulesyncPermissionBlocks are the top-level keys of permissions.jsonc that are
 // tool-scoped overrides rather than the shared `permission` block.
@@ -301,7 +301,7 @@ func (b *rulesyncPlanner) importPermissions(file string) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		switch k {
-		case "$schema":
+		case litSchema:
 		case rulesyncSharedPermission:
 			pb.rulesyncCategories(file, doc[k])
 		default:

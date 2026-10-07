@@ -19,18 +19,18 @@ type mcpFile struct {
 
 // mcpFiles are the project MCP files of the supported tools.
 var mcpFiles = []mcpFile{
-	{Path: ".mcp.json", Keys: []string{"mcpServers"}},
-	{Path: ".cursor/mcp.json", Keys: []string{"mcpServers"}},
-	{Path: ".vscode/mcp.json", Keys: []string{"servers", "mcpServers"}},
-	{Path: ".kiro/settings/mcp.json", Keys: []string{"mcpServers"}},
-	{Path: ".roo/mcp.json", Keys: []string{"mcpServers"}},
-	{Path: ".gemini/settings.json", Keys: []string{"mcpServers"}},
-	{Path: ".qwen/settings.json", Keys: []string{"mcpServers"}},
+	{Path: litMCPJSON, Keys: []string{litMCPServers}},
+	{Path: ".cursor/mcp.json", Keys: []string{litMCPServers}},
+	{Path: ".vscode/mcp.json", Keys: []string{"servers", litMCPServers}},
+	{Path: ".kiro/settings/mcp.json", Keys: []string{litMCPServers}},
+	{Path: ".roo/mcp.json", Keys: []string{litMCPServers}},
+	{Path: ".gemini/settings.json", Keys: []string{litMCPServers}},
+	{Path: ".qwen/settings.json", Keys: []string{litMCPServers}},
 }
 
 var mcpKnownKeys = map[string]bool{
 	"command": true, "args": true, "env": true, "url": true, "serverUrl": true, "type": true,
-	"transport": true, "headers": true, "disabled": true, "enabled": true, "description": true,
+	"transport": true, "headers": true, "disabled": true, "enabled": true, litDescription: true,
 }
 
 func importMCP(p *Plan, r *reader) {
@@ -142,7 +142,7 @@ func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPSe
 	if srv.URL == "" {
 		srv.URL = as[string](raw["serverUrl"])
 	}
-	srv.Description = as[string](raw["description"])
+	srv.Description = as[string](raw[litDescription])
 	if isOwnServer(srv) {
 		p.add(newFinding(StatusDropped, file, field, "", "this is ai-rulez's own MCP server, which generate adds itself"))
 		return srv, false
@@ -157,7 +157,7 @@ func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPSe
 		typ = as[string](raw["transport"])
 	}
 	switch strings.ToLower(typ) {
-	case "", "stdio":
+	case "", litStdio:
 		if srv.URL != "" {
 			srv.Transport = config.TransportHTTP
 			p.add(newFinding(StatusApproximated, file, field+".type", "mcp_servers."+name+".transport",

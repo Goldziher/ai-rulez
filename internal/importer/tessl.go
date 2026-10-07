@@ -121,7 +121,7 @@ func (b *tesslPlanner) importManifest() ([]tesslDep, error) {
 	var deps []tesslDep
 	for _, k := range keys {
 		switch k {
-		case "$schema", "name", "description", "version":
+		case litSchema, litName, litDescription, litVersion:
 		case "mode":
 			var mode string
 			if json.Unmarshal(doc[k], &mode) != nil || (mode != "managed" && mode != "vendored") {
@@ -230,7 +230,7 @@ func (b *tesslPlanner) pluginRoot(dir, version string) (string, bool) {
 }
 
 func (b *tesslPlanner) isPlugin(dir string) bool {
-	for _, marker := range []string{"skills", "rules", "evals", tesslPluginMeta} {
+	for _, marker := range []string{skillsDir, rulesDir, "evals", tesslPluginMeta} {
 		if _, ok := b.r.exists(path.Join(dir, marker)); ok {
 			return true
 		}
@@ -245,10 +245,10 @@ func (b *tesslPlanner) importPlugin(root, label string) {
 	if root != "" {
 		b.p.add(newFinding(StatusApproximated, root, "", "", "vendored copy of "+label+" imported as local files; the registry link is not kept, so it no longer updates"))
 	}
-	if sub := path.Join(root, "skills"); b.exists(sub) {
+	if sub := path.Join(root, skillsDir); b.exists(sub) {
 		b.n.importSkills(b.p, b.r, sub, b.opt, b.onSkip)
 	}
-	if sub := path.Join(root, "rules"); b.exists(sub) {
+	if sub := path.Join(root, rulesDir); b.exists(sub) {
 		b.n.importRules(b.p, b.r, sub, map[string]bool{}, b.onSkip)
 	}
 	b.importMeta(root)
@@ -273,7 +273,7 @@ func (b *tesslPlanner) importMeta(root string) {
 }
 
 // tesslHandled are the entries of a plugin directory importPlugin reads.
-var tesslHandled = map[string]bool{"skills": true, "rules": true, "evals": true, tesslPluginMeta: true}
+var tesslHandled = map[string]bool{skillsDir: true, rulesDir: true, "evals": true, tesslPluginMeta: true}
 
 // reportOthers reports the entries of a vendored plugin that are not read.
 // Documentation and the usual package files are named for what they are. The
@@ -293,7 +293,7 @@ func (b *tesslPlanner) reportOthers(root string) {
 			b.p.add(newFinding(StatusDropped, path.Join(root, name), "", "",
 				"documentation is reference material Tessl serves to the agent; copy what it needs into context/ by hand"))
 		case root == "":
-		case strings.HasPrefix(lower, "readme"), strings.HasPrefix(lower, "license"), strings.HasPrefix(lower, "changelog"):
+		case strings.HasPrefix(lower, "readme"), strings.HasPrefix(lower, litLicense), strings.HasPrefix(lower, "changelog"):
 		default:
 			b.p.add(newFinding(StatusDropped, path.Join(root, name), "", "", "not a Tessl plugin entry the importer reads; ignored"))
 		}
@@ -362,7 +362,7 @@ func (b *tesslPlanner) importScenario(dir, name, label string, skill *Item) {
 	}
 	id, synth := safeName(name)
 	if synth {
-		b.p.add(newFinding(StatusApproximated, dir, "name", "evals/"+id, "the scenario name has no ASCII letters or digits; a stable id was derived from it"))
+		b.p.add(newFinding(StatusApproximated, dir, litName, "evals/"+id, "the scenario name has no ASCII letters or digits; a stable id was derived from it"))
 	}
 	var rubric string
 	crit := path.Join(dir, "criteria.json")
@@ -484,7 +484,7 @@ func renderEvalFile(c evalCase) ([]byte, error) {
 	}
 	cs := yamlMap()
 	yamlAdd(cs, "id", yamlStr(id))
-	yamlAdd(cs, "description", yamlStr(c.description))
+	yamlAdd(cs, litDescription, yamlStr(c.description))
 	yamlAdd(cs, "prompt", yamlStr(c.prompt))
 	yamlAdd(cs, "expect_trigger", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"})
 	if c.rubric != "" {
@@ -510,12 +510,12 @@ func renderEvalFile(c evalCase) ([]byte, error) {
 func yamlMap() *yaml.Node { return &yaml.Node{Kind: yaml.MappingNode} }
 
 func yamlAdd(m *yaml.Node, key string, val *yaml.Node) {
-	m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}, val)
+	m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: key}, val)
 }
 
 // yamlStr is a string node; multi-line text is written as a literal block.
 func yamlStr(s string) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: s}
+	n := &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: s}
 	if strings.Contains(s, "\n") && !strings.ContainsAny(s, "\r\t") && !strings.HasPrefix(s, " ") && !strings.HasSuffix(s, " ") && !strings.Contains(s, " \n") {
 		n.Style = yaml.LiteralStyle
 	}

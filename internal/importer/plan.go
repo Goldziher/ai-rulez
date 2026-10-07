@@ -342,7 +342,7 @@ func (p *Plan) Finalize() {
 			if it.Kind == KindSkill {
 				it.Main = []byte(setFrontmatterName(string(it.Main), it.Name))
 			}
-			p.add(newFinding(StatusApproximated, src, "name", it.Rel(),
+			p.add(newFinding(StatusApproximated, src, litName, it.Rel(),
 				"name "+orig+" is already used by different content; renamed with a stable suffix"))
 			key = it.root() + string(it.Kind) + "\x00" + it.Name
 		}

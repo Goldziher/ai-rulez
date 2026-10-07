@@ -191,7 +191,7 @@ type ruleFM struct {
 	Targets     []string `yaml:"targets,omitempty"`
 }
 
-var validActivations = map[string]bool{"always": true, "glob": true, "auto": true, "manual": true}
+var validActivations = map[string]bool{litAlways: true, litGlob: true, autoFrom: true, ActionManual: true}
 
 // translateRule maps a native rule file's frontmatter onto ai-rulez rule
 // frontmatter. Keys come from Cursor (alwaysApply, globs, description), VS Code
@@ -210,51 +210,51 @@ func translateRule(source string, fm map[string]any, cursor bool) (ruleFM, []Fin
 
 	activation := ""
 	approximate := func(field, reason string) {
-		findings = append(findings, newFinding(StatusApproximated, source, field, "rules", reason))
+		findings = append(findings, newFinding(StatusApproximated, source, field, rulesDir, reason))
 	}
 	for _, k := range keys {
 		v := fm[k]
 		switch k {
-		case "description":
+		case litDescription:
 			if s, ok := v.(string); ok {
 				out.Description = strings.TrimSpace(s)
 			}
-		case "globs", "paths", "fileMatchPattern":
+		case litGlobs, "paths", "fileMatchPattern":
 			out.Globs = append(out.Globs, globsFrom(v)...)
 		case "applyTo":
 			g := globsFrom(v)
 			if len(g) == 1 && (g[0] == "**" || g[0] == "**/*") {
-				activation = "always"
+				activation = litAlways
 				continue
 			}
 			out.Globs = append(out.Globs, g...)
 		case "alwaysApply":
 			if b, ok := v.(bool); ok && b {
-				activation = "always"
+				activation = litAlways
 			}
 		case "trigger":
 			switch fmt.Sprint(v) {
 			case "always_on":
-				activation = "always"
-			case "glob":
-				activation = "glob"
+				activation = litAlways
+			case litGlob:
+				activation = litGlob
 			case "model_decision":
-				activation = "auto"
-			case "manual":
-				activation = "manual"
+				activation = autoFrom
+			case ActionManual:
+				activation = ActionManual
 			default:
 				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown trigger value"))
 			}
 		case "inclusion":
 			switch fmt.Sprint(v) {
-			case "always":
-				activation = "always"
+			case litAlways:
+				activation = litAlways
 			case "fileMatch":
-				activation = "glob"
-			case "auto":
-				activation = "auto"
-			case "manual":
-				activation = "manual"
+				activation = litGlob
+			case autoFrom:
+				activation = autoFrom
+			case ActionManual:
+				activation = ActionManual
 			default:
 				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown inclusion value"))
 			}
@@ -270,7 +270,7 @@ func translateRule(source string, fm map[string]any, cursor bool) (ruleFM, []Fin
 			} else {
 				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown priority value"))
 			}
-		case "name":
+		case litName:
 			// The rule is named after its file.
 		default:
 			findings = append(findings, newFinding(StatusDropped, source, k, "",
@@ -282,22 +282,22 @@ func translateRule(source string, fm map[string]any, cursor bool) (ruleFM, []Fin
 	switch {
 	case activation != "":
 	case len(out.Globs) > 0:
-		activation = "glob"
+		activation = litGlob
 	case cursor && out.Description != "":
-		activation = "auto"
-		approximate("description", "description-only auto-attach is approximated as activation: auto")
+		activation = autoFrom
+		approximate(litDescription, "description-only auto-attach is approximated as activation: auto")
 	case cursor:
-		activation = "manual"
+		activation = ActionManual
 		approximate("frontmatter", "a Cursor rule with no alwaysApply, globs or description is applied manually")
 	}
-	if activation == "glob" && len(out.Globs) == 0 {
+	if activation == litGlob && len(out.Globs) == 0 {
 		activation = ""
 		approximate("activation", "glob activation without globs; the rule is always applied")
 	}
-	if activation == "always" {
+	if activation == litAlways {
 		if len(out.Globs) > 0 {
 			// An always-on rule applies everywhere; keeping its globs would scope it.
-			findings = append(findings, newFinding(StatusApproximated, source, "globs", "rules",
+			findings = append(findings, newFinding(StatusApproximated, source, litGlobs, rulesDir,
 				"the rule is always on, so its globs are dropped (ai-rulez would otherwise scope it to them)"))
 			out.Globs = nil
 		}
@@ -349,10 +349,10 @@ func renderRule(meta ruleFM, body string) ([]byte, error) {
 // ai-rulez understands (its own fields, the shared agent model and the Agent
 // Skills spec). Every other key is tool specific.
 var auxKnownKeys = map[string]bool{
-	"name": true, "description": true, "model": true, "tools": true, "skills": true, "targets": true,
+	litName: true, litDescription: true, "model": true, litTools: true, skillsDir: true, litTargets: true,
 	"aliases": true, "keywords": true, "priority": true, "usage": true, "shortcut": true, "category": true,
-	"effort": true, "short-description": true, "license": true, "compatibility": true, "metadata": true,
-	"allowed-tools": true, "activation": true, "globs": true, "paths": true,
+	"effort": true, "short-description": true, litLicense: true, "compatibility": true, litMetadata: true,
+	"allowed-tools": true, "activation": true, litGlobs: true, "paths": true,
 }
 
 // reviewAuxFrontmatter inspects the frontmatter of an agent, command or skill.
@@ -381,15 +381,15 @@ func reviewAuxFrontmatter(p *Plan, source, text string) string {
 				"tool-specific key kept verbatim; ai-rulez has no field for it, so only presets that copy unknown keys render it"))
 		}
 	}
-	if tools, ok := meta["tools"].(string); ok && strings.Contains(tools, ",") && !lenient {
+	if tools, ok := meta[litTools].(string); ok && strings.Contains(tools, ",") && !lenient {
 		var list []string
 		for _, t := range strings.Split(tools, ",") {
 			if t = strings.TrimSpace(t); t != "" {
 				list = append(list, t)
 			}
 		}
-		if rewritten, ok := replaceFrontmatterKey(fm, "tools", "tools:\n  - "+strings.Join(list, "\n  - ")); ok {
-			p.add(newFinding(StatusApproximated, source, "tools", "tools",
+		if rewritten, ok := replaceFrontmatterKey(fm, litTools, "tools:\n  - "+strings.Join(list, "\n  - ")); ok {
+			p.add(newFinding(StatusApproximated, source, litTools, litTools,
 				"comma-separated tools string converted to a list"))
 			return "---\n" + rewritten + "\n---\n" + body
 		}
@@ -418,10 +418,10 @@ func setFrontmatterName(text, name string) string {
 		return text
 	}
 	meta, _ := parseFrontmatter(fm)
-	if cur, ok := meta["name"]; !ok || fmt.Sprint(cur) == name {
+	if cur, ok := meta[litName]; !ok || fmt.Sprint(cur) == name {
 		return text
 	}
-	rewritten, ok := replaceFrontmatterKey(fm, "name", "name: "+name)
+	rewritten, ok := replaceFrontmatterKey(fm, litName, "name: "+name)
 	if !ok {
 		return text
 	}
@@ -450,7 +450,7 @@ func nestUnknownKeys(text string, known map[string]bool) (out string, moved []st
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i], root.Content[i+1]
 		switch {
-		case k.Value == "metadata" && v.Kind == yaml.MappingNode:
+		case k.Value == litMetadata && v.Kind == yaml.MappingNode:
 			metadata = v
 			keep = append(keep, k, v)
 		case known[k.Value]:
@@ -468,7 +468,7 @@ func nestUnknownKeys(text string, known map[string]bool) (out string, moved []st
 		root.Content = keep
 	} else {
 		meta := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: unknown}
-		root.Content = append(keep, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "metadata"}, meta)
+		root.Content = append(keep, &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: litMetadata}, meta)
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)

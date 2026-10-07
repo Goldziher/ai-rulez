@@ -12,77 +12,77 @@ import (
 var rulesyncPresets = map[string]string{
 	"aiassistant":        "aiassistant",
 	"amp":                "amp",
-	"antigravity-cli":    "antigravity",
-	"antigravity-ide":    "antigravity",
+	"antigravity-cli":    litAntigravity,
+	"antigravity-ide":    litAntigravity,
 	"augmentcode":        "augment",
 	"augmentcode-legacy": "augment",
 	"bob":                "bob",
-	"claudecode":         "claude",
-	"claudecode-legacy":  "claude",
+	"claudecode":         litClaude,
+	"claudecode-legacy":  litClaude,
 	"cline":              "cline",
 	"codebuddy":          "codebuddy",
 	"codebuff":           "codebuff",
 	"codewhale":          "codewhale",
-	"codexcli":           "codex",
+	"codexcli":           litCodex,
 	"commandcode":        "commandcode",
-	"copilot":            "copilot",
+	litCopilot:           litCopilot,
 	"copilotcli":         "copilot-cli",
 	"cortexcode":         "cortex",
 	"crush":              "crush",
-	"cursor":             "cursor",
+	litCursor:            litCursor,
 	"deepagents":         "deepagents",
-	"devin":              "devin",
+	litDevin:             litDevin,
 	"dsh":                "dsh",
 	"factorydroid":       "factory",
-	"geminicli":          "gemini", // name of older rulesync releases; not in the current target list
+	"geminicli":          litGemini, // name of older rulesync releases; not in the current target list
 	"gitlabduo":          "gitlab-duo",
 	"goose":              "goose",
 	"grokcli":            "grok",
 	"hermesagent":        "hermes",
-	"junie":              "junie",
+	litJunie:             litJunie,
 	"kilo":               "kilo",
 	"kimi-code":          "kimi",
-	"kiro":               "kiro",
-	"kiro-cli":           "kiro",
-	"kiro-ide":           "kiro",
+	litKiro:              litKiro,
+	"kiro-cli":           litKiro,
+	"kiro-ide":           litKiro,
 	"lettacode":          "letta",
 	"mimocode":           "mimocode",
 	"musecode":           "muse",
 	"omp":                "omp",
 	"openclaw":           "openclaw",
-	"opencode":           "opencode",
+	litOpencode:          litOpencode,
 	"pi":                 "pi",
 	"pool":               "poolside",
 	"qoder":              "qoder",
 	"qwencode":           "qwen",
 	"reasonix":           "reasonix",
 	"replit":             "replit",
-	"roo":                "zoocode",
+	"roo":                litZoocode,
 	"rovodev":            "rovodev",
-	"takt":               "takt",
+	litTakt:              litTakt,
 	"trae":               "trae",
 	"vibe":               "vibe",
-	"warp":               "warp",
-	"warpcli":            "warp",
-	"windsurf":           "devin", // renamed devin upstream
+	litWarp:              litWarp,
+	"warpcli":            litWarp,
+	"windsurf":           litDevin, // renamed devin upstream
 	"zcode":              "zcode",
 	"zed":                "zed",
-	"zoocode":            "zoocode",
+	litZoocode:           litZoocode,
 }
 
 // rulesyncUnsupported explains the targets that have no preset.
 var rulesyncUnsupported = map[string]string{
 	"agentsmd":           "AGENTS.md is written by several presets (codex, opencode, amp, xum, pi); enable one of them or set agents_md",
 	"agentsskills":       "the shared .agents/skills output has no preset of its own; any preset that writes it covers it",
-	"antigravity-plugin": "plugin packaging targets have no ai-rulez preset",
-	"augmentcode-plugin": "plugin packaging targets have no ai-rulez preset",
-	"claudecode-plugin":  "plugin packaging targets have no ai-rulez preset",
+	"antigravity-plugin": litNoPluginPreset,
+	"augmentcode-plugin": litNoPluginPreset,
+	"claudecode-plugin":  litNoPluginPreset,
 	"continue":           "Continue is end of life and has no ai-rulez preset",
-	"devin-plugin":       "plugin packaging targets have no ai-rulez preset",
-	"kimi-code-plugin":   "plugin packaging targets have no ai-rulez preset",
+	"devin-plugin":       litNoPluginPreset,
+	"kimi-code-plugin":   litNoPluginPreset,
 	"tabnine":            "the legacy Tabnine CLI has no ai-rulez preset",
-	"vibe-plugin":        "plugin packaging targets have no ai-rulez preset",
-	"zcode-plugin":       "plugin packaging targets have no ai-rulez preset",
+	"vibe-plugin":        litNoPluginPreset,
+	"zcode-plugin":       litNoPluginPreset,
 }
 
 // rulesyncTargetFile names the root file a target without a preset selects in an
@@ -118,11 +118,11 @@ func mapItemTargets(p *Plan, source string, raw []string) []string {
 		sort.Strings(unmapped)
 		reason := "no ai-rulez preset for " + strings.Join(unmapped, ", ") + "; the file is not written for them"
 		if len(out) == 0 {
-			p.add(newFinding(StatusNeedsAction, source, "targets", "targets",
+			p.add(newFinding(StatusNeedsAction, source, litTargets, litTargets,
 				reason+"; the original names were kept in targets, so the file reaches no output until you set targets"))
 			return unmapped
 		}
-		p.add(newFinding(StatusApproximated, source, "targets", "targets", reason))
+		p.add(newFinding(StatusApproximated, source, litTargets, litTargets, reason))
 	}
 	return out
 }
