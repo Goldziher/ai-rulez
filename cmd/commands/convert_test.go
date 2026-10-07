@@ -328,3 +328,37 @@ func TestConvertAllowFindingsCodeFormat(t *testing.T) {
 		}
 	}
 }
+
+// Nothing to import is not a failure: a script that converts a fleet of
+// repositories must not stop at the ones that have no tool files.
+func TestRunConvert_NothingToConvertExitsZero(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func()
+	}{
+		{"dry run", func() { convertDryRun = true }},
+		{"write", func() { convertWrite = true }},
+		{"json", func() { convertDryRun, convertFormat = true, "json" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Hi\n"), 0o644))
+			resetConvertFlags(t, dir)
+			tt.setup()
+			var out bytes.Buffer
+
+			// Act
+			code := runConvert(context.Background(), &out, false)
+
+			// Assert
+			assert.Equal(t, 0, code)
+			_, err := os.Stat(filepath.Join(dir, ".ai-rulez"))
+			assert.True(t, os.IsNotExist(err), "nothing is written")
+			if convertFormat == "text" {
+				assert.Contains(t, out.String(), "Nothing to convert")
+			}
+		})
+	}
+}
