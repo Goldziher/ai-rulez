@@ -102,3 +102,22 @@ func ReplaceOldHeaderBlock(content, newBlock string) string {
 	out += newBlock
 	return out
 }
+
+// WithoutManagedBlock returns content without the ai-rulez managed block, in
+// either its fenced or its old header-only form.
+func WithoutManagedBlock(content string) string {
+	switch {
+	case strings.Contains(content, BeginMarker):
+		return ReplaceFencedBlock(content, "")
+	case strings.Contains(content, OldHeader):
+		var kept []string
+		for _, line := range strings.Split(content, "\n") {
+			if strings.TrimSpace(line) == OldHeader {
+				break
+			}
+			kept = append(kept, line)
+		}
+		return strings.Join(kept, "\n")
+	}
+	return content
+}

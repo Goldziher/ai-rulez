@@ -227,7 +227,7 @@ func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts Cl
 	}
 	// A generated file someone edited holds work ai-rulez cannot recreate.
 	if !opts.RemoveEdited && output.RawContent == nil && g.editedGenerated(abs) {
-		g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --force to remove it anyway")
+		g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --include-edited to remove it anyway")
 		return true
 	}
 	// A hand-written file in a shared rules folder is not ours to delete.
