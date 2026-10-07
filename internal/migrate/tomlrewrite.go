@@ -230,16 +230,17 @@ func hasPrefix(path, prefix []string) bool {
 	return len(path) >= len(prefix) && equalPath(path[:len(prefix)], prefix)
 }
 
-const (
-	lintTable     = "lint"
-	lintBudgetKey = "budget"
-)
+const lintTable = "lint"
+
+// isOldRatchetKey reports the pre-v5 spellings of [lint.ratchet]: [lint.budget]
+// (4.0) and its replacement [lint.tolerate] (later 4.x).
+func isOldRatchetKey(k string) bool { return k == "budget" || k == "tolerate" }
 
 var (
 	versionValue = regexp.MustCompile(`^(\s*version\s*=\s*)(?:"[^"]*"|'[^']*'|\d[0-9.]*)(.*)$`)
-	budgetHeader = regexp.MustCompile(`^(\s*\[\[?\s*lint\s*\.\s*)budget\b`)
-	budgetKey    = regexp.MustCompile(`^(\s*)budget(\s*[.=])`)
-	lintBudgetKV = regexp.MustCompile(`^(\s*lint\s*\.\s*)budget\b`)
+	budgetHeader = regexp.MustCompile(`^(\s*\[\[?\s*lint\s*\.\s*)(?:budget|tolerate)\b`)
+	budgetKey    = regexp.MustCompile(`^(\s*)(?:budget|tolerate)(\s*[.=])`)
+	lintBudgetKV = regexp.MustCompile(`^(\s*lint\s*\.\s*)(?:budget|tolerate)\b`)
 )
 
 // rootKey finds the root-level statement for key, or -1.
@@ -298,18 +299,18 @@ func (d *tomlDoc) insertLines(at int, newLines ...string) {
 	d.stmts = parseTOMLDoc(d.text()).stmts
 }
 
-// renameLintBudget renames `[lint.budget]` (and dotted spellings) to
+// renameLintBudget renames `[lint.budget]` and `[lint.tolerate]` (and dotted spellings) to
 // `[lint.ratchet]` and reports how many lines changed.
 func (d *tomlDoc) renameLintBudget() int { //nolint:gocyclo // the three spellings of the table (header, dotted-in-table, dotted-at-root) in one place
 	n := 0
 	for _, s := range d.stmts {
 		line := d.lines[s.start]
 		switch {
-		case s.header && len(s.path) >= 2 && s.path[0] == lintTable && s.path[1] == lintBudgetKey:
+		case s.header && len(s.path) >= 2 && s.path[0] == lintTable && isOldRatchetKey(s.path[1]):
 			d.lines[s.start] = budgetHeader.ReplaceAllString(line, "${1}ratchet")
-		case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0 && s.key[0] == lintBudgetKey:
+		case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0 && isOldRatchetKey(s.key[0]):
 			d.lines[s.start] = budgetKey.ReplaceAllString(line, "${1}ratchet${2}")
-		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable && s.key[1] == lintBudgetKey:
+		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable && isOldRatchetKey(s.key[1]):
 			d.lines[s.start] = lintBudgetKV.ReplaceAllString(line, "${1}ratchet")
 		default:
 			continue
@@ -385,6 +386,55 @@ func (d *tomlDoc) replaceAll(oldStr, newStr string) int {
 		}
 		d.lines[i] = strings.ReplaceAll(l, oldStr, newStr)
 		n++
+	}
+	return n
+}
+
+// presetsStmt is the root `presets` statement, or -1.
+func (d *tomlDoc) presetsStmt() int { return d.rootKey("presets") }
+
+// renamePreset renames a built-in preset in the root `presets` array and
+// reports how many lines changed.
+func (d *tomlDoc) renamePreset(oldName, newName string) int {
+	i := d.presetsStmt()
+	if i < 0 {
+		return 0
+	}
+	n := 0
+	for l := d.stmts[i].start; l < d.stmts[i].end; l++ {
+		line := d.lines[l]
+		for _, q := range []string{`"`, `'`} {
+			line = strings.ReplaceAll(line, q+oldName+q, q+newName+q)
+		}
+		if line != d.lines[l] {
+			d.lines[l] = line
+			n++
+		}
+	}
+	return n
+}
+
+// dropPreset removes a built-in preset from the root `presets` array and
+// reports how many lines changed.
+func (d *tomlDoc) dropPreset(name string) int {
+	i := d.presetsStmt()
+	if i < 0 {
+		return 0
+	}
+	n := 0
+	for l := d.stmts[i].start; l < d.stmts[i].end; l++ {
+		line := d.lines[l]
+		for _, q := range []string{`"`, `'`} {
+			item := q + name + q
+			line = strings.Replace(line, item+", ", "", 1)
+			line = strings.Replace(line, ", "+item, "", 1)
+			line = strings.Replace(line, item+",", "", 1)
+			line = strings.Replace(line, item, "", 1)
+		}
+		if line != d.lines[l] {
+			d.lines[l] = line
+			n++
+		}
 	}
 	return n
 }

@@ -1,0 +1,13 @@
+version = "4.0"
+name = "main-4x"
+presets = ["claude", "windsurf", "continue-dev"]
+
+[lint.tolerate]
+AR201 = 2
+
+[[hooks]]
+event = "Stop"
+targets = ["claude"]
+
+[[hooks.hooks]]
+command = "ai-rulez usage prune --keep-days 30 && ai-rulez usage export --to file out.ndjson"
