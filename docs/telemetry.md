@@ -167,7 +167,7 @@ never echoed back; `sample` is 0..1. Headers are read from the environment at fl
   "endpoint": "https://collector.example.org:4318",
   "protocol": "http/json",
   "scope": { "fields": ["event.name", "ai_rulez.item.kind", "..."], "fields_hash": "sha256 of the fields" },
-  "granted_at": "2026-10-06T09:00:00Z",
+  "granted_at": "2026-10-06T09:00:00.000Z",
   "ai_rulez_version": "5.0.0"
 }
 ```
