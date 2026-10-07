@@ -67,7 +67,7 @@ func (s *PolicyCLITestSuite) config(extra string) {
 }
 
 func (s *PolicyCLITestSuite) run(env map[string]string, args ...string) *testutil.CLIResult {
-	merged := map[string]string{"HOME": s.home, "XDG_CONFIG_HOME": filepath.Join(s.home, ".config"), "AI_RULEZ_POLICY": ""}
+	merged := map[string]string{"HOME": s.home, "USERPROFILE": s.home, "XDG_CONFIG_HOME": filepath.Join(s.home, ".config"), "AI_RULEZ_POLICY": ""}
 	for k, v := range env {
 		merged[k] = v
 	}

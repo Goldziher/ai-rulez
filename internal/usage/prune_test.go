@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -83,7 +84,7 @@ func TestPruneLog(t *testing.T) {
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
 			assert.Equal(t, strings.Join(tt.want, "\n")+"\n", string(data))
-			if tt.rewrites {
+			if tt.rewrites && runtime.GOOS != "windows" { // Windows reports 0o666 for every file
 				info, err := os.Stat(path)
 				require.NoError(t, err)
 				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
