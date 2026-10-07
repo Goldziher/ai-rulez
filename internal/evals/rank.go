@@ -175,18 +175,7 @@ func rateOrInf(v *float64) float64 {
 
 func rankOne(in *RankInput, skill RankSkill) RankRow {
 	row := RankRow{ID: skill.ID, SkillTokens: skill.SkillTokens, Feedback: in.Feedback[skill.ID], Notes: skill.Notes}
-	var record *SkillRecord
-	if in.Store != nil {
-		record, _ = in.Store.Get(skill.ID)
-	}
-	if record != nil && !record.Verified() {
-		row.Unverified = true
-		row.Notes = append(slices.Clone(row.Notes), "the eval record is unverified (unsigned, or signed with another key): ignored; run `ai-rulez eval run` to record a signed result")
-		record = nil
-	}
-	if record != nil && !record.HasRun() {
-		record = nil // only an activation measurement: there is no eval result to rank on
-	}
+	record := verifiedRecord(in, skill.ID, &row)
 	if in.Uses != nil {
 		n := in.Uses[skill.ID]
 		row.Uses = &n
@@ -202,6 +191,30 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 		return row
 	}
 
+	decideKeepOrPrune(in, &row, record)
+	return row
+}
+
+// verifiedRecord returns the skill's eval record when it is signed and holds a
+// run, noting on row when an unverified record was ignored.
+func verifiedRecord(in *RankInput, id string, row *RankRow) *SkillRecord {
+	var record *SkillRecord
+	if in.Store != nil {
+		record, _ = in.Store.Get(id)
+	}
+	if record != nil && !record.Verified() {
+		row.Unverified = true
+		row.Notes = append(slices.Clone(row.Notes), "the eval record is unverified (unsigned, or signed with another key): ignored; run `ai-rulez eval run` to record a signed result")
+		return nil
+	}
+	if record != nil && !record.HasRun() {
+		return nil // only an activation measurement: there is no eval result to rank on
+	}
+	return record
+}
+
+// decideKeepOrPrune sets the action of a skill that needs no rewrite.
+func decideKeepOrPrune(in *RankInput, row *RankRow, record *SkillRecord) {
 	// "Never used" needs a log that recorded something, or an empty or wrong log
 	// would mark every skill for pruning.
 	unused := row.Uses != nil && *row.Uses == 0 && totalUses(in.Uses) > 0
@@ -209,7 +222,7 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 	switch {
 	case unused && !showsValue:
 		row.Action = ActionPrune
-		row.Reasons = pruneReasons(&row, record != nil)
+		row.Reasons = pruneReasons(row, record != nil)
 	case unused:
 		row.Action = ActionReview
 		row.Reasons = []string{"never used in the usage log, but evals show a benefit (" + deltaText(row.AblationDelta) + "): check that it triggers in practice"}
@@ -220,7 +233,6 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 		row.Action = ActionKeep
 		row.Reasons = []string{}
 	}
-	return row
 }
 
 // reliableDelta says whether the score carries an ablation delta measured over

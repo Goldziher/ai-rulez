@@ -156,11 +156,6 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if err := checkOptions(opts); err != nil {
 		return nil, err
 	}
-	switch opts.MaxCostMode {
-	case "", CostModeExpected, CostModeHigh:
-	default:
-		return nil, fmt.Errorf("unknown max cost mode %q (use %s or %s)", opts.MaxCostMode, CostModeExpected, CostModeHigh)
-	}
 	e := &engine{opts: opts, counter: opts.Counter, threshold: defaultThreshold, price: opts.Price, store: opts.Store, model: opts.Model, runnerName: "none"}
 	if e.counter == nil {
 		c, err := tokens.New("")
@@ -205,6 +200,11 @@ func checkOptions(opts *RunOptions) error {
 		if err := checkMoney(name, v); err != nil {
 			return err
 		}
+	}
+	switch opts.MaxCostMode {
+	case "", CostModeExpected, CostModeHigh:
+	default:
+		return fmt.Errorf("unknown max cost mode %q (use %s or %s)", opts.MaxCostMode, CostModeExpected, CostModeHigh)
 	}
 	return nil
 }
@@ -336,7 +336,14 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 	}
 	est := EstimateRunWith(e.opts.Params, p.req, skillTokens(skill, e.counter), e.opts.EstimateRuns, e.price, e.counter)
 	p.run.Estimate = &est
-	if old, ok := e.store.Get(skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) &&
+	e.markCached(&p)
+	return p, nil
+}
+
+// markCached marks a planned skill as replayable when the store holds a signed,
+// gradable result for the same inputs.
+func (e *engine) markCached(p *plannedSkill) {
+	if old, ok := e.store.Get(p.skill.ID); ok && !e.opts.Force && cacheable(&old.Score) && old.CacheKey == e.cacheKey(&p.run) &&
 		// The key is an unkeyed hash a committed file can carry, so also require the
 		// recorded digests to match what is on disk now: an edited skill always re-runs.
 		old.Digest == p.run.Digest && old.CasesDigest == p.run.CasesDigest {
@@ -347,7 +354,6 @@ func (e *engine) plan(skill *Skill) (plannedSkill, error) {
 			p.run.Warnings = append(p.run.Warnings, "the stored result is unverified (not recorded and signed on this machine); re-running")
 		}
 	}
-	return p, nil
 }
 
 // lockDigestOf computes the lock's digest of a skill directory; a variable so a
@@ -407,75 +413,14 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 	case p.req == nil:
 		// not changed, no cases or invalid: nothing to execute
 	case run.Status == RunCached:
-		old, _ := e.store.Get(p.skill.ID)
-		score := old.Score
-		run.Score, run.Passing = &score, score.Scored > 0 && score.PassRate >= e.threshold
-		old.Passing = run.Passing
-		if run.LockDigest != "" {
-			old.LockDigest = run.LockDigest // same skill content: backfill a record that predates lock_digest
-		}
-		if run.Passing {
-			old.LastPass = &PassMark{Digest: old.Digest, Date: old.Date}
-		}
+		e.replayCached(p, &run)
 	case e.opts.DryRun:
 		run.Status = RunDryRun
 	case e.opts.MaxCostUSD > 0 && e.report.CostUSD >= e.opts.MaxCostUSD:
 		run.Status = RunOverBudget
 		run.Error = fmt.Sprintf("spend $%.2f reached --max-cost $%.2f", e.report.CostUSD, e.opts.MaxCostUSD)
 	default:
-		p.req.MaxCostUSD = remaining(e.opts.MaxCostUSD, e.report.CostUSD)
-		resp, err := e.opts.Runner.Run(ctx, p.req)
-		if err != nil {
-			run.Status, run.Error = RunError, err.Error()
-			if e.opts.MaxCostUSD > 0 {
-				// A failed call may already have spent money and reported none of it:
-				// assume the whole remaining budget so the run stops.
-				e.report.CostUSD = round(math.Max(e.report.CostUSD, e.opts.MaxCostUSD))
-			}
-			return run
-		}
-		if e.opts.Grader != nil {
-			before := e.opts.Grader.SpentUSD()
-			warnings, refused := gradeRubrics(ctx, e.opts.Grader, p.req.Cases, resp)
-			run.Warnings = append(run.Warnings, warnings...)
-			graded := round(math.Max(0, e.opts.Grader.SpentUSD()-before))
-			e.report.GraderCostUSD, e.report.CostUSD = round(e.report.GraderCostUSD+graded), round(e.report.CostUSD+graded)
-			if refused != nil {
-				run.Status, run.Error = RunError, "the built-in grader is not allowed to run: "+refused.Error()
-				return run
-			}
-		}
-		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price}) //nolint:contextcheck // local grading is bounded by GradeOptions.CommandTimeout
-		charged := score.CostUSD
-		if budget := p.req.MaxCostUSD; budget > 0 {
-			switch {
-			case !costReported(resp):
-				// Reporting nothing is not spending nothing: charge the whole budget this skill
-				// was given, so the next skill is refused rather than run on an unknown spend.
-				charged = max(charged, budget)
-				run.Warnings = append(run.Warnings, fmt.Sprintf("the runner reported no cost; assumed the whole remaining --max-cost budget ($%.2f) was spent", budget))
-			case score.CostUSD > budget:
-				run.Warnings = append(run.Warnings, fmt.Sprintf("cost $%.2f exceeds the $%.2f budget this skill was given (--max-cost is checked between skills, not enforced inside a runner)", score.CostUSD, budget))
-			}
-		}
-		e.report.CostUSD = round(e.report.CostUSD + charged)
-		reportedCost := score.CostUSD
-		score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
-		run.Status, run.Score, run.Cases = RunRan, &score, cases
-		if p.run.Estimate != nil {
-			run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens).WithUsage(p.run.Estimate, score.RunInputTokens, score.RunOutputTokens, e.opts.Params)
-		}
-		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
-		if !cacheable(&score) {
-			return run // never store an infrastructure failure: it would mask the last good result
-		}
-		stored := score
-		stored.CostUSD = reportedCost // a cache hit must not replay an assumed spend
-		e.store.Put(SkillRecord{
-			ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, LockDigest: run.LockDigest, CacheKey: e.cacheKey(&run),
-			Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,
-			Date: e.opts.Date, Passing: run.Passing, Score: stored, Estimate: run.EstimateVsActual,
-		})
+		return e.executeLive(ctx, p, run)
 	}
 	return run
 }
@@ -541,4 +486,77 @@ func skillTokens(skill *Skill, counter tokens.Counter) int {
 		return 0
 	}
 	return counter.Count(string(data))
+}
+
+// replayCached fills run from the stored result of an identical earlier run.
+func (e *engine) replayCached(p *plannedSkill, run *SkillRun) {
+	old, _ := e.store.Get(p.skill.ID)
+	score := old.Score
+	run.Score, run.Passing = &score, score.Scored > 0 && score.PassRate >= e.threshold
+	old.Passing = run.Passing
+	if run.LockDigest != "" {
+		old.LockDigest = run.LockDigest // same skill content: backfill a record that predates lock_digest
+	}
+	if run.Passing {
+		old.LastPass = &PassMark{Digest: old.Digest, Date: old.Date}
+	}
+}
+
+// executeLive sends one planned skill to the runner, grades the answer and stores
+// the result.
+func (e *engine) executeLive(ctx context.Context, p *plannedSkill, run SkillRun) SkillRun {
+	p.req.MaxCostUSD = remaining(e.opts.MaxCostUSD, e.report.CostUSD)
+	resp, err := e.opts.Runner.Run(ctx, p.req)
+	if err != nil {
+		run.Status, run.Error = RunError, err.Error()
+		if e.opts.MaxCostUSD > 0 {
+			// A failed call may already have spent money and reported none of it:
+			// assume the whole remaining budget so the run stops.
+			e.report.CostUSD = round(math.Max(e.report.CostUSD, e.opts.MaxCostUSD))
+		}
+		return run
+	}
+	if e.opts.Grader != nil {
+		before := e.opts.Grader.SpentUSD()
+		warnings, refused := gradeRubrics(ctx, e.opts.Grader, p.req.Cases, resp)
+		run.Warnings = append(run.Warnings, warnings...)
+		graded := round(math.Max(0, e.opts.Grader.SpentUSD()-before))
+		e.report.GraderCostUSD, e.report.CostUSD = round(e.report.GraderCostUSD+graded), round(e.report.CostUSD+graded)
+		if refused != nil {
+			run.Status, run.Error = RunError, "the built-in grader is not allowed to run: "+refused.Error()
+			return run
+		}
+	}
+	score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price}) //nolint:contextcheck // local grading is bounded by GradeOptions.CommandTimeout
+	charged := score.CostUSD
+	if budget := p.req.MaxCostUSD; budget > 0 {
+		switch {
+		case !costReported(resp):
+			// Reporting nothing is not spending nothing: charge the whole budget this skill
+			// was given, so the next skill is refused rather than run on an unknown spend.
+			charged = max(charged, budget)
+			run.Warnings = append(run.Warnings, fmt.Sprintf("the runner reported no cost; assumed the whole remaining --max-cost budget ($%.2f) was spent", budget))
+		case score.CostUSD > budget:
+			run.Warnings = append(run.Warnings, fmt.Sprintf("cost $%.2f exceeds the $%.2f budget this skill was given (--max-cost is checked between skills, not enforced inside a runner)", score.CostUSD, budget))
+		}
+	}
+	e.report.CostUSD = round(e.report.CostUSD + charged)
+	reportedCost := score.CostUSD
+	score.CostUSD = round(math.Max(score.CostUSD, charged)) // show what the run was charged
+	run.Status, run.Score, run.Cases = RunRan, &score, cases
+	if p.run.Estimate != nil {
+		run.EstimateVsActual = NewEstimateRecord(p.run.Estimate, reportedCost, score.RunTokens).WithUsage(p.run.Estimate, score.RunInputTokens, score.RunOutputTokens, e.opts.Params)
+	}
+	run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
+	if !cacheable(&score) {
+		return run // never store an infrastructure failure: it would mask the last good result
+	}
+	stored := score
+	stored.CostUSD = reportedCost // a cache hit must not replay an assumed spend
+	e.store.Put(SkillRecord{
+		ID: p.skill.ID, Digest: run.Digest, CasesDigest: run.CasesDigest, LockDigest: run.LockDigest, CacheKey: e.cacheKey(&run),
+		Runner: e.runnerName, Harness: e.opts.Harness, Model: e.model, Ablation: e.opts.Ablation,
+		Date: e.opts.Date, Passing: run.Passing, Score: stored, Estimate: run.EstimateVsActual,
+	})
+	return run
 }

@@ -287,7 +287,7 @@ func setDigest(ids []string, digests map[string]string) string {
 	sort.Strings(sorted)
 	h := sha256.New()
 	for _, id := range sorted {
-		_, _ = fmt.Fprintf(h, "%s\x00%s\n", id, digests[id])
+		h.Write([]byte(id + "\x00" + digests[id] + "\n"))
 	}
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
