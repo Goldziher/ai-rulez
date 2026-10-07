@@ -439,8 +439,9 @@ reply or a budget stop). It needs `--allow-llm` and `allow_network` like a run; 
 `--no-write` only prints. Exit `2` when a record does not pass (it is still written).
 
 `verifiers run --gate-llm` then lets a failing `llm` verifier declared `severity = "error"` keep that severity, with
-`advisory` false and a note naming the figures, but only while the record is current: the same `llm` predicate
-(checklist, model, `max_diff_bytes`), examples, prompt version and model it was measured with, and a passing status.
+`advisory` false and a note naming the figures, but only while the record is current: the same predicate tree around
+the `llm` predicate (its checklist, model and `max_diff_bytes`, and any `not`, `all` or `any` around it), the same
+`when_changed` and `exclude`, examples, prompt version and model it was measured with, and a passing status.
 Anything else (no record, a failed bar, an edited checklist, another model) leaves the verdict capped at `warning` and
 the note says why. Without `--gate-llm` nothing changes.
 
