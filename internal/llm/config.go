@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"math"
 	"net"
 	"net/url"
 	"regexp"
@@ -140,8 +141,8 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	flt := func(name string, dst *float64) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
 			f, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a number")
+			if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a finite number")
 				return
 			}
 			*dst = f
@@ -320,7 +321,10 @@ func isLoopbackHost(host string) bool {
 func (c Config) validateNumbers() []string {
 	var out []string
 	for name, v := range map[string]float64{"max_cost_usd": c.MaxCostUSD, "price_input_per_mtok": c.PriceInputPerMTok, "price_output_per_mtok": c.PriceOutputPerMTok} {
-		if v < 0 {
+		switch {
+		case math.IsNaN(v) || math.IsInf(v, 0):
+			out = append(out, name+" must be a finite number")
+		case v < 0:
 			out = append(out, name+" must not be negative")
 		}
 	}
