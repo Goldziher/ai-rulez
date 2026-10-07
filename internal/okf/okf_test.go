@@ -220,6 +220,18 @@ func TestBuildIndexesEncodeAwkwardFileNames(t *testing.T) {
 	assert.Empty(t, load(t, files).Validate())
 }
 
+func TestLoadBoundsTotalMarkdownSize(t *testing.T) {
+	old := maxTotalSize
+	maxTotalSize = 100
+	t.Cleanup(func() { maxTotalSize = old })
+	m := fstest.MapFS{}
+	for _, n := range []string{"a.md", "b.md", "c.md"} {
+		m[n] = &fstest.MapFile{Data: []byte(strings.Repeat("x", 60))}
+	}
+	_, err := Load(m)
+	assert.ErrorContains(t, err, "in total")
+}
+
 func TestTitleFromPathKeepsMultiByteRunes(t *testing.T) {
 	assert.Equal(t, "Über Uns", TitleFromPath("über-uns.md"))
 	assert.Equal(t, "日本語 Notes", TitleFromPath("日本語_notes.md"))
