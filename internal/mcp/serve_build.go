@@ -218,6 +218,16 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 			return nil, oops.Wrapf(err, "read %s", lockfile.FileName)
 		}
 	}
+	// A serving build refuses only the served skills the policy denies; the
+	// lock commands (ignoreLock) keep failing on them, so a denied pin is never
+	// silently dropped from the lock.
+	var denied map[string]string
+	if bo.admit && !bo.ignoreLock {
+		denied = takeServedDenials(cfg, lock)
+	}
+	if err := config.CheckPolicy(cfg); err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
 	profile, preset := st.Profile, st.Preset
 	gen := generator.NewGenerator(cfg)
 	roleKeeps, err := st.selectRole(cfg, gen)
@@ -283,7 +293,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	if bo.admit {
 		adm := Admission{
 			Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
-			DefaultTrust: defaultTrust(cfg), Now: st.Clock.Now,
+			DefaultTrust: defaultTrust(cfg), Now: st.Clock.Now, PolicyDenied: denied,
 		}
 		raw := catalog
 		admit := func(log logger.Logger) *Catalog {
@@ -369,9 +379,6 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	cfg, err := proj.Load(ctx, wd, opts...)
 	if err != nil {
 		return nil, oops.Wrapf(err, "load configuration")
-	}
-	if err := config.CheckPolicy(cfg); err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
 	}
 	return cfg, nil
 }
