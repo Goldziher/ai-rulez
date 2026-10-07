@@ -22,7 +22,7 @@ var (
 
 // SkillCmd is the top-level skill command
 var SkillCmd = &cobra.Command{
-	Use:   "skill",
+	Use:   kindSkill,
 	Short: "Manage installed skills",
 	Long:  `Manage named skills installed from external repositories.`,
 }
@@ -81,7 +81,7 @@ follows its tip) and never upgrades a range pin. Use "ai-rulez update --kind
 skill [name...]" to move range pins to the newest allowed tag.`,
 	Run: func(_ *cobra.Command, args []string) {
 		lockCheck = false
-		if code := runLockFor("skill", args); code != 0 {
+		if code := runLockFor(kindSkill, args); code != 0 {
 			os.Exit(code)
 		}
 	},
@@ -194,11 +194,11 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(skills))
 		for i, s := range skills {
 			output[i] = map[string]interface{}{
-				keyName:  s.Name,
-				"source": incl.RedactURL(s.Source),
-				keyPath:  s.Path,
-				"ref":    s.Ref,
-				keyType:  s.Type,
+				keyName:   s.Name,
+				keySource: incl.RedactURL(s.Source),
+				keyPath:   s.Path,
+				"ref":     s.Ref,
+				keyType:   s.Type,
 			}
 		}
 		data, err := json.MarshalIndent(output, "", "  ")

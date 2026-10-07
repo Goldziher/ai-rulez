@@ -245,7 +245,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 
 	output := map[string]interface{}{
 		keySuccess: true,
-		keyType:    "skill",
+		keyType:    kindSkill,
 		keyName:    result.Name,
 		keyPath:    result.FullPath,
 	}

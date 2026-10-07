@@ -88,7 +88,7 @@ func normalizeFormatFlags(cmd *cobra.Command) error {
 	if jf == nil {
 		return nil
 	}
-	if jf.Changed && jf.Value.String() == "true" {
+	if jf.Changed && jf.Value.String() == valueTrue {
 		if ff.Changed && ff.Value.String() != formatJSON {
 			return oops.Hint("Drop --json, or use --format json.").
 				Errorf("--json conflicts with --format %s", ff.Value.String())
@@ -96,7 +96,7 @@ func normalizeFormatFlags(cmd *cobra.Command) error {
 		return ff.Value.Set(formatJSON) //nolint:wrapcheck // a string flag cannot fail to take "json"
 	}
 	if ff.Value.String() == formatJSON {
-		return jf.Value.Set("true") //nolint:wrapcheck // a bool flag cannot fail to take "true"
+		return jf.Value.Set(valueTrue) //nolint:wrapcheck // a bool flag cannot fail to take "true"
 	}
 	return nil
 }

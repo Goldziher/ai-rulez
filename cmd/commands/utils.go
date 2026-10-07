@@ -57,7 +57,7 @@ func askYesNo(prompt string) bool {
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == "yes"
+	return response == "y" || response == answerYes
 }
 
 // workingDir is the process working directory, "" when it cannot be read. The

@@ -188,9 +188,9 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(includes))
 		for i, inc := range includes {
 			output[i] = map[string]interface{}{
-				keyName:  inc.Name,
-				"source": incl.RedactURL(inc.Source),
-				keyType:  inc.Type,
+				keyName:   inc.Name,
+				keySource: incl.RedactURL(inc.Source),
+				keyType:   inc.Type,
 			}
 		}
 		data, err := json.MarshalIndent(output, "", "  ")

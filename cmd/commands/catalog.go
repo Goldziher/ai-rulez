@@ -340,7 +340,7 @@ func checkCatalogSite(out io.Writer, doc *govview.CatalogDocV2, site *catalogsit
 	for _, group := range []struct {
 		label string
 		paths []string
-	}{{"missing", res.Missing}, {"changed", res.Changed}, {"unexpected", res.Extra}} {
+	}{{"missing", res.Missing}, {labelChanged, res.Changed}, {"unexpected", res.Extra}} {
 		for _, p := range group.paths {
 			w.printf("  %s  %s\n", group.label, p)
 		}
@@ -402,7 +402,7 @@ func publishedTextHasSecret(it *govview.CatalogItemV2) bool {
 func lockSummary(l catalogLock) string {
 	switch {
 	case !l.Present:
-		return "none"
+		return valueNone
 	case !l.HasContentPins:
 		return "no content pins"
 	case l.SourcesInSync != nil && *l.SourcesInSync:
