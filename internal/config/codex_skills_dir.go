@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -40,33 +41,39 @@ func ValidateOutputPath(key, dir string) error {
 		return fmt.Errorf("%s %q must be a relative path inside the project", key, dir)
 	}
 	norm := strings.ReplaceAll(dir, "\\", "/")
-	if norm == "" || norm == "." || strings.ContainsRune(norm, 0) || strings.HasPrefix(norm, "/") ||
-		path.IsAbs(norm) || (len(norm) > 1 && norm[1] == ':') {
+	if unsafeOutputPathShape(norm) || slices.Contains(strings.Split(norm, "/"), "..") {
 		return bad()
-	}
-	segments := strings.Split(norm, "/")
-	for _, seg := range segments {
-		if seg == ".." {
-			return bad()
-		}
 	}
 	clean := path.Clean(norm)
 	if clean == ".." || strings.HasPrefix(clean, "../") || clean == "." {
 		return bad()
 	}
 	cleanSegments := strings.Split(clean, "/")
-	for _, seg := range cleanSegments {
-		if IsGitDirName(seg) {
-			return fmt.Errorf("%s %q must not be inside %s", key, dir, gitDirName)
-		}
+	if slices.ContainsFunc(cleanSegments, IsGitDirName) {
+		return fmt.Errorf("%s %q must not be inside %s", key, dir, gitDirName)
 	}
-	first := strings.ToLower(cleanSegments[0])
-	for _, protected := range []string{aiRulezDirName, altConfigDirName, ".hg", ".svn"} {
-		if clean == protected || strings.HasPrefix(strings.ToLower(clean), protected+"/") || first == protected {
-			return fmt.Errorf("%s %q must not be inside %s", key, dir, protected)
-		}
+	if protected := protectedOutputRoot(clean, strings.ToLower(cleanSegments[0])); protected != "" {
+		return fmt.Errorf("%s %q must not be inside %s", key, dir, protected)
 	}
 	return nil
+}
+
+// unsafeOutputPathShape reports a slash path that is empty, ".", absolute, holds
+// a NUL byte or carries a drive prefix.
+func unsafeOutputPathShape(norm string) bool {
+	return norm == "" || norm == "." || strings.ContainsRune(norm, 0) || strings.HasPrefix(norm, "/") ||
+		path.IsAbs(norm) || (len(norm) > 1 && norm[1] == ':')
+}
+
+// protectedOutputRoot returns the VCS or ai-rulez control directory that clean
+// lies inside, or "" when it lies inside none. first is the lowercased first path segment.
+func protectedOutputRoot(clean, first string) string {
+	for _, protected := range []string{aiRulezDirName, altConfigDirName, ".hg", ".svn"} {
+		if clean == protected || strings.HasPrefix(strings.ToLower(clean), protected+"/") || first == protected {
+			return protected
+		}
+	}
+	return ""
 }
 
 // IsGitDirName reports whether one path segment names a git directory under any

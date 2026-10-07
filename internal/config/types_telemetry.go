@@ -142,13 +142,8 @@ func (t *TelemetryConfig) Validate() []string {
 			TelemetryProtocolHTTPJSON, TelemetryProtocolHTTPProtobuf, TelemetryProtocolGRPC)
 	}
 	if t.OTLPEndpoint != "" {
-		endpoint := NormalizeTelemetryEndpoint(t.OTLPEndpoint, t.OTLPProtocol)
-		if problem := ValidateTelemetryEndpoint(endpoint); problem != "" {
+		if problem := otlpEndpointProblem(t.OTLPEndpoint, t.OTLPProtocol); problem != "" {
 			add("telemetry.otlp_endpoint: %s", problem)
-		} else if t.OTLPProtocol == TelemetryProtocolGRPC {
-			if parsed, err := url.Parse(endpoint); err == nil && strings.Trim(parsed.Path, "/") != "" {
-				add("telemetry.otlp_endpoint: a grpc endpoint names host[:port] only, without a path")
-			}
 		}
 	}
 	for _, name := range t.HeadersEnv {
@@ -167,6 +162,21 @@ func (t *TelemetryConfig) Validate() []string {
 	}
 	problems = append(problems, ValidateTelemetryResource(t.Resource)...)
 	return problems
+}
+
+// otlpEndpointProblem describes what is wrong with an OTLP endpoint for the
+// given protocol; empty means acceptable.
+func otlpEndpointProblem(raw, protocol string) string {
+	endpoint := NormalizeTelemetryEndpoint(raw, protocol)
+	if problem := ValidateTelemetryEndpoint(endpoint); problem != "" {
+		return problem
+	}
+	if protocol == TelemetryProtocolGRPC {
+		if parsed, err := url.Parse(endpoint); err == nil && strings.Trim(parsed.Path, "/") != "" {
+			return "a grpc endpoint names host[:port] only, without a path"
+		}
+	}
+	return ""
 }
 
 // NormalizeTelemetryEndpoint returns the endpoint in URL form. A gRPC endpoint is

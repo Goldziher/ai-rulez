@@ -73,6 +73,17 @@ func (c *Config) OKFInclude() []string {
 }
 
 func (c *Config) validateOKF() error {
+	if err := c.validateIncludeFormats(); err != nil {
+		return err
+	}
+	if c.OKF == nil {
+		return nil
+	}
+	return c.OKF.validate()
+}
+
+// validateIncludeFormats rejects an include format other than okf.
+func (c *Config) validateIncludeFormats() error {
 	for i := range c.Includes {
 		if f := c.Includes[i].Format; f != "" && f != IncludeFormatOKF {
 			return oops.
@@ -82,17 +93,38 @@ func (c *Config) validateOKF() error {
 				Errorf("unknown format %q for include %q", f, c.Includes[i].Name)
 		}
 	}
-	if c.OKF == nil {
-		return nil
+	return nil
+}
+
+// validate checks the [okf] table.
+func (o *OKFConfig) validate() error {
+	if err := o.validateSpecAndStyle(); err != nil {
+		return err
 	}
-	if c.OKF.Spec != "" && c.OKF.Spec != OKFSpecVersion {
+	if err := o.validateDir(); err != nil {
+		return err
+	}
+	for _, kind := range o.Include {
+		if !slices.Contains(okfKinds, strings.ToLower(strings.TrimSpace(kind))) {
+			return oops.
+				With("field", "okf.include").
+				With("actual_value", kind).
+				With("valid_values", okfKinds).
+				Errorf("unknown kind %q in okf.include", kind)
+		}
+	}
+	return nil
+}
+
+func (o *OKFConfig) validateSpecAndStyle() error {
+	if o.Spec != "" && o.Spec != OKFSpecVersion {
 		return oops.
 			With("field", "okf.spec").
-			With("actual_value", c.OKF.Spec).
+			With("actual_value", o.Spec).
 			Hint("Only OKF spec "+OKFSpecVersion+" is implemented.").
-			Errorf("unsupported okf.spec %q", c.OKF.Spec)
+			Errorf("unsupported okf.spec %q", o.Spec)
 	}
-	if st := c.OKF.IndexStyle; st != "" && st != OKFIndexStyleBody && st != OKFIndexStyleFrontmatter {
+	if st := o.IndexStyle; st != "" && st != OKFIndexStyleBody && st != OKFIndexStyleFrontmatter {
 		return oops.
 			With("field", "okf.index_style").
 			With("actual_value", st).
@@ -100,7 +132,11 @@ func (c *Config) validateOKF() error {
 			Hint(`Use "body" (the OKF 0.2 listing) or "frontmatter".`).
 			Errorf("unknown okf.index_style %q", st)
 	}
-	if dir := strings.TrimSpace(c.OKF.Dir); dir != "" {
+	return nil
+}
+
+func (o *OKFConfig) validateDir() error {
+	if dir := strings.TrimSpace(o.Dir); dir != "" {
 		if err := ValidateScopePath(dir); err != nil {
 			return oops.
 				With("field", "okf.dir").
@@ -114,20 +150,11 @@ func (c *Config) validateOKF() error {
 				Wrapf(err, "invalid okf.dir %q", dir)
 		}
 	}
-	if top := strings.SplitN(filepath.ToSlash(filepath.Clean(c.OKF.Dir)), "/", 2)[0]; top == ".git" || strings.HasPrefix(top, ".ai-rulez") {
+	if top := strings.SplitN(filepath.ToSlash(filepath.Clean(o.Dir)), "/", 2)[0]; top == ".git" || strings.HasPrefix(top, ".ai-rulez") {
 		return oops.
 			With("field", "okf.dir").
 			Hint("Choose a directory outside the configuration directory and .git, such as docs/okf.").
-			Errorf("okf.dir %q must not be inside %s", c.OKF.Dir, top)
-	}
-	for _, kind := range c.OKF.Include {
-		if !slices.Contains(okfKinds, strings.ToLower(strings.TrimSpace(kind))) {
-			return oops.
-				With("field", "okf.include").
-				With("actual_value", kind).
-				With("valid_values", okfKinds).
-				Errorf("unknown kind %q in okf.include", kind)
-		}
+			Errorf("okf.dir %q must not be inside %s", o.Dir, top)
 	}
 	return nil
 }
