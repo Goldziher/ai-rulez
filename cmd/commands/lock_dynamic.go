@@ -66,7 +66,8 @@ func lockHasName(f *lockfile.File, name string) bool {
 			return true
 		}
 	}
-	for _, e := range f.Served {
+	for i := range f.Served {
+		e := &f.Served[i]
 		if e.Name == name {
 			return true
 		}
@@ -145,9 +146,10 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 		next.Served = mergeServed(next.Served, res, pick)
 	}
 	if refresh(lockfile.KindSource) {
-		for _, e := range res.Sources {
+		for i := range res.Sources {
+			e := &res.Sources[i]
 			if pick(e.Name) {
-				next.Set(lockfile.KindSource, e)
+				next.Set(lockfile.KindSource, *e)
 			}
 		}
 		next.Source = keepConfigured(next.Source, sourceNames(cfg, next.Served))
@@ -157,7 +159,18 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 }
 
 func usesDynamicSkillsFor(cfg *config.Config, extras []mcp.ServeSetup) bool {
+	if len(extras) == 0 && pluginOnly(cfg) {
+		return false
+	}
 	return len(extras) > 0 || len(cfg.SkillSources) > 0 || !cfg.LockEnforceOptedOut() || cfg.DeliveryConfigured(cfg.Content) || cfg.RolesServeSkills()
+}
+
+// pluginOnly reports a plugin source that configures no preset, such as a
+// marketplace member: its skills ship in the bundles `generate --plugin` writes,
+// and the skills server cannot serve it (serving renders skills with a preset),
+// so lock pins its content and no served skills.
+func pluginOnly(cfg *config.Config) bool {
+	return cfg.Plugin != nil && len(cfg.Presets) == 0
 }
 
 func viewLabel(view string) string {
@@ -178,23 +191,25 @@ func mergeServed(existing []lockfile.Entry, res *mcp.LockResult, pick func(strin
 	}
 	fresh := map[string]bool{}
 	next := &lockfile.File{Served: existing}
-	for _, e := range res.Served {
+	for i := range res.Served {
+		e := &res.Served[i]
 		fresh[e.View+"\x00"+e.Name] = true
 		if pick(e.Name) {
-			next.Set(lockfile.KindServed, e)
+			next.Set(lockfile.KindServed, *e)
 		}
 	}
 	out := next.Served[:0:0]
-	for _, e := range next.Served {
+	for i := range next.Served {
+		e := &next.Served[i]
 		switch {
 		case evaluated[e.View]:
 			if fresh[e.View+"\x00"+e.Name] {
-				out = append(out, e)
+				out = append(out, *e)
 			}
 		case len(mcp.ViewKeySources(e.View)) == 0 && e.View != "":
 			// a role or profile that no longer builds: its pins are stale
 		default:
-			out = append(out, e)
+			out = append(out, *e)
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -213,7 +228,8 @@ func sourceNames(cfg *config.Config, served []lockfile.Entry) map[string]bool {
 	for i := range cfg.SkillSources {
 		out[cfg.SkillSources[i].Name] = true
 	}
-	for _, e := range served {
+	for i := range served {
+		e := &served[i]
 		for _, name := range mcp.ViewKeySources(e.View) {
 			out[name] = true
 		}
@@ -223,9 +239,10 @@ func sourceNames(cfg *config.Config, served []lockfile.Entry) map[string]bool {
 
 func keepConfigured(entries []lockfile.Entry, keep map[string]bool) []lockfile.Entry {
 	out := entries[:0:0]
-	for _, e := range entries {
+	for i := range entries {
+		e := &entries[i]
 		if keep[e.Name] {
-			out = append(out, e)
+			out = append(out, *e)
 		}
 	}
 	return out
@@ -234,11 +251,25 @@ func keepConfigured(entries []lockfile.Entry, keep map[string]bool) []lockfile.E
 // dynamicLockChanges reports the source and served pins that disagree with the
 // configuration and the local cache, as changes for `lock --check` and `--diff`.
 func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
-	return mcp.DynamicLockChanges(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, lockExtraViews()...)
+	extras := lockExtraViews()
+	if servesNothing(cfg, lock, extras) {
+		return nil
+	}
+	return mcp.DynamicLockChanges(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, extras...)
+}
+
+// servesNothing reports a plugin-only configuration (see pluginOnly) whose lock
+// pins no served skill: there is no served view to compare.
+func servesNothing(cfg *config.Config, lock *lockfile.File, extras []mcp.ServeSetup) bool {
+	return len(extras) == 0 && pluginOnly(cfg) && (lock == nil || len(lock.Served) == 0)
 }
 
 // checkDynamicLock verifies the source and served pins against the configuration
 // and the local cache without the network.
 func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
-	return mcp.DynamicLockProblems(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, lockExtraViews()...)
+	extras := lockExtraViews()
+	if servesNothing(cfg, lock, extras) {
+		return nil
+	}
+	return mcp.DynamicLockProblems(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, extras...)
 }

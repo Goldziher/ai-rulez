@@ -246,7 +246,9 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
-	for _, e := range lockedEntries(next) {
+	entries := lockedEntries(next)
+	for i := range entries {
+		e := &entries[i]
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
 	}
 	if next.HasContentPins() {
@@ -379,7 +381,7 @@ func checkLockAt(path string) int {
 // checkLockContentAt compares the lock with the sources. The second result is
 // the success report, run by the caller once every other check has passed too, so
 // "up to date" is never printed before a signature failure.
-func checkLockContentAt(path string) (int, func()) {
+func checkLockContentAt(path string) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
 		fmtError(err)

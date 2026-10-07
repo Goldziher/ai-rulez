@@ -43,9 +43,11 @@ func subjectFiles(cfg *config.Config, s approval.Subject) (files []approvedFile,
 		if s.Kind == approval.KindInstalledSkill {
 			want = lockfile.KindSkill
 		}
-		for _, w := range includes.Lockable(cfg) {
+		wants := includes.Lockable(cfg)
+		for i := range wants {
+			w := &wants[i]
 			if w.Kind == want && w.Name == s.ID {
-				if dir := includes.CachedTreeDir(cfg, w); dir != "" {
+				if dir := includes.CachedTreeDir(cfg, *w); dir != "" {
 					return walkFiles(dir)
 				}
 			}

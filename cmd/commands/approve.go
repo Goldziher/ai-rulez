@@ -323,10 +323,13 @@ func (e *approveEnv) listDoc() *approveListDoc {
 		Items: []approveListItem{}, Orphans: []approveListOrphan{}, Summary: map[string]int{},
 	}
 	hasRecord := map[string]bool{}
-	for _, a := range e.lock.Approval {
+	for i := range e.lock.Approval {
+		a := &e.lock.Approval[i]
 		hasRecord[a.ItemKey()] = true
 	}
-	for _, r := range e.policy.EvaluateAll(e.lock.Approval, e.subjects, e.now) {
+	results := e.policy.EvaluateAll(e.lock.Approval, e.subjects, e.now)
+	for i := range results {
+		r := &results[i]
 		if !r.Required && !approveAll && !hasRecord[r.Key()] {
 			continue
 		}
@@ -344,7 +347,9 @@ func (e *approveEnv) listDoc() *approveListDoc {
 			doc.Summary[r.Status]++
 		}
 	}
-	for _, a := range approval.Orphans(e.lock.Approval, e.subjects) {
+	orphans := approval.Orphans(e.lock.Approval, e.subjects)
+	for i := range orphans {
+		a := &orphans[i]
 		doc.Orphans = append(doc.Orphans, approveListOrphan{Kind: a.Kind, ID: a.ID, Domain: a.Domain, Digest: a.Digest, Reviewer: a.Reviewer})
 	}
 	return doc
@@ -385,7 +390,8 @@ func (e *approveEnv) list(out io.Writer) error {
 	}
 	tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(tw, "KIND\tID\tDIGEST\tSTATUS\tREVIEWER\tEXPIRES\tASSURANCE") //nolint:errcheck // flushed below
-	for _, it := range doc.Items {
+	for i := range doc.Items {
+		it := &doc.Items[i]
 		reviewer, expires := "-", "-"
 		if len(it.Reviewers) > 0 {
 			reviewer = safeText(strings.Join(it.Reviewers, ","))
@@ -447,7 +453,9 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 	var dropped []lockfile.Approval
 	// Orphaned records can be revoked by name too: they name content that is gone.
 	known := append([]approval.Subject(nil), e.subjects...)
-	for _, a := range approval.Orphans(e.lock.Approval, e.subjects) {
+	orphans := approval.Orphans(e.lock.Approval, e.subjects)
+	for i := range orphans {
+		a := &orphans[i]
 		known = append(known, approval.Subject{Kind: a.Kind, Domain: a.Domain, ID: a.ID, Digest: a.Digest})
 	}
 	removed := 0
@@ -458,13 +466,14 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 		}
 		kept := e.lock.Approval[:0:0]
 		n := 0
-		for _, a := range e.lock.Approval {
+		for i := range e.lock.Approval {
+			a := &e.lock.Approval[i]
 			if a.ItemKey() == s.Key() && (approveReviewer == "" || approval.SameReviewer(a.Reviewer, approveReviewer)) {
 				n++
-				dropped = append(dropped, a)
+				dropped = append(dropped, *a)
 				continue
 			}
-			kept = append(kept, a)
+			kept = append(kept, *a)
 		}
 		if n == 0 {
 			return oops.Errorf("%s has no approval to revoke", s.Ref())
@@ -497,10 +506,12 @@ func (e *approveEnv) revoke(out io.Writer, refs []string) error {
 // failure to delete is a warning: the lock is already written.
 func (e *approveEnv) removeUnusedBundles(dropped []lockfile.Approval) {
 	inUse := map[string]bool{}
-	for _, a := range e.lock.Approval {
+	for i := range e.lock.Approval {
+		a := &e.lock.Approval[i]
 		inUse[a.Attestation] = true
 	}
-	for _, a := range dropped {
+	for i := range dropped {
+		a := &dropped[i]
 		if a.Attestation == "" || inUse[a.Attestation] {
 			continue
 		}
@@ -522,11 +533,12 @@ func (e *approveEnv) prune(out io.Writer) error {
 	}
 	kept := e.lock.Approval[:0:0]
 	var dropped []lockfile.Approval
-	for _, a := range e.lock.Approval {
+	for i := range e.lock.Approval {
+		a := &e.lock.Approval[i]
 		if d, ok := current[a.ItemKey()]; ok && d == a.Digest {
-			kept = append(kept, a)
+			kept = append(kept, *a)
 		} else {
-			dropped = append(dropped, a)
+			dropped = append(dropped, *a)
 		}
 	}
 	n := len(e.lock.Approval) - len(kept)
@@ -558,9 +570,10 @@ func (e *approveEnv) review(s approval.Subject) approveReview {
 	rv := approveReview{subject: s}
 	rv.files, rv.note = subjectFiles(e.cfg, s)
 	rv.findings = scanApproved(e.cfg, s.ID, rv.files)
-	for _, a := range e.lock.Approval {
+	for i := range e.lock.Approval {
+		a := &e.lock.Approval[i]
 		if a.ItemKey() == s.Key() {
-			rv.previous = append(rv.previous, a)
+			rv.previous = append(rv.previous, *a)
 		}
 	}
 	return rv
@@ -569,7 +582,8 @@ func (e *approveEnv) review(s approval.Subject) approveReview {
 func (e *approveEnv) printReview(out io.Writer, rv *approveReview) {
 	s := rv.subject
 	fmt.Fprintf(out, "%s  %s\n", safeText(s.Ref()), s.Digest) //nolint:errcheck // terminal output
-	for _, a := range rv.previous {
+	for i := range rv.previous {
+		a := &rv.previous[i]
 		state := "approved"
 		if a.Digest != s.Digest {
 			state = "previously approved at " + shortDigest(a.Digest) + " (now changed)"
@@ -838,11 +852,12 @@ func sortedCopy(in []string) []string {
 // record per version. Other reviewers' records stay until they approve again.
 func (e *approveEnv) supersede(rec *lockfile.Approval) {
 	kept := e.lock.Approval[:0:0]
-	for _, a := range e.lock.Approval {
+	for i := range e.lock.Approval {
+		a := &e.lock.Approval[i]
 		if a.ItemKey() == rec.ItemKey() && approval.SameReviewer(a.Reviewer, rec.Reviewer) && a.Digest != rec.Digest {
 			continue
 		}
-		kept = append(kept, a)
+		kept = append(kept, *a)
 	}
 	e.lock.Approval = kept
 }
