@@ -365,7 +365,6 @@ const (
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"
-	SidecarClaudePluginsJSON  = "claude_plugins_json"
 	SidecarMCPJSON            = "mcp_json"
 	SidecarAmpSettingsJSON    = "amp_settings_json"
 	SidecarPiMCPJSON          = "pi_mcp_json"

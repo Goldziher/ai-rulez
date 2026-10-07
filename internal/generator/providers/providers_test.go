@@ -1,7 +1,6 @@
 package providers_test
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -416,33 +415,6 @@ func TestClaude_MCPServersAreNotWrittenToSettingsJSON(t *testing.T) {
 	for _, o := range outputs {
 		assert.False(t, strings.HasSuffix(filepath.ToSlash(o.Path), ".claude/settings.json"), "unexpected %s", o.Path)
 	}
-}
-
-// TestClaude_PluginsJSON covers the plugins-aware plugins.json sidecar
-// (legacy renderPluginsJSON test).
-func TestClaude_PluginsJSON(t *testing.T) {
-	t.Parallel()
-
-	gen := claudeGen(t)
-	enabled := true
-	cfg := &config.Config{
-		Name: "test",
-		Plugins: []config.PluginConfig{
-			{Marketplace: "official", Name: "github", Scope: "project", Enabled: &enabled},
-			{Marketplace: "custom", Name: "tool", Scope: "user"},
-		},
-	}
-	outputs, err := gen.Generate(&config.ContentTree{}, "/test", cfg)
-	require.NoError(t, err)
-
-	pluginsFile := requireFile(t, outputs, filepath.Join(".claude", "plugins.json"))
-	assert.Contains(t, pluginsFile.Content, "official")
-	assert.Contains(t, pluginsFile.Content, "github")
-	assert.Contains(t, pluginsFile.Content, "custom")
-
-	var parsed []any
-	require.NoError(t, json.Unmarshal([]byte(pluginsFile.Content), &parsed))
-	assert.Len(t, parsed, 2)
 }
 
 // TestClaude_Agent_EffortFrontmatter covers the agent-effort resolver chain
