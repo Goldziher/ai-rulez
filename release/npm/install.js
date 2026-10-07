@@ -42,6 +42,22 @@ async function getExpectedChecksum(checksumPath, filename) {
   }
 }
 
+// Fails closed: a missing checksums file, a missing entry, or a mismatch all
+// throw, so an archive is never trusted without a verified digest.
+async function verifyArchiveChecksum(archivePath, checksumPath, archiveName) {
+  if (!fs.existsSync(checksumPath)) {
+    throw new Error("Checksum verification failed: checksums.txt is unavailable");
+  }
+  const expectedHash = await getExpectedChecksum(checksumPath, archiveName);
+  if (!expectedHash) {
+    throw new Error(`Checksum verification failed: no checksum for ${archiveName} in checksums.txt`);
+  }
+  const actualHash = await calculateSHA256(archivePath);
+  if (actualHash !== expectedHash) {
+    throw new Error(`Checksum verification failed. Expected: ${expectedHash}, Got: ${actualHash}`);
+  }
+}
+
 function getPlatform() {
   const platform = process.platform;
   const arch = process.arch;
@@ -339,26 +355,19 @@ async function install(isPostInstall = false) {
     const checksumPath = path.join(__dirname, "checksums.txt");
     try {
       await downloadBinary(checksumUrl, checksumPath);
-    } catch (_checksumError) {
-      console.warn("Warning: Could not download checksums, skipping verification");
+    } catch (checksumError) {
+      throw new Error(`Could not download checksums.txt, refusing to install unverified: ${checksumError.message}`);
     }
 
     await downloadBinary(downloadUrl, archivePath);
 
-    if (fs.existsSync(checksumPath)) {
-      console.log("Verifying checksum...");
-      const expectedHash = await getExpectedChecksum(checksumPath, archiveName);
-      if (expectedHash) {
-        const actualHash = await calculateSHA256(archivePath);
-        if (actualHash !== expectedHash) {
-          throw new Error(
-            `Checksum verification failed. Expected: ${expectedHash}, Got: ${actualHash}`,
-          );
-        }
-        console.log("✓ Checksum verified");
-      }
-      fs.unlinkSync(checksumPath);
+    console.log("Verifying checksum...");
+    try {
+      await verifyArchiveChecksum(archivePath, checksumPath, archiveName);
+    } finally {
+      fs.rmSync(checksumPath, { force: true });
     }
+    console.log("✓ Checksum verified");
 
     console.log("Extracting binary...");
 
@@ -452,6 +461,7 @@ if (typeof module !== "undefined" && module.exports) {
     extractArchive,
     calculateSHA256,
     getExpectedChecksum,
+    verifyArchiveChecksum,
     install,
   };
 }
