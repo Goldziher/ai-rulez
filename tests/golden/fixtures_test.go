@@ -12,6 +12,10 @@ const goldenSecret = "golden-secret-value"
 
 var goldenEnv = []string{"GOLDEN_TOKEN=" + goldenSecret}
 
+// goldenFileURLEnv also lets the project config use a file:// git source outside
+// the project, as the scenarios serving an include from a temporary directory do.
+var goldenFileURLEnv = append([]string{"AI_RULEZ_ALLOW_FILE_URLS=1"}, goldenEnv...)
+
 func tomlList(items []string) string {
 	q := make([]string, len(items))
 	for i, s := range items {

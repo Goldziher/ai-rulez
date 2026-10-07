@@ -414,11 +414,11 @@ args = ["serve"]
 			maskDigests: true,
 			omit:        []string{".ai-rulez/ai-rulez.lock", ".ai-rulez/.generated-manifest.local.json", ".ai-rulez/.generated-manifest.json"},
 			steps: []step{
-				runEnv(goldenEnv, "generate", "--yes"),
-				runEnv(goldenEnv, "generate", "--yes", "--offline"),
-				runEnv(goldenEnv, "lock"),
-				runEnv(goldenEnv, "lock", "--check"),
-				runEnv(goldenEnv, "generate", "--yes", "--locked"),
+				runEnv(goldenFileURLEnv, "generate", "--yes"),
+				runEnv(goldenFileURLEnv, "generate", "--yes", "--offline"),
+				runEnv(goldenFileURLEnv, "lock"),
+				runEnv(goldenFileURLEnv, "lock", "--check"),
+				runEnv(goldenFileURLEnv, "generate", "--yes", "--locked"),
 			},
 		},
 		{
