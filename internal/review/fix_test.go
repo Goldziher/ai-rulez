@@ -309,3 +309,22 @@ func TestProposeFixRejectsAPatchWhoseRejudgeLosesADimension(t *testing.T) {
 	assert.Empty(t, p.Patch)
 	assert.Contains(t, p.Reason, "the judge gave no verdict on instruction-conflict")
 }
+
+// The verifier's tokens and cost belong to the fix totals (RV-LLM-24).
+func TestProposeFixCountsTheVerifiersSpend(t *testing.T) {
+	// Arrange
+	fx := newFixFixture(t, func(int) string {
+		return editReply("Helps with deployments", "Deploy a build to staging when asked to ship; not for rollbacks")
+	}, vagueIsBad)
+	before := fx.in.Verifier.Usage()
+
+	// Act
+	p, err := ProposeFix(t.Context(), fx.in)
+
+	// Assert
+	require.NoError(t, err)
+	used := fx.in.Verifier.Usage()
+	require.Positive(t, used.Tokens-before.Tokens)
+	assert.GreaterOrEqual(t, p.Usage.Tokens, used.Tokens-before.Tokens, "the verifier's tokens are counted")
+	assert.Equal(t, used.Calls-before.Calls+len(fx.fixer.ChatCalls()), p.Usage.Calls)
+}

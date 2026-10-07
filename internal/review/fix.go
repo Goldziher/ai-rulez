@@ -365,11 +365,15 @@ func compareVerdicts(targets map[string]bool, before, after map[string]string) s
 func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (map[string]string, bool, error) {
 	pi := in.Item.Item.WithText(patched)
 	r := ItemResult{Item: pi, Status: StatusScored, Redacted: in.Item.Redacted, Dimensions: in.Item.Dimensions}
+	// The verifier is used by one fix at a time, so the change in its usage is what this re-judge
+	// spent: calls, cache hits, tokens and cost.
+	start := in.Verifier.Usage()
 	sem, err := in.Verifier.ItemSemantic(ctx, &r, in.Pool)
-	if sem != nil {
-		p.Usage.Calls += sem.Calls
-		p.Usage.Cached += sem.Cached
-	}
+	end := in.Verifier.Usage()
+	p.Usage.Calls += end.Calls - start.Calls
+	p.Usage.Cached += end.Cached - start.Cached
+	p.Usage.Tokens += end.Tokens - start.Tokens
+	p.Usage.CostUSD += end.CostUSD - start.CostUSD
 	if err != nil {
 		return nil, false, err
 	}
