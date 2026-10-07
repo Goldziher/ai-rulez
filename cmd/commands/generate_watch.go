@@ -47,9 +47,6 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	if err := checkGenerateWatchFlags(); err != nil {
 		return err
 	}
-	if parent == nil {
-		parent = cmdContext()
-	}
 	ctx, stop := interruptContext(parent)
 	defer stop()
 
