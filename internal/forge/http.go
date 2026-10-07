@@ -207,7 +207,7 @@ func (c *HTTPClient) do(ctx context.Context, req request, rawURL string) ([]byte
 	if err != nil || !strings.EqualFold(u.Scheme, "https") {
 		return nil, nil, oops.Errorf("forge: refusing a non-https request")
 	}
-	hreq, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	hreq, err := http.NewRequestWithContext(ctx, http.MethodGet, target, http.NoBody)
 	if err != nil {
 		return nil, nil, oops.Wrapf(err, "build forge request")
 	}
@@ -541,7 +541,8 @@ func (c *HTTPClient) PullRequestsForCommit(ctx context.Context, repo Repo, sha s
 		}
 	}](ctx, c, req)
 	out := make([]PullRequest, 0, len(items))
-	for _, it := range items {
+	for i := range items {
+		it := &items[i]
 		pr := PullRequest{Number: it.Number, State: it.State, Merged: it.MergedAt != nil, Author: it.User.Login,
 			BaseRef: it.Base.Ref, HeadSHA: it.Head.SHA}
 		if pr.Merged {

@@ -113,31 +113,8 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{r.URL.Path, r.URL.RawQuery, r.Header.Get("Authorization"), r.Header.Get("Accept")})
 	s.mu.Unlock()
-	if s.Token != "" && r.Header.Get("Authorization") != "Bearer "+s.Token {
-		http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
+	if s.intercept(w, r) {
 		return
-	}
-	for prefix, loc := range s.Redirect {
-		if strings.HasPrefix(r.URL.Path, prefix) {
-			http.Redirect(w, r, loc, http.StatusFound)
-			return
-		}
-	}
-	for prefix, code := range s.Status {
-		if strings.HasPrefix(r.URL.Path, prefix) {
-			if s.RateLimited || code == http.StatusTooManyRequests {
-				w.Header().Set("X-RateLimit-Remaining", "0")
-				w.Header().Set("X-RateLimit-Reset", "1900000000")
-			}
-			http.Error(w, `{"message":"forced"}`, code)
-			return
-		}
-	}
-	for prefix, body := range s.Raw {
-		if strings.HasPrefix(r.URL.Path, prefix) {
-			_, _ = w.Write(body)
-			return
-		}
 	}
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	switch {
@@ -150,8 +127,53 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// intercept answers a request the knobs decide (a missing token, a redirect, a
+// forced status, a raw body) and reports whether it did.
+func (s *Server) intercept(w http.ResponseWriter, r *http.Request) bool {
+	if s.Token != "" && r.Header.Get("Authorization") != "Bearer "+s.Token {
+		http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
+		return true
+	}
+	for prefix, loc := range s.Redirect {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			http.Redirect(w, r, loc, http.StatusFound)
+			return true
+		}
+	}
+	for prefix, code := range s.Status {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			if s.RateLimited || code == http.StatusTooManyRequests {
+				w.Header().Set("X-RateLimit-Remaining", "0")
+				w.Header().Set("X-RateLimit-Reset", "1900000000")
+			}
+			http.Error(w, `{"message":"forced"}`, code)
+			return true
+		}
+	}
+	for prefix, body := range s.Raw {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			writeBody(w, body)
+			return true
+		}
+	}
+	return false
+}
+
+// route answers one family of repository endpoints and reports whether path
+// belongs to it.
+type route func(w http.ResponseWriter, r *http.Request, path string) bool
+
 func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 	path := strings.Join(rest, "/")
+	for _, handle := range []route{s.releases, s.gitObjects, s.commits, s.pulls, s.collaborators, s.contents} {
+		if handle(w, r, path) {
+			return
+		}
+	}
+	http.NotFound(w, r)
+}
+
+func (s *Server) releases(w http.ResponseWriter, r *http.Request, path string) bool {
 	switch {
 	case path == "releases":
 		var out []map[string]any
@@ -164,68 +186,79 @@ func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 		for _, rel := range s.Releases {
 			if rel.Tag == tag {
 				writeJSON(w, releaseJSON(rel))
-				return
+				return true
 			}
 		}
 		http.NotFound(w, r)
+	default:
+		return false
+	}
+	return true
+}
+
+func (s *Server) gitObjects(w http.ResponseWriter, r *http.Request, path string) bool {
+	switch {
 	case strings.HasPrefix(path, "git/ref/tags/"):
-		name := strings.TrimPrefix(path, "git/ref/tags/")
-		t, ok := s.Tags[name]
+		t, ok := s.Tags[strings.TrimPrefix(path, "git/ref/tags/")]
 		switch {
 		case !ok:
 			http.NotFound(w, r)
 		case t.Object != "":
-			writeJSON(w, map[string]any{"object": map[string]any{"type": "tag", "sha": t.Object}})
+			writeJSON(w, map[string]any{keyObject: objectJSON("tag", t.Object)})
 		default:
-			writeJSON(w, map[string]any{"object": map[string]any{"type": "commit", "sha": t.Commit}})
+			writeJSON(w, map[string]any{keyObject: objectJSON(keyCommit, t.Commit)})
 		}
 	case strings.HasPrefix(path, "git/tags/"):
 		obj := strings.TrimPrefix(path, "git/tags/")
 		for _, t := range s.Tags {
 			if t.Object == obj {
-				writeJSON(w, map[string]any{"tagger": map[string]any{"date": t.Tagged}, "object": map[string]any{"type": "commit", "sha": t.Commit}})
-				return
+				writeJSON(w, map[string]any{"tagger": map[string]any{keyDate: t.Tagged}, keyObject: objectJSON(keyCommit, t.Commit)})
+				return true
 			}
 		}
 		http.NotFound(w, r)
+	default:
+		return false
+	}
+	return true
+}
+
+func (s *Server) commits(w http.ResponseWriter, r *http.Request, path string) bool {
+	switch {
 	case strings.HasPrefix(path, "commits/") && strings.HasSuffix(path, "/pulls"):
 		sha := strings.TrimSuffix(strings.TrimPrefix(path, "commits/"), "/pulls")
 		var out []map[string]any
 		for _, pr := range s.PRs[sha] {
-			m := map[string]any{"number": pr.Number, "state": pr.State, "user": map[string]any{"login": pr.Author},
-				"base": map[string]any{"ref": pr.BaseRef}, "head": map[string]any{"sha": pr.HeadSHA}, "merge_commit_sha": pr.MergeCommit}
-			if pr.Merged {
-				m["merged_at"] = time.Unix(1, 0).UTC()
-			}
-			out = append(out, m)
+			out = append(out, pullJSON(pr))
 		}
 		s.list(w, r, out)
 	case strings.HasPrefix(path, "commits/"):
-		sha := strings.TrimPrefix(path, "commits/")
-		d, ok := s.Commits[sha]
+		d, ok := s.Commits[strings.TrimPrefix(path, "commits/")]
 		if !ok {
 			http.NotFound(w, r)
-			return
+			return true
 		}
-		writeJSON(w, map[string]any{"commit": map[string]any{"committer": map[string]any{"date": d}, "author": map[string]any{"date": d}}})
+		writeJSON(w, map[string]any{keyCommit: map[string]any{"committer": map[string]any{keyDate: d}, "author": map[string]any{keyDate: d}}})
+	default:
+		return false
+	}
+	return true
+}
+
+func (s *Server) pulls(w http.ResponseWriter, r *http.Request, path string) bool {
+	switch {
 	case strings.HasPrefix(path, "pulls/") && !strings.Contains(strings.TrimPrefix(path, "pulls/"), "/"):
 		n, err := strconv.Atoi(strings.TrimPrefix(path, "pulls/"))
 		if err != nil {
 			http.NotFound(w, r)
-			return
+			return true
 		}
 		for _, prs := range s.PRs {
 			for _, pr := range prs {
-				if pr.Number != n {
-					continue
+				if pr.Number == n {
+					writeJSON(w, pullJSON(pr))
+					return true
 				}
-				m := map[string]any{"number": pr.Number, "state": pr.State, "user": map[string]any{"login": pr.Author},
-					"base": map[string]any{"ref": pr.BaseRef}, "head": map[string]any{"sha": pr.HeadSHA}, "merge_commit_sha": pr.MergeCommit}
-				if pr.Merged {
-					m["merged_at"] = time.Unix(1, 0).UTC()
-				}
-				writeJSON(w, m)
-				return
 			}
 		}
 		http.NotFound(w, r)
@@ -233,35 +266,69 @@ func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 		n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(path, "pulls/"), "/reviews"))
 		if err != nil {
 			http.NotFound(w, r)
-			return
+			return true
 		}
 		var out []map[string]any
 		for _, rv := range s.Reviews[n] {
-			out = append(out, map[string]any{"id": rv.ID, "user": map[string]any{"login": rv.Login}, "state": rv.State, "commit_id": rv.CommitID, "submitted_at": rv.Submitted, "author_association": rv.AuthorAssociation})
+			out = append(out, map[string]any{"id": rv.ID, "user": userJSON(rv.Login), keyState: rv.State, "commit_id": rv.CommitID, "submitted_at": rv.Submitted, "author_association": rv.AuthorAssociation})
 		}
 		s.list(w, r, out)
-	case strings.HasPrefix(path, "collaborators/") && strings.HasSuffix(path, "/permission"):
-		login := strings.TrimSuffix(strings.TrimPrefix(path, "collaborators/"), "/permission")
-		role, ok := s.Collaborators[login]
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-		legacy := map[string]string{"maintain": "write", "triage": "read"}[role]
-		if legacy == "" {
-			legacy = role
-		}
-		writeJSON(w, map[string]any{"permission": legacy, "role_name": role})
-	case strings.HasPrefix(path, "contents/"):
-		body, ok := s.Owners[strings.TrimPrefix(path, "contents/")]
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-		_, _ = w.Write([]byte(body))
 	default:
-		http.NotFound(w, r)
+		return false
 	}
+	return true
+}
+
+func (s *Server) collaborators(w http.ResponseWriter, r *http.Request, path string) bool {
+	if !strings.HasPrefix(path, "collaborators/") || !strings.HasSuffix(path, "/permission") {
+		return false
+	}
+	role, ok := s.Collaborators[strings.TrimSuffix(strings.TrimPrefix(path, "collaborators/"), "/permission")]
+	if !ok {
+		http.NotFound(w, r)
+		return true
+	}
+	legacy := map[string]string{"maintain": "write", "triage": "read"}[role]
+	if legacy == "" {
+		legacy = role
+	}
+	writeJSON(w, map[string]any{"permission": legacy, "role_name": role})
+	return true
+}
+
+func (s *Server) contents(w http.ResponseWriter, r *http.Request, path string) bool {
+	if !strings.HasPrefix(path, "contents/") {
+		return false
+	}
+	body, ok := s.Owners[strings.TrimPrefix(path, "contents/")]
+	if !ok {
+		http.NotFound(w, r)
+		return true
+	}
+	writeBody(w, []byte(body))
+	return true
+}
+
+// JSON keys the endpoints share.
+const (
+	keyObject = "object"
+	keyCommit = "commit"
+	keyDate   = "date"
+	keyLogin  = "login"
+	keyState  = "state"
+)
+
+func objectJSON(typ, sha string) map[string]any { return map[string]any{"type": typ, "sha": sha} }
+
+func userJSON(login string) map[string]any { return map[string]any{keyLogin: login} }
+
+func pullJSON(pr forge.PullRequest) map[string]any {
+	m := map[string]any{"number": pr.Number, keyState: pr.State, "user": userJSON(pr.Author),
+		"base": map[string]any{"ref": pr.BaseRef}, "head": map[string]any{"sha": pr.HeadSHA}, "merge_commit_sha": pr.MergeCommit}
+	if pr.Merged {
+		m["merged_at"] = time.Unix(1, 0).UTC()
+	}
+	return m
 }
 
 func (s *Server) team(w http.ResponseWriter, r *http.Request, key string, rest []string) {
@@ -272,13 +339,13 @@ func (s *Server) team(w http.ResponseWriter, r *http.Request, key string, rest [
 	case len(rest) == 1 && rest[0] == "members":
 		var out []map[string]any
 		for _, m := range members {
-			out = append(out, map[string]any{"login": m})
+			out = append(out, userJSON(m))
 		}
 		s.list(w, r, out)
 	case len(rest) == 2 && rest[0] == "memberships":
 		for _, m := range members {
 			if m == rest[1] {
-				writeJSON(w, map[string]any{"state": "active"})
+				writeJSON(w, map[string]any{keyState: "active"})
 				return
 			}
 		}
@@ -322,5 +389,14 @@ func releaseJSON(r Release) map[string]any {
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// writeBody writes a raw answer; a client that went away gets nothing more.
+func writeBody(w http.ResponseWriter, body []byte) {
+	if _, err := w.Write(body); err != nil {
+		return
+	}
 }
