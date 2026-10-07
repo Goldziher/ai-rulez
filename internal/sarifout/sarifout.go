@@ -23,7 +23,9 @@ const (
 	severityWrn = "warning"
 )
 
-var schemeRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+// schemeRe matches a drive letter ("C:/x") or a URI with an authority ("https://h/x"). A relative
+// name with a colon ("notes:v1.md") is a path, not a scheme.
+var schemeRe = regexp.MustCompile(`^(?:[A-Za-z]:(?:/|$)|[A-Za-z][A-Za-z0-9+.-]*://)`)
 
 // ArtifactURI renders a path as a SARIF artifact URI reference. A
 // repository-relative path becomes a slash-separated, percent-escaped reference
@@ -41,7 +43,8 @@ func ArtifactURI(p string) (uri, base string) {
 	}
 	parts := strings.Split(p, "/")
 	for i, seg := range parts {
-		parts[i] = url.PathEscape(seg)
+		// A colon in the first segment would read as a URI scheme, so it is escaped everywhere.
+		parts[i] = strings.ReplaceAll(url.PathEscape(seg), ":", "%3A")
 	}
 	return strings.Join(parts, "/"), SrcRoot
 }
