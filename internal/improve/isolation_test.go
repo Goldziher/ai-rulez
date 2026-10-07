@@ -3,6 +3,7 @@ package improve
 import (
 	"context"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -12,6 +13,15 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
+
+// skipWithoutUnixSandbox skips a test that fakes a darwin or linux sandbox: its tool paths are unix paths, which
+// are not absolute on Windows, so no backend is ever found there (and none exists on Windows).
+func skipWithoutUnixSandbox(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the sandbox backends (sandbox-exec, bwrap, unshare) do not exist on Windows")
+	}
+}
 
 // lookIn finds only the named tools, under /usr/bin.
 func lookIn(tools ...string) func(string) (string, error) {
@@ -36,6 +46,7 @@ func TestExecute_IsolationWrapsTheOptimizerInTheSandbox(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			skipWithoutUnixSandbox(t)
 			// Arrange
 			root, configDir := project(t)
 			var seen []runner.Spec
@@ -89,6 +100,9 @@ func TestPrepare_Isolation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.confined {
+				skipWithoutUnixSandbox(t)
+			}
 			// Arrange
 			root, configDir := project(t)
 			o := baseOptions(root, configDir, goodEval(), &runner.Fake{})
@@ -134,6 +148,7 @@ func TestSummary_IsolationLineStatesWhatTheBackendEnforces(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			skipWithoutUnixSandbox(t)
 			// Arrange
 			root, configDir := project(t)
 			o := baseOptions(root, configDir, goodEval(), &runner.Fake{})
