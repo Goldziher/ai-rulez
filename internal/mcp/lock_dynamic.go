@@ -20,8 +20,8 @@ func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile
 		return nil
 	}
 	sources := append([]config.SkillSourceConfig(nil), cfg.SkillSources...)
-	for _, e := range extras {
-		for _, arg := range e.Sources {
+	for i := range extras {
+		for _, arg := range extras[i].Sources {
 			if spec, err := skillsource.ParseArg(arg); err == nil {
 				sources = append(sources, config.SkillSourceConfig{Name: spec.Name, URL: spec.URL, Ref: spec.Ref, Path: spec.Path})
 			}
@@ -29,8 +29,8 @@ func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile
 	}
 	var viewSources []string
 	if lock != nil {
-		for _, e := range lock.Served {
-			viewSources = append(viewSources, ViewKeySources(e.View)...)
+		for i := range lock.Served {
+			viewSources = append(viewSources, ViewKeySources(lock.Served[i].View)...)
 		}
 	}
 	var out []string
