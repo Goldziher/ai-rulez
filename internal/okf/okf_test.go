@@ -270,6 +270,15 @@ func TestPruneLeavesDotDirsAndForeignEmptyDirsAlone(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "the directory emptied by the prune is removed")
 }
 
+func TestLooksLikeBundleNeedsTheVersionKey(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(dir+"/index.md", []byte("# Docs\n\nThis page mentions okf_version in passing.\n"), 0o644))
+	assert.False(t, LooksLikeBundle(dir))
+	assert.Error(t, WriteFiles(dir, []File{{Path: "a.md", Data: nil}}, true))
+	require.NoError(t, os.WriteFile(dir+"/index.md", []byte("---\nokf_version: \"0.2\"\n---\n"), 0o644))
+	assert.True(t, LooksLikeBundle(dir))
+}
+
 func TestWriteRefusesForeignDirAndTraversal(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(dir+"/precious.txt", []byte("x"), 0o644))

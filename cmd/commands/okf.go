@@ -246,6 +246,9 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		f := &findings[i]
 		counts[f.Severity]++
 		loc := f.Path
+		if loc == "" {
+			loc = "."
+		}
 		if f.Line > 0 {
 			loc = fmt.Sprintf("%s:%d", f.Path, f.Line)
 		}
