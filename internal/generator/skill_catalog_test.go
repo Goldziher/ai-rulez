@@ -165,6 +165,70 @@ func TestApplyIncludeOrigin(t *testing.T) {
 	}
 }
 
+func TestSkillOwners_AttributesInstalledOriginByPathNotName(t *testing.T) {
+	base := filepath.Join(string(filepath.Separator), "work", "proj")
+	shared := filepath.Join(string(filepath.Separator), "work", "shared")
+	cache := filepath.Join(string(filepath.Separator), "home", "u", ".cache", "ai-rulez", "skills", "helper-0123456789ab")
+	const gitURL = "https://github.com/acme/skills.git"
+	tests := []struct {
+		name         string
+		installed    config.InstalledSkillConfig
+		path         string
+		wantSource   string
+		wantRef      string
+		wantImported bool
+	}{
+		{
+			name:       "the local install itself",
+			installed:  config.InstalledSkillConfig{Name: "helper", Source: "./vendor"},
+			path:       filepath.Join(base, "vendor", "skills", "helper", "SKILL.md"),
+			wantSource: "./vendor",
+		},
+		{
+			name:       "the git install in the skill cache",
+			installed:  config.InstalledSkillConfig{Name: "helper", Source: gitURL, Ref: "v1"},
+			path:       filepath.Join(cache, "skills", "helper", "SKILL.md"),
+			wantSource: gitURL,
+			wantRef:    "v1",
+		},
+		{
+			name:         "an include skill sharing the installed name",
+			installed:    config.InstalledSkillConfig{Name: "helper", Source: "./vendor"},
+			path:         filepath.Join(shared, ".ai-rulez", "skills", "helper", "SKILL.md"),
+			wantSource:   "include:shared/skills/helper/SKILL.md",
+			wantImported: true,
+		},
+		{
+			name:       "a local skill shadowing a git install",
+			installed:  config.InstalledSkillConfig{Name: "helper", Source: gitURL, Ref: "v1"},
+			path:       filepath.Join(base, ".ai-rulez", "skills", "helper", "SKILL.md"),
+			wantSource: ".ai-rulez/skills/helper/SKILL.md",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := &config.Config{
+				BaseDir:         base,
+				InstalledSkills: []config.InstalledSkillConfig{tt.installed},
+				Includes:        []config.IncludeConfig{{Name: "shared", Source: shared}},
+			}
+			tree := &config.ContentTree{Skills: []config.ContentFile{{Name: "helper", Path: tt.path}}}
+
+			// Act
+			owners := skillOwners(cfg, tree)
+
+			// Assert
+			require.Len(t, owners, 1)
+			for _, o := range owners {
+				assert.Equal(t, tt.wantSource, o.source)
+				assert.Equal(t, tt.wantRef, o.ref)
+				assert.Equal(t, tt.wantImported, o.imported)
+			}
+		})
+	}
+}
+
 func TestServedSkills_FlagsMalformedFrontmatter(t *testing.T) {
 	// Arrange
 	root := servedSkillsProject(t)
