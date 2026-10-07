@@ -104,7 +104,7 @@ func isLegacyConfigName(base string) bool {
 type legacyConfigError struct{ path string }
 
 func (e *legacyConfigError) Error() string {
-	return fmt.Sprintf("found %s: V2/V3 configs are no longer read; migrate it with ai-rulez 4.x first (`%s`), then upgrade",
+	return fmt.Sprintf("found %s: V2/V3 configs are no longer read; migrate it with ai-rulez 4.x first (%#q), then upgrade",
 		e.path, legacyMigrationCommand)
 }
 
