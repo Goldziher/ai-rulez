@@ -29,10 +29,11 @@ A line with no readable timestamp is kept. The export cursor is moved to match t
   ai-rulez usage prune --keep-days 30 --dry-run
 
 If the cursor belongs to another log (the file was replaced since the last flush) the prune refuses;
-run ` + "`ai-rulez telemetry flush`" + ` first, or pass --ignore-cursor to prune by age alone. The log has no
-lock: the prune re-reads a log that grows while it works and gives up (exit 1, nothing changed) if it
-keeps changing; a line appended in the last microseconds before the file is replaced can be lost, so
-prune from a quiet session.`,
+run ` + "`ai-rulez telemetry flush`" + ` first, or pass --ignore-cursor to prune by age alone. The prune
+holds an exclusive lock on <log>.lock, which every recorder takes shared while it appends, and waits
+up to five seconds for running recorders (exit 1 when they do not finish). A recorder that cannot get
+the lock within two seconds appends anyway, so the prune still re-reads a log that grows while it works
+and gives up (exit 1, nothing changed) if it keeps changing.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return runUsagePrune(cmd.OutOrStdout(), telemetry.SystemClock())

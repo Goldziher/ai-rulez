@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
@@ -105,6 +106,32 @@ func TestEventFieldsAreAllowlistedOrMapped(t *testing.T) {
 	for _, a := range Allowlist {
 		assert.Contains(t, fields, a.Field, "allowlist row %q names no event field", a.Name)
 	}
+}
+
+func TestJSONL_WaitsForAPruneHoldingTheUsageLogLock(t *testing.T) {
+	// RV-LLM-28: the emitter appended without the usage log's lock, so a
+	// `usage prune` rewriting the log could drop the line.
+	// Arrange: hold the exclusive lock a prune holds.
+	path := filepath.Join(t.TempDir(), "usage.jsonl")
+	require.NoError(t, os.WriteFile(path, nil, 0o600))
+	lockFile, err := os.OpenFile(path+".lock", os.O_RDWR|os.O_CREATE, 0o600)
+	require.NoError(t, err)
+	defer lockFile.Close() //nolint:errcheck // test
+	require.NoError(t, lockExclusive(lockFile))
+	events := sampleEvents()
+	done := make(chan error, 1)
+	// Act
+	go func() { done <- JSONL{Path: path}.Emit(context.Background(), &events[0]) }()
+	time.Sleep(150 * time.Millisecond)
+	during, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.NoError(t, lockFile.Close()) // the prune finishes
+	// Assert
+	require.NoError(t, <-done)
+	assert.Empty(t, string(during), "the line was written while the prune held the log")
+	after, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.NotEmpty(t, after)
 }
 
 func TestJSONL_SkillEventsStayReadableByUsageReaders(t *testing.T) {
