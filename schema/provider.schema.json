@@ -321,7 +321,6 @@
         "kind": {
           "enum": [
             "claude_settings_json",
-            "claude_plugins_json",
             "mcp_json",
             "amp_settings_json",
             "pi_mcp_json",

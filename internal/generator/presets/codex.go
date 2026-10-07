@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -147,18 +146,6 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 	if ok {
 		outputs = append(outputs, configFile)
-	}
-
-	// Generate .codex/plugins.json with plugin declarations (if configured)
-	if len(cfg.Plugins) > 0 {
-		pluginsContent, err := g.renderPluginsJSON(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("render plugins.json: %w", err)
-		}
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".codex", "plugins.json"),
-			Content: pluginsContent,
-		})
 	}
 
 	outputs = append(outputs, g.permissionsOutputs(cfg, baseDir)...)
@@ -345,31 +332,4 @@ func quoteYAMLString(value string) string {
 	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
 	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
 	return "\"" + escaped + "\""
-}
-
-// renderPluginsJSON generates .codex/plugins.json with plugin declarations
-func (g *CodexPresetGenerator) renderPluginsJSON(cfg *config.Config) (string, error) {
-	type pluginEntry struct {
-		Marketplace string `json:"marketplace"`
-		Name        string `json:"name"`
-		Scope       string `json:"scope"`
-		Enabled     bool   `json:"enabled"`
-	}
-
-	var plugins []pluginEntry
-	for _, p := range cfg.Plugins {
-		plugins = append(plugins, pluginEntry{
-			Marketplace: p.Marketplace,
-			Name:        p.Name,
-			Scope:       p.GetScope(),
-			Enabled:     p.IsEnabled(),
-		})
-	}
-
-	jsonBytes, err := json.MarshalIndent(plugins, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal plugins JSON: %w", err)
-	}
-
-	return string(jsonBytes) + "\n", nil
 }
