@@ -47,25 +47,51 @@ type publishContext struct {
 	ctx       context.Context
 }
 
+// loadLock reads the project's lock and the bytes the release ships of it.
+func (pc *publishContext) loadLock() error {
+	lockPath := lockfile.Path(pc.cfg.ConfigDir)
+	if err := publish.CheckTree(filepath.Dir(lockPath), []string{filepath.Base(lockPath)}); err != nil {
+		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "no usable %s: %v", lockfile.FileName, err)
+	}
+	raw, err := os.ReadFile(lockPath) //nolint:gosec // the project's own lock file
+	if err != nil {
+		return oops.With("path", lockPath).Wrapf(err, "read lock file")
+	}
+	lock, err := lockfile.Load(pc.cfg.ConfigDir)
+	if err != nil || lock == nil {
+		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "cannot read %s", lockfile.FileName)
+	}
+	pc.lock = lock
+	pc.lockBytes, err = shippedLock(raw, lock)
+	return err
+}
+
+// resolveSourceRepo sets the public repository of the source, the release
+// timestamp and the repository releases go to.
+func (pc *publishContext) resolveSourceRepo() error {
+	pluginRepo := ""
+	if pc.cfg.Plugin != nil {
+		pluginRepo = pc.cfg.Plugin.Repository
+	}
+	pc.src.Source.Repo = publish.PublicRemote(pluginRepo)
+	if pc.src.Source.Repo == "" {
+		pc.src.Source.Repo = pc.src.Remote
+	}
+	var err error
+	if pc.mtime, err = sourceDateEpoch(pc.src.Mtime); err != nil {
+		return err
+	}
+	pc.repo = pc.resolveRepo(pluginRepo)
+	return nil
+}
+
 // newPublishContext resolves the lock, the source, the policy gates, the SBOM,
 // the signer and the previous release, in that order, so a failed gate stops
 // before any signing or network step.
 func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOptions, pre *verifiedBundle, distAbs string, multi bool) (*publishContext, error) {
 	pc := &publishContext{cfg: cfg, opts: opts, pre: pre, distAbs: distAbs, multi: multi, ctx: ctx}
-	lockPath := lockfile.Path(cfg.ConfigDir)
-	if err := publish.CheckTree(filepath.Dir(lockPath), []string{filepath.Base(lockPath)}); err != nil {
-		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "no usable %s: %v", lockfile.FileName, err)
-	}
-	raw, err := os.ReadFile(lockPath) //nolint:gosec // the project's own lock file
+	err := pc.loadLock()
 	if err != nil {
-		return nil, oops.With("path", lockPath).Wrapf(err, "read lock file")
-	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil || lock == nil {
-		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "cannot read %s", lockfile.FileName)
-	}
-	pc.lock = lock
-	if pc.lockBytes, err = shippedLock(raw, lock); err != nil {
 		return nil, err
 	}
 	distRel := ""
@@ -82,18 +108,9 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 	if err := pc.checkBundleTracked(top); err != nil { //nolint:contextcheck // gitutil probes without a context
 		return nil, err
 	}
-	pluginRepo := ""
-	if cfg.Plugin != nil {
-		pluginRepo = cfg.Plugin.Repository
-	}
-	pc.src.Source.Repo = publish.PublicRemote(pluginRepo)
-	if pc.src.Source.Repo == "" {
-		pc.src.Source.Repo = pc.src.Remote
-	}
-	if pc.mtime, err = sourceDateEpoch(pc.src.Mtime); err != nil {
+	if err := pc.resolveSourceRepo(); err != nil {
 		return nil, err
 	}
-	pc.repo = pc.resolveRepo(pluginRepo)
 
 	if pc.approval, err = approvalGate(cfg, opts.requireApproved); err != nil { //nolint:contextcheck // approval owners read git without a context
 		return nil, err
