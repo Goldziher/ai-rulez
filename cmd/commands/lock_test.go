@@ -399,3 +399,53 @@ func TestLockDiffUncachedIncludeIsNamedAndOutputsAreNotReportedRemoved(t *testin
 	assert.Empty(t, diff.Outputs(), "outputs were not compared, so none is reported removed")
 	assert.Contains(t, diff.Notes, "include shared not cached; run ai-rulez lock or generate")
 }
+
+func TestGenerateLockedFailsClosedWhenTheLockIsMissing(t *testing.T) {
+	tests := []struct {
+		name           string
+		locked, frozen bool
+		wantErr        bool
+	}{
+		{"no flag", false, false, false},
+		{"locked", true, false, true},
+		{"frozen", false, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := lockProject(t, "")
+			require.Equal(t, 0, writeLockAt("", "", nil))
+			require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", lockfile.FileName)))
+			cfg, err := loadForLock("")
+			require.NoError(t, err)
+			generateLocked, generateFrozen = tt.locked, tt.frozen
+
+			// Act
+			err = enforceLockedContent(cfg)
+
+			// Assert
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, errLockedSourceDrift)
+			assert.Contains(t, err.Error(), "missing")
+		})
+	}
+}
+
+func TestStrictApprovalFindingsRequireALockWhenApprovalsAreRequired(t *testing.T) {
+	// Arrange
+	root := lockProject(t, "\n[governance]\nrequire_approval = [\"all\"]\n")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", lockfile.FileName)))
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+
+	// Act
+	findings := approvalStatusFindings(t.Context(), cfg)
+
+	// Assert
+	require.NotEmpty(t, findings)
+	assert.Contains(t, findings[0].Message, lockfile.FileName)
+}
