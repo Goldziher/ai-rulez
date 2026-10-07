@@ -46,6 +46,9 @@ type Server struct {
 	Owners map[string]string
 	// Teams by "org/slug": the active members.
 	Teams map[string][]string
+	// Collaborators by login: the repository role served at collaborators/<login>/permission
+	// ("admin", "maintain", "write", "triage", "read"); an unknown login is a 404.
+	Collaborators map[string]string
 	// Status forces a response status for paths with this prefix (rate limiting, 500).
 	Status map[string]int
 	// RateLimited adds spent-rate-limit headers to the forced statuses (a 403 then is a rate limit).
@@ -235,6 +238,18 @@ func (s *Server) repo(w http.ResponseWriter, r *http.Request, rest []string) {
 			out = append(out, map[string]any{"id": rv.ID, "user": map[string]any{"login": rv.Login}, "state": rv.State, "commit_id": rv.CommitID, "submitted_at": rv.Submitted, "author_association": rv.AuthorAssociation})
 		}
 		s.list(w, r, out)
+	case strings.HasPrefix(path, "collaborators/") && strings.HasSuffix(path, "/permission"):
+		login := strings.TrimSuffix(strings.TrimPrefix(path, "collaborators/"), "/permission")
+		role, ok := s.Collaborators[login]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		legacy := map[string]string{"maintain": "write", "triage": "read"}[role]
+		if legacy == "" {
+			legacy = role
+		}
+		writeJSON(w, map[string]any{"permission": legacy, "role_name": role})
 	case strings.HasPrefix(path, "contents/"):
 		body, ok := s.Owners[strings.TrimPrefix(path, "contents/")]
 		if !ok {
