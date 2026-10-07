@@ -394,7 +394,7 @@ presets = ["claude"]
 }
 
 func TestLoadConfigWithIncludes_NonexistentInclude(t *testing.T) {
-	t.Run("handles nonexistent include gracefully", func(t *testing.T) {
+	t.Run("fails on a nonexistent include", func(t *testing.T) {
 		baseDir := t.TempDir()
 		configDir := filepath.Join(baseDir, ".ai-rulez")
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
@@ -424,14 +424,10 @@ include = ["rules"]
 			0o644,
 		))
 
-		// Load config - should not fail but log warning
-		cfg, err := loadWithResolvers(context.Background(), baseDir)
-		require.NoError(t, err)
-		assert.NotNil(t, cfg)
-		assert.Equal(t, "test-nonexistent-include", cfg.Name)
-
-		// Should still have base content even if include failed
-		assert.NotNil(t, cfg.Content)
-		assert.Equal(t, 1, len(cfg.Content.Rules))
+		// An include that cannot be fetched stops the load: rendering without it
+		// would pass a CI gate on a broken checkout.
+		_, err := loadWithResolvers(context.Background(), baseDir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nonexistent")
 	})
 }
