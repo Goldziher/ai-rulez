@@ -9,7 +9,12 @@ AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v5.0.0}"
 AI_RULEZ_BINARY="${AI_RULEZ_BINARY:-}"
 AI_RULEZ_CACHE_DIR="${AI_RULEZ_CACHE_DIR:-$HOME/.cache/ai-rulez/pre-commit}"
 
-if [[ -n "$AI_RULEZ_BINARY" && -x "$AI_RULEZ_BINARY" ]]; then
+if [[ -n "$AI_RULEZ_BINARY" ]]; then
+  # An explicit binary that cannot run is an error, not a reason to run a different one.
+  if [[ ! -f "$AI_RULEZ_BINARY" || ! -x "$AI_RULEZ_BINARY" ]]; then
+    echo "AI_RULEZ_BINARY is not executable: $AI_RULEZ_BINARY" >&2
+    exit 1
+  fi
   BINARY_PATH="$AI_RULEZ_BINARY"
 elif command -v ai-rulez >/dev/null 2>&1; then
   BINARY_PATH="$(command -v ai-rulez)"
