@@ -502,6 +502,11 @@ func (p *planner) resource(c *okf.Concept, ext extInfo) {
 	}
 	dir := p.domainDir(ext.domain, c.Path)
 	target := path.Join(dir, string(kind), ext.id, rel)
+	if other, dup := p.taken[strings.ToLower(target)]; dup {
+		p.note(okf.CodeLossyMapping, c.Path, "skill resource maps to %s, which %s already takes; skipped", target, other)
+		p.skip(c.Path, "skill resource target "+target+" is already taken by "+other)
+		return
+	}
 	p.taken[strings.ToLower(target)] = c.Path
 	p.targets[c.Path] = target
 	p.pending = append(p.pending, pendingBody{out: len(p.out), concept: c, kind: kind, resource: true})
