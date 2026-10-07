@@ -38,8 +38,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
-| `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
-| `ai-rulez telemetry`            | Item-load telemetry and opt-in OTLP export ([details](#usage-commands)) |
+| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#usage-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
 | `ai-rulez llm`                  | Inspect the `[llm]` setup ([details](#llm-commands)) |
 | `ai-rulez version`              | Show version                                        |
@@ -1709,7 +1708,7 @@ lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-file
 ## Telemetry Commands
 
 Opt-in usage and item-load telemetry, documented in [Usage telemetry](usage-telemetry.md) and
-[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `telemetry report|evals` commands.
+[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `report usage|evals` commands.
 
 | Command | Purpose |
 | --- | --- |
@@ -2399,7 +2398,7 @@ ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recurs
 4. Merges a legacy `mcp.toml`, `mcp.yaml` or `mcp.json` into `[[mcp_servers]]` and removes it (left alone with a warning when `config.toml` already has `mcp_servers`).
 5. Pins the three changed defaults to their 4.x values unless `--adopt-defaults`.
 6. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only).
-7. Rewrites `ai-rulez usage ...` and `telemetry report|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
+7. Rewrites `ai-rulez usage ...` and `report usage|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
 8. Warns about `[[plugins]]` (no longer written to any file) and about a 4.x file it left in place.
 
 The result is decoded with the v5 loader before anything is written; a project that would not load is reported with

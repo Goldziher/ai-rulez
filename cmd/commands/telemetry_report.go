@@ -14,7 +14,7 @@ import (
 // the log holds no item events (it then lists the generated rules nothing loaded).
 var reportItems bool
 
-// usageReportJSON is the `report usage --json` document: the skill report as it
+// usageReportJSON is the `telemetry report --format json` document: the skill report as it
 // has always been, plus an "items" object when item events are present.
 type usageReportJSON struct {
 	*usage.Report
@@ -111,5 +111,5 @@ func itemEval(row telemetry.ItemRow) string {
 }
 
 func init() {
-	reportUsageCmd.Flags().BoolVar(&reportItems, "items", false, "Always include the rule, agent and context section (default: only when the log holds item events)")
+	telemetryReportCmd.Flags().BoolVar(&reportItems, "items", false, "Always include the rule, agent and context section (default: only when the log holds item events)")
 }
