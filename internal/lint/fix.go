@@ -261,9 +261,16 @@ func refuseFix(fix *Fix, o FixOptions) string {
 		if o.EditRoot != "" && !fix.Outside && !underDir(gitutil.Resolve(e.File), o.EditRoot) {
 			return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
 		}
-		if fix.Outside && o.ProjectRoot != "" {
-			if reason := outsideFixRefusal(e.File, o.ProjectRoot); reason != "" {
-				return reason
+		if fix.Outside {
+			if o.ProjectRoot == "" && o.EditRoot != "" {
+				// An outside fix skips the EditRoot bound; without a project root it
+				// would be bound by nothing.
+				return "the project root is unknown, so a file outside the authored sources is not edited"
+			}
+			if o.ProjectRoot != "" {
+				if reason := outsideFixRefusal(e.File, o.ProjectRoot); reason != "" {
+					return reason
+				}
 			}
 		}
 		if o.Refuse != nil {
@@ -273,6 +280,10 @@ func refuseFix(fix *Fix, o FixOptions) string {
 		}
 	}
 	for _, c := range fix.Chmods {
+		// chmod follows symlinks, so the file must be a regular file inside the project.
+		if reason := chmodRefusal(c.File, o.ProjectRoot); reason != "" {
+			return reason
+		}
 		if o.Refuse != nil {
 			if r := o.Refuse(c.File); r != "" {
 				return r
@@ -294,6 +305,19 @@ func outsideFixRefusal(file, root string) string {
 	real, err := filepath.EvalSymlinks(file)
 	if err != nil || !underDir(real, gitutil.Resolve(root)) {
 		return "the file is not inside the project (a symlink on its path leaves it)"
+	}
+	return ""
+}
+
+// chmodRefusal says why file may not get the executable bit: it must be a
+// regular file (os.Chmod would follow a symlink out of the project) and, when
+// root is known, resolve to a path inside it.
+func chmodRefusal(file, root string) string {
+	if root != "" {
+		return outsideFixRefusal(file, root)
+	}
+	if info, err := os.Lstat(file); err != nil || !info.Mode().IsRegular() {
+		return "the file is not a regular file (a symlink is never made executable)"
 	}
 	return ""
 }
