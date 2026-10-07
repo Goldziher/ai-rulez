@@ -4,16 +4,7 @@
   "title": "ai-rulez cost report",
   "description": "Output of `ai-rulez cost --format json`: the token cost of the always-loaded and on-demand content.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "profile",
-    "target",
-    "tokenizer",
-    "always",
-    "conditional",
-    "on_demand",
-    "items"
-  ],
+  "required": ["schema_version", "profile", "target", "tokenizer", "always", "conditional", "on_demand", "items"],
   "additionalProperties": true,
   "properties": {
     "schema_version": {
@@ -41,10 +32,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "kind",
-          "name"
-        ],
+        "required": ["kind", "name"],
         "properties": {
           "kind": {
             "type": "string"

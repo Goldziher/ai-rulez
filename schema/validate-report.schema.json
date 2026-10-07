@@ -4,12 +4,7 @@
   "title": "ai-rulez validate report",
   "description": "Output of `ai-rulez validate --format json` and `ai-rulez scan --format json`: the content-check findings of every root.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "roots",
-    "findings",
-    "summary"
-  ],
+  "required": ["schema_version", "roots", "findings", "summary"],
   "additionalProperties": true,
   "properties": {
     "schema_version": {
@@ -25,10 +20,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "code",
-          "severity"
-        ],
+        "required": ["code", "severity"],
         "properties": {
           "code": {
             "type": "string"
@@ -37,12 +29,7 @@
             "type": "string"
           },
           "severity": {
-            "enum": [
-              "error",
-              "warning",
-              "info",
-              "off"
-            ]
+            "enum": ["error", "warning", "info", "off"]
           },
           "message": {
             "type": "string"
@@ -58,12 +45,7 @@
     },
     "summary": {
       "type": "object",
-      "required": [
-        "total",
-        "errors",
-        "warnings",
-        "infos"
-      ],
+      "required": ["total", "errors", "warnings", "infos"],
       "properties": {
         "total": {
           "type": "integer"
@@ -92,11 +74,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "code",
-          "count",
-          "max"
-        ],
+        "required": ["code", "count", "max"],
         "properties": {
           "code": {
             "type": "string"

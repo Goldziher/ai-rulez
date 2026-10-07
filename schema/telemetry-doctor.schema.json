@@ -4,14 +4,7 @@
   "title": "ai-rulez telemetry doctor",
   "description": "Output of `ai-rulez telemetry doctor --format json`: the resolved telemetry configuration, consent state and buffer.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "recording",
-    "export",
-    "settings",
-    "consent",
-    "buffer"
-  ],
+  "required": ["schema_version", "recording", "export", "settings", "consent", "buffer"],
   "additionalProperties": true,
   "properties": {
     "schema_version": {
@@ -36,11 +29,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "key",
-          "value",
-          "source"
-        ],
+        "required": ["key", "value", "source"],
         "properties": {
           "key": {
             "type": "string"
