@@ -166,6 +166,20 @@ func startSkillServer(t *testing.T, cat *Catalog) *rpcPeer {
 
 func startSkillServerWith(t *testing.T, cat *Catalog, opts ServeOptions) (*rpcPeer, *Server) {
 	t.Helper()
+	p, srv := startUninitializedSkillServer(t, cat, opts)
+	init := p.call("initialize", map[string]any{
+		"protocolVersion": "2025-06-18", "capabilities": map[string]any{},
+		"clientInfo": map[string]any{"name": "t", "version": "1"},
+	})
+	require.Nil(t, init["error"], "initialize failed: %v", init)
+	p.notify("notifications/initialized")
+	return p, srv
+}
+
+// startUninitializedSkillServer connects a raw JSON-RPC peer without the
+// initialize handshake.
+func startUninitializedSkillServer(t *testing.T, cat *Catalog, opts ServeOptions) (*rpcPeer, *Server) {
+	t.Helper()
 	srv := NewSkillServerWith("test", cat, opts)
 	clientToServer, serverIn := io.Pipe()
 	serverOut, clientFromServer := io.Pipe()
@@ -186,14 +200,44 @@ func startSkillServerWith(t *testing.T, cat *Catalog, opts ServeOptions) (*rpcPe
 	})
 	scanner := bufio.NewScanner(serverOut)
 	scanner.Buffer(make([]byte, 1<<20), 1<<24)
-	p := &rpcPeer{t: t, in: serverIn, out: scanner}
-	init := p.call("initialize", map[string]any{
-		"protocolVersion": "2025-06-18", "capabilities": map[string]any{},
-		"clientInfo": map[string]any{"name": "t", "version": "1"},
-	})
-	require.Nil(t, init["error"], "initialize failed: %v", init)
-	p.notify("notifications/initialized")
-	return p, srv
+	return &rpcPeer{t: t, in: serverIn, out: scanner}, srv
+}
+
+// RV-DYN-7: the extension methods are answered below the SDK, so they must
+// apply its lifecycle rule themselves: no call before initialize.
+func TestSkillServer_ExtensionMethodsWaitForInitialize(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		params map[string]any
+	}{
+		{name: "skills/list", method: "skills/list", params: map[string]any{}},
+		{name: "skills/get", method: "skills/get", params: map[string]any{"uri": "skill://pdf-processing/SKILL.md"}},
+		{name: "resources/directory/read", method: "resources/directory/read", params: map[string]any{"uri": "skill://pdf-processing"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cat, err := BuildCatalog("p", "claude", testServed(), SkillFilter{})
+			require.NoError(t, err)
+			p, _ := startUninitializedSkillServer(t, cat, ServeOptions{})
+
+			// Act
+			before := p.call(tt.method, tt.params)
+			p.call("initialize", map[string]any{
+				"protocolVersion": "2025-06-18", "capabilities": map[string]any{},
+				"clientInfo": map[string]any{"name": "t", "version": "1"},
+			})
+			p.notify("notifications/initialized")
+			after := p.call(tt.method, tt.params)
+
+			// Assert
+			require.NotNil(t, before["error"], "answered before initialize: %v", before)
+			assert.Contains(t, before["error"].(map[string]any)["message"], "invalid during session initialization")
+			assert.Nil(t, after["error"])
+			assert.NotNil(t, after["result"])
+		})
+	}
 }
 
 func (p *rpcPeer) notify(method string) {

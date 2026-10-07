@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
@@ -295,6 +296,30 @@ func (t *skillsTransport) Connect(ctx context.Context) (sdkmcp.Connection, error
 type skillsConn struct {
 	sdkmcp.Connection
 	srv *Server
+	// initialized is set once an initialize request passed to the SDK: the
+	// extension methods are answered here, below the SDK's lifecycle check, so
+	// they apply the same rule (no call before initialize) themselves.
+	initialized atomic.Bool
+}
+
+// newProtocolVersion is the first protocol version whose requests carry their
+// own protocol version in _meta and need no initialize (SEP-2575).
+const newProtocolVersion = "2026-07-28"
+
+// mayAnswer reports whether a request may be answered: after initialize, or
+// when it carries the per-request protocol version of the sessionless protocol.
+func (c *skillsConn) mayAnswer(params json.RawMessage) bool {
+	if c.initialized.Load() {
+		return true
+	}
+	var p struct {
+		Meta map[string]any `json:"_meta"`
+	}
+	if len(params) == 0 || json.Unmarshal(params, &p) != nil {
+		return false
+	}
+	version, ok := p.Meta[sdkmcp.MetaKeyProtocolVersion].(string)
+	return ok && version >= newProtocolVersion
 }
 
 func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
@@ -304,11 +329,16 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 			return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 		}
 		req, ok := msg.(*jsonrpc.Request)
+		if ok && req.Method == methodInitialize {
+			c.initialized.Store(true)
+		}
 		if !ok || !req.ID.IsValid() || (req.Method != methodSkillsList && req.Method != methodSkillsGet && req.Method != methodDirectoryRead) {
 			return msg, nil
 		}
 		resp := &jsonrpc.Response{ID: req.ID}
-		if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
+		if !c.mayAnswer(req.Params) {
+			resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: fmt.Sprintf("method %q is invalid during session initialization", req.Method)}
+		} else if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
 			resp.Error = rpcErr
 		} else if raw, mErr := json.Marshal(result); mErr != nil {
 			resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: mErr.Error()}
