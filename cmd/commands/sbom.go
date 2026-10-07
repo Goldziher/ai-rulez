@@ -192,7 +192,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	if !f.online {
 		ctx = config.WithOfflineIncludes(ctx)
 	}
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
+	cfg, err := loadConfigForCommand(config.WithUnresolvedIncludesTolerated(ctx), nil, config.WithoutLocal())
 	if err != nil {
 		if !f.online {
 			err = oops.Hint("sbom reads remote sources from the lock and the cache only; run `ai-rulez generate` or `ai-rulez lock` to fill the cache, or pass --online").Wrap(err)

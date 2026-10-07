@@ -94,10 +94,16 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	// `generate --check` would pass on a broken checkout. Only an explicit offline
 	// run (--no-fetch) keeps the warning, since it asked for cached content only,
 	// and `lock` (refresh), which collects the failures and reports them itself.
-	if len(failures) > 0 && ((!SkipFetch && Mode != LockRefresh) || strictLock(cfg)) {
+	if len(failures) > 0 && ((!tolerated(ctx) && Mode != LockRefresh) || strictLock(cfg)) {
 		return nil, errors.Join(failures...)
 	}
 	return mergedContent, nil
+}
+
+// tolerated reports whether the run goes on without an include it cannot
+// resolve: an explicit offline run, or a command that only inventories sources.
+func tolerated(ctx context.Context) bool {
+	return SkipFetch || config.OfflineIncludes(ctx) || config.UnresolvedIncludesTolerated(ctx)
 }
 
 // processInclude handles a single include configuration
