@@ -153,6 +153,26 @@ func (s *State) Advance(key string, signedAt time.Time) error {
 	return s.save()
 }
 
+// checkAll is Check against every key.
+func (s *State) checkAll(keys []string, signedAt time.Time) error {
+	for _, k := range keys {
+		if err := s.Check(k, signedAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// advanceAll is Advance for every key.
+func (s *State) advanceAll(keys []string, signedAt time.Time) error {
+	for _, k := range keys {
+		if err := s.Advance(k, signedAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // CheckDigest reports AR727 when digest is a body this machine has already
 // replaced under key. It is the rollback check for an attestation with no
 // signing time, where Check has nothing to compare: it covers the versions this
