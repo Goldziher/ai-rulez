@@ -121,11 +121,11 @@ func scannerStatus(s lint.ScannerInfo) string {
 
 func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 	if len(infos) == 0 {
-		fmt.Fprintln(out, "No scanners configured. Add a [[lint.external]] entry to .ai-rulez/config.toml.")
+		reportWriter{out}.printf("No scanners configured. Add a [[lint.external]] entry to .ai-rulez/config.toml.\n")
 		return
 	}
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tEGRESS\tINPUTS\tPRESET\tSTATUS")
+	reportWriter{w}.printf("NAME\tEGRESS\tINPUTS\tPRESET\tSTATUS\n")
 	for _, s := range infos {
 		inputs := "-"
 		if len(s.Inputs) > 0 {
@@ -135,7 +135,7 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 		if egress == "true" {
 			egress = "YES"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(s), scannerStatus(s))
+		reportWriter{w}.printf("%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(s), scannerStatus(s))
 	}
 	_ = w.Flush() //nolint:errcheck // a closed stdout has no better handling
 }
@@ -186,7 +186,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 	code := 0
 	for i, s := range selected {
 		if i > 0 {
-			fmt.Fprintln(out)
+			reportWriter{out}.println()
 		}
 		if !writeDoctor(ctx, out, s, scannersProbe) {
 			code = exitScannersUnhealthy
@@ -228,8 +228,9 @@ func selectScanners(infos []lint.ScannerInfo, names []string, all bool) (selecte
 
 // writeDoctor prints one scanner's report and reports whether it is healthy.
 func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe bool) bool {
-	row := func(key, value string) { fmt.Fprintf(out, "  %-9s %s\n", key, value) }
-	fmt.Fprintln(out, s.Name)
+	rw := reportWriter{out}
+	row := func(key, value string) { rw.printf("  %-9s %s\n", key, value) }
+	rw.printf("%s\n", s.Name)
 	if s.Found() {
 		version := "not probed (pass --external)"
 		if probe {
