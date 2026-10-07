@@ -53,7 +53,7 @@ type ReleasePredicate struct {
 	LockTree string   `json:"lock_tree,omitempty"` //nolint:tagliatelle // matches the manifest's lock.tree naming
 	SBOM     *FileRef `json:"sbom,omitempty"`
 	// Source and Approval bind where the release was built and the approval summary the manifest shows,
-	// so a manifest relabelled with another commit, repository or approval count does not verify.
+	// so a manifest relabeled with another commit, repository or approval count does not verify.
 	Source   Source        `json:"source"`
 	Approval *ApprovalInfo `json:"approval"`
 }
@@ -180,7 +180,7 @@ type ReleaseFiles struct {
 
 // VerifyReleaseAttestation checks the signed release statement: its signature,
 // that the signer is trusted, and that it names the manifest's plugin and
-// version and the digests of the files in hand. A manifest relabelled after
+// version and the digests of the files in hand. A manifest relabeled after
 // signing, or paired with another archive, lock or SBOM, fails here.
 func VerifyReleaseAttestation(bundle []byte, m Manifest, files ReleaseFiles, o VerifyOptions) (*signing.Result, error) {
 	v := o.verifier()
