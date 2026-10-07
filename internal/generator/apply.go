@@ -203,13 +203,13 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		return nil, err
 	}
 
+	// Stale files go only once every output is written: a write that fails
+	// leaves the previous generation whole instead of half removed.
 	staleFiles := g.retiredFiles(flatOutputs)
-	g.removeStaleManifestFiles(staleFiles)
-
-	// Write all output files
 	if err := g.writeOutputs(flatOutputs); err != nil {
 		return nil, err
 	}
+	g.removeStaleManifestFiles(staleFiles)
 
 	// Merged documents lose what an earlier run merged in and this one does not
 	// (a preset or server that was removed). Planned after the write so that
