@@ -22,6 +22,11 @@ const (
 // own estimate); the upper bound uses the rubric's max_output_tokens.
 const expectedOutputTokens = 400
 
+// DefaultMaxOutputTokens is the judge's completion cap when a rubric leaves max_output_tokens
+// unset: the built-in rubric's cap, which leaves a thinking model room to think before the
+// verdict (400 came back truncated).
+const DefaultMaxOutputTokens = 1500
+
 // callOverheadTokens stands for per-request framing of the model's chat format.
 const callOverheadTokens = 16
 
@@ -249,7 +254,7 @@ func planItem(in EstimateInput, r *ItemResult, system string) (EgressItem, []Pro
 			OutputTokens: rb.Limits.MaxOutputTokens,
 		}
 		if call.OutputTokens == 0 {
-			call.OutputTokens = expectedOutputTokens
+			call.OutputTokens = DefaultMaxOutputTokens
 		}
 		for _, s := range sibs {
 			call.Siblings = append(call.Siblings, s.ID)
