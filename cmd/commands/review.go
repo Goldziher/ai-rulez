@@ -28,9 +28,6 @@ const (
 // exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate --strict`.
 const exitRubricFindings = 2
 
-// failOnError is the lint severity threshold that fails on errors only.
-const failOnError = "error"
-
 // maxConcurrency bounds --concurrency: more parallel calls mostly trip provider rate limits.
 const maxConcurrency = 16
 
