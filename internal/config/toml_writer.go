@@ -80,7 +80,6 @@ type tomlOutput struct {
 	Hooks           []HookGroup            `toml:"hooks,omitempty"`
 	Guard           *GuardConfig           `toml:"guard,omitempty"`
 	Permissions     *Permissions           `toml:"permissions,omitempty"`
-	OKF             *OKFConfig             `toml:"okf,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -182,7 +181,6 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Hooks:           cfg.UserHooks(),
 		Guard:           cfg.Guard,
 		Permissions:     cfg.Permissions,
-		OKF:             cfg.OKF,
 	}
 }
 
