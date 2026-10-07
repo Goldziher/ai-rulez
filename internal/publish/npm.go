@@ -19,6 +19,15 @@ const (
 // npmMaxName is npm's limit on a package name, scope included.
 const npmMaxName = 214
 
+const (
+	// npmBin is the npm executable, found on PATH.
+	npmBin = "npm"
+	// npmIgnoreScripts keeps npm from running package scripts.
+	npmIgnoreScripts = "--ignore-scripts"
+	// npmManifest is the npm package manifest.
+	npmManifest = "package.json"
+)
+
 var (
 	npmNamePattern  = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 	npmScopePattern = regexp.MustCompile(`^@[a-z0-9][a-z0-9._-]*$`)
@@ -61,12 +70,12 @@ func NPMTarball(pkg, version string) string {
 // directory is spelled "./npm/package": npm reads a bare "npm/package" as the
 // GitHub repository npm/package.
 func NPMPackArgv() []string {
-	return []string{"npm", "pack", "--ignore-scripts", "--pack-destination", NPMDir, "./" + NPMPackageDir}
+	return []string{npmBin, "pack", npmIgnoreScripts, "--pack-destination", NPMDir, "./" + NPMPackageDir}
 }
 
 // NPMPublishArgv publishes the tarball.
 func NPMPublishArgv(p NPMPlan) []string {
-	argv := []string{"npm", "publish", "./" + p.Tarball, "--access", p.Access, "--ignore-scripts"}
+	argv := []string{npmBin, "publish", "./" + p.Tarball, "--access", p.Access, npmIgnoreScripts}
 	if p.Registry != "" {
 		argv = append(argv, "--registry", p.Registry)
 	}
@@ -78,7 +87,7 @@ func NPMPublishArgv(p NPMPlan) []string {
 
 // NPMViewArgv asks the registry whether the exact version already exists.
 func NPMViewArgv(p NPMPlan, version string) []string {
-	argv := []string{"npm", "view", p.Package + "@" + version, "version", "--json"}
+	argv := []string{npmBin, "view", p.Package + "@" + version, "version", "--json"}
 	if p.Registry != "" {
 		argv = append(argv, "--registry", p.Registry)
 	}
@@ -166,7 +175,7 @@ func npmPackageFiles(in Input, m Manifest, plan NPMPlan) (map[string][]byte, err
 	top := map[string]bool{}
 	files := map[string][]byte{}
 	for _, f := range in.Files {
-		if f.Path == "package.json" {
+		if f.Path == npmManifest {
 			return nil, newError(CodeConfig, ExitFailed, "drop the opencode runtime with --runtime, or publish to another target",
 				"the bundle already has a package.json; the npm target writes its own")
 		}

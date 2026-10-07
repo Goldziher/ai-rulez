@@ -13,6 +13,9 @@ import (
 )
 
 // Dist file names.
+// roleEmitted is the role of a file a vendor emitter or template wrote.
+const roleEmitted = "emitted"
+
 const (
 	SumsFile  = "SHA256SUMS"
 	PlanFile  = "publish-plan.json"
@@ -353,7 +356,7 @@ func addExtras(d *Dist, roles map[string]string, in Input, m Manifest) error {
 		return err
 	}
 	for name, data := range emitted {
-		d.Files[name], roles[name] = data, "emitted"
+		d.Files[name], roles[name] = data, roleEmitted
 	}
 	files, warnings, err := BuildExtras(Extras{
 		Channel: in.Channel, Pin: in.Pin, PinCommit: in.Source.Commit, PinDirty: in.Source.Dirty, Emit: in.Emit,
@@ -364,7 +367,7 @@ func addExtras(d *Dist, roles map[string]string, in Input, m Manifest) error {
 	}
 	for name, data := range files {
 		d.Files[name] = data
-		roles[name] = "emitted"
+		roles[name] = roleEmitted
 		if strings.HasPrefix(name, MarketplaceDir+"/") {
 			roles[name] = "marketplace"
 		}

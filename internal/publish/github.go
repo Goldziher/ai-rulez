@@ -11,11 +11,17 @@ import (
 // uploadTimeout bounds one gh invocation (an upload can be large).
 const uploadTimeout = 10 * time.Minute
 
+// The gh release command and its repository flag.
+const (
+	ghReleaseCmd = "release"
+	ghRepoFlag   = "--repo"
+)
+
 // ReleaseCreateArgv is the fixed argv that creates the release. The tag must
 // already exist on the remote (--verify-tag): publishing never creates tags.
 func ReleaseCreateArgv(name, version, tag, repo string, upload []string) []string {
 	argv := []string{
-		"gh", "release", "create", tag, "--repo", repo, "--title", name + " " + version,
+		"gh", ghReleaseCmd, "create", tag, ghRepoFlag, repo, "--title", name + " " + version,
 		"--notes-file", NotesFile, "--verify-tag",
 	}
 	return append(argv, upload...)
@@ -23,7 +29,7 @@ func ReleaseCreateArgv(name, version, tag, repo string, upload []string) []strin
 
 // ReleaseUploadArgv replaces the assets of an existing release (--force).
 func ReleaseUploadArgv(tag, repo string, upload []string) []string {
-	argv := []string{"gh", "release", "upload", tag, "--repo", repo, "--clobber"}
+	argv := []string{"gh", ghReleaseCmd, "upload", tag, ghRepoFlag, repo, "--clobber"}
 	return append(argv, upload...)
 }
 
@@ -91,7 +97,7 @@ func ghReleaseExists(ctx context.Context, r runner.Runner, plan Plan, opts Execu
 	if plan.Target != TargetGitHubRelease || len(plan.Commands) != 1 {
 		return false, newError(CodeTarget, ExitFailed, "", "the plan has no github-release command to run")
 	}
-	view := ghRunner(ctx, r, opts)([]string{"gh", "release", "view", plan.Tag, "--repo", plan.Repo})
+	view := ghRunner(ctx, r, opts)([]string{"gh", ghReleaseCmd, "view", plan.Tag, ghRepoFlag, plan.Repo})
 	switch view.Status {
 	case runner.StatusOK:
 		return true, nil
