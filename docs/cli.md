@@ -1545,7 +1545,7 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labelled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
+`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labeled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
 
 Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 
@@ -1598,7 +1598,7 @@ when the surface is loaded:
 | Bucket        | Meaning                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
 | `always`      | Paid on every request: the root instructions file and the item listing (below) |
-| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labelled `(machine-local)` for roots |
+| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labeled `(machine-local)` for roots |
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
@@ -1848,7 +1848,7 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 
 ### `ai-rulez search --eval <cases.yaml>`
 
-Measure the ranking against labelled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k. With positive and negative cases and a vector or hybrid mode it also prints the `[search] vector_min_sim` that best separates them (`calibration`, `abstain` rate; see [Abstaining](search.md#abstaining)).
+Measure the ranking against labeled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k. With positive and negative cases and a vector or hybrid mode it also prints the `[search] vector_min_sim` that best separates them (`calibration`, `abstain` rate; see [Abstaining](search.md#abstaining)).
 
 | Flag | Meaning |
 | --- | --- |
