@@ -241,7 +241,7 @@ func (g *Generator) projectFileIsOurs(abs string, output config.OutputFile) bool
 		return true
 	}
 	rel := filepath.ToSlash(g.convertToRelativePath(abs))
-	return g.outputProvenance(abs, rel, data, output.RawContent != nil) == provenStrong
+	return g.outputProvenance(abs, rel, data, g.headerlessOutput(abs, output)) == provenStrong
 }
 
 // isMergedDocument reports whether abs is one of the documents ai-rulez merges
