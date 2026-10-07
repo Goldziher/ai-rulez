@@ -12,10 +12,13 @@ func isWindows() bool { return false }
 // procTree owns the processes a command started.
 type procTree struct{}
 
-// configure puts the child in its own process group and makes cancellation kill
-// the whole group, so a scanner's helpers die with it.
+// configure starts the child in a new session (which is also a new process
+// group) and makes cancellation kill the whole group, so a scanner's helpers die
+// with it. The new session leaves the child without a controlling terminal: a
+// command run from an interactive shell cannot open /dev/tty and push input
+// into the user's terminal (TIOCSTI).
 func configure(cmd *exec.Cmd) *procTree {
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {
 			return nil
