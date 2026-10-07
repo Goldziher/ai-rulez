@@ -140,7 +140,7 @@ func TestRunConvert_ForceKeepsExistingConfig(t *testing.T) {
 	// Arrange
 	dir := convertProject(t)
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
-	existing := "version = \"4.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"
+	existing := "version = \"5.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(existing), 0o644))
 	resetConvertFlags(t, dir)
 	convertWrite, convertForce = true, true

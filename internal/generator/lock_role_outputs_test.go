@@ -21,7 +21,7 @@ func roleOutputProject(t *testing.T, mode string) *config.Config {
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o644))
 	}
-	write("config.toml", `version = "4.0"
+	write("config.toml", `version = "5.0"
 name = "role-outputs"
 presets = ["claude"]
 gitignore = false

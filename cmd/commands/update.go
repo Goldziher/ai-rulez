@@ -97,7 +97,6 @@ func init() {
 	f.BoolVar(&updateAcceptMoved, "accept-moved-tag", false, "Re-pin a tag that now points to another commit (AR732) after you reviewed it")
 	f.StringVar(&updateKind, "kind", "", "Limit the update to include, skill or source")
 	addFormatFlag(f, &updateFormat, "", formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.BoolVar(&updateOffline, "offline", false, "Refuse to run: update reads the remote's tags")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RootCmd.AddCommand(UpdateCmd)

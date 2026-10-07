@@ -29,7 +29,7 @@ func TestEffectiveMCPServers(t *testing.T) {
 			root := t.TempDir()
 			dir := filepath.Join(root, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(dir, 0o755))
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"+tt.config), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte("version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n"+tt.config), 0o644))
 			cfg, err := LoadConfig(context.Background(), root)
 			require.NoError(t, err)
 			// A render resolves placeholders in the working copy.
@@ -59,7 +59,7 @@ func TestLoadConfig_IgnoresSeparateMCPFiles(t *testing.T) {
 			dir := filepath.Join(root, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(dir, 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"),
-				[]byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
+				[]byte("version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(`{"mcp_servers":[{"name":"legacy","command":"x"}]}`), 0o644))
 
 			// Act

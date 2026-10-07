@@ -43,7 +43,7 @@ func writeChecksProject(t *testing.T, presets []string, files map[string]string,
 	for i, p := range presets {
 		quoted[i] = `"` + p + `"`
 	}
-	cfg := "version = \"4.0\"\nname = \"checks\"\ngitignore = false\npresets = [" + strings.Join(quoted, ",") + "]\n" + extraConfig
+	cfg := "version = \"5.0\"\nname = \"checks\"\ngitignore = false\nagents_md = false\npresets = [" + strings.Join(quoted, ",") + "]\n" + extraConfig
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte(cfg), 0o600))
 	return base
 }
@@ -271,7 +271,7 @@ func rewriteChecksConfigPresets(t *testing.T, base string, presets ...string) {
 	for i, p := range presets {
 		quoted[i] = `"` + p + `"`
 	}
-	cfg := "version = \"4.0\"\nname = \"checks\"\ngitignore = false\npresets = [" + strings.Join(quoted, ",") + "]\n"
+	cfg := "version = \"5.0\"\nname = \"checks\"\ngitignore = false\nagents_md = false\npresets = [" + strings.Join(quoted, ",") + "]\n"
 	require.NoError(t, os.WriteFile(cfgPath, []byte(cfg), 0o600))
 }
 

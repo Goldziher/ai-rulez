@@ -56,7 +56,7 @@ func evalProject(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		".ai-rulez/config.toml":                     "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml":                     "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 		".ai-rulez/skills/deploy/SKILL.md":          "---\nname: deploy\ndescription: Deploy things. Use when deploying.\n---\nbody\n",
 		".ai-rulez/skills/deploy/evals/a.eval.yaml": evalCLICases,
 	}
@@ -196,7 +196,7 @@ func TestEvalRun_RunnerSelection(t *testing.T) {
 func TestEvalRun_MinPassRateFromConfigIsTheThreshold(t *testing.T) {
 	resetEvalFlags(t)
 	root := evalProject(t)
-	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n[lint.evals]\nmin_pass_rate = 0.5\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[lint.evals]\nmin_pass_rate = 0.5\n"
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"), []byte(cfg), 0o600))
 	// one of two cases passes: 50%
 	evalFlags.runnerCommand = writeRunnerScript(t, `{"version":1,"results":[{"case":"fires","arm":"with","triggered":true,"output":"ok"},{"case":"quiet","arm":"with","triggered":true}]}`)

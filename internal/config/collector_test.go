@@ -17,19 +17,18 @@ import (
 // the loads each is said once, not on every reload.
 func TestWithCollectorSaysEachLoadWarningOnce(t *testing.T) {
 	tests := []struct {
-		name       string
-		shared     bool
-		wantBudget int
-		wantMalf   int
+		name     string
+		shared   bool
+		wantMalf int
 	}{
-		{"a fresh collector per load repeats them", false, 3, 3},
-		{"one collector across the loads says them once", true, 1, 1},
+		{"a fresh collector per load repeats them", false, 3},
+		{"one collector across the loads says them once", true, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			ws := workspace.NewMem("/virtual/watch")
-			ws.Set(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"watch\"\npresets = [\"claude\"]\n[lint.budget]\nAR201 = 2\n", 0o644)
+			ws.Set(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"watch\"\npresets = [\"claude\"]\n", 0o644)
 			ws.Set(".ai-rulez/rules/broken.md", "---\ntitle: a: b: c\n---\n# Broken\n", 0o644)
 			rec := &testutil.LogRecorder{}
 			collector := diag.New(nil)
@@ -46,7 +45,6 @@ func TestWithCollectorSaysEachLoadWarningOnce(t *testing.T) {
 
 			// Assert
 			got := rec.Level("WARN")
-			assert.Equal(t, tt.wantBudget, countContaining(got, "[lint.budget] is deprecated"), "%v", got)
 			assert.Equal(t, tt.wantMalf, countContaining(got, "malformed YAML frontmatter"), "%v", got)
 		})
 	}

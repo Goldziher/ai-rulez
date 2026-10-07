@@ -13,7 +13,7 @@ import (
 func testConfig() *config.Config {
 	return &config.Config{
 		Name:    "basemind",
-		Version: "4.0",
+		Version: "5.0",
 		BaseDir: "/tmp/out",
 		Plugin: &config.PluginAuthoring{
 			Name:        "basemind",

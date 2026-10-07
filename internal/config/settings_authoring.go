@@ -180,7 +180,7 @@ func (c *Config) validateSettingsHooks() error {
 
 // validateSettingsHookAction checks one action of a top-level [[hooks]] group:
 // exactly one of command or script, and a script that stays inside the project.
-// Whether the script exists and is executable is reported by `validate --strict`
+// Whether the script exists and is executable is reported by `validate`
 // (AR504, AR505), because the file may be produced by a build step.
 func validateSettingsHookAction(event string, index int, action *HookAction) error {
 	switch {
@@ -244,6 +244,9 @@ func (c *Config) validateManagedSettings() error {
 		if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "= \t") {
 			return oops.With("field", "claude.settings.managed.env").With("value", name).
 				Errorf("%q is not a valid environment variable name", name)
+		}
+		if err := CheckRepoTelemetryEnv(name, managed.Env[name]); err != nil {
+			return oops.With("field", "claude.settings.managed.env").Errorf("%s", err.Error())
 		}
 	}
 	for skill, state := range managed.SkillOverrides {

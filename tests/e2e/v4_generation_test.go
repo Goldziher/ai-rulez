@@ -32,10 +32,30 @@ func TestV4GenerationSuite(t *testing.T) {
 	suite.Run(t, new(V4GenerationSuite))
 }
 
+// bumpConfigVersionToV5 rewrites the version of the v4-era fixture config to
+// 5.0: the loader rejects 4.0 (the fixtures themselves stay as migrate input).
+func bumpConfigVersionToV5(t *testing.T, workingDir string) {
+	t.Helper()
+	path := filepath.Join(workingDir, ".ai-rulez", "config.toml")
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	bumped := strings.Replace(string(raw), `version = "5.0"`, "version = \"5.0\"\nagents_md = false", 1)
+	require.NotEqual(t, string(raw), bumped, "fixture should declare version 4.0")
+	// Pin the pre-v5 defaults the assertions were written against: per-preset
+	// files rather than a canonical AGENTS.md, and full content hashes.
+	if strings.Contains(bumped, "[header]\n") {
+		bumped = strings.Replace(bumped, "[header]\n", "[header]\nhashes = \"full\"\n", 1)
+	} else {
+		bumped += "\n[header]\nhashes = \"full\"\n"
+	}
+	require.NoError(t, os.WriteFile(path, []byte(bumped), 0o644))
+}
+
 func (s *V4GenerationSuite) SetupSuite() {
 	t := s.T()
 	s.workingDir = testutil.CreateTempDir(t)
 	testutil.SetupV4FullConfig(t, s.workingDir)
+	bumpConfigVersionToV5(t, s.workingDir)
 
 	// Load V4 config (TOML support is the first thing that needs implementing)
 	cfg, err := config.LoadConfig(context.Background(), s.workingDir)
@@ -44,7 +64,7 @@ func (s *V4GenerationSuite) SetupSuite() {
 	s.cfg = cfg
 
 	// Verify V4-specific fields were loaded
-	require.Equal(t, "4.0", cfg.Version, "Config version should be 4.0")
+	require.Equal(t, "5.0", cfg.Version, "Config version should be 5.0")
 	require.Equal(t, "v4-test-project", cfg.Name)
 	require.Len(t, cfg.Plugins, 3, "Should have 3 plugins configured")
 	require.Len(t, cfg.Marketplaces, 2, "Should have 2 marketplaces configured")
@@ -163,9 +183,8 @@ func (s *V4GenerationSuite) TestClaude_FileStructure() {
 	s.Require().Nil(s.findFile(outputs, filepath.Join(".claude", "settings.json")),
 		"MCP servers are not written to .claude/settings.json")
 
-	// Plugins (NEW)
-	claudePluginFile := s.findFile(outputs, filepath.Join(".claude", "plugins.json"))
-	s.Require().NotNil(claudePluginFile, "Should generate .claude/plugins.json with plugin declarations")
+	// [[plugins]] no longer writes a plugins.json nobody reads
+	s.Nil(s.findFile(outputs, filepath.Join(".claude", "plugins.json")))
 }
 
 func (s *V4GenerationSuite) TestClaude_Content() {
@@ -192,10 +211,6 @@ func (s *V4GenerationSuite) TestClaude_Content() {
 	s.assertContentContains(agentFile, "name: security-reviewer")
 	s.assertContentContains(agentFile, "description:")
 
-	// Plugins content (NEW)
-	pluginsFile := s.requireFile(outputs, filepath.Join(".claude", "plugins.json"))
-	s.assertContentContains(pluginsFile, "github")
-	s.assertContentContains(pluginsFile, "claude-plugins-official")
 }
 
 // ==========================================
@@ -497,9 +512,8 @@ func (s *V4GenerationSuite) TestCodex_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "agents", "security-reviewer.toml")),
 		"Should generate agent in TOML format")
 
-	// Plugins (NEW — Codex plugin declarations)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "plugins.json")),
-		"Should generate Codex plugin declarations (NEW)")
+	// [[plugins]] no longer writes a plugins.json nobody reads
+	s.Nil(s.findFile(outputs, filepath.Join(".codex", "plugins.json")))
 
 	// Commands are written as skills: Codex reads no project prompts folder
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "run-tests", "SKILL.md")),
@@ -519,11 +533,6 @@ func (s *V4GenerationSuite) TestCodex_Content() {
 	s.assertContentContains(agentFile, "name")
 	s.assertContentContains(agentFile, "description")
 	s.assertContentContains(agentFile, "security vulnerabilities")
-
-	// Plugins content (NEW)
-	pluginsFile := s.requireFile(outputs, filepath.Join(".codex", "plugins.json"))
-	s.assertContentContains(pluginsFile, "gmail")
-	s.assertContentContains(pluginsFile, "openai-curated")
 }
 
 // ==========================================
@@ -767,7 +776,7 @@ func (s *V4GenerationSuite) TestAllPresets_Generated() {
 }
 
 func (s *V4GenerationSuite) TestV4Config_VersionIs4() {
-	s.Assert().Equal("4.0", s.cfg.Version)
+	s.Assert().Equal("5.0", s.cfg.Version)
 }
 
 func (s *V4GenerationSuite) TestV4Config_TOMLFormat() {
@@ -817,6 +826,7 @@ func TestV4Generation_ModelByPreset(t *testing.T) {
 	agentsDir := filepath.Join(aiRulesDir, "agents")
 	require.NoError(t, os.MkdirAll(agentsDir, 0o755))
 	testutil.WriteFile(t, aiRulesDir, "config.toml", testutil.V4ModelByPresetConfigTOML)
+	bumpConfigVersionToV5(t, workingDir)
 	testutil.WriteFile(t, agentsDir, "agent-overrides.md", testutil.V4AgentWithPerPresetModels)
 	testutil.WriteFile(t, agentsDir, "agent-defaulted.md", testutil.V4AgentWithDefaultedModel)
 

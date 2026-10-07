@@ -552,7 +552,7 @@ func strictGate(cfg *config.Config) error {
 	if threshold == okfFailNone {
 		threshold = string(lint.SeverityError)
 	}
-	if lint.FailedWithExcess(report.Findings, threshold, budgetsFor(cfg), excess[0]) || baselineBlocks(reports) {
+	if lint.FailedWithExcess(report.Findings, threshold, ratchetFor(cfg), excess[0]) || baselineBlocks(reports) {
 		if werr := lint.Write(os.Stderr, lint.FormatText, lint.Combine(reports), lint.WriteOptions{Version: Version, FailOn: threshold}); werr != nil {
 			logger.Warn("Could not print the findings", "error", werr)
 		}

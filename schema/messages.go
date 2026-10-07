@@ -34,7 +34,7 @@ func refineMessages(lines []string) []string {
 			continue
 		case missing && (isMissingVersion(line) || strings.HasPrefix(line, "- version.enum:")):
 			if !versionWritten {
-				out = append(out, `- version: the required key is missing; add version = "4.0" at the top of the file`)
+				out = append(out, `- version: the required key is missing; add version = "5.0" at the top of the file`)
 				versionWritten = true
 			}
 		case repl[line] != "":

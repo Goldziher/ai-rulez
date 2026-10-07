@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -20,9 +21,9 @@ func localRuleProject(t *testing.T, preset, mode string) string {
 	t.Helper()
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
-	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\nagents_md = false\n"
 	if mode != "" {
-		cfg += "[rules]\nmode = \"" + mode + "\"\n"
+		cfg += "\n[rules]\nmode = \"" + mode + "\"\n"
 	}
 	seedLocalFile(t, filepath.Join(cfgDir, "config.toml"), cfg)
 	seedLocalFile(t, filepath.Join(cfgDir, "rules", "x.md"), "---\npriority: high\n---\n\nShared rule body.\n")
@@ -343,23 +344,26 @@ func TestLocalRuleFiles_RoutingMatchesSharedRules(t *testing.T) {
 	}{
 		{"claude inline scoped becomes file", "claude", "inline", "", scoped, ".claude/rules/y.local.md", ""},
 		{"claude inline unscoped stays inline", "claude", "inline", "", "Plain.\n", "", "Plain."},
-		{"claude mode_by_preset split", "claude", "inline", "[rules.mode_by_preset]\nclaude = \"split\"\n", "Plain.\n", ".claude/rules/y.local.md", ""},
+		{"claude mode_by_preset split", "claude", "inline", "\n[rules.mode_by_preset]\nclaude = \"split\"\n", "Plain.\n", ".claude/rules/y.local.md", ""},
 		{"copilot manual stays inline", "copilot", "split", "", manual, "", ""},
 		{"copilot negated-only stays inline", "copilot", "split", "",
 			"---\nactivation: glob\npaths:\n  - \"!vendor/**\"\n---\n\nNeg.\n", "", ""},
 		{"copilot scoped in inline mode becomes file", "copilot", "inline", "", scoped, ".github/instructions/y.local.instructions.md", ""},
 		{"antigravity split", "antigravity", "split", "", "Plain.\n", ".agents/rules/y.local.md", ""},
 		{"antigravity demoted by gemini", "antigravity,gemini", "split", "", "Plain.\n", "", ""},
-		{"antigravity explicit with gemini", "antigravity,gemini", "split", "[rules.mode_by_preset]\nantigravity = \"split\"\n", "Plain.\n", ".agents/rules/y.local.md", ""},
+		{"antigravity explicit with gemini", "antigravity,gemini", "split", "\n[rules.mode_by_preset]\nantigravity = \"split\"\n", "Plain.\n", ".agents/rules/y.local.md", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
-			presets := "[\"" + strings.ReplaceAll(tt.preset, ",", "\", \"") + "\"]"
+			presets := make([]string, 0, 2)
+			for _, p := range strings.Split(tt.preset, ",") {
+				presets = append(presets, strconv.Quote(p))
+			}
 			seedLocalFile(t, filepath.Join(cfgDir, "config.toml"),
-				"version = \"4.0\"\nname = \"t\"\npresets = "+presets+"\ngitignore = true\n\n[rules]\nmode = \""+tt.mode+"\"\n"+tt.byPreset)
+				"version = \"5.0\"\nname = \"t\"\npresets = ["+strings.Join(presets, ", ")+"]\ngitignore = true\nagents_md = false\n\n[rules]\nmode = \""+tt.mode+"\"\n"+tt.byPreset)
 			seedLocalFile(t, filepath.Join(cfgDir, "local", "rules", "y.md"), tt.rule)
 
 			// Act

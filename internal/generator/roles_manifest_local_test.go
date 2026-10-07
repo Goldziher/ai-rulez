@@ -12,7 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 )
 
-const manifestSharedConfig = `version = "4.0"
+const manifestSharedConfig = `version = "5.0"
 name = "manifest"
 presets = ["claude"]
 gitignore = false

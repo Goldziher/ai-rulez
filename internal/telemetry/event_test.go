@@ -227,3 +227,15 @@ func TestNormalize_DropsAnUnusableTimestamp(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONL_ListEventsAreNotSkillUses(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "local", "usage.jsonl")
+	listing := Event{Version: 1, Name: EventItem, Time: "2026-10-05T09:12:42Z", EventID: "bbbbbbbbbbbbbbb1", Kind: KindSkill, ID: ListID,
+		Source: SourceMCP, Outcome: OutcomeLoaded, LoadReason: ReasonList}
+	require.NoError(t, JSONL{Path: path}.Emit(context.Background(), &listing))
+
+	entries, skipped, err := usage.ReadLog(path)
+	require.NoError(t, err)
+	assert.Zero(t, skipped)
+	assert.Empty(t, entries, "a listing must not appear as a skill named _list")
+}

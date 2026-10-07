@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const userOwnedFilesConfig = `version = "4.0"
+const userOwnedFilesConfig = `version = "5.0"
 name = "me"
 presets = ["claude", "codex", "cline", "opencode", "copilot", "pi"]
 
@@ -23,7 +23,7 @@ command = "echo guard"
 deny = ["Bash(rm -rf:*)"]
 `
 
-const userOwnedFilesBare = `version = "4.0"
+const userOwnedFilesBare = `version = "5.0"
 name = "me"
 presets = ["claude", "codex", "cline", "opencode", "copilot", "pi"]
 `

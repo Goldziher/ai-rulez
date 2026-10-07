@@ -156,7 +156,7 @@ func (c *Config) RoleNames() []string {
 // validateRoles checks what can be judged without the content tree: names,
 // duplicates and skill_mode values. Problems that need the content (unknown
 // references, unreachable dependencies) and inheritance problems are reported by
-// RoleProblems, which `validate --strict` surfaces as AR971 to AR973.
+// RoleProblems, which `validate` surfaces as AR971 to AR973.
 func (c *Config) validateRoles() error {
 	if c.RoleManifest != nil {
 		switch c.RoleManifest.SkillModeFallback {
@@ -201,7 +201,7 @@ func (c *Config) validateRoles() error {
 		}
 	}
 	for _, p := range c.roleExtendsProblems() {
-		c.Warn("Role inheritance problem; `ai-rulez validate --strict` reports it as AR972", "role", p.Role, "problem", p.Message)
+		c.Warn("Role inheritance problem; `ai-rulez validate` reports it as AR972", "role", p.Role, "problem", p.Message)
 	}
 	return nil
 }

@@ -208,6 +208,36 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 	assert.Empty(t, load(t, files).Validate())
 }
 
+func TestBuildIndexesEncodeAwkwardFileNames(t *testing.T) {
+	in := []IndexInput{{Path: "skills/s/references/My File (1).md", Title: "My File"}, {Path: "skills/s/SKILL.md", Title: "S"}}
+	files := map[string]string{}
+	for p, d := range BuildIndexes(in, nil, "") {
+		files[p] = string(d)
+	}
+	for _, c := range in {
+		files[c.Path] = "---\ntype: X\ntitle: " + c.Title + "\n---\n"
+	}
+	assert.Contains(t, files["skills/s/references/index.md"], "(My%20File%20%281%29.md)")
+	assert.Empty(t, load(t, files).Validate())
+}
+
+func TestLoadBoundsTotalMarkdownSize(t *testing.T) {
+	old := maxTotalSize
+	maxTotalSize = 100
+	t.Cleanup(func() { maxTotalSize = old })
+	m := fstest.MapFS{}
+	for _, n := range []string{"a.md", "b.md", "c.md"} {
+		m[n] = &fstest.MapFile{Data: []byte(strings.Repeat("x", 60))}
+	}
+	_, err := Load(m)
+	assert.ErrorContains(t, err, "in total")
+}
+
+func TestTitleFromPathKeepsMultiByteRunes(t *testing.T) {
+	assert.Equal(t, "Über Uns", TitleFromPath("über-uns.md"))
+	assert.Equal(t, "日本語 Notes", TitleFromPath("日本語_notes.md"))
+}
+
 func TestMarshalFrontmatterOrder(t *testing.T) {
 	out, err := MarshalFrontmatter([]Field{{"type", "Decision"}, {"title", "T: colon"}, {"x", map[string]any{"b": 1, "a": []string{"z"}}}})
 	require.NoError(t, err)
@@ -237,6 +267,31 @@ func TestWriteCompareAndPrune(t *testing.T) {
 	require.NoError(t, WriteFiles(dir, files[:1], true))
 	_, err = os.Stat(dir + "/a")
 	assert.True(t, os.IsNotExist(err), "emptied directory is pruned")
+}
+
+func TestPruneLeavesDotDirsAndForeignEmptyDirsAlone(t *testing.T) {
+	dir := t.TempDir()
+	files := []File{{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}, {Path: "a/b.md", Data: []byte("x")}}
+	require.NoError(t, WriteFiles(dir, files, true))
+	for _, d := range []string{".git/refs/heads", ".git/objects", "keep-me"} {
+		require.NoError(t, os.MkdirAll(dir+"/"+d, 0o755))
+	}
+	require.NoError(t, WriteFiles(dir, files[:1], true))
+	for _, d := range []string{".git/refs/heads", ".git/objects", "keep-me"} {
+		_, err := os.Stat(dir + "/" + d)
+		assert.NoError(t, err, d)
+	}
+	_, err := os.Stat(dir + "/a")
+	assert.True(t, os.IsNotExist(err), "the directory emptied by the prune is removed")
+}
+
+func TestLooksLikeBundleNeedsTheVersionKey(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(dir+"/index.md", []byte("# Docs\n\nThis page mentions okf_version in passing.\n"), 0o644))
+	assert.False(t, LooksLikeBundle(dir))
+	assert.Error(t, WriteFiles(dir, []File{{Path: "a.md", Data: nil}}, true))
+	require.NoError(t, os.WriteFile(dir+"/index.md", []byte("---\nokf_version: \"0.2\"\n---\n"), 0o644))
+	assert.True(t, LooksLikeBundle(dir))
 }
 
 func TestWriteRefusesForeignDirAndTraversal(t *testing.T) {

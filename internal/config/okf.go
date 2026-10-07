@@ -22,7 +22,7 @@ const PresetOKF = "okf"
 var okfKinds = []string{rulesDir, contextDir, skillsDir, agentsDir, commandsDir, "checks"}
 
 // OKFConfig configures the Open Knowledge Format bundle written by the okf
-// preset and linted by `validate --strict`.
+// preset and linted by `validate`.
 type OKFConfig struct {
 	// Dir is the bundle directory, relative to the project root. Default docs/okf.
 	Dir string `yaml:"dir,omitempty" json:"dir,omitempty" toml:"dir,omitempty"`

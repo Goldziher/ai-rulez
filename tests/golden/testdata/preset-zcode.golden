@@ -23,7 +23,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 44dff599540bf831b70517217360b89ad9a05d7757a7b8ec7eaa268f7e7861b0
+.ai-rulez/config.toml file 0644 844 2e20643feeb4b36075d9aeba8ff6259e200da8f66ee2dc26584710a0a24b2e68
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -46,22 +46,22 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .zcode/ dir 0755
 .zcode/agents/ dir 0755
-.zcode/agents/architect.md file 0644 273 4921bdef5f1a197519f50ca9f132d6203d561fe6a85c462e85a3da1bb0fd1ae0
-.zcode/agents/tester.md file 0644 245 77c8295c366add271791da53db3e896a52f61df7ef30a18999ddeb53a6f527a7
+.zcode/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.zcode/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .zcode/commands/ dir 0755
-.zcode/commands/build.md file 0644 250 88b02b2d0267ed6cc1ac2bb86768da1604f06e8a2ec3b398c59e4f800d5cce3c
-.zcode/commands/ship.md file 0644 227 7618539da94b6e165fd29ad696a1de0390e132009e37fadd06287e5efaa1664c
+.zcode/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.zcode/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .zcode/config.json file 0600 427 a12b37c58d68abdf5a98bc093e8d1fc3700fabf62115e2e959b298921c4acebf
 .zcode/skills/ dir 0755
 .zcode/skills/deployer/ dir 0755
-.zcode/skills/deployer/SKILL.md file 0644 259 82e4292464483cf123d2e696db8a9bec66b9ac7007429d87afcea1f5ef4ea7d0
+.zcode/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .zcode/skills/reviewer/ dir 0755
-.zcode/skills/reviewer/SKILL.md file 0644 506 2ed32c998dd5c8d7bf9fc5b8fe9e1800c19bb7683bfc02ff604e2b938c3f23f0
+.zcode/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .zcode/skills/reviewer/references/ dir 0755
 .zcode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .zcode/skills/reviewer/scripts/ dir 0755
 .zcode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 874 bc0c9551d30ea84e7ffb3b217bb645479396f2a8013a08584c3429889ad50e96
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -144,7 +144,7 @@ INFO  Removed generated files files=11 directories=8
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 44dff599540bf831b70517217360b89ad9a05d7757a7b8ec7eaa268f7e7861b0
+.ai-rulez/config.toml file 0644 844 2e20643feeb4b36075d9aeba8ff6259e200da8f66ee2dc26584710a0a24b2e68
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

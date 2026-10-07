@@ -82,7 +82,7 @@ Where a tool cannot express `auto` or `manual`, the rule is written as always-on
 
 ### Freshness hashes
 
-`Content-Hash` and `Source-Hash` lines are written inside the HTML comment banner that follows the frontmatter, never in the frontmatter, because the tools' frontmatter parsers are not documented to tolerate YAML comments. This applies to every rules-folder file, including `.mdc`. Files written by earlier versions with hashes in the frontmatter are rewritten once on the next `generate`. Hash lines follow `[header] hashes`.
+The hash lines (`Content-Hash`, plus `Source-Hash` with `hashes = "full"`) are written inside the HTML comment banner that follows the frontmatter, never in the frontmatter, because the tools' frontmatter parsers are not documented to tolerate YAML comments. This applies to every rules-folder file, including `.mdc`. Files written by earlier versions with hashes in the frontmatter are rewritten once on the next `generate`. Hash lines follow `[header] hashes`.
 
 ### Tools without a rules folder
 
@@ -207,7 +207,7 @@ For `[[scopes]]`, rule files are written to the root rules folder, with the scop
 
 ## Hand-written rule files
 
-Generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. A hand-written file is never overwritten. Since 4.22.1, if it has the name of a generated rule, the generated rule is written as `<id>.ai-rulez<ext>` instead (`<id>.ai-rulez.instructions.md` for Copilot), `generate` warns, and the renamed file is recorded in the manifest and gitignored like any generated file. Rename or delete the hand-written file to put the rule back under its plain name; the next run removes the renamed file. If the renamed name is taken by a hand-written file too, the rule is skipped with a warning. Names matching `*.local.*` in a rules folder are reserved for [local rules](#local-rules): a hand-written file with such a name is skipped with a warning, and the local rule is not written.
+With `gitignore = true`, generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. A hand-written file is never overwritten. Since 4.22.1, if it has the name of a generated rule, the generated rule is written as `<id>.ai-rulez<ext>` instead (`<id>.ai-rulez.instructions.md` for Copilot), `generate` warns, and the renamed file is recorded in the manifest and treated like any generated file. Rename or delete the hand-written file to put the rule back under its plain name; the next run removes the renamed file. If the renamed name is taken by a hand-written file too, the rule is skipped with a warning. Names matching `*.local.*` in a rules folder are reserved for [local rules](#local-rules): a hand-written file with such a name is skipped with a warning, and the local rule is not written.
 
 ## Size limits
 

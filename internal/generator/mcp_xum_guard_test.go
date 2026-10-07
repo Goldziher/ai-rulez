@@ -17,7 +17,7 @@ func TestGenerator_MCPSecrets_GuardsXumMCPConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "xum-guard"
 presets = ["xum"]
 gitignore = false

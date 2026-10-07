@@ -56,7 +56,7 @@ func registerImprovecodes(s *ruleSet) {
 			Good: "Add held-out cases, or review the diff with the interval in mind",
 		},
 		CodeImproveRepoOptimizerIgnored: {
-			Why:  "A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate --strict` and `improve run` report them.",
+			Why:  "A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate` and `improve run` report them.",
 			Bad:  "A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`",
 			Good: "Pass `--with`, or review the config and add `--trust-repo-optimizer`",
 		},

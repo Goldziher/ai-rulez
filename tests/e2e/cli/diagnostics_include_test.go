@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
 
-const unreachableIncludeConfig = `version = "4.0"
+const unreachableIncludeConfig = `version = "5.0"
 name = "x"
 presets = ["claude"]
 

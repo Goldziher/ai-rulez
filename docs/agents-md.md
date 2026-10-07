@@ -2,10 +2,13 @@
 
 `AGENTS.md` and `.agents/skills/` are the closest thing to a cross-tool convention for project instructions and
 Agent Skills. With `agents_md = true`, ai-rulez renders them once and every preset that reads them stops writing its
-own copy. The flag is off by default; with it off, output is byte-for-byte what earlier releases produced.
+own copy. The flag is on by default: `AGENTS.md` is the canonical instruction file and `CLAUDE.md` imports
+`@AGENTS.md`. Set `agents_md = false` to get the per-tool files of earlier releases (`migrate v5` pins that value for
+a 4.x project so its output does not move).
 
 ```toml
-agents_md = true
+agents_md = true    # the default
+# agents_md = false # per-tool files
 ```
 
 What changes:
@@ -17,7 +20,7 @@ What changes:
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
   MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
-Without the flag, `codex`, `opencode`, `xum`, `pi`, `amp` and `baz` already write the same `AGENTS.md`, while `claude`, `gemini`,
+With `agents_md = false`, `codex`, `opencode`, `xum`, `pi`, `amp` and `baz` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.
 
 ## Tool support
@@ -213,18 +216,20 @@ the root, Gemini gets no instructions for that scope and `generate` warns; add `
 - Junie and Antigravity load the local context from their rules folders (`.junie/rules/ai-rulez.local.md`,
   `.agents/rules/ai-rulez.local.md`).
 
-**Hashes.** The shared outputs carry one `Source-Hash` (and `Content-Hash`, per `[header] hashes`) computed from the
-content and the settings that shape the file. It does not depend on the list of presets, rules modes, MCP servers or
+**Hashes.** The shared outputs carry one `Content-Hash` (and the project-wide `Source-Hash` with `[header] hashes =
+"full"`) computed from the content and the settings that shape the file. It does not depend on the list of presets, rules modes, MCP servers or
 plugins, so adding a preset that reads the file leaves the provenance line unchanged unless the file itself changes.
 It changes with the inlining decision above, and, only when some rule or context item has `targets`, with the set of
 presets relying on the file. `AGENTS.md` and the files under `.agents/skills` share the hash. The `[header] hashes`
-modes apply as elsewhere: `full` writes both hashes, `content` only `Content-Hash`, `none` neither.
+modes apply as elsewhere: `content` (the default) writes only `Content-Hash`, `full` both hashes, `none` neither.
 
 ## Turning the flag on and off
 
 ```bash
 ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
 ```
+
+The flag is on unless you set `agents_md = false`; the two lists below describe switching between the modes.
 
 - **On:** files that were only needed by the per-tool layout (`GEMINI.md`, `.hermes.md`,
   `.github/copilot-instructions.md`, `.devin/skills`, ...) are removed

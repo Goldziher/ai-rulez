@@ -23,11 +23,20 @@ var validateRecursive bool
 
 var ValidateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
-	Short: "Validate AI rules configuration file",
-	Long: `Validate an AI rules configuration file for syntax errors,
-schema compliance, and structural issues.`,
+	Short: "Validate AI rules configuration and content",
+	Long: `Validate an AI rules configuration for syntax errors, schema compliance and
+structural issues, then run the content checks: globs that match nothing, dead
+links and references, missing hooks, oversize or duplicate content and the
+security rules (see the [lint] config table).
+
+Pass --config-only to check the configuration file alone. Pass --strict to make
+warnings fail the run (the same as --fail-on warning).
+
+Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
+2 findings at or above --fail-on (default error).`,
 	Aliases: []string{"val", "v", "check"},
 	Args:    cobra.MaximumNArgs(1),
+	PreRunE: func(*cobra.Command, []string) error { return validatePreRun() },
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmdContext()
 		if validateExplain != "" {
@@ -125,17 +134,17 @@ schema compliance, and structural issues.`,
 
 func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
-	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
-	ValidateCmd.Flags().BoolVar(&validateVerifiers, "verifiers", false, "With --strict, also evaluate the verifiers (never a command or a model) and report them as AR9H findings")
-	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
-	ValidateCmd.Flags().StringVar(&validateApprovalsBase, "approvals-base", "", "With --strict, report approvals added since this git revision for content that also changed since it (AR716)")
+	ValidateCmd.Flags().BoolVar(&validateConfigOnly, "config-only", false, "Check the configuration file only and skip the content checks")
+	ValidateCmd.Flags().BoolVar(&validateWarnings, "strict", false, "Fail on warnings as well as errors (the same as --fail-on warning)")
+	ValidateCmd.Flags().BoolVar(&validateVerifiers, "verifiers", false, "Also evaluate the verifiers (never a command or a model) and report them as AR9H findings")
+	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
+	ValidateCmd.Flags().StringVar(&validateApprovalsBase, "approvals-base", "", "Report approvals added since this git revision for content that also changed since it (AR716)")
 	ValidateCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ValidateCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...) // --format implies --strict
-	addJSONFlagAlias(ValidateCmd.Flags())
-	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "With --strict, lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
-	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "With --strict, run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): "+strings.Join(lint.AnalyzerNames(), ", "))
-	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "With --strict, write the report to this file instead of stdout")
-	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
+	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
+	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): "+strings.Join(lint.AnalyzerNames(), ", "))
+	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
+	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")
 	addBaselineFlags(ValidateCmd)
 	addChangedFlags(ValidateCmd)
@@ -143,6 +152,21 @@ func init() {
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	ValidateCmd.Flags().StringVar(&validateRepoRoot, "repo-root", "", "Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory)")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+}
+
+// validatePreRun resolves --config-only and --strict into the internal state.
+func validatePreRun() error {
+	if validateWarnings && validateConfigOnly {
+		return oops.Errorf("--strict (warnings fail) needs the content checks: drop --config-only")
+	}
+	validateStrict = !validateConfigOnly
+	if validateWarnings {
+		if validateFailOn != "" && validateFailOn != failOnWarning {
+			return oops.Errorf("--strict means --fail-on warning and conflicts with --fail-on %s", validateFailOn)
+		}
+		validateFailOn = failOnWarning
+	}
+	return nil
 }
 
 // runRecursiveValidate validates every discovered config, reports all failures,
@@ -335,7 +359,7 @@ func isEntryNamePath(path string) bool {
 var ScanCmd = &cobra.Command{
 	Use:   "scan [config-file]",
 	Short: "Scan skills, rules and scripts for secrets, hidden text, injection and risky shell",
-	Long: `Run the deterministic security checks of "validate --strict" on their own:
+	Long: `Run the deterministic security checks of "validate" on their own:
 secret patterns, hidden or bidirectional characters, prompt-injection phrases,
 HTML comments that carry instructions, curl-pipe-shell, eval and base64 payloads,
 credential access, unrestricted allowed-tools, outbound hosts outside an
@@ -357,7 +381,6 @@ func init() {
 	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
 	ScanCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ScanCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...)
-	addJSONFlagAlias(ScanCmd.Flags())
 	ScanCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile)")
 	ScanCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
 	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")

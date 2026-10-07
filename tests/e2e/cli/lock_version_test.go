@@ -39,7 +39,7 @@ func (s *LockVersionCLITestSuite) SetupTest() {
 	s.release("two", "v1.1.0")
 	s.release("three", "v2.0.0")
 	s.Require().NoError(os.MkdirAll(filepath.Join(s.dir, ".ai-rulez", "rules"), 0o755))
-	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false

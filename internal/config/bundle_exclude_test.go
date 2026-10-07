@@ -145,9 +145,9 @@ func TestBundleExcludeFromConfig(t *testing.T) {
 		"skills/demo/scripts/.venv-x/lib.py",
 	)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\n"), 0o644))
 
-	cfg, err := decodeConfigTOML([]byte("version = \"4.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\ncodex_skills_dir = \".codex/skills\"\n"), "x")
+	cfg, err := decodeConfigTOML([]byte("version = \"5.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\ncodex_skills_dir = \".codex/skills\"\n"), "x")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"*.bak"}, cfg.BundleExclude)
 	assert.Equal(t, ".codex/skills", cfg.CodexSkillsDir)
@@ -225,7 +225,7 @@ func TestCustomPresetPathIsValidated(t *testing.T) {
 	t.Parallel()
 	for _, p := range []string{".git/config", "../escaped.md", "/etc/passwd", ".ai-rulez/config.toml"} {
 		cfg := &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{Name: "x", Type: PresetTypeMarkdown, Path: p, Template: "x"}},
 		}
@@ -238,7 +238,7 @@ func TestCustomPresetPathIsValidated(t *testing.T) {
 func TestOKFDirRejectsControlDirs(t *testing.T) {
 	t.Parallel()
 	for _, dir := range []string{".git/hooks", "a/.GIT/x", "/etc", "../x", ".hg/store"} {
-		cfg := &Config{Version: "4.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, OKF: &OKFConfig{Dir: dir}}
+		cfg := &Config{Version: "5.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, OKF: &OKFConfig{Dir: dir}}
 		err := cfg.Validate()
 		require.Error(t, err, dir)
 		assert.Contains(t, err.Error(), "okf.dir", dir)

@@ -33,7 +33,7 @@ func InitConfigTOML(projectName string, presets []string) string {
 # Documentation: https://github.com/Goldziher/ai-rulez
 
 # Version (required)
-version = "4.0"
+version = "5.0"
 
 # Project name (required)
 name = `)

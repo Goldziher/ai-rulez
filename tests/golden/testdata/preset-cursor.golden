@@ -13,9 +13,9 @@ INFO  Generation complete files=20
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 e3543171165a006522c412cd898978545ed8c40dea4eb1cc37e08e3c96745162
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 c89125d0598071fbc1bf6e20c46a9085097f8ddd313d64cc5afafc1005be6094
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -32,7 +32,7 @@ INFO  Generation complete files=20
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 827 088094524001c38588574068d351f8df063788602903335da3375e1c8b49730a
+.ai-rulez/config.toml file 0644 845 9071e51a562fb3638913412fd72071d0213e53c7564f6193b76e11a75394a1b8
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -54,8 +54,8 @@ INFO  Generation complete files=20
 .cursor/ dir 0755
 .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .cursor/agents/ dir 0755
-.cursor/agents/architect.md file 0644 273 59238c7a97c7c74ff6f784ea0de413c81a0b3d6935e8ec531cfef38a6a045596
-.cursor/agents/tester.md file 0644 245 4d511401322a4d52ad09481f3c3b608ff20e9937d747eb17ab90a18fa68fb66b
+.cursor/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.cursor/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
 .cursor/commands/ dir 0755
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
@@ -63,13 +63,13 @@ INFO  Generation complete files=20
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
 .cursor/mcp.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
 .cursor/rules/ dir 0755
-.cursor/rules/always.mdc file 0644 351 dd0a1fff8aea26a5af14806673eeedeec002801354d00917ae0089e88a95dbb8
-.cursor/rules/auto.mdc file 0644 362 97be429a3e36fff7d14e8d8752a284be259ed6faf4e538ed7b06298b4a34ec7b
-.cursor/rules/context-architecture.mdc file 0644 340 d531e257439e0ba9127d41815f99a834c462a45771af752d334cec9f6b3a4c55
-.cursor/rules/context-overview.mdc file 0644 351 d682e1ae2824163686e3c15032dea068a4a0476c60253bc6531438624df6b1d9
-.cursor/rules/manual.mdc file 0644 340 be8277f30d2b1897e471dce29466640e7c3948a6ae6fac237c1fcc192baa3da9
-.cursor/rules/targeted.mdc file 0644 335 619f69fe04dba4df3bb841c69870ef76bfd4a89bfa312faff9590066790070e2
-.cursor/rules/typescript.mdc file 0644 390 a9812f364902b7cf3458bb13370315ccde1641879bd7e0e82d175fb146bfe6b5
+.cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
+.cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
+.cursor/rules/context-architecture.mdc file 0644 255 355e35cba517e7f51002ffd853d57deb6fcecb661ed0853cbc24ac44f10a9898
+.cursor/rules/context-overview.mdc file 0644 266 bf769d85e9b2aae7d279408c2fb692d1e55051e5be994cddad9eba3941b6b792
+.cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
+.cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
+.cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gitignore file 0644 477 afcb215f82127921668e7324ec0fcf27d875257a733daebc1b7f1de2bffa5957
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 scripts/ dir 0755
@@ -114,7 +114,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -164,7 +164,7 @@ INFO  Removed generated files files=20 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 827 088094524001c38588574068d351f8df063788602903335da3375e1c8b49730a
+.ai-rulez/config.toml file 0644 845 9071e51a562fb3638913412fd72071d0213e53c7564f6193b76e11a75394a1b8
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

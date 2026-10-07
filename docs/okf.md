@@ -138,16 +138,18 @@ context/<id>.md
 skills/<id>/SKILL.md            + references/, scripts/, assets/ next to it
 agents/<id>.md
 commands/<id>.md
+checks/<id>.md
 domains/<domain>/<kind>/...     same shape for domain content
 ```
 
 | ai-rulez | OKF `type` written | Notes |
 | --- | --- | --- |
-| rule | `Decision` | A rule states a decision the team made. Override with the `okf_type` frontmatter key |
+| rule | `Decision` | A rule states a decision the team made. Override by setting `type` in the item's `okf:` metadata map (for example `okf:` with `type: Policy` nested under it); an import stores a foreign `type` there |
 | context | `Concept` | Background knowledge |
 | skill | `Playbook` | The SKILL.md body is the procedure; resources ship next to it |
 | agent | `Reference` | OKF has no agent type. `x-ai-rulez.kind: agent` restores it |
 | command | `Reference` | Same, `kind: command` |
+| check | `Reference` | Same, `kind: check` |
 | skill resource (markdown) | `Reference` | Wrapped in frontmatter so the bundle stays conformant; stripped on import. Non-markdown resources are copied verbatim |
 | metric | n/a | ai-rulez has no metric concept; an imported `Metric` becomes context |
 
@@ -186,7 +188,7 @@ no `x-ai-rulez.kind`:
 | `howto`, `playbook`, `runbook`, `procedure`, `skill` | skill |
 | `concept`, `reference`, `metric`, anything else (incl. `Attested Computation`) | context |
 
-`--into rules|context|skills` forces every concept to that kind. OKF keys with no
+`--into rules|context|skills` forces every concept to that kind. Without `--into`, a concept whose `x-ai-rulez.kind` is `agent`, `command` or `check` is imported as that kind, so a bundle can also create agents, commands and checks (the security scan runs on all of them first). OKF keys with no
 ai-rulez equivalent (`tags`, `resource`, `sources`, `status`, `stale_after`, ...) are kept
 as extra frontmatter so they survive a later export.
 
@@ -204,7 +206,7 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 | AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
 | AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one), or `log.md` headings that are not ISO dates |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, a markdown file over the size limit that was skipped, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
 | AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
 
 ## Format details
@@ -302,7 +304,7 @@ changed a title, the rule is deterministic and never silent:
 - `import okf` never overwrites a source file that differs; without `--force` it reports a conflict (exit 2), with
   `--force` the bundle wins.
 - `export okf` and `generate` write the sources' title, so a title edited only in the bundle is drift. `generate --check`,
-  `export okf --check` and `validate --strict` report it as AR9B5, naming the edited title and both ways out
+  `export okf --check` and `validate` report it as AR9B5, naming the edited title and both ways out
   (`generate` restores the source, `import okf --force` adopts the edit).
 
 A title edit on a markdown skill resource is not kept: its wrapper is rebuilt from the file name.
@@ -342,7 +344,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
 | `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
-| `ai-rulez validate --strict`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |
+| `ai-rulez validate`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |
 
 `--into` takes `rules`, `context` or `skills`; use `--domain` to place the result in a domain. (The design note
 asked for `--into domain|...`; a separate flag keeps the two choices independent.)
@@ -364,8 +366,9 @@ index_style = "body"             # or "frontmatter", see Index styles
 ```
 
 The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`). Domains
-that come from builtins or includes are skipped, in the preset and in `export okf`, because they are not this project's
-own content; root content is exported as the generator sees it. The bundle is committed documentation: `gitignore = true`
+that come from builtins or includes are skipped, in the preset and in `export okf`, and so is any root-level or domain
+item merged in from an include (its source file is outside your `.ai-rulez/` directory), because they are not this
+project's own content; `export okf` names the number skipped on stderr. The bundle is committed documentation: `gitignore = true`
 never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
 hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
 
@@ -389,7 +392,7 @@ discarded) and merged like any other include, with the usual precedence. The AR0
 converted text; a bundle with an error-level finding is refused as a whole, and the include is skipped with an error.
 A bundle in a git repository is cached under `~/.cache/ai-rulez/includes/<name>` and recorded in `ai-rulez.lock`
 exactly like a git include: `ai-rulez lock` pins a tag or branch to its commit and a content digest, a locked run
-fetches the pinned commit (a moved tag changes nothing until you relock), `--frozen` and `--no-fetch` use the cache and
+fetches the pinned commit (a moved tag changes nothing until you relock), `--frozen` and `--offline` use the cache and
 fail when the digest differs, `lock --check` and `[lock] enforce` apply, and a branch or tag that is not locked is
 reported as `AR010`. The clone runs with hooks, credential helpers and submodules off and only the https, ssh and file
 transports. See [Lock file](lockfile.md). `install_to` places the content in a
@@ -413,7 +416,7 @@ domain like other includes. Configure with `includes[].format`; the only value i
 
 ```bash
 ai-rulez generate --check                 # includes the okf preset: fails when docs/okf is stale
-ai-rulez validate --strict                # AR9B0-AR9B9 for the configured bundle
+ai-rulez validate                         # AR9B0-AR9B9 for the configured bundle
 ai-rulez okf validate docs/okf --fail-on warning --format json
 ai-rulez export okf --out /tmp/kb --check # compare without touching the repository
 ```

@@ -36,7 +36,7 @@ func concurrentProject(t *testing.T, i int) string {
 	t.Helper()
 	dir := t.TempDir()
 	files := map[string]string{
-		".ai-rulez/config.toml":      fmt.Sprintf("version = \"4.0\"\nname = \"p%d\"\npresets = [\"claude\", \"cursor\", \"codex\"]\ngitignore = true\n", i),
+		".ai-rulez/config.toml":      fmt.Sprintf("version = \"5.0\"\nname = \"p%d\"\npresets = [\"claude\", \"cursor\", \"codex\"]\ngitignore = true\n", i),
 		".ai-rulez/rules/own.md":     fmt.Sprintf("---\npriority: high\n---\n# Rule %d\n\nOnly project %d.\n", i, i),
 		".ai-rulez/rules/manual.md":  "---\nactivation: manual\n---\n# Manual\n\nBody.\n",
 		".ai-rulez/context/about.md": fmt.Sprintf("# About %d\n", i),

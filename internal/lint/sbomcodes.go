@@ -15,7 +15,7 @@ const (
 )
 
 // SBOMFinding is one SBOM problem: Code is one of the codes above and Path the
-// file it is shown against ("" for the configuration file). `validate --strict`
+// file it is shown against ("" for the configuration file). `validate`
 // builds the SBOM (internal/sbom, which this package cannot import) and passes
 // the findings in with WithSBOM.
 type SBOMFinding struct {

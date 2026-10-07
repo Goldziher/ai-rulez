@@ -13,9 +13,11 @@ packaging metadata.
 !!! note "Authoring vs. installing"
 The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
 (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
-arrays, which are the **consumer** side. `[[plugins]]` is rendered into
-`.claude/plugins.json` and `.codex/plugins.json`; `[[marketplaces]]` is currently
-recorded only and not emitted. See
+arrays, which are the **consumer** side. Neither array writes an output file:
+`[[plugins]]` is still accepted but `generate` warns that it has no effect, and
+`[[marketplaces]]` is recorded only. To enable plugins, use
+`[claude.settings] manage = true` with `enable_plugins` for Claude Code and
+`[plugins."name@marketplace"] enabled = true` in `.codex/config.toml` for Codex. See
 [Consumer plugins](configuration.md#plugins) for the fields.
 
 To turn a generated bundle into a checksummed release archive and upload it to a GitHub release, see
@@ -25,7 +27,7 @@ To turn a generated bundle into a checksummed release archive and upload it to a
 
 ```toml
 # .ai-rulez/config.toml
-version = "4.0"
+version = "5.0"
 name = "my-tool"
 description = "My project."
 
@@ -292,7 +294,7 @@ content_root = "plugin"
 ### Generated-file provenance
 
 Generated JavaScript, TypeScript, Python, and Markdown files include an ai-rulez warning plus
-deterministic BLAKE3 `Content-Hash` and `Source-Hash` values. Markdown headers follow
+deterministic BLAKE3 `Content-Hash` value (and `Source-Hash` with `[header] hashes = "full"`). Markdown headers follow
 YAML frontmatter so skill discovery remains valid.
 
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
@@ -517,7 +519,7 @@ nothing tells anyone the plugin exists.
 Claude Code's documentation says a client that installed a plugin from a git-hosted marketplace
 keeps its cached copy until the plugin's version string changes (a plugin that declares no version
 is tracked by commit, and a plugin loaded in place from a local marketplace is not controlled by
-`version`). `ai-rulez validate --strict` therefore reports `AR961 plugin-version-drift` (warning)
+`version`). `ai-rulez validate` therefore reports `AR961 plugin-version-drift` (warning)
 when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
 version in its manifest is unchanged. Bump `version`, or omit it to track commits.
 

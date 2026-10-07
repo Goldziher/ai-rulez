@@ -229,7 +229,7 @@ func newCatalogSkill(log logger.Logger, src *generator.ServedSkill) (*CatalogSki
 	}
 	skill := &CatalogSkill{
 		Name:        name,
-		Description: desc,
+		Description: boundText(desc),
 		URI:         SkillURIScheme + name + "/" + skillMarkdown,
 		Domain:      src.Domain,
 		Source:      src.Source,
@@ -241,7 +241,7 @@ func newCatalogSkill(log logger.Logger, src *generator.ServedSkill) (*CatalogSki
 		Commit:      src.Commit,
 		Trust:       src.Trust,
 		Imported:    src.Imported,
-		Frontmatter: front,
+		Frontmatter: boundFrontmatter(front),
 	}
 	if len(skill.Triggers) == 0 {
 		skill.Triggers = listField(front, "triggers")
@@ -249,6 +249,7 @@ func newCatalogSkill(log logger.Logger, src *generator.ServedSkill) (*CatalogSki
 	if len(skill.Keywords) == 0 {
 		skill.Keywords = listField(front, "keywords")
 	}
+	skill.Triggers, skill.Keywords = boundList(skill.Triggers), boundList(skill.Keywords)
 	leaves := make([]contentlock.Leaf, 0, len(src.Files))
 	for _, f := range src.Files {
 		if signing.IsSignatureFile(f.RelPath) {

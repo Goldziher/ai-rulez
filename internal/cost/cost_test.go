@@ -23,7 +23,7 @@ func fixture(t *testing.T, presets string) *config.Config {
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750))
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
 	}
-	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"t\"\npresets = "+presets+"\ngitignore = false\n")
+	write(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"t\"\npresets = "+presets+"\ngitignore = false\n")
 	write(".ai-rulez/rules/big.md", "---\ndescription: a big always-on rule\n---\n"+strings.Repeat("Always do the careful thing in every file. ", 60))
 	write(".ai-rulez/rules/small.md", "---\ndescription: tiny\n---\nBe kind.\n")
 	write(".ai-rulez/rules/scoped.md", "---\ndescription: scoped\npaths: [\"src/**\"]\n---\n"+strings.Repeat("Only for sources. ", 30))

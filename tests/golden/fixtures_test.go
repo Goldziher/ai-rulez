@@ -27,6 +27,15 @@ func gitignoreKey(top string) string {
 	return "gitignore = true\n"
 }
 
+// agentsMDKey pins the 4.x per-tool outputs the preset goldens describe, unless
+// the scenario states agents_md itself.
+func agentsMDKey(top string) string {
+	if strings.Contains(top, "agents_md") {
+		return ""
+	}
+	return "agents_md = false\n"
+}
+
 // withoutMCP drops the [[mcp_servers]] tables of a rich project: many presets write
 // the same MCP file with different bytes, which generate refuses.
 func withoutMCP(files map[string]string) map[string]string {
@@ -43,11 +52,11 @@ func richConfig(presets []string, extra string) string { return richConfigTop(pr
 
 // richConfigTop is richConfig with top-level keys (before any table).
 func richConfigTop(presets []string, top, extra string) string {
-	return `version = "4.0"
+	return `version = "5.0"
 name = "golden"
 description = "Golden fixture project"
 presets = ` + tomlList(presets) + `
-` + gitignoreKey(top) + top + `
+` + gitignoreKey(top) + agentsMDKey(top) + top + `
 [guard]
 generated = true
 

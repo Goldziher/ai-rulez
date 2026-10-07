@@ -30,7 +30,7 @@ func writeMinimalConfig(t *testing.T, dir string) {
 	t.Helper()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	body := "version = \"5.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
 	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 }
 
@@ -274,7 +274,7 @@ func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".config", "ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	body := "version = \"5.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
 	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 	res, err := UpdateConfigHandler(context.Background(), newRequestWithArgs(map[string]any{
@@ -298,16 +298,18 @@ func TestAgentsMDConfigRoundTrip(t *testing.T) {
 		want    bool
 		wantTOM string // substring expected in the saved config.toml, "" for none
 	}{
-		{name: "enable", initial: "", set: true, want: true, wantTOM: "agents_md = true"},
-		{name: "disable", initial: "agents_md = true\n", set: false, want: false},
-		{name: "stays on when not passed", initial: "agents_md = true\n", set: nil, want: true, wantTOM: "agents_md = true"},
+		// v5 defaults agents_md to true, so only the opt-out is persisted.
+		{name: "enable", initial: "agents_md = false\n", set: true, want: true},
+		{name: "disable", initial: "", set: false, want: false, wantTOM: "agents_md = false"},
+		{name: "on by default when not passed", initial: "", set: nil, want: true},
+		{name: "stays off when not passed", initial: "agents_md = false\n", set: nil, want: false, wantTOM: "agents_md = false"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-			body := "version = \"4.0\"\nname = \"test\"\n" + tc.initial + "presets = [\"claude\"]\n"
+			body := "version = \"5.0\"\nname = \"test\"\n" + tc.initial + "presets = [\"claude\"]\n"
 			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 			args := map[string]any{"working_directory": dir, "description": "d"}
@@ -323,7 +325,7 @@ func TestAgentsMDConfigRoundTrip(t *testing.T) {
 			if tc.wantTOM != "" {
 				assert.Contains(t, string(saved), tc.wantTOM)
 			} else {
-				assert.NotContains(t, string(saved), "agents_md = true")
+				assert.NotContains(t, string(saved), "agents_md = false")
 			}
 
 			read, err := ReadConfigHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir}))

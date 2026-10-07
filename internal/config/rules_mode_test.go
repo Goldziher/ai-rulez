@@ -94,7 +94,7 @@ func TestValidate_RulesMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &Config{
-				Version: "4.0",
+				Version: "5.0",
 				Name:    "test",
 				Presets: []Preset{{BuiltIn: "claude"}, {Name: "docs", Type: PresetTypeMarkdown, Path: "DOCS.md"}},
 				Rules:   tt.rules,
@@ -111,7 +111,7 @@ func TestValidate_RulesMode(t *testing.T) {
 }
 
 func TestTOMLWriter_RulesRoundTrip(t *testing.T) {
-	baseDir := writeTOMLProject(t, `version = "4.0"
+	baseDir := writeTOMLProject(t, `version = "5.0"
 name = "proj"
 presets = ["claude", "cursor"]
 
@@ -145,7 +145,7 @@ func TestLoadConfig_RulesTOML(t *testing.T) {
 	}{
 		{
 			"toml", "config.toml",
-			"version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\", \"cursor\"]\n\n[rules]\nmode = \"split\"\n\n[rules.mode_by_preset]\ncursor = \"inline\"\n",
+			"version = \"5.0\"\nname = \"proj\"\npresets = [\"claude\", \"cursor\"]\n\n[rules]\nmode = \"split\"\n\n[rules.mode_by_preset]\ncursor = \"inline\"\n",
 		},
 	}
 	for _, tt := range tests {
@@ -165,7 +165,7 @@ func TestLoadConfig_RulesTOML(t *testing.T) {
 }
 
 func TestTOMLWriter_OmitsEmptyRules(t *testing.T) {
-	data, err := MarshalTOML(&Config{Version: "4.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}})
+	data, err := MarshalTOML(&Config{Version: "5.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}})
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "[rules]")
 }

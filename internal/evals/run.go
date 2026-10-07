@@ -187,7 +187,7 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner != nil {
 		e.runnerName = opts.Runner.Name()
 	}
-	e.report = &RunReport{Grader: e.graderName(), Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown, PricedAs: pricedAs}
+	e.report = &RunReport{Grader: e.graderName(), Runner: e.runnerName, Harness: opts.Harness, Model: e.model, Date: opts.Date, Ablation: opts.Ablation, DryRun: opts.DryRun, PriceKnown: e.priceKnown, PricedAs: pricedAs, Skills: []SkillRun{}}
 	return e, nil
 }
 

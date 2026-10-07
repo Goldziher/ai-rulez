@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ var domainRemoveCmd = &cobra.Command{
 	Short: "Remove a domain",
 	Long: `Remove a domain and all its contents.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runDomainRemove,
 }
@@ -60,7 +60,7 @@ func init() {
 	domainAddCmd.Flags().StringVarP(&domainDescription, "description", "s", "", "Domain description")
 
 	// Add flags to domain remove command
-	domainRemoveCmd.Flags().BoolVarP(&domainForce, "force", "f", false, "Skip confirmation prompts")
+	domainRemoveCmd.Flags().BoolVarP(&domainForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Add flags to domain list command
 	addJSONFormat(domainListCmd.Flags(), &domainJSON, "j")
@@ -99,7 +99,7 @@ func runDomainAdd(cmd *cobra.Command, args []string) {
 func runDomainRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !domainForce {
 		if !confirmRemoval("domain", name) {
 			logger.Info("Operation canceled")
@@ -152,12 +152,12 @@ func runDomainList(cmd *cobra.Command, args []string) {
 				"description": domain.Description,
 			}
 		}
-		data, err := json.MarshalIndent(output, "", "  ")
+		data, err := jsondoc.Marshal(output)
 		if err != nil {
 			logger.Error("Failed to marshal JSON", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 	} else {
 		// Output as human-readable table
 		logger.Info("Domains:")

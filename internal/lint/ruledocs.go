@@ -250,15 +250,27 @@ func anchorFor(r RuleInfo) string {
 	return slugify(r.Code + " " + r.Name)
 }
 
+// configAnchoredRules report (at least sometimes) on a line of config.toml,
+// where the HTML comment form does not apply.
+var configAnchoredRules = map[string]bool{
+	CodeMCPUnpinned: true, CodeSecretInConfig: true, CodeInsecureHTTP: true, CodeMCPConfigInvalid: true,
+	CodePublisherMismatch: true, CodeAuthorityClaim: true, CodeHookSchema: true, CodeLoadBudget: true,
+}
+
 // suppressSyntax lists the ways to silence a rule.
 func suppressSyntax(r RuleInfo) []string {
-	return []string{
+	out := []string{
 		fmt.Sprintf("inline: <!-- ai-rulez-lint-ignore: %s --> on the line before, or on, the offending line", r.Code),
+	}
+	if configAnchoredRules[r.Code] {
+		out = append(out, fmt.Sprintf("inline in config.toml: # ai-rulez-lint-ignore: %s on the line before, or on, the line the finding is reported at (for an MCP server, its name = \"...\" line)", r.Code))
+	}
+	return append(out,
 		fmt.Sprintf("config.toml: [lint] ignore = [%q]", r.Code),
 		fmt.Sprintf("config.toml: [lint.severity] %s = \"off\" (or \"info\" to keep it visible without failing)", r.Code),
 		"config.toml: [lint] ignore_paths = [\"<glob>\"] for one source file",
 		"baseline: validate --update-baseline accepts the current findings with a reason",
-	}
+	)
 }
 
 // Explain returns the explanation of a rule given its code or name.

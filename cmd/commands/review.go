@@ -1,12 +1,13 @@
 package commands
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ const (
 	exitReviewGate    = 2
 )
 
-// exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate --strict`.
+// exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate`.
 const exitRubricFindings = 2
 
 // maxConcurrency bounds --concurrency: more parallel calls mostly trip provider rate limits.
@@ -179,13 +180,11 @@ func init() {
 	f.StringVar(&reviewFlags.cacheDir, "cache-dir", "", "Response cache directory (default the user cache directory of this project)")
 	f.BoolVar(&reviewFlags.includeImports, "include-imports", false, "Also review content from includes, installed skills and builtins")
 	addFormatFlag(f, &reviewFlags.format, formatText, formatText, rv.Formats()...)
-	addJSONFlagAlias(f)
 	f.StringVar(&reviewFlags.out, "out", "", "Write the report to this file instead of standard output")
 	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 
 	addFormatFlag(RubricCmd.PersistentFlags(), &rubricFormat, formatText, formatText, rv.Formats()...)
-	addJSONFlagAlias(RubricCmd.PersistentFlags())
 	RubricCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RubricCmd.AddCommand(rubricListCmd, rubricShowCmd, rubricLintCmd)
 	ReviewCmd.AddCommand(reviewCalibrateCmd, reviewFixCmd, reviewExplainCmd)
@@ -542,9 +541,7 @@ func orDash(s string) string {
 }
 
 func writeIndentedJSON(out io.Writer, v any) error {
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	return oops.Wrapf(enc.Encode(v), "write json")
+	return oops.Wrapf(jsondoc.Write(out, v), "write json")
 }
 
 // runRubricLint lints the named rubrics, or every project rubric. found is true when any finding exists.

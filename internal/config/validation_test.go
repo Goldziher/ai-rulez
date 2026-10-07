@@ -36,7 +36,7 @@ func TestValidateEffort(t *testing.T) {
 func TestConfigValidateDefaults(t *testing.T) {
 	base := func() *Config {
 		return &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 		}
@@ -125,7 +125,7 @@ func TestConfigValidateDefaults(t *testing.T) {
 func TestConfigValidateAgentEffort(t *testing.T) {
 	base := func() *Config {
 		return &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			Content: &ContentTree{},
@@ -178,7 +178,7 @@ func TestConfigValidateAgentEffort(t *testing.T) {
 func TestConfigValidateMalformedFrontmatter(t *testing.T) {
 	base := func() *Config {
 		return &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			Content: &ContentTree{},
@@ -240,7 +240,7 @@ func TestConfigValidateMalformedFrontmatter(t *testing.T) {
 func TestConfigValidateOutputNamespaceCollisions(t *testing.T) {
 	base := func() *Config {
 		return &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			Content: &ContentTree{},
@@ -394,7 +394,7 @@ func TestConfigValidateOutputNamespaceCollisions(t *testing.T) {
 func TestConfigValidateDuplicateOutputIDs(t *testing.T) {
 	base := func() *Config {
 		return &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{BuiltIn: "claude"}},
 			Content: &ContentTree{},

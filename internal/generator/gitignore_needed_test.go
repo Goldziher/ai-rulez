@@ -38,6 +38,12 @@ func gitRepo(t *testing.T, extraConfig string) string {
 	return dir
 }
 
+// gitignoreOn opts a config into the managed .gitignore block, which is off by default.
+func gitignoreOn() *bool {
+	enabled := true
+	return &enabled
+}
+
 func gitignoreOutputs(dir string) []config.OutputFile {
 	return []config.OutputFile{
 		{Path: filepath.Join(dir, "CLAUDE.md")},
@@ -138,7 +144,7 @@ func TestUpdateGitignore_AddsOnlyWhatGitDoesNotIgnore(t *testing.T) {
 				require.NoError(t, os.MkdirAll(filepath.Join(dir, "packages", "web"), 0o755))
 				require.NoError(t, os.WriteFile(filepath.Join(dir, "packages", "web", ".gitignore"), []byte(tt.subRules), 0o644))
 			}
-			gen := NewGenerator(&config.Config{BaseDir: dir})
+			gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 
 			// Act
 			require.NoError(t, gen.updateGitignore(gitignoreOutputs(dir)))
@@ -159,7 +165,7 @@ func TestUpdateGitignore_AddsOnlyWhatGitDoesNotIgnore(t *testing.T) {
 func TestUpdateGitignore_SecondRunIsStable(t *testing.T) {
 	dir := gitRepo(t, "")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("node_modules/\n.claude/\n!CLAUDE.md\n"), 0o644))
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 	outputs := gitignoreOutputs(dir)
 
 	require.NoError(t, gen.updateGitignore(outputs))
@@ -176,7 +182,7 @@ func TestUpdateGitignore_SecondRunIsStable(t *testing.T) {
 
 func TestUpdateGitignore_RemovesBlockWhenNothingIsNeeded(t *testing.T) {
 	dir := gitRepo(t, "")
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 	outputs := gitignoreOutputs(dir)
 	require.NoError(t, gen.updateGitignore(outputs))
 	require.Contains(t, readGitignore(t, dir), gitignore.BeginMarker)
@@ -195,7 +201,7 @@ func TestUpdateGitignore_RemovesBlockWhenNothingIsNeeded(t *testing.T) {
 func TestUpdateGitignore_NoBlockWhenEverythingIgnored(t *testing.T) {
 	dir := gitRepo(t, "")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("*.md\n.claude/\n.ai-rulez/.generated-manifest.json\n.ai-rulez/local/\n"), 0o644))
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 
 	require.NoError(t, gen.updateGitignore(gitignoreOutputs(dir)))
 
@@ -204,7 +210,7 @@ func TestUpdateGitignore_NoBlockWhenEverythingIgnored(t *testing.T) {
 
 func TestUpdateGitignore_OutsideRepositoryAddsEverything(t *testing.T) {
 	dir := t.TempDir() // not a git repository
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 
 	require.NoError(t, gen.updateGitignore(gitignoreOutputs(dir)))
 
@@ -250,7 +256,7 @@ func TestNeededGitignorePatterns_ProtectedOutputsUnignoredByUser(t *testing.T) {
 			if tt.rules != "" {
 				require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(tt.rules), 0o644))
 			}
-			gen := NewGenerator(&config.Config{BaseDir: dir})
+			gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 			tt.output.Path = filepath.Join(dir, tt.output.Path)
 
 			needed, overridden := gen.neededGitignorePatterns([]config.OutputFile{tt.output})
@@ -316,7 +322,7 @@ func TestGitignoreProbes(t *testing.T) {
 
 func TestNeededGitignorePatterns_NeverTouchesUserFiles(t *testing.T) {
 	dir := gitRepo(t, "")
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 	outputs := gitignoreOutputs(dir)
 	user := "node_modules/\n.claude/\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(user), 0o644))
@@ -353,7 +359,7 @@ func TestNeededGitignorePatterns_ManyNestedGitignores(t *testing.T) {
 		}
 		outputs = append(outputs, config.OutputFile{Path: filepath.Join(pkg, "AGENTS.md")})
 	}
-	gen := NewGenerator(&config.Config{BaseDir: dir})
+	gen := NewGenerator(&config.Config{BaseDir: dir, Gitignore: gitignoreOn()})
 	require.NoError(t, gen.updateGitignore(outputs)) // creates a block, forcing the mirror path
 
 	needed, _ := gen.neededGitignorePatterns(outputs)
@@ -369,7 +375,7 @@ func TestNeededGitignorePatterns_SubdirectoryBaseDirWithBlock(t *testing.T) {
 	base := filepath.Join(dir, "sub")
 	require.NoError(t, os.MkdirAll(base, 0o755))
 	outputs := []config.OutputFile{{Path: filepath.Join(base, "CLAUDE.md")}, {Path: filepath.Join(base, "AGENTS.md")}}
-	gen := NewGenerator(&config.Config{BaseDir: base})
+	gen := NewGenerator(&config.Config{BaseDir: base, Gitignore: gitignoreOn()})
 	require.NoError(t, os.WriteFile(filepath.Join(base, ".gitignore"), []byte("seed\n"), 0o644))
 	require.NoError(t, gen.updateGitignore(outputs))
 

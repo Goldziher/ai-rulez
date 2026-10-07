@@ -17,7 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const userConfigTOML = `version = "4.0"
+const userConfigTOML = `version = "5.0"
 name = "me"
 presets = ["claude", "codex", "gemini", "opencode", "cursor", "copilot", "pi", "baz"]
 
@@ -312,7 +312,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 	quietWarnings(t)
 
 	t.Run("a directory symlinked inside the home directory is followed", func(t *testing.T) {
-		home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
+		home, gen := newUserHome(t, "version = \"5.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
 		dotfiles := filepath.Join(home, "dotfiles", "claude")
 		require.NoError(t, os.MkdirAll(dotfiles, 0o755))
 		testutil.SymlinkOrSkip(t, dotfiles, filepath.Join(home, ".claude"))
@@ -323,7 +323,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 	})
 
 	t.Run("a symlink out of the home directory is refused", func(t *testing.T) {
-		home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
+		home, gen := newUserHome(t, "version = \"5.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
 		outside := t.TempDir()
 		testutil.SymlinkOrSkip(t, outside, filepath.Join(home, ".claude"))
 
@@ -334,7 +334,7 @@ func TestUser_SymlinkHandling(t *testing.T) {
 	})
 
 	t.Run("a symlinked file is left alone", func(t *testing.T) {
-		home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
+		home, gen := newUserHome(t, "version = \"5.0\"\nname = \"me\"\npresets = [\"claude\"]\n", userFixture())
 		target := filepath.Join(home, "elsewhere.md")
 		require.NoError(t, os.WriteFile(target, []byte("shared\n"), 0o644))
 		require.NoError(t, os.MkdirAll(filepath.Join(home, ".claude", "rules"), 0o755))

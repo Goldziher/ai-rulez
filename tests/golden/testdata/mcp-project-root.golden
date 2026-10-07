@@ -10,7 +10,7 @@ INFO  Generation complete files=3
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .ai-rulez/ dir 0755
-.ai-rulez/config.toml file 0644 186 3cc1fa70e98106eb07780cc78cf818e6ac4209646be656f560dd0dd255f49999
+.ai-rulez/config.toml file 0644 204 320ee96fddcbd836e1237574ee1139e2d7c7e76e207b8f5cb316c30a2611d536
 .claude/ dir 0755
 .claude/agents/ dir 0755
 .claude/rules/ dir 0755
@@ -22,7 +22,7 @@ INFO  Generation complete files=3
 .cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
 .mcp.json file 0644 167 67ab99799092b5f7170bd3ba53d77a318d58530da486026f8ab031b2630df85d
-CLAUDE.md file 0644 456 d43e4a644ad54a3a21f72be8d5ad68a7271fc09bc6bd944c140f80881cb5f3af
+CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef
 --- home tree
 (no change)
 
@@ -35,7 +35,7 @@ INFO  Generated files are up to date roots=1
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .ai-rulez/ dir 0755
-.ai-rulez/config.toml file 0644 186 3cc1fa70e98106eb07780cc78cf818e6ac4209646be656f560dd0dd255f49999
+.ai-rulez/config.toml file 0644 204 320ee96fddcbd836e1237574ee1139e2d7c7e76e207b8f5cb316c30a2611d536
 .claude/ dir 0755
 .claude/agents/ dir 0755
 .claude/rules/ dir 0755
@@ -47,6 +47,6 @@ INFO  Generated files are up to date roots=1
 .cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
 .mcp.json file 0644 167 67ab99799092b5f7170bd3ba53d77a318d58530da486026f8ab031b2630df85d
-CLAUDE.md file 0644 456 d43e4a644ad54a3a21f72be8d5ad68a7271fc09bc6bd944c140f80881cb5f3af
+CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef
 --- home tree
 (no change)

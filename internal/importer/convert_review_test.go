@@ -55,7 +55,7 @@ func TestReport_SchemaAcceptsEveryCode(t *testing.T) {
 // --- config.toml is merged, never replaced ---
 
 func TestConvert_MergesExistingConfig(t *testing.T) {
-	existing := "version = \"4.0\"\nname = \"mine\"\npresets = [\"codex\"]\n\n" +
+	existing := "version = \"5.0\"\nname = \"mine\"\npresets = [\"codex\"]\n\n" +
 		"[[mcp_servers]]\nname = \"gh\"\ncommand = \"mine-gh\"\n\n" +
 		"[[installed_skills]]\nname = \"old\"\nsource = \"https://example.com/o/old\"\n"
 	tests := []struct {
@@ -100,7 +100,7 @@ func TestConvert_MergeAppendsNewServersAndSkills(t *testing.T) {
 	writeTree(t, dir, map[string]string{
 		"skills-lock.json":      lockV1,
 		".mcp.json":             `{"mcpServers":{"fresh":{"command":"npx","args":["x"]}}}`,
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[[mcp_servers]]\nname = \"gh\"\ncommand = \"g\"\n",
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[[mcp_servers]]\nname = \"gh\"\ncommand = \"g\"\n",
 	})
 
 	// Act
@@ -118,7 +118,7 @@ func TestConvert_V3ConfigIsLeftAlone(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	writeTree(t, dir, sampleProject)
-	yamlCfg := "version: \"4.0\"\nname: mine\npresets: [claude]\n"
+	yamlCfg := "version: \"5.0\"\nname: mine\npresets: [claude]\n"
 	writeTree(t, dir, map[string]string{".ai-rulez/config.yaml": yamlCfg})
 
 	// Act
@@ -284,7 +284,7 @@ func TestMCPCredentials(t *testing.T) {
 				}
 			}
 			assert.Equal(t, tt.wantNeed, haveNeed)
-			rendered, err := config.MarshalTOML(&config.Config{Version: "4.0", Name: "x", MCPServersRaw: p.MCPServers})
+			rendered, err := config.MarshalTOML(&config.Config{Version: "5.0", Name: "x", MCPServersRaw: p.MCPServers})
 			require.NoError(t, err)
 			for _, leak := range tt.wantLeak {
 				assert.NotContains(t, string(rendered), leak)
@@ -402,11 +402,11 @@ func TestSkillsLock_RejectsUnsafeFields(t *testing.T) {
 func TestCheckStaged_ValidatesInstalledSkills(t *testing.T) {
 	// Arrange
 	cfg := &config.Config{
-		Version: config.ConfigVersionV4, Name: "x", Presets: []config.Preset{{BuiltIn: "claude"}},
+		Version: config.ConfigVersionV5, Name: "x", Presets: []config.Preset{{BuiltIn: "claude"}},
 		InstalledSkills: []config.InstalledSkillConfig{{Name: "s", Source: "--upload-pack=x", Path: "../x"}},
 	}
 	report := &Report{}
-	files := map[string][]byte{"config.toml": []byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")}
+	files := map[string][]byte{"config.toml": []byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")}
 
 	// Act
 	err := checkStaged(context.Background(), report, files, cfg, scanContext{})
@@ -443,7 +443,7 @@ func generatedProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	writeTree(t, dir, map[string]string{
-		".ai-rulez/config.toml":                "version = \"4.0\"\nname = \"gen\"\npresets = [\"claude\", \"cursor\", \"copilot\", \"gemini\"]\n",
+		".ai-rulez/config.toml":                "version = \"5.0\"\nname = \"gen\"\npresets = [\"claude\", \"cursor\", \"copilot\", \"gemini\"]\n",
 		".ai-rulez/rules/style.md":             "---\ndescription: style\n---\nUse tabs.\n",
 		".ai-rulez/context/overview.md":        "Overview text.\n",
 		".ai-rulez/skills/lint/SKILL.md":       "---\nname: lint\ndescription: Run the linter\n---\nRun lint.\n",

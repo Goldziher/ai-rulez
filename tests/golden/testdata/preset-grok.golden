@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 dfda5191eb1fabad65ca0b22d5cf4f42d5305178e65558f9983132f5a7408bc3
+.ai-rulez/config.toml file 0644 843 73b9804fd5584719e8082fef00549ab850c2e6fd69f3b415e8f40059d1940cb9
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -45,30 +45,30 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 384 30fbd19190152b08f5fbeb709cf728ff3aea3972333d1c88843b16911e33c9fa
 .grok/ dir 0755
 .grok/agents/ dir 0755
-.grok/agents/architect.md file 0644 259 930761c27a31427fa703ec20cbaf0a9e2a40daae5f5a15f0ea6327fda6a93fe5
-.grok/agents/tester.md file 0644 245 8af0dd9aeb83c0fde376ecc8a25bbe0a44cbc18888d2d1c39670213e5a8a7e05
+.grok/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.grok/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .grok/commands/ dir 0755
-.grok/commands/build.md file 0644 250 f845ca894418e152ba89f6b6a2bfd63c20adb2b66c4b5bc3a78f50625747ea72
-.grok/commands/ship.md file 0644 227 a8291ff311fe8317bf0acd0a1d3a6bdf6e80acbc27e97564397e0b187f1a9514
+.grok/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.grok/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .grok/config.toml file 0600 462 09adbfd3985ec2fdfd8bcd3da89e0270a2bafbdee85f3c2b71239b06338854b1
 .grok/hooks/ dir 0755
 .grok/hooks/ai-rulez.json file 0644 437 a47ea6ae441896a2cae71153e94e5d030151667195f068925f14bc8f5362fc83
 .grok/rules/ dir 0755
-.grok/rules/always.md file 0644 325 7263b7a28aae538822e16f8085f8ce2c2aeace57df233f50d405a80700ef8694
-.grok/rules/auto.md file 0644 302 a7c99a1c2581b851dd5e6bdeb56e25cbf21143f870315635a4cbdbf96daed3b6
-.grok/rules/manual.md file 0644 313 3da09a407c6132e1b14955586ce3045e438ce2e5982058c773619e621f2b54c5
-.grok/rules/typescript.md file 0644 369 7fb8a7982062b64f6d5af315140207c5198c0d740aa2a1f28dcb36577844704c
+.grok/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.grok/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.grok/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.grok/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .grok/skills/ dir 0755
 .grok/skills/deployer/ dir 0755
-.grok/skills/deployer/SKILL.md file 0644 259 d0496bb3c7e37eed9a5b1eaf99ffb73b0c995db8f2dd8e4ba107ed1f4268781c
+.grok/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .grok/skills/reviewer/ dir 0755
-.grok/skills/reviewer/SKILL.md file 0644 506 cd61c90f091397fdddc12eb55199a408806626ec0058a8af3ae6f7d3a772d20a
+.grok/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .grok/skills/reviewer/references/ dir 0755
 .grok/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .grok/skills/reviewer/scripts/ dir 0755
 .grok/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 0e6f3dfef6ef3c0b3285570e514a6a98c1215f1fbdefad3dfe705b35b2cada5e
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -112,7 +112,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -158,7 +158,7 @@ INFO  Removed generated files files=16 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 dfda5191eb1fabad65ca0b22d5cf4f42d5305178e65558f9983132f5a7408bc3
+.ai-rulez/config.toml file 0644 843 73b9804fd5584719e8082fef00549ab850c2e6fd69f3b415e8f40059d1940cb9
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

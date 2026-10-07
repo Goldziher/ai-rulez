@@ -31,7 +31,7 @@ func (s *RecursiveGenerateSuite) TearDownSuite() {
 // writeMinimalConfig writes a `<dir>/.ai-rulez/config.toml` that produces
 // a Claude preset output deterministically.
 func (s *RecursiveGenerateSuite) writeMinimalConfig(dir, name string) {
-	cfg := fmt.Sprintf(`version = "4.0"
+	cfg := fmt.Sprintf(`version = "5.0"
 name = "%s"
 description = "%s test config"
 presets = ["claude"]
@@ -45,7 +45,7 @@ gitignore = false
 // writeConventionConfig writes a `<dir>/.config/ai-rulez/config.toml` using the
 // project-level config-dir convention.
 func (s *RecursiveGenerateSuite) writeConventionConfig(dir, name string) {
-	cfg := fmt.Sprintf(`version = "4.0"
+	cfg := fmt.Sprintf(`version = "5.0"
 name = "%s"
 description = "%s convention config"
 presets = ["claude"]
@@ -108,7 +108,7 @@ func (s *RecursiveGenerateSuite) TestRecursiveSkipsSharedRuleLibrary() {
 	// Top-level shared library: `ai-rulez/` (no dot) with a root config.
 	libRoot := filepath.Join(s.workingDir, "ai-rulez")
 	s.NoError(os.MkdirAll(libRoot, 0o755))
-	testutil.WriteFile(s.T(), libRoot, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), libRoot, "config.toml", `version = "5.0"
 name = "shared-lib"
 `)
 	// Library modules — should be skipped by the walker.

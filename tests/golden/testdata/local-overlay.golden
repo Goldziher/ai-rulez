@@ -37,25 +37,25 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/build/ dir 0755
-.agents/skills/build/SKILL.md file 0644 295 c0837b409995cfbbbd447dd83eee007005b4a0b044dbd065074e1e387b9519e6
+.agents/skills/build/SKILL.md file 0644 208 46b69b72e18269edf5eebfbca6e27e758458e9cef50f0d490ca48843d9b8ea09
 .agents/skills/build/agents/ dir 0755
 .agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/quick/ dir 0755
-.agents/skills/quick/SKILL.md file 0644 269 256b5982c43494c8bb83b148e823be1cb091146a67b3e8b5a8416e81f8aceb90
+.agents/skills/quick/SKILL.md file 0644 182 1f4766c163e6a0abba143d03705089fe6aa2417d13eb85f93750863658bb1530
 .agents/skills/quick/agents/ dir 0755
 .agents/skills/quick/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .agents/skills/scratch/ dir 0755
-.agents/skills/scratch/SKILL.md file 0644 237 ade03881d3bbb64ae1f9b2e94410b99f0e8627d1208c52866df1a3b6d5de3c2d
+.agents/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
 .agents/skills/ship/ dir 0755
-.agents/skills/ship/SKILL.md file 0644 271 0a87c8bdc028a15c6cf3e62705f2217253088c22993180970bb63d18d476d763
+.agents/skills/ship/SKILL.md file 0644 184 6b822e098b5ea716fc05e66c57a0617b08a030c3f138b086712a80d7be4479d5
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
@@ -71,7 +71,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
 .ai-rulez/config.local.toml file 0644 179 9150d530a5018f750014c4cd83d80abfff5c1599cdf527a7706dd12752bff394
-.ai-rulez/config.toml file 0644 879 707e490a887b3bf3783e25cc60ad8305471e837945d4763dc6b7c27e3bb78562
+.ai-rulez/config.toml file 0644 897 d9f438d95a59aae3b547433a505eaa69ae93f7db301ca608c7087bdc37df5934
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -110,35 +110,35 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/ dir 0755
 .claude/agents/ dir 0755
-.claude/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
-.claude/agents/helper.md file 0644 232 72fc32e4fcbb072f0785a50ae5737045a43111d2a0f8b9ab5441fc265bc22767
-.claude/agents/tester.md file 0644 258 a9e9fe75485b49bacef5891b39aef865f8bf18380875516ab383788636e1704e
+.claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.claude/agents/helper.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
+.claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
 .claude/rules/ dir 0755
-.claude/rules/always.md file 0644 325 2ab1cd0e8f57ffa1689b4783d1aae3204e2f2326dc3a411e9304f6ff1a083a3e
-.claude/rules/auto.md file 0644 302 973b0db27f52d8ba3345b3176d5aa92f169b7dca9c498baee597f1f24b92edb3
-.claude/rules/lab.local.md file 0644 308 74dbdeaa2b710911725986f9767199f5686ea64520541e8ba7931a190d15ed2f
-.claude/rules/manual.md file 0644 313 19d821313aafa8f86c45fbd7db1839a07ef783044941dc869f1b44700be78642
-.claude/rules/mine.local.md file 0644 316 b232e1aed3184024e85bbe04a3c39f98bd2431229233e441fe14db6c68168ecb
-.claude/rules/targeted.md file 0644 309 f94e9309e5b91e5105afdad4f05fbf2c29e2e130738cde8e38b4c6b9a434686d
-.claude/rules/typescript.md file 0644 376 0791fd74494946b73e876111350ceecdbbf27c60348d76ec8872cb1ef028bbf4
+.claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.claude/rules/lab.local.md file 0644 223 32acecd6ad4cda4857d4fbebdb0a14eb550bae808d9917722b0bd700f57a094f
+.claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.claude/rules/mine.local.md file 0644 231 3ab2c4ed381a77b250ebb868c1410aad077e9d8da4af8f0158dabd45871ef723
+.claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
+.claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
-.claude/skills/build/SKILL.md file 0644 283 04915e0fe640da81827bd0f6751e0d0780119bb25c9e2ba3290c82997c04726a
+.claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 .claude/skills/deployer/ dir 0755
-.claude/skills/deployer/SKILL.md file 0644 259 8f9da103d00f84e2e1957015095611a9c993c44e816f2b73dac0bdc168aa1d9e
+.claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .claude/skills/quick/ dir 0755
-.claude/skills/quick/SKILL.md file 0644 257 d938ad248a7005b93a1f2e4645366f6213f8025d23963b34571d50ef3d1a4a91
+.claude/skills/quick/SKILL.md file 0644 170 d845ca59dbcddd3bfaec2f6f423a22ed839a35569e85d4d99e1e1aec8927484e
 .claude/skills/reviewer/ dir 0755
-.claude/skills/reviewer/SKILL.md file 0644 506 971ece4e984fcf9187673e152b8ac7759f87c245648ed84550b4a219d989f438
+.claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .claude/skills/reviewer/references/ dir 0755
 .claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .claude/skills/reviewer/scripts/ dir 0755
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/scratch/ dir 0755
-.claude/skills/scratch/SKILL.md file 0644 235 69f7643bf0fa4a1763643c3e741a6f1e007026af58f2e51a3a99b7d0af49d7b7
+.claude/skills/scratch/SKILL.md file 0644 148 8854c619aef7bbafc04d15c1ab364d8dda27925d4a7770a40620f9a580bfd582
 .claude/skills/ship/ dir 0755
-.claude/skills/ship/SKILL.md file 0644 259 9d341e8036e1756762c3751530f94b49be25e1601afd26e1e650d351f09f82af
+.claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .codex/ dir 0755
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
@@ -147,13 +147,13 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/config.toml file 0600 321 995c2a001216b2b2f5980c225802139d31589b3616b6b5b71313e4bc4d561b2f
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
-.codex/rules/ai-rulez.rules file 0644 496 7b1e7083f973ddbd2143b6777c6754c4618bc43f56771ee16be29de2a1e28ff2
+.codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
 .cursor/ dir 0755
 .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .cursor/agents/ dir 0755
-.cursor/agents/architect.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
-.cursor/agents/helper.md file 0644 232 72fc32e4fcbb072f0785a50ae5737045a43111d2a0f8b9ab5441fc265bc22767
-.cursor/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.cursor/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.cursor/agents/helper.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
+.cursor/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
 .cursor/commands/ dir 0755
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
@@ -162,113 +162,113 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
 .cursor/mcp.json file 0600 482 f8cf3fb157962e923d18894ad9d23d6bbf9e7477674d6d06b59f2a8123612452
 .cursor/rules/ dir 0755
-.cursor/rules/always.mdc file 0644 351 8410f5018def9af1cdf1a3680d49f32e6f66fdb8e5e7cf226391e3c99aa0deb5
-.cursor/rules/auto.mdc file 0644 362 4a4ff6c7533c87a47a362e5b7644e1c358ad204de81b203d3c26c70502232eb1
-.cursor/rules/context-architecture.mdc file 0644 340 b53b60e20095e30b911b6a38083722e88a3b11aff951de766c6234fea082c249
-.cursor/rules/context-overview.mdc file 0644 351 8df75e5ba9eba5a440e5d36b42e1489dbb28da9f3e775d33bd18fd2ad17c34a8
-.cursor/rules/lab.local.mdc file 0644 334 74b54aa9e60a4b4ffeb15c7f99c1e8c17e97439e0b5127408b1ecd3fa8829bd2
-.cursor/rules/manual.mdc file 0644 340 2f003b535b416e45a83b3ca8ad3cb858c7c749944f095952c3a200c41fabc7d2
-.cursor/rules/mine.local.mdc file 0644 342 f74a7d7e3204aab7135c0157b454d27cc6e233fb205f1b22da029947ebefca26
-.cursor/rules/targeted.mdc file 0644 335 ddf1ed861653df5becd110ea4396397b910692527c95c9273e5691bcfd82b543
-.cursor/rules/typescript.mdc file 0644 390 2fdea94a93a3001f6a4d37b085aed470bba9020bb9abdd5e764857b31f486d4a
+.cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
+.cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
+.cursor/rules/context-architecture.mdc file 0644 255 355e35cba517e7f51002ffd853d57deb6fcecb661ed0853cbc24ac44f10a9898
+.cursor/rules/context-overview.mdc file 0644 266 bf769d85e9b2aae7d279408c2fb692d1e55051e5be994cddad9eba3941b6b792
+.cursor/rules/lab.local.mdc file 0644 249 98b32e2381f014bcbb79940c4d59eef1c4b7726eccec3e44f5f950c9d3732e0b
+.cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
+.cursor/rules/mine.local.mdc file 0644 257 121f7e18e8bec044d48a11c578153e3eca046436aec3a8a89cf3a4e9512ea7bd
+.cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
+.cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gemini/ dir 0755
 .gemini/agents/ dir 0755
-.gemini/agents/architect.md file 0644 259 1249633eac30fc5787db1acf4ca2c1f9e98d4b911cc2f1519c872e5023e148d7
-.gemini/agents/helper.md file 0644 232 72fc32e4fcbb072f0785a50ae5737045a43111d2a0f8b9ab5441fc265bc22767
-.gemini/agents/tester.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
+.gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.gemini/agents/helper.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
+.gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0600 1516 325f44351f470d649c6c1da8688887baf56cb279dfb668bfdc39dd3801e9a364
 .github/ dir 0755
 .github/agents/ dir 0755
-.github/agents/architect.agent.md file 0644 273 ae8608f851f9c405790db6310b822267d006da8a8a8209cdc6422692eb3b7436
-.github/agents/helper.agent.md file 0644 232 72fc32e4fcbb072f0785a50ae5737045a43111d2a0f8b9ab5441fc265bc22767
-.github/agents/tester.agent.md file 0644 245 8ba71daff1bb750cbe6701832430ce7c71712ae640c174d642614cd8637ca3b1
-.github/copilot-instructions.md file 0644 712 1d90bdf3388e4992ab4652cf4079f13b235f8e8af959b96026853cdd9dbc3e8d
+.github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.github/agents/helper.agent.md file 0644 145 a05e291bca4e263ce308383033e43e9baba24e5b5ea3fb585b2e5d74c72001bc
+.github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
+.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
-.github/instructions/ai-rulez.local.instructions.md file 0644 335 63c92c54b9529712d28a87ab1be16d2dceaa312144c47ba014f14aa580aa6108
-.github/instructions/always.instructions.md file 0644 347 91052e3abc11a6dda9a137fe0769d7d886c2b15e58d7fba65453245a3ec1786a
-.github/instructions/lab.local.instructions.md file 0644 330 a04119245e422033ef17cececb89e961eb982a2038f5ebdfe13e12c4b2cf81e8
-.github/instructions/mine.local.instructions.md file 0644 338 062897b8647a35ebeaf36dc90c6da5470dbe14aac7f55446087dcdd7a70e5c6c
-.github/instructions/typescript.instructions.md file 0644 373 158de33be03cd5d06cd00689888b85bb7e602346342cc5ad495ac39c92035e4e
+.github/instructions/ai-rulez.local.instructions.md file 0644 250 f467f66bc7b8bd1caec1bbc61cac64608eef8c4b107aedf0a336b47853fc62e9
+.github/instructions/always.instructions.md file 0644 262 e6d7ab8091b623f01d6cfcfe854c854842d5333da0446436d1e1ca9bbe72c1a7
+.github/instructions/lab.local.instructions.md file 0644 245 81b0ba1794a9cc43e7a73c35df098b8d0b12af8c92725593fb9b3c44bb2d2d0d
+.github/instructions/mine.local.instructions.md file 0644 253 afbcce95947aad44cca3b976ff82829d35807244cf4940029f41a13379002bed
+.github/instructions/typescript.instructions.md file 0644 288 14f2246195732bcddc818abd579815c3b0fba6bc55b2925fde948dafa230e2d2
 .github/prompts/ dir 0755
-.github/prompts/build.prompt.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
-.github/prompts/quick.prompt.md file 0644 224 099b7472efdbb124c02a5738204f300fff08b66bf0753455808deddd4dcaa0db
-.github/prompts/ship.prompt.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.github/prompts/build.prompt.md file 0644 163 7e3c85af2b70967aa544ebf2695885bec743b36aaa6911c94ecb84af90829b44
+.github/prompts/quick.prompt.md file 0644 137 30b923cdb4aa3ec71b608cb37282038a61018935654a3cbaa7f1fdb4b69fe4e0
+.github/prompts/ship.prompt.md file 0644 140 8302239666a0f1ea2a3ef65733af690c3df05de9f0c780c8a4b05bc18039a238
 .github/skills/ dir 0755
 .github/skills/deployer/ dir 0755
-.github/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.github/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .github/skills/reviewer/ dir 0755
-.github/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.github/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .github/skills/reviewer/references/ dir 0755
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .github/skills/scratch/ dir 0755
-.github/skills/scratch/SKILL.md file 0644 237 ade03881d3bbb64ae1f9b2e94410b99f0e8627d1208c52866df1a3b6d5de3c2d
+.github/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
 .gitignore file 0644 1399 28724b7f60d7216b53038f01349cde1b24ca480cf1778012f91080cdc13ff7db
 .kilo/ dir 0755
 .kilo/agents/ dir 0755
-.kilo/agents/architect.md file 0644 258 c38a78b27360d96dda04649eb6185b5d5cad4c2df1a73f7045ac255f59c38bea
-.kilo/agents/helper.md file 0644 234 4d29efb3a2358317e596c01975e0280bf75b3fdff86e5b9386d32375ced1a92f
-.kilo/agents/tester.md file 0644 247 0bd08cb1481e9b8f814796325031dac86588503305274a0cf55cffe2c3fb8001
+.kilo/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
+.kilo/agents/helper.md file 0644 147 52d68b4ac241267c3d725d3a2b41ed42eb012862e15bc9ba7865ce305bf559e1
+.kilo/agents/tester.md file 0644 160 504b5d937542036401aadba25e2515c53fa13bab2abc6ecc024c235368736439
 .kilo/commands/ dir 0755
-.kilo/commands/build.md file 0644 250 3cb22ec416f21cfdb798fbebdadb1c9fb327fa62374a3acbba1c6f1abfa573e2
-.kilo/commands/quick.md file 0644 224 82005c72e65283ff391b525d343de4ee69623f82ae99c4dd5de2237fa992fc34
-.kilo/commands/ship.md file 0644 227 72f0bd747e3a996bf66d2d329860f1d3ce18f6513b1a642d3b8606e703effe8c
+.kilo/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.kilo/commands/quick.md file 0644 137 2992a4ca155542450658646370f654641d824017b98394a51abfb7400703b479
+.kilo/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .kilo/plugins/ dir 0755
 .kilo/plugins/ai-rulez-hooks.js file 0644 8796 bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c
 .kilo/rules/ dir 0755
-.kilo/rules/always.md file 0644 325 555fe754942f88e98efe016b7974ab36e8fbfbf9e4985b8f38fe103c9c4899f7
-.kilo/rules/auto.md file 0644 302 6ad5a4d55ca6eebf022d2c00f23dc1fd8d6595d154e401c13d7ecbea898fcb1c
-.kilo/rules/lab.local.md file 0644 308 74dbdeaa2b710911725986f9767199f5686ea64520541e8ba7931a190d15ed2f
-.kilo/rules/manual.md file 0644 313 72a95c69982c3ac19927cf0e83fa1a8a86ab27def4b489d1d9849ec8b404cdf5
-.kilo/rules/mine.local.md file 0644 316 b232e1aed3184024e85bbe04a3c39f98bd2431229233e441fe14db6c68168ecb
-.kilo/rules/typescript.md file 0644 369 8fb0df8526edfcdf13cfd89039824a47e62bcd93d381e8499ef2dde50922c268
+.kilo/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.kilo/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.kilo/rules/lab.local.md file 0644 223 32acecd6ad4cda4857d4fbebdb0a14eb550bae808d9917722b0bd700f57a094f
+.kilo/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.kilo/rules/mine.local.md file 0644 231 3ab2c4ed381a77b250ebb868c1410aad077e9d8da4af8f0158dabd45871ef723
+.kilo/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .kilo/skills/ dir 0755
 .kilo/skills/deployer/ dir 0755
-.kilo/skills/deployer/SKILL.md file 0644 259 085aaf36ff067e11988418d60dc915017c96340844487e1a34aa6f9b9df8e51d
+.kilo/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .kilo/skills/reviewer/ dir 0755
-.kilo/skills/reviewer/SKILL.md file 0644 506 a53aa7fc37db7bd92ddf090c2443c5a6517166c96d090229b7c094b2c8824c05
+.kilo/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .kilo/skills/reviewer/references/ dir 0755
 .kilo/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .kilo/skills/reviewer/scripts/ dir 0755
 .kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .kilo/skills/scratch/ dir 0755
-.kilo/skills/scratch/SKILL.md file 0644 235 69f7643bf0fa4a1763643c3e741a6f1e007026af58f2e51a3a99b7d0af49d7b7
+.kilo/skills/scratch/SKILL.md file 0644 148 8854c619aef7bbafc04d15c1ab364d8dda27925d4a7770a40620f9a580bfd582
 .mcp.json file 0600 571 8c416c5b9bc31fc113d5b3694f7c21726cca98653b0b12c964fee621caea8334
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
-.opencode/agents/architect.md file 0644 253 bd89f33c6b6f6f4e9c415cd4e195d27f6098fc9c2ce2a833bd97314d19d757d2
-.opencode/agents/helper.md file 0644 229 16e8dc7a2940120e0342a1d47ae511114b8a88dfe06d2db5937a93a7ebf508ef
-.opencode/agents/tester.md file 0644 256 5f56d22a43303cec05b56623d2e36cf9731093452b9bdaf8364e115998492044
+.opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
+.opencode/agents/helper.md file 0644 142 8a5f732a41f229018341b521dd831e47ab75f35f593a0afef7274dca0d273dfa
+.opencode/agents/tester.md file 0644 169 75eb4d0bf61903216baf02272dd4e376a76cbb452fd49b434f3ef884443ec6e1
 .opencode/commands/ dir 0755
-.opencode/commands/build.md file 0644 250 7659b49da53245fe156f0ccf915e9f63b09b0e13cc56d19d62d8c65a578afaf6
-.opencode/commands/quick.md file 0644 224 099b7472efdbb124c02a5738204f300fff08b66bf0753455808deddd4dcaa0db
-.opencode/commands/ship.md file 0644 227 5416a2cfe4fa25c3ea3c3b581615910ed3081905f332358028c4d9c39f028b46
+.opencode/commands/build.md file 0644 163 7e3c85af2b70967aa544ebf2695885bec743b36aaa6911c94ecb84af90829b44
+.opencode/commands/quick.md file 0644 137 30b923cdb4aa3ec71b608cb37282038a61018935654a3cbaa7f1fdb4b69fe4e0
+.opencode/commands/ship.md file 0644 140 8302239666a0f1ea2a3ef65733af690c3df05de9f0c780c8a4b05bc18039a238
 .opencode/plugins/ dir 0755
 .opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
 .opencode/skills/ dir 0755
 .opencode/skills/deployer/ dir 0755
-.opencode/skills/deployer/SKILL.md file 0644 261 657b328bde9fc8b7522d76e52aed4ee401cea152c31c80c4222c16c5b1340d03
+.opencode/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .opencode/skills/reviewer/ dir 0755
-.opencode/skills/reviewer/SKILL.md file 0644 508 0f60038dee8541033471de22b3483ccd2fa6e65b850bf775dca00c04fdbec82d
+.opencode/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .opencode/skills/reviewer/references/ dir 0755
 .opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .opencode/skills/scratch/ dir 0755
-.opencode/skills/scratch/SKILL.md file 0644 237 ade03881d3bbb64ae1f9b2e94410b99f0e8627d1208c52866df1a3b6d5de3c2d
+.opencode/skills/scratch/SKILL.md file 0644 150 840b60e9b2cd7374a669c0a76336256af88013efba44cd33f201a9c29dda5ec6
 .vscode/ dir 0755
 .vscode/mcp.json file 0600 547 dd8303f1e4edb5c7fc5436db37e3a93667f2d000280d564da65da580a94818af
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703
-AGENTS.local.md file 0644 587 1ca4b8766ada651b8fa0b9e1bd8c3ad87cc7f0f508dce20d8535c9789b31a331
-AGENTS.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
-AGENTS.override.md file 0644 1251 36e18c878d905fdb90723b458ace01f57747515aee7d55b66325d187525b4116
-CLAUDE.local.md file 0644 500 e82a7b66723d6cd44c7946a3cf62e08c5d0f72463df54a950b1d0ffc54bc53ac
-CLAUDE.md file 0644 575 10812b979313438f84a1d8fdf06945d56d9e7ac4b058fe1d322feb41ec64ecda
-GEMINI.local.md file 0644 587 1ca4b8766ada651b8fa0b9e1bd8c3ad87cc7f0f508dce20d8535c9789b31a331
-GEMINI.md file 0644 874 70fdcbf2d2eeeb5e914e03bc66e3b8bcf845b522f7c4f8e36daef7aaf23eaaf9
+AGENTS.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
+AGENTS.override.md file 0644 1166 fb8051321a48d855ac56b59e4891b501d6029a20bdd329b76034d90336a9f1f9
+CLAUDE.local.md file 0644 415 71759bed64dc5f1674339c7a5ab7d4c318124aea36c6626b815b2a8b0693fa2c
+CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
+GEMINI.local.md file 0644 502 b2dffe46219ed6a027a7d925af7e7f2339f14e1aa32982b2067b70dd09b9c9df
+GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0600 915 c18268664298f582eed44cd5947f66d6f4961874cc2f6994059f3f52bd0ae259
 opencode.json file 0600 962 c6b99383b04d57af967fc89e796bc26ed5c69eb4ee0ea4f3a0d9cfb045b73dc3
@@ -698,7 +698,7 @@ local overlay: .ai-rulez/config.local.toml
 --- home tree
 (no change)
 
-## step 8: ai-rulez clean --force
+## step 8: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -923,7 +923,7 @@ INFO  Removed generated files files=120 directories=67
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
 .ai-rulez/config.local.toml file 0644 179 9150d530a5018f750014c4cd83d80abfff5c1599cdf527a7706dd12752bff394
-.ai-rulez/config.toml file 0644 879 707e490a887b3bf3783e25cc60ad8305471e837945d4763dc6b7c27e3bb78562
+.ai-rulez/config.toml file 0644 897 d9f438d95a59aae3b547433a505eaa69ae93f7db301ca608c7087bdc37df5934
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

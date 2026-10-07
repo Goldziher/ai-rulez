@@ -84,7 +84,7 @@ func applyBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 		}
 		if b == nil {
 			if validateBaseline != "" {
-				return oops.Hint("Create it with `ai-rulez validate --strict --update-baseline`").Errorf("baseline %s does not exist", path)
+				return oops.Hint("Create it with `ai-rulez validate --update-baseline`").Errorf("baseline %s does not exist", path)
 			}
 			continue
 		}
@@ -96,6 +96,9 @@ func applyBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 
 // updateBaselines rewrites each root's baseline to accept its current findings.
 func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
+	if validateBaseline != "" && len(reports) > 1 {
+		return oops.Errorf("--update-baseline with --baseline <file> needs a single root: %d roots would each rewrite the shared file and drop the entries of the others", len(reports))
+	}
 	for i, r := range reports {
 		path := baselinePathFor(cfgAt(cfgs, i))
 		if path == "" {
@@ -121,25 +124,25 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 	return nil
 }
 
-// budgetsFor resolves one root's [lint.tolerate] (or its deprecated [lint.budget]).
-func budgetsFor(cfg *config.Config) lint.Budgets {
+// ratchetFor resolves one root's [lint.ratchet] (or its deprecated [lint.ratchet]).
+func ratchetFor(cfg *config.Config) lint.Ratchet {
 	if cfg == nil || cfg.Lint == nil {
 		return nil
 	}
-	budgets, _ := lint.ResolveBudgets(cfg.Lint.Tolerated()).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
+	budgets, _ := lint.ResolveRatchet(cfg.Lint.Ratchet).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
 	return budgets
 }
 
-// reportRefusedBudgets reports, once per report, a [lint.tolerate] entry for a
+// reportRefusedRatchet reports, once per report, a [lint.ratchet] entry for a
 // code the organization policy protects: the entry is ignored.
-func reportRefusedBudgets(reports []*lint.Report, cfgs []*config.Config) {
+func reportRefusedRatchet(reports []*lint.Report, cfgs []*config.Config) {
 	for i, r := range reports {
 		cfg := cfgAt(cfgs, i)
 		if cfg == nil || cfg.Lint == nil {
 			continue
 		}
-		_, dropped := lint.ResolveBudgets(cfg.Lint.Tolerated()).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
-		r.RefuseTolerate(dropped)
+		_, dropped := lint.ResolveRatchet(cfg.Lint.Ratchet).Without(lint.ProtectedCodes(cfg.PolicyOutcome))
+		r.RefuseRatchet(dropped)
 	}
 }
 

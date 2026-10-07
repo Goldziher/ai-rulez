@@ -46,24 +46,24 @@ INFO  User-level generation complete files=25
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/helper/ dir 0755
-.agents/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 .claude/ dir 0755
-.claude/CLAUDE.md file 0644 505 ca1a1f5f7c8fcd770046ec9386adddd68b5555c0ab22e7ae34b41972c8fd6ac1
+.claude/CLAUDE.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 .claude/agents/ dir 0755
-.claude/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.claude/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .claude/rules/ dir 0755
-.claude/rules/mine.md file 0644 315 92ca0bb9d1f3560b925832c3f026618c2e58a28e1c0ef98103c32f6410bc01b4
+.claude/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 .claude/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 .claude/skills/ dir 0755
 .claude/skills/helper/ dir 0755
-.claude/skills/helper/SKILL.md file 0644 225 e737995ff98543a2420592593b1cbe4e823a96a16bc21c0ada994ae43293c4bd
+.claude/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
 .config/ai-rulez/.generated-manifest.json file 0644 1775 921751973e988834497e74cbfdb68633944ed4f67e77c305cc29a779d92c1054
 .config/ai-rulez/.generated-manifest.local.json file 0644 3258 96d08f4bd1d39549cdc780f2d17f95ea8e344a1ca119e10baaccd79a826332d5
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
-.config/ai-rulez/config.toml file 0644 325 3563eee2eb37cdf23c02ccf8185b39b0e14015ff57be744b4615b62b3adbb1ca
+.config/ai-rulez/config.toml file 0644 343 a74ba88ce9f1e6af91ed65dda76e441d2aac7cec723ddc738ff3e3accdff8f74
 .config/ai-rulez/context/ dir 0755
 .config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
 .config/ai-rulez/domains/ dir 0755
@@ -79,41 +79,41 @@ INFO  User-level generation complete files=25
 .config/ai-rulez/skills/helper/ dir 0755
 .config/ai-rulez/skills/helper/SKILL.md file 0644 49 6b7435a4fcbe0e1b1c9be84bf3c7cde3916532f00fc0c75cd3a44a8b81349438
 .config/opencode/ dir 0755
-.config/opencode/AGENTS.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+.config/opencode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 .config/opencode/agents/ dir 0755
-.config/opencode/agents/buddy.md file 0644 221 33e50dc4258ddef567874ca8a37799f207f4a1d0f05b197f1d05a4c0b8495920
+.config/opencode/agents/buddy.md file 0644 134 81ae320b25c504b95e130059b3a32a3ae4cff078f93dd97cc607adc182d19508
 .config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
 .config/opencode/plugins/ dir 0755
 .config/opencode/plugins/ai-rulez-hooks.js file 0644 8886 56b4f64d52bcede8715bd13582db3cc6571f06f44d21eebcf9badb7a5c8b1fbd
 .config/opencode/skills/ dir 0755
 .config/opencode/skills/helper/ dir 0755
-.config/opencode/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.config/opencode/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 .copilot/ dir 0755
 .copilot/agents/ dir 0755
-.copilot/agents/buddy.agent.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
-.copilot/copilot-instructions.md file 0644 505 ca1a1f5f7c8fcd770046ec9386adddd68b5555c0ab22e7ae34b41972c8fd6ac1
+.copilot/agents/buddy.agent.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
+.copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 .copilot/hooks/ dir 0755
 .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
 .copilot/instructions/ dir 0755
-.copilot/instructions/mine.instructions.md file 0644 341 d825116e9c1919df2cb3cf5f6af49a2adbb416b1be56b6e3ba1a15953db98bfb
+.copilot/instructions/mine.instructions.md file 0644 254 4df7caf7e1d101f8f891b42effd2e8f75033c720a4709709af31359a872259c8
 .copilot/skills/ dir 0755
 .copilot/skills/helper/ dir 0755
-.copilot/skills/helper/SKILL.md file 0644 227 2131a832e97e1dc68a7211d0757702cf0f789bcac9982c070ca2ea5aa9607d56
+.copilot/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 .cursor/ dir 0755
 .cursor/agents/ dir 0755
-.cursor/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.cursor/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .cursor/commands/ dir 0755
 .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 .gemini/ dir 0755
-.gemini/GEMINI.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+.gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 .gemini/agents/ dir 0755
-.gemini/agents/buddy.md file 0644 223 b0405ba09de8951b4e90698b39004638d564cbd03c7d2a11498072af3b2195ce
+.gemini/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 .gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
 elsewhere/ dir 0755
 elsewhere/codex/ dir 0755
-elsewhere/codex/AGENTS.md file 0644 561 55ade037ab627db9d086e8b32021bac18d81b5bc85754f1c403b5a76bc1dc036
+elsewhere/codex/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 elsewhere/codex/agents/ dir 0755
 elsewhere/codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
 elsewhere/codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 elsewhere/codex/rules/ dir 0755
-elsewhere/codex/rules/ai-rulez.rules file 0644 425 2605682bc869c20f1932d4b0957af30e660468f48dd979f1478e3317185c7f5c
+elsewhere/codex/rules/ai-rulez.rules file 0644 338 20e79faa1ff0244bcf6238a431259150f364c373a0f70a020f09789f645744a3

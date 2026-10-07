@@ -80,7 +80,7 @@ and `baz` stay identical. The scope of a nested file is the whole directory, whi
   skills (its "ignore commands" rule names only the `commands/` directories); and Claude Code loads a nested `AGENTS.md`
   when it works in a directory without a `CLAUDE.md`, so a scoped rule can reach Claude both from `.claude/rules/` and
   from the nested file. Set `targets` on the rule to limit it to one of them.
-- **`codex`, `opencode`, `amp`, `xum`**: they share `AGENTS.md`, which is identical. With `agents_md = true` the shared
+- **`codex`, `opencode`, `amp`, `xum`**: they share `AGENTS.md`, which is identical. With `agents_md` on (the default) the shared
   `AGENTS.md` and `.agents/skills/` are written once and `baz` adds only its nested files, agents and targeted skills.
 - **`cursor`** and others that write `.cursor/rules`: Baz reads those files too, so a rule can be read from both
   `.cursor/rules` and `AGENTS.md`. Baz applies all in-scope guidelines, so contradictions show up as contradictory

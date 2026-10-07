@@ -17,12 +17,12 @@ func TestLoadConfig_StructuralTOMLErrorNamesKeyAndLine(t *testing.T) {
 	}{
 		{
 			name:     "skills array of tables",
-			toml:     "version = \"4.0\"\nname = \"x\"\n\n[[skills]]\nname = \"a\"\npath = \"p\"\n",
+			toml:     "version = \"5.0\"\nname = \"x\"\n\n[[skills]]\nname = \"a\"\npath = \"p\"\n",
 			contains: []string{"[[skills]]", "line 4", "skill_sources", "installed_skills", ".ai-rulez/skills"},
 		},
 		{
 			name:     "string where a table belongs",
-			toml:     "version = \"4.0\"\nname = \"x\"\nheader = \"oops\"\n",
+			toml:     "version = \"5.0\"\nname = \"x\"\nheader = \"oops\"\n",
 			contains: []string{"header", "line 3"},
 		},
 	}

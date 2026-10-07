@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func resetEnrichFlags(t *testing.T) {
 	t.Helper()
 	resetUsageFlags(t)
 	clear := func() {
-		usageHarness, usageOutcome, usageRole, usageServed, usageSalt = "", "", "", false, ""
+		telHarness, usageOutcome, telRole, usageServed, usageSalt = "", "", "", false, ""
 		feedbackKind, feedbackNote, reportFeedback, reportEvals = "", "", "", ""
 		reportEvalsFlags.usageLogs, reportEvalsFlags.usageLogsAlias, reportEvalsFlags.fromOTLP, reportEvalsFlags.feedback, reportEvalsFlags.results = nil, nil, false, "", ""
 		reportEvalsFlags.minPass, reportEvalsFlags.minTrigger, reportEvalsFlags.json = evals.DefaultMinPassRate, evals.DefaultMinTrigger, false
@@ -32,18 +33,18 @@ func resetEnrichFlags(t *testing.T) {
 func TestUsageHook_HarnessTemplatesAndWarning(t *testing.T) {
 	resetEnrichFlags(t)
 	var out, errOut bytes.Buffer
-	usageHookCmd.SetOut(&out)
-	usageHookCmd.SetErr(&errOut)
+	telemetryHookCmd.SetOut(&out)
+	telemetryHookCmd.SetErr(&errOut)
 
-	usageHarness = "codex"
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil))
+	telHarness = "codex"
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	assert.Contains(t, out.String(), "--harness codex")
 	assert.Contains(t, out.String(), "PreToolUse")
 	assert.Empty(t, errOut.String())
 
 	out.Reset()
-	usageHarness = "windsurf"
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil), "an unsupported harness warns, it does not fail")
+	telHarness = "windsurf"
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil), "an unsupported harness warns, it does not fail")
 	assert.Empty(t, out.String(), "and prints no template")
 	assert.Contains(t, errOut.String(), "warning:")
 	assert.Contains(t, errOut.String(), "windsurf")
@@ -54,7 +55,7 @@ func TestUsageRecord_HarnessAndOutcomeFlags(t *testing.T) {
 	t.Setenv(usage.SaltEnv, "test-salt")
 	dir := t.TempDir()
 	usageLog = filepath.Join(dir, "usage.jsonl")
-	usageHarness, usageOutcome, usageRole, usageServed = "cursor", "used", "reviewer", true
+	telHarness, usageOutcome, telRole, usageServed = "cursor", "used", "reviewer", true
 	event := `{"hook_event_name":"preToolUse","session_id":"sess-9","tool_name":"Read","tool_input":{"file_path":"/p/.cursor/skills/beta/SKILL.md"}}`
 	require.NoError(t, runUsageRecord(strings.NewReader(event)))
 
@@ -313,4 +314,38 @@ func TestReportEvals_IgnoresAnUnsignedRecord(t *testing.T) {
 	assert.True(t, decoded.Skills[0].Unverified)
 	assert.Nil(t, decoded.Skills[0].PassRate)
 	assert.NotEqual(t, evals.ActionKeep, decoded.Skills[0].Action)
+}
+
+func TestJoinRankUsage_SkipsResourceLoadsAndListings(t *testing.T) {
+	resetEnrichFlags(t)
+	dir := t.TempDir()
+	log := filepath.Join(dir, "usage.jsonl")
+	lines := `{"v":2,"event":"skill_invoked","skill":"alpha","id":"alpha"}
+{"v":2,"event":"skill_invoked","skill":"alpha","id":"alpha","resource":true}
+{"v":2,"event":"skill_invoked","skill":"_list","id":"_list"}
+`
+	require.NoError(t, os.WriteFile(log, []byte(lines), 0o600))
+	reportEvalsFlags.usageLogs = []string{log}
+	in := &evals.RankInput{}
+	_, err := joinRankUsage(in, dir)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"alpha": 1}, in.Uses)
+}
+
+func TestUsageRecord_HonorsTelemetrySaltFile(t *testing.T) {
+	resetEnrichFlags(t)
+	dir := t.TempDir()
+	saltPath := filepath.Join(dir, "shared.salt")
+	t.Setenv(telemetry.EnvSaltFile, saltPath)
+	usageLog = filepath.Join(dir, "usage.jsonl")
+	telHarness = "cursor"
+	event := `{"hook_event_name":"preToolUse","session_id":"sess-9","tool_name":"Read","tool_input":{"file_path":"/p/.cursor/skills/beta/SKILL.md"}}`
+	require.NoError(t, runUsageRecord(strings.NewReader(event)))
+
+	entries, _, err := usage.ReadLog(usageLog)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, usage.HashSession(usage.LoadSalt(saltPath), "sess-9"), entries[0].Session)
+	assert.FileExists(t, saltPath)
+	assert.NoFileExists(t, filepath.Join(dir, "salt"), "the default salt beside the log must not be used")
 }

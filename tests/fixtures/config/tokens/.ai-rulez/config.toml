@@ -1,4 +1,4 @@
-version = "4.0"
+version = "5.0"
 name = "tokens-test"
 description = "Fixture for the tokens command"
 presets = ["claude"]
@@ -8,6 +8,7 @@ presets = ["claude"]
 # agent-delegation on a copy of this fixture instead.
 default = "backend"
 gitignore = false
+agents_md = false
 
 [profiles]
 backend = ["backend"]

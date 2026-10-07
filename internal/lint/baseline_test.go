@@ -3,6 +3,7 @@ package lint
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -109,14 +110,14 @@ func TestBudgetsTolerateUpToTheCap(t *testing.T) {
 		finding(CodePathMissing, "a.md", 1, "1"), finding(CodePathMissing, "a.md", 2, "2"),
 		finding(CodeLinkUnresolved, "a.md", 3, "3"),
 	}
-	within := ResolveBudgets(map[string]int{"AR401": 2, "nonsense": 1})
-	assert.Equal(t, Budgets{CodePathMissing: 2}, within)
+	within := ResolveRatchet(map[string]int{"AR401": 2, "nonsense": 1})
+	assert.Equal(t, Ratchet{CodePathMissing: 2}, within)
 	assert.Empty(t, within.Excess(findings))
 	assert.True(t, FailedWith(findings, "error", within), "AR201 is unbudgeted and still fails")
 	assert.False(t, FailedWith(findings[:2], "error", within), "AR401 within budget is tolerated")
 
-	tight := ResolveBudgets(map[string]int{"path-missing": 1})
-	assert.Equal(t, []BudgetExcess{{Code: CodePathMissing, Count: 2, Max: 1}}, tight.Excess(findings))
+	tight := ResolveRatchet(map[string]int{"path-missing": 1})
+	assert.Equal(t, []RatchetExcess{{Code: CodePathMissing, Count: 2, Max: 1}}, tight.Excess(findings))
 	assert.True(t, FailedWith(findings[:2], "error", tight), "over budget: every finding of the rule counts again")
 
 	findings[0].meta().Accepted = true
@@ -130,14 +131,9 @@ func TestFailedIgnoresAcceptedFindings(t *testing.T) {
 	assert.False(t, Failed([]Finding{f}, "error"))
 }
 
-func TestValidateSettingsTolerate(t *testing.T) {
-	problems := ValidateSettings(&config.LintConfig{Tolerate: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
-	assert.Equal(t, []string{"lint.tolerate.AR201: -1 is negative", `lint.tolerate: unknown rule "AR999"`}, problems)
-}
-
-func TestValidateSettingsBudget(t *testing.T) {
-	problems := ValidateSettings(&config.LintConfig{Budget: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
-	assert.Equal(t, []string{"lint.budget.AR201: -1 is negative", `lint.budget: unknown rule "AR999"`}, problems)
+func TestValidateSettingsRatchet(t *testing.T) {
+	problems := ValidateSettings(&config.LintConfig{Ratchet: map[string]int{"AR401": 3, "AR999": 1, "AR201": -1}})
+	assert.Equal(t, []string{"lint.ratchet.AR201: -1 is negative", `lint.ratchet: unknown rule "AR999"`}, problems)
 }
 
 func TestApplyBaselineRefusesPolicyProtectedCodes(t *testing.T) {
@@ -171,17 +167,71 @@ func TestApplyBaselineRefusesPolicyProtectedCodes(t *testing.T) {
 
 func TestBudgetsWithoutDropsProtectedCodes(t *testing.T) {
 	// Arrange
-	b := Budgets{CodeSecretDetected: 5, CodePathMissing: 2}
+	b := Ratchet{CodeSecretDetected: 5, CodePathMissing: 2}
 	findings := []Finding{finding(CodeSecretDetected, "a.md", 1, "x")}
 
 	// Act
 	kept, dropped := b.Without(map[string]bool{CodeSecretDetected: true})
 
 	// Assert
-	assert.Equal(t, Budgets{CodePathMissing: 2}, kept)
+	assert.Equal(t, Ratchet{CodePathMissing: 2}, kept)
 	assert.Equal(t, []string{CodeSecretDetected}, dropped)
 	assert.True(t, FailedWith(findings, "error", kept), "the protected finding counts against the exit code")
 	same, none := b.Without(nil)
 	assert.Equal(t, b, same)
 	assert.Empty(t, none)
+}
+
+func TestNarrowedRunKeepsBaselineEntriesItDidNotLookFor(t *testing.T) {
+	prev := &Baseline{Version: 1, Entries: []BaselineEntry{
+		{Fingerprint: "other", Code: CodePathMissing, File: "a.md", Reason: "legacy", Expires: "2027-01-01"},
+		{Fingerprint: "ext", Code: CodeExternalFinding, File: "a.md", Reason: "scanner"},
+		{Fingerprint: "sec-gone", Code: CodeSecretDetected, File: "a.md", Reason: "fixture"},
+	}}
+	r := &Report{Analyzers: []string{AnalyzerSecurity}, Findings: []Finding{finding(CodeShellExec, "s.md", 1, "fresh")}}
+
+	res := ApplyBaseline(r, prev, "b.json", "2026-10-05")
+	require.Len(t, res.Stale, 1, "only the entry of a rule the run checked can be stale")
+	assert.Equal(t, "sec-gone", res.Stale[0].Fingerprint)
+
+	next, err := UpdateBaseline(r, prev, "why")
+	require.NoError(t, err)
+	byFP := map[string]BaselineEntry{}
+	for _, e := range next.Entries {
+		byFP[e.Fingerprint] = e
+	}
+	assert.Contains(t, byFP, "other", "a security-only run must not delete non-security entries")
+	assert.Equal(t, "legacy", byFP["other"].Reason)
+	assert.Equal(t, "2027-01-01", byFP["other"].Expires)
+	assert.Contains(t, byFP, "ext", "a run without --external must keep scanner entries")
+	assert.Contains(t, byFP, "fresh")
+	assert.NotContains(t, byFP, "sec-gone", "stale entries of a checked rule are still pruned")
+}
+
+func sizeFingerprint(t *testing.T, lines int) string {
+	t.Helper()
+	root := t.TempDir()
+	body := "---\nname: big\ndescription: Use when you need the oversized skill for tests.\n---\n" + strings.Repeat("line\n", lines)
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":         baseConfig + "\n[lint.budgets.skill]\nmax_lines = 10\n",
+		".ai-rulez/skills/big/SKILL.md": body,
+	})
+	gitAdd(t, root)
+	tree, err := LoadTree(root)
+	require.NoError(t, err)
+	rep, err := RunWith(loadNoRemote(t, root), tree, Options{})
+	require.NoError(t, err)
+	for i := range rep.Findings {
+		if rep.Findings[i].Code == CodeSizeLines {
+			return rep.Findings[i].Fingerprint()
+		}
+	}
+	t.Fatalf("no size finding for %d lines:\n%s", lines, dump(rep.Findings))
+	return ""
+}
+
+func TestSizeFindingFingerprintTracksGrowth(t *testing.T) {
+	at30 := sizeFingerprint(t, 30)
+	assert.Equal(t, at30, sizeFingerprint(t, 31), "a few lines more keep the entry")
+	assert.NotEqual(t, at30, sizeFingerprint(t, 530), "a baselined oversize file that grows 20x must fire again")
 }

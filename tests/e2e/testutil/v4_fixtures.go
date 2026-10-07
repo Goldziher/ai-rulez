@@ -34,7 +34,7 @@ func quotedPresetList(presets []string) string {
 // V4FullConfigTOML enables every built-in preset (see AllV4Presets).
 var V4FullConfigTOML = strings.Replace(v4FullConfigTemplate, "@PRESETS@", quotedPresetList(AllV4Presets()), 1)
 
-const v4FullConfigTemplate = `version = "4.0"
+const v4FullConfigTemplate = `version = "5.0"
 name = "v4-test-project"
 description = "Full V4 test configuration with all presets"
 gitignore = false

@@ -173,7 +173,7 @@ func overlayProject(t *testing.T, shared string) (base, configDir string) {
 
 func TestLocalDoc_SaveWritesOwnerOnlyAndIgnoresInGit(t *testing.T) {
 	// Arrange
-	base, configDir := overlayProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	base, configDir := overlayProject(t, "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 	d, err := OpenLocalDoc(configDir, "config.toml")
 	require.NoError(t, err)
 	t.Cleanup(d.Close)
@@ -209,7 +209,7 @@ func TestLocalDoc_SaveRollsBackWhenMergedConfigIsInvalid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			base, configDir := overlayProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+			base, configDir := overlayProject(t, "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 			localPath := filepath.Join(configDir, "config.local.toml")
 			if tt.existing != "" {
 				require.NoError(t, os.WriteFile(localPath, []byte(tt.existing), 0o600))
@@ -239,7 +239,7 @@ func TestLocalDoc_SaveRollsBackWhenMergedConfigIsInvalid(t *testing.T) {
 
 func TestInitLocalOverlay(t *testing.T) {
 	// Arrange
-	base, configDir := overlayProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	base, configDir := overlayProject(t, "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 
 	// Act
 	path, created, err := InitLocalOverlay(base)
@@ -258,7 +258,7 @@ func TestInitLocalOverlay(t *testing.T) {
 
 func TestDescribeLocalOverlay_RedactsSecrets(t *testing.T) {
 	// Arrange
-	base, configDir := overlayProject(t, `version = "4.0"
+	base, configDir := overlayProject(t, `version = "5.0"
 name = "shared-name"
 presets = ["claude"]
 
@@ -308,7 +308,7 @@ func TestLocalDoc_DottedNamesAreAddressable(t *testing.T) {
 }
 
 func TestLocalDoc_ScopeWithoutNameMatchesSharedByPath(t *testing.T) {
-	_, configDir := overlayProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[scopes]]\npath = \"svc/a\"\nprofile = \"p\"\n\n[profiles]\np = []\nq = []\n")
+	_, configDir := overlayProject(t, "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[scopes]]\npath = \"svc/a\"\nprofile = \"p\"\n\n[profiles]\np = []\nq = []\n")
 	d, err := OpenLocalDoc(configDir, "config.toml")
 	require.NoError(t, err)
 	t.Cleanup(d.Close)

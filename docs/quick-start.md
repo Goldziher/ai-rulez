@@ -4,7 +4,7 @@ Get AI-Rulez running in 5 minutes.
 
 ## Step 1: Initialize Your Project
 
-Create a new V4 configuration:
+Create a new configuration:
 
 ```bash
 ai-rulez init "my-project"
@@ -32,7 +32,7 @@ This creates a `.ai-rulez/` directory with:
 Edit `.ai-rulez/config.toml` to specify which tools to generate for:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 description = "My awesome project"
 
@@ -138,28 +138,32 @@ ai-rulez generate
 
 This creates:
 
-- `CLAUDE.md` and `.claude/rules/` (from claude preset; with the default split mode your rules are in `.claude/rules/`)
+- `AGENTS.md` and `.agents/skills/` (shared by the presets that read them; `agents_md` is on by default)
+- `CLAUDE.md`, which imports `@AGENTS.md`, and `.claude/rules/` (from claude preset; with the default split mode your
+  path-scoped rules are in `.claude/rules/`)
 - `.cursor/rules/` (from cursor preset)
-- `GEMINI.md` (from gemini preset)
+- `.gemini/settings.json`, which points Gemini at `AGENTS.md` (from gemini preset)
+
+Set `agents_md = false` to get a separate file per tool (`GEMINI.md`, and so on) instead.
 
 ## Step 7: Verify and Commit
 
 Check that files were generated:
 
 ```bash
-ls -la CLAUDE.md .claude/rules/ .cursor/rules/ GEMINI.md
+ls -la AGENTS.md CLAUDE.md .agents/skills/ .gemini/settings.json
 ```
 
-Commit the sources:
+Commit the sources and the generated files:
 
 ```bash
-git add .ai-rulez/
+git add .ai-rulez/ AGENTS.md CLAUDE.md .agents/ .claude/ .cursor/ .gemini/
 git commit -m "docs: initialize AI assistant configuration"
 ```
 
-`gitignore` defaults to `true`, so `generate` adds the generated files to `.gitignore` and teammates
-run `ai-rulez generate` themselves. To commit generated files instead, set `gitignore = false` in
-`config.toml` and add them to the commit.
+Generated files are not gitignored by default. To keep them out of git and let
+teammates run `ai-rulez generate` themselves, set `gitignore = true` in `config.toml` (or pass
+`generate --gitignore`); `generate` then maintains a managed block in `.gitignore`.
 
 Personal notes that should not be shared go in `.ai-rulez/local/` (`ai-rulez add rule my-notes --local`);
 see [Local Configuration](local-overrides.md).
@@ -194,7 +198,7 @@ priority: critical
 **3. Update `config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-platform"
 
 presets = ["claude", "cursor"]

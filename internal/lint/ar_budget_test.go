@@ -38,3 +38,28 @@ func TestLoadBudgetTableIsComplete(t *testing.T) {
 		}
 	}
 }
+
+func budgetMessages(t *testing.T, c ruleCase) string {
+	t.Helper()
+	root := t.TempDir()
+	writeFiles(t, root, c.project())
+	gitAdd(t, root)
+	var all []string
+	for _, f := range lintDir(t, root) {
+		if f.Code == CodeLoadBudget {
+			all = append(all, f.Message)
+		}
+	}
+	return strings.Join(all, "\n")
+}
+
+func TestLoadBudgetMessagesNameTheHarnessAndMarkUnverifiedFigures(t *testing.T) {
+	big := "# Big\n" + strings.Repeat("x", 13000) + "\n"
+	if msg := budgetMessages(t, ruleCase{presets: `"devin"`, files: map[string]string{".ai-rulez/rules/big.md": big}}); !strings.Contains(msg, "Windsurf") {
+		t.Errorf("the devin-preset rule-file budget should name Windsurf: %q", msg)
+	}
+	skill := "---\nname: bad\ndescription: Use when " + strings.Repeat("abcdefgh ", 1000) + "\n---\nx\n"
+	if msg := budgetMessages(t, ruleCase{presets: `"codex"`, skill: skill}); !strings.Contains(msg, "unverified") {
+		t.Errorf("an unverified figure should say so: %q", msg)
+	}
+}

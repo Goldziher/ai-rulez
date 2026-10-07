@@ -112,8 +112,8 @@ frontend = ["frontend", "qa"]
    git commit -m "docs: update AI assistant guidelines"
    ```
 
-   Generated files are gitignored by default (`gitignore = true`). Add them to the commit too only
-   if you set `gitignore = false`.
+   Generated files are committed by default: add them to the commit too. Set `gitignore = true` to have
+   ai-rulez keep them out of git through a managed `.gitignore` block instead.
 
 ## Key Features
 
@@ -166,4 +166,4 @@ project-root/
 
 ## Version
 
-This documentation covers **ai-rulez v5**. It reads the V4 TOML configuration (`version = "4.0"`); V2 and V3 configs are not read, see [Migrating to v5](migration-v5.md).
+This documentation covers **ai-rulez v5**. It reads the V4 TOML configuration (`version = "5.0"`); V2 and V3 configs are not read, see [Migrating to v5](migration-v5.md).

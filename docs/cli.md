@@ -8,7 +8,7 @@ All AI-Rulez CLI commands and flags.
 
 | Command                         | Description                                         |
 | ------------------------------- | --------------------------------------------------- |
-| `ai-rulez init`                 | Initialize V4 directory-based configuration         |
+| `ai-rulez init`                 | Initialize directory-based configuration            |
 | `ai-rulez convert`              | Convert existing tool files into `.ai-rulez/` with a lossiness report ([details](#convert-command)) |
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
@@ -30,6 +30,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
+| `ai-rulez migrate v5`           | Migrate a 4.x project to 5.0 ([details](#migrate-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez search`               | Rank skills against a query (lexical or hybrid with embeddings); `index`, `status`, `mine`; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
@@ -68,7 +69,7 @@ write to the `config.local.*` overlay. See [Local Configuration](local-overrides
 
 ## CRUD Commands
 
-AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
+AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
 
 `add agent` and `add command` take `--domain`/`-d`, `--description`/`-s`, `--content`/`-c` and
 `--local`. `remove agent|command` and `list agents|commands` take the same flags as their rule/skill
@@ -134,7 +135,7 @@ ai-rulez domain remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation prompt
+- `--yes` / `-y` (optional): Skip confirmation prompt
 
 **Examples:**
 
@@ -147,7 +148,7 @@ ai-rulez domain remove backend
 Remove without confirmation:
 
 ```bash
-ai-rulez domain remove backend --force
+ai-rulez domain remove backend --yes
 ```
 
 #### `ai-rulez domain list [flags]`
@@ -162,7 +163,7 @@ ai-rulez domain list [flags]
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 **Examples:**
 
@@ -172,7 +173,7 @@ List domains:
 ai-rulez domain list
 ```
 
-List as JSON:
+List as JSON (a wrapper document, `{"schema_version": 1, "items": [...]}`):
 
 ```bash
 ai-rulez domain list --format json
@@ -323,7 +324,7 @@ ai-rulez remove rule <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
@@ -337,7 +338,7 @@ ai-rulez remove rule code-quality
 Remove a domain rule:
 
 ```bash
-ai-rulez remove rule database-standards --domain backend --force
+ai-rulez remove rule database-standards --domain backend --yes
 ```
 
 #### `ai-rulez remove context <name> [flags]`
@@ -357,14 +358,14 @@ ai-rulez remove context <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
 ```bash
 ai-rulez remove context architecture
-ai-rulez remove context backend-design --domain backend --force
+ai-rulez remove context backend-design --domain backend --yes
 ```
 
 #### `ai-rulez remove skill <name> [flags]`
@@ -384,14 +385,14 @@ ai-rulez remove skill <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
 ```bash
 ai-rulez remove skill code-reviewer
-ai-rulez remove skill performance-optimizer --domain backend --force
+ai-rulez remove skill performance-optimizer --domain backend --yes
 ```
 
 #### `ai-rulez list rules [flags]`
@@ -407,7 +408,7 @@ ai-rulez list rules [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List rules in specific domain only
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -437,7 +438,7 @@ ai-rulez list context [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List context in specific domain only
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -460,7 +461,7 @@ ai-rulez list skills [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): List skills in specific domain only
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 - `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
@@ -507,14 +508,14 @@ Remove an installed skill from the configuration.
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation prompt
+- `--yes` / `-y` (optional): Skip confirmation prompt
 - `--local` (optional): Remove through the `config.local.*` overlay. A skill installed in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
 ```bash
 ai-rulez skill remove kreuzberg
-ai-rulez skill remove my-lib --force
+ai-rulez skill remove my-lib --yes
 ```
 
 #### `ai-rulez skill list [flags]`
@@ -523,7 +524,7 @@ List all installed skills.
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 **Examples:**
 
@@ -596,14 +597,14 @@ ai-rulez include remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove through the `config.local.*` overlay. An include defined in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
 ```bash
 ai-rulez include remove corporate-rules
-ai-rulez include remove shared-patterns --force
+ai-rulez include remove shared-patterns --yes
 ```
 
 #### `ai-rulez include list [flags]`
@@ -618,7 +619,7 @@ ai-rulez include list [flags]
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 **Examples:**
 
@@ -681,14 +682,14 @@ ai-rulez profile remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove a profile defined in the overlay. A profile from the shared config cannot be removed locally (error)
 
 **Examples:**
 
 ```bash
 ai-rulez profile remove staging
-ai-rulez profile remove development --force
+ai-rulez profile remove development --yes
 ```
 
 #### `ai-rulez profile set-default <name> [flags]`
@@ -727,7 +728,7 @@ ai-rulez profile list [flags]
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 **Examples:**
 
@@ -794,7 +795,7 @@ When a `config.local.*` overlay or `local/` content exists, `generate` also rend
 
 Whether a path is tracked or ignored is asked of git in one call each; if git fails inside a repository the guard assumes every affected file is tracked and refuses. If a `.gitignore` rule un-ignores a machine-local or secret-bearing output, the overlay or the `local/` tree, or `.gitignore` is a symbolic link (entries then go to `.git/info/exclude`), see [Local overrides](local-overrides.md); the run is refused with the paths listed when something would stay committable. `--allow-local-drift` is command-line only (MCP clients cannot pass it) and can write non-secret overlay values into files that are tracked and shared, so review `git diff` before committing. It does not bypass the secret guard: a generated MCP config that would carry resolved secrets (`env`, `headers`, URL credentials, secret flags) is still refused unless it is git-ignored.
 
-Shared outputs keep the baseline `Source-Hash`, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `allowed:` (a drift file that is git-ignored), `suppressed:` and `blocked:` lines, and exits non-zero when any line is `blocked:` (the real run would refuse). A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
+Shared outputs keep the baseline hashes, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `allowed:` (a drift file that is git-ignored), `suppressed:` and `blocked:` lines, and exits non-zero when any line is `blocked:` (the real run would refuse). A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
 
 ## Builtins Command
 
@@ -804,7 +805,7 @@ List all built-in domains embedded in the `ai-rulez` binary.
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 ### `ai-rulez builtins show <name> [flags]`
 
@@ -816,7 +817,7 @@ Show the full rules, context, skills, agents, and commands for a built-in domain
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON. `--json` / `-j` still works as a deprecated alias for `--format json`
+- `--format text|json` (optional, default `text`): `json` prints JSON.
 
 ---
 
@@ -881,7 +882,7 @@ ai-rulez convert --list                           # importers and what each dete
 
 Rule frontmatter is translated, not copied: Cursor `alwaysApply`/`globs`/`description`, Copilot `applyTo`, Kiro `inclusion`/`fileMatchPattern`, Devin and Windsurf `trigger`, and `paths` become `activation`, `globs` and `description`; any other key is reported as `dropped`. A Cursor rule with `alwaysApply: true` and `globs` is always on, so its globs are dropped (`approximated`). Frontmatter that is not valid YAML as written (an unquoted `globs: **/*.ts`) is read leniently with block scalars and lists intact, and reported as `approximated`. Skills, agents and commands are copied with their frontmatter, and every key ai-rulez has no field for (Claude `color`, `permissionMode`; Copilot `handoffs`, `target`, `mode`, `agent`; ...) is reported as `approximated`, because only presets that copy unknown keys render it; a comma-separated Claude `tools` string becomes a list. The `name:` of a `SKILL.md` follows its directory when the directory is renamed to a valid name or suffixed after a collision. A name with no ASCII letters or digits (`日本語`) gets a stable derived name (`unnamed-<hash>`), reported as `approximated`. Presets are inferred only from files one tool owns (`.cursor/rules` implies `cursor`, `.windsurf` implies `devin`, `.roo` implies `zoocode`); shared files such as `AGENTS.md` and `.agents/skills` imply none, and with no other evidence `claude` is used and reported. A command file `convert` imported (`.claude/commands/daily.md`) is removed by the first `generate` once the generated `.claude/skills/daily/SKILL.md` replaces it and the file and its copy under `.ai-rulez/commands/` are both unchanged since the import, so the command does not appear twice; `clean` writes it back from that copy as it removes the skill. An edited file stays, and a skill whose command cannot be written back byte for byte is kept by `clean`. A root file that is a symlink onto an imported `AGENTS.md` (`CLAUDE.md -> AGENTS.md`) is not imported, but `codex` (which writes `AGENTS.md`) and the preset the link name implies (`claude`) are added, so the first `generate` writes `AGENTS.md` and keeps the link. Files ai-rulez generated are never read back as source: the `AI-RULEZ ::` header, the `GENERATED FILE` and `Generated by ai-rulez` banners (also in skill resource files), the `Content-Hash` and `Source-Hash` lines, and every path in `.ai-rulez/.generated-manifest.json` are skipped with a `dropped` finding, as are root files that only contain an `@path` pointer. A path that exists but cannot be read (permissions, a symlink, an invalid `.claude/settings.json`) is reported as `dropped` with the error, never silently ignored. Identical content found in several files (for example `CLAUDE.md` and `AGENTS.md`) is imported once; different content under one name gets a stable hash suffix.
 
-A root file such as `CLAUDE.md` or `AGENTS.md` becomes a context file. Frontmatter keys no tool reads (`title`, `applies_to`, `updated`) are kept under `metadata:` so `validate --strict` does not report them as `AR303`, and the report lists them as `approximated`.
+A root file such as `CLAUDE.md` or `AGENTS.md` becomes a context file. Frontmatter keys no tool reads (`title`, `applies_to`, `updated`) are kept under `metadata:` so `validate` does not report them as `AR303`, and the report lists them as `approximated`.
 
 When `native` and `skills-lock` run together, skills named in `skills-lock.json` are imported only as `[[installed_skills]]`, not copied from `.agents/skills`. The lock's `computedHash` is never carried (its scheme differs from the `ai-rulez.lock` tree digest) and is reported as `needs-action`; run `ai-rulez lock` after converting. `node_modules` and `local` skill sources are `unsupported`; global skill locks are out of scope. A lock source must be an `https://`, `ssh://` or `git@host:path` URL: a leading `-`, a transport helper such as `ext::`, `file://`, `git://`, plain `http://` and URLs with embedded credentials are `unsupported`, as are a `ref` starting with `-` and a `skillPath` that is absolute or contains `..`. The planned `installed_skills` go through the same field validation as at config load, without any network access.
 
@@ -996,7 +997,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Blocked scan.** When the scan finds an error-level problem (a secret, a risky command), `convert` prints each finding at the **source** file and line it came from (`.rulesync/rules/x.md:33`), with the planned `.ai-rulez/` path in parentheses, exits 2 and writes nothing. Remove the text from the source and run again. To write anyway, pass `--allow-findings AR001` (repeatable, comma separated): the finding stays in the report, marked `allowed`, and only that code is let through. Findings in the generated `config.toml` keep their planned path. In `--format json` the source location is `file`/`line` and the planned one is `planned`.
 
-**Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate --strict`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
+**Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
 
 **Report codes:** `AR9F1` approximated, `AR9F2` dropped, `AR9F3` needs-action, `AR9F4` unsupported, `AR9F5` blocked by the scan; `AR9F0` marks an input file that cannot be parsed at all and appears only in the error that stops the run. They have their own range, apart from the `AR9E0`-`AR9E4` scanner codes, and appear in the convert report only; `validate` does not emit them.
 
@@ -1012,7 +1013,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 ### `ai-rulez init [project-name]`
 
-Initialize a new V4 directory-based configuration.
+Initialize a new directory-based configuration. It writes `.ai-rulez/config.toml`.
 
 **Syntax:**
 
@@ -1024,7 +1025,7 @@ ai-rulez init [project-name] [flags]
 
 - `[project-name]` (optional): The project name. If omitted, the current directory's base name is used (falling back to `MyProject`). Nothing is prompted.
 
-**V4-specific Flags:**
+**Flags:**
 
 | Flag                    | Type    | Default | Description                                                          |
 | ----------------------- | ------- | ------- | -------------------------------------------------------------------- |
@@ -1041,7 +1042,7 @@ place; if none of the three is present it logs a message and does nothing rather
 width survive. Husky has no configuration file to preserve — the validation step is appended to
 `.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
 
-ai-rulez is safe to run inside a git hook. Git exports `GIT_DIR`, `GIT_INDEX_FILE` and related variables to hooks, which would make every nested `git` call act on the hook's repository; ai-rulez removes `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the environment of every git subprocess it starts (and of `usage` sink commands) and targets repositories only with an explicit `-C`.
+ai-rulez is safe to run inside a git hook. Git exports `GIT_DIR`, `GIT_INDEX_FILE` and related variables to hooks, which would make every nested `git` call act on the hook's repository; ai-rulez removes `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the environment of every git subprocess it starts (and of `telemetry` sink commands) and targets repositories only with an explicit `-C`.
 The generated config lists the built-in presets in a comment (`ai-rulez init --help` prints them too) and
 enables `claude`. Add the harnesses you use to `presets`; all 52 and what each supports are in
 [Supported harnesses](harnesses.md). The former `windsurf` preset is `devin`, and `continue-dev` is removed.
@@ -1055,7 +1056,7 @@ enables `claude`. Add the harnesses you use to `presets`; all 52 and what each s
 
 **Examples:**
 
-Basic V4 initialization (TOML format):
+Basic initialization:
 
 ```bash
 ai-rulez init "my-project"
@@ -1067,7 +1068,7 @@ V4 with multiple domains:
 ai-rulez init "my-project" --domains "backend,frontend,qa"
 ```
 
-V4 with example content skipped:
+With example content skipped:
 
 ```bash
 ai-rulez init "my-project" --skip-content
@@ -1110,7 +1111,7 @@ ai-rulez generate [config-file] [flags]
 | `--force`                       | boolean | false         | Overwrite an existing file ai-rulez cannot prove it wrote (see [Existing files](#existing-files-generate-will-not-overwrite)). A symlinked output stays refused |
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
-| `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
+| `--offline` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--verify-tags`                 | boolean | false         | Before generating, ask the remotes whether a tag pinned in `ai-rulez.lock` moved (`AR732`, exit 2) or was deleted (`AR735`); needs the network. Also `[lock] verify_tags = true` |
 | `--emit-plan FILE`              | string  |               | Write the generation plan as JSON to FILE (`-` for stdout) and apply nothing ([details](#embedding-the-plan)) |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
@@ -1126,11 +1127,10 @@ ai-rulez generate [config-file] [flags]
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 | `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
 | `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell); always, do not warn about new hook and MCP commands (same as `AI_RULEZ_ACK_COMMANDS=1`) |
-| `--strict`                      | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate --strict` (deep content checks) |
+| `--strict`                      | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate` (deep content checks) |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
-`--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
-`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` are hidden deprecated no-ops kept so existing scripts keep working: `generate` only writes MCP config files and never configures CLI tools, so there is nothing to skip.
+`--update-gitignore`, `--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` were removed in v5 (use `--gitignore`; the others had no effect).
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
@@ -1192,7 +1192,7 @@ Dry-run to preview generation:
 ai-rulez generate --dry-run --profile backend
 ```
 
-Generate and update .gitignore:
+Generate and maintain the managed .gitignore block (opt-in):
 
 ```bash
 ai-rulez generate --profile full --gitignore
@@ -1305,7 +1305,7 @@ The `.ai-rulez/` source tree is never touched. Generated directories are only re
 
 Settings documents you share with ai-rulez (`.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, ...) are not deleted: `clean` removes only the keys, MCP server entries and array elements ai-rulez merged into them (including a stale entry that holds a resolved secret), and deletes the file only when nothing else is left. The plan lists them as `remove ai-rulez keys from:`. See [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
 
-By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--force` there.
+By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--yes` there.
 
 **Syntax:**
 
@@ -1334,13 +1334,13 @@ ai-rulez clean --dry-run
 Remove all generated files without a prompt:
 
 ```bash
-ai-rulez clean --force
+ai-rulez clean --yes
 ```
 
 Remove generated files but keep the `.gitignore` block and manifest:
 
 ```bash
-ai-rulez clean --force --keep-gitignore --keep-manifest
+ai-rulez clean --yes --keep-gitignore --keep-manifest
 ```
 
 ## Verify Command
@@ -1413,6 +1413,8 @@ Verify every plugin producer and marketplace in a repository:
 ```bash
 ai-rulez verify --recursive --plugin --if-configured
 ```
+
+Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration), `2` a bundle file is missing, stale, obsolete or fails its provenance hash.
 
 When a `[plugin]` block exists but no bundle was generated, `verify --plugin` fails with `plugin bundle not generated; run `ai-rulez generate --plugin``. `--if-configured` only skips a project with no plugin configuration; add `--if-generated` to also skip until the bundle exists.
 
@@ -1528,7 +1530,6 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--all` | Evaluate every file (the default); exclusive with `--since` and `--staged` |
 | `--rule <id>` | Run only the verifiers that enforce this rule, skill, agent or command |
 | `--format` | `text` (default), `json` ([`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json)), `sarif` or `junit` |
-| `--json` | Deprecated alias for `--format json` (conflicts with another `--format`) |
 | `--out <file>` | Write the report to a file instead of stdout |
 | `--fail-on` | Lowest failing severity: `error` (default), `warning`, `info` or `none` |
 | `--strict` | Same as `--fail-on warning` |
@@ -1569,7 +1570,7 @@ ai-rulez tokens [config-file] [flags]
 
 | Flag                  | Type    | Default            | Description                                                      |
 | --------------------- | ------- | ------------------ | ---------------------------------------------------------------- |
-| `--format`            | string  | `text`             | `text` or `json` (`--json` / `-j` is a deprecated alias for `--format json`) |
+| `--format`            | string  | `text`             | `text` or `json` |
 | `--budget` / `-b`     | int     | 0                  | Exit 2 when the headline always-loaded count exceeds this ceiling |
 | `--compare-profiles`  | strings | none               | One profile per column of a comparison table; repeat the flag per column |
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
@@ -1705,28 +1706,27 @@ while `.claude/agents/*.md` already carry the same text on demand. Drop it with
 `builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
 lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
-## Usage Commands
+## Telemetry Commands
 
-Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
+Opt-in usage and item-load telemetry, documented in [Usage telemetry](usage-telemetry.md) and
+[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `telemetry report|evals` commands.
 
 | Command | Purpose |
 | --- | --- |
-| `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
-| `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
-| `ai-rulez usage export --to file <path> [--file f] [--log f] [--with-evals] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
-| `ai-rulez usage export --to otlp [--all] [--with-evals] [--max-batches n] [--dry-run]` | Push the usage log past the export cursor (and eval results) to the consented collector; exits 1 when delivery fails |
-| `ai-rulez usage prune --keep-days n [--dry-run] [--ignore-cursor] [--log f]` | Delete usage-log lines older than n days that are behind the export cursor |
+| `ai-rulez telemetry hook [--harness claude\|codex\|cursor] [--role r] [--format json\|toml] [-o file] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks; codex and cursor: the skill hook) as a hooks block or `[[hooks]]` groups; other harnesses warn and print nothing |
+| `ai-rulez telemetry record [--harness h] [--role r] [--outcome o] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f] [--root dir]` | Read one hook event on stdin: a skill invocation appends an identifier-only JSON line to the usage log, an item load is recorded when `[telemetry] enabled`; silent, always exits 0 |
+| `ai-rulez telemetry feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
+| `ai-rulez telemetry report [log] [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log (default `.ai-rulez/local/usage.jsonl`) with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
+| `ai-rulez telemetry report evals [--usage f]... [--from-otlp] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
+| `ai-rulez telemetry export --to file <path> [--file f] [--log f] [--with-evals] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
+| `ai-rulez telemetry export --to otlp [--all] [--with-evals] [--max-batches n] [--dry-run]` | Push the usage log past the export cursor (and eval results) to the consented collector; exits 1 when delivery fails |
+| `ai-rulez telemetry prune --keep-days n [--dry-run] [--ignore-cursor] [--log f]` | Delete usage-log lines older than n days that are behind the export cursor |
 | `ai-rulez telemetry enable [--endpoint url] [--protocol http/json\|http/protobuf\|grpc] [--include-session] [--include-paths] [--backfill]` | Store your consent for one collector (per user, mode 0600; a repository cannot grant it) |
 | `ai-rulez telemetry status [--format json]` | Recording and export on or off, consent state, pending events, cursor, failed flushes |
 | `ai-rulez telemetry disable` | Withdraw consent |
-| `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
-| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
-| `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
-| `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
 | `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
 | `ai-rulez telemetry preview [--log f] [--limit n] [--with-evals] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
 | `ai-rulez telemetry doctor [--format json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
-| `ai-rulez report evals [--usage f]... [--from-otlp] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 
 ## Eval Commands
 
@@ -1885,37 +1885,38 @@ ai-rulez validate [config-path] [flags]
 | `--recursive` / `-r`  | boolean | Validate every discovered config; exits non-zero if any is invalid |
 | `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
-| `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
+| `--config-only`       | boolean | Check the configuration file only and skip the content checks (dead globs, links, references, hooks, size). See [Strict validation](strict-validation.md) |
+| `--strict`            | boolean | Fail on warnings as well as errors (the same as `--fail-on warning`); cannot be combined with `--config-only` or another `--fail-on` |
 | `--show-policy`       | boolean | Print the effective [organization policy](policy.md) with the origin of every value and what the repository tried to loosen (text, or `--format json`), then exit; exit 1 when the repository loosens it |
-| `--format`            | string  | `text` (default), `json`, `sarif`, `github`, `junit` or `markdown`; any value implies `--strict` |
-| `--output`            | string  | With `--strict`: write the report to this file instead of stdout |
-| `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
-| `--external`          | boolean | With `--strict`: also run the `[[lint.external]]` scanners and merge their findings |
+| `--format`            | string  | `text` (default), `json`, `sarif`, `github`, `junit` or `markdown`; any value other than `text` writes the findings in that format |
+| `--output`            | string  | Write the report to this file instead of stdout |
+| `--fail-on`           | string  | Lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
+| `--external`          | boolean | Also run the `[[lint.external]]` scanners and merge their findings |
 | `--allow-egress`      | strings | With `--external`: allow the named scanners that declare `egress = true` to run (repeatable; a name no `[[lint.external]]` declares is an error) |
 | `--write-baseline`, `--reason`, `--scanner-baseline`, `--show-suppressed` | | With `--external`: the scanner baseline flags ([Scan Command](#scan-command)) |
 | `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
 | `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
-| `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
-| `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
+| `--baseline`          | string  | Accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
+| `--update-baseline`   | boolean | Record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0. Refused with `--fix`, `--since`/`--changed`, `--analyzer`, `--lint-profile` and a shared `--baseline` across roots |
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
-| `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
-| `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
-| `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
-| `--verifiers`         | boolean | With `--strict`: also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
-| `--approvals-base`    | string  | With `--strict`: also report approvals added since this git revision for content that also changed since it (`AR716`, see [Approvals](approvals.md#approvals-are-assertions)) |
+| `--strict-baseline`   | boolean | Exit 2 when the baseline has stale or expired entries (ratchet) |
+| `--since`             | string  | Report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
+| `--changed`           | boolean | Shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--verifiers`         | boolean | Also evaluate the verifiers (never a command or a model) and report them as `AR9H1`-`AR9H6` findings |
+| `--approvals-base`    | string  | Also report approvals added since this git revision for content that also changed since it (`AR716`, see [Approvals](approvals.md#approvals-are-assertions)) |
 | `--since-depth`       | string  | With `--since` or `--changed`: how many reference hops to follow from the changed files, a number or `all` (default `1`); each JSON finding carries a `hop` (`changed`, `dependent`, `transitive(n)`) |
 | `--since-max-files`   | int     | With `--since` or `--changed`: report at most this many files besides the changed ones, nearest first (`0`: no cap) |
 | `--repo-root`         | string  | Repository root that repo-relative paths and git-tracked globs resolve against (env `AI_RULEZ_REPO_ROOT`; default the git top level, else the config's parent); an error outside a git repository |
 | `--fix`               | boolean | With `--strict`: apply the safe automatic fixes to authored sources: executable bits (`AR502`, `AR503`, `AR505`), frontmatter key renames (`AR303`), quoted booleans (`AR304`), unclosed fences (`AR806`) and missing final newlines (`AR807`). The harness trap fixes (`AR9C7`, and `AR9CA` `key-misspelt` rows from `.ai-rulez/traps/*.toml`) also rewrite a misspelled frontmatter key in a hand-written harness file outside `.ai-rulez/`. Never generated outputs or security findings |
 | `--fix-unsafe`        | boolean | With `--strict`: also apply fixes that can change meaning (skill name normalization, `AR804`); implies `--fix` |
 | `--dry-run`           | boolean | With `--fix`/`--fix-unsafe`: print the unified diff (applies with `git apply`) and change nothing |
-| `--analyzer`          | strings | With `--strict`: run only these analyzers (repeatable or comma separated; replaces `[lint] analyzers`; unknown names are rejected): `security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`, `config`, `roles`, `lock`, `delivery`, `evals`, `okf`, `traps`, `convert`, `search`, `verifiers` |
-| `--lint-profile`      | string  | With `--strict`: lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
+| `--analyzer`          | strings | Run only these analyzers (repeatable or comma separated; replaces `[lint] analyzers`; unknown names are rejected): `security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`, `config`, `roles`, `lock`, `delivery`, `evals`, `okf`, `traps`, `convert`, `search`, `verifiers` |
+| `--lint-profile`      | string  | Lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
-Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` (with `--strict`) findings at or above `--fail-on`.
+Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` findings at or above `--fail-on`.
 
 **Examples:**
 
@@ -1925,19 +1926,31 @@ Explain a rule:
 ai-rulez validate --explain AR401
 ```
 
-Run the deep content checks, as JSON, across every root:
+Run the checks as JSON across every root:
 
 ```bash
-ai-rulez validate --strict --recursive --format json
+ai-rulez validate --recursive --format json
 ```
 
-Validate every config in a monorepo (all roots are checked; exit status 1 if any fails):
+Fail on warnings too:
+
+```bash
+ai-rulez validate
+```
+
+Check only the configuration file, as `validate` did before v5:
+
+```bash
+ai-rulez validate --config-only
+```
+
+Validate every config in a monorepo (all roots are checked; exit status 1 if any config is invalid, 2 on findings):
 
 ```bash
 ai-rulez validate --recursive
 ```
 
-Validate current configuration:
+Validate current configuration (configuration checks, then the deep content checks):
 
 ```bash
 ai-rulez validate
@@ -1957,7 +1970,7 @@ ai-rulez validate --verbose
 
 ### What Gets Validated
 
-For V4 configs the raw file is also checked against `schema/ai-rules.schema.json`, so an unknown key
+The raw config file is also checked against `schema/ai-rules.schema.json`, so an unknown key
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
 - A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
@@ -2045,7 +2058,7 @@ Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
 the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and
-`validate --strict` reports it as `AR010` (a warning; an error under enforcement, or raise it with `[lint.severity]`). Enforcement is on
+`validate` reports it as `AR010` (a warning; an error under enforcement, or raise it with `[lint.severity]`). Enforcement is on
 whenever `ai-rulez.lock` exists (`[lock] enforce = false` opts out); it also reports content drift as `AR981` / `AR982`, and `generate`
 refuses a remote source the lock does not cover, as `--locked` does. Pinning `ref` to a full commit SHA also counts as pinned.
 
@@ -2267,7 +2280,7 @@ ai-rulez publish emit <emitter> [--out dir] [--experimental] [--channel NAME] [-
 
 `--confirm-registry URL` is required with `--to npm --execute` when the committed `[publish.npm]` config names a registry other than the public one.
 
-Runs `validate --strict`, `lock --check`, `verify --plugin`, a secret scan and the `[publish]` policy gates
+Runs `validate`, `lock --check`, `verify --plugin`, a secret scan and the `[publish]` policy gates
 (`require_approved`, `require_signature`), then writes a reproducible `<name>-<version>.tar.gz`, its manifest,
 `SHA256SUMS`, a copy of `ai-rulez.lock`, `RELEASE_NOTES.md` (with the lock changes since the previous tag) and
 `publish-plan.json` to `--dist`. `--dry-run` writes nothing. Only `--execute --yes` leaves the machine: `gh release create`,
@@ -2282,9 +2295,9 @@ complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](
 
 ### `ai-rulez scan [config-path]`
 
-Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. `scan` runs only the `security` analyzer, so hook and config findings (`AR504`, `AR9K0`, ...) belong to `validate --strict`. Flags: `--recursive`/`-r`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--lint-profile`, `--external`, `--allow-egress`, `--baseline`, `--update-baseline`, `--baseline-reason`, `--strict-baseline`, `--changed`, `--since`, `--since-depth`, `--since-max-files`, `--repo-root`, `--no-local`, `--config-dir`/`-n`. The baseline and changed-only flags mean the same as on [`validate`](#validation-command) (without needing `--strict`). Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
+Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. `scan` runs only the `security` analyzer, so hook and config findings (`AR504`, `AR9K0`, ...) belong to `validate`. Flags: `--recursive`/`-r`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--lint-profile`, `--external`, `--allow-egress`, `--baseline`, `--update-baseline`, `--baseline-reason`, `--strict-baseline`, `--changed`, `--since`, `--since-depth`, `--since-max-files`, `--repo-root`, `--no-local`, `--config-dir`/`-n`. The baseline and changed-only flags mean the same as on [`validate`](#validation-command) (without needing `--strict`). Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 
-With `--external`, the scanners of `[[lint.external]]` also run (see [External scanners](strict-validation.md#staged-input-severity-and-baseline)). Scanner flags, also on `validate --strict`:
+With `--external`, the scanners of `[[lint.external]]` also run (see [External scanners](strict-validation.md#staged-input-severity-and-baseline)). Scanner flags, also on `validate`:
 
 | Flag | Meaning |
 | --- | --- |
@@ -2315,7 +2328,7 @@ the security scan), `1` it could not run.
 ### `ai-rulez export okf`
 
 ```bash
-ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check]
+ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check] [--config-dir n]
 ```
 
 Writes rules, context, skills, agents, commands and checks as an OKF v0.2 bundle. Without `--out` the bundle goes
@@ -2326,10 +2339,11 @@ exits 2 when the bundle on disk differs. `--index-style` (default `okf.index_sty
 ### `ai-rulez import okf`
 
 ```bash
-ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json]
+ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json] [--config-dir n]
 ```
 
-Converts the concepts of a bundle into `.ai-rulez/` sources. The target directory must exist (`--config-dir` selects a
+Converts the concepts of a bundle into `.ai-rulez/` sources: rules, context and skills by `type`, and also agents, commands
+and checks when a concept says so in `x-ai-rulez.kind` (`--into` only forces rules, context or skills). The target directory must exist (`--config-dir` selects a
 non-default one). Existing files are never overwritten unless `--force`; identical files are reported as unchanged, so a
 second run changes nothing. Links between imported concepts are rewritten to the created files; symlinks in the bundle are skipped with a warning. Imported text goes through the `AR001`-`AR011` security scan first and the import is refused
 with nothing written when it finds an error. A git source is fetched shallowly into a temporary directory.
@@ -2352,6 +2366,53 @@ ai-rulez llm estimate <file> [--max-output <tokens>] [--format text|json]
 ```
 
 `doctor` prints the resolved backend, model, endpoint host, whether the key variable is set (never its value), whether network use is allowed and the cache directory; `--ping` makes one 1-token call and refuses unless `allow_network = true`. `estimate` approximates the prompt tokens of a file and the worst-case cost offline. A failure exits `1`.
+
+## Migrate Command
+
+### `ai-rulez migrate v5`
+
+Rewrite a 4.x project for ai-rulez 5.0. `migrate` reads 4.x only: a 2.x or 3.x project must first be migrated to
+4.0 with ai-rulez 4.x. The full list of breaking changes and the before/after of each is in
+[Migrating to v5](migration-v5.md).
+
+**Syntax:**
+
+```bash
+ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recursive] [--config-dir name] [--format text|json]
+```
+
+**Flags:**
+
+- `--dry-run`: print the change list and write nothing.
+- `--check`: write nothing and exit 2 when a project still needs migration.
+- `--adopt-defaults`: do not pin the 4.x defaults (`agents_md = false`, `gitignore = true`, `[header] hashes = "full"`); take the v5 ones.
+- `--write`: also rewrite the deprecated frontmatter spellings `permission_mode` and `user_invocable` in the markdown sources.
+- `--recursive`: migrate every project found below the current directory.
+- `--config-dir`: migrate one config directory name instead of `.ai-rulez` (then `.config/ai-rulez`).
+- `--format json`: a machine-readable report with `schema_version`, one entry per project and a summary.
+
+**What It Does (per project):**
+
+1. Converts a 4.x `config.yaml`, `config.yml` or `config.json` to `config.toml`, keeping keys, order and comments, and removes the old file.
+2. Sets `version = "5.0"` in place, keeping the rest of the line.
+3. Renames `[lint.budget]` and `[lint.tolerate]` to `[lint.ratchet]`, the `windsurf` preset to `devin` and drops the removed `continue-dev` preset.
+4. Merges a legacy `mcp.toml`, `mcp.yaml` or `mcp.json` into `[[mcp_servers]]` and removes it (left alone with a warning when `config.toml` already has `mcp_servers`).
+5. Pins the three changed defaults to their 4.x values unless `--adopt-defaults`.
+6. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only).
+7. Rewrites `ai-rulez usage ...` and `telemetry report|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
+8. Warns about `[[plugins]]` (no longer written to any file) and about a 4.x file it left in place.
+
+The result is decoded with the v5 loader before anything is written; a project that would not load is reported with
+its error and left untouched. Running `migrate v5` on a migrated project changes nothing.
+
+**Exit codes:** `0` migrated or nothing to do, `1` a project could not be migrated (or an unsupported target),
+`2` `--check` found a project that needs migration.
+
+Then regenerate outputs and review the diff:
+
+```bash
+ai-rulez generate
+```
 
 ## Version Command
 
@@ -2442,7 +2503,7 @@ Commands that load a project directory use the following config order:
 3. **Project convention**: `.config/ai-rulez/config.toml`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
 4. **Error**: No configuration found
 
-The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a V3 `.ai-rulez/config.yaml`, `.yml` or `.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; migrate it with ai-rulez 4.x first (`npx ai-rulez@4 migrate v4`; for a flat V2 file, move it to `.ai-rulez/config.yaml` first), then upgrade. `doctor` reports the same file.
+The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a YAML or JSON config (`.ai-rulez/config.yaml`, `.yml` or `.json`, or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x first). A `config.toml` whose `version` is `4.0` stops the same way. `doctor` reports the same file.
 
 Example detection flow:
 
@@ -2461,16 +2522,19 @@ ai-rulez generate --config ./ai-policy/config.toml
 
 ## Exit Codes
 
-Every command follows one contract, so a script can tell a failed run from a failed check:
+Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md)), so a script can tell a failed run from a failed check:
 
 | Code | Meaning |
 | ---- | ------- |
 | 0    | Success |
 | 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
+
+The contract is covered by a table test over the built binary (`tests/e2e/cli/exit_codes_test.go`), so a
+CI step can rely on it: `0` pass, `2` fix the content, `1` fix the setup.
 
 ## Output Examples
 
@@ -2612,7 +2676,7 @@ ai-rulez list rules --domain backend
 ai-rulez list rules --domain frontend
 
 # Remove a rule
-ai-rulez remove rule old-guideline --force
+ai-rulez remove rule old-guideline --yes
 ```
 
 ---
@@ -2664,7 +2728,7 @@ ai-rulez validate
 ai-rulez generate
 
 # Commit changes
-git add .ai-rulez/   # plus generated files only if gitignore = false
+git add .ai-rulez/   # plus the generated files unless gitignore = true
 git commit -m "docs: update AI assistant guidelines"
 ```
 
@@ -2674,18 +2738,16 @@ git commit -m "docs: update AI assistant guidelines"
 #!/bin/bash
 # Simple CI/CD script
 
-# Validate configuration (--no-local: ignore any machine-local overlay)
+# Validate configuration and content (--no-local: ignore any machine-local overlay).
+# Exit 2 means findings, exit 1 means the setup is broken.
 ai-rulez validate --no-local || exit 1
 
-# Generate all outputs
-ai-rulez generate --no-local || exit 1
-
-# Check for uncommitted changes
-if ! git diff --quiet CLAUDE.md .cursor/ GEMINI.md; then
+# Fail when the committed generated files differ from the sources (exit 2 on drift)
+ai-rulez generate --check --no-local || {
   echo "Generated files are out of sync"
   echo "Run: ai-rulez generate"
   exit 1
-fi
+}
 ```
 
 ## Troubleshooting

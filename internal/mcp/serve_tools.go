@@ -46,7 +46,9 @@ func (s *Server) registerServeTools() {
 	s.addTool(
 		newAnnotatedTool(toolListSkillResources,
 			"List the files of a skill (references, scripts, assets) with size and digest, without loading them",
-			newSchemaBuilder().String("name", "Skill name from find_skill", true),
+			newSchemaBuilder().
+				String("name", "Skill name from find_skill", true).
+				Number("offset", fmt.Sprintf("Index of the first file to list (at most %d files are listed per call; see next_offset)", maxListedResources), false),
 			readOnlyAnnotations(),
 		),
 		s.listSkillResourcesHandler,
@@ -155,10 +157,15 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		t(SessionTelemetry{Skill: skill.Name, Digest: skill.Digest, Session: session, Client: client, Resource: rel != skillMarkdown, Role: s.serve.opts.Role})
 	}
 
-	resources := make([]map[string]any, 0, len(skill.Files))
+	resourcesTruncated := false
+	resources := make([]map[string]any, 0, min(len(skill.Files), maxListedResources))
 	for i := range skill.Files {
 		if skill.Files[i].RelPath == rel {
 			continue
+		}
+		if len(resources) == maxListedResources {
+			resourcesTruncated = true
+			break
 		}
 		f := &skill.Files[i]
 		resources = append(resources, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, keyDigest: f.Digest})
@@ -172,6 +179,9 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	out["truncated"] = truncated
 	out["file_digest"] = file.Digest
 	out[keyResources] = resources
+	if resourcesTruncated {
+		out["resources_truncated"] = true // list_skill_resources pages through the rest
+	}
 	if truncated {
 		out["total_bytes"] = file.Size
 	}
@@ -187,12 +197,17 @@ func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.Tool
 	if err != nil {
 		return handlers.ToolError(err)
 	}
-	files := make([]map[string]any, 0, len(skill.Files))
-	for i := range skill.Files {
+	offset := min(max(int(req.GetNumber("offset", 0)), 0), len(skill.Files))
+	end := min(offset+maxListedResources, len(skill.Files))
+	files := make([]map[string]any, 0, end-offset)
+	for i := offset; i < end; i++ {
 		f := &skill.Files[i]
 		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest})
 	}
-	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, keyResources: files}
+	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, keyResources: files, "total": len(skill.Files)}
+	if end < len(skill.Files) {
+		out["truncated"], out["next_offset"] = true, end
+	}
 	s.addProvenance(out, skill)
 	return handlers.ToolSuccess(out)
 }

@@ -74,7 +74,7 @@ type HookOptions struct {
 // HandleHook reads one hook input from in and records the item event it
 // describes, if any. It returns the event recorded, or nil for an event it does
 // not handle. Only Claude Code's InstructionsLoaded, SubagentStart and
-// SubagentStop are handled here; skill loads stay with `usage record`.
+// SubagentStop are handled here; skill loads stay with `telemetry record`.
 func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOptions) (*Event, error) {
 	if !p.Settings.RecordActive() {
 		return nil, nil // nothing is recorded: do not read or parse the harness's input

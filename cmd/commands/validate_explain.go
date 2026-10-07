@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"encoding/json"
 	"io"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/samber/oops"
 )
@@ -21,9 +21,7 @@ func runExplain(w io.Writer, key, format string) error {
 			Errorf("unknown rule %q", key)
 	}
 	if format == formatJSON {
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(e) //nolint:wrapcheck // writer error
+		return jsondoc.Write(w, e)
 	}
 	var sb strings.Builder
 	lint.WriteExplanation(&sb, e)

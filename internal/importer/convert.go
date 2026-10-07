@@ -453,8 +453,9 @@ func buildConfig(plan *Plan, project string) *config.Config {
 		project = "imported-project"
 	}
 	cfg := &config.Config{
-		Version:         config.ConfigVersionV4,
+		Version:         config.ConfigVersionV5,
 		Name:            project,
+		AgentsMD:        true, // the v5 default; MarshalTOML writes only an explicit false
 		MCPServersRaw:   plan.MCPServers,
 		InstalledSkills: plan.InstalledSkills,
 	}

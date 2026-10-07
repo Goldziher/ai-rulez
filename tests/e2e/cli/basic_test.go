@@ -96,7 +96,7 @@ func (s *BasicCLITestSuite) TestInvalidFlag() {
 }
 
 // TestLegacyConfigIsRefused covers a project that has only a V2/V3 config: every
-// command that loads a config exits 1 and names the file and the 4.x migration.
+// command that loads a config exits 1 and names the file and ai-rulez migrate v5.
 func (s *BasicCLITestSuite) TestLegacyConfigIsRefused() {
 	tests := []struct {
 		name string
@@ -119,7 +119,7 @@ func (s *BasicCLITestSuite) TestLegacyConfigIsRefused() {
 				// Assert
 				s.Equal(1, result.ExitCode)
 				result.AssertOutputContains(s.T(), tt.file)
-				result.AssertOutputContains(s.T(), "npx ai-rulez@4 migrate v4")
+				result.AssertOutputContains(s.T(), "ai-rulez migrate v5")
 			})
 		}
 	}

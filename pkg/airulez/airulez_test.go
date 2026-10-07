@@ -15,7 +15,7 @@ import (
 )
 
 var sources = map[string]string{
-	".ai-rulez/config.toml":            "version = \"4.0\"\nname = \"svc\"\npresets = [\"claude\", \"cursor\", \"codex\"]\n\n[permissions]\nallow = [\"Bash(go test:*)\"]\n",
+	".ai-rulez/config.toml":            "version = \"5.0\"\nname = \"svc\"\npresets = [\"claude\", \"cursor\", \"codex\"]\nagents_md = false\n\n[permissions]\nallow = [\"Bash(go test:*)\"]\n",
 	".ai-rulez/rules/style.md":         "---\npriority: high\n---\n# Style\n\nBe concise.\n",
 	".ai-rulez/context/arch.md":        "# Architecture\n\nA CLI.\n",
 	".ai-rulez/skills/review/SKILL.md": "---\nname: review\ndescription: Review code\n---\nLook for bugs.\n",
@@ -180,7 +180,7 @@ func TestValidate(t *testing.T) {
 		wantOK bool
 	}{
 		{name: "a valid configuration", config: sources[".ai-rulez/config.toml"], wantOK: true},
-		{name: "an unknown preset", config: "version = \"4.0\"\nname = \"x\"\npresets = [\"no-such-tool\"]\n"},
+		{name: "an unknown preset", config: "version = \"5.0\"\nname = \"x\"\npresets = [\"no-such-tool\"]\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

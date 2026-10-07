@@ -43,7 +43,7 @@ type = "generated_in_sync"
 
 ```bash
 ai-rulez verifiers run                  # table, exit 2 when an error-severity verifier fails
-ai-rulez verifiers run --format json    # machine-readable (--json is a deprecated alias and conflicts with another --format)
+ai-rulez verifiers run --format json    # machine-readable
 ai-rulez verifiers run --strict         # warning-severity failures also fail (--fail-on warning)
 ai-rulez verifiers run --name readme    # only the named verifier (repeatable)
 ai-rulez verifiers run --since origin/main   # only what changed since the merge base
@@ -58,7 +58,7 @@ ai-rulez verifiers list [--format json]        # what is declared, without evalu
 ai-rulez verifiers explain <name>       # what it checks, the rule it enforces, how to fix it
 ai-rulez verifiers test [name...]       # run the self-test examples offline (--allow-exec for command predicates)
 ai-rulez verifiers suggest database     # ask the model to propose verifiers for the rule (dry run; --write saves them)
-ai-rulez validate --strict --verifiers  # one run and one report for lint and verifiers (never a command or a model)
+ai-rulez validate --verifiers  # one run and one report for lint and verifiers (never a command or a model)
 ```
 
 | Code | Meaning |
@@ -302,7 +302,7 @@ lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unch
 | `AR9H5` `verifier-dead-scope` | `when_changed` matches no file of the repository; with `--strict-applicability` or `[verifiers_settings] warn_dead` |
 | `AR9H6` `verifier-no-examples` | a spec verifier has no `[[verifiers.examples]]`; only with `[verifiers_settings] require_examples`; severity `warning` |
 
-They are reported by the `verifiers` commands, and by `validate --strict --verifiers`; `ai-rulez validate --explain AR9H1`
+They are reported by the `verifiers` commands, and by `validate --verifiers`; `ai-rulez validate --explain AR9H1`
 describes them. Two more statuses never fail a run: `skipped` (an `llm` verifier that was not evaluated) and `inactive`
 (see [Active profile and role](#active-profile-and-role)).
 
@@ -324,7 +324,7 @@ without examples are listed.
 - Predicates are tables (`[verifiers.require.regex]`), not keys on `require`, so `regex` is one name for the
   predicate and its pattern field.
 - A missing `anchor` heading is `AR9H2`, so the finding-to-rule mapping cannot rot.
-- The verifier verb is `verifiers run`; `validate --strict --verifiers` runs the same verifiers inside the lint report
+- The verifier verb is `verifiers run`; `validate --verifiers` runs the same verifiers inside the lint report
   (all files, no command, no model).
 - `linguist-generated` files are not excluded by default; use `exclude`.
 - `diff-added` ships in this slice; it needs a base, and with `--all` every line is added.

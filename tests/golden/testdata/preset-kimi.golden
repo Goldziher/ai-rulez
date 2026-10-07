@@ -23,7 +23,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 d0f07d0dd2fd717a98d0adf9bfc9662449362899d47bfc84648b7f3865ea1048
+.ai-rulez/config.toml file 0644 843 74ea7569ae2def55d20bdbad57a5fe7eb53c562cb699ca5da17930fd0852cdf1
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -45,20 +45,20 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 264 d09ae87bcb9a0244e1e3f8a68d7569e04eefe8c885c6f69bc5bcaeeadd208746
 .kimi-code/ dir 0755
 .kimi-code/agents/ dir 0755
-.kimi-code/agents/architect.md file 0644 259 b72808867823a0b3aec606a2aac84f2877fa96ace6988a164701f416ae935b39
-.kimi-code/agents/tester.md file 0644 245 90e8f7b87470b52497b7fb82f22a91f8e7a8412daf3d94af3d919c6eec982a26
+.kimi-code/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.kimi-code/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .kimi-code/mcp.json file 0600 410 bfca900972a91659eccbacdeb7dc4eb3bc7e81dec29edcc70b9f4c524be6805b
 .kimi-code/skills/ dir 0755
 .kimi-code/skills/deployer/ dir 0755
-.kimi-code/skills/deployer/SKILL.md file 0644 259 ed9806e83b036033baab28a9310eae80abad95a6835869fd0dfd6e7c8f796bcd
+.kimi-code/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .kimi-code/skills/reviewer/ dir 0755
-.kimi-code/skills/reviewer/SKILL.md file 0644 506 5f89718f193c65e463fc552b65af1b71303fa4b801235d56c8c781f10b201f46
+.kimi-code/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .kimi-code/skills/reviewer/references/ dir 0755
 .kimi-code/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .kimi-code/skills/reviewer/scripts/ dir 0755
 .kimi-code/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 874 d27170afafbc8b092a2f96828a876757e07608c8451ae2ab47ff36a0ceb27f62
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -102,7 +102,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -138,7 +138,7 @@ INFO  Removed generated files files=9 directories=7
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 d0f07d0dd2fd717a98d0adf9bfc9662449362899d47bfc84648b7f3865ea1048
+.ai-rulez/config.toml file 0644 843 74ea7569ae2def55d20bdbad57a5fe7eb53c562cb699ca5da17930fd0852cdf1
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

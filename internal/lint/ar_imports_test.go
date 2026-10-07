@@ -33,6 +33,8 @@ func TestImportsAR210(t *testing.T) {
 				"```\n@docs/in-a-fence.md\n```\nUse @~/.claude/me.md or @/etc/thing.md.\nThe @decorator and @user.name handle.\n"},
 			absent: []string{"AR210"},
 		},
+		{name: "skill prose with a path-like mention is not a memory import", skill: "---\nname: bad\ndescription: Use when testing the import behavior.\n---\nSee @docs/missing.md and @README.md for more.\n", absent: []string{"AR210"}},
+		{name: "context file is a memory file", files: map[string]string{".ai-rulez/context/c.md": "# C\n@docs/missing.md\n"}, want: []string{"AR210:c.md:2"}},
 		{name: "inline ignore", files: map[string]string{".ai-rulez/rules/a.md": "# A\n<!-- ai-rulez-lint-ignore: AR210 -->\n@docs/missing.md\n"}, absent: []string{"AR210"}},
 		{name: "severity override", config: "\n[lint.severity]\nAR210 = \"warning\"\n", files: map[string]string{".ai-rulez/rules/a.md": "# A\n@docs/missing.md\n"}, want: []string{"AR210:a.md:2"}, sev: map[string]Severity{"AR210": SeverityWarning}},
 	})

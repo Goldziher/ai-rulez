@@ -44,7 +44,7 @@ func TestHookTemplate_HasEveryEventAndIsAsync(t *testing.T) {
 		}
 	}
 	assert.Contains(t, doc.Hooks["InstructionsLoaded"][0].Hooks[0].Command, "telemetry record")
-	assert.Contains(t, doc.Hooks["PreToolUse"][0].Hooks[0].Command, "usage record")
+	assert.Contains(t, doc.Hooks["PreToolUse"][0].Hooks[0].Command, "telemetry record")
 }
 
 func TestHookTemplate_TOMLParsesIntoHookGroups(t *testing.T) {
@@ -69,7 +69,6 @@ func TestHookTemplate_OtherHarnessesAndErrors(t *testing.T) {
 	codex, err := HookTemplate(TemplateOptions{Harness: "codex"})
 	require.NoError(t, err)
 	assert.NotContains(t, string(codex), "InstructionsLoaded", "Codex documents no instruction-load event")
-	assert.Contains(t, string(codex), "usage record")
 	assert.Contains(t, string(codex), "ai-rulez telemetry record --harness codex")
 	assert.Contains(t, string(codex), `"SubagentStart"`)
 	assert.Contains(t, string(codex), `"SubagentStop"`)

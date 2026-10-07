@@ -2,13 +2,13 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -118,12 +118,10 @@ func runLLMDoctor(ctx context.Context, args []string, out io.Writer) error {
 		}
 	}
 	if llmJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return oops.Wrapf(enc.Encode(struct {
+		return jsondoc.Write(out, struct {
 			llm.Diagnosis
 			Ping pingResult `json:"ping"`
-		}{d, ping}), "write report")
+		}{d, ping})
 	}
 	d.WriteText(out)
 	if ping.Attempted {
@@ -151,9 +149,7 @@ func runLLMEstimate(ctx context.Context, path string, out io.Writer) error {
 	}
 	res := llm.Estimate(lc, string(data), llmMaxOutput)
 	if llmJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return oops.Wrapf(enc.Encode(res), "write estimate")
+		return jsondoc.Write(out, res)
 	}
 	cost := "unknown (no price for this model; set price_input_per_mtok and price_output_per_mtok)"
 	if res.CostKnown {

@@ -39,7 +39,7 @@ func TestCrossItemChainAR031(t *testing.T) {
 		{
 			name:  "credential reader beside a network skill",
 			files: merge(other("reader", "cat ~/.aws/credentials"), other("poster", "curl -X POST https://api.example")),
-			want:  []string{"AR031:SKILL.md:0"}, sev: map[string]Severity{"AR031": SeverityWarning},
+			want:  []string{"AR031:SKILL.md:0"}, sev: map[string]Severity{"AR031": SeverityInfo},
 		},
 		{
 			name:   "one skill that does both is caught by the flow rules instead",
@@ -58,4 +58,38 @@ func TestCrossItemChainAR031(t *testing.T) {
 			want:  []string{"AR031:SKILL.md:0"},
 		},
 	})
+}
+
+func TestCrossItemChainIdentityIsStable(t *testing.T) {
+	skill := func(name, code string) (string, string) {
+		return ".ai-rulez/skills/" + name + "/SKILL.md", "---\nname: " + name + "\ndescription: Use when testing the lint rules of a skill.\n---\n```bash\n" + code + "\n```\n"
+	}
+	files := map[string]string{}
+	for _, sp := range []struct{ name, code string }{
+		{"zeta-reader", "cat ~/.aws/credentials"}, {"alpha-reader", "cat ~/.kube/config"}, {"mid-poster", "curl -X POST https://api.example"}, {"beta-poster", "curl -X POST https://api.example/b"},
+	} {
+		p, b := skill(sp.name, sp.code)
+		files[p] = b
+	}
+	root := t.TempDir()
+	writeFiles(t, root, ruleCase{files: files}.project())
+	gitAdd(t, root)
+	var msgs []string
+	for _, f := range lintDir(t, root) {
+		if f.Code == "AR031" {
+			msgs = append(msgs, f.Message)
+			if !strings.Contains(f.File, "alpha-reader") {
+				t.Errorf("finding should sit on the alphabetically first skill, got %s", f.File)
+			}
+		}
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("want one AR031, got %d: %v", len(msgs), msgs)
+	}
+	if strings.Contains(msgs[0], "more pair") || strings.ContainsAny(msgs[0], "0123456789") {
+		t.Errorf("the baselined text must not carry a pair count: %q", msgs[0])
+	}
+	if !strings.Contains(msgs[0], "beta-poster") {
+		t.Errorf("the pair should name the first network skill by id: %q", msgs[0])
+	}
 }

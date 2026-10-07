@@ -102,7 +102,7 @@ func countCode(fs []Finding, code string) int {
 	return n
 }
 
-const baseConfig = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
 
 func fixture(extraConfig string) map[string]string {
 	return map[string]string{

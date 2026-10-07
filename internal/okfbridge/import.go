@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/samber/oops"
@@ -189,18 +188,27 @@ func (p *planner) rejectUnsafe(b *okf.Bundle) error {
 	return nil
 }
 
-// scan runs the AR0xx security scan over everything about to be written.
+// scan runs the AR0xx security scan over everything about to be written. A file
+// that is not valid UTF-8 is scanned with the invalid bytes dropped, so a stray
+// byte cannot hide a payload. A file too large to scan is reported as an error
+// finding: whatever cannot be scanned is not imported.
 func scan(scanner Scanner, files []planned) []SecurityFinding {
 	if scanner == nil {
 		return nil
 	}
 	texts := map[string]string{}
+	var unscanned []SecurityFinding
 	for i := range files {
-		if len(files[i].data) <= maxScanSize && utf8.Valid(files[i].data) {
-			texts[files[i].rel] = string(files[i].data)
+		if len(files[i].data) > maxScanSize {
+			unscanned = append(unscanned, SecurityFinding{
+				Code: okf.CodePathUnsafe, Severity: SeverityError, File: files[i].rel, Line: 1,
+				Message: fmt.Sprintf("file is larger than %d bytes and cannot be security-scanned; it was not imported", maxScanSize),
+			})
+			continue
 		}
+		texts[files[i].rel] = strings.ToValidUTF8(string(files[i].data), "")
 	}
-	return scanner(texts)
+	return append(scanner(texts), unscanned...)
 }
 
 // pendingBody is a markdown file whose text is built once every target path is
@@ -430,7 +438,7 @@ func renderFields(c *okf.Concept, ext extInfo, kind Kind, id string) []okf.Field
 			if key == keyDescription {
 				continue
 			}
-			hasName = hasName || key == "name"
+			hasName = hasName || key == keyName
 			fields = append(fields, okf.Field{Key: key, Value: ext.metadata.Content[i+1]})
 		}
 	}
@@ -438,7 +446,7 @@ func renderFields(c *okf.Concept, ext extInfo, kind Kind, id string) []okf.Field
 	// source had; adding name or description would make the next export differ.
 	if kind == KindSkill && !ext.present {
 		if !hasName {
-			fields = append(fields, okf.Field{Key: "name", Value: id})
+			fields = append(fields, okf.Field{Key: keyName, Value: id})
 		}
 		if desc == nil || strings.TrimSpace(desc.Value) == "" {
 			fields = append([]okf.Field{{Key: keyDescription, Value: c.Title()}}, fields...)
@@ -521,7 +529,7 @@ func (p *planner) files(b *okf.Bundle) {
 		}
 		p.taken[strings.ToLower(target)] = f
 		p.targets[f] = target
-		p.out = append(p.out, planned{rel: target, kind: owner.kind, source: f, data: p.readFile(b, f), mode: b.Mode(f)})
+		p.out = append(p.out, planned{rel: target, kind: owner.kind, source: f, data: p.readFile(b, f), mode: b.Mode(f) & 0o755})
 	}
 }
 

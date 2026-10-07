@@ -16,7 +16,7 @@ import (
 var ErrLegacyConfig = errors.New("legacy V2/V3 config is no longer read")
 
 // legacyMigrationCommand is the upgrade path for a V3 directory config.
-const legacyMigrationCommand = "npx ai-rulez@4 migrate v4"
+const legacyMigrationCommand = MigrateCommandHint
 
 // legacyFlatHint adds the V2 step: 4.x migrates only a directory config.
 const legacyFlatHint = "A flat V2 file is not read by that command: move it to .ai-rulez/config.yaml first"
@@ -104,7 +104,7 @@ func isLegacyConfigName(base string) bool {
 type legacyConfigError struct{ path string }
 
 func (e *legacyConfigError) Error() string {
-	return fmt.Sprintf("found %s: V2/V3 configs are no longer read; migrate it with ai-rulez 4.x first (%#q), then upgrade",
+	return fmt.Sprintf("found %s: YAML and JSON configs are no longer read; run %#q to convert it to config.toml",
 		e.path, legacyMigrationCommand)
 }
 

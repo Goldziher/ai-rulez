@@ -13,9 +13,9 @@ INFO  Generation complete files=12
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 7f3e143298f1aef657c42b91480b085c4ff321f057884b886c2c9e8ad31d4d8c
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 b433f8768739c62f1c105effb6a4f3b3b12110e43350738a023144009446df2f
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -33,7 +33,7 @@ INFO  Generation complete files=12
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 832 b01f026a062fda72fc6ca9d3131bcc444171e8b4b1f3f3305f9e121536d8d5ff
+.ai-rulez/config.toml file 0644 850 121809149b6ea209e79ebd6d228e776734064bbc4a6ff1b704dff3d9508a0a5b
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -56,12 +56,12 @@ INFO  Generation complete files=12
 .ai/mcp/mcp.json file 0600 355 aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b
 .aiassistant/ dir 0755
 .aiassistant/rules/ dir 0755
-.aiassistant/rules/always.md file 0644 347 837f6f30b8a406681f908e1f6b8868a4afcb625e91127b501174bfbb09f7792d
-.aiassistant/rules/auto.md file 0644 369 4b392e6c8dbdd4c18a1690214b3db7433e253f34d5943103fea58c1a923aa0e0
-.aiassistant/rules/context-architecture.md file 0644 336 29de26af4878af195da893c5df15dffea0bc5a344e1339cf6711b9a193ddf3c4
-.aiassistant/rules/context-overview.md file 0644 347 fc48e3876c400926b2ef0c76bf18b57b313894453aebb60c83b99f70bde3ebbf
-.aiassistant/rules/manual.md file 0644 337 0f8298a202e91f8c9b767b629f03e678e2ef27f0c158eb4bed3329208ffc45ff
-.aiassistant/rules/typescript.md file 0644 392 3f6094641cd6f435c6624a35d4078febd0f7703560932afc919c95420f28e466
+.aiassistant/rules/always.md file 0644 262 4d358916fbc7f90959c41c044659c27e86c1ddc832117907a9b4a5cd18592df4
+.aiassistant/rules/auto.md file 0644 284 1afdc1746225c48b2b36053d10d25f2a182098097b986a54adc71a4709b1b797
+.aiassistant/rules/context-architecture.md file 0644 251 e4b320d67f3db49148a99533a0561260219d29edabf1aed27475a0843593bfdb
+.aiassistant/rules/context-overview.md file 0644 262 54ef97f8b4f25178977bd4a9d2672597dac3e07cc2cdc035a6132fce275f87a7
+.aiassistant/rules/manual.md file 0644 252 988e89bac7a662273831650c33214c75df4e5b0ae6ae9df6485bd0aa639b7846
+.aiassistant/rules/typescript.md file 0644 307 8bf3be196db4c22911f62d105d4b808179676c48697fe80ddf9597d8697229df
 .gitignore file 0644 429 aa84d730933fb554fae9820699ca2e7d74da924c38ab9c37de0fb3c63fdd0254
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 scripts/ dir 0755
@@ -106,7 +106,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -148,7 +148,7 @@ INFO  Removed generated files files=12 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 832 b01f026a062fda72fc6ca9d3131bcc444171e8b4b1f3f3305f9e121536d8d5ff
+.ai-rulez/config.toml file 0644 850 121809149b6ea209e79ebd6d228e776734064bbc4a6ff1b704dff3d9508a0a5b
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

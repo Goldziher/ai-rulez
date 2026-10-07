@@ -21,7 +21,7 @@ INFO  Generation complete files=16
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 27543e54bef4cb1883b293d8b6e990bbc7fc686b93ce43a90029e1175d03b0fe
+.ai-rulez/config.toml file 0644 843 47de692112fda5b01014e290788149308eefc5239363a09fc9d8914a579adf71
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -43,8 +43,8 @@ INFO  Generation complete files=16
 .gitignore file 0644 401 227104159d071053856bb0f80d96a611081b4c906861d66614290210918b1b60
 .kiro/ dir 0755
 .kiro/agents/ dir 0755
-.kiro/agents/architect.md file 0644 259 ec1865d17bf05890907416dc7408123cfcfd1e0e778b87af8b6a604b72ac3f60
-.kiro/agents/tester.md file 0644 245 19a6926d8b1408161f5ca43923a1a3431faae026cd360ff2b02ebdac74ac9690
+.kiro/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.kiro/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .kiro/hooks/ dir 0755
 .kiro/hooks/ai-rulez.json file 0644 438 d98985a2780bc0e55e5f3029e00eaee80ab575a887c8bd71feee692dba6de73c
 .kiro/prompts/ dir 0755
@@ -54,20 +54,20 @@ INFO  Generation complete files=16
 .kiro/settings/mcp.json file 0600 355 aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b
 .kiro/skills/ dir 0755
 .kiro/skills/deployer/ dir 0755
-.kiro/skills/deployer/SKILL.md file 0644 259 4205fc7bdeadb55e694c8c36e43cbd65d66a24f68a5ba7083e4cd5a8e9eec2b3
+.kiro/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .kiro/skills/reviewer/ dir 0755
-.kiro/skills/reviewer/SKILL.md file 0644 506 578d2765067f9fc499c2e22515509c79b01301aa2c78e21c1d3609386f9c6257
+.kiro/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .kiro/skills/reviewer/references/ dir 0755
 .kiro/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .kiro/skills/reviewer/scripts/ dir 0755
 .kiro/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .kiro/steering/ dir 0755
-.kiro/steering/always.md file 0644 325 316b4b2479acc210eedb347f17638682b3e2b72207525bd471bd9784b52736e2
-.kiro/steering/auto.md file 0644 370 cf5280a7b1a9bc64c543d8bc0e095295f9e7a6ae7b0967067249184baef6962f
-.kiro/steering/manual.md file 0644 339 cd6730bd4427efba912ed7643fa844b7ba0db8f97c5f52f9ea7fce44878fb88c
-.kiro/steering/typescript.md file 0644 408 fcb68d74effe48862ffeccca8d6b952355bcca1804a034a959b11c7acd63ac9d
+.kiro/steering/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.kiro/steering/auto.md file 0644 285 47f1cbb3072ae55fc92a89193fb51dd7207870b0e48c86a704d1055d15c64196
+.kiro/steering/manual.md file 0644 254 a9ef562d5e483332688c4644cdd446d30f19384692e66d97f991a745c3a058a5
+.kiro/steering/typescript.md file 0644 323 96df5cab46ee4766456b060d1091c230cf4f01a7be26f0fea7aa0472a6879b0a
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 a81f62ff964578cf4a8fdec9d5d0b5566ee82f9c08e4bdf6f8a8a3fcfad1826e
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -108,7 +108,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -155,7 +155,7 @@ INFO  Removed generated files files=16 directories=11
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 27543e54bef4cb1883b293d8b6e990bbc7fc686b93ce43a90029e1175d03b0fe
+.ai-rulez/config.toml file 0644 843 47de692112fda5b01014e290788149308eefc5239363a09fc9d8914a579adf71
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

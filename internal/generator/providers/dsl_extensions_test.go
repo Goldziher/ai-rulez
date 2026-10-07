@@ -224,7 +224,6 @@ func TestMergedSidecarPaths_IncludesGenericKinds(t *testing.T) {
 	for _, kind := range []string{"mcp", "permissions", "hooks", "mcp_json", "claude_settings_json"} {
 		assert.True(t, providers.SidecarIsMergedDocument(kind), kind)
 	}
-	assert.False(t, providers.SidecarIsMergedDocument("claude_plugins_json"))
 	assert.Contains(t, providers.MergedSidecarPaths(), ".claude/settings.json")
 
 	docs := providers.MergedSidecarDocs()

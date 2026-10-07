@@ -9,18 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadConfig_LintTolerateAndDeprecatedBudget(t *testing.T) {
+func TestLoadConfig_LintRatchet(t *testing.T) {
 	tests := []struct {
 		name  string
 		lint  string
 		local string
 		want  map[string]int
 	}{
-		{"new key", "[lint.tolerate]\nAR201 = 1\n", "", map[string]int{"AR201": 1}},
-		{"deprecated alias still works", "[lint.budget]\nAR201 = 2\n", "", map[string]int{"AR201": 2}},
-		{"new key wins over the alias", "[lint.budget]\nAR201 = 2\nAR401 = 3\n[lint.tolerate]\nAR201 = 1\n", "",
-			map[string]int{"AR201": 1, "AR401": 3}},
-		{"overlay accepts the new key", "[lint]\nfail_on = \"warning\"\n", "[lint.tolerate]\nAR201 = 5\n",
+		{"ratchet", "[lint.ratchet]\nAR201 = 1\n", "", map[string]int{"AR201": 1}},
+		{"overlay accepts ratchet", "[lint]\nfail_on = \"warning\"\n", "[lint.ratchet]\nAR201 = 5\n",
 			map[string]int{"AR201": 5}},
 	}
 	for _, tt := range tests {
@@ -38,7 +35,26 @@ func TestLoadConfig_LintTolerateAndDeprecatedBudget(t *testing.T) {
 
 			// Assert
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, cfg.Lint.Tolerated())
+			assert.Equal(t, tt.want, cfg.Lint.Ratchet)
+		})
+	}
+}
+
+func TestLoadConfig_RenamedRatchetTablesAreRefused(t *testing.T) {
+	for _, old := range []string{"budget", "tolerate"} {
+		t.Run(old, func(t *testing.T) {
+			// Arrange
+			base := t.TempDir()
+			dir := filepath.Join(base, ".ai-rulez")
+			writeProjectFile(t, dir, "config.toml", overlayMainTOML+"\n[lint."+old+"]\nAR201 = 2\n")
+
+			// Act
+			_, err := LoadConfig(context.Background(), base)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "[lint.ratchet]")
+			assert.Contains(t, err.Error(), old)
 		})
 	}
 }
@@ -55,9 +71,9 @@ func TestLoadConfig_SwappedLintTablesAreTargeted(t *testing.T) {
 		{"size table under tolerate", "[lint.tolerate.skill]\nmax_lines = 3\n", "",
 			[]string{"[lint.tolerate.skill]", "[lint.budgets.skill]"}},
 		{"rule count under budgets", "[lint.budgets]\nAR201 = 1\n", "",
-			[]string{"[lint.budgets] AR201 = 1", "[lint.tolerate] AR201 = 1"}},
+			[]string{"[lint.budgets] AR201 = 1", "[lint.ratchet] AR201 = 1"}},
 		{"swap in the overlay", "[lint]\nfail_on = \"warning\"\n", "[lint.budgets]\nAR201 = 1\n",
-			[]string{"[lint.tolerate] AR201 = 1"}},
+			[]string{"[lint.ratchet] AR201 = 1"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

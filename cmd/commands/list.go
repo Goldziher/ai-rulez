@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -200,12 +200,12 @@ func outputListJSON(fileType string, files []crud.FileInfo) {
 			"targets":  file.Targets,
 		}
 	}
-	data, err := json.MarshalIndent(output, "", "  ")
+	data, err := jsondoc.Marshal(output)
 	if err != nil {
 		logger.Error("Failed to marshal JSON", "error", err)
 		os.Exit(1)
 	}
-	fmt.Println(string(data))
+	fmt.Print(string(data))
 }
 
 // outputListTable outputs file list as human-readable table
@@ -297,8 +297,8 @@ func runListRoot(cmd *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 	if listJSON {
-		data, _ := json.MarshalIndent(report, "", "  ") //nolint:errcheck // plain structs always marshal
-		fmt.Println(string(data))
+		data, _ := jsondoc.Marshal(report) //nolint:errcheck // plain structs always marshal
+		fmt.Print(string(data))
 		return
 	}
 	printPlacementReport(report)

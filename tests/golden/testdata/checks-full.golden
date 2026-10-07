@@ -24,7 +24,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .agents/ dir 0755
 .agents/checks/ dir 0755
-.agents/checks/security.md file 0644 336 0cbf60572dd121b4ddfb9241e522979c1eab954eaf1b566c0f4d5316f41efeca
+.agents/checks/security.md file 0644 249 e60edbe7bb66ba3d5165dbe421047a916944e88cda08b2e08911886a7c7178e3
 >>>>
 ---
 description: Flags common security issues
@@ -34,53 +34,48 @@ tools:
     - Read
     - Grep
 # Content-Hash: blake3:d928c194bd97836beb630b95c0d373d940440450518deb210617aa22dfd31ae3
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Review the diff for injection and secrets.
 <<<<
-.agents/checks/style.md file 0644 276 77252039a0d7c80ddd122ab445488a52e4e2124ed29424128dbb4bf02589836e
+.agents/checks/style.md file 0644 189 60742aace04d27412ebf8905ac8c9c14d257de50de8fb58539f155c2319cc77d
 >>>>
 ---
 description: Style consistency
 name: style
 severity-default: low
 # Content-Hash: blake3:edbcc604222d3caa46adc46060dfae80cec9a0b750503e03efdc320fa228faac
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Keep the style consistent.
 <<<<
 .agents/commands/ dir 0755
-.agents/commands/build.md file 0644 250 6eb17ee5408d5279f9daf9f1dc074822c9dd188e0ee46ec517db6b6a1990566e
+.agents/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 >>>>
 ---
 description: Build the project
 # Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Run the build and report failures.
 <<<<
-.agents/commands/ship.md file 0644 227 50bb4f0458493e7d31340f866a073a07afba15c844ba3319a7da61510a91ec50
+.agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 >>>>
 ---
 description: Ship a release
 # Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Cut a release.
 <<<<
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 63aeb4be9f2270d0cbd076dd54b302e519743195b16bce42c777f8e444848283
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 >>>>
 ---
 name: deployer
 description: "Deploys the service"
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -88,13 +83,12 @@ description: "Deploys the service"
 Deploy safely.
 <<<<
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 36ed4ed67135d329d75ddcfa4a5631dfecfd12361f70ce4e8302be0b1914cd88
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 >>>>
 ---
 name: reviewer
 description: "Reviews pull requests"
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -770,13 +764,14 @@ description: Ship a release
 ---
 Cut a release.
 <<<<
-.ai-rulez/config.toml file 0644 897 1fbda8cbf5ccd0cd467cca8434588a763378775d6c3fe23a422755113c4238ba
+.ai-rulez/config.toml file 0644 915 1c8bb59ad2ae156de88f38ba0fc529e8f6c1aa364fcb0a611a9ebe7b92f26f44
 >>>>
-version = "4.0"
+version = "5.0"
 name = "golden"
 description = "Golden fixture project"
 presets = ["cursor", "kilo", "qwen", "factory", "rovodev", "amp", "augment", "gitlab-duo"]
 gitignore = true
+agents_md = false
 
 [guard]
 generated = true
@@ -1185,26 +1180,24 @@ export default function (amp: any) {
 <<<<
 .augment/ dir 0755
 .augment/agents/ dir 0755
-.augment/agents/architect.md file 0644 259 43230048e05e6dc7597faa002d1e0bacc29323f96af46a3072257ac617f39e44
+.augment/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 >>>>
 ---
 description: Designs systems
 name: architect
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.augment/agents/tester.md file 0644 245 64ab97ea44b722df02e4f773bba8c6cf1945a3c4f514e06f3028f0469317a989
+.augment/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 >>>>
 ---
 description: Writes tests
 name: tester
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
@@ -1232,28 +1225,26 @@ areas:
         severity: low
 <<<<
 .augment/commands/ dir 0755
-.augment/commands/build.md file 0644 250 6eb17ee5408d5279f9daf9f1dc074822c9dd188e0ee46ec517db6b6a1990566e
+.augment/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 >>>>
 ---
 description: Build the project
 # Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Run the build and report failures.
 <<<<
-.augment/commands/ship.md file 0644 227 50bb4f0458493e7d31340f866a073a07afba15c844ba3319a7da61510a91ec50
+.augment/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 >>>>
 ---
 description: Ship a release
 # Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Cut a release.
 <<<<
 .augment/rules/ dir 0755
-.augment/rules/always.md file 0644 352 af473792089536d2766a3714e43623ae5972bab1b632707bec054019d9a33a4d
+.augment/rules/always.md file 0644 267 7d40f461b55cdc34e5bef9549a4cccf21c56adecd219ddbefbba3d2e5ec33b34
 >>>>
 ---
 type: always_apply
@@ -1261,7 +1252,6 @@ type: always_apply
 <!--
 Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
 Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # always
@@ -1270,7 +1260,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Always apply this rule.
 <<<<
-.augment/rules/auto.md file 0644 365 8686e187ea2a50abb25e827cac704466e9a6aa3f61156ae3f730398c6231a9ce
+.augment/rules/auto.md file 0644 280 5cc67ee476077fc333852adfe4770e69f8876d23db5237e46469e27bdaad8f45
 >>>>
 ---
 description: Database migrations
@@ -1279,14 +1269,13 @@ type: agent_requested
 <!--
 Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
 Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # auto
 
 Write reversible migrations.
 <<<<
-.augment/rules/manual.md file 0644 334 bc5455060bec58310482c47df5cc5e139d424dcdc361fd67bf0b2d597bf92491
+.augment/rules/manual.md file 0644 249 8e0035e3ab12fe8b91b3c435151d5e7a6ebbfa5c763af7b8561b1ba1b5a86e55
 >>>>
 ---
 type: manual
@@ -1294,7 +1283,6 @@ type: manual
 <!--
 Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
 Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # manual
@@ -1303,7 +1291,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Only when asked.
 <<<<
-.augment/rules/typescript.md file 0644 349 d8e08caf9d54b44f09fb9a7b2b56eed0148ee9610c92d6f25ddaf09dcf6eda46
+.augment/rules/typescript.md file 0644 264 56127024c810a97cb016b65fe0a79e68e5f91cf8dfaa52ec5b2f74cdd4ec5591
 >>>>
 ---
 type: always_apply
@@ -1311,7 +1299,6 @@ type: always_apply
 <!--
 Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
 Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # typescript
@@ -1374,13 +1361,12 @@ Use strict mode.
 <<<<
 .augment/skills/ dir 0755
 .augment/skills/deployer/ dir 0755
-.augment/skills/deployer/SKILL.md file 0644 259 f78ad7900709edf3daa12c4b06cf50cab95b4d32f643f76c31a4be8e2229c2d2
+.augment/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 >>>>
 ---
 description: Deploys the service
 name: deployer
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -1388,13 +1374,12 @@ name: deployer
 Deploy safely.
 <<<<
 .augment/skills/reviewer/ dir 0755
-.augment/skills/reviewer/SKILL.md file 0644 506 829bac68d6e72086f14edb3df0075e138ff47d04e8716877bf22690ac580976a
+.augment/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 >>>>
 ---
 description: Reviews pull requests
 name: reviewer
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -1446,27 +1431,25 @@ Keep the style consistent.
 <!-- ai-rulez:checks:end -->
 <<<<
 .cursor/agents/ dir 0755
-.cursor/agents/architect.md file 0644 273 da5d593590f3fd6ae30eab2e2c3ce192ec152ec4479d34ca383fc8f83db85383
+.cursor/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 >>>>
 ---
 description: Designs systems
 model: sonnet
 name: architect
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.cursor/agents/tester.md file 0644 245 64ab97ea44b722df02e4f773bba8c6cf1945a3c4f514e06f3028f0469317a989
+.cursor/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 >>>>
 ---
 description: Writes tests
 name: tester
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
@@ -1554,7 +1537,7 @@ Cut a release.
 }
 <<<<
 .cursor/rules/ dir 0755
-.cursor/rules/always.mdc file 0644 351 f7180d98902dfdce1eed8afa8eadb6592d900b30b5bec90ea110fc03eb2e7746
+.cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
 >>>>
 ---
 alwaysApply: true
@@ -1562,7 +1545,6 @@ alwaysApply: true
 <!--
 Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
 Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # always
@@ -1571,7 +1553,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Always apply this rule.
 <<<<
-.cursor/rules/auto.mdc file 0644 362 63c20257a277a600475940fd8bc04d81bf225d72fba9bb5a3ea21bcf57359315
+.cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
 >>>>
 ---
 alwaysApply: false
@@ -1580,14 +1562,13 @@ description: Database migrations
 <!--
 Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
 Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # auto
 
 Write reversible migrations.
 <<<<
-.cursor/rules/context-architecture.mdc file 0644 340 cd01b8febcc8ea5590f05ad58e6206645f647d6a02edc980bf2ca4a60e61fe27
+.cursor/rules/context-architecture.mdc file 0644 255 355e35cba517e7f51002ffd853d57deb6fcecb661ed0853cbc24ac44f10a9898
 >>>>
 ---
 alwaysApply: true
@@ -1595,14 +1576,13 @@ alwaysApply: true
 <!--
 Generated by ai-rulez from .ai-rulez/context/architecture.md. Edit the source, not this file.
 Content-Hash: blake3:8f77c7d3494e658fa2e3d3b3d503cdd74e4316ab9a9076f9a506566dd2c10f34
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # architecture
 
 Layers and boundaries.
 <<<<
-.cursor/rules/context-overview.mdc file 0644 351 190c0141c29341bd3105fd08c0a6d0c8dbc1b277c85214b9bc3c666e0af3e64a
+.cursor/rules/context-overview.mdc file 0644 266 bf769d85e9b2aae7d279408c2fb692d1e55051e5be994cddad9eba3941b6b792
 >>>>
 ---
 alwaysApply: true
@@ -1610,7 +1590,6 @@ alwaysApply: true
 <!--
 Generated by ai-rulez from .ai-rulez/context/overview.md. Edit the source, not this file.
 Content-Hash: blake3:52911f95f682a11e5036a423c56f3be58f5b93fe8ab603133b0aef49dfe24234
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # overview
@@ -1619,7 +1598,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 The project overview.
 <<<<
-.cursor/rules/manual.mdc file 0644 340 ecf2b067fb5dbf2348fdf37c19a51af1738a6c8426bb5000280da89abf0a964b
+.cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 >>>>
 ---
 alwaysApply: false
@@ -1627,7 +1606,6 @@ alwaysApply: false
 <!--
 Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
 Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # manual
@@ -1636,7 +1614,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Only when asked.
 <<<<
-.cursor/rules/targeted.mdc file 0644 335 161ab56feb7b1f234473ecc66481ef01682a0317214b947751a6b96a73ba0814
+.cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 >>>>
 ---
 alwaysApply: true
@@ -1644,14 +1622,13 @@ alwaysApply: true
 <!--
 Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
 Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # targeted
 
 For claude and cursor only.
 <<<<
-.cursor/rules/typescript.mdc file 0644 390 68a5fe015cfadb7bfca66d494f1bd4c0f87efdaef2f2f93f3136bb5bbb4c8b0d
+.cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 >>>>
 ---
 alwaysApply: false
@@ -1660,7 +1637,6 @@ globs: src/**/*.ts,src/**/*.tsx,tests/**
 <!--
 Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
 Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # typescript
@@ -1671,48 +1647,44 @@ Use strict mode.
 <<<<
 .factory/ dir 0755
 .factory/commands/ dir 0755
-.factory/commands/build.md file 0644 250 6eb17ee5408d5279f9daf9f1dc074822c9dd188e0ee46ec517db6b6a1990566e
+.factory/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 >>>>
 ---
 description: Build the project
 # Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Run the build and report failures.
 <<<<
-.factory/commands/ship.md file 0644 227 50bb4f0458493e7d31340f866a073a07afba15c844ba3319a7da61510a91ec50
+.factory/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 >>>>
 ---
 description: Ship a release
 # Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Cut a release.
 <<<<
 .factory/droids/ dir 0755
-.factory/droids/architect.md file 0644 259 43230048e05e6dc7597faa002d1e0bacc29323f96af46a3072257ac617f39e44
+.factory/droids/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 >>>>
 ---
 description: Designs systems
 name: architect
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.factory/droids/tester.md file 0644 267 43ffece49316776dde3362c0f52513cfad437f1df155db3cb01cd9298f7c6a06
+.factory/droids/tester.md file 0644 180 6877ac2f6d43ef9a12e4f6f2462213d590230f3b185a0ff94275090ed60190c3
 >>>>
 ---
 description: Writes tests
 name: tester
 reasoningEffort: high
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
@@ -1782,13 +1754,12 @@ Test first.
 <<<<
 .factory/skills/ dir 0755
 .factory/skills/deployer/ dir 0755
-.factory/skills/deployer/SKILL.md file 0644 259 f78ad7900709edf3daa12c4b06cf50cab95b4d32f643f76c31a4be8e2229c2d2
+.factory/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 >>>>
 ---
 description: Deploys the service
 name: deployer
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -1818,13 +1789,12 @@ Keep the style consistent.
 <!-- ai-rulez:checks:end -->
 <<<<
 .factory/skills/reviewer/ dir 0755
-.factory/skills/reviewer/SKILL.md file 0644 506 829bac68d6e72086f14edb3df0075e138ff47d04e8716877bf22690ac580976a
+.factory/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 >>>>
 ---
 description: Reviews pull requests
 name: reviewer
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -1926,7 +1896,7 @@ kilo.jsonc
 <<<<
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
-.gitlab/duo/chat-rules.md file 0644 874 409019959d08859a3e5c4178df692001fa45870f4d9205fbfbea7061a7b07c9c
+.gitlab/duo/chat-rules.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1939,7 +1909,6 @@ Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
 Content-Hash: blake3:e92a7daaf71ae710480b9051bb7366cd8977f369e0ad3ddf052ac75a967a2abd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # golden
@@ -2036,26 +2005,24 @@ instructions:
 <<<<
 .kilo/ dir 0755
 .kilo/agents/ dir 0755
-.kilo/agents/architect.md file 0644 258 4f7269341eb61e2bcf32456473f444679ee062c654eb5393ffce03a1acf229ff
+.kilo/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
 >>>>
 ---
 description: Designs systems
 mode: subagent
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.kilo/agents/tester.md file 0644 247 a3298a2f3c3f8893361bb660f4573b5a0f502f5c26d3f8403e101922382fa08d
+.kilo/agents/tester.md file 0644 160 504b5d937542036401aadba25e2515c53fa13bab2abc6ecc024c235368736439
 >>>>
 ---
 description: Writes tests
 mode: subagent
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
@@ -2063,22 +2030,20 @@ mode: subagent
 Test first.
 <<<<
 .kilo/commands/ dir 0755
-.kilo/commands/build.md file 0644 250 6eb17ee5408d5279f9daf9f1dc074822c9dd188e0ee46ec517db6b6a1990566e
+.kilo/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 >>>>
 ---
 description: Build the project
 # Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Run the build and report failures.
 <<<<
-.kilo/commands/ship.md file 0644 227 50bb4f0458493e7d31340f866a073a07afba15c844ba3319a7da61510a91ec50
+.kilo/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 >>>>
 ---
 description: Ship a release
 # Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Cut a release.
@@ -2365,12 +2330,11 @@ export default {
 };
 <<<<
 .kilo/rules/ dir 0755
-.kilo/rules/always.md file 0644 325 6959667da1935ac5b9e4774ef198536d37352f63bae1ac86e750beb34c580ad7
+.kilo/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
 Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # always
@@ -2379,24 +2343,22 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Always apply this rule.
 <<<<
-.kilo/rules/auto.md file 0644 302 5a30edf003b3803fabaf48497963e056514bdae1328a7743753210681d6b4665
+.kilo/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
 Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # auto
 
 Write reversible migrations.
 <<<<
-.kilo/rules/manual.md file 0644 313 bb0e80fe54d6f6cd69e3703052dc0180e26ff69996268352a9ec8f9effd097c0
+.kilo/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
 Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # manual
@@ -2405,12 +2367,11 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Only when asked.
 <<<<
-.kilo/rules/typescript.md file 0644 369 088201c03e584ddfc549be964bd8699db8aa25979f44f73825539d6cba11b042
+.kilo/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
 Content-Hash: blake3:5f60b253d5ac53d6bb1b55a9c767b3f0c4409215fdb133e60b063ad4e7a7488c
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # typescript
@@ -2423,13 +2384,12 @@ Use strict mode.
 <<<<
 .kilo/skills/ dir 0755
 .kilo/skills/deployer/ dir 0755
-.kilo/skills/deployer/SKILL.md file 0644 259 f78ad7900709edf3daa12c4b06cf50cab95b4d32f643f76c31a4be8e2229c2d2
+.kilo/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 >>>>
 ---
 description: Deploys the service
 name: deployer
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -2437,13 +2397,12 @@ name: deployer
 Deploy safely.
 <<<<
 .kilo/skills/reviewer/ dir 0755
-.kilo/skills/reviewer/SKILL.md file 0644 506 829bac68d6e72086f14edb3df0075e138ff47d04e8716877bf22690ac580976a
+.kilo/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 >>>>
 ---
 description: Reviews pull requests
 name: reviewer
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -2505,26 +2464,24 @@ echo review
 <<<<
 .qwen/ dir 0755
 .qwen/agents/ dir 0755
-.qwen/agents/architect.md file 0644 259 43230048e05e6dc7597faa002d1e0bacc29323f96af46a3072257ac617f39e44
+.qwen/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 >>>>
 ---
 description: Designs systems
 name: architect
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.qwen/agents/tester.md file 0644 245 64ab97ea44b722df02e4f773bba8c6cf1945a3c4f514e06f3028f0469317a989
+.qwen/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 >>>>
 ---
 description: Writes tests
 name: tester
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
@@ -2532,22 +2489,20 @@ name: tester
 Test first.
 <<<<
 .qwen/commands/ dir 0755
-.qwen/commands/build.md file 0644 250 6eb17ee5408d5279f9daf9f1dc074822c9dd188e0ee46ec517db6b6a1990566e
+.qwen/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 >>>>
 ---
 description: Build the project
 # Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Run the build and report failures.
 <<<<
-.qwen/commands/ship.md file 0644 227 50bb4f0458493e7d31340f866a073a07afba15c844ba3319a7da61510a91ec50
+.qwen/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 >>>>
 ---
 description: Ship a release
 # Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 Cut a release.
@@ -2569,12 +2524,11 @@ Keep the style consistent.
 <!-- ai-rulez:checks:end -->
 <<<<
 .qwen/rules/ dir 0755
-.qwen/rules/always.md file 0644 325 6959667da1935ac5b9e4774ef198536d37352f63bae1ac86e750beb34c580ad7
+.qwen/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
 Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # always
@@ -2583,24 +2537,22 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Always apply this rule.
 <<<<
-.qwen/rules/auto.md file 0644 302 5a30edf003b3803fabaf48497963e056514bdae1328a7743753210681d6b4665
+.qwen/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
 Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # auto
 
 Write reversible migrations.
 <<<<
-.qwen/rules/manual.md file 0644 313 bb0e80fe54d6f6cd69e3703052dc0180e26ff69996268352a9ec8f9effd097c0
+.qwen/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
 >>>>
 <!--
 Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
 Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # manual
@@ -2609,7 +2561,7 @@ Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4
 
 Only when asked.
 <<<<
-.qwen/rules/typescript.md file 0644 376 56efbe1337d9e332a340018e86e974e9453b336c33bdcfc78b08dc18116e3482
+.qwen/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 >>>>
 ---
 paths:
@@ -2619,7 +2571,6 @@ paths:
 <!--
 Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
 Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # typescript
@@ -2692,13 +2643,12 @@ Use strict mode.
 <<<<
 .qwen/skills/ dir 0755
 .qwen/skills/deployer/ dir 0755
-.qwen/skills/deployer/SKILL.md file 0644 259 f78ad7900709edf3daa12c4b06cf50cab95b4d32f643f76c31a4be8e2229c2d2
+.qwen/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 >>>>
 ---
 description: Deploys the service
 name: deployer
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -2706,13 +2656,12 @@ name: deployer
 Deploy safely.
 <<<<
 .qwen/skills/reviewer/ dir 0755
-.qwen/skills/reviewer/SKILL.md file 0644 506 829bac68d6e72086f14edb3df0075e138ff47d04e8716877bf22690ac580976a
+.qwen/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 >>>>
 ---
 description: Reviews pull requests
 name: reviewer
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -2765,13 +2714,12 @@ Keep the style consistent.
 <<<<
 .rovodev/skills/ dir 0755
 .rovodev/skills/deployer/ dir 0755
-.rovodev/skills/deployer/SKILL.md file 0644 259 f78ad7900709edf3daa12c4b06cf50cab95b4d32f643f76c31a4be8e2229c2d2
+.rovodev/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 >>>>
 ---
 description: Deploys the service
 name: deployer
 # Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Deployer
@@ -2779,13 +2727,12 @@ name: deployer
 Deploy safely.
 <<<<
 .rovodev/skills/reviewer/ dir 0755
-.rovodev/skills/reviewer/SKILL.md file 0644 506 829bac68d6e72086f14edb3df0075e138ff47d04e8716877bf22690ac580976a
+.rovodev/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 >>>>
 ---
 description: Reviews pull requests
 name: reviewer
 # Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Reviewer
@@ -2820,33 +2767,31 @@ This skill bundles supporting files. Read them on demand when the task calls for
 echo review
 <<<<
 .rovodev/subagents/ dir 0755
-.rovodev/subagents/architect.md file 0644 259 43230048e05e6dc7597faa002d1e0bacc29323f96af46a3072257ac617f39e44
+.rovodev/subagents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 >>>>
 ---
 description: Designs systems
 name: architect
 # Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Architect
 
 Think in layers.
 <<<<
-.rovodev/subagents/tester.md file 0644 245 64ab97ea44b722df02e4f773bba8c6cf1945a3c4f514e06f3028f0469317a989
+.rovodev/subagents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 >>>>
 ---
 description: Writes tests
 name: tester
 # Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
-# Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 ---
 
 # Tester
 
 Test first.
 <<<<
-AGENTS.md file 0644 874 409019959d08859a3e5c4178df692001fa45870f4d9205fbfbea7061a7b07c9c
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2859,7 +2804,6 @@ Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
 Content-Hash: blake3:e92a7daaf71ae710480b9051bb7366cd8977f369e0ad3ddf052ac75a967a2abd
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # golden
@@ -2904,7 +2848,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-QWEN.md file 0644 575 6132c7b702bb734421c7503ef66e8aa0bad724b9fcdd0dbd092cec3fb859c855
+QWEN.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -2917,7 +2861,6 @@ Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
 Content-Hash: blake3:2d7c528e752b413fa5da736b24437ed1bbd61eaaa88cbc4aa3a61fb8306bff6e
-Source-Hash: blake3:c7ecb3688601b078f80724abeec31c4692eef81ad506843466e7ff1cd2b4739a
 -->
 
 # golden

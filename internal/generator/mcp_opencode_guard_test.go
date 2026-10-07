@@ -18,7 +18,7 @@ func TestGenerator_MCPEnv_GuardsOpencodeJSON(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "opencode-guard"
 presets = ["opencode"]
 gitignore = false

@@ -86,7 +86,7 @@ ai-rulez doctor
 ## config.toml
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 description = "Project description"
 
@@ -229,7 +229,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 - `ai-rulez lock` writes `ai-rulez.lock`: commits and digests of remote includes, installed skills and skill sources, plus every authored item and generated output. It is enforced whenever the file exists (`[lock] enforce = false` opts out). `lock --check` verifies offline, `--diff` previews, `--subject` prints the digest to sign with cosign, `generate --locked`/`--frozen` are the CI modes. Exit codes: `0` ok, `1` could not run, `2` drift, `3` served skills left unpinned by the security scan. See `docs/lockfile.md`.
 - Sources accept `version = "^1.2"`; `ai-rulez lock --outdated` lists newer tags and `ai-rulez update` moves range pins (codes `AR730`, `AR731`, `AR732`, `AR735`).
-- `ai-rulez validate --strict` runs deep content checks with stable `AR` codes (`--fix`, `--since`, `--baseline`, `--format json|sarif|github|junit|markdown`); `ai-rulez scan` runs only the security checks; `validate --explain AR001` explains a rule. See `docs/strict-validation.md`.
+- `ai-rulez validate` runs deep content checks with stable `AR` codes (`--fix`, `--since`, `--baseline`, `--format json|sarif|github|junit|markdown`); `ai-rulez scan` runs only the security checks; `validate --explain AR001` explains a rule. See `docs/strict-validation.md`.
 - `[[verifiers]]` and `.ai-rulez/verifiers/*.toml` declare deterministic repo checks run by `ai-rulez verifiers run` (`--since`, `--staged`, `--format sarif|junit`).
 - `ai-rulez sbom` prints a CycloneDX bill of materials, `ai-rulez catalog` lists every item with owner, version, tokens and lock status (`--html <dir>` writes a static site), `ai-rulez tokens` and `cost` report prompt-token cost, `ai-rulez search <query>` ranks skills.
 - `ai-rulez convert` imports existing tool files, a rulesync project or a `skills-lock.json` into `.ai-rulez/` with a lossiness report.
@@ -253,8 +253,8 @@ Configure in your AI tool's MCP settings to enable CRUD operations from within t
 
 MCP server env values can use `${VAR}` placeholders. `ai-rulez generate` resolves them from `--env`,
 process env, and dotenv files, then refuses to write secret-bearing generated MCP configs unless the
-target paths are gitignored.
+target paths are gitignored (`gitignore = true` or `generate --gitignore` adds them to the managed block).
 
 ## Plugins and Marketplaces
 
-V4 can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (rendered into `.claude/plugins.json` and `.codex/plugins.json`).
+ai-rulez can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (no output file is written for them: `generate` warns that `[[plugins]]` has no effect; enable plugins through `[claude.settings]` for Claude Code and `.codex/config.toml` for Codex).

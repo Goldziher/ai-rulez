@@ -80,7 +80,7 @@ func Compare(dir string, files []File) (Drift, error) {
 			return walkErr
 		}
 		if e.IsDir() {
-			if e.Name() == ".git" {
+			if e.Name() == gitDir {
 				return fs.SkipDir
 			}
 			return nil
@@ -107,7 +107,11 @@ func Compare(dir string, files []File) (Drift, error) {
 // existing export is recognized before stale files are removed from it.
 func LooksLikeBundle(dir string) bool {
 	data, err := os.ReadFile(filepath.Join(dir, IndexFile))
-	return err == nil && bytes.Contains(data, []byte("okf_version"))
+	if err != nil {
+		return false
+	}
+	fm, _ := SplitFrontmatter(data)
+	return fm.Err == nil && fm.Lookup("okf_version") != nil
 }
 
 // WriteFiles writes files into dir, creating it. Writes cannot escape dir, even
@@ -144,7 +148,17 @@ func WriteFiles(dir string, files []File, prune bool) error {
 }
 
 func checkPrunable(dir string) error {
-	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 && !LooksLikeBundle(dir) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil //nolint:nilerr // a missing directory is created by the write
+	}
+	content := 0
+	for _, e := range entries {
+		if e.Name() != gitDir {
+			content++
+		}
+	}
+	if content > 0 && !LooksLikeBundle(dir) {
 		return oops.Errorf("%s is not empty and is not an OKF bundle (no index.md with okf_version); refusing to remove files", dir)
 	}
 	return nil
@@ -160,7 +174,7 @@ func removeExtras(root *os.Root, dir string, files []File) error {
 			return oops.Wrapf(err, "remove %s", extra)
 		}
 	}
-	return pruneEmptyDirs(dir)
+	return pruneEmptyDirs(dir, drift.Extra)
 }
 
 func writeOne(root *os.Root, f File) error {
@@ -178,25 +192,25 @@ func writeOne(root *os.Root, f File) error {
 	return nil
 }
 
-func pruneEmptyDirs(dir string) error {
+// pruneEmptyDirs removes the directories that the removal of extras left empty,
+// walking up from each removed file. It never looks at anything else, so dot
+// directories such as .git and empty directories the exporter did not create
+// are left alone.
+func pruneEmptyDirs(dir string, removed []string) error {
+	seen := map[string]bool{}
 	var dirs []string
-	err := filepath.WalkDir(dir, func(p string, e fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	for _, rel := range removed {
+		for d := path.Dir(rel); d != "." && d != "/" && !seen[d]; d = path.Dir(d) {
+			seen[d] = true
+			dirs = append(dirs, d)
 		}
-		if e.IsDir() && p != dir {
-			dirs = append(dirs, p)
-		}
-		return nil
-	})
-	if err != nil {
-		return oops.Wrapf(err, "scan %s", dir)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
 	for _, d := range dirs {
-		if entries, err := os.ReadDir(d); err == nil && len(entries) == 0 {
-			if err := os.Remove(d); err != nil {
-				return oops.Wrapf(err, "remove %s", d)
+		full := filepath.Join(dir, filepath.FromSlash(d))
+		if entries, err := os.ReadDir(full); err == nil && len(entries) == 0 {
+			if err := os.Remove(full); err != nil {
+				return oops.Wrapf(err, "remove %s", full)
 			}
 		}
 	}

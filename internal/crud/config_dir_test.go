@@ -19,7 +19,7 @@ func TestOperator_ConventionConfigDir(t *testing.T) {
 	configDir := filepath.Join(baseDir, ".config", "ai-rulez")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"convention\"\npresets = [\"claude\"]\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"convention\"\npresets = [\"claude\"]\n"), 0o644))
 	ctx := context.Background()
 
 	// Act

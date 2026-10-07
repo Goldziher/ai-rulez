@@ -1,6 +1,6 @@
 # Configuration Examples
 
-V4 uses a file-based directory structure (`.ai-rulez/`) with TOML configuration. These examples show how to organize your configuration across multiple markdown files and a `config.toml` file.
+ai-rulez uses a file-based directory structure (`.ai-rulez/`) with TOML configuration. These examples show how to organize your configuration across multiple markdown files and a `config.toml` file.
 
 ---
 
@@ -11,7 +11,7 @@ The simplest setup for a single team with basic rules.
 **`.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "My Project"
 
 presets = ["claude", "cursor"]
@@ -63,7 +63,7 @@ For projects with multiple teams, use domains to organize team-specific content.
 **`.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Platform"
 
 presets = ["claude", "cursor", "gemini"]
@@ -202,7 +202,7 @@ For projects that need different output formats for different tools.
 **`.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "ML Research Platform"
 description = "Machine learning platform with team separation"
 
@@ -299,7 +299,7 @@ For larger projects, reuse configurations across subdirectories.
 **`/.ai-rulez/config.toml`** (Root config):
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Platform"
 
 presets = ["claude", "cursor"]
@@ -312,7 +312,7 @@ full = ["shared"]
 **`/backend/.ai-rulez/config.toml`** (Backend-specific):
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Backend Service"
 
 presets = ["claude", "cursor"]
@@ -352,7 +352,7 @@ Use profiles for different deployment environments.
 **`.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Web Application"
 
 presets = ["claude"]

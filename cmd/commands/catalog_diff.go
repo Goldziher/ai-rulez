@@ -65,7 +65,6 @@ catalogs differ.`,
 
 func init() {
 	addFormatFlag(catalogDiffCmd.Flags(), &catalogDiffFormat, "", formatText, formatText, formatJSON)
-	addJSONFlagAlias(catalogDiffCmd.Flags())
 	catalogDiffCmd.Flags().BoolVar(&catalogDiffExitCode, "exit-code", false, "Exit 2 when the catalogs differ")
 	catalogDiffCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	CatalogCmd.AddCommand(catalogDiffCmd)
