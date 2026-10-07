@@ -3,6 +3,7 @@ package lint
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -205,4 +206,32 @@ func TestNarrowedRunKeepsBaselineEntriesItDidNotLookFor(t *testing.T) {
 	assert.Contains(t, byFP, "ext", "a run without --external must keep scanner entries")
 	assert.Contains(t, byFP, "fresh")
 	assert.NotContains(t, byFP, "sec-gone", "stale entries of a checked rule are still pruned")
+}
+
+func sizeFingerprint(t *testing.T, lines int) string {
+	t.Helper()
+	root := t.TempDir()
+	body := "---\nname: big\ndescription: Use when you need the oversized skill for tests.\n---\n" + strings.Repeat("line\n", lines)
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":         baseConfig + "\n[lint.budgets.skill]\nmax_lines = 10\n",
+		".ai-rulez/skills/big/SKILL.md": body,
+	})
+	gitAdd(t, root)
+	tree, err := LoadTree(root)
+	require.NoError(t, err)
+	rep, err := RunWith(loadNoRemote(t, root), tree, Options{})
+	require.NoError(t, err)
+	for i := range rep.Findings {
+		if rep.Findings[i].Code == CodeSizeLines {
+			return rep.Findings[i].Fingerprint()
+		}
+	}
+	t.Fatalf("no size finding for %d lines:\n%s", lines, dump(rep.Findings))
+	return ""
+}
+
+func TestSizeFindingFingerprintTracksGrowth(t *testing.T) {
+	at30 := sizeFingerprint(t, 30)
+	assert.Equal(t, at30, sizeFingerprint(t, 31), "a few lines more keep the entry")
+	assert.NotEqual(t, at30, sizeFingerprint(t, 530), "a baselined oversize file that grows 20x must fire again")
 }
