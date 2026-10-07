@@ -118,6 +118,14 @@ func (b *mdBuilder) node(n ast.Node, into *mdNode, depth int) {
 		b.add(into, &mdNode{Kind: mdCodeBlock, Text: b.lines(n)})
 	case *ast.ThematicBreak:
 		b.add(into, &mdNode{Kind: mdRule})
+	default:
+		b.inline(n, into, depth)
+	}
+}
+
+// inline renders an inline node; node handles the block ones.
+func (b *mdBuilder) inline(n ast.Node, into *mdNode, depth int) {
+	switch v := n.(type) {
 	case *ast.Emphasis:
 		kind := mdEmphasis
 		if v.Level >= 2 {
