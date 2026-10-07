@@ -128,7 +128,7 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 		}
 		return "", nil, "VS Code terminal rules are prefixes or regular expressions; a command glob is not translated"
 	case KindEdit:
-		if r.Tool != "Edit" && e.Action == ActionAllow {
+		if r.Tool != toolEdit && e.Action == ActionAllow {
 			return "", nil, "the edits setting covers every edit tool, so a " + r.Tool + " allow rule would be widened"
 		}
 		if r.Bare {
@@ -143,7 +143,7 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 			return vscURLs, []string{"*"}, ""
 		}
 		if r.Domain == "" || strings.ContainsAny(r.Domain, "*?/") {
-			return "", nil, "only WebFetch(domain:host) rules carry over"
+			return "", nil, msgOnlyWebFetchDomain
 		}
 		return vscURLs, []string{"https://" + r.Domain, "https://" + r.Domain + "/*"}, ""
 	}
@@ -270,7 +270,7 @@ func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 // (https://cursor.com/docs/cli/reference/configuration, read 2026-10-06), so a
 // document with any permission carries both.
 var _ = registerPermissionDialectRequiring(config.HarnessCursor, buildCursor,
-	[]string{"permissions", "allow"}, []string{"permissions", "deny"})
+	[]string{keyPermissions, string(ActionAllow)}, []string{keyPermissions, string(ActionDeny)})
 
 func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
@@ -297,10 +297,10 @@ func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	// add it empty or as the document holds it.
 	var keys []jsonmerge.OwnedKey
 	if len(allow) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", "allow"}, allow))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyPermissions, string(ActionAllow)}, allow))
 	}
 	if len(deny) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"permissions", "deny"}, deny))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyPermissions, string(ActionDeny)}, deny))
 	}
 	return keys, nil
 }
@@ -325,9 +325,9 @@ func cursorRule(e permEntry) (string, string) {
 		}
 		return "", "Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it"
 	case KindRead, KindEdit:
-		tool := "Read"
+		tool := toolRead
 		if r.Kind == KindEdit {
-			tool = "Write"
+			tool = toolWrite
 		}
 		if r.Bare {
 			return tool + "(**)", ""
@@ -344,7 +344,7 @@ func cursorRule(e permEntry) (string, string) {
 			return "WebFetch(*)", ""
 		}
 		if r.Domain == "" {
-			return "", "only WebFetch(domain:host) rules carry over"
+			return "", msgOnlyWebFetchDomain
 		}
 		return "WebFetch(" + r.Domain + ")", ""
 	case KindMCP:
@@ -367,10 +367,10 @@ var _ = registerPermissionDialect("zed", buildZed)
 
 var zedLists = map[PermAction]string{ActionAllow: "always_allow", ActionAsk: "always_confirm", ActionDeny: "always_deny"}
 
-var zedDefaults = map[PermAction]string{ActionAllow: "allow", ActionAsk: "confirm", ActionDeny: "deny"}
+var zedDefaults = map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: "confirm", ActionDeny: string(ActionDeny)}
 
 func buildZed(t *translation) ([]jsonmerge.OwnedKey, error) {
-	base := []string{"agent", "tool_permissions", "tools"}
+	base := []string{"agent", "tool_permissions", keyTools}
 	lists := map[string][]any{}
 	var keys []jsonmerge.OwnedKey
 	for _, e := range t.entries {
@@ -408,17 +408,17 @@ func zedEntry(e permEntry) (tool, pattern, def, why string) {
 	switch r.Kind {
 	case KindShell:
 		if r.Bare {
-			return "terminal", "", zedDefaults[e.Action], ""
+			return keyTerminal, "", zedDefaults[e.Action], ""
 		}
 		p := r.Shell()
 		if p.Kind == ShellAny {
-			return "terminal", "", zedDefaults[e.Action], ""
+			return keyTerminal, "", zedDefaults[e.Action], ""
 		}
 		// Zed also tests each chained sub-command, so a deny prefix stays anchored.
 		if e.Action == ActionAllow {
-			return "terminal", allowShellRegex(p), "", ""
+			return keyTerminal, allowShellRegex(p), "", ""
 		}
-		return "terminal", denyShellRegex(p, true), "", ""
+		return keyTerminal, denyShellRegex(p, true), "", ""
 	case KindEdit:
 		if r.Bare {
 			return "edit_file", "", zedDefaults[e.Action], ""
@@ -432,7 +432,7 @@ func zedEntry(e permEntry) (tool, pattern, def, why string) {
 			return "fetch", "", zedDefaults[e.Action], ""
 		}
 		if r.Domain == "" || strings.ContainsAny(r.Domain, "*?/") {
-			return "", "", "", "only WebFetch(domain:host) rules carry over"
+			return "", "", "", msgOnlyWebFetchDomain
 		}
 		return "fetch", `^https?://` + regexp.QuoteMeta(r.Domain) + `(:\d+)?(/|$)`, "", ""
 	case KindMCP:
