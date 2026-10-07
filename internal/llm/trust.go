@@ -88,6 +88,10 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 		(u.Provider == "" || modelPrefix(cfg.EmbeddingModel) != u.Provider)
 	// Without a user config the flags still apply: an env-only user (AI_RULEZ_LLM_*)
 	// sends a key too, and WithEnv clears the flags when the env sets the routing.
+	// The user's price override is for the model the user chose. A model the
+	// repository picked is priced from the built-in table (or refused under a
+	// cost cap), never from a price that was written for another model.
+	merged.priceBound, merged.priceModel = true, u.Model
 	merged.MaxCostUSD = tighterFloat(u.MaxCostUSD, cfg.MaxCostUSD)
 	merged.MaxTokens = tighterInt(u.MaxTokens, cfg.MaxTokens)
 	merged.MaxCalls = tighterInt(u.MaxCalls, cfg.MaxCalls)
