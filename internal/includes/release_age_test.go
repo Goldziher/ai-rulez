@@ -32,10 +32,10 @@ func (a *agesTimer) ReleaseTime(_ context.Context, tag tagresolve.RawTag) (tagre
 
 func useAgeGate(t *testing.T, min time.Duration, timer *agesTimer) {
 	t.Helper()
-	ReleaseGate = func(lockfile.Want) *tagresolve.AgeGate {
+	lockPolicy.ReleaseGate = func(lockfile.Want) *tagresolve.AgeGate {
 		return &tagresolve.AgeGate{Min: min, Now: ageNow, Timer: timer}
 	}
-	t.Cleanup(func() { ReleaseGate = nil })
+	t.Cleanup(func() { lockPolicy.ReleaseGate = nil })
 }
 
 const dayAge = 24 * time.Hour
@@ -101,7 +101,7 @@ func TestReleaseAge_UpdateMovesToTheNewestOldEnoughTagAndNeverBelowThePin(t *tes
 			f.release(t, "release 1.2", "v1.2.0", false)
 			f.release(t, "release 1.3", "v1.3.0", false)
 			useAgeGate(t, 7*dayAge, &agesTimer{ages: tt.ages})
-			Advance = func(kind, _ string) bool { return kind == lockfile.KindInclude }
+			lockPolicy.Advance = func(kind, _ string) bool { return kind == lockfile.KindInclude }
 
 			// Act
 			moved, problems := f.refresh(t, first)

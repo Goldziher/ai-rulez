@@ -338,9 +338,11 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 		wanted[m.row.Name] = true
 		before[key] = hashTree(m.src.treeDir, entryCommit(current, m.row))
 	}
-	includes.Advance = func(kind, name string) bool { return rep.moves[moveKey(kind, name)] != nil }
-	includes.AllowDowngrade, includes.AcceptMovedTag = updateAllowDowngrade, updateAcceptMoved
-	defer func() { includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false }()
+	cliLockPolicy.Advance = func(kind, name string) bool { return rep.moves[moveKey(kind, name)] != nil }
+	cliLockPolicy.AllowDowngrade, cliLockPolicy.AcceptMovedTag = updateAllowDowngrade, updateAcceptMoved
+	defer func() {
+		cliLockPolicy.Advance, cliLockPolicy.AllowDowngrade, cliLockPolicy.AcceptMovedTag = nil, false, false
+	}()
 	defer prepareLockRun(true, "", wanted)()
 	cliLockPolicy.Refresh = updateRefreshFilter(rep.moves) // by kind and name: a same-named source of another kind stays put
 

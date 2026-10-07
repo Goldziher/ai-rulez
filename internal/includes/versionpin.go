@@ -21,25 +21,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// Policy of a refresh over sources that ask for a version range. They are set by
-// `ai-rulez update` and are zero for `ai-rulez lock`, which keeps a pin that
-// still satisfies its constraint.
-var (
-	// Advance selects the sources a refresh moves to the newest allowed tag.
-	// nil moves none: a pin that still satisfies its constraint is kept.
-	Advance func(kind, name string) bool
-	// AllowDowngrade lets Advance select a tag with lower precedence than the pin.
-	AllowDowngrade bool
-	// AcceptMovedTag re-pins a tag that now points to another commit instead of
-	// failing with AR732.
-	AcceptMovedTag bool
-	// ReleaseGate returns the minimum release age gate for a source, or nil for
-	// none. `lock` and `update` set it; it is only consulted when a range is
-	// resolved to a new tag (a pin that still satisfies its constraint is kept
-	// without a lookup, its age having been decided when it was pinned).
-	ReleaseGate func(w lockfile.Want) *tagresolve.AgeGate
-)
-
 // tagInfo is the tag a version constraint resolved to.
 type tagInfo struct {
 	tag, tagObject string
@@ -132,7 +113,7 @@ func versionRef(ctx context.Context, cfg *config.Config, lock *lockfile.File, w 
 		recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject, p.entry.Released, p.entry.ReleasedFrom})
 		return p.entry.Commit, nil
 	}
-	ref, info, err := resolveConstraint(ctx, refreshing(cfg, w.Kind, w.Name), lock, w, repoURL, token)
+	ref, info, err := resolveConstraint(ctx, refreshRun(cfg, w), lock, w, repoURL, token)
 	if err != nil {
 		recordProblem(baseDir, w.Kind, w.Name, err.Error())
 		return "", violationOrPlain(w, err)
@@ -151,6 +132,19 @@ type RunMode struct {
 	Refresh bool
 	// Offline: the network may not be used.
 	Offline bool
+	// Version is how the refresh moves a range pin: the load's
+	// config.LockPolicy.VersionPolicy, never a process-wide setting.
+	Version config.VersionPolicy
+}
+
+// refreshRun is the run mode of a constraint source of cfg's load: its
+// refresh selection and its version policy.
+func refreshRun(cfg *config.Config, w lockfile.Want) RunMode {
+	run := RunMode{Refresh: refreshing(cfg, w.Kind, w.Name)}
+	if cfg != nil {
+		run.Version = cfg.LockPolicy.VersionPolicy
+	}
+	return run
 }
 
 // Resolution is the commit and tag a version constraint resolved to.
@@ -164,8 +158,9 @@ type Resolution struct {
 }
 
 // resolveConstraint picks the commit of a constraint source that has no usable pin.
-func resolveConstraint(ctx context.Context, refresh bool, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
-	res, err := ResolveVersion(ctx, lock, w, RunMode{Refresh: refresh, Offline: offline(ctx)}, func(ctx context.Context) ([]tagresolve.RawTag, error) {
+func resolveConstraint(ctx context.Context, run RunMode, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
+	run.Offline = offline(ctx)
+	res, err := ResolveVersion(ctx, lock, w, run, func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return ListRemoteTags(ctx, repoURL, token)
 	})
 	return res.Commit, tagInfo{res.Tag, res.TagObject, res.Released, res.ReleasedFrom}, err
@@ -173,11 +168,11 @@ func resolveConstraint(ctx context.Context, refresh bool, lock *lockfile.File, w
 
 // ResolveVersion resolves w's constraint against the tags list returns. A
 // Refresh run may move the pin (`lock`, `update`): a pin that still satisfies
-// the constraint is then kept, unless Advance selects the source, after
+// the constraint is then kept, unless run.Version advances the source, after
 // checking that its tag was not moved. Offline, only a kept pin resolves.
 func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, run RunMode, list func(context.Context) ([]tagresolve.RawTag, error)) (Resolution, error) {
 	entry := lock.Find(w.Kind, w.Name)
-	advance := Advance != nil && Advance(w.Kind, w.Name)
+	advance := run.Version.Advancing(w.Kind, w.Name)
 	keep := run.Refresh && entry.Covers(w) && !advance
 	if run.Offline {
 		if keep {
@@ -191,22 +186,22 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 		return Resolution{}, err
 	}
 	if keep {
-		commit, t, err := keepPin(ctx, entry, tags, w)
+		commit, t, err := keepPin(ctx, entry, tags, w, run.Version.AcceptMovedTag)
 		return Resolution{Commit: commit, Tag: t.tag, TagObject: t.tagObject, Released: t.released, ReleasedFrom: t.releasedFrom}, err
 	}
-	return selectVersion(ctx, entry, tags, w)
+	return selectVersion(ctx, entry, tags, w, run.Version)
 }
 
 // selectVersion picks the newest tag that satisfies w's constraint, through the
 // release age gate, and records its release time.
-func selectVersion(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (Resolution, error) {
+func selectVersion(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want, v config.VersionPolicy) (Resolution, error) {
 	spec := TagSpec(w)
 	if entry != nil {
 		spec.Pinned = entry.Tag
 	}
 	var gate *tagresolve.AgeGate
-	if ReleaseGate != nil {
-		gate = ReleaseGate(w)
+	if v.ReleaseGate != nil {
+		gate = v.ReleaseGate(w)
 	}
 	sel, err := tagresolve.SelectGated(ctx, tags, spec, gate)
 	if err != nil {
@@ -218,7 +213,7 @@ func selectVersion(ctx context.Context, entry *lockfile.Entry, tags []tagresolve
 	for _, h := range sel.Held {
 		logger.FromContext(ctx).Info(h.String(), "source", w.Name, "min_release_age", gate.Min.String())
 	}
-	if err := refuseDowngrade(entry, sel.Chosen, w); err != nil {
+	if err := refuseDowngrade(entry, sel.Chosen, w, v); err != nil {
 		return Resolution{}, err
 	}
 	c := sel.Chosen.Tag
@@ -240,8 +235,8 @@ func keptResolution(e *lockfile.Entry) Resolution {
 
 // refuseDowngrade stops an update that would select a tag below the pinned one:
 // a truncated tag list (an attacker, a mirror) must not roll a pin back.
-func refuseDowngrade(entry *lockfile.Entry, chosen tagresolve.Candidate, w lockfile.Want) error {
-	if entry == nil || entry.Tag == "" || AllowDowngrade || Advance == nil {
+func refuseDowngrade(entry *lockfile.Entry, chosen tagresolve.Candidate, w lockfile.Want, v config.VersionPolicy) error {
+	if entry == nil || entry.Tag == "" || v.AllowDowngrade || v.Advance == nil {
 		return nil
 	}
 	cur, ok := semver.ParseTag(entry.Tag, w.TagPrefix)
@@ -253,11 +248,11 @@ func refuseDowngrade(entry *lockfile.Entry, chosen tagresolve.Candidate, w lockf
 }
 
 // keepPin keeps the pinned commit after checking that its tag was not moved.
-func keepPin(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (string, tagInfo, error) {
+func keepPin(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want, acceptMoved bool) (string, tagInfo, error) {
 	status, now := tagresolve.Check(tags, entry.Tag, entry.Commit)
 	switch status {
 	case tagresolve.StatusMoved:
-		if !AcceptMovedTag {
+		if !acceptMoved {
 			return "", tagInfo{}, tagresolve.MovedError(entry.Tag, entry.Commit, now.Commit)
 		}
 		logger.FromContext(ctx).Warn("Accepted a moved tag", "source", w.Name, "tag", entry.Tag, "was", shortSHA(entry.Commit), "now", shortSHA(now.Commit))

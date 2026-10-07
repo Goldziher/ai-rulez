@@ -102,8 +102,8 @@ func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File
 			return nil, err
 		}
 		var gate *tagresolve.AgeGate
-		if includes.ReleaseGate != nil {
-			gate = includes.ReleaseGate(s.want)
+		if cliLockPolicy.ReleaseGate != nil {
+			gate = cliLockPolicy.ReleaseGate(s.want)
 		}
 		rows = append(rows, tagresolve.EvaluateGated(ctx, s.want, lock.Find(s.kind, s.name), tags, gate))
 	}

@@ -36,6 +36,9 @@ type Options struct {
 	Frozen bool
 	// Refresh ignores the lock's pin and resolves the ref again (`ai-rulez lock`).
 	Refresh bool
+	// Version is how a refresh moves a source that asks for a version range
+	// (`ai-rulez update`): the policy of the load the source belongs to.
+	Version config.VersionPolicy
 	// ProjectRoot is the project a local source must stay inside unless the
 	// source allows outside paths (see Spec.AllowOutside). It is also the base of
 	// a relative local path of such a source.
@@ -345,7 +348,7 @@ func pickVersion(ctx context.Context, spec Spec, opts Options, q commitSearch, w
 	list := func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return tagresolve.ListTags(ctx, func(ctx context.Context, args ...string) (string, error) { return runGit(ctx, "", args...) }, q.url)
 	}
-	res, err := includes.ResolveVersion(ctx, opts.Lock, w, includes.RunMode{Refresh: opts.Refresh, Offline: q.offline}, list)
+	res, err := includes.ResolveVersion(ctx, opts.Lock, w, includes.RunMode{Refresh: opts.Refresh, Offline: q.offline, Version: opts.Version}, list)
 	if err != nil {
 		return "", "", res, oops.With("url", spec.Redacted()).Wrapf(err, "skill source %q", spec.Name)
 	}

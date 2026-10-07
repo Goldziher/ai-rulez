@@ -1,6 +1,11 @@
 package config
 
-import "context"
+import (
+	"context"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
+)
 
 // LockMode says how a load resolves remote sources against ai-rulez.lock.
 type LockMode int
@@ -38,6 +43,34 @@ type LockPolicy struct {
 	// writer of outputs sets it (generate, the MCP generate_outputs tool, the
 	// pkg/airulez facade); commands that only read or report leave it off.
 	RequireWhenEnforced bool
+	// VersionPolicy is how a refresh moves the sources that ask for a version
+	// range (`ai-rulez update`, and the release age gate of `lock`).
+	VersionPolicy
+}
+
+// VersionPolicy is how a refresh resolves the sources that ask for a version
+// range. `ai-rulez update` sets Advance, AllowDowngrade and AcceptMovedTag;
+// `lock` and `update` set ReleaseGate. The zero value keeps a pin that still
+// satisfies its constraint and applies no minimum release age.
+type VersionPolicy struct {
+	// Advance selects the sources a refresh moves to the newest allowed tag.
+	// nil moves none: a pin that still satisfies its constraint is kept.
+	Advance func(kind, name string) bool
+	// AllowDowngrade lets Advance select a tag with lower precedence than the pin.
+	AllowDowngrade bool
+	// AcceptMovedTag re-pins a tag that now points to another commit instead of
+	// failing with AR732.
+	AcceptMovedTag bool
+	// ReleaseGate returns the minimum release age gate for a source, or nil for
+	// none. It is only consulted when a range is resolved to a new tag (a pin
+	// that still satisfies its constraint is kept without a lookup, its age
+	// having been decided when it was pinned).
+	ReleaseGate func(w lockfile.Want) *tagresolve.AgeGate
+}
+
+// Advancing reports whether the refresh moves the source to its newest allowed tag.
+func (v VersionPolicy) Advancing(kind, name string) bool {
+	return v.Advance != nil && v.Advance(kind, name)
 }
 
 // WithLockPolicy loads the configuration under p (see LockPolicy). The loaded
