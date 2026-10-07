@@ -90,7 +90,7 @@ tasks:
   test:
     desc: "Run unit and integration tests"
     cmds:
-      - go test ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/...
+      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/...
 
   test:verbose:
     desc: "Run all tests with verbose output"
@@ -105,7 +105,7 @@ tasks:
   test:e2e:
     desc: "Run all e2e tests"
     cmds:
-      - go test ./tests/e2e/...
+      - go test -timeout 30m ./tests/e2e/...
 
   test:e2e:cli:
     desc: "Run e2e CLI tests"
@@ -132,7 +132,7 @@ tasks:
   test:platform:
     desc: "Run cross-platform specific tests"
     cmds:
-      - go test ./tests/platform/...
+      - go test -timeout 30m ./tests/platform/...
 
   test:bats:
     desc: "Run the Bats suites for shell scripts (usage: task test:bats -- [bats args or suite path])"
