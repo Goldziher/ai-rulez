@@ -35,7 +35,9 @@ type Config struct {
 	Defaults        *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
 	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	Compact         *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
-	AgentsMD        bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	// AgentsMD defaults to true in v5 when a config file does not state it;
+	// the loaders apply the default, a Config built in code keeps the zero value.
+	AgentsMD        bool                   `yaml:"agents_md" json:"agents_md" toml:"agents_md,omitempty"` //nolint:tagliatelle
 	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
 	// resources matching one are not listed in SKILL.md or copied.
 	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle
@@ -309,7 +311,7 @@ type HeaderConfig struct {
 	// with SOURCE_DATE_EPOCH if reproducibility still matters.
 	Timestamp *bool `yaml:"timestamp,omitempty" json:"timestamp,omitempty" toml:"timestamp,omitempty"`
 	// Hashes selects which freshness lines generated headers carry: "full"
-	// (default) writes Content-Hash and Source-Hash, "content" keeps only the
+	// writes Content-Hash and Source-Hash, "content" (default) keeps only the
 	// per-file Content-Hash, "none" writes neither. Source-Hash covers the whole
 	// source set, so under "full" one edit rewrites a line in every generated
 	// file; "content" and "none" keep committed output free of that churn.
@@ -323,10 +325,10 @@ const (
 	HeaderHashesNone    = "none"
 )
 
-// GetHeaderHashes returns the header hash mode, defaulting to "full".
+// GetHeaderHashes returns the header hash mode, defaulting to "content".
 func (h *HeaderConfig) GetHeaderHashes() string {
 	if h == nil || h.Hashes == "" {
-		return HeaderHashesFull
+		return HeaderHashesContent
 	}
 	return h.Hashes
 }
@@ -871,7 +873,7 @@ func (m *Metadata) HasTargets() bool {
 // ShouldUpdateGitignore returns whether .gitignore should be updated
 func (c *Config) ShouldUpdateGitignore() bool {
 	if c.Gitignore == nil {
-		return true
+		return false
 	}
 	return *c.Gitignore
 }
@@ -949,10 +951,10 @@ func (c *Config) GetHeaderStyle() string {
 }
 
 // GetHeaderHashes returns the configured header hash mode ("full", "content" or
-// "none"), defaulting to "full".
+// "none"), defaulting to "content".
 func (c *Config) GetHeaderHashes() string {
 	if c == nil {
-		return HeaderHashesFull
+		return HeaderHashesContent
 	}
 	return c.Header.GetHeaderHashes()
 }

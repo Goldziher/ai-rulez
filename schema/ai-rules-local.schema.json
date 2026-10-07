@@ -241,8 +241,8 @@
       "type": "string"
     },
     "agents_md": {
-      "default": false,
-      "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to false (per-tool outputs, unchanged).",
+      "default": true,
+      "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to true in v5: AGENTS.md is the canonical instruction file and tools that do not read it import it. Set false for per-tool outputs.",
       "type": "boolean"
     },
     "builtins": {
@@ -582,8 +582,8 @@
       "type": "object"
     },
     "gitignore": {
-      "default": true,
-      "description": "Whether to automatically update .gitignore with generated output patterns (defaults to true)",
+      "default": false,
+      "description": "Opt in to a managed block in .gitignore listing the generated output patterns. Off by default in v5 (committed outputs are not ignored); machine-local outputs are always ignored",
       "type": "boolean"
     },
     "governance": {
@@ -686,8 +686,8 @@
       "description": "Header style configuration for generated files",
       "properties": {
         "hashes": {
-          "default": "full",
-          "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash (default); content keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
+          "default": "content",
+          "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash; content (default) keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
           "enum": ["full", "content", "none"],
           "type": "string"
         },
@@ -3614,7 +3614,11 @@
           },
           "severity": {
             "description": "Defaults to error.",
-            "enum": ["error", "warning", "info"],
+            "enum": [
+              "error",
+              "warning",
+              "info"
+            ],
             "type": "string"
           },
           "skill": {
