@@ -198,36 +198,10 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 		if _, dup := byMode[mode]; dup {
 			continue
 		}
-		mr := &ModeResult{Cases: []CaseResult{}, Misses: []CaseResult{}}
-		for i := range f.Cases {
-			c := &f.Cases[i]
-			sr := ranker.SearchMode(ctx, mode, c.Query, scopes[c.Role])
-			if err := ctx.Err(); err != nil {
-				return nil, oops.Wrapf(err, "evaluation interrupted")
-			}
-			if sr.Degraded != "" && mode != ModeLexical {
-				mr.DegradedCases++
-			}
-			ranked := make([]string, len(sr.Hits))
-			scores := make([]float64, len(sr.Hits))
-			for j, h := range sr.Hits {
-				ranked[j], scores[j] = ids[h.Index], h.Score
-			}
-			if len(c.Expect) == 0 {
-				neg := NegativeResult{ID: c.ID, Tags: c.Tags, Avoid: c.Avoid, Degraded: sr.Degraded, hasAvoid: len(c.Avoid) > 0, TopSim: sr.TopSim, Abstained: sr.Abstained}
-				if len(ranked) > 0 {
-					neg.Top, neg.TopScore = ranked[0], scores[0]
-					neg.Violated = len(ranked) > 0 && contains(c.Avoid, ranked[0])
-				}
-				mr.Negatives = append(mr.Negatives, neg)
-				continue
-			}
-			cr := scoreCase(c, ranked, k)
-			cr.Degraded = sr.Degraded
-			cr.TopSim = sr.TopSim
-			mr.Cases = append(mr.Cases, cr)
+		mr, err := evalMode(ctx, ranker, &modeRun{ids: ids, scopes: scopes, f: f, k: k}, mode)
+		if err != nil {
+			return nil, err
 		}
-		mr.finish(mode)
 		byMode[mode] = mr
 		res.Modes[mode] = mr.Metrics
 	}
@@ -247,6 +221,49 @@ func Eval(ctx context.Context, env *EvalEnv, f *CaseFile, k int, modes []string)
 		}
 	}
 	return res, nil
+}
+
+// modeRun is what every mode of one Eval call shares.
+type modeRun struct {
+	ids    []string
+	scopes map[string]func(item int) bool
+	f      *CaseFile
+	k      int
+}
+
+// evalMode ranks every case in one mode and scores the result.
+func evalMode(ctx context.Context, ranker *Ranker, run *modeRun, mode string) (*ModeResult, error) {
+	mr := &ModeResult{Cases: []CaseResult{}, Misses: []CaseResult{}}
+	for i := range run.f.Cases {
+		c := &run.f.Cases[i]
+		sr := ranker.SearchMode(ctx, mode, c.Query, run.scopes[c.Role])
+		if err := ctx.Err(); err != nil {
+			return nil, oops.Wrapf(err, "evaluation interrupted")
+		}
+		if sr.Degraded != "" && mode != ModeLexical {
+			mr.DegradedCases++
+		}
+		ranked := make([]string, len(sr.Hits))
+		scores := make([]float64, len(sr.Hits))
+		for j, h := range sr.Hits {
+			ranked[j], scores[j] = run.ids[h.Index], h.Score
+		}
+		if len(c.Expect) == 0 {
+			neg := NegativeResult{ID: c.ID, Tags: c.Tags, Avoid: c.Avoid, Degraded: sr.Degraded, hasAvoid: len(c.Avoid) > 0, TopSim: sr.TopSim, Abstained: sr.Abstained}
+			if len(ranked) > 0 {
+				neg.Top, neg.TopScore = ranked[0], scores[0]
+				neg.Violated = len(ranked) > 0 && contains(c.Avoid, ranked[0])
+			}
+			mr.Negatives = append(mr.Negatives, neg)
+			continue
+		}
+		cr := scoreCase(c, ranked, run.k)
+		cr.Degraded = sr.Degraded
+		cr.TopSim = sr.TopSim
+		mr.Cases = append(mr.Cases, cr)
+	}
+	mr.finish(mode)
+	return mr, nil
 }
 
 // finish computes the metrics, intervals and misses of a mode from its scored cases.

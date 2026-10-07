@@ -241,20 +241,7 @@ func Mine(entries []LogEntry, o MineOptions) Mined {
 			m.Unlabelled++
 			continue
 		}
-		type kv struct {
-			skill string
-			n     int
-		}
-		var ranked []kv
-		for s, c := range t.labels {
-			ranked = append(ranked, kv{s, c})
-		}
-		sort.Slice(ranked, func(i, j int) bool {
-			if ranked[i].n != ranked[j].n {
-				return ranked[i].n > ranked[j].n
-			}
-			return ranked[i].skill < ranked[j].skill
-		})
+		ranked := rankLabels(t.labels)
 		if len(ranked) > 1 && ranked[0].n == ranked[1].n {
 			m.Ambiguous++
 			continue
@@ -270,6 +257,27 @@ func Mine(entries []LogEntry, o MineOptions) Mined {
 		})
 	}
 	return m
+}
+
+// labelCount is how many sessions loaded a skill after a query.
+type labelCount struct {
+	skill string
+	n     int
+}
+
+// rankLabels orders the labels by count, highest first, then by skill name.
+func rankLabels(labels map[string]int) []labelCount {
+	var ranked []labelCount
+	for s, c := range labels {
+		ranked = append(ranked, labelCount{s, c})
+	}
+	sort.Slice(ranked, func(i, j int) bool {
+		if ranked[i].n != ranked[j].n {
+			return ranked[i].n > ranked[j].n
+		}
+		return ranked[i].skill < ranked[j].skill
+	})
+	return ranked
 }
 
 // CasesYAML renders cases as a cases file, for review before use.
