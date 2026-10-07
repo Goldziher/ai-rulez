@@ -69,7 +69,7 @@ func buildActivationRunner(cmd *cobra.Command) (evals.Runner, string, error) {
 		switch {
 		case evalFlags.runnerCommand != "":
 			name = evals.RunnerCommand
-		case harness == "claude":
+		case harness == evalHarnessClaude:
 			name = evals.RunnerClaudeNative
 		case harness == "codex":
 			name = evals.RunnerCodexNative
@@ -138,52 +138,15 @@ func evalPrice(cfg *config.Config, model string) evals.Price {
 // runEvalActivation runs `eval run --mode activation`, on the retrieval surface or
 // the native one.
 func runEvalActivation(ctx context.Context, cmd *cobra.Command, skills []string, cfg *config.Config) (failed bool, err error) {
-	cfgDir, baseDir := cfg.ConfigDir, cfg.BaseDir
-	absDir, err := filepath.Abs(cfgDir)
+	opts, err := buildActivationOptions(cmd, skills, cfg)
 	if err != nil {
-		return false, oops.Wrapf(err, "resolve config directory")
-	}
-	date := evalFlags.date
-	if date == "" {
-		date = os.Getenv(EvalDateEnv)
-	}
-	opts := &evals.ActivationOptions{ConfigDir: absDir, Skills: skills, Scope: evalFlags.scope, Date: date, Surface: evalFlags.surface}
-	if evalFlags.descriptionFrom != "" {
-		if len(skills) != 1 {
-			return false, oops.Hint("Name the skill: ai-rulez eval run <skill> --mode activation --description-from FILE").
-				Errorf("--description-from measures a candidate description of exactly one skill, got %d", len(skills))
-		}
-		if opts.Description, err = readDescriptionFile(evalFlags.descriptionFrom); err != nil {
-			return false, err
-		}
-		opts.DescriptionSkill = skills[0]
-	}
-	if thresholdGiven(cmd) {
-		threshold := evalFlags.threshold
-		opts.PassThreshold = &threshold
-	}
-	if opts.Changed, err = changedEvalSkills(absDir, baseDir); err != nil {
 		return false, err
 	}
-	if evalFlags.surface == evals.SurfaceNative {
-		if err := configureNative(cmd, opts, cfg); err != nil {
-			return false, err
-		}
-	}
-	path := resultsPath(cfgDir)
+	path := resultsPath(cfg.ConfigDir)
 	save := !evalDryRun() && !evalFlags.noWrite
-	var store *evals.Store
-	switch {
-	case save:
-		if store, err = evals.LoadStoreKeyed(path, evals.UserKey()); err != nil {
-			return false, err
-		}
-		opts.Store = store
-	case evalFlags.surface == evals.SurfaceNative:
-		// A dry run still reads the store, so the estimate leaves out what a real run would replay.
-		if opts.Store, err = evals.LoadStoreKeyed(path, evals.ExistingUserKey()); err != nil {
-			return false, err
-		}
+	store, err := attachActivationStore(opts, path, save)
+	if err != nil {
+		return false, err
 	}
 	report, runErr := evals.RunActivation(ctx, opts)
 	if report == nil {
@@ -196,6 +159,60 @@ func runEvalActivation(ctx context.Context, cmd *cobra.Command, skills []string,
 		}
 	}
 	return report.Failed, errors.Join(writeActivationReport(cmd, report), runErr)
+}
+
+// buildActivationOptions turns the flags into the options of an activation run.
+func buildActivationOptions(cmd *cobra.Command, skills []string, cfg *config.Config) (*evals.ActivationOptions, error) {
+	cfgDir, baseDir := cfg.ConfigDir, cfg.BaseDir
+	absDir, err := filepath.Abs(cfgDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "resolve config directory")
+	}
+	date := evalFlags.date
+	if date == "" {
+		date = os.Getenv(EvalDateEnv)
+	}
+	opts := &evals.ActivationOptions{ConfigDir: absDir, Skills: skills, Scope: evalFlags.scope, Date: date, Surface: evalFlags.surface}
+	if evalFlags.descriptionFrom != "" {
+		if len(skills) != 1 {
+			return nil, oops.Hint("Name the skill: ai-rulez eval run <skill> --mode activation --description-from FILE").
+				Errorf("--description-from measures a candidate description of exactly one skill, got %d", len(skills))
+		}
+		if opts.Description, err = readDescriptionFile(evalFlags.descriptionFrom); err != nil {
+			return nil, err
+		}
+		opts.DescriptionSkill = skills[0]
+	}
+	if thresholdGiven(cmd) {
+		threshold := evalFlags.threshold
+		opts.PassThreshold = &threshold
+	}
+	if opts.Changed, err = changedEvalSkills(absDir, baseDir); err != nil {
+		return nil, err
+	}
+	if evalFlags.surface == evals.SurfaceNative {
+		if err := configureNative(cmd, opts, cfg); err != nil {
+			return nil, err
+		}
+	}
+	return opts, nil
+}
+
+// attachActivationStore loads the results store: for writing when a run will save, read-only
+// for a native dry run (the estimate leaves out what a real run would replay).
+func attachActivationStore(opts *evals.ActivationOptions, path string, save bool) (store *evals.Store, err error) {
+	switch {
+	case save:
+		if store, err = evals.LoadStoreKeyed(path, evals.UserKey()); err != nil {
+			return nil, err
+		}
+		opts.Store = store
+	case evalFlags.surface == evals.SurfaceNative:
+		if opts.Store, err = evals.LoadStoreKeyed(path, evals.ExistingUserKey()); err != nil {
+			return nil, err
+		}
+	}
+	return store, nil
 }
 
 // readDescriptionFile reads a candidate skill description (--description-from):
