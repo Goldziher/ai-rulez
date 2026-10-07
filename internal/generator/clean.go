@@ -43,11 +43,15 @@ type CleanPlan struct {
 	// .claude/settings.json) that ai-rulez merged keys into; clean removes those
 	// keys and keeps the rest. A document left with nothing else is in Files.
 	Unmerged []string
+	// Restored lists the absolute paths of imported commands generate retired in
+	// favour of a generated skill; clean writes them back as it removes the skill.
+	Restored []string
 }
 
 // Empty reports whether the plan would remove nothing at all.
 func (p *CleanPlan) Empty() bool {
-	return len(p.Files) == 0 && len(p.Dirs) == 0 && len(p.Unmerged) == 0 && p.ManifestPath == "" && p.LocalManifestPath == "" && !p.GitignoreEdited
+	return len(p.Files) == 0 && len(p.Dirs) == 0 && len(p.Unmerged) == 0 && len(p.Restored) == 0 &&
+		p.ManifestPath == "" && p.LocalManifestPath == "" && !p.GitignoreEdited
 }
 
 // Clean removes the files and directories that Generate produced for the given
@@ -104,7 +108,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	dirs = append(dirs, g.emptiedDirs(removing)...)
 	// Deepest-first so children are removed before their parents.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
-	plan.Dirs = slices.Compact(dirs)
+	plan.Dirs = slices.DeleteFunc(slices.Compact(dirs), func(dir string) bool { return holdsAny(dir, plan.Restored) })
 
 	if !opts.KeepManifest {
 		if mp := g.manifestPath(); pathIsFile(mp) {
@@ -118,6 +122,9 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		return plan, nil
 	}
 
+	if err := g.restoreRetiredCommands(plan.Restored); err != nil {
+		return nil, err
+	}
 	g.applyUnmerge(rewrites(edits))
 	for _, f := range plan.Files {
 		g.removeStaleFile(f)
@@ -218,6 +225,17 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 				"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
 			continue
 		}
+		// The skill that replaced a command `convert` imported goes only when the
+		// command can come back in its place.
+		if cmd, ok := g.retiredCommand(abs); ok {
+			if !g.restorableCommand(cmd) {
+				g.warnOnce("Keeping "+g.relSlash(abs)+": it replaced "+cmd+", which `convert` imported, "+
+					"and the copy under the config directory no longer holds the imported bytes",
+					"hint", "delete it by hand once you no longer want it in the repository")
+				continue
+			}
+			plan.Restored = append(plan.Restored, filepath.Join(g.config.BaseDir, filepath.FromSlash(cmd)))
+		}
 		plan.Files = append(plan.Files, abs)
 	}
 	return dirs
@@ -316,6 +334,16 @@ func existingSortedUnique(paths []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// holdsAny reports whether dir is an ancestor of any of paths.
+func holdsAny(dir string, paths []string) bool {
+	for _, p := range paths {
+		if isUnderBaseDir(dir, p) && filepath.Clean(dir) != filepath.Clean(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // existingDirs filters to directories that exist on disk, preserving order.
