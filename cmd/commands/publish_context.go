@@ -69,7 +69,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, err
 	}
 	distRel := ""
-	top := gitutil.New(publishRunner).TopLevel(cfg.BaseDir)
+	top := gitutil.New(publishRunner).TopLevel(cfg.BaseDir) //nolint:contextcheck // gitutil probes without a context
 	if top != "" {
 		distRel = gitutil.RepoRelative(top, distAbs)
 		pc.repoPath = gitutil.RepoRelative(top, cfg.BaseDir)
@@ -79,7 +79,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, publish.Errorf(publish.CodeSource, publish.ExitGate, "commit the changes (including the generated bundle), or pass --allow-dirty for a throwaway build",
 			"the source tree is dirty or has no commit")
 	}
-	if err := pc.checkBundleTracked(top); err != nil {
+	if err := pc.checkBundleTracked(top); err != nil { //nolint:contextcheck // gitutil probes without a context
 		return nil, err
 	}
 	pluginRepo := ""
@@ -95,7 +95,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 	}
 	pc.repo = pc.resolveRepo(pluginRepo)
 
-	if pc.approval, err = approvalGate(cfg, opts.requireApproved); err != nil {
+	if pc.approval, err = approvalGate(cfg, opts.requireApproved); err != nil { //nolint:contextcheck // approval owners read git without a context
 		return nil, err
 	}
 	if opts.requireSignature && !publishSigning() {
@@ -488,7 +488,7 @@ func resolveVerifyTarget(ctx context.Context, target string) (dir string, cleanu
 	if err != nil {
 		return "", noop, oops.Wrapf(err, "create temporary directory")
 	}
-	cleanup = func() { os.RemoveAll(tmp) } //nolint:errcheck // best effort cleanup of our own directory
+	cleanup = func() { os.RemoveAll(tmp) } //nolint:errcheck,gosec // best effort cleanup of our own temporary directory
 	digest, err := publish.PullOCI(ctx, oci.Target{Ref: target}, tmp)
 	if err != nil {
 		cleanup()

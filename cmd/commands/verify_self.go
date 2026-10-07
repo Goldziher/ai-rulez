@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -65,7 +64,7 @@ func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 	}
 	res := artifactSuccess(signing.SubjectRelease, rep.Attestation, "sha256:"+rep.Digest, rep.ArtifactReport, now)
 	if verifyFormat != formatJSON {
-		fmt.Fprintf(out, "%s is an official ai-rulez build.\n", exe)
+		reportWriter{out}.printf("%s is an official ai-rulez build.\n", exe)
 	}
 	return reportAttestation(out, res, now)
 }

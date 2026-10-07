@@ -366,11 +366,11 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	if opts.requireApproved {
 		// Before the strict gate, which would report the same missing approvals as
 		// plain findings: AR9N8 names the items and the way out.
-		if _, err := approvalGate(cfg, true); err != nil {
+		if _, err := approvalGate(cfg, true); err != nil { //nolint:contextcheck // approval owners read git without a context
 			return err
 		}
 	}
-	pre, err := publishPreflight(cfg)
+	pre, err := publishPreflight(cfg) //nolint:contextcheck // the strict gate loads the config without a context
 	if err != nil {
 		return err
 	}
@@ -379,13 +379,13 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 		return err
 	}
 	if multi {
-		return runPublishMulti(out, pc, emitOnly)
+		return runPublishMulti(out, pc, emitOnly) //nolint:contextcheck // plugin manifests are built without a context
 	}
 	return runPublishSingle(ctx, out, pc, emitOnly)
 }
 
 func runPublishSingle(ctx context.Context, out io.Writer, pc *publishContext, emitOnly string) error {
-	spec, err := pc.singleSpec()
+	spec, err := pc.singleSpec() //nolint:contextcheck // plugin manifests are built without a context
 	if err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ func runPublishSingle(ctx context.Context, out io.Writer, pc *publishContext, em
 		return err
 	}
 	in.Pin = pin
-	dist, err := publish.Build(*in)
+	dist, err := publish.Build(*in) //nolint:contextcheck // publish.Build packs without a context
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
@@ -602,38 +602,38 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 	if publishDryRun {
 		verb = "would write"
 	}
-	fmt.Fprintf(out, "preflight   validate --strict ok | lock ok | verify --plugin ok | secrets 0\n")
+	reportWriter{out}.printf("preflight   validate --strict ok | lock ok | verify --plugin ok | secrets 0\n")
 	if m := d.Manifest; m.Signature != nil && publishDryRun {
-		fmt.Fprintf(out, "signature   would sign (%s)\n", publishSignFlagText())
+		reportWriter{out}.printf("signature   would sign (%s)\n", publishSignFlagText())
 	} else if m.Signature != nil {
-		fmt.Fprintf(out, "signature   %s (%s)\n", m.Signature.File, publishSignerText(m.Signature.Signer))
+		reportWriter{out}.printf("signature   %s (%s)\n", m.Signature.File, publishSignerText(m.Signature.Signer))
 	} else if d.Manifest.Name != "" {
-		fmt.Fprintf(out, "signature   none\n")
+		reportWriter{out}.printf("signature   none\n")
 	}
 	if a := d.Manifest.Approval; a != nil {
-		fmt.Fprintf(out, "approval    %d of %d selected items approved\n", a.Approved, a.Required)
+		reportWriter{out}.printf("approval    %d of %d selected items approved\n", a.Approved, a.Required)
 	}
-	fmt.Fprintf(out, "artifacts   %s %d files to %s\n", verb, len(d.Files), dir)
+	reportWriter{out}.printf("artifacts   %s %d files to %s\n", verb, len(d.Files), dir)
 	for _, a := range d.Plan.Artifacts {
-		fmt.Fprintf(out, "            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
+		reportWriter{out}.printf("            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
 	}
-	fmt.Fprintf(out, "            %-40s %s  %d bytes\n", publish.PlanFile, publish.Digest(d.Files[publish.PlanFile]), len(d.Files[publish.PlanFile]))
+	reportWriter{out}.printf("            %-40s %s  %d bytes\n", publish.PlanFile, publish.Digest(d.Files[publish.PlanFile]), len(d.Files[publish.PlanFile]))
 	if d.Plan.Ref != "" {
-		fmt.Fprintf(out, "push        %s (manifest %s)\n", d.Plan.Ref, d.Plan.OCIDigest)
+		reportWriter{out}.printf("push        %s (manifest %s)\n", d.Plan.Ref, d.Plan.OCIDigest)
 	}
 	for _, c := range d.Plan.Commands {
 		verb := "would run"
 		if publishExecute {
 			verb = "running"
 		}
-		fmt.Fprintf(out, "%-11s %s\n", verb, shellJoin(c.Argv))
+		reportWriter{out}.printf("%-11s %s\n", verb, shellJoin(c.Argv))
 	}
 	if d.Plan.NPM != nil {
-		fmt.Fprintf(out, "registry    %s (npm runs from an empty temporary directory with explicit --userconfig and --globalconfig; no project .npmrc applies)\n",
+		reportWriter{out}.printf("registry    %s (npm runs from an empty temporary directory with explicit --userconfig and --globalconfig; no project .npmrc applies)\n",
 			publish.NPMEffectiveRegistry(*d.Plan.NPM, runner.ScrubEnv(os.Environ(), npmEnvPass, nil)))
 	}
 	if d.Plan.Credentials != "" {
-		fmt.Fprintf(out, "credentials %s\n", d.Plan.Credentials)
+		reportWriter{out}.printf("credentials %s\n", d.Plan.Credentials)
 	}
 	return nil
 }
@@ -682,7 +682,7 @@ func runPublishVerify(ctx context.Context, out io.Writer, target string) error {
 		return err
 	}
 	defer cleanup()
-	results, err := verifyTree(dir, checks)
+	results, err := verifyTree(dir, checks) //nolint:contextcheck // plan verification runs without a context
 	if err != nil {
 		return err //nolint:wrapcheck // a publish.Error carries the exit status
 	}
@@ -764,12 +764,12 @@ func reportVerify(out io.Writer, results []verifyResult, target string) error {
 		}
 		if r.OK() && publishFormat != formatJSON {
 			if r.Name == "" {
-				fmt.Fprintf(out, "%sverified: %d files match SHA256SUMS\n", label, r.Files)
+				reportWriter{out}.printf("%sverified: %d files match SHA256SUMS\n", label, r.Files)
 				continue
 			}
-			fmt.Fprintf(out, "%sverified %s %s: %d files match SHA256SUMS, the manifest and the archive (signature: %s)\n", label, r.Name, r.Version, r.Files, verifyOrNone(r.Signature))
+			reportWriter{out}.printf("%sverified %s %s: %d files match SHA256SUMS, the manifest and the archive (signature: %s)\n", label, r.Name, r.Version, r.Files, verifyOrNone(r.Signature))
 			if r.Signer != "" {
-				fmt.Fprintf(out, "%ssigner: %s\n", label, r.Signer)
+				reportWriter{out}.printf("%ssigner: %s\n", label, r.Signer)
 			}
 			continue
 		}

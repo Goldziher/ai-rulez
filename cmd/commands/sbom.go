@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -97,7 +96,7 @@ func init() {
 	f.BoolVar(&sbomOpts.requireLock, "require-lock", false, "Fail with exit 2 unless ai-rulez.lock is in sync with the sources")
 	f.BoolVar(&sbomOpts.strictPins, "strict-pins", false, "Fail with exit 2 when an MCP package or remote source is not pinned to one release")
 	f.BoolVar(&sbomOpts.check, "check", false, "With --output: exit 2 when the committed SBOM differs from a fresh one")
-	f.StringVar(&sbomOpts.timestamp, "timestamp", "", "Record this time (RFC 3339, or \"now\"); SOURCE_DATE_EPOCH is honoured when the flag is absent")
+	f.StringVar(&sbomOpts.timestamp, "timestamp", "", "Record this time (RFC 3339, or \"now\"); SOURCE_DATE_EPOCH is honored when the flag is absent")
 	f.Lookup("timestamp").NoOptDefVal = "now"
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -263,7 +262,7 @@ func sbomGates(errOut io.Writer, f sbomFlags, bom *sbom.BOM) int {
 		}
 	}
 	for _, finding := range failed {
-		fmt.Fprintln(errOut, finding.String())
+		reportWriter{errOut}.printf("%s\n", finding.String())
 	}
 	if len(failed) > 0 {
 		return exitDrift
@@ -275,7 +274,7 @@ func sbomGates(errOut io.Writer, f sbomFlags, bom *sbom.BOM) int {
 func checkSBOM(out, errOut io.Writer, path string, fresh []byte) int {
 	committed, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		fmt.Fprintln(errOut, sbom.Finding{Code: sbom.CodeDrift, Subject: path, Message: "no committed SBOM; run `ai-rulez sbom -o " + path + "` and commit it"})
+		reportWriter{errOut}.printf("%s\n", sbom.Finding{Code: sbom.CodeDrift, Subject: path, Message: "no committed SBOM; run `ai-rulez sbom -o " + path + "` and commit it"})
 		return exitDrift
 	}
 	if err != nil {
@@ -288,12 +287,12 @@ func checkSBOM(out, errOut io.Writer, path string, fresh []byte) int {
 		return 1
 	}
 	if len(diffs) == 0 {
-		fmt.Fprintf(out, "%s is up to date\n", path)
+		reportWriter{out}.printf("%s is up to date\n", path)
 		return 0
 	}
-	fmt.Fprintln(errOut, sbom.Finding{Code: sbom.CodeDrift, Subject: path, Message: "differs from the SBOM generated now; regenerate it with `ai-rulez sbom -o " + path + "`"})
+	reportWriter{errOut}.printf("%s\n", sbom.Finding{Code: sbom.CodeDrift, Subject: path, Message: "differs from the SBOM generated now; regenerate it with `ai-rulez sbom -o " + path + "`"})
 	for _, d := range diffs {
-		fmt.Fprintln(errOut, "  "+d)
+		reportWriter{errOut}.printf("%s\n", "  "+d)
 	}
 	return exitDrift
 }

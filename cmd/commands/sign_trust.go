@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -35,7 +34,7 @@ a private Sigstore deployment, pass its trusted root file with --trusted-root.`,
 			os.Exit(1)
 		}
 		logger.Success("Cached the Sigstore trusted root", "path", path)
-		fmt.Fprintln(os.Stdout, path)
+		reportWriter{os.Stdout}.printf("%s\n", path)
 	},
 }
 
