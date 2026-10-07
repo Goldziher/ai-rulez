@@ -69,6 +69,22 @@ def get_expected_checksum(checksums_content, archive_name):
     return None
 
 
+def verify_archive_checksum(checksums_content, archive_name, archive_path):
+    """Fail closed: a missing checksums file, entry, or a mismatch all raise."""
+    if not checksums_content:
+        raise RuntimeError("Checksum verification failed: checksums.txt is empty")
+    expected_hash = get_expected_checksum(checksums_content, archive_name)
+    if not expected_hash:
+        raise RuntimeError(
+            f"Checksum verification failed: no checksum for {archive_name} in checksums.txt"
+        )
+    actual_hash = calculate_sha256(archive_path)
+    if actual_hash != expected_hash:
+        raise RuntimeError(
+            f"Checksum verification failed. Expected: {expected_hash}, Got: {actual_hash}"
+        )
+
+
 def download_file_with_retries(url, dest_path, description="file"):
     import time
 
@@ -176,9 +192,8 @@ def download_and_verify_binary(url, dest_path, version):
                     os.unlink(checksums_tmp_path)
                     print("Checksums downloaded successfully", file=sys.stderr)
                 except Exception as e:
-                    print(
-                        f"Warning: Could not download checksums, skipping verification: {e}",
-                        file=sys.stderr,
+                    raise RuntimeError(
+                        f"Could not download checksums.txt, refusing to install unverified: {e}"
                     )
 
                 print(f"Downloading binary from {url}...", file=sys.stderr)
@@ -214,7 +229,16 @@ def download_and_verify_binary(url, dest_path, version):
 
                 print(f"Successfully downloaded {actual_size} bytes", file=sys.stderr)
 
-                platform_name, _ = get_platform()
+                # Verify before anything is extracted from the archive.
+                platform_name, arch = get_platform()
+                archive_format = "zip" if platform_name == "windows" else "tar.gz"
+                archive_name = (
+                    f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
+                )
+                print("Verifying archive checksum...", file=sys.stderr)
+                verify_archive_checksum(checksums_content, archive_name, tmp_file_path)
+                print("✓ Checksum verified", file=sys.stderr)
+
                 binary_name = (
                     "ai-rulez.exe" if platform_name == "windows" else "ai-rulez"
                 )
@@ -266,30 +290,6 @@ def download_and_verify_binary(url, dest_path, version):
 
                 if os.path.getsize(dest_path) == 0:
                     raise RuntimeError("Extracted binary is empty")
-
-                if checksums_content:
-                    platform_name, arch = get_platform()
-                    archive_format = "zip" if platform_name == "windows" else "tar.gz"
-                    archive_name = (
-                        f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
-                    )
-
-                    expected_hash = get_expected_checksum(
-                        checksums_content, archive_name
-                    )
-                    if expected_hash:
-                        print("Verifying archive checksum...", file=sys.stderr)
-                        actual_hash = calculate_sha256(tmp_file_path)
-                        if actual_hash != expected_hash:
-                            raise RuntimeError(
-                                f"Checksum verification failed. Expected: {expected_hash}, Got: {actual_hash}"
-                            )
-                        print("✓ Checksum verified", file=sys.stderr)
-                    else:
-                        print(
-                            "Warning: Could not find checksum for archive in checksums file",
-                            file=sys.stderr,
-                        )
 
                 if platform_name != "windows":
                     os.chmod(dest_path, 0o755)
