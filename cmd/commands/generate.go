@@ -16,7 +16,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -855,11 +857,29 @@ var errLockedSourceDrift = errors.New("authored content differs from " + "ai-rul
 // fix it: it changes the lock and invalidates the signature.
 var errLockedSignature = errors.New("the lock attestation does not satisfy [signing] require")
 
+// errLockedApproval marks a `generate --locked` refusal because content the
+// lock pins lacks an approval [governance] requires, with nothing drifted.
+var errLockedApproval = errors.New("required approvals are missing")
+
+// splitApprovalLines separates the approval lines of a locked-content check (an
+// approval change, or the policy's own AR710 lock problem) from the drift lines.
+func splitApprovalLines(lines []string) (approvals, drift []string) {
+	for _, l := range lines {
+		if strings.HasPrefix(l, contentlock.ScopeApproval+": ") || strings.HasPrefix(l, approval.CodeMissing+" ") {
+			approvals = append(approvals, l)
+		} else {
+			drift = append(drift, l)
+		}
+	}
+	return approvals, drift
+}
+
 // isLockedDrift reports whether err is a lock refusal that exits with exitDrift:
 // authored content or a remote disagreeing with the lock, or a missing or invalid
 // attestation.
 func isLockedDrift(err error) bool {
-	return errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) || errors.Is(err, config.ErrLockViolation)
+	return errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) || errors.Is(err, errLockedApproval) ||
+		errors.Is(err, config.ErrLockViolation)
 }
 
 // exitOnLockedDrift exits with the drift code when err says authored content no
@@ -869,7 +889,7 @@ func exitOnLockedDrift(err error) {
 		return
 	}
 	fmtError(err)
-	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) {
+	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) || errors.Is(err, errLockedApproval) {
 		os.Exit(exitDrift)
 	}
 	os.Exit(1)
@@ -897,9 +917,14 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	if err != nil {
 		return err
 	}
+	approvals, drift := splitApprovalLines(lines)
 	switch {
 	case len(lines) == 0 && len(signLines) == 0:
 		return nil
+	case len(drift) == 0 && len(approvals) > 0:
+		// Nothing drifted: running `lock` would not help, approving does.
+		return oops.Hint("Review each item named above, then run `ai-rulez approve <item>`").
+			Wrapf(errLockedApproval, "%s lacks approvals [governance] requires:\n  %s", "ai-rulez.lock", strings.Join(append(approvals, signLines...), "\n  "))
 	case len(lines) == 0:
 		return oops.Hint("Sign the current lock with `ai-rulez sign --lock` (running `ai-rulez lock` again would invalidate the signature)").
 			Wrapf(errLockedSignature, "%s lacks the attestation [signing] require asks for:\n  %s", "ai-rulez.lock", strings.Join(signLines, "\n  "))

@@ -158,7 +158,6 @@ func TestApprovalsGovernanceE2E(t *testing.T) {
 	})
 
 	t.Run("generate --locked names the missing approval, not drift", func(t *testing.T) {
-		blockedOn(t, "MAN-3")
 		// Arrange
 		env := newIsoEnv(t)
 		root := governedProject(t, env, "", nil)
