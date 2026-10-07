@@ -2326,7 +2326,7 @@ the security scan), `1` it could not run.
 ### `ai-rulez export okf`
 
 ```bash
-ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check]
+ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check] [--config-dir n]
 ```
 
 Writes rules, context, skills, agents, commands and checks as an OKF v0.2 bundle. Without `--out` the bundle goes
@@ -2337,10 +2337,11 @@ exits 2 when the bundle on disk differs. `--index-style` (default `okf.index_sty
 ### `ai-rulez import okf`
 
 ```bash
-ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json]
+ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force] [--format json] [--config-dir n]
 ```
 
-Converts the concepts of a bundle into `.ai-rulez/` sources. The target directory must exist (`--config-dir` selects a
+Converts the concepts of a bundle into `.ai-rulez/` sources: rules, context and skills by `type`, and also agents, commands
+and checks when a concept says so in `x-ai-rulez.kind` (`--into` only forces rules, context or skills). The target directory must exist (`--config-dir` selects a
 non-default one). Existing files are never overwritten unless `--force`; identical files are reported as unchanged, so a
 second run changes nothing. Links between imported concepts are rewritten to the created files; symlinks in the bundle are skipped with a warning. Imported text goes through the `AR001`-`AR011` security scan first and the import is refused
 with nothing written when it finds an error. A git source is fetched shallowly into a temporary directory.
