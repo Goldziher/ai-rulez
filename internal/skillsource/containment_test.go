@@ -2,12 +2,14 @@ package skillsource
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -97,4 +99,22 @@ func TestDiscover_NeverServesTheFileTheDigestLeavesOut(t *testing.T) {
 		got = append(got, f.Path)
 	}
 	assert.Equal(t, []string{"SKILL.md", ".cache_meta.json.bak", "refs/.cache_meta.json"}, got)
+}
+
+func TestResolve_FileURLOfAProjectConfigMustStayInsideTheProject(t *testing.T) {
+	// Arrange
+	t.Setenv(lockfile.EnvAllowFileURLs, "")
+	base := t.TempDir()
+	project := filepath.Join(base, "project")
+	outside := filepath.Join(base, "victim", "skills")
+	require.NoError(t, os.MkdirAll(project, 0o755))
+	write(t, outside, "stolen/SKILL.md", skillMD("stolen", "Outside the project"))
+
+	// Act
+	res, err := Resolve(context.Background(), Spec{Name: "out", URL: "file://" + outside}, Options{ProjectRoot: project})
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "outside the project")
+	assert.Nil(t, res)
 }

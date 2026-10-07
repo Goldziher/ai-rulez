@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -112,6 +113,48 @@ func TestResolveIncludes_OutsideLocalIncludeIsAnError(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestResolver_CreateSource_FileURLStaysInsideProject(t *testing.T) {
+	t.Setenv(lockfile.EnvAllowFileURLs, "")
+	// Arrange
+	root := t.TempDir()
+	project := filepath.Join(root, "project")
+	victim := filepath.Join(root, "victim")
+	require.NoError(t, os.MkdirAll(filepath.Join(project, "shared"), 0o755))
+	require.NoError(t, os.MkdirAll(victim, 0o755))
+	overlay := &config.LocalOverlay{Doc: map[string]any{"includes": []any{map[string]any{"name": "x", "source": "file://" + victim}}}}
+
+	tests := []struct {
+		name    string
+		source  string
+		cfg     *config.Config
+		wantErr bool
+	}{
+		{"file url outside", "file://" + victim, &config.Config{}, true},
+		{"file url dot-dot outside", "file://" + filepath.Join(project, "..", "victim"), &config.Config{}, true},
+		{"file url inside", "file://" + filepath.Join(project, "shared"), &config.Config{}, false},
+		{"file url outside from the local overlay", "file://" + victim, &config.Config{LocalOverlay: overlay}, false},
+		{"file url outside in user scope", "file://" + victim, &config.Config{UserScope: true}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			r := &Resolver{baseDir: project, cfg: tt.cfg}
+
+			// Act
+			_, err := r.createSource(t.Context(), &config.IncludeConfig{Name: "x", Source: tt.source})
+
+			// Assert
+			if tt.wantErr {
+				require.ErrorIs(t, err, config.ErrIncludeOutsideProject)
+				return
+			}
+			if err != nil {
+				assert.NotContains(t, err.Error(), "outside the project")
+			}
 		})
 	}
 }
