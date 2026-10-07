@@ -44,6 +44,7 @@ func newPRWorld(t *testing.T) *prWorld {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
+	testutil.GitIdentity(t) // PR commits through its own git, which gitIn's -c user.* does not reach
 	root, configDir, plan, report := acceptedRun(t)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	gitIn(t, root, "add", ".ai-rulez/config.toml", ".ai-rulez/skills")
@@ -571,6 +572,7 @@ func TestPR_StagesTheLockOfAConfigDirectoryNotNamedLikeItsParent(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
+	testutil.GitIdentity(t)
 	root, configDir, plan, _ := acceptedRunAt(t, ".config/ai-rulez", "\nGOOD advice.\n", nil)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "ai-rulez.lock"), []byte("version = 1\n"), 0o600))
