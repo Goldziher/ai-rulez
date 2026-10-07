@@ -7,7 +7,6 @@ import (
 	"github.com/samber/oops"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -22,7 +21,7 @@ const (
 // Signer turns a DSSE payload into a Sigstore bundle.
 type Signer interface {
 	// Bundle signs content and returns the bundle.
-	Bundle(ctx context.Context, content sign.Content) (*protobundle.Bundle, error)
+	Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error)
 }
 
 // SignStatement signs an in-toto statement as a DSSE envelope and returns the
@@ -34,7 +33,7 @@ func SignStatement(ctx context.Context, s Signer, st *Statement) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	pb, err := s.Bundle(ctx, &sign.DSSEData{Data: payload, PayloadType: PayloadTypeInToto})
+	pb, err := s.Bundle(ctx, &DSSEData{Data: payload, PayloadType: PayloadTypeInToto})
 	if err != nil {
 		return nil, oops.Wrapf(err, "sign the attestation")
 	}
@@ -63,12 +62,12 @@ func LoadKeySigner(pemBytes, password []byte) (*KeySigner, error) {
 }
 
 // Bundle implements Signer.
-func (k *KeySigner) Bundle(ctx context.Context, content sign.Content) (*protobundle.Bundle, error) {
-	opts := sign.BundleOptions{Context: ctx}
+func (k *KeySigner) Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error) {
+	var rekor *rekorClient
 	if k.TLog {
-		opts.TransparencyLogs = []sign.Transparency{newRekor(k.RekorURL)}
+		rekor = newRekor(k.RekorURL)
 	}
-	return sign.Bundle(content, k.Key, opts)
+	return buildBundle(ctx, content, k.Key, nil, "", rekor)
 }
 
 // KeylessOptions configures keyless signing.
@@ -84,6 +83,8 @@ type KeylessOptions struct {
 // signature in Rekor. The token, certificate and subject digest leave the machine.
 type KeylessSigner struct {
 	opts KeylessOptions
+	// backoff overrides the delay before the first retry (tests).
+	backoff time.Duration
 }
 
 // NewKeylessSigner validates the options.
@@ -98,25 +99,24 @@ func NewKeylessSigner(opts KeylessOptions) (*KeylessSigner, error) {
 }
 
 // Bundle implements Signer.
-func (k *KeylessSigner) Bundle(ctx context.Context, content sign.Content) (*protobundle.Bundle, error) {
-	kp, err := sign.NewEphemeralKeypair(nil)
+func (k *KeylessSigner) Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error) {
+	kp, err := newEphemeralKeyPair()
 	if err != nil {
-		return nil, oops.Wrapf(err, "generate an ephemeral key")
+		return nil, err
 	}
-	fulcio := sign.NewFulcio(&sign.FulcioOptions{BaseURL: k.opts.FulcioURL, Timeout: defaultTimeout, Retries: defaultRetries})
-	return sign.Bundle(content, kp, sign.BundleOptions{
-		Context:                    ctx,
-		CertificateProvider:        fulcio,
-		CertificateProviderOptions: &sign.CertificateProviderOptions{IDToken: k.opts.IDToken},
-		TransparencyLogs:           []sign.Transparency{newRekor(k.opts.RekorURL)},
-	})
+	fulcio := &fulcioClient{newServiceClient(k.opts.FulcioURL)}
+	rekor := newRekor(k.opts.RekorURL)
+	if k.backoff > 0 {
+		fulcio.backoff, rekor.backoff = k.backoff, k.backoff
+	}
+	return buildBundle(ctx, content, kp, fulcio, k.opts.IDToken, rekor)
 }
 
-func newRekor(url string) sign.Transparency {
+func newRekor(url string) *rekorClient {
 	if url == "" {
 		url = DefaultRekorURL
 	}
-	return sign.NewRekor(&sign.RekorOptions{BaseURL: url, Timeout: defaultTimeout, Retries: defaultRetries})
+	return &rekorClient{newServiceClient(url)}
 }
 
 // parseBundle decodes bundle JSON with the size bound applied.

@@ -19,8 +19,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-// KeyPair is a long-lived signing key (ECDSA P-256, P-384, P-521 or ed25519). It
-// implements sigstore-go's sign.Keypair.
+// KeyPair is a signing key (ECDSA P-256, P-384, P-521 or ed25519): a long-lived
+// key, or the ephemeral key of a keyless signature.
 type KeyPair struct {
 	priv    crypto.Signer
 	details signature.AlgorithmDetails
@@ -149,7 +149,7 @@ func ParsePublicKey(pemBytes []byte) (crypto.PublicKey, error) {
 	return pub, nil
 }
 
-// sign.Keypair implementation.
+// Key accessors used when building a bundle.
 
 // GetHashAlgorithm returns the digest algorithm the key signs.
 func (k *KeyPair) GetHashAlgorithm() protocommon.HashAlgorithm { return k.details.GetProtoHashType() }
