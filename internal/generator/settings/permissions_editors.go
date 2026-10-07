@@ -114,31 +114,9 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
-		p := r.Shell()
-		switch {
-		case p.Kind == ShellAny:
-			return vscTerminal, []string{"/.*/"}, ""
-		case p.Kind == ShellPrefix && e.Action == ActionAllow:
-			// A plain key is a prefix whose word boundary VS Code does not document, so
-			// `git` could approve `gitk`; an anchored regular expression cannot.
-			return vscTerminal, []string{"/^" + strings.ReplaceAll(regexp.QuoteMeta(p.Literal), "/", `\/`) + `(\s|$)/`}, ""
-		case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action != ActionAllow:
-			return vscTerminal, []string{p.Literal}, ""
-		case p.Kind == ShellExact:
-			return "", nil, "VS Code matches command prefixes, so an exact-command allow would be widened"
-		}
-		return "", nil, "VS Code terminal rules are prefixes or regular expressions; a command glob is not translated"
+		return vscodeShell(e)
 	case KindEdit:
-		if r.Tool != toolEdit && e.Action == ActionAllow {
-			return "", nil, "the edits setting covers every edit tool, so a " + r.Tool + " allow rule would be widened"
-		}
-		if r.Bare {
-			return vscEdits, []string{"**/*"}, ""
-		}
-		if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
-			return "", nil, "home and absolute path anchors cannot be written as workspace globs"
-		}
-		return vscEdits, []string{"**/" + strings.TrimPrefix(r.Path.Glob, "**/")}, ""
+		return vscodeEdit(e)
 	case KindFetch:
 		if r.Bare {
 			return vscURLs, []string{"*"}, ""
@@ -151,10 +129,63 @@ func vscodeEntry(e permEntry) (target string, patterns []string, why string) {
 	return "", nil, "VS Code has no setting for " + r.Tool + " rules"
 }
 
+// vscodeShell translates a shell rule to a terminal auto-approve entry.
+func vscodeShell(e permEntry) (target string, patterns []string, why string) {
+	p := e.Rule.Shell()
+	switch {
+	case p.Kind == ShellAny:
+		return vscTerminal, []string{"/.*/"}, ""
+	case p.Kind == ShellPrefix && e.Action == ActionAllow:
+		// A plain key is a prefix whose word boundary VS Code does not document, so
+		// `git` could approve `gitk`; an anchored regular expression cannot.
+		return vscTerminal, []string{"/^" + strings.ReplaceAll(regexp.QuoteMeta(p.Literal), "/", `\/`) + `(\s|$)/`}, ""
+	case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action != ActionAllow:
+		return vscTerminal, []string{p.Literal}, ""
+	case p.Kind == ShellExact:
+		return "", nil, "VS Code matches command prefixes, so an exact-command allow would be widened"
+	}
+	return "", nil, "VS Code terminal rules are prefixes or regular expressions; a command glob is not translated"
+}
+
+// vscodeEdit translates an edit rule to a workspace glob of the edits setting.
+func vscodeEdit(e permEntry) (target string, patterns []string, why string) {
+	r := e.Rule
+	if r.Tool != toolEdit && e.Action == ActionAllow {
+		return "", nil, "the edits setting covers every edit tool, so a " + r.Tool + " allow rule would be widened"
+	}
+	if r.Bare {
+		return vscEdits, []string{"**/*"}, ""
+	}
+	if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
+		return "", nil, "home and absolute path anchors cannot be written as workspace globs"
+	}
+	return vscEdits, []string{"**/" + strings.TrimPrefix(r.Path.Glob, "**/")}, ""
+}
+
 func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	t.harness = harnessZoocode
 	t.askUnsupported()
-	var allowed, denied []string
+	allowed, denied := zooLists(t)
+	kept := zooDropOverridden(t, allowed, denied)
+	// Zoo Code matches with a plain startsWith, so `git` would also approve `gitk`:
+	// an allow prefix ends at a word boundary.
+	for i, a := range kept {
+		if a != "*" {
+			kept[i] = a + " "
+		}
+	}
+	var keys []jsonmerge.OwnedKey
+	if len(kept) > 0 {
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{zooAllowed}, stringElements(kept)))
+	}
+	if len(denied) > 0 {
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{zooDenied}, stringElements(denied)))
+	}
+	return keys
+}
+
+// zooLists splits the translatable shell rules into allow and deny prefixes.
+func zooLists(t *translation) (allowed, denied []string) {
 	for ix := range t.entries {
 		e := t.entries[ix]
 		if e.Action == ActionAsk {
@@ -171,8 +202,14 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 			denied = append(denied, prefix)
 		}
 	}
-	// The longest matching prefix wins and a deny only wins a tie or a longer
-	// match: an allow with a deny prefix of it would override the deny.
+	return allowed, denied
+}
+
+// zooDropOverridden returns the allow prefixes that no deny prefix blocks. The
+// longest matching prefix wins and a deny only wins a tie or a longer match: an
+// allow with a deny prefix of it would override the deny, so it is dropped with a
+// warning.
+func zooDropOverridden(t *translation, allowed, denied []string) []string {
 	kept := allowed[:0:0]
 	for _, a := range allowed {
 		blocked := ""
@@ -190,21 +227,7 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 		}
 		kept = append(kept, a)
 	}
-	// Zoo Code matches with a plain startsWith, so `git` would also approve `gitk`:
-	// an allow prefix ends at a word boundary.
-	for i, a := range kept {
-		if a != "*" {
-			kept[i] = a + " "
-		}
-	}
-	var keys []jsonmerge.OwnedKey
-	if len(kept) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{zooAllowed}, stringElements(kept)))
-	}
-	if len(denied) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{zooDenied}, stringElements(denied)))
-	}
-	return keys
+	return kept
 }
 
 func zooPrefix(e permEntry) (prefix, why string) {
@@ -309,25 +332,11 @@ func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return keys, nil
 }
 
-func cursorRule(e permEntry) (string, string) {
+func cursorRule(e permEntry) (rule, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
-		p := r.Shell()
-		words := strings.Fields(p.Literal)
-		switch {
-		case p.Kind == ShellAny && e.Action == ActionDeny:
-			return "Shell(*)", ""
-		case p.Kind == ShellAny:
-			return "", "allowing every command is not documented for Cursor"
-		case p.Kind == ShellPrefix && len(words) == 1:
-			return "Shell(" + words[0] + ")", ""
-		case p.Kind == ShellPrefix && e.Action == ActionDeny:
-			return "Shell(" + words[0] + ":" + strings.Join(words[1:], " ") + "*)", ""
-		case p.Kind == ShellExact && len(words) == 1 && e.Action == ActionDeny:
-			return "Shell(" + words[0] + ")", ""
-		}
-		return "", "Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it"
+		return cursorShell(e)
 	case KindRead, KindEdit:
 		tool := toolRead
 		if r.Kind == KindEdit {
@@ -337,10 +346,8 @@ func cursorRule(e permEntry) (string, string) {
 			return tool + "(**)", ""
 		}
 		glob := r.Path.Glob
-		switch r.Path.Anchor {
-		case AnchorHome:
+		if r.Path.Anchor == AnchorHome {
 			glob = "~/" + glob
-		case AnchorAbsolute:
 		}
 		return tool + "(" + glob + ")", ""
 	case KindFetch:
@@ -358,6 +365,25 @@ func cursorRule(e permEntry) (string, string) {
 		return "Mcp(" + r.Server + ":" + r.MCPTool + ")", ""
 	}
 	return "", "the harness has no equivalent of " + r.Tool + " rules"
+}
+
+// cursorShell translates a shell rule to a Cursor Shell() entry.
+func cursorShell(e permEntry) (rule, why string) {
+	p := e.Rule.Shell()
+	words := strings.Fields(p.Literal)
+	switch {
+	case p.Kind == ShellAny && e.Action == ActionDeny:
+		return "Shell(*)", ""
+	case p.Kind == ShellAny:
+		return "", "allowing every command is not documented for Cursor"
+	case p.Kind == ShellPrefix && len(words) == 1:
+		return "Shell(" + words[0] + ")", ""
+	case p.Kind == ShellPrefix && e.Action == ActionDeny:
+		return "Shell(" + words[0] + ":" + strings.Join(words[1:], " ") + "*)", ""
+	case p.Kind == ShellExact && len(words) == 1 && e.Action == ActionDeny:
+		return "Shell(" + words[0] + ")", ""
+	}
+	return "", "Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it"
 }
 
 // Zed: agent.tool_permissions in the user settings.json (JSONC). Patterns are Rust

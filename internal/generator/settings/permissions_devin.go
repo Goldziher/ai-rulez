@@ -109,34 +109,13 @@ func buildGrok(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return keys, nil
 }
 
-func grokRules(e permEntry) ([]string, string) {
+func grokRules(e permEntry) (rules []string, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
-		p := r.Shell()
-		switch p.Kind {
-		case ShellAny:
-			return []string{toolBash}, ""
-		case ShellPrefix:
-			return []string{"Bash(" + p.Literal + ")", "Bash(" + p.Literal + " *)"}, ""
-		default:
-			return []string{"Bash(" + p.Literal + ")"}, ""
-		}
+		return grokShell(r.Shell()), ""
 	case KindRead, KindEdit:
-		tool := toolRead
-		if r.Kind == KindEdit {
-			tool = toolEdit
-			if r.Tool != toolEdit && e.Action == ActionAllow {
-				return nil, "Grok has one Edit filter for every edit tool, so a " + r.Tool + " allow rule would be widened"
-			}
-		}
-		if r.Bare {
-			return []string{tool}, ""
-		}
-		if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
-			return nil, "home and absolute path anchors are not documented for Grok"
-		}
-		return []string{tool + "(" + r.Path.Glob + ")"}, ""
+		return grokPathRule(e)
 	case KindSearch:
 		if r.Bare {
 			return []string{toolWebSearch}, ""
@@ -153,4 +132,34 @@ func grokRules(e permEntry) ([]string, string) {
 		return []string{"MCPTool(" + r.Server + "__" + r.MCPTool + ")"}, ""
 	}
 	return nil, "the harness has no equivalent of " + r.Tool + " rules"
+}
+
+// grokShell renders a shell pattern as Grok Bash filters.
+func grokShell(p ShellPattern) []string {
+	switch p.Kind {
+	case ShellAny:
+		return []string{toolBash}
+	case ShellPrefix:
+		return []string{"Bash(" + p.Literal + ")", "Bash(" + p.Literal + " *)"}
+	}
+	return []string{"Bash(" + p.Literal + ")"}
+}
+
+// grokPathRule renders a Read or Edit rule as a Grok filter.
+func grokPathRule(e permEntry) (rules []string, why string) {
+	r := e.Rule
+	tool := toolRead
+	if r.Kind == KindEdit {
+		tool = toolEdit
+		if r.Tool != toolEdit && e.Action == ActionAllow {
+			return nil, "Grok has one Edit filter for every edit tool, so a " + r.Tool + " allow rule would be widened"
+		}
+	}
+	if r.Bare {
+		return []string{tool}, ""
+	}
+	if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
+		return nil, "home and absolute path anchors are not documented for Grok"
+	}
+	return []string{tool + "(" + r.Path.Glob + ")"}, ""
 }

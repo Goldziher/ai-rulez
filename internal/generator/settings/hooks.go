@@ -103,55 +103,84 @@ func renderHooks(cfg *config.Config, spec hookSpec) (hookRender, error) {
 		if !g.HookTargetsHarness(spec.name) {
 			continue
 		}
-		native, ok := spec.events[g.Event]
-		if !ok {
-			warn(cfg.Diag, spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
-				"hint", "restrict the group with targets, or remove it")
-			continue
-		}
-		matcher, ok := groupMatcher(cfg.Diag, g, spec)
+		native, matcher, ok := resolveGroup(cfg, spec, g)
 		if !ok {
 			continue
 		}
-		if matcher == "" && spec.defaultMatcher != "" && (spec.matcherRequired || spec.matcherEvents[native]) {
-			matcher = spec.defaultMatcher
-		}
-		if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
-			warn(cfg.Diag, spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
-				"hint", "remove the matcher or set targets to leave this harness out")
-			continue
-		}
-		handlers := make([]json.RawMessage, 0, len(g.Hooks))
-		for j := range g.Hooks {
-			name := fmt.Sprintf("ai-rulez-%s-%d", strings.ToLower(native), out.count()+len(handlers)+1)
-			raw, ok, err := renderHandler(cfg, spec, g, &g.Hooks[j], handlerContext{name: name, event: native, matcher: matcher})
-			if err != nil {
-				return hookRender{}, err
-			}
-			if ok {
-				handlers = append(handlers, raw)
-			}
+		handlers, err := groupHandlers(cfg, spec, g, handlerContext{event: native, matcher: matcher}, out.count())
+		if err != nil {
+			return hookRender{}, err
 		}
 		if len(handlers) == 0 {
 			continue
 		}
-		if spec.flat != nil {
-			out.flat = append(out.flat, handlers...)
-			continue
+		if err := out.place(spec, native, matcher, handlers); err != nil {
+			return hookRender{}, err
 		}
-		if !spec.nested {
-			for _, raw := range handlers {
-				out.add(native, raw)
-			}
-			continue
-		}
-		raw, err := json.Marshal(group{Matcher: matcher, Hooks: handlers})
-		if err != nil {
-			return hookRender{}, fmt.Errorf("marshal %s hook group: %w", spec.name, err)
-		}
-		out.add(native, raw)
 	}
 	return out, nil
+}
+
+// resolveGroup maps a group's event to the harness's native event and resolves
+// its matcher. ok is false, after a warning, when the harness cannot express it.
+func resolveGroup(cfg *config.Config, spec hookSpec, g *config.HookGroup) (native, matcher string, ok bool) {
+	native, ok = spec.events[g.Event]
+	if !ok {
+		warn(cfg.Diag, spec.name, fmt.Sprintf("the event %s has no equivalent", g.Event),
+			"hint", "restrict the group with targets, or remove it")
+		return "", "", false
+	}
+	matcher, ok = groupMatcher(cfg.Diag, g, spec)
+	if !ok {
+		return "", "", false
+	}
+	if matcher == "" && spec.defaultMatcher != "" && (spec.matcherRequired || spec.matcherEvents[native]) {
+		matcher = spec.defaultMatcher
+	}
+	if matcher != "" && matcher != spec.defaultMatcher && spec.matcherEvents != nil && !spec.matcherEvents[native] {
+		warn(cfg.Diag, spec.name, fmt.Sprintf("%s ignores a matcher on %s, so the group would run on every occurrence", spec.name, native),
+			"hint", "remove the matcher or set targets to leave this harness out")
+		return "", "", false
+	}
+	return native, matcher, true
+}
+
+// groupHandlers renders the handlers of one group. rendered is how many handlers
+// the earlier groups produced, which numbers the generated names.
+func groupHandlers(cfg *config.Config, spec hookSpec, g *config.HookGroup, hc handlerContext, rendered int) ([]json.RawMessage, error) {
+	handlers := make([]json.RawMessage, 0, len(g.Hooks))
+	for j := range g.Hooks {
+		hc.name = fmt.Sprintf("ai-rulez-%s-%d", strings.ToLower(hc.event), rendered+len(handlers)+1)
+		raw, ok, err := renderHandler(cfg, spec, g, &g.Hooks[j], hc)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			handlers = append(handlers, raw)
+		}
+	}
+	return handlers, nil
+}
+
+// place files the rendered handlers of a group into the layout the harness uses:
+// a flat list, one entry per handler, or a group object.
+func (r *hookRender) place(spec hookSpec, native, matcher string, handlers []json.RawMessage) error {
+	if spec.flat != nil {
+		r.flat = append(r.flat, handlers...)
+		return nil
+	}
+	if !spec.nested {
+		for _, raw := range handlers {
+			r.add(native, raw)
+		}
+		return nil
+	}
+	raw, err := json.Marshal(group{Matcher: matcher, Hooks: handlers})
+	if err != nil {
+		return fmt.Errorf("marshal %s hook group: %w", spec.name, err)
+	}
+	r.add(native, raw)
+	return nil
 }
 
 // groupMatcher resolves the matcher a group renders with for a harness. ok is
@@ -192,22 +221,7 @@ type handlerContext struct{ name, event, matcher string }
 
 func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, action *config.HookAction, hc handlerContext,
 ) (raw json.RawMessage, ok bool, err error) {
-	matcher := hc.matcher
-	if action.Type != "" && action.Type != config.HookTypeCommand {
-		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
-		return nil, false, nil
-	}
-	if action.If != "" && !spec.condition {
-		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler sets 'if', which %s has no equivalent of; running it unconditionally would widen it", g.Event, spec.name))
-		return nil, false, nil
-	}
-	if action.Async && !spec.async {
-		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler is async, which %s cannot express", g.Event, spec.name))
-		return nil, false, nil
-	}
-	if action.Script != "" && !config.IsSafeHookScript(action.Script) {
-		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
-			g.Event, action.Script))
+	if !handlerExpressible(cfg, spec, g, action) {
 		return nil, false, nil
 	}
 	command, args, ok := handlerCommand(cfg, spec, action)
@@ -220,7 +234,35 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 		command += " " + shellJoin(args)
 		args = nil
 	}
+	raw, err = json.Marshal(handlerValue(spec, hc, command, args, action))
+	if err != nil {
+		return nil, false, fmt.Errorf("marshal %s hook handler: %w", spec.name, err)
+	}
+	return raw, true, nil
+}
 
+// handlerExpressible reports whether the harness can carry the handler as
+// declared; when it cannot, it warns and the handler is skipped, never widened.
+func handlerExpressible(cfg *config.Config, spec hookSpec, g *config.HookGroup, action *config.HookAction) bool {
+	switch {
+	case action.Type != "" && action.Type != config.HookTypeCommand:
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has type %q; only command handlers are generated", g.Event, action.Type))
+	case action.If != "" && !spec.condition:
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler sets 'if', which %s has no equivalent of; running it unconditionally would widen it", g.Event, spec.name))
+	case action.Async && !spec.async:
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler is async, which %s cannot express", g.Event, spec.name))
+	case action.Script != "" && !config.IsSafeHookScript(action.Script):
+		warn(cfg.Diag, spec.name, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+			g.Event, action.Script))
+	default:
+		return true
+	}
+	return false
+}
+
+// handlerValue builds the harness's handler object for a resolved command.
+func handlerValue(spec hookSpec, hc handlerContext, command string, args []string, action *config.HookAction) any {
+	matcher := hc.matcher
 	var value any
 	switch {
 	case spec.flat != nil:
@@ -242,11 +284,7 @@ func renderHandler(cfg *config.Config, spec hookSpec, g *config.HookGroup, actio
 	case config.HarnessCopilot, config.HarnessCopilotCLI:
 		value = copilotEntry{Type: config.HookTypeCommand, Matcher: matcher, Bash: command, TimeoutSec: action.Timeout}
 	}
-	raw, err = json.Marshal(value)
-	if err != nil {
-		return nil, false, fmt.Errorf("marshal %s hook handler: %w", spec.name, err)
-	}
-	return raw, true, nil
+	return value
 }
 
 // handlerCommand resolves the command a harness spawns for an action. A

@@ -46,24 +46,7 @@ type ocRule struct {
 }
 
 func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
-	byTool := map[string][]ocRule{}
-	for ix := range t.entries {
-		e := t.entries[ix]
-		tool, patterns, why := opencodePatterns(e)
-		if why != "" {
-			t.drop(e, why)
-			continue
-		}
-		if r := e.Rule; (r.Kind == KindRead || r.Kind == KindEdit) && !r.Bare && e.Action != ActionAllow &&
-			(r.Path.Anchor == AnchorHome || r.Path.Anchor == AnchorAbsolute) {
-			t.cfg.Diag.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
-				"so a home or absolute path pattern may never apply", e.Action, r.Raw, t.harness),
-				"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
-		}
-		for _, p := range patterns {
-			byTool[tool] = append(byTool[tool], ocRule{pattern: p, entry: e})
-		}
-	}
+	byTool := opencodeRules(t)
 	tools := make([]string, 0, len(byTool))
 	for tool := range byTool {
 		tools = append(tools, tool)
@@ -95,6 +78,37 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 		}
 	}
 	return keys, nil
+}
+
+// opencodeRules translates every entry and groups the patterns by tool.
+func opencodeRules(t *translation) map[string][]ocRule {
+	byTool := map[string][]ocRule{}
+	for ix := range t.entries {
+		e := t.entries[ix]
+		tool, patterns, why := opencodePatterns(e)
+		if why != "" {
+			t.drop(e, why)
+			continue
+		}
+		warnUnenforcedPath(t, e)
+		for _, p := range patterns {
+			byTool[tool] = append(byTool[tool], ocRule{pattern: p, entry: e})
+		}
+	}
+	return byTool
+}
+
+// warnUnenforcedPath flags a deny or ask on a home or absolute path: these
+// harnesses match paths relative to the worktree, so the rule may never apply.
+func warnUnenforcedPath(t *translation, e permEntry) {
+	r := e.Rule
+	if (r.Kind != KindRead && r.Kind != KindEdit) || r.Bare || e.Action == ActionAllow ||
+		(r.Path.Anchor != AnchorHome && r.Path.Anchor != AnchorAbsolute) {
+		return
+	}
+	t.cfg.Diag.Warn(fmt.Sprintf("SECURITY: [permissions] %s rule %q may not be enforced by %s: it matches paths relative to the worktree, "+
+		"so a home or absolute path pattern may never apply", e.Action, r.Raw, t.harness),
+		"severity", "error", "hint", "enforce it another way (sandbox, hook) or remove the harness from the project")
 }
 
 // existingObject returns the object at path in the document: ok is false when the

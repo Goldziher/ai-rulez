@@ -27,31 +27,48 @@ func globVariants(p string) []string {
 }
 
 func globIntersect(p, q string) bool {
-	memo := map[[2]int]bool{}
-	seen := map[[2]int]bool{}
-	var f func(i, j int) bool
-	f = func(i, j int) bool {
-		key := [2]int{i, j}
-		if seen[key] {
-			return memo[key]
-		}
-		seen[key] = true
-		var res bool
-		switch {
-		case i == len(p) && j == len(q):
-			res = true
-		case i < len(p) && p[i] == '*':
-			res = f(i+1, j) || (j < len(q) && f(i, j+1))
-		case j < len(q) && q[j] == '*':
-			res = f(i, j+1) || (i < len(p) && f(i+1, j))
-		case i < len(p) && j < len(q):
-			res = (p[i] == q[j] || p[i] == '?' || q[j] == '?') && f(i+1, j+1)
-		}
-		memo[key] = res
-		return res
-	}
-	return f(0, 0)
+	m := globMatcher{p: p, q: q, memo: map[[2]int]bool{}, seen: map[[2]int]bool{}}
+	return m.from(0, 0)
 }
+
+// globMatcher decides whether two patterns share a string, memoising the
+// (position in p, position in q) pairs it has settled.
+type globMatcher struct {
+	p, q       string
+	memo, seen map[[2]int]bool
+}
+
+// from reports whether p[i:] and q[j:] share a string.
+func (m *globMatcher) from(i, j int) bool {
+	key := [2]int{i, j}
+	if m.seen[key] {
+		return m.memo[key]
+	}
+	m.seen[key] = true
+	res := m.step(i, j)
+	m.memo[key] = res
+	return res
+}
+
+// step consumes one position of either pattern: a star may match nothing or one
+// more character, a literal or `?` must meet its counterpart.
+func (m *globMatcher) step(i, j int) bool {
+	pLeft, qLeft := i < len(m.p), j < len(m.q)
+	switch {
+	case !pLeft && !qLeft:
+		return true
+	case pLeft && m.p[i] == '*':
+		return m.from(i+1, j) || (qLeft && m.from(i, j+1))
+	case qLeft && m.q[j] == '*':
+		return m.from(i, j+1) || (pLeft && m.from(i+1, j))
+	case pLeft && qLeft:
+		return charsMeet(m.p[i], m.q[j]) && m.from(i+1, j+1)
+	}
+	return false
+}
+
+// charsMeet reports whether two pattern characters can match the same character.
+func charsMeet(a, b byte) bool { return a == b || a == '?' || b == '?' }
 
 // strictness orders the actions: a later match of a weaker action than an
 // earlier overlapping stricter one would relax it.
