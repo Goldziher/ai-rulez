@@ -277,7 +277,28 @@ func (pluginNotGeneratedError) Error() string {
 	return "plugin bundle not generated; run ai-rulez generate --plugin"
 }
 
-func (pluginNotGeneratedError) Is(target error) bool { return target == ErrPluginNotGenerated }
+func (pluginNotGeneratedError) Is(target error) bool {
+	return target == ErrPluginNotGenerated || target == ErrPluginDrift
+}
+
+// ErrPluginDrift is matched by every VerifyPlugin failure that means the
+// bundle on disk differs from what generate would write (missing, stale,
+// obsolete or hash-mismatched files), as opposed to the check not being able
+// to run. verify --plugin maps it to exit 2.
+var ErrPluginDrift = errors.New("plugin bundle differs from its sources")
+
+type pluginDriftError struct{ err error }
+
+func (e pluginDriftError) Error() string      { return e.err.Error() }
+func (e pluginDriftError) Unwrap() error      { return e.err }
+func (pluginDriftError) Is(target error) bool { return target == ErrPluginDrift }
+
+func asPluginDrift(err error) error {
+	if err == nil {
+		return nil
+	}
+	return pluginDriftError{err}
+}
 
 // checkPluginGenerated fails with ErrPluginNotGenerated, and the command that
 // fixes it, when no expected plugin file exists.
@@ -315,31 +336,31 @@ func (g *Generator) VerifyPlugin(profile string) error {
 		return err
 	}
 	if len(obsolete) > 0 {
-		return obsoleteFilesError(obsolete)
+		return asPluginDrift(obsoleteFilesError(obsolete))
 	}
 	if err := verifyPluginOutputs(expected); err != nil {
-		return err
+		return asPluginDrift(err)
 	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return err
 	}
 	if len(stale) > 0 {
-		return oops.With("dirs", strings.Join(stale, ", ")).
+		return asPluginDrift(oops.With("dirs", strings.Join(stale, ", ")).
 			Hint("Run ai-rulez generate --plugin to remove the plugin directories of domains that no longer exist").
-			Errorf("stale generated plugin directory")
+			Errorf("stale generated plugin directory"))
 	}
 	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
 		for _, member := range marketplace.Members {
 			if err := plugin.VerifyProvenance(filepath.Join(g.config.BaseDir, member)); err != nil {
-				return oops.With("member", member).Wrapf(err, "verify member plugin bundle")
+				return asPluginDrift(oops.With("member", member).Wrapf(err, "verify member plugin bundle"))
 			}
 		}
 	}
 	if marketplace := g.config.Marketplace; marketplace != nil && marketplace.HasDomainPlugins() {
-		return g.verifyDomainPluginProvenance(expected)
+		return asPluginDrift(g.verifyDomainPluginProvenance(expected))
 	}
-	return plugin.VerifyProvenance(g.config.BaseDir)
+	return asPluginDrift(plugin.VerifyProvenance(g.config.BaseDir))
 }
 
 // verifyPluginOutputs compares every expected plugin file with what is on disk.
