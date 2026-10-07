@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -450,7 +451,8 @@ func TestKeyNeverReachesLogsErrorsOrCacheFiles(t *testing.T) {
 		if strings.Contains(string(b), key) {
 			t.Errorf("key in cache file %s", p)
 		}
-		if info, _ := d.Info(); info != nil && info.Mode().Perm() != 0o600 { //nolint:errcheck // test
+		// Windows has no unix permission bits (a file reports 0666); the cache dir is per user there.
+		if info, _ := d.Info(); runtime.GOOS != "windows" && info != nil && info.Mode().Perm() != 0o600 { //nolint:errcheck // test
 			t.Errorf("cache file %s has mode %v, want 0600", p, info.Mode().Perm())
 		}
 		return nil
