@@ -46,14 +46,14 @@ gitignore = false
 
 [[includes]]
 name = "shared"
-source = "`+s.repo.URL+`"
+source = '`+s.repo.URL+`'
 version = "^1"
 `)
 	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/rules/local.md", "# Local\n\nlocal rule\n")
 }
 
 func (s *LockVersionCLITestSuite) run(args ...string) *testutil.CLIResult {
-	return testutil.RunCLIWithEnv(s.T(), s.dir, map[string]string{"HOME": s.home}, args...)
+	return testutil.RunCLIWithEnv(s.T(), s.dir, map[string]string{"HOME": s.home, "USERPROFILE": s.home}, args...)
 }
 
 func (s *LockVersionCLITestSuite) lockText() string {

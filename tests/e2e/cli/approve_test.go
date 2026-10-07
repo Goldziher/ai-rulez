@@ -48,7 +48,7 @@ gitignore = false
 
 [[includes]]
 name = "shared"
-source = "`+s.repo.URL+`"
+source = '`+s.repo.URL+`'
 version = "^1"
 
 [governance]
@@ -59,7 +59,7 @@ enforce = true
 }
 
 func (s *ApproveCLITestSuite) run(args ...string) *testutil.CLIResult {
-	return testutil.RunCLIWithEnv(s.T(), s.dir, map[string]string{"HOME": s.home}, args...)
+	return testutil.RunCLIWithEnv(s.T(), s.dir, map[string]string{"HOME": s.home, "USERPROFILE": s.home}, args...)
 }
 
 func (s *ApproveCLITestSuite) strict() *testutil.CLIResult {
