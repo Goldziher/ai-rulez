@@ -1,0 +1,87 @@
+{
+  "entries": [
+    {
+      "identifier": "urn:air:example.com:ai-rulez:ai-rulez",
+      "displayName": "ai-rulez MCP server",
+      "type": "application/mcp-server-card+json",
+      "data": {
+        "name": "ai-rulez",
+        "transport": {
+          "type": "stdio"
+        }
+      },
+      "description": "Read and edit ai-rulez configuration.",
+      "capabilities": [
+        "create_rule",
+        "generate_outputs"
+      ],
+      "representativeQueries": [
+        "add a rule to my ai-rulez config",
+        "regenerate the assistant files"
+      ],
+      "updatedAt": "2026-09-01T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:example.com:ai-rulez:code-review",
+      "displayName": "code-review",
+      "type": "application/ai-skill+md",
+      "url": "https://example.com/skills/code-review/SKILL.md",
+      "description": "Review a diff for bugs.",
+      "representativeQueries": [
+        "review my changes",
+        "check this PR for bugs"
+      ],
+      "updatedAt": "2026-09-01T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:example.com:ai-rulez:governance",
+      "displayName": "Governance plugin",
+      "type": "application/vnd.ai-rulez.plugin+json",
+      "url": "https://github.com/example/governance/releases/download/v5.0.0/plugin.json",
+      "description": "Rules, skills and MCP servers for AI governance.",
+      "tags": [
+        "governance",
+        "plugin"
+      ],
+      "representativeQueries": [
+        "install the governance plugin",
+        "set up AI coding rules for my repo"
+      ],
+      "version": "5.0.0",
+      "updatedAt": "2026-09-01T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:example.com:ai-rulez:release-notes",
+      "displayName": "release-notes",
+      "type": "application/ai-skill+md",
+      "url": "https://example.com/skills/release-notes/SKILL.md",
+      "description": "Write release notes from merged PRs.",
+      "tags": [
+        "docs",
+        "release"
+      ],
+      "capabilities": [
+        "ReleaseNotes"
+      ],
+      "representativeQueries": [
+        "draft release notes for v2.1",
+        "summarize the merged pull requests since the last tag",
+        "write a changelog entry"
+      ],
+      "version": "1.2.0",
+      "updatedAt": "2026-08-30T07:30:00Z"
+    },
+    {
+      "identifier": "urn:air:example.com:ai-rulez:search",
+      "displayName": "search",
+      "type": "application/mcp-server-card+json",
+      "url": "https://example.com/mcp/search/server-card.json",
+      "description": "Web search.",
+      "representativeQueries": [
+        "search the web for the go 1.27 release notes",
+        "find docs about json schema"
+      ],
+      "updatedAt": "2026-09-01T12:00:00Z"
+    }
+  ]
+}
