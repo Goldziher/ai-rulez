@@ -140,7 +140,7 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 	// The views load under the lock run's policy, so a refresh re-resolves the
 	// same sources the run's own load did.
 	policy := cfg.LockPolicy
-	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: policy.Offline, LockPolicy: &policy}
+	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: policy.Offline, LockPolicy: &policy, Collector: lockWarnings}
 	res, err := setup.LockViews(cmdContext(), extras)
 	if err != nil {
 		out.problems = []string{err.Error()}

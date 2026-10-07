@@ -38,7 +38,7 @@ func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile
 		out = append(out, "  "+p.String())
 	}
 	if lock != nil && (len(lock.Served) > 0 || len(extras) > 0 || cfg.LockEnforced()) {
-		setup := &ServeSetup{Version: version, WorkDir: cfg.BaseDir, NoWatch: true}
+		setup := &ServeSetup{Version: version, WorkDir: cfg.BaseDir, NoWatch: true, Collector: cfg.Diag}
 		problems, err := setup.ServedProblems(ctx, extras...)
 		if err != nil {
 			out = append(out, "  served: "+err.Error())
