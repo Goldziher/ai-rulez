@@ -84,7 +84,7 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 	left := budget
 	for run := 0; run < runs; run++ {
 		req := &evals.Request{
-			Version: evals.ProtocolVersion, Harness: e.Harness, Model: e.Model, MaxCostUSD: roundUSD(left),
+			Version: evals.ProtocolVersion, Harness: e.Harness, Model: e.Model, MaxCostUSD: budgetUSD(left),
 			Skill: evals.SkillRef{ID: id, Dir: dir, Digest: digest}, Cases: cases,
 		}
 		resp, err := e.Runner.Run(ctx, req)
@@ -165,6 +165,15 @@ func reportedCost(resp *evals.Response) bool {
 }
 
 func roundUSD(v float64) float64 { return math.Round(v*1e4) / 1e4 }
+
+// budgetUSD is a positive remaining budget as handed to a runner or optimizer:
+// rounded to 1e-4 USD, but never to 0, which the protocols read as unlimited.
+func budgetUSD(left float64) float64 {
+	if left <= 0 {
+		return 0
+	}
+	return max(roundUSD(left), 0.0001)
+}
 
 // MetricsOf summarises outcomes, optionally restricted to the cases in only.
 func MetricsOf(outcomes []CaseOutcome, only map[string]bool) Metrics {

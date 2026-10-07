@@ -495,11 +495,18 @@ func costReported(resp *Response) bool {
 	return false
 }
 
+// minBudgetUSD is the least budget handed to a runner under a limit: a request's
+// max_cost_usd of 0 means unlimited, so a remainder that rounds to 0 must not.
+const minBudgetUSD = 0.0001
+
+// remaining is the budget left under limit (0: no limit), rounded to 1e-4 USD
+// and never rounded down to 0, which would read as unlimited. Callers stop
+// before calling it once spent reaches limit.
 func remaining(limit, spent float64) float64 {
 	if limit <= 0 {
 		return 0
 	}
-	return round(limit - spent)
+	return max(round(limit-spent), minBudgetUSD)
 }
 
 func selectSkills(all []Skill, ids []string) ([]Skill, error) {
