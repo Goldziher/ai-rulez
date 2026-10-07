@@ -3,7 +3,7 @@ package fixtures
 // V4ModelByPresetConfigTOML exercises the per-preset model override chain:
 // agent `<preset>_model` frontmatter wins, otherwise `defaults.model_by_preset`
 // for that preset, otherwise the legacy `model:` field.
-const V4ModelByPresetConfigTOML = `version = "4.0"
+const V4ModelByPresetConfigTOML = `version = "5.0"
 name = "model-by-preset-test"
 description = "E2E coverage for per-preset model overrides"
 gitignore = false

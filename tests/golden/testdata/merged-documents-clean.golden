@@ -22,19 +22,19 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/build/ dir 0755
-.agents/skills/build/SKILL.md file 0644 295 23ceaf0c32336962c58d46ff4ff76a189846a66bf46231ab1286901fd3d2eee3
+.agents/skills/build/SKILL.md file 0644 208 46b69b72e18269edf5eebfbca6e27e758458e9cef50f0d490ca48843d9b8ea09
 .agents/skills/build/agents/ dir 0755
 .agents/skills/build/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 3c2e1bd4ccadfae5613dab7e17470c2db563f96c6e7480eb0d559bc1b660d575
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 e5ca744a84d018147d034e09cc5a2b6e932f11a328b14e680b9702447ea70be0
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .agents/skills/ship/ dir 0755
-.agents/skills/ship/SKILL.md file 0644 271 dabb21dd54e23dc4bfd3836f3599ca3341d0b5181508644a7c29c99cec76cf19
+.agents/skills/ship/SKILL.md file 0644 184 6b822e098b5ea716fc05e66c57a0617b08a030c3f138b086712a80d7be4479d5
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
@@ -49,7 +49,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 722 2cc05c02ab69823505cc6c34cab934ccc459fe2d967020e878ff363ce3c33973
+.ai-rulez/config.toml file 0644 740 4ee6328c2c6b654b519d9fcb1bf9cb8aaf5e7d8b4d12b9b789921653509c250c
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -70,28 +70,28 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/ dir 0755
 .claude/agents/ dir 0755
-.claude/agents/architect.md file 0644 273 80224a42a36af79f83b16952f0532433474050c122a9843935e18a1c5622fb7a
-.claude/agents/tester.md file 0644 258 d13205754117ceeaac7aef817849cb5c868e9c2ce09239b34844d0dadfcc9136
+.claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
 .claude/rules/ dir 0755
-.claude/rules/always.md file 0644 325 822d4fb1454410d6212af1d363fa9dd6d03e6d42480207948f19bbc886130004
-.claude/rules/auto.md file 0644 302 8563645abbefb2f24b011631721aadd81ea508dff2a89dea9a2f1dbf740e76a9
-.claude/rules/manual.md file 0644 313 8c24ced23993fc3269e4791949c8822ff480586d925fcedf6e440b6bfd06b4bd
-.claude/rules/targeted.md file 0644 309 71d5cb4f1d84394887a667f96a0ecc9ca24e9c03aaf8ff35f63d2fd3f5438687
-.claude/rules/typescript.md file 0644 376 cbcad973152cc9eb784aa6e1a734d8bee6a71965f3449ab1c6b8eebfdcf8e24f
+.claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
+.claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .claude/settings.json file 0644 955 5b012aa98d93a01ab9e35e2e371d285248093d9e07f92caebc91a96231d0f1da
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
-.claude/skills/build/SKILL.md file 0644 283 0b705856455d8f4c2180a2311bb46556cfc93af3b2216b2447425e7b57a9eafa
+.claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 .claude/skills/deployer/ dir 0755
-.claude/skills/deployer/SKILL.md file 0644 259 e1ade4595a3ceb3fa7438b9e1a7e1d91a083d81189466c4c7a4c59854d36dfed
+.claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .claude/skills/reviewer/ dir 0755
-.claude/skills/reviewer/SKILL.md file 0644 506 d2d1e97c84a293c83fd6cb372a40542caf74f8cc0d785426b8b6a6f48e448017
+.claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .claude/skills/reviewer/references/ dir 0755
 .claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .claude/skills/reviewer/scripts/ dir 0755
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/ship/ dir 0755
-.claude/skills/ship/SKILL.md file 0644 259 68b467146526f46ca3381916e4ddf148731cd7075a49ac7e23ad9a6eeb6f7b64
+.claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .codex/ dir 0755
 .codex/agents/ dir 0755
 .codex/agents/architect.toml file 0644 115 100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13
@@ -99,35 +99,35 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .codex/config.toml file 0644 172 8694fed0985cfcd41339e2ff5b5adedff98d9ed787c20f4b3baf00e881691d63
 .codex/hooks.json file 0644 719 4ed20f680526671552a907de7a7e0fca8d830315416ab5c9da33754af14b2c70
 .codex/rules/ dir 0755
-.codex/rules/ai-rulez.rules file 0644 496 542e4ffb00abd7b5fc8db03ff81c40971c9d12b0767251b55c88fb8900963ad7
+.codex/rules/ai-rulez.rules file 0644 409 2c4fde503d40ad6215a476740f268b6d1237543cb47d2020756cfcef46f5b6d8
 .gemini/ dir 0755
 .gemini/agents/ dir 0755
-.gemini/agents/architect.md file 0644 259 3b0b35a5c229d07224760fe8ba35d70d706a1305e1786a57db55ca56f73c62a1
-.gemini/agents/tester.md file 0644 245 aa2069ebf60572c329bd673a327d1c1e2f780db748d2950f7500dac37df52710
+.gemini/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 3131805941dbd2899345d317fd9e153d003454ffcc05a69028d8e7fd40f7e167
 .gitignore file 0644 575 ded5b926598b8fb57938cdbb87212553be9c7377e7b608006306a52604d31bae
 .mcp.json file 0644 284 3787ef010d1b74fe9b445d3f86bac33847d72e904bb1e01df0dc09c3a64cef6b
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
-.opencode/agents/architect.md file 0644 253 f733ceea029be52216c04d3105ab047c3ad4bb0b59805c39bc2dc28bbec09778
-.opencode/agents/tester.md file 0644 256 c223f04da120e14512f6c4c712c2b4147279229b0fa93e3c25b7325a1509bb8c
+.opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
+.opencode/agents/tester.md file 0644 169 75eb4d0bf61903216baf02272dd4e376a76cbb452fd49b434f3ef884443ec6e1
 .opencode/commands/ dir 0755
-.opencode/commands/build.md file 0644 250 28c20242fd7bb0ee2d49ee90051febb701743c9dcd4250667179efba022d858e
-.opencode/commands/ship.md file 0644 227 063389142184ab475702ba978f59ca1057602962f4bf13fa6bce93e8a1d10dcb
+.opencode/commands/build.md file 0644 163 7e3c85af2b70967aa544ebf2695885bec743b36aaa6911c94ecb84af90829b44
+.opencode/commands/ship.md file 0644 140 8302239666a0f1ea2a3ef65733af690c3df05de9f0c780c8a4b05bc18039a238
 .opencode/plugins/ dir 0755
 .opencode/plugins/ai-rulez-hooks.js file 0644 9627 97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2
 .opencode/skills/ dir 0755
 .opencode/skills/deployer/ dir 0755
-.opencode/skills/deployer/SKILL.md file 0644 261 3c2e1bd4ccadfae5613dab7e17470c2db563f96c6e7480eb0d559bc1b660d575
+.opencode/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .opencode/skills/reviewer/ dir 0755
-.opencode/skills/reviewer/SKILL.md file 0644 508 e5ca744a84d018147d034e09cc5a2b6e932f11a328b14e680b9702447ea70be0
+.opencode/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .opencode/skills/reviewer/references/ dir 0755
 .opencode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .opencode/skills/reviewer/scripts/ dir 0755
 .opencode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 874 4844f1e5dcb61c7adb7bbe8864f0513a17ba0df4dbd28df185b10564dcdd9b05
-CLAUDE.md file 0644 575 0e3ec11b3d8edc5f6e68e9d6d6b7e9cb669b04b5b2816862b25ae52a59519fc0
-GEMINI.md file 0644 874 4844f1e5dcb61c7adb7bbe8864f0513a17ba0df4dbd28df185b10564dcdd9b05
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
+CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
+GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 opencode.json file 0644 627 67223e5c641a7fa93f7c5a6ff56f6621b1515ef3d96b1a87dc6e874605d23c93
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -228,7 +228,7 @@ INFO  Dry run — no files were removed
 --- home tree
 (no change)
 
-## step 3: ai-rulez clean --force
+## step 3: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -380,13 +380,14 @@ description: Ship a release
 ---
 Cut a release.
 <<<<
-.ai-rulez/config.toml file 0644 722 2cc05c02ab69823505cc6c34cab934ccc459fe2d967020e878ff363ce3c33973
+.ai-rulez/config.toml file 0644 740 4ee6328c2c6b654b519d9fcb1bf9cb8aaf5e7d8b4d12b9b789921653509c250c
 >>>>
-version = "4.0"
+version = "5.0"
 name = "golden"
 description = "Golden fixture project"
 presets = ["claude", "opencode", "codex", "gemini"]
 gitignore = true
+agents_md = false
 
 [guard]
 generated = true

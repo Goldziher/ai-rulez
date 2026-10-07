@@ -13,7 +13,7 @@ import (
 func TestCLI_ValidateReportsMalformedFrontmatterOnce(t *testing.T) {
 	// Arrange
 	dir := testutil.CreateTempDir(t)
-	writeIn(t, dir+"/.ai-rulez", "config.toml", "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	writeIn(t, dir+"/.ai-rulez", "config.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 	writeIn(t, dir+"/.ai-rulez/agents", "bad.md", "---\nname: a: b: c\n---\nAgent\n")
 
 	// Act

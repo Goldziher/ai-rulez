@@ -23,7 +23,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 829 ec885b5386dab07f9738ba97569a067ff973e83dcaaae94d89ca91292622ecf1
+.ai-rulez/config.toml file 0644 847 ed5a3ba91309866edfe0af13b5285b197a072764da6e32e34ded7b3c38dfa9ed
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -46,23 +46,23 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .reasonix/ dir 0755
 .reasonix/commands/ dir 0755
-.reasonix/commands/build.md file 0644 250 c89b865407a973fc9128498c9bcd502be08cb10ea8be5eaef834251d08809e8a
-.reasonix/commands/ship.md file 0644 227 7b50fd58045729bf9d48a4e9423d072b1f5687bbd7948c75ac7907ffa699f660
+.reasonix/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.reasonix/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .reasonix/settings.json file 0644 99 0101e92db4f04bc46eb72867609eefb880618da16072f510d82ef96cc2f2dbf2
 .reasonix/skills/ dir 0755
 .reasonix/skills/architect/ dir 0755
-.reasonix/skills/architect/SKILL.md file 0644 294 687542235a72a5592517bea73ad0b531fbd55066ee13fab387315e78093b8594
+.reasonix/skills/architect/SKILL.md file 0644 207 56cee3cf9d5f6db00f6f6eed2069351aa8e2f70b419f1bd47f981d388b3c54cb
 .reasonix/skills/deployer/ dir 0755
-.reasonix/skills/deployer/SKILL.md file 0644 259 6b646beab9339d3e134f055a9d58c695a2e6bdf873b8e69b9efee58d9bb7cfe6
+.reasonix/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .reasonix/skills/reviewer/ dir 0755
-.reasonix/skills/reviewer/SKILL.md file 0644 506 54a220443cc6c14687e916ccd79c5da56b8e6badd95701d2a7ff9a26c4c2c770
+.reasonix/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .reasonix/skills/reviewer/references/ dir 0755
 .reasonix/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .reasonix/skills/reviewer/scripts/ dir 0755
 .reasonix/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .reasonix/skills/tester/ dir 0755
-.reasonix/skills/tester/SKILL.md file 0644 293 378dd547b1f39b842c68f73212d5283dd603ed7188b2e4d7cef9ed44dfed5b96
-REASONIX.md file 0644 874 75141f21164f128baae0b09cd9584ad8d2891c7d7e65f2683ba2e9d8b70627f9
+.reasonix/skills/tester/SKILL.md file 0644 206 094f01d88d6fd99abab9bd559ab7f8dc228821f87f46cb471911321110316f1f
+REASONIX.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -106,7 +106,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -146,7 +146,7 @@ INFO  Removed generated files files=11 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 829 ec885b5386dab07f9738ba97569a067ff973e83dcaaae94d89ca91292622ecf1
+.ai-rulez/config.toml file 0644 847 ed5a3ba91309866edfe0af13b5285b197a072764da6e32e34ded7b3c38dfa9ed
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -22,7 +22,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 a46153da64bfe6a1246aeadc2cc5ba957dcfdf8505915fa0ee9daeea0c9719ad
+.ai-rulez/config.toml file 0644 846 5e604f5ab3fcc6899e9241df2fee849b02001a807aba7a096fc0028ca8512f1c
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -43,27 +43,27 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .factory/ dir 0755
 .factory/commands/ dir 0755
-.factory/commands/build.md file 0644 250 76d0392a532dce1b73bec7062d6d77055bf2cce236d25f4b2019e8c64f6d350c
-.factory/commands/ship.md file 0644 227 5a4f47aebf60e81d7833c0067fc8d827bfa3e303181a192d147f9209617bb04e
+.factory/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.factory/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .factory/droids/ dir 0755
-.factory/droids/architect.md file 0644 259 a8352e987ec50352b157fff2be6372dfee145cf81c5eb18babd20a8780d9730e
-.factory/droids/tester.md file 0644 267 7b80453a1385978a2da40b60a047253a69b35ce585bab87f262ff183ead279f7
+.factory/droids/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.factory/droids/tester.md file 0644 180 6877ac2f6d43ef9a12e4f6f2462213d590230f3b185a0ff94275090ed60190c3
 .factory/hooks.json file 0644 590 d518b9a57f90b3e55dcf9461671cad126ba15f78eafbea34397818fc4bf3641b
 .factory/mcp.json file 0644 369 df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836
 .factory/skills/ dir 0755
 .factory/skills/deployer/ dir 0755
-.factory/skills/deployer/SKILL.md file 0644 259 2debcef01629b290f3c1cad568cf24b06f6f02dddd1d38ef3c8fb9e37e047b54
+.factory/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .factory/skills/review-guidelines/ dir 0755
 .factory/skills/review-guidelines/SKILL.md file 0644 309 490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc
 .factory/skills/reviewer/ dir 0755
-.factory/skills/reviewer/SKILL.md file 0644 506 df2a37199d401f04f6c9834087dfefcea23b053969aabda6b999b7949666be5d
+.factory/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .factory/skills/reviewer/references/ dir 0755
 .factory/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .factory/skills/reviewer/scripts/ dir 0755
 .factory/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 412 4e199a3e4ad17a574685b395716f10302407ed4f3e3de69019c32c7e1b99f333
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 874 4976bd8aba5421d7e0ce3036d63cc5d4c8a70127462ebaf3695458e2718c3055
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -147,7 +147,7 @@ INFO  Removed generated files files=13 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 a46153da64bfe6a1246aeadc2cc5ba957dcfdf8505915fa0ee9daeea0c9719ad
+.ai-rulez/config.toml file 0644 846 5e604f5ab3fcc6899e9241df2fee849b02001a807aba7a096fc0028ca8512f1c
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -18,7 +18,7 @@ Hint: Set missing values with --env KEY=VALUE, an environment variable, or .env
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 837 c28aa60dd9e966beadcb501a651e98571c8de7f3487e158c1a6e585923ad0901
+.ai-rulez/config.toml file 0644 855 ce5f7d6c4dbab1ea9cc62108f136ff03df0a8fa9ec223e3f7bb8d1f099f26f20
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -57,9 +57,9 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/ dir 0755
 + .agents/skills/ dir 0755
 + .agents/skills/deployer/ dir 0755
-+ .agents/skills/deployer/SKILL.md file 0644 261 f85dc9b3d93895830b07a4f13224a77882f000eec151ce735c0226288fcaf173
++ .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 + .agents/skills/reviewer/ dir 0755
-+ .agents/skills/reviewer/SKILL.md file 0644 508 d02ed6ccaa181c8112bc181ed47eeeb49e328082ba0d6e26757fd1db2dc79bc7
++ .agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 + .agents/skills/reviewer/references/ dir 0755
 + .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 + .agents/skills/reviewer/scripts/ dir 0755
@@ -68,33 +68,33 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .ai-rulez/.generated-manifest.local.json file 0644 4957 9d66494423d752fd982fe6e093357086e9bbcc2ff4ef9c16d23a9f6a25b245b3
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
-+ .claude/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
-+ .claude/agents/tester.md file 0644 258 8b2b02006e99e66fcaee446b3b4ae1263ebc3b2827497b3a3df7d9282d5a440e
++ .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
++ .claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
 + .claude/rules/ dir 0755
-+ .claude/rules/always.md file 0644 325 599bca98c247320bd995cf24c904a482931de96e82ff9dfd478f0de84c658839
-+ .claude/rules/auto.md file 0644 302 1a5fe5e9a5a47442fc7b53a2528499cdfdb05b84b1fe93c21554733fc98508fe
-+ .claude/rules/manual.md file 0644 313 eedc8089df7d226a19db407ddf96c0c7c85d3d7abab5737144fa9647d30cd9a3
-+ .claude/rules/targeted.md file 0644 309 9c292b2ac45c9e3604c519430e30d64d768bf3d9bb76a074fc345fe874c0c23f
-+ .claude/rules/typescript.md file 0644 376 bd048fe16d8e70ae60a453b6056db1b39296a8638875c86a153da9a09e5d9788
++ .claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
++ .claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
++ .claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
++ .claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
++ .claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 + .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
 + .claude/skills/ dir 0755
 + .claude/skills/build/ dir 0755
-+ .claude/skills/build/SKILL.md file 0644 283 ce24a1dc91ec23ebf84afef63299cc0a92f159c2ec744ecf628f98270e367ea8
++ .claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 + .claude/skills/deployer/ dir 0755
-+ .claude/skills/deployer/SKILL.md file 0644 259 bad875a0f03ba01001405a6cba6d24a5a2b3921a603d833b62cf43ce0e75a268
++ .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 + .claude/skills/reviewer/ dir 0755
-+ .claude/skills/reviewer/SKILL.md file 0644 506 ec27028f0920cde64108176d9843ad125dd14ff75a1909cb85bb0bca9435cb47
++ .claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 + .claude/skills/reviewer/references/ dir 0755
 + .claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 + .claude/skills/reviewer/scripts/ dir 0755
 + .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .claude/skills/ship/ dir 0755
-+ .claude/skills/ship/SKILL.md file 0644 259 5be47b18ff8b7617963988274bfd3f581393c7d3e888fd2a6da696b0653bd27e
++ .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 + .cursor/ dir 0755
 + .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 + .cursor/agents/ dir 0755
-+ .cursor/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
-+ .cursor/agents/tester.md file 0644 245 60a09511b67458b495694ef72bc0548fa996500e3fd223e6df9ad3bd5a0f3559
++ .cursor/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
++ .cursor/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 + .cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
 + .cursor/commands/ dir 0755
 + .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
@@ -102,16 +102,16 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
 + .cursor/mcp.json file 0600 335 009e0f810b76d1e1cb4d6fba539baf8798e8123c9f21588aa2549927c0218893
 + .cursor/rules/ dir 0755
-+ .cursor/rules/always.mdc file 0644 351 de5637956bbdad1b8ccf53dba6bfb8bd65927bca25ba8dc2678614462e780243
-+ .cursor/rules/auto.mdc file 0644 362 e4de61edd1eb2bd8cceb072392dd94c11344b367d93fadae4366c4fab81b61e4
-+ .cursor/rules/context-architecture.mdc file 0644 340 ce60e21e00529915ed2c8603b6a65995089f1b67cb01029c63d3bb6ee28d71a5
-+ .cursor/rules/context-overview.mdc file 0644 351 d7df3c5f21a37590838c5b5faa07058df1c2daba5ab1fa8a9b8cee4642404e3d
-+ .cursor/rules/manual.mdc file 0644 340 5582514156b4d644712a281bdebb7e216af4e6e723c84409cb9a84b0798ba62e
-+ .cursor/rules/targeted.mdc file 0644 335 21eee309af65a4b55e4fd98fba22dee9b1883dc5733a2b64b7c6992ebf30a604
-+ .cursor/rules/typescript.mdc file 0644 390 1453e788fdf95e4ccbf5d22c4470a10b6502b1611fcbce0af0ec5b69ad5800f4
++ .cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
++ .cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
++ .cursor/rules/context-architecture.mdc file 0644 255 355e35cba517e7f51002ffd853d57deb6fcecb661ed0853cbc24ac44f10a9898
++ .cursor/rules/context-overview.mdc file 0644 266 bf769d85e9b2aae7d279408c2fb692d1e55051e5be994cddad9eba3941b6b792
++ .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
++ .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
++ .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 + .gitignore file 0644 690 73e063635efb07c5863545ee197eee7ec312877280560e9656c04b4fa1792c66
 + .mcp.json file 0600 407 27023c8bdace230a0843ecff9b74d52207c64a7593ccd20fb16070d2c20b62f9
-+ CLAUDE.md file 0644 575 d73249de49105166a02026b11419078259d7c87f6b204cc91baa84760034ca6a
++ CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 --- home tree
 (no change)
 
@@ -133,17 +133,38 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 (no change)
 
 ## step 4: ai-rulez validate
-exit: 0
+exit: 2
 --- stdout
+.ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
+.ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
+.ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
+.ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
+.ai-rulez/config.toml:1: info AR750 sbom-component-unpinned: mcp-server local-tool: the package has no version; pin it (for example name@1.2.3)
+.ai-rulez/config.toml:12: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
+.ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
+.cursor/mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.cursor/mcp.json:10: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
+.cursor/mcp.json:15: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
+.mcp.json:3: warning AR012 mcp-unpinned-package: MCP server "local-tool" runs "golden-mcp", but no version is pinned; pin it (for example golden-mcp@1.2.3) so a new release cannot change what the server does
+.mcp.json:11: error AR015 secret-in-env-or-header: MCP server "local-tool": env "API_TOKEN" holds a literal credential; reference an environment variable instead (for example "${API_TOKEN}")
+.mcp.json:17: error AR015 secret-in-env-or-header: MCP server "remote-tool": header "Authorization" holds a literal credential; reference an environment variable instead (for example "${AUTHORIZATION}")
+
+strict validation: 4 error(s), 9 warning(s), 1 info across 1 root(s)
+  AR012 mcp-unpinned-package         3
+  AR015 secret-in-env-or-header      4
+  AR503 script-not-executable        1
+  AR750 sbom-component-unpinned      1
+  AR802 description-length           5
+risk (advisory, never fails the run): critical (score 100/100)
+  high       58  .cursor/mcp.json
+  high       58  .mcp.json
+  medium      9  .ai-rulez/config.toml
+  medium      8  .ai-rulez/agents/architect.md
+  medium      8  .ai-rulez/agents/tester.md
+  ... and 4 more item(s)
 --- stderr
 INFO  Configuration is valid path=$ROOT/.ai-rulez
-INFO  
-Configuration summary:
-INFO    - Rules: count=5
-INFO    - Context files: count=2
-INFO    - Skills: count=2
-INFO    - Domains: count=0
-INFO    - Presets: count=2
 --- project tree
 (no change)
 --- home tree
@@ -166,9 +187,9 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 f85dc9b3d93895830b07a4f13224a77882f000eec151ce735c0226288fcaf173
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 d02ed6ccaa181c8112bc181ed47eeeb49e328082ba0d6e26757fd1db2dc79bc7
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -185,7 +206,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 837 c28aa60dd9e966beadcb501a651e98571c8de7f3487e158c1a6e585923ad0901
+.ai-rulez/config.toml file 0644 855 ce5f7d6c4dbab1ea9cc62108f136ff03df0a8fa9ec223e3f7bb8d1f099f26f20
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -206,33 +227,33 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/ dir 0755
 .claude/agents/ dir 0755
-.claude/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
-.claude/agents/tester.md file 0644 258 8b2b02006e99e66fcaee446b3b4ae1263ebc3b2827497b3a3df7d9282d5a440e
+.claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
 .claude/rules/ dir 0755
-.claude/rules/always.md file 0644 325 599bca98c247320bd995cf24c904a482931de96e82ff9dfd478f0de84c658839
-.claude/rules/auto.md file 0644 302 1a5fe5e9a5a47442fc7b53a2528499cdfdb05b84b1fe93c21554733fc98508fe
-.claude/rules/manual.md file 0644 313 eedc8089df7d226a19db407ddf96c0c7c85d3d7abab5737144fa9647d30cd9a3
-.claude/rules/targeted.md file 0644 309 9c292b2ac45c9e3604c519430e30d64d768bf3d9bb76a074fc345fe874c0c23f
-.claude/rules/typescript.md file 0644 376 bd048fe16d8e70ae60a453b6056db1b39296a8638875c86a153da9a09e5d9788
+.claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
+.claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
 .claude/skills/ dir 0755
 .claude/skills/build/ dir 0755
-.claude/skills/build/SKILL.md file 0644 283 ce24a1dc91ec23ebf84afef63299cc0a92f159c2ec744ecf628f98270e367ea8
+.claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
 .claude/skills/deployer/ dir 0755
-.claude/skills/deployer/SKILL.md file 0644 259 bad875a0f03ba01001405a6cba6d24a5a2b3921a603d833b62cf43ce0e75a268
+.claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .claude/skills/reviewer/ dir 0755
-.claude/skills/reviewer/SKILL.md file 0644 506 ec27028f0920cde64108176d9843ad125dd14ff75a1909cb85bb0bca9435cb47
+.claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .claude/skills/reviewer/references/ dir 0755
 .claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .claude/skills/reviewer/scripts/ dir 0755
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/ship/ dir 0755
-.claude/skills/ship/SKILL.md file 0644 259 5be47b18ff8b7617963988274bfd3f581393c7d3e888fd2a6da696b0653bd27e
+.claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
 .cursor/ dir 0755
 .cursor/BUGBOT.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .cursor/agents/ dir 0755
-.cursor/agents/architect.md file 0644 273 e53a365c205c149c5688c9a829fac7f27612cda1e6380acba0d2ae90ec1d23a9
-.cursor/agents/tester.md file 0644 245 60a09511b67458b495694ef72bc0548fa996500e3fd223e6df9ad3bd5a0f3559
+.cursor/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.cursor/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .cursor/cli.json file 0644 164 7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c
 .cursor/commands/ dir 0755
 .cursor/commands/build.md file 0644 81 b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef
@@ -240,17 +261,17 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .cursor/hooks.json file 0644 375 4ee59fc717970d5b4cf0fc1c3995d41643c5df5cec38e3eaa2a40ec5a4e8e4f2
 .cursor/mcp.json file 0600 343 6ef00d0b6bd8414858717a715a1c5f07ef9a722f90d0acb3e450025b645ccfa5
 .cursor/rules/ dir 0755
-.cursor/rules/always.mdc file 0644 351 de5637956bbdad1b8ccf53dba6bfb8bd65927bca25ba8dc2678614462e780243
-.cursor/rules/auto.mdc file 0644 362 e4de61edd1eb2bd8cceb072392dd94c11344b367d93fadae4366c4fab81b61e4
-.cursor/rules/context-architecture.mdc file 0644 340 ce60e21e00529915ed2c8603b6a65995089f1b67cb01029c63d3bb6ee28d71a5
-.cursor/rules/context-overview.mdc file 0644 351 d7df3c5f21a37590838c5b5faa07058df1c2daba5ab1fa8a9b8cee4642404e3d
-.cursor/rules/manual.mdc file 0644 340 5582514156b4d644712a281bdebb7e216af4e6e723c84409cb9a84b0798ba62e
-.cursor/rules/targeted.mdc file 0644 335 21eee309af65a4b55e4fd98fba22dee9b1883dc5733a2b64b7c6992ebf30a604
-.cursor/rules/typescript.mdc file 0644 390 1453e788fdf95e4ccbf5d22c4470a10b6502b1611fcbce0af0ec5b69ad5800f4
+.cursor/rules/always.mdc file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
+.cursor/rules/auto.mdc file 0644 277 afe47fdfcc7669e0c685dcbabf2a703fc3a9d993878850431becd23b436dad22
+.cursor/rules/context-architecture.mdc file 0644 255 355e35cba517e7f51002ffd853d57deb6fcecb661ed0853cbc24ac44f10a9898
+.cursor/rules/context-overview.mdc file 0644 266 bf769d85e9b2aae7d279408c2fb692d1e55051e5be994cddad9eba3941b6b792
+.cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
+.cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
+.cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .env.golden file 0644 27 d4b549fcc2672cda5726aaf8cf7aec3e2b2d43e4799018f57326034d34c213ed
 .gitignore file 0644 690 73e063635efb07c5863545ee197eee7ec312877280560e9656c04b4fa1792c66
 .mcp.json file 0600 415 361a3c1632667898efae3f2763974066bb23bf6e5f4fdf6c4ceea2d05183587a
-CLAUDE.md file 0644 575 d73249de49105166a02026b11419078259d7c87f6b204cc91baa84760034ca6a
+CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

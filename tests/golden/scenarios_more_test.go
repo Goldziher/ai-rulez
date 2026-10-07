@@ -48,7 +48,7 @@ args = ["--token", "${GOLDEN_TOKEN}"]
 				runEnv(goldenEnv, "generate", "--yes", "--no-local"),
 				runEnv(goldenEnv, "generate", "--dry-run", "--allow-local-drift"),
 				run("local", "show"),
-				run("clean", "--force"),
+				run("clean", "--yes"),
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func lifecycleScenarios(multi []string) []scenario {
 			steps: []step{
 				runEnv(goldenEnv, "generate", "--yes"),
 				run("clean", "--dry-run"),
-				run("clean", "--force"),
+				run("clean", "--yes"),
 			},
 		},
 		{
@@ -187,7 +187,8 @@ func lifecycleScenarios(multi []string) []scenario {
 			// (and the manifests that digest them) are left out of the snapshot.
 			name: "mcp-project-root",
 			files: map[string]string{
-				".ai-rulez/config.toml": `version = "4.0"
+				".ai-rulez/config.toml": `version = "5.0"
+agents_md = false
 name = "root"
 presets = ["claude", "cursor"]
 gitignore = true
@@ -217,7 +218,7 @@ args = ["--root", "${PROJECT_ROOT}"]
 		{
 			name: "invalid-config",
 			files: map[string]string{
-				".ai-rulez/config.toml": "version = \"4.0\"\nname = \"bad\"\npresets = [\"claude\", \"not-a-preset\"]\n",
+				".ai-rulez/config.toml": "version = \"5.0\"\nagents_md = false\nname = \"bad\"\npresets = [\"claude\", \"not-a-preset\"]\n",
 			},
 			git:   true,
 			steps: []step{run("generate", "--yes"), run("validate"), run("validate", "--strict")},
@@ -227,7 +228,8 @@ args = ["--root", "${PROJECT_ROOT}"]
 
 func userScenarios(all []string) []scenario {
 	userConfig := func(presets []string) string {
-		return `version = "4.0"
+		return `version = "5.0"
+agents_md = false
 name = "me"
 presets = ` + tomlList(presets) + `
 
@@ -274,7 +276,7 @@ domains = ["backend"]
 				run("generate", "--user", "--yes"),
 				run("generate", "--user", "--yes", "--profile", "backend"),
 				run("clean", "--user", "--dry-run"),
-				run("clean", "--user", "--force"),
+				run("clean", "--user", "--yes"),
 			},
 		},
 		{
@@ -301,7 +303,7 @@ func gitInclude(t *testing.T, base, _ string) {
 	t.Helper()
 	repo := filepath.Join(base, "shared")
 	files := map[string]string{
-		".ai-rulez/config.toml":        "version = \"4.0\"\nname = \"shared\"\npresets = []\n",
+		".ai-rulez/config.toml":        "version = \"5.0\"\nagents_md = false\nname = \"shared\"\npresets = []\n",
 		".ai-rulez/rules/shared.md":    "---\npriority: high\n---\n# Shared\n\nShared rule.\n",
 		".ai-rulez/context/shared.md":  "# Shared context\n",
 		".ai-rulez/skills/sk/SKILL.md": "---\nname: sk\ndescription: Shared skill\n---\n# SK\n",
@@ -378,7 +380,7 @@ args = ["serve"]
 			files: scopes,
 			exec:  scriptExec(),
 			git:   true,
-			steps: []step{runEnv(goldenEnv, "generate", "--yes"), runEnv(goldenEnv, "generate", "--check"), run("clean", "--force")},
+			steps: []step{runEnv(goldenEnv, "generate", "--yes"), runEnv(goldenEnv, "generate", "--check"), run("clean", "--yes")},
 		},
 		{
 			name:  "plugin",
@@ -413,7 +415,7 @@ args = ["serve"]
 			omit:        []string{".ai-rulez/ai-rulez.lock", ".ai-rulez/.generated-manifest.local.json", ".ai-rulez/.generated-manifest.json"},
 			steps: []step{
 				runEnv(goldenEnv, "generate", "--yes"),
-				runEnv(goldenEnv, "generate", "--yes", "--no-fetch"),
+				runEnv(goldenEnv, "generate", "--yes", "--offline"),
 				runEnv(goldenEnv, "lock"),
 				runEnv(goldenEnv, "lock", "--check"),
 				runEnv(goldenEnv, "generate", "--yes", "--locked"),
@@ -471,9 +473,9 @@ args = ["serve"]
 		{
 			name: "recursive",
 			files: map[string]string{
-				"a/.ai-rulez/config.toml":    "version = \"4.0\"\nname = \"a\"\npresets = [\"claude\"]\n",
+				"a/.ai-rulez/config.toml":    "version = \"5.0\"\nagents_md = false\nname = \"a\"\npresets = [\"claude\"]\n",
 				"a/.ai-rulez/rules/r.md":     "# A rule\n",
-				"b/c/.ai-rulez/config.toml":  "version = \"4.0\"\nname = \"c\"\npresets = [\"cursor\", \"codex\"]\n",
+				"b/c/.ai-rulez/config.toml":  "version = \"5.0\"\nagents_md = false\nname = \"c\"\npresets = [\"cursor\", \"codex\"]\n",
 				"b/c/.ai-rulez/context/c.md": "# C\n",
 			},
 			git:   true,
@@ -488,7 +490,7 @@ args = ["serve"]
 			}),
 			exec:  scriptExec(),
 			git:   true,
-			steps: []step{runEnv(goldenEnv, "generate", "--yes"), runEnv(goldenEnv, "generate", "--yes"), run("clean", "--force")},
+			steps: []step{runEnv(goldenEnv, "generate", "--yes"), runEnv(goldenEnv, "generate", "--yes"), run("clean", "--yes")},
 			full:  false,
 		},
 	}

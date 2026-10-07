@@ -26,7 +26,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 1ab1d10fbb1380eef5bd11ed78f7006aac806b8fd3f1997b31da07f12efab3ce
+.ai-rulez/config.toml file 0644 846 606012f1063762578256c15c50c33df17cba7caca55c77ec5b8040ad5946881e
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -47,30 +47,30 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .augment/ dir 0755
 .augment/agents/ dir 0755
-.augment/agents/architect.md file 0644 259 9a3eaab2c4902b01abeef9add78cd7525811a786c54b501231e802006be643aa
-.augment/agents/tester.md file 0644 245 33ce79502ee970ab82a6ed7a2eac0e2a1fea3890997654c7a0d12a78b8bfe288
+.augment/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.augment/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .augment/code_review_guidelines.yaml file 0644 375 47e43af38313b3f1a322bf40d6c04365e9f8c1696947778a994e0fc50e4fa217
 .augment/commands/ dir 0755
-.augment/commands/build.md file 0644 250 07d18fd80da31e26dd2cc609783285dbdf4c147f9fbac1bafe04e41f366685c9
-.augment/commands/ship.md file 0644 227 28b582a80f54ed0e236d031ed104509123fccaf6f11af3fea5761a0fbdc5fb94
+.augment/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.augment/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .augment/rules/ dir 0755
-.augment/rules/always.md file 0644 352 fd9a7dc3594891186417ad20eca6a9cb901f63ead426abd7104471358ed80c27
-.augment/rules/auto.md file 0644 365 c87be12792ca96195bbcbcfe5c4a6fa756e07553d3bb9019a476d4d216635ebb
-.augment/rules/manual.md file 0644 334 002ffb3a5542dad7af784b03916a8b1131bb4836e97b264bb3c51fe91877b9a5
-.augment/rules/typescript.md file 0644 349 da37af5076ed53eb460abdd5c07b43f5035631bc1976e63c7860ceab8db89793
+.augment/rules/always.md file 0644 267 7d40f461b55cdc34e5bef9549a4cccf21c56adecd219ddbefbba3d2e5ec33b34
+.augment/rules/auto.md file 0644 280 5cc67ee476077fc333852adfe4770e69f8876d23db5237e46469e27bdaad8f45
+.augment/rules/manual.md file 0644 249 8e0035e3ab12fe8b91b3c435151d5e7a6ebbfa5c763af7b8561b1ba1b5a86e55
+.augment/rules/typescript.md file 0644 264 56127024c810a97cb016b65fe0a79e68e5f91cf8dfaa52ec5b2f74cdd4ec5591
 .augment/settings.json file 0600 940 1779e0a1dc76188223f3505ec6e54847c181ba66c78f921d31859043fd4b67f6
 .augment/skills/ dir 0755
 .augment/skills/deployer/ dir 0755
-.augment/skills/deployer/SKILL.md file 0644 259 357af6ff460d254090a89e22705dba226f8728f30088d29bdaa87d9af5fd818e
+.augment/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .augment/skills/reviewer/ dir 0755
-.augment/skills/reviewer/SKILL.md file 0644 506 e3290871fd1cbefccec3fafbb2463ee107a475913b32f1d25e8bc10445efac23
+.augment/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .augment/skills/reviewer/references/ dir 0755
 .augment/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .augment/skills/reviewer/scripts/ dir 0755
 .augment/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 384 4bc96f1ee819413cef4f43f60432610a866e4749d637923fe6453ef3e1b94e65
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 7a048cddf4fd45e64c78078e78e4c3c8cfe6113bf09fe218f667b98e17563b49
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -120,7 +120,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -165,7 +165,7 @@ INFO  Removed generated files files=16 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 1ab1d10fbb1380eef5bd11ed78f7006aac806b8fd3f1997b31da07f12efab3ce
+.ai-rulez/config.toml file 0644 846 606012f1063762578256c15c50c33df17cba7caca55c77ec5b8040ad5946881e
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

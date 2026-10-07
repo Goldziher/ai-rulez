@@ -26,7 +26,7 @@ func scannerProject(t *testing.T) string {
 	}
 	dir := testutil.CreateTempDir(t)
 	cfg := filepath.Join(dir, ".ai-rulez")
-	putFile(t, cfg, "config.toml", `version = "4.0"
+	putFile(t, cfg, "config.toml", `version = "5.0"
 name = "s"
 presets = ["claude"]
 

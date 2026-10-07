@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 830 9c94f2b7b279e474c8439111bb6f8454d89c1677f752e069934acfb2d255aa3d
+.ai-rulez/config.toml file 0644 848 08eed3f6ffef6433a404976701a7eaa4768c0b715ac788b65e1862d55231f43f
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,26 +44,26 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .codewhale/ dir 0755
 .codewhale/commands/ dir 0755
-.codewhale/commands/build.md file 0644 250 98f0b356b4f35e480baa6e993e6af9db2ae9348cd72751ad5bd7f10bb6750abb
-.codewhale/commands/ship.md file 0644 227 2889cfbf48f495132880a5faf5d896995f37deccad70166c615be1a4ef6c1ec3
+.codewhale/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.codewhale/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .codewhale/mcp.json file 0600 352 5b26a6649f08b530a8a5588ccdf1f17ebf3c5c2130201ec7e26b10a52e0093c9
 .codewhale/rules/ dir 0755
-.codewhale/rules/always.md file 0644 325 1027fdfd98840ba83627d6c71064361793f6a6f41209d601ff7dd739ecb92692
-.codewhale/rules/auto.md file 0644 302 d2609d2b354ce1e629424ae50988f5ab5ebc60a6b35e54f53554807e1644d05e
-.codewhale/rules/manual.md file 0644 313 9f6d77510301f8013a5439cd095bbd80c82346a0ad2de0bcbc3287b9e756dfd9
-.codewhale/rules/typescript.md file 0644 369 78961b23bd65b34fd01f48de8dca432d9bab4cffa837e2c8cce3453b1fb93727
+.codewhale/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.codewhale/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.codewhale/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.codewhale/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .codewhale/skills/ dir 0755
 .codewhale/skills/deployer/ dir 0755
-.codewhale/skills/deployer/SKILL.md file 0644 259 63ceb9d0633a4c4b9bf4e10117dacae0d8c6a38360c87341e35fa5bb27310226
+.codewhale/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .codewhale/skills/reviewer/ dir 0755
-.codewhale/skills/reviewer/SKILL.md file 0644 506 a3e922eb556ead647be96441ea782e4d8fc2381c6022439f99340930927f476d
+.codewhale/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .codewhale/skills/reviewer/references/ dir 0755
 .codewhale/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .codewhale/skills/reviewer/scripts/ dir 0755
 .codewhale/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 376 8d047003a1165e5d9501655888138d12a60c44530c94c249732f9507889b7714
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 033486f352351a2ddb2f64811ec4d5f80771bf1b377d50e13ad263faac385407
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -107,7 +107,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -148,7 +148,7 @@ INFO  Removed generated files files=13 directories=8
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 830 9c94f2b7b279e474c8439111bb6f8454d89c1677f752e069934acfb2d255aa3d
+.ai-rulez/config.toml file 0644 848 08eed3f6ffef6433a404976701a7eaa4768c0b715ac788b65e1862d55231f43f
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

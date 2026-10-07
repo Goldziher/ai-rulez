@@ -21,7 +21,7 @@ INFO  Generation complete files=18
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 3ea9bb59ee5291a226e86c31f693debb9108db8c4e1d37553d203c877d0f9881
+.ai-rulez/config.toml file 0644 844 5ab2605f772f5e04e2e2b26a6ad90f3c15e8f08334d587b140e22196f2990045
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -42,31 +42,31 @@ INFO  Generation complete files=18
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .devin/ dir 0755
 .devin/agents/ dir 0755
-.devin/agents/architect.md file 0644 273 1543065ed95a18d5b3ee23ac38c70394b3a283c89afe7272cc7b6ff8e191664b
-.devin/agents/tester.md file 0644 268 ad715cc04e1a3c4c4599f23e3816a99a57da619060989877534e722e287ae376
+.devin/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.devin/agents/tester.md file 0644 181 000e4a75e8281da1d0fc4051b5a3fe3d8c847502fbe91f3cd925eedb742c3ce2
 .devin/config.json file 0644 237 bc2afde2e8fe0bbccd3875196a2eb5ff9b24682b1445e7b7aa1f4155f0284dfb
 .devin/hooks.v1.json file 0644 376 cd48b1f3ebc1741b685095fccf0ca599fd4c7562295f650ff11eb8c85a598423
 .devin/mcp_config.json file 0644 355 063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73
 .devin/rules/ dir 0755
-.devin/rules/always.md file 0644 352 c38ee52afc47f442e843b42f86491110e0e0dd30dde1ee77db58ca5090e78cf0
-.devin/rules/auto.md file 0644 367 91d84fbc94db6a0e9e601ab1b74678f1e21f0ab721bf06c403650198c1807239
-.devin/rules/context-architecture.md file 0644 341 49d824acc433c115bd3bf96cec0477d56f34abc1f8b8ed31c04d0ed04b738342
-.devin/rules/context-overview.md file 0644 352 b9df0bcd2487e23543ebbc0140f97a92e36063caa38f8c58df461009e141e5fe
-.devin/rules/manual.md file 0644 337 fe8f42b4ba5ea734437bef92fbd3902f03c48333fc14dd6ee175b10e7b7a2b0d
-.devin/rules/typescript.md file 0644 385 e3705fdc2dd9c1df522d8e66b902564909f2eb6f23766af6a42a48eb90e39d64
+.devin/rules/always.md file 0644 267 8d22ebebb39d9a32e594528873d26b3fecd70f3345de787f36bc5d7bfabc8d95
+.devin/rules/auto.md file 0644 282 cbb82d8013eb3e2fb28f34487ba0c28eea92da8a24b57226423e7e98b7e2ba21
+.devin/rules/context-architecture.md file 0644 256 8ca857f9853f6fefad64a088da84235d3fe50dbb04f7398fac435909fe2e97ec
+.devin/rules/context-overview.md file 0644 267 3170fe2bf16173f6049f1d0c281d417182315a00c2d5900054f8f9f55dc38130
+.devin/rules/manual.md file 0644 252 bbedb2a973b7591599b37b437f16c115f0dbece6bbf99d5541f10c0873bd4714
+.devin/rules/typescript.md file 0644 300 a56baf9a61d2a22868f949a4be908e99dea10f7aa5a81271399ffab2b1006650
 .devin/skills/ dir 0755
 .devin/skills/build/ dir 0755
-.devin/skills/build/SKILL.md file 0644 283 9b715c6198ebb8b13f71411ce23969876b1f7e1516a7ee2050de46ddc92fae74
+.devin/skills/build/SKILL.md file 0644 196 a7fec0442d98575084e6e2c95746f42de3c457962e2377dc48b4dbbb358169d1
 .devin/skills/deployer/ dir 0755
-.devin/skills/deployer/SKILL.md file 0644 261 56dffdf091c35eea207000f9ab4a200336ba0b42cd2b626cea40f0024b9f08aa
+.devin/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .devin/skills/reviewer/ dir 0755
-.devin/skills/reviewer/SKILL.md file 0644 508 0db9319534256d885fe69126cfe8271c26d01c522d48e8660f59ee5ab2b511ad
+.devin/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .devin/skills/reviewer/references/ dir 0755
 .devin/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .devin/skills/reviewer/scripts/ dir 0755
 .devin/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .devin/skills/ship/ dir 0755
-.devin/skills/ship/SKILL.md file 0644 259 0e4b4893fe14dcdad185f441ae7cd819b8037c890dfb4ea8876dc954a462cab9
+.devin/skills/ship/SKILL.md file 0644 172 d8de428210d703724d88d1605e2981304ccaf07eef38d4d86417b6fb3a58ce19
 .gitignore file 0644 428 3516d0432bdbdcce23e94bf5d88eff86c5263f11cec00e133d1de4b8aa0cb923
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 scripts/ dir 0755
@@ -109,7 +109,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -157,7 +157,7 @@ INFO  Removed generated files files=18 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 3ea9bb59ee5291a226e86c31f693debb9108db8c4e1d37553d203c877d0f9881
+.ai-rulez/config.toml file 0644 844 5ab2605f772f5e04e2e2b26a6ad90f3c15e8f08334d587b140e22196f2990045
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -39,7 +39,7 @@ func bumpConfigVersionToV5(t *testing.T, workingDir string) {
 	path := filepath.Join(workingDir, ".ai-rulez", "config.toml")
 	raw, err := os.ReadFile(path)
 	require.NoError(t, err)
-	bumped := strings.Replace(string(raw), `version = "4.0"`, "version = \"5.0\"\nagents_md = false", 1)
+	bumped := strings.Replace(string(raw), `version = "5.0"`, "version = \"5.0\"\nagents_md = false", 1)
 	require.NotEqual(t, string(raw), bumped, "fixture should declare version 4.0")
 	// Pin the pre-v5 defaults the assertions were written against: per-preset
 	// files rather than a canonical AGENTS.md, and full content hashes.

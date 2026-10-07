@@ -21,7 +21,7 @@ INFO  Generation complete files=15
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 56efd592d59c135f95bd4b4792f6e80af341bebb7469e812bd595530495cec0b
+.ai-rulez/config.toml file 0644 844 a08f5caf066673811ea9c93cfc0d2f1a15a2afb16f28a8858afe71389edd5523
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,27 +44,27 @@ INFO  Generation complete files=15
 .mcp.json file 0600 427 073ead1bdffff9e4912031337e55d0ec5faf83ca3047ef05f4e6e0671e98a6ce
 .qoder/ dir 0755
 .qoder/agents/ dir 0755
-.qoder/agents/architect.md file 0644 259 8114ef640e04cfe5c968b513f4fc14f2be58b2de2f8e0179e39879b0a8c56dc1
-.qoder/agents/tester.md file 0644 245 a177bd600dd517b562e824f7f6d4bc892231636c34ca7eb9fbcb46b95d671472
+.qoder/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.qoder/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .qoder/commands/ dir 0755
-.qoder/commands/build.md file 0644 250 8e6988f341e0b6b2638972bf4acce168e9673aa478fae9580b5a6fc3c252915a
-.qoder/commands/ship.md file 0644 227 8d079b703fb37cb76a2a44cd637f84100e86d4f1f87535a12471e06c430ec0fa
+.qoder/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.qoder/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .qoder/rules/ dir 0755
-.qoder/rules/always.md file 0644 352 2d34a0cab42c3d67baa5b8374a0b19ca400c3c3c59723f9bd590794f14a3f002
-.qoder/rules/auto.md file 0644 367 22ec074982018c2d1b62809226be4349796de3ac390741f888f54cf78432bd40
-.qoder/rules/manual.md file 0644 337 ad2b918d489d4402168f86b46dda1e165eca90e062517c86e95e209e51523e2b
-.qoder/rules/typescript.md file 0644 389 864ab56262a0fbafca14d2a774968b5b43b0d6e0383b0ac864d54153885ab8d2
+.qoder/rules/always.md file 0644 267 8d22ebebb39d9a32e594528873d26b3fecd70f3345de787f36bc5d7bfabc8d95
+.qoder/rules/auto.md file 0644 282 cbb82d8013eb3e2fb28f34487ba0c28eea92da8a24b57226423e7e98b7e2ba21
+.qoder/rules/manual.md file 0644 252 bbedb2a973b7591599b37b437f16c115f0dbece6bbf99d5541f10c0873bd4714
+.qoder/rules/typescript.md file 0644 304 f0643c8c070a6a3eef242a2c08b4002fcebe8079b98a7e96b640df932a2ffe13
 .qoder/settings.json file 0644 642 284282c4b3d649c588534d622f4f0bf957d579797ad14b0d3ac2bdb277d65ccf
 .qoder/skills/ dir 0755
 .qoder/skills/deployer/ dir 0755
-.qoder/skills/deployer/SKILL.md file 0644 259 d9aa838a5ca7502d8432c8dfe8bd3b35fcfabb90b11825133fb7830f82667a73
+.qoder/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .qoder/skills/reviewer/ dir 0755
-.qoder/skills/reviewer/SKILL.md file 0644 506 fff7bb084da3e1b5a12a270bfc9869741cf0adf9a8a1d416d775068856a26a04
+.qoder/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .qoder/skills/reviewer/references/ dir 0755
 .qoder/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .qoder/skills/reviewer/scripts/ dir 0755
 .qoder/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 575 9beaa038b012a9a5b5270b6c00ca52103294d6e627b841bf3af65a1c14e46f93
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -149,7 +149,7 @@ INFO  Removed generated files files=15 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 56efd592d59c135f95bd4b4792f6e80af341bebb7469e812bd595530495cec0b
+.ai-rulez/config.toml file 0644 844 a08f5caf066673811ea9c93cfc0d2f1a15a2afb16f28a8858afe71389edd5523
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

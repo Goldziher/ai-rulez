@@ -14,7 +14,7 @@ func TestSearchCLI(t *testing.T) {
 	dir := testutil.CreateTempDir(t)
 	skill := filepath.Join(dir, ".ai-rulez", "skills", "refund-policy")
 	require.NoError(t, os.MkdirAll(skill, 0o755))
-	testutil.WriteFile(t, filepath.Join(dir, ".ai-rulez"), "config.toml", "version = \"4.0\"\nname = \"search\"\npresets = [\"claude\"]\n")
+	testutil.WriteFile(t, filepath.Join(dir, ".ai-rulez"), "config.toml", "version = \"5.0\"\nname = \"search\"\npresets = [\"claude\"]\n")
 	testutil.WriteFile(t, skill, "SKILL.md", "---\nname: refund-policy\ndescription: Process customer refund requests\ntriggers:\n  - customer wants money back\n---\nbody\n")
 	testutil.WriteFile(t, dir, "cases.yaml", "version: 1\ncases:\n  - {id: refund, query: money back, expect: [refund-policy]}\n")
 
