@@ -108,15 +108,14 @@ func Serve(ctx context.Context, name string, in io.Reader, out io.Writer, worksp
 		resp = &improve.OptimizerResponse{Version: improve.ProtocolVersion, Summary: "no-op adapter: made no change", Changed: []string{}}
 	case ReviewFix:
 		resp, err = RunReviewFix(ctx, req, workspace, &opts.ReviewFix)
-		if err != nil {
-			return err
+	}
+	if resp != nil {
+		// Printed on failure too: the response then carries what the failed round spent, which improve charges.
+		if werr := json.NewEncoder(out).Encode(resp); werr != nil && err == nil {
+			return fmt.Errorf("write the response: %w", werr)
 		}
 	}
-	enc := json.NewEncoder(out)
-	if err := enc.Encode(resp); err != nil {
-		return fmt.Errorf("write the response: %w", err)
-	}
-	return nil
+	return err
 }
 
 // RefusedError reports an adapter that cannot run (AR9J9): a missing model, no network opt-in, a

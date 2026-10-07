@@ -84,7 +84,9 @@ decision and nothing else.
 `changed` is informational: ai-rulez computes the real diff. `cost_usd` is self-reported and counts against
 `--max-cost`; a run whose optimizer never reports a cost is flagged. `summary` and `notes` are untrusted: control
 characters are removed and they are never fed to a model. A crash, timeout, invalid JSON or wrong version rejects
-that round only.
+that round only, and the round is charged: the `cost_usd` of a well-formed answer the optimizer printed before it
+failed (the bundled adapters print one), else the whole `budget.max_cost_usd` it was handed, so the next round gets
+only what is left.
 
 ## Bundled adapters
 

@@ -352,6 +352,50 @@ func TestExecute_OptimizerFailuresRejectTheRoundOnly(t *testing.T) {
 	}
 }
 
+func TestExecute_AFailedOptimizerRoundIsChargedAndTheBudgetShrinks(t *testing.T) {
+	tests := []struct {
+		name string
+		// stdout is what the failing optimizer printed before it exited 1.
+		stdout     string
+		wantHanded []float64
+		wantOpt    float64
+	}{
+		// baseline held-out and train cost 0.02 each, so 0.36 is left for round 1
+		{"no cost reported: the whole budget it was handed is charged", "", []float64{0.36}, 0.36},
+		{"the cost it printed is charged", `{"version":1,"summary":"failed","changed":[],"cost_usd":0.05}`, []float64{0.36, 0.31, 0.26}, 0.15},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root, configDir := project(t)
+			var handed []float64
+			opt := &runner.Fake{Handle: func(s runner.Spec) runner.Result {
+				var req OptimizerRequest
+				if err := json.Unmarshal(s.Stdin, &req); err != nil {
+					return runner.Result{Status: runner.StatusError, Err: err}
+				}
+				handed = append(handed, req.Budget.MaxCostUSD)
+				return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stdout: []byte(tt.stdout)}
+			}}
+			o := baseOptions(root, configDir, goodEval(), opt)
+			o.MaxRounds, o.MaxCostUSD = 3, 0.40
+			plan := mustPrepare(t, &o)
+
+			// Act
+			report, err := plan.Execute(context.Background())
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantHanded, handed)
+			assert.InDelta(t, tt.wantOpt, report.Costs.OptimizerUSD, 1e-9)
+			assert.LessOrEqual(t, report.Costs.TotalUSD, o.MaxCostUSD+1e-9)
+			for _, rd := range report.Rounds {
+				assert.Positive(t, rd.OptCostUSD, "round %d", rd.Round)
+			}
+		})
+	}
+}
+
 func TestExecute_NothingToGainStopsBeforeTheOptimizer(t *testing.T) {
 	// Arrange
 	root, configDir := project(t)
