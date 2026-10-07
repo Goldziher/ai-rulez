@@ -302,7 +302,7 @@ func (k scanCacheKeyInput) hash() string {
 func digestStage(files []stagedFile) string {
 	h := sha256.New()
 	for _, f := range files { // sorted by stageFiles
-		fmt.Fprintf(h, "%d:%s\x00%d:", len(f.rel), f.rel, len(f.data))
+		h.Write(fmt.Appendf(nil, "%d:%s\x00%d:", len(f.rel), f.rel, len(f.data)))
 		h.Write(f.data)
 		h.Write([]byte{0})
 	}
