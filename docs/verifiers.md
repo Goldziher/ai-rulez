@@ -239,7 +239,8 @@ expect_exit = 0                     # optional
   characters with credential-looking text masked.
 - **Environment allowlist.** The child gets only `PATH`, `HOME`, `USER`, `TMPDIR`, `TZ`, the locale (`LANG`, `LC_*`),
   `CI`, `NO_COLOR` and `TERM=dumb`, plus the names listed in `[verifiers_settings] command_env`. A verifier cannot read
-  CI secrets; `command_env` refuses credential-looking and proxy names (`*_TOKEN`, `*_SECRET`, `*_API_KEY`, `HTTPS_PROXY`...).
+  CI secrets; `command_env` refuses credential-looking and proxy names (`*_TOKEN`, `*_SECRET`, `*_KEY`, `*_SK`, `*_BEARER`,
+  `*_PASS`, `HTTPS_PROXY`...). The check reads the name only: a credential under an unremarkable name still passes.
 - **No network sandbox.** ai-rulez cannot sandbox network use portably. Enforce it with an OS sandbox or the CI egress
   policy.
 - **Imported verifiers** (from an include) cannot use `command` unless the include is allowlisted, see
