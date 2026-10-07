@@ -1,0 +1,21 @@
+version = "5.0"
+name = "main-4x"
+presets = ["claude", "devin"]
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+[lint.ratchet]
+AR201 = 2
+
+[[hooks]]
+event = "Stop"
+targets = ["claude"]
+
+[[hooks.hooks]]
+command = "ai-rulez telemetry prune --keep-days 30 && ai-rulez telemetry export --to file out.ndjson"
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"

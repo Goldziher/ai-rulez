@@ -38,6 +38,7 @@ const (
 	RuleLocalOverlay  = "local-overlay"
 	RuleFrontmatter   = "frontmatter-alias"
 	RuleCommand       = "command-rename"
+	RulePreset        = "preset-rename"
 )
 
 // Options configures a migration run.
@@ -371,7 +372,13 @@ func planMainConfig(p *plan, dir string, doc *tomlDoc, oldVersion, srcName strin
 		p.change(file, RuleVersion, "version "+from+" -> "+config.ConfigVersionV5)
 	}
 	if n := doc.renameLintBudget(); n > 0 {
-		p.change(file, RuleLintRatchet, "[lint.budget] renamed to [lint.ratchet] (per-rule finding counts); size limits stay in [lint.budgets]")
+		p.change(file, RuleLintRatchet, "[lint.budget] / [lint.tolerate] renamed to [lint.ratchet] (per-rule finding counts); size limits stay in [lint.budgets]")
+	}
+	if n := doc.renamePreset("windsurf", "devin"); n > 0 {
+		p.change(file, RulePreset, "preset windsurf renamed to devin (outputs move from .windsurf/ to .devin/; delete the old directory)")
+	}
+	if n := doc.dropPreset("continue-dev"); n > 0 {
+		p.change(file, RulePreset, "preset continue-dev removed (it has no replacement; delete the old .continue/rules/ outputs)")
 	}
 	for _, rw := range commandRewrites {
 		if n := doc.replaceAll(rw.old, rw.new); n > 0 {
