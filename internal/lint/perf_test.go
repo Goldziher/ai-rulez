@@ -37,7 +37,7 @@ func syntheticSkillBody(lines int) string {
 		case 7:
 			sb.WriteString("The reviewer, the author and the maintainer each own one part of the change; ask them when a step is unclear or when the tests disagree with the description.\n")
 		default:
-			sb.WriteString("Remember to update the documentation, the changelog and the examples whenever the behaviour of a command or an option changes for the user.\n")
+			sb.WriteString("Remember to update the documentation, the changelog and the examples whenever the behavior of a command or an option changes for the user.\n")
 		}
 	}
 	// close an unterminated fence

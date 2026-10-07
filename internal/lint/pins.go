@@ -56,6 +56,19 @@ func pinOf(spec string) (name, version string) {
 	return spec, ""
 }
 
+// gitShorthandProblem handles npm's github:owner/repo style specs: pinned only
+// with a #<commit or version> suffix.
+func gitShorthandProblem(spec string) (why string, isShorthand bool) {
+	host, rest, ok := strings.Cut(spec, ":")
+	if !ok || (host != FormatGitHub && host != "gitlab" && host != "bitbucket") {
+		return "", false
+	}
+	if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref)) {
+		return "", true
+	}
+	return "the " + host + " shorthand has no #<commit> pin, so it follows the default branch", true
+}
+
 // npmPinProblem reports why an npm package spec is not pinned ("" when pinned
 // or not a registry package).
 func npmPinProblem(spec string) string {
@@ -63,11 +76,8 @@ func npmPinProblem(spec string) string {
 		strings.Contains(spec, "://") || strings.HasPrefix(spec, "file:") || strings.HasPrefix(spec, "git+") {
 		return ""
 	}
-	if host, rest, ok := strings.Cut(spec, ":"); ok && (host == "github" || host == "gitlab" || host == "bitbucket") {
-		if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref)) {
-			return ""
-		}
-		return "the " + host + " shorthand has no #<commit> pin, so it follows the default branch"
+	if why, isShorthand := gitShorthandProblem(spec); isShorthand {
+		return why
 	}
 	_, ver := pinOf(spec)
 	switch {
