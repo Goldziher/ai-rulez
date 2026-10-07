@@ -578,6 +578,7 @@ type tomlConfig struct {
 	Catalog         *CatalogConfig         `toml:"catalog"`
 	Signing         *SigningConfig         `toml:"signing"`
 	Publish         *PublishConfig         `toml:"publish"`
+	ARD             *ARDConfig             `toml:"ard"`
 	LLM             *llm.Config            `toml:"llm"`
 	Telemetry       *TelemetryConfig       `toml:"telemetry"`
 	Review          *ReviewConfig          `toml:"review"`
@@ -677,6 +678,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Catalog:         raw.Catalog,
 		Signing:         raw.Signing,
 		Publish:         raw.Publish,
+		ARD:             raw.ARD,
 		LLM:             raw.LLM,
 		Telemetry:       raw.Telemetry,
 		Review:          raw.Review,

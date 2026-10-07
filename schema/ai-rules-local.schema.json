@@ -245,6 +245,34 @@
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to true in v5: AGENTS.md is the canonical instruction file and tools that do not read it import it. Set false for per-tool outputs.",
       "type": "boolean"
     },
+    "ard": {
+      "additionalProperties": false,
+      "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see docs/ard.md.",
+      "properties": {
+        "base_url": {
+          "description": "https URL the skill files and server cards are served from. Without it entries point at the release of the repository.",
+          "pattern": "^https://",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Identifier segment between publisher and name; colons separate sub-segments.",
+          "pattern": "^[A-Za-z0-9._-]+(:[A-Za-z0-9._-]+)*$",
+          "type": "string"
+        },
+        "plugin_type": {
+          "description": "Media type of plugin entries. Default application/vnd.ai-rulez.plugin+json, because the spec registers none.",
+          "pattern": "^[^\\s/]+/[^\\s/]+$",
+          "type": "string"
+        },
+        "publisher": {
+          "description": "Fully qualified domain name the identifiers are anchored to, normally the domain that serves /.well-known/ard.json.",
+          "maxLength": 253,
+          "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "builtins": {
       "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
       "oneOf": [
@@ -1650,6 +1678,37 @@
       },
       "type": "object"
     },
+    "llms_txt": {
+      "additionalProperties": false,
+      "description": "llms.txt output written by the llms-txt preset and linted by `validate --strict` (AR9P0-AR9P6).",
+      "properties": {
+        "dir": {
+          "description": "Directory llms.txt is written to, relative to the project root. Defaults to the project root. Must not be inside the configuration directory or .git.",
+          "type": "string"
+        },
+        "full": {
+          "description": "Also write llms-full.txt, holding the full text of every listed item.",
+          "type": "boolean"
+        },
+        "include": {
+          "description": "Content kinds to list. Defaults to rules, context and skills; agents and commands are listed in the Optional section.",
+          "items": {
+            "enum": ["rules", "context", "skills", "agents", "commands"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "description": "Blockquote under the title. Defaults to the project description.",
+          "type": "string"
+        },
+        "title": {
+          "description": "H1 of the file. Defaults to the project name.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "lock": {
       "additionalProperties": false,
       "description": "Content pinning in ai-rulez.lock (see docs/lockfile.md).",
@@ -2029,37 +2088,6 @@
       "description": "Project name",
       "minLength": 1,
       "type": "string"
-    },
-    "llms_txt": {
-      "additionalProperties": false,
-      "description": "llms.txt output written by the llms-txt preset and linted by `validate --strict` (AR9P0-AR9P6).",
-      "properties": {
-        "dir": {
-          "description": "Directory llms.txt is written to, relative to the project root. Defaults to the project root. Must not be inside the configuration directory or .git.",
-          "type": "string"
-        },
-        "full": {
-          "description": "Also write llms-full.txt, holding the full text of every listed item.",
-          "type": "boolean"
-        },
-        "include": {
-          "description": "Content kinds to list. Defaults to rules, context and skills; agents and commands are listed in the Optional section.",
-          "items": {
-            "enum": ["rules", "context", "skills", "agents", "commands"],
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "summary": {
-          "description": "Blockquote under the title. Defaults to the project description.",
-          "type": "string"
-        },
-        "title": {
-          "description": "H1 of the file. Defaults to the project name.",
-          "type": "string"
-        }
-      },
-      "type": "object"
     },
     "okf": {
       "additionalProperties": false,
@@ -2628,7 +2656,15 @@
             "additionalProperties": false,
             "properties": {
               "name": {
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering", "agent-plugins"],
+                "enum": [
+                  "template",
+                  "cursor-team-marketplace",
+                  "port",
+                  "aws-agent-registry",
+                  "kiro-steering",
+                  "agent-plugins",
+                  "ard"
+                ],
                 "type": "string"
               },
               "options": {
