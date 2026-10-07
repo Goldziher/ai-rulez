@@ -1,0 +1,11 @@
+version = "5.0"
+name = "web"
+presets = ["cursor"]
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"
