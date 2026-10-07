@@ -201,7 +201,7 @@ func classifyGRPC(err error) error {
 	switch st.Code() {
 	case codes.OK:
 		return nil
-	case codes.Unavailable, codes.ResourceExhausted, codes.DeadlineExceeded, codes.Aborted, codes.Canceled:
+	case codes.Unavailable, codes.ResourceExhausted, codes.DeadlineExceeded, codes.Aborted, codes.Canceled, codes.Internal, codes.Unknown:
 		return &transientError{msg: "collector returned " + st.Code().String(), retryAfter: retryInfo(st)}
 	}
 	return fmt.Errorf("%w: grpc code %s", ErrRejected, st.Code())
