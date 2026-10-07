@@ -294,12 +294,16 @@ func lock(path string, wait, stale time.Duration) (release func(), err error) {
 		} else if created {
 			return func() { releaseLock(path, token) }, nil
 		}
-		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > stale {
-			if takeOver(path, token, info.ModTime(), stale) {
-				return func() { releaseLock(path, token) }, nil
-			}
-			continue
+		info, statErr := os.Lstat(path)
+		if statErr == nil && !info.Mode().IsRegular() {
+			// Never a lock this code made, and one a takeover cannot remove.
+			return nil, oops.With("path", path).Errorf("take telemetry lock: the lock path is not a regular file; remove it")
 		}
+		if statErr == nil && time.Since(info.ModTime()) > stale && takeOver(path, token, info.ModTime(), stale) {
+			return func() { releaseLock(path, token) }, nil
+		}
+		// A failed takeover waits like a held lock: it may keep failing (a
+		// guard held by another process, a lock that cannot be removed).
 		if !time.Now().Before(deadline) {
 			return nil, ErrBusy
 		}
