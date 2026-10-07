@@ -919,3 +919,15 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it (and `ai-rulez sign --lock` when [signing] require is set)").
 		Wrapf(errLockedSourceDrift, "%s does not match the sources:\n  %s", "ai-rulez.lock", strings.Join(lines, "\n  "))
 }
+
+// FormatError renders err for the terminal: the error text, then the oops hint
+// when the error carries one.
+func FormatError(err error) string {
+	text := err.Error()
+	if oopsErr, ok := oops.AsOops(err); ok {
+		if hint := oopsErr.Hint(); hint != "" {
+			text += "\n\nHint: " + hint
+		}
+	}
+	return text
+}
