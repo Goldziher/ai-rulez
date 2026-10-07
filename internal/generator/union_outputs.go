@@ -104,7 +104,11 @@ func unionArrayKey(a, b jsonmerge.OwnedKey) (jsonmerge.OwnedKey, bool) {
 		if !ok {
 			return a, false
 		}
-		combined.Elements, _ = elements.([]any)
+		list, isList := elements.([]any)
+		if !isList {
+			list = nil
+		}
+		combined.Elements = list
 	}
 	return combined, true
 }

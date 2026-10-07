@@ -1223,7 +1223,10 @@ func rootAgentsMD(d *diag.Collector, allOutputs map[string][]config.OutputFile, 
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
 	// A conflict is reported by collectOutputs; the files found so far still tell
 	// what AGENTS.md says.
-	flat, _ := flattenPresetOutputs(d, nil, nil, allOutputs)
+	flat, err := flattenPresetOutputs(d, nil, nil, allOutputs)
+	if err != nil && len(flat) == 0 {
+		return "", false
+	}
 	for _, o := range flat {
 		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
 			return o.Content, true
