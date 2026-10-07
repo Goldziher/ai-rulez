@@ -525,6 +525,14 @@ func (g *Generator) warnIgnoredPlugins() {
 		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml")
 }
 
+// warnLegacyFiles warns about 4.x files beside config.toml that v5 no longer
+// reads: without it their settings and MCP servers vanish without a word.
+func (g *Generator) warnLegacyFiles() {
+	for _, name := range config.LegacyFilesBeside(g.manifestDir()) {
+		g.log().Warn(name + " is no longer read by v5 and is ignored; run `" + config.MigrateCommandHint + "` to fold it into config.toml, then delete it")
+	}
+}
+
 // stalePluginDirs lists the generated domain-plugin directories whose plugin is
 // no longer planned (its domain disappeared, or its declaration was removed).
 // Only directories carrying ai-rulez's provenance sidecar qualify. The plan is
@@ -1040,6 +1048,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	presets.WarnDuplicateContent(g.log(), contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnIgnoredPlugins()
+	g.warnLegacyFiles()
 	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
 		g.config.Diag.Warn(diagnostic)
 	}
