@@ -120,7 +120,7 @@ func ListRemoteTags(ctx context.Context, repoURL, token string) ([]tagresolve.Ra
 func offline(ctx context.Context) bool { return config.OfflineIncludes(ctx) }
 
 // versionRef returns what to fetch for want w, resolving its version constraint
-// when it has one. A source with a plain ref keeps the old behaviour: the locked
+// when it has one. A source with a plain ref keeps the old behavior: the locked
 // commit when pinned, else the ref. A constraint is resolved only here, on the
 // paths that may move a pin (`lock` for a source the lock does not cover or an
 // `update` that advances it); a covered pin is used as it is.

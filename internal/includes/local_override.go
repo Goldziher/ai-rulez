@@ -8,7 +8,7 @@ import (
 
 // checkLocalOverride refuses a local_override that bypasses an enforced lock.
 // local_override swaps a pinned remote source for an unpinned local directory,
-// so it is a development shortcut: it is honoured from the machine-local
+// so it is a development shortcut: it is honored from the machine-local
 // overlay (config.local.*, never committed), or when no lock is enforced. A
 // committed local_override under --locked, --frozen or an enforced lock fails.
 // listKey is the config list the entry lives in ("includes", "installed_skills").

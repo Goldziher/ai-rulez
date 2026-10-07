@@ -63,7 +63,7 @@ func ResetObserved() {
 
 // policyContext is ctx as the lock policy of cfg asks: offline when the policy
 // says so. The loader marks the context it hands the resolvers the same way; a
-// resolver called directly with a configuration gets the same behaviour.
+// resolver called directly with a configuration gets the same behavior.
 func policyContext(ctx context.Context, cfg *config.Config) context.Context {
 	if cfg != nil && cfg.LockPolicy.Offline && !config.NoFetchRequested(ctx) {
 		return config.WithNoFetch(ctx)

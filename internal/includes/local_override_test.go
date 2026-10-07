@@ -20,10 +20,10 @@ func TestCheckLocalOverride(t *testing.T) {
 		overlay *config.LocalOverlay
 		wantErr bool
 	}{
-		{name: "committed override without lock enforcement is honoured", mode: LockAuto},
+		{name: "committed override without lock enforcement is honored", mode: LockAuto},
 		{name: "committed override under --locked is refused", mode: LockRequire, wantErr: true},
 		{name: "committed override under --frozen is refused", mode: LockFrozen, wantErr: true},
-		{name: "overlay override under --locked is honoured", mode: LockRequire, overlay: overlay("includes", "shared", "../x")},
+		{name: "overlay override under --locked is honored", mode: LockRequire, overlay: overlay("includes", "shared", "../x")},
 		{name: "overlay override for another entry does not cover this one", mode: LockRequire, overlay: overlay("includes", "other", "../x"), wantErr: true},
 	}
 	for _, tt := range tests {
