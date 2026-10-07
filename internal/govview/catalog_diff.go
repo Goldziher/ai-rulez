@@ -43,6 +43,12 @@ type DiffSection struct {
 	Changed []DiffChanged `json:"changed"`
 }
 
+// Diff entry kinds that have no item kind of their own.
+const (
+	diffKindMCP  = "mcp"
+	diffKindRole = "role"
+)
+
 // Empty reports whether nothing differs.
 func (s *DiffSection) Empty() bool {
 	return len(s.Added)+len(s.Removed)+len(s.Changed) == 0
@@ -219,7 +225,7 @@ func diffMCP(from, to []CatalogMCPServer) DiffSection {
 		seen[s.Ref] = true
 		prev, ok := old[s.Ref]
 		if !ok {
-			sec.Added = append(sec.Added, DiffEntry{Ref: s.Ref, Kind: "mcp"})
+			sec.Added = append(sec.Added, DiffEntry{Ref: s.Ref, Kind: diffKindMCP})
 			continue
 		}
 		var c changeList
@@ -232,12 +238,12 @@ func diffMCP(from, to []CatalogMCPServer) DiffSection {
 		c.str("headers", mcpNameList(prev.Headers), mcpNameList(s.Headers))
 		c.str("description", prev.Description, s.Description)
 		if len(c) > 0 {
-			sec.Changed = append(sec.Changed, DiffChanged{Ref: s.Ref, Kind: "mcp", Changes: c})
+			sec.Changed = append(sec.Changed, DiffChanged{Ref: s.Ref, Kind: diffKindMCP, Changes: c})
 		}
 	}
 	for i := range from {
 		if !seen[from[i].Ref] {
-			sec.Removed = append(sec.Removed, DiffEntry{Ref: from[i].Ref, Kind: "mcp"})
+			sec.Removed = append(sec.Removed, DiffEntry{Ref: from[i].Ref, Kind: diffKindMCP})
 		}
 	}
 	sortSection(&sec)
@@ -283,7 +289,7 @@ func diffRoles(from, to []CatalogRole) DiffSection {
 		seen[r.Name] = true
 		prev, ok := old[r.Name]
 		if !ok {
-			sec.Added = append(sec.Added, DiffEntry{Ref: r.Name, Kind: "role", Tokens: r.Totals.Tokens})
+			sec.Added = append(sec.Added, DiffEntry{Ref: r.Name, Kind: diffKindRole, Tokens: r.Totals.Tokens})
 			continue
 		}
 		var c changeList
@@ -294,12 +300,12 @@ func diffRoles(from, to []CatalogRole) DiffSection {
 		c.num("tokens", prev.Totals.Tokens, r.Totals.Tokens)
 		c.num("served_skills", prev.Totals.Served, r.Totals.Served)
 		if len(c) > 0 {
-			sec.Changed = append(sec.Changed, DiffChanged{Ref: r.Name, Kind: "role", Changes: c})
+			sec.Changed = append(sec.Changed, DiffChanged{Ref: r.Name, Kind: diffKindRole, Changes: c})
 		}
 	}
 	for i := range from {
 		if !seen[from[i].Name] {
-			sec.Removed = append(sec.Removed, DiffEntry{Ref: from[i].Name, Kind: "role", Tokens: from[i].Totals.Tokens})
+			sec.Removed = append(sec.Removed, DiffEntry{Ref: from[i].Name, Kind: diffKindRole, Tokens: from[i].Totals.Tokens})
 		}
 	}
 	sortSection(&sec)
