@@ -76,10 +76,12 @@ func WarnUnreadScopeFile(cfg *config.Config, preset, file string, rules, context
 		return
 	}
 	names := make([]string, 0, len(rules)+len(context))
-	for _, r := range rules {
+	for i := range rules {
+		r := &rules[i]
 		names = append(names, "rule "+r.Name)
 	}
-	for _, c := range context {
+	for i := range context {
+		c := &context[i]
 		names = append(names, "context "+c.Name)
 	}
 	cfg.Diag.Raise(preset+" reads "+file+" at the repository root only, so these items in the scope's copy are never loaded; "+

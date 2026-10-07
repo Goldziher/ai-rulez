@@ -129,9 +129,10 @@ func InlineAllowed(cf config.ContentFile, t Target) bool {
 // FilterInline drops the items whose targets exclude the root file of t.
 func FilterInline(items []config.ContentFile, t Target) []config.ContentFile {
 	var out []config.ContentFile
-	for _, cf := range items {
-		if InlineAllowed(cf, t) {
-			out = append(out, cf)
+	for i := range items {
+		cf := &items[i]
+		if InlineAllowed(*cf, t) {
+			out = append(out, *cf)
 		}
 	}
 	return out
