@@ -124,7 +124,7 @@ func init() {
 	pf.BoolVar(&searchFlags.includeStatic, flagServeIncludeStatic, false, "Also search skills whose delivery is static")
 	pf.BoolVar(&searchFlags.offline, flagServeOffline, false, "Never use the network; use cached content")
 	pf.BoolVar(&searchFlags.frozen, flagServeFrozen, false, "Never use the network and require ai-rulez.lock to cover every remote source")
-	pf.BoolVar(&searchFlags.allowExec, "allow-exec", false, "Honour [search.embeddings] command from the repository config (it runs a program; the user config needs no flag)")
+	pf.BoolVar(&searchFlags.allowExec, "allow-exec", false, "Honor [search.embeddings] command from the repository config (it runs a program; the user config needs no flag)")
 
 	f := SearchCmd.Flags()
 	f.IntVar(&searchFlags.limit, "limit", searchDefaultLimit, fmt.Sprintf("Maximum results (max %d)", searchMaxLimit))
@@ -285,21 +285,30 @@ func checkSearchFlags(cmd *cobra.Command, args []string) error {
 	if searchFlags.limit < 1 || searchFlags.limit > searchMaxLimit {
 		return oops.Errorf("--limit must be between 1 and %d", searchMaxLimit)
 	}
-	evalMode := searchFlags.eval != "" || searchFlags.fromEvals
-	if !evalMode {
-		if strings.TrimSpace(strings.Join(args, " ")) == "" {
-			return oops.Hint("Pass a query, or --eval <cases.yaml> / --from-evals").Errorf("search needs a query")
-		}
-		for _, name := range searchEvalOnlyFlags {
-			if cmd.Flags().Changed(name) {
-				return oops.Errorf("--%s requires --eval or --from-evals", name)
-			}
-		}
-		if searchFlags.mode != "" {
-			return checkQueryMode(searchFlags.mode)
-		}
-		return nil
+	if searchFlags.eval == "" && !searchFlags.fromEvals {
+		return checkSearchQueryFlags(cmd, args)
 	}
+	return checkSearchEvalFlags(cmd, args)
+}
+
+// checkSearchQueryFlags validates a plain query: it needs text and none of the eval-only flags.
+func checkSearchQueryFlags(cmd *cobra.Command, args []string) error {
+	if strings.TrimSpace(strings.Join(args, " ")) == "" {
+		return oops.Hint("Pass a query, or --eval <cases.yaml> / --from-evals").Errorf("search needs a query")
+	}
+	for _, name := range searchEvalOnlyFlags {
+		if cmd.Flags().Changed(name) {
+			return oops.Errorf("--%s requires --eval or --from-evals", name)
+		}
+	}
+	if searchFlags.mode != "" {
+		return checkQueryMode(searchFlags.mode)
+	}
+	return nil
+}
+
+// checkSearchEvalFlags validates an --eval or --from-evals run.
+func checkSearchEvalFlags(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		return oops.Errorf("--eval takes its queries from the cases file; remove the query argument")
 	}

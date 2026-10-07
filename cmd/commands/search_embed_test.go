@@ -114,11 +114,6 @@ func useEmbeddings(t *testing.T, srv *embedServer, allowNetwork bool) {
 	t.Setenv("SEARCH_TEST_KEY", "k")
 }
 
-func execSub(t *testing.T, fn func() int) (code int) {
-	t.Helper()
-	return fn()
-}
-
 func runIndex(t *testing.T, flags ...string) (code int, out, errOut string) {
 	t.Helper()
 	for i := 0; i+1 < len(flags); i += 2 {

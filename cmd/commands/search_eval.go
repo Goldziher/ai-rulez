@@ -82,57 +82,72 @@ func loadEvalCases(env *searchEnv) (*skillsearch.CaseFile, string, error) {
 }
 
 func runSearchEval(ctx context.Context, out, errOut io.Writer, env *searchEnv) int {
-	fail := func(err error) int {
+	res, err := measureSearchEval(ctx, errOut, env)
+	if err != nil {
 		fmtError(err)
 		return 1
 	}
+	return reportSearchEval(out, errOut, res)
+}
+
+// measureSearchEval loads the cases, ranks them in every requested mode and applies the gates.
+func measureSearchEval(ctx context.Context, errOut io.Writer, env *searchEnv) (*skillsearch.Result, error) {
 	if err := skillsearch.CheckK(searchFlags.k); err != nil {
-		return fail(err)
+		return nil, err
 	}
 	mins, err := skillsearch.ParseMinimums(searchFlags.min)
 	if err != nil {
-		return fail(err)
+		return nil, err
 	}
 	modes, err := evalModes(searchFlags.mode, env.resolved.Search.Mode)
 	if err != nil {
-		return fail(err)
+		return nil, err
 	}
 	cases, note, err := loadEvalCases(env)
 	if err != nil {
-		return fail(err)
+		return nil, err
 	}
 	if note != "" {
 		reportWriter{errOut}.printf("%s\n", note)
 	}
 	if err := cases.CheckSkills(skillsearch.IDs(env.items)); err != nil {
-		return fail(err)
+		return nil, err
 	}
 	wantVectors := slices.ContainsFunc(modes, func(m string) bool { return m != skillsearch.ModeLexical })
 	ranker, release, err := env.ranker(wantVectors)
 	defer release()
 	if err != nil {
-		return fail(err)
+		return nil, err
 	}
 	if wantVectors && ranker.Index == nil {
-		return fail(oops.Hint("Run 'ai-rulez search index' first").Errorf("%s evaluation needs an embedding index, and none is usable", strings.Join(modes, "/")))
+		return nil, oops.Hint("Run 'ai-rulez search index' first").Errorf("%s evaluation needs an embedding index, and none is usable", strings.Join(modes, "/"))
 	}
 	evalEnv := &skillsearch.EvalEnv{Items: env.items, Cfg: env.resolved.Search, Index: ranker.Index, Embedder: ranker.Embedder, Scope: roleScope(env)}
 	res, err := skillsearch.Eval(ctx, evalEnv, cases, cases.EffectiveK(searchFlags.k), modes)
 	if err != nil {
-		return fail(err)
+		return nil, err
 	}
 	maxFlips := -1
 	if searchFlags.baseline != "" {
 		base, err := skillsearch.LoadBaseline(searchFlags.baseline)
 		if err != nil {
-			return fail(err)
+			return nil, err
 		}
 		if err := res.CompareBaseline(base); err != nil {
-			return fail(err)
+			return nil, err
 		}
 		maxFlips = searchFlags.maxFlips
 	}
 	res.GateFailures = res.Gate(mins, maxFlips)
+	return res, nil
+}
+
+// reportSearchEval prints the result and returns the exit code.
+func reportSearchEval(out, errOut io.Writer, res *skillsearch.Result) int {
+	fail := func(err error) int {
+		fmtError(err)
+		return 1
+	}
 	degraded := degradedEvalMessage(res)
 	if searchFlags.out != "" && degraded == "" {
 		// A run that fell back to lexical does not measure the requested ranking: never a baseline.
@@ -291,24 +306,20 @@ func printPrimaryMetrics(p reportWriter, r *skillsearch.Result) {
 	}
 }
 
-// printModeTable prints each metric per mode with its interval, then the paired
-// difference of each mode against lexical.
-func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
-	p.printf("\n%-14s", "")
-	for _, m := range modes {
-		p.printf("%-24s", m)
-	}
-	p.printf("\n")
-	type metric struct {
-		label, key string
-		get        func(skillsearch.Metrics) (float64, bool)
-	}
-	metrics := []metric{
+// searchModeMetric is one row of the per-mode table: key names its interval in CI95.
+type searchModeMetric struct {
+	label, key string
+	get        func(skillsearch.Metrics) (float64, bool)
+}
+
+// searchModeMetrics lists the rows of the per-mode table.
+func searchModeMetrics(k int) []searchModeMetric {
+	return []searchModeMetric{
 		{"top1", "top1", func(m skillsearch.Metrics) (float64, bool) { return m.Top1, true }},
-		{fmt.Sprintf("recall@%d", r.K), "recall_at_k", func(m skillsearch.Metrics) (float64, bool) { return m.RecallAt, true }},
-		{fmt.Sprintf("hit@%d", r.K), "", func(m skillsearch.Metrics) (float64, bool) { return m.HitAt, true }},
+		{fmt.Sprintf("recall@%d", k), "recall_at_k", func(m skillsearch.Metrics) (float64, bool) { return m.RecallAt, true }},
+		{fmt.Sprintf("hit@%d", k), "", func(m skillsearch.Metrics) (float64, bool) { return m.HitAt, true }},
 		{"mrr", "mrr", func(m skillsearch.Metrics) (float64, bool) { return m.MRR, true }},
-		{fmt.Sprintf("ndcg@%d", r.K), "ndcg_at_k", func(m skillsearch.Metrics) (float64, bool) {
+		{fmt.Sprintf("ndcg@%d", k), "ndcg_at_k", func(m skillsearch.Metrics) (float64, bool) {
 			if m.NDCG == nil {
 				return 0, false
 			}
@@ -327,7 +338,11 @@ func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
 			return *m.AbstainRate, true
 		}},
 	}
-	for _, mt := range metrics {
+}
+
+// printMetricRows prints each metric that at least one mode reports.
+func printMetricRows(p reportWriter, r *skillsearch.Result, modes []string) {
+	for _, mt := range searchModeMetrics(r.K) {
 		shown := false
 		for _, mode := range modes {
 			_, ok := mt.get(r.Modes[mode])
@@ -351,6 +366,10 @@ func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
 		}
 		p.printf("\n")
 	}
+}
+
+// printPairedDifferences prints the paired difference of each mode against lexical.
+func printPairedDifferences(p reportWriter, r *skillsearch.Result) {
 	if len(r.Paired) > 0 {
 		p.printf("%s\n", "\npaired difference vs lexical (95% bootstrap interval; an interval excluding 0 is a real change):")
 		for _, mode := range slices.Sorted(maps.Keys(r.Paired)) {
@@ -360,6 +379,18 @@ func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
 			}
 		}
 	}
+}
+
+// printModeTable prints each metric per mode with its interval, then the paired
+// difference of each mode against lexical.
+func printModeTable(p reportWriter, r *skillsearch.Result, modes []string) {
+	p.printf("\n%-14s", "")
+	for _, m := range modes {
+		p.printf("%-24s", m)
+	}
+	p.printf("\n")
+	printMetricRows(p, r, modes)
+	printPairedDifferences(p, r)
 	for _, mode := range modes {
 		if mr := r.ByMode[mode]; mr != nil && mr.DegradedCases > 0 {
 			p.printf("\nwarning: %s: %d cases fell back to lexical\n", mode, mr.DegradedCases)
