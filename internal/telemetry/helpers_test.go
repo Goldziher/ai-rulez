@@ -1,8 +1,10 @@
 package telemetry
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -13,6 +15,23 @@ import (
 var fixedNow = time.Date(2026, 10, 5, 9, 12, 44, 0, time.UTC)
 
 func fixedClock() time.Time { return fixedNow }
+
+// assertPerm checks the permission bits of info. Windows has none to check: Go
+// reports 0666 for any writable file, and ACLs keep the per-user files private.
+func assertPerm(t *testing.T, want os.FileMode, info os.FileInfo) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return
+	}
+	assert.Equal(t, want, info.Mode().Perm())
+}
+
+// jsonText is s escaped for use inside a JSON string literal (a Windows path
+// holds backslashes).
+func jsonText(s string) string {
+	b, _ := json.Marshal(s) //nolint:errcheck // a string always marshals
+	return string(b[1 : len(b)-1])
+}
 
 // golden compares got with testdata/<name>; UPDATE_GOLDEN=1 rewrites it.
 func golden(t *testing.T, name string, got []byte) {

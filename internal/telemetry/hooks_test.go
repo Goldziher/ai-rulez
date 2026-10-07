@@ -47,7 +47,7 @@ func TestHandleHook_InstructionsLoadedBecomesARuleEvent(t *testing.T) {
 	ruleFile := filepath.Join(p.Root, ".claude", "rules", "atomic-commits.md")
 	write(t, ruleFile, "# Atomic commits\nsecret prompt text\n")
 
-	in := hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"` + ruleFile + `","memory_type":"Project","load_reason":"path_glob_match","globs":["**/*.go"],"trigger_file_path":"` + p.Root + `/main.go","prompt":"TOP SECRET PROMPT"`)
+	in := hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"` + jsonText(ruleFile) + `","memory_type":"Project","load_reason":"path_glob_match","globs":["**/*.go"],"trigger_file_path":"` + jsonText(p.Root) + `/main.go","prompt":"TOP SECRET PROMPT"`)
 	event, err := p.HandleHook(context.Background(), in, HookOptions{Role: "backend"})
 	require.NoError(t, err)
 	require.NotNil(t, event)
@@ -97,7 +97,7 @@ func TestHandleHook_IncludePathsOptIn(t *testing.T) {
 	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: true, IncludePaths: true}, Getenv: env()})
 	p, _, _ := pipelineFor(t, s)
 	file := filepath.Join(p.Root, ".claude", "rules", "r.md")
-	event, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"`+file+`","memory_type":"Project","load_reason":"session_start"`), HookOptions{})
+	event, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"`+jsonText(file)+`","memory_type":"Project","load_reason":"session_start"`), HookOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, ".claude/rules/r.md", event.Path)
 }
@@ -125,7 +125,7 @@ func TestHandleHook_SubagentDuration(t *testing.T) {
 	assert.NotContains(t, string(log), "t.jsonl")
 	info, err := os.Stat(p.agentStatePath())
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 }
 
 func TestHandleHook_IgnoresOtherEventsAndDisabledTelemetry(t *testing.T) {
