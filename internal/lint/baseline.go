@@ -162,7 +162,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 	matched := map[string]bool{}
 	refused := map[string]bool{}
 	byFP := map[string]BaselineEntry{}
-	for _, e := range b.Entries {
+	for i := range b.Entries {
+		e := b.Entries[i]
 		byFP[e.Fingerprint] = e
 	}
 	for i := range r.Findings {
@@ -184,7 +185,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		m.Accepted, m.AcceptReason = true, e.Reason
 		res.Accepted++
 	}
-	for _, e := range b.Entries {
+	for i := range b.Entries {
+		e := b.Entries[i]
 		if !matched[e.Fingerprint] && r.Covers(e.Code) {
 			res.Stale = append(res.Stale, e)
 		}
@@ -201,23 +203,11 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 // (AR0xx) would be added without a reason: accepting a security finding must be
 // explained.
 func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error) {
-	old := map[string]BaselineEntry{}
-	if prev != nil {
-		for _, e := range prev.Entries {
-			old[e.Fingerprint] = e
-		}
-	}
+	old := baselineEntryIndex(prev)
 	out := &Baseline{Version: baselineVersion, Entries: []BaselineEntry{}}
 	seen := map[string]bool{}
 	var unexplained []string
-	if prev != nil {
-		for _, e := range prev.Entries {
-			if !r.Covers(e.Code) {
-				out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
-				seen[e.Fingerprint] = true
-			}
-		}
-	}
+	keepUncoveredEntries(prev, r, out, seen)
 	for i := range r.Findings {
 		f := &r.Findings[i]
 		fp := f.Fingerprint()
@@ -249,6 +239,34 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 		return nil, fmt.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))
 	}
 	return out, nil
+}
+
+// baselineEntryIndex maps each fingerprint of prev to its entry.
+func baselineEntryIndex(prev *Baseline) map[string]BaselineEntry {
+	old := map[string]BaselineEntry{}
+	if prev == nil {
+		return old
+	}
+	for i := range prev.Entries {
+		old[prev.Entries[i].Fingerprint] = prev.Entries[i]
+	}
+	return old
+}
+
+// keepUncoveredEntries copies the entries of an analyzer that did not run
+// (r.Analyzers) into out untouched and marks them seen: the report cannot judge
+// whether they still match.
+func keepUncoveredEntries(prev *Baseline, r *Report, out *Baseline, seen map[string]bool) {
+	if prev == nil {
+		return
+	}
+	for i := range prev.Entries {
+		e := prev.Entries[i]
+		if !r.Covers(e.Code) {
+			out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
+			seen[e.Fingerprint] = true
+		}
+	}
 }
 
 // Ratchet is the [lint.ratchet] table: it caps how many findings of a rule are tolerated: up to max findings
