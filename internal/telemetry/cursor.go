@@ -324,11 +324,13 @@ func notBefore(cur Cursor, o CatchUpOptions) time.Time {
 	return o.GrantedAt
 }
 
-// recordedBefore reports whether e was recorded before t; an event without a
-// readable time counts as before.
+// recordedBefore reports whether e was recorded before t. Both carry whole
+// seconds, so an event stamped in the grant's own second counts as before: it
+// may have been recorded while consent was still off, and withholding one
+// event is the safe side. An event without a readable time counts as before.
 func recordedBefore(e *Event, t time.Time) bool {
 	at, err := time.Parse(time.RFC3339, e.Time)
-	return err != nil || at.Before(t)
+	return err != nil || !at.After(t)
 }
 
 // readTail reads complete log lines from offset until the bound or the end of the
