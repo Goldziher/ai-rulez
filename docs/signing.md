@@ -317,10 +317,21 @@ ai-rulez verify --self --attestation-file ai-rulez_5.0.0_linux_amd64.sigstore.js
 ```
 
 Without `--attestation-file` the bundle is read from `<binary>.sigstore.json`, next to the resolved binary (symlinks
-from a package manager are followed). It is offline, keeps no rollback state and is independent of any project. For a
+from a package manager are followed). It is offline and independent of any project. For a
 build that did not come from the official workflow, `--public-key` or `--identity` with `--issuer` replace the pinned
-identity. Exit codes as for `--attestation`: `0` official build, `1` could not run (no trusted root), `2` failed
-(`AR720` no bundle, `AR722` other signer, `AR724` different bytes). The result's subject is `release`.
+identity. Exit codes: `0` official build, `1` could not check (`AR720` no bundle, `AR725` no usable trusted root, or
+any other failure to run), `2` the build failed the check (`AR722` other signer, `AR724` different bytes, and the other
+verification codes). The result's subject is `release`.
+
+Limits to know before relying on it:
+
+- **A tampered binary can lie.** `verify --self` runs the binary it verifies; a modified build can print "official".
+  Verify with a trusted copy (an earlier release, or `sha256sum` against the release page) when the binary itself is
+  in doubt.
+- **No rollback protection.** It keeps no state, so an older, genuinely signed release verifies as official; compare
+  the reported version with the one you expect.
+- **The trusted root is not embedded.** By default it is the cache `ai-rulez trust update` writes, which your user can
+  modify. Where that matters, pass `--trusted-root` with a copy kept somewhere read-only.
 
 ## Served skills and publisher-signed skills
 

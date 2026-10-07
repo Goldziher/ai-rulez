@@ -79,6 +79,24 @@ func TestRunVerifySelf(t *testing.T) {
 		assert.Equal(t, exitDrift, code)
 		assert.Contains(t, out.String(), "AR724")
 	})
+	t.Run("a binary without a bundle or without a trusted root could not be verified", func(t *testing.T) {
+		// Arrange: an unsigned binary, and a signed one checked against the pinned
+		// identity with no trusted root cached
+		f := newSelfFixture(t)
+		noBundle := filepath.Join(t.TempDir(), "ai-rulez")
+		require.NoError(t, os.WriteFile(noBundle, []byte("release-binary"), 0o755))
+		verifyPublicKeys, verifyFormat = []string{f.pub}, formatJSON
+
+		// Act
+		missingBundle := runVerifySelf(noBundle, nil, &bytes.Buffer{})
+		verifyTrustedRoot = filepath.Join(t.TempDir(), "no-such-root.json")
+		t.Cleanup(func() { verifyTrustedRoot = "" })
+		missingRoot := runVerifySelf(f.exe, nil, &bytes.Buffer{})
+
+		// Assert: "cannot verify" is exit 1; only a verdict against the build is 2
+		assert.Equal(t, 1, missingBundle)
+		assert.Equal(t, 1, missingRoot)
+	})
 	t.Run("a missing binary could not be checked", func(t *testing.T) {
 		// Arrange
 		newSelfFixture(t)
