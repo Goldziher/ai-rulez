@@ -22,6 +22,7 @@ type loadOptions struct {
 	resolvers     Resolvers
 	registry      *Registry
 	policy        PolicyEnforcer
+	policyDir     string
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -40,6 +41,13 @@ func WithoutLocal() LoadOption {
 // declared configuration, such as verifying ai-rulez.lock against it.
 func WithoutRemote() LoadOption {
 	return func(o *loadOptions) { o.withoutRemote = true }
+}
+
+// WithPolicyDir names the project directory the organization policy is
+// discovered from, when the configuration is loaded from somewhere else, such as
+// a snapshot of an earlier revision extracted to a temporary directory.
+func WithPolicyDir(dir string) LoadOption {
+	return func(o *loadOptions) { o.policyDir = dir }
 }
 
 // WithIncludeMemo makes the loaded config share an include fetch cache created

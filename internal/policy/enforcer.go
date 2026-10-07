@@ -122,7 +122,7 @@ type orgResult struct {
 
 // Enforce implements config.PolicyEnforcer.
 func (e *Enforcer) Enforce(_ context.Context, cfg *config.Config) (*config.PolicyOutcome, error) {
-	r, err := e.LoadFor(cfg.BaseDir)
+	r, err := e.LoadFor(cfg.PolicyProjectDir())
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (e *Enforcer) Enforce(_ context.Context, cfg *config.Config) (*config.Polic
 
 // EnforceContent implements config.ContentEnforcer.
 func (e *Enforcer) EnforceContent(_ context.Context, cfg *config.Config) []config.PolicyViolation {
-	r, err := e.LoadFor(cfg.BaseDir)
+	r, err := e.LoadFor(cfg.PolicyProjectDir())
 	if err != nil || r == nil {
 		return nil // Enforce already failed the load on a policy that cannot be used
 	}
