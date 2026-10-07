@@ -187,10 +187,12 @@ func runLockFor(kind string, names []string) int {
 }
 
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
+	// lock reports an include it cannot resolve as a problem of its own.
+	ctx := config.WithUnresolvedIncludesTolerated(cmdContext())
 	if path != "" {
-		return loadProjectFile(cmdContext(), path, opts...)
+		return loadProjectFile(ctx, path, opts...)
 	}
-	return loadConfigForCommand(cmdContext(), nil, opts...)
+	return loadConfigForCommand(ctx, nil, opts...)
 }
 
 func writeLockAt(path, kind string, names []string) int {
