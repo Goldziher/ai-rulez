@@ -385,7 +385,7 @@ func itemLintFlagged(it *govview.CatalogItemV2) bool {
 // publishedTextHasSecret scans the text of the item the site would publish (its
 // description and excerpt) directly. The lint findings alone are not enough: the
 // lint may not have run, or the finding may be baselined or suppressed, and the
-// text would still go out. Inline ignore comments are not honoured.
+// text would still go out. Inline ignore comments are not honored.
 func publishedTextHasSecret(it *govview.CatalogItemV2) bool {
 	text := it.Description
 	if it.Excerpt != nil {

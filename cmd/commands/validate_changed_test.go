@@ -182,7 +182,7 @@ func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
 		}
 		return out
 	}
-	assert.NotContains(t, hops(one), ".ai-rulez/rules/d.md", "depth 1 keeps today's behaviour")
+	assert.NotContains(t, hops(one), ".ai-rulez/rules/d.md", "depth 1 keeps today's behavior")
 	assert.Equal(t, "transitive(2)", hops(two)[".ai-rulez/rules/d.md"])
 	assert.Equal(t, hops(two), hops(all))
 	assert.Equal(t, 2, two.ChangedOnly.Depth)

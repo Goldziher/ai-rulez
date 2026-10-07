@@ -11,7 +11,7 @@ import (
 const CheckRoleModes = "roles"
 
 // checkRoleModes reports, per role, the skill modes a configured harness cannot
-// honour and what generate --role does instead (see roles.PlanSkillModes). It is
+// honor and what generate --role does instead (see roles.PlanSkillModes). It is
 // advisory: the role still renders, with the documented fallback.
 func checkRoleModes(_ context.Context, s *state) []Finding {
 	if s.cfg == nil {
@@ -29,7 +29,7 @@ func checkRoleModes(_ context.Context, s *state) []Finding {
 			}
 			out = append(out, Finding{
 				Check: CheckRoleModes, Severity: SeverityInfo,
-				Message: "role " + name + ": skill_mode " + o.Mode + " of " + o.Key() + " is not honoured on " +
+				Message: "role " + name + ": skill_mode " + o.Mode + " of " + o.Key() + " is not honored on " +
 					strings.Join(o.Degraded, ", ") + "; " + degradedEffect(o),
 				Hint: "see docs/roles.md#skill_mode-on-other-harnesses; [role_manifest] skill_mode_fallback picks drop or serve for off",
 			})

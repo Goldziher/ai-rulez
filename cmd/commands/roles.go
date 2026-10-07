@@ -128,7 +128,7 @@ func runRolesList(out io.Writer) error {
 	return tw.Flush() //nolint:wrapcheck // writer error
 }
 
-// printModeOutcomes lists the skill modes that a configured harness cannot honour,
+// printModeOutcomes lists the skill modes that a configured harness cannot honor,
 // with what generate does instead.
 func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
 	header := false
@@ -137,7 +137,7 @@ func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
 			continue
 		}
 		if !header {
-			w.printf("\nskill_mode not honoured on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):\n")
+			w.printf("\nskill_mode not honored on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):\n")
 			header = true
 		}
 		w.printf("  %s = %s: not applied on %s; %s\n", o.Key(), o.Mode, strings.Join(o.Degraded, ", "), modeFallbackText(o))

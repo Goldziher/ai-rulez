@@ -25,7 +25,7 @@ func TestCapabilitiesAreCited(t *testing.T) {
 	}
 }
 
-func TestHonours(t *testing.T) {
+func TestHonors(t *testing.T) {
 	tests := []struct {
 		preset, mode string
 		want         bool
@@ -43,7 +43,7 @@ func TestHonours(t *testing.T) {
 	}
 	for _, tt := range tests {
 		c, _ := CapabilityOf(tt.preset)
-		_, got := c.Honours(tt.mode)
+		_, got := c.Honors(tt.mode)
 		assert.Equal(t, tt.want, got, "%s %s", tt.preset, tt.mode)
 	}
 }
@@ -103,10 +103,10 @@ func TestPlanSkillModesReportsFrontmatterOverrides(t *testing.T) {
 		name           string
 		extra          map[string]string
 		wantOverridden []string
-		wantHonoured   bool
+		wantHonored    bool
 	}{
-		{name: "no frontmatter keys", wantHonoured: true},
-		{name: "same value", extra: map[string]string{"disable-model-invocation": "true"}, wantHonoured: true},
+		{name: "no frontmatter keys", wantHonored: true},
+		{name: "same value", extra: map[string]string{"disable-model-invocation": "true"}, wantHonored: true},
 		{name: "author says false", extra: map[string]string{"disable-model-invocation": "false"}, wantOverridden: []string{"cursor"}},
 	}
 	for _, tt := range tests {
@@ -128,10 +128,10 @@ func TestPlanSkillModesReportsFrontmatterOverrides(t *testing.T) {
 			// Assert
 			require.Len(t, got, 1)
 			assert.Equal(t, tt.wantOverridden, got[0].Overridden)
-			_, honoured := got[0].Honoured["cursor"]
-			assert.Equal(t, tt.wantHonoured, honoured)
-			_, viaSettings := got[0].Honoured["claude"]
-			assert.True(t, viaSettings, "claude is honoured through settings whatever the frontmatter says")
+			_, honored := got[0].Honored["cursor"]
+			assert.Equal(t, tt.wantHonored, honored)
+			_, viaSettings := got[0].Honored["claude"]
+			assert.True(t, viaSettings, "claude is honored through settings whatever the frontmatter says")
 		})
 	}
 }
