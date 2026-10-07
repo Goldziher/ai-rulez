@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // syntheticSkillBody is realistic skill prose: headings, lists, links, inline
@@ -69,7 +70,7 @@ func syntheticSkillTree(tb testing.TB, skills, lines int) string {
 			fmt.Sprintf("---\nname: skill-%03d\ndescription: Use when exercising the lint performance of skill %d.\n---\n# Skill %d\n%s", i, i, i, body))
 	}
 	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}} {
-		if out, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
+		if out, err := gitutil.CommandNoContext(root, args...).CombinedOutput(); err != nil {
 			tb.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
