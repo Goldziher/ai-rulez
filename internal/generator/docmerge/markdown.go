@@ -152,10 +152,32 @@ func applyMarkdown(path, existing string, owned []OwnedKey) (Result, error) {
 			doc = strings.TrimRight(withEndings(header, nl), "\r\n") + nl + nl
 		}
 	}
+	doc, err = spliceBlocks(path, doc, blocks, nl)
+	if err != nil {
+		return Result{}, err
+	}
+
+	rest, headerPresent := outsideBlocks(path, doc, blocks, header, nl)
+	claims := make([]Claim, 0, len(blocks)+1)
+	for _, b := range blocks {
+		claims = append(claims, Claim{Path: []string{b.name}, Sum: jsonmerge.Digest(b.text)})
+	}
+	if headerPresent {
+		claims = append(claims, Claim{Path: []string{HeaderKey}, Equals: header})
+	}
+	if !creating {
+		claims = jsonmerge.NoteFinalNewline(claims, existing)
+	}
+	return Result{Body: bom + doc, PartiallyOwned: strings.TrimSpace(rest) != "", Claims: claims}, nil
+}
+
+// spliceBlocks replaces each block in doc in place, or appends it after a blank
+// line, and then checks that the result holds every block.
+func spliceBlocks(path, doc string, blocks []mdBlock, nl string) (string, error) {
 	for _, b := range blocks {
 		span, found, ferr := findBlock(path, doc, b.name)
 		if ferr != nil {
-			return Result{}, ferr
+			return "", ferr
 		}
 		block := renderBlock(b, nl)
 		if found {
@@ -173,22 +195,10 @@ func applyMarkdown(path, existing string, owned []OwnedKey) (Result, error) {
 	for _, b := range blocks {
 		span, found, ferr := findBlock(path, doc, b.name)
 		if ferr != nil || !found || !strings.Contains(doc[span.start:span.end], strings.TrimRight(withEndings(b.text, nl), "\r\n")) {
-			return Result{}, oops.With("path", path, "block", b.name).Errorf("the merged markdown document does not hold the block")
+			return "", oops.With("path", path, "block", b.name).Errorf("the merged markdown document does not hold the block")
 		}
 	}
-
-	rest, headerPresent := outsideBlocks(path, doc, blocks, header, nl)
-	claims := make([]Claim, 0, len(blocks)+1)
-	for _, b := range blocks {
-		claims = append(claims, Claim{Path: []string{b.name}, Sum: jsonmerge.Digest(b.text)})
-	}
-	if headerPresent {
-		claims = append(claims, Claim{Path: []string{HeaderKey}, Equals: header})
-	}
-	if !creating {
-		claims = jsonmerge.NoteFinalNewline(claims, existing)
-	}
-	return Result{Body: bom + doc, PartiallyOwned: strings.TrimSpace(rest) != "", Claims: claims}, nil
+	return doc, nil
 }
 
 // outsideBlocks returns the document without its blocks and without the header
@@ -210,7 +220,8 @@ func unmergeMarkdown(path, existing string, claims []Claim) (Unmerged, error) {
 	nl := lineEnding(doc)
 	var out Unmerged
 	header := ""
-	for _, claim := range claims {
+	for i := range claims {
+		claim := &claims[i]
 		if len(claim.Path) != 1 {
 			continue
 		}
