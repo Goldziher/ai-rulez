@@ -7,7 +7,6 @@ import (
 	"strings"
 	"syscall"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,9 +22,9 @@ func injectProbe(path string) string {
 		return "denied"
 	}
 	defer f.Close() //nolint:errcheck // probe
-	c := byte('\n')
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), uintptr(unix.TIOCSTI), uintptr(unsafe.Pointer(&c)))
-	if errno != 0 {
+	// TIOCSTI reads one byte at the pointer: the low byte of the int32 on a
+	// little-endian machine, '\n'.
+	if err := unix.IoctlSetPointerInt(int(f.Fd()), unix.TIOCSTI, '\n'); err != nil { //nolint:gosec // fd fits in int
 		return "denied"
 	}
 	return "injected"
