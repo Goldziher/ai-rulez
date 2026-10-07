@@ -167,11 +167,9 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 
 	// Nothing is written, ignored or removed when a file ai-rulez cannot prove it
 	// wrote (or a symlinked output) is in the way: the user decides first.
-	refused, linked := g.outputSafety(flatOutputs)
-	if len(refused) > 0 {
-		return nil, refusalError(refused)
+	if err := g.checkOutputSafety(flatOutputs); err != nil {
+		return nil, err
 	}
-	g.linkedOutputs = linked
 
 	// The machine-local inputs (overlay, local/ tree) are ignored before any check
 	// can refuse the run, so a refused first run never leaves them unignored.
