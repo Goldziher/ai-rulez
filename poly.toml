@@ -25,6 +25,7 @@ exclude = [
   "dist/**",
   "internal/lint/testdata/**",
   "internal/publish/emit/testdata/**",
+  "internal/agentplugins/testdata/**",
   "internal/okf/testdata/**",
   "internal/okfbridge/testdata/**",
   "internal/ard/schema/**",

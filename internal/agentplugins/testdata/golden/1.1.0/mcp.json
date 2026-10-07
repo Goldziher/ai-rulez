@@ -1,0 +1,40 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.1.0/mcp.schema.json",
+  "mcpServers": {
+    "deploy-api": {
+      "type": "streamable-http",
+      "url": "https://deploy.acme.example/mcp",
+      "headers": {
+        "X-Tenant": "public"
+      }
+    },
+    "legacy-events": {
+      "type": "sse",
+      "url": "https://legacy.acme.example/sse"
+    },
+    "local-dev": {
+      "type": "streamable-http",
+      "url": "http://localhost:8787/mcp"
+    },
+    "npx-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@acme/mcp"
+      ]
+    },
+    "validator": {
+      "type": "stdio",
+      "command": "./bin/validator",
+      "args": [
+        "--data",
+        "${PLUGIN_DATA}/validator"
+      ],
+      "env": {
+        "CONFIG": "${PLUGIN_ROOT}/config.json"
+      },
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}
