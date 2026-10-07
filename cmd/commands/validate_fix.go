@@ -24,8 +24,8 @@ var (
 
 func addFixFlags(cmd *cobra.Command) {
 	f := cmd.Flags()
-	f.BoolVar(&validateFix, "fix", false, "With --strict, apply the safe automatic fixes to authored sources: executable bits (AR502, AR503, AR505), frontmatter key renames (AR303), quoted booleans (AR304), unclosed code fences (AR806) and missing final newlines (AR807). Harness trap fixes (AR9C7 and project AR9CA key-misspelt rows) also rewrite a misspelt frontmatter key in hand-written harness files outside .ai-rulez/. Never touches generated outputs or security findings")
-	f.BoolVar(&validateFixUnsafe, "fix-unsafe", false, "With --strict, also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix")
+	f.BoolVar(&validateFix, "fix", false, "Apply the safe automatic fixes to authored sources: executable bits (AR502, AR503, AR505), frontmatter key renames (AR303), quoted booleans (AR304), unclosed code fences (AR806) and missing final newlines (AR807). Harness trap fixes (AR9C7 and project AR9CA key-misspelt rows) also rewrite a misspelt frontmatter key in hand-written harness files outside .ai-rulez/. Never touches generated outputs or security findings")
+	f.BoolVar(&validateFixUnsafe, "fix-unsafe", false, "Also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix")
 	f.BoolVar(&validateDryRun, "dry-run", false, "With --fix or --fix-unsafe, print the unified diff and change nothing")
 }
 
