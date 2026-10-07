@@ -9,7 +9,7 @@ import (
 )
 
 func TestMCPServerPackageIsAPackageURL(t *testing.T) {
-	const head = "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n[[mcp_servers]]\nname = \"srv\"\ncommand = \"x\"\n"
+	const head = "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n[[mcp_servers]]\nname = \"srv\"\ncommand = \"x\"\n"
 	tests := []struct {
 		name    string
 		pkg     string
