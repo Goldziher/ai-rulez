@@ -122,14 +122,35 @@ func (t *Timer) fromForge(ctx context.Context, tag tagresolve.RawTag) (tagresolv
 	if err != nil {
 		return tagresolve.ReleaseTime{}, fmt.Errorf("forge release time of %s: %w", tag.Name, err)
 	}
-	// A release keeps its publish time when its tag is later moved: the time
-	// belongs to the commit it was published at, so a moved tag is not that release.
+	// The remote must serve the commit the forge has for the tag (a mirror or a
+	// redirect may not).
 	info, err := t.opt.Forge.Tag(ctx, t.repo, tag.Name)
 	switch {
 	case err != nil:
 		return tagresolve.ReleaseTime{}, fmt.Errorf("forge tag %s (needed to check it did not move after its release): %w", tag.Name, err)
 	case info.Commit != tag.Commit:
-		return tagresolve.ReleaseTime{}, fmt.Errorf("tag %s moved: the forge released commit %s, the remote now has %s", tag.Name, short(info.Commit), short(tag.Commit))
+		return tagresolve.ReleaseTime{}, fmt.Errorf("tag %s: the forge has commit %s, the remote %s", tag.Name, short(info.Commit), short(tag.Commit))
+	}
+	// A release keeps its publish time when its tag is later force-pushed, and the
+	// forge's tag lookup then reports the new commit too, so comparing the current
+	// tag with the current tag proves nothing. The publish time belongs to the
+	// commit released at that time: the one the release recorded, else the first
+	// time this commit was seen under the tag.
+	if rel.Commit != "" {
+		if rel.Commit != tag.Commit {
+			return tagresolve.ReleaseTime{}, fmt.Errorf("tag %s moved: the release was published at commit %s, the tag now has %s", tag.Name, short(rel.Commit), short(tag.Commit))
+		}
+		return tagresolve.ReleaseTime{At: rel.Published, From: tagresolve.SourceForge}, nil
+	}
+	if t.opt.Seen == nil {
+		return tagresolve.ReleaseTime{}, fmt.Errorf("the release of %s does not record its commit and there is no first-seen record to rule out a moved tag", tag.Name)
+	}
+	seen, _, err := t.opt.Seen.FirstSeen(t.opt.Source, tag.Name, tag.Commit, t.opt.Clock.Now())
+	if err != nil {
+		return tagresolve.ReleaseTime{}, fmt.Errorf("the release of %s does not record its commit: %w", tag.Name, err)
+	}
+	if seen.After(rel.Published) {
+		return tagresolve.ReleaseTime{At: seen, From: tagresolve.SourceFirstSeen}, nil
 	}
 	return tagresolve.ReleaseTime{At: rel.Published, From: tagresolve.SourceForge}, nil
 }
