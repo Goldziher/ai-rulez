@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
@@ -153,15 +152,6 @@ func mustPrepare(t *testing.T, o *Options) *Plan {
 	p, err := Prepare(context.Background(), o)
 	require.NoError(t, err)
 	return p
-}
-
-func contains(s string, subs ...string) bool {
-	for _, sub := range subs {
-		if strings.Contains(s, sub) {
-			return true
-		}
-	}
-	return false
 }
 
 func mustSkills(t *testing.T, configDir string) []evals.Skill {
