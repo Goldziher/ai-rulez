@@ -867,7 +867,7 @@ func relInside(base, target string) (string, bool) {
 // files behind, so it is logged rather than returned.
 func removeScratch(dir string) {
 	if err := os.RemoveAll(dir); err != nil {
-		logger.Debug("could not remove the scratch directory", "path", dir, "error", err)
+		logger.Std().Debug("could not remove the scratch directory", "path", dir, "error", err)
 	}
 }
 
