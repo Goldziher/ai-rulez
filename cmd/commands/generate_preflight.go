@@ -27,7 +27,7 @@ func init() {
 
 func envTrue(name string) bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
-	case "1", "true", "yes", "on":
+	case "1", valueTrue, answerYes, "on":
 		return true
 	}
 	return false

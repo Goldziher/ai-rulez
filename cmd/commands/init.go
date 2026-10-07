@@ -193,7 +193,7 @@ func createStructure(projectName, configDir string) error {
 
 // generateConfigTOML generates a TOML configuration template
 func generateConfigTOML(projectName string) string {
-	return templates.InitConfigTOML(projectName, []string{"claude"})
+	return templates.InitConfigTOML(projectName, []string{presetClaude})
 }
 
 // createDomainDirectories creates domain subdirectories
@@ -456,7 +456,7 @@ func shouldOverwriteConfig(filename string) bool {
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == "yes"
+	return response == "y" || response == answerYes
 }
 
 func handleHooksSetup() {

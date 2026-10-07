@@ -76,7 +76,7 @@ func checkFlagValues() error {
 		return err
 	}
 	switch validateFailOn {
-	case "", "error", "warning", "info", "none":
+	case "", failOnError, failOnWarning, "info", valueNone:
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
 	}
@@ -253,7 +253,7 @@ func failOnFor(cfg *config.Config) string {
 			return f
 		}
 	}
-	return "error"
+	return failOnError
 }
 
 // reportStrict prints the combined report and returns the process exit code.
