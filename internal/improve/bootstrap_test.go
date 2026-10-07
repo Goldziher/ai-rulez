@@ -153,6 +153,21 @@ func TestBootstrapGain_UnstableRowsAreNeitherWinsNorLosses(t *testing.T) {
 	assert.InDelta(t, 0.0, ci.High, 1e-9)
 }
 
+func TestBootstrapGain_AnUnstableLossStillCounts(t *testing.T) {
+	// Arrange: ten cases whose only flips are pass-to-fail, every one with split votes.
+	rows := pairs(10, 0, 10)
+	for i := range rows {
+		rows[i].Unstable = true
+	}
+
+	// Act
+	ci := BootstrapGain(rows, 2000)
+
+	// Assert: the interval shows the regression, as the gate counts it.
+	require.NotNil(t, ci)
+	assert.InDelta(t, -1.0, ci.High, 1e-9)
+}
+
 func TestExecute_UnderpoweredWarningOnlyForAnAcceptedRound(t *testing.T) {
 	// Arrange: a candidate nothing improves (rejected), and one that wins (accepted) on a 3-case held-out set.
 	tests := []struct {
