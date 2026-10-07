@@ -235,6 +235,9 @@ appended; the verdict must not improve: verbosity bias), `reorder` (siblings rev
 position bias), `rename` (the item renamed; the verdict must not change: name priors) and `canary` (text addressed to
 the reviewer; `injection-intent` must flag it and no verdict may improve); and the **calibration curve** (vote
 agreement against measured precision). A dimension with fewer than 6 labelled cases is `uncalibrated`.
+A case the judge could not answer for a dimension counts as a wrong answer (and in `errors`); a probe it could not
+answer fails; a probe a case declares that was never measured misses `min_probe`; and with `--k 1` consistency is not
+measured, so a positive `min_consistency` is a miss.
 The record `status` is `pass` only when no calibrated dimension is `fail` or `ill-defined`, at least one passes, and the
 set has `golden_min_items` cases. The thresholds are the rubric's `[calibration]` table
 (`min_weighted_kappa`, `min_consistency`, `min_human_kappa`, `min_recall.<dimension>`, `min_precision`, `min_probe`,

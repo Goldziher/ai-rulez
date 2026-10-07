@@ -328,6 +328,7 @@ func TestProposeFixCountsTheVerifiersSpend(t *testing.T) {
 	assert.GreaterOrEqual(t, p.Usage.Tokens, used.Tokens-before.Tokens, "the verifier's tokens are counted")
 	assert.Equal(t, used.Calls-before.Calls+len(fx.fixer.ChatCalls()), p.Usage.Calls)
 }
+
 // The rejection text is derived from the model's edits and the file, so the retry prompt carries
 // it inside a fence of its own, never as a bare instruction (RV-LLM-23).
 func TestFixPromptFencesTheRejection(t *testing.T) {
