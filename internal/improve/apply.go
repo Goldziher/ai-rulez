@@ -264,6 +264,11 @@ func removeAndEmptyParents(dir, path string) error {
 		return fmt.Errorf("remove %s: %w", path, err)
 	}
 	for p := filepath.Dir(path); p != dir && strings.HasPrefix(p, dir); p = filepath.Dir(p) {
+		// Only a directory can be one the failed apply created: a regular file at a parent path (what made the
+		// write fail) is the user's, and os.Remove would delete it.
+		if info, err := os.Lstat(p); err != nil || !info.IsDir() {
+			break
+		}
 		if os.Remove(p) != nil { // not empty (or not ours): stop
 			break
 		}
