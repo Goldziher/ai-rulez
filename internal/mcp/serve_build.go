@@ -295,6 +295,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 			Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
 			DefaultTrust: defaultTrust(cfg), Now: st.Clock.Now, PolicyDenied: denied,
 		}
+		if adm.Authored, err = authoredSkillItems(cfg); err != nil {
+			return nil, err
+		}
 		raw := catalog
 		admit := func(log logger.Logger) *Catalog {
 			a := adm
