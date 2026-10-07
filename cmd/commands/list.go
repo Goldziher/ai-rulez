@@ -114,7 +114,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	warnUnlistedIncludes(ctx)
+	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeRules)
 	if err != nil {
 		logger.Error("Failed to list rules", "error", err)
@@ -141,7 +141,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	warnUnlistedIncludes(ctx)
+	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeContext)
 	if err != nil {
 		logger.Error("Failed to list context", "error", err)
@@ -168,7 +168,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	warnUnlistedIncludes(ctx)
+	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeSkills)
 	if err != nil {
 		logger.Error("Failed to list skills", "error", err)
@@ -244,7 +244,7 @@ func runListItems(ftype, title, noun string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
-	warnUnlistedIncludes(cmdContext())
+	loadListedConfig(cmdContext())
 	files, err := op.ListFiles(cmdContext(), listDomain, ftype)
 	if err != nil {
 		logger.Error("Failed to list "+noun, "error", err)
@@ -261,17 +261,21 @@ func runListItems(ftype, title, noun string) {
 	}
 }
 
-// warnUnlistedIncludes makes the listing say what it leaves out. The lists read
-// the local content tree only; an include that cannot be resolved (nothing cached,
-// no network is used) is reported as a warning by the load, which is tolerant here
-// by design, and a config that does not load at all is left to the listing itself.
-func warnUnlistedIncludes(ctx context.Context) {
-	if listLocal {
-		return
-	}
+// loadListedConfig loads the project before a listing and exits 1 when the
+// configuration does not load (a syntax error, a V2/V3 config file), the code
+// every other command uses for it. The lists read the content tree only; an
+// include that cannot be resolved (nothing cached, no network is used) is not an
+// error here but a warning from the load, which says what the listing leaves out.
+// The machine-local tree (--local) gets the check without the include warnings.
+func loadListedConfig(ctx context.Context) {
 	ctx = config.WithOfflineIncludes(config.WithUnresolvedIncludesTolerated(ctx))
-	if _, err := loadConfigForCommand(ctx, nil, config.WithoutLocal()); err != nil {
-		logger.Debug("Could not check includes for the listing", "error", err)
+	opts := []config.LoadOption{config.WithoutLocal()}
+	if listLocal {
+		opts = append(opts, config.WithoutRemote())
+	}
+	if _, err := loadConfigForCommand(ctx, nil, opts...); err != nil {
+		logger.Error("Failed to load config", "error", err)
+		os.Exit(1)
 	}
 }
 

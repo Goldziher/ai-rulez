@@ -129,6 +129,7 @@ func runDomainList(cmd *cobra.Command, args []string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
+	loadListedConfig(ctx)
 
 	domains, err := op.ListDomains(ctx)
 	if err != nil {
