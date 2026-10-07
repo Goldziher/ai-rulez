@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 const (
@@ -33,6 +35,9 @@ type reader struct {
 	// generated holds the paths a previous `ai-rulez generate` run wrote, from
 	// its manifest; they are output, not source.
 	generated map[string]bool
+	// merged holds what a previous generate run wrote into merged settings
+	// documents (by path), from the same manifests.
+	merged map[string][]jsonmerge.Claim
 }
 
 func newReader(fsys fs.FS) *reader { return &reader{fsys: fsys} }
@@ -214,13 +219,15 @@ func (r *reader) walkFiles(dir string, onSkip func(name, reason string)) []strin
 // any. A manifest that cannot be read is skipped: the header checks still apply.
 func (r *reader) loadGeneratedManifests() {
 	r.generated = map[string]bool{}
+	r.merged = map[string][]jsonmerge.Claim{}
 	for _, name := range generator.GeneratedManifestNames() {
 		data, err := r.read(DefaultConfigDir + "/" + name)
 		if err != nil {
 			continue
 		}
 		var doc struct {
-			Files []string `json:"files"`
+			Files  []string                     `json:"files"`
+			Merged map[string][]jsonmerge.Claim `json:"merged"`
 		}
 		if json.Unmarshal(data, &doc) != nil {
 			continue
@@ -228,5 +235,20 @@ func (r *reader) loadGeneratedManifests() {
 		for _, f := range doc.Files {
 			r.generated[path.Clean(f)] = true
 		}
+		for f, claims := range doc.Merged {
+			r.merged[path.Clean(f)] = append(r.merged[path.Clean(f)], claims...)
+		}
 	}
+}
+
+// ownedElements matches the elements a previous generate run wrote into the
+// array at keyPath of a merged document. It hands each claimed element out once,
+// so a value the user also wrote by hand is still imported.
+func (r *reader) ownedElements(file string, keyPath ...string) *jsonmerge.ElementMatcher {
+	for _, c := range r.merged[file] {
+		if slices.Equal(c.Path, keyPath) && c.HasElements() {
+			return c.NewElementMatcher()
+		}
+	}
+	return jsonmerge.Claim{}.NewElementMatcher()
 }
