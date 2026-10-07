@@ -117,7 +117,7 @@ enforce          = true
 | --- | --- |
 | `require_approval` | `remote` (includes, installed skills, skill sources and served skills that come from a remote), `local` (every authored item), `all` (both), `kind:<kind>` (for example `kind:hook`, `kind:skill`). `kind:mcp_server` selects the pinned MCP server declarations |
 | `exempt` | Globs over `kind:id` or `kind:domain/id`; `*` matches any run of characters, `?` one. An exempt item never needs approval |
-| `min_approvers` | Distinct reviewers needed for one digest. Default 1; one reviewer twice counts once |
+| `min_approvers` | Distinct reviewers needed for one digest. Default 1; one reviewer twice counts once, and so do the signing keys whose trust entries name one `reviewer` |
 | `approvers` | Allowlist of reviewer strings, matched lower-cased and trimmed (`github:alice`, `@alice` and `alice` are one reviewer). An `@org/team` entry stands for the members `[governance.teams]` lists. A typo guard and an audit aid for `asserted` records: it is not authentication (see below), unless an [organization policy](policy.md) pins the list |
 | `approvers_from` | `"CODEOWNERS"` (found in `.github/`, the repository root or `docs/`, as the forge looks) or a path inside the project to a CODEOWNERS file. Only the owners of an item's source path may approve it; see [Who may approve](#who-may-approve) |
 | `[governance.teams]` | Maps `"@org/team"` to the reviewers it stands for. Used by `approvers` and CODEOWNERS entries |

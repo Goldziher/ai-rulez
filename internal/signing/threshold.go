@@ -21,16 +21,33 @@ func signerID(s SignerInfo) string {
 	return "key:" + s.KeyID
 }
 
-// pickSigners keeps the first accepted item of each distinct signer. It returns
-// the kept items when there are at least threshold of them (threshold below 1
-// counts as 1). With none accepted it returns the first error, so a single
-// failing signature reports its own code; with some but too few it is AR728.
-func pickSigners[T any](items []T, errs []error, signer func(T) SignerInfo, threshold int) ([]T, error) {
+// signerKey identifies the person behind a signer when counting toward a
+// threshold: a certificate identity, or the reviewer a trust entry for subject
+// names for a key (reviewer = "..."), so one person holding several keys, or a
+// key and a keyless identity, counts once. A key no entry names counts as itself.
+func (t TrustSet) signerKey(s SignerInfo, subject, source string) string {
+	if s.Kind == KindKeyless {
+		return "person:" + strings.ToLower(strings.TrimSpace(s.Identity))
+	}
+	for _, e := range t.Entries {
+		if e.Reviewer != "" && e.appliesToSource(subject, source) && e.matches(s) {
+			return "person:" + strings.ToLower(strings.TrimSpace(e.Reviewer))
+		}
+	}
+	return signerID(s)
+}
+
+// pickSigners keeps the first accepted item of each distinct signer, as idOf
+// names it. It returns the kept items when there are at least threshold of them
+// (threshold below 1 counts as 1). With none accepted it returns the first
+// error, so a single failing signature reports its own code; with some but too
+// few it is AR728.
+func pickSigners[T any](items []T, errs []error, idOf func(T) string, threshold int) ([]T, error) {
 	threshold = max(threshold, 1)
 	var kept []T
 	seen := map[string]bool{}
 	for _, it := range items {
-		id := signerID(signer(it))
+		id := idOf(it)
 		if !seen[id] {
 			seen[id] = true
 			kept = append(kept, it)
