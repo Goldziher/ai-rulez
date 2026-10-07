@@ -318,6 +318,12 @@ func scopeOf(p, configDir string) string {
 	return ""
 }
 
+// namesTOMLString reports whether the line holds name as a basic ("name") or
+// literal ('name') TOML string.
+func namesTOMLString(line, name string) bool {
+	return strings.Contains(line, `"`+name+`"`) || strings.Contains(line, "'"+name+"'")
+}
+
 // checkUnpinned reports remote sources that follow a moving ref without a pin.
 func (r *runner) checkUnpinned() {
 	for _, w := range includes.Unpinned(r.cfg) {
@@ -328,7 +334,7 @@ func (r *runner) checkUnpinned() {
 		line := 1
 		if data, err := os.ReadFile(path); err == nil {
 			for i, l := range strings.Split(string(data), "\n") {
-				if strings.Contains(l, `"`+w.Name+`"`) || strings.Contains(l, `'`+w.Name+`'`) {
+				if namesTOMLString(l, w.Name) {
 					line = i + 1
 					break
 				}
