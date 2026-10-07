@@ -262,3 +262,11 @@ func isSymlink(path string) bool {
 	info, err := os.Lstat(path)
 	return err == nil && info.Mode()&os.ModeSymlink != 0
 }
+
+// keepReason says why clean cannot show ai-rulez wrote the file at abs.
+func (g *Generator) keepReason(abs string) string {
+	if slices.Contains(g.previousManifestFiles(), g.relSlash(abs)) {
+		return "the generated manifest lists it, but it has no generated banner and matches no digest recorded for it"
+	}
+	return "it has no Content-Hash and is not in the generated manifest"
+}
