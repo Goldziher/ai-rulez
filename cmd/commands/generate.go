@@ -781,9 +781,10 @@ func generateCheckCode(args []string) int {
 }
 
 // importGate scans imported content before anything is written, when
-// [lint.security] scan_imports is not "off". Dry runs and plugin bundles skip it.
+// [lint.security] scan_imports is not "off". Every mode that writes runs it (the
+// in-repo run, plugin bundles and --user); only a dry run skips it.
 func importGate(cfg *config.Config) error {
-	if dryRun || pluginMode {
+	if dryRun {
 		return nil
 	}
 	// The signature gate comes first: unsigned content is refused before it is scanned.

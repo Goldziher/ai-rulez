@@ -372,7 +372,7 @@ files are never served, scanned or part of the served digest.
 `delivery = "served"` is gated when it is served). Each needs a valid `.ai-rulez.sigstore.json` whose digest covers the
 directory on disk; otherwise nothing is written and the error lists each skill with its `AR72x` code. The check runs
 before the content scan (`scan_imports`), so an unsigned or tampered skill is refused as such rather than scanned as
-trusted. Dry runs and plugin bundles skip it, like the scan.
+trusted. Every mode that writes runs it (`generate`, `generate --plugin`, `generate --user`); only a dry run skips it, like the scan.
 
 ## Cosign interoperability
 
