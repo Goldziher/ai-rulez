@@ -83,7 +83,7 @@ Instructions here.
 		assert.Equal(t, "my-lib", skills[0].Name)
 	})
 
-	t.Run("continues on missing skill", func(t *testing.T) {
+	t.Run("fails on a missing skill", func(t *testing.T) {
 		t.Parallel()
 
 		repoDir := t.TempDir()
@@ -99,7 +99,8 @@ Instructions here.
 		}
 
 		skills, err := ResolveInstalledSkills(context.Background(), cfg, "")
-		require.NoError(t, err)
+		require.ErrorIs(t, err, config.ErrSkillUnresolved)
+		assert.Contains(t, err.Error(), "nonexistent")
 		assert.Empty(t, skills)
 	})
 

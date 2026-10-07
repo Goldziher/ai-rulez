@@ -18,6 +18,10 @@ var (
 	// would produce outputs the configuration never described. Only --no-fetch
 	// downgrades it to a warning.
 	ErrIncludeUnresolved = errors.New("include could not be resolved")
+	// ErrSkillUnresolved is ErrIncludeUnresolved for an installed skill: one that
+	// cannot be fetched, found or scanned fails the load, because generating
+	// without it removes its outputs as stale and lets `generate --check` pass.
+	ErrSkillUnresolved = errors.New("installed skill could not be resolved")
 	// ErrIncludeOutsideProject marks a local include declared in the committed
 	// project config that resolves outside the project. It is fatal like a lock
 	// violation: dropping the include with a warning would hide a path a

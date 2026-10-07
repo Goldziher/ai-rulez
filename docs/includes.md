@@ -369,6 +369,11 @@ that loads the configuration, so a CI gate cannot pass on a checkout that render
 `--no-fetch` (cached content only) an include that cannot be resolved is logged as a warning and skipped instead,
 and `ai-rulez lock` reports it as a problem of its own.
 
+An `[[installed_skills]]` entry follows the same rule: a skill that cannot be fetched, found (no `SKILL.md` at its
+path) or scanned fails the load instead of being dropped, which would have removed its generated outputs as stale.
+`--no-fetch`, `lock`, `sbom` and the CRUD commands keep the warning. A `local_override` that names a missing
+directory skips the skill with a notice, as it does an include.
+
 Included content never follows symlinks: a symlinked file or directory (a rule, skill, agent, command, context or
 check file, `rules/`, `skills/` and so on, domains, or the include's `.ai-rulez/` itself) is skipped with a warning
 naming it, so an include cannot point at an arbitrary local file. Replace the link with the real file or directory.

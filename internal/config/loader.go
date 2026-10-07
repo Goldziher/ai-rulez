@@ -395,7 +395,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 
 	skills, err := resolve(ctx, config)
 	if err != nil {
-		if errors.Is(err, ErrLockViolation) {
+		if errors.Is(err, ErrLockViolation) || errors.Is(err, ErrSkillUnresolved) {
 			return err
 		}
 		log.Warn("Failed to resolve installed skills", "error", err)
